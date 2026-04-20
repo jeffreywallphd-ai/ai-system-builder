@@ -1,6 +1,8 @@
+import type { PythonRuntimeOutputDescriptor } from "./python-runtime-output-descriptor";
+
 export interface PrepareTemplatedDatasetResult {
-  trainArtifactTempPath: string;
-  testArtifactTempPath: string;
+  outputs: PythonRuntimeOutputDescriptor[];
   trainRowCount: number;
   testRowCount: number;
+  warnings?: string[];
 }

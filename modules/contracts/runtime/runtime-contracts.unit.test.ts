@@ -2,6 +2,14 @@ import { describe, expect, it } from "../../testing/node-test";
 
 import {
   KNOWN_RUNTIME_KINDS,
+  type PrepareTemplatedDatasetRequest,
+  type PrepareTemplatedDatasetResult,
+  type PythonRuntimeCapabilitiesResult,
+  type PythonRuntimeHealthCheckResult,
+  type PythonRuntimeHealthStatus,
+  type PythonRuntimeOutputDescriptor,
+  type PythonRuntimeTaskRequest,
+  type PythonRuntimeTaskResult,
   createRuntimeOperation,
   createRuntimeExecutionDiagnostic,
   createRuntimeExecutionError,
@@ -266,5 +274,144 @@ describe("runtime contracts", () => {
       requestId: "req-3",
       correlationId: "corr-3",
     });
+  });
+});
+
+describe("python sidecar runtime contracts", () => {
+  it("models health status and health checks with explicit lifecycle states", () => {
+    const status: PythonRuntimeHealthStatus = {
+      runtimeId: "python-sidecar-1",
+      status: "degraded",
+      version: "0.1.0",
+      pythonVersion: "3.12.2",
+      workerStartedAt: "2026-04-20T11:00:00.000Z",
+      lastHeartbeatAt: "2026-04-20T11:00:30.000Z",
+    };
+
+    const healthCheck: PythonRuntimeHealthCheckResult = {
+      healthy: false,
+      status,
+      error: {
+        code: "heartbeat_stale",
+        message: "Heartbeat is stale.",
+        retryable: true,
+        details: {
+          staleByMs: 120000,
+        },
+      },
+      message: "Python runtime heartbeat exceeded threshold.",
+    };
+
+    expect(healthCheck.status.status).toBe("degraded");
+    expect(healthCheck.error?.code).toBe("heartbeat_stale");
+    expect(healthCheck.error?.retryable).toBe(true);
+  });
+
+  it("models runtime capabilities as sidecar-advertised task types", () => {
+    const capabilities: PythonRuntimeCapabilitiesResult = {
+      runtimeId: "python-sidecar-1",
+      capabilities: [
+        "prepare-templated-dataset",
+        "future-task-type",
+      ],
+    };
+
+    expect(capabilities.runtimeId).toBe("python-sidecar-1");
+    expect(capabilities.capabilities).toContain("prepare-templated-dataset");
+  });
+
+  it("uses runtime output descriptors as canonical output handoff contracts", () => {
+    const output: PythonRuntimeOutputDescriptor = {
+      name: "dataset-train",
+      role: "train",
+      tempPath: "/tmp/runtime/train.jsonl",
+      mediaType: "application/x-ndjson",
+      sizeBytes: 1024,
+      metadata: {
+        partition: "train",
+      },
+    };
+
+    expect(output).toMatchObject({
+      name: "dataset-train",
+      role: "train",
+      tempPath: "/tmp/runtime/train.jsonl",
+      mediaType: "application/x-ndjson",
+    });
+  });
+
+  it("keeps generic python runtime task request/result envelopes stable and metadata-friendly", () => {
+    const request: PythonRuntimeTaskRequest = {
+      requestId: "req-python-1",
+      taskType: "prepare-templated-dataset",
+      payload: {
+        sourceArtifactIds: ["artifact-1"],
+      },
+      timeoutMs: 10000,
+      metadata: {
+        initiatedBy: "application",
+      },
+    };
+    const result: PythonRuntimeTaskResult = {
+      requestId: request.requestId,
+      taskType: request.taskType,
+      success: false,
+      error: {
+        code: "validation_failed",
+        message: "Payload validation failed.",
+        retryable: false,
+      },
+      metadata: {
+        stage: "validation",
+      },
+    };
+
+    expect(result.requestId).toBe(request.requestId);
+    expect(result.taskType).toBe(request.taskType);
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe("validation_failed");
+  });
+
+  it("keeps dataset preparation contracts task-specific while using shared output descriptors", () => {
+    const request: PrepareTemplatedDatasetRequest = {
+      sourceArtifactIds: ["artifact-1", "artifact-2"],
+      template: "Summarize: {{text}}",
+      split: {
+        trainRatio: 0.8,
+        testRatio: 0.2,
+        seed: 42,
+      },
+      outputFormat: "jsonl",
+      shuffle: true,
+      validationPolicy: "strict",
+      outputNaming: {
+        baseName: "support-ticket-dataset",
+      },
+    };
+
+    const result: PrepareTemplatedDatasetResult = {
+      outputs: [
+        {
+          name: "support-ticket-dataset-train",
+          role: "train",
+          tempPath: "/tmp/runtime/support-ticket-dataset-train.jsonl",
+          mediaType: "application/x-ndjson",
+        },
+        {
+          name: "support-ticket-dataset-test",
+          role: "test",
+          tempPath: "/tmp/runtime/support-ticket-dataset-test.jsonl",
+          mediaType: "application/x-ndjson",
+        },
+      ],
+      trainRowCount: 800,
+      testRowCount: 200,
+      warnings: ["Some rows were skipped because required fields were missing."],
+    };
+
+    expect(request.validationPolicy).toBe("strict");
+    expect(result.outputs.length).toBe(2);
+    expect(result.outputs.map((output) => output.role)).toEqual(["train", "test"]);
+    expect(result.trainRowCount + result.testRowCount).toBe(1000);
   });
 });

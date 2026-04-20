@@ -1,5 +1,7 @@
 export interface PythonRuntimeTaskRequest {
+  requestId: string;
   taskType: string;
   payload: unknown;
-  requestId: string;
+  timeoutMs?: number;
+  metadata?: Record<string, unknown>;
 }

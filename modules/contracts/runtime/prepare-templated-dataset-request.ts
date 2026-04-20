@@ -7,4 +7,9 @@ export interface PrepareTemplatedDatasetRequest {
     seed?: number;
   };
   outputFormat: "jsonl" | "json" | "csv";
+  shuffle?: boolean;
+  validationPolicy?: "strict" | "best-effort";
+  outputNaming?: {
+    baseName?: string;
+  };
 }
