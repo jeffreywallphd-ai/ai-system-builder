@@ -1,0 +1,26 @@
+.settings-panel__field {
+  border-top: 1px solid var(--color-border-soft);
+  padding-top: var(--space-md);
+}
+
+.settings-panel--compact {
+  padding: var(--space-md);
+}
+
+.settings-secret__state--configured {
+  color: var(--color-success);
+}
+
+.settings-secret__state--missing {
+  color: var(--color-text-secondary);
+}
+
+.settings-secret__controls {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.artifact-browser__html-preview {
+  max-height: 16rem;
+  overflow: auto;
+}

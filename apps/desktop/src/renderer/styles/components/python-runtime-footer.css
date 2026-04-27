@@ -1,0 +1,32 @@
+.ui-python-runtime-footer {
+  margin-top: var(--space-sm);
+}
+
+.ui-python-runtime-footer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.ui-python-runtime-footer__actions {
+  display: flex;
+  gap: var(--space-2xs);
+  flex-wrap: wrap;
+}
+
+.ui-python-runtime-footer__logs {
+  border-top: 1px solid var(--color-border-soft);
+  padding-top: var(--space-xs);
+}
+
+.ui-python-runtime-footer__log-list {
+  list-style: none;
+  margin: var(--space-xs) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3xs);
+  max-height: 10rem;
+  overflow-y: auto;
+}

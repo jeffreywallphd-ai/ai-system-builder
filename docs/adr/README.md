@@ -1,173 +1,28 @@
-# ADR Documentation Router
+# ADR Index
 
-## Audience
-- Engineers proposing or reviewing architectural decisions.
-- Maintainers tracking supersession and decision history.
+This directory stores Architecture Decision Records (ADRs) for `ai-system-builder`.
 
 ## Purpose
-- Architecture Decision Records and supersession history.
 
-## Belongs Here
-- ADR documents with context, decision, status, and consequences.
-- Superseded ADRs with replacement references.
-- Decision history that affects long-term architecture direction.
+ADRs capture architectural intentions and decisions so humans and AI agents can implement consistently.
 
-## Does Not Belong Here
-- General architecture reference material without a decision record.
-- Operational runbooks and support procedures.
-- Contributor implementation tutorials.
+## Rules
 
-## ADR File Home
-- Store ADR files in `docs/adr/records/`.
-- Use filename format `adr-<NNN>-<kebab-case-title>.md` and pair AI companion files as `adr-<NNN>-<kebab-case-title>.ai.md`.
-- Keep architecture overviews/references in `docs/architecture/`; use ADRs only for explicit choices and tradeoffs.
+- Keep ADRs short and specific.
+- Record decisions before implementation when practical.
+- Update ADRs as implementation choices become final.
+- Keep superseded ADRs; mark them and reference replacements.
 
-## ADR Discovery Registry
-- Use `docs/adr/records/adr-registry.json` as the canonical fast-discovery artifact for ADR lookup by identifier, status, summary, and domain.
-- Keep registry records sorted by `adrNumber` ascending and synchronized with ADR frontmatter (`adr_number`, `decision_status`, `decision_date`, and title).
-- Keep `discoveryIndex.byDecisionStatus` and `discoveryIndex.byDomain` aligned with `records` so readers and automation can route quickly without scanning all ADR files.
+## File Naming
 
-## ADR Decision Thresholds
+Use `ADR-XXXX-short-title.md` with zero-padded numbers.
 
-### ADR Required
-- The change introduces or revises a durable architectural invariant that future features must obey.
-- The change alters control-plane shape, authority boundaries, or host/runtime composition contracts.
-- The change modifies workspace model guarantees (scope, tenancy, lifecycle, or cross-workspace behavior).
-- The change redefines security trust boundaries, identity/authorization enforcement model, or transport/data trust assumptions.
-- The change sets or reverses storage policy direction (durability model, persistence strategy, replication/sync authority, retention posture).
-- The change locks in studio and system modeling semantics used across multiple domains or subsystems.
+## Status Values
 
-### ADR Recommended
-- The change creates a high-impact cross-domain tradeoff likely to be revisited without explicit rationale.
-- The change introduces a new extension seam, platform-wide abstraction, or default pattern that other teams will copy.
-- The change is expected to have long-lived consequences, but can still be rolled back with bounded migration effort.
+Use one of: `proposed`, `accepted`, `superseded`, `deprecated`.
 
-### ADR Unnecessary
-- The change clarifies or expands an already accepted ADR without changing the decision itself.
-- The change is implementation-level and local to one component while preserving existing architecture contracts.
-- The change is operational procedure, diagnostics, rollout sequencing, or incident response guidance.
-- The change is a historical completion snapshot, migration inventory, or baseline handoff artifact.
+## Workflow
 
-### Where To Document When ADR Is Unnecessary
-- Architecture contract updates: `docs/architecture/`.
-- Contributor implementation guardrails: `docs/contributors/`.
-- Runtime/admin operations: `docs/operations/`.
-- Historical baselines and migration snapshots: `docs/baselines/`.
-- Shared taxonomy/context semantics: `docs/context/`.
-
-## ADR Metadata and Lifecycle Rules
-
-### Numbering and Filename Rules
-- ADR numbers are 3-digit, zero-padded identifiers (`001`, `002`, ...).
-- Allocate numbers by taking the highest existing ADR number in `docs/adr/records/` and adding one.
-- Numbers are unique and immutable; never renumber or reuse an old number.
-- Every ADR pair must use the same number and slug in both files:
-  - Human doc: `adr-<NNN>-<kebab-case-title>.md`
-  - AI companion: `adr-<NNN>-<kebab-case-title>.ai.md`
-
-### Title Rules
-- Frontmatter `title` must use: `ADR-<NNN> <Decision Title>`.
-- H1 must use: `# ADR-<NNN>: <Decision Title>`.
-- `<Decision Title>` should be concise, stable, and aligned with the filename slug.
-
-### Decision Status Rules
-Use ADR lifecycle status values in `decision_status` frontmatter and mirror the same value in the `Status` section:
-
-- `proposed`: decision under review; not yet adopted.
-- `accepted`: approved direction and current decision of record.
-- `superseded`: replaced by a newer accepted ADR; `superseded_by` must point to the replacement path.
-- `deprecated`: still valid for legacy contexts but should not guide new architecture work.
-
-### Amendment vs New ADR Rules
-- Amend an existing ADR in place only for non-decisional changes: clarifications, typo fixes, broken links, metadata hygiene, or better rationale wording that does not change the decision boundary.
-- Create a new ADR when architectural intent changes in any durable way: authority boundaries, invariants, trust model, storage posture, tenancy semantics, or extension constraints.
-- If the original ADR remains mostly valid but one bounded part changes, create a new ADR for the revised scope and keep the older ADR `accepted` or move it to `deprecated` based on how much guidance still applies.
-- Do not silently rewrite history by changing an old ADR's `Decision Statement` to reflect a new direction without a new ADR number.
-
-### Supersession Representation Rules
-- Use frontmatter `superseded_by` only on older ADRs that are no longer authoritative.
-- Use frontmatter `supersedes` on the newer ADR that becomes authoritative for the replaced scope.
-- Keep supersession links bi-directional:
-  - Older ADR: `superseded_by: docs/adr/records/adr-<new>.md`
-  - Newer ADR: `supersedes: docs/adr/records/adr-<old>.md`
-- In full replacement cases, set older ADR `decision_status: superseded`.
-- In partial replacement cases, keep older ADR as `accepted` or `deprecated` (based on remaining validity) and explain the narrowed scope in `## Supersession`.
-
-### ADR-Specific Metadata Fields
-Each ADR must include these lightweight metadata fields in frontmatter:
-
-- `adr_number`: 3-digit ADR identifier matching filename/title.
-- `decision_status`: one of `proposed`, `accepted`, `superseded`, `deprecated`.
-- `decision_date`: `YYYY-MM-DD` date when decision status became `accepted` (or date accepted before later lifecycle changes).
-- `review_tier`: one of `routine` or `heightened` to classify review depth expectations.
-
-## High-Risk ADR Review Expectations
-
-Use `review_tier` to distinguish routine ADR governance from ADRs needing heightened care:
-
-- `routine`: normal architecture review path for ADRs that do not change sensitive boundaries.
-- `heightened`: stronger review path for ADRs that change high-risk architecture boundaries.
-
-### High-Risk ADR Classes
-- Security and trust boundaries: authentication, authorization, trusted-device/node trust, transport trust, secret handling, or audit redaction boundaries.
-- Runtime control authority: control-plane ownership, orchestration mutation authority, or host role inversion that can bypass centralized governance.
-- Tenancy and isolation semantics: workspace ownership boundaries, cross-workspace access/data-flow rules, and isolation guarantees.
-- Supersession of high-risk authority: replacing or narrowing an accepted high-risk ADR where downstream teams rely on existing guarantees.
-
-### Heightened Review Minimums
-- Keep review practical: require explicit evidence only for decisions that cross high-risk classes, not for routine implementation-local ADRs.
-- Require at least two reviewers before moving `decision_status` to `accepted` or `superseded`:
-  - one platform architecture owner, and
-  - one domain owner from the highest-impact area (security, runtime, or tenancy depending on scope).
-- Include a concise `## Review Expectations` section in the ADR capturing:
-  - `Risk Class`
-  - `Required Reviewers`
-  - `Broader Architecture Review Trigger`
-  - `Recertification Cadence`
-- Keep cadence lightweight but explicit: high-risk accepted ADRs should define recertification timing in terms of architecture risk (for example every 6-12 months or on trigger events).
-
-### Broader Architecture Review Triggers
-Run broader architecture review before accepting or superseding an ADR when any of these are true:
-
-- The ADR changes trust boundaries or privileged-operation pathways spanning more than one runtime surface.
-- The ADR changes control-plane authority ownership or introduces alternate mutation channels.
-- The ADR changes tenancy/isolation rules, especially cross-workspace visibility or ownership behavior.
-- The ADR supersedes (full or partial) an accepted high-risk ADR and can change existing safety guarantees.
-
-Broader review can stay lightweight (async design review thread or one focused review meeting) as long as decisions and dissent are captured in the ADR PR trail.
-
-## Standard ADR Sections
-- Required: `Status`, `Decision Date`, `Decision Statement`, `Context and Problem Statement`, `Decision Drivers`, `Considered Options`, `Chosen Approach`, `Consequences`, `Related Documentation`, and `Related Code Paths`.
-- Optional: `Review Expectations` (required for `review_tier: heightened`), `Supersession` (required whenever the ADR supersedes another ADR or is superseded), and `Follow-Up Actions`.
-- Use the template directly so decision records remain concise and consistent: `docs/context/templates/adr.template.md`.
-- Use ADR authoring guidance to keep decisions concise and high-signal: `docs/adr/records/authoring-guide.md`.
-
-## ADR Cross-Linking Conventions
-
-ADRs are part of the documentation system, not a standalone archive. Keep relationship paths explicit and durable:
-
-- In `## Related Documentation`, include repo-relative links for:
-  - Core architecture context (`docs/architecture/<...>.md`) that explains system boundaries touched by the decision.
-  - Prior/adjacent decisions (`docs/adr/records/adr-<NNN>-<...>.md`) when supersession or dependency exists.
-  - High-value context assets (`docs/context/packs/<...>.pack.md`, `docs/context/routing/<...>.md`, or `docs/context/context-map.md`) when routing or AI context should carry this decision.
-- Prefer stable path references over prose-only mentions so maintainers can update links mechanically.
-- Keep links bi-directional:
-  - ADRs point to architecture/context docs in `Related Documentation`.
-  - Architecture overviews/references should include `## Related ADRs` with direct links back to relevant ADR records.
-  - Context packs may cite ADRs in `## Authoritative Docs` when the pack must preserve decision intent for implementation tasks.
-
-## Initial ADR Rollout Boundaries
-- The initial ADR rollout is intentionally bounded and not exhaustive.
-- Use [ADR System Rollout Boundaries and Future Expansion Areas](./records/rollout-boundaries.md) for explicit included scope, current gaps, and safe expansion points.
-
-## Start Here
-- [ADR Records Home](./records/README.md)
-- [ADR Discovery Registry](./records/adr-registry.json)
-- [ADR System Rollout Boundaries and Future Expansion Areas](./records/rollout-boundaries.md)
-- [ADR Authoring Guide](./records/authoring-guide.md)
-- [ADR-Informed Implementation and Review Examples](../contributors/adr-informed-implementation-and-review-examples.md)
-- [ADR Template](../context/templates/adr.template.md)
-- [Architecture Domain Cross-Linking Rules](../architecture/architecture-domain-cross-linking-rules.md)
-- [Architecture Router](../architecture/README.md)
-- [Docs Top-Level Contract](../README.md)
-- [Baselines Router](../baselines/README.md)
+1. Create a new ADR from `template.md`.
+2. Link related ADRs and docs/context packs when relevant.
+3. Keep decision and rationale aligned with current code.

@@ -1,0 +1,171 @@
+import {
+  ARTIFACT_READ_OPERATION,
+  normalizeArtifactBrowserLocator,
+  normalizeArtifactReadSuccessValue,
+  type ArtifactBrowserLocator,
+  type ArtifactReadSuccessValue,
+} from "../artifact-browser";
+import { type StorageObjectMetadata } from "../storage";
+import {
+  createIpcChannel,
+  type IpcChannel,
+  type IpcChannelValue,
+} from "./ipc-channel";
+import {
+  createIpcRequest,
+  type IpcRequest,
+} from "./ipc-request";
+import {
+  createIpcSuccessResponse,
+  type IpcResponse,
+} from "./ipc-response";
+
+export const DESKTOP_ARTIFACT_READ_OPERATION = ARTIFACT_READ_OPERATION;
+
+export const DESKTOP_ARTIFACT_READ_REQUEST_CHANNEL = createIpcChannel(
+  DESKTOP_ARTIFACT_READ_OPERATION,
+  "request",
+);
+
+export const DESKTOP_ARTIFACT_READ_RESPONSE_CHANNEL = createIpcChannel(
+  DESKTOP_ARTIFACT_READ_OPERATION,
+  "response",
+);
+
+export interface DesktopArtifactReadBoundaryContext {
+  host: "desktop";
+  source: string;
+}
+
+export interface DesktopArtifactReadRequestPayload {
+  locator: ArtifactBrowserLocator;
+  boundary: DesktopArtifactReadBoundaryContext;
+}
+
+export type DesktopArtifactReadSuccessValue<
+  TMetadata extends StorageObjectMetadata = StorageObjectMetadata,
+> = ArtifactReadSuccessValue<TMetadata>;
+
+export type DesktopArtifactReadRequest = IpcRequest<
+  DesktopArtifactReadRequestPayload,
+  typeof DESKTOP_ARTIFACT_READ_OPERATION,
+  Record<string, never>,
+  typeof DESKTOP_ARTIFACT_READ_REQUEST_CHANNEL.value
+>;
+
+export type DesktopArtifactReadResponse<
+  TMetadata extends StorageObjectMetadata = StorageObjectMetadata,
+> = IpcResponse<
+  DesktopArtifactReadSuccessValue<TMetadata>,
+  Record<string, unknown>,
+  typeof DESKTOP_ARTIFACT_READ_OPERATION,
+  Record<string, never>,
+  typeof DESKTOP_ARTIFACT_READ_RESPONSE_CHANNEL.value
+>;
+
+function normalizeRequiredTextField(value: string, fieldName: string): string {
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    throw new Error(`${fieldName} must be a non-empty, trimmed string.`);
+  }
+
+  return normalized;
+}
+
+function normalizeDesktopArtifactReadPayload(
+  payload: DesktopArtifactReadRequestPayload,
+): DesktopArtifactReadRequestPayload {
+  return {
+    locator: normalizeArtifactBrowserLocator(payload.locator),
+    boundary: {
+      host: "desktop",
+      source: normalizeRequiredTextField(payload.boundary.source, "boundary.source"),
+    },
+  };
+}
+
+export function createDesktopArtifactReadRequest(
+  payload: DesktopArtifactReadRequestPayload,
+  options?: {
+    requestId?: string;
+    correlationId?: string;
+  },
+): DesktopArtifactReadRequest {
+  return createIpcRequest(
+    DESKTOP_ARTIFACT_READ_REQUEST_CHANNEL,
+    normalizeDesktopArtifactReadPayload(payload),
+    {
+      requestId: options?.requestId,
+      correlationId: options?.correlationId,
+    },
+  );
+}
+
+export function createDesktopArtifactReadSuccessResponse<
+  TMetadata extends StorageObjectMetadata = StorageObjectMetadata,
+>(
+  value: ArtifactReadSuccessValue<TMetadata>,
+  options?: {
+    requestId?: string;
+    correlationId?: string;
+  },
+): DesktopArtifactReadResponse<TMetadata> {
+  return createIpcSuccessResponse(
+    DESKTOP_ARTIFACT_READ_RESPONSE_CHANNEL,
+    normalizeArtifactReadSuccessValue(value),
+    {
+      requestId: options?.requestId,
+      correlationId: options?.correlationId,
+    },
+  );
+}
+
+export function isDesktopArtifactReadRequestChannel(
+  value: string,
+): value is IpcChannelValue<
+  typeof DESKTOP_ARTIFACT_READ_OPERATION,
+  "request"
+> {
+  return value === DESKTOP_ARTIFACT_READ_REQUEST_CHANNEL.value;
+}
+
+export function isDesktopArtifactReadResponseChannel(
+  value: string,
+): value is IpcChannelValue<
+  typeof DESKTOP_ARTIFACT_READ_OPERATION,
+  "response"
+> {
+  return value === DESKTOP_ARTIFACT_READ_RESPONSE_CHANNEL.value;
+}
+
+export function getDesktopArtifactReadChannel(
+  kind: "request",
+): IpcChannel<
+  typeof DESKTOP_ARTIFACT_READ_OPERATION,
+  "request",
+  IpcChannelValue<typeof DESKTOP_ARTIFACT_READ_OPERATION, "request">
+>;
+export function getDesktopArtifactReadChannel(
+  kind: "response",
+): IpcChannel<
+  typeof DESKTOP_ARTIFACT_READ_OPERATION,
+  "response",
+  IpcChannelValue<typeof DESKTOP_ARTIFACT_READ_OPERATION, "response">
+>;
+export function getDesktopArtifactReadChannel(
+  kind: "request" | "response",
+):
+  | IpcChannel<
+    typeof DESKTOP_ARTIFACT_READ_OPERATION,
+    "request",
+    IpcChannelValue<typeof DESKTOP_ARTIFACT_READ_OPERATION, "request">
+  >
+  | IpcChannel<
+    typeof DESKTOP_ARTIFACT_READ_OPERATION,
+    "response",
+    IpcChannelValue<typeof DESKTOP_ARTIFACT_READ_OPERATION, "response">
+  > {
+  return kind === "request"
+    ? DESKTOP_ARTIFACT_READ_REQUEST_CHANNEL
+    : DESKTOP_ARTIFACT_READ_RESPONSE_CHANNEL;
+}

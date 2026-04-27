@@ -1,0 +1,13 @@
+.ui-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.ui-stack--sm {
+  gap: var(--space-sm);
+}
+
+.ui-stack--lg {
+  gap: var(--space-lg);
+}

@@ -1,57 +1,33 @@
-# Context Documentation Router
+# Context Documentation
 
-## Audience
-- Engineers and assistants needing cross-feature orientation.
-- Maintainers curating shared taxonomy and glossary context.
+`docs/context/` contains reusable context-assembly artifacts for prompt construction and implementation planning.
 
-## Purpose
-- Shared context and taxonomy references used across the docs system.
+It is designed to help contributors assemble **minimum-sufficient** task context quickly.
 
-> **AI/coding-agent start here:** Load [repository-overview.pack.md](./packs/repository-overview.pack.md) as the default first foundation pack for nearly all non-trivial tasks, then use [prompt-routing guidance](./prompt-routing.md) to assemble minimum sufficient context and authoritative docs.
+## How Context Docs Differ from Canonical Docs
 
-## Belongs Here
-- Cross-domain taxonomy overviews and glossary-style references.
-- Context packs that help readers map concepts across features.
-- Deterministic task-to-context routing guides and machine-readable maps.
-- Governance guides for keeping context assets accurate and maintainable.
-- Shared orientation docs reused by both human and AI readers.
+Canonical guidance lives in:
 
-## Does Not Belong Here
-- Feature-specific operational runbooks.
-- Step-by-step contributor implementation workflows.
-- Architecture decision history better captured as ADRs.
+- `docs/adr/` for architectural decisions.
+- `docs/architecture/` for intended system structure and boundary model.
+- `docs/standards/` for canonical implementation and documentation rules.
 
-## Start Here
-- [Canonical Documentation Taxonomy](./documentation-taxonomy.md)
-- [Documentation Indexing Model and Goals](./documentation-indexing-model.md)
-- [Documentation Index Coverage Rules](./documentation-index-coverage-rules.md)
-- [Standard Indexed Document Metadata Contract](./documentation-indexed-document-metadata.md)
-- [Documentation Registry Structure](./documentation-registry.md)
-- [Documentation Index View](./documentation-index.md)
-- [Documentation Registry Population Inventory](../documentation-registry-population-inventory.md)
-- [Documentation Identity, Stable Keys, and Reference Conventions](./documentation-identity-and-reference-conventions.md)
-- [Documentation Registry Seed JSON](./documentation-registry.seed.json)
-- [Documentation Segmentation Taxonomy](./documentation-segmentation-taxonomy.md)
-- [Documentation Segmentation Seed Guidance](./documentation-segmentation-seed-guidance.md)
-- [Documentation Status Signals](./documentation-status-signals.md)
-- [Baseline and Historical Folder Strategy](./documentation-baseline-and-historical-folder-strategy.md)
-- [Supersession and Redirect Conventions](./documentation-supersession-and-redirect-conventions.md)
-- [Standard Documentation Metadata Header Contract](./documentation-metadata-header.md)
-- [Context Asset Metadata Standard](./context-asset-metadata.md)
-- [Context Map](./context-map.md)
-- [Context Map JSON](./context-map.json)
-- [Human-Readable Prompt Routing Guidance](./prompt-routing.md)
-- [Context Pack Directory](./packs/README.md)
-- [Standard Context Pack Contract](./packs/README.md#standard-context-pack-contract)
-- [Routing Assets Directory](./routing/README.md)
-- [Context Governance Directory](./governance/README.md)
-- [Documentation Quality Standard](./governance/documentation-quality-standard.md)
-- [Context Asset Lifecycle Guidance](./governance/context-asset-lifecycle.md)
-- [Documentation Segmentation Rollout Boundaries and Follow-On Work](./governance/documentation-segmentation-rollout-boundaries.md)
-- [Documentation Indexing Rollout Boundaries and Future Expansion Points](./governance/documentation-indexing-rollout-boundaries.md)
-- [Context System Rollout Boundaries and Follow-On Work](./governance/context-system-rollout-boundaries.md)
-- [Documentation Templates](./templates/README.md)
-- [Shared Composition Taxonomy](../architecture/shared-composition-taxonomy.md)
-- [Architecture Router](../architecture/README.md)
-- [Contributors Router](../contributors/README.md)
-- [Operations Router](../operations/README.md)
+Context docs summarize and route that guidance for execution workflows. They do not replace canonical sources.
+If a context pack/template conflicts with ADRs, architecture docs, or standards docs, canonical docs take precedence.
+
+## Folder Structure
+
+- `docs/context/packs/`
+  - Reusable context modules used to assemble task-specific prompt context.
+  - Packs are compact summaries and routing aids tied back to canonical docs.
+- `docs/context/templates/`
+  - Optional scaffolds for feature, epic, and story context artifacts when structured work-item context is useful.
+  - Not every task or feature needs feature/epic/story context files.
+- `docs/context/prompt-routing.md`
+  - Lightweight decision guide for choosing which packs to include.
+
+## Template Location Clarification
+
+- The pack template is `docs/context/packs/pack.template.md`.
+- It is intentionally stored in `docs/context/packs/` (not in `docs/context/templates/`).
+- Feature, epic, and story templates remain in `docs/context/templates/`.

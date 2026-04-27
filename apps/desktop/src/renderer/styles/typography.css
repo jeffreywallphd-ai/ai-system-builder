@@ -1,0 +1,36 @@
+body {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-base);
+  color: var(--color-text-primary);
+  background:
+    radial-gradient(circle at top, rgba(79, 156, 249, 0.08), transparent 28%),
+    var(--color-bg-primary);
+}
+
+h1,
+h2,
+h3 {
+  line-height: var(--line-height-tight);
+  letter-spacing: 0.01em;
+}
+
+h1 {
+  font-size: var(--font-size-xl);
+}
+
+h2 {
+  font-size: var(--font-size-lg);
+}
+
+p {
+  color: var(--color-text-secondary);
+}
+
+code {
+  font-family: var(--font-family-mono);
+}
+
+.ui-text-muted {
+  color: var(--color-text-muted);
+}

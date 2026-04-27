@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "noEmit": false
+  },
+  "include": [
+    "../../modules/**/*.ts",
+    "../../modules/**/*.tsx",
+    "../../modules/**/*.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.d.ts"
+  ],
+  "exclude": [
+    "../../modules/**/*.test.ts",
+    "../../modules/**/*.test.tsx",
+    "../../modules/**/tests/**",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/tests/**"
+  ]
+}

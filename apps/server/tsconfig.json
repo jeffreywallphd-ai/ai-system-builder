@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "rootDir": "../..",
+    "outDir": "../../dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmitOnError": true,
+    "sourceMap": true,
+    "incremental": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node"],
+    "lib": ["ES2021"]
+  },
+  "include": ["src/**/*.ts", "../../modules/**/*.ts"],
+  "exclude": [
+    "../../node_modules",
+    "../../dist",
+    "../../apps/desktop/**",
+    "../../apps/thin-client/**",
+    "../../**/*.test.ts",
+    "../../**/*.test.tsx",
+    "../../**/tests/**"
+  ]
+}

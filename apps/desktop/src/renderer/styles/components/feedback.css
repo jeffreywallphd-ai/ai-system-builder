@@ -1,0 +1,17 @@
+.ui-status {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-soft);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
+}
+
+.ui-status[role="alert"] {
+  border-color: color-mix(in srgb, var(--color-danger) 45%, var(--color-border-soft));
+  color: var(--color-danger);
+}
+
+.ui-status--success {
+  border-color: color-mix(in srgb, var(--color-success) 45%, var(--color-border-soft));
+  color: var(--color-success);
+}

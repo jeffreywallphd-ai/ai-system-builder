@@ -1,0 +1,38 @@
+.ui-button {
+  min-height: var(--control-height-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-accent);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.ui-button:hover:enabled {
+  background: var(--color-bg-accent-hover);
+  border-color: var(--color-border-inverse);
+}
+
+.ui-button[aria-current="page"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.ui-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.ui-button--destructive {
+  border-color: var(--color-danger);
+  background: var(--color-danger);
+  color: var(--color-text-inverse);
+}
+
+.ui-button--destructive:hover:enabled {
+  border-color: var(--color-border-inverse);
+  background: var(--color-danger);
+}

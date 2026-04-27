@@ -1,9 +1,0 @@
-import type { IAuthorizationResourcePolicyMetadataPersistenceRepository } from "./IAuthorizationResourcePolicyMetadataPersistenceRepository";
-import type { IAuthorizationRoleAssignmentPersistenceRepository } from "./IAuthorizationRoleAssignmentPersistenceRepository";
-import type { IAuthorizationSharingGrantPersistenceRepository } from "./IAuthorizationSharingGrantPersistenceRepository";
-
-export interface AuthorizationPolicyPersistencePorts {
-  readonly roleAssignmentPersistenceRepository: IAuthorizationRoleAssignmentPersistenceRepository;
-  readonly sharingGrantPersistenceRepository: IAuthorizationSharingGrantPersistenceRepository;
-  readonly resourcePolicyMetadataPersistenceRepository: IAuthorizationResourcePolicyMetadataPersistenceRepository;
-}

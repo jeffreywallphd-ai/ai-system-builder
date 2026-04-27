@@ -1,35 +1,43 @@
 {
   "compilerOptions": {
     "target": "ES2021",
-    "lib": ["ES2021", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "baseUrl": ".",
-    "paths": {
-      "@src/*": ["src/*"],
-      "@application/*": ["src/application/*"],
-      "@domain/*": ["src/domain/*"],
-      "@hosts/*": ["src/hosts/*"],
-      "@infrastructure/*": ["src/infrastructure/*"],
-      "@shared/*": ["src/shared/*"],
-      "@ui/*": ["src/ui/*"]
-    },
-    "allowImportingTsExtensions": false,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "rootDir": ".",
+    "outDir": "dist",
     "strict": true,
-    "noEmit": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
-    "types": ["vite/client"]
+    "noEmitOnError": true,
+    "sourceMap": true,
+    "incremental": true,
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
+    "types": [
+      "node",
+      "react",
+      "react-dom"
+    ],
+    "lib": [
+      "ES2021",
+      "DOM",
+      "DOM.Iterable"
+    ]
   },
   "include": [
-    "application/**/*.ts",
-    "domain/**/*.ts",
-    "infrastructure/**/*.ts",
-    "electron/shared/**/*.ts",
-    "src/ui/**/*.ts",
-    "src/ui/**/*.tsx"
-, "src/application/nodes/CompositeNodeCatalogProvider.ts", "src/application/nodes/ConnectNodesUseCase.ts", "src/application/nodes/CreateNodeUseCase.ts", "src/application/nodes/ListAvailableNodesUseCase.ts", "src/application/nodes/NodeCanvasLayoutMetrics.ts", "src/application/nodes/NodeCanvasLayoutService.ts", "src/application/nodes/RemoveNodeUseCase.ts", "src/application/nodes/UpdateNodePropertyUseCase.ts", "src/application/nodes/tests/CombineSummariesNode.test.ts", "src/application/nodes/tests/CompositeNodeCatalogProvider.test.ts", "src/application/nodes/tests/ConnectNodesUseCase.test.ts", "src/application/nodes/tests/ContextFormatterNode.test.ts", "src/application/nodes/tests/CreateNodeUseCase.test.ts", "src/application/nodes/tests/ListAvailableNodesUseCase.test.ts", "src/application/nodes/tests/NodeCanvasLayoutService.test.ts", "src/application/nodes/tests/NodesContracts.test.ts", "src/application/nodes/tests/NodesInteractions.test.ts", "src/application/nodes/tests/RemoveNodeUseCase.test.ts", "src/application/nodes/tests/SimilaritySearchNode.test.ts", "src/application/nodes/tests/SummarizationNode.test.ts", "src/application/nodes/tests/testUtils.ts", "src/application/nodes/tests/UpdateNodePropertyUseCase.test.ts", "src/application/nodes/tests/VectorStoreUpsertNode.test.ts", "src/domain/assets/Asset.ts", "src/domain/assets/AssetId.ts", "src/domain/assets/AssetLineageEdge.ts", "src/domain/assets/AssetMetadata.ts", "src/domain/assets/AssetTransformation.ts", "src/domain/assets/AssetVersion.ts", "src/domain/assets/GeneratedAsset.ts", "src/domain/assets/tests/Asset.test.ts", "src/domain/assets/tests/AssetContracts.test.ts", "src/domain/assets/tests/AssetInteractions.test.ts", "src/domain/assets/tests/AssetLineageEdge.test.ts", "src/domain/assets/tests/AssetMetadata.test.ts", "src/domain/assets/tests/AssetTransformation.test.ts", "src/domain/assets/tests/AssetVersion.test.ts", "src/domain/assets/tests/GeneratedAsset.test.ts", "src/infrastructure/config/AppRuntimeConfig.ts", "src/infrastructure/config/EnvironmentConfig.ts", "src/infrastructure/config/EnvironmentConfigProvider.ts", "src/infrastructure/config/HostSecureTransportConfig.ts", "src/infrastructure/config/IdentityProviderAccountPolicyConfig.ts", "src/infrastructure/config/IdentitySessionPolicyConfig.ts", "src/infrastructure/config/IdentitySessionTrustPolicyConfig.ts", "src/infrastructure/config/McpRuntimeConfig.ts", "src/infrastructure/config/PythonRuntimeConfig.ts", "src/infrastructure/config/PythonRuntimeMode.ts", "src/infrastructure/config/PythonRuntimeWorkingDirectory.ts", "src/infrastructure/config/tests/AppRuntimeConfig.test.ts", "src/infrastructure/config/tests/ConfigContracts.test.ts", "src/infrastructure/config/tests/ConfigInteractions.test.ts", "src/infrastructure/config/tests/EnvironmentConfig.test.ts", "src/infrastructure/config/tests/EnvironmentConfigProvider.test.ts", "src/infrastructure/config/tests/HostSecureTransportConfig.test.ts", "src/infrastructure/config/tests/IdentityProviderAccountPolicyConfig.test.ts", "src/infrastructure/config/tests/IdentitySessionPolicyConfig.test.ts", "src/infrastructure/config/tests/IdentitySessionTrustPolicyConfig.test.ts", "src/infrastructure/config/tests/McpRuntimeConfig.test.ts", "src/infrastructure/config/tests/PythonRuntimeConfig.test.ts", "src/infrastructure/config/tests/PythonRuntimeMode.test.ts", "src/infrastructure/transport/authorization/AuthorizationTransportAdapters.ts", "src/infrastructure/transport/authorization/AuthorizationTransportPolicyGuard.ts", "src/infrastructure/transport/authorization/index.ts", "src/domain/nodes/tests/Node.test.ts", "src/domain/nodes/tests/NodeCategory.test.ts", "src/domain/nodes/tests/NodeCompatibilityProfile.test.ts", "src/domain/nodes/tests/NodeContracts.test.ts", "src/domain/nodes/tests/NodeDefinition.test.ts", "src/domain/nodes/tests/NodeInteractions.test.ts", "src/domain/nodes/tests/NodePort.test.ts", "src/domain/nodes/tests/NodeProperty.test.ts", "src/domain/nodes/tests/WorkflowDataTypes.test.ts", "src/application/identity/ports/IIdentityClock.ts", "src/application/identity/ports/IIdentityCredentialAuthenticator.ts", "src/application/identity/ports/IIdentityCredentialResetVerifier.ts", "src/application/identity/ports/IIdentityIdGenerator.ts", "src/application/identity/ports/IIdentityLifecycleEventPublisher.ts", "src/application/identity/ports/IIdentitySessionTokenService.ts", "src/application/identity/ports/IIdentitySessionTrustEvaluator.ts", "src/application/identity/ports/IIdentitySessionTrustService.ts", "src/application/identity/ports/ILocalPasswordCredentialService.ts", "src/application/identity/ports/ITrustedDeviceManagementService.ts", "src/application/identity/ports/ITrustedDevicePairingRepository.ts", "src/application/identity/ports/ITrustedDevicePairingService.ts", "src/application/identity/ports/ITrustedDeviceRepository.ts", "src/application/identity/tests/CompleteTrustedDevicePairingUseCase.test.ts", "src/application/identity/tests/ChangeLocalPasswordCredentialUseCase.test.ts", "src/application/identity/tests/IdentityAuthenticatedSessionService.test.ts", "src/application/identity/tests/IdentityAuthenticatorAndProviderCatalog.test.ts", "src/application/identity/tests/IdentityBootstrapService.test.ts", "src/application/identity/tests/IdentityPolicyService.test.ts", "src/application/identity/tests/IdentityPortsContracts.test.ts", "src/application/identity/tests/IdentitySessionLifecycleService.test.ts", "src/application/identity/tests/LocalIdentityAdministrationUseCases.test.ts", "src/application/identity/tests/LoginLocalAccountUseCase.test.ts", "src/application/identity/tests/LogoutIdentitySessionUseCase.test.ts", "src/application/identity/tests/RegisterLocalAccountUseCase.test.ts", "src/application/identity/tests/RevokeIdentitySessionUseCase.test.ts", "src/application/identity/tests/TrustedDeviceAdministrativeAuthorization.test.ts", "src/application/identity/tests/TrustedDeviceManagementService.test.ts", "src/application/identity/tests/TrustedDevicePairingService.test.ts", "src/application/identity/tests/TrustedDeviceSessionTrustService.test.ts", "src/application/identity/tests/VerifyLocalPasswordCredentialUseCase.test.ts"  ],
-  "references": [{ "path": "./tsconfig.node.json" }]
+    "modules/**/*.ts",
+    "modules/**/*.tsx",
+    "modules/**/*.d.ts",
+    "apps/**/*.ts",
+    "apps/**/*.tsx",
+    "apps/**/*.d.ts",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "tests/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
