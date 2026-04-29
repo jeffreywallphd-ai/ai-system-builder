@@ -37,4 +37,5 @@ Use this pack when prompt scope includes long-running runtime-backed tasks (data
 - Dataset preparation now uses only `RuntimeTaskRegistryPort` with Python `/tasks/start` + `/tasks/{requestId}` lifecycle polling.
 - Legacy `PythonDatasetPreparationPort` and its adapter path are retired.
 - Legacy dataset-preparation synchronous `/tasks/execute` path is removed from dataset-preparation production flows.
-- Model training/validation may still use synchronous execute compatibility until migrated.
+- Model training/validation still use synchronous execute compatibility as a pending migration.
+- No new long-running runtime-backed feature should use legacy `/tasks/execute`; use Runtime Task Registry lifecycle APIs.

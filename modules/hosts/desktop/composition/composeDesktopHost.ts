@@ -707,6 +707,7 @@ export function composeDesktopHost(
       const listModels = new ListModelsUseCase({
         modelRegistry,
       });
+      // TODO(runtime-task-registry): Model training still uses legacy executeTask and must migrate to RuntimeTaskRegistryPort next.
       const modelTrainingPort = createPythonModelTrainingPort({
         ...pythonRuntimeFoundation.runtimePort,
         executeTask: async (request) => {
@@ -731,6 +732,7 @@ export function composeDesktopHost(
       }, {
         ensureRuntimeReady: () => pythonRuntimeFoundation.supervisor.start(),
       });
+      // TODO(runtime-task-registry): Model validation still uses legacy executeTask and must migrate to RuntimeTaskRegistryPort.
       const modelValidationPort = createPythonModelValidationPort({
         ...pythonRuntimeFoundation.runtimePort,
         executeTask: (request) => pythonRuntimeFoundation.runtimePort.executeTask(request),

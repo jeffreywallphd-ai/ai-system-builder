@@ -106,4 +106,6 @@ No domain runtime value objects are introduced initially; runtime task registry 
 
 - Dataset preparation has completed migration to Runtime Task Registry lifecycle APIs.
 - Legacy dataset-preparation-specific runtime port/adapter path has been removed.
+- Model training and model validation remain on legacy synchronous `executeTask` compatibility and are the next migration targets.
 - Remaining synchronous runtime execute compatibility is scoped to non-dataset-preparation tasks until those flows migrate.
+- No new long-running runtime feature should use `executeTask`; use Runtime Task Registry lifecycle APIs (`start/read/cancel`).

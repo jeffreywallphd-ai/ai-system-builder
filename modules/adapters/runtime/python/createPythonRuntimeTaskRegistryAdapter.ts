@@ -1,5 +1,6 @@
 import type { RuntimeTaskRegistryPort } from "../../../application/ports/runtime";
 import type { PythonRuntimePort } from "../../../application/ports/runtime";
+import { randomUUID } from "node:crypto";
 import type {
   CancelRuntimeTaskResult,
   RuntimeTaskRecord,
@@ -53,7 +54,7 @@ export function createPythonRuntimeTaskRegistryAdapter(runtimePort: PythonRuntim
   return {
     async startTask(request: StartRuntimeTaskRequest): Promise<StartRuntimeTaskResult> {
       return runtimePort.startTask({
-        requestId: request.requestId ?? `runtime-task-${Date.now()}`,
+        requestId: request.requestId ?? randomUUID(),
         taskType: toPythonTaskType(request.taskType),
         payload: request.payload,
         metadata: request.metadata,
@@ -84,7 +85,7 @@ export function createPythonRuntimeTaskRegistryAdapter(runtimePort: PythonRuntim
       };
     },
     async listTasks(_request: RuntimeTaskListRequest): Promise<RuntimeTaskListResult> {
-      return { tasks: [] };
+      throw new Error("Python runtime task listing is not supported by the current runtime port.");
     },
   };
 }
