@@ -128,7 +128,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
 
     const inputs = Array.from(container.querySelectorAll("input"));
     setInputValue(inputs[0] as HTMLInputElement, "openai/demo");
-    setInputValue(inputs[1] as HTMLInputElement, "images/cat.png");
+    setInputValue(inputs[2] as HTMLInputElement, "images");
 
     const publishButton = Array.from(container.querySelectorAll("button"))
       .find((button) => button.textContent === "Publish") as HTMLButtonElement;
@@ -199,7 +199,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
 
     const inputs = Array.from(container.querySelectorAll("input"));
     setInputValue(inputs[0] as HTMLInputElement, "openai/demo");
-    setInputValue(inputs[1] as HTMLInputElement, "images/cat.png");
+    setInputValue(inputs[2] as HTMLInputElement, "images");
 
     const publishButton = Array.from(container.querySelectorAll("button"))
       .find((button) => button.textContent === "Publish") as HTMLButtonElement;
@@ -209,6 +209,57 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
 
     expect(container.textContent).toContain("Missing Hugging Face token.");
     expect(container.textContent).toContain("This Hugging Face repository may require an access token.");
+  });
+
+
+  it("renders Hugging Face defaults collapsed by default", async () => {
+    const client = {
+      browseArtifacts: vi.fn().mockResolvedValue([
+        {
+          storageKey: "uploads/cat.png",
+          artifactFamily: "image" as const,
+        },
+      ]),
+      readArtifactDetail: vi.fn().mockResolvedValue({
+        locator: { storageKey: "uploads/cat.png" },
+        artifactFamily: "image" as const,
+      }),
+      readArtifactContent: vi.fn().mockResolvedValue({
+        locator: { storageKey: "uploads/cat.png" },
+        availability: "available" as const,
+        retrieval: "deferred" as const,
+      }),
+      createArtifactMediaViewUrl: vi.fn().mockResolvedValue("blob:desktop-preview"),
+      readArtifactMedia: vi.fn().mockResolvedValue({ mediaType: "text/plain", bytes: new Uint8Array([97]) }),
+      getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
+      setHuggingFaceToken: vi.fn(),
+      clearHuggingFaceToken: vi.fn(),
+      publishArtifactToHuggingFace: vi.fn(),
+      verifyPublishedArtifactBacking: vi.fn(),
+      registerArtifactFromRepo: vi.fn(),
+      localizeArtifactFromRepo: vi.fn(),
+    };
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoot = root;
+    mountedContainer = container;
+
+    await act(async () => {
+      root.render(<ArtifactBrowserFeature client={client} />);
+    });
+
+    const artifactButton = Array.from(container.querySelectorAll("button"))
+      .find((button) => button.textContent?.includes("uploads/cat.png")) as HTMLButtonElement;
+    await act(async () => {
+      artifactButton.click();
+    });
+
+    const defaultsPanelToggle = Array.from(container.querySelectorAll("button"))
+      .find((button) => button.textContent?.includes("Hugging Face defaults")) as HTMLButtonElement;
+
+    expect(defaultsPanelToggle.getAttribute("aria-expanded")).toBe("false");
   });
 
   it("keeps browser card focused on browsing and excludes ingestion controls", async () => {

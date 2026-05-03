@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, expectTypeOf, it, testDouble } from "../../../../testing/node-test";
@@ -26,7 +27,9 @@ import {
   DESKTOP_ARTIFACT_UPLOAD_POLICY_READ_REQUEST_CHANNEL,
   DESKTOP_INGEST_WEBSITE_PAGE_REQUEST_CHANNEL,
   DESKTOP_INGEST_WEBSITE_PAGES_BATCH_REQUEST_CHANNEL,
-  DESKTOP_DATASET_PREPARE_TRAINING_REQUEST_CHANNEL,
+  DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL,
+  DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL,
+  DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL,
   DESKTOP_HUGGING_FACE_TOKEN_GET_REQUEST_CHANNEL,
   DESKTOP_HUGGING_FACE_TOKEN_SET_REQUEST_CHANNEL,
   DESKTOP_HUGGING_FACE_TOKEN_CLEAR_REQUEST_CHANNEL,
@@ -39,11 +42,27 @@ import {
   DESKTOP_APPLICATION_SETTINGS_UPDATE_REQUEST_CHANNEL,
   DESKTOP_APPLICATION_SETTINGS_CLEAR_REQUEST_CHANNEL,
   DESKTOP_APPLICATION_SETTINGS_RESOLVE_MODEL_DEFAULT_REQUEST_CHANNEL,
+  DESKTOP_MODEL_BROWSE_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DETAILS_READ_REQUEST_CHANNEL,
+  DESKTOP_MODEL_LIST_REQUEST_CHANNEL,
+  DESKTOP_MODEL_REFERENCE_SAVE_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_REQUEST_CHANNEL,
+  DESKTOP_MODEL_RECORD_UPDATE_REQUEST_CHANNEL,
+  DESKTOP_MODEL_RECORD_DELETE_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL,
+  DESKTOP_MODEL_VALIDATE_REQUEST_CHANNEL,
+  DESKTOP_MODEL_PUBLISH_REQUEST_CHANNEL,
 } from "../../../../contracts/ipc";
 import type { IpcMainHandlePort } from "../../../../adapters/transport/ipc-electron/ipcMainHandlePort";
 
 import {
+  classifyPythonRuntimeStdioLogLevel,
   composeDesktopHost,
+  resolveComfyUiLaunchPythonExecutable,
+  resolveComfyUiPythonEnvironmentMode,
+  resolveComfyUiRuntimeDeviceMode,
+  resolveComfyUiInstallRoot,
   resolveDefaultManagedPythonRuntimePort,
   resolvePythonRuntimeBaseUrl,
   type ComposeDesktopHostOptions,
@@ -51,6 +70,92 @@ import {
 } from "../composeDesktopHost";
 
 describe("composeDesktopHost", () => {
+  it("resolves ComfyUI install root with COMFYUI_INSTALL_ROOT override", () => {
+    expect(resolveComfyUiInstallRoot({ COMFYUI_INSTALL_ROOT: "/tmp/comfy" } as NodeJS.ProcessEnv, "/storage")).toBe("/tmp/comfy");
+  });
+
+  it("resolves ComfyUI install root from runtime root directory by default", () => {
+    expect(resolveComfyUiInstallRoot({} as NodeJS.ProcessEnv, "/desktop-data")).toBe(join("/desktop-data", "runtime-installs", "comfyui"));
+  });
+
+  it("resolves ComfyUI install root from DESKTOP_RUNTIME_ROOT without using artifact storage root", () => {
+    expect(resolveComfyUiInstallRoot({
+      DESKTOP_RUNTIME_ROOT: "/desktop-data",
+      DESKTOP_STORAGE_ROOT: "/desktop-data/artifacts",
+    } as NodeJS.ProcessEnv)).toBe(join("/desktop-data", "runtime-installs", "comfyui"));
+  });
+
+  it("does not fall back to process cwd when ComfyUI root is unavailable", () => {
+    expect(() => resolveComfyUiInstallRoot({} as NodeJS.ProcessEnv)).toThrow(
+      "Unable to resolve ComfyUI install root. Set COMFYUI_INSTALL_ROOT or DESKTOP_RUNTIME_ROOT.",
+    );
+  });
+
+  it("resolves DirectML for Windows machines without detected Nvidia GPUs", () => {
+    expect(resolveComfyUiRuntimeDeviceMode({ env: {}, platform: "win32", hasNvidiaGpu: false })).toBe("directml");
+  });
+
+  it("honors explicit ComfyUI runtime device mode overrides", () => {
+    expect(resolveComfyUiRuntimeDeviceMode({
+      env: { COMFYUI_RUNTIME_DEVICE_MODE: "cpu" } as NodeJS.ProcessEnv,
+      platform: "win32",
+      hasNvidiaGpu: false,
+    })).toBe("cpu");
+    expect(resolveComfyUiRuntimeDeviceMode({
+      env: { COMFYUI_ACCELERATOR: "cuda" } as NodeJS.ProcessEnv,
+      platform: "win32",
+      hasNvidiaGpu: false,
+    })).toBe("cuda");
+  });
+
+  it("prefers env override over configured gpu type mapping", () => {
+    expect(resolveComfyUiRuntimeDeviceMode({
+      env: { COMFYUI_RUNTIME_DEVICE_MODE: "cpu" } as NodeJS.ProcessEnv,
+      gpuType: "nvidia",
+    })).toBe("cpu");
+  });
+
+  it("resolves ComfyUI runtime mode from configured GPU type when env override is not set", () => {
+    expect(resolveComfyUiRuntimeDeviceMode({ gpuType: "nvidia" })).toBe("cuda");
+    expect(resolveComfyUiRuntimeDeviceMode({ gpuType: "amd" })).toBe("directml");
+    expect(resolveComfyUiRuntimeDeviceMode({ gpuType: "intel" })).toBe("directml");
+    expect(resolveComfyUiRuntimeDeviceMode({ gpuType: "cpu" })).toBe("cpu");
+  });
+
+  it("rejects unsupported ComfyUI runtime device mode overrides", () => {
+    expect(() => resolveComfyUiRuntimeDeviceMode({
+      env: { COMFYUI_RUNTIME_DEVICE_MODE: "vulkan" } as NodeJS.ProcessEnv,
+      platform: "win32",
+      hasNvidiaGpu: false,
+    })).toThrow("Unsupported COMFYUI_RUNTIME_DEVICE_MODE value");
+  });
+
+  it("uses a managed ComfyUI Python environment by default", () => {
+    expect(resolveComfyUiPythonEnvironmentMode({} as NodeJS.ProcessEnv)).toBe("managed-venv");
+    expect(resolveComfyUiLaunchPythonExecutable({
+      installRoot: "/runtime/comfy",
+      basePythonCommand: "python",
+      pythonEnvironmentMode: "managed-venv",
+      platform: "win32",
+    })).toBe(join("/runtime/comfy", ".venv", "Scripts", "python.exe"));
+  });
+
+  it("allows explicit ambient ComfyUI Python environment mode", () => {
+    expect(resolveComfyUiPythonEnvironmentMode({ COMFYUI_PYTHON_ENVIRONMENT_MODE: "ambient" } as NodeJS.ProcessEnv)).toBe("ambient");
+    expect(resolveComfyUiLaunchPythonExecutable({
+      installRoot: "/runtime/comfy",
+      basePythonCommand: "python",
+      pythonEnvironmentMode: "ambient",
+      platform: "win32",
+    })).toBe("python");
+  });
+
+  it("rejects unsupported ComfyUI Python environment modes", () => {
+    expect(() => resolveComfyUiPythonEnvironmentMode({
+      COMFYUI_PYTHON_ENVIRONMENT_MODE: "global",
+    } as NodeJS.ProcessEnv)).toThrow("Unsupported COMFYUI_PYTHON_ENVIRONMENT_MODE value");
+  });
+
   it("uses the canonical ipc-main handle port type for registration options", () => {
     expectTypeOf<RegisterDesktopArtifactUploadIpcOptions["ipcMain"]>().toEqualTypeOf<IpcMainHandlePort>();
   });
@@ -99,19 +204,30 @@ describe("composeDesktopHost", () => {
     });
   });
 
+  it("classifies routine Python runtime stderr output without warning noise", () => {
+    expect(classifyPythonRuntimeStdioLogLevel("stderr", "INFO:     Uvicorn running on http://127.0.0.1:47595")).toBe("info");
+    expect(classifyPythonRuntimeStdioLogLevel("stderr", "Map: 100%|##########| 117/117 [00:00<00:00, 1393.06 examples/s]")).toBe("info");
+    expect(classifyPythonRuntimeStdioLogLevel("stderr", "worker.py:1: UserWarning: model warning")).toBe("warn");
+    expect(classifyPythonRuntimeStdioLogLevel("stderr", "Traceback (most recent call last):")).toBe("error");
+  });
+
 
   it("registers the desktop artifact upload IPC handler on the request channel", () => {
     const ipcMain = {
       handle: testDouble.fn(),
     };
-    const host = composeDesktopHost();
+    const host = composeDesktopHost({
+      artifactRepo: {
+        huggingFaceTokenConfigFilePath: join(tmpdir(), `desktop-host-token-${Date.now()}.json`),
+      },
+    });
 
     host.registerArtifactUploadIpc({
       ipcMain,
-      storageRootDirectory: "/tmp/desktop-artifact-upload-test",
+      storageRootDirectory: join(tmpdir(), `desktop-artifact-upload-test-${Date.now()}`),
     });
 
-    expect(ipcMain.handle).toHaveBeenCalledTimes(30);
+    expect(ipcMain.handle).toHaveBeenCalledTimes(49);
     const channels = ipcMain.handle.mock.calls.map((call) => call[0]);
     expect(channels).toEqual([
       DESKTOP_ARTIFACT_UPLOAD_REQUEST_CHANNEL.value,
@@ -136,12 +252,31 @@ describe("composeDesktopHost", () => {
       DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_REQUEST_CHANNEL.value,
       DESKTOP_INGEST_WEBSITE_PAGE_REQUEST_CHANNEL.value,
       DESKTOP_INGEST_WEBSITE_PAGES_BATCH_REQUEST_CHANNEL.value,
-      DESKTOP_DATASET_PREPARE_TRAINING_REQUEST_CHANNEL.value,
+      DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL.value,
+      DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL.value,
+      DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL.value,
       DESKTOP_APPLICATION_SETTINGS_LIST_DEFINITIONS_REQUEST_CHANNEL.value,
       DESKTOP_APPLICATION_SETTINGS_READ_REQUEST_CHANNEL.value,
       DESKTOP_APPLICATION_SETTINGS_UPDATE_REQUEST_CHANNEL.value,
       DESKTOP_APPLICATION_SETTINGS_CLEAR_REQUEST_CHANNEL.value,
       DESKTOP_APPLICATION_SETTINGS_RESOLVE_MODEL_DEFAULT_REQUEST_CHANNEL.value,
+      DESKTOP_MODEL_BROWSE_REQUEST_CHANNEL.value,
+      DESKTOP_MODEL_DETAILS_READ_REQUEST_CHANNEL.value,
+      DESKTOP_MODEL_LIST_REQUEST_CHANNEL.value,
+      DESKTOP_MODEL_REFERENCE_SAVE_REQUEST_CHANNEL.value,
+      DESKTOP_MODEL_DOWNLOAD_REQUEST_CHANNEL.value,
+      DESKTOP_MODEL_RECORD_UPDATE_REQUEST_CHANNEL.value,
+      DESKTOP_MODEL_RECORD_DELETE_REQUEST_CHANNEL.value,
+      DESKTOP_MODEL_TRAIN_REQUEST_CHANNEL.value,
+      DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL.value,
+      DESKTOP_MODEL_VALIDATE_REQUEST_CHANNEL.value,
+      DESKTOP_MODEL_PUBLISH_REQUEST_CHANNEL.value,
+      "ipc.image-generation.start.request",
+      "ipc.image-generation.read.request",
+      "ipc.image-generation.cancel.request",
+      "ipc.image-generation.finalize-if-completed.request",
+      "ipc.comfyui-runtime.read-install-status.request",
+      "ipc.comfyui-runtime.repair-install.request",
       DESKTOP_PYTHON_RUNTIME_STATUS_READ_REQUEST_CHANNEL.value,
       DESKTOP_PYTHON_RUNTIME_CONTROL_REQUEST_CHANNEL.value,
     ]);
@@ -229,12 +364,64 @@ describe("composeDesktopHost", () => {
     const source = readFileSync(sourcePath, "utf8");
 
     expect(source).toContain("createPythonRuntimeAdapterFoundation");
-    expect(source).toContain("createPythonDatasetPreparationPort");
+    expect(source).toContain("createPythonRuntimeTaskRegistryAdapter");
+    expect(source).not.toContain("createPythonDatasetPreparationPort");
     expect(source).toContain("ensureRuntimeReady: () => pythonRuntimeFoundation.supervisor.start()");
     expect(source).toContain("requiredCapabilities: PYTHON_RUNTIME_DATASET_PREPARATION_REQUIRED_CAPABILITIES");
     expect(source).toContain("HF_HUB_DISABLE_XET");
     expect(source).toContain("PrepareTrainingDatasetFromArtifactsUseCase");
     expect(source).toContain("prepareTrainingDatasetFromArtifactsUseCase");
+  });
+
+  it("preserves the full Python runtime port when adding desktop composition logging wrappers", () => {
+    const canonicalSourcePath = resolve("modules/hosts/desktop/composition/composeDesktopHost.ts");
+    const typeScriptPath = fileURLToPath(new URL("../composeDesktopHost.ts", import.meta.url));
+    const sourcePath = existsSync(canonicalSourcePath)
+      ? canonicalSourcePath
+      : (existsSync(typeScriptPath) ? typeScriptPath : typeScriptPath.replace(/\.ts$/, ".js"));
+    const source = readFileSync(sourcePath, "utf8");
+    const runtimePortSpreadCount = source.match(/\.\.\.pythonRuntimeFoundation\.runtimePort/g)?.length ?? 0;
+
+    expect(runtimePortSpreadCount >= 1).toBe(true);
+    expect(source).not.toContain("getHealthStatus: () => pythonRuntimeFoundation.runtimePort.getHealthStatus()");
+    expect(source).not.toContain("getCapabilities: () => pythonRuntimeFoundation.runtimePort.getCapabilities()");
+    expect(source).not.toContain("unloadModels: () => pythonRuntimeFoundation.runtimePort.unloadModels()");
+  });
+
+  it("passes ComfyUI installer dependencies through the top-level desktop IPC composition", () => {
+    const canonicalSourcePath = resolve("modules/hosts/desktop/composition/composeDesktopHost.ts");
+    const typeScriptPath = fileURLToPath(new URL("../composeDesktopHost.ts", import.meta.url));
+    const sourcePath = existsSync(canonicalSourcePath)
+      ? canonicalSourcePath
+      : (existsSync(typeScriptPath) ? typeScriptPath : typeScriptPath.replace(/\.ts$/, ".js"));
+    const source = readFileSync(sourcePath, "utf8");
+
+    expect(source).toContain("const comfyUiInstallRoot = resolveComfyUiInstallRoot");
+    expect(source).toContain("const comfyUiInstaller = createComfyUiRuntimeInstaller");
+    expect(source).toContain("const configuredComfyUiInstallCommandTimeoutMs = Number(process.env.COMFYUI_INSTALL_COMMAND_TIMEOUT_MS)");
+    expect(source).toContain("execFile: (file, args = []) => execFile(file, [...args], { timeout: comfyUiInstallCommandTimeoutMs, windowsHide: true })");
+    expect(source).toContain("const resolvedRuntimeDeviceMode = resolveComfyUiRuntimeDeviceMode");
+    expect(source).toContain("const comfyUiPythonEnvironmentMode = resolveComfyUiPythonEnvironmentMode");
+    expect(source).toContain("pythonEnvironmentMode: comfyUiPythonEnvironmentMode");
+    expect(source).toContain("runtimeDeviceMode: resolvedRuntimeDeviceMode");
+    expect(source).toContain("IMAGE_GENERATION_GPU_TYPE_SETTING_KEY");
+    expect(source).toContain("processReuse: modeChanged ? \"restarted_mode_changed\" : \"reused_or_started\"");
+    expect(source).toContain("comfyUiInstaller,");
+    expect(source).toContain("comfyUiInstallRoot,");
+  });
+
+  it("wires generated image finalization into desktop image generation IPC", () => {
+    const canonicalSourcePath = resolve("modules/hosts/desktop/composition/composeDesktopHost.ts");
+    const typeScriptPath = fileURLToPath(new URL("../composeDesktopHost.ts", import.meta.url));
+    const sourcePath = existsSync(canonicalSourcePath)
+      ? canonicalSourcePath
+      : (existsSync(typeScriptPath) ? typeScriptPath : typeScriptPath.replace(/\.ts$/, ".js"));
+    const source = readFileSync(sourcePath, "utf8");
+
+    expect(source).toContain("const imageGenerationFinalizationOrchestrator = new ImageGenerationFinalizationOrchestratorService");
+    expect(source).toContain("createFilesystemGeneratedImagePersistenceAdapter");
+    expect(source).toContain("artifactCatalogAppend: artifactCatalog");
+    expect(source).toContain("imageGenerationFinalizationOrchestrator,");
   });
 
   it("derives the Python runtime client URL from host and port when no base URL is configured", () => {
@@ -269,8 +456,25 @@ describe("composeDesktopHost", () => {
     expect(source).toContain("PYTHON_RUNTIME_PORT: pythonRuntimeEndpoint.port");
   });
 
+  it("configures Python runtime startup timeout for slower cold starts", () => {
+    const canonicalSourcePath = resolve("modules/hosts/desktop/composition/composeDesktopHost.ts");
+    const typeScriptPath = fileURLToPath(new URL("../composeDesktopHost.ts", import.meta.url));
+    const sourcePath = existsSync(canonicalSourcePath)
+      ? canonicalSourcePath
+      : (existsSync(typeScriptPath) ? typeScriptPath : typeScriptPath.replace(/\.ts$/, ".js"));
+    const source = readFileSync(sourcePath, "utf8");
+
+    expect(source).toContain("PYTHON_RUNTIME_STARTUP_TIMEOUT_MS_DEFAULT = 60_000");
+    expect(source).toContain("Number(process.env.PYTHON_RUNTIME_STARTUP_TIMEOUT_MS)");
+    expect(source).toContain("startupTimeoutMs: pythonRuntimeStartupTimeoutMs");
+  });
+
   it("stores and exposes desktop Hugging Face token status", () => {
-    const host = composeDesktopHost();
+    const host = composeDesktopHost({
+      artifactRepo: {
+        huggingFaceTokenConfigFilePath: join(tmpdir(), `desktop-host-token-${Date.now()}.json`),
+      },
+    });
     expect(host.getHuggingFaceTokenStatus().configured).toBe(false);
     const saved = host.setHuggingFaceToken("hf_desktop_token");
     expect(saved.configured).toBe(true);
@@ -337,4 +541,3 @@ describe("composeDesktopHost", () => {
     expect(healthTransitionLogsSecondRead.length).toBe(1);
   });
 });
-

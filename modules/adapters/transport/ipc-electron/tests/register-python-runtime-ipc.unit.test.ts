@@ -44,6 +44,7 @@ describe("registerPythonRuntimeIpc", () => {
       stopPythonRuntime: testDouble.fn(async () => undefined),
       restartPythonRuntime: testDouble.fn(async () => undefined),
       unloadPythonRuntimeModel: testDouble.fn(async () => undefined),
+      clearPythonRuntimeLogs: testDouble.fn(async () => undefined),
       readPythonRuntimeStatus: testDouble.fn(async () => ({
         supervisorStatus: "starting",
         healthy: false,
@@ -99,6 +100,7 @@ describe("registerPythonRuntimeIpc", () => {
         throw new Error("restart failed");
       }),
       unloadPythonRuntimeModel: testDouble.fn(async () => undefined),
+      clearPythonRuntimeLogs: testDouble.fn(async () => undefined),
       readPythonRuntimeStatus: testDouble.fn(async () => ({
         supervisorStatus: "failed",
         healthy: false,
@@ -139,6 +141,7 @@ describe("registerPythonRuntimeIpc", () => {
       stopPythonRuntime: testDouble.fn(async () => undefined),
       restartPythonRuntime: testDouble.fn(async () => undefined),
       unloadPythonRuntimeModel: testDouble.fn(async () => undefined),
+      clearPythonRuntimeLogs: testDouble.fn(async () => undefined),
       readPythonRuntimeStatus: testDouble.fn(async () => ({
         supervisorStatus: "stopped",
         healthy: false,
@@ -161,6 +164,7 @@ describe("registerPythonRuntimeIpc", () => {
       stopPythonRuntime: testDouble.fn(async () => undefined),
       restartPythonRuntime: testDouble.fn(async () => undefined),
       unloadPythonRuntimeModel,
+      clearPythonRuntimeLogs: testDouble.fn(async () => undefined),
       readPythonRuntimeStatus: testDouble.fn(async () => ({
         supervisorStatus: "ready",
         healthy: true,
@@ -183,4 +187,35 @@ describe("registerPythonRuntimeIpc", () => {
     expect(unloadPythonRuntimeModel).toHaveBeenCalledOnce();
     expect(response.ok).toBe(true);
   });
+  it("maps clear-logs control requests to runtime log clearing", async () => {
+    const clearPythonRuntimeLogs = testDouble.fn(async () => undefined);
+    const handler = createDesktopPythonRuntimeControlIpcHandler({
+      startPythonRuntime: testDouble.fn(async () => undefined),
+      stopPythonRuntime: testDouble.fn(async () => undefined),
+      restartPythonRuntime: testDouble.fn(async () => undefined),
+      unloadPythonRuntimeModel: testDouble.fn(async () => undefined),
+      clearPythonRuntimeLogs,
+      readPythonRuntimeStatus: testDouble.fn(async () => ({
+        supervisorStatus: "ready",
+        healthy: true,
+        runtimeStatus: "ready",
+        capabilities: ["unload-model"],
+        logs: [],
+        loadedModels: [],
+        activeTaskCount: 0,
+      })),
+    });
+
+    const response = await handler({}, createDesktopPythonRuntimeControlRequest({
+      action: "clear-logs",
+      boundary: {
+        host: "desktop",
+        source: "desktop.renderer.dataset-preparation",
+      },
+    }));
+
+    expect(clearPythonRuntimeLogs).toHaveBeenCalledOnce();
+    expect(response.ok).toBe(true);
+  });
+
 });

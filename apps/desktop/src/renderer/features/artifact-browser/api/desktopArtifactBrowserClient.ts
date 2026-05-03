@@ -13,6 +13,7 @@ import {
   type DesktopHuggingFaceNamespaceDataset,
   type DesktopHuggingFaceDatasetParquetFile,
 } from "../../../lib/desktopApi";
+import { normalizeArtifactMediaBytes } from "../helpers/artifactMediaBytes";
 
 export interface DesktopArtifactBrowserClient {
   getHuggingFaceTokenStatus: () => Promise<DesktopHuggingFaceTokenStatus>;
@@ -103,6 +104,16 @@ function ensureSuccess<T>(
   }
 
   return pick(envelope.value);
+}
+
+function toArtifactMediaDataUrl(bytes: Uint8Array, mediaType?: string): string {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    const chunk = bytes.subarray(offset, offset + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return `data:${mediaType ?? "application/octet-stream"};base64,${btoa(binary)}`;
 }
 
 export function createDesktopArtifactBrowserClient(): DesktopArtifactBrowserClient {
@@ -251,7 +262,7 @@ export function createDesktopArtifactBrowserClient(): DesktopArtifactBrowserClie
         "Failed to read artifact media.",
       );
 
-      return { mediaType: media.mediaType, bytes: Uint8Array.from(media.bytes) };
+      return { mediaType: media.mediaType, bytes: normalizeArtifactMediaBytes(media.bytes) };
     },
 
     async createArtifactMediaViewUrl(locator) {
@@ -260,10 +271,9 @@ export function createDesktopArtifactBrowserClient(): DesktopArtifactBrowserClie
         (value) => value as { mediaType?: string; bytes: Uint8Array },
         "Failed to read artifact media.",
       );
+      const normalizedBytes = normalizeArtifactMediaBytes(media.bytes);
 
-      const blobBytes = Uint8Array.from(media.bytes);
-      const blob = new Blob([blobBytes], { type: media.mediaType ?? "application/octet-stream" });
-      return URL.createObjectURL(blob);
+      return toArtifactMediaDataUrl(normalizedBytes, media.mediaType);
     },
 
     async publishArtifactToHuggingFace(input) {

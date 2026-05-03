@@ -21,6 +21,7 @@ describe("settings contracts", () => {
     expect(keys.has(GLOBAL_MODEL_DEFAULT_SETTING_KEY)).toBe(true);
     expect(keys.has(createTaskModelDefaultSettingKey("qaGeneration"))).toBe(true);
     expect(keys.has(createFeatureModelDefaultSettingKey("datasetPreparation", "qaGeneration"))).toBe(true);
+    expect(keys.has("runtime.imageGeneration.gpuType")).toBe(true);
     expect(keys.has("runtime.python.defaultDevice")).toBe(true);
     expect(keys.has("runtime.python.defaultTorchDtype")).toBe(true);
   });
@@ -144,6 +145,7 @@ describe("settings contracts", () => {
   it("filters definitions by category", () => {
     const runtimeDefinitions = listApplicationSettingDefinitionsByCategory("runtime");
     expect(runtimeDefinitions.map((definition) => definition.key).sort()).toEqual([
+      "runtime.imageGeneration.gpuType",
       "runtime.python.defaultDevice",
       "runtime.python.defaultTorchDtype",
     ]);

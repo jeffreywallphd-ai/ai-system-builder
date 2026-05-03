@@ -8,8 +8,8 @@ import { buildDatasetPreparationRequest } from "./datasetPreparationRequestBuild
 import {
   validateAndParseDatasetPreparationInputs,
 } from "./datasetPreparationRequestValidation";
-import { resolveLatestModelDownloadProgress } from "./modelDownloadProgress";
 import { useDatasetPreparationClient } from "./useDatasetPreparationClient";
+import { resolveUserFacingDatasetPreparationErrorMessage } from "./datasetPreparationTransport";
 
 interface DatasetPreparationStatus {
   kind: "idle" | "loading" | "success" | "error";
@@ -21,8 +21,51 @@ interface DatasetPreparationResultSummary {
   datasetRows: number;
 }
 
+interface DatasetPreparationPageState {
+  selectedArtifactStorageFilter: DatasetPreparationArtifactStorageFilter;
+  selectedArtifactIds: string[];
+  unsupportedDocumentPolicy: "" | "fail" | "skip";
+  normalizationMode: "" | "best-effort" | "strict";
+  chunkSize: string;
+  chunkOverlap: string;
+  preserveDocumentBoundaries: boolean;
+  maxChunkCount: string;
+  modelId: string;
+  modelInferenceMode: ModelDefaultInferenceMode;
+  modelDevice: "" | "auto" | "cpu" | "cuda";
+  modelTorchDtype: "" | "auto" | "float16" | "bfloat16" | "float32";
+  maxExamplesPerChunk: string;
+  batchSize: string;
+  failurePolicy: "" | "fail" | "skip";
+  generationTemperature: string;
+  generationTopP: string;
+  generationMaxNewTokens: string;
+  trainRatio: string;
+  testRatio: string;
+  seed: string;
+  shuffle: boolean;
+  outputFormat: "jsonl" | "json" | "csv" | "parquet";
+  outputBaseName: string;
+  localDestinationEnabled: boolean;
+  huggingFaceDestinationEnabled: boolean;
+  huggingFaceRepository: string;
+  huggingFaceRevision: string;
+  huggingFacePathPrefix: string;
+  status: DatasetPreparationStatus;
+  resultSummary?: DatasetPreparationResultSummary;
+  activeTaskRequestId?: string;
+  activeTaskType?: "dataset-preparation";
+  activeTaskStartedAt?: string;
+}
+
+export type DatasetPreparationArtifactStorageFilter = "all" | "uploaded" | "generated";
+
 export interface UseDatasetPreparationFeatureResult {
-  artifacts: Array<{ artifactId: string; label: string }>;
+  artifacts: Array<{ artifactId: string; label: string; storageKey: string }>;
+  filteredArtifacts: Array<{ artifactId: string; label: string; storageKey: string }>;
+  uploadedArtifacts: Array<{ artifactId: string; label: string; storageKey: string }>;
+  generatedArtifacts: Array<{ artifactId: string; label: string; storageKey: string }>;
+  selectedArtifactStorageFilter: DatasetPreparationArtifactStorageFilter;
   selectedArtifactIds: string[];
   unsupportedDocumentPolicy: "" | "fail" | "skip";
   normalizationMode: "" | "best-effort" | "strict";
@@ -59,6 +102,7 @@ export interface UseDatasetPreparationFeatureResult {
   stopTrainingInFlight: boolean;
   unloadModelInFlight: boolean;
   onToggleArtifact: (artifactId: string) => void;
+  setSelectedArtifactStorageFilter: (value: DatasetPreparationArtifactStorageFilter) => void;
   setUnsupportedDocumentPolicy: (value: "" | "fail" | "skip") => void;
   setNormalizationMode: (value: "" | "best-effort" | "strict") => void;
   setChunkSize: (value: string) => void;
@@ -98,6 +142,49 @@ export interface UseDatasetPreparationFeatureOptions {
   onPrepared?: () => void;
 }
 
+const defaultDatasetPreparationPageState: DatasetPreparationPageState = {
+  selectedArtifactStorageFilter: "all",
+  selectedArtifactIds: [],
+  unsupportedDocumentPolicy: "",
+  normalizationMode: "",
+  chunkSize: "1000",
+  chunkOverlap: "200",
+  preserveDocumentBoundaries: true,
+  maxChunkCount: "",
+  modelId: "",
+  modelInferenceMode: "auto",
+  modelDevice: "auto",
+  modelTorchDtype: "",
+  maxExamplesPerChunk: "4",
+  batchSize: "4",
+  failurePolicy: "skip",
+  generationTemperature: "",
+  generationTopP: "",
+  generationMaxNewTokens: "",
+  trainRatio: "0.8",
+  testRatio: "0.2",
+  seed: "",
+  shuffle: true,
+  outputFormat: "parquet",
+  outputBaseName: "",
+  localDestinationEnabled: true,
+  huggingFaceDestinationEnabled: false,
+  huggingFaceRepository: "",
+  huggingFaceRevision: "",
+  huggingFacePathPrefix: "",
+  status: { kind: "idle" },
+  resultSummary: undefined,
+  activeTaskRequestId: undefined,
+  activeTaskType: undefined,
+  activeTaskStartedAt: undefined,
+};
+
+let cachedDatasetPreparationPageState: DatasetPreparationPageState = { ...defaultDatasetPreparationPageState };
+
+export function resetDatasetPreparationPageStateForTests(): void {
+  cachedDatasetPreparationPageState = { ...defaultDatasetPreparationPageState };
+}
+
 function createDatasetPreparationRequestId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return `dataset-preparation-${crypto.randomUUID()}`;
@@ -106,10 +193,33 @@ function createDatasetPreparationRequestId(): string {
   return `dataset-preparation-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function appendErrorDetailsMessage(message: string, details: Record<string, unknown> | undefined): string {
+  if (!details) {
+    return message;
+  }
+
+  const reason = typeof details.reason === "string" ? details.reason : undefined;
+  const status = typeof details.providerStatusCode === "number" ? details.providerStatusCode : undefined;
+  const repository = typeof details.repository === "string" ? details.repository : undefined;
+  const pathInRepo = typeof details.pathInRepo === "string" ? details.pathInRepo : undefined;
+  const suffix = [reason, status ? `status ${status}` : undefined, repository, pathInRepo]
+    .filter((part): part is string => typeof part === "string" && part.trim().length > 0)
+    .join(" | ");
+  return suffix ? `${message} Details: ${suffix}.` : message;
+}
+
+function isTransientPollReadFailure(message: string, details?: Record<string, unknown>): boolean {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("fetch failed") || normalized.includes("network") || normalized.includes("transport")) {
+    return true;
+  }
+  return typeof details?.retryable === "boolean" ? details.retryable : false;
+}
 
 export function useDatasetPreparationFeature(
   options: UseDatasetPreparationFeatureOptions = {},
 ): UseDatasetPreparationFeatureResult {
+  const pollingRecoveryGraceWindowMs = 30_000;
   const onPrepared = options.onPrepared;
   const datasetClient = useDatasetPreparationClient(options.client);
   const settingsClient = useMemo(() => {
@@ -132,43 +242,132 @@ export function useDatasetPreparationFeature(
       return undefined;
     }
   }, [options.runtimeStatusClient]);
-  const [artifacts, setArtifacts] = useState<Array<{ artifactId: string; label: string }>>([]);
-  const [selectedArtifactIds, setSelectedArtifactIds] = useState<string[]>([]);
-  const [unsupportedDocumentPolicy, setUnsupportedDocumentPolicy] = useState<"" | "fail" | "skip">("");
-  const [normalizationMode, setNormalizationMode] = useState<"" | "best-effort" | "strict">("");
-  const [chunkSize, setChunkSize] = useState("1000");
-  const [chunkOverlap, setChunkOverlap] = useState("200");
-  const [preserveDocumentBoundaries, setPreserveDocumentBoundaries] = useState(true);
-  const [maxChunkCount, setMaxChunkCount] = useState("");
-  const [modelId, setModelId] = useState("");
-  const [modelInferenceMode, setModelInferenceMode] = useState<ModelDefaultInferenceMode>("auto");
-  const [modelDevice, setModelDevice] = useState<"" | "auto" | "cpu" | "cuda">("auto");
-  const [modelTorchDtype, setModelTorchDtype] = useState<"" | "auto" | "float16" | "bfloat16" | "float32">("");
-  const [maxExamplesPerChunk, setMaxExamplesPerChunk] = useState("4");
-  const [batchSize, setBatchSize] = useState("4");
-  const [failurePolicy, setFailurePolicy] = useState<"" | "fail" | "skip">("skip");
-  const [generationTemperature, setGenerationTemperature] = useState("");
-  const [generationTopP, setGenerationTopP] = useState("");
-  const [generationMaxNewTokens, setGenerationMaxNewTokens] = useState("");
-  const [trainRatio, setTrainRatio] = useState("0.8");
-  const [testRatio, setTestRatio] = useState("0.2");
-  const [seed, setSeed] = useState("");
-  const [shuffle, setShuffle] = useState(true);
-  const [outputFormat, setOutputFormat] = useState<"jsonl" | "json" | "csv" | "parquet">("parquet");
-  const [outputBaseName, setOutputBaseName] = useState("");
-  const [localDestinationEnabled, setLocalDestinationEnabled] = useState(true);
-  const [huggingFaceDestinationEnabled, setHuggingFaceDestinationEnabled] = useState(false);
-  const [huggingFaceRepository, setHuggingFaceRepository] = useState("");
-  const [huggingFaceRevision, setHuggingFaceRevision] = useState("");
-  const [huggingFacePathPrefix, setHuggingFacePathPrefix] = useState("");
-  const [status, setStatus] = useState<DatasetPreparationStatus>({ kind: "idle" });
-  const [resultSummary, setResultSummary] = useState<DatasetPreparationResultSummary>();
+  const [artifacts, setArtifacts] = useState<Array<{ artifactId: string; label: string; storageKey: string }>>([]);
+  const [selectedArtifactStorageFilter, setSelectedArtifactStorageFilter] =
+    useState<DatasetPreparationArtifactStorageFilter>(cachedDatasetPreparationPageState.selectedArtifactStorageFilter);
+  const [selectedArtifactIds, setSelectedArtifactIds] = useState<string[]>(cachedDatasetPreparationPageState.selectedArtifactIds);
+  const [unsupportedDocumentPolicy, setUnsupportedDocumentPolicy] = useState<"" | "fail" | "skip">(cachedDatasetPreparationPageState.unsupportedDocumentPolicy);
+  const [normalizationMode, setNormalizationMode] = useState<"" | "best-effort" | "strict">(cachedDatasetPreparationPageState.normalizationMode);
+  const [chunkSize, setChunkSize] = useState(cachedDatasetPreparationPageState.chunkSize);
+  const [chunkOverlap, setChunkOverlap] = useState(cachedDatasetPreparationPageState.chunkOverlap);
+  const [preserveDocumentBoundaries, setPreserveDocumentBoundaries] = useState(cachedDatasetPreparationPageState.preserveDocumentBoundaries);
+  const [maxChunkCount, setMaxChunkCount] = useState(cachedDatasetPreparationPageState.maxChunkCount);
+  const [modelId, setModelId] = useState(cachedDatasetPreparationPageState.modelId);
+  const [modelInferenceMode, setModelInferenceMode] = useState<ModelDefaultInferenceMode>(cachedDatasetPreparationPageState.modelInferenceMode);
+  const [modelDevice, setModelDevice] = useState<"" | "auto" | "cpu" | "cuda">(cachedDatasetPreparationPageState.modelDevice);
+  const [modelTorchDtype, setModelTorchDtype] = useState<"" | "auto" | "float16" | "bfloat16" | "float32">(cachedDatasetPreparationPageState.modelTorchDtype);
+  const [maxExamplesPerChunk, setMaxExamplesPerChunk] = useState(cachedDatasetPreparationPageState.maxExamplesPerChunk);
+  const [batchSize, setBatchSize] = useState(cachedDatasetPreparationPageState.batchSize);
+  const [failurePolicy, setFailurePolicy] = useState<"" | "fail" | "skip">(cachedDatasetPreparationPageState.failurePolicy);
+  const [generationTemperature, setGenerationTemperature] = useState(cachedDatasetPreparationPageState.generationTemperature);
+  const [generationTopP, setGenerationTopP] = useState(cachedDatasetPreparationPageState.generationTopP);
+  const [generationMaxNewTokens, setGenerationMaxNewTokens] = useState(cachedDatasetPreparationPageState.generationMaxNewTokens);
+  const [trainRatio, setTrainRatio] = useState(cachedDatasetPreparationPageState.trainRatio);
+  const [testRatio, setTestRatio] = useState(cachedDatasetPreparationPageState.testRatio);
+  const [seed, setSeed] = useState(cachedDatasetPreparationPageState.seed);
+  const [shuffle, setShuffle] = useState(cachedDatasetPreparationPageState.shuffle);
+  const [outputFormat, setOutputFormat] = useState<"jsonl" | "json" | "csv" | "parquet">(cachedDatasetPreparationPageState.outputFormat);
+  const [outputBaseName, setOutputBaseName] = useState(cachedDatasetPreparationPageState.outputBaseName);
+  const [localDestinationEnabled, setLocalDestinationEnabled] = useState(cachedDatasetPreparationPageState.localDestinationEnabled);
+  const [huggingFaceDestinationEnabled, setHuggingFaceDestinationEnabled] = useState(cachedDatasetPreparationPageState.huggingFaceDestinationEnabled);
+  const [huggingFaceRepository, setHuggingFaceRepository] = useState(cachedDatasetPreparationPageState.huggingFaceRepository);
+  const [huggingFaceRevision, setHuggingFaceRevision] = useState(cachedDatasetPreparationPageState.huggingFaceRevision);
+  const [huggingFacePathPrefix, setHuggingFacePathPrefix] = useState(cachedDatasetPreparationPageState.huggingFacePathPrefix);
+  const [status, setStatus] = useState<DatasetPreparationStatus>(cachedDatasetPreparationPageState.status);
+  const [resultSummary, setResultSummary] = useState<DatasetPreparationResultSummary | undefined>(cachedDatasetPreparationPageState.resultSummary);
   const [defaultHuggingFaceNamespace, setDefaultHuggingFaceNamespace] = useState<string | undefined>(undefined);
+  const [activeTaskRequestId, setActiveTaskRequestId] = useState<string | undefined>(cachedDatasetPreparationPageState.activeTaskRequestId);
+  const [activeTaskStartedAt, setActiveTaskStartedAt] = useState<string | undefined>(cachedDatasetPreparationPageState.activeTaskStartedAt);
   const [loadedModelCount, setLoadedModelCount] = useState(0);
   const [runtimeActiveTaskCount, setRuntimeActiveTaskCount] = useState(0);
   const [stopTrainingInFlight, setStopTrainingInFlight] = useState(false);
   const [unloadModelInFlight, setUnloadModelInFlight] = useState(false);
   const stopTrainingRequestedRef = useRef(false);
+  const activePollingRequestIdRef = useRef<string | undefined>(undefined);
+  const pollingSessionIdRef = useRef(0);
+  const isMountedRef = useRef(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      activePollingRequestIdRef.current = undefined;
+      pollingSessionIdRef.current += 1;
+    };
+  }, []);
+
+  useEffect(() => {
+    cachedDatasetPreparationPageState = {
+      selectedArtifactStorageFilter,
+      selectedArtifactIds,
+      unsupportedDocumentPolicy,
+      normalizationMode,
+      chunkSize,
+      chunkOverlap,
+      preserveDocumentBoundaries,
+      maxChunkCount,
+      modelId,
+      modelInferenceMode,
+      modelDevice,
+      modelTorchDtype,
+      maxExamplesPerChunk,
+      batchSize,
+      failurePolicy,
+      generationTemperature,
+      generationTopP,
+      generationMaxNewTokens,
+      trainRatio,
+      testRatio,
+      seed,
+      shuffle,
+      outputFormat,
+      outputBaseName,
+      localDestinationEnabled,
+      huggingFaceDestinationEnabled,
+      huggingFaceRepository,
+      huggingFaceRevision,
+      huggingFacePathPrefix,
+      status,
+      resultSummary,
+      activeTaskRequestId,
+      activeTaskType: activeTaskRequestId ? "dataset-preparation" : undefined,
+      activeTaskStartedAt,
+    };
+  }, [
+    selectedArtifactStorageFilter,
+    selectedArtifactIds,
+    unsupportedDocumentPolicy,
+    normalizationMode,
+    chunkSize,
+    chunkOverlap,
+    preserveDocumentBoundaries,
+    maxChunkCount,
+    modelId,
+    modelInferenceMode,
+    modelDevice,
+    modelTorchDtype,
+    maxExamplesPerChunk,
+    batchSize,
+    failurePolicy,
+    generationTemperature,
+    generationTopP,
+    generationMaxNewTokens,
+    trainRatio,
+    testRatio,
+    seed,
+    shuffle,
+    outputFormat,
+    outputBaseName,
+    localDestinationEnabled,
+    huggingFaceDestinationEnabled,
+    huggingFaceRepository,
+    huggingFaceRevision,
+    huggingFacePathPrefix,
+    status,
+    resultSummary,
+    activeTaskRequestId,
+    activeTaskStartedAt,
+  ]);
 
   const setStatusWarningMessage = useCallback((warningMessage: string) => {
     setStatus((current) => {
@@ -180,6 +379,24 @@ export function useDatasetPreparationFeature(
     });
   }, []);
 
+  const clearActiveTask = useCallback(() => {
+    setActiveTaskRequestId(undefined);
+    setActiveTaskStartedAt(undefined);
+    activePollingRequestIdRef.current = undefined;
+    cachedDatasetPreparationPageState.activeTaskRequestId = undefined;
+    cachedDatasetPreparationPageState.activeTaskType = undefined;
+    cachedDatasetPreparationPageState.activeTaskStartedAt = undefined;
+  }, []);
+
+  const setActiveDatasetPreparationTask = useCallback((requestId: string) => {
+    const startedAt = new Date().toISOString();
+    setActiveTaskRequestId(requestId);
+    setActiveTaskStartedAt(startedAt);
+    cachedDatasetPreparationPageState.activeTaskRequestId = requestId;
+    cachedDatasetPreparationPageState.activeTaskType = "dataset-preparation";
+    cachedDatasetPreparationPageState.activeTaskStartedAt = startedAt;
+  }, []);
+
   const refreshArtifacts = useCallback(async () => {
     const sourceArtifacts = await datasetClient.browseSourceArtifacts();
     setArtifacts(sourceArtifacts);
@@ -188,6 +405,101 @@ export function useDatasetPreparationFeature(
       return current.filter((artifactId) => validArtifactIds.has(artifactId));
     });
   }, [datasetClient]);
+
+  const refreshRuntimeModelStatus = useCallback(async () => {
+    if (!runtimeStatusClient) {
+      return;
+    }
+
+    try {
+      const snapshot = await runtimeStatusClient.readStatus();
+      setLoadedModelCount(snapshot.loadedModels.length);
+      setRuntimeActiveTaskCount(snapshot.activeTaskCount);
+    } catch {
+      // Runtime status is best-effort for model lifecycle controls.
+    }
+  }, [runtimeStatusClient]);
+
+  const isPollingStillActive = useCallback((requestId: string, sessionId: number): boolean => {
+    return isMountedRef.current
+      && activePollingRequestIdRef.current === requestId
+      && pollingSessionIdRef.current === sessionId
+      && !stopTrainingRequestedRef.current;
+  }, []);
+
+  const pollDatasetPreparationTask = useCallback(async (requestId: string) => {
+    if (activePollingRequestIdRef.current === requestId) return;
+    activePollingRequestIdRef.current = requestId;
+    const pollingSessionId = pollingSessionIdRef.current;
+    let pollRecoveryStartedAtMs: number | undefined;
+    while (isPollingStillActive(requestId, pollingSessionId)) {
+      try {
+        const pollResponse = await datasetClient.readPrepareTrainingDatasetTask(requestId);
+        if (!isPollingStillActive(requestId, pollingSessionId)) return;
+        if (pollResponse.ok === false) {
+          if (!pollRecoveryStartedAtMs) pollRecoveryStartedAtMs = Date.now();
+          if (isTransientPollReadFailure(pollResponse.error.message, pollResponse.error.details)
+            && (Date.now() - pollRecoveryStartedAtMs) < pollingRecoveryGraceWindowMs) {
+            setStatus({ kind: "loading", message: "Reconnecting to dataset preparation task..." });
+            await new Promise<void>((resolve) => window.setTimeout(resolve, 750));
+            if (!isPollingStillActive(requestId, pollingSessionId)) return;
+            continue;
+          }
+          clearActiveTask();
+          setStatus({ kind: "error", message: appendErrorDetailsMessage(pollResponse.error.message, pollResponse.error.details) });
+          return;
+        }
+        if (pollResponse.status === "pending" || pollResponse.status === "running") {
+          const processed = pollResponse.progress?.processed;
+          const total = pollResponse.progress?.total;
+          const suffix = typeof processed === "number" && typeof total === "number" ? ` (${processed}/${total})` : "";
+          setStatus({ kind: "loading", message: `${pollResponse.progress?.message ?? "Preparing training dataset..."}${suffix}` });
+          await new Promise<void>((resolve) => window.setTimeout(resolve, 750));
+          if (!isPollingStillActive(requestId, pollingSessionId)) return;
+          continue;
+        }
+        if (pollResponse.status === "cancelled") {
+          clearActiveTask(); setStatus({ kind: "idle", message: "Training stopped." }); return;
+        }
+        if (pollResponse.status === "unknown") {
+          clearActiveTask(); setStatus({ kind: "error", message: "Dataset preparation task could not be found or is no longer available." }); return;
+        }
+        if (pollResponse.status === "succeeded") {
+          clearActiveTask();
+          setStatus({ kind: "success", message: "Training dataset is ready." });
+          setResultSummary({ datasetKey: pollResponse.value.outputs.local?.dataset.storage.key ?? "(not produced locally)", datasetRows: pollResponse.value.summary.datasetRowCount ?? pollResponse.value.summary.generatedExampleCount });
+          await refreshArtifacts();
+          if (!isPollingStillActive(requestId, pollingSessionId)) return;
+          await refreshRuntimeModelStatus();
+          if (!isPollingStillActive(requestId, pollingSessionId)) return;
+          onPrepared?.(); return;
+        }
+        clearActiveTask(); setStatus({ kind: "error", message: "Dataset preparation task returned an invalid status." }); return;
+      } catch (error) {
+        if (!pollRecoveryStartedAtMs) pollRecoveryStartedAtMs = Date.now();
+        if ((Date.now() - pollRecoveryStartedAtMs) < pollingRecoveryGraceWindowMs) {
+          setStatus({ kind: "loading", message: "Reconnecting to dataset preparation task..." });
+          await new Promise<void>((resolve) => window.setTimeout(resolve, 750));
+          if (!isPollingStillActive(requestId, pollingSessionId)) return;
+          continue;
+        }
+        clearActiveTask(); setStatus({ kind: "error", message: resolveUserFacingDatasetPreparationErrorMessage(error) }); return;
+      }
+    }
+    if (!isMountedRef.current
+      || activePollingRequestIdRef.current !== requestId
+      || pollingSessionIdRef.current !== pollingSessionId) {
+      return;
+    }
+    if (stopTrainingRequestedRef.current) {
+      clearActiveTask();
+      setStatus({ kind: "idle", message: "Training stopped." });
+    }
+  }, [clearActiveTask, datasetClient, isPollingStillActive, onPrepared, pollingRecoveryGraceWindowMs, refreshArtifacts, refreshRuntimeModelStatus]);
+
+  useEffect(() => {
+    if (status.kind === "loading" && activeTaskRequestId) void pollDatasetPreparationTask(activeTaskRequestId);
+  }, [activeTaskRequestId, pollDatasetPreparationTask, status.kind]);
 
   useEffect(() => {
     void refreshArtifacts().catch((error) => {
@@ -217,26 +529,11 @@ export function useDatasetPreparationFeature(
       const namespace = result.values.find((value) => value.key === "huggingface.defaultNamespace")?.value;
       if (typeof namespace === "string" && namespace.trim().length > 0) {
         setDefaultHuggingFaceNamespace(namespace.trim());
-        setHuggingFaceRepository((current) => (current.trim().length === 0 ? `${namespace.trim()}/` : current));
       }
     }).catch(() => {
       setStatusWarningMessage("Hugging Face namespace default could not be loaded.");
     });
   }, [settingsClient, setStatusWarningMessage]);
-
-  const refreshRuntimeModelStatus = useCallback(async () => {
-    if (!runtimeStatusClient) {
-      return;
-    }
-
-    try {
-      const snapshot = await runtimeStatusClient.readStatus();
-      setLoadedModelCount(snapshot.loadedModels.length);
-      setRuntimeActiveTaskCount(snapshot.activeTaskCount);
-    } catch {
-      // Runtime status is best-effort for model lifecycle controls.
-    }
-  }, [runtimeStatusClient]);
 
   useEffect(() => {
     void refreshRuntimeModelStatus();
@@ -255,6 +552,24 @@ export function useDatasetPreparationFeature(
         ? current.filter((id) => id !== artifactId)
         : [...current, artifactId]);
   }, []);
+
+  const uploadedArtifacts = useMemo(
+    () => artifacts.filter((artifact) => artifact.storageKey.startsWith("uploads/")),
+    [artifacts],
+  );
+  const generatedArtifacts = useMemo(
+    () => artifacts.filter((artifact) => artifact.storageKey.startsWith("generated/")),
+    [artifacts],
+  );
+  const filteredArtifacts = useMemo(() => {
+    if (selectedArtifactStorageFilter === "uploaded") {
+      return uploadedArtifacts;
+    }
+    if (selectedArtifactStorageFilter === "generated") {
+      return generatedArtifacts;
+    }
+    return artifacts;
+  }, [artifacts, generatedArtifacts, selectedArtifactStorageFilter, uploadedArtifacts]);
 
   const onSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -276,6 +591,7 @@ export function useDatasetPreparationFeature(
       localDestinationEnabled,
       huggingFaceDestinationEnabled,
       huggingFaceRepository,
+      defaultHuggingFaceNamespace,
     });
 
     if (validationResult.ok === false) {
@@ -316,79 +632,24 @@ export function useDatasetPreparationFeature(
       huggingFaceRepository,
       huggingFaceRevision,
       huggingFacePathPrefix,
+      defaultHuggingFaceNamespace,
       parsed: validationResult.parsed,
       resolvedDefault,
     });
     const generationModelId = request.recipe.generation.model.modelId;
     const requestId = createDatasetPreparationRequestId();
-    const progressStartedAtMs = Date.now();
-    let preparationActive = true;
-    let progressReadInFlight = false;
-    const refreshModelDownloadProgress = async () => {
-      if (!runtimeStatusClient || progressReadInFlight || !preparationActive) {
-        return;
-      }
 
-      progressReadInFlight = true;
-      try {
-        const snapshot = await runtimeStatusClient.readStatus();
-        if (!preparationActive) {
-          return;
-        }
-        const progress = resolveLatestModelDownloadProgress(snapshot, generationModelId, {
-          sinceEpochMs: progressStartedAtMs,
-        });
-        if (progress) {
-          setStatus({ kind: "loading", message: progress.message });
-        }
-      } catch {
-        // Progress polling is best-effort; the preparation request owns final success/failure.
-      } finally {
-        progressReadInFlight = false;
-      }
-    };
-
+    window.dispatchEvent(new CustomEvent("dataset-preparation-training-started"));
     setStatus({ kind: "loading", message: `Checking model ${generationModelId} before dataset preparation...` });
-    void refreshModelDownloadProgress();
-    const progressTimer = window.setInterval(() => {
-      void refreshModelDownloadProgress();
-    }, 750);
 
-    let response: Awaited<ReturnType<DesktopDatasetPreparationClient["prepareTrainingDatasetFromArtifacts"]>>;
-    try {
-      response = await datasetClient.prepareTrainingDatasetFromArtifacts(
-        request,
-        { requestId },
-      );
-    } catch (error) {
-      if (stopTrainingRequestedRef.current) {
-        setStatus({ kind: "idle", message: "Training stopped." });
-      } else {
-        setStatus({ kind: "error", message: error instanceof Error ? error.message : "Dataset preparation failed." });
-      }
-      return;
-    } finally {
-      preparationActive = false;
-      window.clearInterval(progressTimer);
-      void refreshRuntimeModelStatus();
-    }
-
-    if (response.ok === false) {
-      setStatus(stopTrainingRequestedRef.current
-        ? { kind: "idle", message: "Training stopped." }
-        : { kind: "error", message: response.error.message });
+    const started = await datasetClient.startPrepareTrainingDataset(request, { requestId });
+    if ("error" in started) {
+      setStatus({ kind: "error", message: appendErrorDetailsMessage(started.error.message, started.error.details) });
       return;
     }
 
-    setStatus({ kind: "success", message: "Training dataset is ready." });
-    setResultSummary({
-      datasetKey: response.value.outputs.local?.dataset.storage.key ?? "(not produced locally)",
-      datasetRows: response.value.summary.datasetRowCount ?? response.value.summary.generatedExampleCount,
-    });
-
-    await refreshArtifacts();
-    await refreshRuntimeModelStatus();
-    onPrepared?.();
+    setActiveDatasetPreparationTask(started.requestId);
+    await pollDatasetPreparationTask(started.requestId);
   }, [
     selectedArtifactIds,
     unsupportedDocumentPolicy,
@@ -416,36 +677,35 @@ export function useDatasetPreparationFeature(
     localDestinationEnabled,
     huggingFaceDestinationEnabled,
     huggingFaceRepository,
+    defaultHuggingFaceNamespace,
     huggingFaceRevision,
     huggingFacePathPrefix,
     datasetClient,
     settingsClient,
-    runtimeStatusClient,
-    refreshArtifacts,
-    refreshRuntimeModelStatus,
-    onPrepared,
+    pollDatasetPreparationTask,
+    setActiveDatasetPreparationTask,
   ]);
 
   const onStopTraining = useCallback(async () => {
-    if (!runtimeStatusClient?.controlRuntime || status.kind !== "loading") {
+    if (!activeTaskRequestId || status.kind !== "loading") {
       return;
     }
 
     stopTrainingRequestedRef.current = true;
     setStopTrainingInFlight(true);
-    setStatus({ kind: "loading", message: "Stopping training..." });
+    setStatus({ kind: "loading", message: "Stopping dataset preparation..." });
     try {
-      const snapshot = await runtimeStatusClient.controlRuntime("stop");
-      setLoadedModelCount(snapshot.loadedModels.length);
-      setRuntimeActiveTaskCount(snapshot.activeTaskCount);
-      setStatus({ kind: "idle", message: "Training stopped." });
+      const response = await datasetClient.cancelPrepareTrainingDatasetTask(activeTaskRequestId);
+      if (response.ok === false) {
+        setStatus({ kind: "error", message: appendErrorDetailsMessage(response.error.message, response.error.details) });
+      }
     } catch (error) {
       setStatus({ kind: "error", message: error instanceof Error ? error.message : "Failed to stop training." });
     } finally {
       setStopTrainingInFlight(false);
       void refreshRuntimeModelStatus();
     }
-  }, [refreshRuntimeModelStatus, runtimeStatusClient, status.kind]);
+  }, [activeTaskRequestId, datasetClient, refreshRuntimeModelStatus, status.kind]);
 
   const onUnloadModel = useCallback(async () => {
     if (!runtimeStatusClient?.controlRuntime || status.kind === "loading") {
@@ -470,6 +730,10 @@ export function useDatasetPreparationFeature(
 
   return {
     artifacts,
+    filteredArtifacts,
+    uploadedArtifacts,
+    generatedArtifacts,
+    selectedArtifactStorageFilter,
     selectedArtifactIds,
     unsupportedDocumentPolicy,
     normalizationMode,
@@ -506,6 +770,7 @@ export function useDatasetPreparationFeature(
     stopTrainingInFlight,
     unloadModelInFlight,
     onToggleArtifact,
+    setSelectedArtifactStorageFilter,
     setUnsupportedDocumentPolicy,
     setNormalizationMode,
     setChunkSize,

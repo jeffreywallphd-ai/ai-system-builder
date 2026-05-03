@@ -6,7 +6,7 @@ export interface ArtifactCatalogRecord {
   artifactFamily: ArtifactFamily;
   mediaType?: string;
   sizeBytes?: number;
-  sourceKind?: "upload";
+  sourceKind?: "upload" | "generated";
   originalName?: string;
   createdAt?: string;
   checksum?: StorageObjectChecksum;

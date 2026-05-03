@@ -98,3 +98,18 @@ Python never writes directly to the artifact catalog.
 - distributed execution
 - batching
 - streaming outputs
+
+## Runtime Task Lifecycle Update (2026-04-29)
+
+- Long-running Python runtime operations must use a **start + poll** lifecycle (`startTask`, `readTaskStatus`, `cancelTask`) instead of holding a single HTTP request open until completion.
+- Long-held HTTP responses are unsafe for dataset preparation/model-training durations because transport intermediaries and host request chains can disconnect before work finishes.
+- The async task lifecycle is being introduced incrementally: this step adds contract and TypeScript runtime-client/protocol support before worker and UI migration.
+- Worker support now includes `POST /tasks/start`, `GET /tasks/{requestId}`, and `POST /tasks/{requestId}/cancel` for start/poll/cancel task lifecycle flows; legacy `POST /tasks/execute` remains for compatibility while callers migrate.
+
+- Desktop host runtime can also use Electron `powerSaveBlocker` (`prevent-app-suspension`) for long-running local tasks to reduce OS sleep/suspension risk.
+- This suspension blocker complements async start/poll/cancel lifecycle management and does not replace task polling or resolve transport/request timeouts from long-held requests.
+- Long-running tasks follow async lifecycle rules: start task, poll status, optional cancel, then terminal completion.
+- During active long-running local tasks, desktop application/use-cases acquire per-task power suspension blockers and release them on terminal states.
+- No long-lived transport requests should be used as a substitute for async lifecycle polling.
+- Current async cleanup behavior releases blockers when terminal lifecycle status is read in application polling paths.
+- Future improvement: event-driven completion cleanup should release blockers without polling dependencies.

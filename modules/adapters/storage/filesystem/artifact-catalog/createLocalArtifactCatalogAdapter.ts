@@ -55,7 +55,7 @@ function parseRecordLine(line: string): ArtifactCatalogRecordLine | undefined {
       artifactFamily: normalizeArtifactFamily(parsed.artifactFamily),
       mediaType: typeof parsed.mediaType === "string" ? parsed.mediaType : undefined,
       sizeBytes: typeof parsed.sizeBytes === "number" ? parsed.sizeBytes : undefined,
-      sourceKind: parsed.sourceKind === "upload" ? "upload" : undefined,
+      sourceKind: parsed.sourceKind === "upload" || parsed.sourceKind === "generated" ? parsed.sourceKind : undefined,
       originalName: typeof parsed.originalName === "string" ? parsed.originalName : undefined,
       createdAt: typeof parsed.createdAt === "string" ? parsed.createdAt : undefined,
       checksum:

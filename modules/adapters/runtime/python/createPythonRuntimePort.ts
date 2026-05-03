@@ -30,7 +30,9 @@ export function createPythonRuntimeAdapterFoundation(
   });
 
   const runtimePort: PythonRuntimePort = {
-    executeTask: (request) => client.executeTask(request),
+    startTask: (request) => client.startTask(request),
+    readTaskStatus: (requestId) => client.readTaskStatus(requestId),
+    cancelTask: (requestId) => client.cancelTask(requestId),
     getHealthStatus: () => client.getHealthStatus(),
     getCapabilities: () => client.getCapabilities(),
     ensureModelDownloaded: (request) => client.ensureModelDownloaded(request),

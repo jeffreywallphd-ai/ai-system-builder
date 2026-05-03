@@ -57,6 +57,12 @@ describe("desktop renderer page composition", () => {
           logs: [],
         },
       }),
+      browseModels: vi.fn().mockResolvedValue({ ok: true, value: { models: [] } }),
+      getModelDetails: vi.fn().mockResolvedValue({ ok: true, value: { model: { provider: "huggingface", modelId: "org/demo", displayName: "Demo" } } }),
+      listModels: vi.fn().mockResolvedValue({ ok: true, value: { models: [] } }),
+      saveModelReference: vi.fn().mockResolvedValue({ ok: true, value: { model: { modelRecordId: "m1", displayName: "Demo", source: "huggingface", lifecycleStatus: "saved-reference", artifactForm: "full-model", provider: "huggingface", createdAt: "2026-04-27T00:00:00.000Z" } } }),
+      updateModelRecord: vi.fn().mockResolvedValue({ ok: true, value: { model: { modelRecordId: "m1", displayName: "Demo", source: "huggingface", lifecycleStatus: "saved-reference", artifactForm: "full-model", provider: "huggingface", createdAt: "2026-04-27T00:00:00.000Z" } } }),
+      deleteModelRecord: vi.fn().mockResolvedValue({ ok: true, value: { deletedModelRecordId: "m1", deletedRegistryRecord: true, deletedLocalFiles: false, deletedBackingArtifactIds: [] } }),
     };
 
     await act(async () => {
@@ -98,6 +104,28 @@ describe("desktop renderer page composition", () => {
     });
 
     expect(container.textContent).toContain("Python Runtime");
+
+    const modelsButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Models",
+    );
+    expect(modelsButton).toBeDefined();
+
+    await act(async () => {
+      modelsButton?.dispatchEvent(new Event("click", { bubbles: true }));
+    });
+    expect(container.textContent).toContain("Model Management");
+    expect(container.textContent).toContain("Browse Models");
+
+
+    const imageGenerationButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Image Generation",
+    );
+    expect(imageGenerationButton).toBeDefined();
+
+    await act(async () => {
+      imageGenerationButton?.dispatchEvent(new Event("click", { bubbles: true }));
+    });
+    expect(container.textContent).toContain("Run runtime-backed image generation tasks");
 
     const settingsButton = Array.from(container.querySelectorAll("button")).find(
       (button) => button.textContent === "Settings",

@@ -251,4 +251,80 @@ describe("datasetPreparationRequestBuilder", () => {
 
     expect(request.recipe.generation.model.inferenceMode).toBe("text2text");
   });
+
+  it("prefixes default namespace and normalizes backslash repository separators", () => {
+    const withNameOnly = buildDatasetPreparationRequest({
+      selectedArtifactIds: ["artifact-1"],
+      unsupportedDocumentPolicy: "",
+      normalizationMode: "",
+      preserveDocumentBoundaries: true,
+      modelId: "",
+      modelInferenceMode: "auto",
+      modelDevice: "",
+      modelTorchDtype: "",
+      failurePolicy: "skip",
+      shuffle: true,
+      outputFormat: "parquet",
+      outputBaseName: "",
+      localDestinationEnabled: false,
+      huggingFaceDestinationEnabled: true,
+      huggingFaceRepository: "AISysBuilderTest",
+      huggingFaceRevision: "",
+      huggingFacePathPrefix: "",
+      defaultHuggingFaceNamespace: "OpenFinAL",
+      parsed: {
+        chunkSize: 1000,
+        chunkOverlap: 200,
+        maxChunkCount: undefined,
+        maxExamplesPerChunk: 4,
+        batchSize: 4,
+        generationTemperature: undefined,
+        generationTopP: undefined,
+        generationMaxNewTokens: undefined,
+        trainRatio: 0.8,
+        testRatio: 0.2,
+        seed: undefined,
+      },
+      resolvedDefault: {
+        provider: "transformers",
+        modelId: "google/flan-t5-base",
+        inferenceMode: "auto",
+        source: "builtin",
+        device: "auto",
+        torchDtype: "auto",
+      },
+    });
+
+    expect(withNameOnly.output.destinations.huggingFace?.repository).toBe("OpenFinAL/AISysBuilderTest");
+    const withBackslashes = buildDatasetPreparationRequest({
+      selectedArtifactIds: ["artifact-1"],
+      unsupportedDocumentPolicy: "",
+      normalizationMode: "",
+      preserveDocumentBoundaries: true,
+      modelId: "",
+      modelInferenceMode: "auto",
+      modelDevice: "",
+      modelTorchDtype: "",
+      failurePolicy: "skip",
+      shuffle: true,
+      outputFormat: "parquet",
+      outputBaseName: "",
+      localDestinationEnabled: false,
+      huggingFaceDestinationEnabled: true,
+      huggingFaceRepository: "OpenFinAL\\AISysBuilderTest",
+      huggingFaceRevision: "",
+      huggingFacePathPrefix: "",
+      parsed: withNameOnly.split,
+      resolvedDefault: {
+        provider: "transformers",
+        modelId: "google/flan-t5-base",
+        inferenceMode: "auto",
+        source: "builtin",
+        device: "auto",
+        torchDtype: "auto",
+      },
+    });
+
+    expect(withBackslashes.output.destinations.huggingFace?.repository).toBe("OpenFinAL/AISysBuilderTest");
+  });
 });

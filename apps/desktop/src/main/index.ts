@@ -10,6 +10,7 @@ async function createMainWindow(): Promise<void> {
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    show: false,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       contextIsolation: true,
@@ -23,11 +24,14 @@ async function createMainWindow(): Promise<void> {
     openWindows.delete(mainWindow);
   });
 
+  mainWindow.maximize();
   await mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
+  mainWindow.show();
 }
 
 app.whenReady().then(async () => {
-  const storageRootDirectory = path.join(app.getPath("userData"), "artifacts");
+  const desktopDataRootDirectory = app.getPath("userData");
+  const storageRootDirectory = path.join(desktopDataRootDirectory, "artifacts");
   const desktopHost = composeDesktopHost({
     logging: {
       verbosity: process.env.LOG_VERBOSITY,
@@ -42,6 +46,7 @@ app.whenReady().then(async () => {
   desktopHost.registerArtifactUploadIpc({
     ipcMain,
     storageRootDirectory,
+    runtimeRootDirectory: desktopDataRootDirectory,
   });
 
   await createMainWindow();

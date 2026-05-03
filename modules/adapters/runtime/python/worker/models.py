@@ -84,6 +84,56 @@ class PythonRuntimeTaskResult(BaseModel):
     metadata: dict[str, Any] | None = None
 
 
+PythonRuntimeTaskStatus = Literal[
+    "queued",
+    "running",
+    "succeeded",
+    "failed",
+    "cancelled",
+    "unknown",
+]
+
+
+class StartPythonRuntimeTaskRequest(BaseModel):
+    requestId: str
+    taskType: str
+    payload: Any
+    timeoutMs: int | None = None
+    metadata: dict[str, Any] | None = None
+
+
+class StartPythonRuntimeTaskResult(BaseModel):
+    requestId: str
+    taskType: str
+    accepted: bool
+    status: Literal["queued", "running"]
+    startedAt: str | None = None
+    updatedAt: str | None = None
+    metadata: dict[str, Any] | None = None
+
+
+class PythonRuntimeTaskStatusResult(BaseModel):
+    requestId: str
+    taskType: str | None = None
+    status: PythonRuntimeTaskStatus
+    progress: dict[str, Any] | None = None
+    data: Any | None = None
+    error: PythonRuntimeError | None = None
+    startedAt: str | None = None
+    updatedAt: str | None = None
+    completedAt: str | None = None
+    metadata: dict[str, Any] | None = None
+
+
+class CancelPythonRuntimeTaskResult(BaseModel):
+    requestId: str
+    taskType: str | None = None
+    status: PythonRuntimeTaskStatus
+    cancelled: bool
+    message: str | None = None
+    metadata: dict[str, Any] | None = None
+
+
 class DatasetPreparationSourceInput(BaseModel):
     artifactId: str
     localPath: str
@@ -191,3 +241,69 @@ class PrepareTrainingDatasetResult(BaseModel):
     outputs: list[PythonRuntimeOutputDescriptor]
     summary: DatasetPreparationSummary
     warnings: list[DatasetPreparationWarning] | None = None
+
+
+class TrainModelBaseModelInput(BaseModel):
+    modelRecordId: str | None = None
+    provider: str | None = None
+    modelId: str | None = None
+    localPath: str | None = None
+    inferenceMode: Literal["text2text", "causal", "chat"] | None = None
+
+
+class TrainModelDatasetInput(BaseModel):
+    artifactId: str
+    splitRole: Literal["train", "validation", "test"]
+    format: str | None = None
+    path: str | None = None
+
+
+class TrainModelTaskRequest(BaseModel):
+    baseModel: TrainModelBaseModelInput
+    datasets: list[TrainModelDatasetInput]
+    method: Literal["lora", "qlora", "full-finetune"]
+    commonParameters: dict[str, Any] | None = None
+    advancedParameters: dict[str, Any] | None = None
+    output: dict[str, Any]
+    validation: dict[str, Any] | None = None
+    runMetadata: dict[str, Any] | None = None
+
+
+class TrainModelTaskResult(BaseModel):
+    runId: str
+    status: Literal["queued", "running", "succeeded", "failed", "cancelled"]
+    outputDirectory: str | None = None
+    outputModelName: str | None = None
+    checkpoints: list[dict[str, Any]] | None = None
+    metrics: dict[str, float] | None = None
+    logs: list[str] | None = None
+    warnings: list[str] | None = None
+    validationReportPath: str | None = None
+    generatedModelCandidate: dict[str, Any] | None = None
+    error: dict[str, Any] | None = None
+
+
+class ValidateModelTaskRequest(BaseModel):
+    modelRecordId: str
+    modelPath: str
+    reportOutputDirectory: str | None = None
+    expectedLoRA: bool | None = None
+    expectedRecurrentAdditions: bool | None = None
+    validationStrictness: Literal["normal", "publish"] | None = None
+
+
+class ValidateModelTaskResult(BaseModel):
+    modelRecordId: str
+    status: Literal["unknown", "valid", "invalid", "warning"]
+    validationReportPath: str | None = None
+    validationDiffPath: str | None = None
+    serializationFormat: str | None = None
+    shardCount: int | None = None
+    detectedLoRA: bool | None = None
+    detectedRecurrentAdditions: bool | None = None
+    validatedModelPath: str | None = None
+    validatedAt: str | None = None
+    validationStrictness: Literal["normal", "publish"] | None = None
+    tensorChecksCompleted: bool | None = None
+    warnings: list[str] | None = None
+    errors: list[str] | None = None

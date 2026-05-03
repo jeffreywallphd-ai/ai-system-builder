@@ -26,6 +26,8 @@ const QA_TASK_MODEL_DEFAULT: ModelDefaultConfig = {
   torchDtype: "auto",
 };
 
+export const IMAGE_GENERATION_GPU_TYPE_SETTING_KEY = "runtime.imageGeneration.gpuType" as const;
+
 export const INITIAL_APPLICATION_SETTING_DEFINITIONS: ApplicationSettingDefinition[] = [
   {
     key: "huggingface.token",
@@ -63,6 +65,16 @@ export const INITIAL_APPLICATION_SETTING_DEFINITIONS: ApplicationSettingDefiniti
     category: "datasetPreparation",
     label: "Dataset preparation QA model override",
     valueKind: "object",
+    scope: "application",
+  },
+  {
+    key: IMAGE_GENERATION_GPU_TYPE_SETTING_KEY,
+    category: "runtime",
+    label: "Image generation GPU type",
+    description: "Preferred GPU type for ComfyUI image generation when auto-detection is unavailable.",
+    valueKind: "select",
+    options: [{ value: "auto" }, { value: "nvidia" }, { value: "amd" }, { value: "intel" }, { value: "cpu" }],
+    defaultValue: "auto",
     scope: "application",
   },
   {

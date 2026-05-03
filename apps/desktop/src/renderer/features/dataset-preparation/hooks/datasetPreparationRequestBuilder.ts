@@ -33,8 +33,23 @@ export interface BuildDatasetPreparationRequestInput {
   huggingFaceRepository: string;
   huggingFaceRevision: string;
   huggingFacePathPrefix: string;
+  defaultHuggingFaceNamespace?: string;
   parsed: ParsedDatasetPreparationInputs;
   resolvedDefault: ResolvedModelDefault;
+}
+
+function resolveHuggingFaceRepository(repository: string, defaultNamespace?: string): string {
+  const normalized = repository.trim().replace(/^datasets\//i, "").replaceAll("\\", "/");
+  if (normalized.length === 0) {
+    return normalized;
+  }
+
+  if (normalized.includes("/")) {
+    return normalized;
+  }
+
+  const namespace = defaultNamespace?.trim();
+  return namespace ? `${namespace}/${normalized}` : normalized;
 }
 
 export function buildDatasetPreparationRequest(input: BuildDatasetPreparationRequestInput) {
@@ -99,7 +114,10 @@ export function buildDatasetPreparationRequest(input: BuildDatasetPreparationReq
           ? {
             enabled: true,
             provider: "huggingface" as const,
-            repository: input.huggingFaceRepository.trim(),
+            repository: resolveHuggingFaceRepository(
+              input.huggingFaceRepository,
+              input.defaultHuggingFaceNamespace,
+            ),
             revision: input.huggingFaceRevision.trim() || undefined,
             pathPrefix: input.huggingFacePathPrefix.trim() || undefined,
           }

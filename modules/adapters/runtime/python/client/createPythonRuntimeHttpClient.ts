@@ -1,18 +1,22 @@
 import type {
+  CancelPythonRuntimeTaskResult,
+  PythonRuntimeTaskStatusResult,
   PythonRuntimeCapabilitiesResult,
   PythonRuntimeHealthCheckResult,
   PythonRuntimeModelStatusResult,
-  PythonRuntimeTaskRequest,
-  PythonRuntimeTaskResult,
+  StartPythonRuntimeTaskRequest,
+  StartPythonRuntimeTaskResult,
   PythonRuntimeUnloadModelsResult,
 } from "../../../../contracts/runtime";
 
 import {
+  mapCancelTaskResponse,
   mapCapabilitiesResponseFromHttpPayload,
   mapHealthResponseFromHttpPayload,
   mapModelStatusResponseFromHttpPayload,
-  mapTaskRequestToHttpPayload,
-  mapTaskResponseFromHttpPayload,
+  mapStartTaskRequest,
+  mapStartTaskResponse,
+  mapTaskStatusResponse,
   mapUnloadModelsResponseFromHttpPayload,
 } from "../protocol/pythonRuntimeHttpProtocol";
 
@@ -28,13 +32,16 @@ export interface PythonRuntimeHttpClient {
   }>;
   getModelStatus(): Promise<PythonRuntimeModelStatusResult>;
   unloadModels(): Promise<PythonRuntimeUnloadModelsResult>;
-  executeTask(request: PythonRuntimeTaskRequest): Promise<PythonRuntimeTaskResult>;
+  startTask(request: StartPythonRuntimeTaskRequest): Promise<StartPythonRuntimeTaskResult>;
+  readTaskStatus(requestId: string): Promise<PythonRuntimeTaskStatusResult>;
+  cancelTask(requestId: string): Promise<CancelPythonRuntimeTaskResult>;
 }
 
 export interface CreatePythonRuntimeHttpClientOptions {
   baseUrl: string;
   fetchImplementation?: typeof fetch;
   defaultTaskTimeoutMs?: number;
+  transportRequestTimeoutMs?: number;
 }
 
 async function parseJsonResponseSafe(
@@ -115,6 +122,7 @@ export function createPythonRuntimeHttpClient(
   const fetcher = options.fetchImplementation ?? fetch;
   const baseUrl = trimTrailingSlash(options.baseUrl);
   const defaultTaskTimeoutMs = options.defaultTaskTimeoutMs ?? 120_000;
+  const transportRequestTimeoutMs = options.transportRequestTimeoutMs ?? 9 * 60 * 1000;
 
   return {
     async getHealthStatus() {
@@ -165,32 +173,31 @@ export function createPythonRuntimeHttpClient(
 
       return mapRuntimeResponsePayload("/models/unload", response, payload, mapUnloadModelsResponseFromHttpPayload);
     },
-
-    async executeTask(request: PythonRuntimeTaskRequest) {
-      const timeoutMs = request.timeoutMs ?? defaultTaskTimeoutMs;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(new Error(`Python runtime task timed out after ${timeoutMs}ms.`)), timeoutMs);
-      let response: Response;
-      try {
-        response = await fetcher(`${baseUrl}/tasks/execute`, {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-          },
-          body: JSON.stringify(mapTaskRequestToHttpPayload({ ...request, timeoutMs })),
-          signal: controller.signal,
-        });
-      } catch (error) {
-        if (error instanceof Error && (error.name === "AbortError" || error.message.includes("timed out"))) {
-          throw new Error(`Python runtime task request timed out after ${timeoutMs}ms.`);
-        }
-        throw error;
-      } finally {
-        clearTimeout(timeout);
-      }
-
+    async startTask(request: StartPythonRuntimeTaskRequest) {
+      const response = await fetcher(`${baseUrl}/tasks/start`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(mapStartTaskRequest(request)),
+      });
       const payload = await parseJsonResponseSafe(response);
-      return mapRuntimeResponsePayload("/tasks/execute", response, payload, mapTaskResponseFromHttpPayload);
+      return mapRuntimeResponsePayload("/tasks/start", response, payload, mapStartTaskResponse);
+    },
+    async readTaskStatus(requestId: string) {
+      const response = await fetcher(`${baseUrl}/tasks/${encodeURIComponent(requestId)}`, { method: "GET" });
+      const payload = await parseJsonResponseSafe(response);
+      return mapRuntimeResponsePayload(`/tasks/${requestId}`, response, payload, mapTaskStatusResponse);
+    },
+    async cancelTask(requestId: string) {
+      const response = await fetcher(`${baseUrl}/tasks/${encodeURIComponent(requestId)}/cancel`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+      });
+      const payload = await parseJsonResponseSafe(response);
+      return mapRuntimeResponsePayload(`/tasks/${requestId}/cancel`, response, payload, mapCancelTaskResponse);
     },
   };
 }

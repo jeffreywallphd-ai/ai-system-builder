@@ -234,6 +234,7 @@ describe("contracts cross-family invariants", () => {
     const browse = normalizeArtifactBrowseSuccessValue({
       items: [
         {
+          artifactId: stagedDescriptor.storage.key,
           storageKey: stagedDescriptor.storage.key,
           artifactFamily: "image",
           mediaType: stagedDescriptor.storage.mediaType,

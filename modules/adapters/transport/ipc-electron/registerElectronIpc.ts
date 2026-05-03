@@ -23,6 +23,13 @@ import {
   registerApplicationSettingsIpc,
   type RegisterApplicationSettingsIpcDependencies,
 } from "./settings/registerApplicationSettingsIpc";
+import {
+  registerModelManagementIpc,
+  type RegisterModelManagementIpcDependencies,
+} from "./model/registerModelManagementIpc";
+import { registerImageGenerationIpc, type RegisterImageGenerationIpcDependencies } from "./image-generation/registerImageGenerationIpc";
+import { registerComfyUiRuntimeIpc } from "./comfyui-runtime/registerComfyUiRuntimeIpc";
+import type { RuntimeInstallerPort } from "../../../application/ports/runtime-installer/runtime-installer.port";
 
 export interface RegisterElectronIpcDependencies {
   ipcMain: IpcMainHandlePort;
@@ -48,12 +55,26 @@ export interface RegisterElectronIpcDependencies {
   localizeArtifactFromRepoUseCase: RegisterArtifactBrowserIpcDependencies["localizeArtifactFromRepoUseCase"];
   ingestWebsitePageUseCase: RegisterWebsiteIngestionIpcDependencies["ingestWebsitePageUseCase"];
   ingestWebsitePagesBatchUseCase: RegisterWebsiteIngestionIpcDependencies["ingestWebsitePagesBatchUseCase"];
-  prepareTrainingDatasetFromArtifactsUseCase: RegisterDatasetPreparationIpcDependencies["prepareTrainingDatasetFromArtifactsUseCase"];
+  prepareTrainingDatasetUseCase: RegisterDatasetPreparationIpcDependencies["prepareTrainingDatasetUseCase"];
   listSettingsDefinitionsUseCase: RegisterApplicationSettingsIpcDependencies["listSettingsDefinitionsUseCase"];
   readSettingsUseCase: RegisterApplicationSettingsIpcDependencies["readSettingsUseCase"];
   updateSettingUseCase: RegisterApplicationSettingsIpcDependencies["updateSettingUseCase"];
   clearSettingUseCase: RegisterApplicationSettingsIpcDependencies["clearSettingUseCase"];
   resolveModelDefaultUseCase: RegisterApplicationSettingsIpcDependencies["resolveModelDefaultUseCase"];
+  browseModelsUseCase: RegisterModelManagementIpcDependencies["browseModelsUseCase"];
+  getModelDetailsUseCase: RegisterModelManagementIpcDependencies["getModelDetailsUseCase"];
+  listModelsUseCase: RegisterModelManagementIpcDependencies["listModelsUseCase"];
+  saveModelReferenceUseCase: RegisterModelManagementIpcDependencies["saveModelReferenceUseCase"];
+  downloadModelUseCase: RegisterModelManagementIpcDependencies["downloadModelUseCase"];
+  updateModelRecordUseCase: RegisterModelManagementIpcDependencies["updateModelRecordUseCase"];
+  deleteModelRecordUseCase: RegisterModelManagementIpcDependencies["deleteModelRecordUseCase"];
+  trainModelUseCase: RegisterModelManagementIpcDependencies["trainModelUseCase"];
+  validateModelUseCase: RegisterModelManagementIpcDependencies["validateModelUseCase"];
+  publishModelUseCase: RegisterModelManagementIpcDependencies["publishModelUseCase"];
+  generateImageUseCase: RegisterImageGenerationIpcDependencies["generateImageUseCase"];
+  imageGenerationFinalizationOrchestrator?: RegisterImageGenerationIpcDependencies["imageGenerationFinalizationOrchestrator"];
+  comfyUiInstaller: RuntimeInstallerPort;
+  comfyUiInstallRoot: string;
 }
 
 export function registerElectronIpc(
@@ -94,7 +115,7 @@ export function registerElectronIpc(
 
   registerDatasetPreparationIpc({
     ipcMain: dependencies.ipcMain,
-    prepareTrainingDatasetFromArtifactsUseCase: dependencies.prepareTrainingDatasetFromArtifactsUseCase,
+    prepareTrainingDatasetUseCase: dependencies.prepareTrainingDatasetUseCase,
   });
 
   registerApplicationSettingsIpc({
@@ -105,6 +126,31 @@ export function registerElectronIpc(
     clearSettingUseCase: dependencies.clearSettingUseCase,
     resolveModelDefaultUseCase: dependencies.resolveModelDefaultUseCase,
   });
+  registerModelManagementIpc({
+    ipcMain: dependencies.ipcMain,
+    browseModelsUseCase: dependencies.browseModelsUseCase,
+    getModelDetailsUseCase: dependencies.getModelDetailsUseCase,
+    listModelsUseCase: dependencies.listModelsUseCase,
+    saveModelReferenceUseCase: dependencies.saveModelReferenceUseCase,
+    downloadModelUseCase: dependencies.downloadModelUseCase,
+    updateModelRecordUseCase: dependencies.updateModelRecordUseCase,
+    deleteModelRecordUseCase: dependencies.deleteModelRecordUseCase,
+    trainModelUseCase: dependencies.trainModelUseCase,
+    validateModelUseCase: dependencies.validateModelUseCase,
+    publishModelUseCase: dependencies.publishModelUseCase,
+  });
+
+  registerImageGenerationIpc({
+    ipcMain: dependencies.ipcMain,
+    generateImageUseCase: dependencies.generateImageUseCase,
+    imageGenerationFinalizationOrchestrator: dependencies.imageGenerationFinalizationOrchestrator,
+  });
+
+  registerComfyUiRuntimeIpc({
+    ipcMain: dependencies.ipcMain,
+    installer: dependencies.comfyUiInstaller,
+    installRoot: dependencies.comfyUiInstallRoot,
+  });
 
   registerPythonRuntimeIpc({
     ipcMain: dependencies.ipcMain,
@@ -112,7 +158,7 @@ export function registerElectronIpc(
     stopPythonRuntime: dependencies.pythonRuntime.stopPythonRuntime,
     restartPythonRuntime: dependencies.pythonRuntime.restartPythonRuntime,
     unloadPythonRuntimeModel: dependencies.pythonRuntime.unloadPythonRuntimeModel,
+    clearPythonRuntimeLogs: dependencies.pythonRuntime.clearPythonRuntimeLogs,
     readPythonRuntimeStatus: dependencies.pythonRuntime.readPythonRuntimeStatus,
   });
 }
-

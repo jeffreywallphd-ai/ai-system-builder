@@ -106,6 +106,8 @@ describe("desktop artifact upload end-to-end", () => {
         startPythonRuntime: async () => undefined,
         stopPythonRuntime: async () => undefined,
         restartPythonRuntime: async () => undefined,
+        unloadPythonRuntimeModel: async () => undefined,
+        clearPythonRuntimeLogs: async () => undefined,
         readPythonRuntimeStatus: async () => ({
           supervisorStatus: "stopped",
           healthy: false,

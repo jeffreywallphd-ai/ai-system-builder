@@ -29,7 +29,7 @@ export interface GenerationParams {
 export interface LocalModelConfig {
   provider: "transformers";
   modelId: string;
-  inferenceMode?: "auto" | "text2text" | "causal" | "chat";
+  inferenceMode?: "auto" | "text2text" | "causal" | "chat" | "text-to-image" | "text-to-image";
   device?: "cpu" | "cuda" | "auto";
   torchDtype?: "auto" | "float16" | "bfloat16" | "float32";
 }

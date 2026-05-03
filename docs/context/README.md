@@ -31,3 +31,14 @@ If a context pack/template conflicts with ADRs, architecture docs, or standards 
 - The pack template is `docs/context/packs/pack.template.md`.
 - It is intentionally stored in `docs/context/packs/` (not in `docs/context/templates/`).
 - Feature, epic, and story templates remain in `docs/context/templates/`.
+
+
+## Context Pack Index (Selected Packs)
+
+- `docs/context/packs/index.pack.md`
+  - Baseline pack included for all automated prompt assembly.
+- `docs/context/packs/debugging-error-handling.pack.md`
+  - Select for debugging/error-fix prompts (errors, exceptions, hangs, timeout, transport disconnect, runtime still running).
+  - Focuses on execution timeline, invariants, lifecycle-safe error handling, and boundary-preserving fixes.
+
+Use `docs/context/prompt-routing.md` for full pack selection rules and minimal-context routing.

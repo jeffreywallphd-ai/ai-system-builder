@@ -1,4 +1,5 @@
 import type { ArtifactContentRetrievalPort } from "../../../../application/ports/artifact-content";
+import { normalizeArtifactFamily } from "../../../../domain/artifact";
 import type {
   BrowseArtifactsCommand,
   BrowseArtifactsUseCasePort,
@@ -132,7 +133,9 @@ export function mapArtifactBrowseApiRequestToCommand(
 ): BrowseArtifactsCommand {
   const apiRequest = createApiArtifactBrowseRequest(
     {
-      artifactFamily: requestBody.artifactFamily,
+      artifactFamily: requestBody.artifactFamily
+        ? normalizeArtifactFamily(requestBody.artifactFamily)
+        : undefined,
       boundary: {
         host: "server",
         source: normalizeSource(requestBody.source),
@@ -141,7 +144,9 @@ export function mapArtifactBrowseApiRequestToCommand(
     context,
   );
 
-  return { artifactFamily: apiRequest.payload.artifactFamily };
+  return {
+    artifactFamily: apiRequest.payload.artifactFamily,
+  };
 }
 
 export function mapArtifactReadApiRequestToCommand(

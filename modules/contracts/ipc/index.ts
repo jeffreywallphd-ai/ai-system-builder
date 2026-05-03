@@ -25,3 +25,8 @@ export * from "./desktop-website-ingestion-contract";
 export * from "./desktop-dataset-preparation-contract";
 export * from "./desktop-python-runtime-contract";
 export * from "./desktop-application-settings-contract";
+export * from "./desktop-model-management-contract";
+
+export * from "./desktop-image-generation-contract";
+
+export * from "./desktop-comfyui-runtime-contract";

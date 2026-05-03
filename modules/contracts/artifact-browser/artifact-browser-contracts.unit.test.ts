@@ -21,6 +21,7 @@ describe("artifact-browser contracts", () => {
     const browse = normalizeArtifactBrowseSuccessValue({
       items: [
         {
+          artifactId: " artifact-1 ",
           storageKey: " staged/images/kitten-1 ",
           artifactFamily: "image",
           mediaType: " image/png ",
@@ -34,6 +35,7 @@ describe("artifact-browser contracts", () => {
       items: [
         {
           storageKey: "staged/images/kitten-1",
+          artifactId: "artifact-1",
           artifactFamily: "image",
           mediaType: "image/png",
           sourceKind: "upload",

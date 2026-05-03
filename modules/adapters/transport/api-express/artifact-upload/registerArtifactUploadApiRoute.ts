@@ -1,6 +1,7 @@
 import {
   API_ARTIFACT_UPLOAD_OPERATION,
   API_ARTIFACT_UPLOAD_POLICY_READ_OPERATION,
+  createApiArtifactUploadFailureResponse,
   createApiArtifactUploadPolicyReadSuccessResponse,
   createApiArtifactUploadSuccessResponse,
   createApiError,
@@ -211,16 +212,9 @@ export function registerArtifactUploadApiRoute(
     try {
       mapping = await mapApiArtifactUploadRequest(request);
     } catch (error) {
-      const apiResponse = createApiFailureResponse(
-        createApiError(
-          API_ARTIFACT_UPLOAD_OPERATION,
-          "validation",
-          error instanceof Error ? error.message : "Invalid upload request.",
-          {
-            requestId,
-            correlationId,
-          },
-        ),
+      const apiResponse = createApiArtifactUploadFailureResponse(
+        "validation",
+        error instanceof Error ? error.message : "Invalid upload request.",
         {
           requestId,
           correlationId,

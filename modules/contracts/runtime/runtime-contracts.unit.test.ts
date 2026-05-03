@@ -18,6 +18,18 @@ import {
   type PythonRuntimeOutputDescriptor,
   type PythonRuntimeTaskRequest,
   type PythonRuntimeTaskResult,
+  type PythonRuntimeTaskStatus,
+  type RuntimeTaskError,
+  type RuntimeTaskStatus,
+  type RuntimeTaskConcurrencyClass,
+  type StartRuntimeTaskRequest,
+  type StartRuntimeTaskResult,
+  type CancelRuntimeTaskResult,
+  type RuntimeTaskListRequest,
+  type RuntimeTaskListResult,
+  type RuntimeTaskRecord,
+  type RuntimeTaskRetentionPolicy,
+  TaskType,
   createRuntimeOperation,
   createRuntimeExecutionDiagnostic,
   createRuntimeExecutionError,
@@ -529,5 +541,173 @@ describe("python sidecar runtime contracts", () => {
       inferenceMode: "seq2seq",
     };
     expect(invalidModel).toBeDefined();
+  });
+});
+
+
+describe("train-model runtime contracts", () => {
+  it("defines python-friendly train-model request/result shapes", () => {
+    const request: import(".").TrainModelTaskRequest = {
+      baseModel: { modelRecordId: "base-1", modelId: "org/base" },
+      datasets: [{ artifactId: "dataset-1", splitRole: "train", format: "jsonl" }],
+      method: "lora",
+      commonParameters: { numEpochs: 3, learningRate: 0.0002 },
+      output: { outputModelName: "demo-adapter", outputDirectory: "/tmp/output" },
+      runMetadata: { source: "desktop" },
+    };
+
+    const result: import(".").TrainModelTaskResult = {
+      runId: "run-1",
+      status: "failed",
+      warnings: ["lora only"],
+      error: { code: "unsupported_method", message: "qlora is not implemented" },
+    };
+
+    expect(request.method).toBe("lora");
+    expect(result.error?.code).toBe("unsupported_method");
+  });
+});
+
+describe("python runtime async task contracts", () => {
+  it("defines start-task request/result and status/cancel result shapes", () => {
+    const startRequest: import(".").StartPythonRuntimeTaskRequest = {
+      requestId: "task-1",
+      taskType: "prepare-training-dataset",
+      payload: { sourceArtifactId: "artifact-1" },
+      metadata: { source: "desktop" },
+      timeoutMs: 30_000,
+    };
+    const startResult: import(".").StartPythonRuntimeTaskResult = {
+      requestId: "task-1",
+      taskType: "prepare-training-dataset",
+      accepted: true,
+      status: "queued",
+    };
+    const statusResult: import(".").PythonRuntimeTaskStatusResult = {
+      requestId: "task-1",
+      status: "running",
+      progress: { completedSteps: 1 },
+    };
+    const cancelResult: import(".").CancelPythonRuntimeTaskResult = {
+      requestId: "task-1",
+      status: "cancelled",
+      cancelled: true,
+    };
+
+    expect(startRequest.requestId).toBe("task-1");
+    expect(startResult.accepted).toBe(true);
+    expect(statusResult.status).toBe("running");
+    expect(cancelResult.cancelled).toBe(true);
+  });
+
+  it("enforces required async contract fields at compile time", () => {
+    // @ts-expect-error requestId is required.
+    const invalidStartRequest: import(".").StartPythonRuntimeTaskRequest = { taskType: "x", payload: {} };
+    // @ts-expect-error cancelled is required.
+    const invalidCancelResult: import(".").CancelPythonRuntimeTaskResult = { requestId: "x", status: "unknown" };
+    expect(invalidStartRequest).toBeDefined();
+    expect(invalidCancelResult).toBeDefined();
+  });
+});
+
+describe("runtime task registry contracts", () => {
+  it("defines shared runtime task type and lifecycle status literals", () => {
+    const taskTypes = Object.values(TaskType);
+    expect(taskTypes).toEqual([
+      "dataset-preparation",
+      "model-training",
+      "model-validation",
+      "model-publishing",
+      "image-generation",
+    ]);
+
+    const statuses: RuntimeTaskStatus[] = [
+      "queued",
+      "running",
+      "succeeded",
+      "failed",
+      "cancelled",
+      "unknown",
+    ];
+    expect(statuses).toContain("succeeded");
+    const pythonStatuses: PythonRuntimeTaskStatus[] = statuses;
+    expect(pythonStatuses).toContain("queued");
+  });
+
+  it("defines runtime task concurrency classes and task record shape", () => {
+    const concurrencyClass: RuntimeTaskConcurrencyClass = "cpu-heavy";
+
+    const record: RuntimeTaskRecord = {
+      requestId: "req-rt-1",
+      taskType: TaskType.MODEL_TRAINING,
+      status: "running",
+      concurrencyClass,
+      progress: { message: "step", current: 1, total: 4, unit: "step", percent: 25 },
+      error: { code: "transient", message: "retry later", retryable: true, stage: "dispatch" },
+      metadata: { source: "desktop" },
+      queuedAt: "2026-04-29T00:00:00.000Z",
+      startedAt: "2026-04-29T00:00:05.000Z",
+      updatedAt: "2026-04-29T00:00:10.000Z",
+    };
+
+    expect(record.concurrencyClass).toBe("cpu-heavy");
+    expect(record.progress?.percent).toBe(25);
+    expect((record.progress?.percent ?? -1) >= 0).toBe(true);
+    expect((record.progress?.percent ?? 101) <= 100).toBe(true);
+    expect(record.error?.code).toBe("transient");
+  });
+
+  it("defines task listing and retention policy contracts", () => {
+    const listRequest: RuntimeTaskListRequest = {
+      statuses: ["queued", "running"],
+      taskTypes: [TaskType.DATASET_PREPARATION],
+      includeCompleted: false,
+      limit: 50,
+    };
+
+    const listResult: RuntimeTaskListResult = {
+      tasks: [],
+    };
+
+    const genericError: RuntimeTaskError = { code: "runtime_failed", message: "failed" };
+
+    const retention: RuntimeTaskRetentionPolicy = {
+      completedTaskTtlMs: 600_000,
+      maxCompletedTasks: 1_000,
+      cleanupIntervalMs: 30_000,
+    };
+
+    expect(listRequest.limit).toBe(50);
+    expect(Array.isArray(listResult.tasks)).toBe(true);
+    expect(retention.maxCompletedTasks).toBe(1_000);
+    expect(genericError.message).toBe("failed");
+  });
+
+  it("defines generic runtime task start and cancel contracts", () => {
+    const startRequest: StartRuntimeTaskRequest = {
+      requestId: "req-caller-1",
+      taskType: TaskType.DATASET_PREPARATION,
+      concurrencyClass: "cpu-heavy",
+      payload: { sourceIds: ["a1"] },
+      metadata: { caller: "test" },
+    };
+
+    const started: StartRuntimeTaskResult = { requestId: "req-start-1" };
+    const cancelled: CancelRuntimeTaskResult = {
+      requestId: started.requestId,
+      status: "cancelled",
+      cancelled: true,
+    };
+
+    const startRequestWithoutRequestId: StartRuntimeTaskRequest = {
+      taskType: TaskType.DATASET_PREPARATION,
+      payload: { sourceIds: ["a1"] },
+    };
+
+    expect(startRequest.requestId).toBe("req-caller-1");
+    expect(startRequestWithoutRequestId.requestId).toBeUndefined();
+    expect(startRequest.taskType).toBe(TaskType.DATASET_PREPARATION);
+    expect(started.requestId).toBe("req-start-1");
+    expect(cancelled.cancelled).toBe(true);
   });
 });

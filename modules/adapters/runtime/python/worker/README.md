@@ -7,7 +7,6 @@ Endpoints:
 - `GET /health`
 - `GET /capabilities`
 - `POST /models/ensure-downloaded`
-- `POST /tasks/execute`
 
 Implemented task:
 

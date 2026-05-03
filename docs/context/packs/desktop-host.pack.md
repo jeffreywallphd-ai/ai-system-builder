@@ -27,6 +27,8 @@
 - Restrict IPC channel kind to `request`, `response`, or `event`; do not introduce ad hoc kind variants.
 - Keep business policy and use-case orchestration in application/domain, not `main`/preload/IPC glue.
 - Desktop host code should compose adapters and lifecycle behavior, then delegate inward.
+- When adding desktop host features, typecheck the full desktop composition dependency closure under `apps/desktop/tsconfig.webpack.json`; `ts-loader` with `noEmitOnError` can surface reachable TypeScript diagnostics as a vague `emitted no output` failure at `composeDesktopHost.ts`.
+- When desktop composition wraps a typed adapter/application port to add logging or host lifecycle behavior, spread the full existing port first and override only the adapted method(s); hand-built partial port objects can drift when port contracts add methods and surface as vague `ts-loader` no-output failures.
 - Pass inward host metadata through `modules/contracts/host` host-context shapes,
   not Electron-specific objects.
 - Keep host-context metadata small and serialization-friendly (JSON-serializable values only).

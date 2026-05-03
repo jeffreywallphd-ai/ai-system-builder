@@ -45,7 +45,8 @@ function normalizeBusboyHeaders(
 export async function parseMultipartArtifactUploadRequest(
   request: MultipartRequestLike,
 ): Promise<ParsedMultipartArtifactUploadRequest> {
-  if (typeof request.pipe !== "function") {
+  const pipeRequest = request.pipe;
+  if (typeof pipeRequest !== "function") {
     throw new Error("multipart artifact upload requires a readable request stream.");
   }
 
@@ -98,6 +99,6 @@ export async function parseMultipartArtifactUploadRequest(
       });
     });
 
-    request.pipe(parser);
+    pipeRequest.call(request, parser);
   });
 }

@@ -39,7 +39,9 @@ export interface HuggingFaceFetchResponse {
 export type HuggingFaceFetchImplementation = (
   input: string,
   init?: {
+    method?: string;
     headers?: Record<string, string>;
+    body?: string;
   },
 ) => Promise<HuggingFaceFetchResponse>;
 
@@ -48,6 +50,11 @@ interface ResolvedHuggingFaceTarget {
   readonly repositoryName: string;
   readonly revision: string;
   readonly pathInRepo: string;
+}
+
+interface ResolvedHuggingFaceRepositoryIdentity {
+  readonly namespace: string;
+  readonly name: string;
 }
 
 interface HuggingFaceRepoDesignation {
@@ -77,7 +84,7 @@ interface HuggingFaceHubClient {
     repo: HuggingFaceRepoDesignation;
     file: {
       path: string;
-      content: Uint8Array;
+      content: Blob | Uint8Array;
     };
     branch?: string;
     commitTitle?: string;
@@ -93,6 +100,17 @@ interface HuggingFaceHubClient {
     hubUrl?: string;
     fetch?: HuggingFaceFetchImplementation;
   }) => Promise<HuggingFaceFetchResponse>;
+}
+
+function toUploadContent(content: Uint8Array, mediaType?: string): Blob | Uint8Array {
+  if (typeof Blob === "undefined") {
+    return content;
+  }
+
+  const blobContent = new Uint8Array(content);
+  return new Blob([blobContent], {
+    type: mediaType?.trim() || "application/octet-stream",
+  });
 }
 
 export interface CreateHuggingFaceArtifactRepoStorageAdapterOptions {
@@ -336,6 +354,22 @@ function toRepoDesignation(target: ResolvedHuggingFaceTarget): HuggingFaceRepoDe
   };
 }
 
+function resolveRepositoryIdentity(repositoryName: string): ResolvedHuggingFaceRepositoryIdentity {
+  const [namespace, ...nameSegments] = repositoryName.split("/");
+  const name = nameSegments.join("/");
+
+  if (!namespace?.trim() || !name.trim()) {
+    throw new HuggingFaceAdapterValidationError(
+      "Artifact-repo target.repository must include namespace and repository name (for example: owner/repo).",
+    );
+  }
+
+  return {
+    namespace: namespace.trim(),
+    name: name.trim(),
+  };
+}
+
 function assertHubClient(client: Partial<HuggingFaceHubClient>): HuggingFaceHubClient {
   if (
     typeof client.fileExists !== "function"
@@ -387,10 +421,12 @@ function mapUnexpectedHubError(
   operation: HuggingFaceOperation,
   error: unknown,
   accessToken: string | undefined,
+  diagnostics?: Record<string, unknown>,
 ) {
   if (error instanceof HuggingFaceHubClientUnavailableError) {
     return createContractError("unavailable", error.message, {
       details: {
+        ...diagnostics,
         reason: error.message,
       },
     });
@@ -399,6 +435,7 @@ function mapUnexpectedHubError(
   if (error instanceof HuggingFaceAdapterValidationError) {
     return createContractError("validation", `Hugging Face ${operation} failed unexpectedly.`, {
       details: {
+        ...diagnostics,
         reason: error.message,
       },
     });
@@ -434,9 +471,31 @@ function mapUnexpectedHubError(
 
   return createContractError("internal", `Hugging Face ${operation} failed unexpectedly.`, {
     details: {
+      ...diagnostics,
       reason: error instanceof Error ? error.message : String(error),
     },
   });
+}
+
+function isRepositoryMissingStatus(error: unknown): boolean {
+  return getProviderStatusCode(error) === 404;
+}
+
+function logHuggingFaceOperation(
+  operation: HuggingFaceOperation,
+  event: "start" | "success" | "error",
+  metadata: Record<string, unknown>,
+): void {
+  const payload = {
+    operation,
+    event,
+    ...metadata,
+  };
+  if (event === "error") {
+    console.error("[huggingface-artifact-repo]", payload);
+    return;
+  }
+  console.info("[huggingface-artifact-repo]", payload);
 }
 
 function toRepoBrowserError(error: ReturnType<typeof mapUnexpectedHubError>): {
@@ -555,6 +614,74 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     }
   }
 
+  async function createDatasetRepositoryIfMissing(
+    target: ResolvedHuggingFaceTarget,
+    accessToken: string,
+  ): Promise<void> {
+    const repositoryIdentity = resolveRepositoryIdentity(target.repositoryName);
+    const response = await resolvedFetchImplementation(`${hubBaseUrl}/api/repos/create`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        name: repositoryIdentity.name,
+        organization: repositoryIdentity.namespace,
+        type: target.repoType,
+      }),
+    });
+
+    if (response.ok || response.status === 409) {
+      return;
+    }
+
+    throw mapProviderStatusError(
+      "storeArtifactInRepo",
+      response.status,
+      accessToken,
+      response.statusText,
+    );
+  }
+
+  async function uploadWithRepoAutoCreateOnNotFound(
+    hubClient: HuggingFaceHubClient,
+    request: StoreArtifactInRepoRequest,
+    target: ResolvedHuggingFaceTarget,
+    accessToken: string,
+  ): Promise<void> {
+    try {
+      await hubClient.uploadFile({
+        repo: toRepoDesignation(target),
+        file: {
+          path: target.pathInRepo,
+          content: toUploadContent(request.content, request.mediaType),
+        },
+        branch: target.revision,
+        commitTitle: `Store ${target.pathInRepo} via ai-system-builder artifact-repo adapter`,
+        accessToken,
+      });
+      return;
+    } catch (error) {
+      if (!isRepositoryMissingStatus(error)) {
+        throw error;
+      }
+    }
+
+    await createDatasetRepositoryIfMissing(target, accessToken);
+
+    await hubClient.uploadFile({
+      repo: toRepoDesignation(target),
+      file: {
+        path: target.pathInRepo,
+        content: toUploadContent(request.content, request.mediaType),
+      },
+      branch: target.revision,
+      commitTitle: `Store ${target.pathInRepo} via ai-system-builder artifact-repo adapter`,
+      accessToken,
+    });
+  }
+
   const hasArtifactInRepo: ArtifactRepoStoragePort["hasArtifactInRepo"] = async (
     request: HasArtifactInRepoRequest,
     context: ApplicationRequestContext = {},
@@ -589,22 +716,46 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     try {
       const resolvedTarget = resolveTarget(request.target, defaultRepoType);
       const token = getAccessToken()?.trim();
+      logHuggingFaceOperation("storeArtifactInRepo", "start", {
+        repository: resolvedTarget.repositoryName,
+        repoType: resolvedTarget.repoType,
+        pathInRepo: resolvedTarget.pathInRepo,
+        revision: resolvedTarget.revision,
+        hasAccessToken: Boolean(token),
+        contentSizeBytes: request.content.byteLength,
+        requestId: requestContext.requestId,
+        correlationId: requestContext.correlationId,
+      });
       if (!token) {
+        logHuggingFaceOperation("storeArtifactInRepo", "error", {
+          repository: resolvedTarget.repositoryName,
+          pathInRepo: resolvedTarget.pathInRepo,
+          revision: resolvedTarget.revision,
+          hasAccessToken: false,
+          requestId: requestContext.requestId,
+          correlationId: requestContext.correlationId,
+          reason: "missing-access-token",
+        });
         return createStoreArtifactInRepoFailureResult(
           createAuthRequiredError("storeArtifactInRepo"),
           requestContext,
         );
       }
       const hubClient = await resolveHubClient();
-      await hubClient.uploadFile({
-        repo: toRepoDesignation(resolvedTarget),
-        file: {
-          path: resolvedTarget.pathInRepo,
-          content: request.content,
-        },
-        branch: resolvedTarget.revision,
-        commitTitle: `Store ${resolvedTarget.pathInRepo} via ai-system-builder artifact-repo adapter`,
-        accessToken: token,
+      await uploadWithRepoAutoCreateOnNotFound(
+        hubClient,
+        request,
+        resolvedTarget,
+        token,
+      );
+      logHuggingFaceOperation("storeArtifactInRepo", "success", {
+        repository: resolvedTarget.repositoryName,
+        pathInRepo: resolvedTarget.pathInRepo,
+        revision: resolvedTarget.revision,
+        hasAccessToken: true,
+        contentSizeBytes: request.content.byteLength,
+        requestId: requestContext.requestId,
+        correlationId: requestContext.correlationId,
       });
 
       return createStoreArtifactInRepoSuccessResult(
@@ -616,8 +767,30 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
         requestContext,
       );
     } catch (error) {
+      const mappedError = mapUnexpectedHubError(
+        "storeArtifactInRepo",
+        error,
+        getAccessToken(),
+        {
+          repository: request.target.repository,
+          pathInRepo: request.target.path,
+          revision: request.target.revision,
+          hasAccessToken: Boolean(getAccessToken()?.trim()),
+          contentSizeBytes: request.content.byteLength,
+        },
+      );
+      logHuggingFaceOperation("storeArtifactInRepo", "error", {
+        repository: request.target.repository,
+        pathInRepo: request.target.path,
+        revision: request.target.revision,
+        requestId: requestContext.requestId,
+        correlationId: requestContext.correlationId,
+        errorCode: mappedError.code,
+        errorMessage: mappedError.message,
+        details: mappedError.details,
+      });
       return createStoreArtifactInRepoFailureResult(
-        mapUnexpectedHubError("storeArtifactInRepo", error, getAccessToken()),
+        mappedError,
         requestContext,
       );
     }

@@ -121,6 +121,8 @@ export interface ArtifactRepoExpressResponseLike {
     | ApiArtifactSourceVerifyResponse
     | ApiArtifactLocalizeFromRepoResponse
     | ApiArtifactRegisterFromRepoResponse
+    | ApiHuggingFaceNamespaceDatasetsBrowseResponse
+    | ApiHuggingFaceDatasetParquetFilesBrowseResponse
     | HuggingFaceTokenConfigApiResponse
   ) => void;
 }
@@ -266,6 +268,7 @@ function mapPublishStatusCode(
   response:
     | ApiArtifactPublishResponse
     | ApiArtifactPublishVerifyResponse
+    | ApiArtifactSourceVerifyResponse
     | ApiArtifactLocalizeFromRepoResponse
     | ApiArtifactRegisterFromRepoResponse,
 ): number {

@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, expectTypeOf, it, testDouble } from "../../../../testing/node-test";
@@ -92,6 +93,7 @@ describe("composeServerHost", () => {
     const host = composeServerHost({
       artifactRepo: {
         huggingFaceHubClient: hubClient,
+        huggingFaceTokenConfigFilePath: join(tmpdir(), `server-host-token-${Date.now()}.json`),
       },
     });
     host.setHuggingFaceToken("hf_token_updated");

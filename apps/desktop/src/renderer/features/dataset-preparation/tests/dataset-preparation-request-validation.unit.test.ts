@@ -49,4 +49,27 @@ describe("datasetPreparationRequestValidation", () => {
       error: "Chunk size must be a positive integer.",
     });
   });
+
+  it("returns a friendly repository-name message when default namespace is configured", () => {
+    expect(validateAndParseDatasetPreparationInputs({
+      ...createValidInput(),
+      huggingFaceDestinationEnabled: true,
+      defaultHuggingFaceNamespace: "OpenFinAL",
+    })).toEqual({
+      ok: false,
+      error: "Dataset repository name is required when Hugging Face publishing is enabled.",
+    });
+  });
+
+  it("rejects backslash repository separators", () => {
+    expect(validateAndParseDatasetPreparationInputs({
+      ...createValidInput(),
+      huggingFaceDestinationEnabled: true,
+      defaultHuggingFaceNamespace: "OpenFinAL",
+      huggingFaceRepository: "OpenFinAL\\AISysBuilderTest",
+    })).toEqual({
+      ok: false,
+      error: "Dataset repository name cannot include backslashes. Use only the repository name (for example: my-dataset).",
+    });
+  });
 });

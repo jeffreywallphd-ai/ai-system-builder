@@ -1,85 +1,49 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "../../../testing/node-test";
+import { DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL, DESKTOP_DATASET_PREPARE_TRAINING_START_RESPONSE_CHANNEL, DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL, DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_RESPONSE_CHANNEL, DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL, DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_RESPONSE_CHANNEL, createDesktopPrepareTrainingDatasetStartRequest, createDesktopPrepareTrainingDatasetStartSuccessResponse, createDesktopPrepareTrainingDatasetTaskReadRequest, createDesktopPrepareTrainingDatasetTaskReadSuccessResponse, createDesktopPrepareTrainingDatasetTaskCancelRequest, createDesktopPrepareTrainingDatasetTaskCancelSuccessResponse, getDesktopPrepareTrainingDatasetChannel } from "..";
 
-import {
-  DESKTOP_DATASET_PREPARE_TRAINING_OPERATION,
-  DESKTOP_DATASET_PREPARE_TRAINING_REQUEST_CHANNEL,
-  DESKTOP_DATASET_PREPARE_TRAINING_RESPONSE_CHANNEL,
-  createDesktopPrepareTrainingDatasetRequest,
-  createDesktopPrepareTrainingDatasetSuccessResponse,
-} from "..";
+describe("desktop dataset preparation ipc contract",()=>{
+ it("defines async operation channels",()=>{
+  expect(DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL.value).toContain("prepare-training-dataset.start");
+  expect(DESKTOP_DATASET_PREPARE_TRAINING_START_RESPONSE_CHANNEL.value).toContain("prepare-training-dataset.start");
+  expect(DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL.value).toContain("prepare-training-dataset.read-task");
+  expect(DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_RESPONSE_CHANNEL.value).toContain("prepare-training-dataset.read-task");
+  expect(DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL.value).toContain("prepare-training-dataset.cancel-task");
+  expect(DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_RESPONSE_CHANNEL.value).toContain("prepare-training-dataset.cancel-task");
+ });
+ it("returns concrete operation-bound channel constants from the channel lookup helper",()=>{
+  expect(getDesktopPrepareTrainingDatasetChannel("start-request")).toBe(DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL);
+  expect(getDesktopPrepareTrainingDatasetChannel("start-response")).toBe(DESKTOP_DATASET_PREPARE_TRAINING_START_RESPONSE_CHANNEL);
+  expect(getDesktopPrepareTrainingDatasetChannel("task-read-request")).toBe(DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL);
+  expect(getDesktopPrepareTrainingDatasetChannel("task-read-response")).toBe(DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_RESPONSE_CHANNEL);
+  expect(getDesktopPrepareTrainingDatasetChannel("task-cancel-request")).toBe(DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL);
+  expect(getDesktopPrepareTrainingDatasetChannel("task-cancel-response")).toBe(DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_RESPONSE_CHANNEL);
+ });
+ it("keeps ipc channel contract types operation-bound instead of widened to raw string",()=>{
+  const ipcContractsDirectory = resolve("modules/contracts/ipc");
+  const violations = readdirSync(ipcContractsDirectory, { withFileTypes: true })
+   .filter((entry) => entry.isFile() && entry.name.endsWith(".ts") && !entry.name.endsWith(".test.ts"))
+   .flatMap((entry) => {
+    const filePath = resolve(ipcContractsDirectory, entry.name);
+    const source = readFileSync(filePath, "utf8");
+    return /\bIpcChannel\s*<\s*string\b/.test(source) ? [entry.name] : [];
+   });
 
-describe("desktop dataset preparation ipc contract", () => {
-  it("defines operation/channel identities", () => {
-    expect(DESKTOP_DATASET_PREPARE_TRAINING_OPERATION).toBe("artifact.prepare-training-dataset");
-    expect(DESKTOP_DATASET_PREPARE_TRAINING_REQUEST_CHANNEL.value).toBe("ipc.artifact.prepare-training-dataset.request");
-    expect(DESKTOP_DATASET_PREPARE_TRAINING_RESPONSE_CHANNEL.value).toBe("ipc.artifact.prepare-training-dataset.response");
-  });
-
-  it("creates normalized request and success envelopes", () => {
-    const request = createDesktopPrepareTrainingDatasetRequest({
-      command: {
-        sourceArtifactIds: ["artifact-1"],
-        recipe: {
-          normalization: { targetFormat: "markdown" },
-          chunking: { strategy: "character", chunkSize: 1_000, chunkOverlap: 200 },
-          generation: {
-            mode: "qa",
-            model: { provider: "transformers", modelId: "Qwen/Qwen2.5-1.5B-Instruct" },
-            promptTemplate: "Prompt: {{text}}",
-          },
-        },
-        split: { trainRatio: 0.8, testRatio: 0.2, seed: 7 },
-        output: { format: "jsonl" },
-      },
-      boundary: {
-        host: "desktop",
-        source: " desktop.renderer.dataset-preparation ",
-      },
-    });
-
-    expect(request.payload.boundary.source).toBe("desktop.renderer.dataset-preparation");
-
-    const response = createDesktopPrepareTrainingDatasetSuccessResponse({
-      outputs: {
-        local: {
-          dataset: {
-            sourceKind: "runtime",
-            storage: { key: "stored-dataset", mediaType: "application/x-ndjson", sizeBytes: 20 },
-          },
-        },
-      },
-      provenance: {
-        sourceArtifactIds: ["artifact-1"],
-        recipe: request.payload.command.recipe,
-        split: request.payload.command.split,
-        output: request.payload.command.output,
-        generationModelId: "Qwen/Qwen2.5-1.5B-Instruct",
-        summary: {
-          sourceDocumentCount: 1,
-          normalizedDocumentCount: 1,
-          skippedDocumentCount: 0,
-          chunkCount: 2,
-          generatedExampleCount: 10,
-          datasetRowCount: 10,
-          trainRowCount: 10,
-          testRowCount: 0,
-        },
-      },
-      summary: {
-        sourceDocumentCount: 1,
-        normalizedDocumentCount: 1,
-        skippedDocumentCount: 0,
-        chunkCount: 2,
-        generatedExampleCount: 10,
-        datasetRowCount: 10,
-        trainRowCount: 10,
-        testRowCount: 0,
-      },
-      warnings: [{ code: "skipped_document", message: "Skipped one unsupported artifact." }],
-    });
-
-    expect(response.ok).toBe(true);
-    expect(response.value.result.outputs.local?.dataset.storage.key).toBe("stored-dataset");
-    expect(response.value.result.summary.datasetRowCount).toBe(10);
-  });
+  expect(violations).toEqual([]);
+ });
+ it("creates start/read envelopes",()=>{
+  const start=createDesktopPrepareTrainingDatasetStartRequest({command:{sourceArtifactIds:["a1"],recipe:{normalization:{targetFormat:"markdown"},chunking:{strategy:"character",chunkSize:1,chunkOverlap:0},generation:{mode:"qa",model:{provider:"transformers",modelId:"m"}}},split:{trainRatio:0.8,testRatio:0.2},output:{format:"jsonl"}},boundary:{host:"desktop",source:" test "}});
+  expect(start.payload.boundary.source).toBe("test");
+  const started=createDesktopPrepareTrainingDatasetStartSuccessResponse({requestId:"r1",taskType:"prepare-training-dataset",accepted:true,status:"queued"});
+  expect(started.ok).toBe(true);
+  const read=createDesktopPrepareTrainingDatasetTaskReadRequest({requestId:" r1 ",boundary:{host:"desktop",source:"x"}});
+  expect(read.payload.requestId).toBe("r1");
+  const status=createDesktopPrepareTrainingDatasetTaskReadSuccessResponse({requestId:"r1",taskType:"prepare-training-dataset",status:"running"});
+  expect(status.ok).toBe(true);
+  const cancel=createDesktopPrepareTrainingDatasetTaskCancelRequest({requestId:" r1 ",boundary:{host:"desktop",source:"x"}});
+  expect(cancel.payload.requestId).toBe("r1");
+  const cancelled=createDesktopPrepareTrainingDatasetTaskCancelSuccessResponse({requestId:"r1",cancelled:true,status:"cancelled"});
+  expect(cancelled.ok).toBe(true);
+ });
 });

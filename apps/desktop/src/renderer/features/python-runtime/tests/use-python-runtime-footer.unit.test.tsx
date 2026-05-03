@@ -31,6 +31,11 @@ function createSnapshot() {
     logs: [],
     loadedModels: [],
     activeTaskCount: 0,
+    systemResources: {
+      memoryUsagePercent: 45,
+      cpuUsagePercent: 30,
+      gpuUsagePercent: 0,
+    },
   };
 }
 
@@ -54,7 +59,7 @@ describe("usePythonRuntimeFooter", () => {
     vi.useRealTimers();
   });
 
-  it("polls runtime status every 10 seconds", async () => {
+  it("polls runtime status and system resources in the background", async () => {
     const client: DesktopPythonRuntimeClient = {
       readStatus: vi.fn().mockResolvedValue(createSnapshot()),
       controlRuntime: vi.fn().mockResolvedValue(createSnapshot()),
@@ -75,11 +80,10 @@ describe("usePythonRuntimeFooter", () => {
 
     expect(client.readStatus).toHaveBeenCalledTimes(1);
     await act(async () => {
-      vi.advanceTimersByTime(30_000);
+      vi.advanceTimersByTime(5_000);
       await Promise.resolve();
     });
-
-    expect(client.readStatus).toHaveBeenCalledTimes(4);
+    expect(client.readStatus).toHaveBeenCalledTimes(2);
     expect(container.querySelector("[data-testid='loading']")?.textContent).toBe("idle");
   });
 

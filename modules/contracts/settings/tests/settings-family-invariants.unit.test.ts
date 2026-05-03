@@ -14,13 +14,13 @@ describe("settings family invariants", () => {
       "createFeatureModelDefaultSettingKey",
       "createTaskModelDefaultSettingKey",
       "findApplicationSettingDefinition",
-      "isApplicationSettingSensitive",
       "isApplicationSettingCategory",
+      "isApplicationSettingSensitive",
       "isModelDefaultFeatureKey",
       "isModelDefaultTaskKey",
       "listApplicationSettingDefinitionsByCategory",
       "normalizeApplicationSettingKey",
       "normalizeModelDefaultConfig",
-    ]);
+    ].sort());
   });
 });

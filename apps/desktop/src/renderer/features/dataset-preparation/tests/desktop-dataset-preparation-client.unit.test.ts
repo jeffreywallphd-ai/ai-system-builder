@@ -6,7 +6,8 @@ describe("desktop dataset preparation client", () => {
   it("maps success response from preload bridge", async () => {
     const hostWindow = globalThis as typeof globalThis & { window?: Window & typeof globalThis };
     hostWindow.window ??= {} as Window & typeof globalThis;
-    const prepareTrainingDatasetFromArtifacts = vi.fn().mockResolvedValue({
+    const startPrepareTrainingDataset = vi.fn().mockResolvedValue({ ok: true, value: { requestId: "req-123" } });
+    const readPrepareTrainingDatasetTask = vi.fn().mockResolvedValue({
       ok: true,
       value: {
         result: {
@@ -64,12 +65,13 @@ describe("desktop dataset preparation client", () => {
       verifyPublishedArtifactBacking: async () => ({ ok: false }),
       registerArtifactFromRepo: async () => ({ ok: false }),
       localizeArtifactFromRepo: async () => ({ ok: false }),
-      prepareTrainingDatasetFromArtifacts,
+      startPrepareTrainingDataset,
+      readPrepareTrainingDatasetTask,
     };
 
     const client = createDesktopDatasetPreparationClient();
     const browseResult = await client.browseSourceArtifacts();
-    const response = await client.prepareTrainingDatasetFromArtifacts({
+    const started = await client.startPrepareTrainingDataset({
       sourceArtifactIds: ["artifact-1"],
       recipe: {
         normalization: { targetFormat: "markdown" },
@@ -86,9 +88,11 @@ describe("desktop dataset preparation client", () => {
       requestId: "req-123",
     });
 
-    expect(browseResult).toEqual([{ artifactId: "artifact-1", label: "stored/a1.jsonl" }]);
+    expect(browseResult).toEqual([{ artifactId: "artifact-1", label: "stored/a1.jsonl", storageKey: "stored/a1.jsonl" }]);
+    expect(started).toEqual({ requestId: "req-123" });
+    const response = await client.readPrepareTrainingDatasetTask("req-123");
     expect(response.ok).toBe(true);
-    expect(prepareTrainingDatasetFromArtifacts).toHaveBeenCalledWith(expect.any(Object), { requestId: "req-123" });
+    expect(startPrepareTrainingDataset).toHaveBeenCalledWith(expect.any(Object), { requestId: "req-123" });
   });
 
   it("maps failure response from preload bridge", async () => {
@@ -105,11 +109,11 @@ describe("desktop dataset preparation client", () => {
       verifyPublishedArtifactBacking: async () => ({ ok: false }),
       registerArtifactFromRepo: async () => ({ ok: false }),
       localizeArtifactFromRepo: async () => ({ ok: false }),
-      prepareTrainingDatasetFromArtifacts: async () => ({ ok: false, error: { code: "validation", message: "bad input" } }),
+      startPrepareTrainingDataset: async () => ({ ok: false, error: { code: "validation", message: "bad input" } }),
     };
 
     const client = createDesktopDatasetPreparationClient();
-    const response = await client.prepareTrainingDatasetFromArtifacts({
+    const started = await client.startPrepareTrainingDataset({
       sourceArtifactIds: [],
       recipe: {
         normalization: { targetFormat: "markdown" },
@@ -124,11 +128,58 @@ describe("desktop dataset preparation client", () => {
       output: { format: "jsonl" },
     });
 
-    expect(response).toEqual({
-      ok: false,
-      error: { code: "validation", message: "bad input" },
+    expect(started).toEqual({ error: { code: "validation", message: "bad input" } });
+  });
+
+  it("preserves clear runtime start failure message and details", async () => {
+    const hostWindow = globalThis as typeof globalThis & { window?: Window & typeof globalThis };
+    hostWindow.window ??= {} as Window & typeof globalThis;
+    hostWindow.window.desktopApi = {
+      uploadArtifact: async () => ({ ok: false }),
+      getArtifactUploadPolicy: async () => ({ ok: false }),
+      browseArtifacts: async () => ({ ok: true, value: { items: [] } }),
+      readArtifactDetail: async () => ({ ok: false }),
+      readArtifactContentDescriptor: async () => ({ ok: false }),
+      readArtifactViewerMedia: async () => ({ ok: false }),
+      publishArtifactToRepo: async () => ({ ok: false }),
+      verifyPublishedArtifactBacking: async () => ({ ok: false }),
+      registerArtifactFromRepo: async () => ({ ok: false }),
+      localizeArtifactFromRepo: async () => ({ ok: false }),
+      startPrepareTrainingDataset: async () => ({
+        ok: false,
+        error: {
+          code: "internal",
+          message: "Python runtime could not be started before dataset preparation.",
+          details: { cause: "supervisor unavailable" },
+        },
+      }),
+    };
+
+    const client = createDesktopDatasetPreparationClient();
+    const started = await client.startPrepareTrainingDataset({
+      sourceArtifactIds: ["artifact-1"],
+      recipe: {
+        normalization: { targetFormat: "markdown" },
+        chunking: { strategy: "character", chunkSize: 1_000, chunkOverlap: 200 },
+        generation: {
+          mode: "qa",
+          model: { provider: "transformers", modelId: "Qwen/Qwen2.5-1.5B-Instruct" },
+          promptTemplate: "Prompt",
+        },
+      },
+      split: { trainRatio: 0.8, testRatio: 0.2 },
+      output: { format: "jsonl" },
+    });
+
+    expect(started).toEqual({
+      error: {
+        code: "internal",
+        message: "Python runtime could not be started before dataset preparation.",
+        details: { cause: "supervisor unavailable" },
+      },
     });
   });
+
 
   it("does not fall back to storageKey when artifactId is missing from browse items", async () => {
     const hostWindow = globalThis as typeof globalThis & { window?: Window & typeof globalThis };
@@ -147,7 +198,7 @@ describe("desktop dataset preparation client", () => {
       verifyPublishedArtifactBacking: async () => ({ ok: false }),
       registerArtifactFromRepo: async () => ({ ok: false }),
       localizeArtifactFromRepo: async () => ({ ok: false }),
-      prepareTrainingDatasetFromArtifacts: async () => ({ ok: false }),
+      startPrepareTrainingDataset: async () => ({ ok: false }),
     };
 
     const client = createDesktopDatasetPreparationClient();
@@ -155,5 +206,92 @@ describe("desktop dataset preparation client", () => {
     await expect(client.browseSourceArtifacts()).rejects.toThrow(
       "Artifact browse item is missing artifactId.",
     );
+  });
+
+  it("throws when browse items are missing storageKey", async () => {
+    const hostWindow = globalThis as typeof globalThis & { window?: Window & typeof globalThis };
+    hostWindow.window ??= {} as Window & typeof globalThis;
+    hostWindow.window.desktopApi = {
+      uploadArtifact: async () => ({ ok: false }),
+      getArtifactUploadPolicy: async () => ({ ok: false }),
+      browseArtifacts: async () => ({
+        ok: true,
+        value: { items: [{ artifactId: "artifact-1", artifactFamily: "structured-text" }] },
+      }),
+      readArtifactDetail: async () => ({ ok: false }),
+      readArtifactContentDescriptor: async () => ({ ok: false }),
+      readArtifactViewerMedia: async () => ({ ok: false }),
+      publishArtifactToRepo: async () => ({ ok: false }),
+      verifyPublishedArtifactBacking: async () => ({ ok: false }),
+      registerArtifactFromRepo: async () => ({ ok: false }),
+      localizeArtifactFromRepo: async () => ({ ok: false }),
+      startPrepareTrainingDataset: async () => ({ ok: false }),
+    };
+
+    const client = createDesktopDatasetPreparationClient();
+
+    await expect(client.browseSourceArtifacts()).rejects.toThrow(
+      "Artifact browse item is missing storageKey.",
+    );
+  });
+
+  it("normalizes transient transport errors from preload requests", async () => {
+    const hostWindow = globalThis as typeof globalThis & { window?: Window & typeof globalThis };
+    hostWindow.window ??= {} as Window & typeof globalThis;
+    hostWindow.window.desktopApi = {
+      uploadArtifact: async () => ({ ok: false }),
+      getArtifactUploadPolicy: async () => ({ ok: false }),
+      browseArtifacts: async () => ({ ok: true, value: { items: [] } }),
+      readArtifactDetail: async () => ({ ok: false }),
+      readArtifactContentDescriptor: async () => ({ ok: false }),
+      readArtifactViewerMedia: async () => ({ ok: false }),
+      publishArtifactToRepo: async () => ({ ok: false }),
+      verifyPublishedArtifactBacking: async () => ({ ok: false }),
+      registerArtifactFromRepo: async () => ({ ok: false }),
+      localizeArtifactFromRepo: async () => ({ ok: false }),
+      startPrepareTrainingDataset: async () => {
+        throw new TypeError("Failed to fetch");
+      },
+    };
+
+    const client = createDesktopDatasetPreparationClient();
+
+    await expect(client.startPrepareTrainingDataset({
+      sourceArtifactIds: ["artifact-1"],
+      recipe: {
+        normalization: { targetFormat: "markdown" },
+        chunking: { strategy: "character", chunkSize: 1_000, chunkOverlap: 200 },
+        generation: {
+          mode: "qa",
+          model: { provider: "transformers", modelId: "google/flan-t5-base" },
+          promptTemplate: "Prompt: {{text}}",
+        },
+      },
+      split: { trainRatio: 0.8, testRatio: 0.2 },
+      output: { format: "jsonl" },
+    })).rejects.toThrow("fetch failed");
+  });
+
+  it("maps task read statuses with discriminated status values", async () => {
+    const hostWindow = globalThis as typeof globalThis & { window?: Window & typeof globalThis };
+    hostWindow.window ??= {} as Window & typeof globalThis;
+    const readPrepareTrainingDatasetTask = vi.fn()
+      .mockResolvedValueOnce({ ok: true, value: { status: "running", progress: { message: "step", processed: 1, total: 2 } } })
+      .mockResolvedValueOnce({ ok: true, value: { status: "cancelled" } })
+      .mockResolvedValueOnce({ ok: true, value: { status: "unknown" } })
+      .mockResolvedValueOnce({ ok: true, value: { status: "failed", error: { message: "boom" } } });
+    hostWindow.window.desktopApi = {
+      uploadArtifact: async () => ({ ok: false }), getArtifactUploadPolicy: async () => ({ ok: false }),
+      browseArtifacts: async () => ({ ok: true, value: { items: [] } }), readArtifactDetail: async () => ({ ok: false }),
+      readArtifactContentDescriptor: async () => ({ ok: false }), readArtifactViewerMedia: async () => ({ ok: false }),
+      publishArtifactToRepo: async () => ({ ok: false }), verifyPublishedArtifactBacking: async () => ({ ok: false }),
+      registerArtifactFromRepo: async () => ({ ok: false }), localizeArtifactFromRepo: async () => ({ ok: false }),
+      startPrepareTrainingDataset: async () => ({ ok: true, value: { requestId: "req" } }), readPrepareTrainingDatasetTask,
+    };
+    const client = createDesktopDatasetPreparationClient();
+    await expect(client.readPrepareTrainingDatasetTask("req")).resolves.toMatchObject({ ok: true, status: "running" });
+    await expect(client.readPrepareTrainingDatasetTask("req")).resolves.toMatchObject({ ok: true, status: "cancelled" });
+    await expect(client.readPrepareTrainingDatasetTask("req")).resolves.toMatchObject({ ok: true, status: "unknown" });
+    await expect(client.readPrepareTrainingDatasetTask("req")).resolves.toMatchObject({ ok: false, error: { code: "failed", message: "boom" } });
   });
 });

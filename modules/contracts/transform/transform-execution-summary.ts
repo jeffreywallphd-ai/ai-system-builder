@@ -1,8 +1,8 @@
 import {
   normalizeTransformRecord,
   type TransformRecord,
-  type TransformParameters,
 } from "./transform-record";
+import type { TransformParameters } from "./transform-specification";
 
 export interface TransformExecutionSummary<
   TParameters extends TransformParameters = TransformParameters,

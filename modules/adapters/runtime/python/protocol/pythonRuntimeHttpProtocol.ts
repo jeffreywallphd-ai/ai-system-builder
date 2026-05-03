@@ -1,13 +1,16 @@
 import type {
+  CancelPythonRuntimeTaskResult,
+  PythonRuntimeTaskStatus,
+  PythonRuntimeTaskStatusResult,
   PythonRuntimeCapabilitiesResult,
   PythonRuntimeError,
   PythonRuntimeHealthCheckResult,
   PythonRuntimeHealthStatus,
   PythonRuntimeLoadedModel,
   PythonRuntimeModelStatusResult,
+  StartPythonRuntimeTaskRequest,
+  StartPythonRuntimeTaskResult,
   PythonRuntimeStatus,
-  PythonRuntimeTaskRequest,
-  PythonRuntimeTaskResult,
   PythonRuntimeUnloadModelsResult,
 } from "../../../../contracts/runtime";
 
@@ -36,6 +39,14 @@ const LOADED_MODEL_TORCH_DTYPES: ReadonlySet<NonNullable<PythonRuntimeLoadedMode
   "float16",
   "bfloat16",
   "float32",
+]);
+const PYTHON_RUNTIME_TASK_STATUS_VALUES: ReadonlySet<PythonRuntimeTaskStatus> = new Set([
+  "queued",
+  "running",
+  "succeeded",
+  "failed",
+  "cancelled",
+  "unknown",
 ]);
 
 function asObject(value: unknown, label: string): Record<string, unknown> {
@@ -153,6 +164,22 @@ function asOptionalStage(value: unknown, field: string): PythonRuntimeError["sta
   return stage as PythonRuntimeError["stage"];
 }
 
+function asPythonRuntimeTaskStatus(value: unknown, field: string): PythonRuntimeTaskStatus {
+  if (value === undefined || value === null) {
+    return "unknown";
+  }
+  if (typeof value !== "string") {
+    return "unknown";
+  }
+  const status = value.trim().toLowerCase();
+  if (status.length === 0) {
+    return "unknown";
+  }
+  return PYTHON_RUNTIME_TASK_STATUS_VALUES.has(status as PythonRuntimeTaskStatus)
+    ? (status as PythonRuntimeTaskStatus)
+    : "unknown";
+}
+
 function parseLoadedModel(value: unknown, field: string): PythonRuntimeLoadedModel {
   const payload = asObject(value, field);
   return {
@@ -214,15 +241,16 @@ function parseCapabilities(value: unknown): string[] {
   return value.map((entry, index) => asString(entry, `capabilities[${index}]`));
 }
 
-export function mapTaskRequestToHttpPayload(
-  request: PythonRuntimeTaskRequest,
-): PythonRuntimeTaskRequest {
+
+export function mapStartTaskRequest(
+  request: StartPythonRuntimeTaskRequest,
+): StartPythonRuntimeTaskRequest {
   return {
     requestId: asString(request.requestId, "request.requestId"),
     taskType: asString(request.taskType, "request.taskType"),
     payload: request.payload,
     timeoutMs: request.timeoutMs,
-    metadata: request.metadata,
+    metadata: asOptionalRecord(request.metadata, "request.metadata"),
   };
 }
 
@@ -248,17 +276,52 @@ export function mapCapabilitiesResponseFromHttpPayload(
   };
 }
 
-export function mapTaskResponseFromHttpPayload(
-  payload: unknown,
-): PythonRuntimeTaskResult {
-  const response = asObject(payload, "task response");
 
+export function mapStartTaskResponse(payload: unknown): StartPythonRuntimeTaskResult {
+  const response = asObject(payload, "start task response");
+  const accepted = asBoolean(response.accepted, "accepted");
+  if (!accepted) {
+    throw new Error("Invalid python runtime payload: accepted must be true.");
+  }
+  const status = asPythonRuntimeTaskStatus(response.status, "status");
+  if (status !== "queued" && status !== "running") {
+    throw new Error("Invalid python runtime payload: start status must be queued or running.");
+  }
   return {
     requestId: asString(response.requestId, "requestId"),
     taskType: asString(response.taskType, "taskType"),
-    success: asBoolean(response.success, "success"),
+    accepted,
+    status,
+    startedAt: asOptionalString(response.startedAt, "startedAt"),
+    updatedAt: asOptionalString(response.updatedAt, "updatedAt"),
+    metadata: asOptionalRecord(response.metadata, "metadata"),
+  };
+}
+
+export function mapTaskStatusResponse(payload: unknown): PythonRuntimeTaskStatusResult {
+  const response = asObject(payload, "task status response");
+  return {
+    requestId: asString(response.requestId, "requestId"),
+    taskType: asOptionalString(response.taskType, "taskType"),
+    status: asPythonRuntimeTaskStatus(response.status, "status"),
+    progress: asOptionalRecord(response.progress, "progress"),
     data: response.data,
     error: parseRuntimeError(response.error, "error"),
+    startedAt: asOptionalString(response.startedAt, "startedAt"),
+    updatedAt: asOptionalString(response.updatedAt, "updatedAt"),
+    completedAt: asOptionalString(response.completedAt, "completedAt"),
+    metadata: asOptionalRecord(response.metadata, "metadata"),
+  };
+}
+
+export function mapCancelTaskResponse(payload: unknown): CancelPythonRuntimeTaskResult {
+  const response = asObject(payload, "cancel task response");
+  return {
+    requestId: asString(response.requestId, "requestId"),
+    taskType: asOptionalString(response.taskType, "taskType"),
+    status: asPythonRuntimeTaskStatus(response.status, "status"),
+    cancelled: asBoolean(response.cancelled, "cancelled"),
+    message: asOptionalString(response.message, "message"),
     metadata: asOptionalRecord(response.metadata, "metadata"),
   };
 }

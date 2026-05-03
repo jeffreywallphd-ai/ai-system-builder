@@ -36,9 +36,10 @@ import {
   createHuggingFaceTokenConfigStore,
   type HuggingFaceTokenStatus,
 } from "../../shared/huggingFaceTokenConfigStore";
-import { registerExpressApi } from "../../../adapters/transport/api-express/registerExpressApi";
-import type { ExpressPostRoutePort } from "../../../adapters/transport/api-express/artifact-upload/registerArtifactUploadApiRoute";
-import type { ExpressRoutePort } from "../../../adapters/transport/api-express/artifact-browser/registerArtifactBrowserApiRoutes";
+import {
+  registerExpressApi,
+  type RegisterExpressApiDependencies,
+} from "../../../adapters/transport/api-express/registerExpressApi";
 import { createLoggingConfig, type LoggingConfig } from "../../../contracts/config";
 import type { LogLevel, LogVerbosity } from "../../../contracts/logging";
 
@@ -64,7 +65,7 @@ export interface ComposeServerHostOptions {
 }
 
 export interface RegisterServerApiOptions {
-  app: ExpressPostRoutePort & ExpressRoutePort;
+  app: RegisterExpressApiDependencies["app"];
   storageRootDirectory: string;
 }
 

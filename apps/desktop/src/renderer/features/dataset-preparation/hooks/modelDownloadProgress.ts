@@ -7,8 +7,23 @@ export interface DatasetPreparationModelDownloadProgress {
   totalFiles?: number;
 }
 
+export interface DatasetPreparationChunkProgress {
+  message: string;
+  processedChunkCount: number;
+  totalChunkCount: number;
+}
+
+interface ParsedDatasetPreparationGenerationProgressEvent {
+  event?: string;
+  requestId?: string;
+  processedChunkCount?: number;
+  totalChunkCount?: number;
+}
+
 const HUGGING_FACE_FETCHING_PATTERN = /Fetching\s+(\d+)\s+files:\s+(\d+)%\|.*?\|\s+(\d+)\/(\d+)/i;
 const HUGGING_FACE_FETCHING_PERCENT_PATTERN = /Fetching\s+(\d+)\s+files:\s+(\d+)%/i;
+const MODEL_LOAD_PATTERN = /Generation model\s+(.+?)\s+will be loaded from/i;
+const STARTING_RUNTIME_PATTERN = /Starting Python runtime\.?/i;
 
 function splitLogMessage(message: string): string[] {
   return message
@@ -69,6 +84,101 @@ function parseProgressLine(modelId: string, line: string): DatasetPreparationMod
   }
 
   return undefined;
+}
+
+function parseJsonLogLine(line: string): unknown | undefined {
+  const prefixIndex = line.indexOf("{");
+  if (prefixIndex < 0) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(line.slice(prefixIndex));
+  } catch {
+    return undefined;
+  }
+}
+
+export function resolveLatestDatasetPreparationChunkProgress(
+  snapshot: Pick<DesktopPythonRuntimeStatusSnapshot, "logs">,
+  options: { requestId?: string; sinceEpochMs?: number } = {},
+): DatasetPreparationChunkProgress | undefined {
+  for (const log of [...snapshot.logs].reverse()) {
+    if (typeof options.sinceEpochMs === "number") {
+      const logEpochMs = Date.parse(log.timestamp);
+      if (Number.isFinite(logEpochMs) && logEpochMs < options.sinceEpochMs) {
+        continue;
+      }
+    }
+
+    for (const line of splitLogMessage(log.message).reverse()) {
+      const payload = parseJsonLogLine(line) as ParsedDatasetPreparationGenerationProgressEvent | undefined;
+      if (payload?.event !== "runtime.dataset_preparation.generation.progress") {
+        continue;
+      }
+      if (options.requestId && payload.requestId !== options.requestId) {
+        continue;
+      }
+
+      if (typeof payload.processedChunkCount !== "number" || typeof payload.totalChunkCount !== "number") {
+        continue;
+      }
+
+      return {
+        processedChunkCount: payload.processedChunkCount,
+        totalChunkCount: payload.totalChunkCount,
+        message: `Processing chunk ${Math.min(payload.processedChunkCount + 1, payload.totalChunkCount)}/${payload.totalChunkCount}...`,
+      };
+    }
+  }
+
+  return undefined;
+}
+
+export function resolveModelInMemoryLoadMessage(
+  snapshot: Pick<DesktopPythonRuntimeStatusSnapshot, "logs">,
+  modelId: string,
+  options: { sinceEpochMs?: number } = {},
+): string | undefined {
+  for (const log of [...snapshot.logs].reverse()) {
+    if (typeof options.sinceEpochMs === "number") {
+      const logEpochMs = Date.parse(log.timestamp);
+      if (Number.isFinite(logEpochMs) && logEpochMs < options.sinceEpochMs) {
+        continue;
+      }
+    }
+
+    for (const line of splitLogMessage(log.message).reverse()) {
+      const modelLoadMatch = line.match(MODEL_LOAD_PATTERN);
+      if (modelLoadMatch && modelLoadMatch[1]?.trim() === modelId) {
+        return `Loading model ${modelId} into memory...`;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+export function sawPythonRuntimeStartup(
+  snapshot: Pick<DesktopPythonRuntimeStatusSnapshot, "logs">,
+  options: { sinceEpochMs?: number } = {},
+): boolean {
+  for (const log of [...snapshot.logs].reverse()) {
+    if (typeof options.sinceEpochMs === "number") {
+      const logEpochMs = Date.parse(log.timestamp);
+      if (Number.isFinite(logEpochMs) && logEpochMs < options.sinceEpochMs) {
+        continue;
+      }
+    }
+
+    for (const line of splitLogMessage(log.message)) {
+      if (STARTING_RUNTIME_PATTERN.test(line)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 export function resolveLatestModelDownloadProgress(

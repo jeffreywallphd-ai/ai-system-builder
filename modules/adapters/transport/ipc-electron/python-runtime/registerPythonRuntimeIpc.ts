@@ -20,6 +20,7 @@ export interface PythonRuntimeControlPort {
   stopPythonRuntime: () => Promise<void>;
   restartPythonRuntime: () => Promise<void>;
   unloadPythonRuntimeModel: () => Promise<void>;
+  clearPythonRuntimeLogs: () => Promise<void>;
   readPythonRuntimeStatus: () => Promise<DesktopPythonRuntimeStatusPayload>;
 }
 
@@ -97,7 +98,7 @@ export function createDesktopPythonRuntimeStatusReadIpcHandler(
 }
 
 export function createDesktopPythonRuntimeControlIpcHandler(
-  dependencies: Pick<RegisterPythonRuntimeIpcDependencies, "startPythonRuntime" | "stopPythonRuntime" | "restartPythonRuntime" | "unloadPythonRuntimeModel" | "readPythonRuntimeStatus">,
+  dependencies: Pick<RegisterPythonRuntimeIpcDependencies, "startPythonRuntime" | "stopPythonRuntime" | "restartPythonRuntime" | "unloadPythonRuntimeModel" | "clearPythonRuntimeLogs" | "readPythonRuntimeStatus">,
 ) {
   return async (
     _event: unknown,
@@ -110,8 +111,10 @@ export function createDesktopPythonRuntimeControlIpcHandler(
         await dependencies.stopPythonRuntime();
       } else if (request.payload.action === "restart") {
         await dependencies.restartPythonRuntime();
-      } else {
+      } else if (request.payload.action === "unload-model") {
         await dependencies.unloadPythonRuntimeModel();
+      } else {
+        await dependencies.clearPythonRuntimeLogs();
       }
 
       const status = await dependencies.readPythonRuntimeStatus();
@@ -149,6 +152,7 @@ export function registerPythonRuntimeIpc(
       stopPythonRuntime: dependencies.stopPythonRuntime,
       restartPythonRuntime: dependencies.restartPythonRuntime,
       unloadPythonRuntimeModel: dependencies.unloadPythonRuntimeModel,
+      clearPythonRuntimeLogs: dependencies.clearPythonRuntimeLogs,
       readPythonRuntimeStatus: dependencies.readPythonRuntimeStatus,
     }),
   );

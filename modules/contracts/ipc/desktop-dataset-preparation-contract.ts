@@ -1,162 +1,100 @@
-import type { StagedArtifactDescriptor } from "../ingestion";
-import type {
-  DatasetPreparationSummary,
-  DatasetPreparationWarning,
-  PrepareTrainingDatasetRequest,
-} from "../runtime";
 import { createTransportOperation } from "../transport";
-import { createIpcChannel, type IpcChannel, type IpcChannelValue } from "./ipc-channel";
+import { createIpcChannel } from "./ipc-channel";
 import { createIpcRequest, type IpcRequest } from "./ipc-request";
 import { createIpcSuccessResponse, type IpcResponse } from "./ipc-response";
+import type { DatasetPreparationSummary, DatasetPreparationWarning, PrepareTrainingDatasetRequest } from "../runtime";
+import type { StagedArtifactDescriptor } from "../ingestion";
 
-export const DESKTOP_DATASET_PREPARE_TRAINING_OPERATION = createTransportOperation(
-  "artifact",
-  "prepare-training-dataset",
-);
+export const DESKTOP_DATASET_PREPARE_TRAINING_START_OPERATION = createTransportOperation("artifact", "prepare-training-dataset.start");
+export const DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_OPERATION = createTransportOperation("artifact", "prepare-training-dataset.read-task");
+export const DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_OPERATION = createTransportOperation("artifact", "prepare-training-dataset.cancel-task");
 
-export const DESKTOP_DATASET_PREPARE_TRAINING_REQUEST_CHANNEL = createIpcChannel(
-  DESKTOP_DATASET_PREPARE_TRAINING_OPERATION,
-  "request",
-);
+export const DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL = createIpcChannel(DESKTOP_DATASET_PREPARE_TRAINING_START_OPERATION, "request");
+export const DESKTOP_DATASET_PREPARE_TRAINING_START_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_DATASET_PREPARE_TRAINING_START_OPERATION, "response");
+export const DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL = createIpcChannel(DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_OPERATION, "request");
+export const DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_OPERATION, "response");
+export const DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL = createIpcChannel(DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_OPERATION, "request");
+export const DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_OPERATION, "response");
 
-export const DESKTOP_DATASET_PREPARE_TRAINING_RESPONSE_CHANNEL = createIpcChannel(
-  DESKTOP_DATASET_PREPARE_TRAINING_OPERATION,
-  "response",
-);
-
-export interface DesktopDatasetPreparationBoundaryContext {
-  host: "desktop";
-  source: string;
-}
-
-export interface DesktopPrepareTrainingDatasetRequestPayload {
-  command: {
+export interface DesktopDatasetPreparationBoundaryContext { host: "desktop"; source: string; }
+export interface DesktopPrepareTrainingDatasetStartRequestPayload { command: { sourceArtifactIds: string[]; recipe: PrepareTrainingDatasetRequest["recipe"]; split: PrepareTrainingDatasetRequest["split"]; output: PrepareTrainingDatasetRequest["output"]; }; boundary: DesktopDatasetPreparationBoundaryContext; }
+export interface DesktopPrepareTrainingDatasetTaskReadRequestPayload { requestId: string; boundary: DesktopDatasetPreparationBoundaryContext; }
+export interface DesktopPrepareTrainingDatasetTaskCancelRequestPayload { requestId: string; boundary: DesktopDatasetPreparationBoundaryContext; }
+export interface DesktopPrepareTrainingDatasetStartSuccessValue { requestId: string; taskType: string; accepted: true; status: "queued" | "running"; }
+export interface DesktopPrepareTrainingDatasetFinalResult {
+  outputs: {
+    local?: {
+      dataset: StagedArtifactDescriptor;
+    };
+    huggingFace?: {
+      dataset: {
+        provider: "huggingface";
+        repository: string;
+        path: string;
+        revision?: string;
+        exists: boolean;
+        verifiedAt: string;
+      };
+    };
+  };
+  provenance: {
     sourceArtifactIds: string[];
     recipe: PrepareTrainingDatasetRequest["recipe"];
     split: PrepareTrainingDatasetRequest["split"];
     output: PrepareTrainingDatasetRequest["output"];
-  };
-  boundary: DesktopDatasetPreparationBoundaryContext;
-}
-
-export interface DesktopPrepareTrainingDatasetSuccessValue {
-  result: {
-    outputs: {
-      local?: {
-        dataset: StagedArtifactDescriptor;
-      };
-      huggingFace?: {
-        dataset: {
-          provider: "huggingface";
-          repository: string;
-          path: string;
-          revision?: string;
-          exists: boolean;
-          verifiedAt: string;
-        };
-      };
-    };
-    provenance: {
-      sourceArtifactIds: string[];
-      recipe: PrepareTrainingDatasetRequest["recipe"];
-      split: PrepareTrainingDatasetRequest["split"];
-      output: PrepareTrainingDatasetRequest["output"];
-      generationModelId: string;
-      summary: DatasetPreparationSummary;
-    };
+    generationModelId: string;
     summary: DatasetPreparationSummary;
-    warnings?: DatasetPreparationWarning[];
   };
+  summary: DatasetPreparationSummary;
+  warnings?: DatasetPreparationWarning[];
 }
+export type DesktopPrepareTrainingDatasetTaskReadSuccessValue =
+  | { status: "queued" | "running"; requestId: string; taskType?: string; progress?: { message?: string; processed?: number; total?: number }; startedAt?: string; updatedAt?: string }
+  | { status: "succeeded"; requestId: string; taskType?: string; result: DesktopPrepareTrainingDatasetFinalResult; startedAt?: string; updatedAt?: string; completedAt?: string }
+  | { status: "failed"; requestId: string; taskType?: string; error: { code?: string; message: string; details?: Record<string, unknown> }; startedAt?: string; updatedAt?: string; completedAt?: string }
+  | { status: "cancelled" | "unknown"; requestId: string; taskType?: string; message?: string; progress?: { message?: string; processed?: number; total?: number }; startedAt?: string; updatedAt?: string; completedAt?: string };
+export interface DesktopPrepareTrainingDatasetTaskCancelSuccessValue { requestId: string; cancelled: boolean; status: "cancelled" | "running" | "unknown"; }
 
-export type DesktopPrepareTrainingDatasetRequest = IpcRequest<
-  DesktopPrepareTrainingDatasetRequestPayload,
-  typeof DESKTOP_DATASET_PREPARE_TRAINING_OPERATION,
-  Record<string, never>,
-  typeof DESKTOP_DATASET_PREPARE_TRAINING_REQUEST_CHANNEL.value
->;
+export type DesktopPrepareTrainingDatasetStartRequest = IpcRequest<DesktopPrepareTrainingDatasetStartRequestPayload, typeof DESKTOP_DATASET_PREPARE_TRAINING_START_OPERATION, Record<string, never>, typeof DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL.value>;
+export type DesktopPrepareTrainingDatasetStartResponse = IpcResponse<DesktopPrepareTrainingDatasetStartSuccessValue, Record<string, unknown>, typeof DESKTOP_DATASET_PREPARE_TRAINING_START_OPERATION, Record<string, never>, typeof DESKTOP_DATASET_PREPARE_TRAINING_START_RESPONSE_CHANNEL.value>;
+export type DesktopPrepareTrainingDatasetTaskReadRequest = IpcRequest<DesktopPrepareTrainingDatasetTaskReadRequestPayload, typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_OPERATION, Record<string, never>, typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL.value>;
+export type DesktopPrepareTrainingDatasetTaskReadResponse = IpcResponse<DesktopPrepareTrainingDatasetTaskReadSuccessValue, Record<string, unknown>, typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_OPERATION, Record<string, never>, typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_RESPONSE_CHANNEL.value>;
+export type DesktopPrepareTrainingDatasetTaskCancelRequest = IpcRequest<DesktopPrepareTrainingDatasetTaskCancelRequestPayload, typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_OPERATION, Record<string, never>, typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL.value>;
+export type DesktopPrepareTrainingDatasetTaskCancelResponse = IpcResponse<DesktopPrepareTrainingDatasetTaskCancelSuccessValue, Record<string, unknown>, typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_OPERATION, Record<string, never>, typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_RESPONSE_CHANNEL.value>;
 
-export type DesktopPrepareTrainingDatasetResponse = IpcResponse<
-  DesktopPrepareTrainingDatasetSuccessValue,
-  Record<string, unknown>,
-  typeof DESKTOP_DATASET_PREPARE_TRAINING_OPERATION,
-  Record<string, never>,
-  typeof DESKTOP_DATASET_PREPARE_TRAINING_RESPONSE_CHANNEL.value
->;
+type DesktopPrepareTrainingDatasetChannel =
+  | typeof DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL
+  | typeof DESKTOP_DATASET_PREPARE_TRAINING_START_RESPONSE_CHANNEL
+  | typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL
+  | typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_RESPONSE_CHANNEL
+  | typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL
+  | typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_RESPONSE_CHANNEL;
 
-function normalizeRequiredTextField(value: string, fieldName: string): string {
-  const normalized = value.trim();
-  if (normalized.length === 0) {
-    throw new Error(`${fieldName} must be a non-empty, trimmed string.`);
+const norm = (v: string, f: string) => { const n = v.trim(); if (!n) throw new Error(`${f} must be a non-empty, trimmed string.`); return n; };
+const b = (boundary: DesktopDatasetPreparationBoundaryContext) => ({ host: "desktop" as const, source: norm(boundary.source, "boundary.source") });
+const assertNever = (value: never): never => { throw new Error(`Unhandled channel kind: ${String(value)}`); };
+
+export function createDesktopPrepareTrainingDatasetStartRequest(payload: DesktopPrepareTrainingDatasetStartRequestPayload, options?: { requestId?: string; correlationId?: string }): DesktopPrepareTrainingDatasetStartRequest { return createIpcRequest(DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL, { command: payload.command, boundary: b(payload.boundary) }, options); }
+export function createDesktopPrepareTrainingDatasetStartSuccessResponse(value: DesktopPrepareTrainingDatasetStartSuccessValue, options?: { requestId?: string; correlationId?: string }): DesktopPrepareTrainingDatasetStartResponse { return createIpcSuccessResponse(DESKTOP_DATASET_PREPARE_TRAINING_START_RESPONSE_CHANNEL, value, options); }
+export function createDesktopPrepareTrainingDatasetTaskReadRequest(payload: DesktopPrepareTrainingDatasetTaskReadRequestPayload, options?: { requestId?: string; correlationId?: string }): DesktopPrepareTrainingDatasetTaskReadRequest { return createIpcRequest(DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL, { requestId: norm(payload.requestId, "requestId"), boundary: b(payload.boundary) }, options); }
+export function createDesktopPrepareTrainingDatasetTaskReadSuccessResponse(value: DesktopPrepareTrainingDatasetTaskReadSuccessValue, options?: { requestId?: string; correlationId?: string }): DesktopPrepareTrainingDatasetTaskReadResponse { return createIpcSuccessResponse(DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_RESPONSE_CHANNEL, value, options); }
+export function createDesktopPrepareTrainingDatasetTaskCancelRequest(payload: DesktopPrepareTrainingDatasetTaskCancelRequestPayload, options?: { requestId?: string; correlationId?: string }): DesktopPrepareTrainingDatasetTaskCancelRequest { return createIpcRequest(DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL, { requestId: norm(payload.requestId, "requestId"), boundary: b(payload.boundary) }, options); }
+export function createDesktopPrepareTrainingDatasetTaskCancelSuccessResponse(value: DesktopPrepareTrainingDatasetTaskCancelSuccessValue, options?: { requestId?: string; correlationId?: string }): DesktopPrepareTrainingDatasetTaskCancelResponse { return createIpcSuccessResponse(DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_RESPONSE_CHANNEL, value, options); }
+
+export function getDesktopPrepareTrainingDatasetChannel(kind: "start-request"): typeof DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL;
+export function getDesktopPrepareTrainingDatasetChannel(kind: "start-response"): typeof DESKTOP_DATASET_PREPARE_TRAINING_START_RESPONSE_CHANNEL;
+export function getDesktopPrepareTrainingDatasetChannel(kind: "task-read-request"): typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL;
+export function getDesktopPrepareTrainingDatasetChannel(kind: "task-read-response"): typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_RESPONSE_CHANNEL;
+export function getDesktopPrepareTrainingDatasetChannel(kind: "task-cancel-request"): typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL;
+export function getDesktopPrepareTrainingDatasetChannel(kind: "task-cancel-response"): typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_RESPONSE_CHANNEL;
+export function getDesktopPrepareTrainingDatasetChannel(kind: "start-request" | "start-response" | "task-read-request" | "task-read-response" | "task-cancel-request" | "task-cancel-response"): DesktopPrepareTrainingDatasetChannel {
+  switch (kind) {
+    case "start-request": return DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL;
+    case "start-response": return DESKTOP_DATASET_PREPARE_TRAINING_START_RESPONSE_CHANNEL;
+    case "task-read-request": return DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL;
+    case "task-read-response": return DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_RESPONSE_CHANNEL;
+    case "task-cancel-request": return DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL;
+    case "task-cancel-response": return DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_RESPONSE_CHANNEL;
+    default: return assertNever(kind);
   }
-
-  return normalized;
-}
-
-function normalizeBoundary(
-  boundary: DesktopDatasetPreparationBoundaryContext,
-): DesktopDatasetPreparationBoundaryContext {
-  return {
-    host: "desktop",
-    source: normalizeRequiredTextField(boundary.source, "boundary.source"),
-  };
-}
-
-export function createDesktopPrepareTrainingDatasetRequest(
-  payload: DesktopPrepareTrainingDatasetRequestPayload,
-  options?: { requestId?: string; correlationId?: string },
-): DesktopPrepareTrainingDatasetRequest {
-  return createIpcRequest(
-    DESKTOP_DATASET_PREPARE_TRAINING_REQUEST_CHANNEL,
-    {
-      command: payload.command,
-      boundary: normalizeBoundary(payload.boundary),
-    },
-    options,
-  );
-}
-
-export function createDesktopPrepareTrainingDatasetSuccessResponse(
-  result: DesktopPrepareTrainingDatasetSuccessValue["result"],
-  options?: { requestId?: string; correlationId?: string },
-): DesktopPrepareTrainingDatasetResponse {
-  return createIpcSuccessResponse(
-    DESKTOP_DATASET_PREPARE_TRAINING_RESPONSE_CHANNEL,
-    {
-      result,
-    },
-    options,
-  );
-}
-
-export function getDesktopPrepareTrainingDatasetChannel(
-  kind: "request",
-): IpcChannel<
-  typeof DESKTOP_DATASET_PREPARE_TRAINING_OPERATION,
-  "request",
-  IpcChannelValue<typeof DESKTOP_DATASET_PREPARE_TRAINING_OPERATION, "request">
->;
-export function getDesktopPrepareTrainingDatasetChannel(
-  kind: "response",
-): IpcChannel<
-  typeof DESKTOP_DATASET_PREPARE_TRAINING_OPERATION,
-  "response",
-  IpcChannelValue<typeof DESKTOP_DATASET_PREPARE_TRAINING_OPERATION, "response">
->;
-export function getDesktopPrepareTrainingDatasetChannel(
-  kind: "request" | "response",
-):
-  | IpcChannel<
-    typeof DESKTOP_DATASET_PREPARE_TRAINING_OPERATION,
-    "request",
-    IpcChannelValue<typeof DESKTOP_DATASET_PREPARE_TRAINING_OPERATION, "request">
-  >
-  | IpcChannel<
-    typeof DESKTOP_DATASET_PREPARE_TRAINING_OPERATION,
-    "response",
-    IpcChannelValue<typeof DESKTOP_DATASET_PREPARE_TRAINING_OPERATION, "response">
-  > {
-  return kind === "request"
-    ? DESKTOP_DATASET_PREPARE_TRAINING_REQUEST_CHANNEL
-    : DESKTOP_DATASET_PREPARE_TRAINING_RESPONSE_CHANNEL;
 }

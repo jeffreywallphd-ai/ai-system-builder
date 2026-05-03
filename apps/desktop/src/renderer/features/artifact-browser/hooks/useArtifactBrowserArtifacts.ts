@@ -15,9 +15,13 @@ interface UseArtifactBrowserArtifactsParams {
 
 export interface UseArtifactBrowserArtifactsResult {
   items: DesktopArtifactBrowseItem[];
+  uploadedItems: DesktopArtifactBrowseItem[];
+  generatedItems: DesktopArtifactBrowseItem[];
   unregisteredItems: DesktopUnregisteredArtifactBrowseItem[];
   selectedArtifactFamily: DesktopArtifactFamily | "all";
   setSelectedArtifactFamily: (value: DesktopArtifactFamily | "all") => void;
+  selectedStorageFilter: "all" | "uploaded" | "generated";
+  setSelectedStorageFilter: (value: "all" | "uploaded" | "generated") => void;
   refreshArtifacts: () => Promise<void>;
 }
 
@@ -28,6 +32,7 @@ export function useArtifactBrowserArtifacts({
   const [items, setItems] = useState<DesktopArtifactBrowseItem[]>([]);
   const [unregisteredItems, setUnregisteredItems] = useState<DesktopUnregisteredArtifactBrowseItem[]>([]);
   const [selectedArtifactFamily, setSelectedArtifactFamily] = useState<DesktopArtifactFamily | "all">("all");
+  const [selectedStorageFilter, setSelectedStorageFilter] = useState<"all" | "uploaded" | "generated">("all");
 
   const refreshArtifacts = useCallback(async () => {
     setViewState({ status: "loading", message: "Loading artifacts..." });
@@ -37,11 +42,20 @@ export function useArtifactBrowserArtifacts({
         client.browseUnregisteredArtifacts?.() ?? Promise.resolve([]),
       ]);
 
-      setItems(browseItems);
+      const filteredByStorage = browseItems.filter((item) => {
+        if (selectedStorageFilter === "uploaded") {
+          return item.storageKey.startsWith("uploads/");
+        }
+        if (selectedStorageFilter === "generated") {
+          return item.storageKey.startsWith("generated/");
+        }
+        return true;
+      });
+      setItems(filteredByStorage);
       setUnregisteredItems(unregistered);
       setViewState({
         status: "success",
-        message: (browseItems.length + unregistered.length) > 0
+        message: (filteredByStorage.length + unregistered.length) > 0
           ? "Loaded artifacts."
           : "No artifacts found yet.",
       });
@@ -51,13 +65,20 @@ export function useArtifactBrowserArtifacts({
         message: error instanceof Error ? error.message : "Failed to load artifacts.",
       });
     }
-  }, [client, selectedArtifactFamily, setViewState]);
+  }, [client, selectedArtifactFamily, selectedStorageFilter, setViewState]);
+
+  const uploadedItems = items.filter((item) => item.storageKey.startsWith("uploads/"));
+  const generatedItems = items.filter((item) => item.storageKey.startsWith("generated/"));
 
   return {
     items,
+    uploadedItems,
+    generatedItems,
     unregisteredItems,
     selectedArtifactFamily,
     setSelectedArtifactFamily,
+    selectedStorageFilter,
+    setSelectedStorageFilter,
     refreshArtifacts,
   };
 }

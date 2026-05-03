@@ -36,6 +36,7 @@ export interface DatasetPreparationValidationInput {
   localDestinationEnabled: boolean;
   huggingFaceDestinationEnabled: boolean;
   huggingFaceRepository: string;
+  defaultHuggingFaceNamespace?: string;
 }
 
 export interface ParsedDatasetPreparationInputs {
@@ -131,7 +132,21 @@ export function validateAndParseDatasetPreparationInputs(
   }
 
   if (input.huggingFaceDestinationEnabled && input.huggingFaceRepository.trim().length === 0) {
-    return { ok: false, error: "Hugging Face repository is required when that destination is enabled." };
+    return {
+      ok: false,
+      error: input.defaultHuggingFaceNamespace
+        ? "Dataset repository name is required when Hugging Face publishing is enabled."
+        : "Hugging Face repository is required when that destination is enabled. Use owner/repository.",
+    };
+  }
+
+  if (input.huggingFaceDestinationEnabled && input.huggingFaceRepository.includes("\\")) {
+    return {
+      ok: false,
+      error: input.defaultHuggingFaceNamespace
+        ? "Dataset repository name cannot include backslashes. Use only the repository name (for example: my-dataset)."
+        : "Hugging Face repository must use forward slashes (owner/repository).",
+    };
   }
 
   return {

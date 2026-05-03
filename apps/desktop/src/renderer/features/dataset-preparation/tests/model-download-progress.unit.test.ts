@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveLatestModelDownloadProgress } from "../hooks/modelDownloadProgress";
+import { resolveLatestDatasetPreparationChunkProgress, resolveLatestModelDownloadProgress } from "../hooks/modelDownloadProgress";
 
 describe("model download progress", () => {
   it("extracts Hugging Face file download percentages from runtime logs", () => {
@@ -37,5 +37,36 @@ describe("model download progress", () => {
     }, "Qwen/Qwen3.5-4B");
 
     expect(progress?.message).toBe("Downloading model Qwen/Qwen3.5-4B: 43% (6/14 files).");
+  });
+
+  it("parses dataset-preparation chunk progress and filters by requestId", () => {
+    const progress = resolveLatestDatasetPreparationChunkProgress({
+      logs: [
+        {
+          timestamp: "2026-04-26T21:06:04.000Z",
+          level: "info",
+          message: JSON.stringify({
+            event: "runtime.dataset_preparation.generation.progress",
+            requestId: "dataset-preparation-other",
+            totalChunkCount: 100,
+            processedChunkCount: 77,
+            generatedRowCount: 77,
+          }),
+        },
+        {
+          timestamp: "2026-04-26T21:06:05.000Z",
+          level: "info",
+          message: JSON.stringify({
+            event: "runtime.dataset_preparation.generation.progress",
+            requestId: "dataset-preparation-123",
+            totalChunkCount: 100,
+            processedChunkCount: 8,
+            generatedRowCount: 8,
+          }),
+        },
+      ],
+    }, { requestId: "dataset-preparation-123" });
+
+    expect(progress?.message).toBe("Processing chunk 9/100...");
   });
 });

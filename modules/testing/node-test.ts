@@ -284,10 +284,13 @@ function createMatchers(actual: unknown, isNot: boolean) {
         throwWithMessage("toThrow requires a function.");
       }
 
-      const assertThrows = isNot ? assert.doesNotThrow : assert.throws;
+      if (isNot) {
+        assert.doesNotThrow(callable);
+        return;
+      }
 
       if (typeof expected === "string") {
-        assertThrows(callable, (error: unknown) => {
+        assert.throws(callable, (error: unknown) => {
           if (!(error instanceof Error)) {
             return false;
           }
@@ -298,7 +301,7 @@ function createMatchers(actual: unknown, isNot: boolean) {
       }
 
       if (expected instanceof Error) {
-        assertThrows(callable, (error: unknown) => {
+        assert.throws(callable, (error: unknown) => {
           if (!(error instanceof Error)) {
             return false;
           }
@@ -308,7 +311,12 @@ function createMatchers(actual: unknown, isNot: boolean) {
         return;
       }
 
-      assertThrows(callable, expected as RegExp | undefined);
+      if (expected instanceof RegExp) {
+        assert.throws(callable, expected);
+        return;
+      }
+
+      assert.throws(callable);
     },
   };
 
@@ -354,7 +362,12 @@ function createRejectMatchers(actual: Promise<unknown>, isNot: boolean) {
         return;
       }
 
-      await assert.rejects(actual, expected as RegExp | undefined);
+      if (expected instanceof RegExp) {
+        await assert.rejects(actual, expected);
+        return;
+      }
+
+      await assert.rejects(actual);
     },
   };
 }
@@ -395,23 +408,14 @@ type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B 
     : false
   : false;
 
-type AssertTrue<T extends true> = T;
-type AssertFalse<T extends false> = T;
-
 export function expectTypeOf<T>() {
   return {
-    toEqualTypeOf<U>() {
-      type _ = AssertTrue<Equal<T, U>>;
-      void (0 as _);
+    toEqualTypeOf<U>(..._args: Equal<T, U> extends true ? [] : ["Expected types to be equal"]) {
     },
-    toExtend<U>() {
-      type _ = AssertTrue<T extends U ? true : false>;
-      void (0 as _);
+    toExtend<U>(..._args: T extends U ? [] : ["Expected type to extend target"]) {
     },
     not: {
-      toExtend<U>() {
-        type _ = AssertFalse<T extends U ? true : false>;
-        void (0 as _);
+      toExtend<U>(..._args: T extends U ? ["Expected type not to extend target"] : []) {
       },
     },
   };

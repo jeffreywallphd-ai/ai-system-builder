@@ -165,6 +165,7 @@ def _emit_rows(
 def _build_generated_rows(
     payload: PrepareTrainingDatasetRequest,
     generator: Callable[[list, object], list[GeneratedQaExample]],
+    on_generation_progress: Callable[[dict[str, int]], None] | None = None,
 ) -> tuple[list[dict[str, object]], list[DatasetPreparationWarning], int, int, int]:
     try:
         ensure_generation_model_is_available(payload.recipe.generation)
@@ -230,8 +231,18 @@ def _build_generated_rows(
     warnings: list[DatasetPreparationWarning] = list(normalization.warnings)
     generation_error_samples: list[str] = []
     skipped_generation_chunk_count = 0
+    processed_chunk_count = 0
+    generated_row_count = 0
     for start in range(0, len(chunks), batch_size):
         chunk_batch = chunks[start : start + batch_size]
+        if on_generation_progress is not None:
+            on_generation_progress(
+                {
+                    "totalChunkCount": len(chunks),
+                    "processedChunkCount": processed_chunk_count,
+                    "generatedRowCount": generated_row_count,
+                }
+            )
         try:
             generated_examples = generator(chunk_batch, payload.recipe.generation)
             generated_chunk_keys = {
@@ -271,6 +282,16 @@ def _build_generated_rows(
                         "generationMode": example.generation_mode,
                     }
                 )
+            processed_chunk_count += len(chunk_batch)
+            generated_row_count = len(rows)
+            if on_generation_progress is not None:
+                on_generation_progress(
+                    {
+                        "totalChunkCount": len(chunks),
+                        "processedChunkCount": processed_chunk_count,
+                        "generatedRowCount": generated_row_count,
+                    }
+                )
         except Exception as error:
             formatted_error = _format_generation_error(error)
             if len(generation_error_samples) < 3:
@@ -286,6 +307,15 @@ def _build_generated_rows(
                             ),
                             sourceArtifactId=chunk.artifact_id,
                         )
+                    )
+                processed_chunk_count += len(chunk_batch)
+                if on_generation_progress is not None:
+                    on_generation_progress(
+                        {
+                            "totalChunkCount": len(chunks),
+                            "processedChunkCount": processed_chunk_count,
+                            "generatedRowCount": generated_row_count,
+                        }
                     )
                 continue
             raise DatasetPreparationStageError(
@@ -372,6 +402,7 @@ def _build_generated_rows(
 def prepare_training_dataset(
     payload: PrepareTrainingDatasetRequest,
     example_generator: Callable[[list, object], list[GeneratedQaExample]] = generate_qa_examples_for_chunks,
+    on_generation_progress: Callable[[dict[str, int]], None] | None = None,
 ) -> PrepareTrainingDatasetResult:
     try:
         _validate_split_config(float(payload.split.trainRatio), float(payload.split.testRatio))
@@ -386,7 +417,11 @@ def prepare_training_dataset(
             },
         ) from error
 
-    rows, warnings, normalized_count, skipped_count, chunk_count = _build_generated_rows(payload, example_generator)
+    rows, warnings, normalized_count, skipped_count, chunk_count = _build_generated_rows(
+        payload,
+        example_generator,
+        on_generation_progress,
+    )
     _validate_generated_rows(len(rows), chunk_count)
 
     if payload.split.shuffle:

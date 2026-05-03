@@ -40,6 +40,7 @@ describe("useArtifactBrowserArtifacts", () => {
     const browseArtifacts = vi
       .fn()
       .mockResolvedValueOnce([{ storageKey: "uploads/cat.png", artifactFamily: "image" }])
+      .mockResolvedValueOnce([{ storageKey: "uploads/train.parquet", artifactFamily: "tabular" }])
       .mockResolvedValueOnce([{ storageKey: "uploads/train.parquet", artifactFamily: "tabular" }]);
     const browseUnregisteredArtifacts = vi
       .fn()
@@ -75,6 +76,8 @@ describe("useArtifactBrowserArtifacts", () => {
     });
     expect(browseArtifacts).toHaveBeenNthCalledWith(1, {});
     expect(hookState?.items[0]?.storageKey).toBe("uploads/cat.png");
+    expect(hookState?.uploadedItems[0]?.storageKey).toBe("uploads/cat.png");
+    expect(hookState?.generatedItems).toEqual([]);
     expect(hookState?.unregisteredItems[0]?.storageKey).toBe("uploads/orphan.json");
 
     await act(async () => {
@@ -87,5 +90,14 @@ describe("useArtifactBrowserArtifacts", () => {
     expect(hookState?.items[0]?.storageKey).toBe("uploads/train.parquet");
     expect(hookState?.unregisteredItems[0]?.storageKey).toBe("uploads/orphan-2.json");
     expect(setViewState).toHaveBeenCalledWith({ status: "loading", message: "Loading artifacts..." });
+
+    await act(async () => {
+      hookState?.setSelectedStorageFilter("generated");
+    });
+    await act(async () => {
+      await hookState?.refreshArtifacts();
+    });
+    expect(browseArtifacts).toHaveBeenNthCalledWith(3, { artifactFamily: "tabular" });
+    expect(hookState?.items).toEqual([]);
   });
 });

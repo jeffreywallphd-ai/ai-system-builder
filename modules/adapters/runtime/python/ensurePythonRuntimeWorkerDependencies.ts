@@ -94,7 +94,14 @@ print(json.dumps({
 }))
 `.trim();
 
-const WORKER_DEPENDENCY_PROBE_SCRIPT = "import accelerate, fastapi, hf_xet, uvicorn, huggingface_hub, transformers";
+const WORKER_DEPENDENCY_PROBE_SCRIPT = `
+# asb:worker-dependency-probe
+import importlib.util
+required = ["accelerate", "datasets", "fastapi", "hf_xet", "peft", "pyarrow", "safetensors", "uvicorn", "huggingface_hub", "transformers"]
+missing = [name for name in required if importlib.util.find_spec(name) is None]
+if missing:
+  raise ModuleNotFoundError(f"No module named '{missing[0]}'")
+`.trim();
 
 const TORCH_INSTALL_PROBE_SCRIPT = `
 # asb:torch-install-probe
@@ -535,7 +542,7 @@ function installWorkerRequirementsIfNeeded(
     throw new Error(`Failed to probe Python runtime worker dependencies: ${probeOutput}`);
   }
 
-  const missingDependencyPattern = /No module named ['"](accelerate|fastapi|hf_xet|uvicorn|huggingface_hub|transformers)['"]/i;
+  const missingDependencyPattern = /No module named ['"](accelerate|datasets|fastapi|hf_xet|peft|pyarrow|safetensors|uvicorn|huggingface_hub|transformers)['"]/i;
   if (!missingDependencyPattern.test(probeOutput)) {
     throw new Error(
       `Python dependency probe failed for an unexpected reason; aborting startup. ${probeOutput}`,

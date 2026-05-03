@@ -34,7 +34,14 @@ function createEnvironmentInspectionJson(version = "3.11.9"): string {
   });
 }
 
-const workerDependencyProbeScript = "import accelerate, fastapi, hf_xet, uvicorn, huggingface_hub, transformers";
+const workerDependencyProbeScript = `
+# asb:worker-dependency-probe
+import importlib.util
+required = ["accelerate", "datasets", "fastapi", "hf_xet", "peft", "pyarrow", "safetensors", "uvicorn", "huggingface_hub", "transformers"]
+missing = [name for name in required if importlib.util.find_spec(name) is None]
+if missing:
+  raise ModuleNotFoundError(f"No module named '{missing[0]}'")
+`.trim();
 
 describe("ensurePythonRuntimeWorkerDependencies", () => {
   it("keeps existing torch installation when already matching selected CPU target", () => {
@@ -187,6 +194,63 @@ describe("ensurePythonRuntimeWorkerDependencies", () => {
         return createSpawnSyncResult({
           status: 1,
           stderr: "ModuleNotFoundError: No module named 'accelerate'",
+        });
+      }
+      if (command === "python" && args.join(" ") === "-m pip install -r requirements.txt") {
+        return createSpawnSyncResult({ status: 0, stdout: "Successfully installed requirements" });
+      }
+      if (command === "nvidia-smi") {
+        return createSpawnSyncResult({ status: 1, stderr: "not found" });
+      }
+      if (command === "rocminfo") {
+        return createSpawnSyncResult({ status: 1, stderr: "not found" });
+      }
+      if (command === "python" && args[0] === "-c" && args[1]?.includes("asb:torch-install-probe")) {
+        return createSpawnSyncResult({
+          stdout: JSON.stringify({
+            installed: true,
+            version: "2.6.0+cpu",
+            cudaVersion: null,
+            hipVersion: null,
+            cudaAvailable: false,
+          }),
+        });
+      }
+      if (command === "python" && args[0] === "-c" && args[1]?.includes("asb:torch-verification")) {
+        return createSpawnSyncResult({ status: 0, stdout: "{\"ok\": true}" });
+      }
+
+      throw new Error(`Unexpected command: ${command} ${args.join(" ")}`);
+    });
+
+    ensurePythonRuntimeWorkerDependencies({
+      command: "python",
+      cwd: "/tmp/runtime-worker",
+      spawnSyncImplementation: spawnSyncImplementation as any,
+      diagnosticsFile: "/tmp/diag.json",
+    });
+
+    expect(
+      spawnSyncImplementation.mock.calls.some((call) =>
+        Array.isArray(call[1]) && call[1].join(" ") === "-m pip install -r requirements.txt"),
+    ).toBe(true);
+  });
+
+  it("installs worker requirements when model-training dataset dependencies are missing", () => {
+    const spawnSyncImplementation = createSpawnSyncImplementation((command, args) => {
+      if (command === "python" && args[0] === "-c" && args[1]?.includes("asb:python-env-inspect")) {
+        return createSpawnSyncResult({ stdout: createEnvironmentInspectionJson() });
+      }
+      if (command === "python" && args.join(" ") === "-m pip --version") {
+        return createSpawnSyncResult({ stdout: "pip 25.0 from /venv/lib/python3.11/site-packages/pip (python 3.11)" });
+      }
+      if (command === "python" && args[0] === "-c" && args[1]?.includes("os.access") && args[2] === "/tmp/runtime-worker") {
+        return createSpawnSyncResult({ stdout: "1\n" });
+      }
+      if (command === "python" && args[0] === "-c" && args[1] === workerDependencyProbeScript) {
+        return createSpawnSyncResult({
+          status: 1,
+          stderr: "ModuleNotFoundError: No module named 'datasets'",
         });
       }
       if (command === "python" && args.join(" ") === "-m pip install -r requirements.txt") {
