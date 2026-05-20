@@ -1,20 +1,57 @@
+import { normalizeAssetId, normalizeAssetReferenceKind, type AssetReference } from "../asset";
+import { normalizeAssetDraftId, normalizeAssetOverrideId, normalizeAssetRevisionId, normalizeAuthoredAssetId } from "../asset-authoring";
+import { createUserLibraryAssetId, createUserLibraryRelationshipId } from "../user-library";
 import { createWorkspaceId } from "../workspace";
 import { normalizeEffectiveAssetProjectionBlocker, normalizeEffectiveAssetProjectionDiagnostic } from "./effective-asset-projection-diagnostics";
 import { normalizeEffectiveAssetProjectionId } from "./effective-asset-projection-identity";
 import type { CreateEffectiveAssetProjectionCommand, InvalidateEffectiveAssetProjectionCommand, ListEffectiveAssetProjectionsCommand, ReadEffectiveAssetProjectionCommand, RefreshEffectiveAssetProjectionCommand, ValidateEffectiveAssetProjectionReadinessCommand } from "./effective-asset-projection-commands";
-import type { EffectiveAssetProjectionRecord } from "./effective-asset-projection-record";
+import type { EffectiveAssetProjectionRecord, EffectiveAssetProjectionSnapshotRecord } from "./effective-asset-projection-record";
 import { normalizeEffectiveAssetProjectionPolicy } from "./effective-asset-projection-policy";
-import { normalizeSafeEffectiveAssetProjectedFieldPatch } from "./effective-asset-projected-fields";
-import { normalizeEffectiveAssetProjectionSourceKind } from "./effective-asset-projection-source";
+import { normalizeSafeEffectiveAssetLabel, normalizeSafeEffectiveAssetProjectedFieldPatch } from "./effective-asset-projected-fields";
+import { normalizeEffectiveAssetProjectionSourceKind, type EffectiveAssetProjectionSource, type EffectiveAssetProjectionTarget } from "./effective-asset-projection-source";
 import { normalizeEffectiveAssetProjectionStatus } from "./effective-asset-projection-status";
 
-const req=(v:unknown,l:string)=>{if(typeof v!=="string"||v.trim().length===0||v!==v.trim()) throw new Error(`${l} is invalid.`); return v;};
-export const normalizeEffectiveAssetProjectionSource=(v:any)=>({ ...v, sourceKind: normalizeEffectiveAssetProjectionSourceKind(v.sourceKind), targetWorkspaceId: createWorkspaceId(v.targetWorkspaceId), ...(v.sourceLabel?{sourceLabel:req(v.sourceLabel,"Source label")}:{})});
-export const normalizeEffectiveAssetProjectionTarget=(v:any)=>({ ...v, targetWorkspaceId: createWorkspaceId(v.targetWorkspaceId), intendedPolicy: normalizeEffectiveAssetProjectionPolicy(v.intendedPolicy), ...(v.projectionId?{projectionId:normalizeEffectiveAssetProjectionId(v.projectionId)}:{}), ...(v.targetLabel?{targetLabel:req(v.targetLabel,"Target label")}:{})});
-export const normalizeEffectiveAssetProjectionRecord=(v:EffectiveAssetProjectionRecord):EffectiveAssetProjectionRecord=>({ ...v, projectionId: normalizeEffectiveAssetProjectionId(v.projectionId), targetWorkspaceId: createWorkspaceId(v.targetWorkspaceId), source: normalizeEffectiveAssetProjectionSource(v.source), target: normalizeEffectiveAssetProjectionTarget(v.target), sourceKind: normalizeEffectiveAssetProjectionSourceKind(v.sourceKind), status: normalizeEffectiveAssetProjectionStatus(v.status), policy: normalizeEffectiveAssetProjectionPolicy(v.policy), projectedFields: normalizeSafeEffectiveAssetProjectedFieldPatch(v.projectedFields), diagnostics: v.diagnostics.map(normalizeEffectiveAssetProjectionDiagnostic), blockers: v.blockers.map(normalizeEffectiveAssetProjectionBlocker)});
-export const normalizeCreateEffectiveAssetProjectionCommand=(v:CreateEffectiveAssetProjectionCommand):CreateEffectiveAssetProjectionCommand=>({ ...v, targetWorkspaceId:createWorkspaceId(v.targetWorkspaceId), source:normalizeEffectiveAssetProjectionSource(v.source), target:normalizeEffectiveAssetProjectionTarget(v.target), policy:normalizeEffectiveAssetProjectionPolicy(v.policy), ...(v.projectedFieldPatch?{projectedFieldPatch:normalizeSafeEffectiveAssetProjectedFieldPatch(v.projectedFieldPatch)}:{})});
-export const normalizeRefreshEffectiveAssetProjectionCommand=(v:RefreshEffectiveAssetProjectionCommand):RefreshEffectiveAssetProjectionCommand=>({ ...v, targetWorkspaceId:createWorkspaceId(v.targetWorkspaceId), projectionId:normalizeEffectiveAssetProjectionId(v.projectionId)});
-export const normalizeInvalidateEffectiveAssetProjectionCommand=(v:InvalidateEffectiveAssetProjectionCommand):InvalidateEffectiveAssetProjectionCommand=>({ ...v, targetWorkspaceId:createWorkspaceId(v.targetWorkspaceId), projectionId:normalizeEffectiveAssetProjectionId(v.projectionId)});
-export const normalizeReadEffectiveAssetProjectionCommand=(v:ReadEffectiveAssetProjectionCommand):ReadEffectiveAssetProjectionCommand=>({ ...v, targetWorkspaceId:createWorkspaceId(v.targetWorkspaceId), projectionId:normalizeEffectiveAssetProjectionId(v.projectionId)});
-export const normalizeListEffectiveAssetProjectionsCommand=(v:ListEffectiveAssetProjectionsCommand):ListEffectiveAssetProjectionsCommand=>({ ...v, targetWorkspaceId:createWorkspaceId(v.targetWorkspaceId)});
-export const normalizeValidateEffectiveAssetProjectionReadinessCommand=(v:ValidateEffectiveAssetProjectionReadinessCommand):ValidateEffectiveAssetProjectionReadinessCommand=>({ ...v, targetWorkspaceId:createWorkspaceId(v.targetWorkspaceId), projectionId:normalizeEffectiveAssetProjectionId(v.projectionId), ...(v.requiredPolicy?{requiredPolicy:normalizeEffectiveAssetProjectionPolicy(v.requiredPolicy)}:{})});
+export type TryNormalizeResult<T> = { ok: true; value: T } | { ok: false; diagnostics: Array<{ code: "normalization-failed"; message: string }> };
+const fail = <T>(): TryNormalizeResult<T> => ({ ok: false, diagnostics: [{ code: "normalization-failed", message: "Normalization failed." }] });
+
+function normalizeAssetReference(value: AssetReference): AssetReference {
+  return { ...value, kind: normalizeAssetReferenceKind(value.kind), id: normalizeAssetId(value.id), ...(value.version ? { version: value.version.trim() } : {}) };
+}
+
+export const normalizeEffectiveAssetProjectionSource = (value: EffectiveAssetProjectionSource): EffectiveAssetProjectionSource => ({
+  sourceKind: normalizeEffectiveAssetProjectionSourceKind(value.sourceKind),
+  targetWorkspaceId: createWorkspaceId(value.targetWorkspaceId),
+  ...(value.sourceAssetReference ? { sourceAssetReference: normalizeAssetReference(value.sourceAssetReference) } : {}),
+  ...(value.effectiveAssetReference ? { effectiveAssetReference: normalizeAssetReference(value.effectiveAssetReference) } : {}),
+  ...(value.sourceWorkspaceId ? { sourceWorkspaceId: createWorkspaceId(value.sourceWorkspaceId) } : {}),
+  ...(value.userLibraryAssetId ? { userLibraryAssetId: createUserLibraryAssetId(value.userLibraryAssetId) } : {}),
+  ...(value.authoredAssetId ? { authoredAssetId: normalizeAuthoredAssetId(value.authoredAssetId) } : {}),
+  ...(value.draftId ? { draftId: normalizeAssetDraftId(value.draftId) } : {}),
+  ...(value.revisionId ? { revisionId: normalizeAssetRevisionId(value.revisionId) } : {}),
+  ...(value.overrideId ? { overrideId: normalizeAssetOverrideId(value.overrideId) } : {}),
+  ...(value.sourceRelationshipId ? { sourceRelationshipId: createUserLibraryRelationshipId(value.sourceRelationshipId) } : {}),
+  ...(value.sourceLabel ? { sourceLabel: normalizeSafeEffectiveAssetLabel(value.sourceLabel, "sourceLabel") } : {}),
+});
+
+export const normalizeEffectiveAssetProjectionTarget = (value: EffectiveAssetProjectionTarget): EffectiveAssetProjectionTarget => ({
+  targetWorkspaceId: createWorkspaceId(value.targetWorkspaceId),
+  effectiveAssetReference: normalizeAssetReference(value.effectiveAssetReference),
+  intendedPolicy: normalizeEffectiveAssetProjectionPolicy(value.intendedPolicy),
+  ...(value.projectionId ? { projectionId: normalizeEffectiveAssetProjectionId(value.projectionId) } : {}),
+  ...(value.targetLabel ? { targetLabel: normalizeSafeEffectiveAssetLabel(value.targetLabel, "targetLabel") } : {}),
+});
+
+export const normalizeEffectiveAssetProjectionRecord = (value: EffectiveAssetProjectionRecord): EffectiveAssetProjectionRecord => ({ ...value, projectionId: normalizeEffectiveAssetProjectionId(value.projectionId), targetWorkspaceId: createWorkspaceId(value.targetWorkspaceId), source: normalizeEffectiveAssetProjectionSource(value.source), target: normalizeEffectiveAssetProjectionTarget(value.target), sourceKind: normalizeEffectiveAssetProjectionSourceKind(value.sourceKind), status: normalizeEffectiveAssetProjectionStatus(value.status), policy: normalizeEffectiveAssetProjectionPolicy(value.policy), effectiveAssetReference: normalizeAssetReference(value.effectiveAssetReference), ...(value.sourceAssetReference ? { sourceAssetReference: normalizeAssetReference(value.sourceAssetReference) } : {}), projectedFields: normalizeSafeEffectiveAssetProjectedFieldPatch(value.projectedFields), diagnostics: value.diagnostics.map(normalizeEffectiveAssetProjectionDiagnostic), blockers: value.blockers.map(normalizeEffectiveAssetProjectionBlocker) });
+export const normalizeEffectiveAssetProjectionSnapshotRecord = (value: EffectiveAssetProjectionSnapshotRecord): EffectiveAssetProjectionSnapshotRecord => normalizeEffectiveAssetProjectionRecord(value) as EffectiveAssetProjectionSnapshotRecord;
+export const normalizeCreateEffectiveAssetProjectionCommand = (value: CreateEffectiveAssetProjectionCommand): CreateEffectiveAssetProjectionCommand => ({ ...value, targetWorkspaceId: createWorkspaceId(value.targetWorkspaceId), source: normalizeEffectiveAssetProjectionSource(value.source), target: normalizeEffectiveAssetProjectionTarget(value.target), policy: normalizeEffectiveAssetProjectionPolicy(value.policy), ...(value.projectedFieldPatch ? { projectedFieldPatch: normalizeSafeEffectiveAssetProjectedFieldPatch(value.projectedFieldPatch) } : {}) });
+export const normalizeRefreshEffectiveAssetProjectionCommand = (value: RefreshEffectiveAssetProjectionCommand): RefreshEffectiveAssetProjectionCommand => ({ ...value, targetWorkspaceId: createWorkspaceId(value.targetWorkspaceId), projectionId: normalizeEffectiveAssetProjectionId(value.projectionId) });
+export const normalizeInvalidateEffectiveAssetProjectionCommand = (value: InvalidateEffectiveAssetProjectionCommand): InvalidateEffectiveAssetProjectionCommand => ({ ...value, targetWorkspaceId: createWorkspaceId(value.targetWorkspaceId), projectionId: normalizeEffectiveAssetProjectionId(value.projectionId) });
+export const normalizeReadEffectiveAssetProjectionCommand = (value: ReadEffectiveAssetProjectionCommand): ReadEffectiveAssetProjectionCommand => ({ ...value, targetWorkspaceId: createWorkspaceId(value.targetWorkspaceId), projectionId: normalizeEffectiveAssetProjectionId(value.projectionId) });
+export const normalizeListEffectiveAssetProjectionsCommand = (value: ListEffectiveAssetProjectionsCommand): ListEffectiveAssetProjectionsCommand => ({ ...value, targetWorkspaceId: createWorkspaceId(value.targetWorkspaceId) });
+export const normalizeValidateEffectiveAssetProjectionReadinessCommand = (value: ValidateEffectiveAssetProjectionReadinessCommand): ValidateEffectiveAssetProjectionReadinessCommand => ({ ...value, targetWorkspaceId: createWorkspaceId(value.targetWorkspaceId), projectionId: normalizeEffectiveAssetProjectionId(value.projectionId), ...(value.requiredPolicy ? { requiredPolicy: normalizeEffectiveAssetProjectionPolicy(value.requiredPolicy) } : {}) });
+
+export function tryNormalizeEffectiveAssetProjectionRecord(value: EffectiveAssetProjectionRecord): TryNormalizeResult<EffectiveAssetProjectionRecord> { try { return { ok: true, value: normalizeEffectiveAssetProjectionRecord(value) }; } catch { return fail(); } }
+export function tryNormalizeEffectiveAssetProjectionSource(value: EffectiveAssetProjectionSource): TryNormalizeResult<EffectiveAssetProjectionSource> { try { return { ok: true, value: normalizeEffectiveAssetProjectionSource(value) }; } catch { return fail(); } }
+export function tryNormalizeEffectiveAssetProjectionTarget(value: EffectiveAssetProjectionTarget): TryNormalizeResult<EffectiveAssetProjectionTarget> { try { return { ok: true, value: normalizeEffectiveAssetProjectionTarget(value) }; } catch { return fail(); } }
+export function tryNormalizeCreateEffectiveAssetProjectionCommand(value: CreateEffectiveAssetProjectionCommand): TryNormalizeResult<CreateEffectiveAssetProjectionCommand> { try { return { ok: true, value: normalizeCreateEffectiveAssetProjectionCommand(value) }; } catch { return fail(); } }
+export function tryNormalizeSafeEffectiveAssetProjectedFieldPatch(value: import("./effective-asset-projected-fields").SafeEffectiveAssetProjectedFieldPatch): TryNormalizeResult<import("./effective-asset-projected-fields").SafeEffectiveAssetProjectedFieldPatch> { try { return { ok: true, value: normalizeSafeEffectiveAssetProjectedFieldPatch(value) }; } catch { return fail(); } }
