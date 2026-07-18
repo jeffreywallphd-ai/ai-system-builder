@@ -12,6 +12,13 @@ Current contract families include:
 - `artifact-browser` read-side operation and read-model contracts
 - `runtime`, `persistence`, `storage`, and `ingestion`
 - `system-builder` for workspace-owned composed-system design records that specialize Asset Kernel compositions
+- `asset-authoring` for safe authored records plus exact-base layered
+  customizations, typed semantic sections, bounded source overlays, review
+  evidence, and distinct publication lineage
+- `asset-implementation` for drafts, releases, facets, bindings, and immutable
+  implementation backing-resource bundles kept outside Asset Kernel metadata
+- `asset-package` for the bounded package lifecycle contract and deterministic,
+  inspector-valid, non-executing `.aisb-package` starter
 - `artifact`, `transform`, `lineage`, and `dataset` for ELT-style data flow
 - `host` context metadata
 - `logging` vocabulary

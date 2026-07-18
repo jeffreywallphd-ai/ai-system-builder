@@ -133,9 +133,8 @@ describe("thin-client useAssetLibraryFeature", () => {
     await render(client);
 
     expect(client.listAssetDefinitions).toHaveBeenCalledTimes(1);
-    expect(client.listAssetResourceBackedViews).toHaveBeenCalledTimes(1);
+    expect(client.listAssetResourceBackedViews).not.toHaveBeenCalled();
     expect(client.listAssetDefinitions).toHaveBeenCalledWith({ limit: 50, workspaceId: "workspace.alpha" });
-    expect(client.listAssetResourceBackedViews).toHaveBeenCalledWith({ limit: 50, workspaceId: "workspace.alpha" });
   });
 
   it("sends supported query fields when filters change and refreshes the current query", async () => {

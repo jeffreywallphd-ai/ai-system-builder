@@ -13,34 +13,34 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
 
 ## Pack Selection Table
 
-| If the task materially involves... | Add this pack |
-| --- | --- |
-| repository layout, package placement, dependency direction | `docs/context/packs/repository-overview.pack.md` |
-| cross-layer architecture or boundary decisions | `docs/context/packs/architecture.pack.md` |
-| Asset Kernel vocabulary, Asset Registry/Library, system packs, resource-backed asset views | `docs/context/packs/asset-kernel.pack.md` |
-| user library, promote/link/copy/import reuse, cross-workspace provenance/propagation | `docs/context/packs/user-library.pack.md` |
-| custom asset creation, authored drafts, revisions, overrides, promotion readiness | `docs/context/packs/asset-authoring.pack.md` |
-| effective/materialized projections, projection readiness, blockers, diagnostics | `docs/context/packs/effective-asset-projections.pack.md` |
-| asset composition plans, compatibility, dependencies, planning blockers | `docs/context/packs/asset-composition-planning.pack.md` |
-| composed systems, System Builder records, Systems navigation, software-status placement | `docs/context/packs/system-builder.pack.md` |
-| runtime readiness, capability matching, runtime resources, execution-output readiness | `docs/context/packs/runtime-readiness-binding.pack.md` |
-| execution plans, dry-run/preflight, planned steps/inputs/outputs, safety gates | `docs/context/packs/execution-plan-preparation.pack.md` |
-| conversational runnable systems, sessions, turns, runs, text-generation adapters | `docs/context/packs/controlled-conversational-system-execution.pack.md` |
-| runtime adapters, runtime contracts, runtime execution flow | `docs/context/packs/runtime.pack.md` |
-| runtime task registry lifecycle, progress, cancellation, retention | `docs/context/packs/runtime-task-registry.pack.md` |
-| runtime installers, auto-install, install state, ComfyUI/Git installs | `docs/context/packs/runtime-installer.pack.md` |
-| image generation, ComfyUI sidecar, image assets/generated outputs | `docs/context/packs/image-generation.pack.md` |
-| Electron host lifecycle, IPC/preload boundaries, desktop composition | `docs/context/packs/desktop-host.pack.md` |
-| Electron IPC contracts, operation-derived channels, preload invoke boundaries | `docs/context/packs/ipc-electron.pack.md` |
-| renderer feature/page/component work, renderer clients, UI state | `docs/context/packs/desktop-implementation.pack.md` |
-| renderer CSS/style architecture, shared style layers, tokens | `docs/context/packs/desktop-styling.pack.md` |
-| server lifecycle, Express APIs, thin-client coupling, API route handlers | `docs/context/packs/server-host.pack.md` |
-| persistence/storage, artifacts/uploads, storage keys, AppData/server roots, model/artifact storage | `docs/context/packs/persistence-storage.pack.md` |
-| authn/authz, OIDC, organization tenancy/placement, route policy, HTTPS/TLS, tokens, credentials, audit, sanitization | `docs/context/packs/security.pack.md` + `docs/context/packs/persistence-storage.pack.md` when data isolation changes |
-| structured logging, diagnostic events, verbosity, safe failure reporting | `docs/context/packs/logging.pack.md` |
-| documentation governance, agent change planning, decision readiness, change impact, canonical-vs-context updates | `docs/context/packs/docs-standards.pack.md` |
-| test strategy, regression coverage, test placement | `docs/context/packs/testing.pack.md` |
-| debugging, failures, stack traces, hangs, timeouts, broken UI/API/runtime behavior | `docs/context/packs/debugging-error-handling.pack.md` |
+| If the task materially involves...                                                                                         | Add this pack                                                                                                        |
+| -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| repository layout, package placement, dependency direction                                                                 | `docs/context/packs/repository-overview.pack.md`                                                                     |
+| cross-layer architecture or boundary decisions                                                                             | `docs/context/packs/architecture.pack.md`                                                                            |
+| Asset Kernel vocabulary, Asset Registry/Library, system packs, resource-backed asset views                                 | `docs/context/packs/asset-kernel.pack.md`                                                                            |
+| user library, promote/link/copy/import reuse, cross-workspace provenance/propagation                                       | `docs/context/packs/user-library.pack.md`                                                                            |
+| custom asset creation, authored drafts, revisions, overrides, layered definition/source customization, promotion readiness | `docs/context/packs/asset-authoring.pack.md`                                                                         |
+| effective/materialized projections, projection readiness, blockers, diagnostics                                            | `docs/context/packs/effective-asset-projections.pack.md`                                                             |
+| asset composition plans, compatibility, dependencies, planning blockers                                                    | `docs/context/packs/asset-composition-planning.pack.md`                                                              |
+| composed systems, System Builder records, Systems navigation, software-status placement                                    | `docs/context/packs/system-builder.pack.md`                                                                          |
+| runtime readiness, capability matching, runtime resources, execution-output readiness                                      | `docs/context/packs/runtime-readiness-binding.pack.md`                                                               |
+| execution plans, dry-run/preflight, planned steps/inputs/outputs, safety gates                                             | `docs/context/packs/execution-plan-preparation.pack.md`                                                              |
+| conversational runnable systems, sessions, turns, runs, text-generation adapters                                           | `docs/context/packs/controlled-conversational-system-execution.pack.md`                                              |
+| runtime adapters, runtime contracts, runtime execution flow                                                                | `docs/context/packs/runtime.pack.md`                                                                                 |
+| runtime task registry lifecycle, progress, cancellation, retention                                                         | `docs/context/packs/runtime-task-registry.pack.md`                                                                   |
+| runtime installers, auto-install, install state, ComfyUI/Git installs                                                      | `docs/context/packs/runtime-installer.pack.md`                                                                       |
+| image generation, ComfyUI sidecar, image assets/generated outputs                                                          | `docs/context/packs/image-generation.pack.md`                                                                        |
+| Electron host lifecycle, IPC/preload boundaries, desktop composition                                                       | `docs/context/packs/desktop-host.pack.md`                                                                            |
+| Electron IPC contracts, operation-derived channels, preload invoke boundaries                                              | `docs/context/packs/ipc-electron.pack.md`                                                                            |
+| renderer feature/page/component work, renderer clients, UI state                                                           | `docs/context/packs/desktop-implementation.pack.md`                                                                  |
+| renderer CSS/style architecture, shared style layers, tokens                                                               | `docs/context/packs/desktop-styling.pack.md`                                                                         |
+| server lifecycle, Express APIs, thin-client coupling, API route handlers                                                   | `docs/context/packs/server-host.pack.md`                                                                             |
+| persistence/storage, artifacts/uploads, storage keys, AppData/server roots, model/artifact storage                         | `docs/context/packs/persistence-storage.pack.md`                                                                     |
+| authn/authz, OIDC, organization tenancy/placement, route policy, HTTPS/TLS, tokens, credentials, audit, sanitization       | `docs/context/packs/security.pack.md` + `docs/context/packs/persistence-storage.pack.md` when data isolation changes |
+| structured logging, diagnostic events, verbosity, safe failure reporting                                                   | `docs/context/packs/logging.pack.md`                                                                                 |
+| documentation governance, agent change planning, decision readiness, change impact, canonical-vs-context updates           | `docs/context/packs/docs-standards.pack.md`                                                                          |
+| test strategy, regression coverage, test placement                                                                         | `docs/context/packs/testing.pack.md`                                                                                 |
+| debugging, failures, stack traces, hangs, timeouts, broken UI/API/runtime behavior                                         | `docs/context/packs/debugging-error-handling.pack.md`                                                                |
 
 ## Common Pack Chains
 
@@ -49,7 +49,10 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
 - Asset Library/Registry: `index` + `asset-kernel` + the affected UI, transport/host, persistence, or security pack.
 - Workspace-scoped persistence: `index` + the owning feature pack + `persistence-storage`; load security or a host pack only when that boundary also changes.
 - User Library: `index` + `user-library` + either `asset-kernel` for semantics or `persistence-storage` for repository behavior.
-- Asset authoring: `index` + `asset-authoring` + either `asset-kernel`, `user-library`, or `effective-asset-projections` based on the adjacent behavior.
+- Asset authoring: `index` + `asset-authoring` + either `asset-kernel`,
+  `user-library`, `effective-asset-projections`, or `security` based on the
+  adjacent behavior; use `security` for Asset Studio source overlays or
+  materialization.
 - Projection/composition/readiness/planning: select the one owning layer plus one immediate neighbor; move forward through the chain in separate reasoning stages.
 - System Builder: `index` + `system-builder`; add `asset-kernel` or `asset-composition-planning` for data semantics, or `desktop-implementation` for Systems/Settings UI placement.
 - Controlled conversational execution: `index` + `controlled-conversational-system-execution`; add the execution-plan or runtime pack only when that exact boundary changes.

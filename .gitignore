@@ -48,6 +48,7 @@ apps/web-thin-client/*.tsbuildinfo
 apps/thin-client/.local/
 
 artifacts/
+docs/tmp/
 
 # Local Codex helper tooling
 .local-codex/

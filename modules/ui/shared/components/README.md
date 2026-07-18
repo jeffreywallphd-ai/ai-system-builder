@@ -8,4 +8,8 @@ Code-native presentation primitives used by both React surfaces belong here. `Ap
 
 `WorkflowSequence` and `WorkflowStep` provide the shared numbered-card and connecting-rail treatment for guided, multi-step tasks. Features own their fields, validation, state transitions, and commands; the workflow components supply only accessible grouping and consistent presentation.
 
+`ModalDialog` owns the shared modal interaction contract as well as the existing modal surface classes: visible accessible naming, initial focus, contained Tab and Shift+Tab movement, topmost-only Escape handling for stacked dialogs, a visible close control, and focus restoration. Callers own open state and task-specific confirmation rules; backdrop close stays opt-in.
+
+`TabbedPanel` owns the shared attached tab-and-card presentation, tab/tabpanel relationships, roving focus, and horizontal arrow/Home/End activation. Desktop and thin-client compatibility modules may re-export it, but must not fork its behavior.
+
 Shared visual-state hooks may coordinate presentation that must remain consistent across hosts. `useSidebarCollapseState` and `useNavigationGroupCollapseState` own only user interface preferences and their local persistence; they do not alter route availability, permissions, page data, or feature behavior.

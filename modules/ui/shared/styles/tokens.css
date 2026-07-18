@@ -75,4 +75,6 @@
   --transition-normal: 200ms ease;
   --z-sticky: 20;
   --z-overlay: 1000;
+  --z-modal: 1100;
+  --z-modal-stacked: 1110;
 }

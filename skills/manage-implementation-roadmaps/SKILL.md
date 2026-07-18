@@ -1,13 +1,13 @@
 ---
 name: manage-implementation-roadmaps
-description: Prepare, review, resume, and execute implementation roadmaps as approval-gated increments with research, high-level options, durable Markdown reports, feedback reconciliation, tests, documentation, and evidence. Use when a user asks for an implementation roadmap; asks to implement, continue, review, or resume roadmap increments; requests a skill for roadmap work without naming one; or wants systematic progress tracking across a long coding task.
+description: Prepare, review, resume, and execute implementation roadmaps as economically cohesive, approval-gated increments with research, high-level options, concise temporary Markdown progress reports, feedback reconciliation, tests, documentation, and evidence. Use when a user asks for an implementation roadmap; asks to implement, continue, review, or resume roadmap increments; requests a skill for roadmap work without naming one; or wants systematic progress tracking across a long coding task.
 ---
 
 # Manage Implementation Roadmaps
 
 Use this skill to turn a substantial change into an explicitly approved sequence of
 increments and to preserve enough repository state for another contributor or AI to
-resume faithfully.
+resume faithfully without committing verbose progress reports.
 
 ## Start
 
@@ -16,8 +16,9 @@ resume faithfully.
    decisions, and change-impact guidance before proposing work.
 2. Read [workflow.md](references/workflow.md) and
    [events.md](references/events.md) completely.
-3. Locate an existing roadmap, report, and state file for the requested work. Resume
-   those artifacts when they exist; do not silently create a competing roadmap.
+3. Locate an existing roadmap, temporary report, and state file for the requested
+   work. Resume those artifacts when they exist; do not silently create a competing
+   roadmap.
 4. Treat user feedback, CI output, interrupted work, and uncommitted changes as
    inputs to reconcile before making new edits.
 5. Use the term **increment**. Do not rename increments to phases.
@@ -48,13 +49,69 @@ approval from a request to draft or inspect a roadmap.
    Mark exactly one as recommended and explain tradeoffs and consequences.
 4. Stop for explicit user approval of the high-level option. Record
    `decision-approved` only after the user actually selects or accepts an option.
-5. Define ordered, contiguous increments. Each increment must include dependencies,
+5. Define the fewest ordered, contiguous increments that provide sensible approval,
+   rollback, and verification boundaries. Each increment must include dependencies,
    an objective, deliverables, acceptance criteria, verification, rollback, and
-   exclusions. Favor independently verifiable vertical slices.
+   exclusions. Keep closely coupled work as chunks inside one cohesive vertical
+   slice.
 6. Present the complete roadmap and stop for explicit user approval. Record
    `roadmap-approved` only after that approval.
 
 Do not start implementation while an option or roadmap approval is missing or stale.
+
+## Size increments economically
+
+Treat an increment as a substantial integration and approval boundary, not as a
+component, layer, tab, test category, or planning theme. Every increment pays the
+fixed cost of research, planning, reporting, verification, and user review, so use
+the fewest increments that still control material risk.
+
+Create a separate increment only when at least one of these is true:
+
+- it delivers independently useful or releasable behavior;
+- it crosses a real approval, architecture, compatibility, migration, security,
+  operational, or controlled-qualification boundary;
+- a dependency must land first to unblock meaningful work outside the roadmap;
+- it needs an independent rollback because failure should not roll back adjacent
+  work;
+- combining it would create an unreasonably large review across genuinely
+  independent subsystems.
+
+Do not split increments merely because work uses different files, UI components,
+layers, hosts, tests, or documentation. In particular, keep a shared UI primitive
+with its first consumers, and group closely related page changes such as tabs,
+cards, filters, modals, labels, instructions, and responsive behavior into one
+user-visible experience increment. Use work packages and planned chunks for those
+internal outcomes.
+
+Before presenting a roadmap, perform an adjacent-increment cohesion audit. Merge
+neighbors when neither is independently valuable, they touch the same behavior or
+verification surface, or the later increment exists mainly to consume foundations
+from the earlier one. If an increment would contain only a small UI adjustment,
+rename, helper, documentation update, test-only step, or shared primitive, merge it
+unless an explicit risk boundary above justifies separation.
+
+## Preserve plan continuity across approval turns
+
+An approval checkpoint ends a conversation turn, not the larger roadmap task. Never
+let asking for approval discard the active working plan or its pending increments.
+
+1. Before asking for approval, persist the current discovery, decision proposal, or
+   roadmap definition in the state engine and render the roadmap plus concise
+   temporary report. Keep an explicit post-approval step in the active working plan.
+2. When the user responds, first reload and validate the durable roadmap state and
+   reconcile the response with the plan that was active before the checkpoint.
+3. Continue the existing plan by marking the approval step complete and advancing
+   the next pending step when the response accepts the proposal unchanged.
+4. Replace the working plan only when the response changes the decision, scope,
+   ordering, or acceptance criteria. Explain the reconciliation and preserve every
+   still-valid pending step in the replacement.
+5. If the host-side conversational planning tool was cleared between turns,
+   reconstruct it from the roadmap state and report before doing more work. Do not
+   proceed with an empty or unrelated plan.
+6. Record the approval event only after this reconciliation, then report the next
+   checkpoint. Never treat a short approval reply as a new standalone request that
+   supersedes the larger roadmap objective.
 
 ## Execute each increment
 
@@ -64,15 +121,24 @@ For every approved increment, repeat this loop:
 2. Start only the next pending increment; do not skip dependencies.
 3. Conduct increment-specific repository and primary-source research.
 4. Write the increment implementation plan before editing. Map every acceptance
-   criterion to at least one coherent work chunk and name tests, documentation,
-   assumptions, and rollback.
+   criterion to at least one coherent work chunk. Separately name focused tests
+   for internal chunks and completion tests for the whole increment, plus
+   documentation, assumptions, and rollback.
 5. Implement one coherent chunk at a time. A chunk is a reviewable outcome, not an
    individual file write.
-6. Add or update tests and documentation with the behavior. Run narrow checks while
-   iterating and applicable repository gates before closing the increment.
-7. Record chunk completion and update the generated Markdown report. Provide the
-   user a clickable report link after each meaningful chunk or natural checkpoint,
-   not after every file change.
+6. Add or update tests and documentation with the behavior. Run only the narrow
+   tests for the current chunk while iterating. Never run a full suite while any
+   planned chunk in the increment remains unimplemented. After every planned chunk
+   is implemented and its focused tests pass, run the completion tests and costly
+   repository-wide gates once for the whole increment, immediately before recording
+   increment completion. Do not use risk or convenience as an exception to run the
+   full suite early; add a focused risk test instead.
+7. Record completed chunks and update the generated Markdown report in meaningful
+   batches. Keep the report minimally verbose: status, increment progress, current
+   or next work, recent chunks, unresolved feedback, and blockers only. Full history
+   remains in JSON state and the roadmap. Provide the user a clickable report link
+   after a user-visible slice or natural checkpoint, not after every file change or
+   minor internal chunk.
 8. Attach evidence to every acceptance criterion. Distinguish local passes from
    controlled-environment qualification; never describe pending external evidence
    as passed.
@@ -89,6 +155,8 @@ For every approved increment, repeat this loop:
 - Record blockers with the action required to clear them.
 - On resume, inspect worktree and artifact drift, resolve the blocker, document the
   reconciliation, re-run affected checks, and continue from the last proven state.
+- After every user approval response, perform the plan-continuity reconciliation
+  above before research, implementation, or another approval request.
 - Treat direct edits to generated roadmap or report Markdown as drift. Review the
   diff, update state with a valid event, or restore generated files with `render`.
 
@@ -105,9 +173,11 @@ python <skill-root>/scripts/roadmap.py status --repo <repo> --state <state.json>
 ```
 
 Start from [roadmap-config.example.json](assets/roadmap-config.example.json). Keep
-the state, roadmap, and report repository-relative and tracked unless repository
-policy explicitly requires another location. Use temporary event files and do not
-commit secrets, raw private conversations, credentials, or local absolute paths.
+the state and roadmap repository-relative and tracked. Keep the concise report under
+ignored `docs/tmp/`; it is a temporary progress view, not a release artifact. Use
+`report-relocated` to migrate a legacy active report. Use temporary event files and
+do not commit reports, secrets, raw private conversations, credentials, or local
+absolute paths.
 
 ## Close
 
@@ -117,8 +187,13 @@ Before claiming completion:
    pending.
 2. Run the applicable repository gates and validate generated artifacts.
 3. Reconcile documentation, feedback, blockers, assumptions, and excluded work.
-4. Record roadmap completion and provide links to the final roadmap and report.
-5. Report commands run, failures, evidence that remains external, and work not done.
+4. Record roadmap completion, provide the temporary report link, and ask for
+   explicit final approval of the completed overall work.
+5. Only after the user gives that final approval, record
+   `final-approval-recorded`. The engine removes only the generated temporary
+   report and retains the roadmap and canonical JSON state.
+6. Provide permanent roadmap/state references and report commands run, failures,
+   evidence that remains external, and work not done.
 
 Read [installation.md](references/installation.md) when installing or publishing the
 skill for Codex, Claude Code, GitHub Copilot, or another Agent Skills-compatible

@@ -2,7 +2,7 @@
 
 - Status: current
 - Implementation: semantic draft/revision/override authoring plus the bounded Asset Studio source-proposal and human-review workflow are current
-- Related decisions: `docs/adr/ADR-0018-asset-authoring-customization-and-overrides.md`
+- Related decisions: `docs/adr/ADR-0018-asset-authoring-customization-and-overrides.md`, `docs/adr/ADR-0035-layered-derived-asset-customization.md`
 - Verification: `docs/architecture/architecture-verification.md`
 
 - Effective asset projections: `docs/architecture/effective-asset-projections.md` and ADR-0019 define how authored/customized records become workspace-scoped effective projections with explicit status/blockers.
@@ -46,6 +46,9 @@ Asset authoring/customization depends on User Library reuse status documented in
 - **Promotable authored asset**: a workspace-authored or customized asset revision eligible for explicit later promotion workflows.
 - **Safe editable fields**: explicitly allowlisted, validated, user-facing fields permitted in asset authoring/customization editing.
 - **Non-editable source fields**: protected fields and internals that cannot be modified in asset authoring/customization baseline.
+- **Layered derived customization**: a workspace-owned draft pinned to exact semantic and implementation bases that stores sparse semantic changes plus an optional bounded source-overlay descriptor.
+- **Source overlay**: the changed-file portion of a customization. Raw relative paths and source text exist only inside an authorized authoring proposal/artifact boundary; durable structured records retain bounded counts and an immutable artifact descriptor.
+- **Review materialization**: the fail-closed assembly of unchanged base source plus the changed-file overlay into a complete immutable source snapshot for human review, build, and release gates.
 
 ## Scope definitions
 
@@ -247,6 +250,66 @@ preview, release, activation, and deployment remain separate gates. A host
 without a configured coding-model provider returns an explicit unavailable
 result while retaining the complete manual workflow.
 
+## Layered derived customization model
+
+ADR-0035 extends the conservative override baseline for an integrated
+definition-and-implementation customization workflow. The extension is additive;
+existing `AssetOverrideRecord` values remain safe-field-only and do not gain source
+content.
+
+A layered customization is workspace-owned and pins all of the following:
+
+- an exact semantic `asset-definition-version` reference;
+- an exact implementation release;
+- the release's exact immutable source snapshot; and
+- the source artifact descriptor and digest for that snapshot.
+
+Before review, the structured draft stores only a sparse safe semantic patch,
+including allowlisted display/description/metadata fields and typed configuration,
+ports, AI context, requirements, composition rules, and dependencies;
+lifecycle/provenance/revision data; safe diagnostics; and an optional source-overlay
+descriptor. The descriptor identifies a verified
+immutable `source` artifact and bounded file/character totals. It does not contain
+source text or paths. Bounded relative paths and changed source text cross only the
+authorized Asset Studio proposal boundary and are revalidated before artifact
+persistence.
+
+Unchanged fields and files are logically reused through the exact base identities.
+Storage adapters may deduplicate content-addressed blobs, but the customization
+contract neither requires nor claims physical deduplication.
+
+Review materialization must:
+
+1. re-read and verify the exact base source artifact and overlay artifact by digest;
+2. confirm workspace ownership, release/snapshot availability, and optimistic
+   revision;
+3. revalidate path containment, file types, file and aggregate sizes, duplicate
+   paths, secret-like content, dependencies, capabilities, and protected fields;
+4. apply changed files over the exact base in an isolated authoring workspace; and
+5. persist a complete immutable source snapshot for review without building,
+   releasing, installing, activating, deploying, or executing it.
+
+Publication creates a distinct workspace-owned asset definition and implementation
+lineage. The base definition, package, implementation release, snapshot, and source
+artifact remain immutable in success, failure, conflict, abandonment, and retry
+paths.
+
+### Protected fields
+
+The integrated workflow may display important internals, but these categories are
+read-only unless a later accepted decision and typed schema authorize a safe edit:
+
+- source asset identity and version;
+- ownership, provenance, lifecycle, trust, and admission state;
+- package, implementation release, source snapshot, build, and artifact identities;
+- signer, digest, revocation, evidence, compatibility, and deployment policy;
+- runtime capability grants, secrets, storage locations, and host configuration.
+
+Changing an exact base, a reviewed semantic patch, a reviewed overlay, requested
+dependency, or requested capability invalidates prior review. Missing, changed,
+revoked, or unavailable bases produce an explicit conflict or invalid state. There
+is no automatic rebase or floating-base remap.
+
 ## Versioning and conflict baseline
 
 1. Draft and published authored revisions are distinct.
@@ -289,7 +352,8 @@ The architecture defines vocabulary and current boundaries. Implementation statu
 
 ### Deferred scope
 
-- Raw prompt/workflow editing, arbitrary internals editing, runtime-execution-linked editing.
+- Raw prompt/workflow editing outside the bounded Asset Studio source-overlay
+  boundary, arbitrary internals editing, and runtime-execution-linked editing.
 - Collaboration permissions/multi-user authorization.
 - Pack import/export, marketplace, live workspace-to-workspace linking.
 
@@ -303,6 +367,12 @@ The architecture defines vocabulary and current boundaries. Implementation statu
 - Override creation requires a composed safe customization-target reader and a safe target-selection UX. Where those are unavailable, UI must not present create-override as supported and transport responses may truthfully return unavailable/not-found/unsupported outcomes.
 - No workflow execution, no materialized effective-asset generation, no propagation execution, and no conflict rebase/resolution workflows in asset authoring/customization.
 - No linked-source mutation and no `system.foundation` mutation/copy behavior.
+- Layered-derived customization target discovery, workspace-isolated optimistic
+  persistence, sparse semantic/source overlays, immutable review materialization,
+  distinct definition plus implementation-draft publication, history, and abandon
+  operations are implemented at the application boundary. Desktop/server
+  composition, API/IPC/preload clients, and the guided UI remain unavailable until
+  their ordered implementation chunks are composed and verified.
 
 ### Required status checklist
 
@@ -325,7 +395,12 @@ The architecture defines vocabulary and current boundaries. Implementation statu
 17. Conflict rebase/resolution workflow: not implemented.
 18. Source mutation: not implemented.
 19. `system.foundation` mutation: not implemented.
-
+20. Layered-derived customization decision and contracts: implemented.
+21. Layered-derived customization target catalog, persistence, and
+    create/update/review/publish/abandon application workflow: implemented and
+    covered by focused restart, workspace-isolation, immutability, and
+    materialization tests.
+22. Layered-derived customization host transports and guided UI: not yet composed.
 
 ## Relationship to asset composition planning
 

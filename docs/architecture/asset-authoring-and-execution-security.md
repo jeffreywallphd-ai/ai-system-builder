@@ -2,7 +2,7 @@
 
 - Status: current
 - Implementation: bounded manual/coding-model patch proposal, immutable source review, and fail-closed provider behavior are current; untrusted build/execution remains unavailable until the selected sandbox adapter is qualified
-- Related decisions: ADR-0015, ADR-0029, ADR-0030, ADR-0031, ADR-0032
+- Related decisions: ADR-0015, ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0035
 - Verification: `docs/security/asset-package-authoring-and-execution-threat-model.md`
 
 ## Purpose
@@ -78,6 +78,16 @@ digest and revalidated at approval. Exact workflow revision plus exact
 dependency/capability consent are required before an immutable source snapshot
 is created. No configured provider is a normal unavailable state, not a reason
 to fall back to an implicit provider or broader tools.
+
+Layered derived customizations use the same boundary. Structured customization
+records may contain exact base identities, a sparse safe semantic patch, bounded
+counts, and immutable artifact descriptors; they never contain source text or raw
+paths. Changed relative paths and source text are authorized proposal content only.
+Materialization re-reads the exact base and overlay by digest, revalidates all
+source/dependency/capability limits plus workspace ownership and optimistic
+revision, and creates a new immutable review snapshot. Any base drift, revocation,
+unavailable artifact, stale approval, or validation failure denies materialization
+and publication without changing the base.
 
 ## Approved-release data execution
 

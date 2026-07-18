@@ -93,6 +93,7 @@ export async function composeDesktopAssetFeature(
           definitions:
             internalAssetRegistry.assetKernel.repositories.definitionRepository,
           implementations: assetImplementation.repository,
+          backingResources: assetImplementation.backingResources,
           artifacts: createAssetImplementationArtifactAdapter(
             options.artifacts.storage,
           ),

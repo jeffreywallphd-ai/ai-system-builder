@@ -76,6 +76,8 @@ Before publishing or changing the skill:
 6. Test natural-language triggering with requests that do and do not name the skill.
 7. Confirm the installed host can locate references and scripts relative to
    `SKILL.md`.
+8. Confirm the target repository ignores `docs/tmp/`, progress reports remain
+   concise and local, and explicit final approval removes the generated report.
 
 ## Primary references
 

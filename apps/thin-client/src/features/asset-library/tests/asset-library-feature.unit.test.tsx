@@ -17,8 +17,13 @@ const dom = new JSDOM("<!doctype html><html><body></body></html>");
 (globalThis as any).window = dom.window;
 (globalThis as any).document = dom.window.document;
 (globalThis as any).Event = dom.window.Event;
+(globalThis as any).Node = dom.window.Node;
+(globalThis as any).HTMLElement = dom.window.HTMLElement;
 (globalThis as any).HTMLInputElement = dom.window.HTMLInputElement;
 (globalThis as any).HTMLSelectElement = dom.window.HTMLSelectElement;
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+
+const TEST_WORKSPACE_ID = "workspace.asset-library-tests";
 
 const card: AssetLibraryDefinitionCard = {
   id: "builtin.document@1.0.0",
@@ -146,22 +151,33 @@ function queuedDetailResults(results: readonly unknown[]) {
   return testDouble.fn().mockImplementation(() => Promise.resolve(queue.shift()) as any);
 }
 
-function setInputValue(input: HTMLInputElement, value: string): void {
-  const descriptor = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value");
-  descriptor?.set?.call(input, value);
-  input.dispatchEvent(new Event("input", { bubbles: true }));
+async function setInputValue(input: HTMLInputElement, value: string): Promise<void> {
+  await act(async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value");
+    descriptor?.set?.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
 }
 
-function setSelectValue(select: HTMLSelectElement, value: string): void {
-  const descriptor = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value");
-  descriptor?.set?.call(select, value);
-  select.dispatchEvent(new Event("change", { bubbles: true }));
+async function setSelectValue(select: HTMLSelectElement, value: string): Promise<void> {
+  await act(async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value");
+    descriptor?.set?.call(select, value);
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
 }
 
 async function flush() {
   await act(async () => {
     await Promise.resolve();
   });
+}
+
+function getTopmostDialog(): HTMLElement {
+  const dialogs = document.body.querySelectorAll<HTMLElement>("[role='dialog']");
+  const dialog = dialogs[dialogs.length - 1];
+  assert.ok(dialog);
+  return dialog;
 }
 
 describe("thin-client AssetLibraryFeature", () => {
@@ -185,10 +201,15 @@ describe("thin-client AssetLibraryFeature", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<AssetLibraryFeature client={client} />);
+      root.render(
+        <AssetLibraryFeature
+          client={client}
+          workspaceId={TEST_WORKSPACE_ID}
+        />,
+      );
     });
     await flush();
-    return { container, client };
+    return { container: document.body, client };
   }
 
   it("renders cards with category, system default, lifecycle, type, and family cues", async () => {
@@ -203,6 +224,40 @@ describe("thin-client AssetLibraryFeature", () => {
     expect(container.textContent).toContain("Published");
     expect(container.textContent).toContain("v1.0.0");
   });
+
+  it("renders a card grid and opens details in a top-layer modal", async () => {
+    const { container } = await render();
+    const cardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Document"),
+    ) as HTMLButtonElement;
+
+    expect(container.querySelector(".asset-library-layout")).toBe(null);
+    expect(Boolean(container.querySelector(".asset-library-list"))).toBe(true);
+    expect(cardButton.getAttribute("aria-haspopup")).toBe("dialog");
+    expect(document.body.querySelector("[role='dialog']")).toBe(null);
+
+    cardButton.focus();
+    await act(async () => cardButton.click());
+    await flush();
+
+    const dialog = getTopmostDialog();
+    expect(dialog.classList.contains("asset-library-detail-dialog")).toBe(true);
+    expect(dialog.textContent).toContain("Represent document-backed assets");
+    expect(cardButton.getAttribute("aria-expanded")).toBe("true");
+
+    await act(async () => {
+      document.dispatchEvent(
+        new dom.window.KeyboardEvent("keydown", {
+          key: "Escape",
+          bubbles: true,
+        }),
+      );
+    });
+
+    expect(document.body.querySelector("[role='dialog']")).toBe(null);
+    expect(document.activeElement).toBe(cardButton);
+  });
+
 
   it("renders resource-backed views in a read-only Resource views tab", async () => {
     const { container, client } = await render();
@@ -219,7 +274,10 @@ describe("thin-client AssetLibraryFeature", () => {
 
     expect(client.readAssetResourceBackedView).toHaveBeenCalledWith(
       { viewId: "asset-view.external-repository-object.internal.1" },
-      { expand: ["metadata", "resourceBackings"] },
+      {
+        expand: ["metadata", "resourceBackings"],
+        workspaceId: TEST_WORKSPACE_ID,
+      },
     );
     expect(container.textContent).toContain("Import external object");
     expect(container.textContent).toContain("Localize external object");
@@ -245,7 +303,7 @@ describe("thin-client AssetLibraryFeature", () => {
     expect(container.textContent).toContain("Network or provider");
     expect(client.importExternalRepositoryObjectAsAsset).not.toHaveBeenCalled();
 
-    const dialog = container.querySelector("[role='dialog']") as HTMLElement;
+    const dialog = getTopmostDialog();
     const confirmButton = Array.from(dialog.querySelectorAll("button")).find((button) => button.textContent === "Import object") as HTMLButtonElement;
     await act(async () => confirmButton.click());
     await flush();
@@ -253,6 +311,7 @@ describe("thin-client AssetLibraryFeature", () => {
     expect(client.importExternalRepositoryObjectAsAsset).toHaveBeenCalledWith({
       operation: "asset.import-external-repository-object",
       viewId: "asset-view.external-repository-object.internal.1",
+      workspaceId: TEST_WORKSPACE_ID,
       importMode: "remote-reference",
       approval: {
         userConfirmed: true,
@@ -345,7 +404,7 @@ describe("thin-client AssetLibraryFeature", () => {
     expect(container.textContent).toContain("No reusable building blocks are registered yet.");
     expect(container.textContent).toContain("Built-in assets appear here after they are registered for this workspace.");
 
-    setInputValue(container.querySelector("input[type='search']") as HTMLInputElement, "missing");
+    await setInputValue(container.querySelector("input[type='search']") as HTMLInputElement, "missing");
     await flush();
 
     expect(container.textContent).toContain("No assets match the current filters.");
@@ -356,15 +415,15 @@ describe("thin-client AssetLibraryFeature", () => {
     const { container } = await render(client);
     const selects = Array.from(container.querySelectorAll("select"));
 
-    setInputValue(container.querySelector("input[type='search']") as HTMLInputElement, "doc");
+    await setInputValue(container.querySelector("input[type='search']") as HTMLInputElement, "doc");
     await flush();
-    setSelectValue(selects[0] as HTMLSelectElement, "document");
+    await setSelectValue(selects[0] as HTMLSelectElement, "document");
     await flush();
-    setSelectValue(selects[1] as HTMLSelectElement, "resource-backed");
+    await setSelectValue(selects[1] as HTMLSelectElement, "resource-backed");
     await flush();
-    setSelectValue(selects[2] as HTMLSelectElement, "published");
+    await setSelectValue(selects[2] as HTMLSelectElement, "published");
     await flush();
-    setSelectValue(selects[3] as HTMLSelectElement, "built-in");
+    await setSelectValue(selects[3] as HTMLSelectElement, "built-in");
     await flush();
 
     expect(client.listAssetDefinitions).toHaveBeenCalledWith({
@@ -374,6 +433,7 @@ describe("thin-client AssetLibraryFeature", () => {
       assetFamilies: ["resource-backed"],
       lifecycleStatuses: ["published"],
       builtIn: "built-in",
+      workspaceId: TEST_WORKSPACE_ID,
     });
   });
 
@@ -389,6 +449,7 @@ describe("thin-client AssetLibraryFeature", () => {
               id: "builtin.form.form@1.0.0",
               definitionId: "builtin.form.form",
               displayName: "Form",
+              summary: "Form building block",
               packCategoryId: "forms-fields",
               packCategoryDisplayName: "Forms and Fields",
               categoryLabel: "Forms and Fields",
@@ -400,14 +461,14 @@ describe("thin-client AssetLibraryFeature", () => {
     const { container } = await render(client);
     const selects = Array.from(container.querySelectorAll("select"));
 
-    setSelectValue(selects[6] as HTMLSelectElement, "forms-fields");
+    await setSelectValue(selects[6] as HTMLSelectElement, "forms-fields");
     await flush();
 
     expect(container.textContent).toContain("Form");
     expect(container.textContent).toContain("Forms and Fields");
     expect(container.textContent).not.toContain("Document building block");
 
-    setSelectValue(selects[5] as HTMLSelectElement, "imported-pack");
+    await setSelectValue(selects[5] as HTMLSelectElement, "imported-pack");
     await flush();
 
     expect(container.textContent).toContain("No assets match the current filters.");
@@ -425,11 +486,12 @@ describe("thin-client AssetLibraryFeature", () => {
       { definitionId: "builtin.document", version: "1.0.0" },
       {
         expand: ["aiContext", "configurationSchema", "ports", "requirements", "provenance", "metadata"],
+        workspaceId: TEST_WORKSPACE_ID,
       },
     );
     expect((client.readAssetDefinitionVersion as ReturnType<typeof testDouble.fn>).mock.calls
       .some((call) => call[1]?.includeValidation === true)).toBe(false);
-    expect(container.textContent).toContain("Reusable document descriptor");
+    expect(container.textContent).toContain("Represent document-backed assets");
 
     const advancedToggle = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("AI-readable context")) as HTMLButtonElement;
     expect(advancedToggle.getAttribute("aria-expanded")).toBe("false");
@@ -463,6 +525,7 @@ describe("thin-client AssetLibraryFeature", () => {
       {
         expand: ["aiContext", "configurationSchema", "ports", "requirements", "provenance", "metadata"],
         includeValidation: true,
+        workspaceId: TEST_WORKSPACE_ID,
       },
     ]);
     expect(container.textContent).toContain("Validation summary");

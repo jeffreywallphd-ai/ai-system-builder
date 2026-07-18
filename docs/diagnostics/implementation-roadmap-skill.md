@@ -44,24 +44,53 @@ The workflow requires:
 
 Use **increment**, not phase, in roadmap and status artifacts.
 
-## Durable tracking
+## Economical increment sizing
+
+Use the fewest substantial increments that preserve meaningful approval,
+integration, rollback, and verification boundaries. An increment is not a file,
+component, tab, layer, test category, or documentation task. Closely related work
+such as a shared UI primitive plus its first consumers, or tabs, cards, filters,
+modals, labels, instructions, and responsive behavior on one user experience,
+belongs in one increment as internal work packages.
+
+Before roadmap approval, audit every boundary between adjacent increments. Keep a
+boundary only when it separates independently useful behavior or a material
+architecture, compatibility, migration, security, operational, rollback, or
+controlled-qualification concern. Otherwise merge the work. Run only focused checks
+as internal chunks land, batch report updates around meaningful outcomes, and run
+the full suite and costly repository-wide gates once after every planned chunk in
+the increment is implemented. Use focused risk regressions instead of an early full
+suite.
+
+If execution reveals that the pending roadmap is too fine-grained, record the
+feedback, preserve completed increments and their evidence, replace the pending
+suffix through `roadmap-revised`, render the consolidated proposal, and obtain
+renewed roadmap approval before continuing.
+
+## Durable tracking and temporary reports
 
 By default the skill creates:
 
 - `docs/<slug>-implementation-roadmap.md` for approved intent;
-- `docs/<slug>-implementation-report.md` for progress, evidence, feedback, and
-  the next checkpoint;
+- `docs/tmp/<slug>-implementation-report.md` for a concise local progress
+  summary and the next checkpoint;
 - `.implementation-roadmaps/<slug>/state.json` as deterministic render state.
 
-The files are repository-relative and should be tracked unless repository policy
-requires a different location. The AI updates the report after a coherent chunk
-or natural checkpoint and gives the user a clickable link. It does not update
-the report after every individual file change.
+The roadmap and state are durable repository artifacts. `docs/tmp/` is ignored;
+the report must not be committed or pushed. It summarizes status, increment
+progress, current/next work, recent chunks, unresolved feedback, and blockers;
+full evidence and history stay in JSON state. The AI updates the report after a
+coherent chunk or natural checkpoint and gives the user a clickable link. It
+does not update the report after every individual file change.
 
 The Markdown files are generated from JSON state. Direct edits are detected as
-drift. The standard-library Python engine validates events, confines output
-paths to the repository, writes files atomically, and never executes a recorded
-command.
+drift. `report-relocated` migrates legacy reports into `docs/tmp/`. After all
+increments pass, the AI records roadmap completion, presents the temporary
+report, and waits for explicit final overall approval. Only then does
+`final-approval-recorded` remove the generated report. The standard-library
+Python engine validates events, confines output paths to the repository, writes
+files atomically, refuses to delete non-generated content, and never executes a
+recorded command.
 
 ## Skill and helper boundary
 

@@ -1,4 +1,4 @@
 interface:
   display_name: "Implementation Roadmaps"
   short_description: "Prepare and execute verified roadmap increments"
-  default_prompt: "Use $manage-implementation-roadmaps to prepare or execute an implementation roadmap with approval checkpoints and durable progress reporting."
+  default_prompt: "Use $manage-implementation-roadmaps to prepare or execute an implementation roadmap with approval checkpoints, durable state, concise temporary progress reports, focused chunk tests, and one full completion suite after the entire increment is implemented."

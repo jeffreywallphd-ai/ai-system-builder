@@ -1308,6 +1308,7 @@ export function composeServerHost(
                 internalAssetRegistry.assetKernel.repositories
                   .definitionRepository,
               implementations: assetImplementation.repository,
+              backingResources: assetImplementation.backingResources,
               artifacts: createAssetImplementationArtifactAdapter(storage),
               nextInspectionId: () => `package-inspection.${randomUUID()}`,
               now: options.now ?? (() => new Date().toISOString()),

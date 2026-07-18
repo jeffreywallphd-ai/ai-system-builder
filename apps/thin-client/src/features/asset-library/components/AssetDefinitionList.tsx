@@ -44,7 +44,8 @@ export function AssetDefinitionList({
             key={definition.id}
             type="button"
             className={`asset-definition-card${isSelected ? " asset-definition-card--selected" : ""}`}
-            aria-pressed={isSelected}
+            aria-haspopup="dialog"
+            aria-expanded={isSelected}
             onClick={() => onSelectDefinition(definition)}
           >
             <span className="asset-definition-card__header">

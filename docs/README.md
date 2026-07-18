@@ -12,6 +12,9 @@ This directory separates canonical system guidance from downstream task context 
   - Current intended system structure, module boundaries, and operating model.
   - `docs/architecture/user-library-and-cross-workspace-reuse.md` defines User Library reuse, explicit promote/link/copy/import relationships, provenance, and propagation constraints.
   - `docs/architecture/asset-authoring-customization-and-overrides.md` defines workspace-scoped asset authoring, customization, and override architecture.
+- `docs/asset-package-authoring-guide.md`
+  - User and contributor instructions for creating, inspecting, and safely
+    admitting bounded `.aisb-package` files from the downloadable starter.
 - `docs/standards/`
   - Canonical implementation and documentation rules.
   - `docs/standards/dependency-supply-chain-standards.md` defines lockfile,
@@ -29,6 +32,10 @@ This directory separates canonical system guidance from downstream task context 
     loops under `dev-tools/helpers/`.
   - `implementation-roadmap-skill.md` documents the cross-agent repository
     skill, durable roadmap/report artifacts, installation, and maintenance.
+- `docs/tmp/`
+  - Ignored local-only implementation report summaries. Roadmap state keeps the
+    complete evidence history; generated reports are removed after explicit
+    final approval and must never be committed.
 - `docs/operations/`
   - Persistence operations, schema compatibility, recovery, rollout, and
     deployment qualification procedures.
@@ -81,10 +88,12 @@ If context guidance conflicts with an ADR, architecture document, or standard, t
 - Workspace model: `docs/architecture/workspace-model.md`, including reference-only `system.foundation@1.0.0` activation and the no-hidden-workspace/no-auto-migration rule.
 - Organization tenancy and identity: `docs/architecture/organization-tenancy-and-identity.md`; pooled placement is the managed default and dedicated one-organization placement is the premium profile.
 - User Library reuse: `docs/architecture/user-library-and-cross-workspace-reuse.md` and ADR-0017.
-- Asset authoring, customization, and overrides: `docs/architecture/asset-authoring-customization-and-overrides.md` and ADR-0018.
+- Asset authoring, customization, and overrides: `docs/architecture/asset-authoring-customization-and-overrides.md`, ADR-0018, and ADR-0035.
 - Effective asset projections: `docs/architecture/effective-asset-projections.md` and ADR-0019.
 - Asset composition planning: `docs/architecture/asset-composition-planning.md` and ADR-0020.
 - Asset implementations, packages, trust, and functional defaults: `docs/architecture/asset-implementations-and-packages.md` and ADR-0030, ADR-0031, and ADR-0034.
+- Asset package creation and import: `docs/asset-package-authoring-guide.md`; use
+  the Assets **Import Assets** tab to download the canonical starter.
 - Asset authoring/execution security: `docs/architecture/asset-authoring-and-execution-security.md`, `docs/security/asset-package-authoring-and-execution-threat-model.md`, and ADR-0032.
 - System Builder: `docs/architecture/system-builder.md`, `docs/architecture/system-build-and-release.md`, ADR-0024, and ADR-0033; Systems is workspace-scoped while builder-application status belongs to Settings / Software status.
 - Runtime readiness binding: `docs/architecture/runtime-readiness-binding.md` and ADR-0021.
@@ -105,6 +114,8 @@ If context guidance conflicts with an ADR, architecture document, or standard, t
 
 ## Verification
 
+- During roadmap execution, run focused tests for each internal chunk and defer
+  the full suite until every planned chunk in the increment is implemented.
 - Run `npm run docs:check` after documentation or context changes.
 - Run `npm test` after implementation changes and before handoff when practical.
 - Continuous integration enforces both gates for pull requests and changes to the default branch.

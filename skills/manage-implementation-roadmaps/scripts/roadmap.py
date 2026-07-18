@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Maintain an approval-gated implementation roadmap and durable Markdown report."""
+"""Maintain an approval-gated implementation roadmap and temporary progress report."""
 
 from __future__ import annotations
 
@@ -116,6 +116,22 @@ def safe_relative_path(repo: Path, value: Any, label: str) -> str:
     if relative == Path("."):
         raise RoadmapError(f"{label} must name a file inside the repository.")
     return relative.as_posix()
+
+
+def temporary_report_path(value: Any, label: str) -> str:
+    raw = require_string(value, label, maximum=500).replace("\\", "/")
+    candidate = Path(raw)
+    if (
+        candidate.is_absolute()
+        or ".." in candidate.parts
+        or len(candidate.parts) < 3
+        or candidate.parts[:2] != ("docs", "tmp")
+        or candidate.suffix.lower() != ".md"
+    ):
+        raise RoadmapError(
+            f"{label} must be a Markdown file under the ignored docs/tmp directory."
+        )
+    return candidate.as_posix()
 
 
 def atomic_write(path: Path, content: str) -> None:
@@ -386,6 +402,26 @@ def validate_increment(value: Any, label: str) -> dict[str, Any]:
     }
 
 
+def validate_increment_sequence(increments: list[dict[str, Any]]) -> None:
+    ids = [item["id"] for item in increments]
+    numbers = [item["number"] for item in increments]
+    if len(ids) != len(set(ids)):
+        raise RoadmapError("Increment ids must be unique.")
+    if sorted(numbers) != list(range(min(numbers), max(numbers) + 1)):
+        raise RoadmapError("Increment numbers must be contiguous.")
+    by_id = {item["id"]: item for item in increments}
+    for item in increments:
+        for dependency in item["dependsOn"]:
+            if dependency not in by_id:
+                raise RoadmapError(
+                    f"Increment {item['id']} depends on unknown increment {dependency}."
+                )
+            if by_id[dependency]["number"] >= item["number"]:
+                raise RoadmapError(
+                    f"Increment {item['id']} must depend only on earlier increments."
+                )
+
+
 def validate_plan(value: Any, increment: dict[str, Any]) -> dict[str, Any]:
     plan = require_object(value, "event.plan")
     reject_unknown(
@@ -394,7 +430,8 @@ def validate_plan(value: Any, increment: dict[str, Any]) -> dict[str, Any]:
             "summary",
             "steps",
             "chunks",
-            "tests",
+            "focusedTests",
+            "completionTests",
             "documentation",
             "rollback",
             "assumptions",
@@ -447,7 +484,12 @@ def validate_plan(value: Any, increment: dict[str, Any]) -> dict[str, Any]:
             plan.get("steps"), "event.plan.steps", minimum=1
         ),
         "chunks": chunks,
-        "tests": require_string_list(plan.get("tests"), "event.plan.tests", minimum=1),
+        "focusedTests": require_string_list(
+            plan.get("focusedTests"), "event.plan.focusedTests", minimum=1
+        ),
+        "completionTests": require_string_list(
+            plan.get("completionTests"), "event.plan.completionTests", minimum=1
+        ),
         "documentation": require_string_list(
             plan.get("documentation"),
             "event.plan.documentation",
@@ -570,23 +612,7 @@ def handle_roadmap_defined(state: dict[str, Any], event: dict[str, Any]) -> None
             require_list(event.get("increments"), "event.increments", minimum=1)
         )
     ]
-    ids = [item["id"] for item in increments]
-    numbers = [item["number"] for item in increments]
-    if len(ids) != len(set(ids)):
-        raise RoadmapError("Increment ids must be unique.")
-    if sorted(numbers) != list(range(min(numbers), max(numbers) + 1)):
-        raise RoadmapError("Increment numbers must be contiguous.")
-    by_id = {item["id"]: item for item in increments}
-    for item in increments:
-        for dependency in item["dependsOn"]:
-            if dependency not in by_id:
-                raise RoadmapError(
-                    f"Increment {item['id']} depends on unknown increment {dependency}."
-                )
-            if by_id[dependency]["number"] >= item["number"]:
-                raise RoadmapError(
-                    f"Increment {item['id']} must depend only on earlier increments."
-                )
+    validate_increment_sequence(increments)
     if state["increments"] and any(
         item["status"] != "pending" for item in state["increments"]
     ):
@@ -595,6 +621,40 @@ def handle_roadmap_defined(state: dict[str, Any], event: dict[str, Any]) -> None
             "create a successor roadmap or resume after an approved bounded update."
         )
     state["increments"] = sorted(increments, key=lambda item: item["number"])
+    invalidate_roadmap_approval(state)
+    state["status"] = "roadmap-review"
+
+
+def handle_roadmap_revised(state: dict[str, Any], event: dict[str, Any]) -> None:
+    reject_unknown(event, {"type", "reason", "increments"}, "event")
+    require_string(event.get("reason"), "event.reason")
+    if state.get("currentIncrementId"):
+        raise RoadmapError(
+            "Complete the active increment before revising the pending roadmap."
+        )
+    if not state["increments"]:
+        raise RoadmapError("Define a roadmap before revising its pending increments.")
+
+    preserved: list[dict[str, Any]] = []
+    for increment in state["increments"]:
+        if increment["status"] == "pending":
+            continue
+        if increment["status"] not in INCREMENT_DONE:
+            raise RoadmapError(
+                "Only completed or implemented-pending-qualification increments "
+                "may be preserved during a roadmap revision."
+            )
+        preserved.append(increment)
+
+    replacements = [
+        validate_increment(item, f"event.increments[{index}]")
+        for index, item in enumerate(
+            require_list(event.get("increments"), "event.increments", minimum=1)
+        )
+    ]
+    revised = sorted([*preserved, *replacements], key=lambda item: item["number"])
+    validate_increment_sequence(revised)
+    state["increments"] = revised
     invalidate_roadmap_approval(state)
     state["status"] = "roadmap-review"
 
@@ -1062,11 +1122,40 @@ def handle_roadmap_completed(state: dict[str, Any], event: dict[str, Any]) -> No
     }
 
 
+def handle_report_relocated(state: dict[str, Any], event: dict[str, Any]) -> None:
+    reject_unknown(event, {"type", "reportPath", "reason"}, "event")
+    if state.get("finalApproval"):
+        raise RoadmapError("The temporary report was already removed after final approval.")
+    report_path = temporary_report_path(event.get("reportPath"), "event.reportPath")
+    if report_path == state["paths"]["report"]:
+        raise RoadmapError("The temporary report already uses the requested path.")
+    state["paths"]["report"] = report_path
+    require_string(event.get("reason"), "event.reason")
+
+
+def handle_final_approval_recorded(
+    state: dict[str, Any], event: dict[str, Any]
+) -> None:
+    reject_unknown(event, {"type", "note"}, "event")
+    if state["status"] != "completed" or not state.get("completion"):
+        raise RoadmapError(
+            "Complete the roadmap and present the final report before recording final approval."
+        )
+    if state.get("finalApproval"):
+        raise RoadmapError("Final approval has already been recorded.")
+    state["status"] = "final-approved"
+    state["finalApproval"] = {
+        "note": require_string(event.get("note"), "event.note"),
+        "approvedAt": now_utc(),
+    }
+
+
 EVENT_HANDLERS = {
     "discovery-recorded": handle_discovery_recorded,
     "decision-proposed": handle_decision_proposed,
     "decision-approved": handle_decision_approved,
     "roadmap-defined": handle_roadmap_defined,
+    "roadmap-revised": handle_roadmap_revised,
     "roadmap-approved": handle_roadmap_approved,
     "increment-started": handle_increment_started,
     "increment-research-recorded": handle_increment_research_recorded,
@@ -1078,14 +1167,24 @@ EVENT_HANDLERS = {
     "resumed": handle_resumed,
     "increment-completed": handle_increment_completed,
     "roadmap-completed": handle_roadmap_completed,
+    "report-relocated": handle_report_relocated,
+    "final-approval-recorded": handle_final_approval_recorded,
 }
 
 
 def apply_event(state: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
     event_type = require_string(event.get("type"), "event.type", maximum=80)
-    if state.get("status") == "completed":
+    if state.get("status") == "final-approved":
         raise RoadmapError(
-            "Completed roadmaps are immutable; create a successor roadmap."
+            "Final-approved roadmaps are immutable; create a successor roadmap."
+        )
+    if (
+        state.get("status") == "completed"
+        and event_type != "final-approval-recorded"
+    ):
+        raise RoadmapError(
+            "Completed roadmaps are immutable except for explicit final approval; "
+            "create a successor roadmap for new scope."
         )
     handler = EVENT_HANDLERS.get(event_type)
     if not handler:
@@ -1127,6 +1226,7 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
         "resumeAudits",
         "history",
         "completion",
+        "finalApproval",
     }
     reject_unknown(state, allowed, "state")
     if state.get("schemaVersion") != SCHEMA_VERSION:
@@ -1167,14 +1267,43 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
         )
     if state["roadmapApproval"] and not approval_is_current(state):
         raise RoadmapError("Stored roadmap approval is stale.")
+    final_approval = state.get("finalApproval")
+    if final_approval is not None:
+        final_approval = require_object(final_approval, "state.finalApproval")
+        reject_unknown(
+            final_approval, {"note", "approvedAt"}, "state.finalApproval"
+        )
+        require_string(final_approval.get("note"), "state.finalApproval.note")
+        require_string(
+            final_approval.get("approvedAt"),
+            "state.finalApproval.approvedAt",
+            maximum=80,
+        )
+        if state["status"] != "final-approved":
+            raise RoadmapError(
+                "state.status must be final-approved when final approval is recorded."
+            )
+    elif state["status"] == "final-approved":
+        raise RoadmapError(
+            "state.finalApproval is required for a final-approved roadmap."
+        )
 
 
-def render_sources(sources: list[dict[str, str]]) -> list[str]:
+def render_sources(
+    sources: list[dict[str, str]], from_path: str
+) -> list[str]:
     lines = []
     for source in sources:
         title = markdown(source["title"])
         if source.get("url"):
-            title = f"[{title}](<{source['url']}>)"
+            source_url = source["url"]
+            parsed = urlsplit(source_url)
+            rendered_url = (
+                source_url
+                if parsed.scheme or source_url.startswith(("#", "?"))
+                else relative_markdown_link(from_path, source_url)
+            )
+            title = f"[{title}](<{rendered_url}>)"
         note = f" - {markdown(source['note'])}" if source.get("note") else ""
         lines.append(f"- {title}{note}")
     return lines or ["None recorded."]
@@ -1215,7 +1344,9 @@ def render_roadmap(state: dict[str, Any]) -> str:
                 "",
                 "### Sources",
                 "",
-                *render_sources(discovery["sources"]),
+                *render_sources(
+                    discovery["sources"], state["paths"]["roadmap"]
+                ),
             ]
         )
     else:
@@ -1362,8 +1493,39 @@ def next_checkpoint(state: dict[str, Any]) -> str:
     if status == "roadmap-ready-to-close":
         return "Review final evidence and record roadmap completion."
     if status == "completed":
-        return "Roadmap complete; create a successor roadmap for new scope."
+        return (
+            "Present the final report and wait for explicit overall approval before "
+            "recording final approval and removing the temporary report."
+        )
+    if status == "final-approved":
+        return (
+            "Final approval recorded and the temporary report removed; create a "
+            "successor roadmap for new scope."
+        )
     return "Review the state and choose the next approved transition."
+
+
+def compact_markdown(value: Any, maximum: int = 220) -> str:
+    text = markdown(value)
+    if len(text) <= maximum:
+        return text
+    return text[: maximum - 3].rstrip() + "..."
+
+
+def increment_evidence_summary(
+    state: dict[str, Any], increment: dict[str, Any]
+) -> str:
+    counts = {"passed": 0, "pending": 0, "failed": 0, "missing": 0}
+    for criterion in increment["acceptanceCriteria"]:
+        evidence = latest_criterion_evidence(
+            state, increment["id"], criterion["id"]
+        )
+        key = evidence["outcome"] if evidence else "missing"
+        counts[key] += 1
+    return (
+        f"{counts['passed']} passed, {counts['pending']} pending, "
+        f"{counts['failed']} failed, {counts['missing']} missing"
+    )
 
 
 def render_report(state: dict[str, Any]) -> str:
@@ -1390,133 +1552,105 @@ def render_report(state: dict[str, Any]) -> str:
     if state["increments"]:
         lines.extend(
             [
-                "| Increment | Status | Completed chunks | Pending criteria |",
+                "| Increment | Status | Chunks | Criteria |",
                 "| --- | --- | --- | --- |",
             ]
         )
         for increment in state["increments"]:
-            chunks = ", ".join(increment["completedChunks"]) or "None"
-            pending = ", ".join(increment.get("pendingCriteria", [])) or "None"
+            planned = len((increment.get("plan") or {}).get("chunks", []))
+            chunks = (
+                f"{len(increment['completedChunks'])}/{planned}"
+                if planned
+                else str(len(increment["completedChunks"]))
+            )
             lines.append(
                 f"| {increment['number']}: {markdown(increment['title'])} "
-                f"| `{increment['status']}` | {chunks} | {pending} |"
+                f"| `{increment['status']}` | {chunks} "
+                f"| {increment_evidence_summary(state, increment)} |"
             )
     else:
         lines.append("No increments defined.")
-    lines.extend(["", "## Approved decisions", ""])
-    if state["decisions"]:
-        lines.extend(
-            [
-                "| Decision | Selected option | Status |",
-                "| --- | --- | --- |",
-            ]
-        )
-        for decision in state["decisions"]:
-            lines.append(
-                f"| {markdown(decision['title'])} "
-                f"| `{decision.get('selectedOptionId') or 'none'}` "
-                f"| `{decision['status']}` |"
-            )
-    else:
-        lines.append("None recorded.")
     active = None
     if state.get("currentIncrementId"):
         active = current_increment(state)
-    lines.extend(["", "## Current increment plan", ""])
+    lines.extend(["", "## Current work", ""])
     if active and active.get("plan"):
-        lines.extend([active["plan"]["summary"], "", "### Steps", ""])
-        lines.extend(
-            f"{index}. {step}"
-            for index, step in enumerate(active["plan"]["steps"], 1)
+        next_chunk = next(
+            (
+                chunk
+                for chunk in active["plan"]["chunks"]
+                if chunk["id"] not in active["completedChunks"]
+            ),
+            None,
         )
-        lines.extend(["", "### Planned chunks", ""])
-        for chunk in active["plan"]["chunks"]:
-            marker = "x" if chunk["id"] in active["completedChunks"] else " "
+        lines.append(compact_markdown(active["plan"]["summary"]))
+        if next_chunk:
             lines.append(
-                f"- [{marker}] **{chunk['title']}** (`{chunk['id']}`): "
-                f"{chunk['outcome']}"
+                f"- Next chunk: **{next_chunk['title']}** "
+                f"(`{next_chunk['id']}`) - "
+                f"{compact_markdown(next_chunk['outcome'], 180)}"
             )
+        else:
+            lines.append("- Next chunk: none; complete increment verification.")
     else:
         lines.append("No active implementation plan.")
-    lines.extend(["", "## Completed chunks", ""])
+    lines.extend(["", "## Recent progress", ""])
     if state["chunks"]:
-        for chunk in state["chunks"]:
-            lines.extend(
-                [
-                    f"### {chunk['title']} "
-                    f"(`{chunk['incrementId']}/{chunk['chunkId']}`)",
-                    "",
-                    chunk["summary"],
-                    "",
-                    "- Areas: " + "; ".join(chunk["areas"]),
-                    "- Tests: "
-                    + ("; ".join(chunk["tests"]) or "None recorded"),
-                    "- Documentation: "
-                    + ("; ".join(chunk["documentation"]) or "None recorded"),
-                    "- Feedback addressed: "
-                    + ("; ".join(chunk["feedbackAddressed"]) or "None"),
-                    f"- Completed: `{chunk['completedAt']}`",
-                    "",
-                ]
+        lines.extend(
+            [
+                "| Completed | Increment / chunk | Summary |",
+                "| --- | --- | --- |",
+            ]
+        )
+        for chunk in state["chunks"][-5:]:
+            lines.append(
+                f"| `{chunk['completedAt']}` "
+                f"| `{chunk['incrementId']}/{chunk['chunkId']}` "
+                f"| {compact_markdown(chunk['summary'], 180)} |"
             )
     else:
         lines.append("No coherent work chunk has been completed.")
-    lines.extend(["", "## Feedback register", ""])
+    lines.extend(["", "## Recent feedback", ""])
     if state["feedback"]:
+        addressed = {
+            feedback_id
+            for chunk in state["chunks"]
+            for feedback_id in chunk["feedbackAddressed"]
+        }
         lines.extend(
             [
-                "| Id | Summary | Impact | Disposition | Next action |",
-                "| --- | --- | --- | --- | --- |",
+                "| Id | Status | Summary |",
+                "| --- | --- | --- |",
             ]
         )
-        for item in state["feedback"]:
+        for item in state["feedback"][-5:]:
+            status = "addressed" if item["id"] in addressed else item["disposition"]
             lines.append(
-                f"| `{item['id']}` | {markdown(item['summary'])} "
-                f"| {item['impact']} | {item['disposition']} "
-                f"| {markdown(item['nextAction'])} |"
+                f"| `{item['id']}` | {status} "
+                f"| {compact_markdown(item['summary'], 180)} |"
             )
     else:
         lines.append("None recorded.")
-    lines.extend(["", "## Evidence ledger", ""])
-    if state["evidence"]:
-        lines.extend(
-            [
-                "| Increment / criterion | Kind | Outcome | Summary | Artifact |",
-                "| --- | --- | --- | --- | --- |",
-            ]
-        )
-        for item in state["evidence"]:
-            lines.append(
-                f"| `{item['incrementId']}/{item['criterionId']}` "
-                f"| {item['kind']} | **{item['outcome']}** "
-                f"| {markdown(item['summary'])} "
-                f"| {markdown(item.get('artifact') or 'None')} |"
-            )
-    else:
-        lines.append("None recorded.")
-    lines.extend(["", "## Blockers and resume audits", ""])
-    if state["blockers"]:
-        for blocker in state["blockers"]:
+    lines.extend(["", "## Open blockers", ""])
+    open_blockers = [
+        blocker for blocker in state["blockers"] if blocker["status"] != "resolved"
+    ]
+    if open_blockers:
+        for blocker in open_blockers[-3:]:
             lines.append(
                 f"- **{blocker['id']}** ({blocker['kind']}, {blocker['status']}): "
-                f"{blocker['summary']} Required action: {blocker['requiredAction']}"
+                f"{compact_markdown(blocker['summary'], 140)} Required action: "
+                f"{compact_markdown(blocker['requiredAction'], 140)}"
             )
     else:
         lines.append("No blockers recorded.")
-    if state["resumeAudits"]:
-        lines.extend(["", "### Resume audits", ""])
-        for audit in state["resumeAudits"]:
-            lines.append(
-                f"- `{audit['blockerId']}` at `{audit['recordedAt']}`: "
-                f"{audit['reconciliation']}"
-            )
     if state.get("completion"):
         lines.extend(
             [
                 "",
                 "## Completion",
                 "",
-                state["completion"]["summary"],
+                compact_markdown(state["completion"]["summary"]),
                 "",
                 f"Completed at `{state['completion']['completedAt']}`.",
             ]
@@ -1525,10 +1659,12 @@ def render_report(state: dict[str, Any]) -> str:
 
 
 def document_contents(state: dict[str, Any]) -> dict[str, str]:
-    return {
+    contents = {
         state["paths"]["roadmap"]: render_roadmap(state),
-        state["paths"]["report"]: render_report(state),
     }
+    if not state.get("finalApproval"):
+        contents[state["paths"]["report"]] = render_report(state)
+    return contents
 
 
 def ensure_documents_match(repo: Path, state: dict[str, Any]) -> None:
@@ -1542,6 +1678,8 @@ def ensure_documents_match(repo: Path, state: dict[str, Any]) -> None:
             continue
         if normalize_text(actual) != expected:
             mismatches.append(relative)
+    if state.get("finalApproval") and (repo / state["paths"]["report"]).exists():
+        mismatches.append(state["paths"]["report"])
     if mismatches:
         raise RoadmapError(
             "Generated document drift detected: "
@@ -1550,13 +1688,39 @@ def ensure_documents_match(repo: Path, state: dict[str, Any]) -> None:
         )
 
 
-def write_project_files(repo: Path, state: dict[str, Any]) -> None:
+def remove_generated_report(path: Path) -> None:
+    if not path.exists():
+        return
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError as error:
+        raise RoadmapError(f"Unable to inspect temporary report: {error}") from error
+    if not normalize_text(content).startswith(GENERATED_NOTICE):
+        raise RoadmapError(
+            "Refusing to remove a temporary report without the generated notice."
+        )
+    try:
+        path.unlink()
+    except OSError as error:
+        raise RoadmapError(f"Unable to remove temporary report: {error}") from error
+
+
+def write_project_files(
+    repo: Path,
+    state: dict[str, Any],
+    *,
+    previous_report_path: str | None = None,
+) -> None:
     state_content = (
         json.dumps(state, indent=2, ensure_ascii=True, sort_keys=True) + "\n"
     )
     atomic_write(repo / state["paths"]["state"], state_content)
     for relative, content in document_contents(state).items():
         atomic_write(repo / relative, content)
+    if previous_report_path and previous_report_path != state["paths"]["report"]:
+        remove_generated_report(repo / previous_report_path)
+    if state.get("finalApproval"):
+        remove_generated_report(repo / state["paths"]["report"])
 
 
 def initial_state(repo: Path, config: dict[str, Any]) -> dict[str, Any]:
@@ -1592,8 +1756,12 @@ def initial_state(repo: Path, config: dict[str, Any]) -> dict[str, Any]:
         ),
         "report": safe_relative_path(
             repo,
-            config.get(
-                "reportPath", f"docs/{slug}-implementation-report.md"
+            temporary_report_path(
+                config.get(
+                    "reportPath",
+                    f"docs/tmp/{slug}-implementation-report.md",
+                ),
+                "config.reportPath",
             ),
             "config.reportPath",
         ),
@@ -1629,6 +1797,7 @@ def initial_state(repo: Path, config: dict[str, Any]) -> dict[str, Any]:
         "resumeAudits": [],
         "history": [],
         "completion": None,
+        "finalApproval": None,
     }
     validate_state_shape(repo, state)
     return state
@@ -1657,7 +1826,12 @@ def result_payload(repo: Path, state: dict[str, Any]) -> dict[str, Any]:
         "currentIncrementId": state.get("currentIncrementId"),
         "statePath": str((repo / state["paths"]["state"]).resolve()),
         "roadmapPath": str((repo / state["paths"]["roadmap"]).resolve()),
-        "reportPath": str((repo / state["paths"]["report"]).resolve()),
+        "reportPath": (
+            None
+            if state.get("finalApproval")
+            else str((repo / state["paths"]["report"]).resolve())
+        ),
+        "reportAvailable": not bool(state.get("finalApproval")),
         "roadmapFingerprint": (
             roadmap_fingerprint(state) if state["increments"] else None
         ),
@@ -1680,7 +1854,11 @@ def command_apply(args: argparse.Namespace) -> dict[str, Any]:
     updated = apply_event(state, event)
     validate_state_shape(repo, updated)
     if not args.dry_run:
-        write_project_files(repo, updated)
+        write_project_files(
+            repo,
+            updated,
+            previous_report_path=state["paths"]["report"],
+        )
     result = result_payload(repo, updated)
     result["dryRun"] = args.dry_run
     result["eventFingerprint"] = fingerprint(event)
@@ -1703,6 +1881,8 @@ def command_render(args: argparse.Namespace) -> dict[str, Any]:
     if not args.dry_run:
         for relative, content in contents.items():
             atomic_write(repo / relative, content)
+        if state.get("finalApproval"):
+            remove_generated_report(repo / state["paths"]["report"])
     result = result_payload(repo, state)
     result["dryRun"] = args.dry_run
     return result

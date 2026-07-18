@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   AssetFamily,
@@ -138,14 +138,20 @@ export function useAssetLibraryDefinitionBrowser(client: AssetLibraryClient, wor
   const [detailError, setDetailError] = useState<string | undefined>();
   const [validationError, setValidationError] = useState<string | undefined>();
   const [diagnostics, setDiagnostics] = useState<readonly string[]>([]);
+  const listRequestSequence = useRef(0);
+  const detailRequestSequence = useRef(0);
+  const validationRequestSequence = useRef(0);
 
   const query = useMemo(() => ({ ...createAssetLibraryQuery(filters), ...(workspaceId ? { workspaceId } : {}) }), [filters, workspaceId]);
   const hasActiveFilters = useMemo(() => assetLibraryFiltersAreActive(filters), [filters]);
 
   const loadList = useCallback(async () => {
+    const requestSequence = ++listRequestSequence.current;
     setIsLoadingList(true);
     setListError(undefined);
     if (!workspaceId) {
+      detailRequestSequence.current += 1;
+      validationRequestSequence.current += 1;
       setDefinitions([]);
       setResourceBackedViews([]);
       setSelectedDefinition(undefined);
@@ -156,63 +162,67 @@ export function useAssetLibraryDefinitionBrowser(client: AssetLibraryClient, wor
       setIsLoadingList(false);
       return;
     }
-    const result = await client.listAssetDefinitions(query);
-    const resourceResult = activeTab === "resource-views"
-      ? await client.listAssetResourceBackedViews({
-        searchText: query.searchText,
-        assetTypes: query.assetTypes,
-        assetFamilies: query.assetFamilies,
-        lifecycleStatuses: query.lifecycleStatuses,
-        limit: query.limit,
-        cursor: query.cursor,
-        ...(workspaceId ? { workspaceId } : {}),
-      })
-      : undefined;
-    if (result.ok === false) {
+    try {
+      const result = await client.listAssetDefinitions(query);
+      const resourceResult = activeTab === "resource-views"
+        ? await client.listAssetResourceBackedViews({
+          searchText: query.searchText,
+          assetTypes: query.assetTypes,
+          assetFamilies: query.assetFamilies,
+          lifecycleStatuses: query.lifecycleStatuses,
+          limit: query.limit,
+          cursor: query.cursor,
+          workspaceId,
+        })
+        : undefined;
+      if (requestSequence !== listRequestSequence.current) return;
+      if (result.ok === false) {
+        setDefinitions([]);
+        setResourceBackedViews(resourceResult?.ok === true ? resourceResult.value.items : []);
+        setDiagnostics([]);
+        setListError(result.error.message || "Unable to load Asset Library.");
+        setSelectedDefinition(undefined);
+        setSelectedDetail(undefined);
+        return;
+      }
+
+      const filteredDefinitions = applyLocalDefinitionFilters(result.value.items, filters);
+      setDefinitions(filteredDefinitions);
+      if (resourceResult?.ok === true) {
+        setResourceBackedViews(resourceResult.value.items);
+      } else if (activeTab === "resource-views") {
+        setResourceBackedViews([]);
+      }
+      setDiagnostics([
+        ...safeDiagnosticMessages((result.value.diagnostics ?? []).map((diagnostic) => diagnostic.message)),
+        ...(resourceResult?.ok === true
+          ? safeDiagnosticMessages((resourceResult.value.diagnostics ?? []).map((diagnostic) => diagnostic.message))
+          : activeTab === "resource-views" && resourceResult?.ok === false
+            ? [safeDisplayText(resourceResult.error.message) ?? "Unable to load resource-backed views."]
+            : []),
+      ]);
+    } catch {
+      if (requestSequence !== listRequestSequence.current) return;
       setDefinitions([]);
-      setResourceBackedViews(resourceResult?.ok === true ? resourceResult.value.items : []);
-      setDiagnostics([]);
-      setListError(result.error.message || "Unable to load Asset Library.");
-      setSelectedDefinition(undefined);
-      setSelectedDetail(undefined);
-      setIsLoadingList(false);
-      return;
-    }
-
-    const filteredDefinitions = applyLocalDefinitionFilters(result.value.items, filters);
-    setDefinitions(filteredDefinitions);
-    if (resourceResult?.ok === true) {
-      setResourceBackedViews(resourceResult.value.items);
-    } else if (activeTab === "resource-views") {
       setResourceBackedViews([]);
+      setDiagnostics([]);
+      setListError("Unable to read Asset Library data.");
+    } finally {
+      if (requestSequence === listRequestSequence.current) {
+        setIsLoadingList(false);
+      }
     }
-    setDiagnostics([
-      ...safeDiagnosticMessages((result.value.diagnostics ?? []).map((diagnostic) => diagnostic.message)),
-      ...(resourceResult?.ok === true
-        ? safeDiagnosticMessages((resourceResult.value.diagnostics ?? []).map((diagnostic) => diagnostic.message))
-        : activeTab === "resource-views" && resourceResult?.ok === false
-          ? [safeDisplayText(resourceResult.error.message) ?? "Unable to load resource-backed views."]
-          : []),
-    ]);
-    setIsLoadingList(false);
-
-    if (selectedDefinition && !filteredDefinitions.some((item) => item.id === selectedDefinition.id)) {
-      setSelectedDefinition(undefined);
-      setSelectedDetail(undefined);
-      setDetailError(undefined);
-      setValidationError(undefined);
-    }
-    if (selectedResourceBackedView && resourceResult?.ok === true && !resourceResult.value.items.some((item) => item.id === selectedResourceBackedView.id)) {
-      setSelectedResourceBackedView(undefined);
-      setSelectedResourceBackedViewDetail(undefined);
-      setDetailError(undefined);
-      setValidationError(undefined);
-    }
-  }, [activeTab, client, filters, query, selectedDefinition, selectedResourceBackedView, workspaceId]);
+  }, [activeTab, client, filters, query, workspaceId]);
 
   useEffect(() => {
     void loadList();
   }, [loadList]);
+
+  useEffect(() => () => {
+    listRequestSequence.current += 1;
+    detailRequestSequence.current += 1;
+    validationRequestSequence.current += 1;
+  }, []);
 
   const readDetail = useCallback(async (
     definition: AssetLibraryDefinitionCard,
@@ -233,6 +243,8 @@ export function useAssetLibraryDefinitionBrowser(client: AssetLibraryClient, wor
   }, [client, workspaceId]);
 
   const selectDefinition = useCallback(async (definition: AssetLibraryDefinitionCard) => {
+    const requestSequence = ++detailRequestSequence.current;
+    validationRequestSequence.current += 1;
     setActiveTab("definitions");
     setSelectedDefinition(definition);
     setSelectedResourceBackedView(undefined);
@@ -242,17 +254,28 @@ export function useAssetLibraryDefinitionBrowser(client: AssetLibraryClient, wor
     setValidationError(undefined);
     setIsLoadingDetail(true);
 
-    const result = await readDetail(definition, {});
-
-    if (result.ok === true) {
-      setSelectedDetail(result.value);
-    } else {
-      setDetailError(result.error.message || "Unable to load this asset.");
+    try {
+      const result = await readDetail(definition, {});
+      if (requestSequence !== detailRequestSequence.current) return;
+      if (result.ok === true) {
+        setSelectedDetail(result.value);
+      } else {
+        setDetailError(result.error.message || "Unable to load this asset.");
+      }
+    } catch {
+      if (requestSequence === detailRequestSequence.current) {
+        setDetailError("Unable to load this asset.");
+      }
+    } finally {
+      if (requestSequence === detailRequestSequence.current) {
+        setIsLoadingDetail(false);
+      }
     }
-    setIsLoadingDetail(false);
   }, [readDetail]);
 
   const selectResourceBackedView = useCallback(async (view: AssetLibraryResourceBackedViewCard) => {
+    const requestSequence = ++detailRequestSequence.current;
+    validationRequestSequence.current += 1;
     if (!workspaceId) {
       setActiveTab("resource-views");
       setSelectedResourceBackedView(view);
@@ -273,31 +296,51 @@ export function useAssetLibraryDefinitionBrowser(client: AssetLibraryClient, wor
     setValidationError(undefined);
     setIsLoadingDetail(true);
 
-    const result = await client.readAssetResourceBackedView(
-      { viewId: view.viewId },
-      { expand: ["metadata", "resourceBackings"], ...(workspaceId ? { workspaceId } : {}) },
-    );
-
-    if (result.ok === true) {
-      setSelectedResourceBackedViewDetail(result.value);
-    } else {
-      setDetailError(safeDisplayText(result.error.message) ?? "Unable to load this resource-backed view.");
+    try {
+      const result = await client.readAssetResourceBackedView(
+        { viewId: view.viewId },
+        { expand: ["metadata", "resourceBackings"], workspaceId },
+      );
+      if (requestSequence !== detailRequestSequence.current) return;
+      if (result.ok === true) {
+        setSelectedResourceBackedViewDetail(result.value);
+      } else {
+        setDetailError(safeDisplayText(result.error.message) ?? "Unable to load this resource-backed view.");
+      }
+    } catch {
+      if (requestSequence === detailRequestSequence.current) {
+        setDetailError("Unable to load this resource-backed view.");
+      }
+    } finally {
+      if (requestSequence === detailRequestSequence.current) {
+        setIsLoadingDetail(false);
+      }
     }
-    setIsLoadingDetail(false);
   }, [client, workspaceId]);
 
   const loadValidationDetails = useCallback(async () => {
     if (!selectedDefinition) return;
+    const requestSequence = ++validationRequestSequence.current;
     setValidationError(undefined);
     setIsLoadingValidation(true);
 
-    const result = await readDetail(selectedDefinition, { includeValidation: true });
-    if (result.ok === true) {
-      setSelectedDetail(result.value);
-    } else {
-      setValidationError(result.error.message || "Unable to load validation details.");
+    try {
+      const result = await readDetail(selectedDefinition, { includeValidation: true });
+      if (requestSequence !== validationRequestSequence.current) return;
+      if (result.ok === true) {
+        setSelectedDetail(result.value);
+      } else {
+        setValidationError(result.error.message || "Unable to load validation details.");
+      }
+    } catch {
+      if (requestSequence === validationRequestSequence.current) {
+        setValidationError("Unable to load validation details.");
+      }
+    } finally {
+      if (requestSequence === validationRequestSequence.current) {
+        setIsLoadingValidation(false);
+      }
     }
-    setIsLoadingValidation(false);
   }, [readDetail, selectedDefinition]);
 
   return {

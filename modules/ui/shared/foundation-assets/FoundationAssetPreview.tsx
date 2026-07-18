@@ -1,6 +1,6 @@
 import type { FormEvent, ReactNode } from "react";
 
-import { readSystemFoundationFunctionalDefault } from "../../../application/services/asset-packs/system-foundation-functional-default-catalog";
+import { readSystemFoundationBackingResourceProgram } from "../../../application/services/asset-packs/system-foundation-backing-resource-catalog";
 import type { AssetJsonValue } from "../../../contracts/asset";
 
 export interface FoundationAssetPreviewProps {
@@ -9,8 +9,8 @@ export interface FoundationAssetPreviewProps {
 }
 
 export function FoundationAssetPreview({ definitionId, displayName }: FoundationAssetPreviewProps) {
-  const descriptor = readSystemFoundationFunctionalDefault(definitionId);
-  if (!descriptor) {
+  const program = readSystemFoundationBackingResourceProgram(definitionId);
+  if (!program) {
     return (
       <div className="foundation-preview foundation-preview--unsupported" role="status">
         <strong>Preview unavailable</strong>
@@ -19,17 +19,17 @@ export function FoundationAssetPreview({ definitionId, displayName }: Foundation
     );
   }
 
-  const title = displayName ?? descriptor.displayName;
-  switch (descriptor.previewKind) {
-    case "form": return <FormPreview title={title} fixture={descriptor.previewFixture} />;
-    case "data": return <DataPreview title={title} fixture={descriptor.previewFixture} />;
-    case "conversation": return <ConversationPreview title={title} fixture={descriptor.previewFixture} />;
-    case "workflow": return <OrderedPreview title={title} label="Workflow steps" values={stringArray(descriptor.previewFixture.steps)} />;
-    case "policy": return <PolicyPreview title={title} reason={stringValue(descriptor.previewFixture.reason)} />;
-    case "state": return <StatePreview title={title} message={stringValue(descriptor.previewFixture.message)} />;
-    case "layout": return <OrderedPreview title={title} label="Layout regions" values={stringArray(descriptor.previewFixture.regions)} />;
+  const title = displayName ?? program.displayName;
+  switch (program.previewKind) {
+    case "form": return <FormPreview title={title} fixture={program.previewFixture} />;
+    case "data": return <DataPreview title={title} fixture={program.previewFixture} />;
+    case "conversation": return <ConversationPreview title={title} fixture={program.previewFixture} />;
+    case "workflow": return <OrderedPreview title={title} label="Workflow steps" values={program.backendSteps.length ? program.backendSteps : stringArray(program.previewFixture.steps)} />;
+    case "policy": return <PolicyPreview title={title} reason={stringValue(program.previewFixture.reason)} />;
+    case "state": return <StatePreview title={title} message={stringValue(program.previewFixture.message)} />;
+    case "layout": return <OrderedPreview title={title} label="Layout regions" values={stringArray(program.previewFixture.regions)} />;
     default:
-      return <PreviewFrame title={title} kind="Semantic default"><p>{stringValue(descriptor.previewFixture.summary) ?? "Portable system-foundation building block."}</p></PreviewFrame>;
+      return <PreviewFrame title={title} kind="Semantic default"><p>{stringValue(program.previewFixture.summary) ?? "Portable system-foundation building block."}</p></PreviewFrame>;
   }
 }
 

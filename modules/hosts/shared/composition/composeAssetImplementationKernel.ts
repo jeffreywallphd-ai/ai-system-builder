@@ -1,5 +1,8 @@
 import type { AssetDefinitionRepositoryPort } from "../../../application/ports/asset";
-import { SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS } from "../../../application/services/asset-packs";
+import {
+  SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES,
+  SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS,
+} from "../../../application/services/asset-packs";
 import type {
   AssetImplementationArtifactPort,
   AssetImplementationBuilderPort,
@@ -15,16 +18,22 @@ import {
   RevokeAssetImplementationReleaseUseCase,
   SnapshotAssetImplementationSourceUseCase,
 } from "../../../application/use-cases/asset-implementation";
-import { createStructuredAssetImplementationRepository } from "../../../adapters/persistence/asset-implementation";
+import {
+  createStructuredAssetImplementationBackingResourceRepository,
+  createStructuredAssetImplementationRepository,
+} from "../../../adapters/persistence/asset-implementation";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import {
   normalizeAssetId,
   type AssetReference,
 } from "../../../contracts/asset";
 import {
+  ASSET_IMPLEMENTATION_BACKING_RESOURCE_MEDIA_TYPE,
+  describeAssetImplementationBackingResourceFiles,
   normalizeAssetImplementationBindingId,
   normalizeAssetImplementationFacetId,
   normalizeAssetImplementationReleaseId,
+  normalizeAssetSourceSnapshotId,
   type AssetImplementationBinding,
   type AssetImplementationDeploymentProfile,
   type AssetImplementationFacetKind,
@@ -32,9 +41,14 @@ import {
   type AssetImplementationResolutionRequest,
   type TrustedBuiltInImplementationSeed,
 } from "../../../contracts/asset-implementation";
-import type { WorkspaceId } from "../../../contracts/workspace";
+import {
+  createWorkspaceId,
+  type WorkspaceId,
+} from "../../../contracts/workspace";
 
 const DEFAULT_PACKAGE_DIGEST = `sha256:${"c".repeat(64)}`;
+export const SYSTEM_FOUNDATION_BACKING_RESOURCE_WORKSPACE_ID =
+  createWorkspaceId("system.foundation");
 
 /** Exact, closed implementation bindings for every immutable foundation entry. */
 export const SYSTEM_FOUNDATION_TRUSTED_IMPLEMENTATION_SEEDS: readonly TrustedBuiltInImplementationSeed[] =
@@ -81,6 +95,10 @@ export function composeAssetImplementationKernel(
   const repository = createStructuredAssetImplementationRepository(
     options.documents,
   );
+  const backingResources =
+    createStructuredAssetImplementationBackingResourceRepository(
+      options.documents,
+    );
   const definitions = {
     readExactDefinition: (reference: AssetReference) =>
       options.definitions.getDefinition(reference),
@@ -132,6 +150,7 @@ export function composeAssetImplementationKernel(
 
   return {
     repository,
+    backingResources,
     useCases,
     async ensureTrustedBuiltIns(): Promise<void> {
       for (const seed of options.trustedSeeds ??
@@ -154,6 +173,48 @@ export function composeAssetImplementationKernel(
             actorId: "system",
           });
           if (!published.ok) throw new Error(published.error.message);
+        }
+
+        const release = await repository.readRelease(seed.releaseId);
+        if (!release) {
+          throw new Error("Trusted built-in implementation release is unavailable.");
+        }
+
+        if (options.artifacts) {
+          const bundle = SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES.get(
+            String(seed.definitionRef.id),
+          );
+          if (!bundle) {
+            throw new Error(
+              "Trusted built-in implementation backing resources are unavailable.",
+            );
+          }
+          const artifact = await options.artifacts.putImmutable({
+            workspaceId: SYSTEM_FOUNDATION_BACKING_RESOURCE_WORKSPACE_ID,
+            kind: "source",
+            content: JSON.stringify(bundle),
+            mediaType: ASSET_IMPLEMENTATION_BACKING_RESOURCE_MEDIA_TYPE,
+          });
+          const identity = String(seed.definitionRef.id).replace(
+            /[^a-zA-Z0-9._-]/g,
+            "-",
+          );
+          await backingResources.save({
+            backingResourceId: `implementation-backing.${identity}.1`,
+            origin: "system-foundation",
+            releaseId: seed.releaseId,
+            definitionRef: seed.definitionRef,
+            scope: "system",
+            artifactWorkspaceId:
+              SYSTEM_FOUNDATION_BACKING_RESOURCE_WORKSPACE_ID,
+            sourceSnapshotId: normalizeAssetSourceSnapshotId(
+              `source-snapshot.${identity}.${artifact.digest.slice(-16)}`,
+            ),
+            artifact,
+            files: describeAssetImplementationBackingResourceFiles(bundle),
+            createdAt: release.createdAt,
+            createdBy: "system",
+          });
         }
 
         const existingBinding = await repository.readBinding(seed.bindingId);

@@ -39,8 +39,18 @@ Asset Kernel remains authoritative for definitions, instances, ports, bindings, 
 | `AssetImplementationRelease`    | immutable                   | workspace/organization/system | facets, digests, compatibility, capabilities, provenance, evidence |
 | `AssetImplementationBinding`    | revisioned policy record    | workspace/organization/system | exact definition-to-release association and activation state       |
 | `AssetImplementationRevocation` | append-only                 | authority scope               | reason, authority, timestamp, affected digest/identity             |
+| `AssetImplementationBackingResourceRecord` | immutable exact-release link | workspace/system | safe descriptors linking an exact release to one verified source bundle |
 
 The structured records use opaque identifiers, media types, digests, byte sizes, and storage keys. They reject code strings, raw package bytes, source files, filesystem paths, credentials, environment values, provider payloads, and unbounded logs.
+
+Actual implementation backing resources remain in immutable artifact storage.
+Their bounded bundle may contain frontend structure, frontend styling, backend
+logic, and other definition/source files. The structured record retains only
+safe descriptors and the verified artifact identity. System Foundation previews
+consume the same canonical declarative resource programs stored for customization;
+admitted packages retain their inspected text facet resources. Compiled JavaScript
+is visible but read-only, while allowlisted TypeScript/TSX/JSON/CSS/Markdown source
+may participate in a reviewed sparse overlay.
 
 ## Facets
 
@@ -115,6 +125,13 @@ platform authorization remains authoritative. Record-form, data-preview, and
 basic-assistant composites reference the same lower-level definitions and
 typed composition model used by System Builder.
 
+Every current System Foundation definition also has an actual bounded backing
+bundle. Depending on the asset, it contains the canonical frontend structure,
+CSS, declarative backend logic, definition JSON, or an appropriate combination.
+These resources are persisted as immutable artifacts when trusted built-ins are
+ensured; they are not metadata-only placeholders and they do not copy protected
+host implementation code into Asset Kernel records.
+
 ## Ownership and dependency direction
 
 ```txt
@@ -139,13 +156,25 @@ organization admission additionally requires a configured verified signature.
 Definitions and implementation releases use same-identity/same-content
 idempotency and reject replacement with different content.
 
-The Assets **Import packages** tab provides the same three-step inspection,
-permission review, install, activate, disable, and rollback workflow in desktop
-and thin-client surfaces. The API routes require `asset:read` or `asset:write`;
+Admission also creates one immutable implementation backing bundle per admitted
+release from the exact inspected definition and readable facet entries. Workspace
+authorization and release visibility govern reads; unsupported/binary resources
+remain unavailable rather than being decoded or executed.
+
+The Assets **Import Assets** tab provides a canonical deterministic,
+inspector-valid, non-executing `.aisb-package` starter plus complete authoring
+guidance and the same three-step inspection, permission review, install,
+activate, disable, and rollback workflow in desktop and thin-client surfaces.
+The starter download is generated locally and performs no inspection,
+installation, network access, activation, or execution. The API routes require
+`asset:read` or `asset:write`;
 desktop IPC exposes only typed package lifecycle channels. Package browse or
 inspection never resolves or executes an implementation. Public registries,
 automatic updates, package removal, and public marketplace behavior remain
 unsupported.
+
+`docs/asset-package-authoring-guide.md` documents the contract-aligned authoring
+sequence, bounded entry descriptors, evidence, and separate trust decisions.
 
 ## Research basis
 
