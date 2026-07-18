@@ -61,6 +61,11 @@ import type {
   SetAssetPackageActivationCommand,
 } from "../../../../../modules/contracts/asset-package";
 import type {
+  CreateAssetStudioAssetDraftCommand,
+  ListAssetStudioAssetDraftsQuery,
+  ReadAssetStudioAssetDraftQuery,
+  TransitionAssetStudioAssetDraftCommand,
+  UpdateAssetStudioAssetDraftCommand,
   ProposeAssetStudioChangeCommand,
   ReviewAssetStudioProposalCommand,
   StartAssetStudioCommand,
@@ -812,6 +817,34 @@ interface DesktopApiBridge {
   ) => Promise<unknown>;
   listAssetStudioWorkflows?: (
     workspaceId: string,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  createAssetStudioAssetDraft?: (
+    input: Omit<CreateAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  updateAssetStudioAssetDraft?: (
+    input: Omit<UpdateAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  readAssetStudioAssetDraft?: (
+    input: ReadAssetStudioAssetDraftQuery,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  listAssetStudioAssetDrafts?: (
+    input: ListAssetStudioAssetDraftsQuery,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  reviewAssetStudioAssetDraft?: (
+    input: Omit<TransitionAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  publishAssetStudioAssetDraft?: (
+    input: Omit<TransitionAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  abandonAssetStudioAssetDraft?: (
+    input: Omit<TransitionAssetStudioAssetDraftCommand, "actorId">,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   readAssetDefinition?: (

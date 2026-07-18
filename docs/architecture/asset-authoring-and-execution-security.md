@@ -88,6 +88,13 @@ source/dependency/capability limits plus workspace ownership and optimistic
 revision, and creates a new immutable review snapshot. Any base drift, revocation,
 unavailable artifact, stale approval, or validation failure denies materialization
 and publication without changing the base.
+Customization-target listing and exact reads also consult current implementation
+revocation truth. A revoked release, an unavailable revocation store, or a failed
+revocation lookup makes the base ineligible without exposing persistence detail.
+This fail-closed check happens before the base can enter a derived customization.
+Publishing a distinct customized or Studio-authored definition and implementation
+release still grants no execution, installation, activation, deployment, secret,
+network, or host-filesystem authority.
 
 ## Approved-release data execution
 

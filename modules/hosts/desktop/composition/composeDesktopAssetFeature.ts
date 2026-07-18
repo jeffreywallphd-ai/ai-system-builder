@@ -108,6 +108,8 @@ export async function composeDesktopAssetFeature(
           documents: options.documents,
           implementations: assetImplementation,
           artifacts: implementationArtifacts,
+          definitions:
+            internalAssetRegistry.assetKernel.repositories.definitionRepository,
           now: options.now,
         })
       : undefined;

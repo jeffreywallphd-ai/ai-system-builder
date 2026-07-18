@@ -355,11 +355,184 @@
         "Desktop webpack and thin-client TypeScript checks passed"
       ],
       "title": "Shared end-to-end ordered customization experience"
+    },
+    {
+      "areas": [
+        "Asset Studio contracts and normalization",
+        "Structured draft persistence",
+        "Studio application lifecycle",
+        "Shared desktop and server composition"
+      ],
+      "chunkId": "studio-draft-lifecycle",
+      "completedAt": "2026-07-18T19:43:38Z",
+      "criteriaIds": [
+        "studio-drafts-persist",
+        "studio-review-publish-safe"
+      ],
+      "documentation": [
+        "Temporary implementation report"
+      ],
+      "feedbackAddressed": [],
+      "id": "unified-asset-studio-saved-studio-draft-lifecycle",
+      "incrementId": "unified-asset-studio-saved",
+      "summary": "Added workspace-isolated resource-backed Studio drafts with complete structured semantics, immutable source artifacts, optimistic updates, review invalidation, review snapshots, safe definition publication, and restart-safe persistence.",
+      "tests": [
+        "Focused Studio draft contract and lifecycle matrix passed: 4 tests",
+        "Scoped TypeScript diagnostic filter reported no Studio draft errors"
+      ],
+      "title": "Resource-backed Studio draft lifecycle"
+    },
+    {
+      "areas": [
+        "Asset Studio API and desktop IPC contracts",
+        "Server and desktop host composition with route security",
+        "Desktop preload/renderer and thin-client lifecycle adapters"
+      ],
+      "chunkId": "studio-host-transports",
+      "completedAt": "2026-07-18T20:08:05Z",
+      "criteriaIds": [
+        "studio-transports-aligned"
+      ],
+      "documentation": [
+        "Temporary Increment 5 implementation report"
+      ],
+      "feedbackAddressed": [
+        "feedback-desktop-customization-envelope"
+      ],
+      "id": "unified-asset-studio-saved-studio-host-transports",
+      "incrementId": "unified-asset-studio-saved",
+      "summary": "Exposed the structured Studio asset-draft lifecycle through authenticated server API and desktop IPC/preload transports, aligned desktop and thin-client adapters, and preserved canonical failure envelopes.",
+      "tests": [
+        "Desktop and thin-client scoped TypeScript checks passed",
+        "Focused API/IPC transport parity test passed",
+        "Focused desktop and thin-client adapter tests passed: 2 tests"
+      ],
+      "title": "Aligned Studio host transports and clients"
+    },
+    {
+      "areas": [
+        "Ordered semantic, configuration, AI context, composition, and backing-resource Studio sections",
+        "Responsive Saved cards with native and idempotent legacy draft handoff",
+        "Desktop/thin-client tab consolidation and canonical authoring documentation"
+      ],
+      "chunkId": "unified-studio-saved-experience",
+      "completedAt": "2026-07-18T20:34:24Z",
+      "criteriaIds": [
+        "single-studio-surface",
+        "saved-reopens-exact-draft",
+        "asset-tabs-consolidated"
+      ],
+      "documentation": [
+        "Asset authoring/customization architecture and context pack",
+        "Shared Asset Studio UI README",
+        "Temporary Increment 5 implementation report"
+      ],
+      "feedbackAddressed": [
+        "single-studio-saved-assets"
+      ],
+      "id": "unified-asset-studio-saved-unified-studio-saved-experience",
+      "incrementId": "unified-asset-studio-saved",
+      "summary": "Delivered one shared desktop/thin-client Studio surface for complete semantic data and actual categorized backing resources, plus a Saved list that reopens exact native drafts and lazily upgrades legacy drafts without mutation or duplicate rows.",
+      "tests": [
+        "Desktop and thin-client scoped TypeScript checks passed",
+        "Focused lifecycle and unified UI matrix passed: 8 tests",
+        "Documentation drift checks passed"
+      ],
+      "title": "Single ordered Studio and Saved-assets experience"
+    },
+    {
+      "areas": [
+        "System-owned and admitted-import customization lifecycle matrix",
+        "Studio post-restart exact draft read and rediscovery",
+        "Immutable base and no-authored-release execution assertions"
+      ],
+      "chunkId": "representative-lifecycle-matrix",
+      "completedAt": "2026-07-18T20:52:15Z",
+      "criteriaIds": [
+        "e2e-default-imported",
+        "e2e-studio-saved"
+      ],
+      "documentation": [
+        "Temporary concise Increment 6 implementation report"
+      ],
+      "feedbackAddressed": [],
+      "id": "production-qualification-representative-lifecycle-matrix",
+      "incrementId": "production-qualification",
+      "summary": "Qualified admitted imported, System Foundation, and from-scratch Studio assets through distinct publication, immutable bases, exact resource restoration, restart rediscovery, workspace isolation, and non-execution.",
+      "tests": [
+        "Focused derived-customization and Studio lifecycle matrix passed: 5 tests"
+      ],
+      "title": "Representative lifecycle and restart matrix"
+    },
+    {
+      "areas": [
+        "Fail-closed implementation revocation eligibility",
+        "Unsafe path, protected content, secret, size, stale, and workspace negative coverage",
+        "Shared workflow list semantics, modal focus/stacking, safe status announcements, and narrow-layout contracts"
+      ],
+      "chunkId": "failure-security-accessibility",
+      "completedAt": "2026-07-18T21:02:13Z",
+      "criteriaIds": [
+        "desktop-thin-accessibility",
+        "security-review"
+      ],
+      "documentation": [
+        "Temporary concise Increment 6 implementation report"
+      ],
+      "feedbackAddressed": [],
+      "id": "production-qualification-failure-security-accessibility",
+      "incrementId": "production-qualification",
+      "summary": "Hardened customization against revoked or unavailable revocation truth, unsafe and oversized Studio source, and unavailable Saved adapters while improving ordered workflow semantics and proving modal, status, labeling, and responsive behavior across shared hosts.",
+      "tests": [
+        "Focused security, lifecycle, modal, accessibility-semantic, and responsive matrix passed: 24 tests",
+        "Desktop and thin-client scoped TypeScript checks passed",
+        "Diff whitespace check passed"
+      ],
+      "title": "Fail-closed, security, accessibility, and responsive qualification"
+    },
+    {
+      "areas": [
+        "dev-tools/config/asset-system-qualification.json",
+        "dev-tools/scripts/qualification/tests/asset-system-qualification.unit.test.mjs",
+        "docs/operations/asset-experience-controlled-review.md",
+        "docs/operations/asset-system-support-qualification.md",
+        "docs/architecture/asset-authoring-and-execution-security.md",
+        "docs/context/packs/asset-authoring.pack.md",
+        "modules/ui/shared/components/README.md",
+        "modules/ui/shared/asset-studio/README.md",
+        "docs/README.md"
+      ],
+      "chunkId": "release-evidence-gates",
+      "completedAt": "2026-07-18T21:08:22Z",
+      "criteriaIds": [
+        "all-gates-pass"
+      ],
+      "documentation": [
+        "docs/operations/asset-experience-controlled-review.md",
+        "docs/operations/asset-system-support-qualification.md",
+        "docs/architecture/asset-authoring-and-execution-security.md",
+        "docs/context/packs/asset-authoring.pack.md",
+        "modules/ui/shared/components/README.md",
+        "modules/ui/shared/asset-studio/README.md",
+        "docs/README.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "production-qualification-release-evidence-gates",
+      "incrementId": "production-qualification",
+      "summary": "Added reusable controlled asset-experience review guidance, required automated asset-experience evidence for every support profile, documented fail-closed revocation eligibility and non-execution boundaries, and added regression coverage for the qualification policy.",
+      "tests": [
+        "node --test dev-tools/scripts/qualification/tests/asset-system-qualification.unit.test.mjs",
+        "npm run asset-system:check",
+        "npm run docs:check",
+        "npm run agent-support:check",
+        "git diff --check"
+      ],
+      "title": "Release evidence, canonical docs, and complete gates"
     }
   ],
   "completion": null,
   "createdAt": "2026-07-18T10:28:03Z",
-  "currentIncrementId": "layered-customization-workflow",
+  "currentIncrementId": null,
   "decisions": [
     {
       "approvalNote": "The user explicitly approved Option 1, Layered derived customization.",
@@ -603,6 +776,248 @@
       "outcome": "passed",
       "recordedAt": "2026-07-18T13:17:25Z",
       "summary": "The starter contains one text/plain README entry, zero implementations, zero requested capabilities, and no executable content; generation and local Blob download use only canonical in-memory data while inspection remains the existing non-executing bounded read path."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "eligible-sources-searchable",
+      "id": "evidence-13",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:20Z",
+      "summary": "Built-in, imported, authored, and customized exact targets are searchable with truthful eligibility and backing-resource summaries. Focused domain/catalog tests plus the complete non-browser suite and cross-host UI matrix passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "workspace-isolated",
+      "id": "evidence-14",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "Derived customization reads, writes, artifacts, transports, and publication remain scoped to the requested workspace. Workspace-isolation and transport tests plus the complete non-browser suite passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "transport-aligned",
+      "id": "evidence-15",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "Server API, desktop IPC/preload, and both renderer clients expose aligned authorized customization operations. Transport, security, preload, client, and host tests plus both affected builds passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "base-remains-immutable",
+      "id": "evidence-16",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "Customization lifecycle operations and publication preserve exact immutable base definitions, releases, snapshots, and resources. Base-immutability and publication tests plus the complete non-browser suite passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "sparse-reuse",
+      "id": "evidence-17",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "Unchanged semantic values and backing resources remain logically reused while only changed files are overlaid. Sparse patch and materialization tests plus editor model tests passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "safe-materialization",
+      "id": "evidence-18",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "Review revalidates and materializes bounded content as an immutable snapshot without executing it. Materialization, path/content validation, transport sanitization, and complete non-browser tests passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "new-owned-lineage",
+      "id": "evidence-19",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "Publishing a reviewed customization creates distinct workspace-owned definition and implementation-draft lineage. Publication and persistence tests plus the complete non-browser suite passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "selection-controlled",
+      "id": "evidence-20",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "The shared editor requires exact selection and confirms target changes before discarding unsaved editor state. Cross-host jsdom/page interaction matrix passed: 8 tests."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "internals-visible",
+      "id": "evidence-21",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "The ordered editor exposes semantic definition internals and actual frontend structure, styling, backend logic, and other backing resources. Shared editor model tests, jsdom interactions, desktop TypeScript, and thin-client build passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "ordered-workflow",
+      "id": "evidence-22",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "Desktop and thin client share one ordered select, edit, save, review, publish, and history workflow. Cross-host jsdom/page matrix passed and both affected builds passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "copy-confirmed",
+      "id": "evidence-23",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "Save, publish, target-change, and abandon actions clearly preserve the base and confirm destructive editor-state changes. Interaction tests and the complete non-browser suite passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test && npm run build:thin-client && npm run package",
+      "criterionId": "single-studio-surface",
+      "id": "evidence-24",
+      "incrementId": "unified-asset-studio-saved",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T20:40:38Z",
+      "summary": "Shared Studio UI tests and both production host builds verified one ordered semantic and backing-resource editor."
+    },
+    {
+      "artifact": null,
+      "command": "npm test",
+      "criterionId": "studio-drafts-persist",
+      "id": "evidence-25",
+      "incrementId": "unified-asset-studio-saved",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T20:40:41Z",
+      "summary": "Lifecycle and persistence tests verified workspace isolation, restart-safe structured drafts, immutable bounded resource artifacts, and revision checks."
+    },
+    {
+      "artifact": null,
+      "command": "npm test",
+      "criterionId": "saved-reopens-exact-draft",
+      "id": "evidence-26",
+      "incrementId": "unified-asset-studio-saved",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T20:40:44Z",
+      "summary": "Saved-surface tests verified exact native draft restoration and idempotent legacy draft upgrade into Studio."
+    },
+    {
+      "artifact": null,
+      "command": "npm test && npm run build:server && npm run package",
+      "criterionId": "studio-transports-aligned",
+      "id": "evidence-27",
+      "incrementId": "unified-asset-studio-saved",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T20:40:51Z",
+      "summary": "Transport parity, renderer adapter, full-suite, server build, and desktop package checks verified aligned API and IPC behavior."
+    },
+    {
+      "artifact": null,
+      "command": "npm test",
+      "criterionId": "studio-review-publish-safe",
+      "id": "evidence-28",
+      "incrementId": "unified-asset-studio-saved",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T20:40:54Z",
+      "summary": "Workflow tests verified immutable review snapshots and definition plus implementation-draft publication without activation or execution."
+    },
+    {
+      "artifact": null,
+      "command": "npm test",
+      "criterionId": "asset-tabs-consolidated",
+      "id": "evidence-29",
+      "incrementId": "unified-asset-studio-saved",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T20:40:58Z",
+      "summary": "Desktop and thin-client tab tests verified Browse, Import Assets, Studio, Saved, and Customizations with no Create or split Drafts workflow."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "node --import tsx --test modules/application/use-cases/asset-authoring/tests/asset-derived-customization-workflow.unit.test.ts; npm test",
+      "criterionId": "e2e-default-imported",
+      "id": "evidence-30",
+      "incrementId": "production-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T21:14:15Z",
+      "summary": "Focused and full tests prove System Foundation and admitted imported bases can be customized, reviewed, published as distinct workspace assets, rediscovered after restart, and left exactly unchanged."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "node --import tsx --test modules/application/use-cases/asset-studio/tests/asset-studio-asset-draft-workflow.unit.test.ts; npm test",
+      "criterionId": "e2e-studio-saved",
+      "id": "evidence-31",
+      "incrementId": "production-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T21:14:18Z",
+      "summary": "Focused and full tests prove a resource-backed Studio asset can be saved unpublished, reopened exactly from Saved after restart, reviewed, published, and rediscovered without executing authored source."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "npm test; npm run docs:check; npm run architecture:check; npm run agent-support:check; npm run security:dependencies; npm run asset-system:check; npm run build:server; npm run build:thin-client; npm run package; git diff --check",
+      "criterionId": "all-gates-pass",
+      "id": "evidence-32",
+      "incrementId": "production-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T21:14:23Z",
+      "summary": "The 475-file non-browser suite and every required documentation, architecture, agent-support, dependency-security, asset-system policy, server, thin-client, and desktop packaging gate passed; diff validation found no whitespace errors."
+    },
+    {
+      "artifact": null,
+      "command": "Follow docs/operations/asset-experience-controlled-review.md",
+      "criterionId": "desktop-thin-accessibility",
+      "id": "evidence-33",
+      "incrementId": "production-qualification",
+      "kind": "manual",
+      "outcome": "pending",
+      "recordedAt": "2026-07-18T21:14:26Z",
+      "summary": "Automated shared-host tests passed for labels, ordered list semantics, modal focus and stacking, status/error behavior, and narrow-layout rules. Controlled keyboard, screen-reader, 400-percent zoom/reflow, and contrast review on supported desktop and thin-client environments remains required and is not inferred."
+    },
+    {
+      "artifact": null,
+      "command": "Follow docs/operations/asset-experience-controlled-review.md",
+      "criterionId": "security-review",
+      "id": "evidence-34",
+      "incrementId": "production-qualification",
+      "kind": "manual",
+      "outcome": "pending",
+      "recordedAt": "2026-07-18T21:14:31Z",
+      "summary": "Automated review passed for source containment, unsafe paths, protected content, secrets, size limits, stale revisions, workspace isolation, immutable bases, non-execution, safe diagnostics, and fail-closed revocation truth. The controlled target-environment security review remains required and is not inferred."
     }
   ],
   "feedback": [
@@ -705,6 +1120,26 @@
       "recordedAt": "2026-07-18T14:29:59Z",
       "summary": "Each Asset Browser asset card needs a Customize action that opens the selected asset in the Customizations tab.",
       "targetIncrementId": "layered-customization-workflow"
+    },
+    {
+      "category": "scope",
+      "disposition": "accepted",
+      "id": "single-studio-saved-assets",
+      "impact": "scope-change",
+      "nextAction": "Insert one cohesive Studio and Saved-assets increment before production qualification.",
+      "recordedAt": "2026-07-18T17:54:41Z",
+      "summary": "Studio must provide one ordered surface for new from-scratch semantic definitions and actual backing resources; Create is removed, and Saved lists unpublished assets that reopen in Studio.",
+      "targetIncrementId": "production-qualification"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "feedback-desktop-customization-envelope",
+      "impact": "within-increment",
+      "nextAction": "Use the canonical ok/value IPC envelope in the desktop client, retain legacy compatibility, and cover the renderer, preload, and IPC chain with focused regression tests.",
+      "recordedAt": "2026-07-18T19:44:09Z",
+      "summary": "Desktop Customize actions and Customizations search reported Unable to complete request because the renderer client parsed an obsolete envelope shape.",
+      "targetIncrementId": "unified-asset-studio-saved"
     }
   ],
   "history": [
@@ -1043,6 +1478,252 @@
       "recordedAt": "2026-07-18T17:43:09Z",
       "sequence": 56,
       "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "7bd45b0185b509f73b722120f03ab82dd55bf3d0942932aea51880e2f0e2ef4c",
+      "recordedAt": "2026-07-18T17:52:20Z",
+      "sequence": 57,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "86a5592a61481237294069318756feeeee9b525c61805ea43f0dcafec1e0c57f",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 58,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "0f0ff5862d7f45093cbb25f3a7292dc6b074f05e75b84191c9d429c8b1fb4283",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 59,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9a2a9f180636be53c44d67c2cd7a02736be6f7d8514ddb1328c224776c2aa204",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 60,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f6bb959db53dc7b130d8879118cbbaadc0234a583ce716c470e81d04270bdb8d",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 61,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c2ca4297bed7035ca1f8da4e8bed3e30ea7dbe4839556437049c3037a82f0358",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 62,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "4f810ac1690108ff02059db8d056e6d74e0a4ee994fc40153f3df00139e910b5",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 63,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ae2bd98feeb9606bd510e9f9f1c6c5579222ee19e171e842798f5df1a29111a1",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 64,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "2f86b001c9430ea10e1cb373577c1d320ad829dc60a1d5febd6a48bda3ce76f0",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 65,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "26781a99ccebdec57d55bdbcb5c491e872b270af5c7031b8deca6ba15e1c9690",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 66,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f064419f8ce43da5dde8dc389d2319f64e2732121f763d493a95286e788eabf5",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 67,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "649ca28e9c5a93b0faf35860ba4f8a7c62bd0b4478a86a84c9fc027cf4ac2a99",
+      "recordedAt": "2026-07-18T17:52:22Z",
+      "sequence": 68,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "78b10411ba7ccc9d31f84f3e549df4fad01bbd372095ff19b3656015fa3e997b",
+      "recordedAt": "2026-07-18T17:54:41Z",
+      "sequence": 69,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "51e0b7e2920c77fc9402cea672eabf8bbe5cd7722c83bf2c1c2bbb720d992b5f",
+      "recordedAt": "2026-07-18T17:54:41Z",
+      "sequence": 70,
+      "type": "roadmap-revised"
+    },
+    {
+      "eventFingerprint": "02455d6ead0d5e7a50631d97052b149c253bf7eefa27f78ab308a2f98c9db702",
+      "recordedAt": "2026-07-18T17:54:42Z",
+      "sequence": 71,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "f33eb5242620b0f21d386471d632fc29587fbe7d4392699f418d07e2a44b8018",
+      "recordedAt": "2026-07-18T19:07:18Z",
+      "sequence": 72,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "39f3dcef35fca67844665d2cde090655679ff7dc3b768b798914341b00771dba",
+      "recordedAt": "2026-07-18T19:11:38Z",
+      "sequence": 73,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "f84601ca514fe800ad00646df88e1f4cd08a40d9e57838eadd8993b4d2497d7f",
+      "recordedAt": "2026-07-18T19:11:38Z",
+      "sequence": 74,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "1fcbc003bf1af80cf38b927ab573fb32ed95d40782a8949d7f4c274d36571ecd",
+      "recordedAt": "2026-07-18T19:43:38Z",
+      "sequence": 75,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "e78b30012ab4eb2b5d6f0323430680983a492896b3bc41fec13ef65a7eab21aa",
+      "recordedAt": "2026-07-18T19:44:09Z",
+      "sequence": 76,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "dbb4817bf118c8abce511962fcc73d55d9083f1245040a9cd951cf72cf52b10f",
+      "recordedAt": "2026-07-18T20:08:05Z",
+      "sequence": 77,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "392a9be0570121090a50e75f9f231c4314292d7c44c8953353f5bb85f6d83749",
+      "recordedAt": "2026-07-18T20:34:24Z",
+      "sequence": 78,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "3260014f3a9d4bf8a1ea18a1f7447af2b5e4e67a9462381f59581fdae61b3233",
+      "recordedAt": "2026-07-18T20:40:38Z",
+      "sequence": 79,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "086ac2cda1b9c5238bea243a3059d966734e2e1e7c213a7a79f7ad51695b0332",
+      "recordedAt": "2026-07-18T20:40:41Z",
+      "sequence": 80,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "bfa8aedb0bf7824ed09ca96e22ec7a14049458059b91b351f684228166ae8043",
+      "recordedAt": "2026-07-18T20:40:44Z",
+      "sequence": 81,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "4fe43ac1caf77e707f7583a663ab69ef0ba1a0fafea058f539cf13e38391aee8",
+      "recordedAt": "2026-07-18T20:40:51Z",
+      "sequence": 82,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "0935372cd3cce29f6b5332ab0d1b08ddfbcf9ffdcff361b7387e48549916cef1",
+      "recordedAt": "2026-07-18T20:40:54Z",
+      "sequence": 83,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "114c9b0f1f45a7411effb97ab623a0c365d2d98f132ccbc93e70b3c0586b2390",
+      "recordedAt": "2026-07-18T20:40:58Z",
+      "sequence": 84,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "92f726eb68baa1e11745fc1b61200f38cf28ca2a48169b5070a658c5e9c9186a",
+      "recordedAt": "2026-07-18T20:41:01Z",
+      "sequence": 85,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "96301c286f1494e086f3d0f89307ca831738e1821da7cda0bca28e5914cc268b",
+      "recordedAt": "2026-07-18T20:45:29Z",
+      "sequence": 86,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "75a4abaf4b19ce3561b7ca036ef2d264a0f18fdb7a1d666992139b8b2722fd9a",
+      "recordedAt": "2026-07-18T20:45:33Z",
+      "sequence": 87,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "74b8ae07e125106cbfb6ce01447e87991bc21023ca061c1426cca6cd9f342fe7",
+      "recordedAt": "2026-07-18T20:45:36Z",
+      "sequence": 88,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "90ae24cdc8334b9834a3a42f5b943824877b3496b88cfaf8aabb6f688f06010d",
+      "recordedAt": "2026-07-18T20:52:15Z",
+      "sequence": 89,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "6df9b963a960f3df0595849df9da9a4489220090422d1e3a2bfc3ebc23924fdf",
+      "recordedAt": "2026-07-18T21:02:13Z",
+      "sequence": 90,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "f84885c32958e94b88f4e1d8f71ff782f1202d03a66962faf9fbed097fac5a10",
+      "recordedAt": "2026-07-18T21:08:22Z",
+      "sequence": 91,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "15f989ce14419db734e95538dd5b0f2410ea95b1c9fb0fd8b0afdf3748a066e0",
+      "recordedAt": "2026-07-18T21:14:15Z",
+      "sequence": 92,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "85d71d4575d3c77abf9e2dcd38879576a8f6ce875f35affd916decec448621a4",
+      "recordedAt": "2026-07-18T21:14:18Z",
+      "sequence": 93,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "0c4da638cbb722f9805a11642eda7d97244d717f41c331758e81cda22442b4a9",
+      "recordedAt": "2026-07-18T21:14:23Z",
+      "sequence": 94,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c6736cc9cf230ace0c94ee3a38acb125fab4a4e70f752908980789420096df9f",
+      "recordedAt": "2026-07-18T21:14:26Z",
+      "sequence": 95,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9860d6e8c4dad88da001533cf591a4239b0a3d8a38d6fdd2d422dcafe9e34632",
+      "recordedAt": "2026-07-18T21:14:31Z",
+      "sequence": 96,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "95d398fca77447297756408e629f102627491589a154f9f18829d0a23332119b",
+      "recordedAt": "2026-07-18T21:14:33Z",
+      "sequence": 97,
+      "type": "increment-completed"
     }
   ],
   "increments": [
@@ -1672,12 +2353,13 @@
         }
       ],
       "allowPendingQualification": false,
-      "completedAt": null,
+      "completedAt": "2026-07-18T17:52:22Z",
       "completedChunks": [
         "customization-domain-catalog",
         "customization-host-transports",
         "customization-ordered-experience"
       ],
+      "completionSummary": "Increment 4 now delivers a tested, documented, cross-host layered customization workflow over exact immutable bases and real backing resources, with aligned transports, ordered editing, review materialization, distinct publication, and recoverable history.",
       "deliverables": [
         "Customization target contracts, application read service, and host-composed source readers",
         "Derived customization application use cases and ports",
@@ -1704,6 +2386,7 @@
       "id": "layered-customization-workflow",
       "number": 4,
       "objective": "Deliver one production-complete vertical slice for searchable exact target selection, sparse layered customization, bounded source overlays, immutable review materialization, workspace-owned publication, and the ordered desktop and thin-client workflow without mutating any base asset.",
+      "pendingCriteria": [],
       "plan": {
         "assumptions": [
           "Implementation backing resources means immutable source or admitted bundle artifacts associated with an exact implementation release, not the separate resource-backed asset catalog family.",
@@ -1822,7 +2505,7 @@
       ],
       "rollback": "Keep all new operations additive and capability-gated, retain the existing list and disable view until the guided workflow passes integration, and disable creation without deleting drafts or changing existing authored, package, or base-asset data.",
       "startedAt": "2026-07-18T13:23:28Z",
-      "status": "verifying",
+      "status": "completed",
       "title": "End-to-end layered Asset Customization workflow",
       "verification": [
         "Run focused contract, target-reader, application, persistence, artifact-storage, Asset Studio, host, API, IPC, preload, client, workflow, and renderer tests as their internal chunks land.",
@@ -1889,8 +2572,223 @@
     {
       "acceptanceCriteria": [
         {
+          "description": "Desktop and thin client each expose one ordered Studio tab that edits both complete semantic definition sections and actual categorized backing resources for a new from-scratch asset.",
+          "id": "single-studio-surface",
+          "qualification": "local"
+        },
+        {
+          "description": "A new resource-backed Studio asset can be saved without publication, survives host restart, remains workspace-isolated, and retains source bytes only in bounded immutable artifact storage.",
+          "id": "studio-drafts-persist",
+          "qualification": "local"
+        },
+        {
+          "description": "Saved lists unpublished assets and opens the selected exact draft with all semantic and backing-resource content restored in Studio.",
+          "id": "saved-reopens-exact-draft",
+          "qualification": "local"
+        },
+        {
+          "description": "Server API and desktop IPC/preload operations enforce the same validation, workspace authorization, optimistic revision, sanitized failure, and bounded resource semantics.",
+          "id": "studio-transports-aligned",
+          "qualification": "local"
+        },
+        {
+          "description": "Review materializes an immutable source snapshot and publication creates a distinct definition plus implementation draft without build, activation, deployment, or execution.",
+          "id": "studio-review-publish-safe",
+          "qualification": "local"
+        },
+        {
+          "description": "Create is absent, Drafts is labeled Saved, Customizations remains dedicated to derived copies, and cross-tab handoff never splits editing across multiple tabs.",
+          "id": "asset-tabs-consolidated",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-18T20:41:01Z",
+      "completedChunks": [
+        "studio-draft-lifecycle",
+        "studio-host-transports",
+        "unified-studio-saved-experience"
+      ],
+      "completionSummary": "Increment 5 delivers one tested and documented cross-host Studio for complete semantic data and actual backing resources, persistent unpublished Saved drafts, safe review and publication, aligned transports, and exact legacy-aware reopening.",
+      "deliverables": [
+        "Resource-backed Studio draft contracts, persistence, application lifecycle, and artifact integration",
+        "Aligned API, IPC, preload, host, and client operations",
+        "Shared ordered semantic and backing-resource Studio sections",
+        "Saved-assets list with exact Studio reopening",
+        "Removed Create tab and renamed Drafts tab",
+        "Focused cross-host, workspace-isolation, restart, security, accessibility, and navigation tests",
+        "Updated ADR or architecture guidance, READMEs, context pack, and temporary report"
+      ],
+      "dependsOn": [
+        "layered-customization-workflow"
+      ],
+      "excluded": [
+        "Executing authored code in the product renderer, Electron main process, or API server",
+        "Automatic dependency installation, build, activation, deployment, or publication",
+        "Public marketplace or registry behavior",
+        "Cross-workspace collaborative editing"
+      ],
+      "id": "unified-asset-studio-saved",
+      "number": 5,
+      "objective": "Deliver one ordered Studio surface for creating, saving, reopening, reviewing, and publishing from-scratch semantic assets with actual frontend structure, frontend styling, backend logic, and other backing resources across desktop and thin-client hosts.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "A Studio draft may reference an exact intended definition before that definition is published because implementation drafts already validate identity shape rather than registry existence.",
+          "The structured Studio record stores a complete validated semantic definition and safe artifact descriptors; actual backing-resource content remains only in immutable artifact storage and authorized read views.",
+          "Legacy authored drafts remain readable and are seeded into Studio without mutation; the first Studio save records legacy provenance and Saved de-duplicates the upgraded item.",
+          "Review and definition publication are supported, but build, implementation release publication, binding, activation, deployment, and execution remain separate unavailable or explicit gates."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "studio-drafts-persist",
+              "studio-review-publish-safe"
+            ],
+            "id": "studio-draft-lifecycle",
+            "outcome": "Workspace-isolated from-scratch drafts persist complete validated semantic definitions and only safe artifact descriptors, restore bounded backing resources, invalidate stale reviews on edit, materialize immutable snapshots, and publish a definition plus implementation draft without execution.",
+            "title": "Resource-backed Studio draft lifecycle"
+          },
+          {
+            "criteriaIds": [
+              "studio-transports-aligned"
+            ],
+            "id": "studio-host-transports",
+            "outcome": "Server API and desktop IPC/preload plus both renderer clients expose identical typed draft operations, trusted actor attribution, workspace enforcement, optimistic revisions, bounded content, and sanitized errors while retaining proposal assistance.",
+            "title": "Aligned Studio host transports and clients"
+          },
+          {
+            "criteriaIds": [
+              "single-studio-surface",
+              "saved-reopens-exact-draft",
+              "asset-tabs-consolidated"
+            ],
+            "id": "unified-studio-saved-experience",
+            "outcome": "Desktop and thin client share reusable semantic and categorized resource sections, one complete Studio tab, an unpublished Saved list with exact and legacy handoff, no Create tab, and no split editing workflow.",
+            "title": "Single ordered Studio and Saved-assets experience"
+          }
+        ],
+        "completionTests": [
+          "After every planned chunk is implemented and focused checks pass: run the complete Increment 5 focused matrix together.",
+          "Run desktop webpack TypeScript and package validation, server and thin-client production builds, docs:check, architecture:check, agent-support:check, git diff validation, and npm test once.",
+          "Do not run npm test or another repository-wide suite before every Increment 5 chunk is implemented."
+        ],
+        "documentation": [
+          "Asset authoring/customization and implementation/package architecture",
+          "Sandboxed authoring security and decision-readiness guidance if the new record boundary requires clarification",
+          "Asset Studio, asset-authoring, contract, transport, and shared UI READMEs",
+          "Asset authoring context pack and concise temporary implementation report"
+        ],
+        "fingerprint": "024beb4a891938933ac33e2489f80fbdd3effd952b7f92855dd23366965d7bcd",
+        "focusedTests": [
+          "Chunk 1 only: Studio draft contract normalization, bounded resource validation, structured repository conflict/isolation/restart tests, create/update/read/list/review/publish/abandon use-case tests, definition collision tests, review invalidation, artifact containment, and implementation snapshot tests.",
+          "Chunk 2 only: API operation/envelope/security tests, IPC channel/handler tests, preload allowlist tests, desktop and thin-client tests, host composition tests, and transport-parity/sanitized-failure tests.",
+          "Chunk 3 only: shared semantic/resource section model and component tests, ordered Studio interactions, coding-assistance integration, Saved merge/legacy seed/exact reopen tests, tab removal/rename tests, keyboard/focus/responsive tests, and desktop/thin page tests."
+        ],
+        "recordedAt": "2026-07-18T19:11:38Z",
+        "rollback": "Keep the new contract and persistence namespace additive, preserve legacy drafts and all immutable artifacts/snapshots, capability-gate new mutation operations, and restore the prior Studio/Saved presentation without deleting user data or published definitions.",
+        "steps": [
+          "Add strict Studio asset-draft contracts, structured persistence, immutable resource-bundle storage, create/read/list/update/review/publish/abandon behavior, legacy provenance, and host composition.",
+          "Expose the draft lifecycle through aligned API and desktop IPC/preload operations plus desktop and thin clients, preserving existing proposal assistance operations.",
+          "Extract reusable semantic and backing-resource section presenters from Customizations, build the ordered from-scratch Studio, merge new and legacy unpublished records in Saved, route exact selections into Studio, and remove Create.",
+          "Update canonical architecture, ADR readiness if needed, context, contract/UI READMEs, tests, and the concise temporary report.",
+          "After all chunks and focused tests pass, run the complete Increment 5 builds and repository gates once."
+        ],
+        "summary": "Implement the unified Studio and Saved experience in three cohesive vertical chunks: first the application-owned resource-backed draft lifecycle, then aligned transports and clients, then one shared ordered UI with legacy Saved seeding and tab consolidation. Run only each chunk's focused checks while work remains and run the full Increment 5 completion matrix once after all three chunks pass."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-18T19:11:38Z",
+          "risks": [
+            "Raw resource paths and content must pass only through authorized Studio commands and immutable artifact storage, never structured draft records or diagnostics.",
+            "Updating semantic or resource content after review must invalidate the prior review while retaining immutable historical snapshots.",
+            "Publication must reject exact-definition collisions with different content and must not imply build, release, binding, activation, deployment, or execution.",
+            "Legacy safe-field drafts need a non-destructive Studio upgrade path and must not disappear from Saved.",
+            "Desktop lazy composition, server composition, API, IPC, preload, and both clients must stay contract-aligned and workspace-scoped."
+          ],
+          "sources": [
+            {
+              "title": "Asset Studio shared manager and contracts",
+              "url": "modules/ui/shared/asset-studio/AssetStudioManager.tsx"
+            },
+            {
+              "title": "Asset Studio workflow composition",
+              "url": "modules/hosts/shared/composition/composeAssetStudioWorkflow.ts"
+            },
+            {
+              "title": "Implementation source snapshot use case",
+              "url": "modules/application/use-cases/asset-implementation/snapshot-asset-implementation-source.use-case.ts"
+            },
+            {
+              "title": "Derived customization materialization workflow",
+              "url": "modules/application/use-cases/asset-authoring/asset-derived-customization-workflow.use-case.ts"
+            },
+            {
+              "title": "Backing resource contracts and validation",
+              "url": "modules/contracts/asset-implementation/asset-implementation-backing-resource-normalization.ts"
+            },
+            {
+              "title": "Legacy authored draft model and repository",
+              "url": "modules/contracts/asset-authoring/asset-authoring-models.ts"
+            },
+            {
+              "title": "Executable implementation boundary",
+              "url": "docs/adr/ADR-0030-executable-asset-implementations-and-releases.md"
+            },
+            {
+              "title": "Sandboxed authoring boundary",
+              "url": "docs/adr/ADR-0032-sandboxed-asset-authoring-and-execution.md"
+            }
+          ],
+          "summary": "Current Studio authors only implementation proposals against an exact definition, while legacy authored drafts persist only safe semantic fields. The implementation create use case does not require the definition to be published, and the existing snapshot service plus derived-customization workflow already provide the bounded bundle validation, immutable artifact, definition materialization, and publication seams needed for one coordinated from-scratch Studio. A dedicated structured Studio-draft record avoids raw source in metadata and avoids mutating the legacy draft schema; Saved can merge new Studio summaries with legacy drafts and seed a one-time Studio upgrade while preserving legacy data."
+        }
+      ],
+      "rollback": "Keep legacy authored-draft reads compatible and all new records readable; disable new Studio mutation capabilities and restore the prior tabs without deleting saved drafts, artifacts, snapshots, or published definitions.",
+      "startedAt": "2026-07-18T19:07:18Z",
+      "status": "completed",
+      "title": "Unified resource-backed Asset Studio and Saved assets",
+      "verification": [
+        "Run focused contract, application, persistence, artifact, API, IPC, preload, client, shared-section, Studio, Saved-navigation, restart, workspace-isolation, and negative security tests while each chunk is active.",
+        "After every Increment 5 chunk passes focused checks, run desktop TypeScript/package validation, server and thin-client builds, docs:check, architecture:check, agent-support:check, git diff validation, and npm test once."
+      ],
+      "workPackages": [
+        {
+          "id": "studio-draft-domain",
+          "outcome": "A backward-compatible authored-draft evolution coordinates full semantic definition data, exact intended identity, immutable backing-resource artifacts, implementation draft identity, optimistic revision, and lifecycle without storing source text in structured records.",
+          "title": "Workspace-owned resource-backed Studio drafts"
+        },
+        {
+          "id": "studio-lifecycle",
+          "outcome": "Application use cases create, read, list, update, review-materialize, publish, and abandon exact workspace drafts while preserving non-execution, safe diagnostics, and distinct publication and activation gates.",
+          "title": "Save, reopen, review, and publish lifecycle"
+        },
+        {
+          "id": "studio-transports",
+          "outcome": "API, IPC, preload, host composition, and both renderer clients expose the same workspace-isolated Studio draft operations and bounded resource details.",
+          "title": "Aligned desktop and server boundaries"
+        },
+        {
+          "id": "shared-studio-sections",
+          "outcome": "Studio reuses shared semantic and backing-resource section components from Customizations for definition, configuration/interfaces, AI context/composition, frontend structure, frontend styling, backend logic, other resources, and save/review/publish.",
+          "title": "One reusable ordered authoring surface"
+        },
+        {
+          "id": "saved-navigation",
+          "outcome": "Create is removed; Drafts becomes Saved, lists unpublished workspace assets, and opens an exact draft in the single Studio tab in both hosts.",
+          "title": "Saved assets and tab consolidation"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
           "description": "A built-in or system asset and an admitted installed imported asset can each be selected, customized, reviewed, published as distinct workspace-owned assets, rediscovered after restart, and proven not to mutate their bases.",
           "id": "e2e-default-imported",
+          "qualification": "local"
+        },
+        {
+          "description": "A new from-scratch resource-backed asset can be saved unpublished, reopened from Saved in Studio, reviewed, published, and rediscovered after restart without executing authored source.",
+          "id": "e2e-studio-saved",
           "qualification": "local"
         },
         {
@@ -1910,8 +2808,13 @@
         }
       ],
       "allowPendingQualification": true,
-      "completedAt": null,
-      "completedChunks": [],
+      "completedAt": "2026-07-18T21:14:33Z",
+      "completedChunks": [
+        "representative-lifecycle-matrix",
+        "failure-security-accessibility",
+        "release-evidence-gates"
+      ],
+      "completionSummary": "Increment 6 completes the automated end-to-end production hardening and qualification for System Foundation, imported, and Studio-authored asset lifecycles across shared desktop and thin-client contracts. All repository gates pass; controlled manual accessibility and target-environment security evidence remains explicitly pending.",
       "deliverables": [
         "End-to-end and negative regression coverage",
         "Desktop and thin-client build and package evidence",
@@ -1920,8 +2823,7 @@
         "Final implementation report with commands, results, risks, and limitations"
       ],
       "dependsOn": [
-        "complete-assets-experience",
-        "layered-customization-workflow"
+        "unified-asset-studio-saved"
       ],
       "excluded": [
         "Public marketplace or registry discovery",
@@ -1930,13 +2832,118 @@
         "Cross-workspace collaborative editing"
       ],
       "id": "production-qualification",
-      "number": 5,
-      "objective": "Prove the complete Assets and Systems experience and layered customization behavior across supported hosts, representative bases, restart persistence, failure and security modes, responsive layouts, accessibility expectations, and canonical documentation.",
-      "plan": null,
-      "research": [],
-      "rollback": "Keep new create operations capability-gated while retaining read-only browse, import, and history behavior plus all persisted drafts; do not delete user data to disable the feature.",
-      "startedAt": null,
-      "status": "pending",
+      "number": 6,
+      "objective": "Prove the complete Assets and Systems experience, layered customization, and unified resource-backed Studio behavior across supported hosts, representative bases and new assets, restart persistence, failure and security modes, responsive layouts, accessibility expectations, and canonical documentation.",
+      "pendingCriteria": [
+        "desktop-thin-accessibility",
+        "security-review"
+      ],
+      "plan": {
+        "assumptions": [
+          "The shared React surfaces are the authoritative UI implementation for both desktop and thin client.",
+          "Imported and authored source remains non-executable until a separately qualified sandbox exists.",
+          "Controlled manual accessibility and security evidence may remain pending when the required environment or reviewer is unavailable, but it must never be inferred from automated tests."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "e2e-default-imported",
+              "e2e-studio-saved"
+            ],
+            "id": "representative-lifecycle-matrix",
+            "outcome": "System Foundation, admitted imported, and Studio-authored assets are qualified through save, reopen, review, publication, restart rediscovery, immutable-base, and non-execution assertions.",
+            "title": "Representative lifecycle and restart matrix"
+          },
+          {
+            "criteriaIds": [
+              "desktop-thin-accessibility",
+              "security-review"
+            ],
+            "id": "failure-security-accessibility",
+            "outcome": "Negative matrices and cross-host shared-surface checks cover isolation, stale state, unsafe and oversized content, unavailable adapters, modal/focus semantics, keyboard naming, status announcements, and narrow-layout CSS; controlled manual evidence is recorded truthfully.",
+            "title": "Fail-closed, security, accessibility, and responsive qualification"
+          },
+          {
+            "criteriaIds": [
+              "all-gates-pass"
+            ],
+            "id": "release-evidence-gates",
+            "outcome": "Canonical docs and support qualification match implemented behavior and limitations, sanitized evidence is ready for controlled review, and every applicable repository, security, build, and package gate has one final recorded result.",
+            "title": "Release evidence, canonical docs, and complete gates"
+          }
+        ],
+        "completionTests": [
+          "npm test",
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check",
+          "npm run security:dependencies",
+          "npm run asset-system:check",
+          "npm run build:server",
+          "npm run build:thin-client",
+          "npm run package"
+        ],
+        "documentation": [
+          "Asset and System Support Qualification",
+          "Asset authoring and execution security architecture",
+          "Asset authoring context pack and nearest READMEs",
+          "Temporary concise roadmap implementation report"
+        ],
+        "fingerprint": "8df22d4ffc926280f02ea98ceed5a72e1b362a4891afab8205251c4ab67b4560",
+        "focusedTests": [
+          "Focused lifecycle tests for the representative matrix",
+          "Focused qualification and shared UI tests for failure, security, accessibility semantics, and responsive contracts",
+          "Qualification harness and documentation checks for release evidence"
+        ],
+        "recordedAt": "2026-07-18T20:45:36Z",
+        "rollback": "Retain safe browse, import, Saved, Studio, and Customizations behavior plus persisted drafts; revert qualification-only checks independently and capability-gate create operations without deleting user data.",
+        "steps": [
+          "Extend representative lifecycle coverage across System Foundation, admitted imported, and from-scratch Studio assets, including restart rediscovery and immutable-base or non-execution proofs.",
+          "Exercise failure, security, accessibility-semantic, modal, and responsive invariants across shared desktop and thin-client surfaces; fix any product defects found.",
+          "Update canonical qualification documentation and sanitized controlled-review templates, then run the complete release gate set once all chunks are implemented."
+        ],
+        "summary": "Qualify the complete Assets experience with representative lifecycle matrices, fail-closed and cross-host UI hardening, then one final release-evidence and repository-gate pass."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-18T20:45:33Z",
+          "risks": [
+            "Automated semantic checks cannot establish WCAG conformance; controlled keyboard, screen-reader, zoom/reflow, contrast, and focus evidence must remain pending until actually performed.",
+            "A qualification test must not execute imported or authored source merely to prove persistence or publication.",
+            "Qualification artifacts must stay sanitized and must not commit environment-specific evidence or host paths."
+          ],
+          "sources": [
+            {
+              "title": "Approved Increment 6 roadmap",
+              "url": "docs/asset-experience-layered-customization-implementation-roadmap.md"
+            },
+            {
+              "title": "Asset and System Support Qualification",
+              "url": "docs/operations/asset-system-support-qualification.md"
+            },
+            {
+              "title": "Machine-readable qualification policy",
+              "url": "dev-tools/config/asset-system-qualification.json"
+            },
+            {
+              "title": "Derived customization lifecycle tests",
+              "url": "modules/application/use-cases/asset-authoring/tests/asset-derived-customization-workflow.unit.test.ts"
+            },
+            {
+              "title": "Studio draft lifecycle tests",
+              "url": "modules/application/use-cases/asset-studio/tests/asset-studio-asset-draft-workflow.unit.test.ts"
+            },
+            {
+              "title": "Asset authoring security boundary",
+              "url": "docs/architecture/asset-authoring-and-execution-security.md"
+            }
+          ],
+          "summary": "Existing derived-customization and Studio lifecycle tests already prove most persistence, immutability, review, publication, and non-execution invariants; Increment 6 should extend them to both System Foundation and admitted imported bases, consolidate cross-host UI qualification, expand negative security coverage, and produce explicit sanitized controlled-review evidence without inferring manual passes."
+        }
+      ],
+      "rollback": "Keep new create operations capability-gated while retaining read-only browse, import, Saved, Studio history, and Customizations behavior plus all persisted drafts; do not delete user data to disable the feature.",
+      "startedAt": "2026-07-18T20:45:29Z",
+      "status": "implemented-pending-qualification",
       "title": "End-to-end production qualification and hardening",
       "verification": [
         "Run focused and full non-browser tests, UI tests, docs:check, architecture:check, agent-support:check, security:dependencies, server and thin-client builds, and desktop package or build validation.",
@@ -1945,12 +2952,12 @@
       "workPackages": [
         {
           "id": "scenario-tests",
-          "outcome": "Tests cover default or system and admitted installed imported asset customization, sparse reuse, changed code, publication, browse visibility, restart persistence, and original immutability on desktop and server paths.",
+          "outcome": "Tests cover default or system and admitted imported customization plus new Studio asset save, reopen, review, publication, browse visibility, restart persistence, and original immutability on desktop and server paths.",
           "title": "Representative end-to-end scenarios"
         },
         {
           "id": "failure-security",
-          "outcome": "Cross-workspace access, stale bases, unsafe paths or content, oversized files, revoked or unavailable package truth, interrupted persistence, and unavailable Studio adapters fail closed with recoverable safe UI states.",
+          "outcome": "Cross-workspace access, stale revisions or bases, unsafe paths or content, oversized files, revoked or unavailable package truth, interrupted persistence, and unavailable Studio adapters fail closed with recoverable safe UI states.",
           "title": "Failure and security qualification"
         },
         {
@@ -1975,12 +2982,12 @@
   },
   "resumeAudits": [],
   "roadmapApproval": {
-    "approvedAt": "2026-07-18T11:39:05Z",
-    "fingerprint": "c1be33d4ab56a134c1aab2dc8a87d25c3f9eae7500c600c559c940b457d041dd",
-    "note": "The user explicitly approved the consolidated five-increment roadmap with completed Increments 1 and 2 preserved and three economically cohesive pending increments."
+    "approvedAt": "2026-07-18T17:54:42Z",
+    "fingerprint": "66ab56b6115450df42f5777e05e79a0715e3790e0de660c8f5915f5d5772fa51",
+    "note": "The user explicitly requested one Studio tab for semantic data and backing resources, directed implementation as requested, and approved adding a new cohesive increment after Increment 4."
   },
   "schemaVersion": 1,
   "slug": "asset-experience-layered-customization",
-  "status": "executing",
-  "updatedAt": "2026-07-18T17:43:09Z"
+  "status": "implementation-complete-qualification-pending",
+  "updatedAt": "2026-07-18T21:14:33Z"
 }

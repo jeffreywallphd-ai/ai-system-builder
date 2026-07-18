@@ -14,6 +14,7 @@ import {
   ASSET_IMPLEMENTATION_BACKING_RESOURCE_MEDIA_TYPE,
   describeAssetImplementationBackingResourceFiles,
   normalizeAssetImplementationRelease,
+  normalizeAssetImplementationRevocation,
   normalizeSha256Digest,
   type AssetImplementationBackingResourceBundleV1,
 } from "../../../../contracts/asset-implementation";
@@ -39,8 +40,16 @@ describe("derived asset customization workflow", () => {
       definitionRef: fixture.baseRef,
       implementationReleaseId: fixture.releaseId,
     });
-    expect(detail?.backingResources.find((resource) => resource.path === "backend/logic.ts")?.content).toContain("base");
-    expect(detail?.backingResources.find((resource) => resource.path === "other/definition.json")?.editable).toBe(false);
+    expect(
+      detail?.backingResources.find(
+        (resource) => resource.path === "backend/logic.ts",
+      )?.content,
+    ).toContain("base");
+    expect(
+      detail?.backingResources.find(
+        (resource) => resource.path === "other/definition.json",
+      )?.editable,
+    ).toBe(false);
 
     const created = await fixture.workflow.create({
       workspaceId: fixture.workspaceA,
@@ -65,7 +74,9 @@ describe("derived asset customization workflow", () => {
     });
     expect(created.kind).toBe("success");
     if (created.kind !== "success") return;
-    expect(created.value.base.sourceArtifact.digest).toBe(fixture.baseArtifactDigest);
+    expect(created.value.base.sourceArtifact.digest).toBe(
+      fixture.baseArtifactDigest,
+    );
 
     const stale = await fixture.workflow.update({
       workspaceId: fixture.workspaceA,
@@ -97,7 +108,9 @@ describe("derived asset customization workflow", () => {
     expect(published.kind).toBe("success");
     if (published.kind !== "success") return;
     expect(published.value.status).toBe("published");
-    expect(published.value.publication?.definitionRef).toEqual(fixture.derivedRef);
+    expect(published.value.publication?.definitionRef).toEqual(
+      fixture.derivedRef,
+    );
 
     const baseAfter = await fixture.definitions.getDefinition(fixture.baseRef);
     const derived = await fixture.definitions.getDefinition(fixture.derivedRef);
@@ -105,7 +118,9 @@ describe("derived asset customization workflow", () => {
     expect(derived?.displayName).toBe("Customized tool");
     expect(derived?.provenance.derivedFromRefs).toEqual([fixture.baseRef]);
     expect((derived?.metadata as any)?.purpose).toBe("workspace-review");
-    expect((await fixture.implementations.listReleases(fixture.workspaceA)).length).toBe(1);
+    expect(
+      (await fixture.implementations.listReleases(fixture.workspaceA)).length,
+    ).toBe(1);
 
     const snapshot = await fixture.implementations.readSourceSnapshot(
       fixture.workspaceA,
@@ -126,13 +141,135 @@ describe("derived asset customization workflow", () => {
     );
     const history = await restarted.list({ workspaceId: fixture.workspaceA });
     expect(history.records[0]?.status).toBe("published");
-    expect((await restarted.list({ workspaceId: fixture.workspaceB })).records.length).toBe(0);
     expect(
-      await restarted.read(
-        fixture.workspaceB,
-        published.value.customizationId,
-      ),
+      (await restarted.list({ workspaceId: fixture.workspaceB })).records
+        .length,
+    ).toBe(0);
+    expect(
+      await restarted.read(fixture.workspaceB, published.value.customizationId),
     ).toBeUndefined();
+  });
+  it("customizes a System Foundation base without mutating it and rediscovers the published copy after restart", async () => {
+    const fixture = await createFixture("system-foundation");
+    const listed = await fixture.targets.list({
+      workspaceId: fixture.workspaceA,
+      text: "base tool",
+      eligibility: "eligible",
+    });
+    expect(listed.targets.length).toBe(1);
+    expect(listed.targets[0]?.sourceKind).toBe("system-owned-asset");
+
+    const baseBefore = await fixture.definitions.getDefinition(fixture.baseRef);
+    const created = await fixture.workflow.create({
+      workspaceId: fixture.workspaceA,
+      baseDefinitionRef: fixture.baseRef,
+      baseImplementationReleaseId: fixture.releaseId,
+      derivedDefinitionRef: fixture.derivedRef,
+      semanticPatch: {
+        "display-name": "Workspace System Tool",
+        description: "A workspace-owned copy of a System Foundation asset.",
+      },
+      sourceChanges: [
+        {
+          operation: "upsert",
+          path: "frontend/styles.css",
+          role: "frontend-style",
+          mediaType: "text/css",
+          content: ".base { color: rebeccapurple; }",
+        },
+      ],
+      actorId: "actor-a",
+    });
+    expect(created.kind).toBe("success");
+    if (created.kind !== "success") return;
+
+    const reviewed = await fixture.workflow.review({
+      workspaceId: fixture.workspaceA,
+      customizationId: created.value.customizationId,
+      expectedRevision: 1,
+      actorId: "reviewer-a",
+    });
+    expect(reviewed.kind).toBe("success");
+    if (reviewed.kind !== "success") return;
+    const published = await fixture.workflow.publish({
+      workspaceId: fixture.workspaceA,
+      customizationId: created.value.customizationId,
+      expectedRevision: 2,
+      actorId: "publisher-a",
+    });
+    expect(published.kind).toBe("success");
+    if (published.kind !== "success") return;
+
+    expect(await fixture.definitions.getDefinition(fixture.baseRef)).toEqual(
+      baseBefore,
+    );
+    expect(
+      (await fixture.definitions.getDefinition(fixture.derivedRef))
+        ?.displayName,
+    ).toBe("Workspace System Tool");
+    const restarted = createStructuredAssetDerivedCustomizationRepository(
+      fixture.documents,
+    );
+    const rediscovered = await restarted.list({
+      workspaceId: fixture.workspaceA,
+      status: "published",
+    });
+    expect(rediscovered.records.length).toBe(1);
+    expect(rediscovered.records[0]?.derivedDefinitionRef).toEqual(
+      fixture.derivedRef,
+    );
+  });
+  it("fails closed when a base is revoked or revocation truth is unavailable", async () => {
+    const revokedFixture = await createFixture();
+    await revokedFixture.implementations.saveRevocation(
+      normalizeAssetImplementationRevocation({
+        revocationId: "implementation-revocation.base-tool.1",
+        releaseId: revokedFixture.releaseId,
+        reasonCode: "qualification-revoked",
+        message: "Revoked by the qualification fixture.",
+        revokedAt: "2026-07-18T14:00:00.000Z",
+        revokedBy: "security-reviewer",
+      }),
+    );
+    const revokedTargets = await revokedFixture.targets.list({
+      workspaceId: revokedFixture.workspaceA,
+      eligibility: "all",
+    });
+    expect(revokedTargets.targets[0]?.eligibility.eligible).toBe(false);
+    expect(revokedTargets.targets[0]?.eligibility.message).toContain("revoked");
+
+    const attempted = await revokedFixture.workflow.create({
+      workspaceId: revokedFixture.workspaceA,
+      baseDefinitionRef: revokedFixture.baseRef,
+      baseImplementationReleaseId: revokedFixture.releaseId,
+      derivedDefinitionRef: revokedFixture.derivedRef,
+      semanticPatch: { "display-name": "Revoked copy" },
+      actorId: "actor-a",
+    });
+    expect(attempted.kind).toBe("failure");
+
+    const unavailableFixture = await createFixture();
+    const unavailableTargets =
+      new AssetDerivedCustomizationTargetCatalogService({
+        definitions: unavailableFixture.definitions,
+        implementations: {
+          ...unavailableFixture.implementations,
+          async listRevocations() {
+            throw new Error("sensitive persistence failure");
+          },
+        },
+        backingResources: unavailableFixture.backingResources,
+        artifacts: unavailableFixture.artifacts,
+      });
+    const unavailable = await unavailableTargets.list({
+      workspaceId: unavailableFixture.workspaceA,
+      eligibility: "all",
+    });
+    expect(unavailable.targets[0]?.eligibility.eligible).toBe(false);
+    expect(unavailable.targets[0]?.eligibility.message).toBe(
+      "Implementation revocation status is unavailable.",
+    );
+    expect(JSON.stringify(unavailable)).not.toContain("sensitive persistence");
   });
 
   it("fails closed for cross-workspace bases and read-only compiled resources", async () => {
@@ -165,9 +302,12 @@ describe("derived asset customization workflow", () => {
   });
 });
 
-async function createFixture() {
+async function createFixture(
+  origin: "admitted-package" | "system-foundation" = "admitted-package",
+) {
   const documents = createInMemoryStructuredDocumentStore();
-  const implementations = createStructuredAssetImplementationRepository(documents);
+  const implementations =
+    createStructuredAssetImplementationRepository(documents);
   const backingResources =
     createStructuredAssetImplementationBackingResourceRepository(documents);
   const customizations =
@@ -197,9 +337,13 @@ async function createFixture() {
     lifecycleStatus: "published",
     reviewStatus: "approved",
     provenance: {
-      sourceKind: "imported",
+      sourceKind:
+        origin === "system-foundation" ? "system-generated" : "imported",
       createdAt: "2026-07-18T12:00:00.000Z",
-      createdBy: "package-admission",
+      createdBy:
+        origin === "system-foundation"
+          ? "system-foundation-installer"
+          : "package-admission",
     },
     aiContext: {
       purpose: "Exercise a bounded test behavior.",
@@ -282,7 +426,7 @@ async function createFixture() {
   await implementations.saveRelease(release);
   await backingResources.save({
     backingResourceId: "implementation-backing.base-tool.1",
-    origin: "admitted-package",
+    origin,
     releaseId,
     definitionRef: baseRef,
     scope: "workspace",
@@ -292,7 +436,10 @@ async function createFixture() {
     artifact: baseArtifact,
     files: describeAssetImplementationBackingResourceFiles(bundle),
     createdAt: "2026-07-18T12:00:00.000Z",
-    createdBy: "package-admission",
+    createdBy:
+      origin === "system-foundation"
+        ? "system-foundation-installer"
+        : "package-admission",
   });
   const targets = new AssetDerivedCustomizationTargetCatalogService({
     definitions,
@@ -312,14 +459,14 @@ async function createFixture() {
         `sha256:${createHash("sha256").update(value).digest("hex")}`,
       ),
     nextCustomizationId: () => "customization.asset.1",
-    now: () =>
-      new Date(Date.UTC(2026, 6, 18, 13, 0, tick++)).toISOString(),
+    now: () => new Date(Date.UTC(2026, 6, 18, 13, 0, tick++)).toISOString(),
   });
   return {
     documents,
     implementations,
     artifacts,
     definitions,
+    backingResources,
     targets,
     workflow,
     workspaceA,
@@ -344,7 +491,9 @@ function memoryDefinitions(): AssetDefinitionRepositoryPort {
       return structuredClone(value);
     },
     async getDefinition(reference) {
-      return structuredClone(values.get(`${reference.id}@${reference.version}`));
+      return structuredClone(
+        values.get(`${reference.id}@${reference.version}`),
+      );
     },
     async listDefinitions() {
       return { definitions: structuredClone([...values.values()]) };
@@ -357,7 +506,10 @@ function memoryStorage() {
   return {
     async storeArtifact(request: any) {
       if (values.has(request.descriptor.key)) {
-        return { ok: false as const, error: { code: "conflict", message: "exists" } };
+        return {
+          ok: false as const,
+          error: { code: "conflict", message: "exists" },
+        };
       }
       values.set(request.descriptor.key, Uint8Array.from(request.content));
       return { ok: true as const, value: { descriptor: request.descriptor } };
@@ -380,7 +532,10 @@ function memoryStorage() {
               content: value,
             },
           }
-        : { ok: false as const, error: { code: "not-found", message: "missing" } };
+        : {
+            ok: false as const,
+            error: { code: "not-found", message: "missing" },
+          };
     },
   } as any;
 }

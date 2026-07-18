@@ -60,6 +60,7 @@ export class AssetDerivedCustomizationTargetCatalogService {
           })
         : Promise.resolve({ records: [] as const }),
     ]);
+    const revokedReleaseIds = await this.readRevokedReleaseIds(releases);
     const backingByRelease = new Map(
       backingRecords.map((record) => [String(record.releaseId), record]),
     );
@@ -69,6 +70,7 @@ export class AssetDerivedCustomizationTargetCatalogService {
           query.workspaceId,
           release,
           backingByRelease.get(String(release.releaseId)),
+          revokedReleaseIds,
         ),
       ),
     );
@@ -99,7 +101,8 @@ export class AssetDerivedCustomizationTargetCatalogService {
           (query.eligibility === undefined ||
             query.eligibility === "all" ||
             (query.eligibility === "eligible" && target.eligibility.eligible) ||
-            (query.eligibility === "ineligible" && !target.eligibility.eligible)) &&
+            (query.eligibility === "ineligible" &&
+              !target.eligibility.eligible)) &&
           (!text || targetText(target).includes(text)),
       )
       .sort(
@@ -137,14 +140,15 @@ export class AssetDerivedCustomizationTargetCatalogService {
       releaseId,
       query.workspaceId,
     );
+    const revokedReleaseIds = await this.readRevokedReleaseIds([release]);
     const summary = await this.summaryForRelease(
       query.workspaceId,
       release,
       backing,
+      revokedReleaseIds,
     );
-    const definition = await this.dependencies.definitions.getDefinition(
-      definitionRef,
-    );
+    const definition =
+      await this.dependencies.definitions.getDefinition(definitionRef);
     if (!definition || !backing) {
       return {
         ...summary,
@@ -203,6 +207,7 @@ export class AssetDerivedCustomizationTargetCatalogService {
     workspaceId: ListAssetDerivedCustomizationTargetsQuery["workspaceId"],
     release: AssetImplementationRelease,
     backing: AssetImplementationBackingResourceRecord | undefined,
+    revokedReleaseIds: ReadonlySet<string> | undefined,
   ): Promise<AssetDerivedCustomizationTargetSummary> {
     const definition = await this.dependencies.definitions.getDefinition(
       release.definitionRef,
@@ -212,17 +217,27 @@ export class AssetDerivedCustomizationTargetCatalogService {
           "definition-unavailable",
           "The exact asset definition is unavailable.",
         )
-      : release.status !== "published"
+      : revokedReleaseIds === undefined
         ? ineligible(
             "implementation-unavailable",
-            "The exact implementation release is not published.",
+            "Implementation revocation status is unavailable.",
           )
-        : !backing
+        : revokedReleaseIds.has(String(release.releaseId))
           ? ineligible(
-              "backing-resources-unavailable",
-              "This implementation does not expose a customization backing resource.",
+              "implementation-unavailable",
+              "The exact implementation release is revoked.",
             )
-          : eligible();
+          : release.status !== "published"
+            ? ineligible(
+                "implementation-unavailable",
+                "The exact implementation release is not published.",
+              )
+            : !backing
+              ? ineligible(
+                  "backing-resources-unavailable",
+                  "This implementation does not expose a customization backing resource.",
+                )
+              : eligible();
     return {
       workspaceId,
       sourceKind: sourceKind(backing?.origin, release),
@@ -232,13 +247,33 @@ export class AssetDerivedCustomizationTargetCatalogService {
       description:
         definition?.description ?? "Exact definition content is unavailable.",
       ...(definition
-        ? { assetType: definition.assetType, assetFamily: definition.assetFamily }
+        ? {
+            assetType: definition.assetType,
+            assetFamily: definition.assetFamily,
+          }
         : {}),
       implementationVersion: release.version,
       trustLevel: release.trustLevel,
       eligibility,
       resources: counts(backing?.files ?? []),
     };
+  }
+
+  private async readRevokedReleaseIds(
+    releases: readonly AssetImplementationRelease[],
+  ): Promise<ReadonlySet<string> | undefined> {
+    if (releases.length === 0) return new Set();
+    try {
+      const revocations =
+        await this.dependencies.implementations.listRevocations(
+          releases.map((release) => release.releaseId),
+        );
+      return new Set(
+        revocations.map((revocation) => String(revocation.releaseId)),
+      );
+    } catch {
+      return undefined;
+    }
   }
 }
 
@@ -263,7 +298,8 @@ function counts(
     frontendStructure: files.filter(
       (file) => file.role === "frontend-structure",
     ).length,
-    frontendStyle: files.filter((file) => file.role === "frontend-style").length,
+    frontendStyle: files.filter((file) => file.role === "frontend-style")
+      .length,
     backendLogic: files.filter((file) => file.role === "backend-logic").length,
     other: files.filter((file) => file.role === "other").length,
   };
@@ -290,7 +326,8 @@ function normalizeCursor(value: string | undefined): number {
   if (value === undefined) return 0;
   if (!/^\d+$/.test(value)) throw new Error("Customization cursor is invalid.");
   const offset = Number(value);
-  if (!Number.isSafeInteger(offset)) throw new Error("Customization cursor is invalid.");
+  if (!Number.isSafeInteger(offset))
+    throw new Error("Customization cursor is invalid.");
   return offset;
 }
 
@@ -309,7 +346,10 @@ function targetText(target: AssetDerivedCustomizationTargetSummary): string {
     .toLowerCase();
 }
 
-function sameReference(left: { id: unknown; version?: string }, right: { id: unknown; version?: string }): boolean {
+function sameReference(
+  left: { id: unknown; version?: string },
+  right: { id: unknown; version?: string },
+): boolean {
   return left.id === right.id && left.version === right.version;
 }
 

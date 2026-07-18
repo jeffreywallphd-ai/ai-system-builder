@@ -58,6 +58,20 @@ tokens, prompts, protected content, provider payloads, host paths, or raw user
 data. Store the evidence artifact under the owning release-retention policy;
 do not commit environment evidence to source control.
 
+## Asset experience qualification
+
+The `asset-experience-automated` check covers representative System Foundation,
+imported, and from-scratch Studio lifecycles; exact backing-resource restoration
+after restart; base immutability; non-execution; fail-closed validation; modal and
+status semantics; and responsive desktop/thin-client presentation. Every
+qualification profile requires this automated evidence.
+
+Automated evidence does not replace `accessibility-manual` or `security-manual`.
+Use the [Asset Experience Controlled Review](asset-experience-controlled-review.md)
+for the reusable keyboard, screen-reader, zoom/reflow, contrast, isolation,
+revocation, and non-execution review procedure. Missing controlled evidence keeps
+the target profile `incomplete`; it is never inferred from repository tests.
+
 ## Performance qualification
 
 The manifest defines p95 budgets and exact representative workloads for Catalog

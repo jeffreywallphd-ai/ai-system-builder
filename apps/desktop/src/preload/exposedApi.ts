@@ -419,6 +419,9 @@ import {
   type DesktopAssetStudioWorkflowResponse,
   type DesktopAssetStudioListResponse,
   type DesktopAssetStudioDraftResponse,
+  type DesktopAssetStudioAssetDraftResponse,
+  type DesktopAssetStudioAssetDraftViewResponse,
+  type DesktopAssetStudioAssetDraftListResponse,
   DESKTOP_SYSTEM_BUILDER_OPERATIONS,
   DESKTOP_SYSTEM_BUILDER_CHANNELS,
   createDesktopSystemBuilderRequest,
@@ -452,9 +455,14 @@ import type {
   SetAssetPackageActivationCommand,
 } from "../../../../modules/contracts/asset-package";
 import type {
+  CreateAssetStudioAssetDraftCommand,
+  ListAssetStudioAssetDraftsQuery,
   ProposeAssetStudioChangeCommand,
+  ReadAssetStudioAssetDraftQuery,
   ReviewAssetStudioProposalCommand,
   StartAssetStudioCommand,
+  TransitionAssetStudioAssetDraftCommand,
+  UpdateAssetStudioAssetDraftCommand,
 } from "../../../../modules/contracts/asset-studio";
 import type {
   ChangeSystemBuilderArchiveStateCommand,
@@ -1051,6 +1059,34 @@ export interface DesktopPreloadApi {
     workspaceId: string,
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopAssetStudioListResponse>;
+  createAssetStudioAssetDraft: (
+    input: Omit<CreateAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftResponse>;
+  updateAssetStudioAssetDraft: (
+    input: Omit<UpdateAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftResponse>;
+  readAssetStudioAssetDraft: (
+    input: ReadAssetStudioAssetDraftQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftViewResponse>;
+  listAssetStudioAssetDrafts: (
+    input: ListAssetStudioAssetDraftsQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftListResponse>;
+  reviewAssetStudioAssetDraft: (
+    input: Omit<TransitionAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftResponse>;
+  publishAssetStudioAssetDraft: (
+    input: Omit<TransitionAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftResponse>;
+  abandonAssetStudioAssetDraft: (
+    input: Omit<TransitionAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftResponse>;
   createSystemBuilderSystem: (
     input: Omit<CreateSystemBuilderSystemCommand, "actorId">,
     context?: DesktopArtifactUploadBridgeContext,
@@ -4321,6 +4357,41 @@ export function createDesktopPreloadApi(
         "list",
         { workspaceId },
         context,
+      );
+    },
+    async createAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftResponse>(
+        dependencies, "createAssetDraft", input, context,
+      );
+    },
+    async updateAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftResponse>(
+        dependencies, "updateAssetDraft", input, context,
+      );
+    },
+    async readAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftViewResponse>(
+        dependencies, "readAssetDraft", input, context,
+      );
+    },
+    async listAssetStudioAssetDrafts(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftListResponse>(
+        dependencies, "listAssetDrafts", input, context,
+      );
+    },
+    async reviewAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftResponse>(
+        dependencies, "reviewAssetDraft", input, context,
+      );
+    },
+    async publishAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftResponse>(
+        dependencies, "publishAssetDraft", input, context,
+      );
+    },
+    async abandonAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftResponse>(
+        dependencies, "abandonAssetDraft", input, context,
       );
     },
     async createSystemBuilderSystem(input, context = {}) {

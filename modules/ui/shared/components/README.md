@@ -6,7 +6,7 @@ Code-native presentation primitives used by both React surfaces belong here. `Ap
 
 `SidebarNavigationGroup` provides the accessible disclosure control for wide-screen navigation sections. `TypeBadge` derives a short, colored visual designator from an artifact media type or extension. It supplements the visible file name and media type; it never replaces either as the source of truth.
 
-`WorkflowSequence` and `WorkflowStep` provide the shared numbered-card and connecting-rail treatment for guided, multi-step tasks. Features own their fields, validation, state transitions, and commands; the workflow components supply only accessible grouping and consistent presentation.
+`WorkflowSequence` and `WorkflowStep` provide the shared numbered-card and connecting-rail treatment for guided, multi-step tasks. The sequence is exposed as a named list and each step as a list item. Features own their fields, validation, state transitions, and commands; the workflow components supply only accessible grouping and consistent presentation.
 
 `ModalDialog` owns the shared modal interaction contract as well as the existing modal surface classes: visible accessible naming, initial focus, contained Tab and Shift+Tab movement, topmost-only Escape handling for stacked dialogs, a visible close control, and focus restoration. Callers own open state and task-specific confirmation rules; backdrop close stays opt-in.
 

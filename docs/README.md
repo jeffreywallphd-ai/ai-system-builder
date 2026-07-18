@@ -74,7 +74,8 @@ This directory separates canonical system guidance from downstream task context 
   `docs/operations/deployment-qualification.md`.
 - Asset/system release support, compatibility, performance, security,
   accessibility, revocation, or recovery qualification: use
-  `docs/operations/asset-system-support-qualification.md`.
+  `docs/operations/asset-system-support-qualification.md`; for controlled Assets
+  UI security/accessibility evidence, use `docs/operations/asset-experience-controlled-review.md`.
 - Documentation work: read `docs/standards/documentation-standards.md` and use the canonical templates listed there.
 - Automated or repository-scale implementation: read `docs/standards/ai-agent-development-standards.md`, apply `docs/standards/change-impact-matrix.md`, and check `docs/adr/decision-readiness.md`.
 - Architecture verification: use `docs/architecture/architecture-verification.md` to distinguish direct fitness functions from representative coverage and known gaps.

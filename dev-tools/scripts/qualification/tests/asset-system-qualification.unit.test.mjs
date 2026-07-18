@@ -28,6 +28,11 @@ test("asset/system qualification manifest covers every required compatibility, b
   assert.equal(config.performanceBudgets.length, 6);
   assert.equal(config.admissionControls.length, 5);
   assert.equal(config.qualificationProfiles.length, 5);
+  assert.ok(
+    config.qualificationProfiles.every((profile) =>
+      profile.requiredEvidence.includes("asset-experience-automated"),
+    ),
+  );
 });
 
 test("qualification assessment never converts missing or failed controlled evidence into a pass", () => {

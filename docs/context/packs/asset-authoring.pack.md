@@ -45,6 +45,9 @@ Include this pack when prompts materially involve:
 - Customizations/overrides are explicit, user-visible, durable, and safe.
 - A layered customization pins an exact definition version, implementation
   release, source snapshot, and source artifact digest.
+- Exact target eligibility requires readable current implementation revocation
+  truth. Revoked or unavailable revocation state makes the target ineligible.
+
 - Structured customization records contain sparse safe semantic patches and
   bounded source-overlay descriptors only. Raw changed paths/text belong only to
   an authorized Asset Studio proposal/artifact boundary.
@@ -53,6 +56,14 @@ Include this pack when prompts materially involve:
   immutable source snapshot.
 - Publication creates a distinct workspace-owned definition and implementation
   lineage; it never mutates, activates, deploys, or executes the base.
+- From-scratch Studio drafts combine a complete semantic definition with actual
+  frontend structure, frontend styling, backend logic, and other backing
+  resources stored through the authorized immutable artifact boundary.
+- Saved assets are unpublished workspace Studio drafts. Opening one must restore
+  the exact semantic values and verified resource content; it must not create a
+  second editing surface or a lossy metadata-only copy.
+- Review and publication use optimistic revisions. Saving changed reviewed
+  content invalidates review, and publication does not activate or execute it.
 - No hidden propagation, live workspace-to-workspace links, collaboration permissions, pack import/export, marketplace behavior, hidden/default workspaces, startup seeding, or legacy/global auto-migration.
 - No host filesystem paths/storage roots/provider payloads/prompt text/workflow JSON/tokens/secrets/stack traces/command lines/environment values/bytes/blobs/base64/signed URLs in Asset Kernel records, general list contracts, diagnostics, provenance, or list/readiness UI. Workspace-authorized customization-target details and bounded source proposals are the narrow logical-path/source-text exceptions.
 
@@ -67,6 +78,8 @@ Include this pack when prompts materially involve:
   Asset Studio source boundary as deferred until explicitly scoped with safe
   schema/tests.
 - Keep override behavior non-destructive and explicit.
+- Do not treat automated workflow semantics or responsive-layout assertions as
+  manual accessibility or controlled security qualification evidence.
 
 ## Relationship to User Library Reuse
 
@@ -97,6 +110,13 @@ Use conservative wording in prompts and reviews:
   desktop/thin-client workflow as implemented; the workflow requires exact target
   selection and separates frontend structure, frontend styling, backend logic,
   and other backing resources before review and publication;
+- treat the unified from-scratch Studio draft lifecycle, workspace-isolated
+  structured persistence, immutable backing-resource artifacts, server API,
+  desktop IPC/preload, desktop/thin-client clients, ordered single-surface
+  semantic/resource editing, and Saved-to-Studio exact draft reopening as
+  implemented;
+- treat the Assets tab set as Browse, Import Assets, Studio, Saved, and
+  Customizations; do not reintroduce separate Create or Drafts editing tabs;
 - treat draft publication as creating new authored assets only;
 - do not claim executable outputs, automatic rebase/conflict resolution, source
   mutation, implicit activation/deployment, or `system.foundation` mutation.

@@ -2,8 +2,8 @@
 
 # Asset Experience and Layered Customization Implementation Roadmap
 
-- Status: `executing`
-- Updated: `2026-07-18T17:43:09Z`
+- Status: `implementation-complete-qualification-pending`
+- Updated: `2026-07-18T21:14:33Z`
 
 ## Objective
 
@@ -58,8 +58,9 @@ The accepted authoring ADR permits sparse semantic overrides but defers raw code
 | 1: Layered customization architecture and contracts | Ratify the approved layered-derived model and establish stable typed semantics before application or UI consumers are added. | None | `completed` |
 | 2: Shared modal and attached tab foundations | Turn the existing visual modal and tab patterns into reusable, accessible cross-surface components and apply the attached card shell to Assets and Systems. | architecture-contract | `completed` |
 | 3: Complete responsive Assets browsing and import experience | Deliver the complete user-facing Assets browse and import experience across desktop and thin client: responsive asset cards, modal details, responsive filters, Import Assets language, and a safe downloadable .aisb-package starter with complete guidance. | shared-surface-foundation | `completed` |
-| 4: End-to-end layered Asset Customization workflow | Deliver one production-complete vertical slice for searchable exact target selection, sparse layered customization, bounded source overlays, immutable review materialization, workspace-owned publication, and the ordered desktop and thin-client workflow without mutating any base asset. | architecture-contract, shared-surface-foundation, complete-assets-experience | `verifying` |
-| 5: End-to-end production qualification and hardening | Prove the complete Assets and Systems experience and layered customization behavior across supported hosts, representative bases, restart persistence, failure and security modes, responsive layouts, accessibility expectations, and canonical documentation. | complete-assets-experience, layered-customization-workflow | `pending` |
+| 4: End-to-end layered Asset Customization workflow | Deliver one production-complete vertical slice for searchable exact target selection, sparse layered customization, bounded source overlays, immutable review materialization, workspace-owned publication, and the ordered desktop and thin-client workflow without mutating any base asset. | architecture-contract, shared-surface-foundation, complete-assets-experience | `completed` |
+| 5: Unified resource-backed Asset Studio and Saved assets | Deliver one ordered Studio surface for creating, saving, reopening, reviewing, and publishing from-scratch semantic assets with actual frontend structure, frontend styling, backend logic, and other backing resources across desktop and thin-client hosts. | layered-customization-workflow | `completed` |
+| 6: End-to-end production qualification and hardening | Prove the complete Assets and Systems experience, layered customization, and unified resource-backed Studio behavior across supported hosts, representative bases and new assets, restart persistence, failure and security modes, responsive layouts, accessibility expectations, and canonical documentation. | unified-asset-studio-saved | `implemented-pending-qualification` |
 
 ## Increment 1: Layered customization architecture and contracts
 
@@ -205,7 +206,7 @@ Retain existing detail presenters as modal bodies so the grid can be reverted in
 ## Increment 4: End-to-end layered Asset Customization workflow
 
 - Id: `layered-customization-workflow`
-- Status: `verifying`
+- Status: `completed`
 - Dependencies: `architecture-contract`, `shared-surface-foundation`, `complete-assets-experience`
 
 Deliver one production-complete vertical slice for searchable exact target selection, sparse layered customization, bounded source overlays, immutable review materialization, workspace-owned publication, and the ordered desktop and thin-client workflow without mutating any base asset.
@@ -240,17 +241,17 @@ Deliver one production-complete vertical slice for searchable exact target selec
 
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
-| `eligible-sources-searchable`: A workspace can search and select exact eligible built-in or system, admitted installed imported, and authored asset versions with truthful unavailable reasons for unsupported targets. | local | not recorded |
-| `workspace-isolated`: Missing workspace context and cross-workspace imported or authored target reads and writes fail closed while system-owned metadata remains read-only and safely visible. | local | not recorded |
-| `transport-aligned`: API, IPC, preload, host, and client tests prove aligned request, response, error, and operation identities without raw storage or provider data leakage. | local | not recorded |
-| `base-remains-immutable`: Creating, editing, publishing, failing, or abandoning a customization never changes the selected base definition, implementation release, package, authored record, or system-owned source. | local | not recorded |
-| `sparse-reuse`: Unchanged semantic fields and source files remain referenced by exact base identity while only modified fields and files create new customization entries before materialization. | local | not recorded |
-| `safe-materialization`: Review materialization validates containment, sizes, allowed extensions, dependencies, capabilities, secret-like content, digests, and optimistic revisions before producing an immutable snapshot. | local | not recorded |
-| `new-owned-lineage`: Publishing produces a distinct workspace-owned asset lineage with explicit provenance and no implicit build, release, installation, activation, deployment, or execution. | local | not recorded |
-| `selection-controlled`: No customization fields are editable until a specific eligible exact asset version is selected, and changing the target requires explicit confirmation that clears incompatible work. | local | not recorded |
-| `internals-visible`: The workflow shows all important authorized semantic and implementation internals, distinguishes editable, protected, reused, and changed content, and explains why protected fields cannot be edited. | local | not recorded |
-| `ordered-workflow`: Users complete selection, definition, interfaces and configuration, implementation, and review and create sections in a predictable ordered interface consistent with other workflow features. | local | not recorded |
-| `copy-confirmed`: Successful completion visibly creates a new workspace-owned asset and leaves the base unchanged; errors preserve recoverable draft work and expose safe remediation. | local | not recorded |
+| `eligible-sources-searchable`: A workspace can search and select exact eligible built-in or system, admitted installed imported, and authored asset versions with truthful unavailable reasons for unsupported targets. | local | passed (test) |
+| `workspace-isolated`: Missing workspace context and cross-workspace imported or authored target reads and writes fail closed while system-owned metadata remains read-only and safely visible. | local | passed (test) |
+| `transport-aligned`: API, IPC, preload, host, and client tests prove aligned request, response, error, and operation identities without raw storage or provider data leakage. | local | passed (test) |
+| `base-remains-immutable`: Creating, editing, publishing, failing, or abandoning a customization never changes the selected base definition, implementation release, package, authored record, or system-owned source. | local | passed (test) |
+| `sparse-reuse`: Unchanged semantic fields and source files remain referenced by exact base identity while only modified fields and files create new customization entries before materialization. | local | passed (test) |
+| `safe-materialization`: Review materialization validates containment, sizes, allowed extensions, dependencies, capabilities, secret-like content, digests, and optimistic revisions before producing an immutable snapshot. | local | passed (test) |
+| `new-owned-lineage`: Publishing produces a distinct workspace-owned asset lineage with explicit provenance and no implicit build, release, installation, activation, deployment, or execution. | local | passed (test) |
+| `selection-controlled`: No customization fields are editable until a specific eligible exact asset version is selected, and changing the target requires explicit confirmation that clears incompatible work. | local | passed (test) |
+| `internals-visible`: The workflow shows all important authorized semantic and implementation internals, distinguishes editable, protected, reused, and changed content, and explains why protected fields cannot be edited. | local | passed (test) |
+| `ordered-workflow`: Users complete selection, definition, interfaces and configuration, implementation, and review and create sections in a predictable ordered interface consistent with other workflow features. | local | passed (test) |
+| `copy-confirmed`: Successful completion visibly creates a new workspace-owned asset and leaves the base unchanged; errors preserve recoverable draft work and expose safe remediation. | local | passed (test) |
 
 ### Verification
 
@@ -269,18 +270,71 @@ Keep all new operations additive and capability-gated, retain the existing list 
 - Automatic conflict rebase
 - Automatic build, release, installation, activation, deployment, or execution
 
-## Increment 5: End-to-end production qualification and hardening
+## Increment 5: Unified resource-backed Asset Studio and Saved assets
 
-- Id: `production-qualification`
-- Status: `pending`
-- Dependencies: `complete-assets-experience`, `layered-customization-workflow`
+- Id: `unified-asset-studio-saved`
+- Status: `completed`
+- Dependencies: `layered-customization-workflow`
 
-Prove the complete Assets and Systems experience and layered customization behavior across supported hosts, representative bases, restart persistence, failure and security modes, responsive layouts, accessibility expectations, and canonical documentation.
+Deliver one ordered Studio surface for creating, saving, reopening, reviewing, and publishing from-scratch semantic assets with actual frontend structure, frontend styling, backend logic, and other backing resources across desktop and thin-client hosts.
 
 ### Work packages
 
-- **Representative end-to-end scenarios** (`scenario-tests`): Tests cover default or system and admitted installed imported asset customization, sparse reuse, changed code, publication, browse visibility, restart persistence, and original immutability on desktop and server paths.
-- **Failure and security qualification** (`failure-security`): Cross-workspace access, stale bases, unsafe paths or content, oversized files, revoked or unavailable package truth, interrupted persistence, and unavailable Studio adapters fail closed with recoverable safe UI states.
+- **Workspace-owned resource-backed Studio drafts** (`studio-draft-domain`): A backward-compatible authored-draft evolution coordinates full semantic definition data, exact intended identity, immutable backing-resource artifacts, implementation draft identity, optimistic revision, and lifecycle without storing source text in structured records.
+- **Save, reopen, review, and publish lifecycle** (`studio-lifecycle`): Application use cases create, read, list, update, review-materialize, publish, and abandon exact workspace drafts while preserving non-execution, safe diagnostics, and distinct publication and activation gates.
+- **Aligned desktop and server boundaries** (`studio-transports`): API, IPC, preload, host composition, and both renderer clients expose the same workspace-isolated Studio draft operations and bounded resource details.
+- **One reusable ordered authoring surface** (`shared-studio-sections`): Studio reuses shared semantic and backing-resource section components from Customizations for definition, configuration/interfaces, AI context/composition, frontend structure, frontend styling, backend logic, other resources, and save/review/publish.
+- **Saved assets and tab consolidation** (`saved-navigation`): Create is removed; Drafts becomes Saved, lists unpublished workspace assets, and opens an exact draft in the single Studio tab in both hosts.
+
+### Deliverables
+
+- Resource-backed Studio draft contracts, persistence, application lifecycle, and artifact integration
+- Aligned API, IPC, preload, host, and client operations
+- Shared ordered semantic and backing-resource Studio sections
+- Saved-assets list with exact Studio reopening
+- Removed Create tab and renamed Drafts tab
+- Focused cross-host, workspace-isolation, restart, security, accessibility, and navigation tests
+- Updated ADR or architecture guidance, READMEs, context pack, and temporary report
+
+### Acceptance criteria
+
+| Criterion | Qualification | Latest evidence |
+| --- | --- | --- |
+| `single-studio-surface`: Desktop and thin client each expose one ordered Studio tab that edits both complete semantic definition sections and actual categorized backing resources for a new from-scratch asset. | local | passed (test) |
+| `studio-drafts-persist`: A new resource-backed Studio asset can be saved without publication, survives host restart, remains workspace-isolated, and retains source bytes only in bounded immutable artifact storage. | local | passed (test) |
+| `saved-reopens-exact-draft`: Saved lists unpublished assets and opens the selected exact draft with all semantic and backing-resource content restored in Studio. | local | passed (test) |
+| `studio-transports-aligned`: Server API and desktop IPC/preload operations enforce the same validation, workspace authorization, optimistic revision, sanitized failure, and bounded resource semantics. | local | passed (test) |
+| `studio-review-publish-safe`: Review materializes an immutable source snapshot and publication creates a distinct definition plus implementation draft without build, activation, deployment, or execution. | local | passed (test) |
+| `asset-tabs-consolidated`: Create is absent, Drafts is labeled Saved, Customizations remains dedicated to derived copies, and cross-tab handoff never splits editing across multiple tabs. | local | passed (test) |
+
+### Verification
+
+- Run focused contract, application, persistence, artifact, API, IPC, preload, client, shared-section, Studio, Saved-navigation, restart, workspace-isolation, and negative security tests while each chunk is active.
+- After every Increment 5 chunk passes focused checks, run desktop TypeScript/package validation, server and thin-client builds, docs:check, architecture:check, agent-support:check, git diff validation, and npm test once.
+
+### Rollback
+
+Keep legacy authored-draft reads compatible and all new records readable; disable new Studio mutation capabilities and restore the prior tabs without deleting saved drafts, artifacts, snapshots, or published definitions.
+
+### Excluded
+
+- Executing authored code in the product renderer, Electron main process, or API server
+- Automatic dependency installation, build, activation, deployment, or publication
+- Public marketplace or registry behavior
+- Cross-workspace collaborative editing
+
+## Increment 6: End-to-end production qualification and hardening
+
+- Id: `production-qualification`
+- Status: `implemented-pending-qualification`
+- Dependencies: `unified-asset-studio-saved`
+
+Prove the complete Assets and Systems experience, layered customization, and unified resource-backed Studio behavior across supported hosts, representative bases and new assets, restart persistence, failure and security modes, responsive layouts, accessibility expectations, and canonical documentation.
+
+### Work packages
+
+- **Representative end-to-end scenarios** (`scenario-tests`): Tests cover default or system and admitted imported customization plus new Studio asset save, reopen, review, publication, browse visibility, restart persistence, and original immutability on desktop and server paths.
+- **Failure and security qualification** (`failure-security`): Cross-workspace access, stale revisions or bases, unsafe paths or content, oversized files, revoked or unavailable package truth, interrupted persistence, and unavailable Studio adapters fail closed with recoverable safe UI states.
 - **Accessibility and responsive qualification** (`accessibility-responsive`): Keyboard, focus, modal stacking, tab semantics, screen-reader naming and status, 400-percent zoom and reflow, contrast, and narrow-layout checks are recorded for desktop and thin client.
 - **Documentation and release evidence** (`documentation-release`): Canonical architecture, security, package authoring, UI guidance, context packs, READMEs, support qualification, and durable roadmap and report state match implemented behavior and limitations.
 
@@ -296,10 +350,11 @@ Prove the complete Assets and Systems experience and layered customization behav
 
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
-| `e2e-default-imported`: A built-in or system asset and an admitted installed imported asset can each be selected, customized, reviewed, published as distinct workspace-owned assets, rediscovered after restart, and proven not to mutate their bases. | local | not recorded |
-| `all-gates-pass`: Focused suites, npm test, documentation, architecture, agent-support, dependency security, server, thin-client, and desktop build or package gates pass or have explicitly recorded environmental limitations with no product defect concealed. | local | not recorded |
-| `desktop-thin-accessibility`: Documented keyboard, screen-reader, 400-percent zoom and reflow, contrast, focus, modal, and responsive checks pass on supported desktop and thin-client surfaces. | controlled-environment | not recorded |
-| `security-review`: A controlled security review confirms source containment, non-execution during browsing and import inspection, workspace isolation, immutable bases, safe diagnostics, and no implied activation or deployment authority. | controlled-environment | not recorded |
+| `e2e-default-imported`: A built-in or system asset and an admitted installed imported asset can each be selected, customized, reviewed, published as distinct workspace-owned assets, rediscovered after restart, and proven not to mutate their bases. | local | passed (test) |
+| `e2e-studio-saved`: A new from-scratch resource-backed asset can be saved unpublished, reopened from Saved in Studio, reviewed, published, and rediscovered after restart without executing authored source. | local | passed (test) |
+| `all-gates-pass`: Focused suites, npm test, documentation, architecture, agent-support, dependency security, server, thin-client, and desktop build or package gates pass or have explicitly recorded environmental limitations with no product defect concealed. | local | passed (test) |
+| `desktop-thin-accessibility`: Documented keyboard, screen-reader, 400-percent zoom and reflow, contrast, focus, modal, and responsive checks pass on supported desktop and thin-client surfaces. | controlled-environment | pending (manual) |
+| `security-review`: A controlled security review confirms source containment, non-execution during browsing and import inspection, workspace isolation, immutable bases, safe diagnostics, and no implied activation or deployment authority. | controlled-environment | pending (manual) |
 
 ### Verification
 
@@ -308,7 +363,7 @@ Prove the complete Assets and Systems experience and layered customization behav
 
 ### Rollback
 
-Keep new create operations capability-gated while retaining read-only browse, import, and history behavior plus all persisted drafts; do not delete user data to disable the feature.
+Keep new create operations capability-gated while retaining read-only browse, import, Saved, Studio history, and Customizations behavior plus all persisted drafts; do not delete user data to disable the feature.
 
 ### Excluded
 

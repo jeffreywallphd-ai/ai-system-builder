@@ -998,3 +998,76 @@
   color: var(--color-text-muted);
   overflow-wrap: anywhere;
 }
+.asset-studio--unified .ui-workflow__step,
+.asset-studio--saved .asset-studio__saved-card {
+  min-inline-size: 0;
+}
+
+.asset-studio__editor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr));
+  gap: var(--space-md);
+}
+
+.asset-studio__json {
+  min-block-size: 10rem;
+  font-family: var(--font-family-mono, ui-monospace, monospace);
+  line-height: 1.5;
+  tab-size: 2;
+}
+
+.asset-studio__resource {
+  min-inline-size: 0;
+}
+
+.asset-studio__actions {
+  flex-wrap: wrap;
+}
+
+.asset-studio__saved-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-sm);
+  align-items: end;
+}
+
+.asset-studio__saved-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+  gap: var(--space-md);
+}
+
+.asset-studio__saved-card {
+  display: grid;
+  gap: var(--space-md);
+  align-content: start;
+}
+
+.asset-studio__saved-card h3,
+.asset-studio__saved-card p,
+.asset-studio__saved-card dl {
+  margin: 0;
+}
+
+.asset-studio__saved-card dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-sm);
+}
+
+.asset-studio__saved-card dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.asset-studio__saved-card dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 42rem) {
+  .asset-studio__saved-search,
+  .asset-studio__saved-card dl {
+    grid-template-columns: 1fr;
+  }
+}

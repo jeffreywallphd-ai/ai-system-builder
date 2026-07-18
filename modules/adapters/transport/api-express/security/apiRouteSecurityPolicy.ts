@@ -232,6 +232,13 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     { public: false, scopes: ["asset:write"] },
   ],
   ["POST /api/asset-studio/review", { public: false, scopes: ["asset:write"] }],
+  ["GET /api/asset-studio/asset-drafts", { public: false, scopes: ["asset:read"] }],
+  ["GET /api/asset-studio/asset-draft", { public: false, scopes: ["asset:read"] }],
+  ["POST /api/asset-studio/asset-drafts", { public: false, scopes: ["asset:write"] }],
+  ["POST /api/asset-studio/asset-drafts/update", { public: false, scopes: ["asset:write"] }],
+  ["POST /api/asset-studio/asset-drafts/review", { public: false, scopes: ["asset:write"] }],
+  ["POST /api/asset-studio/asset-drafts/publish", { public: false, scopes: ["asset:write"] }],
+  ["POST /api/asset-studio/asset-drafts/abandon", { public: false, scopes: ["asset:write"] }],
   ["GET /api/systems", { public: false, scopes: ["asset:read"] }],
   ["GET /api/systems/templates", { public: false, scopes: ["asset:read"] }],
   [

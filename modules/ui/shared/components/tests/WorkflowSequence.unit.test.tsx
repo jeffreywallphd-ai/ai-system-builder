@@ -20,8 +20,10 @@ describe("WorkflowSequence", () => {
     );
 
     expect(html).toContain('class="ui-workflow"');
+    expect(html).toContain('role="list"');
     expect(html).toContain('aria-label="Example workflow"');
     expect(html).toContain('class="ui-workflow__step"');
+    expect(html.match(/role="listitem"/g)?.length).toBe(2);
     expect(html).toContain('data-active="true"');
     expect(html).toContain('aria-labelledby="');
     expect(html).toContain("Choose input");

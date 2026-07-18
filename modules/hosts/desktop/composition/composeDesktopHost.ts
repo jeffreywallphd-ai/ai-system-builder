@@ -1499,6 +1499,43 @@ export function composeDesktopHost(
               return feature.useCases.list.execute(workspaceId);
             },
           },
+          assetDrafts: {
+            create: async (command) => {
+              const feature = (await getAssetFeatures()).assetStudio;
+              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              return feature.useCases.assetDrafts.create(command);
+            },
+            update: async (command) => {
+              const feature = (await getAssetFeatures()).assetStudio;
+              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              return feature.useCases.assetDrafts.update(command);
+            },
+            read: async (query) => {
+              const feature = (await getAssetFeatures()).assetStudio;
+              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              return feature.useCases.assetDrafts.read(query);
+            },
+            list: async (query) => {
+              const feature = (await getAssetFeatures()).assetStudio;
+              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              return feature.useCases.assetDrafts.list(query);
+            },
+            review: async (command) => {
+              const feature = (await getAssetFeatures()).assetStudio;
+              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              return feature.useCases.assetDrafts.review(command);
+            },
+            publish: async (command) => {
+              const feature = (await getAssetFeatures()).assetStudio;
+              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              return feature.useCases.assetDrafts.publish(command);
+            },
+            abandon: async (command) => {
+              const feature = (await getAssetFeatures()).assetStudio;
+              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              return feature.useCases.assetDrafts.abandon(command);
+            },
+          },
         },
         ...(systemBuilder
           ? {

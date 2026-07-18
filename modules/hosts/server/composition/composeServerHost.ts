@@ -1321,6 +1321,9 @@ export function composeServerHost(
               documents: organizationDocuments,
               implementations: assetImplementation,
               artifacts: createAssetImplementationArtifactAdapter(storage),
+              definitions:
+                internalAssetRegistry.assetKernel.repositories
+                  .definitionRepository,
               now: options.now ?? (() => new Date().toISOString()),
             })
           : undefined;
@@ -1991,6 +1994,7 @@ export function composeServerHost(
                 review: assetStudio.useCases.review,
                 read: assetStudio.useCases.read,
                 list: assetStudio.useCases.list,
+                assetDrafts: assetStudio.useCases.assetDrafts,
               },
             }
           : {}),

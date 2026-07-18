@@ -250,6 +250,31 @@ optimistic revision; approval produces an immutable source snapshot. Build,
 preview, release, activation, and deployment remain separate gates. A host
 without a configured coding-model provider returns an explicit unavailable
 result while retaining the complete manual workflow.
+For from-scratch resource-backed assets, Studio also owns a workspace-scoped
+structured draft that combines the complete semantic definition with an
+immutable backing-resource artifact. The structured record stores safe
+definition fields, lifecycle, revision, provenance, artifact descriptors,
+digests, and file descriptors; actual logical paths and source text remain in
+the authorized artifact boundary. Frontend structure, frontend styling,
+backend logic, and other resources are actual saved files, not metadata
+descriptions of hypothetical files.
+
+The shared desktop and thin-client experience presents identity, definition,
+configuration, interfaces, AI context, composition, and all backing-resource
+roles in one ordered Studio surface. Saving creates or updates an unpublished
+draft. The Saved surface lists only non-published, non-abandoned workspace
+drafts and reopens the selected draft in Studio with its exact semantic values
+and verified backing-resource content. The former Create and Drafts tabs are
+therefore redundant and are not exposed.
+Legacy authored drafts remain readable and are not mutated. Saved merges them
+with native Studio drafts; opening one creates an idempotent resource-backed
+Studio draft with explicit legacy provenance, after which the native draft
+de-duplicates the legacy row.
+
+Changing a reviewed Studio draft invalidates its prior review. Review
+materializes an immutable definition-plus-resource snapshot; publication creates
+the definition and implementation lineage but never installs, activates,
+deploys, or executes the implementation.
 
 ## Layered derived customization model
 
