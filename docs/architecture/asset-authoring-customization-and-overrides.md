@@ -97,10 +97,11 @@ Override records are durable, explicit, workspace-visible records that capture w
 17. No legacy/global auto-migration.
 18. Public contracts/provenance/diagnostics/UI must never expose raw paths, storage roots, provider payloads, prompt text, workflow JSON, tokens/secrets, stack traces, command lines, environment values, bytes/blobs/base64, or signed URLs.
 
-Asset Studio source and diff responses are the narrow exception for an
-authorized authoring session: they may expose bounded relative source paths and
-source text after workspace authorization. Those values remain outside Asset
-Kernel metadata, list/readiness DTOs, logs, and safe diagnostics.
+Authorized customization-target details plus Asset Studio source and diff
+responses are the narrow exceptions for an authoring session: they may expose
+bounded logical relative source paths and source text after workspace
+authorization. They never expose host filesystem paths. Those values remain
+outside Asset Kernel metadata, list/readiness DTOs, logs, and safe diagnostics.
 
 ## Ownership model by source relationship
 
@@ -370,9 +371,15 @@ The architecture defines vocabulary and current boundaries. Implementation statu
 - Layered-derived customization target discovery, workspace-isolated optimistic
   persistence, sparse semantic/source overlays, immutable review materialization,
   distinct definition plus implementation-draft publication, history, and abandon
-  operations are implemented at the application boundary. Desktop/server
-  composition, API/IPC/preload clients, and the guided UI remain unavailable until
-  their ordered implementation chunks are composed and verified.
+  operations are implemented. Server API and desktop IPC/preload transports,
+  desktop/thin-client clients, host composition, authenticated actor attribution,
+  and workspace enforcement are implemented and covered by focused tests. Desktop
+  and thin-client Assets surfaces compose one shared ordered workflow for exact
+  target selection; allowlisted definition, configuration, interface, and AI
+  context editing; explicit frontend structure, frontend styling, backend logic,
+  and other backing-resource sections; immutable review; publication; abandon;
+  and customization history. Asset Browser cards can open their exact semantic
+  definition and version directly in that workflow.
 
 ### Required status checklist
 
@@ -388,8 +395,8 @@ The architecture defines vocabulary and current boundaries. Implementation statu
 10. Override disabling: implemented.
 11. API exposure: implemented for current asset authoring/customization operations.
 12. IPC/preload exposure: implemented for current asset authoring/customization operations.
-13. Desktop UI support: implemented for listing/draft actions/override disable + truthful deferred messaging.
-14. Thin-client UI support: implemented for listing/draft actions/override disable + truthful deferred messaging.
+13. Desktop UI support: implemented for listing/draft actions/override disable and the shared layered-derived customization workflow.
+14. Thin-client UI support: implemented for listing/draft actions/override disable and the shared layered-derived customization workflow.
 15. Workflow execution from authored/customized assets: not implemented.
 16. Materialization from override patches: not implemented.
 17. Conflict rebase/resolution workflow: not implemented.
@@ -400,7 +407,9 @@ The architecture defines vocabulary and current boundaries. Implementation statu
     create/update/review/publish/abandon application workflow: implemented and
     covered by focused restart, workspace-isolation, immutability, and
     materialization tests.
-22. Layered-derived customization host transports and guided UI: not yet composed.
+22. Layered-derived customization host transports: implemented for server and
+    desktop hosts with typed clients and focused security/host tests.
+23. Layered-derived customization guided UI: implemented as a shared ordered desktop/thin-client workflow with exact Asset Browser handoff, sparse semantic/source changes, explicit backing-resource sections, review/publication, abandon, and history.
 
 ## Relationship to asset composition planning
 

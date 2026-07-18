@@ -472,6 +472,12 @@ import type {
   PublishAssetDraftCommand,
   UpdateAssetDraftCommand,
   UpdateAssetOverrideCommand,
+  CreateAssetDerivedCustomizationCommand,
+  UpdateAssetDerivedCustomizationCommand,
+  ReviewAssetDerivedCustomizationCommand,
+  ListAssetDerivedCustomizationTargetsQuery,
+  ReadAssetDerivedCustomizationTargetQuery,
+  ListAssetDerivedCustomizationsQuery,
 } from "../../../../modules/contracts/asset-authoring";
 import type {
   FinalizeGeneratedOutputCommand,
@@ -1354,6 +1360,15 @@ export interface DesktopPreloadApi {
     },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopAssetAuthoringListEffectiveSummariesResponse>;
+  listAssetDerivedCustomizationTargets: (input: ListAssetDerivedCustomizationTargetsQuery, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopAssetDerivedCustomizationListTargetsResponse>;
+  readAssetDerivedCustomizationTarget: (input: ReadAssetDerivedCustomizationTargetQuery, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopAssetDerivedCustomizationReadTargetResponse>;
+  createAssetDerivedCustomization: (input: Omit<CreateAssetDerivedCustomizationCommand, "actorId">, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopAssetDerivedCustomizationCreateResponse>;
+  updateAssetDerivedCustomization: (input: Omit<UpdateAssetDerivedCustomizationCommand, "actorId">, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopAssetDerivedCustomizationUpdateResponse>;
+  reviewAssetDerivedCustomization: (input: Omit<ReviewAssetDerivedCustomizationCommand, "actorId">, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopAssetDerivedCustomizationReviewResponse>;
+  publishAssetDerivedCustomization: (input: Omit<ReviewAssetDerivedCustomizationCommand, "actorId">, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopAssetDerivedCustomizationPublishResponse>;
+  abandonAssetDerivedCustomization: (input: Omit<ReviewAssetDerivedCustomizationCommand, "actorId">, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopAssetDerivedCustomizationAbandonResponse>;
+  listAssetDerivedCustomizations: (input: ListAssetDerivedCustomizationsQuery, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopAssetDerivedCustomizationListResponse>;
+  readAssetDerivedCustomization: (input: { workspaceId: string; customizationId: string }, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopAssetDerivedCustomizationReadResponse>;
   listAssetDefinitions: (
     input?: DesktopAssetDefinitionsListBridgeInput,
     context?: DesktopArtifactUploadBridgeContext,
@@ -3116,6 +3131,33 @@ export function createDesktopPreloadApi(
         },
       );
     },
+    async listAssetDerivedCustomizationTargets(input, context = {}) {
+      return invokeAssetDerivedCustomization(dependencies, "listTargets", input, context) as Promise<DesktopAssetDerivedCustomizationListTargetsResponse>;
+    },
+    async readAssetDerivedCustomizationTarget(input, context = {}) {
+      return invokeAssetDerivedCustomization(dependencies, "readTarget", input, context) as Promise<DesktopAssetDerivedCustomizationReadTargetResponse>;
+    },
+    async createAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(dependencies, "create", input, context) as Promise<DesktopAssetDerivedCustomizationCreateResponse>;
+    },
+    async updateAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(dependencies, "update", input, context) as Promise<DesktopAssetDerivedCustomizationUpdateResponse>;
+    },
+    async reviewAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(dependencies, "review", input, context) as Promise<DesktopAssetDerivedCustomizationReviewResponse>;
+    },
+    async publishAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(dependencies, "publish", input, context) as Promise<DesktopAssetDerivedCustomizationPublishResponse>;
+    },
+    async abandonAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(dependencies, "abandon", input, context) as Promise<DesktopAssetDerivedCustomizationAbandonResponse>;
+    },
+    async listAssetDerivedCustomizations(input, context = {}) {
+      return invokeAssetDerivedCustomization(dependencies, "list", input, context) as Promise<DesktopAssetDerivedCustomizationListResponse>;
+    },
+    async readAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(dependencies, "read", input, context) as Promise<DesktopAssetDerivedCustomizationReadResponse>;
+    },
     async listAssetDefinitions(input = {}, context = {}) {
       const request = createDesktopAssetDefinitionsListRequest(
         {
@@ -4667,6 +4709,18 @@ async function invokeSystemDeployment(
     },
   );
 }
+
+async function invokeAssetDerivedCustomization(
+  dependencies: CreateDesktopPreloadApiDependencies,
+  key: keyof typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS,
+  payload: unknown,
+  context: DesktopArtifactUploadBridgeContext,
+): Promise<unknown> {
+  if (!payload || typeof payload !== "object" || !("workspaceId" in payload) || typeof payload.workspaceId !== "string" || !payload.workspaceId.trim()) throw new Error("Invalid request.");
+  const descriptor = DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS[key];
+  const response = await dependencies.ipcRenderer.invoke(descriptor.request.value, { payload, operation: descriptor.operation, channel: descriptor.request.value, requestId: context.requestId, correlationId: context.correlationId });
+  return assertDesktopEnvelopeResponse(response, { operation: descriptor.operation, channel: descriptor.response.value, message: `Received invalid desktop asset derived customization ${key} IPC response envelope.` });
+}
 import {
   DESKTOP_ASSET_AUTHORING_CREATE_WORKSPACE_AUTHORED_ASSET_OPERATION,
   DESKTOP_ASSET_AUTHORING_CREATE_WORKSPACE_AUTHORED_ASSET_REQUEST_CHANNEL,
@@ -4716,6 +4770,7 @@ import {
   DESKTOP_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_OPERATION,
   DESKTOP_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_REQUEST_CHANNEL,
   DESKTOP_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_RESPONSE_CHANNEL,
+  DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS,
   type DesktopAssetAuthoringCreateWorkspaceAuthoredAssetResponse,
   type DesktopAssetAuthoringCreateDraftResponse,
   type DesktopAssetAuthoringUpdateDraftResponse,
@@ -4732,6 +4787,15 @@ import {
   type DesktopAssetAuthoringListOverridesResponse,
   type DesktopAssetAuthoringReadOverrideResponse,
   type DesktopAssetAuthoringListEffectiveSummariesResponse,
+  type DesktopAssetDerivedCustomizationListTargetsResponse,
+  type DesktopAssetDerivedCustomizationReadTargetResponse,
+  type DesktopAssetDerivedCustomizationCreateResponse,
+  type DesktopAssetDerivedCustomizationUpdateResponse,
+  type DesktopAssetDerivedCustomizationReviewResponse,
+  type DesktopAssetDerivedCustomizationPublishResponse,
+  type DesktopAssetDerivedCustomizationAbandonResponse,
+  type DesktopAssetDerivedCustomizationListResponse,
+  type DesktopAssetDerivedCustomizationReadResponse,
 } from "../../../../modules/contracts/ipc";
 import type {
   CopyUserLibraryAssetToWorkspaceCommand,

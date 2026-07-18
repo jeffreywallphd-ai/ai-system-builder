@@ -19,13 +19,26 @@ import type {
   UpdateAssetDraftCommand,
   UpdateAssetOverrideCommand,
   AssetAuthoringFailureCode,
+  AbandonAssetDerivedCustomizationCommand,
+  AssetDerivedCustomizationDraftRecord,
+  AssetDerivedCustomizationTargetDetail,
+  CreateAssetDerivedCustomizationCommand,
+  ListAssetDerivedCustomizationsQuery,
+  ListAssetDerivedCustomizationTargetsQuery,
+  ListAssetDerivedCustomizationTargetsResult,
+  PublishAssetDerivedCustomizationCommand,
+  ReadAssetDerivedCustomizationTargetQuery,
+  ReviewAssetDerivedCustomizationCommand,
+  UpdateAssetDerivedCustomizationCommand,
 } from "../asset-authoring";
+import { ASSET_DERIVED_CUSTOMIZATION_OPERATIONS } from "../asset-authoring";
 import type { WorkspaceId } from "../workspace";
 import { createTransportOperation } from "../transport";
-import { createIpcChannel } from "./ipc-channel";
+import { createIpcChannel, type IpcChannel } from "./ipc-channel";
 import { createIpcError } from "./ipc-error";
 import { createIpcFailureResponse, createIpcSuccessResponse, type IpcResponse } from "./ipc-response";
 import type { IpcRequest } from "./ipc-request";
+import type { IpcOperation } from "./ipc-operation";
 
 export const DESKTOP_ASSET_AUTHORING_CREATE_WORKSPACE_AUTHORED_ASSET_OPERATION = createTransportOperation("asset-authoring", "create-workspace-authored-asset");
 export const DESKTOP_ASSET_AUTHORING_CREATE_DRAFT_OPERATION = createTransportOperation("asset-authoring", "create-draft");
@@ -43,6 +56,18 @@ export const DESKTOP_ASSET_AUTHORING_READ_REVISION_OPERATION = createTransportOp
 export const DESKTOP_ASSET_AUTHORING_LIST_OVERRIDES_OPERATION = createTransportOperation("asset-authoring", "list-overrides");
 export const DESKTOP_ASSET_AUTHORING_READ_OVERRIDE_OPERATION = createTransportOperation("asset-authoring", "read-override");
 export const DESKTOP_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_OPERATION = createTransportOperation("asset-authoring", "list-effective-summaries");
+
+export const DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS = Object.freeze({
+  listTargets: channels(ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.listTargets),
+  readTarget: channels(ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.readTarget),
+  create: channels(ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.create),
+  update: channels(ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.update),
+  review: channels(ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.review),
+  publish: channels(ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.publish),
+  abandon: channels(ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.abandon),
+  list: channels(ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.list),
+  read: channels(ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.read),
+});
 
 export const DESKTOP_ASSET_AUTHORING_CREATE_WORKSPACE_AUTHORED_ASSET_REQUEST_CHANNEL = createIpcChannel(DESKTOP_ASSET_AUTHORING_CREATE_WORKSPACE_AUTHORED_ASSET_OPERATION, "request"); export const DESKTOP_ASSET_AUTHORING_CREATE_WORKSPACE_AUTHORED_ASSET_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_ASSET_AUTHORING_CREATE_WORKSPACE_AUTHORED_ASSET_OPERATION, "response");
 export const DESKTOP_ASSET_AUTHORING_CREATE_DRAFT_REQUEST_CHANNEL = createIpcChannel(DESKTOP_ASSET_AUTHORING_CREATE_DRAFT_OPERATION, "request"); export const DESKTOP_ASSET_AUTHORING_CREATE_DRAFT_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_ASSET_AUTHORING_CREATE_DRAFT_OPERATION, "response");
@@ -105,8 +130,35 @@ export type DesktopAssetAuthoringListOverridesResponse = IpcResponse<{ readonly 
 export type DesktopAssetAuthoringReadOverrideResponse = IpcResponse<AssetOverrideRecord, Record<string, unknown>, typeof DESKTOP_ASSET_AUTHORING_READ_OVERRIDE_OPERATION, Record<string, never>, typeof DESKTOP_ASSET_AUTHORING_READ_OVERRIDE_RESPONSE_CHANNEL.value>;
 export type DesktopAssetAuthoringListEffectiveSummariesResponse = IpcResponse<{ readonly items: readonly AssetAuthoringEffectiveSourceSummary[]; readonly nextCursor?: string }, Record<string, unknown>, typeof DESKTOP_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_OPERATION, Record<string, never>, typeof DESKTOP_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_RESPONSE_CHANNEL.value>;
 
-type DesktopAssetAuthoringResponseChannel =
-  | typeof DESKTOP_ASSET_AUTHORING_CREATE_WORKSPACE_AUTHORED_ASSET_RESPONSE_CHANNEL | typeof DESKTOP_ASSET_AUTHORING_CREATE_DRAFT_RESPONSE_CHANNEL | typeof DESKTOP_ASSET_AUTHORING_UPDATE_DRAFT_RESPONSE_CHANNEL | typeof DESKTOP_ASSET_AUTHORING_PUBLISH_DRAFT_RESPONSE_CHANNEL | typeof DESKTOP_ASSET_AUTHORING_CREATE_OVERRIDE_RESPONSE_CHANNEL | typeof DESKTOP_ASSET_AUTHORING_UPDATE_OVERRIDE_RESPONSE_CHANNEL | typeof DESKTOP_ASSET_AUTHORING_DISABLE_OVERRIDE_RESPONSE_CHANNEL | typeof DESKTOP_ASSET_AUTHORING_LIST_AUTHORED_ASSETS_RESPONSE_CHANNEL | typeof DESKTOP_ASSET_AUTHORING_READ_AUTHORED_ASSET_RESPONSE_CHANNEL | typeof DESKTOP_ASSET_AUTHORING_LIST_DRAFTS_RESPONSE_CHANNEL | typeof DESKTOP_ASSET_AUTHORING_READ_DRAFT_RESPONSE_CHANNEL | typeof DESKTOP_ASSET_AUTHORING_LIST_REVISIONS_RESPONSE_CHANNEL | typeof DESKTOP_ASSET_AUTHORING_READ_REVISION_RESPONSE_CHANNEL | typeof DESKTOP_ASSET_AUTHORING_LIST_OVERRIDES_RESPONSE_CHANNEL | typeof DESKTOP_ASSET_AUTHORING_READ_OVERRIDE_RESPONSE_CHANNEL | typeof DESKTOP_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_RESPONSE_CHANNEL;
+export type DesktopAssetDerivedCustomizationListTargetsRequest = IpcRequest<ListAssetDerivedCustomizationTargetsQuery, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.listTargets, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.listTargets.request.value>;
+export type DesktopAssetDerivedCustomizationReadTargetRequest = IpcRequest<ReadAssetDerivedCustomizationTargetQuery, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.readTarget, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.readTarget.request.value>;
+export type DesktopAssetDerivedCustomizationCreateRequest = IpcRequest<Omit<CreateAssetDerivedCustomizationCommand, "actorId">, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.create, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.create.request.value>;
+export type DesktopAssetDerivedCustomizationUpdateRequest = IpcRequest<Omit<UpdateAssetDerivedCustomizationCommand, "actorId">, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.update, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.update.request.value>;
+export type DesktopAssetDerivedCustomizationReviewRequest = IpcRequest<Omit<ReviewAssetDerivedCustomizationCommand, "actorId">, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.review, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.review.request.value>;
+export type DesktopAssetDerivedCustomizationPublishRequest = IpcRequest<Omit<PublishAssetDerivedCustomizationCommand, "actorId">, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.publish, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.publish.request.value>;
+export type DesktopAssetDerivedCustomizationAbandonRequest = IpcRequest<Omit<AbandonAssetDerivedCustomizationCommand, "actorId">, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.abandon, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.abandon.request.value>;
+export type DesktopAssetDerivedCustomizationListRequest = IpcRequest<ListAssetDerivedCustomizationsQuery, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.list, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.list.request.value>;
+export type DesktopAssetDerivedCustomizationReadRequest = IpcRequest<{ readonly workspaceId: WorkspaceId; readonly customizationId: string }, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.read, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.read.request.value>;
+
+export type DesktopAssetDerivedCustomizationListTargetsResponse = IpcResponse<ListAssetDerivedCustomizationTargetsResult, Record<string, unknown>, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.listTargets, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.listTargets.response.value>;
+export type DesktopAssetDerivedCustomizationReadTargetResponse = IpcResponse<AssetDerivedCustomizationTargetDetail, Record<string, unknown>, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.readTarget, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.readTarget.response.value>;
+export type DesktopAssetDerivedCustomizationCreateResponse = IpcResponse<AssetDerivedCustomizationDraftRecord, Record<string, unknown>, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.create, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.create.response.value>;
+export type DesktopAssetDerivedCustomizationUpdateResponse = IpcResponse<AssetDerivedCustomizationDraftRecord, Record<string, unknown>, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.update, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.update.response.value>;
+export type DesktopAssetDerivedCustomizationReviewResponse = IpcResponse<AssetDerivedCustomizationDraftRecord, Record<string, unknown>, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.review, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.review.response.value>;
+export type DesktopAssetDerivedCustomizationPublishResponse = IpcResponse<AssetDerivedCustomizationDraftRecord, Record<string, unknown>, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.publish, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.publish.response.value>;
+export type DesktopAssetDerivedCustomizationAbandonResponse = IpcResponse<AssetDerivedCustomizationDraftRecord, Record<string, unknown>, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.abandon, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.abandon.response.value>;
+export type DesktopAssetDerivedCustomizationListResponse = IpcResponse<{ readonly customizations: readonly AssetDerivedCustomizationDraftRecord[]; readonly nextCursor?: string }, Record<string, unknown>, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.list, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.list.response.value>;
+export type DesktopAssetDerivedCustomizationReadResponse = IpcResponse<AssetDerivedCustomizationDraftRecord, Record<string, unknown>, typeof ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.read, Record<string, never>, typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.read.response.value>;
+
+type DesktopAssetAuthoringResponseChannel = IpcChannel<IpcOperation, "response">;
 
 export const createDesktopAssetAuthoringOperationSuccessResponse = <TValue>(responseChannel: DesktopAssetAuthoringResponseChannel, value: TValue, options?: { requestId?: string; correlationId?: string }) => createIpcSuccessResponse(responseChannel as never, value, options);
 export const createDesktopAssetAuthoringFailureResponse = (responseChannel: DesktopAssetAuthoringResponseChannel, operation: string, code: AssetAuthoringFailureCode, message: string, options?: { requestId?: string; correlationId?: string }) => createIpcFailureResponse(createIpcError(responseChannel as never, code === "unsupported" ? "not-supported" : code, message, { requestId: options?.requestId, correlationId: options?.correlationId, details: { operation } }) as never);
+
+function channels<TOperation extends IpcOperation>(operation: TOperation) {
+  return Object.freeze({
+    operation,
+    request: createIpcChannel(operation, "request"),
+    response: createIpcChannel(operation, "response"),
+  });
+}

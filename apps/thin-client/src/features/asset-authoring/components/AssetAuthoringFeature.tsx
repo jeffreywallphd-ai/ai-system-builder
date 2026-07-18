@@ -6,9 +6,11 @@ import type {
   AuthoredAssetRecord,
 } from "../../../../../../modules/contracts/asset-authoring";
 import {
-  PanelHeading,
-  TermWithHint,
-} from "../../../../../../modules/ui/shared";
+  AssetDerivedCustomizationEditor,
+  type AssetCustomizationTargetSelection,
+} from "../../../../../../modules/ui/shared/asset-authoring";
+import { PanelHeading } from "../../../../../../modules/ui/shared/components/PanelHeading";
+import { TermWithHint } from "../../../../../../modules/ui/shared/glossary/GlossaryHint";
 import { createThinClientAssetAuthoringClient } from "../api/thinClientAssetAuthoringClient";
 
 type RowVm = {
@@ -80,9 +82,11 @@ const summaryVm = (
 export function AssetAuthoringFeature({
   workspaceId,
   initialSection = "create",
+  initialCustomizationTarget,
 }: {
   workspaceId: string;
   initialSection?: Section;
+  initialCustomizationTarget?: AssetCustomizationTargetSelection;
 }) {
   const client = useMemo(
     () => createThinClientAssetAuthoringClient("/api"),
@@ -127,8 +131,18 @@ export function AssetAuthoringFeature({
   };
 
   useEffect(() => {
-    void refresh();
-  }, [workspaceId]);
+    if (initialSection !== "customizations") void refresh();
+  }, [initialSection, workspaceId]);
+
+  if (initialSection === "customizations") {
+    return (
+      <AssetDerivedCustomizationEditor
+        workspaceId={workspaceId}
+        client={client}
+        initialTarget={initialCustomizationTarget}
+      />
+    );
+  }
 
   const createDraft = async (event: FormEvent) => {
     event.preventDefault();
@@ -284,42 +298,6 @@ export function AssetAuthoringFeature({
               ))
             ) : (
               <li>No drafts yet.</li>
-            )}
-          </ul>
-        </section>
-      ) : null}
-
-      {initialSection === "customizations" ? (
-        <section className="ui-panel ui-stack">
-          <h3>Customizations</h3>
-          <p>
-            <small>Creating new customizations is not available yet.</small>
-          </p>
-          <ul>
-            {overrides.length ? (
-              overrides.map((override) => (
-                <li key={override.id}>
-                  <AssetRow row={override} />{" "}
-                  <button
-                    onClick={async () => {
-                      const result = await client.disableOverride(
-                        workspaceId,
-                        override.id,
-                      );
-                      setMessage(
-                        result.ok
-                          ? "Customization disabled."
-                          : result.error.message,
-                      );
-                      if (result.ok) await refresh();
-                    }}
-                  >
-                    Disable
-                  </button>
-                </li>
-              ))
-            ) : (
-              <li>No customizations yet.</li>
             )}
           </ul>
         </section>

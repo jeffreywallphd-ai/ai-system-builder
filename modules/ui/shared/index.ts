@@ -5,6 +5,7 @@ export * from "./presenters/imageGenerationModelInventory";
 export * from "./asset-library";
 export * from "./asset-package";
 export * from "./asset-studio";
+export * from "./asset-authoring";
 export * from "./foundation-assets";
 export * from "./system-builder";
 export * from "./glossary";

@@ -3,7 +3,13 @@ import { JSDOM } from "jsdom";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
-import { afterEach, describe, expect, it, testDouble } from "../../../../../../../modules/testing/node-test";
+import {
+  afterEach,
+  describe,
+  expect,
+  it,
+  testDouble,
+} from "../../../../../../../modules/testing/node-test";
 import type {
   AssetLibraryClient,
   AssetLibraryDefinitionCard,
@@ -126,42 +132,106 @@ const resourceViewDetail: AssetLibraryResourceBackedViewDetail = {
   summary: "Generated output view; not finalized or registered.",
 };
 
-function createClient(overrides: Partial<AssetLibraryClient> = {}): AssetLibraryClient {
+function createClient(
+  overrides: Partial<AssetLibraryClient> = {},
+): AssetLibraryClient {
   return {
-    listAssetDefinitions: testDouble.fn().mockResolvedValue({ ok: true, value: { items: [card] } }),
-    readAssetDefinition: testDouble.fn().mockResolvedValue({ ok: true, value: detailWithoutValidation }),
-    readAssetDefinitionVersion: testDouble.fn().mockResolvedValue({ ok: true, value: detailWithoutValidation }),
-    listAssetResourceBackedViews: testDouble.fn().mockResolvedValue({ ok: true, value: { items: [resourceViewCard] } }),
-    readAssetResourceBackedView: testDouble.fn().mockResolvedValue({ ok: true, value: resourceViewDetail }),
-    registerResourceBackedViewAsAsset: testDouble.fn().mockResolvedValue({ ok: true, value: { ok: true, operation: "asset.register-resource-backed-view", status: "created" } }),
-    finalizeGeneratedOutputAsAsset: testDouble.fn().mockResolvedValue({ ok: true, value: { ok: true, operation: "asset.finalize-generated-output", status: "created" } }),
-    importExternalRepositoryObjectAsAsset: testDouble.fn().mockResolvedValue({ ok: true, value: { ok: true, operation: "asset.import-external-repository-object", status: "created" } }),
-    localizeExternalRepositoryObjectAsAsset: testDouble.fn().mockResolvedValue({ ok: true, value: { ok: true, operation: "asset.localize-external-repository-object", status: "created" } }),
+    listAssetDefinitions: testDouble
+      .fn()
+      .mockResolvedValue({ ok: true, value: { items: [card] } }),
+    readAssetDefinition: testDouble
+      .fn()
+      .mockResolvedValue({ ok: true, value: detailWithoutValidation }),
+    readAssetDefinitionVersion: testDouble
+      .fn()
+      .mockResolvedValue({ ok: true, value: detailWithoutValidation }),
+    listAssetResourceBackedViews: testDouble
+      .fn()
+      .mockResolvedValue({ ok: true, value: { items: [resourceViewCard] } }),
+    readAssetResourceBackedView: testDouble
+      .fn()
+      .mockResolvedValue({ ok: true, value: resourceViewDetail }),
+    registerResourceBackedViewAsAsset: testDouble
+      .fn()
+      .mockResolvedValue({
+        ok: true,
+        value: {
+          ok: true,
+          operation: "asset.register-resource-backed-view",
+          status: "created",
+        },
+      }),
+    finalizeGeneratedOutputAsAsset: testDouble
+      .fn()
+      .mockResolvedValue({
+        ok: true,
+        value: {
+          ok: true,
+          operation: "asset.finalize-generated-output",
+          status: "created",
+        },
+      }),
+    importExternalRepositoryObjectAsAsset: testDouble
+      .fn()
+      .mockResolvedValue({
+        ok: true,
+        value: {
+          ok: true,
+          operation: "asset.import-external-repository-object",
+          status: "created",
+        },
+      }),
+    localizeExternalRepositoryObjectAsAsset: testDouble
+      .fn()
+      .mockResolvedValue({
+        ok: true,
+        value: {
+          ok: true,
+          operation: "asset.localize-external-repository-object",
+          status: "created",
+        },
+      }),
     ...overrides,
   };
 }
 
 function queuedListResults(results: readonly unknown[]) {
   const queue = [...results];
-  return testDouble.fn().mockImplementation(() => Promise.resolve(queue.shift()) as any);
+  return testDouble
+    .fn()
+    .mockImplementation(() => Promise.resolve(queue.shift()) as any);
 }
 
 function queuedDetailResults(results: readonly unknown[]) {
   const queue = [...results];
-  return testDouble.fn().mockImplementation(() => Promise.resolve(queue.shift()) as any);
+  return testDouble
+    .fn()
+    .mockImplementation(() => Promise.resolve(queue.shift()) as any);
 }
 
-async function setInputValue(input: HTMLInputElement, value: string): Promise<void> {
+async function setInputValue(
+  input: HTMLInputElement,
+  value: string,
+): Promise<void> {
   await act(async () => {
-    const descriptor = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value");
+    const descriptor = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      "value",
+    );
     descriptor?.set?.call(input, value);
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
 }
 
-async function setSelectValue(select: HTMLSelectElement, value: string): Promise<void> {
+async function setSelectValue(
+  select: HTMLSelectElement,
+  value: string,
+): Promise<void> {
   await act(async () => {
-    const descriptor = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value");
+    const descriptor = Object.getOwnPropertyDescriptor(
+      window.HTMLSelectElement.prototype,
+      "value",
+    );
     descriptor?.set?.call(select, value);
     select.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -174,7 +244,8 @@ async function flush() {
 }
 
 function getTopmostDialog(): HTMLElement {
-  const dialogs = document.body.querySelectorAll<HTMLElement>("[role='dialog']");
+  const dialogs =
+    document.body.querySelectorAll<HTMLElement>("[role='dialog']");
   const dialog = dialogs[dialogs.length - 1];
   assert.ok(dialog);
   return dialog;
@@ -193,7 +264,10 @@ describe("AssetLibraryFeature", () => {
     mountedContainer = undefined;
   });
 
-  async function render(client: AssetLibraryClient = createClient()) {
+  async function render(
+    client: AssetLibraryClient = createClient(),
+    onCustomizeDefinition?: (definition: AssetLibraryDefinitionCard) => void,
+  ) {
     const container = document.createElement("div");
     document.body.appendChild(container);
     const root = createRoot(container);
@@ -205,6 +279,7 @@ describe("AssetLibraryFeature", () => {
         <AssetLibraryFeature
           client={client}
           workspaceId={TEST_WORKSPACE_ID}
+          onCustomizeDefinition={onCustomizeDefinition}
         />,
       );
     });
@@ -258,17 +333,34 @@ describe("AssetLibraryFeature", () => {
     expect(document.activeElement).toBe(cardButton);
   });
 
+  it("offers a per-card Customize action for the exact definition", async () => {
+    const onCustomizeDefinition = testDouble.fn();
+    const { container } = await render(createClient(), onCustomizeDefinition);
+    const customize = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Customize",
+    ) as HTMLButtonElement;
+
+    await act(async () => customize.click());
+    expect(onCustomizeDefinition).toHaveBeenCalledWith(
+      expect.objectContaining({ id: card.id, version: card.version }),
+    );
+    expect(document.body.querySelector("[role='dialog']")).toBe(null);
+  });
 
   it("renders resource-backed views in a read-only Resource views tab", async () => {
     const { container, client } = await render();
-    const resourceTab = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Resource views") as HTMLButtonElement;
+    const resourceTab = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Resource views",
+    ) as HTMLButtonElement;
 
     await act(async () => resourceTab.click());
     await flush();
 
     expect(container.textContent).toContain("Generated output");
     expect(container.textContent).toContain("Not finalized or registered");
-    const cardButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Generated output")) as HTMLButtonElement;
+    const cardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Generated output"),
+    ) as HTMLButtonElement;
     await act(async () => cardButton.click());
     await flush();
 
@@ -280,21 +372,30 @@ describe("AssetLibraryFeature", () => {
       },
     );
     expect(container.textContent).toContain("Finalize and register");
-    assert.doesNotMatch(container.textContent ?? "", /Create asset|Edit asset|Delete asset|Seed built-ins|Scan resources|Install pack|Import pack|Export pack|Activate pack|Disable pack|Edit override|Override asset/i);
+    assert.doesNotMatch(
+      container.textContent ?? "",
+      /Create asset|Edit asset|Delete asset|Seed built-ins|Scan resources|Install pack|Import pack|Export pack|Activate pack|Disable pack|Edit override|Override asset/i,
+    );
   });
 
   it("requires confirmation and calls the finalize mutation with a safe command", async () => {
     const client = createClient();
     const { container } = await render(client);
-    const resourceTab = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Resource views") as HTMLButtonElement;
+    const resourceTab = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Resource views",
+    ) as HTMLButtonElement;
 
     await act(async () => resourceTab.click());
     await flush();
-    const cardButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Generated output")) as HTMLButtonElement;
+    const cardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Generated output"),
+    ) as HTMLButtonElement;
     await act(async () => cardButton.click());
     await flush();
 
-    const actionButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Finalize and register") as HTMLButtonElement;
+    const actionButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Finalize and register",
+    ) as HTMLButtonElement;
     await act(async () => actionButton.click());
     await flush();
 
@@ -303,7 +404,9 @@ describe("AssetLibraryFeature", () => {
     expect(client.finalizeGeneratedOutputAsAsset).not.toHaveBeenCalled();
 
     const dialog = getTopmostDialog();
-    const confirmButton = Array.from(dialog.querySelectorAll("button")).find((button) => button.textContent === "Finalize and register") as HTMLButtonElement;
+    const confirmButton = Array.from(dialog.querySelectorAll("button")).find(
+      (button) => button.textContent === "Finalize and register",
+    ) as HTMLButtonElement;
     await act(async () => confirmButton.click());
     await flush();
 
@@ -324,7 +427,12 @@ describe("AssetLibraryFeature", () => {
         automationSafe: false,
       },
     });
-    assert.doesNotMatch(JSON.stringify((client.finalizeGeneratedOutputAsAsset as any).mock.calls[0][0]), /metadata|C:\\|Bearer|base64|workflow|prompt/i);
+    assert.doesNotMatch(
+      JSON.stringify(
+        (client.finalizeGeneratedOutputAsAsset as any).mock.calls[0][0],
+      ),
+      /metadata|C:\\|Bearer|base64|workflow|prompt/i,
+    );
     expect(container.textContent).toContain("Asset registered.");
     expect(client.listAssetResourceBackedViews).toHaveBeenCalled();
     expect(client.readAssetResourceBackedView).toHaveBeenCalledTimes(2);
@@ -344,27 +452,65 @@ describe("AssetLibraryFeature", () => {
       sourceKind: "artifact-browser",
     };
     const registerClient = createClient({
-      listAssetResourceBackedViews: testDouble.fn().mockResolvedValue({ ok: true, value: { items: [registerView] } }),
-      readAssetResourceBackedView: testDouble.fn().mockResolvedValue({ ok: true, value: registerView }),
+      listAssetResourceBackedViews: testDouble
+        .fn()
+        .mockResolvedValue({ ok: true, value: { items: [registerView] } }),
+      readAssetResourceBackedView: testDouble
+        .fn()
+        .mockResolvedValue({ ok: true, value: registerView }),
     });
     const registerRender = await render(registerClient);
-    const registerTab = Array.from(registerRender.container.querySelectorAll("button")).find((button) => button.textContent === "Resource views") as HTMLButtonElement;
+    const registerTab = Array.from(
+      registerRender.container.querySelectorAll("button"),
+    ).find(
+      (button) => button.textContent === "Resource views",
+    ) as HTMLButtonElement;
     await act(async () => registerTab.click());
     await flush();
-    await act(async () => (Array.from(registerRender.container.querySelectorAll("button")).find((button) => button.textContent?.includes("Artifact view")) as HTMLButtonElement).click());
+    await act(async () =>
+      (
+        Array.from(registerRender.container.querySelectorAll("button")).find(
+          (button) => button.textContent?.includes("Artifact view"),
+        ) as HTMLButtonElement
+      ).click(),
+    );
     await flush();
-    await act(async () => (Array.from(registerRender.container.querySelectorAll("button")).find((button) => button.textContent === "Register as asset") as HTMLButtonElement).click());
+    await act(async () =>
+      (
+        Array.from(registerRender.container.querySelectorAll("button")).find(
+          (button) => button.textContent === "Register as asset",
+        ) as HTMLButtonElement
+      ).click(),
+    );
     await flush();
-    await act(async () => (Array.from(getTopmostDialog().querySelectorAll("button")).find((button) => button.textContent === "Register asset") as HTMLButtonElement).click());
+    await act(async () =>
+      (
+        Array.from(getTopmostDialog().querySelectorAll("button")).find(
+          (button) => button.textContent === "Register asset",
+        ) as HTMLButtonElement
+      ).click(),
+    );
     await flush();
 
-    expect((registerClient.registerResourceBackedViewAsAsset as ReturnType<typeof testDouble.fn>).mock.calls[0]?.[0]).toMatchObject({
+    expect(
+      (
+        registerClient.registerResourceBackedViewAsAsset as ReturnType<
+          typeof testDouble.fn
+        >
+      ).mock.calls[0]?.[0],
+    ).toMatchObject({
       operation: "asset.register-resource-backed-view",
       viewId: "asset-view.artifact.internal.1",
     });
-    expect(registerClient.finalizeGeneratedOutputAsAsset).not.toHaveBeenCalled();
-    expect(registerClient.importExternalRepositoryObjectAsAsset).not.toHaveBeenCalled();
-    expect(registerClient.localizeExternalRepositoryObjectAsAsset).not.toHaveBeenCalled();
+    expect(
+      registerClient.finalizeGeneratedOutputAsAsset,
+    ).not.toHaveBeenCalled();
+    expect(
+      registerClient.importExternalRepositoryObjectAsAsset,
+    ).not.toHaveBeenCalled();
+    expect(
+      registerClient.localizeExternalRepositoryObjectAsAsset,
+    ).not.toHaveBeenCalled();
 
     await act(async () => mountedRoot?.unmount());
     mountedContainer?.remove();
@@ -382,29 +528,69 @@ describe("AssetLibraryFeature", () => {
       assetTypeLabel: "Data Source",
       registrationStatusLabel: "Not imported or registered",
       sourceKind: "external-repository",
-      metadata: { provider: "huggingface", repository: "safe/repo", objectLabel: "safe-object" },
+      metadata: {
+        provider: "huggingface",
+        repository: "safe/repo",
+        objectLabel: "safe-object",
+      },
     };
     const localizeClient = createClient({
-      listAssetResourceBackedViews: testDouble.fn().mockResolvedValue({ ok: true, value: { items: [externalView] } }),
-      readAssetResourceBackedView: testDouble.fn().mockResolvedValue({ ok: true, value: externalView }),
+      listAssetResourceBackedViews: testDouble
+        .fn()
+        .mockResolvedValue({ ok: true, value: { items: [externalView] } }),
+      readAssetResourceBackedView: testDouble
+        .fn()
+        .mockResolvedValue({ ok: true, value: externalView }),
     });
     const localizeRender = await render(localizeClient);
-    const localizeTab = Array.from(localizeRender.container.querySelectorAll("button")).find((button) => button.textContent === "Resource views") as HTMLButtonElement;
+    const localizeTab = Array.from(
+      localizeRender.container.querySelectorAll("button"),
+    ).find(
+      (button) => button.textContent === "Resource views",
+    ) as HTMLButtonElement;
     await act(async () => localizeTab.click());
     await flush();
-    await act(async () => (Array.from(localizeRender.container.querySelectorAll("button")).find((button) => button.textContent?.includes("External object")) as HTMLButtonElement).click());
+    await act(async () =>
+      (
+        Array.from(localizeRender.container.querySelectorAll("button")).find(
+          (button) => button.textContent?.includes("External object"),
+        ) as HTMLButtonElement
+      ).click(),
+    );
     await flush();
-    await act(async () => (Array.from(localizeRender.container.querySelectorAll("button")).find((button) => button.textContent === "Localize external object") as HTMLButtonElement).click());
+    await act(async () =>
+      (
+        Array.from(localizeRender.container.querySelectorAll("button")).find(
+          (button) => button.textContent === "Localize external object",
+        ) as HTMLButtonElement
+      ).click(),
+    );
     await flush();
-    await act(async () => (Array.from(getTopmostDialog().querySelectorAll("button")).find((button) => button.textContent === "Localize object") as HTMLButtonElement).click());
+    await act(async () =>
+      (
+        Array.from(getTopmostDialog().querySelectorAll("button")).find(
+          (button) => button.textContent === "Localize object",
+        ) as HTMLButtonElement
+      ).click(),
+    );
     await flush();
 
-    expect((localizeClient.localizeExternalRepositoryObjectAsAsset as ReturnType<typeof testDouble.fn>).mock.calls[0]?.[0]).toMatchObject({
+    expect(
+      (
+        localizeClient.localizeExternalRepositoryObjectAsAsset as ReturnType<
+          typeof testDouble.fn
+        >
+      ).mock.calls[0]?.[0],
+    ).toMatchObject({
       operation: "asset.localize-external-repository-object",
       viewId: "asset-view.external-repository-object.internal.1",
     });
-    expect(localizeClient.registerResourceBackedViewAsAsset).not.toHaveBeenCalled();
-    expect(localizeClient.finalizeGeneratedOutputAsAsset).not.toHaveBeenCalled();
+    expect(
+      localizeClient.registerResourceBackedViewAsAsset,
+    ).not.toHaveBeenCalled();
+    expect(
+      localizeClient.finalizeGeneratedOutputAsAsset,
+    ).not.toHaveBeenCalled();
   });
 
   it("does not render unsafe resource view diagnostics or mutation details", async () => {
@@ -434,7 +620,11 @@ describe("AssetLibraryFeature", () => {
         value: {
           items: [card],
           diagnostics: [
-            { severity: "info", code: "safe-definition", message: "Safe definition diagnostic." },
+            {
+              severity: "info",
+              code: "safe-definition",
+              message: "Safe definition diagnostic.",
+            },
             ...unsafeTopLevelDiagnostics.map((message, index) => ({
               severity: "warning" as const,
               code: `unsafe-definition-${index}`,
@@ -446,13 +636,27 @@ describe("AssetLibraryFeature", () => {
       listAssetResourceBackedViews: testDouble.fn().mockResolvedValue({
         ok: true,
         value: {
-          items: [{
-            ...resourceViewCard,
-            diagnostics: ["Safe list diagnostic.", "C:\\Users\\name\\secret token workflowJson prompt"],
-          }],
+          items: [
+            {
+              ...resourceViewCard,
+              diagnostics: [
+                "Safe list diagnostic.",
+                "C:\\Users\\name\\secret token workflowJson prompt",
+              ],
+            },
+          ],
           diagnostics: [
-            { severity: "info", code: "safe", message: "Safe aggregate diagnostic." },
-            { severity: "warning", code: "unsafe", message: "/tmp/secret Bearer token data:image base64 raw provider payload command line process.env" },
+            {
+              severity: "info",
+              code: "safe",
+              message: "Safe aggregate diagnostic.",
+            },
+            {
+              severity: "warning",
+              code: "unsafe",
+              message:
+                "/tmp/secret Bearer token data:image base64 raw provider payload command line process.env",
+            },
           ],
         },
       }),
@@ -472,17 +676,28 @@ describe("AssetLibraryFeature", () => {
             code: "internal",
             message: "raw",
             operation: "asset.finalize-generated-output",
-            diagnostics: [{ severity: "error", code: "unsafe", message: "Bearer token C:\\Users\\secret workflowJson prompt stack" }],
+            diagnostics: [
+              {
+                severity: "error",
+                code: "unsafe",
+                message:
+                  "Bearer token C:\\Users\\secret workflowJson prompt stack",
+              },
+            ],
           },
         },
       }),
     });
     const { container } = await render(client);
-    const resourceTab = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Resource views") as HTMLButtonElement;
+    const resourceTab = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Resource views",
+    ) as HTMLButtonElement;
 
     await act(async () => resourceTab.click());
     await flush();
-    const cardButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Generated output")) as HTMLButtonElement;
+    const cardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Generated output"),
+    ) as HTMLButtonElement;
     await act(async () => cardButton.click());
     await flush();
 
@@ -491,19 +706,30 @@ describe("AssetLibraryFeature", () => {
     expect(container.textContent).toContain("Safe list diagnostic.");
     expect(container.textContent).toContain("Safe detail diagnostic.");
 
-    const actionButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Finalize and register") as HTMLButtonElement;
+    const actionButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Finalize and register",
+    ) as HTMLButtonElement;
     await act(async () => actionButton.click());
     await flush();
     const dialog = getTopmostDialog();
-    const confirmButton = Array.from(dialog.querySelectorAll("button")).find((button) => button.textContent === "Finalize and register") as HTMLButtonElement;
+    const confirmButton = Array.from(dialog.querySelectorAll("button")).find(
+      (button) => button.textContent === "Finalize and register",
+    ) as HTMLButtonElement;
     await act(async () => confirmButton.click());
     await flush();
 
-    expect(container.textContent).toContain("Something went wrong while completing this action.");
-    const diagnosticStatusText = Array.from(container.querySelectorAll("[role='status'], [role='alert']"))
+    expect(container.textContent).toContain(
+      "Something went wrong while completing this action.",
+    );
+    const diagnosticStatusText = Array.from(
+      container.querySelectorAll("[role='status'], [role='alert']"),
+    )
       .map((element) => element.textContent ?? "")
       .join(" ");
-    assert.doesNotMatch(diagnosticStatusText, /C:\\|\/tmp|\/home|Bearer|token|secret|password|apiKey|signedUrl|access_token|base64|data:image|raw provider payload|workflowJson|prompt|stack|command line|process\.env/i);
+    assert.doesNotMatch(
+      diagnosticStatusText,
+      /C:\\|\/tmp|\/home|Bearer|token|secret|password|apiKey|signedUrl|access_token|base64|data:image|raw provider payload|workflowJson|prompt|stack|command line|process\.env/i,
+    );
   });
 
   it("renders empty states for no registered definitions and filtered misses", async () => {
@@ -515,13 +741,22 @@ describe("AssetLibraryFeature", () => {
     });
     const { container } = await render(client);
 
-    expect(container.textContent).toContain("No reusable building blocks are registered yet.");
-    expect(container.textContent).toContain("Built-in assets appear here after they are registered for this workspace.");
+    expect(container.textContent).toContain(
+      "No reusable building blocks are registered yet.",
+    );
+    expect(container.textContent).toContain(
+      "Built-in assets appear here after they are registered for this workspace.",
+    );
 
-    await setInputValue(container.querySelector("input[type='search']") as HTMLInputElement, "missing");
+    await setInputValue(
+      container.querySelector("input[type='search']") as HTMLInputElement,
+      "missing",
+    );
     await flush();
 
-    expect(container.textContent).toContain("No assets match the current filters.");
+    expect(container.textContent).toContain(
+      "No assets match the current filters.",
+    );
   });
 
   it("sends filter changes through the supported query fields", async () => {
@@ -529,7 +764,10 @@ describe("AssetLibraryFeature", () => {
     const { container } = await render(client);
     const selects = Array.from(container.querySelectorAll("select"));
 
-    await setInputValue(container.querySelector("input[type='search']") as HTMLInputElement, "doc");
+    await setInputValue(
+      container.querySelector("input[type='search']") as HTMLInputElement,
+      "doc",
+    );
     await flush();
     await setSelectValue(selects[0] as HTMLSelectElement, "document");
     await flush();
@@ -585,13 +823,17 @@ describe("AssetLibraryFeature", () => {
     await setSelectValue(selects[5] as HTMLSelectElement, "imported-pack");
     await flush();
 
-    expect(container.textContent).toContain("No assets match the current filters.");
+    expect(container.textContent).toContain(
+      "No assets match the current filters.",
+    );
   });
 
   it("loads selected definition details without validation and keeps advanced sections collapsed by default", async () => {
     const client = createClient();
     const { container } = await render(client);
-    const cardButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Document")) as HTMLButtonElement;
+    const cardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Document"),
+    ) as HTMLButtonElement;
 
     await act(async () => cardButton.click());
     await flush();
@@ -599,17 +841,35 @@ describe("AssetLibraryFeature", () => {
     expect(client.readAssetDefinitionVersion).toHaveBeenCalledWith(
       { definitionId: "builtin.document", version: "1.0.0" },
       {
-        expand: ["aiContext", "configurationSchema", "ports", "requirements", "provenance", "metadata"],
+        expand: [
+          "aiContext",
+          "configurationSchema",
+          "ports",
+          "requirements",
+          "provenance",
+          "metadata",
+        ],
         workspaceId: TEST_WORKSPACE_ID,
       },
     );
-    expect((client.readAssetDefinitionVersion as ReturnType<typeof testDouble.fn>).mock.calls
-      .some((call) => call[1]?.includeValidation === true)).toBe(false);
+    expect(
+      (
+        client.readAssetDefinitionVersion as ReturnType<typeof testDouble.fn>
+      ).mock.calls.some((call) => call[1]?.includeValidation === true),
+    ).toBe(false);
     expect(container.textContent).toContain("Represent document-backed assets");
 
-    const advancedToggle = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("AI-readable context")) as HTMLButtonElement;
+    const advancedToggle = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) =>
+      button.textContent?.includes("AI-readable context"),
+    ) as HTMLButtonElement;
     expect(advancedToggle.getAttribute("aria-expanded")).toBe("false");
-    expect(document.getElementById(advancedToggle.getAttribute("aria-controls") ?? "")?.hidden).toBe(true);
+    expect(
+      document.getElementById(
+        advancedToggle.getAttribute("aria-controls") ?? "",
+      )?.hidden,
+    ).toBe(true);
   });
 
   it("renders validation only after the explicit validation action and keeps sections collapsed", async () => {
@@ -620,29 +880,50 @@ describe("AssetLibraryFeature", () => {
       ]),
     });
     const { container } = await render(client);
-    const cardButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Document")) as HTMLButtonElement;
+    const cardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Document"),
+    ) as HTMLButtonElement;
 
     await act(async () => cardButton.click());
     await flush();
 
-    expect(container.textContent).toContain("Validation details are loaded only when requested.");
+    expect(container.textContent).toContain(
+      "Validation details are loaded only when requested.",
+    );
     expect(container.textContent).not.toContain("Validation summary");
     expect(container.textContent).not.toContain("Valid With Warnings");
-    const validationButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Check validation details")) as HTMLButtonElement;
+    const validationButton = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) =>
+      button.textContent?.includes("Check validation details"),
+    ) as HTMLButtonElement;
     await act(async () => validationButton.click());
     await flush();
 
-    const calls = (client.readAssetDefinitionVersion as ReturnType<typeof testDouble.fn>).mock.calls;
+    const calls = (
+      client.readAssetDefinitionVersion as ReturnType<typeof testDouble.fn>
+    ).mock.calls;
     expect(calls[calls.length - 1]).toEqual([
       { definitionId: "builtin.document", version: "1.0.0" },
       {
-        expand: ["aiContext", "configurationSchema", "ports", "requirements", "provenance", "metadata"],
+        expand: [
+          "aiContext",
+          "configurationSchema",
+          "ports",
+          "requirements",
+          "provenance",
+          "metadata",
+        ],
         includeValidation: true,
         workspaceId: TEST_WORKSPACE_ID,
       },
     ]);
     expect(container.textContent).toContain("Validation summary");
-    const validationToggle = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Validation summary")) as HTMLButtonElement;
+    const validationToggle = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) =>
+      button.textContent?.includes("Validation summary"),
+    ) as HTMLButtonElement;
     expect(validationToggle.getAttribute("aria-expanded")).toBe("false");
   });
 
@@ -652,25 +933,38 @@ describe("AssetLibraryFeature", () => {
         { ok: true, value: detailWithoutValidation },
         {
           ok: false,
-          error: { code: "internal", message: "Unable to read Asset Library data." },
+          error: {
+            code: "internal",
+            message: "Unable to read Asset Library data.",
+          },
         },
       ]),
     });
     const { container } = await render(client);
-    const cardButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Document")) as HTMLButtonElement;
+    const cardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Document"),
+    ) as HTMLButtonElement;
 
     await act(async () => cardButton.click());
     await flush();
-    const validationButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Check validation details")) as HTMLButtonElement;
+    const validationButton = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) =>
+      button.textContent?.includes("Check validation details"),
+    ) as HTMLButtonElement;
     await act(async () => validationButton.click());
     await flush();
 
-    expect(container.querySelector("[role='alert']")?.textContent).toContain("Unable to read Asset Library data.");
+    expect(container.querySelector("[role='alert']")?.textContent).toContain(
+      "Unable to read Asset Library data.",
+    );
   });
 
   it("renders available advanced sections only after selection and keeps safe metadata hidden until expanded", async () => {
     const { container } = await render();
-    const cardButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Document")) as HTMLButtonElement;
+    const cardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Document"),
+    ) as HTMLButtonElement;
 
     await act(async () => cardButton.click());
     await flush();
@@ -682,8 +976,14 @@ describe("AssetLibraryFeature", () => {
     expect(container.textContent).toContain("Source");
     expect(container.textContent).toContain("Details");
 
-    const metadataToggle = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Details")) as HTMLButtonElement;
-    const metadataPanel = document.getElementById(metadataToggle.getAttribute("aria-controls") ?? "") as HTMLDivElement;
+    const metadataToggle = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) =>
+      button.textContent?.includes("Details"),
+    ) as HTMLButtonElement;
+    const metadataPanel = document.getElementById(
+      metadataToggle.getAttribute("aria-controls") ?? "",
+    ) as HTMLDivElement;
     expect(metadataPanel.hidden).toBe(true);
     await act(async () => metadataToggle.click());
 
@@ -698,26 +998,39 @@ describe("AssetLibraryFeature", () => {
         safeNote: "visible",
       },
     };
-    const { container } = await render(createClient({
-      readAssetDefinitionVersion: testDouble.fn().mockResolvedValue({ ok: true, value: unsafeDetail }),
-    }));
-    const cardButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Document")) as HTMLButtonElement;
+    const { container } = await render(
+      createClient({
+        readAssetDefinitionVersion: testDouble
+          .fn()
+          .mockResolvedValue({ ok: true, value: unsafeDetail }),
+      }),
+    );
+    const cardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Document"),
+    ) as HTMLButtonElement;
 
     await act(async () => cardButton.click());
     await flush();
 
     const text = container.textContent ?? "";
-    assert.doesNotMatch(text, /Create asset|Edit asset|Delete asset|Seed built-ins|Scan resources|Execute workflow|Install pack|Import pack|Export pack|Activate pack|Disable pack|Edit override|Override asset/i);
+    assert.doesNotMatch(
+      text,
+      /Create asset|Edit asset|Delete asset|Seed built-ins|Scan resources|Execute workflow|Install pack|Import pack|Export pack|Activate pack|Disable pack|Edit override|Override asset/i,
+    );
     expect(text).not.toContain("C:\\Users\\name\\secret");
     expect(text).not.toContain("Bearer abc");
   });
 
   it("uses accessible loading and error states with safe messages", async () => {
     const slowClient = createClient({
-      listAssetDefinitions: testDouble.fn().mockImplementation(() => new Promise(() => undefined) as any),
+      listAssetDefinitions: testDouble
+        .fn()
+        .mockImplementation(() => new Promise(() => undefined) as any),
     });
     const loading = await render(slowClient);
-    expect(loading.container.querySelector("[role='status']")?.textContent).toContain("Loading asset definitions");
+    expect(
+      loading.container.querySelector("[role='status']")?.textContent,
+    ).toContain("Loading asset definitions");
 
     await act(async () => mountedRoot?.unmount());
     mountedContainer?.remove();
@@ -727,11 +1040,16 @@ describe("AssetLibraryFeature", () => {
     const failingClient = createClient({
       listAssetDefinitions: testDouble.fn().mockResolvedValue({
         ok: false,
-        error: { code: "internal", message: "Unable to read Asset Library data." },
+        error: {
+          code: "internal",
+          message: "Unable to read Asset Library data.",
+        },
       }),
     });
     const failing = await render(failingClient);
 
-    expect(failing.container.querySelector("[role='alert']")?.textContent).toBe("Unable to read Asset Library data.");
+    expect(failing.container.querySelector("[role='alert']")?.textContent).toBe(
+      "Unable to read Asset Library data.",
+    );
   });
 });

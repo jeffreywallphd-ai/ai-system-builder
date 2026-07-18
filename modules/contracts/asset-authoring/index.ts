@@ -10,5 +10,6 @@ export * from "./asset-authoring-normalization";
 export * from "./asset-derived-customization";
 export * from "./asset-derived-customization-normalization";
 export * from "./asset-derived-customization-workflow";
+export * from "./asset-derived-customization-operations";
 
 export * from "./asset-authoring-effective-source";

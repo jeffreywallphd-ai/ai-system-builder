@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { AssetPackageManager } from "../../../../modules/ui/shared/asset-package";
 import { AssetStudioManager } from "../../../../modules/ui/shared/asset-studio";
 
@@ -14,11 +14,18 @@ export interface WorkspaceScopedPageProps {
 }
 
 export function AssetLibraryPage({ workspaceId }: WorkspaceScopedPageProps) {
+  const [activeTabId, setActiveTabId] = useState("browse");
+  const [initialCustomizationTarget, setInitialCustomizationTarget] = useState<{
+    definitionId: string;
+    version: string;
+  }>();
   return (
     <section className="ui-stack ui-stack--sm">
       <h1>Assets</h1>
       <TabbedPanel
+        activeTabId={activeTabId}
         defaultTabId="browse"
+        onTabChange={setActiveTabId}
         tabListAriaLabel="Assets sections"
         tabs={[
           {
@@ -28,6 +35,13 @@ export function AssetLibraryPage({ workspaceId }: WorkspaceScopedPageProps) {
               <AssetLibraryFeature
                 key={`assets-${workspaceId}`}
                 workspaceId={workspaceId}
+                onCustomizeDefinition={(definition) => {
+                  setInitialCustomizationTarget({
+                    definitionId: String(definition.definitionId),
+                    version: definition.version,
+                  });
+                  setActiveTabId("customizations");
+                }}
               />
             ),
           },
@@ -68,6 +82,7 @@ export function AssetLibraryPage({ workspaceId }: WorkspaceScopedPageProps) {
               <AssetAuthoringFeature
                 workspaceId={workspaceId}
                 initialSection="customizations"
+                initialCustomizationTarget={initialCustomizationTarget}
               />
             ),
           },

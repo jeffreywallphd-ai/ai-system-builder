@@ -32,6 +32,10 @@ describe("registerAssetAuthoringApiRoutes", () => {
       "/api/asset-authoring/workspaces/:workspaceId/overrides",
       "/api/asset-authoring/workspaces/:workspaceId/overrides/:overrideId",
       "/api/asset-authoring/workspaces/:workspaceId/effective-summaries",
+      "/api/asset-authoring/workspaces/:workspaceId/customization-targets",
+      "/api/asset-authoring/workspaces/:workspaceId/customization-targets/:implementationReleaseId",
+      "/api/asset-authoring/workspaces/:workspaceId/derived-customizations",
+      "/api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId",
     ]);
   });
 
@@ -73,5 +77,22 @@ describe("registerAssetAuthoringApiRoutes", () => {
     const drafts = response();
     await handlers.get("GET /api/asset-authoring/workspaces/:workspaceId/drafts")({ params: { workspaceId: "workspace-a" }, query: {} }, drafts.res);
     expect(drafts.json.mock.calls[0][0].value).toEqual({ drafts: [{ draftId: "draft-1" }], nextCursor: "next-draft" });
+  });
+
+  it("exposes exact backing resources and attributes mutations to the authenticated actor", async () => {
+    const { app, handlers } = appAndHandlers();
+    const listTargets = testDouble.fn(async () => ({ targets: [{ displayName: "Button" }] }));
+    const readTarget = testDouble.fn(async () => ({ displayName: "Button", backingResources: [{ path: "frontend/component.tsx", role: "frontend-structure", mediaType: "text/typescript", content: "export const Button = true;", editable: true, sizeCharacters: 27 }] }));
+    const create = testDouble.fn(async (command) => ({ kind: "success", value: { customizationId: "customization-1", createdBy: command.actorId } }));
+    registerAssetAuthoringApiRoutes({ app, derivedCustomizations: { listTargets, readTarget, create } as any });
+    const listed = response();
+    await handlers.get("GET /api/asset-authoring/workspaces/:workspaceId/customization-targets")({ params: { workspaceId: "workspace-a" }, query: { text: "button" } }, listed.res);
+    expect(listTargets.mock.calls[0][0]).toMatchObject({ workspaceId: "workspace-a", text: "button" });
+    const detail = response();
+    await handlers.get("GET /api/asset-authoring/workspaces/:workspaceId/customization-targets/:implementationReleaseId")({ params: { workspaceId: "workspace-a", implementationReleaseId: "implementation-release.button.1" }, query: { definitionId: "builtin.button", definitionVersion: "1.0.0" } }, detail.res);
+    expect(detail.json.mock.calls[0][0].value.backingResources[0]).toMatchObject({ path: "frontend/component.tsx", content: "export const Button = true;" });
+    const created = response();
+    await handlers.get("POST /api/asset-authoring/workspaces/:workspaceId/derived-customizations")({ params: { workspaceId: "workspace-a" }, body: { actorId: "renderer-spoof", semanticPatch: {} }, securityContext: { principal: { id: "principal-1" } } }, created.res);
+    expect(create.mock.calls[0][0]).toMatchObject({ workspaceId: "workspace-a", actorId: "principal-1" });
   });
 });

@@ -382,9 +382,12 @@ describe("composeDesktopHost", () => {
     expect(preloadSource).toContain("finalizeGeneratedOutputAsAsset");
     expect(preloadSource).toContain("importExternalRepositoryObjectAsAsset");
     expect(preloadSource).toContain("localizeExternalRepositoryObjectAsAsset");
+    expect(preloadSource).toContain("listAssetDerivedCustomizationTargets");
+    expect(preloadSource).toContain("createAssetDerivedCustomization");
     expect(/createAssetDefinition|updateAssetDefinition|deleteAssetDefinition|patchAsset|editAsset|seedAsset|publishAssetDefinition|publishAssetInstance|listAssetInstances|readAssetInstance/i.test(preloadSource)).toBe(false);
     const hostSource = readFileSync(resolve("modules/hosts/desktop/composition/composeDesktopHost.ts"), "utf8");
     expect(hostSource).toContain("await import(\"./composeDesktopAssetFeature\")");
+    expect(hostSource).toContain("getDerivedCustomizations");
     expect(hostSource).not.toContain("import { composeInternalAssetRegistry");
     expect(hostSource).not.toContain("assetRegistryRead: internalAssetRegistry,");
     const listener = ipcMain.handle.mock.calls[0]?.[1];

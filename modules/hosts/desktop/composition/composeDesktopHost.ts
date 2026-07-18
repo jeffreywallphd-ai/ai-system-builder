@@ -1267,6 +1267,8 @@ export function composeDesktopHost(
           assetDraftRepository,
           assetRevisionRepository,
           assetOverrideRepository,
+          getDerivedCustomizations: async () =>
+            (await getAssetFeatures()).derivedCustomizations?.service,
         },
         userLibrary: {
           ipcMain: registerOptions.ipcMain,

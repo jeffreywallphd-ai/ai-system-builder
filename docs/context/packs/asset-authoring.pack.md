@@ -54,7 +54,7 @@ Include this pack when prompts materially involve:
 - Publication creates a distinct workspace-owned definition and implementation
   lineage; it never mutates, activates, deploys, or executes the base.
 - No hidden propagation, live workspace-to-workspace links, collaboration permissions, pack import/export, marketplace behavior, hidden/default workspaces, startup seeding, or legacy/global auto-migration.
-- No raw paths/storage roots/provider payloads/prompt text/workflow JSON/tokens/secrets/stack traces/command lines/environment values/bytes/blobs/base64/signed URLs in Asset Kernel records, general public contracts, diagnostics, provenance, or list/readiness UI. Authorized bounded source proposals/details are the narrow source-text exception.
+- No host filesystem paths/storage roots/provider payloads/prompt text/workflow JSON/tokens/secrets/stack traces/command lines/environment values/bytes/blobs/base64/signed URLs in Asset Kernel records, general list contracts, diagnostics, provenance, or list/readiness UI. Workspace-authorized customization-target details and bounded source proposals are the narrow logical-path/source-text exceptions.
 
 ## Anti-drift rules
 
@@ -91,10 +91,12 @@ Use conservative wording in prompts and reviews:
 - treat effective-summary listing as partial/deferred unless the current backend confirms availability;
 - treat create-override flows as available only when safe target selection/validation and a real customization-target reader are composed; otherwise present them as unavailable/unsupported;
 - treat layered-derived customization contracts, exact target catalog,
-  workspace-isolated persistence, review materialization, and distinct
-  definition/implementation-draft publication as implemented at the application
-  boundary; transports and the guided UI remain unavailable until their host
-  chunks are composed;
+  workspace-isolated persistence, review materialization, distinct
+  definition/implementation-draft publication, server API transport, desktop
+  IPC/preload transport, typed clients, host composition, and the shared ordered
+  desktop/thin-client workflow as implemented; the workflow requires exact target
+  selection and separates frontend structure, frontend styling, backend logic,
+  and other backing resources before review and publication;
 - treat draft publication as creating new authored assets only;
 - do not claim executable outputs, automatic rebase/conflict resolution, source
   mutation, implicit activation/deployment, or `system.foundation` mutation.

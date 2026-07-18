@@ -170,4 +170,27 @@ describe("TabbedPanel", () => {
       "replacement",
     );
   });
+
+  it("follows a controlled active tab for cross-surface navigation", async () => {
+    const onTabChange = testDouble.fn();
+    const mounted = await render(
+      <TabbedPanel tabs={tabs} activeTabId="first" onTabChange={onTabChange} />,
+    );
+    expect(mounted.querySelector("[role='tabpanel']")?.textContent).toBe(
+      "First content",
+    );
+
+    await act(async () => {
+      root?.render(
+        <TabbedPanel
+          tabs={tabs}
+          activeTabId="third"
+          onTabChange={onTabChange}
+        />,
+      );
+    });
+    expect(mounted.querySelector("[role='tabpanel']")?.textContent).toBe(
+      "Third content",
+    );
+  });
 });

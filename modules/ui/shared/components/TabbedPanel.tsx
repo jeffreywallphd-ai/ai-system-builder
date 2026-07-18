@@ -15,6 +15,7 @@ export interface TabbedPanelTab {
 
 export interface TabbedPanelProps {
   readonly tabs: ReadonlyArray<TabbedPanelTab>;
+  readonly activeTabId?: string;
   readonly defaultTabId?: string;
   readonly tabListAriaLabel?: string;
   readonly className?: string;
@@ -34,6 +35,7 @@ function resolveDefaultTabId(
 
 export function TabbedPanel({
   tabs,
+  activeTabId: controlledActiveTabId,
   defaultTabId,
   tabListAriaLabel,
   className,
@@ -41,18 +43,27 @@ export function TabbedPanel({
   onTabChange,
 }: TabbedPanelProps) {
   const resolvedDefaultTabId = resolveDefaultTabId(tabs, defaultTabId);
-  const [activeTabId, setActiveTabId] = useState(resolvedDefaultTabId);
+  const [uncontrolledActiveTabId, setUncontrolledActiveTabId] =
+    useState(resolvedDefaultTabId);
+  const activeTabId = controlledActiveTabId ?? uncontrolledActiveTabId;
   const instanceId = useId();
   const tabElements = useRef(new Map<string, HTMLButtonElement>());
 
   useEffect(() => {
     if (!activeTabId || !tabs.some((tab) => tab.id === activeTabId)) {
-      setActiveTabId(resolvedDefaultTabId);
+      if (controlledActiveTabId === undefined)
+        setUncontrolledActiveTabId(resolvedDefaultTabId);
       if (resolvedDefaultTabId) {
         onTabChange?.(resolvedDefaultTabId);
       }
     }
-  }, [activeTabId, onTabChange, resolvedDefaultTabId, tabs]);
+  }, [
+    activeTabId,
+    controlledActiveTabId,
+    onTabChange,
+    resolvedDefaultTabId,
+    tabs,
+  ]);
 
   if (!activeTabId) {
     return null;
@@ -65,7 +76,8 @@ export function TabbedPanel({
 
   const activateTab = (tabId: string, moveFocus = false) => {
     if (tabId !== activeTabId) {
-      setActiveTabId(tabId);
+      if (controlledActiveTabId === undefined)
+        setUncontrolledActiveTabId(tabId);
       onTabChange?.(tabId);
     }
     if (moveFocus) {

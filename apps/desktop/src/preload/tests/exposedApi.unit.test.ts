@@ -108,6 +108,7 @@ import {
   DESKTOP_CONVERSATION_EXECUTION_V2_RETRY_TURN_REQUEST_CHANNEL,
   DESKTOP_SYSTEM_BUILDER_CHANNELS,
   DESKTOP_SYSTEM_DATA_CHANNELS,
+  DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS,
   createIpcSuccessResponse,
 } from "../../../../../modules/contracts/ipc";
 import {
@@ -1123,5 +1124,16 @@ describe("desktop preload execution-plan bridge", () => {
       "ipc.execution-plans.list-needing-attention.request",
       "ipc.execution-plans.summarize-workspace.request",
     ]);
+  });
+});
+
+describe("desktop preload derived-customization bridge", () => {
+  it("uses the allowlisted customization channels and preserves workspace context", async () => {
+    const descriptor = DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS.listTargets;
+    const invoke = testDouble.fn<IpcRendererInvokePort["invoke"]>().mockResolvedValue(createIpcSuccessResponse(descriptor.response, { targets: [] }));
+    const api = createDesktopPreloadApi({ ipcRenderer: { invoke } });
+    await api.listAssetDerivedCustomizationTargets({ workspaceId: "workspace-a", text: "button" } as any, { requestId: "request-1" });
+    expect(invoke.mock.calls[0]?.[0]).toBe(descriptor.request.value);
+    expect(invoke.mock.calls[0]?.[1]).toMatchObject({ operation: descriptor.operation, channel: descriptor.request.value, requestId: "request-1", payload: { workspaceId: "workspace-a", text: "button" } });
   });
 });

@@ -168,6 +168,7 @@ import {
 import { composeAssetImplementationKernel } from "../../shared/composition/composeAssetImplementationKernel";
 import { composeAssetPackageLifecycle } from "../../shared/composition/composeAssetPackageLifecycle";
 import { composeAssetStudioWorkflow } from "../../shared/composition/composeAssetStudioWorkflow";
+import { composeAssetDerivedCustomization } from "../../shared/composition/composeAssetDerivedCustomization";
 import { composeSystemBuilder } from "../../shared/composition/composeSystemBuilder";
 import { composeSystemBuild } from "../../shared/composition/composeSystemBuild";
 import { composeSystemData } from "../../shared/composition/composeSystemData";
@@ -1812,8 +1813,26 @@ export function composeServerHost(
             new WorkspaceAssetAuthoringReadModelService({
               ...assetAuthoringRepositories,
             });
+          const derivedCustomizations =
+            organizationDocuments && assetImplementation
+              ? composeAssetDerivedCustomization({
+                  documents: organizationDocuments,
+                  definitions:
+                    internalAssetRegistry!.assetKernel.repositories
+                      .definitionRepository,
+                  implementations: assetImplementation,
+                  artifacts: createAssetImplementationArtifactAdapter(storage),
+                  authoredAssets:
+                    assetAuthoringRepositories.authoredAssetRepository,
+                  ensureReady: ensureAssetImplementationReady,
+                  now: options.now ?? (() => new Date().toISOString()),
+                })
+              : undefined;
           return {
             ...assetAuthoringRepositories,
+            ...(derivedCustomizations
+              ? { derivedCustomizations: derivedCustomizations.service }
+              : {}),
             createWorkspaceAuthoredAssetUseCase:
               new CreateWorkspaceAuthoredAssetUseCase({
                 authoredAssetRepository:

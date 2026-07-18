@@ -14,7 +14,8 @@ Current contract families include:
 - `system-builder` for workspace-owned composed-system design records that specialize Asset Kernel compositions
 - `asset-authoring` for safe authored records plus exact-base layered
   customizations, typed semantic sections, bounded source overlays, review
-  evidence, and distinct publication lineage
+  evidence, distinct publication lineage, and shared operation identities used
+  by typed server API and desktop IPC contracts
 - `asset-implementation` for drafts, releases, facets, bindings, and immutable
   implementation backing-resource bundles kept outside Asset Kernel metadata
 - `asset-package` for the bounded package lifecycle contract and deterministic,

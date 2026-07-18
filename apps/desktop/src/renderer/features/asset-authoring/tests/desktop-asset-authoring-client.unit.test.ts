@@ -26,4 +26,18 @@ describe('desktopAssetAuthoringClient',()=>{
     expect(createAssetDraft).toHaveBeenCalledWith({targetWorkspaceId:'w1',draftEditableValues:{'display-name':'Draft Name',summary:'Summary',description:undefined}});
     expect(updateAssetDraft).toHaveBeenCalledWith({targetWorkspaceId:'w1',draftId:'d1',draftEditablePatch:{'display-name':undefined,summary:'Updated',description:undefined}});
   });
+  it('maps target detail and derived customization lifecycle operations',async()=>{
+    const listAssetDerivedCustomizationTargets=vi.fn().mockResolvedValue({status:'success',payload:{targets:[{displayName:'Button'}]}});
+    const readAssetDerivedCustomizationTarget=vi.fn().mockResolvedValue({status:'success',payload:{displayName:'Button',backingResources:[{path:'frontend/component.tsx',content:'source'}]}});
+    const createAssetDerivedCustomization=vi.fn().mockResolvedValue({status:'success',payload:{customizationId:'customization-1'}});
+    (window as any).desktopApi={listAssetDerivedCustomizationTargets,readAssetDerivedCustomizationTarget,createAssetDerivedCustomization};
+    const c=createDesktopAssetAuthoringClient();
+    const listed=await c.listCustomizationTargets({workspaceId:'w1',text:'button'});
+    const target={kind:'asset-definition-version',id:'builtin.button',version:'1.0.0'} as any;
+    const detail=await c.readCustomizationTarget({workspaceId:'w1',definitionRef:target,implementationReleaseId:'implementation-release.button.1'});
+    await c.createDerivedCustomization({workspaceId:'w1',baseDefinitionRef:target,baseImplementationReleaseId:'implementation-release.button.1',derivedDefinitionRef:{...target,id:'workspace.button'},semanticPatch:{'display-name':'My Button'}});
+    expect(listed.ok && listed.value.items[0]?.displayName).toBe('Button');
+    expect(detail.ok && detail.value.backingResources[0]?.path).toBe('frontend/component.tsx');
+    expect(createAssetDerivedCustomization.mock.calls[0][0]).toMatchObject({workspaceId:'w1',baseImplementationReleaseId:'implementation-release.button.1',semanticPatch:{'display-name':'My Button'}});
+  });
 });

@@ -3,7 +3,7 @@
 # Asset Experience and Layered Customization Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-07-18T14:29:59Z`
+- Updated: `2026-07-18T17:43:09Z`
 
 ## Objective
 
@@ -58,7 +58,7 @@ The accepted authoring ADR permits sparse semantic overrides but defers raw code
 | 1: Layered customization architecture and contracts | Ratify the approved layered-derived model and establish stable typed semantics before application or UI consumers are added. | None | `completed` |
 | 2: Shared modal and attached tab foundations | Turn the existing visual modal and tab patterns into reusable, accessible cross-surface components and apply the attached card shell to Assets and Systems. | architecture-contract | `completed` |
 | 3: Complete responsive Assets browsing and import experience | Deliver the complete user-facing Assets browse and import experience across desktop and thin client: responsive asset cards, modal details, responsive filters, Import Assets language, and a safe downloadable .aisb-package starter with complete guidance. | shared-surface-foundation | `completed` |
-| 4: End-to-end layered Asset Customization workflow | Deliver one production-complete vertical slice for searchable exact target selection, sparse layered customization, bounded source overlays, immutable review materialization, workspace-owned publication, and the ordered desktop and thin-client workflow without mutating any base asset. | architecture-contract, shared-surface-foundation, complete-assets-experience | `implementing` |
+| 4: End-to-end layered Asset Customization workflow | Deliver one production-complete vertical slice for searchable exact target selection, sparse layered customization, bounded source overlays, immutable review materialization, workspace-owned publication, and the ordered desktop and thin-client workflow without mutating any base asset. | architecture-contract, shared-surface-foundation, complete-assets-experience | `verifying` |
 | 5: End-to-end production qualification and hardening | Prove the complete Assets and Systems experience and layered customization behavior across supported hosts, representative bases, restart persistence, failure and security modes, responsive layouts, accessibility expectations, and canonical documentation. | complete-assets-experience, layered-customization-workflow | `pending` |
 
 ## Increment 1: Layered customization architecture and contracts
@@ -205,7 +205,7 @@ Retain existing detail presenters as modal bodies so the grid can be reverted in
 ## Increment 4: End-to-end layered Asset Customization workflow
 
 - Id: `layered-customization-workflow`
-- Status: `implementing`
+- Status: `verifying`
 - Dependencies: `architecture-contract`, `shared-surface-foundation`, `complete-assets-experience`
 
 Deliver one production-complete vertical slice for searchable exact target selection, sparse layered customization, bounded source overlays, immutable review materialization, workspace-owned publication, and the ordered desktop and thin-client workflow without mutating any base asset.

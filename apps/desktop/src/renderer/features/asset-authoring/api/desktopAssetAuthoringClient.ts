@@ -1,4 +1,5 @@
-import type { AssetAuthoringEffectiveSourceSummary, AssetOverrideRecord, AuthoredAssetDraftRecord, AuthoredAssetRecord } from '../../../../../../../modules/contracts/asset-authoring';
+import type { AssetAuthoringEffectiveSourceSummary, AssetCustomizationSourceFileChange, AssetDerivedCustomizationDraftRecord, AssetDerivedCustomizationSemanticPatch, AssetDerivedCustomizationTargetDetail, AssetDerivedCustomizationTargetSummary, AssetOverrideRecord, AuthoredAssetDraftRecord, AuthoredAssetRecord } from '../../../../../../../modules/contracts/asset-authoring';
+import type { AssetReference } from '../../../../../../../modules/contracts/asset';
 
 type FailureCode = 'unavailable' | 'conflict' | 'not-found' | 'validation' | 'internal';
 type Result<T> = { ok: true; value: T } | { ok: false; error: { code: FailureCode; message: string } };
@@ -16,8 +17,20 @@ type Api = {
   listAssetOverrides?: (i: { targetWorkspaceId: string }) => Promise<unknown>;
   disableAssetOverride?: (i: { targetWorkspaceId: string; overrideId: string }) => Promise<unknown>;
   listAssetAuthoringEffectiveSummaries?: (i: { targetWorkspaceId: string }) => Promise<unknown>;
+  listAssetDerivedCustomizationTargets?: (i: { workspaceId: string; text?: string; sourceKind?: string; eligibility?: string }) => Promise<unknown>;
+  readAssetDerivedCustomizationTarget?: (i: { workspaceId: string; definitionRef: AssetReference; implementationReleaseId: string }) => Promise<unknown>;
+  createAssetDerivedCustomization?: (i: CreateDerivedCustomizationInput) => Promise<unknown>;
+  updateAssetDerivedCustomization?: (i: UpdateDerivedCustomizationInput) => Promise<unknown>;
+  reviewAssetDerivedCustomization?: (i: CustomizationRevisionInput) => Promise<unknown>;
+  publishAssetDerivedCustomization?: (i: CustomizationRevisionInput) => Promise<unknown>;
+  abandonAssetDerivedCustomization?: (i: CustomizationRevisionInput) => Promise<unknown>;
+  listAssetDerivedCustomizations?: (i: { workspaceId: string; status?: string; text?: string }) => Promise<unknown>;
+  readAssetDerivedCustomization?: (i: { workspaceId: string; customizationId: string }) => Promise<unknown>;
 };
 type EditableValues = Partial<Record<"display-name" | "summary" | "description" | "classification" | "tags", string | readonly string[]>>;
+export type CreateDerivedCustomizationInput = { workspaceId: string; baseDefinitionRef: AssetReference; baseImplementationReleaseId: string; derivedDefinitionRef: AssetReference; semanticPatch: AssetDerivedCustomizationSemanticPatch; sourceChanges?: readonly AssetCustomizationSourceFileChange[] };
+export type UpdateDerivedCustomizationInput = { workspaceId: string; customizationId: string; expectedRevision: number; semanticPatch: AssetDerivedCustomizationSemanticPatch; sourceChanges?: readonly AssetCustomizationSourceFileChange[]; clearSourceOverlay?: boolean };
+export type CustomizationRevisionInput = { workspaceId: string; customizationId: string; expectedRevision: number };
 
 const fail = (message: string, code: FailureCode = 'internal'): Result<never> => ({ ok: false, error: { code, message } });
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
@@ -78,6 +91,44 @@ export function createDesktopAssetAuthoringClient() {
       const r = parseEnvelope<{ items: readonly AssetAuthoringEffectiveSourceSummary[] }>(await api.listAssetAuthoringEffectiveSummaries({ targetWorkspaceId: workspaceId }));
       if (r.ok === false) return fail(r.error.message, r.error.code);
       return { ok: true, value: { items: r.value.items ?? [] } };
+    },
+    async listCustomizationTargets(input: { workspaceId: string; text?: string; sourceKind?: string; eligibility?: string }): Promise<Result<{ items: readonly AssetDerivedCustomizationTargetSummary[]; nextCursor?: string }>> {
+      if (typeof api.listAssetDerivedCustomizationTargets !== 'function') return fail('Asset customization targets are not available yet.', 'unavailable');
+      const r = parseEnvelope<{ targets: readonly AssetDerivedCustomizationTargetSummary[]; nextCursor?: string }>(await api.listAssetDerivedCustomizationTargets(input));
+      return r.ok ? { ok: true, value: { items: r.value.targets ?? [], nextCursor: r.value.nextCursor } } : r;
+    },
+    async readCustomizationTarget(input: { workspaceId: string; definitionRef: AssetReference; implementationReleaseId: string }): Promise<Result<AssetDerivedCustomizationTargetDetail>> {
+      if (typeof api.readAssetDerivedCustomizationTarget !== 'function') return fail('Asset customization details are not available yet.', 'unavailable');
+      return parseEnvelope<AssetDerivedCustomizationTargetDetail>(await api.readAssetDerivedCustomizationTarget(input));
+    },
+    async listDerivedCustomizations(input: { workspaceId: string; status?: string; text?: string }): Promise<Result<{ items: readonly AssetDerivedCustomizationDraftRecord[]; nextCursor?: string }>> {
+      if (typeof api.listAssetDerivedCustomizations !== 'function') return fail('Asset customizations are not available yet.', 'unavailable');
+      const r = parseEnvelope<{ customizations: readonly AssetDerivedCustomizationDraftRecord[]; nextCursor?: string }>(await api.listAssetDerivedCustomizations(input));
+      return r.ok ? { ok: true, value: { items: r.value.customizations ?? [], nextCursor: r.value.nextCursor } } : r;
+    },
+    async readDerivedCustomization(workspaceId: string, customizationId: string): Promise<Result<AssetDerivedCustomizationDraftRecord>> {
+      if (typeof api.readAssetDerivedCustomization !== 'function') return fail('Asset customization is not available yet.', 'unavailable');
+      return parseEnvelope<AssetDerivedCustomizationDraftRecord>(await api.readAssetDerivedCustomization({ workspaceId, customizationId }));
+    },
+    async createDerivedCustomization(input: CreateDerivedCustomizationInput): Promise<Result<AssetDerivedCustomizationDraftRecord>> {
+      if (typeof api.createAssetDerivedCustomization !== 'function') return fail('Create customization is not available yet.', 'unavailable');
+      return parseEnvelope<AssetDerivedCustomizationDraftRecord>(await api.createAssetDerivedCustomization(input));
+    },
+    async updateDerivedCustomization(input: UpdateDerivedCustomizationInput): Promise<Result<AssetDerivedCustomizationDraftRecord>> {
+      if (typeof api.updateAssetDerivedCustomization !== 'function') return fail('Update customization is not available yet.', 'unavailable');
+      return parseEnvelope<AssetDerivedCustomizationDraftRecord>(await api.updateAssetDerivedCustomization(input));
+    },
+    async reviewDerivedCustomization(input: CustomizationRevisionInput): Promise<Result<AssetDerivedCustomizationDraftRecord>> {
+      if (typeof api.reviewAssetDerivedCustomization !== 'function') return fail('Review customization is not available yet.', 'unavailable');
+      return parseEnvelope<AssetDerivedCustomizationDraftRecord>(await api.reviewAssetDerivedCustomization(input));
+    },
+    async publishDerivedCustomization(input: CustomizationRevisionInput): Promise<Result<AssetDerivedCustomizationDraftRecord>> {
+      if (typeof api.publishAssetDerivedCustomization !== 'function') return fail('Publish customization is not available yet.', 'unavailable');
+      return parseEnvelope<AssetDerivedCustomizationDraftRecord>(await api.publishAssetDerivedCustomization(input));
+    },
+    async abandonDerivedCustomization(input: CustomizationRevisionInput): Promise<Result<AssetDerivedCustomizationDraftRecord>> {
+      if (typeof api.abandonAssetDerivedCustomization !== 'function') return fail('Abandon customization is not available yet.', 'unavailable');
+      return parseEnvelope<AssetDerivedCustomizationDraftRecord>(await api.abandonAssetDerivedCustomization(input));
     },
   };
 }

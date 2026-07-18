@@ -286,6 +286,75 @@
         "Focused 21-test matrix passed for contracts, foundation resources, package admission, host seeding, preview consumption, workspace isolation, restart persistence, materialization, publication, and base immutability"
       ],
       "title": "Customization domain, target catalog, and materialization lifecycle"
+    },
+    {
+      "areas": [
+        "Shared customization application facade and operation identities",
+        "Server API and desktop IPC/preload transports with security policy coverage",
+        "Desktop/thin-client clients and server/desktop host composition"
+      ],
+      "chunkId": "customization-host-transports",
+      "completedAt": "2026-07-18T16:48:33Z",
+      "criteriaIds": [
+        "workspace-isolated",
+        "transport-aligned",
+        "safe-materialization"
+      ],
+      "documentation": [
+        "Asset authoring/customization architecture and context pack",
+        "Contracts README"
+      ],
+      "feedbackAddressed": [
+        "customizer-implementation-sections",
+        "foundation-backing-resources",
+        "foundation-backing-resource-content",
+        "increment-test-sequencing"
+      ],
+      "id": "layered-customization-workflow-customization-host-transports",
+      "incrementId": "layered-customization-workflow",
+      "summary": "Composed the derived customization workflow into server and desktop hosts with typed API, IPC, preload, and renderer clients, exact authorized backing-resource details, workspace enforcement, and trusted actor attribution.",
+      "tests": [
+        "Focused TypeScript checks passed for contracts, transports, preload, clients, and both host compositions",
+        "Focused transport/security/host matrix passed: 84 tests",
+        "Focused preload matrix passed: 34 tests; focused client matrix passed: 5 tests"
+      ],
+      "title": "Aligned server, desktop, preload, and client boundaries"
+    },
+    {
+      "areas": [
+        "Shared ordered customization workflow and responsive backing-resource editors",
+        "Desktop and thin-client Assets composition with exact per-card Customize actions",
+        "Controlled tabs, target-change confirmation, and recoverable history management"
+      ],
+      "chunkId": "customization-ordered-experience",
+      "completedAt": "2026-07-18T17:43:09Z",
+      "criteriaIds": [
+        "eligible-sources-searchable",
+        "selection-controlled",
+        "internals-visible",
+        "ordered-workflow",
+        "copy-confirmed"
+      ],
+      "documentation": [
+        "Asset authoring/customization architecture",
+        "Asset authoring context pack"
+      ],
+      "feedbackAddressed": [
+        "feedback-asset-browser-customize-action",
+        "customizer-implementation-sections",
+        "foundation-backing-resources",
+        "foundation-backing-resource-content",
+        "increment-test-sequencing"
+      ],
+      "id": "layered-customization-workflow-customization-ordered-experience",
+      "incrementId": "layered-customization-workflow",
+      "summary": "Delivered one shared desktop/thin-client ordered customizer with exact Asset Browser handoff, controlled target switching, sparse semantic and backing-resource edits, review/publication, searchable history, and confirmed abandon actions.",
+      "tests": [
+        "Focused Node UI matrix passed: 37 tests",
+        "Focused cross-host interaction matrix passed: 10 tests",
+        "Desktop webpack and thin-client TypeScript checks passed"
+      ],
+      "title": "Shared end-to-end ordered customization experience"
     }
   ],
   "completion": null,
@@ -962,6 +1031,18 @@
       "recordedAt": "2026-07-18T14:29:59Z",
       "sequence": 54,
       "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "ab0abb60bac93ae47c67f41036f9efe4b90887acacd960ccbff4973f610f37ca",
+      "recordedAt": "2026-07-18T16:48:33Z",
+      "sequence": 55,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "967926bb42f1963b1a7ea9167e5c91a3c3c670f8f079a11d54cece8b34fd60af",
+      "recordedAt": "2026-07-18T17:43:09Z",
+      "sequence": 56,
+      "type": "chunk-recorded"
     }
   ],
   "increments": [
@@ -1593,7 +1674,9 @@
       "allowPendingQualification": false,
       "completedAt": null,
       "completedChunks": [
-        "customization-domain-catalog"
+        "customization-domain-catalog",
+        "customization-host-transports",
+        "customization-ordered-experience"
       ],
       "deliverables": [
         "Customization target contracts, application read service, and host-composed source readers",
@@ -1739,7 +1822,7 @@
       ],
       "rollback": "Keep all new operations additive and capability-gated, retain the existing list and disable view until the guided workflow passes integration, and disable creation without deleting drafts or changing existing authored, package, or base-asset data.",
       "startedAt": "2026-07-18T13:23:28Z",
-      "status": "implementing",
+      "status": "verifying",
       "title": "End-to-end layered Asset Customization workflow",
       "verification": [
         "Run focused contract, target-reader, application, persistence, artifact-storage, Asset Studio, host, API, IPC, preload, client, workflow, and renderer tests as their internal chunks land.",
@@ -1899,5 +1982,5 @@
   "schemaVersion": 1,
   "slug": "asset-experience-layered-customization",
   "status": "executing",
-  "updatedAt": "2026-07-18T14:29:59Z"
+  "updatedAt": "2026-07-18T17:43:09Z"
 }
