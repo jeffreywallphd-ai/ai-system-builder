@@ -31,15 +31,15 @@ Asset Kernel remains authoritative for definitions, instances, ports, bindings, 
 
 ## Canonical records
 
-| Record                          | Mutability                  | Scope                         | Responsibility                                                     |
-| ------------------------------- | --------------------------- | ----------------------------- | ------------------------------------------------------------------ |
-| `AssetImplementationDraft`      | mutable with revision token | workspace                     | authoring intent and current source snapshot reference             |
-| `AssetSourceSnapshot`           | immutable                   | workspace/organization        | content digest and source artifact descriptor                      |
-| `AssetImplementationBuild`      | immutable attempt record    | workspace/organization        | toolchain inputs, status, bounded log/evidence references          |
-| `AssetImplementationRelease`    | immutable                   | workspace/organization/system | facets, digests, compatibility, capabilities, provenance, evidence |
-| `AssetImplementationBinding`    | revisioned policy record    | workspace/organization/system | exact definition-to-release association and activation state       |
-| `AssetImplementationRevocation` | append-only                 | authority scope               | reason, authority, timestamp, affected digest/identity             |
-| `AssetImplementationBackingResourceRecord` | immutable exact-release link | workspace/system | safe descriptors linking an exact release to one verified source bundle |
+| Record                                     | Mutability                   | Scope                         | Responsibility                                                          |
+| ------------------------------------------ | ---------------------------- | ----------------------------- | ----------------------------------------------------------------------- |
+| `AssetImplementationDraft`                 | mutable with revision token  | workspace                     | authoring intent and current source snapshot reference                  |
+| `AssetSourceSnapshot`                      | immutable                    | workspace/organization        | content digest and source artifact descriptor                           |
+| `AssetImplementationBuild`                 | immutable attempt record     | workspace/organization        | toolchain inputs, status, bounded log/evidence references               |
+| `AssetImplementationRelease`               | immutable                    | workspace/organization/system | facets, digests, compatibility, capabilities, provenance, evidence      |
+| `AssetImplementationBinding`               | revisioned policy record     | workspace/organization/system | exact definition-to-release association and activation state            |
+| `AssetImplementationRevocation`            | append-only                  | authority scope               | reason, authority, timestamp, affected digest/identity                  |
+| `AssetImplementationBackingResourceRecord` | immutable exact-release link | workspace/system              | safe descriptors linking an exact release to one verified source bundle |
 
 The structured records use opaque identifiers, media types, digests, byte sizes, and storage keys. They reject code strings, raw package bytes, source files, filesystem paths, credentials, environment values, provider payloads, and unbounded logs.
 
@@ -115,22 +115,37 @@ Signature verification, SLSA-compatible provenance, SBOM, dependency scanning, a
 
 Foundation upgrades publish a new immutable pack version. Exact old references continue to resolve if not revoked and retained. Deprecation supplies replacement guidance and support dates; it never rewrites a consumer's lock.
 
-The current `system.foundation@1.0.0` construction kit has 87 exact semantic
-definitions. The functional-default catalog maps every definition to a closed
-entry key, facet, deployment compatibility set, bounded preview fixture, and
-trusted built-in or declarative-engine release. The shared Catalog preview is
-available to desktop and thin-client renderers and has no external side
+The original `system.foundation@1.0.0` release remains immutable and contains
+105 exact semantic definitions. The current `system.foundation@2.0.0` release
+contains 119 definitions: the complete v1 vocabulary at exact v2 references
+plus eight application layouts and six page layouts. Both releases are
+installed and materialized independently; existing v1 workspace activations
+and implementation identities are not rewritten, while newly created
+workspaces activate v2 by exact reference.
+
+The version-addressed functional-default catalog maps every definition to a
+closed entry key, facet, deployment compatibility set, bounded preview fixture,
+and trusted built-in or declarative-engine release. The shared Catalog preview
+is available to desktop and thin-client renderers and has no external side
 effects. Policy and security entries deny by default and request no authority;
 platform authorization remains authoritative. Record-form, data-preview, and
-basic-assistant composites reference the same lower-level definitions and
-typed composition model used by System Builder.
+basic-assistant composites reference the same lower-level definitions and typed
+composition model used by System Builder.
 
-Every current System Foundation definition also has an actual bounded backing
+Every definition in both Foundation releases has an exact bounded backing
 bundle. Depending on the asset, it contains the canonical frontend structure,
 CSS, declarative backend logic, definition JSON, or an appropriate combination.
-These resources are persisted as immutable artifacts when trusted built-ins are
-ensured; they are not metadata-only placeholders and they do not copy protected
-host implementation code into Asset Kernel records.
+The v2 layout resources include named-slot structure, logical source order,
+responsive area maps, and working grid CSS. These resources are persisted as
+separate immutable artifacts when trusted built-ins are ensured; they are not
+metadata-only placeholders and they do not copy protected host implementation
+code into Asset Kernel records.
+
+Trusted built-in initialization is additive. When an exact implementation
+release already has a compatible system-owned backing-resource record, host
+composition preserves that immutable record and its artifact digest rather than
+attempting an in-place replacement. Missing release resources may still be
+materialized independently during an upgrade.
 
 ## Ownership and dependency direction
 

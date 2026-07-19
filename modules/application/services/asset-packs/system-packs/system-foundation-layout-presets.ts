@@ -53,7 +53,7 @@ export type SystemFoundationLayoutToken =
   "single" | "start-content" | "content-end" | "equal-split" | "three-panel";
 
 export interface SystemFoundationLayoutVariant {
-  readonly token: SystemFoundationLayoutToken;
+  readonly columnPattern: SystemFoundationLayoutToken;
   readonly areas: readonly (readonly string[])[];
 }
 
@@ -500,10 +500,10 @@ function exactRef(definitionId: string): AssetReference {
 }
 
 function variant(
-  token: SystemFoundationLayoutToken,
+  columnPattern: SystemFoundationLayoutToken,
   areas: readonly (readonly string[])[],
 ): SystemFoundationLayoutVariant {
-  return { token, areas };
+  return { columnPattern, areas };
 }
 
 function sourceMetadata(

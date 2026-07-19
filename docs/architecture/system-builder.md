@@ -98,18 +98,53 @@ authoring, customization, and single-asset Studio workflows.
   commands; adapters and UI do not invent system truth.
 - `ValidateSystemBuilderRevisionService` resolves exact definitions and composes
   canonical Asset Kernel validators with system endpoint, cardinality, and
-  dependency-cycle checks.
+  dependency-cycle checks. Slot validation additionally requires one exact or
+  provenance-derived `builtin.system.system@2.0.0` root for interactive
+  revisions, declared slot membership, compatible children, complete placement
+  coverage, bounded depth, and acyclic containment.
+- New interactive systems start with the Foundation v2 system root, one selected
+  application layout, its required page hosts, a page layout, and bounded empty
+  content. Service and workflow profiles remain explicit and are not assigned an
+  interactive hierarchy.
+- Structured persistence clones the complete revision, including structure and
+  placements, and preserves workspace isolation plus optimistic conflicts. API,
+  IPC, preload, desktop/thin clients, and the shared editor forward those fields
+  without deriving a replacement root. Historical flat revisions continue to
+  round-trip with both fields omitted.
 - `modules/adapters/transport/api-express/system-builder` and
   `modules/adapters/transport/ipc-electron/system-builder` expose the same
   operations. API reads require `asset:read`; mutations require `asset:write`.
+- The workspace-scoped composer read model resolves exact effective definitions,
+  configuration schemas/defaults, declared ports and slots, preview/implementation
+  availability, and server-owned slot compatibility for both desktop and thin
+  client. Renderers do not reconstruct compatibility from Asset Library summaries.
 - `modules/ui/shared/system-builder` is the shared desktop/thin-client editor.
-  It uses native labeled controls and buttons as the complete keyboard path.
-- Compose provides a design-time UI preview of the current in-memory instance
-  order and applied configuration. The shared modal renders only bounded frontend
-  surfaces with registered, side-effect-free System Foundation renderers and
-  truthfully reports omitted nonvisual or unsupported assets. It does not execute
-  implementation or backend source and grants no build, release, activation, or
-  deployment authority.
+  Predefined layout cards create the required root/shell/page-host structure. One
+  canonical in-memory draft drives the synchronized Asset Library palette,
+  semantic slot canvas, keyboard tree, breadcrumbs, protected required nodes,
+  native add/move/reparent/reorder/wrap/remove actions, and bounded undo/redo.
+  Structure, Configure, and Connections are explicit modes over that same draft.
+- Configure generates sectioned native controls from exact schemas, applies
+  defaults and field constraints, offers approved asset/reference choices, and
+  retains a bounded Advanced JSON fallback. Connections accepts only declared,
+  contract-compatible source and target ports; typed bindings remain separate
+  from containment.
+- Compose provides a design-time UI preview of the current unsaved hierarchy and
+  configuration. The shared modal recursively follows canonical placement and
+  slot order, reports unassigned and unsupported assets, and offers bounded
+  desktop/tablet/mobile frames. Only registered, side-effect-free System
+  Foundation renderers run; backend or unqualified imported/authored
+  implementation never executes, and preview grants no build, release,
+  activation, or deployment authority.
+- Systems Manage is the workspace-scoped operational index for draft, published,
+  and archived system records. Its application-owned projection supplies search,
+  lifecycle filters, deterministic ordering, bounded pagination, latest-revision
+  summaries, and exact published-release identity through API and IPC parity.
+  Both hosts share the same responsive list and actions: preview an exact
+  revision, hand off to Compose, duplicate through the canonical clone command,
+  archive through the existing archive-backed delete command, and restore.
+  Archive is disclosed as recoverable; immutable revisions and releases are
+  retained rather than destructively removed.
 - `modules/contracts/system-build`, `modules/application/use-cases/system-build`,
   and the matching persistence/storage/transport adapters own deterministic
   attempts and immutable releases without adding runtime state to system

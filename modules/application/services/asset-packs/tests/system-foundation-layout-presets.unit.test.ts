@@ -13,7 +13,7 @@ import {
 describe("System Foundation predefined layout release", () => {
   it("keeps the 1.0.0 manifest immutable while publishing a complete 2.0.0 release", () => {
     expect(SYSTEM_FOUNDATION_PACK_MANIFEST.version).toBe("1.0.0");
-    expect(SYSTEM_FOUNDATION_PACK_MANIFEST.assets).toHaveLength(105);
+    expect(SYSTEM_FOUNDATION_PACK_MANIFEST.assets.length).toBe(105);
     expect(
       createHash("sha256")
         .update(JSON.stringify(SYSTEM_FOUNDATION_PACK_MANIFEST))
@@ -21,7 +21,7 @@ describe("System Foundation predefined layout release", () => {
     ).toBe("1433b92aa8ed0fa4f963f1874ace22a4634275d89501e1b95e8a72aa4ec9a2e7");
 
     expect(SYSTEM_FOUNDATION_PACK_V2_MANIFEST.version).toBe("2.0.0");
-    expect(SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets).toHaveLength(119);
+    expect(SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.length).toBe(119);
     expect(
       SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.every(
         (entry) => entry.definition.version === "2.0.0",
@@ -29,15 +29,17 @@ describe("System Foundation predefined layout release", () => {
     ).toBe(true);
     expect(
       new Set(
-        SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.map((entry) => entry.entryId),
+        SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.map(
+          (entry) => entry.entryId,
+        ),
       ).size,
     ).toBe(SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.length);
   });
 
   it("publishes all eight application shells and six bounded page layouts", () => {
-    expect(SYSTEM_FOUNDATION_APPLICATION_LAYOUT_IDS).toHaveLength(8);
-    expect(SYSTEM_FOUNDATION_PAGE_LAYOUT_IDS).toHaveLength(6);
-    expect(SYSTEM_FOUNDATION_LAYOUT_PRESETS).toHaveLength(14);
+    expect(SYSTEM_FOUNDATION_APPLICATION_LAYOUT_IDS.length).toBe(8);
+    expect(SYSTEM_FOUNDATION_PAGE_LAYOUT_IDS.length).toBe(6);
+    expect(SYSTEM_FOUNDATION_LAYOUT_PRESETS.length).toBe(14);
 
     const ids = new Set(
       SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.map((entry) =>
@@ -54,12 +56,12 @@ describe("System Foundation predefined layout release", () => {
     const root = SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.find(
       (entry) => entry.definition.definitionId === "builtin.system.system",
     )?.definition;
-    expect(root?.slots).toHaveLength(1);
+    expect(root?.slots?.length).toBe(1);
     expect(root?.slots?.[0]).toMatchObject({
       slotId: "application-shell",
       cardinality: { minItems: 1, maxItems: 1 },
     });
-    expect(root?.slots?.[0]?.acceptedDefinitionRefs).toHaveLength(8);
+    expect(root?.slots?.[0]?.acceptedDefinitionRefs?.length).toBe(8);
   });
 
   it("uses declared logical slots, rectangular responsive areas, and accessible source order", () => {
@@ -77,9 +79,7 @@ describe("System Foundation predefined layout release", () => {
         expect(width).toBeGreaterThan(0);
         expect(variant.areas.every((row) => row.length === width)).toBe(true);
         expect(
-          variant.areas
-            .flat()
-            .every((area) => declared.includes(area as never)),
+          variant.areas.flat().every((area) => declared.includes(area as never)),
         ).toBe(true);
       }
     }

@@ -178,18 +178,19 @@ function normalizeAcceptedDefinitionRefs(
 
 function uniqueValues<T extends string>(
   values: readonly T[] | undefined,
-  allowed: (value: string) => boolean,
+  allowed: (value: string) => value is T,
   label: string,
 ): readonly T[] {
   if (!values) return [];
   const normalized = values.map((value) => String(value).trim().toLowerCase());
-  if (normalized.some((value) => !allowed(value))) {
+  const typedValues = normalized.filter(allowed);
+  if (typedValues.length !== normalized.length) {
     throw safeError(`Asset slot accepted ${label} is unsupported.`);
   }
-  if (new Set(normalized).size !== normalized.length) {
+  if (new Set(typedValues).size !== typedValues.length) {
     throw safeError(`Asset slot accepted ${label} values must be unique.`);
   }
-  return normalized as readonly T[];
+  return typedValues;
 }
 
 function boundedText(value: string, maximum: number, label: string): string {

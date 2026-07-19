@@ -45,11 +45,31 @@
   `modules/application/services/system-builder/validate-system-builder-revision.service.ts`.
 - API/IPC transports and clients are present for both hosts; Systems uses the
   shared `modules/ui/shared/system-builder/` editor in desktop and thin client.
-- The shared Compose UI preview uses current in-memory instance order and applied
-  configuration, is bounded to registered System Foundation frontend renderers,
-  and reports nonvisual or unsupported assets truthfully. It never executes
-  backend or implementation source and does not imply build, release, activation,
-  or deployment.
+- New interactive records begin with one Foundation v2 system root and a
+  canonical application/page containment tree. Save, clone, persistence, API,
+  IPC, preload, and shared UI paths preserve exact structure and placements;
+  legacy-flat revisions remain readable without synthesis.
+- Validation resolves exact definitions and enforces root identity, slot
+  declaration and compatibility, cardinality, placement coverage, bounded
+  depth, and acyclic containment before a revision can be treated as valid.
+- The workspace-scoped composer catalog supplies exact definitions, schemas,
+  defaults, ports, slots, availability, and application-owned compatibility.
+  Desktop and thin client share the predefined layout gallery, semantic slot
+  canvas, keyboard hierarchy, native structural actions, protected required
+  nodes, bounded undo/redo, generated configuration sections, and declared-port
+  Connections mode over one canonical draft.
+- The shared Compose UI preview recursively follows current in-memory placements
+  and slot order, includes unsaved configuration, exposes unassigned and
+  unsupported nodes, and offers desktop/tablet/mobile frames. It is bounded to
+  registered System Foundation frontend renderers, never executes backend or
+  unqualified implementation source, and does not imply build, release,
+  activation, or deployment.
+- Systems Manage uses one workspace-scoped application projection for drafts,
+  published systems, and archived systems across API and IPC. The shared desktop
+  and thin-client surface supports search/filter/sort/paging, exact-revision
+  preview, Compose handoff, canonical duplication, archive-backed deletion, and
+  restore. Archive retains immutable revisions and releases and is presented as
+  recoverable rather than as destructive deletion.
 - Deterministic attempts and immutable releases live in the separate
   `system-build` contract, application, persistence, storage, API/IPC, and
   shared Build & Release workflow families. Approval re-verifies every artifact

@@ -2,8 +2,8 @@
 
 # System Builder Slot Composer Implementation Roadmap
 
-- Status: `executing`
-- Updated: `2026-07-19T01:20:51Z`
+- Status: `ready`
+- Updated: `2026-07-19T17:01:30Z`
 
 ## Objective
 
@@ -59,14 +59,15 @@ The choice changes Asset Kernel contracts, validation, immutable revision compat
 
 | Increment | Outcome | Dependencies | Status |
 | --- | --- | --- | --- |
-| 1: Canonical slot-composition kernel and Foundation layouts | Add a migration-safe canonical model for named slots and ordered nested placements, require a Foundation-derived root for interactive systems, and publish a versioned set of fully backed application-shell and page-layout presets through every persistence and transport boundary. | None | `implementing` |
-| 2: Complete shared slot-based Compose experience | Replace the flat Compose list and uncontrolled JSON editor with one shared desktop/thin-client workspace that creates interactive systems from predefined layouts, embeds assets through named slots, configures instances through generated controls, edits typed connections separately, and recursively previews the current draft. | slot-composition-kernel | `pending` |
-| 3: Migration, build adoption, and production qualification | Adopt canonical placements across historical systems, closed reference templates, deterministic builds and releases, then qualify the complete composer across persistence shapes, packaged desktop, thin-client browser, accessibility, responsive layouts, security, performance, and recovery without rewriting immutable history. | shared-slot-composer-experience | `pending` |
+| 1: Canonical slot-composition kernel and Foundation layouts | Add a migration-safe canonical model for named slots and ordered nested placements, require a Foundation-derived root for interactive systems, and publish a versioned set of fully backed application-shell and page-layout presets through every persistence and transport boundary. | None | `completed` |
+| 2: Complete shared slot-based Compose experience | Replace the flat Compose list and uncontrolled JSON editor with one shared desktop/thin-client workspace that creates interactive systems from predefined layouts, embeds assets through named slots, configures instances through generated controls, edits typed connections separately, and recursively previews the current draft. | slot-composition-kernel | `completed` |
+| 3: Unified system lifecycle management | Add a shared Manage tab where a workspace user can find every drafted and published system in one responsive list, understand its state, preview or reopen it, and perform supported lifecycle actions including guarded deletion through canonical host boundaries. | shared-slot-composer-experience | `completed` |
+| 4: Migration, build adoption, and production qualification | Adopt canonical placements across historical systems, closed reference templates, deterministic builds and releases, then qualify the complete composer and system management experience across persistence shapes, packaged desktop, thin-client browser, accessibility, responsive layouts, security, performance, and recovery without rewriting immutable history. | system-lifecycle-management | `pending` |
 
 ## Increment 1: Canonical slot-composition kernel and Foundation layouts
 
 - Id: `slot-composition-kernel`
-- Status: `implementing`
+- Status: `completed`
 - Dependencies: None
 
 Add a migration-safe canonical model for named slots and ordered nested placements, require a Foundation-derived root for interactive systems, and publish a versioned set of fully backed application-shell and page-layout presets through every persistence and transport boundary.
@@ -93,12 +94,12 @@ Add a migration-safe canonical model for named slots and ordered nested placemen
 
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
-| `kernel-contracts`: Contracts normalize and round-trip exact slot definitions and placements, reject unsafe identifiers, duplicate placements, excessive depth/counts, invalid ordering, and unknown schema versions, and preserve typed bindings as a separate vocabulary. | local | not recorded |
-| `foundation-presets`: The new System Foundation version exposes every approved application-shell and page-layout preset with stable direction-neutral slot IDs, exact cardinality and accepted-child rules, responsive layout tokens, accessible source order, safe preview fixtures, and complete trusted backing-resource references while leaving system.foundation@1.0.0 unchanged. | local | not recorded |
-| `root-placement-validation`: Interactive revisions require exactly one exact or explicitly derived builtin.system.system root plus required shell/page-host structure, and validation produces bounded actionable errors for missing roots, invalid derivation, orphan/multiple-parent placement, nonexistent slots, incompatible children, cardinality, cycles, configuration, or profile violations. | local | not recorded |
-| `revision-roundtrip`: Create, save, clone, read, list, and conflict flows preserve placements through the structured repository and both API and Electron IPC/client surfaces with explicit workspace isolation and no renderer-owned truth. | local | not recorded |
-| `legacy-read-compatibility`: Historical flat revisions remain immutable and readable with an explicit legacy-structure status; no read silently writes, invents placements, changes build authority, or rewrites system.foundation@1.0.0. | local | not recorded |
-| `kernel-documentation`: ADRs, architecture, context packs, contracts/readmes, the docs mismatch register, and contributor guidance accurately describe the slot model, immutable-version strategy, security boundary, and deferred UI/adoption work. | local | not recorded |
+| `kernel-contracts`: Contracts normalize and round-trip exact slot definitions and placements, reject unsafe identifiers, duplicate placements, excessive depth/counts, invalid ordering, and unknown schema versions, and preserve typed bindings as a separate vocabulary. | local | passed (test) |
+| `foundation-presets`: The new System Foundation version exposes every approved application-shell and page-layout preset with stable direction-neutral slot IDs, exact cardinality and accepted-child rules, responsive layout tokens, accessible source order, safe preview fixtures, and complete trusted backing-resource references while leaving system.foundation@1.0.0 unchanged. | local | passed (test) |
+| `root-placement-validation`: Interactive revisions require exactly one exact or explicitly derived builtin.system.system root plus required shell/page-host structure, and validation produces bounded actionable errors for missing roots, invalid derivation, orphan/multiple-parent placement, nonexistent slots, incompatible children, cardinality, cycles, configuration, or profile violations. | local | passed (test) |
+| `revision-roundtrip`: Create, save, clone, read, list, and conflict flows preserve placements through the structured repository and both API and Electron IPC/client surfaces with explicit workspace isolation and no renderer-owned truth. | local | passed (test) |
+| `legacy-read-compatibility`: Historical flat revisions remain immutable and readable with an explicit legacy-structure status; no read silently writes, invents placements, changes build authority, or rewrites system.foundation@1.0.0. | local | passed (test) |
+| `kernel-documentation`: ADRs, architecture, context packs, contracts/readmes, the docs mismatch register, and contributor guidance accurately describe the slot model, immutable-version strategy, security boundary, and deferred UI/adoption work. | local | passed (documentation) |
 
 ### Verification
 
@@ -124,7 +125,7 @@ Stop activation of the new Foundation version and remove the additive slot-aware
 ## Increment 2: Complete shared slot-based Compose experience
 
 - Id: `shared-slot-composer-experience`
-- Status: `pending`
+- Status: `completed`
 - Dependencies: `slot-composition-kernel`
 
 Replace the flat Compose list and uncontrolled JSON editor with one shared desktop/thin-client workspace that creates interactive systems from predefined layouts, embeds assets through named slots, configures instances through generated controls, edits typed connections separately, and recursively previews the current draft.
@@ -152,13 +153,13 @@ Replace the flat Compose list and uncontrolled JSON editor with one shared deskt
 
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
-| `create-compose-reopen`: A user can create an interactive system, choose any approved shell preset, receive its protected required root/shell/page-host structure, add compatible nested assets, save an immutable revision, and reopen the identical hierarchy and configuration in desktop and thin client. | local | not recorded |
-| `slot-aware-editing`: The canvas and hierarchy show the same selection and order; compatible assets can be added, moved, reparented, wrapped, reordered, or removed through both pointer enhancements and a complete keyboard/native-control path, while required assets cannot be deleted and invalid drops/actions explain why they are unavailable. | local | not recorded |
-| `generated-configuration`: Definition schemas, constraints, options, defaults, and UI section/order hints generate appropriate controls for all supported value kinds; changes update selectedConfiguration and inline validation immediately, reset safely, and do not require editing raw JSON. | local | not recorded |
-| `typed-connections`: Connections mode presents only compatible typed endpoints and preserves data/event/control/resource/runtime/adapter/dependency bindings separately from containment, including parent-property and approved context/resource value sources without arbitrary expressions or magic strings. | local | not recorded |
-| `recursive-safe-preview`: Preview renders the selected page and nested slot hierarchy in canonical order with current unsaved values at desktop/tablet/mobile sizes, preserves semantic source order, reports nonvisual or unsupported assets, and does not execute backend or unqualified imported/authored code. | local | not recorded |
-| `responsive-accessible-states`: The shared workspace reflows without unintended horizontal page overflow, uses responsive panels/drawers, follows tree focus/selection/expansion semantics, returns focus after dialogs, and exposes usable loading, empty, error, conflict, blocked, unsaved, and unassigned-content states. | local | not recorded |
-| `composer-parity`: Shared UI tests plus desktop and thin-client builds prove the two hosts consume the same read model and mutations and never bypass API/IPC/preload or persist renderer-local composition truth. | local | not recorded |
+| `create-compose-reopen`: A user can create an interactive system, choose any approved shell preset, receive its protected required root/shell/page-host structure, add compatible nested assets, save an immutable revision, and reopen the identical hierarchy and configuration in desktop and thin client. | local | passed (test) |
+| `slot-aware-editing`: The canvas and hierarchy show the same selection and order; compatible assets can be added, moved, reparented, wrapped, reordered, or removed through both pointer enhancements and a complete keyboard/native-control path, while required assets cannot be deleted and invalid drops/actions explain why they are unavailable. | local | passed (test) |
+| `generated-configuration`: Definition schemas, constraints, options, defaults, and UI section/order hints generate appropriate controls for all supported value kinds; changes update selectedConfiguration and inline validation immediately, reset safely, and do not require editing raw JSON. | local | passed (test) |
+| `typed-connections`: Connections mode presents only compatible typed endpoints and preserves data/event/control/resource/runtime/adapter/dependency bindings separately from containment, including parent-property and approved context/resource value sources without arbitrary expressions or magic strings. | local | passed (test) |
+| `recursive-safe-preview`: Preview renders the selected page and nested slot hierarchy in canonical order with current unsaved values at desktop/tablet/mobile sizes, preserves semantic source order, reports nonvisual or unsupported assets, and does not execute backend or unqualified imported/authored code. | local | passed (test) |
+| `responsive-accessible-states`: The shared workspace reflows without unintended horizontal page overflow, uses responsive panels/drawers, follows tree focus/selection/expansion semantics, returns focus after dialogs, and exposes usable loading, empty, error, conflict, blocked, unsaved, and unassigned-content states. | local | passed (test) |
+| `composer-parity`: Shared UI tests plus desktop and thin-client builds prove the two hosts consume the same read model and mutations and never bypass API/IPC/preload or persist renderer-local composition truth. | local | passed (test) |
 
 ### Verification
 
@@ -182,13 +183,71 @@ Remove the new shared composer entry and read-model consumers while retaining ad
 - Legacy revision upgrade, bulk reference-template migration, and release/deployment qualification
 - Multi-user collaboration and real-time cursors
 
-## Increment 3: Migration, build adoption, and production qualification
+## Increment 3: Unified system lifecycle management
+
+- Id: `system-lifecycle-management`
+- Status: `completed`
+- Dependencies: `shared-slot-composer-experience`
+
+Add a shared Manage tab where a workspace user can find every drafted and published system in one responsive list, understand its state, preview or reopen it, and perform supported lifecycle actions including guarded deletion through canonical host boundaries.
+
+### Work packages
+
+- **Workspace-scoped lifecycle read model** (`manage-read-model`): One application-owned read model returns complete draft and published system summaries, exact current revision state, action eligibility, and bounded search/filter/sort data without renderer-local joins.
+- **Shared Manage tab and list** (`shared-manage-experience`): Desktop and thin client share an accessible responsive Manage list with clear lifecycle badges, useful metadata, search/filter/sort, empty/loading/error states, and direct reopen actions.
+- **Preview and guarded lifecycle actions** (`preview-and-lifecycle-actions`): Each eligible system can be previewed with the canonical recursive preview, opened in Compose, and deleted only through an explicit confirmation and application-owned eligibility/conflict policy.
+- **Host parity, regression coverage, and guidance** (`manage-host-parity`): API, IPC, preload, clients, shared UI, documentation, and regression tests prove identical Manage behavior without bypassing workspace, revision, publication, security, or persistence boundaries.
+
+### Deliverables
+
+- Canonical workspace-scoped system lifecycle summary contract and use case
+- Bounded search, status filtering, sorting, and refresh semantics
+- Shared responsive Manage tab listing drafted and published systems
+- Lifecycle/status metadata and explicit action eligibility
+- Canonical recursive preview action from each system row or card
+- Open-in-Compose and other existing supported lifecycle action handoffs
+- User-confirmed guarded deletion with conflict, dependency, and stale-state handling
+- Desktop API/IPC/preload/client parity and thin-client API parity
+- Focused application, transport, shared UI, accessibility, and host regression tests
+- Updated System Builder architecture, context, and nearest README guidance
+
+### Acceptance criteria
+
+| Criterion | Qualification | Latest evidence |
+| --- | --- | --- |
+| `complete-manage-list`: The Manage tab lists every system visible to the active workspace exactly once across drafted and published lifecycle states, exposes truthful current-revision and update metadata, and supports bounded search, status filtering, sorting, refresh, and usable loading, empty, and error states. | local | passed (test) |
+| `manage-preview-reopen`: A user can preview an eligible drafted or published system from Manage using the canonical bounded recursive preview and can open the selected system in Compose without losing its exact revision, hierarchy, configuration, or publication state. | local | passed (test) |
+| `guarded-system-deletion`: Deletion is available only when the application-owned policy marks a system eligible, always identifies the exact target and consequence in a confirmation dialog, detects stale or conflicting state, preserves immutable retained history required by policy, and refreshes the list after success without renderer-local mutation truth. | local | passed (test) |
+| `manage-action-truthfulness`: Every displayed lifecycle action is derived from canonical state and either succeeds through the established use case and transport boundary or remains visibly unavailable with a useful reason; failures are bounded, redacted, and leave the list and selected system consistent. | local | passed (test) |
+| `manage-accessibility-parity`: The shared Manage experience is keyboard operable, uses accessible list/table and dialog semantics, reflows without unintended page overflow, restores focus after preview and confirmation dialogs, and passes desktop and thin-client transport, build, and interaction parity checks. | local | passed (test) |
+
+### Verification
+
+- Run focused lifecycle read-model tests for workspace isolation, complete draft/published coverage, ordering, filtering, action eligibility, bounds, and stale metadata.
+- Run focused deletion policy and use-case tests for eligibility, confirmation inputs, immutable-history retention, dependencies, conflicts, idempotency, failure atomicity, and post-success refresh state.
+- Run focused API, IPC, preload, desktop-client, thin-client-client, security-policy, and transport-parity tests for list, preview inputs, reopen handoff, and deletion.
+- Run shared Manage interaction tests for search, filters, sorting, preview, Compose handoff, guarded deletion, focus restoration, keyboard operation, and loading/empty/error/conflict states at narrow and wide layouts.
+- After all Increment 3 work packages and focused checks pass, run desktop and thin-client typechecks/builds, npm run docs:check, npm run architecture:check, npm run agent-support:check, npm run package, and npm test once as completion gates.
+
+### Rollback
+
+Hide the Manage tab and disable its new lifecycle endpoints while preserving every existing system, revision, publication record, and Compose entry path. Any partially completed destructive request must fail atomically; rollback must not reconstruct or flatten system history from renderer state.
+
+### Excluded
+
+- Bulk deletion or bulk publication
+- Permanent purge of audit, release, deployment, or immutable revision history when retention policy requires it
+- Cross-workspace administration, ownership transfer, sharing, collaboration, or tenancy changes
+- A new publication workflow, deployment workflow, or revision-history editor
+- Executing unqualified imported or authored code inside Manage previews
+
+## Increment 4: Migration, build adoption, and production qualification
 
 - Id: `migration-build-qualification`
 - Status: `pending`
-- Dependencies: `shared-slot-composer-experience`
+- Dependencies: `system-lifecycle-management`
 
-Adopt canonical placements across historical systems, closed reference templates, deterministic builds and releases, then qualify the complete composer across persistence shapes, packaged desktop, thin-client browser, accessibility, responsive layouts, security, performance, and recovery without rewriting immutable history.
+Adopt canonical placements across historical systems, closed reference templates, deterministic builds and releases, then qualify the complete composer and system management experience across persistence shapes, packaged desktop, thin-client browser, accessibility, responsive layouts, security, performance, and recovery without rewriting immutable history.
 
 ### Work packages
 
@@ -219,9 +278,9 @@ Adopt canonical placements across historical systems, closed reference templates
 | `deterministic-build-hierarchy`: Build and release inputs freeze exact slot, placement, layout-definition, instance-configuration, backing-resource, and binding data; equivalent revisions reproduce identical content digests, meaningful hierarchy changes alter them, and tampering or missing exact definitions fails closed before approval or deployment. | local | not recorded |
 | `bounded-secure-operation`: Maximum instance, placement, depth, slot-child, configuration, binding, diagnostic, and rendered-node limits prevent excessive work; malformed, cyclic, cross-workspace, unsafe, stale, revoked, or unsupported inputs return bounded redacted errors and never widen code, secret, filesystem, network, build, release, or runtime authority. | local | not recorded |
 | `postgres-conformance`: Live PostgreSQL qualification proves the same slot-aware revision, conflict, workspace-isolation, legacy-read, upgrade, and immutable-history semantics as SQLite/structured local persistence. | controlled-environment | not recorded |
-| `packaged-cross-client-e2e`: A packaged Windows desktop application and supported thin-client browser each complete create, choose layout, nest, configure, connect, preview, save, reopen, switch layout, upgrade legacy, build, and inspect revision history against their real IPC/API paths. | controlled-environment | not recorded |
-| `accessibility-responsive-visual`: Controlled keyboard and assistive-technology review confirms understandable tree/canvas/inspector navigation and focus behavior; every approved preset satisfies WCAG 2.2 reflow expectations at 320 CSS pixels or equivalent zoom, preserves semantic reading order, and passes reviewed desktop/tablet/mobile visual baselines in light and dark themes. | controlled-environment | not recorded |
-| `scale-recovery-support`: Representative bounded-scale compositions remain responsive within documented targets, interrupted/conflicting saves and failed upgrades recover without revision loss, rollback disables new activation without flattening slot-aware data, and operator/contributor documentation states supported and unsupported behavior truthfully. | controlled-environment | not recorded |
+| `packaged-cross-client-e2e`: A packaged Windows desktop application and supported thin-client browser each complete create, choose layout, nest, configure, connect, preview, save, reopen, switch layout, upgrade legacy, build, manage, and inspect revision history against their real IPC/API paths. | controlled-environment | not recorded |
+| `accessibility-responsive-visual`: Controlled keyboard and assistive-technology review confirms understandable tree/canvas/inspector/manage navigation and focus behavior; every approved preset satisfies WCAG 2.2 reflow expectations at 320 CSS pixels or equivalent zoom, preserves semantic reading order, and passes reviewed desktop/tablet/mobile visual baselines in light and dark themes. | controlled-environment | not recorded |
+| `scale-recovery-support`: Representative bounded-scale compositions and system lists remain responsive within documented targets, interrupted/conflicting saves, failed upgrades, and guarded lifecycle actions recover without revision loss, rollback disables new activation without flattening slot-aware data, and operator/contributor documentation states supported and unsupported behavior truthfully. | controlled-environment | not recorded |
 
 ### Verification
 
@@ -231,13 +290,13 @@ Adopt canonical placements across historical systems, closed reference templates
 - Run adversarial limit, depth, cycle, oversized configuration, malformed envelope, cross-workspace, revocation, unsupported implementation, and diagnostic-redaction tests.
 - Run live PostgreSQL recovery/conformance qualification and retain sanitized evidence.
 - Run packaged desktop and thin-client browser end-to-end qualification on the supported platform/browser matrix.
-- Perform and record keyboard, assistive-technology, WCAG reflow, source-order, light/dark, and responsive visual review for every preset.
-- Run representative bounded-scale interaction and save/reopen measurements plus interruption/recovery drills.
-- After every Increment 3 work package and all controlled evidence pass, run npm run docs:check, npm run architecture:check, npm run agent-support:check, affected builds/packages, security/dependency checks, deployment fitness checks where applicable, and npm test once as final completion gates.
+- Perform and record keyboard, assistive-technology, WCAG reflow, source-order, light/dark, and responsive visual review for every preset and the Manage experience.
+- Run representative bounded-scale interaction, list, preview, save/reopen, and lifecycle-action measurements plus interruption/recovery drills.
+- After every Increment 4 work package and all controlled evidence pass, run npm run docs:check, npm run architecture:check, npm run agent-support:check, affected builds/packages, security/dependency checks, deployment fitness checks where applicable, and npm test once as final completion gates.
 
 ### Rollback
 
-Disable activation of the new composer and Foundation layout release, preserve all slot-aware and legacy revisions as immutable readable history, and keep prior approved releases runnable under their frozen manifests. A failed upgrade or layout switch never replaces its source revision. Rollback must not remove placement data, weaken validation, or make unqualified implementation executable.
+Disable activation of the new composer, Manage experience, and Foundation layout release; preserve all slot-aware and legacy revisions as immutable readable history; and keep prior approved releases runnable under their frozen manifests. A failed upgrade, layout switch, or lifecycle action never replaces its source revision. Rollback must not remove placement data, weaken validation, or make unqualified implementation executable.
 
 ### Excluded
 

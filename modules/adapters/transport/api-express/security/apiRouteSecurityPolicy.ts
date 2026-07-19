@@ -232,14 +232,36 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     { public: false, scopes: ["asset:write"] },
   ],
   ["POST /api/asset-studio/review", { public: false, scopes: ["asset:write"] }],
-  ["GET /api/asset-studio/asset-drafts", { public: false, scopes: ["asset:read"] }],
-  ["GET /api/asset-studio/asset-draft", { public: false, scopes: ["asset:read"] }],
-  ["POST /api/asset-studio/asset-drafts", { public: false, scopes: ["asset:write"] }],
-  ["POST /api/asset-studio/asset-drafts/update", { public: false, scopes: ["asset:write"] }],
-  ["POST /api/asset-studio/asset-drafts/review", { public: false, scopes: ["asset:write"] }],
-  ["POST /api/asset-studio/asset-drafts/publish", { public: false, scopes: ["asset:write"] }],
-  ["POST /api/asset-studio/asset-drafts/abandon", { public: false, scopes: ["asset:write"] }],
+  [
+    "GET /api/asset-studio/asset-drafts",
+    { public: false, scopes: ["asset:read"] },
+  ],
+  [
+    "GET /api/asset-studio/asset-draft",
+    { public: false, scopes: ["asset:read"] },
+  ],
+  [
+    "POST /api/asset-studio/asset-drafts",
+    { public: false, scopes: ["asset:write"] },
+  ],
+  [
+    "POST /api/asset-studio/asset-drafts/update",
+    { public: false, scopes: ["asset:write"] },
+  ],
+  [
+    "POST /api/asset-studio/asset-drafts/review",
+    { public: false, scopes: ["asset:write"] },
+  ],
+  [
+    "POST /api/asset-studio/asset-drafts/publish",
+    { public: false, scopes: ["asset:write"] },
+  ],
+  [
+    "POST /api/asset-studio/asset-drafts/abandon",
+    { public: false, scopes: ["asset:write"] },
+  ],
   ["GET /api/systems", { public: false, scopes: ["asset:read"] }],
+  ["GET /api/systems/manage", { public: false, scopes: ["asset:read"] }],
   ["GET /api/systems/templates", { public: false, scopes: ["asset:read"] }],
   [
     "POST /api/systems/create-from-template",
@@ -248,6 +270,10 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   ["GET /api/systems/system", { public: false, scopes: ["asset:read"] }],
   ["GET /api/systems/revision", { public: false, scopes: ["asset:read"] }],
   ["GET /api/systems/revisions", { public: false, scopes: ["asset:read"] }],
+  [
+    "GET /api/systems/composer/assets",
+    { public: false, scopes: ["asset:read"] },
+  ],
   ["POST /api/systems/create", { public: false, scopes: ["asset:write"] }],
   ["POST /api/systems/rename", { public: false, scopes: ["asset:write"] }],
   ["POST /api/systems/archive", { public: false, scopes: ["asset:write"] }],
@@ -406,15 +432,42 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     "GET /api/asset-authoring/workspaces/:workspaceId/effective-summaries",
     { public: false, scopes: ["asset:read"] },
   ],
-  ["GET /api/asset-authoring/workspaces/:workspaceId/customization-targets", { public: false, scopes: ["asset:read"] }],
-  ["GET /api/asset-authoring/workspaces/:workspaceId/customization-targets/:implementationReleaseId", { public: false, scopes: ["asset:read"] }],
-  ["GET /api/asset-authoring/workspaces/:workspaceId/derived-customizations", { public: false, scopes: ["asset:read"] }],
-  ["GET /api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId", { public: false, scopes: ["asset:read"] }],
-  ["POST /api/asset-authoring/workspaces/:workspaceId/derived-customizations", { public: false, scopes: ["asset:write"] }],
-  ["PATCH /api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId", { public: false, scopes: ["asset:write"] }],
-  ["POST /api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId/review", { public: false, scopes: ["asset:write"] }],
-  ["POST /api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId/publish", { public: false, scopes: ["asset:write"] }],
-  ["POST /api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId/abandon", { public: false, scopes: ["asset:write"] }],
+  [
+    "GET /api/asset-authoring/workspaces/:workspaceId/customization-targets",
+    { public: false, scopes: ["asset:read"] },
+  ],
+  [
+    "GET /api/asset-authoring/workspaces/:workspaceId/customization-targets/:implementationReleaseId",
+    { public: false, scopes: ["asset:read"] },
+  ],
+  [
+    "GET /api/asset-authoring/workspaces/:workspaceId/derived-customizations",
+    { public: false, scopes: ["asset:read"] },
+  ],
+  [
+    "GET /api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId",
+    { public: false, scopes: ["asset:read"] },
+  ],
+  [
+    "POST /api/asset-authoring/workspaces/:workspaceId/derived-customizations",
+    { public: false, scopes: ["asset:write"] },
+  ],
+  [
+    "PATCH /api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId",
+    { public: false, scopes: ["asset:write"] },
+  ],
+  [
+    "POST /api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId/review",
+    { public: false, scopes: ["asset:write"] },
+  ],
+  [
+    "POST /api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId/publish",
+    { public: false, scopes: ["asset:write"] },
+  ],
+  [
+    "POST /api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId/abandon",
+    { public: false, scopes: ["asset:write"] },
+  ],
 ]);
 
 export function resolveApiRoutePolicy(

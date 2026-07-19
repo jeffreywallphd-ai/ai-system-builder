@@ -1278,11 +1278,11 @@ export function composeServerHost(
         }),
       });
       const foundationReady = internalAssetRegistry.installSystemFoundationPack
-        .install({
+        .installAll({
           allowSystemDefinitionRefresh: true,
         })
-        .then((result) => {
-          if (result.status === "failed") {
+        .then((results) => {
+          if (results.some((result) => result.status === "failed")) {
             throw new Error("System foundation assets are unavailable.");
           }
         });
@@ -1336,6 +1336,7 @@ export function composeServerHost(
                   reference,
                 ),
             },
+            assetRegistryRead: internalAssetRegistry.workspaceReadFacade,
             generateSystemId: () => `system.${randomUUID()}`,
             now: options.now,
           })

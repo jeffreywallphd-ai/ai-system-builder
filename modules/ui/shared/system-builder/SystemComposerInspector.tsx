@@ -1,0 +1,551 @@
+import { useEffect, useMemo, useState } from "react";
+import type {
+  AssetBinding,
+  AssetConfigurationField,
+  AssetConfigurationValue,
+  AssetConfigurationValues,
+  AssetInstance,
+} from "../../../contracts/asset";
+import type { SystemBuilderComposerAsset } from "../../../contracts/system-builder";
+import { ApplicationIcon } from "../components/ApplicationIcon";
+import { EmptyState } from "../components/EmptyState";
+import {
+  bindingKindForSystemComposerEndpoint,
+  buildSystemComposerConfigurationSections,
+  listCompatibleSystemComposerTargets,
+  listSystemComposerPortEndpoints,
+  materializeSystemComposerConfiguration,
+  validateSystemComposerConfiguration,
+  type SystemComposerPortEndpoint,
+} from "./systemComposerInspectorModel";
+
+export type SystemComposerInspectorMode = "configuration" | "connections";
+
+export interface SystemComposerInspectorProps {
+  readonly mode: SystemComposerInspectorMode;
+  readonly selectedInstance?: AssetInstance;
+  readonly selectedDefinition?: SystemBuilderComposerAsset;
+  readonly instances: readonly AssetInstance[];
+  readonly catalog: readonly SystemBuilderComposerAsset[];
+  readonly bindings: readonly AssetBinding[];
+  readonly onConfigurationChange: (values: AssetConfigurationValues) => void;
+  readonly onAddConnection: (
+    source: SystemComposerPortEndpoint,
+    target: SystemComposerPortEndpoint,
+  ) => void;
+  readonly onRemoveConnection: (bindingId: string) => void;
+}
+
+export function SystemComposerInspector({
+  mode,
+  selectedInstance,
+  selectedDefinition,
+  instances,
+  catalog,
+  bindings,
+  onConfigurationChange,
+  onAddConnection,
+  onRemoveConnection,
+}: SystemComposerInspectorProps) {
+  if (mode === "connections") {
+    return (
+      <SystemComposerConnections
+        instances={instances}
+        catalog={catalog}
+        bindings={bindings}
+        onAddConnection={onAddConnection}
+        onRemoveConnection={onRemoveConnection}
+      />
+    );
+  }
+  if (!selectedInstance || !selectedDefinition) {
+    return (
+      <EmptyState
+        compact
+        title="Select an asset to configure"
+        description="Choose an asset in Structure mode, then return here for generated controls."
+        icon="settings"
+      />
+    );
+  }
+  return (
+    <SystemComposerConfiguration
+      instance={selectedInstance}
+      definition={selectedDefinition}
+      catalog={catalog}
+      onChange={onConfigurationChange}
+    />
+  );
+}
+
+function SystemComposerConfiguration({
+  instance,
+  definition,
+  catalog,
+  onChange,
+}: {
+  readonly instance: AssetInstance;
+  readonly definition: SystemBuilderComposerAsset;
+  readonly catalog: readonly SystemBuilderComposerAsset[];
+  readonly onChange: (values: AssetConfigurationValues) => void;
+}) {
+  const values = useMemo(
+    () =>
+      materializeSystemComposerConfiguration(
+        definition,
+        instance.selectedConfiguration,
+      ),
+    [definition, instance.selectedConfiguration],
+  );
+  const sections = useMemo(
+    () =>
+      buildSystemComposerConfigurationSections(definition.configurationSchema),
+    [definition.configurationSchema],
+  );
+  const errors = useMemo(
+    () =>
+      validateSystemComposerConfiguration(
+        definition.configurationSchema,
+        values,
+      ),
+    [definition.configurationSchema, values],
+  );
+  const update = (fieldId: string, value: AssetConfigurationValue) =>
+    onChange({ ...values, [fieldId]: value });
+
+  return (
+    <section
+      className="system-composer-inspector"
+      aria-labelledby="system-composer-configuration-title"
+    >
+      <header className="system-composer-inspector__header">
+        <div>
+          <h3 id="system-composer-configuration-title">
+            Configure {instance.displayName ?? definition.displayName}
+          </h3>
+          <p>
+            {definition.definitionId}@{definition.version}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="ui-button--secondary"
+          onClick={() =>
+            onChange(
+              materializeSystemComposerConfiguration(definition, undefined),
+            )
+          }
+        >
+          <ApplicationIcon name="refresh" />
+          <span>Reset defaults</span>
+        </button>
+      </header>
+      {sections.length ? (
+        sections.map((section) => (
+          <fieldset
+            key={section.id}
+            className="system-composer-inspector__section"
+          >
+            <legend>{section.label}</legend>
+            <div className="system-composer-inspector__fields">
+              {section.fields.map((field) => (
+                <ConfigurationField
+                  key={field.fieldId}
+                  field={field}
+                  value={values[field.fieldId]}
+                  catalog={catalog}
+                  errors={errors[field.fieldId] ?? []}
+                  onChange={(value) => update(field.fieldId, value)}
+                />
+              ))}
+            </div>
+          </fieldset>
+        ))
+      ) : (
+        <p className="ui-status ui-status--info">
+          This asset has no configurable fields.
+        </p>
+      )}
+      <details className="system-composer-inspector__advanced">
+        <summary>Advanced JSON</summary>
+        <p className="ui-text-muted">
+          Use this fallback only for schema fields that cannot be expressed by
+          the generated controls.
+        </p>
+        <JsonValueEditor
+          label="Complete configuration"
+          value={values}
+          onChange={(value) => {
+            if (isObjectValue(value)) onChange(value);
+          }}
+        />
+      </details>
+    </section>
+  );
+}
+
+function ConfigurationField({
+  field,
+  value,
+  catalog,
+  errors,
+  onChange,
+}: {
+  readonly field: AssetConfigurationField;
+  readonly value: AssetConfigurationValue | undefined;
+  readonly catalog: readonly SystemBuilderComposerAsset[];
+  readonly errors: readonly string[];
+  readonly onChange: (value: AssetConfigurationValue) => void;
+}) {
+  const label = field.label ?? field.fieldId;
+  const describedBy = `${field.fieldId}-help ${field.fieldId}-errors`;
+  const common = {
+    id: field.fieldId,
+    "aria-invalid": errors.length > 0,
+    "aria-describedby": describedBy,
+  } as const;
+  let control: React.ReactNode;
+  if (field.valueKind === "boolean") {
+    control = (
+      <input
+        {...common}
+        type="checkbox"
+        checked={value === true}
+        onChange={(event) => onChange(event.currentTarget.checked)}
+      />
+    );
+  } else if (field.options?.length || field.valueKind === "enum") {
+    control = (
+      <select
+        {...common}
+        value={value === undefined ? "" : JSON.stringify(value)}
+        onChange={(event) =>
+          onChange(
+            JSON.parse(event.currentTarget.value) as AssetConfigurationValue,
+          )
+        }
+      >
+        <option value="">Choose {label}</option>
+        {field.options?.map((option, index) => (
+          <option
+            key={index}
+            value={JSON.stringify(option.value)}
+            disabled={option.disabled}
+          >
+            {option.label ?? String(option.value)}
+          </option>
+        ))}
+      </select>
+    );
+  } else if (field.valueKind === "asset-reference") {
+    control = (
+      <select
+        {...common}
+        value={referenceKey(value)}
+        onChange={(event) => {
+          const selected = catalog.find(
+            (item) =>
+              `${item.definitionId}@${item.version}` ===
+              event.currentTarget.value,
+          );
+          if (selected) {
+            onChange({
+              kind: selected.definitionRef.kind,
+              id: String(selected.definitionRef.id),
+              version: selected.version,
+            });
+          }
+        }}
+      >
+        <option value="">Choose approved asset</option>
+        {catalog.map((item) => (
+          <option
+            key={`${item.definitionId}@${item.version}`}
+            value={`${item.definitionId}@${item.version}`}
+          >
+            {item.displayName} · v{item.version}
+          </option>
+        ))}
+      </select>
+    );
+  } else if (
+    [
+      "resource-reference",
+      "artifact-reference",
+      "runtime-capability-reference",
+    ].includes(field.valueKind)
+  ) {
+    control = (
+      <select {...common} disabled>
+        <option>No approved options available</option>
+      </select>
+    );
+  } else if (field.valueKind === "number" || field.valueKind === "integer") {
+    control = (
+      <input
+        {...common}
+        type="number"
+        step={field.valueKind === "integer" ? 1 : "any"}
+        value={typeof value === "number" ? value : ""}
+        placeholder={field.uiHint?.placeholder}
+        onChange={(event) =>
+          onChange(
+            event.currentTarget.value === ""
+              ? null
+              : Number(event.currentTarget.value),
+          )
+        }
+      />
+    );
+  } else if (
+    field.valueKind === "array" ||
+    field.valueKind === "object" ||
+    field.valueKind === "json"
+  ) {
+    control = (
+      <JsonValueEditor
+        label={label}
+        hideLabel
+        value={value ?? (field.valueKind === "array" ? [] : {})}
+        onChange={onChange}
+      />
+    );
+  } else if (field.uiHint?.hintKind === "textarea") {
+    control = (
+      <textarea
+        {...common}
+        value={typeof value === "string" ? value : ""}
+        placeholder={field.uiHint.placeholder}
+        onChange={(event) => onChange(event.currentTarget.value)}
+      />
+    );
+  } else {
+    control = (
+      <input
+        {...common}
+        value={typeof value === "string" ? value : ""}
+        placeholder={field.uiHint?.placeholder}
+        onChange={(event) => onChange(event.currentTarget.value)}
+      />
+    );
+  }
+  return (
+    <div
+      className="system-composer-inspector__field"
+      data-invalid={errors.length > 0}
+    >
+      <label htmlFor={field.fieldId}>
+        {label}
+        {field.required ? <span aria-hidden="true"> *</span> : null}
+      </label>
+      {field.description ? (
+        <p id={`${field.fieldId}-help`} className="ui-text-muted">
+          {field.description}
+        </p>
+      ) : (
+        <span id={`${field.fieldId}-help`} />
+      )}
+      {control}
+      <div
+        id={`${field.fieldId}-errors`}
+        role={errors.length ? "alert" : undefined}
+      >
+        {errors.map((error) => (
+          <p key={error} className="ui-field-error">
+            {error}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function JsonValueEditor({
+  label,
+  hideLabel = false,
+  value,
+  onChange,
+}: {
+  readonly label: string;
+  readonly hideLabel?: boolean;
+  readonly value: AssetConfigurationValue;
+  readonly onChange: (value: AssetConfigurationValue) => void;
+}) {
+  const [text, setText] = useState(() => JSON.stringify(value, null, 2));
+  const [error, setError] = useState<string>();
+  useEffect(() => setText(JSON.stringify(value, null, 2)), [value]);
+  return (
+    <label
+      className={hideLabel ? "system-composer-inspector__json" : undefined}
+    >
+      {hideLabel ? <span className="ui-sr-only">{label}</span> : label}
+      <textarea
+        spellCheck={false}
+        value={text}
+        aria-invalid={Boolean(error)}
+        onChange={(event) => setText(event.currentTarget.value)}
+      />
+      <button
+        type="button"
+        className="ui-button--secondary"
+        onClick={() => {
+          try {
+            onChange(JSON.parse(text) as AssetConfigurationValue);
+            setError(undefined);
+          } catch {
+            setError("Enter valid JSON before applying this value.");
+          }
+        }}
+      >
+        Apply JSON
+      </button>
+      {error ? (
+        <span className="ui-field-error" role="alert">
+          {error}
+        </span>
+      ) : null}
+    </label>
+  );
+}
+
+function SystemComposerConnections({
+  instances,
+  catalog,
+  bindings,
+  onAddConnection,
+  onRemoveConnection,
+}: Pick<
+  SystemComposerInspectorProps,
+  | "instances"
+  | "catalog"
+  | "bindings"
+  | "onAddConnection"
+  | "onRemoveConnection"
+>) {
+  const endpoints = useMemo(
+    () => listSystemComposerPortEndpoints(instances, catalog),
+    [catalog, instances],
+  );
+  const sources = endpoints.filter((endpoint) =>
+    ["output", "event", "control"].includes(endpoint.port.direction),
+  );
+  const [sourceKey, setSourceKey] = useState("");
+  const [targetKey, setTargetKey] = useState("");
+  const source = sources.find((endpoint) => endpoint.key === sourceKey);
+  const targets = useMemo(
+    () => listCompatibleSystemComposerTargets(source, endpoints),
+    [endpoints, source],
+  );
+  const target = targets.find((endpoint) => endpoint.key === targetKey);
+  useEffect(() => setTargetKey(""), [sourceKey]);
+  return (
+    <section
+      className="system-composer-connections"
+      aria-labelledby="system-composer-connections-title"
+    >
+      <h3 id="system-composer-connections-title">
+        Typed connections and value sources
+      </h3>
+      <p className="ui-text-muted">
+        Connect declared ports only. Containment remains in Structure mode; no
+        expressions or arbitrary port names are accepted.
+      </p>
+      {sources.length ? (
+        <div className="system-composer-connections__form">
+          <label>
+            Source endpoint
+            <select
+              value={sourceKey}
+              onChange={(event) => setSourceKey(event.currentTarget.value)}
+            >
+              <option value="">Choose declared source</option>
+              {sources.map((endpoint) => (
+                <option key={endpoint.key} value={endpoint.key}>
+                  {endpointLabel(endpoint)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Compatible target
+            <select
+              value={targetKey}
+              disabled={!source}
+              onChange={(event) => setTargetKey(event.currentTarget.value)}
+            >
+              <option value="">Choose compatible target</option>
+              {targets.map((endpoint) => (
+                <option key={endpoint.key} value={endpoint.key}>
+                  {endpointLabel(endpoint)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {source && !targets.length ? (
+            <p className="ui-status ui-status--info">
+              No compatible typed targets are available for this source.
+            </p>
+          ) : null}
+          <button
+            type="button"
+            className="ui-button--secondary"
+            disabled={!source || !target}
+            onClick={() => source && target && onAddConnection(source, target)}
+          >
+            <ApplicationIcon name="link" />
+            <span>
+              Add{" "}
+              {source ? bindingKindForSystemComposerEndpoint(source) : "typed"}{" "}
+              connection
+            </span>
+          </button>
+        </div>
+      ) : (
+        <EmptyState
+          compact
+          title="No typed source ports"
+          description="Add assets with declared output, event, or control ports."
+          icon="link"
+        />
+      )}
+      <ul className="system-composer-connections__list">
+        {bindings.map((binding) => (
+          <li key={String(binding.bindingId)}>
+            <span>
+              <strong>{binding.bindingKind}</strong> {binding.sourceRef.id}:
+              {binding.sourcePortRef?.id ?? "default"} → {binding.targetRef.id}:
+              {binding.targetPortRef?.id ?? "default"}
+            </span>
+            <button
+              type="button"
+              className="ui-button--tertiary"
+              aria-label={`Remove connection ${binding.bindingId}`}
+              onClick={() => onRemoveConnection(String(binding.bindingId))}
+            >
+              <ApplicationIcon name="delete" />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function endpointLabel(endpoint: SystemComposerPortEndpoint): string {
+  return `${endpoint.instanceLabel} · ${endpoint.port.displayName ?? endpoint.port.portId}`;
+}
+
+function referenceKey(value: AssetConfigurationValue | undefined): string {
+  if (!isObjectValue(value)) return "";
+  const id = value.id;
+  const version = value.version;
+  return typeof id === "string" && typeof version === "string"
+    ? `${id}@${version}`
+    : "";
+}
+
+function isObjectValue(
+  value: AssetConfigurationValue | undefined,
+): value is AssetConfigurationValues {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}

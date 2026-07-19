@@ -5,6 +5,7 @@ import type {
   WorkspaceSystemPackActivation,
 } from "../../../contracts/workspace";
 import {
+  SYSTEM_FOUNDATION_CURRENT_PACK_VERSION,
   SYSTEM_FOUNDATION_PACK_DISPLAY_NAME,
   SYSTEM_FOUNDATION_PACK_ID,
   SYSTEM_FOUNDATION_PACK_SOURCE_KIND,
@@ -22,18 +23,22 @@ export interface KnownWorkspaceSystemPackReference {
   readonly trustStatus: "system-trusted";
 }
 
-export const KNOWN_WORKSPACE_SYSTEM_PACK_REFERENCES: readonly KnownWorkspaceSystemPackReference[] = [
-  {
-    packId: SYSTEM_FOUNDATION_PACK_ID,
-    packVersion: SYSTEM_FOUNDATION_PACK_VERSION,
-    displayName: SYSTEM_FOUNDATION_PACK_DISPLAY_NAME,
-    sourceKind: SYSTEM_FOUNDATION_PACK_SOURCE_KIND,
-    sourceLayer: SYSTEM_FOUNDATION_PACK_SOURCE_LAYER,
-    trustStatus: SYSTEM_FOUNDATION_PACK_TRUST_STATUS,
-  } as KnownWorkspaceSystemPackReference,
-];
+export const KNOWN_WORKSPACE_SYSTEM_PACK_REFERENCES: readonly KnownWorkspaceSystemPackReference[] =
+  [SYSTEM_FOUNDATION_PACK_VERSION, SYSTEM_FOUNDATION_CURRENT_PACK_VERSION].map(
+    (packVersion) =>
+      ({
+        packId: SYSTEM_FOUNDATION_PACK_ID,
+        packVersion,
+        displayName: SYSTEM_FOUNDATION_PACK_DISPLAY_NAME,
+        sourceKind: SYSTEM_FOUNDATION_PACK_SOURCE_KIND,
+        sourceLayer: SYSTEM_FOUNDATION_PACK_SOURCE_LAYER,
+        trustStatus: SYSTEM_FOUNDATION_PACK_TRUST_STATUS,
+      }) as KnownWorkspaceSystemPackReference,
+  );
 
-export function buildSystemFoundationActivationId(workspaceId: WorkspaceId): string {
+export function buildSystemFoundationActivationId(
+  workspaceId: WorkspaceId,
+): string {
   return `activation.system-foundation.${workspaceId}`;
 }
 
@@ -42,7 +47,8 @@ export function getKnownSystemPackReference(
   packVersion: AssetPackVersion,
 ): KnownWorkspaceSystemPackReference | undefined {
   return KNOWN_WORKSPACE_SYSTEM_PACK_REFERENCES.find(
-    (reference) => reference.packId === packId && reference.packVersion === packVersion,
+    (reference) =>
+      reference.packId === packId && reference.packVersion === packVersion,
   );
 }
 
@@ -59,25 +65,31 @@ export function hasValidKnownSystemPackActivationProvenance(
 export function isKnownSystemPackActivation(
   activation: WorkspaceSystemPackActivation,
 ): boolean {
-  return Boolean(getKnownSystemPackReference(activation.packId, activation.packVersion));
+  return Boolean(
+    getKnownSystemPackReference(activation.packId, activation.packVersion),
+  );
 }
 
 export function isValidKnownSystemPackActivation(
   activation: WorkspaceSystemPackActivation,
 ): boolean {
-  return isKnownSystemPackActivation(activation) && hasValidKnownSystemPackActivationProvenance(activation);
+  return (
+    isKnownSystemPackActivation(activation) &&
+    hasValidKnownSystemPackActivationProvenance(activation)
+  );
 }
 
 export function createSystemFoundationWorkspaceActivation(
   workspaceId: WorkspaceId,
   activatedAt: string,
   activatedByActorRef?: WorkspaceActorReference,
+  packVersion: AssetPackVersion = SYSTEM_FOUNDATION_PACK_VERSION,
 ): WorkspaceSystemPackActivation {
   return {
     activationId: buildSystemFoundationActivationId(workspaceId),
     workspaceId,
     packId: SYSTEM_FOUNDATION_PACK_ID,
-    packVersion: SYSTEM_FOUNDATION_PACK_VERSION,
+    packVersion,
     sourceKind: "system",
     sourceLayer: "system-default",
     trustStatus: "system-trusted",

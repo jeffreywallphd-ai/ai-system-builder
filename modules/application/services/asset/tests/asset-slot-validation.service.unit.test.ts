@@ -48,7 +48,7 @@ describe("slot-aware asset definition validation", () => {
     const noncanonical = {
       ...definition(),
       slots: [{ ...definition().slots![0], slotId: " Content " }],
-    } as AssetDefinition;
+    } as unknown as AssetDefinition;
     const invalid = {
       ...definition(),
       slots: [

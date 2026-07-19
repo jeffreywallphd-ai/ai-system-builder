@@ -17,7 +17,7 @@ describe("SystemBuilderWorkspace", () => {
       restore: () => pending,
       clone: () => pending,
       listRevisions: () => pending,
-      listAssetOptions: () => pending,
+      listComposerAssets: () => pending,
     };
 
     const html = renderToStaticMarkup(

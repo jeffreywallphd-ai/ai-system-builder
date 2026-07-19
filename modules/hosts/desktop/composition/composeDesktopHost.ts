@@ -863,6 +863,17 @@ export function composeDesktopHost(
                 );
               },
             },
+            assetRegistryRead: {
+              listDefinitionCards: async (query) =>
+                (await getAssetFeatures()).assetRegistryRead.listDefinitionCards(
+                  query,
+                ),
+              readDefinitionDetail: async (reference, readOptions) =>
+                (await getAssetFeatures()).assetRegistryRead.readDefinitionDetail(
+                  reference,
+                  readOptions,
+                ),
+            },
             generateSystemId: () => `system.${randomUUID()}`,
             now: options.now,
           })

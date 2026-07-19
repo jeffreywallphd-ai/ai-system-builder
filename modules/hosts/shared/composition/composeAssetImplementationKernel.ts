@@ -1,7 +1,8 @@
 import type { AssetDefinitionRepositoryPort } from "../../../application/ports/asset";
 import {
-  SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES,
+  readSystemFoundationBackingResourceBundle,
   SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS,
+  SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS,
 } from "../../../application/services/asset-packs";
 import type {
   AssetImplementationArtifactPort,
@@ -35,6 +36,7 @@ import {
   normalizeAssetImplementationReleaseId,
   normalizeAssetSourceSnapshotId,
   type AssetImplementationBinding,
+  type AssetImplementationBackingResourceRecord,
   type AssetImplementationDeploymentProfile,
   type AssetImplementationFacetKind,
   type AssetImplementationRelease,
@@ -50,9 +52,31 @@ const DEFAULT_PACKAGE_DIGEST = `sha256:${"c".repeat(64)}`;
 export const SYSTEM_FOUNDATION_BACKING_RESOURCE_WORKSPACE_ID =
   createWorkspaceId("system.foundation");
 
-/** Exact, closed implementation bindings for every immutable foundation entry. */
+/** Exact, closed implementation bindings for the immutable 1.0.0 release. */
 export const SYSTEM_FOUNDATION_TRUSTED_IMPLEMENTATION_SEEDS: readonly TrustedBuiltInImplementationSeed[] =
-  SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS.map((descriptor) => {
+  createFoundationTrustedImplementationSeeds(
+    SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS,
+    "1",
+  );
+
+/** Exact, independently addressable implementation bindings for 2.0.0. */
+export const SYSTEM_FOUNDATION_V2_TRUSTED_IMPLEMENTATION_SEEDS: readonly TrustedBuiltInImplementationSeed[] =
+  createFoundationTrustedImplementationSeeds(
+    SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS,
+    "2",
+  );
+
+export const DEFAULT_TRUSTED_ASSET_IMPLEMENTATION_SEEDS: readonly TrustedBuiltInImplementationSeed[] =
+  [
+    ...SYSTEM_FOUNDATION_TRUSTED_IMPLEMENTATION_SEEDS,
+    ...SYSTEM_FOUNDATION_V2_TRUSTED_IMPLEMENTATION_SEEDS,
+  ];
+
+function createFoundationTrustedImplementationSeeds(
+  descriptors: typeof SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS,
+  releaseGeneration: string,
+): readonly TrustedBuiltInImplementationSeed[] {
+  return descriptors.map((descriptor) => {
     const identity = descriptor.definitionId.replace(/[^a-zA-Z0-9._:-]/g, "-");
     return {
       definitionRef: {
@@ -61,10 +85,10 @@ export const SYSTEM_FOUNDATION_TRUSTED_IMPLEMENTATION_SEEDS: readonly TrustedBui
         version: descriptor.definitionVersion,
       },
       releaseId: normalizeAssetImplementationReleaseId(
-        `implementation-release.${identity}.1`,
+        `implementation-release.${identity}.${releaseGeneration}`,
       ),
       bindingId: normalizeAssetImplementationBindingId(
-        `implementation-binding.${identity}.1`,
+        `implementation-binding.${identity}.${releaseGeneration}`,
       ),
       version: descriptor.definitionVersion,
       entryKey: descriptor.entryKey,
@@ -74,9 +98,7 @@ export const SYSTEM_FOUNDATION_TRUSTED_IMPLEMENTATION_SEEDS: readonly TrustedBui
       packageDigest: DEFAULT_PACKAGE_DIGEST,
     };
   });
-
-export const DEFAULT_TRUSTED_ASSET_IMPLEMENTATION_SEEDS: readonly TrustedBuiltInImplementationSeed[] =
-  SYSTEM_FOUNDATION_TRUSTED_IMPLEMENTATION_SEEDS;
+}
 
 export interface ComposeAssetImplementationKernelOptions {
   readonly documents: StructuredDocumentStore;
@@ -177,44 +199,66 @@ export function composeAssetImplementationKernel(
 
         const release = await repository.readRelease(seed.releaseId);
         if (!release) {
-          throw new Error("Trusted built-in implementation release is unavailable.");
+          throw new Error(
+            "Trusted built-in implementation release is unavailable.",
+          );
         }
 
         if (options.artifacts) {
-          const bundle = SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES.get(
-            String(seed.definitionRef.id),
+          const existingBackingResource = await backingResources.readByRelease(
+            seed.releaseId,
           );
-          if (!bundle) {
-            throw new Error(
-              "Trusted built-in implementation backing resources are unavailable.",
+          if (existingBackingResource) {
+            if (
+              !matchesTrustedSeedBackingResource(existingBackingResource, seed)
+            ) {
+              throw new Error(
+                "Trusted built-in implementation backing resource is incompatible.",
+              );
+            }
+          } else {
+            const bundle = readSystemFoundationBackingResourceBundle(
+              String(seed.definitionRef.id),
+              seed.definitionRef.version,
             );
+            if (!bundle) {
+              throw new Error(
+                "Trusted built-in implementation backing resources are unavailable.",
+              );
+            }
+            const artifact = await options.artifacts.putImmutable({
+              workspaceId: SYSTEM_FOUNDATION_BACKING_RESOURCE_WORKSPACE_ID,
+              kind: "source",
+              content: JSON.stringify(bundle),
+              mediaType: ASSET_IMPLEMENTATION_BACKING_RESOURCE_MEDIA_TYPE,
+            });
+            const identity = String(seed.definitionRef.id).replace(
+              /[^a-zA-Z0-9._-]/g,
+              "-",
+            );
+            const releaseGeneration = String(seed.releaseId).split(".").pop();
+            if (!releaseGeneration) {
+              throw new Error(
+                "Trusted built-in implementation release identity is invalid.",
+              );
+            }
+            await backingResources.save({
+              backingResourceId: `implementation-backing.${identity}.${releaseGeneration}`,
+              origin: "system-foundation",
+              releaseId: seed.releaseId,
+              definitionRef: seed.definitionRef,
+              scope: "system",
+              artifactWorkspaceId:
+                SYSTEM_FOUNDATION_BACKING_RESOURCE_WORKSPACE_ID,
+              sourceSnapshotId: normalizeAssetSourceSnapshotId(
+                `source-snapshot.${identity}.${artifact.digest.slice(-16)}`,
+              ),
+              artifact,
+              files: describeAssetImplementationBackingResourceFiles(bundle),
+              createdAt: release.createdAt,
+              createdBy: "system",
+            });
           }
-          const artifact = await options.artifacts.putImmutable({
-            workspaceId: SYSTEM_FOUNDATION_BACKING_RESOURCE_WORKSPACE_ID,
-            kind: "source",
-            content: JSON.stringify(bundle),
-            mediaType: ASSET_IMPLEMENTATION_BACKING_RESOURCE_MEDIA_TYPE,
-          });
-          const identity = String(seed.definitionRef.id).replace(
-            /[^a-zA-Z0-9._-]/g,
-            "-",
-          );
-          await backingResources.save({
-            backingResourceId: `implementation-backing.${identity}.1`,
-            origin: "system-foundation",
-            releaseId: seed.releaseId,
-            definitionRef: seed.definitionRef,
-            scope: "system",
-            artifactWorkspaceId:
-              SYSTEM_FOUNDATION_BACKING_RESOURCE_WORKSPACE_ID,
-            sourceSnapshotId: normalizeAssetSourceSnapshotId(
-              `source-snapshot.${identity}.${artifact.digest.slice(-16)}`,
-            ),
-            artifact,
-            files: describeAssetImplementationBackingResourceFiles(bundle),
-            createdAt: release.createdAt,
-            createdBy: "system",
-          });
         }
 
         const existingBinding = await repository.readBinding(seed.bindingId);
@@ -347,6 +391,34 @@ function matchesTrustedSeedBinding(
     binding.priority === 1000 &&
     binding.revision === 1 &&
     binding.approvedBy === "system"
+  );
+}
+
+function matchesTrustedSeedBackingResource(
+  record: AssetImplementationBackingResourceRecord,
+  seed: TrustedBuiltInImplementationSeed,
+): boolean {
+  return (
+    record.origin === "system-foundation" &&
+    record.releaseId === seed.releaseId &&
+    record.definitionRef.kind === seed.definitionRef.kind &&
+    record.definitionRef.id === seed.definitionRef.id &&
+    record.definitionRef.version === seed.definitionRef.version &&
+    record.scope === "system" &&
+    record.workspaceId === undefined &&
+    record.artifactWorkspaceId ===
+      SYSTEM_FOUNDATION_BACKING_RESOURCE_WORKSPACE_ID &&
+    record.createdBy === "system" &&
+    record.files.length > 0 &&
+    record.artifact.digest.startsWith("sha256:") &&
+    record.files.every(
+      (file) =>
+        file.path.trim().length > 0 &&
+        file.mediaType.trim().length > 0 &&
+        Number.isInteger(file.sizeCharacters) &&
+        file.sizeCharacters >= 0 &&
+        typeof file.editable === "boolean",
+    )
   );
 }
 

@@ -7,6 +7,8 @@ import { normalizeAssetId } from "../../../../contracts/asset";
 import {
   SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS,
   SYSTEM_FOUNDATION_PACK_MANIFEST,
+  SYSTEM_FOUNDATION_PACK_V2_MANIFEST,
+  SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS,
 } from "../../../../application/services/asset-packs";
 import type { AssetDefinitionRepositoryPort } from "../../../../application/ports/asset";
 import type { AssetImplementationArtifactPort } from "../../../../application/ports/asset-implementation";
@@ -136,7 +138,10 @@ describe("asset implementation host composition", () => {
 
   it("resolves every foundation default on every supported deployment profile", async () => {
     const byReference = new Map(
-      SYSTEM_FOUNDATION_PACK_MANIFEST.assets.map((entry) => [
+      [
+        ...SYSTEM_FOUNDATION_PACK_MANIFEST.assets,
+        ...SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets,
+      ].map((entry) => [
         `${entry.definition.definitionId}@${entry.definition.version}`,
         entry.definition,
       ]),
@@ -161,7 +166,8 @@ describe("asset implementation host composition", () => {
       createWorkspaceId("workspace-a"),
     );
     expect(backingResources.length).toBe(
-      SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS.length,
+      SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS.length +
+        SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS.length,
     );
     expect(
       backingResources.every(
@@ -173,7 +179,25 @@ describe("asset implementation host composition", () => {
       ),
     ).toBe(true);
 
-    for (const descriptor of SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS) {
+    expect(
+      backingResources.some(
+        (record) =>
+          record.backingResourceId ===
+          "implementation-backing.builtin.system.system.1",
+      ),
+    ).toBe(true);
+    expect(
+      backingResources.some(
+        (record) =>
+          record.backingResourceId ===
+          "implementation-backing.builtin.system.system.2",
+      ),
+    ).toBe(true);
+
+    for (const descriptor of [
+      ...SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS,
+      ...SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS,
+    ]) {
       for (const profile of descriptor.deploymentProfiles) {
         const result = await composition.resolveFoundationDefault(
           createWorkspaceId("workspace-a"),

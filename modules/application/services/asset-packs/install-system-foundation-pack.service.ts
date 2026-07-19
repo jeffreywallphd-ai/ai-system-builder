@@ -1,5 +1,10 @@
-import type { AssetPackId } from "../../../contracts/asset";
-import { SYSTEM_FOUNDATION_PACK_ID, SYSTEM_FOUNDATION_PACK_MANIFEST } from "./system-packs";
+import type { AssetPackId, AssetPackVersion } from "../../../contracts/asset";
+import {
+  readSystemFoundationManifest,
+  SYSTEM_FOUNDATION_PACK_ID,
+  SYSTEM_FOUNDATION_PACK_VERSION,
+  SYSTEM_FOUNDATION_PACK_VERSIONS,
+} from "./system-packs";
 import {
   InstallSystemAssetPackService,
   type InstallSystemAssetPackInput,
@@ -10,7 +15,9 @@ import {
 export type InstallSystemFoundationPackInput = Omit<
   InstallSystemAssetPackInput,
   "manifest" | "expectedPackId"
->;
+> & {
+  readonly version?: AssetPackVersion;
+};
 
 export class InstallSystemFoundationPackService {
   private readonly installer: InstallSystemAssetPackService;
@@ -22,11 +29,28 @@ export class InstallSystemFoundationPackService {
   public install(
     input: InstallSystemFoundationPackInput = {},
   ): Promise<InstallSystemAssetPackResult> {
+    const { version = SYSTEM_FOUNDATION_PACK_VERSION, ...installInput } = input;
+    const manifest = readSystemFoundationManifest(version);
+    if (!manifest) {
+      throw new Error(
+        "The requested System Foundation release is unavailable.",
+      );
+    }
     return this.installer.install({
-      ...input,
-      manifest: SYSTEM_FOUNDATION_PACK_MANIFEST,
+      ...installInput,
+      manifest,
       expectedPackId: SYSTEM_FOUNDATION_PACK_ID as AssetPackId,
     });
+  }
+
+  public async installAll(
+    input: Omit<InstallSystemFoundationPackInput, "version"> = {},
+  ): Promise<readonly InstallSystemAssetPackResult[]> {
+    const results: InstallSystemAssetPackResult[] = [];
+    for (const version of SYSTEM_FOUNDATION_PACK_VERSIONS) {
+      results.push(await this.install({ ...input, version }));
+    }
+    return results;
   }
 }
 

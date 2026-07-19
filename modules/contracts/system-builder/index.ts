@@ -8,3 +8,5 @@ export * from "./system-builder-record";
 export * from "./system-builder-revision";
 export * from "./system-builder-commands";
 export * from "./system-builder-result";
+export * from "./system-builder-composer";
+export * from "./system-builder-management";

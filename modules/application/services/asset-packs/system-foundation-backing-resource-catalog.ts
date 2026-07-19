@@ -1,13 +1,25 @@
-import type { AssetDefinition, AssetJsonValue } from "../../../contracts/asset";
+import type {
+  AssetDefinition,
+  AssetJsonValue,
+  AssetPackManifest,
+  AssetPackVersion,
+} from "../../../contracts/asset";
 import type {
   AssetImplementationBackingResourceBundleV1,
   AssetImplementationBackingResourceFile,
   SystemFoundationFunctionalDefault,
 } from "../../../contracts/asset-implementation";
-import { SYSTEM_FOUNDATION_PACK_MANIFEST } from "./system-packs";
+import {
+  readSystemFoundationLayoutPreset,
+  SYSTEM_FOUNDATION_PACK_MANIFEST,
+  SYSTEM_FOUNDATION_PACK_V2_MANIFEST,
+  type SystemFoundationLayoutPreset,
+  type SystemFoundationLayoutToken,
+} from "./system-packs";
 import {
   readSystemFoundationFunctionalDefault,
   SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS,
+  SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS,
 } from "./system-foundation-functional-default-catalog";
 
 export interface SystemFoundationBackingResourceProgram {
@@ -21,35 +33,45 @@ export interface SystemFoundationBackingResourceProgram {
   readonly styleClassName?: string;
 }
 
-const definitionsById = new Map(
-  SYSTEM_FOUNDATION_PACK_MANIFEST.assets.map((entry) => [
-    String(entry.definition.definitionId),
-    entry.definition,
-  ]),
-);
-
+/** Immutable implementation resources for the original 1.0.0 release. */
 export const SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES: ReadonlyMap<
   string,
   AssetImplementationBackingResourceBundleV1
-> = new Map(
-  SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS.map((descriptor) => {
-    const definition = definitionsById.get(descriptor.definitionId);
-    if (!definition) {
-      throw new Error(
-        `System foundation backing definition is missing: ${descriptor.definitionId}.`,
-      );
-    }
-    return [
-      descriptor.definitionId,
-      createSystemFoundationBackingResourceBundle(definition, descriptor),
-    ];
-  }),
+> = createBackingResourceCatalog(
+  SYSTEM_FOUNDATION_PACK_MANIFEST,
+  SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS,
 );
+
+/** Implementation resources for the complete 2.0.0 release. */
+export const SYSTEM_FOUNDATION_V2_BACKING_RESOURCE_BUNDLES: ReadonlyMap<
+  string,
+  AssetImplementationBackingResourceBundleV1
+> = createBackingResourceCatalog(
+  SYSTEM_FOUNDATION_PACK_V2_MANIFEST,
+  SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS,
+);
+
+export const SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES_BY_VERSION: ReadonlyMap<
+  AssetPackVersion,
+  ReadonlyMap<string, AssetImplementationBackingResourceBundleV1>
+> = new Map([
+  [
+    SYSTEM_FOUNDATION_PACK_MANIFEST.version,
+    SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES,
+  ],
+  [
+    SYSTEM_FOUNDATION_PACK_V2_MANIFEST.version,
+    SYSTEM_FOUNDATION_V2_BACKING_RESOURCE_BUNDLES,
+  ],
+]);
 
 export function createSystemFoundationBackingResourceBundle(
   definition: AssetDefinition,
   descriptor: SystemFoundationFunctionalDefault,
 ): AssetImplementationBackingResourceBundleV1 {
+  const layoutPreset = readSystemFoundationLayoutPreset(
+    descriptor.definitionId,
+  );
   const files: AssetImplementationBackingResourceFile[] = [
     {
       path: "other/definition.json",
@@ -72,18 +94,20 @@ export function createSystemFoundationBackingResourceBundle(
         formatVersion: "1.0",
         kind: "system-foundation-frontend",
         definitionId: descriptor.definitionId,
+        definitionVersion: descriptor.definitionVersion,
         entryKey: descriptor.entryKey,
         previewKind: descriptor.previewKind,
         displayName: descriptor.displayName,
         configuration: descriptor.previewConfiguration,
         fixture: descriptor.previewFixture,
+        ...(layoutPreset ? { layoutPreset } : {}),
       }),
     });
     files.push({
       path: "frontend/styles.css",
       role: "frontend-style",
       mediaType: "text/css",
-      content: foundationStyles(descriptor.definitionId),
+      content: foundationStyles(descriptor.definitionId, layoutPreset),
     });
   }
 
@@ -96,6 +120,7 @@ export function createSystemFoundationBackingResourceBundle(
         formatVersion: "1.0",
         kind: "system-foundation-backend",
         definitionId: descriptor.definitionId,
+        definitionVersion: descriptor.definitionVersion,
         entryKey: descriptor.entryKey,
         facetKind: descriptor.facetKind,
         previewKind: descriptor.previewKind,
@@ -113,15 +138,31 @@ export function createSystemFoundationBackingResourceBundle(
 
 export function readSystemFoundationBackingResourceBundle(
   definitionId: string,
+  version?: AssetPackVersion,
 ): AssetImplementationBackingResourceBundleV1 | undefined {
-  return SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES.get(definitionId);
+  if (version) {
+    return SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES_BY_VERSION.get(
+      version,
+    )?.get(definitionId);
+  }
+  return (
+    SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES.get(definitionId) ??
+    SYSTEM_FOUNDATION_V2_BACKING_RESOURCE_BUNDLES.get(definitionId)
+  );
 }
 
 export function readSystemFoundationBackingResourceProgram(
   definitionId: string,
+  version?: AssetPackVersion,
 ): SystemFoundationBackingResourceProgram | undefined {
-  const descriptor = readSystemFoundationFunctionalDefault(definitionId);
-  const bundle = readSystemFoundationBackingResourceBundle(definitionId);
+  const descriptor = readSystemFoundationFunctionalDefault(
+    definitionId,
+    version,
+  );
+  const bundle = readSystemFoundationBackingResourceBundle(
+    definitionId,
+    version,
+  );
   if (!descriptor || !bundle) return undefined;
   const frontend = parseFile(bundle, "frontend/structure.json");
   const backend = parseFile(bundle, "backend/logic.json");
@@ -153,6 +194,32 @@ export function readSystemFoundationBackingResourceProgram(
   };
 }
 
+function createBackingResourceCatalog(
+  manifest: AssetPackManifest,
+  descriptors: readonly SystemFoundationFunctionalDefault[],
+): ReadonlyMap<string, AssetImplementationBackingResourceBundleV1> {
+  const definitionsById = new Map(
+    manifest.assets.map((entry) => [
+      String(entry.definition.definitionId),
+      entry.definition,
+    ]),
+  );
+  return new Map(
+    descriptors.map((descriptor) => {
+      const definition = definitionsById.get(descriptor.definitionId);
+      if (!definition) {
+        throw new Error(
+          `System foundation backing definition is missing: ${descriptor.definitionId}@${descriptor.definitionVersion}.`,
+        );
+      }
+      return [
+        descriptor.definitionId,
+        createSystemFoundationBackingResourceBundle(definition, descriptor),
+      ];
+    }),
+  );
+}
+
 function parseFile(
   bundle: AssetImplementationBackingResourceBundleV1,
   path: string,
@@ -163,7 +230,9 @@ function parseFile(
   return objectValue(parsed);
 }
 
-function hasFrontend(kind: SystemFoundationFunctionalDefault["previewKind"]): boolean {
+function hasFrontend(
+  kind: SystemFoundationFunctionalDefault["previewKind"],
+): boolean {
   return ["layout", "form", "data", "state", "conversation"].includes(kind);
 }
 
@@ -186,19 +255,90 @@ function backendSteps(
     return ["Validate required evidence", "Deny when evidence is absent"];
   }
   if (descriptor.facetKind === "data") {
-    return ["Validate typed input", "Invoke authorized data capability", "Return typed output"];
+    return [
+      "Validate typed input",
+      "Invoke authorized data capability",
+      "Return typed output",
+    ];
   }
-  return ["Validate typed input", "Apply bounded implementation", "Return typed output"];
+  return [
+    "Validate typed input",
+    "Apply bounded implementation",
+    "Return typed output",
+  ];
 }
 
-function foundationStyles(definitionId: string): string {
+function foundationStyles(
+  definitionId: string,
+  layoutPreset?: SystemFoundationLayoutPreset,
+): string {
   const className = foundationClassName(definitionId);
+  if (!layoutPreset) {
+    return [
+      `.${className} { display: grid; gap: 0.75rem; min-inline-size: 0; }`,
+      `.${className} :where(input, textarea, select, button) { max-inline-size: 100%; }`,
+      `.${className} [role="status"] { overflow-wrap: anywhere; }`,
+      "",
+    ].join("\n");
+  }
+
+  const compact = layoutRules(className, layoutPreset.responsive.compact);
+  const regular = indent(
+    layoutRules(className, layoutPreset.responsive.regular),
+  );
+  const wide = indent(layoutRules(className, layoutPreset.responsive.wide));
+  const slotRules = layoutPreset.slots.map(
+    (slot) =>
+      `.${className} > [data-slot="${slot.slotId}"] { grid-area: ${slot.slotId}; min-inline-size: 0; }`,
+  );
   return [
-    `.${className} { display: grid; gap: 0.75rem; min-inline-size: 0; }`,
-    `.${className} :where(input, textarea, select, button) { max-inline-size: 100%; }`,
-    `.${className} [role="status"] { overflow-wrap: anywhere; }`,
+    compact,
+    ...slotRules,
+    `@media (min-width: 48rem) {\n${regular}\n}`,
+    `@media (min-width: 80rem) {\n${wide}\n}`,
     "",
   ].join("\n");
+}
+
+function layoutRules(
+  className: string,
+  variant: SystemFoundationLayoutPreset["responsive"]["compact"],
+): string {
+  return [
+    `.${className} {`,
+    "  display: grid;",
+    "  gap: 0.75rem;",
+    "  min-inline-size: 0;",
+    `  grid-template-columns: ${columnsFor(variant.columnPattern)};`,
+    `  grid-template-areas: ${areasFor(variant.areas)};`,
+    "}",
+  ].join("\n");
+}
+
+function columnsFor(token: SystemFoundationLayoutToken): string {
+  switch (token) {
+    case "start-content":
+      return "minmax(12rem, 18rem) minmax(0, 1fr)";
+    case "content-end":
+      return "minmax(0, 1fr) minmax(14rem, 20rem)";
+    case "equal-split":
+      return "repeat(2, minmax(0, 1fr))";
+    case "three-panel":
+      return "minmax(12rem, 18rem) minmax(0, 1fr) minmax(14rem, 20rem)";
+    default:
+      return "minmax(0, 1fr)";
+  }
+}
+
+function areasFor(areas: readonly (readonly string[])[]): string {
+  return areas.map((row) => `"${row.join(" ")}"`).join(" ");
+}
+
+function indent(value: string): string {
+  return value
+    .split("\n")
+    .map((line) => `  ${line}`)
+    .join("\n");
 }
 
 function foundationClassName(definitionId: string): string {

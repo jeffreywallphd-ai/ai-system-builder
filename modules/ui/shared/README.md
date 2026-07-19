@@ -14,15 +14,29 @@
   free, and never accept definition-provided components or source.
 - The shared System Builder editor lives in `modules/ui/shared/system-builder`.
   Keep system records and immutable revision state behind its client interface;
-  both desktop and thin-client surfaces must use the same catalog, composition,
-  inspector, validation, and history semantics. Native labeled controls and
-  explicit buttons are the required keyboard path; drag-and-drop may only be a
-  later enhancement.
-  Compose previews use the shared modal and render the current in-memory ordered
-  frontend surfaces only through registered side-effect-free System Foundation
-  renderers. Keep them bounded, include unsaved applied changes, omit unsupported
-  assets truthfully, and never execute backend logic or imply release, activation,
-  or deployment.
+  both desktop and thin-client surfaces must use the workspace-scoped exact
+  composer catalog and the same draft, validation, history, and save semantics.
+  The layout gallery, compatible palette, semantic canvas, hierarchy tree,
+  breadcrumbs, protected-node actions, Configure mode, Connections mode, and
+  recursive preview are shared UI rather than host-specific reconstructions.
+  Native labeled controls and explicit buttons are the complete keyboard path;
+  drag-and-drop may only be a later enhancement.
+  Slot-aware saves must preserve exact root references, structure, placements,
+  configuration, and typed bindings. Do not infer a replacement root from visual
+  order, synthesize hierarchy for legacy-flat revisions, accept arbitrary port
+  names, or mix containment with bindings.
+  Compose previews use the shared modal and recursively render current in-memory
+  placements and configuration through registered side-effect-free System
+  Foundation renderers. Keep node counts and viewport frames bounded, expose
+  unsaved/unassigned/unsupported states truthfully, and never execute backend or
+  unqualified implementation logic or imply release, activation, or deployment.
+  The Systems Manage surface must remain shared between desktop and thin client.
+  Consume its workspace-scoped application projection instead of joining system
+  records and releases in renderer code. Preserve native table semantics on wide
+  screens and labeled card rows on narrow screens. Preview exact revisions in
+  the shared modal; route edits into Compose; use canonical clone, archive, and
+  restore commands. Describe delete as recoverable archive behavior and never
+  imply that immutable revision or release history was erased.
 - The shared System Builder Build & Release workflow lives beside the editor in
   `modules/ui/shared/system-builder`. Keep exact revision selection, deployment
   profile, build diagnostics/evidence, approval, immutable release history, and

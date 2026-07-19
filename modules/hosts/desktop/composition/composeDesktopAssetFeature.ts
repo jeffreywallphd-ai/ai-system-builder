@@ -69,11 +69,11 @@ export async function composeDesktopAssetFeature(
     }),
   });
   options.onInternalAssetRegistry?.(internalAssetRegistry);
-  const foundationInstall =
-    await internalAssetRegistry.installSystemFoundationPack.install({
+  const foundationInstalls =
+    await internalAssetRegistry.installSystemFoundationPack.installAll({
       allowSystemDefinitionRefresh: true,
     });
-  if (foundationInstall.status === "failed") {
+  if (foundationInstalls.some((result) => result.status === "failed")) {
     throw new Error("System foundation assets are unavailable.");
   }
   const implementationArtifacts = createAssetImplementationArtifactAdapter(

@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   SystemBuilderWorkspace,
+  SystemManagementWorkspace,
   SystemBuildReleaseWorkflow,
   SystemDataRunTest,
   SystemReviewRunTest,
@@ -41,6 +42,8 @@ export function SystemBuilderPage({
     () => createThinClientSystemDeploymentClient(),
     [],
   );
+  const [activeTabId, setActiveTabId] = useState("compose");
+  const [composeSystemId, setComposeSystemId] = useState<string>();
   return (
     <section className="ui-stack ui-stack--sm" aria-labelledby="systems-title">
       <header className="ui-stack ui-stack--sm">
@@ -50,9 +53,25 @@ export function SystemBuilderPage({
         </p>
       </header>
       <TabbedPanel
+        activeTabId={activeTabId}
+        onTabChange={setActiveTabId}
         defaultTabId="compose"
         tabListAriaLabel="System Builder sections"
         tabs={[
+          {
+            id: "manage",
+            label: "Manage",
+            content: (
+              <SystemManagementWorkspace
+                workspaceId={workspaceId}
+                client={client}
+                onOpenInCompose={(systemId) => {
+                  setComposeSystemId(systemId);
+                  setActiveTabId("compose");
+                }}
+              />
+            ),
+          },
           {
             id: "compose",
             label: "Compose",
@@ -60,6 +79,7 @@ export function SystemBuilderPage({
               <SystemBuilderWorkspace
                 workspaceId={workspaceId}
                 client={client}
+                initialSystemId={composeSystemId}
               />
             ),
           },

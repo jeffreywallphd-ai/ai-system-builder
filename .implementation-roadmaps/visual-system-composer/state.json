@@ -1,0 +1,174 @@
+{
+  "blockers": [],
+  "chunks": [],
+  "completion": null,
+  "createdAt": "2026-07-19T17:05:31Z",
+  "currentIncrementId": null,
+  "decisions": [
+    {
+      "approvedAt": null,
+      "approvedFingerprint": null,
+      "context": "The mockup requires a persistent asset/layout palette, safe editable canvas, properties sidebar, and layers tree with pointer/touch dragging, while the repository requires an equivalent keyboard path, canonical slot operations, React 19 desktop/thin parity, bounded behavior, and production packaging.",
+      "id": "visual-composer-drag-interaction",
+      "options": [
+        {
+          "consequences": [
+            "Package and lock files change and dependency security/build/package gates become mandatory",
+            "A thin shared interaction adapter maps palette insert, within-slot reorder, cross-slot reparent, and layout operations onto pure draft/application commands",
+            "The four-region editor shell, responsive drawers, properties tabs, and Layers and Structure tree remain repository-owned shared UI",
+            "No drag library type or event crosses into contracts, application, persistence, transports, or immutable revisions"
+          ],
+          "id": "dnd-kit-canonical-adapter",
+          "label": "dnd-kit canonical adapter",
+          "recommended": true,
+          "summary": "Use the mature @dnd-kit/core and @dnd-kit/sortable packages only as a shared pointer/touch/keyboard interaction adapter; translate every accepted drop into existing canonical draft commands, with custom slot collision rules, drag handles, overlays, instructions, announcements, and unchanged native action controls.",
+          "tradeoffs": [
+            "Adds pinned audited UI dependencies and a modest client bundle cost",
+            "Provides maintained pointer, touch, keyboard, overlay, sensor, and sortable foundations",
+            "Still requires repository-specific collision, compatibility, focus restoration, announcements, and exhaustive nested-slot tests",
+            "Keeps the visual shell declarative and preserves one command/state model across all input methods"
+          ]
+        },
+        {
+          "consequences": [
+            "Package and lock files change and dependency security/build/package gates become mandatory",
+            "The editor must provide explicit move menus or buttons as the authoritative keyboard alternative",
+            "Shared UI owns live-region messaging, focus restoration, and all semantic tree behavior"
+          ],
+          "id": "pragmatic-drag-drop-adapter",
+          "label": "Pragmatic DnD adapter",
+          "recommended": false,
+          "summary": "Use Atlassian Pragmatic Drag and Drop for pointer direct manipulation and keep keyboard movement in the existing explicit action/menu path with custom live announcements.",
+          "tradeoffs": [
+            "Smaller framework coupling and strong performance-oriented primitives",
+            "Accessibility behavior is intentionally separate from the core package and must be assembled in this repository",
+            "Pointer and keyboard paths use different interaction mechanisms even though they converge on the same commands",
+            "Nested named-slot collision and drag-preview behavior still require substantial custom code"
+          ]
+        },
+        {
+          "consequences": [
+            "The roadmap grows materially and direct-manipulation qualification becomes a larger independent risk boundary",
+            "Repository code must own every sensor and accessibility behavior for both Electron and supported browsers",
+            "No package changes are needed, but substantially more shared UI infrastructure and maintenance are introduced"
+          ],
+          "id": "repository-pointer-engine",
+          "label": "Repository-owned pointer engine",
+          "recommended": false,
+          "summary": "Implement direct manipulation with Pointer Events, geometry measurement, custom overlays, auto-scroll, collision detection, touch activation, keyboard pickup/move/drop, and live announcements without a third-party drag dependency.",
+          "tradeoffs": [
+            "Avoids a production dependency and gives complete behavior control",
+            "Largest implementation, accessibility, browser-compatibility, performance, and maintenance burden",
+            "High risk of duplicating mature sensor, cancellation, scrolling, overlay, and focus behavior",
+            "Requires broader test fixtures across mouse, touch, pen, keyboard, zoom, and nested scroll containers"
+          ]
+        }
+      ],
+      "proposalFingerprint": "27c0e5aaa2337c7d7d7564e7d23a8fd0b08df810a1e4e79dfe0ba584a4696a9a",
+      "question": "Which interaction engine should power direct manipulation in the shared visual System Composer?",
+      "selectedOptionId": null,
+      "status": "awaiting-approval",
+      "title": "Visual composer drag interaction"
+    }
+  ],
+  "discovery": {
+    "constraints": [
+      "Use the existing canonical SystemBuilderRevision, AssetComposition, AssetInstance, AssetPlacement, AssetBinding, exact definitions, and application validators; drag state is transient UI state only.",
+      "The visual canvas must represent predefined named slots and semantic ordering rather than arbitrary coordinates, user-authored dimensions, or renderer-only layout metadata.",
+      "Every pointer or touch drop must resolve to the same pure bounded add, reorder, reparent, wrap, or layout-remap operation used by the complete keyboard and button path.",
+      "The center canvas may render only registered side-effect-free Foundation surfaces and safe fixtures; it must never execute unqualified backing resources, imported code, backend logic, or deployment behavior.",
+      "Desktop and thin client must consume one shared editor shell and one platform client contract with exact workspace context, optimistic save conflicts, and no host-specific composition policy.",
+      "The wide mockup layout should keep palette, canvas, properties, and layers visible; narrower layouts must use accessible drawers or panel tabs without losing function, focus order, or source order.",
+      "Selection, focus, hover, drag overlay, zoom, panel size, and open-panel state are presentation state and must not enter immutable system revisions.",
+      "A layout change for an existing system must be explicit, previewable, cancelable, and deterministic, preserving compatible content and exposing unmatched content rather than silently deleting it.",
+      "Any new drag-and-drop dependency must be version-pinned, license/security reviewed, isolated behind shared UI interaction adapters, and verified in desktop packaging and thin-client builds.",
+      "Keep the old slot-composer roadmap stopped after its verified Increment 3; do not resume its unstarted Increment 4 in parallel with this replacement roadmap."
+    ],
+    "decisionRequired": true,
+    "recordedAt": "2026-07-19T17:07:14Z",
+    "sources": [
+      {
+        "note": "Defines canonical revisions, named slots, ordered placements, shared UI, and non-executing preview boundaries.",
+        "title": "System Builder architecture",
+        "url": "docs/architecture/system-builder.md"
+      },
+      {
+        "note": "Owns one in-memory draft, save/preview actions, layout gallery, modes, and desktop/thin-client shared behavior.",
+        "title": "Current shared System Builder workspace",
+        "url": "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx"
+      },
+      {
+        "note": "Already contains the palette, slot canvas, synchronized keyboard tree, selection, and explicit structural actions.",
+        "title": "Current semantic structure editor",
+        "url": "modules/ui/shared/system-builder/SystemComposerStructureEditor.tsx"
+      },
+      {
+        "note": "Pure bounded operations can remain the only commit path for pointer, touch, keyboard, and button interactions.",
+        "title": "Canonical draft operations",
+        "url": "modules/ui/shared/system-builder/systemComposerDraft.ts"
+      },
+      {
+        "note": "Provides the content to reorganize into a persistent properties sidebar without changing system truth.",
+        "title": "Schema inspector and typed connections",
+        "url": "modules/ui/shared/system-builder/SystemComposerInspector.tsx"
+      },
+      {
+        "note": "Documents keyboard sensors, tailored instructions, and live-region announcements; it explicitly treats defaults as a starting point rather than complete accessibility.",
+        "title": "dnd-kit accessibility guide",
+        "url": "https://docs.dndkit.com/guides/accessibility"
+      },
+      {
+        "note": "Provides sortable primitives and spatial keyboard coordinates while leaving canonical state updates to the consumer.",
+        "title": "dnd-kit sortable preset",
+        "url": "https://docs.dndkit.com/presets/sortable"
+      },
+      {
+        "note": "Defines the expected expansion, focus, and selection behavior for the persistent Layers and Structure panel.",
+        "title": "WAI-ARIA tree view pattern",
+        "url": "https://www.w3.org/WAI/ARIA/apg/patterns/treeview/"
+      },
+      {
+        "note": "Defines grouped editor-toolbar semantics and keyboard focus behavior.",
+        "title": "WAI-ARIA toolbar pattern",
+        "url": "https://www.w3.org/WAI/ARIA/apg/patterns/toolbar/"
+      },
+      {
+        "note": "Requires retained information and function at narrow equivalent widths while allowing a bounded two-dimensional manipulation region.",
+        "title": "WCAG 2.2 reflow",
+        "url": "https://www.w3.org/TR/WCAG22/#reflow"
+      }
+    ],
+    "summary": "The completed slot-composer foundations already provide exact workspace asset discovery, required system roots, predefined application/page layouts, canonical named slots and placements, pure add/reorder/reparent/wrap/remove draft operations, protected nodes, bounded undo/redo, schema-generated configuration, typed connections, a keyboard tree, safe recursive preview, and desktop/thin-client parity. The current UI does not yet match the supplied visual-composer mockup: creation controls and layout choices sit above the editor, the asset/canvas/tree workspace exists only in Structure mode, configuration and connections replace the whole workspace, the center is a semantic hierarchy rather than a safe editable visual rendering, and no pointer/touch drag interaction exists. The mockup can therefore be implemented as a shared interaction and presentation layer over the existing canonical draft, with one application-owned layout-remapping seam where changing an existing layout requires deterministic placement mapping. No new persistence graph or renderer-owned system truth is needed."
+  },
+  "evidence": [],
+  "feedback": [],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "80444f314be03eecdc879946720db835e151f95d4cca822994c61c6b94cb486d",
+      "recordedAt": "2026-07-19T17:07:14Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "71545d287d7189d1ddfe9438c379cc68ccb53dd028903a405b4268e58c968948",
+      "recordedAt": "2026-07-19T17:07:19Z",
+      "sequence": 2,
+      "type": "decision-proposed"
+    }
+  ],
+  "increments": [],
+  "name": "Visual System Composer",
+  "objective": "Deliver a production-ready visual System Composer that builds on canonical named slots and placements with a mockup-aligned asset and layout palette, safe editable canvas, synchronized properties and layers panels, accessible drag-and-drop, and shared desktop/thin-client behavior.",
+  "paths": {
+    "report": "docs/tmp/visual-system-composer-implementation-report.md",
+    "roadmap": "docs/visual-system-composer-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/visual-system-composer/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": null,
+  "schemaVersion": 1,
+  "slug": "visual-system-composer",
+  "status": "decision-approval",
+  "updatedAt": "2026-07-19T17:07:19Z"
+}

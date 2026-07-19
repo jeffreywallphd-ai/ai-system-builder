@@ -73,6 +73,8 @@ import type {
 import type {
   SystemBuilderComposition,
   SystemBuilderTemplateId,
+  ListSystemBuilderComposerAssetsQuery,
+  ListSystemBuilderManagementQuery,
 } from "../../../../../modules/contracts/system-builder";
 import type { SystemDeploymentCapabilityPolicy } from "../../../../../modules/contracts/system-deployment";
 
@@ -554,6 +556,10 @@ interface DesktopApiBridge {
     input: { workspaceId: string; includeArchived?: boolean },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
+  listSystemBuilderManagement?: (
+    input: ListSystemBuilderManagementQuery,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
   readSystemBuilderSystem?: (
     input: { workspaceId: string; systemId: string },
     context?: DesktopBridgeRequestContext,
@@ -597,6 +603,10 @@ interface DesktopApiBridge {
   ) => Promise<unknown>;
   listSystemBuilderRevisions?: (
     input: { workspaceId: string; systemId: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  listSystemBuilderComposerAssets?: (
+    input: ListSystemBuilderComposerAssetsQuery,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   requestSystemBuild?: (

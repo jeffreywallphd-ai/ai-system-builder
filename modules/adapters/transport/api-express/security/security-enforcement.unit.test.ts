@@ -25,6 +25,9 @@ describe("api route security policy coverage", () => {
     expect(API_ROUTE_POLICIES.get("POST /api/asset-packages/inspect")).toMatchObject({ public: false, scopes: ["asset:write"] });
     expect(API_ROUTE_POLICIES.get("GET /api/systems")).toMatchObject({ public: false, scopes: ["asset:read"] });
     expect(API_ROUTE_POLICIES.get("POST /api/systems/revisions/save")).toMatchObject({ public: false, scopes: ["asset:write"] });
+    expect(
+      API_ROUTE_POLICIES.get("GET /api/systems/composer/assets"),
+    ).toMatchObject({ public: false, scopes: ["asset:read"] });
     expect(API_ROUTE_POLICIES.get("GET /api/systems/data/form")).toMatchObject({ public: false, scopes: ["asset:read"] });
     expect(API_ROUTE_POLICIES.get("POST /api/systems/data/records/update")).toMatchObject({ public: false, scopes: ["asset:write"] });
     expect(API_ROUTE_POLICIES.get("GET /api/asset-authoring/workspaces/:workspaceId/drafts")).toMatchObject({ public: false, scopes: ["asset:read"] });
