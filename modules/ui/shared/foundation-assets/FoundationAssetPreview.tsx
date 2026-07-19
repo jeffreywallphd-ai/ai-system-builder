@@ -6,9 +6,10 @@ import type { AssetJsonValue } from "../../../contracts/asset";
 export interface FoundationAssetPreviewProps {
   readonly definitionId: string;
   readonly displayName?: string;
+  readonly configuration?: Readonly<Record<string, AssetJsonValue>>;
 }
 
-export function FoundationAssetPreview({ definitionId, displayName }: FoundationAssetPreviewProps) {
+export function FoundationAssetPreview({ definitionId, displayName, configuration }: FoundationAssetPreviewProps) {
   const program = readSystemFoundationBackingResourceProgram(definitionId);
   if (!program) {
     return (
@@ -19,17 +20,22 @@ export function FoundationAssetPreview({ definitionId, displayName }: Foundation
     );
   }
 
-  const title = displayName ?? program.displayName;
+  const fixture = {
+    ...program.previewFixture,
+    ...program.previewConfiguration,
+    ...configuration,
+  };
+  const title = stringValue(configuration?.title) ?? displayName ?? program.displayName;
   switch (program.previewKind) {
-    case "form": return <FormPreview title={title} fixture={program.previewFixture} />;
-    case "data": return <DataPreview title={title} fixture={program.previewFixture} />;
-    case "conversation": return <ConversationPreview title={title} fixture={program.previewFixture} />;
-    case "workflow": return <OrderedPreview title={title} label="Workflow steps" values={program.backendSteps.length ? program.backendSteps : stringArray(program.previewFixture.steps)} />;
-    case "policy": return <PolicyPreview title={title} reason={stringValue(program.previewFixture.reason)} />;
-    case "state": return <StatePreview title={title} message={stringValue(program.previewFixture.message)} />;
-    case "layout": return <OrderedPreview title={title} label="Layout regions" values={stringArray(program.previewFixture.regions)} />;
+    case "form": return <FormPreview title={title} fixture={fixture} />;
+    case "data": return <DataPreview title={title} fixture={fixture} />;
+    case "conversation": return <ConversationPreview title={title} fixture={fixture} />;
+    case "workflow": return <OrderedPreview title={title} label="Workflow steps" values={program.backendSteps.length ? program.backendSteps : stringArray(fixture.steps)} />;
+    case "policy": return <PolicyPreview title={title} reason={stringValue(fixture.reason)} />;
+    case "state": return <StatePreview title={title} message={stringValue(fixture.message)} />;
+    case "layout": return <OrderedPreview title={title} label="Layout regions" values={stringArray(fixture.regions)} />;
     default:
-      return <PreviewFrame title={title} kind="Semantic default"><p>{stringValue(program.previewFixture.summary) ?? "Portable system-foundation building block."}</p></PreviewFrame>;
+      return <PreviewFrame title={title} kind="Semantic default"><p>{stringValue(fixture.summary) ?? "Portable system-foundation building block."}</p></PreviewFrame>;
   }
 }
 

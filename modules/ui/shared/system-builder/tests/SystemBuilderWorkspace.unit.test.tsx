@@ -29,6 +29,7 @@ describe("SystemBuilderWorkspace", () => {
     expect(html).toContain("New system name");
     expect(html).toContain('aria-label="Reference template"');
     expect(html).toContain("Create reference system");
+    expect(html).toContain("Preview UI");
     expect(html).toContain("Create or choose a system");
   });
 });

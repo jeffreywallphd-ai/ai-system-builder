@@ -49,6 +49,10 @@ This directory separates canonical system guidance from downstream task context 
     workflows, System Builder composition, functional system defaults, system
     builds/releases, and multi-shape execution; successor decisions are required
     before crossing currently deferred import or execution boundaries.
+- `docs/system-builder-slot-composer-implementation-roadmap.md`
+  - Successor delivery plan for canonical named slots and ordered placements,
+    predefined interactive layouts, the shared visual Compose experience,
+    immutable legacy upgrades, build adoption, and controlled qualification.
 - `docs/context/templates/`
   - Templates for durable epic, feature, and story context artifacts.
 
@@ -67,6 +71,10 @@ This directory separates canonical system guidance from downstream task context 
 - End-to-end asset and system composition delivery: use
   `docs/asset-system-composition-implementation-roadmap.md`, then load the one
   owning Asset/System context pack for the increment being implemented.
+- Slot-based System Builder composition, predefined interactive layouts, or
+  migration from flat Compose revisions: use
+  `docs/system-builder-slot-composer-implementation-roadmap.md` and the System
+  Builder context pack.
 - Organization tenancy, managed identity, or deployment placement: read
   ADR-0029 and `docs/architecture/organization-tenancy-and-identity.md`.
 - Database operation or release qualification: use

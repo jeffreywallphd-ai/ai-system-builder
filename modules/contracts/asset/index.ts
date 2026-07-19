@@ -35,6 +35,8 @@ export * from "./asset-composition-validation-summary";
 export * from "./asset-definition";
 export * from "./asset-instance";
 export * from "./asset-binding";
+export * from "./asset-slot-definition";
+export * from "./asset-placement";
 export * from "./asset-composition";
 export * from "./asset-validation-issue";
 export * from "./asset-resource-kind";

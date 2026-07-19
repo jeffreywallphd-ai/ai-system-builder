@@ -1,7 +1,7 @@
 # System Builder
 
 - Status: current
-- Related decisions: `docs/adr/ADR-0005-builder-core-platform-capabilities-and-user-composable-assets.md`, `docs/adr/ADR-0016-asset-kernel-terminology-and-architecture-baseline.md`, `docs/adr/ADR-0020-asset-composition-planning.md`, `docs/adr/ADR-0024-system-builder-area-and-software-status-placement.md`, `docs/adr/ADR-0033-system-builds-releases-security-and-workflows.md`
+- Related decisions: `docs/adr/ADR-0005-builder-core-platform-capabilities-and-user-composable-assets.md`, `docs/adr/ADR-0016-asset-kernel-terminology-and-architecture-baseline.md`, `docs/adr/ADR-0020-asset-composition-planning.md`, `docs/adr/ADR-0024-system-builder-area-and-software-status-placement.md`, `docs/adr/ADR-0033-system-builds-releases-security-and-workflows.md`, `docs/adr/ADR-0036-canonical-slot-composition-and-foundation-layouts.md`
 - Verification: `docs/architecture/architecture-verification.md`
 
 ## Purpose
@@ -21,6 +21,10 @@ downstream actions.
 - **System composition**: an `AssetComposition` specialization containing system roots, asset instances, bindings, rules, dependencies, provenance, and validation summary.
 - **Source composition plan**: an optional reference to the non-executing asset composition plan from which a System Builder record is derived.
 - **Materialized system definition**: an optional future reference to a versioned system `AssetDefinition`; the initial contract does not materialize or publish one.
+- **Asset slot definition**: an exact definition-owned, named, bounded child region with accepted child rules; slot array order is logical source order.
+- **Asset placement**: the revision-owned ordered containment edge from one parent instance and named slot to one child instance. It is separate from typed data/event/control/resource/runtime/dependency bindings.
+- **System profile**: an explicit interactive, service, or workflow construction policy. Interactive profiles require one Foundation-derived system root and approved shell/page structure.
+- **Legacy-flat structure**: a historical revision with no structure descriptor and no placements. Reads classify it without synthesizing or persisting a hierarchy.
 - **Software status**: builder-application, host, runtime, installer, and resource diagnostics. This belongs to Settings and is never part of a System Builder record.
 
 ## Contract and data-model baseline
@@ -47,6 +51,16 @@ SystemBuilderRecord {
 }
 ```
 
+Slot-aware revisions add a versioned `SystemBuilderStructure`, canonical
+`AssetPlacement` records, and matching composition placement references. The
+structure and placement schemas are bounded and transport-neutral. Unknown
+schema versions, unsafe IDs, duplicate child parents or positions, self
+placement, excessive counts, invalid cardinality, and invalid order fail closed.
+The same revision may still contain `AssetBinding` records, whose connection
+semantics remain distinct from containment.
+
+Historical revisions omit both additions and remain immutable. A read reports
+`legacy-flat`; it never invents placements or writes an upgrade.
 `SystemBuilderRevision` is an immutable snapshot containing the composition,
 instances, bindings, safe validation issues, actor, and timestamp. Updating a
 record requires the caller's expected record revision. Saving a composition
@@ -90,6 +104,12 @@ authoring, customization, and single-asset Studio workflows.
   operations. API reads require `asset:read`; mutations require `asset:write`.
 - `modules/ui/shared/system-builder` is the shared desktop/thin-client editor.
   It uses native labeled controls and buttons as the complete keyboard path.
+- Compose provides a design-time UI preview of the current in-memory instance
+  order and applied configuration. The shared modal renders only bounded frontend
+  surfaces with registered, side-effect-free System Foundation renderers and
+  truthfully reports omitted nonvisual or unsupported assets. It does not execute
+  implementation or backend source and grants no build, release, activation, or
+  deployment authority.
 - `modules/contracts/system-build`, `modules/application/use-cases/system-build`,
   and the matching persistence/storage/transport adapters own deterministic
   attempts and immutable releases without adding runtime state to system

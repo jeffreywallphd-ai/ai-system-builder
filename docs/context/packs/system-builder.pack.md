@@ -18,6 +18,9 @@
 
 - A task concerns only System Foundation ownership, a system prompt, or operating-system resources.
 - Runtime diagnostics work does not affect System Builder terminology or placement.
+- Reuse canonical `AssetSlotDefinition` and `AssetPlacement` for containment; do not overload typed bindings or create renderer-owned hierarchy.
+- Slot-aware revisions declare an explicit profile and exact layout identity. Preserve logical start/end names and source order across responsive presentation.
+- Treat omitted structure plus omitted placements as immutable `legacy-flat` data; reads must not synthesize or persist a migration.
 
 ## Core Guidance
 
@@ -42,6 +45,11 @@
   `modules/application/services/system-builder/validate-system-builder-revision.service.ts`.
 - API/IPC transports and clients are present for both hosts; Systems uses the
   shared `modules/ui/shared/system-builder/` editor in desktop and thin client.
+- The shared Compose UI preview uses current in-memory instance order and applied
+  configuration, is bounded to registered System Foundation frontend renderers,
+  and reports nonvisual or unsupported assets truthfully. It never executes
+  backend or implementation source and does not imply build, release, activation,
+  or deployment.
 - Deterministic attempts and immutable releases live in the separate
   `system-build` contract, application, persistence, storage, API/IPC, and
   shared Build & Release workflow families. Approval re-verifies every artifact
@@ -77,6 +85,7 @@
 - Operational diagnostics remain in
   `apps/desktop/src/renderer/features/settings/components/SoftwareStatusSection.tsx`.
 - Deployment is never implied by the design-time editor or a successful build;
+- `docs/adr/ADR-0036-canonical-slot-composition-and-foundation-layouts.md`
   it requires an explicit compatible install and readiness-verified activation.
 
 ## Canonical Source Docs

@@ -1,5 +1,5 @@
 import type { AssetDefinition, AssetValidationIssue } from "../../../contracts/asset";
-import { isAssetFamily, isAssetLifecycleStatus, isAssetReviewStatus, isAssetType, isAssetVersion } from "../../../contracts/asset";
+import { isAssetFamily, isAssetLifecycleStatus, isAssetReviewStatus, isAssetType, isAssetVersion, normalizeAssetSlotDefinitions } from "../../../contracts/asset";
 import {
   addIssue,
   checkAllowed,
@@ -74,6 +74,17 @@ export function validateAssetDefinition(
       );
     }
   });
+
+  if (definition.slots !== undefined) {
+    try {
+      const normalizedSlots = normalizeAssetSlotDefinitions(definition.slots);
+      if (JSON.stringify(normalizedSlots) !== JSON.stringify(definition.slots)) {
+        addIssue(issues, { severity: "error", category: "composition", message: "Asset slot definitions must use their canonical normalized form.", assetRef, path: ["slots"] });
+      }
+    } catch {
+      addIssue(issues, { severity: "error", category: "composition", message: "Asset slot definitions are invalid or exceed supported limits.", assetRef, path: ["slots"] });
+    }
+  }
 
   validatePorts(definition.ports, issues, assetRef, ["ports"]);
   validateCompositionRules(definition.compositionRules, issues, assetRef, ["compositionRules"]);

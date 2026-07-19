@@ -13,6 +13,7 @@ import type { AssetProvenance } from "./asset-provenance";
 import type { AssetReference } from "./asset-reference";
 import type { AssetRequirement } from "./asset-requirement";
 import type { AssetReviewStatus } from "./asset-review-status";
+import type { AssetSlotDefinition } from "./asset-slot-definition";
 import type { AssetType } from "./asset-type";
 import type { AssetVersion } from "./asset-version";
 
@@ -36,6 +37,7 @@ export interface AssetDefinition {
   readonly ports?: readonly AssetPort[];
   readonly compositionRuleRefs?: readonly AssetReference[];
   readonly compositionRules?: readonly AssetCompositionRule[];
+  readonly slots?: readonly AssetSlotDefinition[];
   readonly dependencies?: readonly AssetCompositionDependency[];
   readonly metadata?: AssetMetadata;
 }

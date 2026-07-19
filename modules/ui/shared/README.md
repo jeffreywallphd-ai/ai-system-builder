@@ -18,6 +18,11 @@
   inspector, validation, and history semantics. Native labeled controls and
   explicit buttons are the required keyboard path; drag-and-drop may only be a
   later enhancement.
+  Compose previews use the shared modal and render the current in-memory ordered
+  frontend surfaces only through registered side-effect-free System Foundation
+  renderers. Keep them bounded, include unsaved applied changes, omit unsupported
+  assets truthfully, and never execute backend logic or imply release, activation,
+  or deployment.
 - The shared System Builder Build & Release workflow lives beside the editor in
   `modules/ui/shared/system-builder`. Keep exact revision selection, deployment
   profile, build diagnostics/evidence, approval, immutable release history, and

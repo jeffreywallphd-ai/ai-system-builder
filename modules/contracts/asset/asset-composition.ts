@@ -32,6 +32,7 @@ export interface AssetComposition {
   readonly rootInstanceRefs: readonly AssetReference[];
   readonly instanceRefs: readonly AssetReference[];
   readonly bindingRefs?: readonly AssetReference[];
+  readonly placementRefs?: readonly AssetReference[];
   readonly bindings?: readonly AssetBinding[];
   readonly compositionRules?: readonly AssetCompositionRule[];
   readonly dependencies?: readonly AssetCompositionDependency[];

@@ -2,6 +2,7 @@ export * from "./system-builder-id";
 export * from "./system-builder-status";
 export * from "./system-builder-template";
 export * from "./system-builder-validation";
+export * from "./system-builder-structure";
 export * from "./system-builder-composition";
 export * from "./system-builder-record";
 export * from "./system-builder-revision";

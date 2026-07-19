@@ -3,6 +3,8 @@ import type { AssetBinding, AssetInstance, AssetReference } from "../../../contr
 import type { SystemBuilderRecord, SystemBuilderResult, SystemBuilderRevision, SystemBuilderTemplateSummary } from "../../../contracts/system-builder";
 import { ApplicationIcon } from "../components/ApplicationIcon";
 import { EmptyState } from "../components/EmptyState";
+import { ModalDialog } from "../components/ModalDialog";
+import { SystemCompositionPreview } from "./SystemCompositionPreview";
 
 export interface SystemBuilderAssetOption {
   readonly definitionId: string;
@@ -55,6 +57,7 @@ export function SystemBuilderWorkspace({ workspaceId, client }: { readonly works
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const selectedSystem = systems.find((system) => String(system.systemId) === selectedSystemId);
   const selectedInstance = instances.find((instance) => String(instance.instanceId) === selectedInstanceId);
@@ -273,6 +276,7 @@ export function SystemBuilderWorkspace({ workspaceId, client }: { readonly works
   }
 
   return (
+    <>
     <section className="ui-panel ui-panel--sectioned system-builder" aria-labelledby="system-builder-workspace-title">
       <header className="ui-panel__section-header">
         <div className="ui-panel-heading ui-panel-heading--blue">
@@ -296,6 +300,15 @@ export function SystemBuilderWorkspace({ workspaceId, client }: { readonly works
           </> : null}
           <label>Reference template<select aria-label="Reference template" value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.currentTarget.value as SystemBuilderTemplateSummary["templateId"] | "")}><option value="">Choose a template</option>{templates.map((template) => <option key={template.templateId} value={template.templateId}>{template.displayName}</option>)}</select></label>
           <button type="button" className="ui-button--secondary" onClick={() => void createReferenceSystem()} disabled={busy || !selectedTemplateId}><ApplicationIcon name="systems" /><span>Create reference system</span></button>
+          <button
+            type="button"
+            className="ui-button--secondary"
+            onClick={() => setPreviewOpen(true)}
+            disabled={busy || !selectedSystem || !revision || instances.length === 0}
+            aria-haspopup="dialog"
+          >
+            <ApplicationIcon name="play" /><span>Preview UI</span>
+          </button>
         </div>
         {!selectedSystem || !revision ? (
           <EmptyState title="Create or choose a system" description="Systems keep configuration and connections in immutable workspace-scoped revisions." icon="systems" />
@@ -349,6 +362,22 @@ export function SystemBuilderWorkspace({ workspaceId, client }: { readonly works
         </>}
       </div>
     </section>
+      <ModalDialog
+        open={previewOpen && Boolean(selectedSystem && revision)}
+        title={`${selectedSystem?.name ?? "System"} UI preview`}
+        onClose={() => setPreviewOpen(false)}
+        closeLabel="Close system UI preview"
+        dialogClassName="system-composition-preview-dialog"
+      >
+        {selectedSystem ? (
+          <SystemCompositionPreview
+            systemName={selectedSystem.name}
+            instances={instances}
+            includesUnsavedChanges={dirty}
+          />
+        ) : null}
+      </ModalDialog>
+    </>
   );
 }
 
