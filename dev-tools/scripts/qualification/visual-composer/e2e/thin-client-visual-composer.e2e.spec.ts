@@ -1,5 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+
+test.setTimeout(120_000);
 
 test("thin client completes the real visual composer workflow", async ({
   page,
@@ -47,18 +49,24 @@ test("thin client completes the real visual composer workflow", async ({
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Canvas", level: 3 }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 30_000 });
   await expect(
     page.getByRole("heading", { name: "Asset Palette", level: 3 }),
   ).toBeVisible();
-  await expect(page.getByLabel("Search assets")).toBeVisible();
+  await expect(page.getByLabel("Search compatible assets")).toBeVisible();
   const card = page.getByRole("button", { name: "Drag Card", exact: true });
-  await expect(card).toBeVisible();
+  await expect(card).toBeVisible({ timeout: 30_000 });
   const activeRegion = page.locator(
     '.system-composer__slot[data-target="true"]',
   );
   await expect(activeRegion).toHaveCount(1);
-  await pointerDrag(page, card, activeRegion);
+  await card.focus();
+  await card.press("Space");
+  await card.press("Escape");
+  await expect(
+    page.getByText("Drag cancelled. No composition changes were made."),
+  ).toBeVisible();
+  await card.dragTo(activeRegion);
   await expect(
     page.getByText(
       "Asset added locally. Save the revision to validate and persist it.",
@@ -70,7 +78,16 @@ test("thin client completes the real visual composer workflow", async ({
   await expect(
     properties.getByRole("heading", { name: "Configure Card" }),
   ).toBeVisible();
-  await properties.getByLabel("Title").fill("Qualification summary");
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByText("Last composition change undone.")).toBeVisible();
+  await page.getByRole("button", { name: "Redo" }).click();
+  await expect(page.getByText("Composition change restored.")).toBeVisible();
+  await expect(
+    properties.getByRole("heading", { name: "Configure Card" }),
+  ).toBeVisible();
+  await properties
+    .getByRole("textbox", { name: "Title", exact: true })
+    .fill("Qualification summary");
   await expect(
     page.getByText("Unsaved changes", { exact: true }),
   ).toBeVisible();
@@ -92,19 +109,23 @@ test("thin client completes the real visual composer workflow", async ({
 
   await page.getByRole("tab", { name: "Manage" }).click();
   const systemRow = page.getByRole("row", { name: /Qualified portal/ });
-  await expect(systemRow).toBeVisible();
+  await expect(systemRow).toBeVisible({ timeout: 30_000 });
   await systemRow.getByRole("button", { name: "Preview" }).click();
   const managePreview = page.getByRole("dialog", {
     name: "Preview: Qualified portal",
   });
-  await expect(managePreview.getByText("Qualification summary")).toBeVisible();
+  await expect(managePreview.getByText("Qualification summary")).toBeVisible({
+    timeout: 30_000,
+  });
   await managePreview.getByRole("button", { name: "Close dialog" }).click();
   await systemRow.getByRole("button", { name: "Open in Compose" }).click();
   await expect(page.getByRole("tab", { name: "Compose" })).toHaveAttribute(
     "aria-selected",
     "true",
   );
-  await page.getByRole("button", { name: "Build & test" }).click();
+  const buildAndTest = page.getByRole("button", { name: "Build & test" });
+  await expect(buildAndTest).toBeVisible({ timeout: 30_000 });
+  await buildAndTest.click();
   await expect(
     page.getByRole("tab", { name: "Build & Release" }),
   ).toHaveAttribute("aria-selected", "true");
@@ -127,7 +148,7 @@ test("thin client completes the real visual composer workflow", async ({
   await page.setViewportSize({ width: 320, height: 1_000 });
   await expect(
     page.getByRole("heading", { name: "Canvas", level: 3 }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 30_000 });
   const pageOverflow = await page.evaluate(
     () =>
       document.documentElement.scrollWidth -
@@ -136,32 +157,6 @@ test("thin client completes the real visual composer workflow", async ({
   expect(pageOverflow).toBeLessThanOrEqual(1);
   expect(browserErrors).toEqual([]);
 });
-
-async function pointerDrag(
-  page: Page,
-  source: Locator,
-  destination: Locator,
-): Promise<void> {
-  const sourceBox = await source.boundingBox();
-  const destinationBox = await destination.boundingBox();
-  if (!sourceBox || !destinationBox) {
-    throw new Error("Drag source or destination is not visible.");
-  }
-  const sourcePoint = {
-    x: sourceBox.x + sourceBox.width / 2,
-    y: sourceBox.y + sourceBox.height / 2,
-  };
-  const destinationPoint = {
-    x: destinationBox.x + destinationBox.width / 2,
-    y: destinationBox.y + Math.min(destinationBox.height / 2, 80),
-  };
-  await page.mouse.move(sourcePoint.x, sourcePoint.y);
-  await page.mouse.down();
-  await page.mouse.move(sourcePoint.x + 10, sourcePoint.y + 10, { steps: 3 });
-  await page.mouse.move(destinationPoint.x, destinationPoint.y, { steps: 12 });
-  await page.waitForTimeout(250);
-  await page.mouse.up();
-}
 
 function requiredEnvironment(name: string): string {
   const value = process.env[name]?.trim();

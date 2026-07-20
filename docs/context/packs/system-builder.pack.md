@@ -45,15 +45,18 @@
   `modules/application/services/system-builder/validate-system-builder-revision.service.ts`.
 - API/IPC transports and clients are present for both hosts; Systems uses the
   shared `modules/ui/shared/system-builder/` editor in desktop and thin client.
-- New interactive records begin with one Foundation v2 system root and a
-  canonical application/page containment tree. Save, clone, persistence, API,
-  IPC, preload, and shared UI paths preserve exact structure and placements;
-  legacy-flat revisions remain readable without synthesis.
+- New interactive records begin with one Foundation v2 system root, a required
+  exact application layout, and a canonical application/page containment tree.
+  The default is `builtin.layout.application.minimal@2.0.0` when no layout is
+  requested. Save, clone, persistence, API, IPC, preload, and shared UI paths
+  preserve exact structure and placements; legacy-flat revisions remain readable
+  without persistence-time synthesis.
 - Validation resolves exact definitions and enforces root identity, slot
   declaration and compatibility, cardinality, placement coverage, bounded
   depth, and acyclic containment before a revision can be treated as valid.
 - The workspace-scoped composer catalog supplies exact definitions, schemas,
-  defaults, ports, slots, availability, trusted fixed layout geometry, and
+  defaults, ports, slots, availability, abstract geometry for every
+  slot-bearing container, and
   application-owned compatibility. Desktop and thin client share the predefined
   layout icons in the flat three-column Design workspace: a searchable Asset Palette,
   a wide Canvas showing all fixed regions of the active application layout, and one tabbed details sidebar containing
@@ -65,24 +68,49 @@
   draft commands, and drag/panel state is not persisted. Foundation layout
   containers expose semantic labels but not editable
   dimensions, regions, responsive rules, raw JSON, CSS, or grid coordinates.
+  Ordinary containers retain bounded schema-owned layout controls; their
+  direction, spacing, padding, alignment, columns, wrap, and responsive fields
+  are grouped under Layout, and every declared child region remains a nested
+  Canvas drop surface. Standalone catalog fixtures are never nested into Canvas
+  containers: containers expose structure only, while leaf nodes contribute one
+  composition-aware semantic surface without repeating descendant UI.
 - Layout selections use one application preview operation over HTTP/IPC and
   immediately update the local undoable Canvas draft. Expected-revision checks
   and canonical source order produce a preserved/moved/unassigned result without
-  persistence. For a legacy-flat reference system, the same explicit selection
-  materializes the protected current Foundation root and fixed-region shell in
-  memory while preserving all historical assets and bindings. Unmatched
-  instances remain at the bottom of the Asset Palette and are reattachable by
-  drag; Save alone creates the next immutable revision.
-- System Builder may project exact current built-in application and page layout
-  definitions for a workspace with an older active trusted System Foundation
-  generation. This compatibility seam is layout-only and does not widen the
-  workspace Asset Library effective view.
+  persistence. Opening a closed legacy-flat UI reference system automatically
+  requests the Minimal layout through that same preview operation; an explicit
+  selection can choose another layout. Both paths materialize the protected
+  current Foundation root and fixed-region shell in memory while preserving all
+  historical assets and bindings. Closed reference
+  templates use explicit visual placement profiles and may add bounded current
+  Foundation containers/actions; dependency bindings are never inferred to be
+  containment. Exact composer-catalog asset types split unmatched instances:
+  pages, UI components, features, and trusted declarative Foundation
+  system/subsystem facades with child slots appear under Unassigned visual
+  assets and remain reattachable by drag, while policies, models, workflows, data contracts,
+  unknown definitions, and other nonvisual assets appear separately under System
+  resources and logic without Canvas drag controls. Save alone creates the next
+  immutable revision.
+- System Builder Composer may project the complete exact current built-in
+  Foundation catalog for a workspace with an older active trusted Foundation
+  generation. This Composer-only seam supplies nested slots and qualified
+  previews without widening the workspace Asset Library effective view.
 - The shared Compose UI preview recursively follows current in-memory placements
-  and canonical region order, includes unsaved configuration, exposes unassigned and
-  unsupported nodes, and offers desktop/tablet/mobile frames. It is bounded to
-  registered System Foundation frontend renderers, never executes backend or
-  unqualified implementation source, and does not imply build, release,
-  activation, or deployment.
+  and canonical region order, includes unsaved configuration, exposes unplaced
+  visual, nonvisual resource, and unsupported nodes truthfully, and offers
+  desktop/tablet/mobile frames. Exact-version
+  frontend backing programs drive the registered structural, form, display,
+  state, conversation, and preview renderers. Nested regions render as one
+  composed application and primary content suppresses simultaneous alternative
+  states. The renderer never executes backend or unqualified implementation
+  source and does not imply build, release, activation, or deployment. Keep the
+  three hand-authored reference-system semantic HTML fixtures as fidelity
+  oracles; do not replace them with generated snapshots.
+- `npm run test:visual-composer` uses one worker and isolated ignored state to
+  qualify the shared workflow through packaged Windows Electron IPC and local
+  Chrome API paths. Treat its sanitized automation as exact-environment
+  regression evidence, not as physical-touch, screen-reader, cross-platform,
+  manual-security, or production-performance qualification.
 - Systems Manage uses one workspace-scoped application projection for drafts,
   published systems, and archived systems across API and IPC. The shared desktop
   and thin-client surface supports search/filter/sort/paging, exact-revision

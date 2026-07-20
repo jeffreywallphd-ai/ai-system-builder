@@ -24,6 +24,7 @@ import {
   MAX_SYSTEM_BUILDER_INSTANCES,
   ValidateSystemBuilderRevisionService,
 } from "../validate-system-builder-revision.service";
+import { systemBuilderSlotAcceptsDefinition } from "../validate-system-builder-structure.service";
 
 const timestamp = "2026-07-18T00:00:00.000Z";
 const systemId = normalizeSystemBuilderSystemId("system-slot-test");
@@ -37,10 +38,23 @@ describe("canonical System Builder slot structure", () => {
     expect(result.status).toBe("valid");
     expect(result.issues).toEqual([]);
     expect(revision.structure?.profile).toBe("interactive");
+    expect(revision.structure?.layoutPresetRef?.id).toBe(
+      "builtin.layout.application.minimal",
+    );
     expect(revision.composition.rootInstanceRefs.length).toBe(1);
     expect(revision.instances.length).toBe(4);
     expect(revision.placements?.length).toBe(3);
     expect(revision.composition.placementRefs?.length).toBe(3);
+    const shellPlacement = revision.placements?.find(
+      (placement) => String(placement.slotId) === "application-shell",
+    );
+    expect(
+      revision.instances.find(
+        (instance) =>
+          String(instance.instanceId) ===
+          String(shellPlacement?.childInstanceRef.id),
+      )?.definitionRef.id,
+    ).toBe("builtin.layout.application.minimal");
   });
 
   it("creates a valid required structure for every approved application layout", async () => {
@@ -53,6 +67,35 @@ describe("canonical System Builder slot structure", () => {
         result.issues.filter((issue) => issue.severity === "error"),
       ).toEqual([]);
     }
+  });
+
+  it("accepts visual assets inside the current Card regions and rejects nonvisual system data", () => {
+    const card = definition("builtin.ui.card");
+    const table = definition("builtin.display.table");
+    const form = definition("builtin.form.form");
+    const action = definition("builtin.form.submit-action");
+    const entity = definition("builtin.data.entity");
+    const page = definition("builtin.shell.page");
+    const assistant = definition("conversation.basic-assistant-system");
+    const content = card.slots?.find((slot) => slot.slotId === "content");
+    const actions = card.slots?.find((slot) => slot.slotId === "actions");
+    const pageContent = page.slots?.find((slot) => slot.slotId === "content");
+    if (!content || !actions || !pageContent)
+      throw new Error("Current Card slots are missing.");
+
+    expect(systemBuilderSlotAcceptsDefinition(content, table)).toBe(true);
+    expect(systemBuilderSlotAcceptsDefinition(content, form)).toBe(true);
+    expect(systemBuilderSlotAcceptsDefinition(actions, action)).toBe(true);
+    expect(systemBuilderSlotAcceptsDefinition(content, entity)).toBe(false);
+    expect(
+      systemBuilderSlotAcceptsDefinition(pageContent, assistant, page),
+    ).toBe(true);
+    expect(systemBuilderSlotAcceptsDefinition(pageContent, assistant)).toBe(
+      false,
+    );
+    expect(systemBuilderSlotAcceptsDefinition(content, assistant, card)).toBe(
+      false,
+    );
   });
 
   it("accepts an explicitly derived protected root", async () => {

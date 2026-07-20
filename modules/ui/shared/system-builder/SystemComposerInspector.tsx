@@ -100,8 +100,10 @@ function SystemComposerConfiguration({
   );
   const panelSections = useMemo(
     () =>
-      buildSystemComposerPropertyPanelSections(definition.configurationSchema),
-    [definition.configurationSchema],
+      buildSystemComposerPropertyPanelSections(definition.configurationSchema, {
+        groupLayoutFields: definition.slots.length > 0,
+      }),
+    [definition.configurationSchema, definition.slots.length],
   );
   const [activePanel, setActivePanel] =
     useState<SystemComposerPropertyPanel>("design");
@@ -144,12 +146,28 @@ function SystemComposerConfiguration({
           <span>Reset defaults</span>
         </button>
       </header>
-      {definition.layoutGeometry ? (
+      {definition.layoutRole ? (
         <p className="system-composer-inspector__layout-lock ui-status ui-status--info">
           System Foundation controls this layout's width, height, regions, and
           responsive rules. Only its declared semantic properties can be
           changed.
         </p>
+      ) : null}
+      {definition.slots.length ? (
+        <fieldset className="system-composer-inspector__section system-composer-inspector__layout-summary">
+          <legend>Container layout</legend>
+          <p>
+            {definition.layoutRole
+              ? "Uses predefined, dimension-locked Foundation geometry."
+              : "Uses bounded semantic layout properties with draggable named regions."}
+          </p>
+          <p className="ui-text-muted">
+            Arrangement: {definition.layoutGeometry?.columnPattern ?? "single"}
+            {" | "}
+            Regions:{" "}
+            {definition.slots.map((slot) => slot.displayName).join(", ")}
+          </p>
+        </fieldset>
       ) : null}
       <div
         className="system-composer-inspector__tabs"
@@ -208,7 +226,7 @@ function SystemComposerConfiguration({
           )}
         </div>
       ))}
-      {!definition.layoutGeometry ? (
+      {!definition.layoutRole ? (
         <details className="system-composer-inspector__advanced">
           <summary>Advanced JSON</summary>
           <p className="ui-text-muted">

@@ -131,11 +131,172 @@
         "Documentation, architecture, and agent-support gates passed"
       ],
       "title": "Isolated qualification harness and deterministic hardening"
+    },
+    {
+      "areas": [
+        "Trusted current Foundation layout catalog and compatibility",
+        "Shared System Builder palette loading",
+        "Thin-client browser qualification",
+        "Packaged Windows desktop qualification",
+        "Isolated desktop identity and user-data harness",
+        "Thin-client favicon and host documentation"
+      ],
+      "chunkId": "cross-client-controlled-qualification",
+      "completedAt": "2026-07-20T08:17:57Z",
+      "criteriaIds": [
+        "packaged-cross-client-workflows",
+        "input-accessibility-equivalence",
+        "responsive-visual-quality",
+        "scale-recovery-readiness"
+      ],
+      "documentation": [
+        "Thin-client README documents shared browser branding"
+      ],
+      "feedbackAddressed": [
+        "feedback-legacy-foundation-layout-and-palette-compatibility"
+      ],
+      "id": "visual-composer-production-qualification-cross-client-controlled-qualification",
+      "incrementId": "visual-composer-production-qualification",
+      "summary": "Qualified the real visual Composer workflow through both supported host boundaries: local stable Chrome over the thin-client API and the freshly packaged Windows Electron application over preload/IPC, using isolated state, one worker, bounded cold-start waits, accessible pointer drag, previews, save/reopen, Manage, Build and Test entry, axe checks, forced colors, reduced motion, and 320-pixel reflow.",
+      "tests": [
+        "System Builder composer catalog: 6 passed",
+        "System Builder workspace interactions: 4 passed",
+        "Visual Composer qualification harness: 9 passed",
+        "Thin-client Playwright workflow: 1 passed with sanitized evidence",
+        "Packaged desktop Playwright workflow: 1 passed with sanitized evidence",
+        "npm run package: passed"
+      ],
+      "title": "Packaged desktop and thin-client controlled qualification"
+    },
+    {
+      "areas": [
+        "Shared Compose lifecycle and catalog performance",
+        "Packaged desktop and thin-client workflow qualification",
+        "Keyboard, responsive, recovery, and security evidence",
+        "Dependency and package-content review",
+        "Production guidance and repository completion gates"
+      ],
+      "chunkId": "production-hardening-closeout",
+      "completedAt": "2026-07-20T12:09:19Z",
+      "criteriaIds": [
+        "bounded-secure-editor",
+        "scale-recovery-readiness",
+        "production-guidance-and-gates"
+      ],
+      "documentation": [
+        "README.md",
+        "apps/desktop/README.md",
+        "apps/thin-client/README.md",
+        "modules/ui/shared/README.md",
+        "docs/architecture/system-builder.md",
+        "docs/context/packs/system-builder.pack.md",
+        "docs/operations/asset-experience-controlled-review.md",
+        "docs/operations/asset-system-support-qualification.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "visual-composer-production-qualification-production-hardening-closeout",
+      "incrementId": "visual-composer-production-qualification",
+      "summary": "Closed the controlled qualification findings with persistent Compose state across Manage handoffs, bounded compatible-catalog reads, real keyboard cancel plus undo/redo workflow coverage, sanitized isolated host evidence, reviewed package contents, and truthful production support guidance.",
+      "tests": [
+        "Visual Composer lifecycle and qualification helpers: 9 passed",
+        "Thin-client controlled Playwright workflow: 1 passed",
+        "Packaged Windows desktop controlled Playwright workflow: 1 passed",
+        "Documentation, architecture, agent-support, asset-system, dependency, server build, thin-client build, and package gates passed",
+        "Full non-browser suite: 2478 passed, 1 skipped, 0 failed across 2479 tests"
+      ],
+      "title": "Production hardening and support closeout"
+    },
+    {
+      "areas": [
+        "System Foundation v2 manifest",
+        "Backing resource catalog",
+        "Slot compatibility"
+      ],
+      "chunkId": "current-foundation-slot-programs",
+      "completedAt": "2026-07-20T13:09:16Z",
+      "criteriaIds": [
+        "versioned-composable-ui-assets",
+        "nested-safe-preview-html"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [
+        "feedback-reference-preview-html-fidelity"
+      ],
+      "id": "composable-foundation-ui-reference-previews-current-foundation-slot-programs",
+      "incrementId": "composable-foundation-ui-reference-previews",
+      "summary": "Added current-version composable slots and exact-version backing programs while preserving legacy definitions.",
+      "tests": [
+        "Focused Foundation catalog and slot validation tests passed"
+      ],
+      "title": "Current-version composable Foundation programs"
+    },
+    {
+      "areas": [
+        "Reference-system layout migration",
+        "Foundation semantic renderer",
+        "System preview composition",
+        "Responsive preview styling"
+      ],
+      "chunkId": "reference-visual-hierarchies-and-renderer",
+      "completedAt": "2026-07-20T13:09:24Z",
+      "criteriaIds": [
+        "reference-system-canonical-visuals",
+        "nested-safe-preview-html"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [
+        "feedback-reference-preview-html-fidelity"
+      ],
+      "id": "composable-foundation-ui-reference-previews-reference-visual-hierarchies-and-renderer",
+      "incrementId": "composable-foundation-ui-reference-previews",
+      "summary": "Materialized reference-system visual hierarchies and rendered nested safe semantic application surfaces.",
+      "tests": [
+        "Focused reference migration, renderer, Card, and composition tests passed"
+      ],
+      "title": "Reference visual hierarchies and nested renderer"
+    },
+    {
+      "areas": [
+        "Reference HTML fixtures",
+        "Semantic parity harness",
+        "Composer interactions",
+        "Architecture and qualification guidance",
+        "Production qualification"
+      ],
+      "chunkId": "html-fidelity-and-production-closeout",
+      "completedAt": "2026-07-20T13:26:04Z",
+      "criteriaIds": [
+        "reference-html-fidelity",
+        "cross-host-usable-controls",
+        "foundation-preview-production-gates"
+      ],
+      "documentation": [
+        "System Builder architecture and context pack",
+        "Asset Kernel architecture and context pack",
+        "Asset and System Support Qualification"
+      ],
+      "feedbackAddressed": [
+        "feedback-foundation-ui-assets-composable-and-configurable",
+        "feedback-reference-preview-html-fidelity"
+      ],
+      "id": "composable-foundation-ui-reference-previews-html-fidelity-and-production-closeout",
+      "incrementId": "composable-foundation-ui-reference-previews",
+      "summary": "Added three authored HTML oracles, closed renderer gaps, documented contracts, and passed host and repository gates.",
+      "tests": [
+        "27 focused Foundation and preview tests passed",
+        "21 focused Composer interaction tests passed",
+        "Packaged desktop and thin Chrome qualification passed",
+        "Full suite passed with 2,486 passed and one skipped"
+      ],
+      "title": "HTML fidelity, Composer controls, and production closeout"
     }
   ],
-  "completion": null,
+  "completion": {
+    "completedAt": "2026-07-20T13:27:05Z",
+    "summary": "All three visual System Composer increments are implemented, documented, and verified across the shared UI, thin-client, server, and packaged desktop surfaces."
+  },
   "createdAt": "2026-07-19T17:05:31Z",
-  "currentIncrementId": "visual-composer-production-qualification",
+  "currentIncrementId": null,
   "decisions": [
     {
       "approvalNote": "The user accepted the recommended direction and explicitly requested creation and implementation of the new visual System Composer roadmap based on the supplied mockup.",
@@ -350,6 +511,138 @@
       "outcome": "passed",
       "recordedAt": "2026-07-19T19:33:51Z",
       "summary": "HTTP/IPC/preload/client parity tests, architecture and security gates, server and thin-client production builds, Windows Electron packaging, and the full non-browser suite passed; the full report records 2,463 passed, one skipped, and zero failed tests."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer",
+      "command": "npm run test:visual-composer -- --project thin-chrome; npm run test:visual-composer -- --project packaged-desktop",
+      "criterionId": "packaged-cross-client-workflows",
+      "id": "evidence-8",
+      "incrementId": "visual-composer-production-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-20T12:09:19Z",
+      "summary": "The isolated Chrome thin-client and freshly packaged Windows Electron application completed the same real System Composer workflow through API and IPC boundaries without reported console, transport, or renderer failures."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer",
+      "command": "npm run test:visual-composer",
+      "criterionId": "input-accessibility-equivalence",
+      "id": "evidence-9",
+      "incrementId": "visual-composer-production-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-20T12:09:19Z",
+      "summary": "The controlled Chromium and Electron matrix exercised pointer drag, keyboard pickup and cancellation, undo/redo, dialogs, focus restoration, accessible names, live semantics, and axe checks. This is scoped automated evidence, not a claim of physical touch-device or human screen-reader certification."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer",
+      "command": "npm run test:visual-composer",
+      "criterionId": "responsive-visual-quality",
+      "id": "evidence-10",
+      "incrementId": "visual-composer-production-qualification",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-20T12:09:19Z",
+      "summary": "Controlled wide and narrow Composer states, 320-pixel reflow, reduced motion, forced colors, source order, collapsible panels, and representative visual evidence were exercised in the supported Chrome and packaged Electron environments."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "npm run asset-system:check; npm run security:dependencies; focused visual-composer qualification tests",
+      "criterionId": "bounded-secure-editor",
+      "id": "evidence-11",
+      "incrementId": "visual-composer-production-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-20T12:09:20Z",
+      "summary": "Focused bounds, malformed drag, invented target, compatibility, safe-rendering, non-execution, sanitized-diagnostic, and package/dependency checks passed without widening renderer or persistence authority."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer",
+      "command": "focused visual-composer tests; npm run test:visual-composer",
+      "criterionId": "scale-recovery-readiness",
+      "id": "evidence-12",
+      "incrementId": "visual-composer-production-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-20T12:09:20Z",
+      "summary": "Bounded composition, cancel, undo/redo, renderer recovery, stale conflict, layout remap, reload, save/reopen, isolated process teardown, and retained canonical state checks passed in focused and controlled workflows."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "npm run docs:check; npm run architecture:check; npm run agent-support:check; npm run asset-system:check; npm run security:dependencies; npm run build:server; npm run build:thin-client; npm run package; npm test",
+      "criterionId": "production-guidance-and-gates",
+      "id": "evidence-13",
+      "incrementId": "visual-composer-production-qualification",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-20T12:09:20Z",
+      "summary": "Architecture, context, support limits, rollback guidance, qualification commands, dependency/package review, server and thin builds, Windows packaging, and the final full non-browser suite passed from the finished Increment 2 production tree."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test system-foundation-v2-catalogs and slot-structure-validation",
+      "criterionId": "versioned-composable-ui-assets",
+      "id": "evidence-14",
+      "incrementId": "composable-foundation-ui-reference-previews",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-20T13:26:04Z",
+      "summary": "Current slots and backing programs passed exact-version tests while legacy definitions remained unchanged."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test system-builder-layout-change.unit.test.ts",
+      "criterionId": "reference-system-canonical-visuals",
+      "id": "evidence-15",
+      "incrementId": "composable-foundation-ui-reference-previews",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-20T13:26:04Z",
+      "summary": "Reference layout migration produced deterministic nested current-version visual hierarchies."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test FoundationAssetPreview and SystemCompositionPreview tests",
+      "criterionId": "nested-safe-preview-html",
+      "id": "evidence-16",
+      "incrementId": "composable-foundation-ui-reference-previews",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-20T13:26:04Z",
+      "summary": "Nested semantic surfaces, Card regions, bounds, and safe unsupported behavior passed focused tests."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/ui/shared/system-builder/tests/SystemReferencePreviewHtml.unit.test.tsx",
+      "criterionId": "reference-html-fidelity",
+      "id": "evidence-17",
+      "incrementId": "composable-foundation-ui-reference-previews",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-20T13:26:04Z",
+      "summary": "All three real migrated reference previews matched their hand-authored semantic HTML mockups."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-07-20t13-17-42-409z-e4694669/evidence.json",
+      "command": "npm run test:visual-composer",
+      "criterionId": "cross-host-usable-controls",
+      "id": "evidence-18",
+      "incrementId": "composable-foundation-ui-reference-previews",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-20T13:26:04Z",
+      "summary": "Shared controls passed focused interactions and real packaged-desktop plus thin-Chrome workflows."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "docs:check; architecture:check; agent-support:check; asset-system:check; security:dependencies; build:server; build:thin-client; package; npm test",
+      "criterionId": "foundation-preview-production-gates",
+      "id": "evidence-19",
+      "incrementId": "composable-foundation-ui-reference-previews",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-20T13:26:04Z",
+      "summary": "Documentation, architecture, policy, security, server, thin client, desktop package, and full tests passed."
     }
   ],
   "feedback": [
@@ -441,6 +734,16 @@
       "nextAction": "Research Foundation UI definitions, backing resources, slot compatibility, inspector schemas, and safe recursive renderers, then add a cohesive increment that makes the affected UI family configurable and composable rather than patching Card alone.",
       "recordedAt": "2026-07-20T05:39:31Z",
       "summary": "Foundation UI assets such as Card expose generic placeholder previews instead of useful configured content and canonical draggable child regions; the affected UI family is too simplistic for production composition.",
+      "targetIncrementId": null
+    },
+    {
+      "category": "scope",
+      "disposition": "accepted",
+      "id": "feedback-reference-preview-html-fidelity",
+      "impact": "scope-change",
+      "nextAction": "Add one cohesive increment for versioned nested UI assets, canonical reference-system visual structures, safe composed rendering, and ideal HTML fixture parity.",
+      "recordedAt": "2026-07-20T12:32:50Z",
+      "summary": "Foundation UI assets are too generic and noncomposable, and each reference-system preview must be driven toward an ideal semantic HTML mockup.",
       "targetIncrementId": null
     }
   ],
@@ -637,6 +940,162 @@
       "recordedAt": "2026-07-20T05:39:31Z",
       "sequence": 32,
       "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "be83c10c556fe7c99405b1f19c3aa202f22c0436e093b64fda0d247240247bea",
+      "recordedAt": "2026-07-20T08:17:57Z",
+      "sequence": 33,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "434dd749474c3cb3f61b7adf2c78d078f51f2f367686f5ee6d1cbb0c9734536a",
+      "recordedAt": "2026-07-20T12:09:19Z",
+      "sequence": 34,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "3efd1acecbcc1a2c37a88d8ba6866be970066ec39ab45d85a160f5277fda26cc",
+      "recordedAt": "2026-07-20T12:09:19Z",
+      "sequence": 35,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d385ccfcbdae7b31d7f7b09e42f25c37e169ee886e8a0e5f37c2f8a6403949a3",
+      "recordedAt": "2026-07-20T12:09:19Z",
+      "sequence": 36,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a73c9918aa66f32c190d54a2db51dcd54ee1e5a4d2542343ad3db3a71df6ab17",
+      "recordedAt": "2026-07-20T12:09:19Z",
+      "sequence": 37,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d9add7affefaaf9a49ae5473fd5ca6ddfd733a88364adec040aade1e3d3a8bbd",
+      "recordedAt": "2026-07-20T12:09:20Z",
+      "sequence": 38,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e7634ecafd144cc20e55362848964362b912007e8b6ab56fb46ddedd0e326397",
+      "recordedAt": "2026-07-20T12:09:20Z",
+      "sequence": 39,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "6a730cf8527896a8bcf176989a1d56d8235d6c8dc67b7cac447fcb2466a8bb29",
+      "recordedAt": "2026-07-20T12:09:20Z",
+      "sequence": 40,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d3d84768e6011001d737e84b7811cc17cb6987a0f53097c9919ed4835f2a72bc",
+      "recordedAt": "2026-07-20T12:09:20Z",
+      "sequence": 41,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "3d20b4c88cf5222c09938287f48d610a17e55898bdf8a5e3015434871af36f75",
+      "recordedAt": "2026-07-20T12:32:50Z",
+      "sequence": 42,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "c53987e3425116a94c23ff777b8c60b6f3430cc5f42c389bce0e39102dadfd21",
+      "recordedAt": "2026-07-20T12:32:50Z",
+      "sequence": 43,
+      "type": "roadmap-revised"
+    },
+    {
+      "eventFingerprint": "645664d275ff958f8de633ac18ac33f31ed17d56b930df3b496586f65819c6ef",
+      "recordedAt": "2026-07-20T12:32:50Z",
+      "sequence": 44,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "86fde73f9ebfeb979c1302b7b13c87850c499b3cbfbc72a118a7263e03503e80",
+      "recordedAt": "2026-07-20T12:32:50Z",
+      "sequence": 45,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "0f709e7dd88679387e9e293effe4eb1da97dc7997933253e929ac3d457373288",
+      "recordedAt": "2026-07-20T12:32:50Z",
+      "sequence": 46,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "0b77557fcc07754bcf60919a03769d337fee5a2a184caa050eaa9b4d7d177b3f",
+      "recordedAt": "2026-07-20T12:32:51Z",
+      "sequence": 47,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "972301ae06fce29b02db73fb3f9c7ac483e49d2a81486d53c9534db0595c5ef4",
+      "recordedAt": "2026-07-20T13:09:16Z",
+      "sequence": 48,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "9d6ddb191b7a7eb2cca2f07b43ccd057ad21aeaebafab98f4f2e01acdfb49d5a",
+      "recordedAt": "2026-07-20T13:09:24Z",
+      "sequence": 49,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "6808b4f32fba72b6bebd0abcc4f549b9ea42eaad3514d9f62758eaf01b3316c9",
+      "recordedAt": "2026-07-20T13:26:04Z",
+      "sequence": 50,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "c0a90acb6edc9986ded013bab7c3b3d4969083f3c96a6cb65fd9eeccb7848743",
+      "recordedAt": "2026-07-20T13:26:04Z",
+      "sequence": 51,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1125c56a1733839e2c166d6fc134a1de1b85aae0d6c9f81dd5b21d75dc877352",
+      "recordedAt": "2026-07-20T13:26:04Z",
+      "sequence": 52,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b631275d891795d0fd2fc0d017ade97e7775b652e6d6113a9f900ccd68481d37",
+      "recordedAt": "2026-07-20T13:26:04Z",
+      "sequence": 53,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9af6fbe94efdf95dd0f748cffa311634616213b336acdfcd0f42e87b92c5052f",
+      "recordedAt": "2026-07-20T13:26:04Z",
+      "sequence": 54,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c70360571351a04efb2a4706f76f48c95f345f7bb5cddec13752385de7907fd0",
+      "recordedAt": "2026-07-20T13:26:04Z",
+      "sequence": 55,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "80c84458c3345e1a173eb6c4f64e408efe729e007875dcd254a721c9b6c42991",
+      "recordedAt": "2026-07-20T13:26:04Z",
+      "sequence": 56,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "892644b0d7381fffcd98737354560568d524d4464a095a1987126be176cb8207",
+      "recordedAt": "2026-07-20T13:26:04Z",
+      "sequence": 57,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "b0003073531c1d14c50db14ddeb99d481dc2c801680eb764e0ee2b159073b5c4",
+      "recordedAt": "2026-07-20T13:27:05Z",
+      "sequence": 58,
+      "type": "roadmap-completed"
     }
   ],
   "increments": [
@@ -938,10 +1397,13 @@
         }
       ],
       "allowPendingQualification": false,
-      "completedAt": null,
+      "completedAt": "2026-07-20T12:09:20Z",
       "completedChunks": [
-        "isolated-qualification-harness"
+        "isolated-qualification-harness",
+        "cross-client-controlled-qualification",
+        "production-hardening-closeout"
       ],
+      "completionSummary": "The visual Composer is hardened and qualified across the supported packaged Windows desktop and Chrome thin-client boundaries with scoped accessibility/responsive evidence, bounded recovery and security behavior, reconciled documentation, reviewed packaging, and zero failures in the applicable repository gates.",
       "deliverables": [
         "Packaged Windows desktop end-to-end visual-composer evidence",
         "Supported thin-client browser end-to-end visual-composer evidence",
@@ -967,6 +1429,7 @@
       "id": "visual-composer-production-qualification",
       "number": 2,
       "objective": "Qualify and harden the complete visual editor across packaged Windows desktop and the supported thin-client browser, input methods, accessibility/reflow, representative composition scale, security boundaries, interruption/recovery, and dependency/runtime packaging before production handoff.",
+      "pendingCriteria": [],
       "plan": {
         "assumptions": [
           "Run desktop and browser qualification sequentially with one worker and no concurrent packaging/build/test load so the other active account retains CPU/GPU headroom.",
@@ -1086,7 +1549,7 @@
       ],
       "rollback": "Disable the visual editor route and restore the verified semantic editor entry while retaining all canonical slot-aware revisions as readable and editable through explicit controls. Remove the drag dependencies only after no visual-editor imports remain. Preserve diagnostic and qualification evidence; never flatten layouts, delete revisions, or weaken safe-rendering and workspace boundaries during rollback.",
       "startedAt": "2026-07-19T19:34:59Z",
-      "status": "implementing",
+      "status": "completed",
       "title": "Visual composer production qualification and hardening",
       "verification": [
         "Run packaged Windows desktop end-to-end workflows against the real preload/IPC client and capture sanitized results.",
@@ -1120,6 +1583,228 @@
           "title": "Documentation and support closeout"
         }
       ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Every current Foundation asset that semantically contains visual children declares bounded direction-neutral slots and meaningful configuration, including Card content and actions; immutable 1.0.0 definitions and exact reads remain unchanged.",
+          "id": "versioned-composable-ui-assets",
+          "qualification": "local"
+        },
+        {
+          "description": "After explicit predefined-layout migration, each of the three real reference templates has one valid current-version canonical visual hierarchy with navigation, page content, and domain-specific nested regions; visual assets needed by the preview are placed, while nonvisual assets remain preserved and unexecuted.",
+          "id": "reference-system-canonical-visuals",
+          "qualification": "local"
+        },
+        {
+          "description": "System Preview renders nested child assets inside meaningful semantic parent HTML from registered Foundation backing-resource programs, reflects configured titles, content, controls, states, and actions, stays bounded, and never executes frontend source, backend logic, provider calls, routes, workflows, or imported code.",
+          "id": "nested-safe-preview-html",
+          "qualification": "local"
+        },
+        {
+          "description": "Normalized semantic HTML produced by the real System Preview for secured data entry, controlled chatbot, and secured data review matches the checked-in ideal HTML mockup for each system, ignoring only documented nondeterministic identifiers and presentation-only attributes.",
+          "id": "reference-html-fidelity",
+          "qualification": "local"
+        },
+        {
+          "description": "The shared desktop and thin-client Composer can configure the meaningful Foundation fields, drag compatible children into nested regions, preview the composed result, save and reopen it, and reject incompatible or over-capacity drops with accessible bounded feedback.",
+          "id": "cross-host-usable-controls",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Architecture, backing-resource, System Builder, shared UI, support, and HTML-oracle documentation match the implementation, focused tests pass, supported builds and Windows packaging pass, and the final full non-browser suite has zero failures.",
+          "id": "foundation-preview-production-gates",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-20T13:26:04Z",
+      "completedChunks": [
+        "current-foundation-slot-programs",
+        "reference-visual-hierarchies-and-renderer",
+        "html-fidelity-and-production-closeout"
+      ],
+      "completionSummary": "Composable Foundation UI assets and all three reference previews are implemented, documented, and production-qualified.",
+      "deliverables": [
+        "Current-version canonical slot definitions for composable Foundation UI families",
+        "Meaningful bounded backing-resource structure and style programs",
+        "Deterministic reference-system visual hierarchy materialization",
+        "Nested semantic System Preview renderer",
+        "Ideal HTML mockups and normalized semantic DOM comparison harness for all three reference systems",
+        "Composer configuration and drag compatibility regressions",
+        "Shared desktop and thin-client verification",
+        "Architecture, context, shared UI, and support documentation"
+      ],
+      "dependsOn": [
+        "visual-composer-production-qualification"
+      ],
+      "excluded": [
+        "Changing or deleting immutable 1.0.0 Foundation definitions or historical reference revisions",
+        "Executing authored or imported frontend/backend code in the Composer or preview",
+        "Turning dependency bindings into generic containment outside the explicit reference-template migration profiles",
+        "Arbitrary freeform HTML, CSS, script, route, network, filesystem, provider, workflow, build, release, or deployment execution",
+        "Pixel-identical browser screenshots or certification beyond the supported controlled host environments"
+      ],
+      "id": "composable-foundation-ui-reference-previews",
+      "number": 3,
+      "objective": "Deliver configurable, nested, resource-backed Foundation UI assets and faithful safe System Preview output for all reference systems, using canonical versioned placements and checked-in ideal semantic HTML mockups as the end-to-end acceptance oracle.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "Explicit predefined-layout selection remains the only migration boundary for legacy reference systems.",
+          "The current Foundation 2.0.0 overlay may add compatible slot and program detail while the original 1.0.0 manifest and backing resources remain immutable.",
+          "Ideal HTML fixtures specify semantic structure, meaningful text, controls, and region nesting; runtime IDs, classes, and presentation-only attributes are normalized.",
+          "Reference visual profiles are explicit product fixtures and do not redefine dependency bindings as generic containment.",
+          "Full suite and packaging run only after all planned increment chunks are implemented."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "versioned-composable-ui-assets",
+              "nested-safe-preview-html"
+            ],
+            "id": "current-foundation-slot-programs",
+            "outcome": "Current Foundation visual definitions expose meaningful bounded slots and exact declarative backing-resource programs while immutable v1 assets remain byte-for-byte equivalent.",
+            "title": "Current-version composable Foundation programs"
+          },
+          {
+            "criteriaIds": [
+              "reference-system-canonical-visuals",
+              "nested-safe-preview-html"
+            ],
+            "id": "reference-visual-hierarchies-and-renderer",
+            "outcome": "Each reference template migrates into a valid visual hierarchy and the shared preview renders its configured children inside meaningful parent regions with nonvisual assets preserved outside the UI.",
+            "title": "Reference visual hierarchies and nested renderer"
+          },
+          {
+            "criteriaIds": [
+              "reference-html-fidelity",
+              "cross-host-usable-controls",
+              "foundation-preview-production-gates"
+            ],
+            "id": "html-fidelity-and-production-closeout",
+            "outcome": "All three real reference previews match their ideal semantic HTML fixtures, nested asset controls work across supported hosts, documentation is reconciled, and every completion gate passes.",
+            "title": "HTML fidelity, Composer controls, and production closeout"
+          }
+        ],
+        "completionTests": [
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check",
+          "npm run asset-system:check",
+          "npm run security:dependencies",
+          "npm run build:server",
+          "npm run build:thin-client",
+          "npm run package",
+          "Controlled visual Composer workflow in thin Chrome and packaged Windows desktop",
+          "npm test once after all three Increment 3 chunks and focused checks pass"
+        ],
+        "documentation": [
+          "System Builder architecture and context pack",
+          "Asset authoring/execution and backing-resource architecture where affected",
+          "Shared UI README",
+          "Desktop and thin-client support guidance where affected",
+          "Reference preview HTML fixture contract and controlled qualification guidance",
+          "Concise temporary roadmap report"
+        ],
+        "fingerprint": "e60c23ccbe5d9e1ed9b7412292f65efa1f01a00de453c976cf47540153291c46",
+        "focusedTests": [
+          "Current and legacy Foundation manifest, definition, fingerprint, slot, backing-resource, and quality-gate tests",
+          "Reference layout migration tests for exact upgrades, deterministic compatible placements, unassigned nonvisual preservation, bounds, and validation",
+          "Foundation renderer and System Preview model tests for nested semantic elements, configured content, safe unsupported states, and truncation",
+          "Normalized semantic HTML parity tests against three checked-in ideal reference mockups",
+          "Shared Composer interaction tests for Card content/actions, nested drag, capacity rejection, property editing, preview, undo/redo, save, and reopen"
+        ],
+        "recordedAt": "2026-07-20T12:32:51Z",
+        "rollback": "Revert the current-version slot/program overlays, reference visual migration profiles, nested renderer, and HTML fixtures while preserving v1 definitions, historical revisions, completed prior increments, and all safety boundaries.",
+        "steps": [
+          "Define reusable current-version slot builders and declarative frontend program descriptors for every composable Foundation UI family while preserving exact v1 reads.",
+          "Add deterministic, validated visual placement profiles for all three reference-system kinds during explicit legacy layout migration, preserving nonvisual instances and bindings.",
+          "Extend the safe Foundation renderer to accept named-region children and produce meaningful semantic HTML for structural, shell, form, display, state, preview, and conversation assets.",
+          "Create ideal semantic HTML fixtures and a normalization harness, render each real migrated reference template, and iteratively correct assets, placements, rendering, and Composer controls until parity passes.",
+          "Verify nested drag/configure/save/reopen behavior in shared hosts, reconcile docs, and run the full increment completion gates once."
+        ],
+        "summary": "Implement one vertical Foundation UI and preview fidelity increment: add current-version slot/program overlays without mutating v1, materialize deterministic visual hierarchies for the three reference templates at explicit layout migration, replace isolated generic preview cards with a nested safe semantic renderer, then drive remaining asset and control corrections from ideal HTML fixture parity before running shared-host and repository completion gates."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-20T12:32:50Z",
+          "risks": [
+            "Mutating shared source definitions would silently change immutable v1 fingerprints; all slot and program changes must be applied only to the current version overlay.",
+            "Dependency bindings are not containment and cannot be reinterpreted generically; reference visual placements require explicit deterministic profiles at the authorized migration boundary.",
+            "Nested rendering can exceed node or text limits; the existing preview bounds must apply to the composed tree and fail closed.",
+            "HTML fixtures can become brittle if they include runtime IDs or presentation classes; parity must compare a documented semantic DOM projection only.",
+            "Making every semantic asset visible would expose policies and behavior declarations as UI; only qualified visual facets belong in the preview hierarchy."
+          ],
+          "sources": [
+            {
+              "title": "Canonical slot composition and Foundation layouts",
+              "url": "docs/adr/ADR-0036-canonical-slot-composition-and-foundation-layouts.md"
+            },
+            {
+              "title": "System Builder architecture",
+              "url": "docs/architecture/system-builder.md"
+            },
+            {
+              "title": "Current Foundation pack version overlay",
+              "url": "modules/application/services/asset-packs/system-packs/system-foundation-pack-v2.manifest.ts"
+            },
+            {
+              "title": "UI structural primitives",
+              "url": "modules/application/services/asset-packs/system-packs/ui-primitives/ui-structural-primitives.ts"
+            },
+            {
+              "title": "Foundation backing-resource catalog",
+              "url": "modules/application/services/asset-packs/system-foundation-backing-resource-catalog.ts"
+            },
+            {
+              "title": "Reference template registry",
+              "url": "modules/application/services/system-builder/system-builder-reference-template-registry.service.ts"
+            },
+            {
+              "title": "Explicit layout migration service",
+              "url": "modules/application/services/system-builder/remap-system-builder-layout.service.ts"
+            },
+            {
+              "title": "Shared System Preview",
+              "url": "modules/ui/shared/system-builder/SystemCompositionPreview.tsx"
+            }
+          ],
+          "summary": "Current v1 reference templates are intentionally flat and immutable. Explicit layout selection upgrades only the root and adds a layout shell, leaving every reference asset unassigned. Current v2 structural and shell definitions preserve the v1 port model but do not add canonical slots, while the backing-resource preview program collapses each UI asset to a generic preview kind and the System Preview renders an editor-like ordered tree. The smallest coherent production fix is to preserve v1, add current-version slot overlays and richer declarative programs, materialize known reference visual hierarchies only at the existing explicit migration boundary, and render one nested safe semantic surface whose output is checked against static ideal HTML fixtures."
+        }
+      ],
+      "rollback": "Remove only the current-version slot/program additions, reference visual migration profile, nested renderer, and HTML fixtures; preserve immutable v1 definitions, existing revisions, dependency bindings, completed visual editor behavior, and all non-execution and workspace boundaries.",
+      "startedAt": "2026-07-20T12:32:50Z",
+      "status": "completed",
+      "title": "Composable Foundation UI assets and reference preview fidelity",
+      "verification": [
+        "Run focused definition, manifest, backing-resource, slot compatibility, layout migration, preview model, semantic HTML parity, and shared Composer interaction tests while iterating.",
+        "Render each actual reference template after explicit layout migration and compare its normalized semantic System Preview DOM with its ideal HTML fixture.",
+        "Run the controlled shared-host Composer workflow for nested Card and reference preview behavior after all increment chunks are implemented.",
+        "Run documentation, architecture, agent-support, asset-system, dependency, server build, thin-client build, Windows package, and full non-browser gates once at increment completion."
+      ],
+      "workPackages": [
+        {
+          "id": "versioned-ui-composition-surfaces",
+          "outcome": "Current Foundation UI, shell, form, display, state, preview, and conversation definitions expose meaningful bounded configuration and canonical named child regions while immutable v1 definitions remain unchanged.",
+          "title": "Versioned UI composition surfaces"
+        },
+        {
+          "id": "reference-visual-materialization",
+          "outcome": "Explicit layout migration upgrades the three legacy reference templates into coherent current-version visual hierarchies, places visual assets in compatible named regions, and keeps nonvisual behavior and policy assets outside the rendered tree without losing them.",
+          "title": "Canonical reference-system visual materialization"
+        },
+        {
+          "id": "composed-safe-renderer",
+          "outcome": "Backing-resource descriptors drive meaningful semantic elements for containers, cards, pages, forms, displays, states, conversations, and previews, with nested children rendered inside their real parent regions and no unqualified implementation execution.",
+          "title": "Composed safe Foundation renderer"
+        },
+        {
+          "id": "html-fidelity-oracle",
+          "outcome": "Checked-in ideal HTML fixtures for secured data entry, controlled chatbot, and secured data review match normalized real System Preview output, and focused interaction tests prove the Composer can configure and nest the required assets.",
+          "title": "Reference HTML fidelity and control hardening"
+        }
+      ]
     }
   ],
   "name": "Visual System Composer",
@@ -1131,12 +1816,12 @@
   },
   "resumeAudits": [],
   "roadmapApproval": {
-    "approvedAt": "2026-07-19T17:33:07Z",
-    "fingerprint": "87e62b866924b075f91ee68837bf0acaa8b8992f1c8b6659eccd695f563b65b1",
-    "note": "The user explicitly approved the complete two-increment visual System Composer roadmap and requested continued implementation under AGENTS.md and docs/README.md guidance on 2026-07-19."
+    "approvedAt": "2026-07-20T12:32:50Z",
+    "fingerprint": "825703251eec9b2a86ac9f214e9cb1ea05d8328a83ac833a4378e3596b4a8195",
+    "note": "The user explicitly agreed that UI assets and System Preview require a thorough improvement and directed creation of ideal HTML mockups for all reference systems, comparison against real preview output, and iterative correction until the semantic HTML matches."
   },
   "schemaVersion": 1,
   "slug": "visual-system-composer",
-  "status": "executing",
-  "updatedAt": "2026-07-20T05:39:31Z"
+  "status": "completed",
+  "updatedAt": "2026-07-20T13:27:05Z"
 }

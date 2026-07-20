@@ -68,9 +68,17 @@ Use this pack for tasks involving:
   exact, separate trusted implementation bindings and backing resources. Shared
   Catalog previews are bounded and side-effect free; policy defaults fail closed
   and cannot expand platform authority.
+- Only the current release adds definition-owned visual slots. Qualified current
+  visual backing bundles contain the real declarative frontend structure,
+  bounded named regions, fixtures, and styles interpreted by trusted renderers;
+  legacy definitions remain unchanged and backing files are not reduced to
+  metadata about absent implementation resources.
 - Trusted built-in initialization preserves an existing compatible immutable
   backing-resource record for an exact release. Upgrades may fill missing exact
   resources, but must not overwrite retained release artifacts or digests.
+- Preview or resource enrichment must also preserve the exact release's facet,
+  runtime, entry-key, and compatibility identity; changing those semantics
+  requires a new release instead of rewriting a trusted seed in place.
 
 ## Resource-Backed View Rules
 

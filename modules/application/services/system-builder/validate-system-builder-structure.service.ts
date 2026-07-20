@@ -295,7 +295,7 @@ function validateSlotsAndCompatibility(
         : undefined;
       if (
         childDefinition &&
-        !systemBuilderSlotAcceptsDefinition(slot, childDefinition)
+        !systemBuilderSlotAcceptsDefinition(slot, childDefinition, definition)
       ) {
         addIssue(
           issues,
@@ -390,6 +390,7 @@ function validatePlacementGraph(
 export function systemBuilderSlotAcceptsDefinition(
   slot: AssetSlotDefinition,
   child: AssetDefinition,
+  parent?: AssetDefinition,
 ): boolean {
   return (
     slot.acceptedAssetTypes?.includes(child.assetType) === true ||
@@ -398,7 +399,39 @@ export function systemBuilderSlotAcceptsDefinition(
       (reference) =>
         String(reference.id) === String(child.definitionId) &&
         reference.version === child.version,
-    ) === true
+    ) === true ||
+    isCurrentFoundationReferenceVisualContainment(parent, slot, child)
+  );
+}
+
+const CURRENT_FOUNDATION_REFERENCE_VISUAL_CONTAINMENT = [
+  ["builtin.shell.page", "content", "conversation.basic-assistant-system"],
+  [
+    "conversation.assistant-response-panel",
+    "content",
+    "conversation.assistant-text-response-output",
+  ],
+  ["conversation.message-composer", "input", "conversation.user-message-input"],
+] as const;
+
+function isCurrentFoundationReferenceVisualContainment(
+  parent: AssetDefinition | undefined,
+  slot: AssetSlotDefinition,
+  child: AssetDefinition,
+): boolean {
+  // Foundation 2.0.0 is immutable. Its controlled-chatbot reference profile
+  // intentionally presents three semantic records as trusted visual facades.
+  // Keep these exact compatibility bridges in the
+  // application-owned validator instead of rewriting the released slot data.
+  return (
+    parent?.version === SYSTEM_FOUNDATION_CURRENT_PACK_VERSION &&
+    child.version === SYSTEM_FOUNDATION_CURRENT_PACK_VERSION &&
+    CURRENT_FOUNDATION_REFERENCE_VISUAL_CONTAINMENT.some(
+      ([parentId, slotId, childId]) =>
+        String(parent.definitionId) === parentId &&
+        String(slot.slotId) === slotId &&
+        String(child.definitionId) === childId,
+    )
   );
 }
 

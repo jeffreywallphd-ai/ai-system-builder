@@ -157,6 +157,63 @@ describe("SystemComposerInspector interactions", () => {
     expect(onRemoveConnection).toHaveBeenCalledWith("binding.one");
   });
 
+  it("shows bounded layout properties and regions for ordinary containers", () => {
+    const definition: SystemBuilderComposerAsset = {
+      ...asset("builtin.ui.container", [], {
+        fields: [
+          {
+            fieldId: "label",
+            valueKind: "string",
+            label: "Label",
+          },
+          {
+            fieldId: "layoutDirection",
+            valueKind: "enum",
+            label: "Layout direction",
+            options: [{ value: "vertical" }, { value: "horizontal" }],
+          },
+        ],
+      }),
+      layoutGeometry: {
+        columnPattern: "single",
+        areas: [["content"]],
+        sourceOrder: ["content"],
+        dimensionsLocked: true,
+      },
+      slots: [
+        {
+          schemaVersion: "asset-slot-definition.v1",
+          slotId: "content" as never,
+          displayName: "Content",
+          cardinality: { minItems: 0, maxItems: 64 },
+          acceptedAssetTypes: ["ui-component"],
+        },
+      ],
+    };
+    const selected = instance("instance.container", definition);
+    render(
+      <SystemComposerInspector
+        mode="configuration"
+        selectedInstance={selected}
+        selectedDefinition={definition}
+        instances={[selected]}
+        catalog={[definition]}
+        bindings={[]}
+        onConfigurationChange={vi.fn()}
+        onAddConnection={vi.fn()}
+        onRemoveConnection={vi.fn()}
+      />,
+    );
+
+    expect(container!.textContent).toContain("Container layout");
+    expect(container!.textContent).toContain("Regions: Content");
+    expect(container!.textContent).toContain("Layout direction");
+    expect(container!.textContent).toContain("Advanced JSON");
+    expect(container!.textContent).not.toContain(
+      "System Foundation controls this layout's width",
+    );
+  });
+
   it("locks system-foundation layout geometry to declared semantic fields", () => {
     const definition: SystemBuilderComposerAsset = {
       ...asset("builtin.layout.application.standard", [], {

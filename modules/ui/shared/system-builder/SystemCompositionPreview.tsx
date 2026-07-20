@@ -22,6 +22,7 @@ export interface SystemCompositionPreviewItem {
   readonly instanceId: string;
   readonly definitionId: string;
   readonly displayName: string;
+  readonly version?: string;
   readonly configuration: AssetInstance["selectedConfiguration"];
 }
 
@@ -93,6 +94,7 @@ export function buildSystemCompositionPreviewModel(
   const unavailableCount = instances.filter((instance) => {
     const program = readSystemFoundationBackingResourceProgram(
       String(instance.definitionRef.id),
+      instance.definitionRef.version as never,
     );
     return !program?.styleClassName;
   }).length;
@@ -195,15 +197,10 @@ export function SystemCompositionPreview({
 
       {model.roots.length ? (
         <div className="system-composition-preview__viewport-frame">
-          <ol
-            className="system-composition-preview__tree"
-            data-viewport={viewport}
-            aria-label="Recursive system preview"
-          >
-            {model.roots.map((node) => (
-              <PreviewNode key={node.item.instanceId} node={node} />
-            ))}
-          </ol>
+          <SystemCompositionPreviewSurface
+            roots={model.roots}
+            viewport={viewport}
+          />
         </div>
       ) : (
         <EmptyState
@@ -248,6 +245,26 @@ export function SystemCompositionPreview({
         </p>
       ) : null}
     </section>
+  );
+}
+
+export function SystemCompositionPreviewSurface({
+  roots,
+  viewport = "desktop",
+}: {
+  readonly roots: readonly SystemCompositionPreviewNode[];
+  readonly viewport?: "desktop" | "tablet" | "mobile";
+}) {
+  return (
+    <div
+      className="system-composition-preview__surface"
+      data-viewport={viewport}
+      aria-label="Recursive system preview"
+    >
+      {roots.map((node) => (
+        <ComposedPreviewNode key={node.item.instanceId} node={node} />
+      ))}
+    </div>
   );
 }
 
@@ -315,6 +332,55 @@ function PreviewNode({
   );
 }
 
+function ComposedPreviewNode({
+  node,
+}: {
+  readonly node: SystemCompositionPreviewNode;
+}) {
+  const regions = Object.fromEntries(
+    node.slots.map((slot) => [
+      slot.slotId,
+      slot.children.map((child) => (
+        <ComposedPreviewNode key={child.item.instanceId} node={child} />
+      )),
+    ]),
+  );
+  if (!node.previewAvailable) {
+    return (
+      <section
+        className="foundation-preview foundation-preview--unsupported"
+        data-foundation-definition={node.item.definitionId}
+        data-preview-instance={node.item.instanceId}
+        role="status"
+      >
+        <strong>Visual preview unavailable</strong>
+        <span>{node.item.displayName}</span>
+        <span>
+          This asset remains in the hierarchy, but its implementation is not
+          executed.
+        </span>
+        {node.slots.map((slot) => (
+          <section key={slot.slotId} aria-label={slot.displayName + " region"}>
+            {regions[slot.slotId]}
+          </section>
+        ))}
+      </section>
+    );
+  }
+  return (
+    <div data-preview-instance={node.item.instanceId}>
+      <FoundationAssetPreview
+        definitionId={node.item.definitionId}
+        version={node.item.version}
+        displayName={node.item.displayName}
+        configuration={node.item.configuration}
+        presentation="composed"
+        regions={regions}
+      />
+    </div>
+  );
+}
+
 interface PreviewBuildState {
   renderedCount: number;
   readonly items: SystemCompositionPreviewItem[];
@@ -330,12 +396,16 @@ function buildPreviewNode(
   }
   state.renderedCount += 1;
   const definitionId = String(node.instance.definitionRef.id);
-  const program = readSystemFoundationBackingResourceProgram(definitionId);
+  const program = readSystemFoundationBackingResourceProgram(
+    definitionId,
+    node.instance.definitionRef.version as never,
+  );
   const item: SystemCompositionPreviewItem = {
     instanceId: String(node.instance.instanceId),
     definitionId,
     displayName:
       node.instance.displayName ?? program?.displayName ?? definitionId,
+    version: node.instance.definitionRef.version,
     configuration: node.instance.selectedConfiguration,
   };
   const previewAvailable = Boolean(program?.styleClassName);

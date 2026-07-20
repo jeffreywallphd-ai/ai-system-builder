@@ -75,6 +75,7 @@ export function SystemBuilderPage({
           {
             id: "compose",
             label: "Compose",
+            keepMounted: true,
             content: (
               <SystemBuilderWorkspace
                 workspaceId={workspaceId}

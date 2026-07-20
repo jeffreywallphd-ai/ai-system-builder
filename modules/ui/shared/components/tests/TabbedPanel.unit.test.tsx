@@ -193,4 +193,31 @@ describe("TabbedPanel", () => {
       "Third content",
     );
   });
+
+  it("preserves only tabs that explicitly opt into mounted state", async () => {
+    const persistentTabs: TabbedPanelTab[] = [
+      { ...tabs[0], keepMounted: true },
+      tabs[1],
+    ];
+    const mounted = await render(
+      <TabbedPanel tabs={persistentTabs} defaultTabId="first" />,
+    );
+    const firstPanel = mounted.querySelector<HTMLElement>("[role='tabpanel']");
+    const tabButtons = Array.from(
+      mounted.querySelectorAll<HTMLButtonElement>("[role='tab']"),
+    );
+
+    await act(async () => tabButtons[1].click());
+    expect(firstPanel?.isConnected).toBe(true);
+    expect(firstPanel?.hidden).toBe(true);
+    expect(mounted.querySelectorAll("[role='tabpanel']").length).toBe(2);
+    expect(
+      Array.from(
+        mounted.querySelectorAll<HTMLElement>("[role='tabpanel']"),
+      ).find((panel) => !panel.hidden)?.textContent,
+    ).toBe("Second content");
+
+    await act(async () => tabButtons[0].click());
+    expect(firstPanel?.hidden).toBe(false);
+  });
 });

@@ -47,7 +47,7 @@ describe("system builder shared styles", () => {
     expect(composerStyles).toContain('data-layout-container="true"');
     expect(composerStyles).toContain('data-drag-over="true"');
     expect(composerStyles).toContain(".system-composer__unassigned");
-    expect(composerStyles).toContain(".system-layout-change-review__summary");
+    expect(composerStyles).toContain(".system-composer__resources");
     expect(composerStyles).toContain(".system-composer__sidebar-tabs");
     expect(composerStyles).toContain(
       '.system-composer__workspace[data-library-collapsed="true"]',

@@ -22,9 +22,16 @@
   Connections mode, immediate local layout selection, and recursive preview are shared UI
   rather than host-specific reconstructions. The wide layout reserves its largest
   region for the canvas and lets both sidebars collapse to compact rails; narrow
-  layouts use focus-restoring panel controls.
-  Each asset tile is the pointer, touch, and keyboard drag handle, and fixed
-  layout regions are the drop surfaces. Keep the legacy Add-here, move-order,
+  layouts use focus-restoring panel controls. Systems keeps the Compose panel
+  mounted while sibling tabs are active so its canonical draft and loaded catalog
+  survive Manage and Build handoffs; other tab content remains lazy by default.
+  Each asset tile is the pointer, touch, and keyboard drag handle, and every
+  declared container region is a recursive drop surface. The Composer catalog
+  projects abstract source-ordered geometry for all slot-bearing assets so the
+  Canvas never stops at an intermediate page, card, form, conversation, or
+  trusted visual system facade. Do not render standalone catalog fixtures inside
+  those containers: container nodes show their actual named regions and leaf
+  nodes alone render their composition-aware semantic surface. Keep the legacy Add-here, move-order,
   reparent, and wrapper forms out of the Design workspace; the drag adapter maps
   interactions to the canonical add/place operations.
   Never serialize drag, selection, focus, zoom, or panel state.
@@ -32,14 +39,21 @@
   configuration, and typed bindings. Do not infer a replacement root from visual
   order, accept arbitrary port names, or mix containment with bindings. A
   legacy-flat hierarchy may be materialized only by the application preview
-  operation after an explicit layout selection; the renderer must not synthesize
-  it.
-  Foundation layout regions are fixed abstract container projections. Do not add
+  operation after an explicit layout selection or the closed-reference Minimal
+  default request; the renderer must not synthesize or persist it directly.
+  Foundation layout regions are fixed abstract container projections. Ordinary
+  containers expose a shared Container layout summary and group schema-declared
+  direction, spacing, padding, alignment, columns, wrap, and responsive controls
+  under Layout. Do not add
   editable width, height, region, CSS, responsive-rule, or raw JSON controls.
   Layout selections go through the application preview client, immediately
-  update the local undoable Canvas draft, retain unmatched instances in
-  Unassigned at the bottom of the Asset Palette rather than on the Canvas,
-  remain undoable, and persist only through the normal immutable-revision save.
+  update the local undoable Canvas draft, and persist only through the normal
+  immutable-revision save. Classify unmatched instances from their exact catalog
+  definitions: pages, UI components, features, and trusted declarative
+  Foundation system/subsystem facades with child slots belong in draggable
+  Unassigned visual assets. Show every other unmatched instance separately under
+  System resources and logic without a Canvas drag control; missing definitions
+  fail closed into this nonvisual group.
   Compose previews use the shared modal and recursively render current in-memory
   placements and configuration through registered side-effect-free System
   Foundation renderers. Keep node counts and viewport frames bounded, expose
@@ -89,3 +103,9 @@
   thin-client profile still requires the keyboard, focus, zoom/reflow,
   contrast, screen-reader, status, and error review in
   `docs/operations/asset-system-support-qualification.md`.
+- `npm run test:visual-composer` runs the shared one-worker Composer workflow
+  against a freshly packaged Windows Electron application and local Chrome with
+  isolated state and sanitized ignored evidence. Its pointer, keyboard-cancel,
+  undo/redo, axe, 320-pixel reflow, forced-colors, and reduced-motion checks are
+  automated regression evidence; they do not replace physical touch,
+  assistive-technology, manual security, or other-platform qualification.

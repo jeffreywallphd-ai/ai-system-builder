@@ -15,6 +15,10 @@ export interface SystemComposerConfigurationSection {
   readonly fields: readonly AssetConfigurationField[];
 }
 
+export interface SystemComposerConfigurationSectionOptions {
+  readonly groupLayoutFields?: boolean;
+}
+
 export type SystemComposerPropertyPanel = "design" | "data" | "events";
 
 export type SystemComposerPropertyPanelSections = Readonly<
@@ -34,6 +38,7 @@ export interface SystemComposerPortEndpoint {
 
 export function buildSystemComposerConfigurationSections(
   schema: AssetConfigurationSchema | undefined,
+  options: SystemComposerConfigurationSectionOptions = {},
 ): readonly SystemComposerConfigurationSection[] {
   if (!schema) return [];
   const sections = new Map<string, AssetConfigurationField[]>();
@@ -41,9 +46,11 @@ export function buildSystemComposerConfigurationSections(
     if (field.uiHint?.hintKind === "hidden") continue;
     const label =
       field.uiHint?.section?.trim() ||
-      (field.uiHint?.advanced || field.uiHint?.hintKind === "advanced"
-        ? "Advanced"
-        : "General");
+      (options.groupLayoutFields && isLayoutConfigurationField(field)
+        ? "Layout"
+        : field.uiHint?.advanced || field.uiHint?.hintKind === "advanced"
+          ? "Advanced"
+          : "General");
     const fields = sections.get(label) ?? [];
     fields.push(field);
     sections.set(label, fields);
@@ -74,12 +81,16 @@ export function buildSystemComposerConfigurationSections(
 
 export function buildSystemComposerPropertyPanelSections(
   schema: AssetConfigurationSchema | undefined,
+  options: SystemComposerConfigurationSectionOptions = {},
 ): SystemComposerPropertyPanelSections {
   const grouped: Record<
     SystemComposerPropertyPanel,
     SystemComposerConfigurationSection[]
   > = { design: [], data: [], events: [] };
-  for (const section of buildSystemComposerConfigurationSections(schema)) {
+  for (const section of buildSystemComposerConfigurationSections(
+    schema,
+    options,
+  )) {
     const fieldsByPanel: Record<
       SystemComposerPropertyPanel,
       AssetConfigurationField[]
@@ -94,6 +105,12 @@ export function buildSystemComposerPropertyPanelSections(
     }
   }
   return grouped;
+}
+
+function isLayoutConfigurationField(field: AssetConfigurationField): boolean {
+  return /^(?:layoutDirection|direction|orientation|spacing|padding|widthBehavior|mediaPlacement|actionsPlacement|columnCount|gap|itemAlignment|alignment|wrap|responsiveBehavior)$/.test(
+    field.fieldId,
+  );
 }
 
 export function propertyPanelForField(

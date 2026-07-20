@@ -28,6 +28,23 @@ test("visual composer host plan isolates roots, security, ports, and direct chil
   assert.equal(plan.thinClientOrigin.origin, "http://127.0.0.1:45002");
   assert.equal(plan.server.command, process.execPath);
   assert.equal(plan.thinClient.command, process.execPath);
+  assert.match(
+    plan.desktop.executablePath.replaceAll("\\", "/"),
+    /out\/ai-system-builder-win32-x64\/ai-system-builder\.exe$/,
+  );
+  assert.deepEqual(plan.desktop.args, [
+    `--user-data-dir=${plan.paths.desktopDataRoot}`,
+    "--disable-gpu",
+  ]);
+  assert.equal(
+    plan.desktop.env.VISUAL_COMPOSER_DESKTOP_DATA_ROOT,
+    plan.paths.desktopDataRoot,
+  );
+  assert.equal(plan.desktop.seed.env.ELECTRON_RUN_AS_NODE, "1");
+  assert.match(
+    plan.desktop.seed.args.at(-1).replaceAll("\\", "/"),
+    /visual-composer-desktop-seed\.ts$/,
+  );
   assert.equal(plan.server.env.SERVER_STORAGE_ROOT, plan.paths.thinStorageRoot);
   assert.equal(plan.server.env.SERVER_RUNTIME_ROOT, plan.paths.thinRuntimeRoot);
   assert.equal(plan.server.env.AI_SYSTEM_BUILDER_SECURITY_MODE, "disabled-dev");

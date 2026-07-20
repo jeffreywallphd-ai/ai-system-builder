@@ -251,9 +251,53 @@ describe("System Builder layout change preview", () => {
         (placement) => String(placement.slotId) === "application-shell",
       ),
     ).toBe(true);
-    expect(result.value.unassignedInstanceRefs.length).toBe(
-      revision.instances.length - 1,
-    );
+    expect(result.value.unassignedInstanceRefs.length).toBeGreaterThan(0);
+    expect(
+      result.value.unassignedInstanceRefs.length <
+        revision.instances.length - 1,
+    ).toBe(true);
+    expect(
+      result.value.placements.some(
+        (placement) =>
+          String(placement.parentInstanceRef.id).endsWith(".starter") &&
+          String(placement.slotId) === "interface" &&
+          String(placement.childInstanceRef.id).endsWith(".chat-shell"),
+      ),
+    ).toBe(true);
+    expect(
+      result.value.placements.some(
+        (placement) =>
+          String(placement.parentInstanceRef.id).endsWith(".composer") &&
+          String(placement.slotId) === "actions" &&
+          String(placement.childInstanceRef.id).endsWith(".visual-send"),
+      ),
+    ).toBe(true);
+    expect(
+      result.value.validationIssues
+        .filter((issue) =>
+          issue.message.includes(
+            "selected child definition is not compatible with this slot",
+          ),
+        )
+        .map((issue) => {
+          const placementId = issue.path?.[1];
+          const placement = result.value.placements.find(
+            (candidate) => String(candidate.placementId) === placementId,
+          );
+          return placement
+            ? `${placement.parentInstanceRef.id}.${placement.slotId}->${placement.childInstanceRef.id}`
+            : String(placementId);
+        }),
+    ).toEqual([]);
+    expect(
+      result.value.instances
+        .filter((instance) =>
+          String(instance.instanceId).startsWith(
+            String(created.value.systemId) + ".",
+          ),
+        )
+        .every((instance) => instance.definitionRef.version === "2.0.0"),
+    ).toBe(true);
     expect(result.value.instances.length).toBeGreaterThan(
       revision.instances.length,
     );

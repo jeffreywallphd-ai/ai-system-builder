@@ -274,6 +274,17 @@ System defaults are represented as pack entries, not loose hardcoded built-ins. 
 
 Foundation definitions remain semantic and host-neutral. Functional behavior is supplied by exact trusted implementation-release or declarative-engine bindings under ADR-0034. Definitions do not embed renderer components, CSS, routes, API or IPC handlers, workflow engines, runtime tasks, provider calls, resource readers, storage reads/writes, file uploads, executable code, or implementation bytes.
 
+The immutable 1.0.0 and current 2.0.0 releases are addressed independently.
+Only current definitions receive the additive, definition-owned slots required
+for nested visual composition; legacy definitions are not rewritten. Every
+definition retains an exact backing-resource bundle. A qualified current visual
+definition additionally carries a declarative frontend structure program with
+its semantic element, bounded named regions, safe preview fixture, and styling
+resource. These files are implementation backing resources outside Asset Kernel
+metadata, not metadata references pretending that an implementation exists.
+Trusted shared renderers interpret the closed programs without executing
+authored/imported source or backend logic.
+
 Pack validation, quality gates, install diagnostics, resolver diagnostics, manifest serialization, and parsing must stay sanitized. Unsafe paths, credentials, signed URLs, raw provider payloads, stack traces, command lines, environment values, bytes/blob/base64/data URLs, prompt text, workflow JSON, and raw resource contents must be rejected or omitted.
 
 Install/seeding for `system.foundation` is explicit, internal, idempotent, and non-destructive. Shared composition helpers and workspace creation must not invoke it implicitly. The owning desktop/server asset-feature startup explicitly invokes and awaits the guarded global foundation installer before serving asset reads; startup fails closed if that product-owned baseline cannot be established. This is not workspace-scoped seeding, hidden workspace creation, or a public install/import path.

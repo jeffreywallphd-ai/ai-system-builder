@@ -22,6 +22,7 @@ npm run security:dependencies
 npm run build:server
 npm run build:thin-client
 npm run package
+npm run test:visual-composer
 ```
 
 The automated matrix must cover System Foundation and admitted imported customization, from-scratch Studio save/reopen/review/publication, restart rediscovery, immutable bases, workspace denial, stale revisions, protected and unsafe paths, secrets, size limits, unavailable revocation truth, non-execution, shared modal focus/stacking, accessible status semantics, and responsive grids. Record this as `asset-experience-automated`; it does not replace either manual review.
@@ -34,6 +35,11 @@ Exercise Browse, Import Assets, Studio, Saved, Customizations, and the Systems t
 - With a supported screen reader, confirm page and tab names, ordered workflow sections, field labels and descriptions, selected target state, loading/status/error announcements, modal names, and actionable button names.
 - At 400-percent browser zoom and at a 320 CSS-pixel viewport, confirm reflow without horizontal page scrolling, clipped controls, overlapping tabs, hidden modal controls, or loss of content. Source editors may scroll internally.
 - Verify text and non-text contrast, non-color status cues, pointer target size, reduced-motion behavior, error association, and timeout/cancellation behavior.
+- In Systems Compose, review the Asset Palette, every predefined layout family,
+  nested Canvas regions, Properties, Layers and Structure, Connections, preview,
+  dialogs, and narrow panel controls. Complete insert, reorder, and reparent with
+  keyboard only; repeat the structural path with physical touch hardware when the
+  target profile claims touch support.
 
 Record each surface and check as passed or failed. `accessibility-manual` remains `not-run` or failed while any required surface is untested or any exception lacks an owner and approval.
 

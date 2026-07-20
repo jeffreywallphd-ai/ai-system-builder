@@ -1,0 +1,70 @@
+<div>
+  <div>
+    <div data-slot="top-bar">
+      <nav aria-label="Assistant">
+        <strong>Assistant</strong>
+        <ul>
+          <li><button type="button" aria-current="page">Overview</button></li>
+        </ul>
+      </nav>
+    </div>
+    <div data-slot="content">
+      <div>
+        <div data-slot="content">
+          <main>
+            <header><h1>Assistant</h1></header>
+            <div data-slot="content">
+              <section aria-label="Basic assistant system">
+                <header><h2>Basic assistant system</h2></header>
+                <div data-slot="interface">
+                  <section aria-label="Conversation shell">
+                    <header>
+                      <h2>Conversation shell</h2>
+                      <div data-slot="status">
+                        <span role="status">Assistant status: pending</span>
+                      </div>
+                    </header>
+                    <div data-slot="history">
+                      <section aria-label="Conversation history">
+                        <h3>Conversation</h3>
+                        <ol>
+                          <li>
+                            <strong>You</strong>
+                            <p>How can this system help?</p>
+                          </li>
+                          <li>
+                            <strong>Assistant</strong>
+                            <p>This is a safe preview response.</p>
+                          </li>
+                        </ol>
+                      </section>
+                      <section aria-label="Assistant response">
+                        <h3>Assistant response</h3>
+                        <div data-slot="content">
+                          <p>The assistant response will appear here.</p>
+                        </div>
+                      </section>
+                    </div>
+                    <footer data-slot="composer">
+                      <form aria-label="Message composer">
+                        <div data-slot="input">
+                          <label>
+                            <span>Message</span>
+                            <textarea readonly>Preview message</textarea>
+                          </label>
+                        </div>
+                        <div data-slot="actions">
+                          <button type="submit">Send</button>
+                        </div>
+                      </form>
+                    </footer>
+                  </section>
+                </div>
+              </section>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -49,6 +49,124 @@ describe("FoundationAssetPreview", () => {
     expect(html).toContain('role="status"');
   });
 
+  it("renders current Card content and actions as real configurable regions", () => {
+    const html = renderToStaticMarkup(
+      <FoundationAssetPreview
+        definitionId="builtin.ui.card"
+        version="2.0.0"
+        displayName="Fallback card"
+        configuration={{
+          title: "Customer summary",
+          description: "Review the selected customer.",
+        }}
+        presentation="composed"
+        regions={{
+          content: <p>Customer details</p>,
+          actions: <button type="button">Open customer</button>,
+        }}
+      />,
+    );
+    expect(html).toContain("<article");
+    expect(html).toContain("<h2>Customer summary</h2>");
+    expect(html).toContain("Review the selected customer.");
+    expect(html).toContain('data-slot="content"');
+    expect(html).toContain("Customer details");
+    expect(html).toContain('data-slot="actions"');
+    expect(html).toContain("Open customer");
+    expect(html).not.toContain(">Header<");
+    expect(html).not.toContain(">Content<");
+    expect(html).not.toContain(">Actions<");
+  });
+
+  it("renders every current structural UI primitive as a semantic nested surface", () => {
+    const cases = [
+      ["builtin.ui.container", "<div", "Nested content"],
+      ["builtin.ui.section", "<section", "Nested content"],
+      ["builtin.ui.panel", "<section", "Nested content"],
+      ["builtin.ui.card", "<article", "Nested content"],
+      ["builtin.ui.stack", "<div", "Nested item"],
+      ["builtin.ui.grid", "<div", "Nested item"],
+      ["builtin.ui.tabs", 'role="tablist"', "Nested tab"],
+      ["builtin.ui.collapsible-section", "<details", "Nested content"],
+    ] as const;
+    for (const [definitionId, semanticMarker, childText] of cases) {
+      const itemSlot =
+        definitionId === "builtin.ui.stack" ||
+        definitionId === "builtin.ui.grid"
+          ? "items"
+          : definitionId === "builtin.ui.tabs"
+            ? "tabs"
+            : "content";
+      const html = renderToStaticMarkup(
+        <FoundationAssetPreview
+          definitionId={definitionId}
+          version="2.0.0"
+          displayName="Configured surface"
+          configuration={{ title: "Configured surface" }}
+          presentation="composed"
+          regions={{ [itemSlot]: <p>{childText}</p> }}
+        />,
+      );
+      expect(html).toContain(semanticMarker);
+      expect(html).toContain(childText);
+      expect(html).not.toContain("Preview unavailable");
+    }
+  });
+
+  it("renders field groups, radio groups, lists, and preview placeholders with their native semantics", () => {
+    const group = renderToStaticMarkup(
+      <FoundationAssetPreview
+        definitionId="builtin.form.field-group"
+        version="2.0.0"
+        displayName="Preferences"
+        configuration={{ title: "Preferences", collapsible: true }}
+        presentation="composed"
+        regions={{ fields: <p>Notification fields</p> }}
+      />,
+    );
+    expect(group).toContain("<details");
+    expect(group).toContain("Notification fields");
+
+    const radio = renderToStaticMarkup(
+      <FoundationAssetPreview
+        definitionId="builtin.form.radio-group"
+        version="2.0.0"
+        displayName="Frequency"
+        configuration={{
+          label: "Frequency",
+          required: true,
+          defaultValue: "daily",
+          staticOptions: [
+            { value: "daily", label: "Daily" },
+            { value: "weekly", label: "Weekly" },
+          ],
+        }}
+        presentation="composed"
+      />,
+    );
+    expect(radio).toContain('type="radio"');
+    expect(radio).toContain("Daily");
+    expect(radio).toContain("Weekly");
+    expect(radio).toContain("checked");
+
+    for (const definitionId of [
+      "builtin.display.list",
+      "builtin.display.image-preview-placeholder",
+      "builtin.display.resource-preview-placeholder",
+    ]) {
+      const html = renderToStaticMarkup(
+        <FoundationAssetPreview
+          definitionId={definitionId}
+          version="2.0.0"
+          displayName="Configured display"
+          presentation="composed"
+        />,
+      );
+      expect(html).not.toContain("Example preview content");
+      expect(html).not.toContain("Preview unavailable");
+    }
+  });
+
   it("bounds authored preview collections, table dimensions, and text", () => {
     const oversizedText = "x".repeat(
       MAX_FOUNDATION_PREVIEW_TEXT_CHARACTERS + 50,

@@ -17,10 +17,7 @@ import {
 } from "../../../contracts/system-builder";
 import type { AssetRegistryDefinitionReadPort } from "../../ports/asset";
 import { readSystemFoundationBackingResourceProgram } from "../../services/asset-packs/system-foundation-backing-resource-catalog";
-import {
-  readSystemFoundationLayoutPreset,
-  SYSTEM_FOUNDATION_LAYOUT_DEFINITIONS,
-} from "../../services/asset-packs/system-packs/system-foundation-layout-presets";
+import { readSystemFoundationLayoutPreset } from "../../services/asset-packs/system-packs/system-foundation-layout-presets";
 import {
   SYSTEM_FOUNDATION_CURRENT_PACK_VERSION,
   SYSTEM_FOUNDATION_PACK_ID,
@@ -28,7 +25,16 @@ import {
   SYSTEM_FOUNDATION_PACK_SOURCE_LAYER,
   SYSTEM_FOUNDATION_PACK_TRUST_STATUS,
 } from "../../services/asset-packs/system-packs/system-foundation-pack.constants";
+import { SYSTEM_FOUNDATION_PACK_V2_MANIFEST } from "../../services/asset-packs/system-packs/system-foundation-pack-v2.manifest";
 import { systemBuilderSlotAcceptsDefinition } from "../../services/system-builder";
+
+const CURRENT_FOUNDATION_DEFINITIONS =
+  SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.map((entry) => entry.definition);
+const CURRENT_FOUNDATION_DEFINITION_IDS = new Set(
+  CURRENT_FOUNDATION_DEFINITIONS.map((definition) =>
+    String(definition.definitionId),
+  ),
+);
 
 export class ListSystemBuilderComposerAssetsUseCase {
   public constructor(
@@ -68,6 +74,15 @@ export class ListSystemBuilderComposerAssetsUseCase {
         );
       }
 
+      const projectCurrentFoundation =
+        !normalized.value.parentDefinitionRef ||
+        isCurrentFoundationReference(normalized.value.parentDefinitionRef);
+      const hasTrustedFoundation = projectCurrentFoundation
+        ? await this.hasTrustedFoundationWorkspace(
+            String(normalized.value.workspaceId),
+          )
+        : false;
+
       const cards = await this.definitions.listDefinitionCards({
         workspaceId: normalized.value.workspaceId,
         ...(normalized.value.searchText
@@ -91,10 +106,22 @@ export class ListSystemBuilderComposerAssetsUseCase {
       );
       const items = details.flatMap(({ card, detail }) => {
         if (!detail) return [];
+        if (
+          hasTrustedFoundation &&
+          card.builtIn &&
+          detail.definition.version !==
+            SYSTEM_FOUNDATION_CURRENT_PACK_VERSION &&
+          CURRENT_FOUNDATION_DEFINITION_IDS.has(
+            String(detail.definition.definitionId),
+          )
+        ) {
+          return [];
+        }
         const compatibility = describeCompatibility(
           slot,
           detail.definition,
           normalized.value.parentDefinitionRef,
+          parentDefinition,
         );
         if (
           normalized.value.compatibleOnly &&
@@ -106,19 +133,19 @@ export class ListSystemBuilderComposerAssetsUseCase {
           toComposerAsset(detail.definition, card.builtIn, compatibility),
         ];
       });
-      const foundationLayouts =
-        normalized.value.parentDefinitionRef &&
-        !isCurrentFoundationLayoutReference(
-          normalized.value.parentDefinitionRef,
-        )
-          ? []
-          : await this.readCompatibleFoundationLayouts(
-              normalized.value,
-              slot,
-              normalized.value.parentDefinitionRef,
-            );
+      const currentFoundation = hasTrustedFoundation
+        ? this.readCompatibleCurrentFoundationDefinitions(
+            normalized.value,
+            slot,
+            normalized.value.parentDefinitionRef,
+            parentDefinition,
+          )
+        : [];
       const mergedItems = new Map<string, SystemBuilderComposerAsset>();
-      for (const item of [...foundationLayouts, ...items]) {
+      // Exact current trusted Foundation definitions are the canonical
+      // Composer-only projection. Let them replace older/partial persisted
+      // cards so nested geometry and named slots cannot drift.
+      for (const item of [...items, ...currentFoundation]) {
         mergedItems.set(`${item.definitionId}@${item.version}`, item);
       }
       return systemBuilderSuccess({
@@ -146,6 +173,16 @@ export class ListSystemBuilderComposerAssetsUseCase {
     reference: AssetReference,
     workspaceId: string,
   ): Promise<AssetDefinition | undefined> {
+    if (
+      isCurrentFoundationReference(reference) &&
+      (await this.hasTrustedFoundationWorkspace(workspaceId))
+    ) {
+      return CURRENT_FOUNDATION_DEFINITIONS.find(
+        (definition) =>
+          String(definition.definitionId) === String(reference.id) &&
+          definition.version === reference.version,
+      );
+    }
     try {
       const detail = await this.definitions.readDefinitionDetail(reference, {
         workspaceId,
@@ -154,30 +191,21 @@ export class ListSystemBuilderComposerAssetsUseCase {
       });
       if (detail) return detail.definition;
     } catch {
-      // A trusted older Foundation activation cannot read current layout
-      // definitions through its exact-version asset view. The bounded fallback
-      // below is available only for exact built-in application layouts.
+      // A trusted older Foundation activation cannot read current definitions
+      // through its exact-version Asset Library view. The bounded fallback
+      // above is intentionally available only to System Builder Composer.
     }
-    if (
-      !isCurrentFoundationLayoutReference(reference) ||
-      !(await this.hasTrustedFoundationWorkspace(workspaceId))
-    ) {
-      return undefined;
-    }
-    return SYSTEM_FOUNDATION_LAYOUT_DEFINITIONS.find(
-      (definition) =>
-        String(definition.definitionId) === String(reference.id) &&
-        definition.version === reference.version,
-    );
+    return undefined;
   }
 
-  private async readCompatibleFoundationLayouts(
+  private readCompatibleCurrentFoundationDefinitions(
     query: ListSystemBuilderComposerAssetsQuery & { readonly limit: number },
     slot: AssetSlotDefinition | undefined,
     parentDefinitionRef: AssetReference | undefined,
-  ): Promise<readonly SystemBuilderComposerAsset[]> {
+    parentDefinition: AssetDefinition | undefined,
+  ): readonly SystemBuilderComposerAsset[] {
     const search = query.searchText?.trim().toLowerCase();
-    const definitions = SYSTEM_FOUNDATION_LAYOUT_DEFINITIONS.filter(
+    const definitions = CURRENT_FOUNDATION_DEFINITIONS.filter(
       (definition) =>
         !search ||
         `${definition.definitionId} ${definition.displayName} ${definition.description}`
@@ -185,22 +213,17 @@ export class ListSystemBuilderComposerAssetsUseCase {
           .includes(search),
     );
     if (!definitions.length) return [];
-
-    const hasTrustedFoundation = await this.hasTrustedFoundationWorkspace(
-      String(query.workspaceId),
-    );
-    return hasTrustedFoundation
-      ? definitions.flatMap((definition) => {
-          const compatibility = describeCompatibility(
-            slot,
-            definition,
-            parentDefinitionRef,
-          );
-          return query.compatibleOnly && compatibility.status !== "compatible"
-            ? []
-            : [toComposerAsset(definition, true, compatibility)];
-        })
-      : [];
+    return definitions.flatMap((definition) => {
+      const compatibility = describeCompatibility(
+        slot,
+        definition,
+        parentDefinitionRef,
+        parentDefinition,
+      );
+      return query.compatibleOnly && compatibility.status !== "compatible"
+        ? []
+        : [toComposerAsset(definition, true, compatibility)];
+    });
   }
 
   private async hasTrustedFoundationWorkspace(
@@ -226,13 +249,11 @@ export class ListSystemBuilderComposerAssetsUseCase {
   }
 }
 
-function isCurrentFoundationLayoutReference(
-  reference: AssetReference,
-): boolean {
+function isCurrentFoundationReference(reference: AssetReference): boolean {
   return (
     reference.kind === "asset-definition-version" &&
     reference.version === SYSTEM_FOUNDATION_CURRENT_PACK_VERSION &&
-    Boolean(readSystemFoundationLayoutPreset(String(reference.id)))
+    CURRENT_FOUNDATION_DEFINITION_IDS.has(String(reference.id))
   );
 }
 
@@ -310,9 +331,10 @@ function describeCompatibility(
   slot: AssetSlotDefinition | undefined,
   child: AssetDefinition,
   parentDefinitionRef: AssetReference | undefined,
+  parentDefinition: AssetDefinition | undefined,
 ): SystemBuilderComposerCompatibility {
   if (!slot || !parentDefinitionRef) return { status: "not-evaluated" };
-  return systemBuilderSlotAcceptsDefinition(slot, child)
+  return systemBuilderSlotAcceptsDefinition(slot, child, parentDefinition)
     ? {
         status: "compatible",
         parentDefinitionRef,
@@ -337,6 +359,14 @@ function toComposerAsset(
   const layoutPreset = readSystemFoundationLayoutPreset(
     String(definition.definitionId),
   );
+  const layoutGeometry = layoutPreset
+    ? {
+        columnPattern: layoutPreset.responsive.regular.columnPattern,
+        areas: layoutPreset.responsive.regular.areas,
+        sourceOrder: layoutPreset.sourceOrder,
+        dimensionsLocked: true as const,
+      }
+    : abstractContainerGeometry(definition.slots);
   return {
     definitionRef: {
       kind: "asset-definition-version",
@@ -351,17 +381,8 @@ function toComposerAsset(
     assetFamily: definition.assetFamily,
     lifecycleStatus: definition.lifecycleStatus,
     builtIn: builtIn === true,
-    ...(layoutPreset
-      ? {
-          layoutRole: layoutPreset.kind,
-          layoutGeometry: {
-            columnPattern: layoutPreset.responsive.regular.columnPattern,
-            areas: layoutPreset.responsive.regular.areas,
-            sourceOrder: layoutPreset.sourceOrder,
-            dimensionsLocked: true as const,
-          },
-        }
-      : {}),
+    ...(layoutPreset ? { layoutRole: layoutPreset.kind } : {}),
+    ...(layoutGeometry ? { layoutGeometry } : {}),
     ...(definition.configurationSchema
       ? { configurationSchema: definition.configurationSchema }
       : {}),
@@ -377,5 +398,18 @@ function toComposerAsset(
     previewAvailability: hasTrustedPreview
       ? "trusted-declarative"
       : "unavailable",
+  };
+}
+
+function abstractContainerGeometry(
+  slots: readonly AssetSlotDefinition[] | undefined,
+): SystemBuilderComposerAsset["layoutGeometry"] | undefined {
+  const sourceOrder = (slots ?? []).map((slot) => String(slot.slotId));
+  if (!sourceOrder.length) return undefined;
+  return {
+    columnPattern: "single",
+    areas: sourceOrder.map((slotId) => [slotId]),
+    sourceOrder,
+    dimensionsLocked: true,
   };
 }

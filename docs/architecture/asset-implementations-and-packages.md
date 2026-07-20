@@ -147,6 +147,13 @@ composition preserves that immutable record and its artifact digest rather than
 attempting an in-place replacement. Missing release resources may still be
 materialized independently during an upgrade.
 
+Preview classification and backing-resource enrichment do not change the
+identity fields of an already-published trusted implementation release. In
+particular, facet kind, runtime kind, entry key, compatibility, and deployment
+profiles remain stable for an exact release so retained installations continue
+to initialize. A change to those runtime semantics requires a new release and
+pack identity rather than an in-place seed rewrite.
+
 ## Ownership and dependency direction
 
 ```txt

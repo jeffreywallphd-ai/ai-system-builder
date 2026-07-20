@@ -14,6 +14,7 @@ import {
   SYSTEM_FOUNDATION_CURRENT_PACK_VERSION,
   SYSTEM_FOUNDATION_PACK_VERSION,
 } from "./system-foundation-pack.constants";
+import { withCurrentFoundationComposableSlots } from "./system-foundation-composable-slots";
 import { SYSTEM_FOUNDATION_PACK_MANIFEST } from "./system-foundation-pack.manifest";
 
 export const SYSTEM_FOUNDATION_PACK_V2_MANIFEST: AssetPackManifest = {
@@ -37,7 +38,7 @@ export const SYSTEM_FOUNDATION_PACK_V2_MANIFEST: AssetPackManifest = {
 
 function versionEntry(entry: AssetPackAssetEntry): AssetPackAssetEntry {
   const versioned = replaceFoundationVersion(entry);
-  const definition = withRootSlot(versioned.definition);
+  const definition = withCurrentSlots(versioned.definition);
   const fingerprint = `fnv1a:${fnv1a(stableStringify(definition))}`;
   return {
     ...versioned,
@@ -59,10 +60,11 @@ function versionEntry(entry: AssetPackAssetEntry): AssetPackAssetEntry {
   };
 }
 
-function withRootSlot(definition: AssetDefinition): AssetDefinition {
-  return String(definition.definitionId) === "builtin.system.system"
-    ? { ...definition, slots: [createSystemRootSlotDefinition()] }
-    : definition;
+function withCurrentSlots(definition: AssetDefinition): AssetDefinition {
+  if (String(definition.definitionId) === "builtin.system.system") {
+    return { ...definition, slots: [createSystemRootSlotDefinition()] };
+  }
+  return withCurrentFoundationComposableSlots(definition);
 }
 
 function replaceFoundationVersion<T>(value: T): T {

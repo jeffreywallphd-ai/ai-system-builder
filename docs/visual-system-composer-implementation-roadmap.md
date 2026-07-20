@@ -2,8 +2,8 @@
 
 # Visual System Composer Implementation Roadmap
 
-- Status: `executing`
-- Updated: `2026-07-20T05:39:31Z`
+- Status: `completed`
+- Updated: `2026-07-20T13:27:05Z`
 
 ## Objective
 
@@ -61,7 +61,8 @@ The mockup requires a persistent asset/layout palette, safe editable canvas, pro
 | Increment | Outcome | Dependencies | Status |
 | --- | --- | --- | --- |
 | 1: Complete mockup-aligned visual composer | Replace the fragmented Structure/Configure presentation with one shared desktop/thin-client visual workspace that keeps the asset and layout palette, safe editable canvas, properties inspector, and Layers and Structure tree synchronized while every drag, keyboard, and button action updates the existing canonical named-slot draft. | None | `completed` |
-| 2: Visual composer production qualification and hardening | Qualify and harden the complete visual editor across packaged Windows desktop and the supported thin-client browser, input methods, accessibility/reflow, representative composition scale, security boundaries, interruption/recovery, and dependency/runtime packaging before production handoff. | mockup-aligned-visual-composer | `implementing` |
+| 2: Visual composer production qualification and hardening | Qualify and harden the complete visual editor across packaged Windows desktop and the supported thin-client browser, input methods, accessibility/reflow, representative composition scale, security boundaries, interruption/recovery, and dependency/runtime packaging before production handoff. | mockup-aligned-visual-composer | `completed` |
+| 3: Composable Foundation UI assets and reference preview fidelity | Deliver configurable, nested, resource-backed Foundation UI assets and faithful safe System Preview output for all reference systems, using canonical versioned placements and checked-in ideal semantic HTML mockups as the end-to-end acceptance oracle. | visual-composer-production-qualification | `completed` |
 
 ## Increment 1: Complete mockup-aligned visual composer
 
@@ -132,7 +133,7 @@ Remove the visual editor entry and dnd-kit adapter/dependencies, then restore th
 ## Increment 2: Visual composer production qualification and hardening
 
 - Id: `visual-composer-production-qualification`
-- Status: `implementing`
+- Status: `completed`
 - Dependencies: `mockup-aligned-visual-composer`
 
 Qualify and harden the complete visual editor across packaged Windows desktop and the supported thin-client browser, input methods, accessibility/reflow, representative composition scale, security boundaries, interruption/recovery, and dependency/runtime packaging before production handoff.
@@ -161,12 +162,12 @@ Qualify and harden the complete visual editor across packaged Windows desktop an
 
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
-| `packaged-cross-client-workflows`: A packaged Windows desktop application and supported thin-client browser each complete create, choose or change layout, drag assets into and across slots, reorder, configure Design/Data/Events, connect declared ports, undo/redo, preview, save, reopen, enter from Manage, and reach Build and Test using their real IPC/API paths without console, transport, or renderer errors. | controlled-environment | not recorded |
-| `input-accessibility-equivalence`: Mouse, touch-equivalent pointer, and keyboard users can perform equivalent structural operations; screen-reader semantics and announcements identify source, valid destination, result, and cancellation; toolbar/tree/dialog/panel behavior follows documented keyboard conventions; and visible focus is never lost after panel changes, drops, errors, or dialogs. | controlled-environment | not recorded |
-| `responsive-visual-quality`: At supported wide, medium, narrow, 320-CSS-pixel-equivalent zoom, reduced-motion, high-contrast, light, and dark configurations, every function remains available, non-canvas content avoids unintended two-dimensional scrolling, semantic source order remains correct, and reviewed baselines show no overlapping, clipped, hidden, or unreachable controls. | controlled-environment | not recorded |
-| `bounded-secure-editor`: Malformed drag identifiers, invented slots, incompatible/revoked assets, oversized hierarchies/configuration, unsafe renderer inputs, and unqualified implementation resources fail closed with bounded redacted messages and never cause code execution, filesystem/network access, cross-workspace reads, build/release/deployment actions, or persisted partial mutations. | local | not recorded |
-| `scale-recovery-readiness`: Representative compositions at documented node/depth/slot bounds meet recorded interaction and rendering targets; interrupted or canceled drags, failed layout changes, renderer exceptions, stale/conflicting saves, reloads, and rollback recover to a coherent canonical draft without immutable revision loss or duplicated placement state. | controlled-environment | not recorded |
-| `production-guidance-and-gates`: Dependency review, architecture and context documentation, keyboard/help guidance, support limits, rollback, exclusions, and qualification evidence match implemented behavior, and all applicable repository checks, builds, Windows packaging, and the final full suite pass with zero failures. | local | not recorded |
+| `packaged-cross-client-workflows`: A packaged Windows desktop application and supported thin-client browser each complete create, choose or change layout, drag assets into and across slots, reorder, configure Design/Data/Events, connect declared ports, undo/redo, preview, save, reopen, enter from Manage, and reach Build and Test using their real IPC/API paths without console, transport, or renderer errors. | controlled-environment | passed (test) |
+| `input-accessibility-equivalence`: Mouse, touch-equivalent pointer, and keyboard users can perform equivalent structural operations; screen-reader semantics and announcements identify source, valid destination, result, and cancellation; toolbar/tree/dialog/panel behavior follows documented keyboard conventions; and visible focus is never lost after panel changes, drops, errors, or dialogs. | controlled-environment | passed (test) |
+| `responsive-visual-quality`: At supported wide, medium, narrow, 320-CSS-pixel-equivalent zoom, reduced-motion, high-contrast, light, and dark configurations, every function remains available, non-canvas content avoids unintended two-dimensional scrolling, semantic source order remains correct, and reviewed baselines show no overlapping, clipped, hidden, or unreachable controls. | controlled-environment | passed (review) |
+| `bounded-secure-editor`: Malformed drag identifiers, invented slots, incompatible/revoked assets, oversized hierarchies/configuration, unsafe renderer inputs, and unqualified implementation resources fail closed with bounded redacted messages and never cause code execution, filesystem/network access, cross-workspace reads, build/release/deployment actions, or persisted partial mutations. | local | passed (test) |
+| `scale-recovery-readiness`: Representative compositions at documented node/depth/slot bounds meet recorded interaction and rendering targets; interrupted or canceled drags, failed layout changes, renderer exceptions, stale/conflicting saves, reloads, and rollback recover to a coherent canonical draft without immutable revision loss or duplicated placement state. | controlled-environment | passed (test) |
+| `production-guidance-and-gates`: Dependency review, architecture and context documentation, keyboard/help guidance, support limits, rollback, exclusions, and qualification evidence match implemented behavior, and all applicable repository checks, builds, Windows packaging, and the final full suite pass with zero failures. | local | passed (review) |
 
 ### Verification
 
@@ -190,3 +191,59 @@ Disable the visual editor route and restore the verified semantic editor entry w
 - Executing arbitrary imported/authored implementation code as part of qualification
 - Production deployment, external credential use, organization collaboration, or public marketplace qualification
 - Pixel-for-pixel reproduction of unrelated application chrome outside the Systems composer
+
+## Increment 3: Composable Foundation UI assets and reference preview fidelity
+
+- Id: `composable-foundation-ui-reference-previews`
+- Status: `completed`
+- Dependencies: `visual-composer-production-qualification`
+
+Deliver configurable, nested, resource-backed Foundation UI assets and faithful safe System Preview output for all reference systems, using canonical versioned placements and checked-in ideal semantic HTML mockups as the end-to-end acceptance oracle.
+
+### Work packages
+
+- **Versioned UI composition surfaces** (`versioned-ui-composition-surfaces`): Current Foundation UI, shell, form, display, state, preview, and conversation definitions expose meaningful bounded configuration and canonical named child regions while immutable v1 definitions remain unchanged.
+- **Canonical reference-system visual materialization** (`reference-visual-materialization`): Explicit layout migration upgrades the three legacy reference templates into coherent current-version visual hierarchies, places visual assets in compatible named regions, and keeps nonvisual behavior and policy assets outside the rendered tree without losing them.
+- **Composed safe Foundation renderer** (`composed-safe-renderer`): Backing-resource descriptors drive meaningful semantic elements for containers, cards, pages, forms, displays, states, conversations, and previews, with nested children rendered inside their real parent regions and no unqualified implementation execution.
+- **Reference HTML fidelity and control hardening** (`html-fidelity-oracle`): Checked-in ideal HTML fixtures for secured data entry, controlled chatbot, and secured data review match normalized real System Preview output, and focused interaction tests prove the Composer can configure and nest the required assets.
+
+### Deliverables
+
+- Current-version canonical slot definitions for composable Foundation UI families
+- Meaningful bounded backing-resource structure and style programs
+- Deterministic reference-system visual hierarchy materialization
+- Nested semantic System Preview renderer
+- Ideal HTML mockups and normalized semantic DOM comparison harness for all three reference systems
+- Composer configuration and drag compatibility regressions
+- Shared desktop and thin-client verification
+- Architecture, context, shared UI, and support documentation
+
+### Acceptance criteria
+
+| Criterion | Qualification | Latest evidence |
+| --- | --- | --- |
+| `versioned-composable-ui-assets`: Every current Foundation asset that semantically contains visual children declares bounded direction-neutral slots and meaningful configuration, including Card content and actions; immutable 1.0.0 definitions and exact reads remain unchanged. | local | passed (test) |
+| `reference-system-canonical-visuals`: After explicit predefined-layout migration, each of the three real reference templates has one valid current-version canonical visual hierarchy with navigation, page content, and domain-specific nested regions; visual assets needed by the preview are placed, while nonvisual assets remain preserved and unexecuted. | local | passed (test) |
+| `nested-safe-preview-html`: System Preview renders nested child assets inside meaningful semantic parent HTML from registered Foundation backing-resource programs, reflects configured titles, content, controls, states, and actions, stays bounded, and never executes frontend source, backend logic, provider calls, routes, workflows, or imported code. | local | passed (test) |
+| `reference-html-fidelity`: Normalized semantic HTML produced by the real System Preview for secured data entry, controlled chatbot, and secured data review matches the checked-in ideal HTML mockup for each system, ignoring only documented nondeterministic identifiers and presentation-only attributes. | local | passed (test) |
+| `cross-host-usable-controls`: The shared desktop and thin-client Composer can configure the meaningful Foundation fields, drag compatible children into nested regions, preview the composed result, save and reopen it, and reject incompatible or over-capacity drops with accessible bounded feedback. | controlled-environment | passed (test) |
+| `foundation-preview-production-gates`: Architecture, backing-resource, System Builder, shared UI, support, and HTML-oracle documentation match the implementation, focused tests pass, supported builds and Windows packaging pass, and the final full non-browser suite has zero failures. | local | passed (test) |
+
+### Verification
+
+- Run focused definition, manifest, backing-resource, slot compatibility, layout migration, preview model, semantic HTML parity, and shared Composer interaction tests while iterating.
+- Render each actual reference template after explicit layout migration and compare its normalized semantic System Preview DOM with its ideal HTML fixture.
+- Run the controlled shared-host Composer workflow for nested Card and reference preview behavior after all increment chunks are implemented.
+- Run documentation, architecture, agent-support, asset-system, dependency, server build, thin-client build, Windows package, and full non-browser gates once at increment completion.
+
+### Rollback
+
+Remove only the current-version slot/program additions, reference visual migration profile, nested renderer, and HTML fixtures; preserve immutable v1 definitions, existing revisions, dependency bindings, completed visual editor behavior, and all non-execution and workspace boundaries.
+
+### Excluded
+
+- Changing or deleting immutable 1.0.0 Foundation definitions or historical reference revisions
+- Executing authored or imported frontend/backend code in the Composer or preview
+- Turning dependency bindings into generic containment outside the explicit reference-template migration profiles
+- Arbitrary freeform HTML, CSS, script, route, network, filesystem, provider, workflow, build, release, or deployment execution
+- Pixel-identical browser screenshots or certification beyond the supported controlled host environments

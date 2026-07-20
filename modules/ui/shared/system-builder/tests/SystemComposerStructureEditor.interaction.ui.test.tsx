@@ -236,6 +236,190 @@ describe("SystemComposerStructureEditor interactions", () => {
     expect(onRemove).not.toHaveBeenCalled();
   });
 
+  it("renders every nested reference container and its draggable child regions", () => {
+    const system = {
+      ...composerAsset("builtin.system.system", ["application-shell"]),
+      assetType: "system" as const,
+    };
+    const shell = applicationLayout(
+      "builtin.layout.application.standard",
+      ["top-bar", "content"],
+      [["top-bar"], ["content"]],
+      "single",
+    );
+    const page = {
+      ...composerAsset("builtin.shell.page", ["content", "actions"]),
+      assetType: "page" as const,
+    };
+    const assistant = {
+      ...composerAsset("conversation.basic-assistant-system", ["interface"]),
+      assetType: "system" as const,
+    };
+    const chatShell = {
+      ...composerAsset("conversation.chat-shell", [
+        "status",
+        "history",
+        "composer",
+        "states",
+      ]),
+      assetType: "feature" as const,
+    };
+    const history = composerAsset("conversation.message-history-display", []);
+    const composer = composerAsset("conversation.message-composer", [
+      "input",
+      "actions",
+    ]);
+    const input = composerAsset("conversation.user-message-input", []);
+    const send = composerAsset("builtin.form.submit-action", []);
+    const catalog = [
+      system,
+      shell,
+      page,
+      assistant,
+      chatShell,
+      history,
+      composer,
+      input,
+      send,
+    ];
+
+    render(
+      <SystemComposerStructureEditor
+        draft={{
+          instances: [
+            instance("instance.root", system.definitionId, "System root"),
+            instance("instance.shell", shell.definitionId, "Application shell"),
+            instance("instance.page", page.definitionId, "Assistant page"),
+            instance(
+              "instance.assistant",
+              assistant.definitionId,
+              "Basic assistant system",
+            ),
+            instance(
+              "instance.chat",
+              chatShell.definitionId,
+              "Conversation shell",
+            ),
+            instance("instance.history", history.definitionId, "History"),
+            instance("instance.composer", composer.definitionId, "Composer"),
+            instance("instance.input", input.definitionId, "Message input"),
+            instance("instance.send", send.definitionId, "Send"),
+          ],
+          placements: [
+            placement("instance.root", "application-shell", "instance.shell"),
+            placement("instance.shell", "content", "instance.page"),
+            placement("instance.page", "content", "instance.assistant"),
+            placement("instance.assistant", "interface", "instance.chat"),
+            placement("instance.chat", "history", "instance.history"),
+            placement("instance.chat", "composer", "instance.composer"),
+            placement("instance.composer", "input", "instance.input"),
+            placement("instance.composer", "actions", "instance.send"),
+          ],
+          bindings: [],
+        }}
+        rootInstanceRefs={[
+          { kind: "asset-instance", id: normalizeAssetId("instance.root") },
+        ]}
+        catalog={catalog}
+        compatibleAssets={catalog}
+        layoutOptions={[shell]}
+        selectedLayoutDefinitionId={shell.definitionId}
+        selectedInstanceId="instance.page"
+        targetSlot={undefined}
+        protectedInstanceIds={
+          new Set(["instance.root", "instance.shell", "instance.page"])
+        }
+        canUndo={false}
+        canRedo={false}
+        onSelect={vi.fn()}
+        onTargetSlotChange={vi.fn()}
+        onSelectLayout={vi.fn()}
+        onAdd={vi.fn()}
+        onPlace={vi.fn()}
+        onRemove={vi.fn()}
+        onUndo={vi.fn()}
+        onRedo={vi.fn()}
+      />,
+    );
+
+    const canvas = container!.querySelector<HTMLElement>(
+      ".system-composer__panel--canvas",
+    )!;
+    expect(
+      Array.from(
+        canvas.querySelectorAll<HTMLElement>("[data-instance-id]"),
+      ).map((node) => node.dataset.instanceId),
+    ).toEqual([
+      "instance.shell",
+      "instance.page",
+      "instance.assistant",
+      "instance.chat",
+      "instance.history",
+      "instance.composer",
+      "instance.input",
+      "instance.send",
+    ]);
+    const assistantNode = canvas.querySelector<HTMLElement>(
+      '[data-instance-id="instance.assistant"]',
+    );
+    expect(
+      assistantNode?.querySelector(
+        '[data-slot-id="interface"] [data-instance-id="instance.chat"] [data-slot-id="composer"] [data-instance-id="instance.composer"] [data-slot-id="input"] [data-instance-id="instance.input"]',
+      ),
+    ).not.toBeNull();
+    expect(
+      assistantNode?.querySelector(
+        '[data-instance-id="instance.composer"] [data-slot-id="actions"] [data-instance-id="instance.send"]',
+      ),
+    ).not.toBeNull();
+    expect(
+      container!.querySelector(
+        '[aria-label="Drag conversation.basic-assistant-system"]',
+      ),
+    ).not.toBeNull();
+
+    for (const instanceId of [
+      "instance.shell",
+      "instance.page",
+      "instance.assistant",
+      "instance.chat",
+      "instance.composer",
+    ]) {
+      const node = canvas.querySelector<HTMLElement>(
+        `[data-instance-id="${instanceId}"]`,
+      );
+      expect(directEditablePreview(node)).toBeNull();
+    }
+
+    const historyNode = canvas.querySelector<HTMLElement>(
+      '[data-instance-id="instance.history"]',
+    );
+    const historyPreview = directEditablePreview(historyNode);
+    expect(
+      historyPreview?.querySelector(
+        '[data-foundation-definition="conversation.message-history-display"]',
+      ),
+    ).not.toBeNull();
+    expect(historyPreview?.querySelector("textarea")).toBeNull();
+
+    const inputNode = canvas.querySelector<HTMLElement>(
+      '[data-instance-id="instance.input"]',
+    );
+    const inputPreview = directEditablePreview(inputNode);
+    expect(
+      inputPreview?.querySelector(
+        '[data-foundation-definition="conversation.user-message-input"]',
+      ),
+    ).not.toBeNull();
+    expect(inputPreview?.querySelector("textarea")).not.toBeNull();
+    expect(inputPreview?.textContent).not.toContain("Conversation");
+
+    expect(canvas.textContent).not.toContain("Send preview");
+    expect(
+      canvas.querySelector('[aria-label="Example conversation"]'),
+    ).toBeNull();
+  });
+
   it("offers predefined layouts as a native single-choice gallery", async () => {
     const onSelect = vi.fn();
     const standard = applicationLayout(
@@ -344,6 +528,14 @@ function render(element: React.ReactNode): void {
   document.body.append(container);
   root = createRoot(container);
   act(() => root?.render(element));
+}
+
+function directEditablePreview(node: HTMLElement | null): HTMLElement | null {
+  return (
+    (Array.from(node?.children ?? []).find((child) =>
+      child.classList.contains("system-composer__editable-preview"),
+    ) as HTMLElement | undefined) ?? null
+  );
 }
 
 function button(label: string): HTMLButtonElement {

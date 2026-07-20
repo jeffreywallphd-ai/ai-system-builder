@@ -28,7 +28,7 @@ function instance(
     lifecycleStatus: "draft",
     selectedConfiguration: { title: `${displayName} configured` },
     provenance: { sourceKind: "human-authored" },
-  } as AssetInstance;
+  } as unknown as AssetInstance;
 }
 
 describe("SystemCompositionPreview", () => {
@@ -199,5 +199,5 @@ function composerDefinition(
     compatibility: { status: "compatible" },
     implementationAvailability: "trusted-system-foundation",
     previewAvailability: "trusted-declarative",
-  } as SystemBuilderComposerAsset;
+  } as unknown as SystemBuilderComposerAsset;
 }

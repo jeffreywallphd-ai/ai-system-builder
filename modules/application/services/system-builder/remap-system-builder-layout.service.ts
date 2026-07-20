@@ -21,6 +21,7 @@ import {
   SYSTEM_FOUNDATION_PACK_V2_MANIFEST,
 } from "../asset-packs/system-packs";
 import { createCanonicalSystemBuilderStructure } from "./create-canonical-system-builder-structure.service";
+import { materializeReferenceSystemVisualHierarchy } from "./materialize-reference-system-visual-hierarchy.service";
 import { systemBuilderSlotAcceptsDefinition } from "./validate-system-builder-structure.service";
 
 export async function remapSystemBuilderLayout(
@@ -240,21 +241,35 @@ function materializeLegacySystemBuilderLayout(
     ...legacyRoot,
     definitionRef: canonicalRoot.definitionRef,
   };
-  const instances = [
+  const seededInstances = [
     ...command.instances.map((instance) =>
       String(instance.instanceId) === legacyRootId ? root : instance,
     ),
     ...addedInstances,
   ];
-  const placements = seed.placements.map((placement) => ({
+  const seededPlacements = seed.placements.map((placement) => ({
     ...placement,
     parentInstanceRef:
       String(placement.parentInstanceRef.id) === canonicalRootId
         ? instanceReference(root)
         : placement.parentInstanceRef,
   }));
+  const materialized = materializeReferenceSystemVisualHierarchy({
+    systemId: String(command.systemId),
+    compositionId: String(command.composition.compositionId),
+    actorId: command.actorId,
+    timestamp,
+    instances: seededInstances,
+    placements: seededPlacements,
+  });
+  const instances = materialized.instances;
+  const placements = materialized.placements;
+  const placedIds = new Set(
+    placements.map((placement) => String(placement.childInstanceRef.id)),
+  );
   const unassignedInstanceRefs = command.instances
     .filter((instance) => String(instance.instanceId) !== legacyRootId)
+    .filter((instance) => !placedIds.has(String(instance.instanceId)))
     .map(instanceReference);
   const composition = {
     ...command.composition,
@@ -276,11 +291,27 @@ function materializeLegacySystemBuilderLayout(
     instances,
     bindings: command.bindings,
     placements,
-    changes: unassignedInstanceRefs.map((instanceRef) => ({
-      instanceRef,
-      disposition: "unassigned" as const,
-      fromSlotId: "legacy-flat",
-    })),
+    changes: command.instances
+      .filter((instance) => String(instance.instanceId) !== legacyRootId)
+      .map((instance) => {
+        const target = placements.find(
+          (placement) =>
+            String(placement.childInstanceRef.id) ===
+            String(instance.instanceId),
+        );
+        return target
+          ? {
+              instanceRef: instanceReference(instance),
+              disposition: "moved" as const,
+              fromSlotId: "legacy-flat",
+              toSlotId: String(target.slotId),
+            }
+          : {
+              instanceRef: instanceReference(instance),
+              disposition: "unassigned" as const,
+              fromSlotId: "legacy-flat",
+            };
+      }),
     unassignedInstanceRefs,
   };
 }

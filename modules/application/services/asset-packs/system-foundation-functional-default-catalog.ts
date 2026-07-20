@@ -6,6 +6,7 @@ import type {
 } from "../../../contracts/asset";
 import type {
   AssetImplementationFacetKind,
+  AssetImplementationRuntimeKind,
   SystemFoundationFunctionalDefault,
   SystemFoundationPreviewKind,
 } from "../../../contracts/asset-implementation";
@@ -100,14 +101,7 @@ function createFunctionalDefault(
     displayName: definition.displayName,
     entryKey: `foundation.${String(definition.definitionId)}`,
     facetKind: facetKindFor(definition.assetType),
-    runtimeKind:
-      previewKind === "layout" ||
-      previewKind === "form" ||
-      previewKind === "data" ||
-      previewKind === "state" ||
-      previewKind === "conversation"
-        ? "trusted-built-in"
-        : "declarative-engine",
+    runtimeKind: runtimeKindFor(definition, previewKind),
     deploymentProfiles: ALL_PROFILES,
     previewKind,
     previewConfiguration: definition.defaultConfiguration ?? {},
@@ -120,6 +114,26 @@ function createFunctionalDefault(
     failClosed,
     requiredCapabilities: [],
   };
+}
+
+function runtimeKindFor(
+  definition: AssetDefinition,
+  previewKind: SystemFoundationPreviewKind,
+): AssetImplementationRuntimeKind {
+  // Preview enrichment must not rewrite an already-published implementation
+  // release. The v2 System root was originally seeded as declarative-engine;
+  // its later composable visual program changes presentation, not runtime
+  // identity.
+  if (String(definition.definitionId) === "builtin.system.system") {
+    return "declarative-engine";
+  }
+  return previewKind === "layout" ||
+    previewKind === "form" ||
+    previewKind === "data" ||
+    previewKind === "state" ||
+    previewKind === "conversation"
+    ? "trusted-built-in"
+    : "declarative-engine";
 }
 
 function facetKindFor(assetType: AssetType): AssetImplementationFacetKind {
@@ -153,6 +167,9 @@ function previewKindFor(
   definition: AssetDefinition,
 ): SystemFoundationPreviewKind {
   const id = String(definition.definitionId);
+  if (id === "builtin.system.system" && (definition.slots?.length ?? 0) > 0) {
+    return "layout";
+  }
   if (id.startsWith("builtin.form.") || id === "builtin.feature.record-form")
     return "form";
   if (

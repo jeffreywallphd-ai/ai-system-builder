@@ -31,6 +31,14 @@ export interface SystemFoundationBackingResourceProgram {
   readonly failClosed: boolean;
   readonly backendSteps: readonly string[];
   readonly styleClassName?: string;
+  readonly semanticElement?: string;
+  readonly regions: readonly SystemFoundationBackingResourceRegion[];
+}
+
+export interface SystemFoundationBackingResourceRegion {
+  readonly slotId: string;
+  readonly displayName: string;
+  readonly maximumItems: number;
 }
 
 /** Immutable implementation resources for the original 1.0.0 release. */
@@ -100,6 +108,13 @@ export function createSystemFoundationBackingResourceBundle(
         displayName: descriptor.displayName,
         configuration: descriptor.previewConfiguration,
         fixture: descriptor.previewFixture,
+        semanticElement: semanticElementFor(definition),
+        regions:
+          definition.slots?.map((slot) => ({
+            slotId: String(slot.slotId),
+            displayName: slot.displayName,
+            maximumItems: slot.cardinality.maxItems,
+          })) ?? [],
         ...(layoutPreset ? { layoutPreset } : {}),
       }),
     });
@@ -176,6 +191,7 @@ export function readSystemFoundationBackingResourceProgram(
       previewFixture: descriptor.previewFixture,
       failClosed: descriptor.failClosed,
       backendSteps: [],
+      regions: [],
     };
   }
   return {
@@ -190,6 +206,15 @@ export function readSystemFoundationBackingResourceProgram(
         ? program.failClosed
         : descriptor.failClosed,
     backendSteps: stringArray(program.steps),
+    semanticElement: stringValue(program.semanticElement),
+    regions: objectArray(program.regions).flatMap((region) => {
+      const slotId = stringValue(region.slotId);
+      const displayName = stringValue(region.displayName);
+      const maximumItems = numberValue(region.maximumItems);
+      return slotId && displayName && maximumItems !== undefined
+        ? [{ slotId, displayName, maximumItems }]
+        : [];
+    }),
     ...(frontend ? { styleClassName: foundationClassName(definitionId) } : {}),
   };
 }
@@ -345,6 +370,25 @@ function foundationClassName(definitionId: string): string {
   return `foundation-${definitionId.replace(/[^A-Za-z0-9_-]/g, "-")}`;
 }
 
+function semanticElementFor(definition: AssetDefinition): string {
+  const id = String(definition.definitionId);
+  if (id === "builtin.system.system") return "application";
+  if (id.startsWith("builtin.layout.application.")) return "application-layout";
+  if (id === "builtin.shell.navigation-group") return "navigation";
+  if (id === "builtin.shell.page") return "main";
+  if (id === "builtin.ui.card") return "article";
+  if (id === "builtin.ui.section") return "section";
+  if (id === "builtin.ui.collapsible-section") return "details";
+  if (id === "builtin.form.form") return "form";
+  if (id.startsWith("builtin.form.")) return "form-control";
+  if (id.startsWith("builtin.display.")) return "data-display";
+  if (id.startsWith("builtin.state.")) return "status";
+  if (id.startsWith("conversation.")) return "conversation";
+  if (definition.assetType === "page") return "section";
+  if (definition.assetType === "feature") return "feature";
+  return "group";
+}
+
 function pretty(value: unknown): string {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
@@ -365,4 +409,21 @@ function stringArray(value: unknown): readonly string[] {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string")
     : [];
+}
+
+function objectArray(
+  value: unknown,
+): readonly Readonly<Record<string, AssetJsonValue>>[] {
+  return Array.isArray(value)
+    ? value.flatMap((item) => {
+        const object = objectValue(item);
+        return object ? [object] : [];
+      })
+    : [];
+}
+
+function numberValue(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : undefined;
 }

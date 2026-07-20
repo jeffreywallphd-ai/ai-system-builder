@@ -83,7 +83,11 @@ interface LayoutSpec {
 }
 
 const applicationContentRefs = SYSTEM_FOUNDATION_PAGE_LAYOUT_IDS.map(exactRef);
-const visualChildTypes: readonly AssetType[] = ["ui-component", "feature"];
+const visualChildTypes: readonly AssetType[] = [
+  "ui-component",
+  "feature",
+  "page",
+];
 
 const applicationSpecs: readonly LayoutSpec[] = [
   application(

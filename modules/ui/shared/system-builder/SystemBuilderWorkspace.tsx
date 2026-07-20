@@ -49,6 +49,7 @@ import {
   undoSystemComposerDraft,
   type SystemComposerDraft,
 } from "./systemComposerDraft";
+import { isSystemComposerVisualInstance } from "./systemComposerAssetClassification";
 
 export interface SystemBuilderClient {
   list(input: {
@@ -222,18 +223,10 @@ export function SystemBuilderWorkspace({
       if (!active) return;
       if (systemResult.ok) {
         setSystems(systemResult.value);
-        const requestedSystem = initialSystemId
-          ? systemResult.value.find(
-              (item) =>
-                String(item.systemId) === initialSystemId &&
-                item.status !== "archived",
-            )
-          : undefined;
         setSelectedSystemId(
           String(
-            requestedSystem?.systemId ??
-              systemResult.value.find((item) => item.status !== "archived")
-                ?.systemId ??
+            systemResult.value.find((item) => item.status !== "archived")
+              ?.systemId ??
               systemResult.value[0]?.systemId ??
               "",
           ) || undefined,
@@ -244,9 +237,7 @@ export function SystemBuilderWorkspace({
         setSelectedLayoutDefinitionId(
           (current) =>
             current ??
-            catalogResult.value.items.find(
-              (asset) => asset.layoutRole === "application-shell",
-            )?.definitionId,
+            defaultApplicationLayout(catalogResult.value.items)?.definitionId,
         );
       } else setCatalogError(catalogResult.error.message);
       setCatalogLoading(false);
@@ -260,7 +251,16 @@ export function SystemBuilderWorkspace({
     return () => {
       active = false;
     };
-  }, [client, initialSystemId, workspaceId]);
+  }, [client, workspaceId]);
+
+  useEffect(() => {
+    if (!initialSystemId) return;
+    const requestedSystem = systems.find(
+      (item) =>
+        String(item.systemId) === initialSystemId && item.status !== "archived",
+    );
+    if (requestedSystem) setSelectedSystemId(initialSystemId);
+  }, [initialSystemId, systems]);
 
   useEffect(() => {
     if (!selectedSystemId) {
@@ -306,6 +306,21 @@ export function SystemBuilderWorkspace({
       active = false;
     };
   }, [client, selectedSystemId, workspaceId]);
+
+  useEffect(() => {
+    if (
+      !revision ||
+      structure ||
+      dirty ||
+      busy ||
+      !isLegacyUiReferenceSystem(revision)
+    ) {
+      return;
+    }
+    const layout = defaultApplicationLayout(layoutOptions);
+    if (!layout) return;
+    void selectLayout(layout);
+  }, [busy, dirty, layoutOptions, revision, structure]);
 
   useEffect(() => {
     if (!revision || composerCatalog.length === 0) return;
@@ -366,6 +381,7 @@ export function SystemBuilderWorkspace({
       workspaceId,
       parentDefinitionRef: parent.definitionRef,
       slotId: targetSlot.slotId,
+      compatibleOnly: true,
     }).then((result) => {
       if (!active) return;
       if (result.ok) setCompatibleAssets(result.value.items);
@@ -669,7 +685,18 @@ export function SystemBuilderWorkspace({
       ...(structure ? { structure } : {}),
     });
     if (result.ok) {
-      const unassignedCount = result.value.unassignedInstanceRefs.length;
+      const unassignedIds = new Set(
+        result.value.unassignedInstanceRefs.map((reference) =>
+          String(reference.id),
+        ),
+      );
+      const unplaced = result.value.instances.filter((instance) =>
+        unassignedIds.has(String(instance.instanceId)),
+      );
+      const unassignedVisualCount = unplaced.filter((instance) =>
+        isSystemComposerVisualInstance(instance, composerCatalog),
+      ).length;
+      const systemResourceCount = unplaced.length - unassignedVisualCount;
       commitDraft(
         {
           instances: result.value.instances,
@@ -677,9 +704,11 @@ export function SystemBuilderWorkspace({
           bindings: result.value.bindings,
           structure: result.value.structure,
         },
-        unassignedCount
-          ? `${layout.displayName} selected. The Canvas updated automatically; ${unassignedCount} asset${unassignedCount === 1 ? " is" : "s are"} available under Unassigned assets.`
-          : `${layout.displayName} selected. The Canvas updated automatically.`,
+        layoutSelectionNotice(
+          layout.displayName,
+          unassignedVisualCount,
+          systemResourceCount,
+        ),
       );
       setSelectedLayoutDefinitionId(layout.definitionId);
     } else setError(result.error.message);
@@ -1163,6 +1192,52 @@ export function SystemBuilderWorkspace({
 const COMPOSER_CATALOG_PAGE_LIMIT = 200;
 const COMPOSER_CATALOG_MAX_PAGES = 10;
 const APPLICATION_LAYOUT_CATALOG_QUERY = "builtin.layout.application";
+const DEFAULT_APPLICATION_LAYOUT_DEFINITION_ID =
+  "builtin.layout.application.minimal";
+
+function layoutSelectionNotice(
+  layoutName: string,
+  unassignedVisualCount: number,
+  systemResourceCount: number,
+): string {
+  const prefix = `${layoutName} selected. The Canvas updated automatically.`;
+  const details: string[] = [];
+  if (unassignedVisualCount) {
+    details.push(
+      `${unassignedVisualCount} visual asset${unassignedVisualCount === 1 ? " is" : "s are"} available under Unassigned visual assets`,
+    );
+  }
+  if (systemResourceCount) {
+    details.push(
+      `${systemResourceCount} nonvisual asset${systemResourceCount === 1 ? " remains" : "s remain"} under System resources & logic`,
+    );
+  }
+  return details.length ? `${prefix} ${details.join("; ")}.` : prefix;
+}
+
+function defaultApplicationLayout(
+  assets: readonly SystemBuilderComposerAsset[],
+): SystemBuilderComposerAsset | undefined {
+  return (
+    assets.find(
+      (asset) =>
+        asset.layoutRole === "application-shell" &&
+        asset.definitionId === DEFAULT_APPLICATION_LAYOUT_DEFINITION_ID,
+    ) ?? assets.find((asset) => asset.layoutRole === "application-shell")
+  );
+}
+
+function isLegacyUiReferenceSystem(revision: SystemBuilderRevision): boolean {
+  if (revision.structure) return false;
+  return revision.instances.some((instance) => {
+    const kind = instance.metadata?.referenceSystemKind;
+    return (
+      kind === "secured-data-entry" ||
+      kind === "controlled-chatbot" ||
+      kind === "secured-data-review"
+    );
+  });
+}
 
 export function preferredSystemComposerTarget({
   instances,

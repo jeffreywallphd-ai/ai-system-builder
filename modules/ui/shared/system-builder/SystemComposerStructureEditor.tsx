@@ -59,6 +59,11 @@ import {
   targetForSystemComposerDrop,
   type SystemComposerDragData,
 } from "./systemComposerDrag";
+import {
+  groupSystemComposerUnplacedInstances,
+  isSystemComposerVisualAsset,
+  systemComposerAssetForInstance,
+} from "./systemComposerAssetClassification";
 
 export interface SystemComposerTargetSlot {
   readonly parentInstanceId: string;
@@ -157,21 +162,20 @@ export function SystemComposerStructureEditor({
     [draft, rootInstanceRefs],
   );
   const flatTree = useMemo(() => flattenSystemComposerTree(tree), [tree]);
-  const unassignedInstances = useMemo(() => {
-    const roots = new Set(
-      rootInstanceRefs.map((reference) => String(reference.id)),
-    );
-    const placed = new Set(
-      draft.placements.map((placement) =>
-        String(placement.childInstanceRef.id),
-      ),
-    );
-    return draft.instances.filter(
-      (instance) =>
-        !roots.has(String(instance.instanceId)) &&
-        !placed.has(String(instance.instanceId)),
-    );
-  }, [draft.instances, draft.placements, rootInstanceRefs]);
+  const {
+    unplacedInstances,
+    unassignedVisualInstances,
+    systemResourceInstances,
+  } = useMemo(
+    () =>
+      groupSystemComposerUnplacedInstances({
+        instances: draft.instances,
+        placements: draft.placements,
+        rootInstanceRefs,
+        catalog,
+      }),
+    [catalog, draft.instances, draft.placements, rootInstanceRefs],
+  );
   const visibleTreeItems = useMemo(
     () => flattenVisibleSystemComposerTree(tree, collapsedInstanceIds),
     [collapsedInstanceIds, tree],
@@ -180,7 +184,7 @@ export function SystemComposerStructureEditor({
     flatTree.find(
       (node) => String(node.instance.instanceId) === selectedInstanceId,
     ) ??
-    unassignedInstances
+    unplacedInstances
       .filter((instance) => String(instance.instanceId) === selectedInstanceId)
       .map(
         (instance) =>
@@ -191,8 +195,7 @@ export function SystemComposerStructureEditor({
     const query = search.trim().toLowerCase();
     return (
       (!targetSlot || asset.compatibility.status === "compatible") &&
-      asset.layoutRole !== "application-shell" &&
-      ["feature", "page", "ui-component"].includes(asset.assetType) &&
+      isSystemComposerVisualAsset(asset) &&
       (!query ||
         `${asset.displayName} ${asset.definitionId} ${asset.assetType}`
           .toLowerCase()
@@ -553,22 +556,55 @@ export function SystemComposerStructureEditor({
                 </PaletteAssetItem>
               ))}
             </ul>
-            {unassignedInstances.length ? (
+            {unassignedVisualInstances.length ? (
               <section
                 className="system-composer__unassigned system-composer__unassigned--palette"
                 aria-labelledby="system-composer-unassigned-title"
               >
-                <h4 id="system-composer-unassigned-title">Unassigned assets</h4>
+                <h4 id="system-composer-unassigned-title">
+                  Unassigned visual assets
+                </h4>
                 <p className="ui-text-muted">
-                  Preserved during a layout change. Drag each asset into a
-                  compatible named region.
+                  Visual assets preserved during a layout change. Drag each
+                  asset into a compatible named region.
                 </p>
                 <ul>
-                  {unassignedInstances.map((instance, order) => (
+                  {unassignedVisualInstances.map((instance, order) => (
                     <UnassignedAssetItem
                       key={String(instance.instanceId)}
                       instance={instance}
                       order={order}
+                      selected={
+                        String(instance.instanceId) === selectedInstanceId
+                      }
+                      onSelect={onSelect}
+                    />
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+            {systemResourceInstances.length ? (
+              <section
+                className="system-composer__resources system-composer__resources--palette"
+                aria-labelledby="system-composer-resources-title"
+              >
+                <h4 id="system-composer-resources-title">
+                  System resources &amp; logic
+                </h4>
+                <p className="ui-text-muted">
+                  Nonvisual assets remain part of the system and are configured
+                  through Properties or Connections. They are not Canvas
+                  elements.
+                </p>
+                <ul>
+                  {systemResourceInstances.map((instance) => (
+                    <SystemResourceItem
+                      key={String(instance.instanceId)}
+                      instance={instance}
+                      definition={systemComposerAssetForInstance(
+                        instance,
+                        catalog,
+                      )}
                       selected={
                         String(instance.instanceId) === selectedInstanceId
                       }
@@ -734,11 +770,35 @@ export function SystemComposerStructureEditor({
                   />
                 ))}
               </ul>
-              {unassignedInstances.length ? (
+              {unassignedVisualInstances.length ? (
                 <section className="system-composer__unassigned-layers">
-                  <h4>Unassigned</h4>
+                  <h4>Unassigned visual assets</h4>
                   <ul>
-                    {unassignedInstances.map((instance) => (
+                    {unassignedVisualInstances.map((instance) => (
+                      <li key={String(instance.instanceId)}>
+                        <button
+                          type="button"
+                          className="system-composer__link-control"
+                          aria-current={
+                            String(instance.instanceId) === selectedInstanceId
+                              ? "true"
+                              : undefined
+                          }
+                          onClick={() => onSelect(String(instance.instanceId))}
+                        >
+                          {instance.displayName ??
+                            String(instance.definitionRef.id)}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+              {systemResourceInstances.length ? (
+                <section className="system-composer__resources-layers">
+                  <h4>System resources &amp; logic</h4>
+                  <ul>
+                    {systemResourceInstances.map((instance) => (
                       <li key={String(instance.instanceId)}>
                         <button
                           type="button"
@@ -976,6 +1036,32 @@ function UnassignedAssetItem({
   );
 }
 
+function SystemResourceItem({
+  instance,
+  definition,
+  selected,
+  onSelect,
+}: {
+  readonly instance: AssetInstance;
+  readonly definition?: SystemBuilderComposerAsset;
+  readonly selected: boolean;
+  readonly onSelect: (instanceId: string) => void;
+}) {
+  const instanceId = String(instance.instanceId);
+  return (
+    <li data-selected={selected}>
+      <button
+        type="button"
+        className="system-composer__link-control"
+        onClick={() => onSelect(instanceId)}
+      >
+        {instance.displayName ?? String(instance.definitionRef.id)}
+      </button>
+      <small>{definition?.assetType ?? "nonvisual resource"}</small>
+    </li>
+  );
+}
+
 function TreeNode({
   node,
   selectedInstanceId,
@@ -1095,8 +1181,9 @@ function CanvasNode({
   const protectedInstance = protectedInstanceIds.has(instanceId);
   const definitionVersion =
     node.instance.definitionRef.version ?? definition?.version;
+  const fixedLayout = Boolean(definition?.layoutRole);
   const layoutStyle = definition?.layoutGeometry
-    ? layoutGridStyle(definition.layoutGeometry)
+    ? layoutGridStyle(definition.layoutGeometry, fixedLayout)
     : undefined;
   const sortable = useSortable({
     id: `instance:${instanceId}`,
@@ -1124,9 +1211,11 @@ function CanvasNode({
       ref={sortable.setNodeRef}
       style={style}
       className="system-composer__canvas-node"
+      data-instance-id={instanceId}
       data-selected={instanceId === selectedInstanceId}
       data-dragging={sortable.isDragging}
-      data-layout-container={Boolean(definition?.layoutGeometry)}
+      data-layout-container={fixedLayout}
+      data-containment-container={Boolean(definition?.slots.length)}
     >
       <div className="system-composer__canvas-node-heading">
         <button
@@ -1163,15 +1252,18 @@ function CanvasNode({
         ) : null}
       </div>
       {definition?.previewAvailability === "trusted-declarative" &&
-      !definition.layoutGeometry ? (
+      !definition.layoutRole &&
+      definition.slots.length === 0 ? (
         <div
           className="system-composer__editable-preview"
           aria-label={`${node.instance.displayName ?? definition.displayName} safe visual preview`}
         >
           <FoundationAssetPreview
             definitionId={definition.definitionId}
+            version={definition.version}
             displayName={node.instance.displayName ?? definition.displayName}
             configuration={node.instance.selectedConfiguration}
+            presentation="composed"
           />
         </div>
       ) : null}
@@ -1316,16 +1408,12 @@ function definitionForInstance(
   instance: AssetInstance | undefined,
   catalog: readonly SystemBuilderComposerAsset[],
 ): SystemBuilderComposerAsset | undefined {
-  if (!instance) return undefined;
-  return catalog.find(
-    (asset) =>
-      asset.definitionId === String(instance.definitionRef.id) &&
-      asset.version === instance.definitionRef.version,
-  );
+  return systemComposerAssetForInstance(instance, catalog);
 }
 
 function layoutGridStyle(
   geometry: SystemBuilderComposerLayoutGeometry,
+  fixedLayout = true,
 ): CSSProperties {
   return {
     gridTemplateAreas: geometry.areas
@@ -1341,13 +1429,17 @@ function layoutGridStyle(
             : geometry.columnPattern === "start-content"
               ? "minmax(8rem, 0.32fr) minmax(14rem, 1fr)"
               : "minmax(14rem, 1fr) minmax(8rem, 0.32fr)",
-    gridTemplateRows: geometry.areas
-      .map((row) =>
-        row.every((area) => ["top-bar", "page-header", "footer"].includes(area))
-          ? "4rem"
-          : "minmax(14rem, 1fr)",
-      )
-      .join(" "),
+    gridTemplateRows: fixedLayout
+      ? geometry.areas
+          .map((row) =>
+            row.every((area) =>
+              ["top-bar", "page-header", "footer"].includes(area),
+            )
+              ? "4rem"
+              : "minmax(14rem, 1fr)",
+          )
+          .join(" ")
+      : geometry.areas.map(() => "minmax(5rem, auto)").join(" "),
   };
 }
 

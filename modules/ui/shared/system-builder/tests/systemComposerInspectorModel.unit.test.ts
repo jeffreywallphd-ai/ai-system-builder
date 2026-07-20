@@ -144,6 +144,40 @@ describe("System composer inspector model", () => {
     ).toEqual(["onSubmitAction"]);
   });
 
+  it("groups bounded container behavior under Layout properties", () => {
+    const groups = buildSystemComposerPropertyPanelSections(
+      {
+        fields: [
+          {
+            fieldId: "title",
+            valueKind: "string",
+            label: "Title",
+          },
+          {
+            fieldId: "layoutDirection",
+            valueKind: "enum",
+            label: "Layout direction",
+          },
+          {
+            fieldId: "spacing",
+            valueKind: "enum",
+            label: "Spacing",
+          },
+        ],
+      },
+      { groupLayoutFields: true },
+    );
+
+    expect(groups.design.map((section) => section.label)).toEqual([
+      "General",
+      "Layout",
+    ]);
+    expect(groups.design[1]?.fields.map((field) => field.fieldId)).toEqual([
+      "layoutDirection",
+      "spacing",
+    ]);
+  });
+
   it("offers only compatible declared port targets and derives typed binding kinds", () => {
     const source = asset("builtin.source", [
       port("records", "output", "json", "records"),

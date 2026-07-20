@@ -136,6 +136,9 @@ describe("System Builder composer catalog", () => {
       dimensionsLocked: true,
     });
     expect(
+      result.value.items[0]?.slots.map((slot) => String(slot.slotId)),
+    ).toEqual(["top-bar", "content"]);
+    expect(
       result.value.items[0]?.configurationSchema?.fields.map(
         (field) => field.fieldId,
       ),
@@ -148,6 +151,12 @@ describe("System Builder composer catalog", () => {
       "system",
       "structural",
     );
+    const standardLayout = SYSTEM_FOUNDATION_LAYOUT_DEFINITIONS.find(
+      (item) =>
+        String(item.definitionId) === "builtin.layout.application.standard",
+    );
+    if (!standardLayout) throw new Error("Missing standard layout fixture.");
+    const staleStandardLayout = { ...standardLayout, slots: [] };
     const registry: AssetRegistryDefinitionReadPort = {
       listDefinitionCards: async (query = {}) => {
         if (query.searchText === "builtin.system.system") {
@@ -166,9 +175,14 @@ describe("System Builder composer catalog", () => {
             ],
           };
         }
-        return { items: [] };
+        return {
+          items: [{ ...card(staleStandardLayout), builtIn: true }],
+        };
       },
-      readDefinitionDetail: async () => undefined,
+      readDefinitionDetail: async (reference) =>
+        String(reference.id) === String(staleStandardLayout.definitionId)
+          ? { definition: staleStandardLayout, builtIn: true }
+          : undefined,
     };
 
     const result = await new ListSystemBuilderComposerAssetsUseCase(
@@ -190,9 +204,16 @@ describe("System Builder composer catalog", () => {
           item.builtIn,
       ),
     ).toBe(true);
+    expect(
+      result.value.items
+        .find(
+          (item) => item.definitionId === "builtin.layout.application.standard",
+        )
+        ?.slots.map((slot) => String(slot.slotId)),
+    ).toEqual(["top-bar", "content"]);
   });
 
-  it("evaluates legacy workspace assets against an exact trusted current layout parent", async () => {
+  it("projects current nested Foundation containers for a trusted Foundation 1.0 workspace", async () => {
     const legacyRoot = definition(
       "builtin.system.system",
       "system",
@@ -217,23 +238,124 @@ describe("System Builder composer catalog", () => {
             ],
           };
         }
-        return { items: [card(legacyPage)] };
+        return { items: [{ ...card(legacyPage), builtIn: true }] };
       },
-      readDefinitionDetail: async (reference) => {
-        if (String(reference.id).startsWith("builtin.layout.application.")) {
-          throw new Error("not in exact workspace view");
-        }
-        return String(reference.id) === String(legacyPage.definitionId)
+      readDefinitionDetail: async (reference) =>
+        String(reference.id) === String(legacyPage.definitionId)
           ? { definition: legacyPage, builtIn: true }
-          : undefined;
-      },
+          : undefined,
     };
+    const useCase = new ListSystemBuilderComposerAssetsUseCase(registry);
+
+    const result = await useCase.execute({ workspaceId, limit: 200 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const currentPage = result.value.items.find(
+      (item) =>
+        item.definitionId === "builtin.shell.page" && item.version === "2.0.0",
+    );
+    const assistant = result.value.items.find(
+      (item) => item.definitionId === "conversation.basic-assistant-system",
+    );
+    const chatShell = result.value.items.find(
+      (item) => item.definitionId === "conversation.chat-shell",
+    );
+    const composer = result.value.items.find(
+      (item) => item.definitionId === "conversation.message-composer",
+    );
+    expect(currentPage?.slots.map((slot) => String(slot.slotId))).toEqual([
+      "content",
+      "actions",
+    ]);
+    expect(assistant?.slots.map((slot) => String(slot.slotId))).toEqual([
+      "interface",
+    ]);
+    expect(assistant?.layoutGeometry).toEqual({
+      columnPattern: "single",
+      areas: [["interface"]],
+      sourceOrder: ["interface"],
+      dimensionsLocked: true,
+    });
+    expect(chatShell?.slots.map((slot) => String(slot.slotId))).toEqual([
+      "status",
+      "history",
+      "composer",
+      "states",
+    ]);
+    expect(composer?.slots.map((slot) => String(slot.slotId))).toEqual([
+      "input",
+      "actions",
+    ]);
+    expect(composer?.layoutGeometry?.areas).toEqual([["input"], ["actions"]]);
+    expect(
+      result.value.items.some(
+        (item) =>
+          item.definitionId === "builtin.shell.page" &&
+          item.version === "1.0.0",
+      ),
+    ).toBe(false);
+
+    const compatible = await useCase.execute({
+      workspaceId,
+      parentDefinitionRef: currentPage?.definitionRef,
+      slotId: "content",
+      compatibleOnly: true,
+      limit: 200,
+    });
+    expect(compatible.ok).toBe(true);
+    if (!compatible.ok) return;
+    expect(
+      compatible.value.items.some(
+        (item) => item.definitionId === "conversation.basic-assistant-system",
+      ),
+    ).toBe(true);
+  });
+
+  it("evaluates legacy workspace assets against an exact trusted current layout parent", async () => {
+    const legacyRoot = definition(
+      "builtin.system.system",
+      "system",
+      "structural",
+    );
+    const legacyPage = definition("builtin.shell.page", "page", "structural");
     const standard = SYSTEM_FOUNDATION_LAYOUT_DEFINITIONS.find(
       (definition) =>
         String(definition.definitionId) ===
         "builtin.layout.application.standard",
     );
     if (!standard) throw new Error("Missing standard layout fixture.");
+    const registry: AssetRegistryDefinitionReadPort = {
+      listDefinitionCards: async (query = {}) => {
+        if (query.searchText === "builtin.system.system") {
+          return {
+            items: [
+              {
+                ...card(legacyRoot),
+                builtIn: true,
+                sourcePackId: "system.foundation" as never,
+                sourcePackVersion: "1.0.0",
+                sourceKind: "system",
+                sourceLayer: "system-default",
+                trustStatus: "system-trusted",
+                systemDefault: true,
+              },
+            ],
+          };
+        }
+        return { items: [card(legacyPage)] };
+      },
+      readDefinitionDetail: async (reference) => {
+        if (String(reference.id).startsWith("builtin.layout.application.")) {
+          return {
+            definition: { ...standard, slots: [] },
+            builtIn: true,
+          };
+        }
+        return String(reference.id) === String(legacyPage.definitionId)
+          ? { definition: legacyPage, builtIn: true }
+          : undefined;
+      },
+    };
 
     const result = await new ListSystemBuilderComposerAssetsUseCase(
       registry,

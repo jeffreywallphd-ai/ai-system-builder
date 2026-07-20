@@ -11,6 +11,7 @@ export interface TabbedPanelTab {
   readonly id: string;
   readonly label: ReactNode;
   readonly content: ReactNode;
+  readonly keepMounted?: boolean;
 }
 
 export interface TabbedPanelProps {
@@ -48,6 +49,7 @@ export function TabbedPanel({
   const activeTabId = controlledActiveTabId ?? uncontrolledActiveTabId;
   const instanceId = useId();
   const tabElements = useRef(new Map<string, HTMLButtonElement>());
+  const hasPersistentTabs = tabs.some((tab) => tab.keepMounted);
 
   useEffect(() => {
     if (!activeTabId || !tabs.some((tab) => tab.id === activeTabId)) {
@@ -162,15 +164,35 @@ export function TabbedPanel({
           );
         })}
       </div>
-      <div
-        id={panelId}
-        className={resolvedPanelClassName}
-        role="tabpanel"
-        aria-labelledby={`${instanceId}-tab-${activeTab.id}`}
-        tabIndex={0}
-      >
-        {activeTab.content}
-      </div>
+      {hasPersistentTabs ? (
+        tabs.map((tab) => {
+          const isActive = tab.id === activeTab.id;
+          if (!isActive && !tab.keepMounted) return null;
+          return (
+            <div
+              key={tab.id}
+              id={`${instanceId}-panel-${tab.id}`}
+              className={resolvedPanelClassName}
+              role="tabpanel"
+              aria-labelledby={`${instanceId}-tab-${tab.id}`}
+              tabIndex={isActive ? 0 : -1}
+              hidden={!isActive}
+            >
+              {tab.content}
+            </div>
+          );
+        })
+      ) : (
+        <div
+          id={panelId}
+          className={resolvedPanelClassName}
+          role="tabpanel"
+          aria-labelledby={`${instanceId}-tab-${activeTab.id}`}
+          tabIndex={0}
+        >
+          {activeTab.content}
+        </div>
+      )}
     </section>
   );
 }

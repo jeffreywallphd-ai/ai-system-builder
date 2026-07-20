@@ -65,14 +65,21 @@ An explicit predefined-layout selection is the migration boundary for a
 legacy-flat draft: the application preview operation materializes the current
 protected Foundation root, selected fixed-region shell, and required empty
 layout content in memory, preserves every historical instance and binding, and
-reports unmatched instances as Unassigned. The renderer does not synthesize
-this hierarchy, and only the normal Save operation may persist it as a new
-immutable revision.
+reports unmatched instances without discarding them. The shared UI uses each
+instance's exact composer-catalog definition to separate unmatched visual assets
+from nonvisual system resources and logic. For the three closed reference
+templates, the same operation upgrades only instances with an exact current
+Foundation definition and applies an explicit template-owned visual placement
+profile. It may add bounded current Foundation containers and submit controls
+needed for a usable visual composition, but it never reinterprets dependency
+bindings as containment. The renderer does not synthesize this hierarchy, and
+only the normal Save operation may persist it as a new immutable revision.
 For backward compatibility, a workspace with any active trusted System
-Foundation generation may discover exact current built-in application and page
-layout definitions through System Builder only. This narrow compatibility seam
-does not activate or expose other current-generation assets in the workspace
-Asset Library.
+Foundation generation may discover the complete exact current built-in
+Foundation definition catalog through System Builder Composer only. This
+Composer-only compatibility seam supplies the slots and backing-program
+availability needed to render and edit every migrated hierarchy level; it does
+not activate or expose current-generation assets in the workspace Asset Library.
 `SystemBuilderRevision` is an immutable snapshot containing the composition,
 instances, bindings, safe validation issues, actor, and timestamp. Updating a
 record requires the caller's expected record revision. Saving a composition
@@ -114,10 +121,12 @@ authoring, customization, and single-asset Studio workflows.
   provenance-derived `builtin.system.system@2.0.0` root for interactive
   revisions, declared slot membership, compatible children, complete placement
   coverage, bounded depth, and acyclic containment.
-- New interactive systems start with the Foundation v2 system root, one selected
-  application layout, its required page hosts, a page layout, and bounded empty
-  content. Service and workflow profiles remain explicit and are not assigned an
-  interactive hierarchy.
+- New interactive systems start with the Foundation v2 system root, one required
+  selected application layout, its required page hosts, a page layout, and
+  bounded empty content. When a caller does not choose an application layout,
+  the canonical default is `builtin.layout.application.minimal@2.0.0`. Service
+  and workflow profiles remain explicit and are not assigned an interactive
+  hierarchy.
 - Structured persistence clones the complete revision, including structure and
   placements, and preserves workspace isolation plus optimistic conflicts. API,
   IPC, preload, desktop/thin clients, and the shared editor forward those fields
@@ -128,7 +137,7 @@ authoring, customization, and single-asset Studio workflows.
   operations. API reads require `asset:read`; mutations require `asset:write`.
 - The workspace-scoped composer read model resolves exact effective definitions,
   configuration schemas/defaults, declared ports and slots, preview/implementation
-  availability, trusted fixed layout geometry, and server-owned slot
+  availability, abstract geometry for every slot-bearing container, and server-owned slot
   compatibility for both desktop and thin client. Foundation layout geometry is
   an abstract projection of approved named regions; renderers do not reconstruct
   compatibility or accept author-defined dimensions from Asset Library summaries.
@@ -147,10 +156,24 @@ authoring, customization, and single-asset Studio workflows.
   choose-slot, Add-here, move-order, reparent, or wrapper forms. Drag state is
   never serialized. Selection, breadcrumbs, protected required nodes, responsive
   panel focus restoration, and bounded undo/redo remain synchronized across
-  regions.
+  regions. Every exact slot-bearing container recursively exposes its named
+  regions and placed descendants on the Canvas. Trusted Foundation system or
+  subsystem facades with a qualified declarative preview participate as visual
+  containers; ordinary policies, models, workflows, and backend resources do
+  not. Canvas container nodes render only their structural identity and actual
+  named child regions; they never repeat the complete standalone catalog preview.
+  Only leaf nodes render their own composition-aware semantic surface, so each
+  visible detail is contributed by one asset in the hierarchy.
+- Opening a closed legacy-flat UI reference system invokes the same application
+  layout-preview operation with the Minimal default and presents the result as
+  an unsaved draft. The renderer does not synthesize or persist structure on its
+  own; historical storage changes only through the normal validated save path.
 - Properties generates Design, Data, and Events sections from exact schemas, applies
   defaults and field constraints, offers approved asset/reference choices, and
-  retains a bounded Advanced JSON fallback for ordinary assets. System Foundation
+  retains a bounded Advanced JSON fallback for ordinary assets. Slot-bearing
+  containers expose a common Container layout summary, and their declared
+  direction, spacing, padding, alignment, columns, wrapping, and responsive
+  fields are grouped under Layout. System Foundation
   layout containers expose only their declared semantic fields: width, height,
   regions, responsive rules, raw JSON, arbitrary CSS, and grid coordinates remain
   locked. Connections accepts only declared,
@@ -163,18 +186,40 @@ authoring, customization, and single-asset Studio workflows.
   bounded validation issues, and does not persist. A successful selection
   immediately commits the returned structure, instances, bindings, and placements
   to the local draft history, where undo/redo includes the layout descriptor.
-  Unassigned
-  assets remain selectable and removable in Layers and Structure, appear at the
-  bottom of the Asset Palette rather than on the Canvas, and are reattachable by
-  dragging them to compatible Canvas regions.
+  Unassigned visual assets remain selectable and removable in Layers and
+  Structure, appear at the bottom of the Asset Palette rather than on the
+  Canvas, and are reattachable by dragging them to compatible Canvas regions.
+  Trusted Foundation system/subsystem facades with declared slots and a
+  qualified declarative preview remain draggable visual containers. Nonvisual
+  policies, models, workflows, data contracts, and other system
+  resources appear separately under System resources and logic. They remain
+  selectable for Properties or Connections but are never presented as Canvas
+  drag sources. Missing exact catalog metadata fails closed into the nonvisual
+  group.
   Save remains a separate optimistic command that creates a new immutable revision.
 - Compose provides a design-time UI preview of the current unsaved hierarchy and
   configuration. The shared modal recursively follows canonical placement and
-  canonical region order, reports unassigned and unsupported assets, and offers bounded
-  desktop/tablet/mobile frames. Only registered, side-effect-free System
-  Foundation renderers run; backend or unqualified imported/authored
-  implementation never executes, and preview grants no build, release,
-  activation, or deployment authority.
+  canonical region order, reports unplaced visual, nonvisual resource, and
+  unsupported asset states truthfully, and offers
+  bounded desktop/tablet/mobile frames. Exact-version backing programs select
+  side-effect-free semantic renderers for layouts, structural containers, forms,
+  display surfaces, states, conversations, and bounded artifact previews.
+  Container slots render their actual nested children; alternative error/loading
+  states and preview variants do not all appear simultaneously when primary
+  content is available. Backend or unqualified imported/authored implementation
+  never executes, and preview grants no build, release, activation, or
+  deployment authority. Hand-authored semantic HTML mockups for all three closed
+  reference systems are permanent test oracles: normalization ignores runtime
+  trace IDs and styling attributes but preserves meaningful elements, nesting,
+  labels, controls, states, and text.
+- The one-worker visual Composer qualification harness drives the same shared
+  workflow through a freshly packaged Windows Electron preload/IPC boundary and
+  a local Chrome thin-client/API boundary. Every run uses isolated desktop data,
+  server storage, and runtime roots and emits bounded sanitized evidence under
+  ignored `artifacts/qualification/visual-composer`. Automated input,
+  accessibility, reflow, and recovery checks remain scoped regression evidence;
+  they do not qualify another operating system, browser, physical touch device,
+  screen reader, manual security review, or production performance profile.
 - Compose exposes a shared Build & test handoff in both hosts. The handoff is
   disabled for dirty or archived systems and opens the existing Build & Release
   workflow for the selected saved system; it does not build from renderer state or

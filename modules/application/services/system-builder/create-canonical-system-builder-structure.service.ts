@@ -42,7 +42,7 @@ export interface CanonicalSystemBuilderStructureSeed {
 }
 
 const DEFAULT_APPLICATION_LAYOUT_ID =
-  "builtin.layout.application.standard" as const;
+  "builtin.layout.application.minimal" as const;
 const DEFAULT_PAGE_LAYOUT_ID = "builtin.layout.page.single" as const;
 const EMPTY_STATE_ID = "builtin.state.empty-state" as const;
 

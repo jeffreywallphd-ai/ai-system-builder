@@ -34,6 +34,13 @@ const VITE_CLI_RELATIVE_PATH = path.join(
   "bin",
   "vite.js",
 );
+const DESKTOP_IDENTITY_SEED_RELATIVE_PATH = path.join(
+  "dev-tools",
+  "scripts",
+  "qualification",
+  "visual-composer",
+  "visual-composer-desktop-seed.ts",
+);
 
 export function getVisualComposerRepositoryRoot(scriptUrl = import.meta.url) {
   return path.resolve(
@@ -80,6 +87,24 @@ export function createVisualComposerHostLaunchPlan(options = {}) {
     baseEnvironment,
     serverOrigin,
   );
+  const desktopExecutablePath = path.resolve(
+    options.desktopExecutablePath ??
+      baseEnvironment.VISUAL_COMPOSER_DESKTOP_EXECUTABLE ??
+      path.join(
+        repoRoot,
+        "out",
+        "ai-system-builder-win32-x64",
+        "ai-system-builder.exe",
+      ),
+  );
+  const electronNodeExecutablePath = path.resolve(
+    options.electronNodeExecutablePath ??
+      path.join(repoRoot, "node_modules", "electron", "dist", "electron.exe"),
+  );
+  const desktopEnvironment = {
+    ...baseEnvironment,
+    VISUAL_COMPOSER_DESKTOP_DATA_ROOT: paths.desktopDataRoot,
+  };
 
   return {
     repoRoot,
@@ -115,6 +140,26 @@ export function createVisualComposerHostLaunchPlan(options = {}) {
       ],
       cwd: path.join(repoRoot, THIN_CLIENT_RELATIVE_PATH),
       env: thinClientEnvironment,
+    },
+    desktop: {
+      executablePath: desktopExecutablePath,
+      args: [`--user-data-dir=${paths.desktopDataRoot}`, "--disable-gpu"],
+      env: desktopEnvironment,
+      seed: {
+        command: electronNodeExecutablePath,
+        args: [
+          "--preserve-symlinks",
+          "--preserve-symlinks-main",
+          "--import",
+          "tsx",
+          path.join(repoRoot, DESKTOP_IDENTITY_SEED_RELATIVE_PATH),
+        ],
+        cwd: repoRoot,
+        env: {
+          ...desktopEnvironment,
+          ELECTRON_RUN_AS_NODE: "1",
+        },
+      },
     },
   };
 }

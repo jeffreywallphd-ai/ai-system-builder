@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import type { AssetImplementationBackingResourceBundleV1 } from "../../../../contracts/asset-implementation";
 import {
+  readSystemFoundationBackingResourceProgram,
   readSystemFoundationBackingResourceBundle,
   SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES,
   SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES_BY_VERSION,
@@ -21,6 +22,52 @@ import {
 } from "../system-packs";
 
 describe("system foundation version-addressed catalogs", () => {
+  it("adds composable current-version UI regions without mutating legacy definitions", () => {
+    const legacyCard = SYSTEM_FOUNDATION_PACK_MANIFEST.assets.find(
+      (entry) => entry.definition.definitionId === "builtin.ui.card",
+    )?.definition;
+    const currentCard = SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.find(
+      (entry) => entry.definition.definitionId === "builtin.ui.card",
+    )?.definition;
+    assert.equal(legacyCard?.slots, undefined);
+    assert.deepEqual(
+      currentCard?.slots?.map((slot) => String(slot.slotId)),
+      ["media", "content", "actions"],
+    );
+    assert.deepEqual(
+      currentCard?.configurationSchema?.fields.map((field) => field.fieldId),
+      [
+        "title",
+        "description",
+        "mediaPlacement",
+        "emphasis",
+        "clickBehavior",
+        "padding",
+      ],
+    );
+    assert.deepEqual(
+      currentCard?.slots?.find((slot) => slot.slotId === "content")
+        ?.acceptedAssetTypes,
+      ["ui-component", "page", "feature"],
+    );
+    const currentProgram = readSystemFoundationBackingResourceProgram(
+      "builtin.ui.card",
+      "2.0.0",
+    );
+    assert.equal(currentProgram?.semanticElement, "article");
+    assert.deepEqual(
+      currentProgram?.regions.map((region) => region.slotId),
+      ["media", "content", "actions"],
+    );
+    assert.deepEqual(
+      readSystemFoundationBackingResourceProgram(
+        "builtin.ui.card",
+        "1.0.0",
+      )?.regions,
+      [],
+    );
+  });
+
   it("preserves 1.0.0 defaults while independently addressing every 2.0.0 definition", () => {
     assert.equal(
       SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS.length,
@@ -123,6 +170,12 @@ describe("system foundation version-addressed catalogs", () => {
     );
     assert.ok(v1);
     assert.ok(v2);
+    const v2RootDefault = readSystemFoundationFunctionalDefault(
+      "builtin.system.system",
+      "2.0.0",
+    );
+    assert.equal(v2RootDefault?.previewKind, "layout");
+    assert.equal(v2RootDefault?.runtimeKind, "declarative-engine");
     assert.notEqual(
       fileContent(v1, "other/definition.json"),
       fileContent(v2, "other/definition.json"),
@@ -134,6 +187,14 @@ describe("system foundation version-addressed catalogs", () => {
     assert.equal(
       parseJsonFile(v2, "other/definition.json").definition.slots[0].slotId,
       "application-shell",
+    );
+    assert.equal(
+      parseJsonFile(v2, "frontend/structure.json").semanticElement,
+      "application",
+    );
+    assert.equal(
+      v1.files.some((file) => file.path === "frontend/structure.json"),
+      false,
     );
   });
 });

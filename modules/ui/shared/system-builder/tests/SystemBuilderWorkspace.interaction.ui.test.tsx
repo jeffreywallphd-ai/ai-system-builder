@@ -372,7 +372,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     ).toEqual(["top-bar", "content"]);
     await act(async () => minimalChoice.click());
     await vi.waitFor(() => {
-      expect(container!.textContent).toContain("Unassigned assets");
+      expect(container!.textContent).toContain("Unassigned visual assets");
       expect(container!.textContent).toContain("Preserved top bar");
       expect(container!.textContent).toContain("Unsaved changes");
       expect(container!.textContent).toContain(
@@ -386,18 +386,214 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(changedCanvas.getAttribute("data-active-layout")).toBe(
       "builtin.layout.application.minimal",
     );
-    expect(changedCanvas.textContent).not.toContain("Unassigned assets");
+    expect(changedCanvas.textContent).not.toContain("Unassigned visual assets");
     expect(
       container!.querySelector("#system-composer-library-panel")?.textContent,
-    ).toContain("Unassigned assets");
+    ).toContain("Unassigned visual assets");
     expect(previewLayoutChange).toHaveBeenCalledTimes(1);
     await act(async () => button(container, "Undo").click());
     await vi.waitFor(() => {
-      expect(container!.textContent).not.toContain("Unassigned assets");
+      expect(container!.textContent).not.toContain("Unassigned visual assets");
       expect(minimalChoice.checked).toBe(false);
     });
     await act(async () => button(container, "Build & test").click());
     expect(onBuildAndTest).toHaveBeenCalledWith("system-1");
+  });
+
+  it("materializes the Minimal layout for a legacy Controlled Chatbot reference system", async () => {
+    const legacyRoot = {
+      ...instance(
+        "chatbot-system.system",
+        "builtin.system.system",
+        "Controlled chatbot system",
+        { title: "Controlled chatbot" },
+      ),
+      metadata: { referenceSystemKind: "controlled-chatbot" },
+    } as AssetInstance;
+    const authentication = instance(
+      "chatbot-system.authentication",
+      "builtin.security.authentication-requirement",
+      "Authentication required",
+      { required: true },
+    );
+    const revision = {
+      revisionId: "chatbot-system.r1",
+      systemId: "chatbot-system",
+      targetWorkspaceId: "workspace-a",
+      revisionNumber: 1,
+      composition: {
+        compositionId: "chatbot-system.composition",
+        compositionType: "system",
+        displayName: "Controlled chatbot",
+        version: "1.0.0",
+        lifecycleStatus: "draft",
+        rootInstanceRefs: [
+          { kind: "asset-instance", id: legacyRoot.instanceId },
+        ],
+        instanceRefs: [legacyRoot, authentication].map((item) => ({
+          kind: "asset-instance" as const,
+          id: item.instanceId,
+        })),
+        bindingRefs: [],
+        provenance: {
+          sourceKind: "system-generated",
+          metadata: {
+            templateId: "reference.controlled-chatbot@1.0.0",
+          },
+        },
+      },
+      instances: [legacyRoot, authentication],
+      bindings: [],
+      validationIssues: [],
+      createdAt: "2026-07-20T00:00:00.000Z",
+      createdBy: "person-1",
+    } as SystemBuilderRevision;
+    const record = {
+      systemId: revision.systemId,
+      targetWorkspaceId: revision.targetWorkspaceId,
+      name: revision.composition.displayName,
+      status: "validated",
+      revision: 1,
+      currentRevisionId: revision.revisionId,
+      composition: revision.composition,
+      createdAt: revision.createdAt,
+      updatedAt: revision.createdAt,
+      createdBy: "person-1",
+      updatedBy: "person-1",
+    } as SystemBuilderRecord;
+    const minimal = layoutDefinition(
+      "builtin.layout.application.minimal",
+      "Minimal",
+      ["content"],
+    );
+    const currentRoot = {
+      ...legacyRoot,
+      definitionRef: {
+        kind: "asset-definition-version",
+        id: "builtin.system.system",
+        version: "2.0.0",
+      },
+    } as AssetInstance;
+    const currentAuthentication = {
+      ...authentication,
+      definitionRef: {
+        ...authentication.definitionRef,
+        version: "2.0.0",
+      },
+    } as AssetInstance;
+    const shell = {
+      ...instance("chatbot-system.shell", minimal.definitionId, "Minimal", {}),
+      definitionRef: minimal.definitionRef,
+    } as AssetInstance;
+    const structure = {
+      schemaVersion: "system-builder-structure.v1",
+      profile: "interactive",
+      layoutPresetRef: minimal.definitionRef,
+    } as const;
+    const rootShellPlacement = {
+      schemaVersion: "asset-placement.v1",
+      placementId: "chatbot-system.placement-1",
+      parentInstanceRef: {
+        kind: "asset-instance",
+        id: currentRoot.instanceId,
+      },
+      slotId: "application-shell",
+      childInstanceRef: { kind: "asset-instance", id: shell.instanceId },
+      order: 0,
+    } as const;
+    const previewLayoutChange = vi.fn(async () => ({
+      ok: true as const,
+      value: {
+        targetLayoutPresetRef: minimal.definitionRef,
+        composition: {
+          ...revision.composition,
+          instanceRefs: [currentRoot, shell, currentAuthentication].map(
+            (item) => ({
+              kind: "asset-instance" as const,
+              id: item.instanceId,
+            }),
+          ),
+          placementRefs: [
+            {
+              kind: "asset-placement" as const,
+              id: rootShellPlacement.placementId,
+            },
+          ],
+        },
+        structure,
+        instances: [currentRoot, shell, currentAuthentication],
+        bindings: [],
+        placements: [rootShellPlacement],
+        changes: [],
+        unassignedInstanceRefs: [
+          {
+            kind: "asset-instance" as const,
+            id: currentAuthentication.instanceId,
+          },
+        ],
+        validationIssues: [],
+      },
+    }));
+    const client = {
+      ...clientFor(record, revision),
+      previewLayoutChange,
+      listComposerAssets: async (
+        input: ListSystemBuilderComposerAssetsQuery,
+      ) => ({
+        ok: true as const,
+        value: {
+          items:
+            input.searchText === "builtin.layout.application"
+              ? [minimal]
+              : [
+                  composerDefinition("builtin.system.system", "System root", [
+                    "application-shell",
+                  ]),
+                  {
+                    ...composerDefinition(
+                      "builtin.security.authentication-requirement",
+                      "Authentication required",
+                      [],
+                    ),
+                    assetType: "policy" as const,
+                  },
+                ],
+        },
+      }),
+    } as SystemBuilderClient;
+
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <SystemBuilderWorkspace workspaceId="workspace-a" client={client} />,
+      );
+    });
+
+    await vi.waitFor(() =>
+      expect(previewLayoutChange).toHaveBeenCalledTimes(1),
+    );
+    const minimalChoice = container.querySelector<HTMLInputElement>(
+      'input[value="builtin.layout.application.minimal"]',
+    );
+    expect(minimalChoice?.checked).toBe(true);
+    expect(
+      container
+        .querySelector<HTMLElement>(".system-composer__panel--canvas")
+        ?.getAttribute("data-active-layout"),
+    ).toBe("builtin.layout.application.minimal");
+    expect(container.textContent).toContain("System resources & logic");
+    expect(container.textContent).toContain("Authentication required");
+    expect(container.textContent).not.toContain("Unassigned visual assets");
+    expect(
+      container.querySelector(
+        '[aria-label="Drag Authentication required from Unassigned assets"]',
+      ),
+    ).toBeNull();
+    expect(container.textContent).toContain(
+      "1 nonvisual asset remains under System resources & logic",
+    );
   });
 
   it("opens and closes a modal for the current safe frontend composition", async () => {

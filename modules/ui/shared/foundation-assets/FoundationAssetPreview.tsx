@@ -2,11 +2,15 @@ import { Component, type FormEvent, type ReactNode } from "react";
 
 import { readSystemFoundationBackingResourceProgram } from "../../../application/services/asset-packs/system-foundation-backing-resource-catalog";
 import type { AssetJsonValue } from "../../../contracts/asset";
+import { FoundationAssetSurface } from "./FoundationAssetSurface";
 
 export interface FoundationAssetPreviewProps {
   readonly definitionId: string;
+  readonly version?: string;
   readonly displayName?: string;
   readonly configuration?: Readonly<Record<string, AssetJsonValue>>;
+  readonly regions?: Readonly<Record<string, ReactNode>>;
+  readonly presentation?: "standalone" | "composed";
 }
 
 export const MAX_FOUNDATION_PREVIEW_COLLECTION_ITEMS = 50;
@@ -16,7 +20,9 @@ export const MAX_FOUNDATION_PREVIEW_TEXT_CHARACTERS = 2_000;
 
 export function FoundationAssetPreview(props: FoundationAssetPreviewProps) {
   return (
-    <FoundationAssetPreviewBoundary key={props.definitionId}>
+    <FoundationAssetPreviewBoundary
+      key={`${props.definitionId}@${props.version ?? "current"}:${props.presentation ?? "standalone"}`}
+    >
       <FoundationAssetPreviewContent {...props} />
     </FoundationAssetPreviewBoundary>
   );
@@ -54,10 +60,16 @@ export class FoundationAssetPreviewBoundary extends Component<
 
 function FoundationAssetPreviewContent({
   definitionId,
+  version,
   displayName,
   configuration,
+  regions,
+  presentation = "standalone",
 }: FoundationAssetPreviewProps) {
-  const program = readSystemFoundationBackingResourceProgram(definitionId);
+  const program = readSystemFoundationBackingResourceProgram(
+    definitionId,
+    version as never,
+  );
   if (!program) {
     return (
       <div
@@ -79,6 +91,17 @@ function FoundationAssetPreviewContent({
   };
   const title =
     stringValue(configuration?.title) ?? displayName ?? program.displayName;
+  if (presentation === "composed") {
+    return (
+      <FoundationAssetSurface
+        definitionId={definitionId}
+        displayName={title}
+        configuration={configuration}
+        program={program}
+        regions={regions}
+      />
+    );
+  }
   switch (program.previewKind) {
     case "form":
       return <FormPreview title={title} fixture={fixture} />;

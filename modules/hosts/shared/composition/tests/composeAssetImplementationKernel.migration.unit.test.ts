@@ -21,6 +21,55 @@ import {
 } from "../composeAssetImplementationKernel";
 
 describe("asset implementation built-in backing-resource migration", () => {
+  it("keeps the retained v2 System root release compatible after visual preview enrichment", async () => {
+    const currentSeed = DEFAULT_TRUSTED_ASSET_IMPLEMENTATION_SEEDS.find(
+      (seed) =>
+        seed.definitionRef.id === "builtin.system.system" &&
+        seed.definitionRef.version === "2.0.0",
+    );
+    expect(currentSeed).toBeDefined();
+    expect(currentSeed?.runtimeKind).toBe("declarative-engine");
+    const definition = SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.find(
+      (entry) => entry.definition.definitionId === "builtin.system.system",
+    )?.definition;
+    expect(definition).toBeDefined();
+    const definitions: AssetDefinitionRepositoryPort = {
+      async saveDefinition(value) {
+        return value;
+      },
+      async getDefinition(reference) {
+        return reference.id === currentSeed?.definitionRef.id &&
+          reference.version === currentSeed.definitionRef.version
+          ? definition
+          : undefined;
+      },
+      async listDefinitions() {
+        return { definitions: definition ? [definition] : [] };
+      },
+    };
+    const documents = createInMemoryStructuredDocumentStore();
+    const retained = composeAssetImplementationKernel({
+      documents,
+      definitions,
+      trustedSeeds: [
+        {
+          ...currentSeed!,
+          runtimeKind: "declarative-engine",
+        },
+      ],
+      now: () => "2026-07-18T12:00:00.000Z",
+    });
+    await retained.ensureTrustedBuiltIns();
+
+    const enriched = composeAssetImplementationKernel({
+      documents,
+      definitions,
+      trustedSeeds: [currentSeed!],
+      now: () => "2026-07-20T12:00:00.000Z",
+    });
+    await expect(enriched.ensureTrustedBuiltIns()).resolves.toBeUndefined();
+  });
+
   it("preserves a valid immutable backing resource when current catalog content changes", async () => {
     const seed = DEFAULT_TRUSTED_ASSET_IMPLEMENTATION_SEEDS[0]!;
     const definition = [
