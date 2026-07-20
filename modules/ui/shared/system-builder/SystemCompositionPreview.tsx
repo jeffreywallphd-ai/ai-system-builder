@@ -143,7 +143,7 @@ export function SystemCompositionPreview({
     >
       <div className="system-composition-preview__summary ui-stack ui-stack--xs">
         <p>
-          This design-time preview recursively renders the current slot
+          This design-time preview recursively renders the current visual
           hierarchy using registered, side-effect-free System Foundation
           renderers. It does not execute backend logic, activate a release, or
           deploy the system.
@@ -223,7 +223,7 @@ export function SystemCompositionPreview({
           <p>
             These assets are outside the current root hierarchy and will not
             appear in a built interface until they are placed in a compatible
-            slot.
+            canvas region.
           </p>
           <ol className="system-composition-preview__tree">
             {model.unassignedRoots.map((node) => (
@@ -289,7 +289,7 @@ function PreviewNode({
         <section
           key={slot.slotId}
           className="system-composition-preview__slot"
-          aria-label={slot.displayName + " slot"}
+          aria-label={slot.displayName + " region"}
         >
           <header>
             <strong>{slot.displayName}</strong>
@@ -306,7 +306,7 @@ function PreviewNode({
             </ol>
           ) : (
             <span className="system-composition-preview__empty">
-              Empty slot
+              Empty region
             </span>
           )}
         </section>

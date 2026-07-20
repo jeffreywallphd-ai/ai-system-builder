@@ -47,8 +47,12 @@ references and backing resources are immutable and must continue to resolve.
   accessible source order, preview fixtures, and complete trusted backing
   resources.
 - Users select predefined layouts; they do not create slots, dimensions, raw
-  CSS, or arbitrary grid coordinates. Layout switching is an explicit later
-  migration operation and may not discard unmatched children silently.
+  CSS, or arbitrary grid coordinates. Layout switching is an explicit,
+  non-persisting application preview operation. It deterministically preserves
+  or moves compatible direct children, retains unmatched instances in a
+  visible Unassigned state, returns validation diagnostics, and changes the
+  draft only after user confirmation. Persistence still occurs only through a
+  separate optimistic immutable-revision save.
 - Persistence, API, Electron IPC/preload, desktop, and thin-client clients carry
   the same structure and placement contracts. The renderer never owns a second
   hierarchy.

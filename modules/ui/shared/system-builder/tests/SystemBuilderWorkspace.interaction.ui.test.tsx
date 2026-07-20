@@ -8,8 +8,10 @@ import type {
   SystemBuilderRecord,
   SystemBuilderComposerAsset,
   SystemBuilderRevision,
+  ListSystemBuilderComposerAssetsQuery,
 } from "../../../../contracts/system-builder";
 import {
+  preferredSystemComposerTarget,
   SystemBuilderWorkspace,
   type SystemBuilderClient,
 } from "../SystemBuilderWorkspace";
@@ -30,6 +32,374 @@ afterEach(() => {
 });
 
 describe("SystemBuilderWorkspace UI preview", () => {
+  it("prefers the nested page content region over an already-full application content region", () => {
+    const currentInstance = (
+      instanceId: string,
+      definitionId: string,
+      displayName: string,
+    ) =>
+      ({
+        ...instance(instanceId, definitionId, displayName, {}),
+        definitionRef: {
+          kind: "asset-definition-version",
+          id: definitionId,
+          version: "2.0.0",
+        },
+      }) as AssetInstance;
+    const systemRoot = currentInstance(
+      "system.root",
+      "builtin.system.system",
+      "System root",
+    );
+    const shell = currentInstance(
+      "system.shell",
+      "builtin.layout.application.standard",
+      "Application shell",
+    );
+    const page = currentInstance(
+      "system.page",
+      "builtin.layout.page.single",
+      "Page",
+    );
+    const systemDefinition = composerDefinition(
+      "builtin.system.system",
+      "System root",
+      ["application-shell"],
+    );
+    const shellDefinition = layoutDefinition(
+      "builtin.layout.application.standard",
+      "Standard",
+      ["content"],
+    );
+    const pageDefinition = {
+      ...composerDefinition("builtin.layout.page.single", "Single content", [
+        "content",
+      ]),
+      layoutRole: "page-layout" as const,
+    };
+
+    expect(
+      preferredSystemComposerTarget({
+        instances: [systemRoot, shell, page],
+        placements: [
+          {
+            schemaVersion: "asset-placement.v1",
+            placementId: "placement.root-shell",
+            parentInstanceRef: {
+              kind: "asset-instance",
+              id: systemRoot.instanceId,
+            },
+            slotId: "application-shell",
+            childInstanceRef: {
+              kind: "asset-instance",
+              id: shell.instanceId,
+            },
+            order: 0,
+          },
+          {
+            schemaVersion: "asset-placement.v1",
+            placementId: "placement.shell-page",
+            parentInstanceRef: {
+              kind: "asset-instance",
+              id: shell.instanceId,
+            },
+            slotId: "content",
+            childInstanceRef: {
+              kind: "asset-instance",
+              id: page.instanceId,
+            },
+            order: 0,
+          },
+        ],
+        catalog: [systemDefinition, shellDefinition, pageDefinition],
+        activeLayoutDefinitionId: shellDefinition.definitionId,
+        selectedInstanceId: systemRoot.instanceId,
+      }),
+    ).toEqual({
+      parentInstanceId: page.instanceId,
+      slotId: "content",
+    });
+  });
+
+  it("loads paged layouts, applies a selection directly to the Canvas, exposes unassigned assets, and undoes", async () => {
+    const rootInstance = {
+      ...instance("system-1.root", "builtin.system.system", "System root", {}),
+      definitionRef: {
+        kind: "asset-definition-version",
+        id: "builtin.system.system",
+        version: "2.0.0",
+      },
+    } as AssetInstance;
+    const shellInstance = {
+      ...instance(
+        "system-1.shell",
+        "builtin.layout.application.standard",
+        "Standard shell",
+        {},
+      ),
+      definitionRef: {
+        kind: "asset-definition-version",
+        id: "builtin.layout.application.standard",
+        version: "2.0.0",
+      },
+    } as AssetInstance;
+    const extraInstance = {
+      ...instance(
+        "system-1.top",
+        "builtin.state.empty-state",
+        "Preserved top bar",
+        {},
+      ),
+      definitionRef: {
+        kind: "asset-definition-version",
+        id: "builtin.state.empty-state",
+        version: "2.0.0",
+      },
+    } as AssetInstance;
+    const standard = layoutDefinition(
+      "builtin.layout.application.standard",
+      "Standard",
+      ["top-bar", "content"],
+    );
+    const minimal = layoutDefinition(
+      "builtin.layout.application.minimal",
+      "Minimal",
+      ["content"],
+    );
+    const structure = {
+      schemaVersion: "system-builder-structure.v1",
+      profile: "interactive",
+      layoutPresetRef: shellInstance.definitionRef,
+    } as const;
+    const rootShellPlacement = {
+      schemaVersion: "asset-placement.v1",
+      placementId: "placement.root-shell",
+      parentInstanceRef: {
+        kind: "asset-instance",
+        id: rootInstance.instanceId,
+      },
+      slotId: "application-shell",
+      childInstanceRef: {
+        kind: "asset-instance",
+        id: shellInstance.instanceId,
+      },
+      order: 0,
+    } as const;
+    const topPlacement = {
+      schemaVersion: "asset-placement.v1",
+      placementId: "placement.shell-top",
+      parentInstanceRef: {
+        kind: "asset-instance",
+        id: shellInstance.instanceId,
+      },
+      slotId: "top-bar",
+      childInstanceRef: {
+        kind: "asset-instance",
+        id: extraInstance.instanceId,
+      },
+      order: 0,
+    } as const;
+    const revision = {
+      revisionId: "system-revision-layout-1",
+      systemId: "system-1",
+      targetWorkspaceId: "workspace-a",
+      revisionNumber: 1,
+      composition: {
+        compositionId: "system-1.composition",
+        compositionType: "system",
+        displayName: "Portal",
+        version: "0.1.0",
+        lifecycleStatus: "draft",
+        rootInstanceRefs: [
+          { kind: "asset-instance", id: rootInstance.instanceId },
+        ],
+        instanceRefs: [rootInstance, shellInstance, extraInstance].map(
+          (item) => ({ kind: "asset-instance", id: item.instanceId }),
+        ),
+        bindingRefs: [],
+        provenance: { sourceKind: "human-authored" },
+      },
+      instances: [rootInstance, shellInstance, extraInstance],
+      bindings: [],
+      structure,
+      placements: [rootShellPlacement, topPlacement],
+      validationIssues: [],
+      createdAt: "2026-07-19T00:00:00.000Z",
+      createdBy: "person-1",
+    } as SystemBuilderRevision;
+    const record = {
+      systemId: "system-1",
+      targetWorkspaceId: "workspace-a",
+      name: "Portal",
+      status: "validated",
+      revision: 1,
+      currentRevisionId: revision.revisionId,
+      composition: revision.composition,
+      createdAt: revision.createdAt,
+      updatedAt: revision.createdAt,
+      createdBy: "person-1",
+      updatedBy: "person-1",
+    } as SystemBuilderRecord;
+    const targetStructure = {
+      ...structure,
+      layoutPresetRef: minimal.definitionRef,
+    };
+    const targetInstances = revision.instances.map((item) =>
+      String(item.instanceId) === String(shellInstance.instanceId)
+        ? { ...item, definitionRef: minimal.definitionRef }
+        : item,
+    );
+    const previewLayoutChange = vi.fn(async () => ({
+      ok: true as const,
+      value: {
+        sourceLayoutPresetRef: standard.definitionRef,
+        targetLayoutPresetRef: minimal.definitionRef,
+        composition: revision.composition,
+        structure: targetStructure,
+        instances: targetInstances,
+        bindings: [],
+        placements: [rootShellPlacement],
+        changes: [
+          {
+            instanceRef: {
+              kind: "asset-instance",
+              id: extraInstance.instanceId,
+            },
+            disposition: "unassigned" as const,
+            fromSlotId: "top-bar",
+          },
+        ],
+        unassignedInstanceRefs: [
+          { kind: "asset-instance", id: extraInstance.instanceId },
+        ],
+        validationIssues: [
+          {
+            severity: "error" as const,
+            category: "composition" as const,
+            message: "Every non-root instance must have a placement parent.",
+          },
+        ],
+      },
+    }));
+    const onBuildAndTest = vi.fn();
+    const client = {
+      ...clientFor(record, revision),
+      previewLayoutChange,
+      listComposerAssets: async (
+        input: ListSystemBuilderComposerAssetsQuery,
+      ) => {
+        if (input.parentDefinitionRef) {
+          return {
+            ok: true as const,
+            value: {
+              items: [
+                composerDefinition(
+                  "builtin.state.empty-state",
+                  "Empty state",
+                  [],
+                ),
+              ],
+            },
+          };
+        }
+        if (input.searchText === "builtin.layout.application") {
+          return {
+            ok: true as const,
+            value: { items: [standard, minimal] },
+          };
+        }
+        if (input.cursor === "composer-page-2") {
+          return {
+            ok: true as const,
+            value: {
+              items: [
+                composerDefinition(
+                  "builtin.state.empty-state",
+                  "Empty state",
+                  [],
+                ),
+              ],
+            },
+          };
+        }
+        return {
+          ok: true as const,
+          value: {
+            items: [
+              composerDefinition("builtin.system.system", "System root", [
+                "application-shell",
+              ]),
+            ],
+            nextCursor: "composer-page-2",
+          },
+        };
+      },
+    } as SystemBuilderClient;
+
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <SystemBuilderWorkspace
+          workspaceId="workspace-a"
+          client={client}
+          onBuildAndTest={onBuildAndTest}
+        />,
+      );
+    });
+
+    const minimalChoice = await vi.waitFor(() => {
+      const current = container!.querySelector<HTMLInputElement>(
+        'input[value="builtin.layout.application.minimal"]',
+      );
+      expect(current).not.toBeNull();
+      return current!;
+    });
+    expect(
+      minimalChoice.closest("#system-composer-library-panel")?.textContent,
+    ).toContain("Asset Palette");
+    const initialCanvas = container!.querySelector<HTMLElement>(
+      ".system-composer__panel--canvas",
+    )!;
+    expect(initialCanvas.getAttribute("data-active-layout")).toBe(
+      "builtin.layout.application.standard",
+    );
+    expect(
+      Array.from(
+        initialCanvas.querySelectorAll<HTMLElement>("[data-slot-id]"),
+      ).map((slot) => slot.dataset.slotId),
+    ).toEqual(["top-bar", "content"]);
+    await act(async () => minimalChoice.click());
+    await vi.waitFor(() => {
+      expect(container!.textContent).toContain("Unassigned assets");
+      expect(container!.textContent).toContain("Preserved top bar");
+      expect(container!.textContent).toContain("Unsaved changes");
+      expect(container!.textContent).toContain(
+        "The Canvas updated automatically",
+      );
+    });
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+    const changedCanvas = container!.querySelector<HTMLElement>(
+      ".system-composer__panel--canvas",
+    )!;
+    expect(changedCanvas.getAttribute("data-active-layout")).toBe(
+      "builtin.layout.application.minimal",
+    );
+    expect(changedCanvas.textContent).not.toContain("Unassigned assets");
+    expect(
+      container!.querySelector("#system-composer-library-panel")?.textContent,
+    ).toContain("Unassigned assets");
+    expect(previewLayoutChange).toHaveBeenCalledTimes(1);
+    await act(async () => button(container, "Undo").click());
+    await vi.waitFor(() => {
+      expect(container!.textContent).not.toContain("Unassigned assets");
+      expect(minimalChoice.checked).toBe(false);
+    });
+    await act(async () => button(container, "Build & test").click());
+    expect(onBuildAndTest).toHaveBeenCalledWith("system-1");
+  });
+
   it("opens and closes a modal for the current safe frontend composition", async () => {
     const visual = instance(
       "system-1.page",
@@ -266,11 +636,10 @@ describe("SystemBuilderWorkspace UI preview", () => {
       return current!;
     });
     await act(async () => shellTreeItem.click());
-    const configureButton = Array.from(
-      container.querySelectorAll("button"),
-    ).find((button) => button.textContent === "Configure");
-    expect(configureButton).toBeDefined();
-    await act(async () => configureButton!.click());
+    const designButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Design",
+    );
+    expect(designButton?.getAttribute("aria-selected")).toBe("true");
     const title = await vi.waitFor(() => {
       const current = container!.querySelector<HTMLInputElement>("#title");
       expect(current).not.toBeNull();
@@ -367,6 +736,31 @@ function composerDefinition(
     previewAvailability: "trusted-declarative",
   } as SystemBuilderComposerAsset;
 }
+
+function layoutDefinition(
+  definitionId: string,
+  displayName: string,
+  slotIds: readonly string[],
+): SystemBuilderComposerAsset {
+  return {
+    ...composerDefinition(definitionId, displayName, slotIds),
+    layoutRole: "application-shell",
+    layoutGeometry: {
+      columnPattern: "single",
+      areas: slotIds.map((slotId) => [slotId]),
+      sourceOrder: slotIds,
+      dimensionsLocked: true,
+    },
+  };
+}
+
+function button(rootElement: ParentNode, label: string): HTMLButtonElement {
+  const result = Array.from(
+    rootElement.querySelectorAll<HTMLButtonElement>("button"),
+  ).find((candidate) => candidate.textContent === label);
+  if (!result) throw new Error(`Missing ${label} button.`);
+  return result;
+}
 function clientFor(
   record: SystemBuilderRecord,
   revision: SystemBuilderRevision,
@@ -378,6 +772,7 @@ function clientFor(
     list: async () => ({ ok: true, value: [record] }),
     listTemplates: async () => ({ ok: true, value: [] }),
     listComposerAssets: async () => ({ ok: true, value: { items: [] } }),
+    previewLayoutChange: notUsed,
     readRevision: async () => ({ ok: true, value: revision }),
     listRevisions: async () => ({ ok: true, value: [revision] }),
     createFromTemplate: notUsed,

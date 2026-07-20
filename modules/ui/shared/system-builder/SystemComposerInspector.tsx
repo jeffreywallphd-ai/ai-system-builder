@@ -11,12 +11,13 @@ import { ApplicationIcon } from "../components/ApplicationIcon";
 import { EmptyState } from "../components/EmptyState";
 import {
   bindingKindForSystemComposerEndpoint,
-  buildSystemComposerConfigurationSections,
+  buildSystemComposerPropertyPanelSections,
   listCompatibleSystemComposerTargets,
   listSystemComposerPortEndpoints,
   materializeSystemComposerConfiguration,
   validateSystemComposerConfiguration,
   type SystemComposerPortEndpoint,
+  type SystemComposerPropertyPanel,
 } from "./systemComposerInspectorModel";
 
 export type SystemComposerInspectorMode = "configuration" | "connections";
@@ -97,11 +98,14 @@ function SystemComposerConfiguration({
       ),
     [definition, instance.selectedConfiguration],
   );
-  const sections = useMemo(
+  const panelSections = useMemo(
     () =>
-      buildSystemComposerConfigurationSections(definition.configurationSchema),
+      buildSystemComposerPropertyPanelSections(definition.configurationSchema),
     [definition.configurationSchema],
   );
+  const [activePanel, setActivePanel] =
+    useState<SystemComposerPropertyPanel>("design");
+  useEffect(() => setActivePanel("design"), [instance.instanceId]);
   const errors = useMemo(
     () =>
       validateSystemComposerConfiguration(
@@ -129,7 +133,7 @@ function SystemComposerConfiguration({
         </div>
         <button
           type="button"
-          className="ui-button--secondary"
+          className="system-composer__flat-control"
           onClick={() =>
             onChange(
               materializeSystemComposerConfiguration(definition, undefined),
@@ -140,46 +144,86 @@ function SystemComposerConfiguration({
           <span>Reset defaults</span>
         </button>
       </header>
-      {sections.length ? (
-        sections.map((section) => (
-          <fieldset
-            key={section.id}
-            className="system-composer-inspector__section"
+      {definition.layoutGeometry ? (
+        <p className="system-composer-inspector__layout-lock ui-status ui-status--info">
+          System Foundation controls this layout's width, height, regions, and
+          responsive rules. Only its declared semantic properties can be
+          changed.
+        </p>
+      ) : null}
+      <div
+        className="system-composer-inspector__tabs"
+        role="tablist"
+        aria-label="Asset property groups"
+      >
+        {(["design", "data", "events"] as const).map((panel) => (
+          <button
+            key={panel}
+            id={`system-composer-property-tab-${panel}`}
+            type="button"
+            role="tab"
+            className="system-composer__flat-control"
+            aria-selected={activePanel === panel}
+            aria-controls={`system-composer-property-panel-${panel}`}
+            onClick={() => setActivePanel(panel)}
           >
-            <legend>{section.label}</legend>
-            <div className="system-composer-inspector__fields">
-              {section.fields.map((field) => (
-                <ConfigurationField
-                  key={field.fieldId}
-                  field={field}
-                  value={values[field.fieldId]}
-                  catalog={catalog}
-                  errors={errors[field.fieldId] ?? []}
-                  onChange={(value) => update(field.fieldId, value)}
-                />
-              ))}
-            </div>
-          </fieldset>
-        ))
-      ) : (
-        <p className="ui-status ui-status--info">
-          This asset has no configurable fields.
-        </p>
-      )}
-      <details className="system-composer-inspector__advanced">
-        <summary>Advanced JSON</summary>
-        <p className="ui-text-muted">
-          Use this fallback only for schema fields that cannot be expressed by
-          the generated controls.
-        </p>
-        <JsonValueEditor
-          label="Complete configuration"
-          value={values}
-          onChange={(value) => {
-            if (isObjectValue(value)) onChange(value);
-          }}
-        />
-      </details>
+            {panel[0]!.toUpperCase() + panel.slice(1)}
+          </button>
+        ))}
+      </div>
+      {(["design", "data", "events"] as const).map((panel) => (
+        <div
+          key={panel}
+          id={`system-composer-property-panel-${panel}`}
+          role="tabpanel"
+          aria-labelledby={`system-composer-property-tab-${panel}`}
+          hidden={activePanel !== panel}
+          className="system-composer-inspector__panel"
+        >
+          {panelSections[panel].length ? (
+            panelSections[panel].map((section) => (
+              <fieldset
+                key={section.id}
+                className="system-composer-inspector__section"
+              >
+                <legend>{section.label}</legend>
+                <div className="system-composer-inspector__fields">
+                  {section.fields.map((field) => (
+                    <ConfigurationField
+                      key={field.fieldId}
+                      field={field}
+                      value={values[field.fieldId]}
+                      catalog={catalog}
+                      errors={errors[field.fieldId] ?? []}
+                      onChange={(value) => update(field.fieldId, value)}
+                    />
+                  ))}
+                </div>
+              </fieldset>
+            ))
+          ) : (
+            <p className="ui-status ui-status--info">
+              No {panel} properties are declared for this asset.
+            </p>
+          )}
+        </div>
+      ))}
+      {!definition.layoutGeometry ? (
+        <details className="system-composer-inspector__advanced">
+          <summary>Advanced JSON</summary>
+          <p className="ui-text-muted">
+            Use this fallback only for schema fields that cannot be expressed by
+            the generated controls.
+          </p>
+          <JsonValueEditor
+            label="Complete configuration"
+            value={values}
+            onChange={(value) => {
+              if (isObjectValue(value)) onChange(value);
+            }}
+          />
+        </details>
+      ) : null}
     </section>
   );
 }
@@ -387,7 +431,7 @@ function JsonValueEditor({
       />
       <button
         type="button"
-        className="ui-button--secondary"
+        className="system-composer__flat-control"
         onClick={() => {
           try {
             onChange(JSON.parse(text) as AssetConfigurationValue);
@@ -488,7 +532,7 @@ function SystemComposerConnections({
           ) : null}
           <button
             type="button"
-            className="ui-button--secondary"
+            className="system-composer__flat-control"
             disabled={!source || !target}
             onClick={() => source && target && onAddConnection(source, target)}
           >
@@ -518,7 +562,7 @@ function SystemComposerConnections({
             </span>
             <button
               type="button"
-              className="ui-button--tertiary"
+              className="system-composer__flat-control"
               aria-label={`Remove connection ${binding.bindingId}`}
               onClick={() => onRemoveConnection(String(binding.bindingId))}
             >

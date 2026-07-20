@@ -23,6 +23,16 @@ export type SystemBuilderComposerImplementationAvailability =
 export type SystemBuilderComposerPreviewAvailability =
   "trusted-declarative" | "unavailable";
 
+export type SystemBuilderComposerLayoutPattern =
+  "single" | "start-content" | "content-end" | "equal-split" | "three-panel";
+
+export interface SystemBuilderComposerLayoutGeometry {
+  readonly columnPattern: SystemBuilderComposerLayoutPattern;
+  readonly areas: readonly (readonly string[])[];
+  readonly sourceOrder: readonly string[];
+  readonly dimensionsLocked: true;
+}
+
 export interface SystemBuilderComposerCompatibility {
   readonly status: SystemBuilderComposerCompatibilityStatus;
   readonly reason?: string;
@@ -41,6 +51,7 @@ export interface SystemBuilderComposerAsset {
   readonly lifecycleStatus: AssetLifecycleStatus;
   readonly builtIn: boolean;
   readonly layoutRole?: "application-shell" | "page-layout";
+  readonly layoutGeometry?: SystemBuilderComposerLayoutGeometry;
   readonly configurationSchema?: AssetConfigurationSchema;
   readonly defaultConfiguration?: AssetConfigurationValues;
   readonly ports: readonly AssetPort[];

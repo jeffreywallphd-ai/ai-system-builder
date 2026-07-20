@@ -53,13 +53,32 @@
   declaration and compatibility, cardinality, placement coverage, bounded
   depth, and acyclic containment before a revision can be treated as valid.
 - The workspace-scoped composer catalog supplies exact definitions, schemas,
-  defaults, ports, slots, availability, and application-owned compatibility.
-  Desktop and thin client share the predefined layout gallery, semantic slot
-  canvas, keyboard hierarchy, native structural actions, protected required
-  nodes, bounded undo/redo, generated configuration sections, and declared-port
-  Connections mode over one canonical draft.
+  defaults, ports, slots, availability, trusted fixed layout geometry, and
+  application-owned compatibility. Desktop and thin client share the predefined
+  layout icons in the flat three-column Design workspace: a searchable Asset Palette,
+  a wide Canvas showing all fixed regions of the active application layout, and one tabbed details sidebar containing
+  schema-driven Design/Data/Events Properties plus collapsible Layers and
+  Structure. Both sidebars collapse independently into compact rails without
+  changing the canonical draft. Square visual asset tiles and Canvas regions are
+  the pointer, touch, and keyboard drag surfaces; the legacy Add-here, move-order,
+  reparent, and wrapper forms are not exposed. All drag paths converge on bounded
+  draft commands, and drag/panel state is not persisted. Foundation layout
+  containers expose semantic labels but not editable
+  dimensions, regions, responsive rules, raw JSON, CSS, or grid coordinates.
+- Layout selections use one application preview operation over HTTP/IPC and
+  immediately update the local undoable Canvas draft. Expected-revision checks
+  and canonical source order produce a preserved/moved/unassigned result without
+  persistence. For a legacy-flat reference system, the same explicit selection
+  materializes the protected current Foundation root and fixed-region shell in
+  memory while preserving all historical assets and bindings. Unmatched
+  instances remain at the bottom of the Asset Palette and are reattachable by
+  drag; Save alone creates the next immutable revision.
+- System Builder may project exact current built-in application and page layout
+  definitions for a workspace with an older active trusted System Foundation
+  generation. This compatibility seam is layout-only and does not widen the
+  workspace Asset Library effective view.
 - The shared Compose UI preview recursively follows current in-memory placements
-  and slot order, includes unsaved configuration, exposes unassigned and
+  and canonical region order, includes unsaved configuration, exposes unassigned and
   unsupported nodes, and offers desktop/tablet/mobile frames. It is bounded to
   registered System Foundation frontend renderers, never executes backend or
   unqualified implementation source, and does not imply build, release,

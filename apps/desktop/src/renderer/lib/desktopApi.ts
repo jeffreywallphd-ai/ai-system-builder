@@ -75,6 +75,7 @@ import type {
   SystemBuilderTemplateId,
   ListSystemBuilderComposerAssetsQuery,
   ListSystemBuilderManagementQuery,
+  PreviewSystemBuilderLayoutChangeCommand,
 } from "../../../../../modules/contracts/system-builder";
 import type { SystemDeploymentCapabilityPolicy } from "../../../../../modules/contracts/system-deployment";
 
@@ -607,6 +608,13 @@ interface DesktopApiBridge {
   ) => Promise<unknown>;
   listSystemBuilderComposerAssets?: (
     input: ListSystemBuilderComposerAssetsQuery,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  previewSystemBuilderLayoutChange?: (
+    input: Omit<
+      PreviewSystemBuilderLayoutChangeCommand,
+      "actorId" | "workspaceId" | "systemId"
+    > & { readonly workspaceId: string; readonly systemId: string },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   requestSystemBuild?: (

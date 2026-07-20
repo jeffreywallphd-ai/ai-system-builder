@@ -1,56 +1,100 @@
-import { useMemo, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
+import {
+  closestCenter,
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type {
   AssetInstance,
   AssetPlacement,
   AssetReference,
 } from "../../../contracts/asset";
-import type { SystemBuilderComposerAsset } from "../../../contracts/system-builder";
-import { ApplicationIcon } from "../components/ApplicationIcon";
+import type {
+  SystemBuilderComposerAsset,
+  SystemBuilderComposerLayoutGeometry,
+} from "../../../contracts/system-builder";
+import {
+  ApplicationIcon,
+  type ApplicationIconName,
+} from "../components/ApplicationIcon";
 import { EmptyState } from "../components/EmptyState";
+import { FoundationAssetPreview } from "../foundation-assets";
 import {
   buildSystemComposerTree,
   flattenSystemComposerTree,
   type SystemComposerDraft,
   type SystemComposerTreeNode,
 } from "./systemComposerDraft";
+import {
+  describeSystemComposerDragData,
+  describeSystemComposerDropData,
+  instanceDragData,
+  isSystemComposerDragData,
+  paletteDragData,
+  resolveSystemComposerDrop,
+  slotDropData,
+  targetForSystemComposerDrop,
+  type SystemComposerDragData,
+} from "./systemComposerDrag";
 
 export interface SystemComposerTargetSlot {
   readonly parentInstanceId: string;
   readonly slotId: string;
+  readonly order?: number;
 }
-export interface SystemComposerWrapCompatibility {
-  readonly status: "idle" | "checking" | "compatible" | "incompatible";
-  readonly reason?: string;
-}
+type SystemComposerSidebarTab = "properties" | "layers";
+type SystemComposerResponsivePanel = "library" | "details";
+type SystemComposerPanelToggle = "library" | SystemComposerSidebarTab;
 
 export interface SystemComposerStructureEditorProps {
   readonly draft: SystemComposerDraft;
   readonly rootInstanceRefs: readonly AssetReference[];
   readonly catalog: readonly SystemBuilderComposerAsset[];
   readonly compatibleAssets: readonly SystemBuilderComposerAsset[];
+  readonly layoutOptions?: readonly SystemBuilderComposerAsset[];
+  readonly selectedLayoutDefinitionId?: string;
+  readonly layoutSelectionDisabled?: boolean;
   readonly selectedInstanceId?: string;
   readonly targetSlot?: SystemComposerTargetSlot;
   readonly protectedInstanceIds: ReadonlySet<string>;
+  readonly propertiesPanel?: ReactNode;
   readonly catalogLoading?: boolean;
   readonly catalogError?: string;
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   readonly onSelect: (instanceId: string) => void;
   readonly onTargetSlotChange: (target: SystemComposerTargetSlot) => void;
+  readonly onSelectLayout?: (layout: SystemBuilderComposerAsset) => void;
   readonly onAdd: (
     asset: SystemBuilderComposerAsset,
     target: SystemComposerTargetSlot,
   ) => void;
-  readonly onMove: (offset: -1 | 1) => void;
-  readonly onReparent: (target: SystemComposerTargetSlot) => void;
-  readonly onWrap: (
-    wrapper: SystemBuilderComposerAsset,
-    wrapperSlotId: string,
-  ) => void;
-  readonly wrapCompatibility?: SystemComposerWrapCompatibility;
-  readonly onWrapTargetChange?: (
-    wrapper: SystemBuilderComposerAsset | undefined,
-    wrapperSlotId: string | undefined,
+  readonly onPlace: (
+    instanceId: string,
+    target: SystemComposerTargetSlot,
   ) => void;
   readonly onRemove: () => void;
   readonly onUndo: () => void;
@@ -62,100 +106,160 @@ export function SystemComposerStructureEditor({
   rootInstanceRefs,
   catalog,
   compatibleAssets,
+  layoutOptions = [],
+  selectedLayoutDefinitionId,
+  layoutSelectionDisabled = false,
   selectedInstanceId,
   targetSlot,
   protectedInstanceIds,
+  propertiesPanel,
   catalogLoading = false,
   catalogError,
   canUndo,
   canRedo,
   onSelect,
   onTargetSlotChange,
+  onSelectLayout,
   onAdd,
-  onMove,
-  onReparent,
-  onWrap,
-  wrapCompatibility = { status: "idle" },
-  onWrapTargetChange,
+  onPlace,
   onRemove,
   onUndo,
   onRedo,
 }: SystemComposerStructureEditorProps) {
   const [search, setSearch] = useState("");
   const [focusMode, setFocusMode] = useState(false);
-  const [reparentParentId, setReparentParentId] = useState("");
-  const [reparentSlotId, setReparentSlotId] = useState("");
-  const [wrapperDefinitionId, setWrapperDefinitionId] = useState("");
-  const [wrapperSlotId, setWrapperSlotId] = useState("");
+  const [activeDrag, setActiveDrag] = useState<SystemComposerDragData>();
+  const [dragNotice, setDragNotice] = useState<string>();
+  const [responsivePanel, setResponsivePanel] =
+    useState<SystemComposerResponsivePanel>();
+  const [sidebarTab, setSidebarTab] =
+    useState<SystemComposerSidebarTab>("properties");
+  const [libraryCollapsed, setLibraryCollapsed] = useState(false);
+  const [detailsCollapsed, setDetailsCollapsed] = useState(false);
+  const [collapsedInstanceIds, setCollapsedInstanceIds] = useState<
+    ReadonlySet<string>
+  >(new Set());
+  const panelRefs = useRef(
+    new Map<SystemComposerResponsivePanel, HTMLElement>(),
+  );
+  const panelToggleRefs = useRef(
+    new Map<SystemComposerPanelToggle, HTMLButtonElement>(),
+  );
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
   const treeItemRefs = useRef(new Map<string, HTMLButtonElement>());
   const tree = useMemo(
     () => buildSystemComposerTree(draft, rootInstanceRefs),
     [draft, rootInstanceRefs],
   );
   const flatTree = useMemo(() => flattenSystemComposerTree(tree), [tree]);
-  const selectedNode = flatTree.find(
-    (node) => String(node.instance.instanceId) === selectedInstanceId,
+  const unassignedInstances = useMemo(() => {
+    const roots = new Set(
+      rootInstanceRefs.map((reference) => String(reference.id)),
+    );
+    const placed = new Set(
+      draft.placements.map((placement) =>
+        String(placement.childInstanceRef.id),
+      ),
+    );
+    return draft.instances.filter(
+      (instance) =>
+        !roots.has(String(instance.instanceId)) &&
+        !placed.has(String(instance.instanceId)),
+    );
+  }, [draft.instances, draft.placements, rootInstanceRefs]);
+  const visibleTreeItems = useMemo(
+    () => flattenVisibleSystemComposerTree(tree, collapsedInstanceIds),
+    [collapsedInstanceIds, tree],
   );
-  const selectedPlacement = draft.placements.find(
-    (placement) => String(placement.childInstanceRef.id) === selectedInstanceId,
-  );
-  const palette = compatibleAssets.filter((asset) => {
+  const selectedNode =
+    flatTree.find(
+      (node) => String(node.instance.instanceId) === selectedInstanceId,
+    ) ??
+    unassignedInstances
+      .filter((instance) => String(instance.instanceId) === selectedInstanceId)
+      .map(
+        (instance) =>
+          ({ instance, depth: 1, children: [] }) as SystemComposerTreeNode,
+      )[0];
+  const paletteSource = targetSlot ? compatibleAssets : catalog;
+  const palette = paletteSource.filter((asset) => {
     const query = search.trim().toLowerCase();
     return (
-      asset.compatibility.status === "compatible" &&
+      (!targetSlot || asset.compatibility.status === "compatible") &&
+      asset.layoutRole !== "application-shell" &&
+      ["feature", "page", "ui-component"].includes(asset.assetType) &&
       (!query ||
         `${asset.displayName} ${asset.definitionId} ${asset.assetType}`
           .toLowerCase()
           .includes(query))
     );
   });
-  const reparentDefinition = definitionForInstance(
-    draft.instances.find(
-      (instance) => String(instance.instanceId) === reparentParentId,
-    ),
-    catalog,
-  );
-  const wrappers = compatibleAssets.filter(
-    (asset) =>
-      asset.compatibility.status === "compatible" && asset.slots.length > 0,
-  );
-  const selectedWrapper = wrappers.find(
-    (asset) => asset.definitionId === wrapperDefinitionId,
-  );
   const breadcrumb = selectedNode
     ? breadcrumbFor(selectedNode, draft.instances, draft.placements)
     : [];
-  const canvasTree = focusMode && selectedNode ? [selectedNode] : tree;
+  const visualCanvasTree = useMemo(
+    () => systemComposerVisualCanvasRoots(tree, catalog),
+    [catalog, tree],
+  );
+  const canvasTree =
+    focusMode && selectedNode ? [selectedNode] : visualCanvasTree;
+  const activeCanvasLayout = definitionForInstance(
+    visualCanvasTree[0]?.instance,
+    catalog,
+  );
 
   const moveTreeFocus = (
     event: KeyboardEvent<HTMLButtonElement>,
     node: SystemComposerTreeNode,
   ) => {
     const id = String(node.instance.instanceId);
-    const index = flatTree.findIndex(
+    const index = visibleTreeItems.findIndex(
       (item) => String(item.instance.instanceId) === id,
     );
     let nextId: string | undefined;
     if (event.key === "ArrowDown") {
-      nextId = flatTree[index + 1]
-        ? String(flatTree[index + 1]?.instance.instanceId)
+      nextId = visibleTreeItems[index + 1]
+        ? String(visibleTreeItems[index + 1]?.instance.instanceId)
         : undefined;
     } else if (event.key === "ArrowUp") {
-      nextId = flatTree[index - 1]
-        ? String(flatTree[index - 1]?.instance.instanceId)
+      nextId = visibleTreeItems[index - 1]
+        ? String(visibleTreeItems[index - 1]?.instance.instanceId)
         : undefined;
     } else if (event.key === "Home") {
-      nextId = flatTree[0]
-        ? String(flatTree[0]?.instance.instanceId)
+      nextId = visibleTreeItems[0]
+        ? String(visibleTreeItems[0]?.instance.instanceId)
         : undefined;
     } else if (event.key === "End") {
-      nextId = flatTree[flatTree.length - 1]
-        ? String(flatTree[flatTree.length - 1]?.instance.instanceId)
+      nextId = visibleTreeItems[visibleTreeItems.length - 1]
+        ? String(
+            visibleTreeItems[visibleTreeItems.length - 1]?.instance.instanceId,
+          )
         : undefined;
     } else if (event.key === "ArrowRight" && node.children[0]) {
+      if (collapsedInstanceIds.has(id)) {
+        setCollapsedInstanceIds(
+          withCollapsedInstance(collapsedInstanceIds, id, false),
+        );
+        event.preventDefault();
+        return;
+      }
       nextId = String(node.children[0].instance.instanceId);
-    } else if (event.key === "ArrowLeft" && node.placement) {
-      nextId = String(node.placement.parentInstanceRef.id);
+    } else if (event.key === "ArrowLeft") {
+      if (node.children.length && !collapsedInstanceIds.has(id)) {
+        setCollapsedInstanceIds(
+          withCollapsedInstance(collapsedInstanceIds, id, true),
+        );
+        event.preventDefault();
+        return;
+      }
+      nextId = node.placement
+        ? String(node.placement.parentInstanceRef.id)
+        : undefined;
     }
     if (!nextId) return;
     event.preventDefault();
@@ -163,388 +267,554 @@ export function SystemComposerStructureEditor({
     treeItemRefs.current.get(nextId)?.focus();
   };
 
+  const updateDragTarget = (event: DragOverEvent) => {
+    const target = targetForSystemComposerDrop(
+      event.over?.data.current,
+      draft.placements,
+    );
+    if (
+      target &&
+      (target.parentInstanceId !== targetSlot?.parentInstanceId ||
+        target.slotId !== targetSlot.slotId)
+    ) {
+      onTargetSlotChange(target);
+    }
+  };
+
+  const finishDrag = (event: DragEndEvent) => {
+    setActiveDrag(undefined);
+    if (!event.over) {
+      setDragNotice("Drag cancelled. No composition changes were made.");
+      return;
+    }
+    const resolution = resolveSystemComposerDrop({
+      source: event.active.data.current,
+      destination: event.over.data.current,
+      draft,
+      catalog,
+      compatibleAssets,
+      compatibilityTarget: targetSlot,
+      protectedInstanceIds,
+    });
+    if (!resolution.ok) {
+      setDragNotice(resolution.message);
+      return;
+    }
+    if (resolution.value.kind === "add") {
+      onAdd(resolution.value.asset, resolution.value.target);
+    } else {
+      onPlace(resolution.value.instanceId, resolution.value.target);
+    }
+    setDragNotice(resolution.value.announcement);
+  };
+
+  const openPanel = (panel: SystemComposerPanelToggle) => {
+    if (panel === "library") {
+      setLibraryCollapsed(false);
+      setResponsivePanel("library");
+      globalThis.setTimeout(() => panelRefs.current.get("library")?.focus(), 0);
+      return;
+    }
+    setDetailsCollapsed(false);
+    setSidebarTab(panel);
+    setResponsivePanel("details");
+    globalThis.setTimeout(() => panelRefs.current.get("details")?.focus(), 0);
+  };
+  const closePanel = (panel: SystemComposerPanelToggle) => {
+    setResponsivePanel(undefined);
+    globalThis.setTimeout(() => panelToggleRefs.current.get(panel)?.focus(), 0);
+  };
+
   return (
-    <div className="system-composer ui-stack ui-stack--md">
-      <div
-        className="system-composer__toolbar"
-        role="toolbar"
-        aria-label="Composition history"
-      >
-        <button
-          type="button"
-          className="ui-button--secondary"
-          onClick={onUndo}
-          disabled={!canUndo}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={(event: DragStartEvent) => {
+        const data = event.active.data.current;
+        setActiveDrag(isSystemComposerDragData(data) ? data : undefined);
+        setDragNotice(undefined);
+      }}
+      onDragOver={updateDragTarget}
+      onDragEnd={finishDrag}
+      onDragCancel={() => {
+        setActiveDrag(undefined);
+        setDragNotice("Drag cancelled. No composition changes were made.");
+      }}
+      accessibility={{
+        screenReaderInstructions: {
+          draggable:
+            "Press Space to pick up an asset. Use arrow keys to move over a canvas region or asset, press Space to drop, or Escape to cancel.",
+        },
+        announcements: {
+          onDragStart({ active }) {
+            return `Picked up ${describeSystemComposerDragData(active.data.current)}.`;
+          },
+          onDragOver({ active, over }) {
+            return over
+              ? `${describeSystemComposerDragData(active.data.current)} is over ${describeSystemComposerDropData(over.data.current)}.`
+              : `${describeSystemComposerDragData(active.data.current)} is not over an available canvas region.`;
+          },
+          onDragEnd({ active, over }) {
+            return over
+              ? `${describeSystemComposerDragData(active.data.current)} was dropped on ${describeSystemComposerDropData(over.data.current)}.`
+              : "Drag cancelled. No composition changes were made.";
+          },
+          onDragCancel({ active }) {
+            return `Cancelled moving ${describeSystemComposerDragData(active.data.current)}. No composition changes were made.`;
+          },
+        },
+      }}
+    >
+      <div className="system-composer ui-stack ui-stack--md">
+        <div
+          className="system-composer__toolbar"
+          role="toolbar"
+          aria-label="Composition history"
         >
-          <ApplicationIcon name="switch" />
-          <span>Undo</span>
-        </button>
-        <button
-          type="button"
-          className="ui-button--secondary"
-          onClick={onRedo}
-          disabled={!canRedo}
-        >
-          <ApplicationIcon name="refresh" />
-          <span>Redo</span>
-        </button>
-        <button
-          type="button"
-          className="ui-button--secondary"
-          aria-pressed={focusMode}
-          onClick={() => setFocusMode((current) => !current)}
-          disabled={!selectedNode}
-        >
-          <ApplicationIcon name="expand" />
-          <span>
-            {focusMode ? "Show full canvas" : "Focus selected branch"}
-          </span>
-        </button>
-      </div>
-
-      {breadcrumb.length ? (
-        <nav
-          className="system-composer__breadcrumbs"
-          aria-label="Selected asset path"
-        >
-          <ol>
-            {breadcrumb.map((instance) => (
-              <li key={String(instance.instanceId)}>
-                <button
-                  type="button"
-                  onClick={() => onSelect(String(instance.instanceId))}
-                >
-                  {instance.displayName ?? String(instance.definitionRef.id)}
-                </button>
-              </li>
+          <button
+            type="button"
+            className="system-composer__flat-control"
+            onClick={onUndo}
+            disabled={!canUndo}
+          >
+            <ApplicationIcon name="switch" />
+            <span>Undo</span>
+          </button>
+          <button
+            type="button"
+            className="system-composer__flat-control"
+            onClick={onRedo}
+            disabled={!canRedo}
+          >
+            <ApplicationIcon name="refresh" />
+            <span>Redo</span>
+          </button>
+          <button
+            type="button"
+            className="system-composer__flat-control"
+            aria-pressed={focusMode}
+            onClick={() => setFocusMode((current) => !current)}
+            disabled={!selectedNode}
+          >
+            <ApplicationIcon name="expand" />
+            <span>
+              {focusMode ? "Show full canvas" : "Focus selected branch"}
+            </span>
+          </button>
+          <div
+            className="system-composer__panel-controls"
+            role="group"
+            aria-label="Responsive composer panels"
+          >
+            {(["library", "properties", "layers"] as const).map((panel) => (
+              <button
+                key={panel}
+                ref={(element) => {
+                  if (element) panelToggleRefs.current.set(panel, element);
+                  else panelToggleRefs.current.delete(panel);
+                }}
+                type="button"
+                className="system-composer__flat-control"
+                aria-controls={
+                  panel === "library"
+                    ? "system-composer-library-panel"
+                    : "system-composer-details-panel"
+                }
+                aria-expanded={
+                  panel === "library"
+                    ? responsivePanel === "library"
+                    : responsivePanel === "details" && sidebarTab === panel
+                }
+                onClick={() =>
+                  responsivePanel === panel
+                    ? closePanel(panel)
+                    : openPanel(panel)
+                }
+              >
+                {panel === "library"
+                  ? "Assets"
+                  : panel[0]!.toUpperCase() + panel.slice(1)}
+              </button>
             ))}
-          </ol>
-        </nav>
-      ) : null}
+          </div>
+        </div>
 
-      <div className="system-composer__workspace">
-        <aside
-          className="system-composer__panel"
-          aria-labelledby="composer-library-title"
+        {breadcrumb.length ? (
+          <nav
+            className="system-composer__breadcrumbs"
+            aria-label="Selected asset path"
+          >
+            <ol>
+              {breadcrumb.map((instance) => (
+                <li key={String(instance.instanceId)}>
+                  <button
+                    type="button"
+                    className="system-composer__link-control"
+                    onClick={() => onSelect(String(instance.instanceId))}
+                  >
+                    {instance.displayName ?? String(instance.definitionRef.id)}
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        ) : null}
+
+        <div
+          className="system-composer__workspace"
+          data-library-collapsed={libraryCollapsed}
+          data-details-collapsed={detailsCollapsed}
         >
-          <h3 id="composer-library-title">Asset Library</h3>
-          <p className="ui-text-muted">
-            Choose a slot on the canvas, then add a compatible exact asset
-            version.
-          </p>
-          {targetSlot ? (
-            <p className="system-composer__target" role="status">
-              Adding to{" "}
-              <strong>
-                {labelForInstance(targetSlot.parentInstanceId, draft.instances)}
-              </strong>
-              <span> / {targetSlot.slotId}</span>
+          <aside
+            id="system-composer-library-panel"
+            ref={(element) => {
+              if (element) panelRefs.current.set("library", element);
+              else panelRefs.current.delete("library");
+            }}
+            tabIndex={-1}
+            className="system-composer__panel system-composer__panel--library"
+            data-responsive-panel="library"
+            data-panel-open={responsivePanel === "library"}
+            data-collapsed={libraryCollapsed}
+            aria-labelledby="composer-library-title"
+          >
+            <header className="system-composer__panel-heading">
+              <h3 id="composer-library-title">Asset Palette</h3>
+              <button
+                type="button"
+                className="system-composer__flat-control system-composer__sidebar-collapse"
+                aria-label={`${libraryCollapsed ? "Expand" : "Collapse"} Asset Palette sidebar`}
+                aria-expanded={!libraryCollapsed}
+                title={`${libraryCollapsed ? "Expand" : "Collapse"} Asset Palette sidebar`}
+                onClick={() => setLibraryCollapsed((current) => !current)}
+              >
+                <ApplicationIcon
+                  name={libraryCollapsed ? "expand" : "collapse"}
+                />
+                <span>{libraryCollapsed ? "Expand" : "Collapse"}</span>
+              </button>
+            </header>
+            {onSelectLayout ? (
+              <SystemLayoutGallery
+                layouts={layoutOptions}
+                selectedDefinitionId={selectedLayoutDefinitionId}
+                disabled={layoutSelectionDisabled}
+                mode="change"
+                compact
+                loading={catalogLoading}
+                error={catalogError}
+                onSelect={onSelectLayout}
+              />
+            ) : null}
+            <p className="ui-text-muted">
+              {targetSlot
+                ? "Drag a compatible asset tile onto the highlighted Canvas region."
+                : "Browse visual assets. Select a Canvas region to filter by compatibility."}
             </p>
-          ) : (
-            <p className="ui-status ui-status--info">
-              Choose an insertion slot.
-            </p>
-          )}
-          <label>
-            Search compatible assets
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.currentTarget.value)}
-              placeholder="Card, navigation, form..."
-            />
-          </label>
-          {catalogError ? (
-            <p className="ui-status ui-status--error" role="alert">
-              {catalogError}
-            </p>
-          ) : null}
-          {catalogLoading ? (
-            <p className="ui-text-muted" role="status">
-              Loading compatible assets...
-            </p>
-          ) : null}
-          {!catalogLoading && targetSlot && palette.length === 0 ? (
-            <EmptyState
-              compact
-              title="No compatible assets"
-              description="Try another slot or search term."
-              icon="assets"
-            />
-          ) : null}
-          <ul className="system-composer__palette">
-            {palette.map((asset) => (
-              <li key={`${asset.definitionId}@${asset.version}`}>
-                <div>
+            <label>
+              {targetSlot ? "Search compatible assets" : "Search assets"}
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.currentTarget.value)}
+                placeholder="Card, navigation, form..."
+              />
+            </label>
+            {catalogError ? (
+              <p className="ui-status ui-status--error" role="alert">
+                {catalogError}
+              </p>
+            ) : null}
+            {catalogLoading ? (
+              <p className="ui-text-muted" role="status">
+                Loading compatible assets...
+              </p>
+            ) : null}
+            {!catalogLoading && targetSlot && palette.length === 0 ? (
+              <EmptyState
+                compact
+                title="No compatible assets"
+                description="Try another canvas region or search term."
+                icon="assets"
+              />
+            ) : null}
+            <ul className="system-composer__palette">
+              {palette.map((asset) => (
+                <PaletteAssetItem
+                  key={`${asset.definitionId}@${asset.version}`}
+                  asset={asset}
+                >
+                  <span className="system-composer__palette-icon">
+                    <ApplicationIcon name={iconForComposerAsset(asset)} />
+                  </span>
                   <strong>{asset.displayName}</strong>
                   <span>
                     {asset.assetType} · v{asset.version}
                   </span>
-                </div>
-                <button
-                  type="button"
-                  className="ui-button--secondary"
-                  disabled={!targetSlot}
-                  onClick={() => targetSlot && onAdd(asset, targetSlot)}
-                >
-                  Add
-                </button>
-              </li>
-            ))}
-          </ul>
-        </aside>
-
-        <section
-          className="system-composer__panel"
-          aria-labelledby="composer-canvas-title"
-        >
-          <div className="system-composer__panel-heading">
-            <div>
-              <h3 id="composer-canvas-title">Semantic canvas</h3>
-              <p className="ui-text-muted">
-                Named slots preserve semantic source and keyboard order.
-              </p>
-            </div>
-          </div>
-          {canvasTree.length ? (
-            <div className="system-composer__canvas">
-              {canvasTree.map((node) => (
-                <CanvasNode
-                  key={String(node.instance.instanceId)}
-                  node={node}
-                  catalog={catalog}
-                  selectedInstanceId={selectedInstanceId}
-                  targetSlot={targetSlot}
-                  protectedInstanceIds={protectedInstanceIds}
-                  onSelect={onSelect}
-                  onTargetSlotChange={onTargetSlotChange}
-                />
+                </PaletteAssetItem>
               ))}
-            </div>
-          ) : (
-            <EmptyState
-              compact
-              title="No canonical hierarchy"
-              description="This historical revision needs an explicit upgrade before slot editing."
-              icon="systems"
-            />
-          )}
-        </section>
-
-        <aside
-          className="system-composer__panel"
-          aria-labelledby="composer-hierarchy-title"
-        >
-          <h3 id="composer-hierarchy-title">Hierarchy and actions</h3>
-          <p id="composer-tree-help" className="ui-text-muted">
-            Use arrow keys, Home, and End to navigate. Enter or click selects.
-          </p>
-          <ul
-            role="tree"
-            aria-label="System asset hierarchy"
-            aria-describedby="composer-tree-help"
-            className="system-composer__tree"
-          >
-            {tree.map((node) => (
-              <TreeNode
-                key={String(node.instance.instanceId)}
-                node={node}
-                selectedInstanceId={selectedInstanceId}
-                protectedInstanceIds={protectedInstanceIds}
-                itemRefs={treeItemRefs.current}
-                onSelect={onSelect}
-                onKeyDown={moveTreeFocus}
-              />
-            ))}
-          </ul>
-
-          {selectedNode ? (
-            <div className="system-composer__actions ui-stack ui-stack--sm">
-              <dl>
-                <dt>Selected</dt>
-                <dd>
-                  {selectedNode.instance.displayName ??
-                    String(selectedNode.instance.definitionRef.id)}
-                </dd>
-                <dt>Exact definition</dt>
-                <dd>
-                  {String(selectedNode.instance.definitionRef.id)}@
-                  {selectedNode.instance.definitionRef.version}
-                </dd>
-              </dl>
-              {protectedInstanceIds.has(
-                String(selectedNode.instance.instanceId),
-              ) ? (
-                <p className="ui-status ui-status--info">
-                  Required by the selected layout
+            </ul>
+            {unassignedInstances.length ? (
+              <section
+                className="system-composer__unassigned system-composer__unassigned--palette"
+                aria-labelledby="system-composer-unassigned-title"
+              >
+                <h4 id="system-composer-unassigned-title">Unassigned assets</h4>
+                <p className="ui-text-muted">
+                  Preserved during a layout change. Drag each asset into a
+                  compatible named region.
                 </p>
-              ) : null}
-              <div className="ui-inline-actions">
+                <ul>
+                  {unassignedInstances.map((instance, order) => (
+                    <UnassignedAssetItem
+                      key={String(instance.instanceId)}
+                      instance={instance}
+                      order={order}
+                      selected={
+                        String(instance.instanceId) === selectedInstanceId
+                      }
+                      onSelect={onSelect}
+                    />
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+          </aside>
+
+          <section
+            className="system-composer__panel system-composer__panel--canvas"
+            aria-labelledby="composer-canvas-title"
+            data-active-layout={activeCanvasLayout?.definitionId}
+          >
+            <div className="system-composer__panel-heading">
+              <div>
+                <h3 id="composer-canvas-title">Canvas</h3>
+                <p className="ui-text-muted">
+                  {activeCanvasLayout?.layoutGeometry
+                    ? `${activeCanvasLayout.displayName} exposes ${activeCanvasLayout.slots.length} fixed named ${activeCanvasLayout.slots.length === 1 ? "region" : "regions"}. `
+                    : ""}
+                  Drag assets into fixed named regions or use the explicit
+                  keyboard drag path. Canonical semantic order is preserved.
+                </p>
+              </div>
+            </div>
+            {canvasTree.length ? (
+              <div className="system-composer__canvas">
+                {canvasTree.map((node) => (
+                  <CanvasNode
+                    key={String(node.instance.instanceId)}
+                    node={node}
+                    catalog={catalog}
+                    selectedInstanceId={selectedInstanceId}
+                    targetSlot={targetSlot}
+                    protectedInstanceIds={protectedInstanceIds}
+                    onSelect={onSelect}
+                    onTargetSlotChange={onTargetSlotChange}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                compact
+                title="No canonical hierarchy"
+                description="This historical revision needs an explicit upgrade before visual layout editing."
+                icon="systems"
+              />
+            )}
+          </section>
+
+          <aside
+            id="system-composer-details-panel"
+            ref={(element) => {
+              if (element) panelRefs.current.set("details", element);
+              else panelRefs.current.delete("details");
+            }}
+            tabIndex={-1}
+            className="system-composer__panel system-composer__panel--details"
+            data-responsive-panel="details"
+            data-panel-open={responsivePanel === "details"}
+            data-collapsed={detailsCollapsed}
+            aria-label="Composer details"
+          >
+            <header className="system-composer__sidebar-header">
+              <div
+                className="system-composer__sidebar-tabs"
+                role="tablist"
+                aria-label="Composer details"
+              >
                 <button
+                  id="system-composer-sidebar-tab-properties"
                   type="button"
-                  className="ui-button--secondary"
-                  onClick={() => onMove(-1)}
-                  disabled={!selectedPlacement || selectedPlacement.order === 0}
+                  role="tab"
+                  className="system-composer__flat-control"
+                  aria-selected={sidebarTab === "properties"}
+                  aria-controls="system-composer-properties-panel"
+                  onClick={() => setSidebarTab("properties")}
                 >
-                  Move before
+                  Properties
                 </button>
                 <button
+                  id="system-composer-sidebar-tab-layers"
                   type="button"
-                  className="ui-button--secondary"
-                  onClick={() => onMove(1)}
-                  disabled={!selectedPlacement}
+                  role="tab"
+                  className="system-composer__flat-control"
+                  aria-selected={sidebarTab === "layers"}
+                  aria-controls="system-composer-layers-panel"
+                  onClick={() => setSidebarTab("layers")}
                 >
-                  Move after
+                  Layers &amp; Structure
                 </button>
               </div>
+              <button
+                type="button"
+                className="system-composer__flat-control system-composer__sidebar-collapse"
+                aria-label={`${detailsCollapsed ? "Expand" : "Collapse"} Properties and Layers sidebar`}
+                aria-expanded={!detailsCollapsed}
+                title={`${detailsCollapsed ? "Expand" : "Collapse"} Properties and Layers sidebar`}
+                onClick={() => setDetailsCollapsed((current) => !current)}
+              >
+                <ApplicationIcon
+                  name={detailsCollapsed ? "expand" : "collapse"}
+                />
+                <span>{detailsCollapsed ? "Expand" : "Collapse"}</span>
+              </button>
+            </header>
+            <section
+              id="system-composer-properties-panel"
+              role="tabpanel"
+              aria-labelledby="system-composer-sidebar-tab-properties"
+              hidden={sidebarTab !== "properties"}
+              className="system-composer__sidebar-panel system-composer__sidebar-panel--properties"
+            >
+              {propertiesPanel ?? (
+                <EmptyState
+                  compact
+                  title="Select an asset"
+                  description="Choose a canvas node or layer to edit its declared properties."
+                  icon="settings"
+                />
+              )}
+            </section>
 
-              <fieldset disabled={!selectedPlacement}>
-                <legend>Move to another slot</legend>
-                <label>
-                  Parent
-                  <select
-                    value={reparentParentId}
-                    onChange={(event) => {
-                      setReparentParentId(event.currentTarget.value);
-                      setReparentSlotId("");
-                    }}
-                  >
-                    <option value="">Choose parent</option>
-                    {draft.instances
-                      .filter(
-                        (instance) =>
-                          String(instance.instanceId) !== selectedInstanceId,
+            <section
+              id="system-composer-layers-panel"
+              role="tabpanel"
+              aria-labelledby="system-composer-sidebar-tab-layers"
+              hidden={sidebarTab !== "layers"}
+              className="system-composer__sidebar-panel system-composer__sidebar-panel--layers"
+            >
+              <p id="composer-tree-help" className="ui-text-muted">
+                Use arrow keys, Home, and End to navigate. Enter or click
+                selects.
+              </p>
+              <ul
+                role="tree"
+                aria-label="System asset hierarchy"
+                aria-describedby="composer-tree-help"
+                className="system-composer__tree"
+              >
+                {tree.map((node) => (
+                  <TreeNode
+                    key={String(node.instance.instanceId)}
+                    node={node}
+                    selectedInstanceId={selectedInstanceId}
+                    protectedInstanceIds={protectedInstanceIds}
+                    collapsedInstanceIds={collapsedInstanceIds}
+                    itemRefs={treeItemRefs.current}
+                    onSelect={onSelect}
+                    onKeyDown={moveTreeFocus}
+                    onToggle={(instanceId) =>
+                      setCollapsedInstanceIds(
+                        withCollapsedInstance(
+                          collapsedInstanceIds,
+                          instanceId,
+                          !collapsedInstanceIds.has(instanceId),
+                        ),
                       )
-                      .map((instance) => (
-                        <option
-                          key={String(instance.instanceId)}
-                          value={String(instance.instanceId)}
+                    }
+                  />
+                ))}
+              </ul>
+              {unassignedInstances.length ? (
+                <section className="system-composer__unassigned-layers">
+                  <h4>Unassigned</h4>
+                  <ul>
+                    {unassignedInstances.map((instance) => (
+                      <li key={String(instance.instanceId)}>
+                        <button
+                          type="button"
+                          className="system-composer__link-control"
+                          aria-current={
+                            String(instance.instanceId) === selectedInstanceId
+                              ? "true"
+                              : undefined
+                          }
+                          onClick={() => onSelect(String(instance.instanceId))}
                         >
                           {instance.displayName ??
                             String(instance.definitionRef.id)}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-                <label>
-                  Slot
-                  <select
-                    value={reparentSlotId}
-                    onChange={(event) =>
-                      setReparentSlotId(event.currentTarget.value)
-                    }
-                    disabled={!reparentDefinition}
-                  >
-                    <option value="">Choose slot</option>
-                    {reparentDefinition?.slots.map((slot) => (
-                      <option key={slot.slotId} value={slot.slotId}>
-                        {slot.displayName}
-                      </option>
+                        </button>
+                      </li>
                     ))}
-                  </select>
-                </label>
-                <button
-                  type="button"
-                  className="ui-button--secondary"
-                  disabled={!reparentParentId || !reparentSlotId}
-                  onClick={() =>
-                    onReparent({
-                      parentInstanceId: reparentParentId,
-                      slotId: reparentSlotId,
-                    })
-                  }
-                >
-                  Move asset
-                </button>
-              </fieldset>
+                  </ul>
+                </section>
+              ) : null}
 
-              <fieldset disabled={!selectedPlacement}>
-                <legend>Wrap in a container</legend>
-                <label>
-                  Container
-                  <select
-                    value={wrapperDefinitionId}
-                    onChange={(event) => {
-                      setWrapperDefinitionId(event.currentTarget.value);
-                      setWrapperSlotId("");
-                      onWrapTargetChange?.(undefined, undefined);
-                    }}
+              {selectedNode ? (
+                <div className="system-composer__actions ui-stack ui-stack--sm">
+                  <dl>
+                    <dt>Selected</dt>
+                    <dd>
+                      {selectedNode.instance.displayName ??
+                        String(selectedNode.instance.definitionRef.id)}
+                    </dd>
+                    <dt>Exact definition</dt>
+                    <dd>
+                      {String(selectedNode.instance.definitionRef.id)}@
+                      {selectedNode.instance.definitionRef.version}
+                    </dd>
+                  </dl>
+                  {protectedInstanceIds.has(
+                    String(selectedNode.instance.instanceId),
+                  ) ? (
+                    <p className="ui-status ui-status--info">
+                      Required by the selected layout
+                    </p>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="system-composer__flat-control system-composer__flat-control--danger"
+                    onClick={onRemove}
+                    disabled={protectedInstanceIds.has(
+                      String(selectedNode.instance.instanceId),
+                    )}
                   >
-                    <option value="">Choose compatible container</option>
-                    {wrappers.map((asset) => (
-                      <option
-                        key={`${asset.definitionId}@${asset.version}`}
-                        value={asset.definitionId}
-                      >
-                        {asset.displayName}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Container slot
-                  <select
-                    value={wrapperSlotId}
-                    onChange={(event) => {
-                      const slotId = event.currentTarget.value;
-                      setWrapperSlotId(slotId);
-                      onWrapTargetChange?.(
-                        selectedWrapper,
-                        slotId || undefined,
-                      );
-                    }}
-                    disabled={!selectedWrapper}
-                  >
-                    <option value="">Choose slot</option>
-                    {selectedWrapper?.slots.map((slot) => (
-                      <option key={slot.slotId} value={slot.slotId}>
-                        {slot.displayName}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {wrapCompatibility.status === "checking" ? (
-                  <p className="ui-text-muted" role="status">
-                    Checking child compatibility...
-                  </p>
-                ) : null}
-                {wrapCompatibility.status === "incompatible" ? (
-                  <p className="ui-status ui-status--info">
-                    {wrapCompatibility.reason ??
-                      "The selected asset is not accepted by this wrapper slot."}
-                  </p>
-                ) : null}
-                <button
-                  type="button"
-                  className="ui-button--secondary"
-                  disabled={
-                    !selectedWrapper ||
-                    !wrapperSlotId ||
-                    wrapCompatibility.status !== "compatible"
-                  }
-                  onClick={() =>
-                    selectedWrapper && onWrap(selectedWrapper, wrapperSlotId)
-                  }
-                >
-                  Wrap asset
-                </button>
-              </fieldset>
-
-              <button
-                type="button"
-                className="ui-button--danger"
-                onClick={onRemove}
-                disabled={protectedInstanceIds.has(
-                  String(selectedNode.instance.instanceId),
-                )}
-              >
-                <ApplicationIcon name="delete" />
-                <span>Remove selected subtree</span>
-              </button>
-            </div>
-          ) : null}
-        </aside>
+                    <ApplicationIcon name="delete" />
+                    <span>Remove selected subtree</span>
+                  </button>
+                </div>
+              ) : null}
+            </section>
+          </aside>
+        </div>
+        {dragNotice ? (
+          <p
+            className="system-composer__drag-notice"
+            role="status"
+            aria-live="polite"
+          >
+            {dragNotice}
+          </p>
+        ) : null}
       </div>
-    </div>
+      <DragOverlay dropAnimation={null}>
+        {activeDrag ? (
+          <div className="system-composer__drag-overlay">
+            <ApplicationIcon name="menu" />
+            <span>{activeDrag.label}</span>
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }
 
@@ -552,19 +822,32 @@ export function SystemLayoutGallery({
   layouts,
   selectedDefinitionId,
   disabled = false,
+  mode = "create",
+  compact = false,
+  loading = false,
+  error,
   onSelect,
 }: {
   readonly layouts: readonly SystemBuilderComposerAsset[];
   readonly selectedDefinitionId?: string;
   readonly disabled?: boolean;
+  readonly mode?: "create" | "change";
+  readonly compact?: boolean;
+  readonly loading?: boolean;
+  readonly error?: string;
   readonly onSelect: (asset: SystemBuilderComposerAsset) => void;
 }) {
   return (
-    <fieldset className="system-layout-gallery" disabled={disabled}>
-      <legend>Application layout</legend>
+    <fieldset
+      className="system-layout-gallery"
+      data-compact={compact}
+      disabled={disabled}
+    >
+      <legend>{compact ? "Layout" : "Application layout"}</legend>
       <p className="ui-text-muted">
-        Choose a predefined responsive slot configuration for the new
-        interaction system.
+        {mode === "change"
+          ? "Choose a predefined fixed region configuration. The local Canvas updates immediately and remains undoable until saved."
+          : "Choose a predefined responsive region configuration for the new interaction system."}
       </p>
       <div className="system-layout-gallery__grid">
         {layouts.map((layout) => (
@@ -582,9 +865,16 @@ export function SystemLayoutGallery({
             <span
               className="system-layout-gallery__thumbnail"
               aria-hidden="true"
+              style={layoutThumbnailStyle(layout)}
             >
-              {layout.slots.slice(0, 4).map((slot) => (
-                <span key={slot.slotId}>{slot.displayName}</span>
+              {layoutThumbnailSlots(layout).map((slot) => (
+                <span
+                  key={slot.slotId}
+                  data-layout-area={slot.slotId}
+                  style={{ gridArea: slot.slotId }}
+                >
+                  {slot.displayName}
+                </span>
               ))}
             </span>
             <strong>{layout.displayName}</strong>
@@ -594,7 +884,95 @@ export function SystemLayoutGallery({
           </label>
         ))}
       </div>
+      {loading && layouts.length === 0 ? (
+        <p className="ui-text-muted" role="status">
+          Loading predefined layouts...
+        </p>
+      ) : null}
+      {!loading && error && layouts.length === 0 ? (
+        <p className="ui-status ui-status--error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {!loading && !error && layouts.length === 0 ? (
+        <p className="ui-text-muted" role="status">
+          No predefined layouts are available in this workspace.
+        </p>
+      ) : null}
     </fieldset>
+  );
+}
+
+function PaletteAssetItem({
+  asset,
+  children,
+}: {
+  readonly asset: SystemBuilderComposerAsset;
+  readonly children: ReactNode;
+}) {
+  const draggable = useDraggable({
+    id: `palette:${asset.definitionId}@${asset.version}`,
+    data: paletteDragData(asset),
+  });
+  return (
+    <li ref={draggable.setNodeRef} data-dragging={draggable.isDragging}>
+      <button
+        type="button"
+        className="system-composer__palette-tile"
+        aria-label={`Drag ${asset.displayName}`}
+        {...draggable.attributes}
+        {...draggable.listeners}
+      >
+        {children}
+      </button>
+    </li>
+  );
+}
+
+function UnassignedAssetItem({
+  instance,
+  order,
+  selected,
+  onSelect,
+}: {
+  readonly instance: AssetInstance;
+  readonly order: number;
+  readonly selected: boolean;
+  readonly onSelect: (instanceId: string) => void;
+}) {
+  const instanceId = String(instance.instanceId);
+  const draggable = useDraggable({
+    id: `unassigned:${instanceId}`,
+    data: {
+      kind: "instance",
+      instanceId,
+      definitionId: String(instance.definitionRef.id),
+      version: instance.definitionRef.version ?? "",
+      label: instance.displayName ?? String(instance.definitionRef.id),
+      parentInstanceId: "unassigned",
+      slotId: "unassigned",
+      order,
+    } satisfies SystemComposerDragData,
+  });
+  return (
+    <li ref={draggable.setNodeRef} data-selected={selected}>
+      <button
+        type="button"
+        className="system-composer__link-control"
+        onClick={() => onSelect(instanceId)}
+      >
+        {instance.displayName ?? String(instance.definitionRef.id)}
+      </button>
+      <button
+        type="button"
+        className="system-composer__drag-handle"
+        aria-label={`Drag ${instance.displayName ?? String(instance.definitionRef.id)} from Unassigned assets`}
+        {...draggable.attributes}
+        {...draggable.listeners}
+      >
+        <ApplicationIcon name="menu" />
+      </button>
+    </li>
   );
 }
 
@@ -602,55 +980,79 @@ function TreeNode({
   node,
   selectedInstanceId,
   protectedInstanceIds,
+  collapsedInstanceIds,
   itemRefs,
   onSelect,
   onKeyDown,
+  onToggle,
 }: {
   readonly node: SystemComposerTreeNode;
   readonly selectedInstanceId?: string;
   readonly protectedInstanceIds: ReadonlySet<string>;
+  readonly collapsedInstanceIds: ReadonlySet<string>;
   readonly itemRefs: Map<string, HTMLButtonElement>;
   readonly onSelect: (instanceId: string) => void;
   readonly onKeyDown: (
     event: KeyboardEvent<HTMLButtonElement>,
     node: SystemComposerTreeNode,
   ) => void;
+  readonly onToggle: (instanceId: string) => void;
 }) {
   const instanceId = String(node.instance.instanceId);
   const selected = instanceId === selectedInstanceId;
+  const expanded = node.children.length
+    ? !collapsedInstanceIds.has(instanceId)
+    : undefined;
   return (
     <li role="none">
-      <button
-        ref={(element) => {
-          if (element) itemRefs.set(instanceId, element);
-          else itemRefs.delete(instanceId);
-        }}
-        type="button"
-        role="treeitem"
-        aria-level={node.depth}
-        aria-selected={selected}
-        aria-expanded={node.children.length ? true : undefined}
-        tabIndex={
-          selected || (!selectedInstanceId && node.depth === 1) ? 0 : -1
-        }
-        onClick={() => onSelect(instanceId)}
-        onKeyDown={(event) => onKeyDown(event, node)}
-      >
-        <span>
-          {node.instance.displayName ?? String(node.instance.definitionRef.id)}
-        </span>
-        {node.placement ? (
-          <small>
-            {node.placement.slotId} · {node.placement.order + 1}
-          </small>
+      <div className="system-composer__tree-row" role="none">
+        {node.children.length ? (
+          <button
+            type="button"
+            className="system-composer__tree-toggle"
+            aria-label={`${expanded ? "Collapse" : "Expand"} ${node.instance.displayName ?? instanceId}`}
+            data-expanded={expanded}
+            tabIndex={-1}
+            onClick={() => onToggle(instanceId)}
+          >
+            <ApplicationIcon name="chevron" />
+          </button>
         ) : (
-          <small>System root</small>
+          <span className="system-composer__tree-toggle-placeholder" />
         )}
-        {protectedInstanceIds.has(instanceId) ? (
-          <span className="ui-badge ui-badge--info">Required</span>
-        ) : null}
-      </button>
-      {node.children.length ? (
+        <button
+          ref={(element) => {
+            if (element) itemRefs.set(instanceId, element);
+            else itemRefs.delete(instanceId);
+          }}
+          type="button"
+          role="treeitem"
+          aria-level={node.depth}
+          aria-selected={selected}
+          aria-expanded={expanded}
+          tabIndex={
+            selected || (!selectedInstanceId && node.depth === 1) ? 0 : -1
+          }
+          onClick={() => onSelect(instanceId)}
+          onKeyDown={(event) => onKeyDown(event, node)}
+        >
+          <span>
+            {node.instance.displayName ??
+              String(node.instance.definitionRef.id)}
+          </span>
+          {node.placement ? (
+            <small>
+              Region {node.placement.slotId} · layer {node.placement.order + 1}
+            </small>
+          ) : (
+            <small>System root</small>
+          )}
+          {protectedInstanceIds.has(instanceId) ? (
+            <span className="ui-badge ui-badge--info">Required</span>
+          ) : null}
+        </button>
+      </div>
+      {node.children.length && expanded ? (
         <ul role="group">
           {node.children.map((child) => (
             <TreeNode
@@ -658,9 +1060,11 @@ function TreeNode({
               node={child}
               selectedInstanceId={selectedInstanceId}
               protectedInstanceIds={protectedInstanceIds}
+              collapsedInstanceIds={collapsedInstanceIds}
               itemRefs={itemRefs}
               onSelect={onSelect}
               onKeyDown={onKeyDown}
+              onToggle={onToggle}
             />
           ))}
         </ul>
@@ -688,92 +1092,224 @@ function CanvasNode({
 }) {
   const instanceId = String(node.instance.instanceId);
   const definition = definitionForInstance(node.instance, catalog);
+  const protectedInstance = protectedInstanceIds.has(instanceId);
+  const definitionVersion =
+    node.instance.definitionRef.version ?? definition?.version;
+  const layoutStyle = definition?.layoutGeometry
+    ? layoutGridStyle(definition.layoutGeometry)
+    : undefined;
+  const sortable = useSortable({
+    id: `instance:${instanceId}`,
+    disabled: !node.placement || protectedInstance || !definitionVersion,
+    data:
+      node.placement && definitionVersion
+        ? instanceDragData({
+            instanceId,
+            definitionId: String(node.instance.definitionRef.id),
+            version: definitionVersion,
+            label:
+              node.instance.displayName ??
+              String(node.instance.definitionRef.id),
+            placement: node.placement,
+          })
+        : undefined,
+  });
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(sortable.transform),
+    transition: sortable.transition,
+    opacity: sortable.isDragging ? 0.42 : undefined,
+  };
   return (
     <article
+      ref={sortable.setNodeRef}
+      style={style}
       className="system-composer__canvas-node"
       data-selected={instanceId === selectedInstanceId}
+      data-dragging={sortable.isDragging}
+      data-layout-container={Boolean(definition?.layoutGeometry)}
     >
-      <button
-        type="button"
-        className="system-composer__canvas-node-heading"
-        aria-pressed={instanceId === selectedInstanceId}
-        onClick={() => onSelect(instanceId)}
-      >
-        <span>
-          <strong>
-            {node.instance.displayName ??
-              String(node.instance.definitionRef.id)}
-          </strong>
-          <small>
-            {String(node.instance.definitionRef.id)}@
-            {node.instance.definitionRef.version}
-          </small>
-        </span>
-        {protectedInstanceIds.has(instanceId) ? (
-          <span className="ui-badge ui-badge--info">Required</span>
+      <div className="system-composer__canvas-node-heading">
+        <button
+          type="button"
+          className="system-composer__canvas-node-select"
+          aria-pressed={instanceId === selectedInstanceId}
+          onClick={() => onSelect(instanceId)}
+        >
+          <span>
+            <strong>
+              {node.instance.displayName ??
+                String(node.instance.definitionRef.id)}
+            </strong>
+            <small>
+              {String(node.instance.definitionRef.id)}@
+              {node.instance.definitionRef.version}
+            </small>
+          </span>
+          {protectedInstance ? (
+            <span className="ui-badge ui-badge--info">Required</span>
+          ) : null}
+        </button>
+        {node.placement && !protectedInstance && definitionVersion ? (
+          <button
+            type="button"
+            className="system-composer__drag-handle"
+            aria-label={`Drag ${node.instance.displayName ?? instanceId}`}
+            {...sortable.attributes}
+            {...sortable.listeners}
+          >
+            <ApplicationIcon name="menu" />
+            <span>Drag</span>
+          </button>
         ) : null}
-      </button>
+      </div>
+      {definition?.previewAvailability === "trusted-declarative" &&
+      !definition.layoutGeometry ? (
+        <div
+          className="system-composer__editable-preview"
+          aria-label={`${node.instance.displayName ?? definition.displayName} safe visual preview`}
+        >
+          <FoundationAssetPreview
+            definitionId={definition.definitionId}
+            displayName={node.instance.displayName ?? definition.displayName}
+            configuration={node.instance.selectedConfiguration}
+          />
+        </div>
+      ) : null}
       {definition?.slots.length ? (
-        <div className="system-composer__slots">
-          {definition.slots.map((slot) => {
-            const children = node.children.filter(
-              (child) => child.placement?.slotId === slot.slotId,
-            );
-            const selectedTarget =
-              targetSlot?.parentInstanceId === instanceId &&
-              targetSlot.slotId === slot.slotId;
-            return (
-              <section
-                key={slot.slotId}
-                className="system-composer__slot"
-                data-target={selectedTarget}
-                aria-label={`${slot.displayName} slot`}
-              >
-                <header>
-                  <strong>{slot.displayName}</strong>
-                  <small>
-                    {children.length}/{slot.cardinality.maxItems}
-                  </small>
-                </header>
-                <p>{slot.description ?? "Named insertion region"}</p>
-                <button
-                  type="button"
-                  className="ui-button--tertiary"
-                  aria-pressed={selectedTarget}
-                  disabled={children.length >= slot.cardinality.maxItems}
-                  onClick={() =>
-                    onTargetSlotChange({
-                      parentInstanceId: instanceId,
-                      slotId: slot.slotId,
-                    })
-                  }
-                >
-                  Add here
-                </button>
-                {children.map((child) => (
-                  <CanvasNode
-                    key={String(child.instance.instanceId)}
-                    node={child}
-                    catalog={catalog}
-                    selectedInstanceId={selectedInstanceId}
-                    targetSlot={targetSlot}
-                    protectedInstanceIds={protectedInstanceIds}
-                    onSelect={onSelect}
-                    onTargetSlotChange={onTargetSlotChange}
-                  />
-                ))}
-                {children.length === 0 ? (
-                  <span className="system-composer__slot-empty">
-                    Empty slot
-                  </span>
-                ) : null}
-              </section>
-            );
-          })}
+        <div className="system-composer__slots" style={layoutStyle}>
+          {definition.slots.map((slot) => (
+            <CanvasSlot
+              key={slot.slotId}
+              parentInstanceId={instanceId}
+              slot={slot}
+              childrenNodes={node.children.filter(
+                (child) => child.placement?.slotId === slot.slotId,
+              )}
+              catalog={catalog}
+              selectedInstanceId={selectedInstanceId}
+              targetSlot={targetSlot}
+              protectedInstanceIds={protectedInstanceIds}
+              onSelect={onSelect}
+              onTargetSlotChange={onTargetSlotChange}
+            />
+          ))}
         </div>
       ) : null}
     </article>
   );
+}
+
+function CanvasSlot({
+  parentInstanceId,
+  slot,
+  childrenNodes,
+  catalog,
+  selectedInstanceId,
+  targetSlot,
+  protectedInstanceIds,
+  onSelect,
+  onTargetSlotChange,
+}: {
+  readonly parentInstanceId: string;
+  readonly slot: SystemBuilderComposerAsset["slots"][number];
+  readonly childrenNodes: readonly SystemComposerTreeNode[];
+  readonly catalog: readonly SystemBuilderComposerAsset[];
+  readonly selectedInstanceId?: string;
+  readonly targetSlot?: SystemComposerTargetSlot;
+  readonly protectedInstanceIds: ReadonlySet<string>;
+  readonly onSelect: (instanceId: string) => void;
+  readonly onTargetSlotChange: (target: SystemComposerTargetSlot) => void;
+}) {
+  const selectedTarget =
+    targetSlot?.parentInstanceId === parentInstanceId &&
+    targetSlot.slotId === slot.slotId;
+  const droppable = useDroppable({
+    id: `slot:${parentInstanceId}:${slot.slotId}`,
+    data: slotDropData({
+      parentInstanceId,
+      slotId: slot.slotId,
+      label: `${slot.displayName} region`,
+    }),
+  });
+  return (
+    <section
+      ref={droppable.setNodeRef}
+      className="system-composer__slot"
+      data-target={selectedTarget}
+      data-drag-over={droppable.isOver}
+      data-slot-id={slot.slotId}
+      style={{ gridArea: slot.slotId }}
+      aria-label={`${slot.displayName} region`}
+    >
+      <header>
+        <button
+          type="button"
+          className="system-composer__region-selector"
+          aria-label={`Select ${slot.displayName} region`}
+          aria-pressed={selectedTarget}
+          onClick={() =>
+            onTargetSlotChange({
+              parentInstanceId,
+              slotId: String(slot.slotId),
+            })
+          }
+        >
+          <strong>{slot.displayName}</strong>
+        </button>
+        <small>
+          {childrenNodes.length}/{slot.cardinality.maxItems}
+        </small>
+      </header>
+      <p>{slot.description ?? "Canvas drop region"}</p>
+      <SortableContext
+        items={childrenNodes.map(
+          (child) => `instance:${String(child.instance.instanceId)}`,
+        )}
+        strategy={verticalListSortingStrategy}
+      >
+        {childrenNodes.map((child) => (
+          <CanvasNode
+            key={String(child.instance.instanceId)}
+            node={child}
+            catalog={catalog}
+            selectedInstanceId={selectedInstanceId}
+            targetSlot={targetSlot}
+            protectedInstanceIds={protectedInstanceIds}
+            onSelect={onSelect}
+            onTargetSlotChange={onTargetSlotChange}
+          />
+        ))}
+      </SortableContext>
+      {childrenNodes.length === 0 ? (
+        <span className="system-composer__slot-empty">Drop assets here</span>
+      ) : null}
+    </section>
+  );
+}
+
+function withCollapsedInstance(
+  current: ReadonlySet<string>,
+  instanceId: string,
+  collapsed: boolean,
+): ReadonlySet<string> {
+  const next = new Set(current);
+  if (collapsed) next.add(instanceId);
+  else next.delete(instanceId);
+  return next;
+}
+
+function flattenVisibleSystemComposerTree(
+  tree: readonly SystemComposerTreeNode[],
+  collapsedInstanceIds: ReadonlySet<string>,
+): readonly SystemComposerTreeNode[] {
+  const visible: SystemComposerTreeNode[] = [];
+  const visit = (node: SystemComposerTreeNode) => {
+    visible.push(node);
+    if (collapsedInstanceIds.has(String(node.instance.instanceId))) return;
+    node.children.forEach(visit);
+  };
+  tree.forEach(visit);
+  return visible;
 }
 
 function definitionForInstance(
@@ -786,6 +1322,118 @@ function definitionForInstance(
       asset.definitionId === String(instance.definitionRef.id) &&
       asset.version === instance.definitionRef.version,
   );
+}
+
+function layoutGridStyle(
+  geometry: SystemBuilderComposerLayoutGeometry,
+): CSSProperties {
+  return {
+    gridTemplateAreas: geometry.areas
+      .map((row) => `"${row.join(" ")}"`)
+      .join(" "),
+    gridTemplateColumns:
+      geometry.columnPattern === "single"
+        ? "minmax(0, 1fr)"
+        : geometry.columnPattern === "three-panel"
+          ? "minmax(7rem, 0.3fr) minmax(12rem, 1fr) minmax(7rem, 0.3fr)"
+          : geometry.columnPattern === "equal-split"
+            ? "repeat(2, minmax(10rem, 1fr))"
+            : geometry.columnPattern === "start-content"
+              ? "minmax(8rem, 0.32fr) minmax(14rem, 1fr)"
+              : "minmax(14rem, 1fr) minmax(8rem, 0.32fr)",
+    gridTemplateRows: geometry.areas
+      .map((row) =>
+        row.every((area) => ["top-bar", "page-header", "footer"].includes(area))
+          ? "4rem"
+          : "minmax(14rem, 1fr)",
+      )
+      .join(" "),
+  };
+}
+
+function layoutThumbnailStyle(
+  layout: SystemBuilderComposerAsset,
+): CSSProperties | undefined {
+  const geometry = layout.layoutGeometry;
+  if (!geometry) return undefined;
+  return {
+    gridTemplateAreas: geometry.areas
+      .map((row) => `"${row.join(" ")}"`)
+      .join(" "),
+    gridTemplateColumns:
+      geometry.columnPattern === "three-panel"
+        ? "0.55fr 1.4fr 0.55fr"
+        : geometry.columnPattern === "start-content"
+          ? "0.65fr 1.35fr"
+          : geometry.columnPattern === "content-end"
+            ? "1.35fr 0.65fr"
+            : geometry.columnPattern === "equal-split"
+              ? "repeat(2, 1fr)"
+              : "1fr",
+    gridTemplateRows: `repeat(${geometry.areas.length}, minmax(0.7rem, 1fr))`,
+  };
+}
+
+function layoutThumbnailSlots(
+  layout: SystemBuilderComposerAsset,
+): readonly SystemBuilderComposerAsset["slots"][number][] {
+  const sourceOrder = layout.layoutGeometry?.sourceOrder;
+  if (!sourceOrder) return layout.slots;
+  const byId = new Map(layout.slots.map((slot) => [String(slot.slotId), slot]));
+  return sourceOrder.flatMap((slotId) => {
+    const slot = byId.get(String(slotId));
+    return slot ? [slot] : [];
+  });
+}
+
+function iconForComposerAsset(
+  asset: SystemBuilderComposerAsset,
+): ApplicationIconName {
+  const identity =
+    `${asset.definitionId} ${asset.assetType} ${asset.assetFamily}`.toLowerCase();
+  if (identity.includes("security") || identity.includes("policy")) {
+    return "security";
+  }
+  if (identity.includes("image")) return "image-generation";
+  if (
+    identity.includes("data") ||
+    identity.includes("table") ||
+    identity.includes("form") ||
+    identity.includes("record")
+  ) {
+    return "dataset";
+  }
+  if (identity.includes("navigation") || identity.includes("menu")) {
+    return "menu";
+  }
+  if (identity.includes("link") || identity.includes("connection")) {
+    return "link";
+  }
+  if (identity.includes("model")) return "models";
+  if (identity.includes("system")) return "systems";
+  if (
+    identity.includes("page") ||
+    identity.includes("layout") ||
+    identity.includes("container") ||
+    identity.includes("card")
+  ) {
+    return "library";
+  }
+  return "assets";
+}
+
+function systemComposerVisualCanvasRoots(
+  tree: readonly SystemComposerTreeNode[],
+  catalog: readonly SystemBuilderComposerAsset[],
+): readonly SystemComposerTreeNode[] {
+  const applicationLayouts = tree.flatMap((root) =>
+    root.children.filter(
+      (child) =>
+        definitionForInstance(child.instance, catalog)?.layoutRole ===
+        "application-shell",
+    ),
+  );
+  return applicationLayouts.length ? applicationLayouts : tree;
 }
 
 function breadcrumbFor(

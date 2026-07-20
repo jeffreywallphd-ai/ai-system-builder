@@ -89,7 +89,7 @@ describe("SystemCompositionPreview", () => {
     expect(html).toContain("implementation is not executed");
   });
 
-  it("renders canonical slot order, unassigned assets, and responsive viewport controls", () => {
+  it("renders canonical region order, unassigned assets, and responsive viewport controls", () => {
     const root = instance("root", "builtin.system.system", "System root");
     const shell = instance(
       "shell",
@@ -140,8 +140,8 @@ describe("SystemCompositionPreview", () => {
         includesUnsavedChanges={false}
       />,
     );
-    expect(html).toContain('aria-label="application-shell slot"');
-    expect(html).toContain('aria-label="content slot"');
+    expect(html).toContain('aria-label="application-shell region"');
+    expect(html).toContain('aria-label="content region"');
     expect(html).toContain('data-preview-instance="form"');
     expect(html).toContain("Unassigned assets");
     expect(html).toContain('aria-label="Preview viewport"');

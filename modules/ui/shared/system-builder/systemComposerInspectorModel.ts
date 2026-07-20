@@ -15,6 +15,15 @@ export interface SystemComposerConfigurationSection {
   readonly fields: readonly AssetConfigurationField[];
 }
 
+export type SystemComposerPropertyPanel = "design" | "data" | "events";
+
+export type SystemComposerPropertyPanelSections = Readonly<
+  Record<
+    SystemComposerPropertyPanel,
+    readonly SystemComposerConfigurationSection[]
+  >
+>;
+
 export interface SystemComposerPortEndpoint {
   readonly key: string;
   readonly instanceId: string;
@@ -61,6 +70,63 @@ export function buildSystemComposerConfigurationSections(
       if (right.label === "Advanced") return -1;
       return left.label.localeCompare(right.label);
     });
+}
+
+export function buildSystemComposerPropertyPanelSections(
+  schema: AssetConfigurationSchema | undefined,
+): SystemComposerPropertyPanelSections {
+  const grouped: Record<
+    SystemComposerPropertyPanel,
+    SystemComposerConfigurationSection[]
+  > = { design: [], data: [], events: [] };
+  for (const section of buildSystemComposerConfigurationSections(schema)) {
+    const fieldsByPanel: Record<
+      SystemComposerPropertyPanel,
+      AssetConfigurationField[]
+    > = { design: [], data: [], events: [] };
+    for (const field of section.fields) {
+      fieldsByPanel[propertyPanelForField(field)].push(field);
+    }
+    for (const panel of ["design", "data", "events"] as const) {
+      if (fieldsByPanel[panel].length) {
+        grouped[panel].push({ ...section, fields: fieldsByPanel[panel] });
+      }
+    }
+  }
+  return grouped;
+}
+
+export function propertyPanelForField(
+  field: AssetConfigurationField,
+): SystemComposerPropertyPanel {
+  const text = [
+    field.fieldId,
+    field.label,
+    field.description,
+    field.uiHint?.section,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  if (
+    /(^|[^a-z])(event|events|action|actions|handler|callback|click|submit|navigate|trigger)([^a-z]|$)/.test(
+      text,
+    )
+  ) {
+    return "events";
+  }
+  if (
+    field.valueKind === "asset-reference" ||
+    field.valueKind === "resource-reference" ||
+    field.valueKind === "artifact-reference" ||
+    field.valueKind === "runtime-capability-reference" ||
+    /(^|[^a-z])(data|dataset|source|query|record|records|model|resource|artifact|binding)([^a-z]|$)/.test(
+      text,
+    )
+  ) {
+    return "data";
+  }
+  return "design";
 }
 
 export function materializeSystemComposerConfiguration(

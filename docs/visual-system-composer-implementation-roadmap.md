@@ -2,8 +2,8 @@
 
 # Visual System Composer Implementation Roadmap
 
-- Status: `decision-approval`
-- Updated: `2026-07-19T17:07:19Z`
+- Status: `executing`
+- Updated: `2026-07-20T05:39:31Z`
 
 ## Objective
 
@@ -47,8 +47,8 @@ Which interaction engine should power direct manipulation in the shared visual S
 
 The mockup requires a persistent asset/layout palette, safe editable canvas, properties sidebar, and layers tree with pointer/touch dragging, while the repository requires an equivalent keyboard path, canonical slot operations, React 19 desktop/thin parity, bounded behavior, and production packaging.
 
-- Status: `awaiting-approval`
-- Selected option: `awaiting approval`
+- Status: `approved`
+- Selected option: `dnd-kit-canonical-adapter`
 
 | Option | Summary | Recommended | Tradeoffs | Consequences |
 | --- | --- | --- | --- | --- |
@@ -58,4 +58,135 @@ The mockup requires a persistent asset/layout palette, safe editable canvas, pro
 
 ## Increment map
 
-The increment roadmap has not been defined.
+| Increment | Outcome | Dependencies | Status |
+| --- | --- | --- | --- |
+| 1: Complete mockup-aligned visual composer | Replace the fragmented Structure/Configure presentation with one shared desktop/thin-client visual workspace that keeps the asset and layout palette, safe editable canvas, properties inspector, and Layers and Structure tree synchronized while every drag, keyboard, and button action updates the existing canonical named-slot draft. | None | `completed` |
+| 2: Visual composer production qualification and hardening | Qualify and harden the complete visual editor across packaged Windows desktop and the supported thin-client browser, input methods, accessibility/reflow, representative composition scale, security boundaries, interruption/recovery, and dependency/runtime packaging before production handoff. | mockup-aligned-visual-composer | `implementing` |
+
+## Increment 1: Complete mockup-aligned visual composer
+
+- Id: `mockup-aligned-visual-composer`
+- Status: `completed`
+- Dependencies: None
+
+Replace the fragmented Structure/Configure presentation with one shared desktop/thin-client visual workspace that keeps the asset and layout palette, safe editable canvas, properties inspector, and Layers and Structure tree synchronized while every drag, keyboard, and button action updates the existing canonical named-slot draft.
+
+### Work packages
+
+- **Canonical direct-manipulation adapter** (`canonical-drag-adapter`): Pinned dnd-kit primitives provide pointer, touch, and keyboard sensors, drag overlays, tailored instructions, and announcements, while a repository-owned adapter resolves palette insertion, within-slot reorder, cross-slot reparent, and cancellation into existing bounded canonical commands without persisting library state.
+- **Persistent visual editor shell** (`visual-editor-shell`): A mockup-aligned toolbar and responsive four-region shell keep searchable assets and layout choices, the primary canvas, selected-element properties, and Layers and Structure visible together on wide screens and available through accessible drawers or panel tabs at narrower widths.
+- **Safe editable canvas and layouts** (`safe-editable-canvas`): The center surface recursively renders registered side-effect-free Foundation views with selection and named-slot overlays, accepts compatible drops, previews deterministic layout changes, preserves unmatched content explicitly, and shares the same draft, undo/redo, validation, zoom, viewport, preview, and save state.
+- **Properties, Layers and Structure, and connections** (`properties-layers-connections`): Selection remains synchronized across canvas and tree; the persistent properties sidebar organizes schema-backed Design, Data, and Events controls; the layers tree supports expected expansion/navigation and canonical move actions; Connections remains a focused editor mode over the same draft.
+- **Complete workflows and host parity** (`shared-workflow-parity`): Create/open, Manage handoff, layout selection, undo/redo, validation, conflict handling, save, preview, and Build and Test entry points behave coherently through existing clients in both hosts, with focused regression coverage and reconciled documentation.
+
+### Deliverables
+
+- Exact pinned @dnd-kit/core, @dnd-kit/sortable, and required utility dependencies with license/security review
+- Shared drag intent, collision, compatibility, announcement, and canonical-command adapter with no contract-layer leakage
+- Mockup-aligned editor toolbar and persistent Asset Palette, Canvas, Properties, and Layers and Structure regions
+- Searchable compatible asset palette plus predefined whole-system/page layout choices and truthful unavailable states
+- Safe recursive editable visual canvas with named-slot overlays, selection chrome, drop indicators, drag overlay, viewport and zoom controls
+- Pointer, touch, keyboard pickup/move/drop/cancel, and existing explicit action alternatives for add, reorder, reparent, wrap, remove, and layout change
+- Deterministic reviewable layout remapping with cancel, stale/conflict handling, and explicit Unassigned content preservation
+- Persistent schema-backed Design, Data, and Events property sections and typed Connections mode
+- Synchronized accessible Layers and Structure tree, breadcrumbs, protected nodes, and focus restoration
+- Responsive wide, medium, and narrow editor layouts without unintended page overflow or lost functions
+- Coherent create/open/save/preview/Build and Test/Manage handoffs in desktop and thin client
+- Focused model, interaction, accessibility, transport/client, style, and documentation coverage
+
+### Acceptance criteria
+
+| Criterion | Qualification | Latest evidence |
+| --- | --- | --- |
+| `persistent-editor-shell`: For an open system, wide screens present the asset/layout palette, primary editable canvas, properties inspector, and Layers and Structure tree simultaneously beneath one coherent editor toolbar; selected system, revision, dirty, validation, loading, error, conflict, and save states remain understandable without switching between disconnected forms. | local | passed (test) |
+| `canonical-direct-manipulation`: A compatible asset can be inserted from the palette, reordered within a slot, or moved across compatible slots using pointer, touch, keyboard pickup/move/drop, or explicit controls; every successful interaction calls the same bounded canonical command, every invalid target explains why it is unavailable, cancellation changes nothing, and no drag-library state enters a revision or transport payload. | local | passed (test) |
+| `safe-editable-canvas`: The canvas recursively renders the current unsaved named-slot hierarchy with registered side-effect-free Foundation renderers, visible selection and slot overlays, bounded desktop/tablet/mobile frames, and truthful unsupported/nonvisual states while never executing unqualified backing resources, imported code, backend logic, network calls, builds, or deployments. | local | passed (test) |
+| `layout-change-integrity`: Predefined layout choices can create a system or initiate an explicit reviewed layout change; deterministic mapping preserves compatible instances, configuration, bindings, and semantic order, exposes unmatched content in an Unassigned region, supports cancel/undo/redo/stale conflict, and saves only as a new immutable revision without rewriting its source. | local | passed (test) |
+| `properties-layers-synchronization`: Selecting an asset from the canvas or Layers and Structure tree updates both surfaces and the persistent properties inspector; schema-backed Design, Data, and Events sections edit only supported configuration and declared endpoints, tree keyboard behavior follows expected expansion/navigation conventions, and containment remains separate from typed connections. | local | passed (test) |
+| `responsive-accessible-composer`: The shared workspace retains every editor function through accessible panels or drawers at medium and narrow widths, avoids unintended page-level two-dimensional scrolling, preserves logical source and focus order, restores focus after drawers/dialogs/drags, provides tailored instructions and live announcements, honors reduced motion, and keeps explicit native-control alternatives discoverable. | local | passed (test) |
+| `complete-shared-workflows`: Desktop and thin client use the same shared visual editor and canonical client operations for create/open, Manage handoff, edit, undo/redo, validate, save, reopen, preview, and Build and Test entry; focused tests and host builds prove no renderer-local persistence, workspace fallback, host-specific composition rule, or transport divergence. | local | passed (test) |
+
+### Verification
+
+- Run focused dependency import-boundary, drag intent/collision/compatibility, cancellation, announcement, and command-mapping tests.
+- Run focused palette, layout choice, editable canvas, slot overlay, selection, reorder/reparent/wrap/remove, protected-node, unassigned-content, undo/redo, and stale-conflict interaction tests.
+- Run focused properties Design/Data/Events, declared endpoint, Layers tree keyboard, focus restoration, and containment-versus-connection tests.
+- Run focused safe-renderer negative tests proving no imported/backing/backend/network/build/deployment execution and enforcing rendered-node/depth/count bounds.
+- Run focused responsive/source-order/style-token/reduced-motion assertions and wide/medium/narrow component fixtures.
+- Run focused desktop IPC/preload/client, thin-client API/client, Manage handoff, save/reopen, preview, and Build and Test workflow regressions.
+- After every Increment 1 work package is implemented and focused checks pass, run dependency security review, npm run docs:check, npm run architecture:check, npm run agent-support:check, desktop and thin-client typechecks/builds, server build where affected, Windows desktop package, and npm test once as completion gates.
+
+### Rollback
+
+Remove the visual editor entry and dnd-kit adapter/dependencies, then restore the current shared semantic structure editor and explicit native controls over the same canonical slot-aware revisions. Preserve every saved immutable revision, layout definition, placement, and binding; rollback must not flatten or rewrite records or re-enable unsafe implementation execution.
+
+### Excluded
+
+- Freeform x/y positioning, arbitrary pixel dimensions, user-created slots, user-authored breakpoints, raw CSS editing, or a general graphic-design canvas
+- Editing reusable asset definitions, implementation source, or backing resources from System Builder; those remain Asset Studio/customization responsibilities
+- Executing imported/authored frontend code, backend code, scripts, packages, or arbitrary HTML in the editor canvas
+- A new System Builder persistence graph, renderer-owned hierarchy, transport family, build system, publication policy, or deployment authority
+- Multi-user simultaneous editing, live cursors, comments, approvals, organization sharing, or cross-workspace composition
+- Public layout or asset marketplace behavior
+
+## Increment 2: Visual composer production qualification and hardening
+
+- Id: `visual-composer-production-qualification`
+- Status: `implementing`
+- Dependencies: `mockup-aligned-visual-composer`
+
+Qualify and harden the complete visual editor across packaged Windows desktop and the supported thin-client browser, input methods, accessibility/reflow, representative composition scale, security boundaries, interruption/recovery, and dependency/runtime packaging before production handoff.
+
+### Work packages
+
+- **Packaged desktop and browser workflows** (`cross-client-e2e`): Packaged Windows desktop and supported thin-client browser complete the same real create, layout, drag, configure, connect, preview, save, reopen, Manage, and Build and Test entry workflows through IPC and API paths.
+- **Input, accessibility, responsive, and visual qualification** (`input-accessibility-visual`): Mouse, touch-equivalent pointer, keyboard, screen-reader semantics, zoom/reflow, reduced motion, high contrast, focus order, and responsive light/dark baselines are reviewed for the four-region editor and every predefined layout family.
+- **Security, performance, and recovery hardening** (`security-performance-recovery`): Representative bounded systems remain responsive; malformed drag data, excessive nodes/depth, incompatible or revoked assets, stale saves, interrupted drags, failed layout changes, dependency findings, and renderer errors fail closed and recover without revision loss or authority expansion.
+- **Documentation and support closeout** (`support-closeout`): Architecture, context packs, shared UI guidance, support limits, keyboard instructions, rollback, known exclusions, and qualification evidence describe the shipped editor truthfully and the repository gates pass from the final state.
+
+### Deliverables
+
+- Packaged Windows desktop end-to-end visual-composer evidence
+- Supported thin-client browser end-to-end visual-composer evidence
+- Mouse, touch-equivalent pointer, and complete keyboard workflow matrix
+- Keyboard and screen-reader semantic review for toolbar, palette, canvas, properties, drawers, dialogs, and Layers tree
+- WCAG 2.2 reflow, zoom, reduced-motion, high-contrast, source-order, and focus-restoration evidence
+- Reviewed wide/medium/narrow light and dark visual baselines for representative layouts
+- Representative-scale interaction, drag, render, save/reopen, and list measurements with documented bounds
+- Malformed input, cancellation, stale conflict, renderer failure, interruption, rollback, and recovery drills
+- Dependency security/license review and packaged dependency verification
+- Final architecture, context, shared UI, contributor, support, and roadmap evidence
+
+### Acceptance criteria
+
+| Criterion | Qualification | Latest evidence |
+| --- | --- | --- |
+| `packaged-cross-client-workflows`: A packaged Windows desktop application and supported thin-client browser each complete create, choose or change layout, drag assets into and across slots, reorder, configure Design/Data/Events, connect declared ports, undo/redo, preview, save, reopen, enter from Manage, and reach Build and Test using their real IPC/API paths without console, transport, or renderer errors. | controlled-environment | not recorded |
+| `input-accessibility-equivalence`: Mouse, touch-equivalent pointer, and keyboard users can perform equivalent structural operations; screen-reader semantics and announcements identify source, valid destination, result, and cancellation; toolbar/tree/dialog/panel behavior follows documented keyboard conventions; and visible focus is never lost after panel changes, drops, errors, or dialogs. | controlled-environment | not recorded |
+| `responsive-visual-quality`: At supported wide, medium, narrow, 320-CSS-pixel-equivalent zoom, reduced-motion, high-contrast, light, and dark configurations, every function remains available, non-canvas content avoids unintended two-dimensional scrolling, semantic source order remains correct, and reviewed baselines show no overlapping, clipped, hidden, or unreachable controls. | controlled-environment | not recorded |
+| `bounded-secure-editor`: Malformed drag identifiers, invented slots, incompatible/revoked assets, oversized hierarchies/configuration, unsafe renderer inputs, and unqualified implementation resources fail closed with bounded redacted messages and never cause code execution, filesystem/network access, cross-workspace reads, build/release/deployment actions, or persisted partial mutations. | local | not recorded |
+| `scale-recovery-readiness`: Representative compositions at documented node/depth/slot bounds meet recorded interaction and rendering targets; interrupted or canceled drags, failed layout changes, renderer exceptions, stale/conflicting saves, reloads, and rollback recover to a coherent canonical draft without immutable revision loss or duplicated placement state. | controlled-environment | not recorded |
+| `production-guidance-and-gates`: Dependency review, architecture and context documentation, keyboard/help guidance, support limits, rollback, exclusions, and qualification evidence match implemented behavior, and all applicable repository checks, builds, Windows packaging, and the final full suite pass with zero failures. | local | not recorded |
+
+### Verification
+
+- Run packaged Windows desktop end-to-end workflows against the real preload/IPC client and capture sanitized results.
+- Run supported thin-client browser end-to-end workflows against the real API client and capture sanitized results.
+- Exercise mouse, touch-equivalent pointer, and keyboard drag matrices including insert, reorder, reparent, invalid target, cancel, auto-scroll, drawer transition, and focus restoration.
+- Perform controlled screen-reader semantic and keyboard review for editor toolbar, searchable palette, drag instructions/live announcements, safe canvas, properties tabs, Layers tree, drawers, modal preview, and conflict dialogs.
+- Review wide/medium/narrow and 320-CSS-pixel-equivalent reflow at light/dark, reduced-motion, and high-contrast settings for representative application and page layouts.
+- Run representative-scale render/interaction/save measurements plus malformed input, renderer exception, stale conflict, interruption, reload, rollback, and recovery drills.
+- Run dependency license/security checks and verify the packaged desktop and thin-client bundles include only intended drag packages.
+- After every Increment 2 work package and controlled review passes, run npm run docs:check, npm run architecture:check, npm run agent-support:check, npm run security:dependencies, affected server/thin builds, Windows desktop package, and npm test once as final completion gates.
+
+### Rollback
+
+Disable the visual editor route and restore the verified semantic editor entry while retaining all canonical slot-aware revisions as readable and editable through explicit controls. Remove the drag dependencies only after no visual-editor imports remain. Preserve diagnostic and qualification evidence; never flatten layouts, delete revisions, or weaken safe-rendering and workspace boundaries during rollback.
+
+### Excluded
+
+- Claiming support for untested browsers, operating systems, assistive technologies, input hardware, or viewport/theme combinations
+- Relaxing composition bounds to meet performance targets or suppressing truthful unsupported/error states
+- Executing arbitrary imported/authored implementation code as part of qualification
+- Production deployment, external credential use, organization collaboration, or public marketplace qualification
+- Pixel-for-pixel reproduction of unrelated application chrome outside the Systems composer

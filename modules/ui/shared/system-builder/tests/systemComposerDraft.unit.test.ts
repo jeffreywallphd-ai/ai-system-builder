@@ -11,6 +11,7 @@ import {
 import type { SystemBuilderComposerAsset } from "../../../../contracts/system-builder";
 import {
   addSystemComposerAsset,
+  attachUnassignedSystemComposerAsset,
   buildSystemComposerTree,
   commitSystemComposerDraft,
   createSystemComposerDraftHistory,
@@ -87,6 +88,45 @@ describe("System composer draft operations", () => {
     expect(cyclic.ok).toBe(false);
   });
 
+  it("inserts and reparents at an absolute bounded slot order", () => {
+    let draft = add(
+      baseDraft(),
+      "instance.card.one",
+      "instance.shell",
+      "content",
+    );
+    draft = add(draft, "instance.card.two", "instance.shell", "content");
+    const inserted = addSystemComposerAsset(draft, {
+      asset: asset("builtin.container.card", [{ slotId: "body" }]),
+      compositionId: "composition.demo",
+      parentInstanceId: "instance.shell",
+      slotId: "content",
+      instanceId: "instance.card.middle",
+      order: 1,
+    });
+    expect(inserted.ok).toBe(true);
+    if (!inserted.ok) return;
+    expect(slotChildren(inserted.value, "instance.shell", "content")).toEqual([
+      "instance.card.one",
+      "instance.card.middle",
+      "instance.card.two",
+    ]);
+
+    const moved = reparentSystemComposerAsset(inserted.value, {
+      instanceId: "instance.card.one",
+      parentInstanceId: "instance.shell",
+      slotId: "content",
+      order: 2,
+    });
+    expect(moved.ok).toBe(true);
+    if (!moved.ok) return;
+    expect(slotChildren(moved.value, "instance.shell", "content")).toEqual([
+      "instance.card.middle",
+      "instance.card.one",
+      "instance.card.two",
+    ]);
+  });
+
   it("wraps assets, removes bounded subtrees, and protects required nodes", () => {
     const draft = add(
       baseDraft(),
@@ -129,18 +169,46 @@ describe("System composer draft operations", () => {
   });
 
   it("keeps local undo and redo bounded to the unsaved canonical draft", () => {
-    const initial = baseDraft();
+    const initial = {
+      ...baseDraft(),
+      structure: {
+        schemaVersion: "system-builder-structure.v1" as const,
+        profile: "interactive" as const,
+        layoutPresetRef: {
+          kind: "asset-definition-version" as const,
+          id: normalizeAssetId("builtin.layout.application.standard"),
+          version: "2.0.0",
+        },
+      },
+    };
     const next = add(initial, "instance.card", "instance.shell", "content");
+    const changedLayout = {
+      ...next,
+      structure: {
+        ...initial.structure,
+        layoutPresetRef: {
+          kind: "asset-definition-version" as const,
+          id: normalizeAssetId("builtin.layout.application.minimal"),
+          version: "2.0.0",
+        },
+      },
+    };
     const committed = commitSystemComposerDraft(
       createSystemComposerDraftHistory(initial),
-      next,
+      changedLayout,
     );
     expect(committed.present.instances.length).toBe(3);
     const undone = undoSystemComposerDraft(committed);
     expect(undone.present.instances.length).toBe(2);
+    expect(undone.present.structure?.layoutPresetRef?.id).toBe(
+      "builtin.layout.application.standard",
+    );
     expect(undone.future.length).toBe(1);
     const redone = redoSystemComposerDraft(undone);
     expect(redone.present.instances.length).toBe(3);
+    expect(redone.present.structure?.layoutPresetRef?.id).toBe(
+      "builtin.layout.application.minimal",
+    );
     expect(redone.past.length).toBe(1);
   });
 
@@ -155,6 +223,40 @@ describe("System composer draft operations", () => {
       [rootAsset, asset("builtin.layout.application.standard")],
     );
     expect([...protectedIds]).toEqual(["instance.root", "instance.shell"]);
+  });
+
+  it("reattaches preserved unassigned assets without changing identity", () => {
+    const card = instance("instance.card", "builtin.container.card");
+    const draft = {
+      ...baseDraft(),
+      instances: [...baseDraft().instances, card],
+    };
+    const attached = attachUnassignedSystemComposerAsset(draft, {
+      instanceId: "instance.card",
+      parentInstanceId: "instance.shell",
+      slotId: "content",
+      rootInstanceIds: new Set(["instance.root"]),
+    });
+    expect(attached.ok).toBe(true);
+    if (!attached.ok) return;
+    expect(attached.value.instances).toEqual(draft.instances);
+    expect(
+      attached.value.placements.find(
+        (placement) =>
+          String(placement.childInstanceRef.id) === "instance.card",
+      ),
+    ).toMatchObject({
+      parentInstanceRef: { id: "instance.shell" },
+      slotId: "content",
+      order: 0,
+    });
+    const protectedRoot = attachUnassignedSystemComposerAsset(draft, {
+      instanceId: "instance.root",
+      parentInstanceId: "instance.shell",
+      slotId: "content",
+      rootInstanceIds: new Set(["instance.root"]),
+    });
+    expect(protectedRoot.ok).toBe(false);
   });
 });
 
@@ -232,6 +334,21 @@ function placement(
     },
     order,
   };
+}
+
+function slotChildren(
+  draft: SystemComposerDraft,
+  parentInstanceId: string,
+  slotId: string,
+): readonly string[] {
+  return draft.placements
+    .filter(
+      (item) =>
+        String(item.parentInstanceRef.id) === parentInstanceId &&
+        item.slotId === slotId,
+    )
+    .sort((left, right) => left.order - right.order)
+    .map((item) => String(item.childInstanceRef.id));
 }
 
 function asset(

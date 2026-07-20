@@ -16,15 +16,30 @@
   Keep system records and immutable revision state behind its client interface;
   both desktop and thin-client surfaces must use the workspace-scoped exact
   composer catalog and the same draft, validation, history, and save semantics.
-  The layout gallery, compatible palette, semantic canvas, hierarchy tree,
-  breadcrumbs, protected-node actions, Configure mode, Connections mode, and
-  recursive preview are shared UI rather than host-specific reconstructions.
-  Native labeled controls and explicit buttons are the complete keyboard path;
-  drag-and-drop may only be a later enhancement.
-  Slot-aware saves must preserve exact root references, structure, placements,
+  The geometry-aware Layout chooser within the Asset Palette, compatible square
+  visual-asset tiles, full active-layout Canvas, tabbed Properties
+  and Layers and Structure details sidebar, breadcrumbs, protected-node actions,
+  Connections mode, immediate local layout selection, and recursive preview are shared UI
+  rather than host-specific reconstructions. The wide layout reserves its largest
+  region for the canvas and lets both sidebars collapse to compact rails; narrow
+  layouts use focus-restoring panel controls.
+  Each asset tile is the pointer, touch, and keyboard drag handle, and fixed
+  layout regions are the drop surfaces. Keep the legacy Add-here, move-order,
+  reparent, and wrapper forms out of the Design workspace; the drag adapter maps
+  interactions to the canonical add/place operations.
+  Never serialize drag, selection, focus, zoom, or panel state.
+  Structured saves must preserve exact root references, structure, placements,
   configuration, and typed bindings. Do not infer a replacement root from visual
-  order, synthesize hierarchy for legacy-flat revisions, accept arbitrary port
-  names, or mix containment with bindings.
+  order, accept arbitrary port names, or mix containment with bindings. A
+  legacy-flat hierarchy may be materialized only by the application preview
+  operation after an explicit layout selection; the renderer must not synthesize
+  it.
+  Foundation layout regions are fixed abstract container projections. Do not add
+  editable width, height, region, CSS, responsive-rule, or raw JSON controls.
+  Layout selections go through the application preview client, immediately
+  update the local undoable Canvas draft, retain unmatched instances in
+  Unassigned at the bottom of the Asset Palette rather than on the Canvas,
+  remain undoable, and persist only through the normal immutable-revision save.
   Compose previews use the shared modal and recursively render current in-memory
   placements and configuration through registered side-effect-free System
   Foundation renderers. Keep node counts and viewport frames bounded, expose

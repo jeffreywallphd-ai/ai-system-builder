@@ -280,6 +280,10 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   ["POST /api/systems/restore", { public: false, scopes: ["asset:write"] }],
   ["POST /api/systems/clone", { public: false, scopes: ["asset:write"] }],
   [
+    "POST /api/systems/layout-change/preview",
+    { public: false, scopes: ["asset:write"] },
+  ],
+  [
     "POST /api/systems/revisions/save",
     { public: false, scopes: ["asset:write"] },
   ],

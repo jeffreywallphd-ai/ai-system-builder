@@ -61,6 +61,9 @@ const services = () =>
         value: { items: [], query: value },
       })),
     },
+    previewLayoutChange: {
+      execute: testDouble.fn(async (value: any) => ({ ok: true, value })),
+    },
   }) as any;
 
 describe("System Builder transport parity", () => {
@@ -84,6 +87,7 @@ describe("System Builder transport parity", () => {
         "/api/systems/clone",
         "/api/systems/composer/assets",
         "/api/systems/manage",
+        "/api/systems/layout-change/preview",
         "/api/systems/create",
         "/api/systems/rename",
         "/api/systems/templates",
@@ -191,6 +195,28 @@ describe("System Builder transport parity", () => {
       placements: slotPayload.placements,
       actorId: "person-1",
     });
+    await routes.post.get("/api/systems/layout-change/preview")(
+      {
+        body: {
+          ...slotPayload,
+          targetLayoutPresetRef: {
+            kind: "asset-definition-version",
+            id: "builtin.layout.application.minimal",
+            version: "2.0.0",
+          },
+        },
+        securityContext: { principal: { id: "person-1" } },
+      },
+      response,
+    );
+    expect(api.previewLayoutChange.execute.mock.calls[0][0]).toMatchObject({
+      workspaceId: "workspace-a",
+      systemId: "system-1",
+      actorId: "person-1",
+      targetLayoutPresetRef: {
+        id: "builtin.layout.application.minimal",
+      },
+    });
 
     const handlers = new Map<string, any>();
     const ipc = services();
@@ -253,6 +279,26 @@ describe("System Builder transport parity", () => {
     expect(ipc.saveRevision.execute.mock.calls[0][0]).toMatchObject({
       structure: slotPayload.structure,
       placements: slotPayload.placements,
+      actorId: "local-user",
+    });
+    await handlers.get(
+      DESKTOP_SYSTEM_BUILDER_CHANNELS.previewLayoutChange.request.value,
+    )(
+      {},
+      {
+        payload: {
+          ...slotPayload,
+          targetLayoutPresetRef: {
+            kind: "asset-definition-version",
+            id: "builtin.layout.application.minimal",
+            version: "2.0.0",
+          },
+        },
+      },
+    );
+    expect(ipc.previewLayoutChange.execute.mock.calls[0][0]).toMatchObject({
+      workspaceId: "workspace-a",
+      systemId: "system-1",
       actorId: "local-user",
     });
   });

@@ -11,6 +11,7 @@ import {
   ListSystemBuilderComposerAssetsUseCase,
   ListSystemBuilderManagementUseCase,
   ReadSystemBuilderRevisionUseCase,
+  PreviewSystemBuilderLayoutChangeUseCase,
   ReadSystemBuilderSystemUseCase,
   RenameSystemBuilderSystemUseCase,
   RestoreSystemBuilderSystemUseCase,
@@ -74,6 +75,12 @@ export function composeSystemBuilder(options: ComposeSystemBuilderOptions) {
       listComposerAssets: new ListSystemBuilderComposerAssetsUseCase(
         options.assetRegistryRead,
       ),
+      previewLayoutChange: new PreviewSystemBuilderLayoutChangeUseCase({
+        repository,
+        definitions: options.definitions,
+        validator,
+        now: options.now,
+      }),
     },
   };
 }

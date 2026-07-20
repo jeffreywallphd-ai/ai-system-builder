@@ -21,4 +21,8 @@ export const API_SYSTEM_BUILDER_OPERATIONS = {
     "system-builder",
     "list-composer-assets",
   ),
+  previewLayoutChange: createTransportOperation(
+    "system-builder",
+    "preview-layout-change",
+  ),
 } as const;

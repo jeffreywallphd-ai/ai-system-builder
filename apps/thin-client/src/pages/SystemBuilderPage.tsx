@@ -80,6 +80,10 @@ export function SystemBuilderPage({
                 workspaceId={workspaceId}
                 client={client}
                 initialSystemId={composeSystemId}
+                onBuildAndTest={(systemId) => {
+                  setComposeSystemId(systemId);
+                  setActiveTabId("build-release");
+                }}
               />
             ),
           },

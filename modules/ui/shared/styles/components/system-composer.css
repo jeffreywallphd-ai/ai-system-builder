@@ -6,10 +6,272 @@
   border-block-end: 1px solid var(--color-border-soft);
 }
 
+.system-composer__modes {
+  margin-block-end: var(--space-sm);
+  padding: var(--space-xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-panel);
+}
+
 .system-composer__modes [role="tab"][aria-selected="true"] {
-  color: var(--color-text-inverse);
-  background: var(--color-accent-strong);
-  border-color: var(--color-accent-strong);
+  color: var(--color-text-primary);
+  background: var(--color-bg-hover);
+  border-color: var(--color-accent);
+}
+
+.system-composer__workspace {
+  grid-template-columns:
+    minmax(12rem, 0.52fr) minmax(32rem, 2.25fr)
+    minmax(19rem, 0.76fr);
+  grid-template-areas: "library canvas details";
+  align-items: start;
+}
+
+.system-composer__workspace[data-library-collapsed="true"] {
+  grid-template-columns:
+    3.25rem minmax(32rem, 2.25fr)
+    minmax(19rem, 0.76fr);
+}
+
+.system-composer__workspace[data-details-collapsed="true"] {
+  grid-template-columns:
+    minmax(12rem, 0.52fr) minmax(32rem, 2.25fr)
+    3.25rem;
+}
+
+.system-composer__workspace[data-library-collapsed="true"][data-details-collapsed="true"] {
+  grid-template-columns: 3.25rem minmax(32rem, 2.25fr) 3.25rem;
+}
+
+.system-composer__workspace > .system-composer__panel--library {
+  grid-area: library;
+}
+
+.system-composer__workspace > .system-composer__panel--canvas {
+  grid-area: canvas;
+}
+
+.system-composer__workspace > .system-composer__panel--details {
+  grid-area: details;
+}
+
+.system-composer__panel-heading {
+  justify-content: space-between;
+}
+
+.system-composer__panel--library,
+.system-composer__panel--details {
+  max-block-size: 56rem;
+  overflow: auto;
+}
+
+.system-composer__panel--library .system-layout-gallery {
+  margin-block: var(--space-sm);
+  padding: 0 0 var(--space-sm);
+  border: 0;
+  border-block-end: 1px solid var(--color-border-soft);
+  border-radius: 0;
+  background: transparent;
+}
+
+.system-layout-gallery__card {
+  background: transparent;
+  box-shadow: none;
+}
+
+.system-layout-gallery__card:has(input:checked) {
+  background: var(--color-bg-hover);
+  box-shadow: none;
+}
+
+.system-layout-gallery[data-compact="true"] > p {
+  margin-block: var(--space-2xs) var(--space-xs);
+  font-size: var(--font-size-sm);
+}
+
+.system-layout-gallery[data-compact="true"] .system-layout-gallery__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-xs);
+  margin-block-start: var(--space-xs);
+}
+
+.system-layout-gallery[data-compact="true"] .system-layout-gallery__card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2xs);
+  padding: var(--space-xs);
+  text-align: center;
+}
+
+.system-layout-gallery[data-compact="true"] input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.system-layout-gallery[data-compact="true"]
+  input:focus-visible
+  + .system-layout-gallery__thumbnail {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.system-layout-gallery[data-compact="true"] .system-layout-gallery__thumbnail {
+  min-block-size: 3.25rem;
+  gap: 2px;
+}
+
+.system-layout-gallery__thumbnail span {
+  min-block-size: 0.7rem;
+  padding: 0;
+  border: 1px solid var(--color-border-soft);
+  background: color-mix(
+    in srgb,
+    var(--color-accent) 12%,
+    var(--color-bg-panel)
+  );
+  font-size: 0;
+}
+
+.system-layout-gallery[data-compact="true"] .system-layout-gallery__card small {
+  display: none;
+}
+
+.system-composer__panel-controls {
+  display: none;
+}
+
+.system-composer__panel-controls {
+  margin-inline-start: auto;
+}
+
+.system-composer__sidebar-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  border-block-end: 1px solid var(--color-border-soft);
+}
+
+.system-composer__sidebar-collapse {
+  flex: 0 0 auto;
+}
+
+.system-composer__panel[data-collapsed="true"] {
+  padding-inline: var(--space-xs);
+  overflow: hidden;
+}
+
+.system-composer__panel[data-collapsed="true"] > :not(header) {
+  display: none;
+}
+
+.system-composer__panel--library[data-collapsed="true"]
+  .system-composer__panel-heading
+  > h3,
+.system-composer__panel--details[data-collapsed="true"]
+  .system-composer__sidebar-tabs {
+  display: none;
+}
+
+.system-composer__panel[data-collapsed="true"] .system-composer__panel-heading,
+.system-composer__panel[data-collapsed="true"]
+  .system-composer__sidebar-header {
+  justify-content: center;
+  border-block-end: 0;
+}
+
+.system-composer__panel[data-collapsed="true"]
+  .system-composer__sidebar-collapse {
+  inline-size: 100%;
+  min-block-size: 2.75rem;
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.system-composer__panel[data-collapsed="true"]
+  .system-composer__sidebar-collapse
+  > span {
+  display: none;
+}
+
+.system-composer__sidebar-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2xs);
+  inline-size: 100%;
+}
+
+.system-composer__sidebar-tabs [role="tab"] {
+  min-inline-size: 0;
+  padding-inline: var(--space-xs);
+}
+
+.system-composer__sidebar-tabs [role="tab"][aria-selected="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-bg-hover);
+}
+
+.system-composer__sidebar-panel {
+  min-inline-size: 0;
+  padding-block-start: var(--space-sm);
+}
+
+.system-composer__sidebar-panel--properties .system-composer-inspector {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.system-composer__sidebar-panel--properties .system-composer-inspector__header {
+  align-items: stretch;
+  flex-direction: column;
+  margin-block: var(--space-sm);
+}
+
+.system-composer-inspector__tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2xs);
+  margin-block: var(--space-sm);
+}
+
+.system-composer-inspector__tabs [role="tab"] {
+  min-inline-size: 0;
+  padding-inline: var(--space-xs);
+}
+
+.system-composer-inspector__tabs [role="tab"][aria-selected="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-bg-hover);
+}
+
+.system-composer-inspector__panel {
+  min-inline-size: 0;
+}
+
+.system-composer__sidebar-panel--properties
+  .system-composer-inspector__section {
+  margin-block: var(--space-sm);
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+}
+
+.system-composer__sidebar-panel--properties .system-composer-inspector__fields {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-sm);
+}
+
+.system-composer-inspector__layout-lock {
+  margin-block: var(--space-sm);
 }
 
 .system-composer-inspector,
@@ -113,5 +375,424 @@
   .system-composer-connections__list li {
     align-items: stretch;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 96rem) {
+  .system-composer__workspace {
+    grid-template-columns:
+      minmax(12rem, 0.55fr) minmax(26rem, 1.95fr)
+      minmax(17rem, 0.75fr);
+    grid-template-areas: "library canvas details";
+  }
+
+  .system-composer__workspace[data-library-collapsed="true"] {
+    grid-template-columns:
+      3.25rem minmax(26rem, 1.95fr)
+      minmax(17rem, 0.75fr);
+  }
+
+  .system-composer__workspace[data-details-collapsed="true"] {
+    grid-template-columns:
+      minmax(12rem, 0.55fr) minmax(26rem, 1.95fr)
+      3.25rem;
+  }
+
+  .system-composer__workspace[data-library-collapsed="true"][data-details-collapsed="true"] {
+    grid-template-columns: 3.25rem minmax(26rem, 1.95fr) 3.25rem;
+  }
+}
+
+@media (max-width: 70rem) {
+  .system-composer__panel-controls {
+    display: flex;
+  }
+
+  .system-composer__panel-controls {
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+  }
+
+  .system-composer__workspace,
+  .system-composer__workspace[data-library-collapsed="true"],
+  .system-composer__workspace[data-details-collapsed="true"],
+  .system-composer__workspace[data-library-collapsed="true"][data-details-collapsed="true"] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "canvas"
+      "library"
+      "details";
+  }
+
+  .system-composer__panel[data-responsive-panel] {
+    display: none;
+    max-block-size: none;
+  }
+
+  .system-composer__panel[data-responsive-panel][data-panel-open="true"] {
+    display: block;
+  }
+}
+
+.system-composer__unassigned,
+.system-composer__unassigned-layers {
+  margin-block-start: var(--space-md);
+  padding: var(--space-sm);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-subtle);
+}
+
+.system-composer__unassigned h4,
+.system-composer__unassigned-layers h4 {
+  margin: 0 0 var(--space-xs);
+}
+
+.system-composer__unassigned > ul,
+.system-composer__unassigned-layers > ul {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.system-composer__unassigned > ul > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-inline-size: 0;
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-panel);
+}
+
+.system-composer__unassigned > ul > li[data-selected="true"] {
+  border-color: var(--color-accent);
+}
+
+/* Visual composer controls intentionally use the same flat panel language as
+   Data, Model Training, and Image Generation workflows. */
+.system-composer__flat-control,
+.system-composer__drag-handle {
+  min-block-size: var(--control-height-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-primary);
+  box-shadow: none;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.system-composer__flat-control:hover:enabled,
+.system-composer__drag-handle:hover:enabled,
+.system-composer__flat-control[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-bg-hover);
+  transform: none;
+}
+
+.system-composer__flat-control:focus-visible,
+.system-composer__drag-handle:focus-visible,
+.system-composer__link-control:focus-visible,
+.system-composer__canvas-node-select:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.system-composer__flat-control:disabled,
+.system-composer__drag-handle:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.system-composer__flat-control--danger {
+  border-color: color-mix(
+    in srgb,
+    var(--color-danger) 55%,
+    var(--color-border)
+  );
+  color: var(--color-danger);
+}
+
+.system-composer__link-control {
+  min-block-size: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent);
+  box-shadow: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.system-composer__drag-handle {
+  flex: 0 0 auto;
+  touch-action: none;
+}
+
+.system-composer__drag-handle .ui-app-icon {
+  inline-size: 0.9rem;
+  block-size: 0.9rem;
+}
+
+.system-composer__palette li[data-dragging="true"],
+.system-composer__canvas-node[data-dragging="true"] {
+  opacity: 0.42;
+}
+
+.system-composer__palette {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.system-composer__palette li {
+  position: relative;
+  display: grid;
+  align-content: stretch;
+  aspect-ratio: 1;
+  padding: var(--space-xs);
+  background: transparent;
+}
+
+.system-composer__palette-tile {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: var(--space-2xs);
+  inline-size: 100%;
+  min-inline-size: 0;
+  padding: var(--space-sm) var(--space-xs);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  box-shadow: none;
+  font: inherit;
+  text-align: center;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.system-composer__palette-tile:hover:enabled {
+  background: var(--color-bg-hover);
+  transform: none;
+}
+
+.system-composer__palette-tile:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.system-composer__palette-tile:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.system-composer__palette-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-subtle);
+  color: var(--color-accent);
+}
+
+.system-composer__palette-icon .ui-app-icon {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+}
+
+.system-composer__palette-tile strong,
+.system-composer__palette-tile > span:last-child {
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.system-composer__palette-tile strong {
+  font-size: var(--font-size-sm);
+}
+
+.system-composer__palette-tile > span:last-child {
+  white-space: nowrap;
+}
+
+.system-composer__unassigned--palette {
+  margin-block-start: var(--space-sm);
+}
+
+.system-composer__canvas-node,
+.system-composer-inspector,
+.system-composer-connections {
+  background: var(--color-bg-panel);
+  box-shadow: none;
+}
+
+.system-composer__canvas-node-heading {
+  display: flex;
+  align-items: center;
+}
+
+.system-composer__canvas-node-select {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  text-align: start;
+  cursor: pointer;
+}
+
+.system-composer__canvas-node-select > span:first-child {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.system-composer__editable-preview {
+  min-inline-size: 0;
+  padding: var(--space-xs);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-subtle);
+  pointer-events: none;
+}
+
+.system-composer__region-selector {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  text-align: start;
+}
+
+.system-composer__region-selector:hover,
+.system-composer__region-selector:focus-visible,
+.system-composer__region-selector[aria-pressed="true"] {
+  color: var(--color-accent);
+  background: transparent;
+  box-shadow: none;
+}
+
+.system-composer__slot[data-drag-over="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-bg-hover);
+}
+
+.system-composer__canvas-node[data-layout-container="true"]
+  > .system-composer__slots {
+  align-items: stretch;
+  min-block-size: 26rem;
+  overflow: auto;
+}
+
+.system-composer__canvas-node[data-layout-container="true"]
+  > .system-composer__slots
+  > .system-composer__slot {
+  min-inline-size: 0;
+  min-block-size: 0;
+  overflow: auto;
+}
+
+.system-composer__drag-overlay {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  max-inline-size: 20rem;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-panel);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.system-composer__drag-notice {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.system-composer__tree [role="treeitem"] {
+  box-shadow: none;
+  transform: none;
+}
+
+.system-composer__tree-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+.system-composer__tree-toggle,
+.system-composer__tree-toggle-placeholder {
+  flex: 0 0 1.5rem;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+}
+
+.system-composer__tree-toggle {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.system-composer__tree-toggle .ui-app-icon {
+  inline-size: 0.85rem;
+  block-size: 0.85rem;
+  transform: rotate(-90deg);
+}
+
+.system-composer__tree-toggle[data-expanded="true"] .ui-app-icon {
+  transform: rotate(0);
+}
+
+@media (max-width: 48rem) {
+  .system-composer__canvas-node[data-layout-container="true"]
+    > .system-composer__slots {
+    display: grid;
+    grid-template-areas: none !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: none !important;
+    min-block-size: 0;
+  }
+
+  .system-composer__canvas-node[data-layout-container="true"]
+    > .system-composer__slots
+    > .system-composer__slot {
+    grid-area: auto !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .system-composer__flat-control,
+  .system-composer__drag-handle,
+  .system-composer__canvas-node {
+    transition: none;
   }
 }

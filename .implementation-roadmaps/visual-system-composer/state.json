@@ -1,13 +1,146 @@
 {
   "blockers": [],
-  "chunks": [],
+  "chunks": [
+    {
+      "areas": [
+        "Composer catalog layout geometry",
+        "Canonical draft and drag models",
+        "Shared visual canvas and asset palette",
+        "Flat responsive composer styles"
+      ],
+      "chunkId": "visual-canvas-direct-manipulation",
+      "completedAt": "2026-07-19T18:06:17Z",
+      "criteriaIds": [
+        "persistent-editor-shell",
+        "canonical-direct-manipulation",
+        "safe-editable-canvas"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [
+        "feedback-flat-integrated-composer-style",
+        "feedback-fixed-foundation-layout-containers"
+      ],
+      "id": "mockup-aligned-visual-composer-visual-canvas-direct-manipulation",
+      "incrementId": "mockup-aligned-visual-composer",
+      "summary": "Added the pinned dnd-kit adapter, pure canonical drop resolution, ordered reducer operations, draggable palette and sortable canvas nodes, fixed abstract geometry for system-foundation layout containers, side-effect-free Foundation previews, keyboard announcements and cancellation, and flat integrated controls.",
+      "tests": [
+        "16 focused reducer, drag-resolution, catalog-geometry, and style-contract assertions passed",
+        "2 shared composer JSDOM interaction tests passed, including keyboard pickup/cancel semantics",
+        "Scoped visual-composer TypeScript source graph passed"
+      ],
+      "title": "Visual palette and canonical drag canvas"
+    },
+    {
+      "areas": [
+        "Persistent Design workspace regions",
+        "Schema-driven Design, Data, and Events properties",
+        "Collapsible keyboard layers tree",
+        "Responsive panel and focus behavior"
+      ],
+      "chunkId": "properties-layers-responsive-workspace",
+      "completedAt": "2026-07-19T18:28:21Z",
+      "criteriaIds": [
+        "persistent-editor-shell",
+        "properties-layers-synchronization",
+        "responsive-accessible-composer",
+        "safe-editable-canvas"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [
+        "feedback-flat-integrated-composer-style",
+        "feedback-fixed-foundation-layout-containers"
+      ],
+      "id": "mockup-aligned-visual-composer-properties-layers-responsive-workspace",
+      "incrementId": "mockup-aligned-visual-composer",
+      "summary": "Reorganized the shared composer into a flat four-region Design workspace with persistent palette, canvas, schema-driven Properties, and collapsible Layers and Structure; added responsive panel controls with focus restoration, synchronized selection, and restricted foundation-layout inspection that exposes semantic fields but not geometry or raw JSON.",
+      "tests": [
+        "7 focused inspector-model and style-contract assertions passed",
+        "7 focused shared composer interaction tests passed",
+        "Scoped visual-composer TypeScript source graph passed"
+      ],
+      "title": "Persistent properties, layers, and responsive workspace"
+    },
+    {
+      "areas": [
+        "Layout-change contracts and application remapping",
+        "HTTP, IPC, preload, and host client parity",
+        "Reviewed Apply, Cancel, Unassigned, undo, and save workflow",
+        "Desktop and thin-client Build and test handoff",
+        "System Builder architecture and shared UI guidance"
+      ],
+      "chunkId": "layout-workflow-host-parity",
+      "completedAt": "2026-07-19T18:53:29Z",
+      "criteriaIds": [
+        "layout-change-integrity",
+        "canonical-direct-manipulation",
+        "complete-shared-workflows",
+        "responsive-accessible-composer"
+      ],
+      "documentation": [
+        "docs/adr/ADR-0036-canonical-slot-composition-and-foundation-layouts.md",
+        "docs/architecture/system-builder.md",
+        "docs/context/packs/system-builder.pack.md",
+        "modules/ui/shared/README.md"
+      ],
+      "feedbackAddressed": [
+        "feedback-flat-integrated-composer-style",
+        "feedback-fixed-foundation-layout-containers"
+      ],
+      "id": "mockup-aligned-visual-composer-layout-workflow-host-parity",
+      "incrementId": "mockup-aligned-visual-composer",
+      "summary": "Added a workspace- and revision-scoped application layout-change preview through HTTP and IPC parity, deterministic source-order mapping with explicit Unassigned preservation, reviewed cancel/apply semantics, structure-aware undo/redo, reattachment controls, shared desktop/thin Build and test handoff, and reconciled architecture guidance.",
+      "tests": [
+        "28 focused contract, application, transport, reducer, preview, inspector, drag, catalog, and style assertions passed",
+        "11 focused shared composer and Manage interaction tests passed",
+        "Focused visual-composer and desktop/thin host TypeScript source graphs passed"
+      ],
+      "title": "Canonical layout changes and complete host workflows"
+    },
+    {
+      "areas": [
+        "Visual composer qualification tooling and ignored evidence roots",
+        "System Builder layout/catalog compatibility",
+        "Shared Asset Palette and Canvas behavior",
+        "Safe preview, drag, draft, and conflict recovery"
+      ],
+      "chunkId": "isolated-qualification-harness",
+      "completedAt": "2026-07-19T20:54:36Z",
+      "criteriaIds": [
+        "bounded-secure-editor",
+        "scale-recovery-readiness"
+      ],
+      "documentation": [
+        "System Builder architecture",
+        "System Builder context pack",
+        "Shared UI guidance"
+      ],
+      "feedbackAddressed": [
+        "feedback-layout-chooser-in-asset-palette",
+        "feedback-canvas-design-priority-and-asset-tiles",
+        "feedback-remove-legacy-slot-controls",
+        "feedback-legacy-foundation-layout-and-palette-compatibility"
+      ],
+      "id": "visual-composer-production-qualification-isolated-qualification-harness",
+      "incrementId": "visual-composer-production-qualification",
+      "summary": "Added pinned one-worker Playwright and axe tooling, sanitized immutable evidence helpers, direct isolated server/thin-client lifecycle control with bounded readiness and owned-process teardown, and focused deterministic bounds, malformed-input, non-execution, renderer-recovery, history, and conflict coverage. Also completed the requested Asset Palette, Canvas, legacy-control removal, and older Foundation layout/catalog compatibility refinements.",
+      "tests": [
+        "9 qualification core/lifecycle unit tests passed",
+        "Real isolated server and thin-client readiness/teardown probe passed",
+        "24 focused bounds, malformed-input, non-execution, recovery, history, and conflict tests passed",
+        "15 focused catalog, layout, shared UI, and scoped TypeScript checks passed",
+        "Documentation, architecture, and agent-support gates passed"
+      ],
+      "title": "Isolated qualification harness and deterministic hardening"
+    }
+  ],
   "completion": null,
   "createdAt": "2026-07-19T17:05:31Z",
-  "currentIncrementId": null,
+  "currentIncrementId": "visual-composer-production-qualification",
   "decisions": [
     {
-      "approvedAt": null,
-      "approvedFingerprint": null,
+      "approvalNote": "The user accepted the recommended direction and explicitly requested creation and implementation of the new visual System Composer roadmap based on the supplied mockup.",
+      "approvedAt": "2026-07-19T17:23:24Z",
+      "approvedFingerprint": "27c0e5aaa2337c7d7d7564e7d23a8fd0b08df810a1e4e79dfe0ba584a4696a9a",
       "context": "The mockup requires a persistent asset/layout palette, safe editable canvas, properties sidebar, and layers tree with pointer/touch dragging, while the repository requires an equivalent keyboard path, canonical slot operations, React 19 desktop/thin parity, bounded behavior, and production packaging.",
       "id": "visual-composer-drag-interaction",
       "options": [
@@ -66,8 +199,8 @@
       ],
       "proposalFingerprint": "27c0e5aaa2337c7d7d7564e7d23a8fd0b08df810a1e4e79dfe0ba584a4696a9a",
       "question": "Which interaction engine should power direct manipulation in the shared visual System Composer?",
-      "selectedOptionId": null,
-      "status": "awaiting-approval",
+      "selectedOptionId": "dnd-kit-canonical-adapter",
+      "status": "approved",
       "title": "Visual composer drag interaction"
     }
   ],
@@ -140,8 +273,177 @@
     ],
     "summary": "The completed slot-composer foundations already provide exact workspace asset discovery, required system roots, predefined application/page layouts, canonical named slots and placements, pure add/reorder/reparent/wrap/remove draft operations, protected nodes, bounded undo/redo, schema-generated configuration, typed connections, a keyboard tree, safe recursive preview, and desktop/thin-client parity. The current UI does not yet match the supplied visual-composer mockup: creation controls and layout choices sit above the editor, the asset/canvas/tree workspace exists only in Structure mode, configuration and connections replace the whole workspace, the center is a semantic hierarchy rather than a safe editable visual rendering, and no pointer/touch drag interaction exists. The mockup can therefore be implemented as a shared interaction and presentation layer over the existing canonical draft, with one application-owned layout-remapping seam where changing an existing layout requires deterministic placement mapping. No new persistence graph or renderer-owned system truth is needed."
   },
-  "evidence": [],
-  "feedback": [],
+  "evidence": [
+    {
+      "artifact": null,
+      "command": "npx vitest run modules/ui/shared/system-builder/tests/SystemComposerStructureEditor.interaction.ui.test.tsx",
+      "criterionId": "persistent-editor-shell",
+      "id": "evidence-1",
+      "incrementId": "mockup-aligned-visual-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T19:33:02Z",
+      "summary": "The shared editor interaction coverage passed with Asset Library, wide canvas, one tabbed Properties/Layers details sidebar, independent compact rails, selection, history, and workflow state in one workspace; the scoped TypeScript graph and both host builds passed."
+    },
+    {
+      "artifact": null,
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test modules/ui/shared/system-builder/tests/systemComposerDrag.unit.test.ts modules/ui/shared/system-builder/tests/systemComposerDraft.unit.test.ts",
+      "criterionId": "canonical-direct-manipulation",
+      "id": "evidence-2",
+      "incrementId": "mockup-aligned-visual-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T19:33:11Z",
+      "summary": "Focused drag and draft tests passed for typed palette insertion, reorder, cross-slot placement, cancellation, announcements, protected nodes, and undo/redo without serialized drag-library state."
+    },
+    {
+      "artifact": null,
+      "command": "npx vitest run modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx modules/ui/shared/system-builder/tests/SystemCompositionPreview.interaction.ui.test.tsx modules/ui/shared/system-builder/tests/SystemComposerStructureEditor.interaction.ui.test.tsx",
+      "criterionId": "safe-editable-canvas",
+      "id": "evidence-3",
+      "incrementId": "mockup-aligned-visual-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T19:33:18Z",
+      "summary": "Focused shared workspace, recursive preview, structure-editor, and Foundation preview coverage passed for named-slot rendering, selection, safe unsupported states, fixed layout geometry, and unassigned content."
+    },
+    {
+      "artifact": null,
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test modules/application/use-cases/system-builder/tests/system-builder-layout-change.unit.test.ts",
+      "criterionId": "layout-change-integrity",
+      "id": "evidence-4",
+      "incrementId": "mockup-aligned-visual-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T19:33:26Z",
+      "summary": "Application and UI regressions passed for deterministic preview-only layout remapping, expected-revision conflicts, preserved/moved/unassigned dispositions, cancel, apply, undo, and separate immutable save."
+    },
+    {
+      "artifact": null,
+      "command": "npx vitest run modules/ui/shared/system-builder/tests/SystemComposerInspector.interaction.ui.test.tsx modules/ui/shared/system-builder/tests/SystemComposerStructureEditor.interaction.ui.test.tsx",
+      "criterionId": "properties-layers-synchronization",
+      "id": "evidence-5",
+      "incrementId": "mockup-aligned-visual-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T19:33:33Z",
+      "summary": "Focused inspector and structure interactions passed for synchronized selection, tabbed Properties and Layers/Structure, schema-driven Design/Data/Events groups, locked Foundation geometry, keyboard tree behavior, and canonical structural actions."
+    },
+    {
+      "artifact": null,
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test modules/ui/shared/styles/tests/system-builder-style-tokens.unit.test.ts",
+      "criterionId": "responsive-accessible-composer",
+      "id": "evidence-6",
+      "incrementId": "mockup-aligned-visual-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T19:33:42Z",
+      "summary": "Focused interaction and style-contract checks passed for responsive panel access, focus restoration, ARIA tabs/tree, Collapse/Expand rail labels, flat token styling, fixed-layout awareness, and reduced-motion rules."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "npm test",
+      "criterionId": "complete-shared-workflows",
+      "id": "evidence-7",
+      "incrementId": "mockup-aligned-visual-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T19:33:51Z",
+      "summary": "HTTP/IPC/preload/client parity tests, architecture and security gates, server and thin-client production builds, Windows Electron packaging, and the full non-browser suite passed; the full report records 2,463 passed, one skipped, and zero failed tests."
+    }
+  ],
+  "feedback": [
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "feedback-flat-integrated-composer-style",
+      "impact": "within-increment",
+      "nextAction": "Reuse established UI surface, border, tab, and control tokens throughout all three Increment 1 chunks and add focused style-contract coverage.",
+      "recordedAt": "2026-07-19T17:44:19Z",
+      "summary": "Use the mockup's flat integrated styling and match the Data, Model, and Image Generation areas instead of elevated or embossed buttons.",
+      "targetIncrementId": "mockup-aligned-visual-composer"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "feedback-fixed-foundation-layout-containers",
+      "impact": "within-increment",
+      "nextAction": "Render abstract fixed slot geometry from trusted layout definitions, keep assets embeddable within those named containers, and prevent width, height, slot, and arbitrary structural edits for foundation layout assets while retaining schema-driven controls for ordinary containers.",
+      "recordedAt": "2026-07-19T17:50:48Z",
+      "summary": "Predefined layout regions are specialized system-foundation container assets with fixed geometry and heavily restricted properties, not freely editable visual rectangles.",
+      "targetIncrementId": "mockup-aligned-visual-composer"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "feedback-combined-details-sidebar",
+      "impact": "within-increment",
+      "nextAction": "Replace the two right columns with one accessible tabbed details sidebar, preserve responsive focus restoration, and update focused interaction, style, and documentation coverage before Increment 1 completion gates.",
+      "recordedAt": "2026-07-19T19:18:23Z",
+      "summary": "Consolidate Properties and Layers and Structure into one tabbed right sidebar so the primary canvas retains enough usable width.",
+      "targetIncrementId": "mockup-aligned-visual-composer"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "feedback-collapsible-composer-sidebars",
+      "impact": "within-increment",
+      "nextAction": "Keep collapse state transient, render compact independently expandable rails at wide widths, preserve narrow panel access, and verify interaction, style-token, TypeScript, and documentation checks.",
+      "recordedAt": "2026-07-19T19:26:02Z",
+      "summary": "Replace Asset Library and details-sidebar Close controls with main-navigation-style Collapse and Expand controls so either rail can release width to the canvas.",
+      "targetIncrementId": "mockup-aligned-visual-composer"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "feedback-layout-chooser-in-asset-palette",
+      "impact": "within-increment",
+      "nextAction": "Move the canonical application-layout gallery into the Asset Palette, render geometry-aware icon buttons for every preset, retain the reviewed layout-remap path, and add focused workspace and canvas regressions.",
+      "recordedAt": "2026-07-19T19:51:52Z",
+      "summary": "The left composer panel must be an Asset Palette with visible predefined layout choices, and the canvas must render every fixed region of the active layout.",
+      "targetIncrementId": "visual-composer-production-qualification"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "feedback-canvas-design-priority-and-asset-tiles",
+      "impact": "within-increment",
+      "nextAction": "Update the shared palette and canvas presentation while preserving canonical selection, add, drag, and reattachment behavior, then add focused interaction and style regressions.",
+      "recordedAt": "2026-07-19T19:58:19Z",
+      "summary": "Label the design surface Canvas, reserve it for visual layout, move Unassigned assets to the Asset Palette, and present UI assets as draggable representative icon tiles.",
+      "targetIncrementId": "visual-composer-production-qualification"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "feedback-remove-legacy-slot-controls",
+      "impact": "within-increment",
+      "nextAction": "Retain canonical named-region identifiers internally, but expose only layout selection, draggable asset tiles, canvas drop regions, selection, properties, layers, removal, history, preview, and save workflows.",
+      "recordedAt": "2026-07-19T20:06:45Z",
+      "summary": "Remove the legacy visible choose-slot, add-here, move-slot, ordering, and wrapper forms in favor of predefined layouts and pointer/keyboard draggable surfaces.",
+      "targetIncrementId": "visual-composer-production-qualification"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "feedback-legacy-foundation-layout-and-palette-compatibility",
+      "impact": "within-increment",
+      "nextAction": "Provide a System Builder-only compatibility seam for exact current trusted layout definitions, materialize legacy-flat drafts only after explicit layout selection, and keep visual assets discoverable before a Canvas region is selected.",
+      "recordedAt": "2026-07-19T20:46:12Z",
+      "summary": "Older trusted System Foundation workspaces, including the Controlled chatbot system on Foundation 1.0, must receive predefined layout choices and discoverable visual assets in the Asset Palette.",
+      "targetIncrementId": "visual-composer-production-qualification"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "feedback-foundation-ui-assets-composable-and-configurable",
+      "impact": "later-increment",
+      "nextAction": "Research Foundation UI definitions, backing resources, slot compatibility, inspector schemas, and safe recursive renderers, then add a cohesive increment that makes the affected UI family configurable and composable rather than patching Card alone.",
+      "recordedAt": "2026-07-20T05:39:31Z",
+      "summary": "Foundation UI assets such as Card expose generic placeholder previews instead of useful configured content and canonical draggable child regions; the affected UI family is too simplistic for production composition.",
+      "targetIncrementId": null
+    }
+  ],
   "finalApproval": null,
   "history": [
     {
@@ -155,9 +457,671 @@
       "recordedAt": "2026-07-19T17:07:19Z",
       "sequence": 2,
       "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "be847c1e983f1fe542095f72f17c6638ccbf58c5380a72d5f9ef2259c496544b",
+      "recordedAt": "2026-07-19T17:23:24Z",
+      "sequence": 3,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "259b19dab0a455624bceda9899415b6748347b35d2c37122667308e4ce6a1370",
+      "recordedAt": "2026-07-19T17:26:39Z",
+      "sequence": 4,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "f7bfa1ec997d436f02e9477b337af64dbe37fb17a00b716c85ac6696130e9957",
+      "recordedAt": "2026-07-19T17:33:07Z",
+      "sequence": 5,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "9059943faa8808ece8d6606909b9550a777fbb4f2ed58e237e49df8836453223",
+      "recordedAt": "2026-07-19T17:33:33Z",
+      "sequence": 6,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "a01fc204c198a49ef7f8571990bc1592068537042e8f0fe99d35f578a448947f",
+      "recordedAt": "2026-07-19T17:35:33Z",
+      "sequence": 7,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "3e00cdb1c0491d57b4aae205aab7641ceed031ee860ab77821dd06dc1e14301d",
+      "recordedAt": "2026-07-19T17:36:26Z",
+      "sequence": 8,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "b71798a92d3e25a6a7eb7d3ad9d3b9ba96992dae00c7893665bf34aaaec61f78",
+      "recordedAt": "2026-07-19T17:44:19Z",
+      "sequence": 9,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "010c26658648a191ac4d2a050796886404df3654a9adb1d4a5728b59ec9c31ff",
+      "recordedAt": "2026-07-19T17:50:48Z",
+      "sequence": 10,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "39bca3aa7dc7d58e350fd4796acc7bce7b9d28af8f14f998c73bd3da895ba890",
+      "recordedAt": "2026-07-19T18:06:17Z",
+      "sequence": 11,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "7acfa2a7b85e97d751c47f7b6311437a3f1611de5b0ca9cbf9984a65420ca07e",
+      "recordedAt": "2026-07-19T18:28:21Z",
+      "sequence": 12,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "0e44dad92d1e446e4009ec7d77e0bd48caedc16d0694011907e3b09ed6cfd551",
+      "recordedAt": "2026-07-19T18:53:29Z",
+      "sequence": 13,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "0831a8304f412bf886b6eec4abf3b827d93d91c990ba75b043870d5a59c0c51a",
+      "recordedAt": "2026-07-19T19:18:23Z",
+      "sequence": 14,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "cc99ff8972e4fb72be359b89968d6d440308537aaa5005f91a13406b4b73f0b4",
+      "recordedAt": "2026-07-19T19:26:02Z",
+      "sequence": 15,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "642b2164c93ffb444d22cc8b2856a1091341dd44119096e0e86fdc8311fbf8e4",
+      "recordedAt": "2026-07-19T19:33:02Z",
+      "sequence": 16,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e944223ad9d93ca09913c85c8d0088338295668120bb84bd09c86b3761376b75",
+      "recordedAt": "2026-07-19T19:33:11Z",
+      "sequence": 17,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "afe914b90c1cd4d21d1988c9428142583bad6da20f942474484b10cf069b6301",
+      "recordedAt": "2026-07-19T19:33:18Z",
+      "sequence": 18,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "2a1785a20d16c94f8c4a5a06a41df907ebaed35d09e18f7ae97737b5d84f0c92",
+      "recordedAt": "2026-07-19T19:33:26Z",
+      "sequence": 19,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9c4064700ca489761ec04aa6e984b63a703e03933ab8cfd36e1e705aac38c8d9",
+      "recordedAt": "2026-07-19T19:33:33Z",
+      "sequence": 20,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "94f0315d844b144ec16fa17fb39d618b53319906b8f6a66f6306170858453da0",
+      "recordedAt": "2026-07-19T19:33:42Z",
+      "sequence": 21,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ec5d95fcb3197474f74604f89d0e526bf08b14a83c0b9e47cb6778af033fa4d5",
+      "recordedAt": "2026-07-19T19:33:51Z",
+      "sequence": 22,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b1e0b2787fd73502cf62eb9972e728594a4b7e7ea844febcc583eeb3480a175c",
+      "recordedAt": "2026-07-19T19:34:22Z",
+      "sequence": 23,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "25bd0395469244dcba2c26c8ff3b30e3cd84768cfd4b5193e57bb2c77e7d95b0",
+      "recordedAt": "2026-07-19T19:34:59Z",
+      "sequence": 24,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "70f73f93d10ef9ef03e30ee1bc71fde43a03841031b222b6d446eafb7a31ae8d",
+      "recordedAt": "2026-07-19T19:39:05Z",
+      "sequence": 25,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "967b8b461da3ca29a3e8a07fe1e09942d9993548cb1dcb65f39bdbeebb389806",
+      "recordedAt": "2026-07-19T19:40:09Z",
+      "sequence": 26,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "13e28dd55b7e0623b6cd22b6da02a4bd22916e598e6e3106b0b611ec98929fd8",
+      "recordedAt": "2026-07-19T19:51:52Z",
+      "sequence": 27,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "9cdf9891ef92a8e4e383fa5937b96de1b429fe2a3c7dbc84c5fa2b703e0ac455",
+      "recordedAt": "2026-07-19T19:58:19Z",
+      "sequence": 28,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "2b84a95f44eddcef2753b68e6dccb5b07db64608c462b559eec0dcbed9bdac43",
+      "recordedAt": "2026-07-19T20:06:45Z",
+      "sequence": 29,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "5e9b2c4d6d06cd754f37da99d7df7fd950f41b9e655c7b56febe94a52c1814a0",
+      "recordedAt": "2026-07-19T20:46:12Z",
+      "sequence": 30,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "3af920ffbb74b598fbfc2d00750c1055f4a25bc74a512d75b2f84fd59f2a90f8",
+      "recordedAt": "2026-07-19T20:54:36Z",
+      "sequence": 31,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "dc91c49086176f7b16ade4f88a396de8055a0111a5fdca3bb592d6d74cff8736",
+      "recordedAt": "2026-07-20T05:39:31Z",
+      "sequence": 32,
+      "type": "feedback-recorded"
     }
   ],
-  "increments": [],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "For an open system, wide screens present the asset/layout palette, primary editable canvas, properties inspector, and Layers and Structure tree simultaneously beneath one coherent editor toolbar; selected system, revision, dirty, validation, loading, error, conflict, and save states remain understandable without switching between disconnected forms.",
+          "id": "persistent-editor-shell",
+          "qualification": "local"
+        },
+        {
+          "description": "A compatible asset can be inserted from the palette, reordered within a slot, or moved across compatible slots using pointer, touch, keyboard pickup/move/drop, or explicit controls; every successful interaction calls the same bounded canonical command, every invalid target explains why it is unavailable, cancellation changes nothing, and no drag-library state enters a revision or transport payload.",
+          "id": "canonical-direct-manipulation",
+          "qualification": "local"
+        },
+        {
+          "description": "The canvas recursively renders the current unsaved named-slot hierarchy with registered side-effect-free Foundation renderers, visible selection and slot overlays, bounded desktop/tablet/mobile frames, and truthful unsupported/nonvisual states while never executing unqualified backing resources, imported code, backend logic, network calls, builds, or deployments.",
+          "id": "safe-editable-canvas",
+          "qualification": "local"
+        },
+        {
+          "description": "Predefined layout choices can create a system or initiate an explicit reviewed layout change; deterministic mapping preserves compatible instances, configuration, bindings, and semantic order, exposes unmatched content in an Unassigned region, supports cancel/undo/redo/stale conflict, and saves only as a new immutable revision without rewriting its source.",
+          "id": "layout-change-integrity",
+          "qualification": "local"
+        },
+        {
+          "description": "Selecting an asset from the canvas or Layers and Structure tree updates both surfaces and the persistent properties inspector; schema-backed Design, Data, and Events sections edit only supported configuration and declared endpoints, tree keyboard behavior follows expected expansion/navigation conventions, and containment remains separate from typed connections.",
+          "id": "properties-layers-synchronization",
+          "qualification": "local"
+        },
+        {
+          "description": "The shared workspace retains every editor function through accessible panels or drawers at medium and narrow widths, avoids unintended page-level two-dimensional scrolling, preserves logical source and focus order, restores focus after drawers/dialogs/drags, provides tailored instructions and live announcements, honors reduced motion, and keeps explicit native-control alternatives discoverable.",
+          "id": "responsive-accessible-composer",
+          "qualification": "local"
+        },
+        {
+          "description": "Desktop and thin client use the same shared visual editor and canonical client operations for create/open, Manage handoff, edit, undo/redo, validate, save, reopen, preview, and Build and Test entry; focused tests and host builds prove no renderer-local persistence, workspace fallback, host-specific composition rule, or transport divergence.",
+          "id": "complete-shared-workflows",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-19T19:34:22Z",
+      "completedChunks": [
+        "visual-canvas-direct-manipulation",
+        "properties-layers-responsive-workspace",
+        "layout-workflow-host-parity"
+      ],
+      "completionSummary": "The shared visual composer is implemented and verified with canonical drag operations, fixed Foundation layouts, safe canvas rendering, deterministic reviewed layout changes, a wide canvas with independently collapsible side rails and tabbed Properties/Layers details, host parity, production builds, Windows packaging, and a passing full non-browser suite.",
+      "deliverables": [
+        "Exact pinned @dnd-kit/core, @dnd-kit/sortable, and required utility dependencies with license/security review",
+        "Shared drag intent, collision, compatibility, announcement, and canonical-command adapter with no contract-layer leakage",
+        "Mockup-aligned editor toolbar and persistent Asset Palette, Canvas, Properties, and Layers and Structure regions",
+        "Searchable compatible asset palette plus predefined whole-system/page layout choices and truthful unavailable states",
+        "Safe recursive editable visual canvas with named-slot overlays, selection chrome, drop indicators, drag overlay, viewport and zoom controls",
+        "Pointer, touch, keyboard pickup/move/drop/cancel, and existing explicit action alternatives for add, reorder, reparent, wrap, remove, and layout change",
+        "Deterministic reviewable layout remapping with cancel, stale/conflict handling, and explicit Unassigned content preservation",
+        "Persistent schema-backed Design, Data, and Events property sections and typed Connections mode",
+        "Synchronized accessible Layers and Structure tree, breadcrumbs, protected nodes, and focus restoration",
+        "Responsive wide, medium, and narrow editor layouts without unintended page overflow or lost functions",
+        "Coherent create/open/save/preview/Build and Test/Manage handoffs in desktop and thin client",
+        "Focused model, interaction, accessibility, transport/client, style, and documentation coverage"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "Freeform x/y positioning, arbitrary pixel dimensions, user-created slots, user-authored breakpoints, raw CSS editing, or a general graphic-design canvas",
+        "Editing reusable asset definitions, implementation source, or backing resources from System Builder; those remain Asset Studio/customization responsibilities",
+        "Executing imported/authored frontend code, backend code, scripts, packages, or arbitrary HTML in the editor canvas",
+        "A new System Builder persistence graph, renderer-owned hierarchy, transport family, build system, publication policy, or deployment authority",
+        "Multi-user simultaneous editing, live cursors, comments, approvals, organization sharing, or cross-workspace composition",
+        "Public layout or asset marketplace behavior"
+      ],
+      "id": "mockup-aligned-visual-composer",
+      "number": 1,
+      "objective": "Replace the fragmented Structure/Configure presentation with one shared desktop/thin-client visual workspace that keeps the asset and layout palette, safe editable canvas, properties inspector, and Layers and Structure tree synchronized while every drag, keyboard, and button action updates the existing canonical named-slot draft.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "Commit 8f721398e is the reconciled implementation baseline and contains the previously verified slot-composer, Manage, and asset-connectivity foundations.",
+          "@dnd-kit/core 6.3.1, @dnd-kit/sortable 10.0.0, and @dnd-kit/utilities 3.2.2 are declared as exact direct runtime dependencies and remain isolated to shared UI interaction files.",
+          "The existing pure draft operations remain authoritative for ordinary structural mutations; drag code produces typed intents and never mutates revision arrays directly.",
+          "Layout replacement requires an application-owned preview/remap boundary because preservation and Unassigned handling affect canonical revision content; it remains additive and does not mutate until the normal optimistic save command succeeds.",
+          "Safe canvas editing reuses only the registered Foundation renderer boundary; overlays and selection chrome wrap safe output without accepting definition-provided React components or source.",
+          "JSDOM interaction tests prove component wiring and keyboard semantics, while full geometric/input/browser qualification remains in approved Increment 2.",
+          "No full npm test or other repository-wide completion suite runs until every Increment 1 chunk is implemented and its focused tests pass."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "persistent-editor-shell",
+              "canonical-direct-manipulation",
+              "safe-editable-canvas"
+            ],
+            "id": "visual-canvas-direct-manipulation",
+            "outcome": "The approved pinned interaction adapter has a real shared consumer: assets and layouts are discoverable in a persistent palette, the safe visual canvas exposes compatible named slots and selection, and pointer/touch/keyboard drags converge on canonical bounded commands with cancellation and announcements.",
+            "title": "Visual palette and canonical drag canvas"
+          },
+          {
+            "criteriaIds": [
+              "persistent-editor-shell",
+              "properties-layers-synchronization",
+              "responsive-accessible-composer",
+              "safe-editable-canvas"
+            ],
+            "id": "properties-layers-responsive-workspace",
+            "outcome": "Properties, Layers and Structure, Connections, toolbar state, and canvas selection remain synchronized in the four-region editor and reflow into accessible panels without losing native action alternatives or focus/source order.",
+            "title": "Persistent properties, layers, and responsive workspace"
+          },
+          {
+            "criteriaIds": [
+              "layout-change-integrity",
+              "canonical-direct-manipulation",
+              "complete-shared-workflows",
+              "responsive-accessible-composer"
+            ],
+            "id": "layout-workflow-host-parity",
+            "outcome": "Application-owned layout previews preserve or explicitly unassign content and the shared editor completes create/open/Manage, edit, save/reopen, preview, and Build and Test workflows identically through desktop and thin-client boundaries with reconciled guidance.",
+            "title": "Canonical layout changes and complete host workflows"
+          }
+        ],
+        "completionTests": [
+          "npm run security:dependencies",
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check",
+          "desktop and thin-client TypeScript checks",
+          "npm run build:server when layout-preview transport changes are present",
+          "npm run build:thin-client",
+          "npm run package -- --platform=win32 --arch=x64",
+          "npm test once after all Increment 1 chunks and focused UI tests pass"
+        ],
+        "documentation": [
+          "docs/architecture/system-builder.md",
+          "docs/context/packs/system-builder.pack.md",
+          "modules/ui/shared/README.md",
+          "docs/standards/dependency-supply-chain-standards.md only if implemented behavior requires clarification",
+          "nearest application/transport/host README files when their public boundary changes",
+          "docs/docs-mismatch-register.md only for an unresolved implementation/canonical conflict",
+          "concise ignored docs/tmp visual-composer report"
+        ],
+        "fingerprint": "a5ca0a23a8e2cb52cc1c0913647b9f96e876c8b153a137a93802375f4e752963",
+        "focusedTests": [
+          "Pure drag intent, target identity, compatibility/cardinality, order resolution, insert/reorder/reparent, invalid/cyclic/protected target, cancellation, announcement, and no-library-state serialization tests plus focused palette/canvas keyboard and pointer interaction tests",
+          "Shared shell selection synchronization, Design/Data/Events property updates, Layers tree expansion/navigation, Connections separation, drawer/panel focus restoration, reduced-motion, style-token, source-order, and wide/medium/narrow interaction tests",
+          "Application layout-remap preservation/unassigned/cancel/stale/workspace/bounds tests; API/IPC/preload/client parity; create/open/Manage/save/reopen/preview/Build and Test handoff regressions; safe-render negative tests and affected host typechecks"
+        ],
+        "recordedAt": "2026-07-19T17:36:26Z",
+        "rollback": "Remove the visual editor entry and drag adapter/dependencies, retain the verified semantic structure editor and explicit actions, and preserve all slot-aware revisions unchanged. If layout-preview transport exists, disable its UI consumer before removing the additive operation. Never flatten, rewrite, or delete saved placements or relax safe rendering during rollback.",
+        "steps": [
+          "Add exact dnd-kit runtime dependencies and a shared repository-owned drag intent/target resolver; refactor the existing structure editor into a persistent mockup-aligned shell whose searchable palette and safe editable canvas use dedicated drag handles, bounded overlays, compatible named-slot targets, tailored keyboard instructions/live announcements, and the existing canonical add/reorder/reparent commands.",
+          "Keep Properties and Layers and Structure present beside the canvas, synchronize selection/focus across all surfaces, reorganize schema-backed controls into Design/Data/Events, retain typed Connections over the same draft, and implement wide/medium/narrow panels or drawers with logical source order, explicit controls, reduced motion, and focus restoration.",
+          "Add an application-owned deterministic layout-change preview/remap operation through contracts, API/IPC/preload/clients; integrate review, Unassigned content, cancel/undo/redo/conflict/save plus create/open/Manage/preview/Build and Test workflows; reconcile documentation and run Increment 1 completion gates once."
+        ],
+        "summary": "Deliver the complete mockup-aligned editor in three cohesive vertical chunks: first the pinned drag adapter with its real palette/canvas consumer, then the persistent properties/layers responsive workspace over the same selection, and finally canonical layout remapping plus complete workflow/host parity. Each chunk receives only focused tests while iterating; expensive repository gates and npm test run once after all three chunks are implemented."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-19T17:35:33Z",
+          "risks": [
+            "Nested slot collision cannot be delegated to generic closest-center sorting because compatibility, cardinality, protected roots, cycles, unassigned content, and canonical order are application constraints.",
+            "JSDOM does not provide production layout geometry; collision and command resolution need pure model tests, while focused component tests should cover sensor wiring, keyboard behavior, announcements, and cancellation without pretending to be full browser qualification.",
+            "Making safe preview nodes selectable or droppable must not allow definition-provided components, raw backing-resource markup, or backend logic to enter the React tree.",
+            "A four-region wide editor can become unusable under zoom; side panels must become accessible drawers or tabs before widths force clipped controls, while the canvas alone may use a bounded manipulation viewport.",
+            "Layout switching is a canonical data transformation, not presentation state; renderer-only mapping would risk silent deletion and cross-host drift.",
+            "Drag activation on whole cards can steal clicks and scrolling; dedicated handles, activation constraints, explicit controls, reduced-motion behavior, and focus restoration are required.",
+            "The runtime dependency change must pass production and development advisory checks, license review, thin-client bundling, and Electron packaging before Increment 1 can complete."
+          ],
+          "sources": [
+            {
+              "title": "Approved visual composer roadmap",
+              "url": "docs/visual-system-composer-implementation-roadmap.md"
+            },
+            {
+              "note": "Owns the canonical unsaved draft, optimistic save, preview, selection, modes, and workflow entry points.",
+              "title": "Shared System Builder workspace",
+              "url": "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx"
+            },
+            {
+              "note": "Provides the palette, semantic slot canvas, tree, breadcrumbs, and native structural actions that the visual shell must reuse.",
+              "title": "Existing structure editor",
+              "url": "modules/ui/shared/system-builder/SystemComposerStructureEditor.tsx"
+            },
+            {
+              "note": "Provides bounded add, remove, reorder, reparent, and wrap operations plus normalized placement ordering and history.",
+              "title": "Existing canonical draft reducer",
+              "url": "modules/ui/shared/system-builder/systemComposerDraft.ts"
+            },
+            {
+              "note": "Registered side-effect-free renderers and bounded hierarchy traversal are the correct visual-canvas rendering boundary.",
+              "title": "Safe recursive preview",
+              "url": "modules/ui/shared/system-builder/SystemCompositionPreview.tsx"
+            },
+            {
+              "note": "Requires matching manifest/lock changes, direct declarations, security checks, and affected clean builds/packages.",
+              "title": "Dependency and supply-chain standards",
+              "url": "docs/standards/dependency-supply-chain-standards.md"
+            },
+            {
+              "note": "Requires context-specific keyboard instructions and live announcements in addition to library defaults.",
+              "title": "dnd-kit accessibility guidance",
+              "url": "https://docs.dndkit.com/guides/accessibility"
+            },
+            {
+              "note": "Provides sortable keyboard coordinates but leaves declarative state mutation to the consumer.",
+              "title": "dnd-kit sortable preset",
+              "url": "https://docs.dndkit.com/presets/sortable"
+            },
+            {
+              "note": "Supports distance/delay activation constraints and recommends drag handles for scrollable touch surfaces.",
+              "title": "dnd-kit pointer sensor",
+              "url": "https://docs.dndkit.com/api-documentation/sensors/pointer"
+            },
+            {
+              "note": "Focus, selection, expansion, and arrow navigation remain explicit in Layers and Structure.",
+              "title": "WAI-ARIA tree view pattern",
+              "url": "https://www.w3.org/WAI/ARIA/apg/patterns/treeview/"
+            },
+            {
+              "note": "Supports responsive region reflow while preserving logical source order.",
+              "title": "WCAG 2.2 CSS grid reflow technique",
+              "url": "https://www.w3.org/WAI/WCAG22/Techniques/css/C32"
+            }
+          ],
+          "summary": "The committed baseline now contains the complete canonical slot-composer and Systems Manage foundations at commit 8f721398e; only the new visual-composer roadmap artifacts are uncommitted. The shared structure editor already has a three-region asset/semantic-canvas/tree workspace, pure bounded draft commands, protected nodes, undo/redo, schema-generated configuration, typed connections, and recursive safe preview, so Increment 1 should reorganize and enhance these rather than replace their state model. The approved stable dnd-kit line is compatible with React 19 by peer range and is MIT licensed: @dnd-kit/core 6.3.1, @dnd-kit/sortable 10.0.0, and @dnd-kit/utilities 3.2.2. Drag sensors and transient overlays stay in shared UI; nested-slot target resolution and all accepted mutations remain repository-owned. Changing an existing predefined layout requires an application-owned deterministic preview/remap operation rather than renderer policy, because it can preserve, unassign, or reject canonical placements."
+        }
+      ],
+      "rollback": "Remove the visual editor entry and dnd-kit adapter/dependencies, then restore the current shared semantic structure editor and explicit native controls over the same canonical slot-aware revisions. Preserve every saved immutable revision, layout definition, placement, and binding; rollback must not flatten or rewrite records or re-enable unsafe implementation execution.",
+      "startedAt": "2026-07-19T17:33:33Z",
+      "status": "completed",
+      "title": "Complete mockup-aligned visual composer",
+      "verification": [
+        "Run focused dependency import-boundary, drag intent/collision/compatibility, cancellation, announcement, and command-mapping tests.",
+        "Run focused palette, layout choice, editable canvas, slot overlay, selection, reorder/reparent/wrap/remove, protected-node, unassigned-content, undo/redo, and stale-conflict interaction tests.",
+        "Run focused properties Design/Data/Events, declared endpoint, Layers tree keyboard, focus restoration, and containment-versus-connection tests.",
+        "Run focused safe-renderer negative tests proving no imported/backing/backend/network/build/deployment execution and enforcing rendered-node/depth/count bounds.",
+        "Run focused responsive/source-order/style-token/reduced-motion assertions and wide/medium/narrow component fixtures.",
+        "Run focused desktop IPC/preload/client, thin-client API/client, Manage handoff, save/reopen, preview, and Build and Test workflow regressions.",
+        "After every Increment 1 work package is implemented and focused checks pass, run dependency security review, npm run docs:check, npm run architecture:check, npm run agent-support:check, desktop and thin-client typechecks/builds, server build where affected, Windows desktop package, and npm test once as completion gates."
+      ],
+      "workPackages": [
+        {
+          "id": "canonical-drag-adapter",
+          "outcome": "Pinned dnd-kit primitives provide pointer, touch, and keyboard sensors, drag overlays, tailored instructions, and announcements, while a repository-owned adapter resolves palette insertion, within-slot reorder, cross-slot reparent, and cancellation into existing bounded canonical commands without persisting library state.",
+          "title": "Canonical direct-manipulation adapter"
+        },
+        {
+          "id": "visual-editor-shell",
+          "outcome": "A mockup-aligned toolbar and responsive four-region shell keep searchable assets and layout choices, the primary canvas, selected-element properties, and Layers and Structure visible together on wide screens and available through accessible drawers or panel tabs at narrower widths.",
+          "title": "Persistent visual editor shell"
+        },
+        {
+          "id": "safe-editable-canvas",
+          "outcome": "The center surface recursively renders registered side-effect-free Foundation views with selection and named-slot overlays, accepts compatible drops, previews deterministic layout changes, preserves unmatched content explicitly, and shares the same draft, undo/redo, validation, zoom, viewport, preview, and save state.",
+          "title": "Safe editable canvas and layouts"
+        },
+        {
+          "id": "properties-layers-connections",
+          "outcome": "Selection remains synchronized across canvas and tree; the persistent properties sidebar organizes schema-backed Design, Data, and Events controls; the layers tree supports expected expansion/navigation and canonical move actions; Connections remains a focused editor mode over the same draft.",
+          "title": "Properties, Layers and Structure, and connections"
+        },
+        {
+          "id": "shared-workflow-parity",
+          "outcome": "Create/open, Manage handoff, layout selection, undo/redo, validation, conflict handling, save, preview, and Build and Test entry points behave coherently through existing clients in both hosts, with focused regression coverage and reconciled documentation.",
+          "title": "Complete workflows and host parity"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "A packaged Windows desktop application and supported thin-client browser each complete create, choose or change layout, drag assets into and across slots, reorder, configure Design/Data/Events, connect declared ports, undo/redo, preview, save, reopen, enter from Manage, and reach Build and Test using their real IPC/API paths without console, transport, or renderer errors.",
+          "id": "packaged-cross-client-workflows",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Mouse, touch-equivalent pointer, and keyboard users can perform equivalent structural operations; screen-reader semantics and announcements identify source, valid destination, result, and cancellation; toolbar/tree/dialog/panel behavior follows documented keyboard conventions; and visible focus is never lost after panel changes, drops, errors, or dialogs.",
+          "id": "input-accessibility-equivalence",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "At supported wide, medium, narrow, 320-CSS-pixel-equivalent zoom, reduced-motion, high-contrast, light, and dark configurations, every function remains available, non-canvas content avoids unintended two-dimensional scrolling, semantic source order remains correct, and reviewed baselines show no overlapping, clipped, hidden, or unreachable controls.",
+          "id": "responsive-visual-quality",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Malformed drag identifiers, invented slots, incompatible/revoked assets, oversized hierarchies/configuration, unsafe renderer inputs, and unqualified implementation resources fail closed with bounded redacted messages and never cause code execution, filesystem/network access, cross-workspace reads, build/release/deployment actions, or persisted partial mutations.",
+          "id": "bounded-secure-editor",
+          "qualification": "local"
+        },
+        {
+          "description": "Representative compositions at documented node/depth/slot bounds meet recorded interaction and rendering targets; interrupted or canceled drags, failed layout changes, renderer exceptions, stale/conflicting saves, reloads, and rollback recover to a coherent canonical draft without immutable revision loss or duplicated placement state.",
+          "id": "scale-recovery-readiness",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Dependency review, architecture and context documentation, keyboard/help guidance, support limits, rollback, exclusions, and qualification evidence match implemented behavior, and all applicable repository checks, builds, Windows packaging, and the final full suite pass with zero failures.",
+          "id": "production-guidance-and-gates",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": null,
+      "completedChunks": [
+        "isolated-qualification-harness"
+      ],
+      "deliverables": [
+        "Packaged Windows desktop end-to-end visual-composer evidence",
+        "Supported thin-client browser end-to-end visual-composer evidence",
+        "Mouse, touch-equivalent pointer, and complete keyboard workflow matrix",
+        "Keyboard and screen-reader semantic review for toolbar, palette, canvas, properties, drawers, dialogs, and Layers tree",
+        "WCAG 2.2 reflow, zoom, reduced-motion, high-contrast, source-order, and focus-restoration evidence",
+        "Reviewed wide/medium/narrow light and dark visual baselines for representative layouts",
+        "Representative-scale interaction, drag, render, save/reopen, and list measurements with documented bounds",
+        "Malformed input, cancellation, stale conflict, renderer failure, interruption, rollback, and recovery drills",
+        "Dependency security/license review and packaged dependency verification",
+        "Final architecture, context, shared UI, contributor, support, and roadmap evidence"
+      ],
+      "dependsOn": [
+        "mockup-aligned-visual-composer"
+      ],
+      "excluded": [
+        "Claiming support for untested browsers, operating systems, assistive technologies, input hardware, or viewport/theme combinations",
+        "Relaxing composition bounds to meet performance targets or suppressing truthful unsupported/error states",
+        "Executing arbitrary imported/authored implementation code as part of qualification",
+        "Production deployment, external credential use, organization collaboration, or public marketplace qualification",
+        "Pixel-for-pixel reproduction of unrelated application chrome outside the Systems composer"
+      ],
+      "id": "visual-composer-production-qualification",
+      "number": 2,
+      "objective": "Qualify and harden the complete visual editor across packaged Windows desktop and the supported thin-client browser, input methods, accessibility/reflow, representative composition scale, security boundaries, interruption/recovery, and dependency/runtime packaging before production handoff.",
+      "plan": {
+        "assumptions": [
+          "Run desktop and browser qualification sequentially with one worker and no concurrent packaging/build/test load so the other active account retains CPU/GPU headroom.",
+          "Use the installed stable Chrome channel for the thin-client run; allow an explicit generic executable/channel parameter for collaborators and CI rather than recording a local path.",
+          "The controlled claim is limited to this exact Windows packaged Electron build and local stable Chrome environment; it does not claim other operating systems, browsers, assistive-technology products, or production deployment.",
+          "Accessibility-tree and axe evidence verifies screen-reader-facing semantics but does not imply full WCAG or human assistive-technology certification.",
+          "No production credentials, external services, destructive persistence operations, arbitrary implementation execution, or contributor user-data directories are in scope."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "bounded-secure-editor",
+              "scale-recovery-readiness"
+            ],
+            "id": "isolated-qualification-harness",
+            "outcome": "Pinned test-only browser/Electron tooling, one-worker isolated host launchers, sanitized evidence helpers, and focused bounds/security/recovery probes provide a deterministic qualification base without touching user state or executing unqualified resources.",
+            "title": "Isolated qualification harness and deterministic hardening"
+          },
+          {
+            "criteriaIds": [
+              "packaged-cross-client-workflows",
+              "input-accessibility-equivalence",
+              "responsive-visual-quality",
+              "scale-recovery-readiness"
+            ],
+            "id": "cross-client-controlled-qualification",
+            "outcome": "The exact packaged Windows desktop and supported local Chrome thin-client environments complete the same real workflow and input/accessibility/responsive matrix sequentially with reviewed, sanitized evidence and no console, transport, renderer, or recovery failures.",
+            "title": "Packaged desktop and thin-client controlled qualification"
+          },
+          {
+            "criteriaIds": [
+              "bounded-secure-editor",
+              "scale-recovery-readiness",
+              "production-guidance-and-gates"
+            ],
+            "id": "production-hardening-closeout",
+            "outcome": "All controlled findings are repaired or explicitly excluded, performance/recovery observations and support boundaries are documented without overclaiming, dependency/package contents are reviewed, and the final repository gates pass once from the finished tree.",
+            "title": "Production hardening and support closeout"
+          }
+        ],
+        "completionTests": [
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check",
+          "npm run asset-system:check",
+          "npm run security:dependencies",
+          "npm run build:server",
+          "npm run build:thin-client",
+          "npm run package",
+          "npm test once after all three Increment 2 chunks and focused controlled checks pass"
+        ],
+        "documentation": [
+          "System Builder architecture and context pack",
+          "Asset and System Support Qualification",
+          "Asset Experience Controlled Review",
+          "Desktop and thin-client README qualification commands",
+          "Testing standards or contributor guidance only where the reusable harness changes repository practice",
+          "Concise temporary roadmap report and sanitized ignored qualification artifacts"
+        ],
+        "fingerprint": "66d1b2d5a7665009b73537e73d110a3200b1f2d30d2b00780c003393a8368f16",
+        "focusedTests": [
+          "Node tests for qualification configuration, lifecycle cleanup, evidence sanitization, bounds, malformed drag data, non-execution, renderer failure, cancellation, stale layout/save conflict, and coherent draft recovery",
+          "Playwright packaged-desktop workflow with one worker and an isolated --user-data-dir",
+          "Playwright thin-client workflow with one worker, isolated server storage/runtime roots, and real API transport",
+          "Focused axe/accessibility-tree, keyboard, touch-equivalent, focus-return, reflow, forced-colors, reduced-motion, light/dark, and screenshot assertions for the composer region",
+          "Scoped TypeScript, package-content, and dependency-license/security checks for each changed qualification seam"
+        ],
+        "recordedAt": "2026-07-19T19:40:09Z",
+        "rollback": "Remove the test-only Playwright/axe dependencies and qualification scripts, restore the prior test command surface, and revert only hardening changes that exist solely for this harness. Preserve canonical revisions, Increment 1 behavior, security bounds, and all immutable data; never weaken guards to make qualification pass.",
+        "steps": [
+          "Add a test-only, one-worker qualification configuration and isolated desktop/thin host lifecycle helpers with bounded ports, sanitized evidence, reliable teardown, and no access to contributor data.",
+          "Add deterministic scale, malformed-input, non-execution, cancellation, conflict, renderer-failure, and recovery probes at the owning shared UI/application seams.",
+          "Drive the complete create/layout/compose/configure/connect/preview/save/reopen/Manage/Build-and-Test workflow through the packaged desktop IPC path and real thin-client API path.",
+          "Exercise pointer, touch-equivalent, keyboard, accessibility-tree/axe, focus, reflow, reduced-motion, forced-colors, light, and dark scenarios and review representative baselines.",
+          "Repair every discovered in-scope defect with focused tests, record sanitized qualification evidence and support limits, then run the final repository checks, builds, packaging, and full suite once."
+        ],
+        "summary": "Qualify the visual composer with one deterministic, resource-aware test seam rather than separate ad hoc scripts: add pinned test-only Playwright/axe tooling and isolated host launchers, strengthen deterministic bounds/recovery coverage, run the same role-driven workflow against packaged Electron IPC and a real thin-client API host one at a time, review accessible/responsive visual states, repair findings with focused regressions, then run the costly repository gates once."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-19T19:39:05Z",
+          "risks": [
+            "Packaged desktop first-run identity uses a native dialog; the harness must stub it through Playwright's documented Electron main-process evaluation and fail clearly if startup races.",
+            "E2E state and server processes must use isolated roots, fixed bounded ports, one worker, sanitized logs, and reliable teardown so qualification never touches contributor data or leaves background load.",
+            "Automated axe and accessibility-tree evidence cannot be presented as full WCAG, screen-reader-product, or manual security certification; claims must remain scoped to the exact Chromium/Electron environments exercised.",
+            "Timing on a shared workstation is observational controlled evidence, not a portable performance guarantee; hard deterministic bounds stay in ordinary focused tests.",
+            "Visual snapshots can become brittle; limit them to representative composer regions and explicit wide, medium, narrow, forced-colors, reduced-motion, light, and dark scenarios."
+          ],
+          "sources": [
+            {
+              "title": "Asset and System Support Qualification",
+              "url": "docs/operations/asset-system-support-qualification.md"
+            },
+            {
+              "title": "Asset Experience Controlled Review",
+              "url": "docs/operations/asset-experience-controlled-review.md"
+            },
+            {
+              "title": "System Builder architecture",
+              "url": "docs/architecture/system-builder.md"
+            },
+            {
+              "title": "Playwright Electron automation",
+              "url": "https://playwright.dev/docs/api/class-electron"
+            },
+            {
+              "title": "Playwright accessibility testing",
+              "url": "https://playwright.dev/docs/accessibility-testing"
+            },
+            {
+              "title": "WCAG 2.2 Reflow understanding",
+              "url": "https://www.w3.org/WAI/WCAG21/Understanding/reflow.html"
+            }
+          ],
+          "summary": "The repository already has canonical composition bounds, safe preview truncation, deterministic draft/application tests, Windows packaging, production builds, and a qualification policy, but it has no real browser/Electron E2E or automated accessibility harness. The smallest production qualification seam is test-only Playwright plus axe tooling: launch the packaged Electron executable against isolated user data, launch the thin client with a real isolated local server/API, drive the same role-based workflow with one worker, capture sanitized structured evidence and reviewed visual baselines, and add focused scale/recovery/security probes around existing bounds. Sidebar/panel/drag state remains transient and no test hook may widen production authority."
+        }
+      ],
+      "rollback": "Disable the visual editor route and restore the verified semantic editor entry while retaining all canonical slot-aware revisions as readable and editable through explicit controls. Remove the drag dependencies only after no visual-editor imports remain. Preserve diagnostic and qualification evidence; never flatten layouts, delete revisions, or weaken safe-rendering and workspace boundaries during rollback.",
+      "startedAt": "2026-07-19T19:34:59Z",
+      "status": "implementing",
+      "title": "Visual composer production qualification and hardening",
+      "verification": [
+        "Run packaged Windows desktop end-to-end workflows against the real preload/IPC client and capture sanitized results.",
+        "Run supported thin-client browser end-to-end workflows against the real API client and capture sanitized results.",
+        "Exercise mouse, touch-equivalent pointer, and keyboard drag matrices including insert, reorder, reparent, invalid target, cancel, auto-scroll, drawer transition, and focus restoration.",
+        "Perform controlled screen-reader semantic and keyboard review for editor toolbar, searchable palette, drag instructions/live announcements, safe canvas, properties tabs, Layers tree, drawers, modal preview, and conflict dialogs.",
+        "Review wide/medium/narrow and 320-CSS-pixel-equivalent reflow at light/dark, reduced-motion, and high-contrast settings for representative application and page layouts.",
+        "Run representative-scale render/interaction/save measurements plus malformed input, renderer exception, stale conflict, interruption, reload, rollback, and recovery drills.",
+        "Run dependency license/security checks and verify the packaged desktop and thin-client bundles include only intended drag packages.",
+        "After every Increment 2 work package and controlled review passes, run npm run docs:check, npm run architecture:check, npm run agent-support:check, npm run security:dependencies, affected server/thin builds, Windows desktop package, and npm test once as final completion gates."
+      ],
+      "workPackages": [
+        {
+          "id": "cross-client-e2e",
+          "outcome": "Packaged Windows desktop and supported thin-client browser complete the same real create, layout, drag, configure, connect, preview, save, reopen, Manage, and Build and Test entry workflows through IPC and API paths.",
+          "title": "Packaged desktop and browser workflows"
+        },
+        {
+          "id": "input-accessibility-visual",
+          "outcome": "Mouse, touch-equivalent pointer, keyboard, screen-reader semantics, zoom/reflow, reduced motion, high contrast, focus order, and responsive light/dark baselines are reviewed for the four-region editor and every predefined layout family.",
+          "title": "Input, accessibility, responsive, and visual qualification"
+        },
+        {
+          "id": "security-performance-recovery",
+          "outcome": "Representative bounded systems remain responsive; malformed drag data, excessive nodes/depth, incompatible or revoked assets, stale saves, interrupted drags, failed layout changes, dependency findings, and renderer errors fail closed and recover without revision loss or authority expansion.",
+          "title": "Security, performance, and recovery hardening"
+        },
+        {
+          "id": "support-closeout",
+          "outcome": "Architecture, context packs, shared UI guidance, support limits, keyboard instructions, rollback, known exclusions, and qualification evidence describe the shipped editor truthfully and the repository gates pass from the final state.",
+          "title": "Documentation and support closeout"
+        }
+      ]
+    }
+  ],
   "name": "Visual System Composer",
   "objective": "Deliver a production-ready visual System Composer that builds on canonical named slots and placements with a mockup-aligned asset and layout palette, safe editable canvas, synchronized properties and layers panels, accessible drag-and-drop, and shared desktop/thin-client behavior.",
   "paths": {
@@ -166,9 +1130,13 @@
     "state": ".implementation-roadmaps/visual-system-composer/state.json"
   },
   "resumeAudits": [],
-  "roadmapApproval": null,
+  "roadmapApproval": {
+    "approvedAt": "2026-07-19T17:33:07Z",
+    "fingerprint": "87e62b866924b075f91ee68837bf0acaa8b8992f1c8b6659eccd695f563b65b1",
+    "note": "The user explicitly approved the complete two-increment visual System Composer roadmap and requested continued implementation under AGENTS.md and docs/README.md guidance on 2026-07-19."
+  },
   "schemaVersion": 1,
   "slug": "visual-system-composer",
-  "status": "decision-approval",
-  "updatedAt": "2026-07-19T17:07:19Z"
+  "status": "executing",
+  "updatedAt": "2026-07-20T05:39:31Z"
 }

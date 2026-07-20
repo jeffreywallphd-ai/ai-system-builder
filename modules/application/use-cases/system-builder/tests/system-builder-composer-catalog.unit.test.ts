@@ -10,6 +10,7 @@ import {
 } from "../../../../contracts/asset";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import type { AssetRegistryDefinitionReadPort } from "../../../ports/asset";
+import { SYSTEM_FOUNDATION_LAYOUT_DEFINITIONS } from "../../../services/asset-packs/system-packs/system-foundation-layout-presets";
 import type {
   AssetDefinitionCard,
   AssetDefinitionDetail,
@@ -112,6 +113,153 @@ describe("System Builder composer catalog", () => {
       );
     }
     expect(registry.listCalls).toBe(0);
+  });
+
+  it("projects trusted foundation layouts as dimension-locked abstract geometry", async () => {
+    const standardLayout = SYSTEM_FOUNDATION_LAYOUT_DEFINITIONS.find(
+      (item) =>
+        String(item.definitionId) === "builtin.layout.application.standard",
+    );
+    if (!standardLayout) throw new Error("Missing standard layout fixture.");
+    const registry = new FakeRegistry(parent, standardLayout);
+    const result = await new ListSystemBuilderComposerAssetsUseCase(
+      registry,
+    ).execute({ workspaceId, limit: 20 });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.items[0]?.layoutRole).toBe("application-shell");
+    expect(result.value.items[0]?.layoutGeometry).toEqual({
+      columnPattern: "single",
+      areas: [["top-bar"], ["content"]],
+      sourceOrder: ["top-bar", "content"],
+      dimensionsLocked: true,
+    });
+    expect(
+      result.value.items[0]?.configurationSchema?.fields.map(
+        (field) => field.fieldId,
+      ),
+    ).toEqual(["title", "accessibilityLabel"]);
+  });
+
+  it("offers current application layouts to a trusted Foundation 1.0 workspace without widening ordinary asset visibility", async () => {
+    const legacyRoot = definition(
+      "builtin.system.system",
+      "system",
+      "structural",
+    );
+    const registry: AssetRegistryDefinitionReadPort = {
+      listDefinitionCards: async (query = {}) => {
+        if (query.searchText === "builtin.system.system") {
+          return {
+            items: [
+              {
+                ...card(legacyRoot),
+                builtIn: true,
+                sourcePackId: "system.foundation" as never,
+                sourcePackVersion: "1.0.0",
+                sourceKind: "system",
+                sourceLayer: "system-default",
+                trustStatus: "system-trusted",
+                systemDefault: true,
+              },
+            ],
+          };
+        }
+        return { items: [] };
+      },
+      readDefinitionDetail: async () => undefined,
+    };
+
+    const result = await new ListSystemBuilderComposerAssetsUseCase(
+      registry,
+    ).execute({
+      workspaceId,
+      searchText: "builtin.layout.application",
+      limit: 20,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.items.length).toBe(8);
+    expect(
+      result.value.items.every(
+        (item) =>
+          item.layoutRole === "application-shell" &&
+          item.version === "2.0.0" &&
+          item.builtIn,
+      ),
+    ).toBe(true);
+  });
+
+  it("evaluates legacy workspace assets against an exact trusted current layout parent", async () => {
+    const legacyRoot = definition(
+      "builtin.system.system",
+      "system",
+      "structural",
+    );
+    const legacyPage = definition("builtin.shell.page", "page", "structural");
+    const registry: AssetRegistryDefinitionReadPort = {
+      listDefinitionCards: async (query = {}) => {
+        if (query.searchText === "builtin.system.system") {
+          return {
+            items: [
+              {
+                ...card(legacyRoot),
+                builtIn: true,
+                sourcePackId: "system.foundation" as never,
+                sourcePackVersion: "1.0.0",
+                sourceKind: "system",
+                sourceLayer: "system-default",
+                trustStatus: "system-trusted",
+                systemDefault: true,
+              },
+            ],
+          };
+        }
+        return { items: [card(legacyPage)] };
+      },
+      readDefinitionDetail: async (reference) => {
+        if (String(reference.id).startsWith("builtin.layout.application.")) {
+          throw new Error("not in exact workspace view");
+        }
+        return String(reference.id) === String(legacyPage.definitionId)
+          ? { definition: legacyPage, builtIn: true }
+          : undefined;
+      },
+    };
+    const standard = SYSTEM_FOUNDATION_LAYOUT_DEFINITIONS.find(
+      (definition) =>
+        String(definition.definitionId) ===
+        "builtin.layout.application.standard",
+    );
+    if (!standard) throw new Error("Missing standard layout fixture.");
+
+    const result = await new ListSystemBuilderComposerAssetsUseCase(
+      registry,
+    ).execute({
+      workspaceId,
+      parentDefinitionRef: exactReference(standard),
+      slotId: "content",
+      compatibleOnly: true,
+      limit: 20,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.items.map((item) => item.definitionId)).toContain(
+      "builtin.layout.page.single",
+    );
+    expect(result.value.items.map((item) => item.definitionId)).not.toContain(
+      "builtin.shell.page",
+    );
+    expect(
+      result.value.items.every(
+        (item) =>
+          item.layoutRole === "page-layout" &&
+          item.compatibility.status === "compatible",
+      ),
+    ).toBe(true);
   });
 
   it("fails closed with a bounded message when workspace resolution fails", async () => {

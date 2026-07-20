@@ -20,7 +20,10 @@ import type { StructuredLogSink } from "../../../modules/adapters/observability/
 import { normalizeDeploymentShape, type DeploymentShape } from "../../../modules/contracts/config";
 import { openPostgresDatabase, resolvePostgresPoolConfig, type OpenedPostgresDatabase } from "../../../modules/adapters/persistence/postgres";
 import { importJsonStructuredData } from "../../../modules/adapters/persistence/migration";
-import { createOrganizationContextStructuredDocumentStore } from "../../../modules/adapters/persistence/shared";
+import {
+  createOrganizationContextStructuredDocumentStore,
+  type StructuredDocumentStore,
+} from "../../../modules/adapters/persistence/shared";
 import { createStructuredOrganizationRepositories } from "../../../modules/adapters/persistence/organization";
 import { AuthorizeOperationService, createOrganizationAuthorizationPolicy } from "../../../modules/application/services/security";
 import { createJsonlSecurityAuditLogAdapter } from "../../../modules/adapters/security/audit/createJsonlSecurityAuditLogAdapter";
@@ -51,6 +54,8 @@ export interface CreateServerOptions {
   now?: () => string;
   restartServer?: () => void | Promise<void>;
   postgresDatabase?: OpenedPostgresDatabase;
+  /** Explicit non-production composition seam for controlled tests and qualification. */
+  structuredDocuments?: StructuredDocumentStore;
 }
 
 export interface CreatedServer {
@@ -232,12 +237,14 @@ export async function createServer(options: CreateServerOptions = {}): Promise<C
       ...(deploymentShape ? { deploymentShape } : {}),
       persistenceAdapter: postgresDatabase ? "postgres" : "json-compatibility",
     };
+    const persistenceDocuments =
+      postgresDatabase?.documents ?? options.structuredDocuments;
     const organizationDocuments = postgresDatabase
       ? createOrganizationContextStructuredDocumentStore(
         postgresDatabase.documents,
         security.organizationContextScope,
       )
-      : undefined;
+      : options.structuredDocuments;
     const serverHost = composeServerHost({
       env: options.env,
       logging: {
@@ -250,9 +257,9 @@ export async function createServer(options: CreateServerOptions = {}): Promise<C
       organizationContextProvider: postgresDatabase
         ? security.organizationContextScope
         : undefined,
-      ...(postgresDatabase ? {
+      ...(persistenceDocuments ? {
         persistence: {
-          documents: postgresDatabase.documents,
+          documents: persistenceDocuments,
           organizationDocuments,
         },
       } : {}),

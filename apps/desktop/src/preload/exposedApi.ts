@@ -431,6 +431,7 @@ import {
   type DesktopSystemBuilderRevisionResponse,
   type DesktopSystemBuilderRevisionListResponse,
   type DesktopSystemBuilderComposerCatalogResponse,
+  type DesktopSystemBuilderLayoutChangePreviewResponse,
   DESKTOP_SYSTEM_BUILD_OPERATIONS,
   DESKTOP_SYSTEM_BUILD_CHANNELS,
   createDesktopSystemBuildRequest,
@@ -475,6 +476,7 @@ import type {
   SaveSystemBuilderRevisionCommand,
   ListSystemBuilderComposerAssetsQuery,
   ListSystemBuilderManagementQuery,
+  PreviewSystemBuilderLayoutChangeCommand,
 } from "../../../../modules/contracts/system-builder";
 import type {
   CreateAssetDraftCommand,
@@ -1147,6 +1149,13 @@ export interface DesktopPreloadApi {
     input: ListSystemBuilderComposerAssetsQuery,
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopSystemBuilderComposerCatalogResponse>;
+  previewSystemBuilderLayoutChange: (
+    input: Omit<
+      PreviewSystemBuilderLayoutChangeCommand,
+      "actorId" | "workspaceId" | "systemId"
+    > & { readonly workspaceId: string; readonly systemId: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuilderLayoutChangePreviewResponse>;
   requestSystemBuild: (
     input: Record<string, unknown>,
     context?: DesktopArtifactUploadBridgeContext,
@@ -4607,6 +4616,14 @@ export function createDesktopPreloadApi(
       return invokeSystemBuilder<DesktopSystemBuilderComposerCatalogResponse>(
         dependencies,
         "listComposerAssets",
+        input,
+        context,
+      );
+    },
+    async previewSystemBuilderLayoutChange(input, context = {}) {
+      return invokeSystemBuilder<DesktopSystemBuilderLayoutChangePreviewResponse>(
+        dependencies,
+        "previewLayoutChange",
         input,
         context,
       );

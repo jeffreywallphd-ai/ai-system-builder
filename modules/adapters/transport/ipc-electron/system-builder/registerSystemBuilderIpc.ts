@@ -124,6 +124,14 @@ export function registerSystemBuilderIpc(
       workspaceId: createWorkspaceId(required(p.workspaceId)),
     } as any),
   );
+  handle(d, "previewLayoutChange", (p) =>
+    d.previewLayoutChange.execute({
+      ...p,
+      workspaceId: createWorkspaceId(required(p.workspaceId)),
+      systemId: normalizeSystemBuilderSystemId(required(p.systemId)),
+      actorId: "local-user",
+    } as any),
+  );
 }
 
 function handle(

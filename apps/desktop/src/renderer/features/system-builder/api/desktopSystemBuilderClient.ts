@@ -68,5 +68,9 @@ export function createDesktopSystemBuilderClient(): SystemBuilderClient {
       typeof api.listSystemBuilderComposerAssets === "function"
         ? unwrap(await api.listSystemBuilderComposerAssets(input))
         : unavailable(),
+    previewLayoutChange: async (input) =>
+      typeof api.previewSystemBuilderLayoutChange === "function"
+        ? unwrap(await api.previewSystemBuilderLayoutChange(input))
+        : unavailable(),
   };
 }

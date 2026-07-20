@@ -9,6 +9,8 @@ import type {
   SystemBuilderComposerCatalog,
   ListSystemBuilderManagementQuery,
   SystemBuilderManagementPage,
+  PreviewSystemBuilderLayoutChangeCommand,
+  SystemBuilderLayoutChangePreview,
 } from "../system-builder";
 import { createTransportOperation } from "../transport";
 import { createIpcChannel } from "./ipc-channel";
@@ -35,6 +37,10 @@ export const DESKTOP_SYSTEM_BUILDER_OPERATIONS = {
   listComposerAssets: createTransportOperation(
     "system-builder",
     "list-composer-assets",
+  ),
+  previewLayoutChange: createTransportOperation(
+    "system-builder",
+    "preview-layout-change",
   ),
 } as const;
 
@@ -78,6 +84,10 @@ export type DesktopListSystemBuilderManagementRequest = IpcRequest<
   ListSystemBuilderManagementQuery,
   (typeof DESKTOP_SYSTEM_BUILDER_OPERATIONS)["listManagement"]
 >;
+export type DesktopPreviewSystemBuilderLayoutChangeRequest = IpcRequest<
+  WithoutActor<PreviewSystemBuilderLayoutChangeCommand>,
+  (typeof DESKTOP_SYSTEM_BUILDER_OPERATIONS)["previewLayoutChange"]
+>;
 export type DesktopSystemBuilderRecordResponse =
   IpcResponse<SystemBuilderRecord>;
 export type DesktopSystemBuilderListResponse = IpcResponse<
@@ -92,6 +102,8 @@ export type DesktopSystemBuilderRevisionListResponse = IpcResponse<
 >;
 export type DesktopSystemBuilderComposerCatalogResponse =
   IpcResponse<SystemBuilderComposerCatalog>;
+export type DesktopSystemBuilderLayoutChangePreviewResponse =
+  IpcResponse<SystemBuilderLayoutChangePreview>;
 
 export const createDesktopSystemBuilderRequest = <T>(
   operation: keyof typeof DESKTOP_SYSTEM_BUILDER_OPERATIONS,

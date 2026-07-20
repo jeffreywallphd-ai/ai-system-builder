@@ -10,3 +10,4 @@ export * from "./system-builder-commands";
 export * from "./system-builder-result";
 export * from "./system-builder-composer";
 export * from "./system-builder-management";
+export * from "./system-builder-layout-change";

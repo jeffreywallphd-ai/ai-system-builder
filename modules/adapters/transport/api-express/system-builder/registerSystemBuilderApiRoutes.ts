@@ -13,6 +13,7 @@ import type {
   RenameSystemBuilderSystemUseCase,
   RestoreSystemBuilderSystemUseCase,
   SaveSystemBuilderRevisionUseCase,
+  PreviewSystemBuilderLayoutChangeUseCase,
 } from "../../../../application/use-cases/system-builder";
 import {
   API_SYSTEM_BUILDER_OPERATIONS,
@@ -28,6 +29,7 @@ import type {
   SaveSystemBuilderRevisionCommand,
   CreateSystemBuilderFromTemplateCommand,
   ListSystemBuilderManagementQuery,
+  PreviewSystemBuilderLayoutChangeCommand,
 } from "../../../../contracts/system-builder";
 import {
   normalizeSystemBuilderRevisionId,
@@ -79,6 +81,7 @@ export interface RegisterSystemBuilderApiRoutesDependencies {
   readRevision: Pick<ReadSystemBuilderRevisionUseCase, "execute">;
   listRevisions: Pick<ListSystemBuilderRevisionsUseCase, "execute">;
   listComposerAssets: Pick<ListSystemBuilderComposerAssetsUseCase, "execute">;
+  previewLayoutChange: Pick<PreviewSystemBuilderLayoutChangeUseCase, "execute">;
 }
 
 export function registerSystemBuilderApiRoutes(
@@ -176,6 +179,15 @@ export function registerSystemBuilderApiRoutes(
       );
     }
   });
+  d.app.post("/api/systems/layout-change/preview", async (req, res) =>
+    command(
+      req,
+      res,
+      "previewLayoutChange",
+      d.previewLayoutChange,
+      parsePreviewLayoutChange,
+    ),
+  );
 }
 function parseManagementQuery(
   query: Record<string, unknown>,
@@ -346,6 +358,17 @@ function parseSave(
     systemId: normalizeSystemBuilderSystemId(required(body.systemId)),
     actorId,
   } as unknown as SaveSystemBuilderRevisionCommand;
+}
+function parsePreviewLayoutChange(
+  body: Record<string, unknown>,
+  actorId: string,
+): PreviewSystemBuilderLayoutChangeCommand {
+  return {
+    ...body,
+    workspaceId: createWorkspaceId(required(body.workspaceId)),
+    systemId: normalizeSystemBuilderSystemId(required(body.systemId)),
+    actorId,
+  } as unknown as PreviewSystemBuilderLayoutChangeCommand;
 }
 function result(
   res: ResponseLike,

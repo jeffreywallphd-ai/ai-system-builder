@@ -10,12 +10,16 @@ import {
   normalizeAssetId,
   normalizeAssetSlotId,
 } from "../../../contracts/asset";
-import type { SystemBuilderComposerAsset } from "../../../contracts/system-builder";
+import type {
+  SystemBuilderComposerAsset,
+  SystemBuilderStructure,
+} from "../../../contracts/system-builder";
 
 export interface SystemComposerDraft {
   readonly instances: readonly AssetInstance[];
   readonly placements: readonly AssetPlacement[];
   readonly bindings: readonly AssetBinding[];
+  readonly structure?: SystemBuilderStructure;
 }
 
 export interface SystemComposerDraftHistory {
@@ -86,6 +90,7 @@ export function addSystemComposerAsset(
     readonly slotId: string;
     readonly instanceId: string;
     readonly actorId?: string;
+    readonly order?: number;
   },
 ): SystemComposerDraftResult {
   if (!findInstance(draft, input.parentInstanceId)) {
@@ -95,7 +100,10 @@ export function addSystemComposerAsset(
     return failure("A unique asset instance id could not be created.");
   }
   const slotId = normalizeAssetSlotId(input.slotId);
-  const order = nextSlotOrder(draft.placements, input.parentInstanceId, slotId);
+  const order = boundedInsertionOrder(
+    input.order,
+    nextSlotOrder(draft.placements, input.parentInstanceId, slotId),
+  );
   const instance: AssetInstance = {
     instanceId: normalizeAssetId(input.instanceId),
     definitionRef: input.asset.definitionRef,
@@ -121,7 +129,16 @@ export function addSystemComposerAsset(
   return success({
     ...draft,
     instances: [...draft.instances, instance],
-    placements: [...draft.placements, placement],
+    placements: normalizePlacementOrders([
+      ...draft.placements.map((item) =>
+        String(item.parentInstanceRef.id) === input.parentInstanceId &&
+        item.slotId === slotId &&
+        item.order >= order
+          ? { ...item, order: item.order + 1 }
+          : item,
+      ),
+      placement,
+    ]),
   });
 }
 
@@ -209,6 +226,7 @@ export function reparentSystemComposerAsset(
     readonly instanceId: string;
     readonly parentInstanceId: string;
     readonly slotId: string;
+    readonly order?: number;
   },
 ): SystemComposerDraftResult {
   const placement = placementForChild(draft.placements, input.instanceId);
@@ -230,16 +248,86 @@ export function reparentSystemComposerAsset(
   const remaining = draft.placements.filter(
     (item) => String(item.placementId) !== String(placement.placementId),
   );
+  const order = boundedInsertionOrder(
+    input.order,
+    nextSlotOrder(remaining, input.parentInstanceId, slotId),
+  );
   return success({
     ...draft,
     placements: normalizePlacementOrders([
-      ...remaining,
+      ...remaining.map((item) =>
+        String(item.parentInstanceRef.id) === input.parentInstanceId &&
+        item.slotId === slotId &&
+        item.order >= order
+          ? { ...item, order: item.order + 1 }
+          : item,
+      ),
       {
         ...placement,
         parentInstanceRef: instanceReference(input.parentInstanceId),
         slotId,
-        order: nextSlotOrder(remaining, input.parentInstanceId, slotId),
+        order,
       },
+    ]),
+  });
+}
+
+export function attachUnassignedSystemComposerAsset(
+  draft: SystemComposerDraft,
+  input: {
+    readonly instanceId: string;
+    readonly parentInstanceId: string;
+    readonly slotId: string;
+    readonly rootInstanceIds: ReadonlySet<string>;
+    readonly order?: number;
+  },
+): SystemComposerDraftResult {
+  if (!findInstance(draft, input.instanceId)) {
+    return failure("The selected asset instance is unavailable.");
+  }
+  if (input.rootInstanceIds.has(input.instanceId)) {
+    return failure(
+      "The protected system root cannot be placed inside another asset.",
+    );
+  }
+  if (placementForChild(draft.placements, input.instanceId)) {
+    return reparentSystemComposerAsset(draft, input);
+  }
+  if (!findInstance(draft, input.parentInstanceId)) {
+    return failure("The selected parent asset is unavailable.");
+  }
+  if (
+    input.instanceId === input.parentInstanceId ||
+    descendantsOf(draft.placements, input.instanceId).has(
+      input.parentInstanceId,
+    )
+  ) {
+    return failure(
+      "An asset cannot be moved inside itself or its descendants.",
+    );
+  }
+  const slotId = normalizeAssetSlotId(input.slotId);
+  const order = boundedInsertionOrder(
+    input.order,
+    nextSlotOrder(draft.placements, input.parentInstanceId, slotId),
+  );
+  return success({
+    ...draft,
+    placements: normalizePlacementOrders([
+      ...draft.placements.map((item) =>
+        String(item.parentInstanceRef.id) === input.parentInstanceId &&
+        item.slotId === slotId &&
+        item.order >= order
+          ? { ...item, order: item.order + 1 }
+          : item,
+      ),
+      createPlacement({
+        placementId: `placement.${safeId(input.instanceId)}.attached`,
+        parentInstanceId: input.parentInstanceId,
+        childInstanceId: input.instanceId,
+        slotId,
+        order,
+      }),
     ]),
   });
 }
@@ -422,6 +510,14 @@ function nextSlotOrder(
   slotId: AssetSlotId,
 ): number {
   return slotPlacements(placements, parentInstanceId, slotId).length;
+}
+
+function boundedInsertionOrder(
+  requested: number | undefined,
+  maximum: number,
+): number {
+  if (requested === undefined || !Number.isInteger(requested)) return maximum;
+  return Math.max(0, Math.min(requested, maximum));
 }
 
 function slotPlacements(

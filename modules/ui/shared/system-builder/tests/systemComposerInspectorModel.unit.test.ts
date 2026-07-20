@@ -9,6 +9,7 @@ import type { SystemBuilderComposerAsset } from "../../../../contracts/system-bu
 import {
   bindingKindForSystemComposerEndpoint,
   buildSystemComposerConfigurationSections,
+  buildSystemComposerPropertyPanelSections,
   listCompatibleSystemComposerTargets,
   listSystemComposerPortEndpoints,
   materializeSystemComposerConfiguration,
@@ -100,6 +101,47 @@ describe("System composer inspector model", () => {
     expect(errors.title).toEqual(["Title is too short."]);
     expect(errors.count?.[0]).toContain("does not satisfy min");
     expect(errors.mode?.[0]).toContain("approved option");
+  });
+
+  it("groups schema fields into deterministic Design, Data, and Events panels", () => {
+    const groups = buildSystemComposerPropertyPanelSections({
+      fields: [
+        {
+          fieldId: "title",
+          valueKind: "string",
+          label: "Title",
+          uiHint: { hintKind: "text", section: "Content" },
+        },
+        {
+          fieldId: "datasetSource",
+          valueKind: "artifact-reference",
+          label: "Dataset source",
+          uiHint: { hintKind: "select", section: "Data" },
+        },
+        {
+          fieldId: "onSubmitAction",
+          valueKind: "string",
+          label: "Submit action",
+          uiHint: { hintKind: "text", section: "Events" },
+        },
+      ],
+    });
+
+    expect(
+      groups.design
+        .flatMap((section) => section.fields)
+        .map((field) => field.fieldId),
+    ).toEqual(["title"]);
+    expect(
+      groups.data
+        .flatMap((section) => section.fields)
+        .map((field) => field.fieldId),
+    ).toEqual(["datasetSource"]);
+    expect(
+      groups.events
+        .flatMap((section) => section.fields)
+        .map((field) => field.fieldId),
+    ).toEqual(["onSubmitAction"]);
   });
 
   it("offers only compatible declared port targets and derives typed binding kinds", () => {

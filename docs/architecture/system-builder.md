@@ -61,6 +61,18 @@ semantics remain distinct from containment.
 
 Historical revisions omit both additions and remain immutable. A read reports
 `legacy-flat`; it never invents placements or writes an upgrade.
+An explicit predefined-layout selection is the migration boundary for a
+legacy-flat draft: the application preview operation materializes the current
+protected Foundation root, selected fixed-region shell, and required empty
+layout content in memory, preserves every historical instance and binding, and
+reports unmatched instances as Unassigned. The renderer does not synthesize
+this hierarchy, and only the normal Save operation may persist it as a new
+immutable revision.
+For backward compatibility, a workspace with any active trusted System
+Foundation generation may discover exact current built-in application and page
+layout definitions through System Builder only. This narrow compatibility seam
+does not activate or expose other current-generation assets in the workspace
+Asset Library.
 `SystemBuilderRevision` is an immutable snapshot containing the composition,
 instances, bindings, safe validation issues, actor, and timestamp. Updating a
 record requires the caller's expected record revision. Saving a composition
@@ -116,26 +128,57 @@ authoring, customization, and single-asset Studio workflows.
   operations. API reads require `asset:read`; mutations require `asset:write`.
 - The workspace-scoped composer read model resolves exact effective definitions,
   configuration schemas/defaults, declared ports and slots, preview/implementation
-  availability, and server-owned slot compatibility for both desktop and thin
-  client. Renderers do not reconstruct compatibility from Asset Library summaries.
+  availability, trusted fixed layout geometry, and server-owned slot
+  compatibility for both desktop and thin client. Foundation layout geometry is
+  an abstract projection of approved named regions; renderers do not reconstruct
+  compatibility or accept author-defined dimensions from Asset Library summaries.
 - `modules/ui/shared/system-builder` is the shared desktop/thin-client editor.
-  Predefined layout cards create the required root/shell/page-host structure. One
-  canonical in-memory draft drives the synchronized Asset Library palette,
-  semantic slot canvas, keyboard tree, breadcrumbs, protected required nodes,
-  native add/move/reparent/reorder/wrap/remove actions, and bounded undo/redo.
-  Structure, Configure, and Connections are explicit modes over that same draft.
-- Configure generates sectioned native controls from exact schemas, applies
+  Predefined geometry-aware layout icons inside the Asset Palette create or
+  remap the required root/shell/page-host structure. One
+  canonical in-memory draft drives a flat three-column Design workspace with the
+  searchable Asset Palette, a wide Canvas showing every fixed region of the
+  active application layout, and one details
+  sidebar whose accessible tabs switch between Properties and Layers and
+  Structure. Either sidebar can collapse to a compact, non-persisted rail to give
+  the canvas more width. A thin dnd-kit adapter maps pointer,
+  touch, and keyboard insertion/reorder/reparent interactions onto bounded
+  add/place commands; each square visual asset tile is the drag handle and fixed
+  regions are the drop surfaces. The Design workspace does not expose the legacy
+  choose-slot, Add-here, move-order, reparent, or wrapper forms. Drag state is
+  never serialized. Selection, breadcrumbs, protected required nodes, responsive
+  panel focus restoration, and bounded undo/redo remain synchronized across
+  regions.
+- Properties generates Design, Data, and Events sections from exact schemas, applies
   defaults and field constraints, offers approved asset/reference choices, and
-  retains a bounded Advanced JSON fallback. Connections accepts only declared,
+  retains a bounded Advanced JSON fallback for ordinary assets. System Foundation
+  layout containers expose only their declared semantic fields: width, height,
+  regions, responsive rules, raw JSON, arbitrary CSS, and grid coordinates remain
+  locked. Connections accepts only declared,
   contract-compatible source and target ports; typed bindings remain separate
   from containment.
+- Changing an existing application layout calls the workspace-scoped
+  `PreviewSystemBuilderLayoutChangeUseCase` through parity HTTP and IPC paths.
+  The operation checks the expected record revision, maps direct shell children in
+  canonical source order, returns preserved/moved/unassigned dispositions and
+  bounded validation issues, and does not persist. A successful selection
+  immediately commits the returned structure, instances, bindings, and placements
+  to the local draft history, where undo/redo includes the layout descriptor.
+  Unassigned
+  assets remain selectable and removable in Layers and Structure, appear at the
+  bottom of the Asset Palette rather than on the Canvas, and are reattachable by
+  dragging them to compatible Canvas regions.
+  Save remains a separate optimistic command that creates a new immutable revision.
 - Compose provides a design-time UI preview of the current unsaved hierarchy and
   configuration. The shared modal recursively follows canonical placement and
-  slot order, reports unassigned and unsupported assets, and offers bounded
+  canonical region order, reports unassigned and unsupported assets, and offers bounded
   desktop/tablet/mobile frames. Only registered, side-effect-free System
   Foundation renderers run; backend or unqualified imported/authored
   implementation never executes, and preview grants no build, release,
   activation, or deployment authority.
+- Compose exposes a shared Build & test handoff in both hosts. The handoff is
+  disabled for dirty or archived systems and opens the existing Build & Release
+  workflow for the selected saved system; it does not build from renderer state or
+  combine design validation with release/runtime authority.
 - Systems Manage is the workspace-scoped operational index for draft, published,
   and archived system records. Its application-owned projection supplies search,
   lifecycle filters, deterministic ordering, bounded pagination, latest-revision

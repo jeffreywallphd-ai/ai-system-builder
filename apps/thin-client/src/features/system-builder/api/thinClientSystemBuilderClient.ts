@@ -60,6 +60,8 @@ export function createThinClientSystemBuilderClient(
       ),
     listComposerAssets: (input) =>
       request(`${root}/systems/composer/assets?${composerQuery(input)}`),
+    previewLayoutChange: (input) =>
+      post(`${root}/systems/layout-change/preview`, input),
   };
 }
 

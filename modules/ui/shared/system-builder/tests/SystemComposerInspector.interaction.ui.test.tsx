@@ -76,6 +76,10 @@ describe("SystemComposerInspector interactions", () => {
     expect(container!.textContent).toContain("Content");
     expect(container!.textContent).toContain("Title is required.");
     expect(container!.textContent).toContain("Advanced JSON");
+    expect(button("Design").getAttribute("aria-selected")).toBe("true");
+    await click(button("Data"));
+    expect(button("Data").getAttribute("aria-selected")).toBe("true");
+    await click(button("Design"));
     expect(
       container!.querySelectorAll<HTMLSelectElement>("select")[1]?.options,
     ).toHaveLength(2);
@@ -151,6 +155,51 @@ describe("SystemComposerInspector interactions", () => {
       )!,
     );
     expect(onRemoveConnection).toHaveBeenCalledWith("binding.one");
+  });
+
+  it("locks system-foundation layout geometry to declared semantic fields", () => {
+    const definition: SystemBuilderComposerAsset = {
+      ...asset("builtin.layout.application.standard", [], {
+        fields: [
+          { fieldId: "title", valueKind: "string", label: "Title" },
+          {
+            fieldId: "accessibilityLabel",
+            valueKind: "string",
+            label: "Accessibility label",
+          },
+        ],
+        strict: true,
+      }),
+      layoutRole: "application-shell",
+      layoutGeometry: {
+        columnPattern: "single",
+        areas: [["top-bar"], ["content"]],
+        sourceOrder: ["top-bar", "content"],
+        dimensionsLocked: true,
+      },
+    };
+    const selected = instance("instance.layout", definition);
+    render(
+      <SystemComposerInspector
+        mode="configuration"
+        selectedInstance={selected}
+        selectedDefinition={definition}
+        instances={[selected]}
+        catalog={[definition]}
+        bindings={[]}
+        onConfigurationChange={vi.fn()}
+        onAddConnection={vi.fn()}
+        onRemoveConnection={vi.fn()}
+      />,
+    );
+
+    expect(container!.textContent).toContain(
+      "System Foundation controls this layout's width, height, regions, and responsive rules.",
+    );
+    expect(container!.textContent).not.toContain("Advanced JSON");
+    expect(container!.querySelector("#title")).not.toBeNull();
+    expect(container!.querySelector("#width")).toBeNull();
+    expect(container!.querySelector("#height")).toBeNull();
   });
 });
 
