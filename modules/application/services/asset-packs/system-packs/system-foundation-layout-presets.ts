@@ -2,6 +2,7 @@ import type {
   AssetDefinition,
   AssetJsonValue,
   AssetPackAssetEntry,
+  AssetPackVersion,
   AssetReference,
   AssetSlotDefinition,
   AssetType,
@@ -13,9 +14,9 @@ import {
 } from "../../../../contracts/asset";
 
 import {
-  SYSTEM_FOUNDATION_CURRENT_PACK_VERSION,
   SYSTEM_FOUNDATION_PACK_ID,
   SYSTEM_FOUNDATION_PACK_SOURCE_LAYER,
+  SYSTEM_FOUNDATION_V2_PACK_VERSION,
 } from "./system-foundation-pack.constants";
 
 export const SYSTEM_FOUNDATION_LAYOUT_SCHEMA_VERSION =
@@ -257,8 +258,37 @@ const presetsById = new Map(
 
 export function readSystemFoundationLayoutPreset(
   definitionId: string,
+  version: AssetPackVersion = SYSTEM_FOUNDATION_V2_PACK_VERSION,
 ): SystemFoundationLayoutPreset | undefined {
-  return presetsById.get(definitionId as SystemFoundationLayoutId);
+  const preset = presetsById.get(definitionId as SystemFoundationLayoutId);
+  if (!preset || version === SYSTEM_FOUNDATION_V2_PACK_VERSION) return preset;
+  return replaceLayoutVersion(
+    preset,
+    SYSTEM_FOUNDATION_V2_PACK_VERSION,
+    version,
+  );
+}
+
+function replaceLayoutVersion<T>(
+  value: T,
+  fromVersion: string,
+  toVersion: string,
+): T {
+  if (value === fromVersion) return toVersion as T;
+  if (Array.isArray(value)) {
+    return value.map((item) =>
+      replaceLayoutVersion(item, fromVersion, toVersion),
+    ) as T;
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+        key,
+        replaceLayoutVersion(item, fromVersion, toVersion),
+      ]),
+    ) as T;
+  }
+  return value;
 }
 
 export function createSystemRootSlotDefinition(): AssetSlotDefinition {
@@ -325,7 +355,7 @@ function createDefinition(
     definitionId,
     assetType: preset.kind === "page-layout" ? "page" : "ui-component",
     assetFamily: "structural",
-    version: SYSTEM_FOUNDATION_CURRENT_PACK_VERSION,
+    version: SYSTEM_FOUNDATION_V2_PACK_VERSION,
     displayName: preset.displayName,
     description: preset.description,
     lifecycleStatus: "published",
@@ -337,7 +367,7 @@ function createDefinition(
     },
     configurationSchema: {
       schemaId: `${preset.presetId}.configuration`,
-      schemaVersion: SYSTEM_FOUNDATION_CURRENT_PACK_VERSION,
+      schemaVersion: SYSTEM_FOUNDATION_V2_PACK_VERSION,
       fields: [
         {
           fieldId: "title",
@@ -437,7 +467,7 @@ function createEntry(definition: AssetDefinition): AssetPackAssetEntry {
     metadata: {
       sourcePack: {
         packId: SYSTEM_FOUNDATION_PACK_ID,
-        version: SYSTEM_FOUNDATION_CURRENT_PACK_VERSION,
+        version: SYSTEM_FOUNDATION_V2_PACK_VERSION,
       },
       layoutPresetId: String(definition.definitionId),
       systemOwned: true,
@@ -499,7 +529,7 @@ function exactRef(definitionId: string): AssetReference {
   return {
     kind: "asset-definition-version",
     id: normalizeAssetId(definitionId),
-    version: SYSTEM_FOUNDATION_CURRENT_PACK_VERSION,
+    version: SYSTEM_FOUNDATION_V2_PACK_VERSION,
   };
 }
 
@@ -515,7 +545,7 @@ function sourceMetadata(
 ): Record<string, AssetJsonValue> {
   return {
     sourcePackId: SYSTEM_FOUNDATION_PACK_ID,
-    sourcePackVersion: SYSTEM_FOUNDATION_CURRENT_PACK_VERSION,
+    sourcePackVersion: SYSTEM_FOUNDATION_V2_PACK_VERSION,
     sourceLayer: SYSTEM_FOUNDATION_PACK_SOURCE_LAYER,
     layoutPresetId: preset.presetId,
     layoutKind: preset.kind,

@@ -1,6 +1,7 @@
-import type { AssetBinding, AssetInstance } from "../asset";
+import type { AssetBinding, AssetInstance, AssetPlacement } from "../asset";
 import type { WorkspaceId } from "../workspace";
 import type { SystemBuilderComposition } from "./system-builder-composition";
+import type { SystemBuilderStructure } from "./system-builder-structure";
 
 export const SYSTEM_BUILDER_TEMPLATE_IDS = [
   "reference.controlled-chatbot@1.0.0",
@@ -25,6 +26,8 @@ export interface SystemBuilderTemplateMaterialization {
   readonly description: string;
   readonly instances: readonly AssetInstance[];
   readonly bindings: readonly AssetBinding[];
+  readonly structure?: SystemBuilderStructure;
+  readonly placements?: readonly AssetPlacement[];
 }
 
 export interface CreateSystemBuilderFromTemplateCommand {

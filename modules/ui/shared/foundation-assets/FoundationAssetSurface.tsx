@@ -1,4 +1,9 @@
-import { Children, type FormEvent, type ReactNode } from "react";
+import {
+  Children,
+  type CSSProperties,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 
 import type { SystemFoundationBackingResourceProgram } from "../../../application/services/asset-packs/system-foundation-backing-resource-catalog";
 import type { AssetJsonValue } from "../../../contracts/asset";
@@ -40,6 +45,7 @@ export function FoundationAssetSurface({
       "foundation-surface foundation-surface--" +
       definitionId.replace(/[^A-Za-z0-9_-]/g, "-"),
     "data-foundation-definition": definitionId,
+    ...foundationPresentationProps(configuration),
   };
 
   if (definitionId === "builtin.system.system") {
@@ -135,7 +141,14 @@ export function FoundationAssetSurface({
     definitionId === "conversation.basic-assistant-system"
   ) {
     return (
-      <section {...common} aria-label={title}>
+      <section
+        {...common}
+        aria-label={
+          definitionId === "conversation.basic-assistant-system"
+            ? stringValue(configuration?.accessibilityLabel) || title
+            : title
+        }
+      >
         <header>
           <h2>{title}</h2>
           {description ? <p>{description}</p> : null}
@@ -410,10 +423,13 @@ export function FoundationAssetSurface({
     );
   }
   if (definitionId === "conversation.chat-shell") {
+    const accessibilityLabel =
+      stringValue(configuration?.accessibilityLabel) || title;
     return (
-      <section {...common} aria-label={title}>
+      <section {...common} aria-label={accessibilityLabel}>
         <header>
           <h2>{title}</h2>
+          {description ? <p>{description}</p> : null}
           <div data-slot="status">{region("status")}</div>
         </header>
         <div data-slot="history">{region("history")}</div>
@@ -427,17 +443,34 @@ export function FoundationAssetSurface({
     );
   }
   if (definitionId === "conversation.message-history-display") {
+    const historyTitle = stringValue(configuration?.title) || "Conversation";
     return (
-      <section {...common} aria-label="Conversation history">
-        <h3>Conversation</h3>
+      <section
+        {...common}
+        aria-label={
+          stringValue(configuration?.accessibilityLabel) ||
+          "Conversation history"
+        }
+      >
+        <h3>{historyTitle}</h3>
         <ol>
           <li>
-            <strong>You</strong>
-            <p>How can this system help?</p>
+            <strong>
+              {stringValue(configuration?.userRoleLabel) || "You"}
+            </strong>
+            <p>
+              {stringValue(configuration?.sampleUserMessage) ||
+                "How can this system help?"}
+            </p>
           </li>
           <li>
-            <strong>Assistant</strong>
-            <p>This is a safe preview response.</p>
+            <strong>
+              {stringValue(configuration?.assistantRoleLabel) || "Assistant"}
+            </strong>
+            <p>
+              {stringValue(configuration?.sampleAssistantMessage) ||
+                "This is a safe preview response."}
+            </p>
           </li>
         </ol>
         {hasRegion("messages") ? (
@@ -447,9 +480,16 @@ export function FoundationAssetSurface({
     );
   }
   if (definitionId === "conversation.assistant-response-panel") {
+    const responseTitle =
+      stringValue(configuration?.title) || "Assistant response";
     return (
-      <section {...common} aria-label="Assistant response">
-        <h3>Assistant response</h3>
+      <section
+        {...common}
+        aria-label={
+          stringValue(configuration?.accessibilityLabel) || responseTitle
+        }
+      >
+        <h3>{responseTitle}</h3>
         <div data-slot="content">{region("content")}</div>
         {!hasRegion("content") && hasRegion("states") ? (
           <div data-slot="states">{region("states")}</div>
@@ -462,7 +502,9 @@ export function FoundationAssetSurface({
       <form
         {...common}
         onSubmit={(event) => event.preventDefault()}
-        aria-label="Message composer"
+        aria-label={
+          stringValue(configuration?.accessibilityLabel) || "Message composer"
+        }
       >
         <div data-slot="input">{region("input")}</div>
         <div data-slot="actions">{region("actions")}</div>
@@ -472,13 +514,32 @@ export function FoundationAssetSurface({
   if (definitionId === "conversation.user-message-input") {
     return (
       <label {...common}>
-        <span>Message</span>
-        <textarea value="Preview message" readOnly />
+        <span>{stringValue(configuration?.label) || "Message"}</span>
+        <textarea
+          aria-label={
+            stringValue(configuration?.accessibilityLabel) ||
+            stringValue(configuration?.label) ||
+            "Message"
+          }
+          placeholder={stringValue(configuration?.placeholder) || undefined}
+          value={stringValue(configuration?.previewValue) || "Preview message"}
+          readOnly
+        />
       </label>
     );
   }
   if (definitionId === "conversation.assistant-text-response-output") {
-    return <p {...common}>The assistant response will appear here.</p>;
+    return (
+      <p
+        {...common}
+        aria-label={
+          stringValue(configuration?.accessibilityLabel) || "Assistant response"
+        }
+      >
+        {stringValue(configuration?.content) ||
+          "The assistant response will appear here."}
+      </p>
+    );
   }
   if (definitionId.startsWith("conversation.")) {
     return (
@@ -514,6 +575,91 @@ export function FoundationAssetSurface({
       {allRegions}
     </section>
   );
+}
+
+const FOUNDATION_THEME_COLOR_PROPERTIES = {
+  themeColorPrimary: "--foundation-color-primary",
+  themeColorSecondary: "--foundation-color-secondary",
+  themeColorTertiary: "--foundation-color-tertiary",
+  themeColorSurface: "--foundation-color-surface",
+  themeColorCanvas: "--foundation-color-canvas",
+  themeColorText: "--foundation-color-text",
+  themeColorMutedText: "--foundation-color-muted-text",
+  themeColorBorder: "--foundation-color-border",
+  themeColorSuccess: "--foundation-color-success",
+  themeColorDanger: "--foundation-color-danger",
+} as const;
+
+function foundationPresentationProps(
+  configuration: Readonly<Record<string, AssetJsonValue>> | undefined,
+) {
+  const style: Record<string, string> = {};
+  for (const [fieldId, property] of Object.entries(
+    FOUNDATION_THEME_COLOR_PROPERTIES,
+  )) {
+    const value = stringValue(configuration?.[fieldId]);
+    if (value && /^#[0-9A-Fa-f]{6}$/.test(value)) style[property] = value;
+  }
+  return {
+    style: (Object.keys(style).length ? style : undefined) as
+      CSSProperties | undefined,
+    "data-theme-font-family": semanticChoice(configuration, "themeFontFamily"),
+    "data-theme-text-size": semanticChoice(configuration, "themeTextSize"),
+    "data-theme-heading-scale": semanticChoice(
+      configuration,
+      "themeHeadingScale",
+    ),
+    "data-theme-density": semanticChoice(configuration, "themeDensity"),
+    "data-theme-button-treatment": semanticChoice(
+      configuration,
+      "themeButtonTreatment",
+    ),
+    "data-theme-button-shape": semanticChoice(
+      configuration,
+      "themeButtonShape",
+    ),
+    "data-theme-form-treatment": semanticChoice(
+      configuration,
+      "themeFormTreatment",
+    ),
+    "data-theme-surface-treatment": semanticChoice(
+      configuration,
+      "themeSurfaceTreatment",
+    ),
+    "data-style-surface-role": semanticChoice(
+      configuration,
+      "styleSurfaceRole",
+    ),
+    "data-style-text-role": semanticChoice(configuration, "styleTextRole"),
+    "data-style-typography-role": semanticChoice(
+      configuration,
+      "styleTypographyRole",
+    ),
+    "data-style-spacing": semanticChoice(configuration, "styleSpacing"),
+    "data-style-border": semanticChoice(configuration, "styleBorder"),
+    "data-style-button-role": semanticChoice(configuration, "styleButtonRole"),
+    "data-style-button-treatment": semanticChoice(
+      configuration,
+      "styleButtonTreatment",
+    ),
+    "data-style-form-role": semanticChoice(configuration, "styleFormRole"),
+    "data-style-form-treatment": semanticChoice(
+      configuration,
+      "styleFormTreatment",
+    ),
+    "data-style-control-size": semanticChoice(
+      configuration,
+      "styleControlSize",
+    ),
+  };
+}
+
+function semanticChoice(
+  configuration: Readonly<Record<string, AssetJsonValue>> | undefined,
+  fieldId: string,
+): string | undefined {
+  const value = stringValue(configuration?.[fieldId]);
+  return value && value !== "inherit" ? value : undefined;
 }
 
 function renderFormControl(
@@ -618,7 +764,7 @@ function renderFormControl(
         </span>
         <textarea
           required={configuration?.required === true}
-          placeholder={stringValue(configuration?.placeholder)}
+          placeholder={stringValue(configuration?.placeholder) || undefined}
         />
       </label>
     );
@@ -640,7 +786,7 @@ function renderFormControl(
         required={configuration?.required === true}
         min={numberValue(configuration?.minimum)}
         max={numberValue(configuration?.maximum)}
-        placeholder={stringValue(configuration?.placeholder)}
+        placeholder={stringValue(configuration?.placeholder) || undefined}
       />
     </label>
   );

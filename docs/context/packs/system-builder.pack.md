@@ -45,9 +45,9 @@
   `modules/application/services/system-builder/validate-system-builder-revision.service.ts`.
 - API/IPC transports and clients are present for both hosts; Systems uses the
   shared `modules/ui/shared/system-builder/` editor in desktop and thin client.
-- New interactive records begin with one Foundation v2 system root, a required
+- New interactive records begin with one Foundation v3 system root, a required
   exact application layout, and a canonical application/page containment tree.
-  The default is `builtin.layout.application.minimal@2.0.0` when no layout is
+  The default is `builtin.layout.application.minimal@3.0.0` when no layout is
   requested. Save, clone, persistence, API, IPC, preload, and shared UI paths
   preserve exact structure and placements; legacy-flat revisions remain readable
   without persistence-time synthesis.
@@ -60,9 +60,19 @@
   application-owned compatibility. Desktop and thin client share the predefined
   layout icons in the flat three-column Design workspace: a searchable Asset Palette,
   a wide Canvas showing all fixed regions of the active application layout, and one tabbed details sidebar containing
-  schema-driven Design/Data/Events Properties plus collapsible Layers and
-  Structure. Both sidebars collapse independently into compact rails without
-  changing the canonical draft. Square visual asset tiles and Canvas regions are
+  schema-driven Design/Data/Events Properties, root-scoped Styling, and
+  collapsible Layers and Structure. Styling uses native color pickers and
+  allowlisted typography, density, button, form, and surface selects; semantic
+  style fields are unavailable through Advanced JSON. Per-asset style roles
+  remain bounded selects in Properties. The Asset Palette has collapsed, normal, and maximized sizes; its
+  normal size presents layout choices and asset tiles in one column, while its
+  maximized size borrows Canvas width and uses multi-column galleries without
+  changing the details-sidebar width. Layout, Assets, Unassigned visual assets,
+  and System resources and logic are independent Palette disclosures that start
+  collapsed. Canvas States regions also start collapsed without removing their
+  drop surfaces. Layers and Structure contains only the
+  placed hierarchy. These panel and disclosure states do not change the
+  canonical draft. Square visual asset tiles and Canvas regions are
   the pointer, touch, and keyboard drag surfaces; the legacy Add-here, move-order,
   reparent, and wrapper forms are not exposed. All drag paths converge on bounded
   draft commands, and drag/panel state is not persisted. Foundation layout
@@ -102,7 +112,9 @@
   frontend backing programs drive the registered structural, form, display,
   state, conversation, and preview renderers. Nested regions render as one
   composed application and primary content suppresses simultaneous alternative
-  states. The renderer never executes backend or unqualified implementation
+  states. Foundation v3 root colors become inherited CSS variables, while root
+  and per-asset style choices become stable semantic data roles. The renderer
+  accepts no arbitrary CSS, selector, or dimension. It never executes backend or unqualified implementation
   source and does not imply build, release, activation, or deployment. Keep the
   three hand-authored reference-system semantic HTML fixtures as fidelity
   oracles; do not replace them with generated snapshots.

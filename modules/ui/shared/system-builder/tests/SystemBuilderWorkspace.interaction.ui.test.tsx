@@ -702,8 +702,9 @@ describe("SystemBuilderWorkspace UI preview", () => {
       definitionRef: {
         kind: "asset-definition-version",
         id: "builtin.system.system",
-        version: "2.0.0",
+        version: "3.0.0",
       },
+      selectedConfiguration: { themeColorPrimary: "#2563eb" },
     } as AssetInstance;
     const shellInstance = {
       ...instance(
@@ -715,7 +716,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
       definitionRef: {
         kind: "asset-definition-version",
         id: "builtin.layout.application.standard",
-        version: "2.0.0",
+        version: "3.0.0",
       },
     } as AssetInstance;
     const structure = {
@@ -801,14 +802,20 @@ describe("SystemBuilderWorkspace UI preview", () => {
         ok: true as const,
         value: {
           items: [
-            composerDefinition("builtin.system.system", "System root", [
-              "application-shell",
-            ]),
+            composerDefinition(
+              "builtin.system.system",
+              "System root",
+              ["application-shell"],
+              false,
+              "3.0.0",
+              true,
+            ),
             composerDefinition(
               "builtin.layout.application.standard",
               "Standard shell",
               [],
               true,
+              "3.0.0",
             ),
           ],
         },
@@ -832,6 +839,10 @@ describe("SystemBuilderWorkspace UI preview", () => {
       return current!;
     });
     await act(async () => shellTreeItem.click());
+    await vi.waitFor(() =>
+      expect(shellTreeItem.getAttribute("aria-selected")).toBe("true"),
+    );
+    expect(container.textContent).toContain("Configure Standard shell");
     const designButton = Array.from(container.querySelectorAll("button")).find(
       (button) => button.textContent === "Design",
     );
@@ -849,6 +860,39 @@ describe("SystemBuilderWorkspace UI preview", () => {
       setter?.call(title, "Configured portal");
       title.dispatchEvent(new Event("input", { bubbles: true }));
     });
+    await act(async () => button(container, "Styling").click());
+    const primaryColor = await vi.waitFor(() => {
+      const current =
+        container!.querySelector<HTMLInputElement>("#themeColorPrimary");
+      expect(current?.type).toBe("color");
+      return current!;
+    });
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )?.set;
+      setter?.call(primaryColor, "#123456");
+      primaryColor.dispatchEvent(new Event("input", { bubbles: true }));
+      primaryColor.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await vi.waitFor(() =>
+      expect(
+        container!.querySelector<HTMLInputElement>("#themeColorPrimary")?.value,
+      ).toBe("#123456"),
+    );
+    await act(async () => button(container, "Undo").click());
+    await vi.waitFor(() =>
+      expect(
+        container!.querySelector<HTMLInputElement>("#themeColorPrimary")?.value,
+      ).toBe("#2563eb"),
+    );
+    await act(async () => button(container, "Redo").click());
+    await vi.waitFor(() =>
+      expect(
+        container!.querySelector<HTMLInputElement>("#themeColorPrimary")?.value,
+      ).toBe("#123456"),
+    );
     const saveButton = Array.from(container.querySelectorAll("button")).find(
       (button) => button.textContent === "Save and validate revision",
     );
@@ -863,6 +907,22 @@ describe("SystemBuilderWorkspace UI preview", () => {
         rootInstanceRefs: revision.composition.rootInstanceRefs,
       },
     });
+    expect(saveRevision.mock.calls[0]?.[0].instances).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          instanceId: rootInstance.instanceId,
+          selectedConfiguration: expect.objectContaining({
+            themeColorPrimary: "#123456",
+          }),
+        }),
+        expect.objectContaining({
+          instanceId: shellInstance.instanceId,
+          selectedConfiguration: expect.objectContaining({
+            title: "Configured portal",
+          }),
+        }),
+      ]),
+    );
   });
 });
 
@@ -891,30 +951,55 @@ function composerDefinition(
   displayName: string,
   slotIds: readonly string[],
   configurable = false,
+  version = "2.0.0",
+  styling = false,
 ): SystemBuilderComposerAsset {
   return {
     definitionRef: {
       kind: "asset-definition-version",
       id: definitionId,
-      version: "2.0.0",
+      version,
     },
     definitionId,
-    version: "2.0.0",
+    version,
     displayName,
+    description: `${displayName} test definition.`,
     assetType: "ui-component",
     assetFamily: "structural",
     lifecycleStatus: "published",
     builtIn: true,
-    ...(configurable
+    ...(configurable || styling
       ? {
           configurationSchema: {
             fields: [
-              {
-                fieldId: "title",
-                valueKind: "string" as const,
-                label: "Title",
-                required: true,
-              },
+              ...(configurable
+                ? [
+                    {
+                      fieldId: "title",
+                      valueKind: "string" as const,
+                      label: "Title",
+                      required: true,
+                    },
+                  ]
+                : []),
+              ...(styling
+                ? [
+                    {
+                      fieldId: "themeColorPrimary",
+                      valueKind: "string" as const,
+                      label: "Primary color",
+                      defaultValue: "#2563eb",
+                      uiHint: {
+                        hintKind: "color" as const,
+                        section: "Theme colors",
+                        metadata: {
+                          editorScope: "styling",
+                          semanticStyleField: true,
+                        },
+                      },
+                    },
+                  ]
+                : []),
             ],
           },
         }

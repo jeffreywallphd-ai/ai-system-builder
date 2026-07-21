@@ -1,0 +1,1148 @@
+{
+  "blockers": [],
+  "chunks": [
+    {
+      "areas": [
+        "Foundation version constants and manifests",
+        "Version-aware layout, functional-default, and backing-resource catalogs"
+      ],
+      "chunkId": "exact-version-v3-scaffold",
+      "completedAt": "2026-07-20T22:51:28Z",
+      "criteriaIds": [
+        "immutable-version-coexistence"
+      ],
+      "documentation": [
+        "docs/architecture/asset-implementations-and-packages.md",
+        "docs/adr/ADR-0034-functional-foundation-pack-evolution.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "foundation-v3-property-model-exact-version-v3-scaffold",
+      "incrementId": "foundation-v3-property-model",
+      "summary": "Added an immutable Foundation v3 release boundary, exact-version manifests, layouts, functional defaults, and backing-resource catalogs while preserving exact v1 and v2 behavior.",
+      "tests": [
+        "9 exact-version layout and catalog tests passed"
+      ],
+      "title": "Immutable version boundary and v3 catalogs"
+    },
+    {
+      "areas": [
+        "Foundation v3 presentation property projection",
+        "Asset configuration UI hints",
+        "Semantic backing resources"
+      ],
+      "chunkId": "property-complete-theme-contracts",
+      "completedAt": "2026-07-20T22:51:28Z",
+      "criteriaIds": [
+        "all-preview-properties-declared",
+        "bounded-theme-contract"
+      ],
+      "documentation": [
+        "docs/architecture/system-builder.md",
+        "docs/context/packs/asset-kernel.pack.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "foundation-v3-property-model-property-complete-theme-contracts",
+      "incrementId": "foundation-v3-property-model",
+      "summary": "Completed v3 presentation schemas for all frontend-backed assets, added bounded root theme and per-asset override fields, and generated allowlisted semantic CSS resources without exposing raw CSS.",
+      "tests": [
+        "21 asset contract and v3 presentation-property tests passed",
+        "Renderer-property audit returned no undeclared values"
+      ],
+      "title": "Property-complete schemas and bounded theme contracts"
+    },
+    {
+      "areas": [
+        "Asset registry and Composer catalog",
+        "System Builder structure, layout, and validation services",
+        "Architecture and context documentation"
+      ],
+      "chunkId": "current-consumer-conformance",
+      "completedAt": "2026-07-20T22:51:29Z",
+      "criteriaIds": [
+        "all-preview-properties-declared",
+        "bounded-theme-contract",
+        "immutable-version-coexistence"
+      ],
+      "documentation": [
+        "docs/architecture/system-builder.md",
+        "docs/context/packs/system-builder.pack.md",
+        "docs/context/packs/asset-kernel.pack.md"
+      ],
+      "feedbackAddressed": [
+        "feedback-roadmap-source-links"
+      ],
+      "id": "foundation-v3-property-model-current-consumer-conformance",
+      "incrementId": "foundation-v3-property-model",
+      "summary": "Moved current Foundation consumers to the v3 abstraction, qualified install, registry, Composer catalog, structure, layout, documentation, and architecture behavior, and retained exact older-version reads.",
+      "tests": [
+        "38 install, registry, Composer, structure, and layout tests passed",
+        "npm run docs:check passed",
+        "npm run architecture:check passed",
+        "npm run agent-support:check passed"
+      ],
+      "title": "Current consumer wiring and conformance"
+    },
+    {
+      "areas": [
+        "Shared inspector model and controls",
+        "Composer details sidebar",
+        "Workspace draft mutation path"
+      ],
+      "chunkId": "bounded-editors-and-styling-tab",
+      "completedAt": "2026-07-21T00:00:15Z",
+      "criteriaIds": [
+        "complete-bounded-editors",
+        "reusable-styling-and-overrides",
+        "draft-history-roundtrip"
+      ],
+      "documentation": [
+        "Shared UI README updated"
+      ],
+      "feedbackAddressed": [],
+      "id": "cohesive-styling-editor-preview-bounded-editors-and-styling-tab",
+      "incrementId": "cohesive-styling-editor-preview",
+      "summary": "Added generated bounded property controls and a root-scoped Styling tab that excludes semantic style fields from Advanced JSON.",
+      "tests": [
+        "Inspector, structure editor, and workspace interaction tests passed"
+      ],
+      "title": "Bounded property controls and root-aware Styling tab"
+    },
+    {
+      "areas": [
+        "Foundation preview projection",
+        "Semantic preview styling",
+        "Reference preview fixtures"
+      ],
+      "chunkId": "semantic-theme-live-preview",
+      "completedAt": "2026-07-21T00:00:15Z",
+      "criteriaIds": [
+        "complete-bounded-editors",
+        "reusable-styling-and-overrides",
+        "accurate-live-preview"
+      ],
+      "documentation": [
+        "System Builder architecture and context pack updated"
+      ],
+      "feedbackAddressed": [],
+      "id": "cohesive-styling-editor-preview-semantic-theme-live-preview",
+      "incrementId": "cohesive-styling-editor-preview",
+      "summary": "Projected reusable theme choices and per-asset overrides into semantic preview variables and attributes, including configurable conversation copy.",
+      "tests": [
+        "Preview, foundation surface, style token, and authored HTML fidelity tests passed"
+      ],
+      "title": "Declared content and semantic theme live preview"
+    },
+    {
+      "areas": [
+        "Shared System Builder workspace",
+        "Draft history",
+        "Completion qualification"
+      ],
+      "chunkId": "shared-ui-roundtrip-qualification",
+      "completedAt": "2026-07-21T00:00:15Z",
+      "criteriaIds": [
+        "complete-bounded-editors",
+        "reusable-styling-and-overrides",
+        "accurate-live-preview",
+        "draft-history-roundtrip"
+      ],
+      "documentation": [
+        "README, architecture, and context guidance synchronized"
+      ],
+      "feedbackAddressed": [],
+      "id": "cohesive-styling-editor-preview-shared-ui-roundtrip-qualification",
+      "incrementId": "cohesive-styling-editor-preview",
+      "summary": "Verified root theme and selected-asset edits share the canonical draft, undo, redo, validation, and save lifecycle.",
+      "tests": [
+        "37 focused tests and applicable repository gates passed"
+      ],
+      "title": "Shared UI, history, and deterministic preview qualification"
+    }
+  ],
+  "completion": null,
+  "createdAt": "2026-07-20T21:47:41Z",
+  "currentIncrementId": "reference-upgrade-production-qualification",
+  "decisions": [
+    {
+      "approvalNote": "The user explicitly approved Option A: Foundation v3 with a root-instance reusable theme profile and bounded per-asset overrides.",
+      "approvedAt": "2026-07-20T22:00:09Z",
+      "approvedFingerprint": "3beb8680249b02a9461a1fd8c200ce7cc40d5d612b27a635252c840441368ca3",
+      "context": "Foundation v2 cannot be amended without violating the accepted immutable-release architecture, and strict asset schemas reject undeclared configuration. All options therefore publish a v3 successor for completed property schemas and provide an explicit upgrade path for existing v2 systems. The choice determines how global style values are persisted, validated, inherited by previews, and overridden by individual assets. In every option, users edit semantic tokens through color pickers and allowlisted dropdowns; they do not edit arbitrary CSS text.",
+      "id": "style-ownership-and-foundation-versioning",
+      "options": [
+        {
+          "consequences": [
+            "Publish Foundation v3 definitions and backing resources with completed renderer property schemas.",
+            "Add allowlisted semantic color, typography, spacing, button, form, and surface tokens to the system root.",
+            "Map inherited tokens and per-asset overrides to generated CSS custom properties and stable style-role classes in the shared preview."
+          ],
+          "id": "root-instance-theme",
+          "label": "Foundation v3 with a root-instance theme profile",
+          "recommended": true,
+          "summary": "Declare the reusable theme profile on the v3 system-root asset configuration, inherit it through the composed preview tree, and declare bounded per-asset override fields only where relevant.",
+          "tradeoffs": [
+            "Reuses the existing selected-configuration, validation, undo, revision-save, reload, and build paths.",
+            "Keeps one system-scoped style source without introducing another composition node.",
+            "Requires a dedicated Styling editor for a structured root configuration field and an explicit v2-to-v3 upgrade action."
+          ]
+        },
+        {
+          "consequences": [
+            "Publish Foundation v3 property schemas plus a new theme asset definition and binding contract.",
+            "Add validation that a visual system has exactly one effective theme binding.",
+            "Keep per-asset overrides in each visual asset's declared configuration."
+          ],
+          "id": "dedicated-theme-asset",
+          "label": "Foundation v3 with a dedicated theme asset",
+          "recommended": false,
+          "summary": "Represent the reusable style profile as a nonvisual Foundation asset that is bound to the system root and consumed by visual descendants.",
+          "tradeoffs": [
+            "Makes themes independently reusable and conceptually asset-native.",
+            "Adds theme discovery, binding, uniqueness, inheritance, upgrade, and placement semantics to an already complex composition graph.",
+            "Requires the inspector to coordinate selection of a visual asset with editing a different bound theme asset."
+          ]
+        },
+        {
+          "consequences": [
+            "Migrate every revision transport and persistence path for the new profile.",
+            "Maintain a second schema and validator for styling outside asset configuration.",
+            "Bridge revision-level tokens into the shared asset preview and build output."
+          ],
+          "id": "revision-native-theme",
+          "label": "Foundation v3 plus a revision-level style profile",
+          "recommended": false,
+          "summary": "Add a style-profile field directly to the System Builder revision contract while using v3 only for the completed per-asset property schemas.",
+          "tradeoffs": [
+            "Separates system-wide presentation from the root asset and makes theme availability unconditional.",
+            "Expands contracts, persistence adapters, use cases, IPC/HTTP clients, import/export, and qualification surfaces.",
+            "Duplicates configuration validation concepts outside the Asset Kernel and weakens asset portability."
+          ]
+        }
+      ],
+      "proposalFingerprint": "3beb8680249b02a9461a1fd8c200ce7cc40d5d612b27a635252c840441368ca3",
+      "question": "Where should the bounded reusable style profile live while missing renderer properties are completed in an immutable Foundation v3 release?",
+      "selectedOptionId": "root-instance-theme",
+      "status": "approved",
+      "title": "Reusable styling ownership for the successor Foundation release"
+    }
+  ],
+  "discovery": {
+    "constraints": [
+      "Do not mutate the immutable Foundation v2 manifest, definitions, or backing resources in place.",
+      "Do not expose arbitrary CSS, raw stylesheets, unrestricted dimensions, or free-form style values; store bounded semantic choices and generate allowlisted CSS variables/classes.",
+      "Every renderer-visible configurable value must be declared in the exact asset configuration schema and validated before persistence.",
+      "Reusable system styling and per-asset overrides must participate in existing draft, undo, validation, immutable revision save, reload, preview, and build flows.",
+      "Keep the shared System Composer and preview host-neutral so desktop and thin-client behavior remain aligned.",
+      "Preserve all unrelated uncommitted work in the current worktree.",
+      "Use focused tests while implementing a chunk and defer full applicable repository gates until its increment is complete."
+    ],
+    "decisionRequired": true,
+    "recordedAt": "2026-07-20T21:48:43Z",
+    "sources": [
+      {
+        "note": "Defines immutable revisions, exact Foundation versions, shared preview behavior, and bounded layout controls.",
+        "title": "System Builder architecture",
+        "url": "docs/architecture/system-builder.md"
+      },
+      {
+        "note": "Requires immutable Foundation releases and explicit version selection and upgrade.",
+        "title": "ADR-0034 Foundation version coexistence",
+        "url": "docs/adr/ADR-0034-functional-foundation-pack-evolution.md"
+      },
+      {
+        "note": "Prohibits arbitrary CSS and requires allowlisted declarative controls.",
+        "title": "ADR-0036 bounded visual layout",
+        "url": "docs/adr/ADR-0036-canonical-slot-composition-and-foundation-layouts.md"
+      },
+      {
+        "note": "Contains fixed conversation titles, labels, and preview copy not represented in the current asset schemas.",
+        "title": "Foundation asset preview surface",
+        "url": "modules/ui/shared/foundation-assets/FoundationAssetSurface.tsx"
+      },
+      {
+        "note": "All frontend-backed conversation definitions currently declare empty strict configuration schemas.",
+        "title": "Conversation Foundation definitions",
+        "url": "modules/application/services/asset-packs/system-packs/conversation-assets/conversation-assets.ts"
+      },
+      {
+        "note": "Already renders schema-driven bounded controls and commits selected-instance configuration through the workspace.",
+        "title": "System Composer inspector",
+        "url": "modules/ui/shared/system-builder/SystemComposerInspector.tsx"
+      },
+      {
+        "note": "Strict schemas reject undeclared selected-configuration fields, preventing an unversioned styling overlay.",
+        "title": "Asset instance validation",
+        "url": "modules/application/services/asset/asset-validation-helpers.ts"
+      }
+    ],
+    "summary": "The System Composer already persists schema-declared instance configuration and renders it in the shared desktop/thin-client preview, but renderer-visible values are incomplete: all 13 frontend-backed conversation definitions have empty strict configuration schemas while their previews contain fixed titles, labels, sample copy, and accessibility text. The inspector has schema-driven controls but no color picker or system-wide reusable style profile. Foundation v2 is an immutable exact-version release, so completing schemas requires a successor release rather than mutating v2."
+  },
+  "evidence": [
+    {
+      "artifact": null,
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test modules/contracts/asset/tests/asset-configuration-contracts.unit.test.ts modules/application/services/asset-packs/tests/system-foundation-v3-properties.unit.test.ts",
+      "criterionId": "all-preview-properties-declared",
+      "id": "evidence-1",
+      "incrementId": "foundation-v3-property-model",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-20T22:51:29Z",
+      "summary": "All 77 frontend-backed v3 definitions passed the presentation audit, and the renderer-property audit reported no undeclared user-owned preview values."
+    },
+    {
+      "artifact": null,
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test modules/application/services/asset-packs/tests/system-foundation-v3-properties.unit.test.ts",
+      "criterionId": "bounded-theme-contract",
+      "id": "evidence-2",
+      "incrementId": "foundation-v3-property-model",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-20T22:51:29Z",
+      "summary": "The v3 root theme and asset overrides are strictly declared with color/select controls, and generated backing CSS is allowlisted while v2 resources remain unchanged."
+    },
+    {
+      "artifact": null,
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test modules/application/services/asset-packs/tests/system-foundation-layout-presets.unit.test.ts modules/application/services/asset-packs/tests/system-foundation-v2-catalogs.unit.test.ts modules/application/services/asset-packs/tests/install-system-foundation-pack.service.unit.test.ts modules/application/services/asset/tests/workspace-asset-registry-read-facade.service.unit.test.ts modules/application/use-cases/system-builder/tests/system-builder-composer-catalog.unit.test.ts",
+      "criterionId": "immutable-version-coexistence",
+      "id": "evidence-3",
+      "incrementId": "foundation-v3-property-model",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-20T22:51:29Z",
+      "summary": "Exact v1, v2, and v3 manifests, layouts, functional defaults, backing resources, install, registry, and current Composer consumers passed focused coexistence coverage."
+    },
+    {
+      "artifact": null,
+      "command": "npx vitest run SystemComposerInspector.interaction.ui.test.tsx SystemComposerStructureEditor.interaction.ui.test.tsx SystemBuilderWorkspace.interaction.ui.test.tsx",
+      "criterionId": "complete-bounded-editors",
+      "id": "evidence-4",
+      "incrementId": "cohesive-styling-editor-preview",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-21T00:00:16Z",
+      "summary": "Generated controls expose declared content and accessibility fields, while semantic styling remains picker- and select-only."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test SystemCompositionPreview.unit.test.tsx FoundationAssetPreview.unit.test.tsx system-builder-style-tokens.unit.test.ts",
+      "criterionId": "reusable-styling-and-overrides",
+      "id": "evidence-5",
+      "incrementId": "cohesive-styling-editor-preview",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-21T00:00:16Z",
+      "summary": "Root theme tokens and per-asset semantic overrides render through bounded controls and reusable CSS variables and roles."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test SystemReferencePreviewHtml.unit.test.tsx",
+      "criterionId": "accurate-live-preview",
+      "id": "evidence-6",
+      "incrementId": "cohesive-styling-editor-preview",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-21T00:00:16Z",
+      "summary": "All three reference systems match their authored semantic HTML mockups using the exact Foundation v3 catalog."
+    },
+    {
+      "artifact": null,
+      "command": "npx vitest run SystemBuilderWorkspace.interaction.ui.test.tsx",
+      "criterionId": "draft-history-roundtrip",
+      "id": "evidence-7",
+      "incrementId": "cohesive-styling-editor-preview",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-21T00:00:16Z",
+      "summary": "Theme and asset property changes survive undo, redo, and canonical save through one draft update path."
+    }
+  ],
+  "feedback": [
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "feedback-roadmap-source-links",
+      "impact": "within-increment",
+      "nextAction": "Correct only the canonical source URLs, regenerate the roadmap, and rerun docs:check.",
+      "recordedAt": "2026-07-20T22:47:31Z",
+      "summary": "The documentation drift gate found three stale discovery-source paths in the generated roadmap: two ADR filenames and the FoundationAssetSurface directory.",
+      "targetIncrementId": "foundation-v3-property-model"
+    }
+  ],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "8a1628821b0331cabc6cd0f3db2c854ef8261811dcbb0920c1dc00c25ccecc5c",
+      "recordedAt": "2026-07-20T21:48:43Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "5fbffd8e6a0ccc1f99bf788408a38f5c7975b27c42dffa678f63e47817cdec34",
+      "recordedAt": "2026-07-20T21:49:35Z",
+      "sequence": 2,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "db46ddf576aca04e17531b6c1d62748b204d8885099674add038f32a671bc0ce",
+      "recordedAt": "2026-07-20T22:00:09Z",
+      "sequence": 3,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "29ca0369654d4f2496a9fc1b4d8692b5bf2aef67489050eeb89d0c8d2f469815",
+      "recordedAt": "2026-07-20T22:01:50Z",
+      "sequence": 4,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "456179ea384d4161b515f9cb26d1098b070bf2aeff1e2e0b2da4f86de48b45e6",
+      "recordedAt": "2026-07-20T22:04:54Z",
+      "sequence": 5,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "bcf95dc4ef070d366d0381ad8a1b78c4713b7d8eff85bbf0b1c5050e6a0e5e7c",
+      "recordedAt": "2026-07-20T22:05:13Z",
+      "sequence": 6,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "867af592063082d4b766b5e56914c97e406041da9eb9e3d40586dbf54da2aabe",
+      "recordedAt": "2026-07-20T22:10:19Z",
+      "sequence": 7,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "f90178a266ceb1052f3dbd1967a501d71def298341b6f47ea403e9ab9dbc3385",
+      "recordedAt": "2026-07-20T22:10:26Z",
+      "sequence": 8,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "52a212fe844336c323d7121777e52920e0d622856ecf19a7c27a88127cd63b31",
+      "recordedAt": "2026-07-20T22:47:31Z",
+      "sequence": 9,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "7ab4d4f7c1ac4c2c018c81def5169618236cdffd7ee1bea28510a7bdb499fda6",
+      "recordedAt": "2026-07-20T22:51:28Z",
+      "sequence": 10,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "31366db94d065fc36563c5595b13f4cdbe3b7bc3406516d980ec3155ad4a1014",
+      "recordedAt": "2026-07-20T22:51:28Z",
+      "sequence": 11,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "f155af5490dd2a4ed9f562440d243daa3b0bafc5972256e24f43c57685b32c52",
+      "recordedAt": "2026-07-20T22:51:29Z",
+      "sequence": 12,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "03a08ffad734f25b097346e995c01f4ff56d9e8d746fb05d496616aa6d3f33f8",
+      "recordedAt": "2026-07-20T22:51:29Z",
+      "sequence": 13,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "557bbc4defb28198f2a4a34d6d50563a869ad9e48eb94a69c9188e682a21835a",
+      "recordedAt": "2026-07-20T22:51:29Z",
+      "sequence": 14,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9d6e64a2030bdfc3110250309c85a3caa3a7b2995aee9ef95383dd25fb81269f",
+      "recordedAt": "2026-07-20T22:51:29Z",
+      "sequence": 15,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "4fc03926b66253591bf12dc1295e69f26629145163ee7d2572172118c763da21",
+      "recordedAt": "2026-07-20T22:51:29Z",
+      "sequence": 16,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "0c2fbed69b1e0f639d50881dc2702f70e7ced1eb252718851bd3d5b8efb879a6",
+      "recordedAt": "2026-07-20T22:55:06Z",
+      "sequence": 17,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "da5a04ae817e212f2b239435e916324db368b3983a19762c4fb28449b8f00173",
+      "recordedAt": "2026-07-20T22:55:06Z",
+      "sequence": 18,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "6dd405214747d67965db7f48b34401759fc1563e59060706d94a7b682e8cd790",
+      "recordedAt": "2026-07-20T22:55:07Z",
+      "sequence": 19,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "a984c22fe24e76e092b7dc24f1ea0949f74052b2e2fd628bdc6f1d7f1faa64d3",
+      "recordedAt": "2026-07-21T00:00:15Z",
+      "sequence": 20,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "d266d5d33b020fcc3408f633850762d21e909a8ea365e305b6ea7bd6c3159a8e",
+      "recordedAt": "2026-07-21T00:00:15Z",
+      "sequence": 21,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "6f96540ddf6f98b57f9fb51384c745be30364c187d5a8acb9669a96fbdc213f8",
+      "recordedAt": "2026-07-21T00:00:15Z",
+      "sequence": 22,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "fe86ef612ff9aa2d4799b03c4a19304f8c5276846e7529da585bc1ed20e81379",
+      "recordedAt": "2026-07-21T00:00:16Z",
+      "sequence": 23,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b1e6412f2bca9b37023a0a259b539802e5d63d1be146e6eb03fed36750d68922",
+      "recordedAt": "2026-07-21T00:00:16Z",
+      "sequence": 24,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ddc23bacc4cf56525e686183e2814fbe39c7f8bcaf2bbc4b7c46deb6e7332b53",
+      "recordedAt": "2026-07-21T00:00:16Z",
+      "sequence": 25,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "76caf9a6fd7acbbf9a7ff87f3ac417d87af6003112adf8c5f27e3088fc3604b4",
+      "recordedAt": "2026-07-21T00:00:16Z",
+      "sequence": 26,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f0e506cba4e6d0277430cb3e8c1993a63d2008b10924d5e4fec3de9b02c05749",
+      "recordedAt": "2026-07-21T00:00:16Z",
+      "sequence": 27,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "1ba5e52c1fc11331356ac532ae1e69949c2553ba3d5ecc34f2f67025e236f0d5",
+      "recordedAt": "2026-07-21T00:06:14Z",
+      "sequence": 28,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "aaf72a601933cfe9584d2b81447b28dc272ac34961c0e2e24aac78261871f6eb",
+      "recordedAt": "2026-07-21T00:06:14Z",
+      "sequence": 29,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "4235bdcb615ebe98b3aa221bc7e33175b9d28656506c7ab3878efbcbb5747d09",
+      "recordedAt": "2026-07-21T00:06:14Z",
+      "sequence": 30,
+      "type": "increment-plan-recorded"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "For every frontend-backed Foundation asset, each renderer-visible user-owned value is represented by a typed schema field and bounded UI hint, while fixed structural labels are explicitly classified and tested.",
+          "id": "all-preview-properties-declared",
+          "qualification": "local"
+        },
+        {
+          "description": "The v3 system-root schema declares reusable semantic colors, typography sizes, button styles, form styles, and surface/background roles, and relevant visual assets declare only allowlisted override choices without arbitrary CSS fields.",
+          "id": "bounded-theme-contract",
+          "qualification": "local"
+        },
+        {
+          "description": "Foundation v1 and v2 fixtures remain byte-for-byte behaviorally unchanged while v3 validates, installs, resolves, and generates complete backing resources by exact version.",
+          "id": "immutable-version-coexistence",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-20T22:51:29Z",
+      "completedChunks": [
+        "exact-version-v3-scaffold",
+        "property-complete-theme-contracts",
+        "current-consumer-conformance"
+      ],
+      "completionSummary": "Published and qualified immutable Foundation v3 with property-complete frontend definitions, bounded semantic theme contracts, current-consumer wiring, and preserved exact v1/v2 behavior. Focused tests and repository documentation/architecture/agent-support gates pass; the broad repository TypeScript command still reports pre-existing unrelated fixture/type errors, with no diagnostics in Increment 1 files.",
+      "deliverables": [
+        "Foundation v3 manifest, definitions, backing resources, and exact-version registration",
+        "Completed conversation and remaining frontend-backed asset property schemas",
+        "Bounded root theme and relevant per-asset override schemas",
+        "Automated presentation-property completeness audit",
+        "Contract, manifest, conformance, and immutability regression tests",
+        "Architecture, Asset Kernel, System Builder, and context documentation updates"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "Arbitrary CSS or stylesheet source editing",
+        "The interactive System Composer sidebar and preview rendering, which are delivered in Increment 2",
+        "Automatic in-place mutation of existing v2 systems"
+      ],
+      "id": "foundation-v3-property-model",
+      "number": 1,
+      "objective": "Publish an immutable successor Foundation release whose frontend-backed assets declare every user-owned preview value and whose root asset declares the bounded reusable theme profile approved in Option A.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "Foundation v3 uses version 3.0.0 because completed configuration and styling semantics are a major additive release.",
+          "Fixed preview fixture examples remain classified non-user data unless they represent user-owned content such as labels, titles, messages, placeholders, or accessibility text.",
+          "The root theme is stored as individually declared bounded fields or an equivalently strictly declared structure; no raw CSS source is persisted."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "immutable-version-coexistence"
+            ],
+            "id": "exact-version-v3-scaffold",
+            "outcome": "V1, v2, and v3 manifests, functional descriptors, layouts, and backing-resource catalogs resolve independently by exact version, with v3 designated current and v1/v2 unchanged.",
+            "title": "Immutable version boundary and v3 catalogs"
+          },
+          {
+            "criteriaIds": [
+              "all-preview-properties-declared",
+              "bounded-theme-contract"
+            ],
+            "id": "property-complete-theme-contracts",
+            "outcome": "Every frontend-backed v3 asset is audited, conversation previews have declared content properties, and the system root plus relevant visual assets expose only bounded semantic styling fields.",
+            "title": "Property-complete schemas and bounded theme contracts"
+          },
+          {
+            "criteriaIds": [
+              "all-preview-properties-declared",
+              "bounded-theme-contract",
+              "immutable-version-coexistence"
+            ],
+            "id": "current-consumer-conformance",
+            "outcome": "Install, registry, Composer catalog, structure/layout services, and generated backing resources use the current v3 abstraction while exact v1/v2 resolution remains compatible and documented.",
+            "title": "Current consumer wiring and conformance"
+          }
+        ],
+        "completionTests": [
+          "All focused Foundation, Asset Kernel, and System Builder suites affected by the three chunks",
+          "npm run architecture:check",
+          "npm run docs:check",
+          "npm run agent-support:check"
+        ],
+        "documentation": [
+          "docs/architecture/system-builder.md",
+          "docs/architecture/asset-implementations-and-packages.md",
+          "docs/context/packs/system-builder.pack.md",
+          "Relevant Asset Kernel and shared UI READMEs",
+          "Temporary roadmap report"
+        ],
+        "fingerprint": "6012a632b9d22302f959e251c41870107e13504034dbeb14674101c3b9a97742",
+        "focusedTests": [
+          "Foundation manifest/version coexistence tests",
+          "Presentation-property audit and Asset Configuration contract tests",
+          "Functional-default and backing-resource catalog tests",
+          "Install and workspace registry exact-version tests",
+          "System Builder current-manifest structure/layout tests"
+        ],
+        "recordedAt": "2026-07-20T22:10:26Z",
+        "rollback": "Remove v3 registration, catalogs, property projection, and current-consumer aliases; restore v2 as current without changing exact v1/v2 artifacts.",
+        "steps": [
+          "Introduce a dedicated v2 version constant, keep v2 manifests/layouts exact, and add a v3 manifest plus version-aware manifest, functional-default, and backing-resource catalogs.",
+          "Add the bounded color UI hint and a v3 presentation-property projection that completes conversation content fields, root semantic theme tokens, and relevant visual-asset style overrides while producing a full audit classification.",
+          "Move current Foundation consumers from v2-specific imports to the current manifest abstraction, verify exact-version install/registry/structure behavior, and update architecture and context documentation."
+        ],
+        "summary": "Build Foundation v3 additively in three cohesive chunks: isolate immutable version boundaries and create v3 catalogs, complete presentation/theme schemas through a single audited projection, then wire all current consumers and qualify exact-version coexistence and backing resources."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-20T22:10:19Z",
+          "risks": [
+            "An incomplete replacement of v2 hard-coded current-manifest imports could make v3 assets unavailable in Composer or structure validation.",
+            "Changing v2 version sources before isolating them could alter published v2 definition fingerprints and backing resources.",
+            "A root theme object would fall back to a JSON editor unless the Styling panel owns its bounded controls; v3 fields must therefore carry explicit presentation metadata and remain unavailable as raw CSS.",
+            "Adding fields without matching defaults and preview/backing-resource descriptors could reintroduce schema-renderer drift.",
+            "Default no-version lookups currently prefer legacy descriptors in some catalogs and must become intentionally current-first without breaking exact-version reads."
+          ],
+          "sources": [
+            {
+              "title": "Foundation version constants",
+              "url": "modules/application/services/asset-packs/system-packs/system-foundation-pack.constants.ts"
+            },
+            {
+              "title": "Foundation v2 manifest construction",
+              "url": "modules/application/services/asset-packs/system-packs/system-foundation-pack-v2.manifest.ts"
+            },
+            {
+              "title": "Foundation layout preset catalog",
+              "url": "modules/application/services/asset-packs/system-packs/system-foundation-layout-presets.ts"
+            },
+            {
+              "title": "Conversation asset definitions",
+              "url": "modules/application/services/asset-packs/system-packs/conversation-assets/conversation-assets.ts"
+            },
+            {
+              "title": "Functional default catalog",
+              "url": "modules/application/services/asset-packs/system-foundation-functional-default-catalog.ts"
+            },
+            {
+              "title": "Backing resource catalog",
+              "url": "modules/application/services/asset-packs/system-foundation-backing-resource-catalog.ts"
+            },
+            {
+              "title": "Shared Foundation preview renderer",
+              "url": "modules/ui/shared/foundation-assets/FoundationAssetSurface.tsx"
+            },
+            {
+              "title": "Strict instance configuration validation",
+              "url": "modules/application/services/asset/asset-validation-helpers.ts"
+            }
+          ],
+          "summary": "Foundation v2 is produced by recursively replacing v1 version strings and adding v2 layout/slot definitions. Several layout files and current services import SYSTEM_FOUNDATION_CURRENT_PACK_VERSION or SYSTEM_FOUNDATION_PACK_V2_MANIFEST directly, so changing the current constant without first introducing a dedicated v2 constant would mutate the supposedly immutable v2 release. The functional-default and backing-resource catalogs are also explicitly two-version maps. A complete v3 implementation therefore needs an additive exact-version catalog, version-aware functional/backing resources, and current-manifest consumers that do not name v2. The frontend audit covers 77 assets; the only empty strict schemas are the 13 conversation definitions, while other families already carry rich schemas. The preview surface still contains fixed conversation content and consumes a bounded set of configuration keys, so v3 can complete those schemas and add semantic style fields without raw CSS."
+        }
+      ],
+      "rollback": "Remove the additive v3 registration and files; v1 and v2 remain untouched and continue to resolve by exact version.",
+      "startedAt": "2026-07-20T22:05:13Z",
+      "status": "completed",
+      "title": "Property-complete Foundation v3",
+      "verification": [
+        "Run focused asset contract, Foundation manifest, backing-resource, validation, and property-audit tests while implementing each chunk.",
+        "After all increment chunks complete, run the applicable Asset Kernel/Foundation suites, architecture check, docs check, and agent-support check."
+      ],
+      "workPackages": [
+        {
+          "id": "presentation-property-audit",
+          "outcome": "Every frontend-backed asset has an auditable mapping from rendered content and style roles to a declared configurable property or an explicitly fixed structural label.",
+          "title": "Presentation property audit and catalog"
+        },
+        {
+          "id": "versioned-foundation-contracts",
+          "outcome": "Completed configuration schemas, defaults, UI hints, semantic theme tokens, per-asset style overrides, and backing resources are published under a new exact Foundation version without changing v1 or v2.",
+          "title": "Foundation v3 schemas and backing resources"
+        },
+        {
+          "id": "version-coexistence",
+          "outcome": "The new release is discoverable as current while older exact versions remain resolvable and unchanged.",
+          "title": "Version registration and compatibility"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Every declared user-facing asset property is editable with an appropriate bounded control, including conversation-shell content; colors use color pickers and limited choices use selects rather than unrestricted text fields.",
+          "id": "complete-bounded-editors",
+          "qualification": "local"
+        },
+        {
+          "description": "Users can configure reusable button, form, typography, and primary/secondary/tertiary surface roles in Styling and apply relevant bounded overrides from a selected asset's Properties view.",
+          "id": "reusable-styling-and-overrides",
+          "qualification": "local"
+        },
+        {
+          "description": "The full hierarchical Canvas preview reflects content, inherited theme roles, and per-asset overrides without duplicating child UI or exposing executable/raw CSS, and representative reference-preview HTML matches reviewed ideal fixtures.",
+          "id": "accurate-live-preview",
+          "qualification": "local"
+        },
+        {
+          "description": "Property and styling changes support undo/redo and survive validated revision save and reload with deterministic output in the shared desktop/thin-client UI.",
+          "id": "draft-history-roundtrip",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-21T00:00:16Z",
+      "completedChunks": [
+        "bounded-editors-and-styling-tab",
+        "semantic-theme-live-preview",
+        "shared-ui-roundtrip-qualification"
+      ],
+      "completionSummary": "The cohesive properties, bounded styling, live preview, and draft-history experience is implemented, documented, and locally qualified.",
+      "deliverables": [
+        "Shared Styling sidebar tab and responsive collapsed/normal/maximized behavior",
+        "Color-picker and allowlisted typography, spacing, button, form, and surface controls",
+        "Schema-driven missing content/property controls including the conversation-shell title",
+        "Per-asset semantic style override controls in Properties",
+        "Inherited CSS custom-property and stable style-role preview rendering",
+        "Shared UI interaction, accessibility, persistence, and deterministic preview tests",
+        "Shared UI and System Builder documentation updates"
+      ],
+      "dependsOn": [
+        "foundation-v3-property-model"
+      ],
+      "excluded": [
+        "A general-purpose code or CSS editor",
+        "User-defined CSS selectors or arbitrary numeric dimensions",
+        "Host-specific forks of the shared composer"
+      ],
+      "id": "cohesive-styling-editor-preview",
+      "number": 2,
+      "objective": "Deliver the complete shared System Composer experience for editing all declared asset properties, reusable theme roles, and bounded per-asset overrides with immediate accurate Canvas preview feedback.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "The first composition root is the system-root styling owner for current canonical systems.",
+          "Content fields remain text or textarea inputs where free text is the property itself; style values remain color pickers or allowlisted selects.",
+          "Semantic style fields are not editable through Advanced JSON, preventing that fallback from bypassing bounded controls.",
+          "The current shared preview remains declarative and side-effect-free; the styling system does not execute backing-resource CSS source."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "complete-bounded-editors",
+              "reusable-styling-and-overrides",
+              "draft-history-roundtrip"
+            ],
+            "id": "bounded-editors-and-styling-tab",
+            "outcome": "Properties exposes all non-theme declared fields and relevant overrides, while Styling exposes only root semantic theme controls through color pickers and allowlisted selects using the existing undoable draft path.",
+            "title": "Bounded property controls and root-aware Styling tab"
+          },
+          {
+            "criteriaIds": [
+              "complete-bounded-editors",
+              "reusable-styling-and-overrides",
+              "accurate-live-preview"
+            ],
+            "id": "semantic-theme-live-preview",
+            "outcome": "Conversation and other declared content values render immediately, root theme variables inherit through the hierarchy, and per-asset roles apply through stable bounded attributes without duplicated UI or executable CSS.",
+            "title": "Declared content and semantic theme live preview"
+          },
+          {
+            "criteriaIds": [
+              "complete-bounded-editors",
+              "reusable-styling-and-overrides",
+              "accurate-live-preview",
+              "draft-history-roundtrip"
+            ],
+            "id": "shared-ui-roundtrip-qualification",
+            "outcome": "Focused interaction and renderer coverage proves accessible controls, sidebar behavior, immediate draft updates, undo/redo and save/reload round trips, and deterministic semantic preview output in the host-neutral shared UI.",
+            "title": "Shared UI, history, and deterministic preview qualification"
+          }
+        ],
+        "completionTests": [
+          "All focused shared System Composer and Foundation preview suites affected by the chunks",
+          "Affected-file TypeScript diagnostics and shared style-token tests",
+          "npm run architecture:check",
+          "npm run docs:check",
+          "npm run agent-support:check"
+        ],
+        "documentation": [
+          "modules/ui/shared/README.md",
+          "docs/architecture/system-builder.md",
+          "docs/context/packs/system-builder.pack.md",
+          "Temporary roadmap report"
+        ],
+        "fingerprint": "81429c94950c0a25343c4ab04af53ee82a43181b0b2b6de3fb48eca5e0ebe74f",
+        "focusedTests": [
+          "System Composer inspector model and interaction tests",
+          "System Composer structure-editor sidebar interaction tests",
+          "Foundation asset composed-preview tests",
+          "System Composition Preview renderer tests",
+          "System Builder workspace draft/history interaction tests"
+        ],
+        "recordedAt": "2026-07-20T22:55:07Z",
+        "rollback": "Remove the additive Styling panel, theme projection helpers, semantic preview selectors, and v3-only field filtering while leaving the immutable v3 schemas from Increment 1 intact.",
+        "steps": [
+          "Factor schema-field filtering and bounded controls into the shared inspector, add an accessible color picker, exclude root theme fields from ordinary Properties, and add a Styling panel that edits the root instance through the existing draft configuration path.",
+          "Add Properties, Styling, and Layers & Structure to the shared right sidebar; replace fixed conversation content with declared configuration; and project root theme tokens and per-asset roles into allowlisted CSS variables/data attributes used by the flat shared preview stylesheet.",
+          "Verify focused inspector, sidebar, recursive preview, workspace undo/save/reload, accessibility, and semantic HTML behavior; update shared UI/System Builder documentation and run the increment-level UI and repository gates."
+        ],
+        "summary": "Deliver the approved shared experience in three substantial chunks: add reusable bounded field controls and a root-aware Styling tab, project declared content and semantic theme roles through the recursive preview, then qualify undo/save/reload behavior and shared UI documentation without creating host-specific forks."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-20T22:55:06Z",
+          "risks": [
+            "Editing the root theme while a child is selected must reuse the same draft commit path without changing the user's current selection.",
+            "The existing Advanced JSON fallback could bypass bounded style controls unless semantic style fields are excluded from unrestricted JSON editing.",
+            "Applying theme variables at the wrong wrapper would prevent inheritance through composed descendants or leak styling outside the preview.",
+            "Adding a third right-sidebar tab must preserve collapsed and responsive behavior already changed in the current worktree.",
+            "Reference HTML fixtures intentionally exercise exact v2 today; current v3 ideal fixtures and explicit upgrade coverage belong to Increment 3."
+          ],
+          "sources": [
+            {
+              "title": "System Composer structure editor",
+              "url": "modules/ui/shared/system-builder/SystemComposerStructureEditor.tsx"
+            },
+            {
+              "title": "System Composer schema inspector",
+              "url": "modules/ui/shared/system-builder/SystemComposerInspector.tsx"
+            },
+            {
+              "title": "Inspector field grouping model",
+              "url": "modules/ui/shared/system-builder/systemComposerInspectorModel.ts"
+            },
+            {
+              "title": "System Builder draft workspace",
+              "url": "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx"
+            },
+            {
+              "title": "Hierarchical composition preview",
+              "url": "modules/ui/shared/system-builder/SystemCompositionPreview.tsx"
+            },
+            {
+              "title": "Foundation composed surface",
+              "url": "modules/ui/shared/foundation-assets/FoundationAssetSurface.tsx"
+            },
+            {
+              "title": "Shared preview styles",
+              "url": "modules/ui/shared/styles/components/system-composition-preview.css"
+            },
+            {
+              "title": "Inspector interaction tests",
+              "url": "modules/ui/shared/system-builder/tests/SystemComposerInspector.interaction.ui.test.tsx"
+            },
+            {
+              "title": "Reference preview semantic HTML tests",
+              "url": "modules/ui/shared/system-builder/tests/SystemReferencePreviewHtml.unit.test.tsx"
+            }
+          ],
+          "summary": "The shared Composer already commits selected-instance configuration through one undoable draft path, and the right details sidebar already owns Properties and Layers & Structure. The v3 schema metadata cleanly distinguishes root theme fields (editorScope=styling) from per-asset overrides (editorScope=properties), so Styling can edit the composition root without introducing a second persistence contract. The current schema renderer needs a color control and field filtering; the Foundation surface needs to replace fixed conversation copy and project root tokens plus asset roles into CSS variables/data attributes. Existing recursive preview, workspace interaction, and semantic ideal-HTML tests provide the correct focused qualification surfaces."
+        }
+      ],
+      "rollback": "Remove the additive Styling panel, theme projection, and v3-only editor integrations while leaving the versioned v3 contracts available but unused.",
+      "startedAt": "2026-07-20T22:55:06Z",
+      "status": "completed",
+      "title": "Cohesive properties, Styling tab, and live preview experience",
+      "verification": [
+        "Run focused inspector, structure-editor, preview-renderer, accessibility, and workspace interaction tests for each completed chunk.",
+        "After all increment chunks complete, run the complete shared System Composer/UI suites plus architecture, docs, agent-support, and relevant TypeScript/build checks."
+      ],
+      "workPackages": [
+        {
+          "id": "right-sidebar-experience",
+          "outcome": "The right sidebar provides Properties, Styling, and Layers & Structure tabs; schema-appropriate pickers and dropdowns replace avoidable free-form inputs.",
+          "title": "Properties and Styling editors"
+        },
+        {
+          "id": "theme-inheritance-and-overrides",
+          "outcome": "Root style roles inherit through the full composition tree while selected assets can choose bounded overrides relevant to their semantic role.",
+          "title": "Theme inheritance and per-asset overrides"
+        },
+        {
+          "id": "preview-and-draft-integration",
+          "outcome": "Content and style changes update the Canvas immediately and participate in undo, redo, validation, save, reload, and immutable revision history.",
+          "title": "Live Canvas, draft, and revision integration"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Every newly created reference system selects Foundation v3, has a valid root theme profile and meaningful configurable content defaults, and renders the reviewed deterministic preview structure.",
+          "id": "new-reference-systems-use-v3",
+          "qualification": "local"
+        },
+        {
+          "description": "Upgrading an existing v2 system is an explicit user action that creates a new validated v3 revision, preserves the prior revision, maps supported configuration and composition data, and reports any unmapped value before save.",
+          "id": "upgrade-is-explicit-and-nondestructive",
+          "qualification": "local"
+        },
+        {
+          "description": "V3 properties and styling round-trip through supported desktop/thin-client clients, persistence, import/export, and build/test output while v1/v2 systems continue to load by exact version.",
+          "id": "supported-boundaries-roundtrip",
+          "qualification": "local"
+        },
+        {
+          "description": "Applicable repository test, architecture, documentation, agent-support, server-build, thin-client-build, and desktop TypeScript/package qualification gates pass or any environment-only limitation is explicitly reported with focused evidence passing.",
+          "id": "production-gates-pass",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": null,
+      "completedChunks": [],
+      "deliverables": [
+        "Foundation v3 reference templates and default style profiles",
+        "Explicit upgrade use case, shared UI action, validation, and revision mapping",
+        "Backward-compatibility coverage for existing v1/v2 systems",
+        "Desktop/thin-client, persistence, import/export, and build-output regression coverage",
+        "Reference preview ideal-HTML fixtures and comparison tests",
+        "Final architecture, operations, user, and context documentation"
+      ],
+      "dependsOn": [
+        "cohesive-styling-editor-preview"
+      ],
+      "excluded": [
+        "Automatic migration without user confirmation",
+        "Mutation or deletion of historical system revisions",
+        "Redesign of unrelated Asset Library or System Manage experiences"
+      ],
+      "id": "reference-upgrade-production-qualification",
+      "number": 3,
+      "objective": "Move current reference-system creation to Foundation v3, provide a non-destructive explicit upgrade path for existing v2 systems, and qualify the complete experience across supported hosts and durable boundaries.",
+      "plan": {
+        "assumptions": [
+          "Reference template version 1.0.0 is independent from its exact Foundation asset release.",
+          "Minimal is the required default application layout for newly created interactive reference systems.",
+          "Upgrade is fail-closed when a source property cannot map to the target schema or candidate validation fails.",
+          "The existing structured-data export is already namespace-complete; only the enumerated legacy JSON import root needs System Builder inclusion.",
+          "The shared UI remains host-neutral and both hosts use the same preview and confirmation semantics."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "new-reference-systems-use-v3",
+              "supported-boundaries-roundtrip"
+            ],
+            "id": "v3-reference-system-materialization",
+            "outcome": "New reference systems contain exact v3 instances, root theme and content defaults, a required Minimal layout, and one complete deterministic visual hierarchy.",
+            "title": "Direct v3 reference-system materialization"
+          },
+          {
+            "criteriaIds": [
+              "upgrade-is-explicit-and-nondestructive",
+              "supported-boundaries-roundtrip"
+            ],
+            "id": "explicit-nondestructive-upgrade",
+            "outcome": "A pure mapping preview reports every mapped or unmapped value and validation issue; explicit confirmation atomically creates a new v3 revision while retaining the v2 source revision.",
+            "title": "Previewed and confirmed v2-to-v3 revision upgrade"
+          },
+          {
+            "criteriaIds": [
+              "new-reference-systems-use-v3",
+              "upgrade-is-explicit-and-nondestructive",
+              "supported-boundaries-roundtrip",
+              "production-gates-pass"
+            ],
+            "id": "host-boundary-production-qualification",
+            "outcome": "The shared Composer upgrade action and desktop/thin-client boundaries round-trip the upgrade safely, durable export/import retains v3 configuration, older exact versions remain readable, and all production gates pass.",
+            "title": "Shared UI, transport, persistence, and production qualification"
+          }
+        ],
+        "completionTests": [
+          "All affected focused System Builder, Foundation, transport, persistence, and shared UI suites",
+          "Affected-file TypeScript diagnostics",
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check",
+          "npm run build:server",
+          "npm run build:thin-client",
+          "Desktop package or equivalent TypeScript/Webpack qualification",
+          "npm test after every planned chunk is complete"
+        ],
+        "documentation": [
+          "docs/architecture/system-builder.md",
+          "docs/architecture/asset-implementations-and-packages.md",
+          "docs/context/packs/system-builder.pack.md",
+          "modules/ui/shared/README.md",
+          "Temporary roadmap report"
+        ],
+        "fingerprint": "a6aabfc09fc44598120806e7fb7d4cd96ac6d031ad5e5d81db4eefbdcad6a71c",
+        "focusedTests": [
+          "Reference template and exact-version materialization tests",
+          "Foundation upgrade mapping and use-case revision-history tests",
+          "Shared System Builder workspace interaction tests",
+          "API/IPC transport parity, preload, and desktop/thin-client client tests",
+          "Structured System Builder repository and migration import/export tests",
+          "Reference-system semantic HTML fidelity tests"
+        ],
+        "recordedAt": "2026-07-21T00:06:14Z",
+        "rollback": "Remove the additive upgrade operations and UI action, return new template creation to the prior materializer, and stop advertising v3 as current; immutable v1/v2 definitions and saved revisions remain unchanged.",
+        "steps": [
+          "Materialize every new reference template directly against exact Foundation v3 definitions, merge declared defaults with meaningful template content, and build the required Minimal fixed-layout hierarchy without duplicate roots or pages.",
+          "Add a pure v2-to-v3 mapping service plus preview and confirm use cases that report unmapped fields, validate the candidate, reject stale or lossy upgrades, and atomically persist only a new revision.",
+          "Expose the upgrade through the shared Composer modal and synchronized desktop/server transports and clients; qualify structured persistence/import/export, exact old-version reads, previews, builds, documentation, and the final repository suite."
+        ],
+        "summary": "Deliver production-ready Foundation v3 reference systems and an explicit non-destructive upgrade in three cohesive chunks, then run the complete repository qualification once."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-21T00:06:14Z",
+          "risks": [
+            "Reference hierarchy construction must not duplicate the root, page, or composed child UI.",
+            "A layout change or preview must never silently upgrade an older exact Foundation revision.",
+            "Preview and confirmation must re-read the same current source revision so stale upgrades cannot overwrite intervening edits.",
+            "Unknown v2 configuration keys must be reported and block persistence rather than being silently dropped.",
+            "Adding API and IPC operations requires synchronized contracts, parsers, preload exposure, clients, route security, and parity tests.",
+            "Legacy structured-data import currently excludes System Builder namespaces and needs an additive allowlist change with reconciliation coverage."
+          ],
+          "sources": [
+            {
+              "title": "Reference template registry",
+              "url": "modules/application/services/system-builder/system-builder-reference-template-registry.service.ts"
+            },
+            {
+              "title": "Reference visual hierarchy materializer",
+              "url": "modules/application/services/system-builder/materialize-reference-system-visual-hierarchy.service.ts"
+            },
+            {
+              "title": "Canonical fixed-layout structure",
+              "url": "modules/application/services/system-builder/create-canonical-system-builder-structure.service.ts"
+            },
+            {
+              "title": "System Builder revision use cases",
+              "url": "modules/application/use-cases/system-builder/system-builder-use-cases.ts"
+            },
+            {
+              "title": "Shared System Composer workspace",
+              "url": "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx"
+            },
+            {
+              "title": "System Builder transport adapters",
+              "url": "modules/adapters/transport/api-express/system-builder/registerSystemBuilderApiRoutes.ts"
+            },
+            {
+              "title": "Structured persistence migration",
+              "url": "modules/adapters/persistence/migration/json-structured-data-import.ts"
+            },
+            {
+              "title": "Accepted Foundation evolution decision",
+              "url": "docs/adr/ADR-0034-functional-foundation-pack-evolution.md"
+            }
+          ],
+          "summary": "Reference templates still materialize v1 definitions and acquire current hierarchy only through a later layout remap. The shared revision repository already provides atomic immutable revision saves. Increment 3 should materialize new templates directly as v3 with Minimal layout, add a preview-then-confirm v2 upgrade that fails closed on unmapped values, and carry the operation through shared UI, API, IPC, clients, persistence migration coverage, and builds."
+        }
+      ],
+      "rollback": "Stop advertising v3 as current and remove the additive upgrade action; exact v1/v2 systems remain loadable and their saved revisions are unchanged.",
+      "startedAt": "2026-07-21T00:06:14Z",
+      "status": "implementing",
+      "title": "Reference-system upgrade and production qualification",
+      "verification": [
+        "Run focused reference-template, upgrade, persistence, import/export, host-contract, and preview-fixture tests while implementing each chunk.",
+        "After all increment chunks complete, run npm test and all applicable repository architecture, documentation, agent-support, server, thin-client, and desktop build/package gates."
+      ],
+      "workPackages": [
+        {
+          "id": "reference-system-v3",
+          "outcome": "New reference systems use v3 assets, meaningful initial property values, and reviewed theme profiles that produce useful deterministic previews.",
+          "title": "Property-complete v3 reference systems"
+        },
+        {
+          "id": "explicit-system-upgrade",
+          "outcome": "Users can explicitly create a new validated v3 revision from an existing v2 system while the original revision and exact-version references remain intact.",
+          "title": "Non-destructive v2-to-v3 upgrade"
+        },
+        {
+          "id": "host-and-boundary-qualification",
+          "outcome": "Desktop and thin-client hosts, persistence, import/export, build/test output, and reference-preview fixtures agree on the completed property and style semantics.",
+          "title": "Cross-host and durable-boundary qualification"
+        }
+      ]
+    }
+  ],
+  "name": "System Composer Properties and Styling",
+  "objective": "Complete configurable asset properties and deliver bounded reusable styling controls across the System Composer inspector and preview.",
+  "paths": {
+    "report": "docs/tmp/system-composer-properties-styling-implementation-report.md",
+    "roadmap": "docs/system-composer-properties-styling-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/system-composer-properties-styling/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": {
+    "approvedAt": "2026-07-20T22:04:54Z",
+    "fingerprint": "49007fd9788b203be9890339cbdfdd88618cea473ac3fbafda9628044c6aa7cb",
+    "note": "The user explicitly approved the three-increment System Composer properties and styling roadmap."
+  },
+  "schemaVersion": 1,
+  "slug": "system-composer-properties-styling",
+  "status": "executing",
+  "updatedAt": "2026-07-21T00:06:14Z"
+}

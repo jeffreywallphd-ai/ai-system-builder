@@ -118,13 +118,13 @@ authoring, customization, and single-asset Studio workflows.
 - `ValidateSystemBuilderRevisionService` resolves exact definitions and composes
   canonical Asset Kernel validators with system endpoint, cardinality, and
   dependency-cycle checks. Slot validation additionally requires one exact or
-  provenance-derived `builtin.system.system@2.0.0` root for interactive
+  provenance-derived `builtin.system.system@3.0.0` root for interactive
   revisions, declared slot membership, compatible children, complete placement
   coverage, bounded depth, and acyclic containment.
-- New interactive systems start with the Foundation v2 system root, one required
+- New interactive systems start with the Foundation v3 system root, one required
   selected application layout, its required page hosts, a page layout, and
   bounded empty content. When a caller does not choose an application layout,
-  the canonical default is `builtin.layout.application.minimal@2.0.0`. Service
+  the canonical default is `builtin.layout.application.minimal@3.0.0`. Service
   and workflow profiles remain explicit and are not assigned an interactive
   hierarchy.
 - Structured persistence clones the complete revision, including structure and
@@ -141,15 +141,27 @@ authoring, customization, and single-asset Studio workflows.
   compatibility for both desktop and thin client. Foundation layout geometry is
   an abstract projection of approved named regions; renderers do not reconstruct
   compatibility or accept author-defined dimensions from Asset Library summaries.
+  Foundation v3 audits every frontend-backed definition so each renderer-owned
+  content value is schema-declared or explicitly classified as fixed structural
+  preview copy. Its system root owns bounded semantic theme tokens for colors,
+  typography, density, buttons, forms, and surfaces; relevant visual assets own
+  allowlisted semantic overrides. Exact v1 and v2 definitions remain unchanged.
 - `modules/ui/shared/system-builder` is the shared desktop/thin-client editor.
   Predefined geometry-aware layout icons inside the Asset Palette create or
   remap the required root/shell/page-host structure. One
   canonical in-memory draft drives a flat three-column Design workspace with the
   searchable Asset Palette, a wide Canvas showing every fixed region of the
   active application layout, and one details
-  sidebar whose accessible tabs switch between Properties and Layers and
-  Structure. Either sidebar can collapse to a compact, non-persisted rail to give
-  the canvas more width. A thin dnd-kit adapter maps pointer,
+  sidebar whose accessible tabs switch between Properties, Styling, and Layers
+  and Structure. The Asset Palette has collapsed, normal, and maximized presentation
+  sizes. Normal presents layout choices and asset tiles in one column; maximized
+  borrows width from the Canvas and uses multi-column galleries while preserving
+  the details-sidebar width. Its Layout, Assets, Unassigned visual assets, and
+  System resources and logic sections are independent disclosures that start
+  collapsed. Canvas States regions also start collapsed without removing their
+  drop surfaces, and Layers and Structure contains only the placed hierarchy.
+  These presentation states are not persisted. A thin
+  dnd-kit adapter maps pointer,
   touch, and keyboard insertion/reorder/reparent interactions onto bounded
   add/place commands; each square visual asset tile is the drag handle and fixed
   regions are the drop surfaces. The Design workspace does not expose the legacy
@@ -170,7 +182,15 @@ authoring, customization, and single-asset Studio workflows.
   own; historical storage changes only through the normal validated save path.
 - Properties generates Design, Data, and Events sections from exact schemas, applies
   defaults and field constraints, offers approved asset/reference choices, and
-  retains a bounded Advanced JSON fallback for ordinary assets. Slot-bearing
+  retains a bounded Advanced JSON fallback for ordinary non-style fields.
+  Semantic style fields are excluded from that fallback. Foundation v3
+  conversation titles, labels, sample content, placeholders, descriptions, and
+  accessibility text are ordinary declared Properties. The adjacent Styling
+  tab always edits the canonical system-root instance rather than the current
+  child selection. It renders colors as native color pickers and typography,
+  density, button, form, and surface choices as allowlisted selects. Relevant
+  per-asset overrides remain bounded selects in Properties. Both paths commit
+  through the same local draft history and immutable-revision save. Slot-bearing
   containers expose a common Container layout summary, and their declared
   direction, spacing, padding, alignment, columns, wrapping, and responsive
   fields are grouped under Layout. System Foundation
@@ -186,8 +206,8 @@ authoring, customization, and single-asset Studio workflows.
   bounded validation issues, and does not persist. A successful selection
   immediately commits the returned structure, instances, bindings, and placements
   to the local draft history, where undo/redo includes the layout descriptor.
-  Unassigned visual assets remain selectable and removable in Layers and
-  Structure, appear at the bottom of the Asset Palette rather than on the
+  Unassigned visual assets remain selectable and removable at the bottom of the
+  Asset Palette rather than on the
   Canvas, and are reattachable by dragging them to compatible Canvas regions.
   Trusted Foundation system/subsystem facades with declared slots and a
   qualified declarative preview remain draggable visual containers. Nonvisual
@@ -207,7 +227,12 @@ authoring, customization, and single-asset Studio workflows.
   Container slots render their actual nested children; alternative error/loading
   states and preview variants do not all appear simultaneously when primary
   content is available. Backend or unqualified imported/authored implementation
-  never executes, and preview grants no build, release, activation, or
+  logic remains unexecuted. The v3 root preview projects validated colors into
+  inherited CSS custom properties and bounded choices into stable semantic data
+  roles. Descendants may override only their declared surface, text, typography,
+  spacing, border, button, form, and control-size roles. No arbitrary CSS source,
+  selector, or numeric layout value crosses this boundary. Preview grants no
+  build, release, activation, or
   deployment authority. Hand-authored semantic HTML mockups for all three closed
   reference systems are permanent test oracles: normalization ignores runtime
   trace IDs and styling attributes but preserves meaningful elements, nesting,

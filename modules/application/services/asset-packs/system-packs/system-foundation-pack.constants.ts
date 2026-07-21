@@ -9,9 +9,11 @@ import { normalizeAssetPackId } from "../../../../contracts/asset";
 
 export const SYSTEM_FOUNDATION_PACK_ID = normalizeAssetPackId("system.foundation");
 export const SYSTEM_FOUNDATION_PACK_VERSION: AssetPackVersion = "1.0.0";
-export const SYSTEM_FOUNDATION_CURRENT_PACK_VERSION: AssetPackVersion = "2.0.0";
+export const SYSTEM_FOUNDATION_V2_PACK_VERSION: AssetPackVersion = "2.0.0";
+export const SYSTEM_FOUNDATION_CURRENT_PACK_VERSION: AssetPackVersion = "3.0.0";
 export const SYSTEM_FOUNDATION_PACK_VERSIONS: readonly AssetPackVersion[] = [
   SYSTEM_FOUNDATION_PACK_VERSION,
+  SYSTEM_FOUNDATION_V2_PACK_VERSION,
   SYSTEM_FOUNDATION_CURRENT_PACK_VERSION,
 ];
 export const SYSTEM_FOUNDATION_PACK_DISPLAY_NAME = "System Foundation";

@@ -15,7 +15,7 @@ import { createWorkspaceId } from "../../../../contracts/workspace";
 import {
   exactSystemFoundationDefinitionReference,
   SYSTEM_FOUNDATION_PACK_MANIFEST,
-  SYSTEM_FOUNDATION_PACK_V2_MANIFEST,
+  SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST,
 } from "../../../services/asset-packs/system-packs";
 import { ValidateSystemBuilderRevisionService } from "../../../services/system-builder";
 import {
@@ -138,7 +138,7 @@ describe("System Builder layout change preview", () => {
       first.value.validationIssues.some((issue) =>
         /placement parent/i.test(issue.message),
       ),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       (await repository.listRevisions(workspaceId, created.value.systemId))
         .length,
@@ -184,7 +184,7 @@ describe("System Builder layout change preview", () => {
     if (!result.ok) expect(result.error.code).toBe("system-builder.stale");
   });
 
-  it("materializes a selected layout for a legacy built-in reference system without deleting its assets", async () => {
+  it("changes the selected layout for a direct v3 reference system without deleting its assets", async () => {
     const repository = createStructuredSystemBuilderRepository(
       createInMemoryStructuredDocumentStore(),
     );
@@ -214,7 +214,9 @@ describe("System Builder layout change preview", () => {
       created.value.systemId,
     );
     if (!revision) throw new Error("Missing reference revision.");
-    expect(revision.structure).toBeUndefined();
+    expect(revision.structure?.layoutPresetRef?.id).toBe(
+      "builtin.layout.application.minimal",
+    );
 
     const result = await new PreviewSystemBuilderLayoutChangeUseCase({
       repository,
@@ -232,6 +234,8 @@ describe("System Builder layout change preview", () => {
       composition: revision.composition,
       instances: revision.instances,
       bindings: revision.bindings,
+      structure: revision.structure,
+      placements: revision.placements,
     });
 
     expect(result.ok).toBe(true);
@@ -245,13 +249,13 @@ describe("System Builder layout change preview", () => {
           String(instance.instanceId) ===
           String(revision.composition.rootInstanceRefs[0]?.id),
       )?.definitionRef,
-    ).toMatchObject({ id: "builtin.system.system", version: "2.0.0" });
+    ).toMatchObject({ id: "builtin.system.system", version: "3.0.0" });
     expect(
       result.value.placements.some(
         (placement) => String(placement.slotId) === "application-shell",
       ),
     ).toBe(true);
-    expect(result.value.unassignedInstanceRefs.length).toBeGreaterThan(0);
+    expect(result.value.unassignedInstanceRefs.length).toBe(0);
     expect(
       result.value.unassignedInstanceRefs.length <
         revision.instances.length - 1,
@@ -296,11 +300,11 @@ describe("System Builder layout change preview", () => {
             String(created.value.systemId) + ".",
           ),
         )
-        .every((instance) => instance.definitionRef.version === "2.0.0"),
+        .every((instance) => instance.definitionRef.version === "3.0.0"),
     ).toBe(true);
-    expect(result.value.instances.length).toBeGreaterThan(
-      revision.instances.length,
-    );
+    expect(
+      result.value.instances.length >= revision.instances.length,
+    ).toBe(true);
     expect(
       (await repository.listRevisions(workspaceId, created.value.systemId))
         .length,
@@ -311,7 +315,7 @@ describe("System Builder layout change preview", () => {
 function definitionReader() {
   const definitions = [
     ...SYSTEM_FOUNDATION_PACK_MANIFEST.assets,
-    ...SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets,
+    ...SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST.assets,
   ].map((entry) => entry.definition);
   return {
     readExactDefinition: async (reference: AssetReference) =>

@@ -17,7 +17,7 @@ import { createWorkspaceId } from "../../../../contracts/workspace";
 import {
   exactSystemFoundationDefinitionReference,
   SYSTEM_FOUNDATION_APPLICATION_LAYOUT_IDS,
-  SYSTEM_FOUNDATION_PACK_V2_MANIFEST,
+  SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST,
 } from "../../asset-packs/system-packs";
 import { createCanonicalSystemBuilderStructure } from "../create-canonical-system-builder-structure.service";
 import {
@@ -67,6 +67,38 @@ describe("canonical System Builder slot structure", () => {
         result.issues.filter((issue) => issue.severity === "error"),
       ).toEqual([]);
     }
+  });
+
+  it("keeps optional visual assets and nonvisual resources valid while unassigned", async () => {
+    const revision = createRevision();
+    const extras = ["builtin.ui.card", "builtin.data.entity"].map(
+      (definitionId, index) => {
+        const asset = definition(definitionId);
+        return {
+          ...revision.instances[0]!,
+          instanceId: normalizeAssetId(`unassigned-${index + 1}`),
+          definitionRef: exactReference(asset),
+          displayName: asset.displayName,
+          selectedConfiguration: asset.defaultConfiguration,
+        };
+      },
+    );
+    const revised: SystemBuilderRevision = {
+      ...revision,
+      instances: [...revision.instances, ...extras],
+      composition: {
+        ...revision.composition,
+        instanceRefs: [
+          ...revision.composition.instanceRefs,
+          ...extras.map((instance) => instanceReference(instance.instanceId)),
+        ],
+      },
+    };
+
+    const result = await validator().execute(revised);
+
+    expect(result.status).toBe("valid");
+    expect(result.issues).toEqual([]);
   });
 
   it("accepts visual assets inside the current Card regions and rejects nonvisual system data", () => {
@@ -147,7 +179,7 @@ describe("canonical System Builder slot structure", () => {
     expect(legacy.placements).toBeUndefined();
   });
 
-  it("rejects missing roots, unknown slots, incompatible children, gaps, orphans, and layout mismatches", async () => {
+  it("rejects missing roots, unknown slots, incompatible children, gaps, missing required regions, and layout mismatches", async () => {
     const cases: readonly [string, SystemBuilderRevision, RegExp][] = [
       [
         "missing root",
@@ -197,7 +229,7 @@ describe("canonical System Builder slot structure", () => {
         /contiguous from zero/i,
       ],
       [
-        "orphan",
+        "missing required region",
         mutate((revision) => ({
           ...revision,
           placements: revision.placements?.slice(0, -1),
@@ -206,7 +238,7 @@ describe("canonical System Builder slot structure", () => {
             placementRefs: revision.composition.placementRefs?.slice(0, -1),
           },
         })),
-        /placement parent/i,
+        /requires 1 to/i,
       ],
       [
         "layout mismatch",
@@ -339,7 +371,7 @@ function validator(
   additional: readonly AssetDefinition[] = [],
 ): ValidateSystemBuilderRevisionService {
   const definitions = [
-    ...SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.map(
+    ...SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST.assets.map(
       (entry) => entry.definition,
     ),
     ...additional,
@@ -358,7 +390,7 @@ function validator(
 }
 
 function definition(definitionId: string): AssetDefinition {
-  const result = SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.find(
+  const result = SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST.assets.find(
     (entry) => String(entry.definition.definitionId) === definitionId,
   )?.definition;
   if (!result) throw new Error("Missing test definition.");

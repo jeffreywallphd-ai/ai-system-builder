@@ -12,6 +12,7 @@ import type {
 } from "../../../contracts/asset-implementation";
 
 import {
+  SYSTEM_FOUNDATION_PACK_V3_MANIFEST,
   SYSTEM_FOUNDATION_PACK_MANIFEST,
   SYSTEM_FOUNDATION_PACK_V2_MANIFEST,
 } from "./system-packs";
@@ -35,6 +36,12 @@ export const SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS: readonly SystemFoundation
     createFunctionalDefault(entry.definition),
   );
 
+/** Functional descriptors for the property-complete current 3.0.0 release. */
+export const SYSTEM_FOUNDATION_V3_FUNCTIONAL_DEFAULTS: readonly SystemFoundationFunctionalDefault[] =
+  SYSTEM_FOUNDATION_PACK_V3_MANIFEST.assets.map((entry) =>
+    createFunctionalDefault(entry.definition),
+  );
+
 export const SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS_BY_VERSION: ReadonlyMap<
   AssetPackVersion,
   readonly SystemFoundationFunctionalDefault[]
@@ -46,6 +53,10 @@ export const SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS_BY_VERSION: ReadonlyMap<
   [
     SYSTEM_FOUNDATION_PACK_V2_MANIFEST.version,
     SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS,
+  ],
+  [
+    SYSTEM_FOUNDATION_PACK_V3_MANIFEST.version,
+    SYSTEM_FOUNDATION_V3_FUNCTIONAL_DEFAULTS,
   ],
 ]);
 
@@ -63,6 +74,13 @@ const legacyFunctionalDefaultByDefinitionId = new Map(
 );
 
 const currentFunctionalDefaultByDefinitionId = new Map(
+  SYSTEM_FOUNDATION_V3_FUNCTIONAL_DEFAULTS.map((item) => [
+    item.definitionId,
+    item,
+  ]),
+);
+
+const v2FunctionalDefaultByDefinitionId = new Map(
   SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS.map((item) => [
     item.definitionId,
     item,
@@ -79,8 +97,9 @@ export function readSystemFoundationFunctionalDefault(
     );
   }
   return (
-    legacyFunctionalDefaultByDefinitionId.get(definitionId) ??
-    currentFunctionalDefaultByDefinitionId.get(definitionId)
+    currentFunctionalDefaultByDefinitionId.get(definitionId) ??
+    v2FunctionalDefaultByDefinitionId.get(definitionId) ??
+    legacyFunctionalDefaultByDefinitionId.get(definitionId)
   );
 }
 

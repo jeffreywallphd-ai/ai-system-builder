@@ -27,7 +27,10 @@ import type {
   SystemBuilderReferenceTemplateRegistry,
   ValidateSystemBuilderRevisionService,
 } from "../../services/system-builder";
-import { createCanonicalSystemBuilderStructure } from "../../services/system-builder";
+import {
+  createCanonicalSystemBuilderStructure,
+  materializeReferenceSystemTemplateStructure,
+} from "../../services/system-builder";
 
 export interface SystemBuilderUseCaseDependencies {
   readonly repository: SystemBuilderRepositoryPort;
@@ -217,13 +220,29 @@ export class CreateSystemBuilderFromTemplateUseCase {
         "templateId",
       );
     }
+    let structured;
+    try {
+      structured = materializeReferenceSystemTemplateStructure({
+        systemId,
+        name,
+        actorId: safeActor(command.actorId),
+        timestamp,
+        materialized,
+      });
+    } catch {
+      return systemBuilderFailure(
+        "system-builder.template-invalid",
+        "The selected system template could not create a valid visual structure.",
+        "templateId",
+      );
+    }
     const revisionId = normalizeSystemBuilderRevisionId(systemId + ".r1");
     const candidate = {
       revisionId,
       systemId,
       targetWorkspaceId: command.workspaceId,
       revisionNumber: 1,
-      ...materialized,
+      ...structured,
       validationIssues: [],
       createdAt: timestamp,
       createdBy: safeActor(command.actorId),
@@ -237,11 +256,11 @@ export class CreateSystemBuilderFromTemplateUseCase {
       systemId,
       targetWorkspaceId: command.workspaceId,
       name,
-      description: materialized.description,
+      description: structured.description,
       status: validation.status === "invalid" ? "blocked" : "validated",
       revision: 1,
       currentRevisionId: revisionId,
-      composition: materialized.composition,
+      composition: structured.composition,
       createdAt: timestamp,
       updatedAt: timestamp,
       createdBy: safeActor(command.actorId),

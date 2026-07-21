@@ -747,7 +747,10 @@
       "targetIncrementId": null
     }
   ],
-  "finalApproval": null,
+  "finalApproval": {
+    "approvedAt": "2026-07-20T15:56:33Z",
+    "note": "The user explicitly approved the completed visual System Composer roadmap work."
+  },
   "history": [
     {
       "eventFingerprint": "80444f314be03eecdc879946720db835e151f95d4cca822994c61c6b94cb486d",
@@ -1096,6 +1099,12 @@
       "recordedAt": "2026-07-20T13:27:05Z",
       "sequence": 58,
       "type": "roadmap-completed"
+    },
+    {
+      "eventFingerprint": "cbe7b3d28ec62ed2bf9c045a4872d4773bd31514c8e3fb8d3ee8fc01b6ad5e87",
+      "recordedAt": "2026-07-20T15:56:33Z",
+      "sequence": 59,
+      "type": "final-approval-recorded"
     }
   ],
   "increments": [
@@ -1822,6 +1831,6 @@
   },
   "schemaVersion": 1,
   "slug": "visual-system-composer",
-  "status": "completed",
-  "updatedAt": "2026-07-20T13:27:05Z"
+  "status": "final-approved",
+  "updatedAt": "2026-07-20T15:56:33Z"
 }

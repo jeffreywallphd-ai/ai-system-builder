@@ -15,11 +15,11 @@
             <header><h1>Assistant</h1></header>
             <div data-slot="content">
               <section aria-label="Basic assistant system">
-                <header><h2>Basic assistant system</h2></header>
+                <header><h2>Basic assistant</h2></header>
                 <div data-slot="interface">
-                  <section aria-label="Conversation shell">
+                  <section aria-label="Conversation interface">
                     <header>
-                      <h2>Conversation shell</h2>
+                      <h2>Conversation</h2>
                       <div data-slot="status">
                         <span role="status">Assistant status: pending</span>
                       </div>
@@ -41,7 +41,9 @@
                       <section aria-label="Assistant response">
                         <h3>Assistant response</h3>
                         <div data-slot="content">
-                          <p>The assistant response will appear here.</p>
+                          <p aria-label="Assistant response">
+                            The assistant response will appear here.
+                          </p>
                         </div>
                       </section>
                     </div>
@@ -50,7 +52,12 @@
                         <div data-slot="input">
                           <label>
                             <span>Message</span>
-                            <textarea readonly>Preview message</textarea>
+                            <textarea
+                              aria-label="Message"
+                              placeholder="Enter a message"
+                              readonly
+                            >
+Preview message</textarea>
                           </label>
                         </div>
                         <div data-slot="actions">

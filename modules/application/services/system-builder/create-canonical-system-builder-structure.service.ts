@@ -17,8 +17,8 @@ import {
   exactSystemFoundationDefinitionReference,
   readSystemFoundationLayoutPreset,
   SYSTEM_FOUNDATION_APPLICATION_LAYOUT_IDS,
+  SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST,
   SYSTEM_FOUNDATION_CURRENT_PACK_VERSION,
-  SYSTEM_FOUNDATION_PACK_V2_MANIFEST,
   SYSTEM_FOUNDATION_PAGE_LAYOUT_IDS,
 } from "../asset-packs/system-packs";
 
@@ -66,6 +66,7 @@ export function createCanonicalSystemBuilderStructure(
   const layoutPresetRef = applicationLayoutReference(input.layoutPresetRef);
   const layoutPreset = readSystemFoundationLayoutPreset(
     String(layoutPresetRef.id),
+    SYSTEM_FOUNDATION_CURRENT_PACK_VERSION,
   );
   if (!layoutPreset || layoutPreset.kind !== "application-shell") {
     throw safeError("The selected application layout is unavailable.");
@@ -142,7 +143,10 @@ function addRequiredPageContent(
   page: AssetInstance,
   pageIndex: number,
 ): void {
-  const pagePreset = readSystemFoundationLayoutPreset(DEFAULT_PAGE_LAYOUT_ID);
+  const pagePreset = readSystemFoundationLayoutPreset(
+    DEFAULT_PAGE_LAYOUT_ID,
+    SYSTEM_FOUNDATION_CURRENT_PACK_VERSION,
+  );
   if (!pagePreset) throw safeError("The default page layout is unavailable.");
   let contentIndex = 0;
   for (const slot of pagePreset.slots) {
@@ -240,7 +244,7 @@ function addPlacement(
 }
 
 function exactDefinition(reference: AssetReference): AssetDefinition {
-  const definition = SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.find(
+  const definition = SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST.assets.find(
     (entry) =>
       String(entry.definition.definitionId) === String(reference.id) &&
       entry.definition.version === reference.version,

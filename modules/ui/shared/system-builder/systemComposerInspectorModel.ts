@@ -17,6 +17,7 @@ export interface SystemComposerConfigurationSection {
 
 export interface SystemComposerConfigurationSectionOptions {
   readonly groupLayoutFields?: boolean;
+  readonly includeField?: (field: AssetConfigurationField) => boolean;
 }
 
 export type SystemComposerPropertyPanel = "design" | "data" | "events";
@@ -44,6 +45,7 @@ export function buildSystemComposerConfigurationSections(
   const sections = new Map<string, AssetConfigurationField[]>();
   for (const field of schema.fields) {
     if (field.uiHint?.hintKind === "hidden") continue;
+    if (options.includeField && !options.includeField(field)) continue;
     const label =
       field.uiHint?.section?.trim() ||
       (options.groupLayoutFields && isLayoutConfigurationField(field)
@@ -77,6 +79,18 @@ export function buildSystemComposerConfigurationSections(
       if (right.label === "Advanced") return -1;
       return left.label.localeCompare(right.label);
     });
+}
+
+export function isSystemComposerStylingField(
+  field: AssetConfigurationField,
+): boolean {
+  return field.uiHint?.metadata?.editorScope === "styling";
+}
+
+export function isSystemComposerSemanticStyleField(
+  field: AssetConfigurationField,
+): boolean {
+  return field.uiHint?.metadata?.semanticStyleField === true;
 }
 
 export function buildSystemComposerPropertyPanelSections(

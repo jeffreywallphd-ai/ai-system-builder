@@ -17,8 +17,8 @@ import { normalizeSystemBuilderStructure } from "../../../contracts/system-build
 import type { AssetDefinitionVersionReaderPort } from "../../ports/asset-implementation";
 import {
   readSystemFoundationLayoutPreset,
+  SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST,
   SYSTEM_FOUNDATION_CURRENT_PACK_VERSION,
-  SYSTEM_FOUNDATION_PACK_V2_MANIFEST,
 } from "../asset-packs/system-packs";
 import { createCanonicalSystemBuilderStructure } from "./create-canonical-system-builder-structure.service";
 import { materializeReferenceSystemVisualHierarchy } from "./materialize-reference-system-visual-hierarchy.service";
@@ -41,6 +41,7 @@ export async function remapSystemBuilderLayout(
   }
   const sourcePreset = readSystemFoundationLayoutPreset(
     String(sourceLayoutPresetRef.id),
+    sourceLayoutPresetRef.version,
   );
   if (!sourcePreset || sourcePreset.kind !== "application-shell") {
     throw safeError("The current application layout is unavailable.");
@@ -50,6 +51,7 @@ export async function remapSystemBuilderLayout(
   );
   const targetPreset = readSystemFoundationLayoutPreset(
     String(targetLayoutPresetRef.id),
+    targetLayoutPresetRef.version,
   );
   const targetDefinition = foundationDefinition(targetLayoutPresetRef);
   if (!targetPreset || targetPreset.kind !== "application-shell") {
@@ -355,7 +357,10 @@ function chooseTargetSlot(
 }
 
 function exactApplicationLayout(reference: AssetReference): AssetReference {
-  const preset = readSystemFoundationLayoutPreset(String(reference.id));
+  const preset = readSystemFoundationLayoutPreset(
+    String(reference.id),
+    reference.version,
+  );
   if (
     reference.kind !== "asset-definition-version" ||
     reference.version !== SYSTEM_FOUNDATION_CURRENT_PACK_VERSION ||
@@ -370,7 +375,7 @@ function exactApplicationLayout(reference: AssetReference): AssetReference {
 }
 
 function foundationDefinition(reference: AssetReference): AssetDefinition {
-  const definition = SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.find(
+  const definition = SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST.assets.find(
     (entry) =>
       String(entry.definition.definitionId) === String(reference.id) &&
       entry.definition.version === reference.version,

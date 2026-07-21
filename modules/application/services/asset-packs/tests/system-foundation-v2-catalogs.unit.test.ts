@@ -8,17 +8,20 @@ import {
   SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES,
   SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES_BY_VERSION,
   SYSTEM_FOUNDATION_V2_BACKING_RESOURCE_BUNDLES,
+  SYSTEM_FOUNDATION_V3_BACKING_RESOURCE_BUNDLES,
 } from "../system-foundation-backing-resource-catalog";
 import {
   readSystemFoundationFunctionalDefault,
   SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS,
   SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS_BY_VERSION,
   SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS,
+  SYSTEM_FOUNDATION_V3_FUNCTIONAL_DEFAULTS,
 } from "../system-foundation-functional-default-catalog";
 import {
   SYSTEM_FOUNDATION_LAYOUT_PRESETS,
   SYSTEM_FOUNDATION_PACK_MANIFEST,
   SYSTEM_FOUNDATION_PACK_V2_MANIFEST,
+  SYSTEM_FOUNDATION_PACK_V3_MANIFEST,
 } from "../system-packs";
 
 describe("system foundation version-addressed catalogs", () => {
@@ -68,7 +71,7 @@ describe("system foundation version-addressed catalogs", () => {
     );
   });
 
-  it("preserves 1.0.0 defaults while independently addressing every 2.0.0 definition", () => {
+  it("preserves prior defaults while independently addressing every exact release", () => {
     assert.equal(
       SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS.length,
       SYSTEM_FOUNDATION_PACK_MANIFEST.assets.length,
@@ -77,8 +80,12 @@ describe("system foundation version-addressed catalogs", () => {
       SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS.length,
       SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.length,
     );
-    assert.equal(SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS_BY_VERSION.size, 2);
-    assert.equal(SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES_BY_VERSION.size, 2);
+    assert.equal(
+      SYSTEM_FOUNDATION_V3_FUNCTIONAL_DEFAULTS.length,
+      SYSTEM_FOUNDATION_PACK_V3_MANIFEST.assets.length,
+    );
+    assert.equal(SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS_BY_VERSION.size, 3);
+    assert.equal(SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES_BY_VERSION.size, 3);
     assert.equal(
       SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES.size,
       SYSTEM_FOUNDATION_PACK_MANIFEST.assets.length,
@@ -87,10 +94,15 @@ describe("system foundation version-addressed catalogs", () => {
       SYSTEM_FOUNDATION_V2_BACKING_RESOURCE_BUNDLES.size,
       SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.length,
     );
+    assert.equal(
+      SYSTEM_FOUNDATION_V3_BACKING_RESOURCE_BUNDLES.size,
+      SYSTEM_FOUNDATION_PACK_V3_MANIFEST.assets.length,
+    );
 
     for (const manifest of [
       SYSTEM_FOUNDATION_PACK_MANIFEST,
       SYSTEM_FOUNDATION_PACK_V2_MANIFEST,
+      SYSTEM_FOUNDATION_PACK_V3_MANIFEST,
     ]) {
       for (const entry of manifest.assets) {
         const definitionId = String(entry.definition.definitionId);
@@ -115,14 +127,31 @@ describe("system foundation version-addressed catalogs", () => {
     assert.equal(
       readSystemFoundationFunctionalDefault("builtin.system.system")
         ?.definitionVersion,
-      "1.0.0",
+      "3.0.0",
     );
     assert.equal(
       readSystemFoundationFunctionalDefault(
         "builtin.layout.application.standard",
       )?.definitionVersion,
+      "3.0.0",
+    );
+  });
+
+  it("keeps v2 layout references exact while projecting v3 layout resources", () => {
+    const v2 = readSystemFoundationBackingResourceBundle(
+      "builtin.layout.application.navigation",
       "2.0.0",
     );
+    const v3 = readSystemFoundationBackingResourceBundle(
+      "builtin.layout.application.navigation",
+      "3.0.0",
+    );
+    assert.ok(v2);
+    assert.ok(v3);
+    const v2Layout = parseJsonFile(v2, "frontend/structure.json").layoutPreset;
+    const v3Layout = parseJsonFile(v3, "frontend/structure.json").layoutPreset;
+    assert.equal(v2Layout.slots[2].acceptedDefinitionRefs[0].version, "2.0.0");
+    assert.equal(v3Layout.slots[2].acceptedDefinitionRefs[0].version, "3.0.0");
   });
 
   it("publishes executable layout structure and responsive styling as backing resources", () => {

@@ -45,15 +45,20 @@ describe("SystemComposerStructureEditor interactions", () => {
     ]);
     const shell = applicationLayout(
       "builtin.layout.application.navigation-footer",
-      ["top-bar", "start-sidebar", "content", "footer"],
+      ["top-bar", "start-sidebar", "content", "states", "footer"],
       [
         ["top-bar", "top-bar"],
         ["start-sidebar", "content"],
+        ["states", "states"],
         ["footer", "footer"],
       ],
       "start-content",
     );
     const card = composerAsset("builtin.container.card", ["body"]);
+    const policy = {
+      ...composerAsset("builtin.security.authorization-policy", []),
+      assetType: "policy" as const,
+    };
 
     render(
       <SystemComposerStructureEditor
@@ -61,6 +66,8 @@ describe("SystemComposerStructureEditor interactions", () => {
           instances: [
             instance("instance.root", "builtin.system.system", "System root"),
             instance("instance.shell", shell.definitionId, "Application shell"),
+            instance("instance.card", card.definitionId, "Unassigned card"),
+            instance("instance.policy", policy.definitionId, "Access policy"),
           ],
           placements: [
             placement("instance.root", "application-shell", "instance.shell"),
@@ -70,13 +77,15 @@ describe("SystemComposerStructureEditor interactions", () => {
         rootInstanceRefs={[
           { kind: "asset-instance", id: normalizeAssetId("instance.root") },
         ]}
-        catalog={[system, shell, card]}
+        catalog={[system, shell, card, policy]}
         compatibleAssets={[card]}
         layoutOptions={[shell]}
         selectedLayoutDefinitionId={shell.definitionId}
         selectedInstanceId="instance.shell"
         targetSlot={{ parentInstanceId: "instance.shell", slotId: "content" }}
         protectedInstanceIds={new Set(["instance.root", "instance.shell"])}
+        propertiesPanel={<div>Property controls</div>}
+        stylingPanel={<div>Theme controls</div>}
         canUndo={false}
         canRedo
         onSelect={onSelect}
@@ -130,6 +139,15 @@ describe("SystemComposerStructureEditor interactions", () => {
         .querySelector("#system-composer-properties-panel")
         ?.hasAttribute("hidden"),
     ).toBe(false);
+    await click(button("Styling"));
+    expect(
+      container!
+        .querySelector("#system-composer-styling-panel")
+        ?.hasAttribute("hidden"),
+    ).toBe(false);
+    expect(
+      container!.querySelector("#system-composer-styling-panel")?.textContent,
+    ).toContain("Theme controls");
     await click(button("Layers & Structure"));
     expect(
       container!
@@ -141,8 +159,13 @@ describe("SystemComposerStructureEditor interactions", () => {
         .querySelector("#system-composer-layers-panel")
         ?.hasAttribute("hidden"),
     ).toBe(false);
+    const layersPanel = container!.querySelector<HTMLElement>(
+      "#system-composer-layers-panel",
+    );
+    expect(layersPanel?.textContent).not.toContain("Unassigned visual assets");
+    expect(layersPanel?.textContent).not.toContain("System resources & logic");
     const collapseDetails = container!.querySelector<HTMLButtonElement>(
-      "button[aria-label='Collapse Properties and Layers sidebar']",
+      "button[aria-label='Collapse Composer details sidebar']",
     );
     expect(collapseDetails).not.toBeNull();
     await click(collapseDetails!);
@@ -153,7 +176,7 @@ describe("SystemComposerStructureEditor interactions", () => {
     ).toBe("true");
     await click(
       container!.querySelector<HTMLButtonElement>(
-        "button[aria-label='Expand Properties and Layers sidebar']",
+        "button[aria-label='Expand Composer details sidebar']",
       )!,
     );
     expect(
@@ -162,26 +185,41 @@ describe("SystemComposerStructureEditor interactions", () => {
         ?.getAttribute("data-collapsed"),
     ).toBe("false");
 
-    await click(
-      container!.querySelector<HTMLButtonElement>(
-        "button[aria-label='Collapse Asset Palette sidebar']",
-      )!,
-    );
-    expect(
-      container!
-        .querySelector(".system-composer__workspace")
-        ?.getAttribute("data-library-collapsed"),
-    ).toBe("true");
-    expect(
-      container!
-        .querySelector(".system-composer__workspace")
-        ?.getAttribute("data-details-collapsed"),
-    ).toBe("false");
-    await click(
-      container!.querySelector<HTMLButtonElement>(
-        "button[aria-label='Expand Asset Palette sidebar']",
-      )!,
-    );
+    const workspace = container!.querySelector<HTMLElement>(
+      ".system-composer__workspace",
+    )!;
+    expect(workspace.getAttribute("data-library-size")).toBe("normal");
+    await click(ariaButton("Maximize Asset Palette"));
+    expect(workspace.getAttribute("data-library-size")).toBe("maximized");
+    await click(ariaButton("Normal Asset Palette"));
+    expect(workspace.getAttribute("data-library-size")).toBe("normal");
+    await click(ariaButton("Collapse Asset Palette"));
+    expect(workspace.getAttribute("data-library-size")).toBe("collapsed");
+    expect(workspace.getAttribute("data-library-collapsed")).toBe("true");
+    expect(workspace.getAttribute("data-details-collapsed")).toBe("false");
+    await click(ariaButton("Normal Asset Palette"));
+    expect(workspace.getAttribute("data-library-collapsed")).toBe("false");
+
+    for (const section of [
+      "Layout",
+      "Assets",
+      "Unassigned visual assets",
+      "System resources & logic",
+    ]) {
+      const expand = ariaButton(`Expand ${section}`);
+      const contentId = expand.getAttribute("aria-controls");
+      expect(
+        container!.querySelector<HTMLElement>(`#${contentId}`)?.hidden,
+      ).toBe(true);
+      await click(expand);
+      expect(
+        container!.querySelector<HTMLElement>(`#${contentId}`)?.hidden,
+      ).toBe(false);
+      await click(ariaButton(`Collapse ${section}`));
+      expect(
+        container!.querySelector<HTMLElement>(`#${contentId}`)?.hidden,
+      ).toBe(true);
+    }
 
     const contentRegion = container!.querySelector<HTMLElement>(
       '[aria-label="content region"]',
@@ -203,11 +241,26 @@ describe("SystemComposerStructureEditor interactions", () => {
       Array.from(canvas.querySelectorAll<HTMLElement>("[data-slot-id]")).map(
         (slot) => slot.dataset.slotId,
       ),
-    ).toEqual(["top-bar", "start-sidebar", "content", "footer"]);
+    ).toEqual(["top-bar", "start-sidebar", "content", "states", "footer"]);
     expect(
       canvas.querySelector('[data-slot-id="application-shell"]'),
     ).toBeNull();
+    const statesRegion = canvas.querySelector<HTMLElement>(
+      '[data-slot-id="states"]',
+    )!;
+    const statesContent = statesRegion.querySelector<HTMLElement>(
+      ".system-composer__slot-content",
+    )!;
+    expect(statesRegion.getAttribute("data-collapsed")).toBe("true");
+    expect(statesContent.hidden).toBe(true);
+    await click(ariaButton("Expand states region"));
+    expect(statesRegion.getAttribute("data-collapsed")).toBe("false");
+    expect(statesContent.hidden).toBe(false);
+    await click(ariaButton("Collapse states region"));
+    expect(statesRegion.getAttribute("data-collapsed")).toBe("true");
+    expect(statesContent.hidden).toBe(true);
 
+    await click(ariaButton("Expand Assets"));
     const paletteDragHandle = container!.querySelector<HTMLButtonElement>(
       '[aria-label="Drag builtin.container.card"]',
     );
@@ -543,6 +596,14 @@ function button(label: string): HTMLButtonElement {
     container!.querySelectorAll<HTMLButtonElement>("button"),
   ).find((candidate) => candidate.textContent?.trim() === label);
   if (!match) throw new Error(`Missing button: ${label}`);
+  return match;
+}
+
+function ariaButton(label: string): HTMLButtonElement {
+  const match = container!.querySelector<HTMLButtonElement>(
+    `button[aria-label="${label}"]`,
+  );
+  if (!match) throw new Error(`Missing aria button: ${label}`);
   return match;
 }
 

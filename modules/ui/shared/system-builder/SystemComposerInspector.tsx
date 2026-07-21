@@ -15,6 +15,8 @@ import {
   listCompatibleSystemComposerTargets,
   listSystemComposerPortEndpoints,
   materializeSystemComposerConfiguration,
+  isSystemComposerSemanticStyleField,
+  isSystemComposerStylingField,
   validateSystemComposerConfiguration,
   type SystemComposerPortEndpoint,
   type SystemComposerPropertyPanel,
@@ -102,6 +104,7 @@ function SystemComposerConfiguration({
     () =>
       buildSystemComposerPropertyPanelSections(definition.configurationSchema, {
         groupLayoutFields: definition.slots.length > 0,
+        includeField: (field) => !isSystemComposerStylingField(field),
       }),
     [definition.configurationSchema, definition.slots.length],
   );
@@ -118,6 +121,24 @@ function SystemComposerConfiguration({
   );
   const update = (fieldId: string, value: AssetConfigurationValue) =>
     onChange({ ...values, [fieldId]: value });
+  const advancedFieldIds = useMemo(
+    () =>
+      new Set(
+        definition.configurationSchema?.fields
+          .filter((field) => !isSystemComposerSemanticStyleField(field))
+          .map((field) => field.fieldId) ?? [],
+      ),
+    [definition.configurationSchema],
+  );
+  const advancedValues = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(values).filter(([fieldId]) =>
+          advancedFieldIds.has(fieldId),
+        ),
+      ),
+    [advancedFieldIds, values],
+  );
 
   return (
     <section
@@ -207,7 +228,7 @@ function SystemComposerConfiguration({
                 <legend>{section.label}</legend>
                 <div className="system-composer-inspector__fields">
                   {section.fields.map((field) => (
-                    <ConfigurationField
+                    <SystemComposerConfigurationField
                       key={field.fieldId}
                       field={field}
                       value={values[field.fieldId]}
@@ -226,7 +247,7 @@ function SystemComposerConfiguration({
           )}
         </div>
       ))}
-      {!definition.layoutRole ? (
+      {!definition.layoutRole && advancedFieldIds.size ? (
         <details className="system-composer-inspector__advanced">
           <summary>Advanced JSON</summary>
           <p className="ui-text-muted">
@@ -235,9 +256,15 @@ function SystemComposerConfiguration({
           </p>
           <JsonValueEditor
             label="Complete configuration"
-            value={values}
+            value={advancedValues}
             onChange={(value) => {
-              if (isObjectValue(value)) onChange(value);
+              if (!isObjectValue(value)) return;
+              const bounded = Object.fromEntries(
+                Object.entries(value).filter(([fieldId]) =>
+                  advancedFieldIds.has(fieldId),
+                ),
+              );
+              onChange({ ...values, ...bounded });
             }}
           />
         </details>
@@ -246,7 +273,7 @@ function SystemComposerConfiguration({
   );
 }
 
-function ConfigurationField({
+export function SystemComposerConfigurationField({
   field,
   value,
   catalog,
@@ -267,7 +294,23 @@ function ConfigurationField({
     "aria-describedby": describedBy,
   } as const;
   let control: React.ReactNode;
-  if (field.valueKind === "boolean") {
+  if (field.uiHint?.hintKind === "color") {
+    const colorValue =
+      typeof value === "string" && /^#[0-9A-Fa-f]{6}$/.test(value)
+        ? value
+        : "#000000";
+    control = (
+      <div className="system-composer-inspector__color-control">
+        <input
+          {...common}
+          type="color"
+          value={colorValue}
+          onChange={(event) => onChange(event.currentTarget.value)}
+        />
+        <output htmlFor={field.fieldId}>{colorValue.toUpperCase()}</output>
+      </div>
+    );
+  } else if (field.valueKind === "boolean") {
     control = (
       <input
         {...common}

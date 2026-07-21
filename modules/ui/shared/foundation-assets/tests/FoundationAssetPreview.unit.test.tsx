@@ -113,6 +113,75 @@ describe("FoundationAssetPreview", () => {
     }
   });
 
+  it("renders declared conversation content and bounded semantic style attributes", () => {
+    const shell = renderToStaticMarkup(
+      <FoundationAssetPreview
+        definitionId="conversation.chat-shell"
+        version="3.0.0"
+        displayName="Fallback conversation"
+        configuration={{
+          title: "Support assistant",
+          description: "Ask a support question.",
+          accessibilityLabel: "Support conversation",
+          styleSurfaceRole: "secondary",
+          styleBorder: "strong",
+        }}
+        presentation="composed"
+      />,
+    );
+    expect(shell).toContain("Support assistant");
+    expect(shell).toContain("Ask a support question.");
+    expect(shell).toContain('aria-label="Support conversation"');
+    expect(shell).toContain('data-style-surface-role="secondary"');
+    expect(shell).toContain('data-style-border="strong"');
+
+    const history = renderToStaticMarkup(
+      <FoundationAssetPreview
+        definitionId="conversation.message-history-display"
+        version="3.0.0"
+        configuration={{
+          title: "Recent messages",
+          userRoleLabel: "Customer",
+          assistantRoleLabel: "Helper",
+          sampleUserMessage: "Where is my order?",
+          sampleAssistantMessage: "I can help locate it.",
+          accessibilityLabel: "Recent support messages",
+        }}
+        presentation="composed"
+      />,
+    );
+    for (const value of [
+      "Recent messages",
+      "Customer",
+      "Helper",
+      "Where is my order?",
+      "I can help locate it.",
+      'aria-label="Recent support messages"',
+    ]) {
+      expect(history).toContain(value);
+    }
+
+    const root = renderToStaticMarkup(
+      <FoundationAssetPreview
+        definitionId="builtin.system.system"
+        version="3.0.0"
+        configuration={{
+          themeColorPrimary: "#123456",
+          themeFontFamily: "serif",
+          themeTextSize: "large",
+          themeButtonTreatment: "outline",
+          themeFormTreatment: "filled",
+        }}
+        presentation="composed"
+      />,
+    );
+    expect(root).toContain("--foundation-color-primary:#123456");
+    expect(root).toContain('data-theme-font-family="serif"');
+    expect(root).toContain('data-theme-text-size="large"');
+    expect(root).toContain('data-theme-button-treatment="outline"');
+    expect(root).toContain('data-theme-form-treatment="filled"');
+  });
+
   it("renders field groups, radio groups, lists, and preview placeholders with their native semantics", () => {
     const group = renderToStaticMarkup(
       <FoundationAssetPreview

@@ -25,11 +25,13 @@ import {
   SYSTEM_FOUNDATION_PACK_SOURCE_LAYER,
   SYSTEM_FOUNDATION_PACK_TRUST_STATUS,
 } from "../../services/asset-packs/system-packs/system-foundation-pack.constants";
-import { SYSTEM_FOUNDATION_PACK_V2_MANIFEST } from "../../services/asset-packs/system-packs/system-foundation-pack-v2.manifest";
+import { SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST } from "../../services/asset-packs/system-packs/system-foundation-pack-v3.manifest";
 import { systemBuilderSlotAcceptsDefinition } from "../../services/system-builder";
 
 const CURRENT_FOUNDATION_DEFINITIONS =
-  SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.map((entry) => entry.definition);
+  SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST.assets.map(
+    (entry) => entry.definition,
+  );
 const CURRENT_FOUNDATION_DEFINITION_IDS = new Set(
   CURRENT_FOUNDATION_DEFINITIONS.map((definition) =>
     String(definition.definitionId),
@@ -354,10 +356,14 @@ function toComposerAsset(
   compatibility: SystemBuilderComposerCompatibility,
 ): SystemBuilderComposerAsset {
   const hasTrustedPreview = Boolean(
-    readSystemFoundationBackingResourceProgram(String(definition.definitionId)),
+    readSystemFoundationBackingResourceProgram(
+      String(definition.definitionId),
+      definition.version,
+    ),
   );
   const layoutPreset = readSystemFoundationLayoutPreset(
     String(definition.definitionId),
+    definition.version,
   );
   const layoutGeometry = layoutPreset
     ? {

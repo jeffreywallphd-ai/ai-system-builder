@@ -20,7 +20,7 @@ import {
   SYSTEM_FOUNDATION_PACK_VERSION,
 } from "../../asset-packs/system-packs/system-foundation-pack.constants";
 import { SYSTEM_FOUNDATION_PACK_MANIFEST } from "../../asset-packs/system-packs/system-foundation-pack.manifest";
-import { SYSTEM_FOUNDATION_PACK_V2_MANIFEST } from "../../asset-packs/system-packs/system-foundation-pack-v2.manifest";
+import { SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST } from "../../asset-packs/system-packs/system-foundation-pack-v3.manifest";
 import {
   WorkspaceAssetRegistryReadFacade,
   WorkspaceAssetRegistryReadFacadeError,
@@ -251,7 +251,7 @@ test("Workspace A with active system.foundation@1.0.0 sees strict foundation car
   );
 });
 
-test("current Foundation activation exposes only exact 2.0.0 cards and details", async () => {
+test("current Foundation activation exposes only exact 3.0.0 cards and details", async () => {
   const { facade, activations, readPort } = setup();
   activations.activations.set(workspaceA, [
     {
@@ -265,7 +265,7 @@ test("current Foundation activation exposes only exact 2.0.0 cards and details",
   const result = await facade.listDefinitionCards({ workspaceId: workspaceA });
   assert.equal(
     result.items.length,
-    SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.length,
+    SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST.assets.length,
   );
   assert.equal(
     result.items.every(
@@ -274,7 +274,7 @@ test("current Foundation activation exposes only exact 2.0.0 cards and details",
     ),
     true,
   );
-  const currentRoot = SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.find(
+  const currentRoot = SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST.assets.find(
     (entry) =>
       String(entry.definition.definitionId) === "builtin.system.system",
   );

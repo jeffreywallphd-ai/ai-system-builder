@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import {
   exactSystemFoundationDefinitionReference,
-  SYSTEM_FOUNDATION_PACK_V2_MANIFEST,
+  SYSTEM_FOUNDATION_PACK_V3_MANIFEST,
 } from "../../../../application/services/asset-packs/system-packs";
 import {
   remapSystemBuilderLayout,
@@ -130,7 +130,7 @@ function assertCompatibleReferencePlacements(
     instances.map((instance) => [String(instance.instanceId), instance]),
   );
   const definitions = new Map(
-    SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.map((entry) => [
+    SYSTEM_FOUNDATION_PACK_V3_MANIFEST.assets.map((entry) => [
       String(entry.definition.definitionId),
       entry.definition,
     ]),
@@ -161,7 +161,7 @@ function assertCompatibleReferencePlacements(
 }
 
 function definitionReader() {
-  const definitions = SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.map(
+  const definitions = SYSTEM_FOUNDATION_PACK_V3_MANIFEST.assets.map(
     (entry) => entry.definition,
   );
   return {
@@ -175,7 +175,7 @@ function definitionReader() {
 }
 
 function composerCatalog(): readonly SystemBuilderComposerAsset[] {
-  return SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.map(
+  return SYSTEM_FOUNDATION_PACK_V3_MANIFEST.assets.map(
     ({ definition, definitionRef }) =>
       ({
         definitionRef,

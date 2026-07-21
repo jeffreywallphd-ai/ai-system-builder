@@ -53,11 +53,41 @@ describe("system builder shared styles", () => {
       '.system-composer__workspace[data-library-collapsed="true"]',
     );
     expect(composerStyles).toContain(
+      '.system-composer__workspace[data-library-size="maximized"]',
+    );
+    expect(composerStyles).toContain(".system-composer__palette-size-controls");
+    expect(composerStyles).toContain(
+      ".system-composer__palette-section-toggle",
+    );
+    expect(composerStyles).toContain(".system-composer__region-collapse");
+    expect(composerStyles).toContain(".system-composer__slot-content[hidden]");
+    expect(composerStyles).toMatch(
+      /\.system-composer__palette\s*\{\s*grid-template-columns: minmax\(0, 1fr\)/,
+    );
+    expect(composerStyles).toContain(
       '.system-composer__workspace[data-details-collapsed="true"]',
     );
     expect(composerStyles).toContain(
       'grid-template-areas: "library canvas details"',
     );
     expect(composerStyles).toContain("prefers-reduced-motion: reduce");
+  });
+
+  it("keeps preview styling semantic, bounded, and rooted in reusable theme variables", () => {
+    const previewStyles = readStyle(
+      "modules/ui/shared/styles/components/system-composition-preview.css",
+    );
+
+    for (const marker of [
+      "--foundation-color-primary",
+      'data-theme-button-treatment="outline"',
+      'data-theme-form-treatment="filled"',
+      'data-style-surface-role="tertiary"',
+      'data-style-typography-role="heading"',
+      'data-style-control-size="large"',
+    ]) {
+      expect(previewStyles).toContain(marker);
+    }
+    expect(previewStyles).not.toContain("style[data-user-css]");
   });
 });

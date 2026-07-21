@@ -11,8 +11,10 @@ import type {
 } from "../../../contracts/asset-implementation";
 import {
   readSystemFoundationLayoutPreset,
+  SYSTEM_FOUNDATION_CURRENT_PACK_VERSION,
   SYSTEM_FOUNDATION_PACK_MANIFEST,
   SYSTEM_FOUNDATION_PACK_V2_MANIFEST,
+  SYSTEM_FOUNDATION_PACK_V3_MANIFEST,
   type SystemFoundationLayoutPreset,
   type SystemFoundationLayoutToken,
 } from "./system-packs";
@@ -20,6 +22,7 @@ import {
   readSystemFoundationFunctionalDefault,
   SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS,
   SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS,
+  SYSTEM_FOUNDATION_V3_FUNCTIONAL_DEFAULTS,
 } from "./system-foundation-functional-default-catalog";
 
 export interface SystemFoundationBackingResourceProgram {
@@ -59,6 +62,15 @@ export const SYSTEM_FOUNDATION_V2_BACKING_RESOURCE_BUNDLES: ReadonlyMap<
   SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS,
 );
 
+/** Implementation resources for the property-complete current 3.0.0 release. */
+export const SYSTEM_FOUNDATION_V3_BACKING_RESOURCE_BUNDLES: ReadonlyMap<
+  string,
+  AssetImplementationBackingResourceBundleV1
+> = createBackingResourceCatalog(
+  SYSTEM_FOUNDATION_PACK_V3_MANIFEST,
+  SYSTEM_FOUNDATION_V3_FUNCTIONAL_DEFAULTS,
+);
+
 export const SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES_BY_VERSION: ReadonlyMap<
   AssetPackVersion,
   ReadonlyMap<string, AssetImplementationBackingResourceBundleV1>
@@ -71,6 +83,10 @@ export const SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES_BY_VERSION: ReadonlyMap<
     SYSTEM_FOUNDATION_PACK_V2_MANIFEST.version,
     SYSTEM_FOUNDATION_V2_BACKING_RESOURCE_BUNDLES,
   ],
+  [
+    SYSTEM_FOUNDATION_PACK_V3_MANIFEST.version,
+    SYSTEM_FOUNDATION_V3_BACKING_RESOURCE_BUNDLES,
+  ],
 ]);
 
 export function createSystemFoundationBackingResourceBundle(
@@ -79,6 +95,7 @@ export function createSystemFoundationBackingResourceBundle(
 ): AssetImplementationBackingResourceBundleV1 {
   const layoutPreset = readSystemFoundationLayoutPreset(
     descriptor.definitionId,
+    descriptor.definitionVersion,
   );
   const files: AssetImplementationBackingResourceFile[] = [
     {
@@ -122,7 +139,11 @@ export function createSystemFoundationBackingResourceBundle(
       path: "frontend/styles.css",
       role: "frontend-style",
       mediaType: "text/css",
-      content: foundationStyles(descriptor.definitionId, layoutPreset),
+      content: foundationStyles(
+        descriptor.definitionId,
+        descriptor.definitionVersion,
+        layoutPreset,
+      ),
     });
   }
 
@@ -161,8 +182,9 @@ export function readSystemFoundationBackingResourceBundle(
     )?.get(definitionId);
   }
   return (
-    SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES.get(definitionId) ??
-    SYSTEM_FOUNDATION_V2_BACKING_RESOURCE_BUNDLES.get(definitionId)
+    SYSTEM_FOUNDATION_V3_BACKING_RESOURCE_BUNDLES.get(definitionId) ??
+    SYSTEM_FOUNDATION_V2_BACKING_RESOURCE_BUNDLES.get(definitionId) ??
+    SYSTEM_FOUNDATION_BACKING_RESOURCE_BUNDLES.get(definitionId)
   );
 }
 
@@ -295,11 +317,17 @@ function backendSteps(
 
 function foundationStyles(
   definitionId: string,
+  version: AssetPackVersion,
   layoutPreset?: SystemFoundationLayoutPreset,
 ): string {
   const className = foundationClassName(definitionId);
+  const semanticTheme =
+    version === SYSTEM_FOUNDATION_CURRENT_PACK_VERSION
+      ? semanticThemeStyles(className, definitionId)
+      : [];
   if (!layoutPreset) {
     return [
+      ...semanticTheme,
       `.${className} { display: grid; gap: 0.75rem; min-inline-size: 0; }`,
       `.${className} :where(input, textarea, select, button) { max-inline-size: 100%; }`,
       `.${className} [role="status"] { overflow-wrap: anywhere; }`,
@@ -317,12 +345,40 @@ function foundationStyles(
       `.${className} > [data-slot="${slot.slotId}"] { grid-area: ${slot.slotId}; min-inline-size: 0; }`,
   );
   return [
+    ...semanticTheme,
     compact,
     ...slotRules,
     `@media (min-width: 48rem) {\n${regular}\n}`,
     `@media (min-width: 80rem) {\n${wide}\n}`,
     "",
   ].join("\n");
+}
+
+function semanticThemeStyles(
+  className: string,
+  definitionId: string,
+): readonly string[] {
+  const shared = [
+    `.${className}[data-style-surface-role="primary"] { background: var(--aisb-theme-color-primary); color: var(--aisb-theme-color-on-primary, #ffffff); }`,
+    `.${className}[data-style-surface-role="secondary"] { background: var(--aisb-theme-color-secondary); color: var(--aisb-theme-color-on-primary, #ffffff); }`,
+    `.${className}[data-style-surface-role="tertiary"] { background: var(--aisb-theme-color-tertiary); color: var(--aisb-theme-color-on-primary, #ffffff); }`,
+    `.${className}[data-style-surface-role="surface"] { background: var(--aisb-theme-color-surface); color: var(--aisb-theme-color-text); }`,
+    `.${className}[data-style-text-role="muted"] { color: var(--aisb-theme-color-muted-text); }`,
+    `.${className}[data-style-text-role="accent"] { color: var(--aisb-theme-color-primary); }`,
+    `.${className}[data-style-spacing="compact"] { gap: var(--aisb-theme-space-compact); padding: var(--aisb-theme-space-compact); }`,
+    `.${className}[data-style-spacing="comfortable"] { gap: var(--aisb-theme-space-comfortable); padding: var(--aisb-theme-space-comfortable); }`,
+    `.${className}[data-style-border="subtle"] { border: 1px solid var(--aisb-theme-color-border); }`,
+    `.${className}[data-style-border="strong"] { border: 2px solid var(--aisb-theme-color-border); }`,
+    `.${className}[data-style-button-treatment="outline"] { background: transparent; border: 1px solid currentColor; }`,
+    `.${className}[data-style-button-treatment="soft"] { background: color-mix(in srgb, var(--aisb-theme-color-primary) 14%, transparent); color: var(--aisb-theme-color-primary); }`,
+    `.${className}[data-style-form-treatment="filled"] :where(input, textarea, select) { background: color-mix(in srgb, var(--aisb-theme-color-secondary) 10%, var(--aisb-theme-color-surface)); }`,
+    `.${className}[data-style-form-treatment="underlined"] :where(input, textarea, select) { border-width: 0 0 1px; border-radius: 0; }`,
+  ];
+  if (definitionId !== "builtin.system.system") return shared;
+  return [
+    `.${className} { --aisb-theme-color-primary: #2563eb; --aisb-theme-color-secondary: #475569; --aisb-theme-color-tertiary: #7c3aed; --aisb-theme-color-surface: #ffffff; --aisb-theme-color-canvas: #f8fafc; --aisb-theme-color-text: #0f172a; --aisb-theme-color-muted-text: #64748b; --aisb-theme-color-border: #cbd5e1; --aisb-theme-color-success: #15803d; --aisb-theme-color-danger: #b91c1c; --aisb-theme-space-compact: 0.5rem; --aisb-theme-space-standard: 0.75rem; --aisb-theme-space-comfortable: 1rem; color: var(--aisb-theme-color-text); background: var(--aisb-theme-color-canvas); font-family: var(--aisb-theme-font-family, system-ui, sans-serif); }`,
+    ...shared,
+  ];
 }
 
 function layoutRules(

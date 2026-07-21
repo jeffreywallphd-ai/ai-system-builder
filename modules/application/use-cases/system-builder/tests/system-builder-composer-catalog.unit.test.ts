@@ -11,6 +11,7 @@ import {
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import type { AssetRegistryDefinitionReadPort } from "../../../ports/asset";
 import { SYSTEM_FOUNDATION_LAYOUT_DEFINITIONS } from "../../../services/asset-packs/system-packs/system-foundation-layout-presets";
+import { SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST } from "../../../services/asset-packs/system-packs/system-foundation-pack-v3.manifest";
 import type {
   AssetDefinitionCard,
   AssetDefinitionDetail,
@@ -200,7 +201,7 @@ describe("System Builder composer catalog", () => {
       result.value.items.every(
         (item) =>
           item.layoutRole === "application-shell" &&
-          item.version === "2.0.0" &&
+          item.version === "3.0.0" &&
           item.builtIn,
       ),
     ).toBe(true);
@@ -252,7 +253,7 @@ describe("System Builder composer catalog", () => {
     if (!result.ok) return;
     const currentPage = result.value.items.find(
       (item) =>
-        item.definitionId === "builtin.shell.page" && item.version === "2.0.0",
+        item.definitionId === "builtin.shell.page" && item.version === "3.0.0",
     );
     const assistant = result.value.items.find(
       (item) => item.definitionId === "conversation.basic-assistant-system",
@@ -318,11 +319,11 @@ describe("System Builder composer catalog", () => {
       "structural",
     );
     const legacyPage = definition("builtin.shell.page", "page", "structural");
-    const standard = SYSTEM_FOUNDATION_LAYOUT_DEFINITIONS.find(
-      (definition) =>
-        String(definition.definitionId) ===
+    const standard = SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST.assets.find(
+      (entry) =>
+        String(entry.definition.definitionId) ===
         "builtin.layout.application.standard",
-    );
+    )?.definition;
     if (!standard) throw new Error("Missing standard layout fixture.");
     const registry: AssetRegistryDefinitionReadPort = {
       listDefinitionCards: async (query = {}) => {

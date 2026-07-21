@@ -16,17 +16,21 @@ function instance(
   instanceId: string,
   definitionId: string,
   displayName = definitionId,
+  selectedConfiguration: Record<string, unknown> = {
+    title: `${displayName} configured`,
+  },
+  version = "1.0.0",
 ): AssetInstance {
   return {
     instanceId,
     definitionRef: {
       kind: "asset-definition-version",
       id: definitionId,
-      version: "1.0.0",
+      version,
     },
     displayName,
     lifecycleStatus: "draft",
-    selectedConfiguration: { title: `${displayName} configured` },
+    selectedConfiguration,
     provenance: { sourceKind: "human-authored" },
   } as unknown as AssetInstance;
 }
@@ -90,13 +94,36 @@ describe("SystemCompositionPreview", () => {
   });
 
   it("renders canonical region order, unassigned assets, and responsive viewport controls", () => {
-    const root = instance("root", "builtin.system.system", "System root");
+    const root = instance(
+      "root",
+      "builtin.system.system",
+      "System root",
+      {
+        title: "System root configured",
+        themeColorPrimary: "#123456",
+        themeFontFamily: "serif",
+        themeButtonTreatment: "outline",
+      },
+      "3.0.0",
+    );
     const shell = instance(
       "shell",
       "builtin.layout.application.standard",
       "Application shell",
+      { title: "Application shell configured" },
+      "3.0.0",
     );
-    const page = instance("page", "builtin.shell.page", "Workspace page");
+    const page = instance(
+      "page",
+      "builtin.shell.page",
+      "Workspace page",
+      {
+        title: "Workspace page configured",
+        styleSurfaceRole: "tertiary",
+        styleSpacing: "comfortable",
+      },
+      "3.0.0",
+    );
     const form = instance(
       "form",
       "builtin.feature.record-form",
@@ -109,9 +136,17 @@ describe("SystemCompositionPreview", () => {
       placement("page-form", "page", "content", "form", 0),
     ];
     const catalog = [
-      composerDefinition("builtin.system.system", ["application-shell"]),
-      composerDefinition("builtin.layout.application.standard", ["content"]),
-      composerDefinition("builtin.shell.page", ["content"]),
+      composerDefinition(
+        "builtin.system.system",
+        ["application-shell"],
+        "3.0.0",
+      ),
+      composerDefinition(
+        "builtin.layout.application.standard",
+        ["content"],
+        "3.0.0",
+      ),
+      composerDefinition("builtin.shell.page", ["content"], "3.0.0"),
       composerDefinition("builtin.feature.record-form", []),
     ];
 
@@ -140,9 +175,17 @@ describe("SystemCompositionPreview", () => {
         includesUnsavedChanges={false}
       />,
     );
-    expect(html).toContain('aria-label="application-shell region"');
-    expect(html).toContain('aria-label="content region"');
+    expect(html).toContain(
+      'data-foundation-layout="builtin.layout.application.standard"',
+    );
+    expect(html).toContain('data-slot="content"');
     expect(html).toContain('data-preview-instance="form"');
+    expect(html).toContain("--foundation-color-primary:#123456");
+    expect(html).toContain('data-theme-font-family="serif"');
+    expect(html).toContain('data-theme-button-treatment="outline"');
+    expect(html).toContain('data-style-surface-role="tertiary"');
+    expect(html).toContain('data-style-spacing="comfortable"');
+    expect(html).not.toContain("Visual preview unavailable");
     expect(html).toContain("Unassigned assets");
     expect(html).toContain('aria-label="Preview viewport"');
     expect(html).toContain(">Desktop</button>");
@@ -174,15 +217,16 @@ function placement(
 function composerDefinition(
   definitionId: string,
   slotIds: readonly string[],
+  version = "1.0.0",
 ): SystemBuilderComposerAsset {
   return {
     definitionRef: {
       kind: "asset-definition-version",
       id: definitionId,
-      version: "1.0.0",
+      version,
     },
     definitionId,
-    version: "1.0.0",
+    version,
     displayName: definitionId,
     assetType: "ui-component",
     assetFamily: "structural",

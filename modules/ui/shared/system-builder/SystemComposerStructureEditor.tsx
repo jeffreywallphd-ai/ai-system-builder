@@ -70,9 +70,12 @@ export interface SystemComposerTargetSlot {
   readonly slotId: string;
   readonly order?: number;
 }
-type SystemComposerSidebarTab = "properties" | "layers";
+type SystemComposerSidebarTab = "properties" | "styling" | "layers";
 type SystemComposerResponsivePanel = "library" | "details";
 type SystemComposerPanelToggle = "library" | SystemComposerSidebarTab;
+type SystemComposerLibrarySize = "collapsed" | "normal" | "maximized";
+type SystemComposerPaletteSection =
+  "layout" | "assets" | "unassigned" | "resources";
 
 export interface SystemComposerStructureEditorProps {
   readonly draft: SystemComposerDraft;
@@ -86,6 +89,7 @@ export interface SystemComposerStructureEditorProps {
   readonly targetSlot?: SystemComposerTargetSlot;
   readonly protectedInstanceIds: ReadonlySet<string>;
   readonly propertiesPanel?: ReactNode;
+  readonly stylingPanel?: ReactNode;
   readonly catalogLoading?: boolean;
   readonly catalogError?: string;
   readonly canUndo: boolean;
@@ -118,6 +122,7 @@ export function SystemComposerStructureEditor({
   targetSlot,
   protectedInstanceIds,
   propertiesPanel,
+  stylingPanel,
   catalogLoading = false,
   catalogError,
   canUndo,
@@ -139,7 +144,11 @@ export function SystemComposerStructureEditor({
     useState<SystemComposerResponsivePanel>();
   const [sidebarTab, setSidebarTab] =
     useState<SystemComposerSidebarTab>("properties");
-  const [libraryCollapsed, setLibraryCollapsed] = useState(false);
+  const [librarySize, setLibrarySize] =
+    useState<SystemComposerLibrarySize>("normal");
+  const [collapsedPaletteSections, setCollapsedPaletteSections] = useState<
+    ReadonlySet<SystemComposerPaletteSection>
+  >(() => new Set(["layout", "assets", "unassigned", "resources"]));
   const [detailsCollapsed, setDetailsCollapsed] = useState(false);
   const [collapsedInstanceIds, setCollapsedInstanceIds] = useState<
     ReadonlySet<string>
@@ -313,7 +322,9 @@ export function SystemComposerStructureEditor({
 
   const openPanel = (panel: SystemComposerPanelToggle) => {
     if (panel === "library") {
-      setLibraryCollapsed(false);
+      setLibrarySize((current) =>
+        current === "collapsed" ? "normal" : current,
+      );
       setResponsivePanel("library");
       globalThis.setTimeout(() => panelRefs.current.get("library")?.focus(), 0);
       return;
@@ -409,36 +420,42 @@ export function SystemComposerStructureEditor({
             role="group"
             aria-label="Responsive composer panels"
           >
-            {(["library", "properties", "layers"] as const).map((panel) => (
-              <button
-                key={panel}
-                ref={(element) => {
-                  if (element) panelToggleRefs.current.set(panel, element);
-                  else panelToggleRefs.current.delete(panel);
-                }}
-                type="button"
-                className="system-composer__flat-control"
-                aria-controls={
-                  panel === "library"
-                    ? "system-composer-library-panel"
-                    : "system-composer-details-panel"
-                }
-                aria-expanded={
-                  panel === "library"
-                    ? responsivePanel === "library"
-                    : responsivePanel === "details" && sidebarTab === panel
-                }
-                onClick={() =>
-                  responsivePanel === panel
-                    ? closePanel(panel)
-                    : openPanel(panel)
-                }
-              >
-                {panel === "library"
-                  ? "Assets"
-                  : panel[0]!.toUpperCase() + panel.slice(1)}
-              </button>
-            ))}
+            {(["library", "properties", "styling", "layers"] as const).map(
+              (panel) => (
+                <button
+                  key={panel}
+                  ref={(element) => {
+                    if (element) panelToggleRefs.current.set(panel, element);
+                    else panelToggleRefs.current.delete(panel);
+                  }}
+                  type="button"
+                  className="system-composer__flat-control"
+                  aria-controls={
+                    panel === "library"
+                      ? "system-composer-library-panel"
+                      : "system-composer-details-panel"
+                  }
+                  aria-expanded={
+                    panel === "library"
+                      ? responsivePanel === "library"
+                      : responsivePanel === "details" && sidebarTab === panel
+                  }
+                  onClick={() =>
+                    (
+                      panel === "library"
+                        ? responsivePanel === "library"
+                        : responsivePanel === "details" && sidebarTab === panel
+                    )
+                      ? closePanel(panel)
+                      : openPanel(panel)
+                  }
+                >
+                  {panel === "library"
+                    ? "Assets"
+                    : panel[0]!.toUpperCase() + panel.slice(1)}
+                </button>
+              ),
+            )}
           </div>
         </div>
 
@@ -465,7 +482,8 @@ export function SystemComposerStructureEditor({
 
         <div
           className="system-composer__workspace"
-          data-library-collapsed={libraryCollapsed}
+          data-library-size={librarySize}
+          data-library-collapsed={librarySize === "collapsed"}
           data-details-collapsed={detailsCollapsed}
         >
           <aside
@@ -478,92 +496,145 @@ export function SystemComposerStructureEditor({
             className="system-composer__panel system-composer__panel--library"
             data-responsive-panel="library"
             data-panel-open={responsivePanel === "library"}
-            data-collapsed={libraryCollapsed}
+            data-size={librarySize}
+            data-collapsed={librarySize === "collapsed"}
             aria-labelledby="composer-library-title"
           >
             <header className="system-composer__panel-heading">
               <h3 id="composer-library-title">Asset Palette</h3>
-              <button
-                type="button"
-                className="system-composer__flat-control system-composer__sidebar-collapse"
-                aria-label={`${libraryCollapsed ? "Expand" : "Collapse"} Asset Palette sidebar`}
-                aria-expanded={!libraryCollapsed}
-                title={`${libraryCollapsed ? "Expand" : "Collapse"} Asset Palette sidebar`}
-                onClick={() => setLibraryCollapsed((current) => !current)}
+              <div
+                className="system-composer__palette-size-controls"
+                role="group"
+                aria-label="Asset Palette size"
               >
-                <ApplicationIcon
-                  name={libraryCollapsed ? "expand" : "collapse"}
-                />
-                <span>{libraryCollapsed ? "Expand" : "Collapse"}</span>
-              </button>
+                {(
+                  [
+                    ["collapsed", "Collapse", "collapse"],
+                    ["normal", "Normal", "assets"],
+                    ["maximized", "Maximize", "expand"],
+                  ] as const
+                ).map(([size, label, icon]) => (
+                  <button
+                    key={size}
+                    type="button"
+                    className="system-composer__flat-control system-composer__palette-size-control"
+                    aria-label={`${label} Asset Palette`}
+                    aria-pressed={librarySize === size}
+                    title={`${label} Asset Palette`}
+                    onClick={() => setLibrarySize(size)}
+                  >
+                    <ApplicationIcon name={icon} />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
             </header>
             {onSelectLayout ? (
-              <SystemLayoutGallery
-                layouts={layoutOptions}
-                selectedDefinitionId={selectedLayoutDefinitionId}
-                disabled={layoutSelectionDisabled}
-                mode="change"
-                compact
-                loading={catalogLoading}
-                error={catalogError}
-                onSelect={onSelectLayout}
-              />
-            ) : null}
-            <p className="ui-text-muted">
-              {targetSlot
-                ? "Drag a compatible asset tile onto the highlighted Canvas region."
-                : "Browse visual assets. Select a Canvas region to filter by compatibility."}
-            </p>
-            <label>
-              {targetSlot ? "Search compatible assets" : "Search assets"}
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.currentTarget.value)}
-                placeholder="Card, navigation, form..."
-              />
-            </label>
-            {catalogError ? (
-              <p className="ui-status ui-status--error" role="alert">
-                {catalogError}
-              </p>
-            ) : null}
-            {catalogLoading ? (
-              <p className="ui-text-muted" role="status">
-                Loading compatible assets...
-              </p>
-            ) : null}
-            {!catalogLoading && targetSlot && palette.length === 0 ? (
-              <EmptyState
-                compact
-                title="No compatible assets"
-                description="Try another canvas region or search term."
-                icon="assets"
-              />
-            ) : null}
-            <ul className="system-composer__palette">
-              {palette.map((asset) => (
-                <PaletteAssetItem
-                  key={`${asset.definitionId}@${asset.version}`}
-                  asset={asset}
-                >
-                  <span className="system-composer__palette-icon">
-                    <ApplicationIcon name={iconForComposerAsset(asset)} />
-                  </span>
-                  <strong>{asset.displayName}</strong>
-                  <span>
-                    {asset.assetType} · v{asset.version}
-                  </span>
-                </PaletteAssetItem>
-              ))}
-            </ul>
-            {unassignedVisualInstances.length ? (
-              <section
-                className="system-composer__unassigned system-composer__unassigned--palette"
-                aria-labelledby="system-composer-unassigned-title"
+              <CollapsibleComposerSection
+                id="system-composer-layout-section"
+                title="Layout"
+                expanded={!collapsedPaletteSections.has("layout")}
+                onToggle={() =>
+                  setCollapsedPaletteSections((current) =>
+                    withCollapsedPaletteSection(
+                      current,
+                      "layout",
+                      !current.has("layout"),
+                    ),
+                  )
+                }
               >
-                <h4 id="system-composer-unassigned-title">
-                  Unassigned visual assets
-                </h4>
+                <SystemLayoutGallery
+                  layouts={layoutOptions}
+                  selectedDefinitionId={selectedLayoutDefinitionId}
+                  disabled={layoutSelectionDisabled}
+                  mode="change"
+                  compact
+                  hideLegend
+                  loading={catalogLoading}
+                  error={catalogError}
+                  onSelect={onSelectLayout}
+                />
+              </CollapsibleComposerSection>
+            ) : null}
+            <CollapsibleComposerSection
+              id="system-composer-assets-section"
+              title="Assets"
+              expanded={!collapsedPaletteSections.has("assets")}
+              onToggle={() =>
+                setCollapsedPaletteSections((current) =>
+                  withCollapsedPaletteSection(
+                    current,
+                    "assets",
+                    !current.has("assets"),
+                  ),
+                )
+              }
+            >
+              <p className="ui-text-muted">
+                {targetSlot
+                  ? "Drag a compatible asset tile onto the highlighted Canvas region."
+                  : "Browse visual assets. Select a Canvas region to filter by compatibility."}
+              </p>
+              <label>
+                {targetSlot ? "Search compatible assets" : "Search assets"}
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.currentTarget.value)}
+                  placeholder="Card, navigation, form..."
+                />
+              </label>
+              {catalogError ? (
+                <p className="ui-status ui-status--error" role="alert">
+                  {catalogError}
+                </p>
+              ) : null}
+              {catalogLoading ? (
+                <p className="ui-text-muted" role="status">
+                  Loading compatible assets...
+                </p>
+              ) : null}
+              {!catalogLoading && targetSlot && palette.length === 0 ? (
+                <EmptyState
+                  compact
+                  title="No compatible assets"
+                  description="Try another canvas region or search term."
+                  icon="assets"
+                />
+              ) : null}
+              <ul className="system-composer__palette">
+                {palette.map((asset) => (
+                  <PaletteAssetItem
+                    key={`${asset.definitionId}@${asset.version}`}
+                    asset={asset}
+                  >
+                    <span className="system-composer__palette-icon">
+                      <ApplicationIcon name={iconForComposerAsset(asset)} />
+                    </span>
+                    <strong>{asset.displayName}</strong>
+                    <span>
+                      {asset.assetType} · v{asset.version}
+                    </span>
+                  </PaletteAssetItem>
+                ))}
+              </ul>
+            </CollapsibleComposerSection>
+            {unassignedVisualInstances.length ? (
+              <CollapsibleComposerSection
+                id="system-composer-unassigned-section"
+                title="Unassigned visual assets"
+                className="system-composer__unassigned system-composer__unassigned--palette"
+                expanded={!collapsedPaletteSections.has("unassigned")}
+                onToggle={() =>
+                  setCollapsedPaletteSections((current) =>
+                    withCollapsedPaletteSection(
+                      current,
+                      "unassigned",
+                      !current.has("unassigned"),
+                    ),
+                  )
+                }
+              >
                 <p className="ui-text-muted">
                   Visual assets preserved during a layout change. Drag each
                   asset into a compatible named region.
@@ -581,16 +652,24 @@ export function SystemComposerStructureEditor({
                     />
                   ))}
                 </ul>
-              </section>
+              </CollapsibleComposerSection>
             ) : null}
             {systemResourceInstances.length ? (
-              <section
+              <CollapsibleComposerSection
+                id="system-composer-resources-section"
+                title="System resources & logic"
                 className="system-composer__resources system-composer__resources--palette"
-                aria-labelledby="system-composer-resources-title"
+                expanded={!collapsedPaletteSections.has("resources")}
+                onToggle={() =>
+                  setCollapsedPaletteSections((current) =>
+                    withCollapsedPaletteSection(
+                      current,
+                      "resources",
+                      !current.has("resources"),
+                    ),
+                  )
+                }
               >
-                <h4 id="system-composer-resources-title">
-                  System resources &amp; logic
-                </h4>
                 <p className="ui-text-muted">
                   Nonvisual assets remain part of the system and are configured
                   through Properties or Connections. They are not Canvas
@@ -612,7 +691,7 @@ export function SystemComposerStructureEditor({
                     />
                   ))}
                 </ul>
-              </section>
+              </CollapsibleComposerSection>
             ) : null}
           </aside>
 
@@ -689,6 +768,17 @@ export function SystemComposerStructureEditor({
                   Properties
                 </button>
                 <button
+                  id="system-composer-sidebar-tab-styling"
+                  type="button"
+                  role="tab"
+                  className="system-composer__flat-control"
+                  aria-selected={sidebarTab === "styling"}
+                  aria-controls="system-composer-styling-panel"
+                  onClick={() => setSidebarTab("styling")}
+                >
+                  Styling
+                </button>
+                <button
                   id="system-composer-sidebar-tab-layers"
                   type="button"
                   role="tab"
@@ -703,9 +793,9 @@ export function SystemComposerStructureEditor({
               <button
                 type="button"
                 className="system-composer__flat-control system-composer__sidebar-collapse"
-                aria-label={`${detailsCollapsed ? "Expand" : "Collapse"} Properties and Layers sidebar`}
+                aria-label={`${detailsCollapsed ? "Expand" : "Collapse"} Composer details sidebar`}
                 aria-expanded={!detailsCollapsed}
-                title={`${detailsCollapsed ? "Expand" : "Collapse"} Properties and Layers sidebar`}
+                title={`${detailsCollapsed ? "Expand" : "Collapse"} Composer details sidebar`}
                 onClick={() => setDetailsCollapsed((current) => !current)}
               >
                 <ApplicationIcon
@@ -726,6 +816,23 @@ export function SystemComposerStructureEditor({
                   compact
                   title="Select an asset"
                   description="Choose a canvas node or layer to edit its declared properties."
+                  icon="settings"
+                />
+              )}
+            </section>
+
+            <section
+              id="system-composer-styling-panel"
+              role="tabpanel"
+              aria-labelledby="system-composer-sidebar-tab-styling"
+              hidden={sidebarTab !== "styling"}
+              className="system-composer__sidebar-panel system-composer__sidebar-panel--styling"
+            >
+              {stylingPanel ?? (
+                <EmptyState
+                  compact
+                  title="System styling is unavailable"
+                  description="Load a system with a declared reusable style profile."
                   icon="settings"
                 />
               )}
@@ -770,55 +877,6 @@ export function SystemComposerStructureEditor({
                   />
                 ))}
               </ul>
-              {unassignedVisualInstances.length ? (
-                <section className="system-composer__unassigned-layers">
-                  <h4>Unassigned visual assets</h4>
-                  <ul>
-                    {unassignedVisualInstances.map((instance) => (
-                      <li key={String(instance.instanceId)}>
-                        <button
-                          type="button"
-                          className="system-composer__link-control"
-                          aria-current={
-                            String(instance.instanceId) === selectedInstanceId
-                              ? "true"
-                              : undefined
-                          }
-                          onClick={() => onSelect(String(instance.instanceId))}
-                        >
-                          {instance.displayName ??
-                            String(instance.definitionRef.id)}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ) : null}
-              {systemResourceInstances.length ? (
-                <section className="system-composer__resources-layers">
-                  <h4>System resources &amp; logic</h4>
-                  <ul>
-                    {systemResourceInstances.map((instance) => (
-                      <li key={String(instance.instanceId)}>
-                        <button
-                          type="button"
-                          className="system-composer__link-control"
-                          aria-current={
-                            String(instance.instanceId) === selectedInstanceId
-                              ? "true"
-                              : undefined
-                          }
-                          onClick={() => onSelect(String(instance.instanceId))}
-                        >
-                          {instance.displayName ??
-                            String(instance.definitionRef.id)}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ) : null}
-
               {selectedNode ? (
                 <div className="system-composer__actions ui-stack ui-stack--sm">
                   <dl>
@@ -884,6 +942,7 @@ export function SystemLayoutGallery({
   disabled = false,
   mode = "create",
   compact = false,
+  hideLegend = false,
   loading = false,
   error,
   onSelect,
@@ -893,6 +952,7 @@ export function SystemLayoutGallery({
   readonly disabled?: boolean;
   readonly mode?: "create" | "change";
   readonly compact?: boolean;
+  readonly hideLegend?: boolean;
   readonly loading?: boolean;
   readonly error?: string;
   readonly onSelect: (asset: SystemBuilderComposerAsset) => void;
@@ -903,7 +963,9 @@ export function SystemLayoutGallery({
       data-compact={compact}
       disabled={disabled}
     >
-      <legend>{compact ? "Layout" : "Application layout"}</legend>
+      <legend className={hideLegend ? "ui-visually-hidden" : undefined}>
+        {compact ? "Layout" : "Application layout"}
+      </legend>
       <p className="ui-text-muted">
         {mode === "change"
           ? "Choose a predefined fixed region configuration. The local Canvas updates immediately and remains undoable until saved."
@@ -960,6 +1022,56 @@ export function SystemLayoutGallery({
         </p>
       ) : null}
     </fieldset>
+  );
+}
+
+function CollapsibleComposerSection({
+  id,
+  title,
+  className,
+  expanded,
+  onToggle,
+  children,
+}: {
+  readonly id: string;
+  readonly title: string;
+  readonly className?: string;
+  readonly expanded: boolean;
+  readonly onToggle: () => void;
+  readonly children: ReactNode;
+}) {
+  const contentId = `${id}-content`;
+  const toggleId = `${id}-toggle`;
+  return (
+    <section
+      className={["system-composer__palette-section", className]
+        .filter(Boolean)
+        .join(" ")}
+      aria-labelledby={toggleId}
+    >
+      <h4>
+        <button
+          id={toggleId}
+          type="button"
+          className="system-composer__palette-section-toggle"
+          aria-label={`${expanded ? "Collapse" : "Expand"} ${title}`}
+          aria-expanded={expanded}
+          aria-controls={contentId}
+          data-expanded={expanded}
+          onClick={onToggle}
+        >
+          <ApplicationIcon name="chevron" />
+          <span>{title}</span>
+        </button>
+      </h4>
+      <div
+        id={contentId}
+        className="system-composer__palette-section-content"
+        hidden={!expanded}
+      >
+        {children}
+      </div>
+    </section>
   );
 }
 
@@ -1312,6 +1424,9 @@ function CanvasSlot({
   readonly onSelect: (instanceId: string) => void;
   readonly onTargetSlotChange: (target: SystemComposerTargetSlot) => void;
 }) {
+  const collapsible = String(slot.slotId) === "states";
+  const [collapsed, setCollapsed] = useState(true);
+  const contentId = `system-composer-slot-${parentInstanceId}-${String(slot.slotId)}-content`;
   const selectedTarget =
     targetSlot?.parentInstanceId === parentInstanceId &&
     targetSlot.slotId === slot.slotId;
@@ -1330,6 +1445,8 @@ function CanvasSlot({
       data-target={selectedTarget}
       data-drag-over={droppable.isOver}
       data-slot-id={slot.slotId}
+      data-collapsible={collapsible}
+      data-collapsed={collapsible && collapsed}
       style={{ gridArea: slot.slotId }}
       aria-label={`${slot.displayName} region`}
     >
@@ -1348,35 +1465,67 @@ function CanvasSlot({
         >
           <strong>{slot.displayName}</strong>
         </button>
-        <small>
-          {childrenNodes.length}/{slot.cardinality.maxItems}
-        </small>
+        <span className="system-composer__slot-summary">
+          <small>
+            {childrenNodes.length}/{slot.cardinality.maxItems}
+          </small>
+          {collapsible ? (
+            <button
+              type="button"
+              className="system-composer__region-collapse"
+              aria-label={`${collapsed ? "Expand" : "Collapse"} ${slot.displayName} region`}
+              aria-expanded={!collapsed}
+              aria-controls={contentId}
+              data-expanded={!collapsed}
+              onClick={() => setCollapsed((current) => !current)}
+            >
+              <ApplicationIcon name="chevron" />
+            </button>
+          ) : null}
+        </span>
       </header>
-      <p>{slot.description ?? "Canvas drop region"}</p>
-      <SortableContext
-        items={childrenNodes.map(
-          (child) => `instance:${String(child.instance.instanceId)}`,
-        )}
-        strategy={verticalListSortingStrategy}
+      <div
+        id={contentId}
+        className="system-composer__slot-content"
+        hidden={collapsible && collapsed}
       >
-        {childrenNodes.map((child) => (
-          <CanvasNode
-            key={String(child.instance.instanceId)}
-            node={child}
-            catalog={catalog}
-            selectedInstanceId={selectedInstanceId}
-            targetSlot={targetSlot}
-            protectedInstanceIds={protectedInstanceIds}
-            onSelect={onSelect}
-            onTargetSlotChange={onTargetSlotChange}
-          />
-        ))}
-      </SortableContext>
-      {childrenNodes.length === 0 ? (
-        <span className="system-composer__slot-empty">Drop assets here</span>
-      ) : null}
+        <p>{slot.description ?? "Canvas drop region"}</p>
+        <SortableContext
+          items={childrenNodes.map(
+            (child) => `instance:${String(child.instance.instanceId)}`,
+          )}
+          strategy={verticalListSortingStrategy}
+        >
+          {childrenNodes.map((child) => (
+            <CanvasNode
+              key={String(child.instance.instanceId)}
+              node={child}
+              catalog={catalog}
+              selectedInstanceId={selectedInstanceId}
+              targetSlot={targetSlot}
+              protectedInstanceIds={protectedInstanceIds}
+              onSelect={onSelect}
+              onTargetSlotChange={onTargetSlotChange}
+            />
+          ))}
+        </SortableContext>
+        {childrenNodes.length === 0 ? (
+          <span className="system-composer__slot-empty">Drop assets here</span>
+        ) : null}
+      </div>
     </section>
   );
+}
+
+function withCollapsedPaletteSection(
+  current: ReadonlySet<SystemComposerPaletteSection>,
+  section: SystemComposerPaletteSection,
+  collapsed: boolean,
+): ReadonlySet<SystemComposerPaletteSection> {
+  const next = new Set(current);
+  if (collapsed) next.add(section);
+  else next.delete(section);
+  return next;
 }
 
 function withCollapsedInstance(

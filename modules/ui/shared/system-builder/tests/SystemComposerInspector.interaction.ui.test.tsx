@@ -11,6 +11,7 @@ import type {
 import { normalizeAssetId } from "../../../../contracts/asset";
 import type { SystemBuilderComposerAsset } from "../../../../contracts/system-builder";
 import { SystemComposerInspector } from "../SystemComposerInspector";
+import { SystemComposerStylingPanel } from "../SystemComposerStylingPanel";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -258,6 +259,120 @@ describe("SystemComposerInspector interactions", () => {
     expect(container!.querySelector("#width")).toBeNull();
     expect(container!.querySelector("#height")).toBeNull();
   });
+
+  it("uses bounded root styling controls and keeps semantic styles out of Advanced JSON", async () => {
+    const definition = asset("builtin.system.system", [], {
+      fields: [
+        {
+          fieldId: "title",
+          valueKind: "string",
+          label: "Title",
+          defaultValue: "System",
+        },
+        {
+          fieldId: "themeColorPrimary",
+          valueKind: "string",
+          label: "Primary color",
+          defaultValue: "#2563eb",
+          uiHint: {
+            hintKind: "color",
+            section: "Theme colors",
+            metadata: {
+              editorScope: "styling",
+              semanticStyleField: true,
+            },
+          },
+        },
+        {
+          fieldId: "themeButtonTreatment",
+          valueKind: "enum",
+          label: "Button style",
+          defaultValue: "solid",
+          options: [{ value: "solid" }, { value: "outline" }],
+          uiHint: {
+            hintKind: "select",
+            section: "Buttons",
+            metadata: {
+              editorScope: "styling",
+              semanticStyleField: true,
+            },
+          },
+        },
+        {
+          fieldId: "styleSurfaceRole",
+          valueKind: "enum",
+          label: "Background role",
+          defaultValue: "inherit",
+          options: [{ value: "inherit" }, { value: "primary" }],
+          uiHint: {
+            hintKind: "select",
+            section: "Style overrides",
+            metadata: {
+              editorScope: "properties",
+              semanticStyleField: true,
+            },
+          },
+        },
+      ],
+      strict: true,
+    });
+    const selected = instance("instance.root", definition, {
+      title: "Configured system",
+      themeColorPrimary: "#2563eb",
+      themeButtonTreatment: "solid",
+      styleSurfaceRole: "inherit",
+    });
+    const onChange = vi.fn();
+
+    render(
+      <SystemComposerInspector
+        mode="configuration"
+        selectedInstance={selected}
+        selectedDefinition={definition}
+        instances={[selected]}
+        catalog={[definition]}
+        bindings={[]}
+        onConfigurationChange={onChange}
+        onAddConnection={vi.fn()}
+        onRemoveConnection={vi.fn()}
+      />,
+    );
+    expect(container!.querySelector("#themeColorPrimary")).toBeNull();
+    expect(container!.querySelector("#styleSurfaceRole")).not.toBeNull();
+    const advanced = container!.querySelector<HTMLTextAreaElement>(
+      ".system-composer-inspector__advanced textarea",
+    );
+    expect(advanced?.value).toContain('"title"');
+    expect(advanced?.value).not.toContain("themeColorPrimary");
+    expect(advanced?.value).not.toContain("styleSurfaceRole");
+
+    act(() => root?.unmount());
+    root = createRoot(container!);
+    act(() =>
+      root?.render(
+        <SystemComposerStylingPanel
+          rootInstance={selected}
+          rootDefinition={definition}
+          catalog={[definition]}
+          onChange={onChange}
+        />,
+      ),
+    );
+    const color =
+      container!.querySelector<HTMLInputElement>("#themeColorPrimary");
+    expect(color?.type).toBe("color");
+    expect(container!.querySelector("#themeButtonTreatment")).toBeInstanceOf(
+      HTMLSelectElement,
+    );
+    expect(container!.querySelector("#title")).toBeNull();
+    await input(color!, "#123456");
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Configured system",
+        themeColorPrimary: "#123456",
+      }),
+    );
+  });
 });
 
 function render(element: ReactNode): void {
@@ -285,6 +400,18 @@ async function change(
 ): Promise<void> {
   await act(async () => {
     element.value = value;
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
+async function input(element: HTMLInputElement, value: string): Promise<void> {
+  await act(async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(
+      Object.getPrototypeOf(element),
+      "value",
+    );
+    descriptor?.set?.call(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
 }

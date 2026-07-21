@@ -33,6 +33,7 @@ import {
   type SystemComposerTargetSlot,
 } from "./SystemComposerStructureEditor";
 import { SystemComposerInspector } from "./SystemComposerInspector";
+import { SystemComposerStylingPanel } from "./SystemComposerStylingPanel";
 import {
   bindingKindForSystemComposerEndpoint,
   type SystemComposerPortEndpoint,
@@ -184,6 +185,18 @@ export function SystemBuilderWorkspace({
     (definition) =>
       definition.definitionId === String(selectedInstance?.definitionRef.id) &&
       definition.version === selectedInstance?.definitionRef.version,
+  );
+  const stylingRootInstanceId = String(
+    revision?.composition.rootInstanceRefs[0]?.id ?? "",
+  );
+  const stylingRootInstance = instances.find(
+    (instance) => String(instance.instanceId) === stylingRootInstanceId,
+  );
+  const stylingRootDefinition = composerCatalog.find(
+    (definition) =>
+      definition.definitionId ===
+        String(stylingRootInstance?.definitionRef.id) &&
+      definition.version === stylingRootInstance?.definitionRef.version,
   );
   const draft = useMemo<SystemComposerDraft>(
     () => ({ instances, placements, bindings, structure }),
@@ -610,16 +623,37 @@ export function SystemBuilderWorkspace({
   }
   function updateSelectedConfiguration(values: AssetConfigurationValues) {
     if (!selectedInstanceId) return;
+    updateInstanceConfiguration(
+      selectedInstanceId,
+      values,
+      "Configuration updated locally. Save the revision to persist it.",
+    );
+  }
+
+  function updateRootStyling(values: AssetConfigurationValues) {
+    if (!stylingRootInstanceId) return;
+    updateInstanceConfiguration(
+      stylingRootInstanceId,
+      values,
+      "System styling updated locally. Save the revision to persist it.",
+    );
+  }
+
+  function updateInstanceConfiguration(
+    instanceId: string,
+    values: AssetConfigurationValues,
+    message: string,
+  ) {
     commitDraft(
       {
         ...draft,
         instances: draft.instances.map((item) =>
-          String(item.instanceId) === selectedInstanceId
+          String(item.instanceId) === instanceId
             ? { ...item, selectedConfiguration: values }
             : item,
         ),
       },
-      "Configuration updated locally. Save the revision to persist it.",
+      message,
     );
     setError(undefined);
   }
@@ -1077,6 +1111,14 @@ export function SystemBuilderWorkspace({
                       onConfigurationChange={updateSelectedConfiguration}
                       onAddConnection={connectDeclaredPorts}
                       onRemoveConnection={removeBinding}
+                    />
+                  }
+                  stylingPanel={
+                    <SystemComposerStylingPanel
+                      rootInstance={stylingRootInstance}
+                      rootDefinition={stylingRootDefinition}
+                      catalog={composerCatalog}
+                      onChange={updateRootStyling}
                     />
                   }
                   catalogLoading={catalogLoading}

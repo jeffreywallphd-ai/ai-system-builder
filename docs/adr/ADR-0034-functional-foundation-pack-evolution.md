@@ -7,7 +7,11 @@
 
 ## Context
 
-`system.foundation` currently provides trusted semantic definitions but intentionally no renderer, logic, data, policy, or workflow behavior. A system-construction product needs defaults that are genuinely usable while keeping definitions host-neutral and avoiding hidden feature-specific code paths.
+`system.foundation` began as trusted semantic definitions and now supplies exact,
+bounded backing-resource releases for supported renderer, logic, data, policy,
+and workflow facets. A system-construction product needs defaults that are
+genuinely usable while keeping definitions host-neutral and avoiding hidden
+feature-specific code paths.
 
 ## Decision
 
@@ -34,4 +38,8 @@
 
 ### Follow-up
 
-- Deliver the minimum functional kit in Increment 4 and qualify every advertised default in Increment 11.
+- The minimum functional kit and exact backing resources were delivered for v1
+  and v2. `system.foundation@3.0.0` adds property-complete presentation schemas
+  and bounded semantic styling while preserving the exact v1/v2 artifacts.
+- Continue to qualify every advertised default and require a new immutable pack
+  version for future schema, renderer, or runtime-semantic changes.

@@ -3,6 +3,7 @@ export * from "./SystemCompositionPreview";
 export * from "./SystemManagementWorkspace";
 export * from "./SystemComposerStructureEditor";
 export * from "./SystemComposerInspector";
+export * from "./SystemComposerStylingPanel";
 export * from "./systemComposerDraft";
 export * from "./systemComposerInspectorModel";
 export * from "./SystemBuildReleaseWorkflow";

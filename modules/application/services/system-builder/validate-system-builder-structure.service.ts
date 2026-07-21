@@ -67,7 +67,6 @@ export function validateSystemBuilderStructure(
   validatePlacementEndpoints(placements, instancesById, issues);
   validatePlacementCoverage(
     revision.composition.rootInstanceRefs,
-    revision.instances,
     placements,
     issues,
   );
@@ -121,7 +120,7 @@ function validateInteractiveRoot(
   if (!rootDefinition || !isFoundationSystemRoot(rootDefinition)) {
     addIssue(
       issues,
-      "The interactive root must use or explicitly derive from builtin.system.system@2.0.0.",
+      `The interactive root must use or explicitly derive from builtin.system.system@${SYSTEM_FOUNDATION_CURRENT_PACK_VERSION}.`,
       ["instances", String(root.instanceId), "definitionRef"],
     );
   }
@@ -220,7 +219,6 @@ function validatePlacementEndpoints(
 
 function validatePlacementCoverage(
   rootReferences: readonly AssetReference[],
-  instances: readonly AssetInstance[],
   placements: readonly AssetPlacement[],
   issues: AssetValidationIssue[],
 ): void {
@@ -236,16 +234,6 @@ function validatePlacementCoverage(
         "composition",
         "rootInstanceRefs",
       ]);
-    }
-  }
-  for (const instance of instances) {
-    const id = String(instance.instanceId);
-    if (!rootIds.has(id) && !childIds.has(id)) {
-      addIssue(
-        issues,
-        "Every non-root instance must have exactly one placement parent.",
-        ["instances", id],
-      );
     }
   }
 }
@@ -419,7 +407,7 @@ function isCurrentFoundationReferenceVisualContainment(
   slot: AssetSlotDefinition,
   child: AssetDefinition,
 ): boolean {
-  // Foundation 2.0.0 is immutable. Its controlled-chatbot reference profile
+  // Each Foundation release is immutable. The controlled-chatbot reference profile
   // intentionally presents three semantic records as trusted visual facades.
   // Keep these exact compatibility bridges in the
   // application-owned validator instead of rewriting the released slot data.

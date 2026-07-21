@@ -11,7 +11,7 @@ import {
 } from "../../../contracts/asset";
 import {
   exactSystemFoundationDefinitionReference,
-  SYSTEM_FOUNDATION_PACK_V2_MANIFEST,
+  readSystemFoundationManifest,
 } from "../asset-packs/system-packs";
 
 type ReferenceSystemKind =
@@ -116,9 +116,10 @@ export function materializeReferenceSystemVisualHierarchy(
       .filter((instance) => String(instance.instanceId).includes("-content-"))
       .map((instance) => String(instance.instanceId)),
   );
-  const instances = input.instances
-    .filter((instance) => !generatedEmptyIds.has(String(instance.instanceId)))
-    .map(upgradeToCurrentFoundation);
+  const foundationVersion = referenceFoundationVersion(input.instances);
+  const instances = input.instances.filter(
+    (instance) => !generatedEmptyIds.has(String(instance.instanceId)),
+  );
   const placements = input.placements.filter(
     (item) =>
       !generatedEmptyIds.has(String(item.childInstanceRef.id)) &&
@@ -155,7 +156,7 @@ export function materializeReferenceSystemVisualHierarchy(
   }
 
   if (kind === "secured-data-entry") {
-    addSyntheticVisuals(instances, bySuffix, input, [
+    addSyntheticVisuals(instances, bySuffix, input, foundationVersion, [
       visual("entry-stack", "Request workspace", "builtin.ui.stack", {}),
       visual("form-card", "New request", "builtin.ui.card", {
         title: "New request",
@@ -174,6 +175,7 @@ export function materializeReferenceSystemVisualHierarchy(
     const action = addVisualAction(
       instances,
       input,
+      foundationVersion,
       "visual-submit",
       "Save request",
       "Save request",
@@ -183,13 +185,14 @@ export function materializeReferenceSystemVisualHierarchy(
     const action = addVisualAction(
       instances,
       input,
+      foundationVersion,
       "visual-send",
       "Send message",
       "Send",
     );
     bySuffix.set("visual-send", action);
   } else if (kind === "secured-data-review") {
-    addSyntheticVisuals(instances, bySuffix, input, [
+    addSyntheticVisuals(instances, bySuffix, input, foundationVersion, [
       visual("review-grid", "Artifact review workspace", "builtin.ui.grid", {}),
     ]);
   }
@@ -230,6 +233,7 @@ function addSyntheticVisuals(
   instances: AssetInstance[],
   bySuffix: Map<string, AssetInstance>,
   input: MaterializeReferenceSystemVisualHierarchyInput,
+  foundationVersion: string,
   specs: readonly SyntheticVisualSpec[],
 ): void {
   for (const spec of specs) {
@@ -237,8 +241,11 @@ function addSyntheticVisuals(
     if (existing) continue;
     const definitionRef = exactSystemFoundationDefinitionReference(
       spec.definitionId,
+      foundationVersion,
     );
-    const definition = SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.find(
+    const definition = readSystemFoundationManifest(
+      foundationVersion,
+    )?.assets.find(
       (entry) =>
         String(entry.definition.definitionId) === String(definitionRef.id),
     )?.definition;
@@ -284,17 +291,10 @@ function referenceSystemKind(
   return undefined;
 }
 
-function upgradeToCurrentFoundation(instance: AssetInstance): AssetInstance {
-  const entry = SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.find(
-    (candidate) =>
-      String(candidate.definition.definitionId) ===
-      String(instance.definitionRef.id),
-  );
-  return entry ? { ...instance, definitionRef: entry.definitionRef } : instance;
-}
-
 function navigationSlotFor(shell: AssetInstance): string | undefined {
-  const definition = SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.find(
+  const definition = readSystemFoundationManifest(
+    shell.definitionRef.version ?? "",
+  )?.assets.find(
     (entry) =>
       String(entry.definition.definitionId) === String(shell.definitionRef.id),
   )?.definition;
@@ -305,6 +305,7 @@ function navigationSlotFor(shell: AssetInstance): string | undefined {
 function addVisualAction(
   instances: AssetInstance[],
   input: MaterializeReferenceSystemVisualHierarchyInput,
+  foundationVersion: string,
   suffix: string,
   displayName: string,
   label: string,
@@ -315,8 +316,11 @@ function addVisualAction(
   if (existing) return existing;
   const definitionRef = exactSystemFoundationDefinitionReference(
     "builtin.form.submit-action",
+    foundationVersion,
   );
-  const definition = SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.find(
+  const definition = readSystemFoundationManifest(
+    foundationVersion,
+  )?.assets.find(
     (entry) =>
       String(entry.definition.definitionId) === String(definitionRef.id),
   )?.definition;
@@ -343,6 +347,18 @@ function addVisualAction(
   };
   instances.push(instance);
   return instance;
+}
+
+function referenceFoundationVersion(
+  instances: readonly AssetInstance[],
+): string {
+  const version = instances.find(
+    (instance) => String(instance.definitionRef.id) === "builtin.system.system",
+  )?.definitionRef.version;
+  if (!version || !readSystemFoundationManifest(version)) {
+    throw new Error("The reference system Foundation release is unavailable.");
+  }
+  return version;
 }
 
 function addPlacement(

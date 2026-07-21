@@ -17,12 +17,19 @@
   both desktop and thin-client surfaces must use the workspace-scoped exact
   composer catalog and the same draft, validation, history, and save semantics.
   The geometry-aware Layout chooser within the Asset Palette, compatible square
-  visual-asset tiles, full active-layout Canvas, tabbed Properties
+  visual-asset tiles, full active-layout Canvas, tabbed Properties, Styling,
   and Layers and Structure details sidebar, breadcrumbs, protected-node actions,
   Connections mode, immediate local layout selection, and recursive preview are shared UI
-  rather than host-specific reconstructions. The wide layout reserves its largest
-  region for the canvas and lets both sidebars collapse to compact rails; narrow
-  layouts use focus-restoring panel controls. Systems keeps the Compose panel
+  rather than host-specific reconstructions. The Asset Palette has collapsed,
+  normal, and maximized presentation sizes; normal presents layout choices and
+  asset tiles in one column, while maximized borrows width from the Canvas and
+  uses multi-column galleries without changing the details-sidebar width.
+  Layout, Assets, Unassigned visual assets, and System resources and logic are
+  independent Palette disclosures that start collapsed. States regions also
+  start collapsed on the Canvas without removing their drop surface. Layers and
+  Structure lists only the placed hierarchy.
+  These presentation states are not persisted. Narrow layouts use focus-restoring
+  panel controls. Systems keeps the Compose panel
   mounted while sibling tabs are active so its canonical draft and loaded catalog
   survive Manage and Build handoffs; other tab content remains lazy by default.
   Each asset tile is the pointer, touch, and keyboard drag handle, and every
@@ -59,6 +66,13 @@
   Foundation renderers. Keep node counts and viewport frames bounded, expose
   unsaved/unassigned/unsupported states truthfully, and never execute backend or
   unqualified implementation logic or imply release, activation, or deployment.
+  Foundation v3 Properties exposes all declared content plus allowlisted
+  per-asset style roles. Styling edits the system-root theme with native color
+  pickers and bounded selects for typography, density, buttons, forms, and
+  surfaces. Both use the canonical undoable draft and immutable-revision save
+  path. Semantic style fields must not appear in Advanced JSON, and previews
+  may project only stable data roles and generated CSS variables, never user
+  CSS, selectors, or arbitrary dimensions.
   The Systems Manage surface must remain shared between desktop and thin client.
   Consume its workspace-scoped application projection instead of joining system
   records and releases in renderer code. Preserve native table semantics on wide

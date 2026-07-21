@@ -116,12 +116,15 @@ Signature verification, SLSA-compatible provenance, SBOM, dependency scanning, a
 Foundation upgrades publish a new immutable pack version. Exact old references continue to resolve if not revoked and retained. Deprecation supplies replacement guidance and support dates; it never rewrites a consumer's lock.
 
 The original `system.foundation@1.0.0` release remains immutable and contains
-105 exact semantic definitions. The current `system.foundation@2.0.0` release
-contains 119 definitions: the complete v1 vocabulary at exact v2 references
-plus eight application layouts and six page layouts. Both releases are
-installed and materialized independently; existing v1 workspace activations
+105 exact semantic definitions. `system.foundation@2.0.0` remains immutable
+with 119 definitions: the complete v1 vocabulary at exact v2 references plus
+eight application layouts and six page layouts. The current
+`system.foundation@3.0.0` release preserves those 119 definition identities at
+exact v3 references and adds property-complete presentation schemas, a bounded
+root theme contract, and semantic per-asset style overrides. All three releases
+are installed and materialized independently; existing workspace activations
 and implementation identities are not rewritten, while newly created
-workspaces activate v2 by exact reference.
+interactive systems select v3 by exact reference.
 
 The version-addressed functional-default catalog maps every definition to a
 closed entry key, facet, deployment compatibility set, bounded preview fixture,
@@ -132,11 +135,14 @@ platform authorization remains authoritative. Record-form, data-preview, and
 basic-assistant composites reference the same lower-level definitions and typed
 composition model used by System Builder.
 
-Every definition in both Foundation releases has an exact bounded backing
+Every definition in all Foundation releases has an exact bounded backing
 bundle. Depending on the asset, it contains the canonical frontend structure,
 CSS, declarative backend logic, definition JSON, or an appropriate combination.
 The v2 layout resources include named-slot structure, logical source order,
-responsive area maps, and working grid CSS. These resources are persisted as
+responsive area maps, and working grid CSS. V3 resources additionally expose
+allowlisted semantic CSS variables and role selectors for theme inheritance;
+they never accept raw stylesheet text, arbitrary selectors, or dimensions from
+configuration. These resources are persisted as
 separate immutable artifacts when trusted built-ins are ensured; they are not
 metadata-only placeholders and they do not copy protected host implementation
 code into Asset Kernel records.
