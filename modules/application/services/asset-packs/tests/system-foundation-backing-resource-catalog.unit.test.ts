@@ -19,21 +19,28 @@ describe("system foundation backing resource catalog", () => {
     for (const descriptor of SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS) {
       const bundle = readSystemFoundationBackingResourceBundle(
         descriptor.definitionId,
+        descriptor.definitionVersion,
       );
       expect(bundle).toBeDefined();
       const normalized = normalizeAssetImplementationBackingResourceBundle(
         bundle!,
       );
-      expect(normalized.files.some((file) => file.path === "other/definition.json")).toBe(true);
+      expect(
+        normalized.files.some((file) => file.path === "other/definition.json"),
+      ).toBe(true);
       expect(
         normalized.files.every((file) =>
           ASSET_IMPLEMENTATION_BACKING_RESOURCE_ROLES.includes(file.role),
         ),
       ).toBe(true);
 
-      const frontend = ["layout", "form", "data", "state", "conversation"].includes(
-        descriptor.previewKind,
-      );
+      const frontend = [
+        "layout",
+        "form",
+        "data",
+        "state",
+        "conversation",
+      ].includes(descriptor.previewKind);
       expect(
         normalized.files.some((file) => file.role === "frontend-structure"),
       ).toBe(frontend);
@@ -42,8 +49,9 @@ describe("system foundation backing resource catalog", () => {
       ).toBe(frontend);
 
       const backend =
-        ["logic", "workflow", "data", "policy"].includes(descriptor.facetKind) ||
-        ["workflow", "policy"].includes(descriptor.previewKind);
+        ["logic", "workflow", "data", "policy"].includes(
+          descriptor.facetKind,
+        ) || ["workflow", "policy"].includes(descriptor.previewKind);
       expect(
         normalized.files.some((file) => file.role === "backend-logic"),
       ).toBe(backend);
@@ -54,6 +62,7 @@ describe("system foundation backing resource catalog", () => {
     for (const descriptor of SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS) {
       const program = readSystemFoundationBackingResourceProgram(
         descriptor.definitionId,
+        descriptor.definitionVersion,
       );
       expect(program?.definitionId).toBe(descriptor.definitionId);
       expect(program?.previewKind).toBe(descriptor.previewKind);

@@ -284,6 +284,14 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     { public: false, scopes: ["asset:write"] },
   ],
   [
+    "POST /api/systems/foundation-upgrade/preview",
+    { public: false, scopes: ["asset:read"] },
+  ],
+  [
+    "POST /api/systems/foundation-upgrade",
+    { public: false, scopes: ["asset:write"] },
+  ],
+  [
     "POST /api/systems/revisions/save",
     { public: false, scopes: ["asset:write"] },
   ],

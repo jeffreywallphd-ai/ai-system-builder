@@ -16,6 +16,7 @@ export interface SystemManagementWorkspaceProps {
   readonly workspaceId: string;
   readonly client: SystemBuilderClient;
   readonly onOpenInCompose: (systemId: string) => void;
+  readonly onActiveSystemsChanged?: () => void;
 }
 
 interface PreviewState {
@@ -51,6 +52,7 @@ export function SystemManagementWorkspace({
   workspaceId,
   client,
   onOpenInCompose,
+  onActiveSystemsChanged,
 }: SystemManagementWorkspaceProps) {
   const [items, setItems] = useState<readonly SystemBuilderManagementItem[]>(
     [],
@@ -195,6 +197,7 @@ export function SystemManagementWorkspace({
         `${deleteTarget.name} was removed from active systems and can be restored from the Archived view.`,
       );
       setRefreshToken((current) => current + 1);
+      onActiveSystemsChanged?.();
     } else {
       setError(result.error.message);
     }
@@ -212,6 +215,7 @@ export function SystemManagementWorkspace({
     if (result.ok) {
       setNotice(`${item.name} was restored to active systems.`);
       setRefreshToken((current) => current + 1);
+      onActiveSystemsChanged?.();
     } else {
       setError(result.error.message);
     }
@@ -237,6 +241,7 @@ export function SystemManagementWorkspace({
       setCloneTarget(undefined);
       setNotice(`${result.value.name} was created as an unpublished system.`);
       setRefreshToken((current) => current + 1);
+      onActiveSystemsChanged?.();
     } else {
       setError(result.error.message);
     }
@@ -299,7 +304,7 @@ export function SystemManagementWorkspace({
           <button type="submit">Search</button>
           <button
             type="button"
-            className="ui-button--secondary"
+            className="ui-button ui-button--outline"
             onClick={() => setRefreshToken((current) => current + 1)}
           >
             Refresh
@@ -384,7 +389,7 @@ export function SystemManagementWorkspace({
                       <div className="system-management__actions">
                         <button
                           type="button"
-                          className="ui-button--secondary"
+                          className="ui-button ui-button--outline"
                           disabled={!item.actions.canPreview || busy}
                           onClick={() => void openPreview(item)}
                         >
@@ -392,7 +397,7 @@ export function SystemManagementWorkspace({
                         </button>
                         <button
                           type="button"
-                          className="ui-button--secondary"
+                          className="ui-button ui-button--outline"
                           disabled={!item.actions.canOpenInCompose || busy}
                           onClick={() => onOpenInCompose(systemId)}
                         >
@@ -402,7 +407,7 @@ export function SystemManagementWorkspace({
                           <>
                             <button
                               type="button"
-                              className="ui-button--secondary"
+                              className="ui-button ui-button--outline"
                               disabled={busy}
                               onClick={() => openCloneDialog(item)}
                             >
@@ -439,7 +444,7 @@ export function SystemManagementWorkspace({
       {nextCursor ? (
         <button
           type="button"
-          className="ui-button--secondary system-management__load-more"
+          className="ui-button ui-button--outline system-management__load-more"
           disabled={loadingMore}
           onClick={() => void loadMore()}
         >
@@ -484,7 +489,7 @@ export function SystemManagementWorkspace({
             <button
               ref={cancelDeleteRef}
               type="button"
-              className="ui-button--secondary"
+              className="ui-button ui-button--outline"
               disabled={Boolean(busySystemId)}
               onClick={() => setDeleteTarget(undefined)}
             >
@@ -529,7 +534,7 @@ export function SystemManagementWorkspace({
             <button
               ref={cancelCloneRef}
               type="button"
-              className="ui-button--secondary"
+              className="ui-button ui-button--outline"
               disabled={Boolean(busySystemId)}
               onClick={() => setCloneTarget(undefined)}
             >

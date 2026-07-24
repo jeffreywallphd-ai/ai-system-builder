@@ -1,4 +1,5 @@
 import {
+  useDeferredValue,
   useMemo,
   useRef,
   useState,
@@ -76,6 +77,11 @@ type SystemComposerPanelToggle = "library" | SystemComposerSidebarTab;
 type SystemComposerLibrarySize = "collapsed" | "normal" | "maximized";
 type SystemComposerPaletteSection =
   "layout" | "assets" | "unassigned" | "resources";
+
+interface SystemComposerCanvasSlot {
+  readonly slot: SystemBuilderComposerAsset["slots"][number];
+  readonly dropEnabled: boolean;
+}
 
 export interface SystemComposerStructureEditorProps {
   readonly draft: SystemComposerDraft;
@@ -166,6 +172,7 @@ export function SystemComposerStructureEditor({
     }),
   );
   const treeItemRefs = useRef(new Map<string, HTMLButtonElement>());
+  const deferredSearch = useDeferredValue(search);
   const tree = useMemo(
     () => buildSystemComposerTree(draft, rootInstanceRefs),
     [draft, rootInstanceRefs],
@@ -199,18 +206,19 @@ export function SystemComposerStructureEditor({
         (instance) =>
           ({ instance, depth: 1, children: [] }) as SystemComposerTreeNode,
       )[0];
-  const paletteSource = targetSlot ? compatibleAssets : catalog;
-  const palette = paletteSource.filter((asset) => {
-    const query = search.trim().toLowerCase();
-    return (
-      (!targetSlot || asset.compatibility.status === "compatible") &&
-      isSystemComposerVisualAsset(asset) &&
-      (!query ||
-        `${asset.displayName} ${asset.definitionId} ${asset.assetType}`
-          .toLowerCase()
-          .includes(query))
+  const palette = useMemo(() => {
+    const paletteSource = targetSlot ? compatibleAssets : catalog;
+    const query = deferredSearch.trim().toLowerCase();
+    return paletteSource.filter(
+      (asset) =>
+        (!targetSlot || asset.compatibility.status === "compatible") &&
+        isSystemComposerVisualAsset(asset) &&
+        (!query ||
+          `${asset.displayName} ${asset.definitionId} ${asset.assetType}`
+            .toLowerCase()
+            .includes(query)),
     );
-  });
+  }, [catalog, compatibleAssets, deferredSearch, targetSlot]);
   const breadcrumb = selectedNode
     ? breadcrumbFor(selectedNode, draft.instances, draft.placements)
     : [];
@@ -750,45 +758,62 @@ export function SystemComposerStructureEditor({
             data-collapsed={detailsCollapsed}
             aria-label="Composer details"
           >
-            <header className="system-composer__sidebar-header">
-              <div
-                className="system-composer__sidebar-tabs"
-                role="tablist"
-                aria-label="Composer details"
+            <div
+              className="system-composer__sidebar-tabs ui-tabbed-panel__tablist"
+              role="tablist"
+              aria-label="Composer details"
+              aria-orientation="horizontal"
+            >
+              <button
+                id="system-composer-sidebar-tab-properties"
+                type="button"
+                role="tab"
+                className={`ui-tabbed-panel__tab${sidebarTab === "properties" ? " ui-tabbed-panel__tab--active" : ""}`}
+                aria-selected={sidebarTab === "properties"}
+                aria-controls="system-composer-properties-panel"
+                tabIndex={sidebarTab === "properties" ? 0 : -1}
+                onClick={() => setSidebarTab("properties")}
               >
-                <button
-                  id="system-composer-sidebar-tab-properties"
-                  type="button"
-                  role="tab"
-                  className="system-composer__flat-control"
-                  aria-selected={sidebarTab === "properties"}
-                  aria-controls="system-composer-properties-panel"
-                  onClick={() => setSidebarTab("properties")}
-                >
-                  Properties
-                </button>
-                <button
-                  id="system-composer-sidebar-tab-styling"
-                  type="button"
-                  role="tab"
-                  className="system-composer__flat-control"
-                  aria-selected={sidebarTab === "styling"}
-                  aria-controls="system-composer-styling-panel"
-                  onClick={() => setSidebarTab("styling")}
-                >
-                  Styling
-                </button>
-                <button
-                  id="system-composer-sidebar-tab-layers"
-                  type="button"
-                  role="tab"
-                  className="system-composer__flat-control"
-                  aria-selected={sidebarTab === "layers"}
-                  aria-controls="system-composer-layers-panel"
-                  onClick={() => setSidebarTab("layers")}
-                >
-                  Layers &amp; Structure
-                </button>
+                Properties
+              </button>
+              <button
+                id="system-composer-sidebar-tab-styling"
+                type="button"
+                role="tab"
+                className={`ui-tabbed-panel__tab${sidebarTab === "styling" ? " ui-tabbed-panel__tab--active" : ""}`}
+                aria-selected={sidebarTab === "styling"}
+                aria-controls="system-composer-styling-panel"
+                tabIndex={sidebarTab === "styling" ? 0 : -1}
+                onClick={() => setSidebarTab("styling")}
+              >
+                Styling
+              </button>
+              <button
+                id="system-composer-sidebar-tab-layers"
+                type="button"
+                role="tab"
+                className={`ui-tabbed-panel__tab${sidebarTab === "layers" ? " ui-tabbed-panel__tab--active" : ""}`}
+                aria-label="Layers and structure"
+                aria-selected={sidebarTab === "layers"}
+                aria-controls="system-composer-layers-panel"
+                tabIndex={sidebarTab === "layers" ? 0 : -1}
+                onClick={() => setSidebarTab("layers")}
+              >
+                Layers
+              </button>
+            </div>
+            <header className="system-composer__sidebar-header">
+              <div className="system-composer__sidebar-heading">
+                <h3>
+                  Configure{" "}
+                  {selectedNode?.instance.displayName ?? "selected asset"}
+                </h3>
+                {selectedNode ? (
+                  <p>
+                    {String(selectedNode.instance.definitionRef.id)}@
+                    {selectedNode.instance.definitionRef.version}
+                  </p>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -811,14 +836,16 @@ export function SystemComposerStructureEditor({
               hidden={sidebarTab !== "properties"}
               className="system-composer__sidebar-panel system-composer__sidebar-panel--properties"
             >
-              {propertiesPanel ?? (
-                <EmptyState
-                  compact
-                  title="Select an asset"
-                  description="Choose a canvas node or layer to edit its declared properties."
-                  icon="settings"
-                />
-              )}
+              {sidebarTab === "properties"
+                ? (propertiesPanel ?? (
+                    <EmptyState
+                      compact
+                      title="Select an asset"
+                      description="Choose a canvas node or layer to edit its declared properties."
+                      icon="settings"
+                    />
+                  ))
+                : null}
             </section>
 
             <section
@@ -828,14 +855,16 @@ export function SystemComposerStructureEditor({
               hidden={sidebarTab !== "styling"}
               className="system-composer__sidebar-panel system-composer__sidebar-panel--styling"
             >
-              {stylingPanel ?? (
-                <EmptyState
-                  compact
-                  title="System styling is unavailable"
-                  description="Load a system with a declared reusable style profile."
-                  icon="settings"
-                />
-              )}
+              {sidebarTab === "styling"
+                ? (stylingPanel ?? (
+                    <EmptyState
+                      compact
+                      title="System styling is unavailable"
+                      description="Load a system with a declared reusable style profile."
+                      icon="settings"
+                    />
+                  ))
+                : null}
             </section>
 
             <section
@@ -845,71 +874,75 @@ export function SystemComposerStructureEditor({
               hidden={sidebarTab !== "layers"}
               className="system-composer__sidebar-panel system-composer__sidebar-panel--layers"
             >
-              <p id="composer-tree-help" className="ui-text-muted">
-                Use arrow keys, Home, and End to navigate. Enter or click
-                selects.
-              </p>
-              <ul
-                role="tree"
-                aria-label="System asset hierarchy"
-                aria-describedby="composer-tree-help"
-                className="system-composer__tree"
-              >
-                {tree.map((node) => (
-                  <TreeNode
-                    key={String(node.instance.instanceId)}
-                    node={node}
-                    selectedInstanceId={selectedInstanceId}
-                    protectedInstanceIds={protectedInstanceIds}
-                    collapsedInstanceIds={collapsedInstanceIds}
-                    itemRefs={treeItemRefs.current}
-                    onSelect={onSelect}
-                    onKeyDown={moveTreeFocus}
-                    onToggle={(instanceId) =>
-                      setCollapsedInstanceIds(
-                        withCollapsedInstance(
-                          collapsedInstanceIds,
-                          instanceId,
-                          !collapsedInstanceIds.has(instanceId),
-                        ),
-                      )
-                    }
-                  />
-                ))}
-              </ul>
-              {selectedNode ? (
-                <div className="system-composer__actions ui-stack ui-stack--sm">
-                  <dl>
-                    <dt>Selected</dt>
-                    <dd>
-                      {selectedNode.instance.displayName ??
-                        String(selectedNode.instance.definitionRef.id)}
-                    </dd>
-                    <dt>Exact definition</dt>
-                    <dd>
-                      {String(selectedNode.instance.definitionRef.id)}@
-                      {selectedNode.instance.definitionRef.version}
-                    </dd>
-                  </dl>
-                  {protectedInstanceIds.has(
-                    String(selectedNode.instance.instanceId),
-                  ) ? (
-                    <p className="ui-status ui-status--info">
-                      Required by the selected layout
-                    </p>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="system-composer__flat-control system-composer__flat-control--danger"
-                    onClick={onRemove}
-                    disabled={protectedInstanceIds.has(
-                      String(selectedNode.instance.instanceId),
-                    )}
+              {sidebarTab === "layers" ? (
+                <>
+                  <p id="composer-tree-help" className="ui-text-muted">
+                    Use arrow keys, Home, and End to navigate. Enter or click
+                    selects.
+                  </p>
+                  <ul
+                    role="tree"
+                    aria-label="System asset hierarchy"
+                    aria-describedby="composer-tree-help"
+                    className="system-composer__tree"
                   >
-                    <ApplicationIcon name="delete" />
-                    <span>Remove selected subtree</span>
-                  </button>
-                </div>
+                    {tree.map((node) => (
+                      <TreeNode
+                        key={String(node.instance.instanceId)}
+                        node={node}
+                        selectedInstanceId={selectedInstanceId}
+                        protectedInstanceIds={protectedInstanceIds}
+                        collapsedInstanceIds={collapsedInstanceIds}
+                        itemRefs={treeItemRefs.current}
+                        onSelect={onSelect}
+                        onKeyDown={moveTreeFocus}
+                        onToggle={(instanceId) =>
+                          setCollapsedInstanceIds(
+                            withCollapsedInstance(
+                              collapsedInstanceIds,
+                              instanceId,
+                              !collapsedInstanceIds.has(instanceId),
+                            ),
+                          )
+                        }
+                      />
+                    ))}
+                  </ul>
+                  {selectedNode ? (
+                    <div className="system-composer__actions ui-stack ui-stack--sm">
+                      <dl>
+                        <dt>Selected</dt>
+                        <dd>
+                          {selectedNode.instance.displayName ??
+                            String(selectedNode.instance.definitionRef.id)}
+                        </dd>
+                        <dt>Exact definition</dt>
+                        <dd>
+                          {String(selectedNode.instance.definitionRef.id)}@
+                          {selectedNode.instance.definitionRef.version}
+                        </dd>
+                      </dl>
+                      {protectedInstanceIds.has(
+                        String(selectedNode.instance.instanceId),
+                      ) ? (
+                        <p className="ui-status ui-status--info">
+                          Required by the selected layout
+                        </p>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="system-composer__flat-control system-composer__flat-control--danger"
+                        onClick={onRemove}
+                        disabled={protectedInstanceIds.has(
+                          String(selectedNode.instance.instanceId),
+                        )}
+                      >
+                        <ApplicationIcon name="delete" />
+                        <span>Remove selected subtree</span>
+                      </button>
+                    </div>
+                  ) : null}
+                </>
               ) : null}
             </section>
           </aside>
@@ -1069,7 +1102,7 @@ function CollapsibleComposerSection({
         className="system-composer__palette-section-content"
         hidden={!expanded}
       >
-        {children}
+        {expanded ? children : null}
       </div>
     </section>
   );
@@ -1291,12 +1324,12 @@ function CanvasNode({
   const instanceId = String(node.instance.instanceId);
   const definition = definitionForInstance(node.instance, catalog);
   const protectedInstance = protectedInstanceIds.has(instanceId);
-  const definitionVersion =
-    node.instance.definitionRef.version ?? definition?.version;
+  const definitionVersion = definition?.version;
   const fixedLayout = Boolean(definition?.layoutRole);
   const layoutStyle = definition?.layoutGeometry
     ? layoutGridStyle(definition.layoutGeometry, fixedLayout)
     : undefined;
+  const canvasSlots = canvasSlotsForNode(node, definition);
   const sortable = useSortable({
     id: `instance:${instanceId}`,
     disabled: !node.placement || protectedInstance || !definitionVersion,
@@ -1379,9 +1412,9 @@ function CanvasNode({
           />
         </div>
       ) : null}
-      {definition?.slots.length ? (
+      {canvasSlots.length ? (
         <div className="system-composer__slots" style={layoutStyle}>
-          {definition.slots.map((slot) => (
+          {canvasSlots.map(({ slot, dropEnabled }) => (
             <CanvasSlot
               key={slot.slotId}
               parentInstanceId={instanceId}
@@ -1389,6 +1422,7 @@ function CanvasNode({
               childrenNodes={node.children.filter(
                 (child) => child.placement?.slotId === slot.slotId,
               )}
+              dropEnabled={dropEnabled}
               catalog={catalog}
               selectedInstanceId={selectedInstanceId}
               targetSlot={targetSlot}
@@ -1407,6 +1441,7 @@ function CanvasSlot({
   parentInstanceId,
   slot,
   childrenNodes,
+  dropEnabled,
   catalog,
   selectedInstanceId,
   targetSlot,
@@ -1417,6 +1452,7 @@ function CanvasSlot({
   readonly parentInstanceId: string;
   readonly slot: SystemBuilderComposerAsset["slots"][number];
   readonly childrenNodes: readonly SystemComposerTreeNode[];
+  readonly dropEnabled: boolean;
   readonly catalog: readonly SystemBuilderComposerAsset[];
   readonly selectedInstanceId?: string;
   readonly targetSlot?: SystemComposerTargetSlot;
@@ -1432,6 +1468,7 @@ function CanvasSlot({
     targetSlot.slotId === slot.slotId;
   const droppable = useDroppable({
     id: `slot:${parentInstanceId}:${slot.slotId}`,
+    disabled: !dropEnabled,
     data: slotDropData({
       parentInstanceId,
       slotId: slot.slotId,
@@ -1447,7 +1484,8 @@ function CanvasSlot({
       data-slot-id={slot.slotId}
       data-collapsible={collapsible}
       data-collapsed={collapsible && collapsed}
-      style={{ gridArea: slot.slotId }}
+      data-structural-only={!dropEnabled}
+      style={dropEnabled ? { gridArea: slot.slotId } : undefined}
       aria-label={`${slot.displayName} region`}
     >
       <header>
@@ -1456,6 +1494,7 @@ function CanvasSlot({
           className="system-composer__region-selector"
           aria-label={`Select ${slot.displayName} region`}
           aria-pressed={selectedTarget}
+          disabled={!dropEnabled}
           onClick={() =>
             onTargetSlotChange({
               parentInstanceId,
@@ -1489,32 +1528,88 @@ function CanvasSlot({
         className="system-composer__slot-content"
         hidden={collapsible && collapsed}
       >
-        <p>{slot.description ?? "Canvas drop region"}</p>
-        <SortableContext
-          items={childrenNodes.map(
-            (child) => `instance:${String(child.instance.instanceId)}`,
-          )}
-          strategy={verticalListSortingStrategy}
-        >
-          {childrenNodes.map((child) => (
-            <CanvasNode
-              key={String(child.instance.instanceId)}
-              node={child}
-              catalog={catalog}
-              selectedInstanceId={selectedInstanceId}
-              targetSlot={targetSlot}
-              protectedInstanceIds={protectedInstanceIds}
-              onSelect={onSelect}
-              onTargetSlotChange={onTargetSlotChange}
-            />
-          ))}
-        </SortableContext>
-        {childrenNodes.length === 0 ? (
-          <span className="system-composer__slot-empty">Drop assets here</span>
-        ) : null}
+        {collapsible && collapsed ? null : (
+          <>
+            <p>{slot.description ?? "Canvas drop region"}</p>
+            <SortableContext
+              items={childrenNodes.map(
+                (child) => `instance:${String(child.instance.instanceId)}`,
+              )}
+              strategy={verticalListSortingStrategy}
+            >
+              {childrenNodes.map((child) => (
+                <CanvasNode
+                  key={String(child.instance.instanceId)}
+                  node={child}
+                  catalog={catalog}
+                  selectedInstanceId={selectedInstanceId}
+                  targetSlot={targetSlot}
+                  protectedInstanceIds={protectedInstanceIds}
+                  onSelect={onSelect}
+                  onTargetSlotChange={onTargetSlotChange}
+                />
+              ))}
+            </SortableContext>
+            {childrenNodes.length === 0 ? (
+              <span className="system-composer__slot-empty">
+                {dropEnabled ? "Drop assets here" : "No assigned assets"}
+              </span>
+            ) : null}
+          </>
+        )}
       </div>
     </section>
   );
+}
+
+function canvasSlotsForNode(
+  node: SystemComposerTreeNode,
+  definition: SystemBuilderComposerAsset | undefined,
+): readonly SystemComposerCanvasSlot[] {
+  const slots = new Map<string, SystemComposerCanvasSlot>(
+    (definition?.slots ?? []).map((slot) => [
+      String(slot.slotId),
+      { slot, dropEnabled: true },
+    ]),
+  );
+  const childCountBySlot = new Map<string, number>();
+  for (const child of node.children) {
+    const slotId = child.placement?.slotId;
+    if (!slotId) continue;
+    const key = String(slotId);
+    childCountBySlot.set(key, (childCountBySlot.get(key) ?? 0) + 1);
+    if (slots.has(key)) continue;
+    slots.set(key, {
+      slot: {
+        schemaVersion: "asset-slot-definition.v1",
+        slotId,
+        displayName: structuralSlotDisplayName(key),
+        description:
+          "Saved canonical region. Its exact container definition is unavailable, so existing descendants remain visible but this region cannot accept drops.",
+        cardinality: { minItems: 0, maxItems: 1 },
+      },
+      dropEnabled: false,
+    });
+  }
+  return [...slots.entries()].map(([slotId, value]) => {
+    if (value.dropEnabled) return value;
+    const count = childCountBySlot.get(slotId) ?? 1;
+    return {
+      ...value,
+      slot: {
+        ...value.slot,
+        cardinality: { minItems: 0, maxItems: Math.max(1, count) },
+      },
+    };
+  });
+}
+
+function structuralSlotDisplayName(slotId: string): string {
+  return slotId
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part[0]!.toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function withCollapsedPaletteSection(
@@ -1584,8 +1679,8 @@ function layoutGridStyle(
             row.every((area) =>
               ["top-bar", "page-header", "footer"].includes(area),
             )
-              ? "4rem"
-              : "minmax(14rem, 1fr)",
+              ? "minmax(7rem, max-content)"
+              : "minmax(14rem, max-content)",
           )
           .join(" ")
       : geometry.areas.map(() => "minmax(5rem, auto)").join(" "),

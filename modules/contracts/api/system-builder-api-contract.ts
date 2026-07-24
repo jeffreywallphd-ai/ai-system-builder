@@ -25,4 +25,12 @@ export const API_SYSTEM_BUILDER_OPERATIONS = {
     "system-builder",
     "preview-layout-change",
   ),
+  previewFoundationUpgrade: createTransportOperation(
+    "system-builder",
+    "preview-foundation-upgrade",
+  ),
+  upgradeFoundation: createTransportOperation(
+    "system-builder",
+    "upgrade-foundation",
+  ),
 } as const;

@@ -68,9 +68,10 @@ layout content in memory, preserves every historical instance and binding, and
 reports unmatched instances without discarding them. The shared UI uses each
 instance's exact composer-catalog definition to separate unmatched visual assets
 from nonvisual system resources and logic. For the three closed reference
-templates, the same operation upgrades only instances with an exact current
-Foundation definition and applies an explicit template-owned visual placement
-profile. It may add bounded current Foundation containers and submit controls
+templates, the same operation updates the required system root and applies an
+explicit template-owned visual placement profile while preserving the exact
+versions of other historical instances. It may add bounded current Foundation
+containers and submit controls
 needed for a usable visual composition, but it never reinterprets dependency
 bindings as containment. The renderer does not synthesize this hierarchy, and
 only the normal Save operation may persist it as a new immutable revision.
@@ -85,6 +86,15 @@ instances, bindings, safe validation issues, actor, and timestamp. Updating a
 record requires the caller's expected record revision. Saving a composition
 creates a new revision and advances the record atomically; an old revision is
 never overwritten.
+
+Foundation v1/v2-to-v3 migration is a separate explicit preview-and-confirm
+operation over parity API and IPC contracts. Preview performs no writes;
+confirmation requires the exact source revision, maps only declared v3 fields
+and exact Foundation references, revalidates the candidate, and atomically
+creates a new immutable revision while retaining the exact source history. Missing target
+definitions, mixed unsupported Foundation versions, stale revisions, unknown
+configuration fields, or validation errors block confirmation rather than
+silently discarding data.
 
 The composition field narrows the existing Asset Kernel `AssetComposition` to `system` or `system-of-subsystems`. It does not copy its instance, binding, rule, dependency, provenance, lifecycle, or validation vocabularies.
 
@@ -152,14 +162,19 @@ authoring, customization, and single-asset Studio workflows.
   canonical in-memory draft drives a flat three-column Design workspace with the
   searchable Asset Palette, a wide Canvas showing every fixed region of the
   active application layout, and one details
-  sidebar whose accessible tabs switch between Properties, Styling, and Layers
-  and Structure. The Asset Palette has collapsed, normal, and maximized presentation
+  sidebar whose shared-style top row contains three fitted tabs: Properties,
+  Styling, and Layers. The selected asset's Configure heading and the sidebar
+  Collapse control follow directly below that row. The Asset Palette has collapsed, normal, and maximized presentation
   sizes. Normal presents layout choices and asset tiles in one column; maximized
   borrows width from the Canvas and uses multi-column galleries while preserving
   the details-sidebar width. Its Layout, Assets, Unassigned visual assets, and
   System resources and logic sections are independent disclosures that start
   collapsed. Canvas States regions also start collapsed without removing their
-  drop surfaces, and Layers and Structure contains only the placed hierarchy.
+  drop surfaces. Collapsed Palette bodies and States content do not mount their
+  hidden draggable or preview descendants. Only the active Properties, Styling,
+  or Layers panel body is mounted; switching panels reconstructs
+  its controls from the canonical parent-owned draft. Layers
+  contains only the placed hierarchy.
   These presentation states are not persisted. A thin
   dnd-kit adapter maps pointer,
   touch, and keyboard insertion/reorder/reparent interactions onto bounded
@@ -175,11 +190,23 @@ authoring, customization, and single-asset Studio workflows.
   not. Canvas container nodes render only their structural identity and actual
   named child regions; they never repeat the complete standalone catalog preview.
   Only leaf nodes render their own composition-aware semantic surface, so each
-  visible detail is contributed by one asset in the hierarchy.
-- Opening a closed legacy-flat UI reference system invokes the same application
-  layout-preview operation with the Minimal default and presents the result as
-  an unsaved draft. The renderer does not synthesize or persist structure on its
-  own; historical storage changes only through the normal validated save path.
+  visible detail is contributed by one asset in the hierarchy. Canonical
+  placements remain visible even when a historical container's exact catalog
+  contract is unavailable: the Canvas derives only the occupied region labels
+  needed to traverse those saved edges and marks those regions read-only. It
+  does not infer compatibility, enable drops, rewrite the instance version, or
+  persist a synthesized slot definition. Without exact layout geometry, those
+  regions remain in source-order auto-flow and never receive overlapping named
+  grid areas.
+  Fixed layout rows preserve their abstract proportions as minimum sizes but
+  expand for placed descendants, keeping the Canvas as the sole scroll boundary
+  instead of hiding assigned assets behind nested region scrollbars.
+- An already-current closed legacy-flat UI reference system may invoke the same
+  application layout-preview operation with the Minimal default and present the
+  result as an unsaved draft. A reference containing v1 or v2 Foundation assets
+  must use the explicit upgrade first; layout selection cannot materialize a
+  mixed invalid hierarchy. The renderer does not synthesize or persist structure
+  on its own; historical storage changes only through validated save or upgrade.
 - Properties generates Design, Data, and Events sections from exact schemas, applies
   defaults and field constraints, offers approved asset/reference choices, and
   retains a bounded Advanced JSON fallback for ordinary non-style fields.
@@ -217,6 +244,11 @@ authoring, customization, and single-asset Studio workflows.
   drag sources. Missing exact catalog metadata fails closed into the nonvisual
   group.
   Save remains a separate optimistic command that creates a new immutable revision.
+- Composer catalog loading reads the complete catalog once and issues the
+  layout-only query only as a bounded compatibility fallback when no application
+  layout is present. Exact parent-definition/region compatibility results are
+  cached for the mounted workspace, so ordinary configuration edits do not
+  repeat transport reads.
 - Compose provides a design-time UI preview of the current unsaved hierarchy and
   configuration. The shared modal recursively follows canonical placement and
   canonical region order, reports unplaced visual, nonvisual resource, and
@@ -249,6 +281,18 @@ authoring, customization, and single-asset Studio workflows.
   disabled for dirty or archived systems and opens the existing Build & Release
   workflow for the selected saved system; it does not build from renderer state or
   combine design validation with release/runtime authority.
+- Compose presents three explicit semantic entry groups: edit an active existing
+  system, create a named blank system with the required default Minimal layout,
+  or create from a validated template. The two creation groups keep independent
+  required name state. Selecting an existing record only stages it; the Edit
+  system action loads its revision, after which preview, upgrade, build, and
+  editor controls appear. Loaded-system actions share one toolbar below all three
+  entry forms rather than appearing inside an option fieldset. A direct Compose
+  visit does not select the first record, request the Composer layout catalog, or
+  mount the editor. The catalog is requested only by Edit system, Create system,
+  successful template creation, or an active-system Open in Compose handoff. The
+  editor appears only after the selected revision is loaded or a creation
+  succeeds.
 - Systems Manage is the workspace-scoped operational index for draft, published,
   and archived system records. Its application-owned projection supplies search,
   lifecycle filters, deterministic ordering, bounded pagination, latest-revision
@@ -257,7 +301,12 @@ authoring, customization, and single-asset Studio workflows.
   revision, hand off to Compose, duplicate through the canonical clone command,
   archive through the existing archive-backed delete command, and restore.
   Archive is disclosed as recoverable; immutable revisions and releases are
-  retained rather than destructively removed.
+  retained rather than destructively removed. Compose requests and displays only
+  active systems; archived records remain available through Manage for preview
+  and restoration. Successful Manage lifecycle changes refresh the mounted
+  Compose active-system index without reinitializing unrelated active editor
+  state. Compose does not duplicate, archive, restore, or delete systems; those
+  record-management actions remain in Manage.
 - `modules/contracts/system-build`, `modules/application/use-cases/system-build`,
   and the matching persistence/storage/transport adapters own deterministic
   attempts and immutable releases without adding runtime state to system

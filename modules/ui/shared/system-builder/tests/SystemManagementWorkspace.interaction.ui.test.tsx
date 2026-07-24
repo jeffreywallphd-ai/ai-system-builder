@@ -69,8 +69,9 @@ describe("SystemManagementWorkspace", () => {
   it("duplicates and archive-deletes without discarding immutable history", async () => {
     const item = managementItem();
     const client = systemClient({ item, revision: systemRevision() });
+    const onActiveSystemsChanged = vi.fn();
 
-    await renderWorkspace(client, vi.fn());
+    await renderWorkspace(client, vi.fn(), onActiveSystemsChanged);
     await vi.waitFor(() =>
       expect(container?.textContent).toContain("Customer portal"),
     );
@@ -86,6 +87,7 @@ describe("SystemManagementWorkspace", () => {
         name: "Customer portal copy",
       }),
     );
+    expect(onActiveSystemsChanged).toHaveBeenCalledTimes(1);
 
     await vi.waitFor(() =>
       expect(container?.textContent).toContain(
@@ -107,6 +109,7 @@ describe("SystemManagementWorkspace", () => {
         expectedRevision: 4,
       }),
     );
+    expect(onActiveSystemsChanged).toHaveBeenCalledTimes(2);
     expect(container?.textContent).toContain(
       "can be restored from the Archived view",
     );
@@ -115,8 +118,9 @@ describe("SystemManagementWorkspace", () => {
   it("restores an archived system from the same management list", async () => {
     const item = managementItem({ archived: true });
     const client = systemClient({ item, revision: systemRevision() });
+    const onActiveSystemsChanged = vi.fn();
 
-    await renderWorkspace(client, vi.fn());
+    await renderWorkspace(client, vi.fn(), onActiveSystemsChanged);
     await vi.waitFor(() =>
       expect(container?.textContent).toContain("Archived"),
     );
@@ -129,6 +133,7 @@ describe("SystemManagementWorkspace", () => {
         expectedRevision: 4,
       }),
     );
+    expect(onActiveSystemsChanged).toHaveBeenCalledOnce();
     expect(container?.textContent).toContain(
       "Customer portal was restored to active systems",
     );
@@ -138,6 +143,7 @@ describe("SystemManagementWorkspace", () => {
 async function renderWorkspace(
   client: SystemBuilderClient,
   onOpenInCompose: (systemId: string) => void,
+  onActiveSystemsChanged?: () => void,
 ) {
   container = document.createElement("div");
   document.body.append(container);
@@ -148,6 +154,7 @@ async function renderWorkspace(
         workspaceId="workspace-a"
         client={client}
         onOpenInCompose={onOpenInCompose}
+        onActiveSystemsChanged={onActiveSystemsChanged}
       />,
     );
   });

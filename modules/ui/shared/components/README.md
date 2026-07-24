@@ -10,6 +10,8 @@ Code-native presentation primitives used by both React surfaces belong here. `Ap
 
 `ModalDialog` owns the shared modal interaction contract as well as the existing modal surface classes: visible accessible naming, initial focus, contained Tab and Shift+Tab movement, topmost-only Escape handling for stacked dialogs, a visible close control, and focus restoration. Callers own open state and task-specific confirmation rules; backdrop close stays opt-in.
 
+`LoadingSpinner` provides the shared, host-neutral loading wheel. Callers supply a concise accessible label and keep task-specific loading copy beside the indicator.
+
 `TabbedPanel` owns the shared attached tab-and-card presentation, tab/tabpanel relationships, roving focus, and horizontal arrow/Home/End activation. Desktop and thin-client compatibility modules may re-export it, but must not fork its behavior.
 
 Shared visual-state hooks may coordinate presentation that must remain consistent across hosts. `useSidebarCollapseState` and `useNavigationGroupCollapseState` own only user interface preferences and their local persistence; they do not alter route availability, permissions, page data, or feature behavior.

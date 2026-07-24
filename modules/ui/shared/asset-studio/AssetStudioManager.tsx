@@ -390,7 +390,7 @@ export function AssetStudioManager({
                   </button>
                   <button
                     type="button"
-                    className="ui-button--secondary"
+                    className="ui-button ui-button--outline"
                     disabled={busy}
                     onClick={() => void review("reject")}
                   >

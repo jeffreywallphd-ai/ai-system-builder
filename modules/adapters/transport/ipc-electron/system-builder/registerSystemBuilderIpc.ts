@@ -132,6 +132,25 @@ export function registerSystemBuilderIpc(
       actorId: "local-user",
     } as any),
   );
+  handle(d, "previewFoundationUpgrade", (p) =>
+    d.previewFoundationUpgrade.execute({
+      ...p,
+      workspaceId: createWorkspaceId(required(p.workspaceId)),
+      systemId: normalizeSystemBuilderSystemId(required(p.systemId)),
+      actorId: "local-user",
+    } as any),
+  );
+  handle(d, "upgradeFoundation", (p) =>
+    d.upgradeFoundation.execute({
+      ...p,
+      workspaceId: createWorkspaceId(required(p.workspaceId)),
+      systemId: normalizeSystemBuilderSystemId(required(p.systemId)),
+      sourceRevisionId: normalizeSystemBuilderRevisionId(
+        required(p.sourceRevisionId),
+      ),
+      actorId: "local-user",
+    } as any),
+  );
 }
 
 function handle(

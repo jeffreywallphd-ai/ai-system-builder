@@ -651,7 +651,7 @@ export function AssetStudioWorkspace({
               )}
               <button
                 type="button"
-                className="ui-button--secondary"
+                className="ui-button ui-button--outline"
                 onClick={() => addResource("other")}
               >
                 <ApplicationIcon name="add" />
@@ -680,7 +680,7 @@ export function AssetStudioWorkspace({
               </button>
               <button
                 type="button"
-                className="ui-button--secondary"
+                className="ui-button ui-button--outline"
                 disabled={busy || !record || dirty || record.status !== "draft"}
                 onClick={() => void transition("review")}
               >
@@ -697,7 +697,7 @@ export function AssetStudioWorkspace({
               </button>
               <button
                 type="button"
-                className="ui-button--secondary"
+                className="ui-button ui-button--outline"
                 disabled={
                   busy ||
                   !record ||
@@ -779,7 +779,7 @@ function ResourceStep({
       ) : (
         <button
           type="button"
-          className="ui-button--secondary"
+          className="ui-button ui-button--outline"
           onClick={() => onAdd(role)}
         >
           <ApplicationIcon name="add" />
@@ -861,7 +861,7 @@ function ResourceEditor({
       </label>
       <button
         type="button"
-        className="ui-button--secondary"
+        className="ui-button ui-button--outline"
         onClick={() => onRemove(index)}
       >
         <ApplicationIcon name="close" />

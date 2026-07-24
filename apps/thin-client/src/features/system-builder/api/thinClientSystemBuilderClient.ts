@@ -62,6 +62,10 @@ export function createThinClientSystemBuilderClient(
       request(`${root}/systems/composer/assets?${composerQuery(input)}`),
     previewLayoutChange: (input) =>
       post(`${root}/systems/layout-change/preview`, input),
+    previewFoundationUpgrade: (input) =>
+      post(`${root}/systems/foundation-upgrade/preview`, input),
+    upgradeFoundation: (input) =>
+      post(`${root}/systems/foundation-upgrade`, input),
   };
 }
 

@@ -11,6 +11,9 @@ import type {
   SystemBuilderManagementPage,
   PreviewSystemBuilderLayoutChangeCommand,
   SystemBuilderLayoutChangePreview,
+  PreviewSystemBuilderFoundationUpgradeCommand,
+  UpgradeSystemBuilderFoundationCommand,
+  SystemBuilderFoundationUpgradePreview,
 } from "../system-builder";
 import { createTransportOperation } from "../transport";
 import { createIpcChannel } from "./ipc-channel";
@@ -41,6 +44,14 @@ export const DESKTOP_SYSTEM_BUILDER_OPERATIONS = {
   previewLayoutChange: createTransportOperation(
     "system-builder",
     "preview-layout-change",
+  ),
+  previewFoundationUpgrade: createTransportOperation(
+    "system-builder",
+    "preview-foundation-upgrade",
+  ),
+  upgradeFoundation: createTransportOperation(
+    "system-builder",
+    "upgrade-foundation",
   ),
 } as const;
 
@@ -88,6 +99,14 @@ export type DesktopPreviewSystemBuilderLayoutChangeRequest = IpcRequest<
   WithoutActor<PreviewSystemBuilderLayoutChangeCommand>,
   (typeof DESKTOP_SYSTEM_BUILDER_OPERATIONS)["previewLayoutChange"]
 >;
+export type DesktopPreviewSystemBuilderFoundationUpgradeRequest = IpcRequest<
+  WithoutActor<PreviewSystemBuilderFoundationUpgradeCommand>,
+  (typeof DESKTOP_SYSTEM_BUILDER_OPERATIONS)["previewFoundationUpgrade"]
+>;
+export type DesktopUpgradeSystemBuilderFoundationRequest = IpcRequest<
+  WithoutActor<UpgradeSystemBuilderFoundationCommand>,
+  (typeof DESKTOP_SYSTEM_BUILDER_OPERATIONS)["upgradeFoundation"]
+>;
 export type DesktopSystemBuilderRecordResponse =
   IpcResponse<SystemBuilderRecord>;
 export type DesktopSystemBuilderListResponse = IpcResponse<
@@ -104,6 +123,8 @@ export type DesktopSystemBuilderComposerCatalogResponse =
   IpcResponse<SystemBuilderComposerCatalog>;
 export type DesktopSystemBuilderLayoutChangePreviewResponse =
   IpcResponse<SystemBuilderLayoutChangePreview>;
+export type DesktopSystemBuilderFoundationUpgradePreviewResponse =
+  IpcResponse<SystemBuilderFoundationUpgradePreview>;
 
 export const createDesktopSystemBuilderRequest = <T>(
   operation: keyof typeof DESKTOP_SYSTEM_BUILDER_OPERATIONS,

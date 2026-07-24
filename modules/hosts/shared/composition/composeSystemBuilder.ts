@@ -16,6 +16,8 @@ import {
   RenameSystemBuilderSystemUseCase,
   RestoreSystemBuilderSystemUseCase,
   SaveSystemBuilderRevisionUseCase,
+  PreviewSystemBuilderFoundationUpgradeUseCase,
+  UpgradeSystemBuilderFoundationUseCase,
 } from "../../../application/use-cases/system-builder";
 import {
   SystemBuilderReferenceTemplateRegistry,
@@ -78,6 +80,17 @@ export function composeSystemBuilder(options: ComposeSystemBuilderOptions) {
       previewLayoutChange: new PreviewSystemBuilderLayoutChangeUseCase({
         repository,
         definitions: options.definitions,
+        validator,
+        now: options.now,
+      }),
+      previewFoundationUpgrade:
+        new PreviewSystemBuilderFoundationUpgradeUseCase({
+          repository,
+          validator,
+          now: options.now,
+        }),
+      upgradeFoundation: new UpgradeSystemBuilderFoundationUseCase({
+        repository,
         validator,
         now: options.now,
       }),

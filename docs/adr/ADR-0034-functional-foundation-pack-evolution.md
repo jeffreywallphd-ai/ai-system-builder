@@ -41,5 +41,9 @@ feature-specific code paths.
 - The minimum functional kit and exact backing resources were delivered for v1
   and v2. `system.foundation@3.0.0` adds property-complete presentation schemas
   and bounded semantic styling while preserving the exact v1/v2 artifacts.
+- System Builder exposes v1/v2-to-v3 migration as a read-only preview followed by
+  explicit confirmation against the exact source revision. Lossy field or
+  reference mappings and invalid candidates fail closed; confirmation creates a
+  new immutable revision and retains the exact source history.
 - Continue to qualify every advertised default and require a new immutable pack
   version for future schema, renderer, or runtime-semantic changes.

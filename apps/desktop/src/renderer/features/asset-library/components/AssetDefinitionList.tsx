@@ -105,7 +105,7 @@ export function AssetDefinitionList({
               <div className="asset-definition-card__actions">
                 <button
                   type="button"
-                  className="ui-button ui-button--secondary"
+                  className="ui-button ui-button--outline"
                   onClick={() => onCustomizeDefinition(definition)}
                 >
                   Customize

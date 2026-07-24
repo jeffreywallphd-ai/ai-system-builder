@@ -12,6 +12,7 @@ export * from "./glossary";
 export * from "./artifact-preview";
 export * from "./components/ApplicationIcon";
 export * from "./components/EmptyState";
+export * from "./components/LoadingSpinner";
 export * from "./components/PanelHeading";
 export * from "./components/SidebarNavigationGroup";
 export * from "./components/TypeBadge";

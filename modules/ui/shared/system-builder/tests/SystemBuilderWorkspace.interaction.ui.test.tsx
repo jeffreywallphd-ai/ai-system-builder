@@ -8,6 +8,7 @@ import type {
   SystemBuilderRecord,
   SystemBuilderComposerAsset,
   SystemBuilderRevision,
+  SystemBuilderTemplateSummary,
   ListSystemBuilderComposerAssetsQuery,
 } from "../../../../contracts/system-builder";
 import {
@@ -32,6 +33,314 @@ afterEach(() => {
 });
 
 describe("SystemBuilderWorkspace UI preview", () => {
+  it("defers the layout catalog until Create system is submitted and then shows the loading wheel", async () => {
+    const pendingCatalog = new Promise<never>(() => undefined);
+    const listComposerAssets = vi.fn(() => pendingCatalog);
+    const client = {
+      ...clientFor({} as SystemBuilderRecord, {} as SystemBuilderRevision),
+      list: async () => ({ ok: true as const, value: [] }),
+      listComposerAssets,
+    } as SystemBuilderClient;
+
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <SystemBuilderWorkspace workspaceId="workspace-a" client={client} />,
+      );
+    });
+
+    expect(listComposerAssets).not.toHaveBeenCalled();
+    expect(
+      container.querySelector(
+        '.ui-loading-spinner[aria-label="Loading application layouts"]',
+      ),
+    ).toBeNull();
+
+    const nameInput = container.querySelector<HTMLInputElement>(
+      '.system-builder__entry-option--new input[placeholder="Customer portal"]',
+    );
+    expect(nameInput).not.toBeNull();
+    await act(async () => {
+      if (nameInput) setInputValue(nameInput, "New system");
+    });
+    await act(async () => button(container!, "Create system").click());
+
+    await vi.waitFor(() => expect(listComposerAssets).toHaveBeenCalledOnce());
+    expect(
+      container.querySelector(
+        '.ui-loading-spinner[aria-label="Loading application layouts"]',
+      ),
+    ).not.toBeNull();
+    expect(container.textContent).toContain("Preparing system...");
+  });
+
+  it("requests active systems and defensively omits archived records from Compose", async () => {
+    const activeSystem = {
+      systemId: "system.active",
+      name: "Active system",
+      status: "draft",
+    } as SystemBuilderRecord;
+    const archivedSystem = {
+      systemId: "system.archived",
+      name: "Archived system",
+      status: "archived",
+    } as SystemBuilderRecord;
+    const list = vi.fn(async () => ({
+      ok: true as const,
+      value: [archivedSystem, activeSystem],
+    }));
+    const pendingRead = new Promise<never>(() => undefined);
+    const readRevision = vi.fn(() => pendingRead);
+    const listRevisions = vi.fn(() => pendingRead);
+    const client = {
+      ...clientFor(activeSystem, {} as SystemBuilderRevision),
+      list,
+      readRevision,
+      listRevisions,
+    } as SystemBuilderClient;
+
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <SystemBuilderWorkspace workspaceId="workspace-a" client={client} />,
+      );
+    });
+
+    await vi.waitFor(() =>
+      expect(list).toHaveBeenCalledWith({
+        workspaceId: "workspace-a",
+        includeArchived: false,
+      }),
+    );
+    const systemSelect = container.querySelector<HTMLSelectElement>(
+      ".system-builder__entry-option--existing select",
+    );
+    expect(
+      Array.from(systemSelect?.options ?? []).map((option) => option.text),
+    ).toEqual(["Choose a system", "Active system"]);
+    expect(systemSelect?.value).toBe("");
+    const existingOption = container.querySelector(
+      ".system-builder__entry-option--existing",
+    );
+    expect(existingOption).not.toBeNull();
+    expect(
+      Array.from(
+        existingOption?.querySelectorAll<HTMLButtonElement>("button") ?? [],
+      ).map((candidate) => candidate.textContent),
+    ).toEqual(["Edit system"]);
+    expect(container.querySelector(".system-composer__workspace")).toBeNull();
+    expect(container.querySelector(".system-builder__status")).toBeNull();
+    expect(
+      container.querySelector("#system-builder-entry-instructions")
+        ?.textContent,
+    ).toBe("Choose an option below to interact with the System Composer.");
+    expect(
+      container.querySelector(
+        '.system-builder__entry-option--new select[aria-label="New system layout"]',
+      ),
+    ).toBeNull();
+    const templateButton = button(container, "Create from template");
+    expect(templateButton.classList.contains("ui-button--outline")).toBe(false);
+    expect(templateButton.disabled).toBe(true);
+    expect(
+      Array.from(
+        container.querySelectorAll<HTMLLegendElement>(
+          ".system-builder__entry-options legend",
+        ),
+      ).map((legend) => legend.textContent),
+    ).toEqual([
+      "1. Edit an existing system",
+      "2. Create a new system",
+      "3. Create from a template",
+    ]);
+
+    await act(async () => {
+      if (!systemSelect) return;
+      systemSelect.value = "system.active";
+      systemSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(readRevision).not.toHaveBeenCalled();
+    expect(container.querySelector(".system-composer__workspace")).toBeNull();
+
+    await act(async () => button(existingOption!, "Edit system").click());
+    await vi.waitFor(() => expect(readRevision).toHaveBeenCalledOnce());
+    expect(button(existingOption!, "Loading system...").disabled).toBe(true);
+    expect(container.querySelector(".system-composer__workspace")).toBeNull();
+  });
+
+  it("refreshes the active picker after a Manage lifecycle change", async () => {
+    const activeSystem = {
+      systemId: "system.active",
+      name: "Active system",
+      status: "draft",
+    } as SystemBuilderRecord;
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true as const, value: [activeSystem] })
+      .mockResolvedValueOnce({ ok: true as const, value: [] });
+    const client = {
+      ...clientFor(activeSystem, {} as SystemBuilderRevision),
+      list,
+    } as SystemBuilderClient;
+
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <SystemBuilderWorkspace
+          workspaceId="workspace-a"
+          client={client}
+          activeSystemsRevision={0}
+        />,
+      );
+    });
+
+    const systemSelect = await vi.waitFor(() => {
+      const select = container?.querySelector<HTMLSelectElement>(
+        ".system-builder__entry-option--existing select",
+      );
+      expect(
+        Array.from(select?.options ?? []).map((option) => option.text),
+      ).toEqual(["Choose a system", "Active system"]);
+      return select!;
+    });
+    await act(async () => {
+      systemSelect.value = "system.active";
+      systemSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    await act(async () => {
+      root?.render(
+        <SystemBuilderWorkspace
+          workspaceId="workspace-a"
+          client={client}
+          activeSystemsRevision={1}
+        />,
+      );
+    });
+
+    await vi.waitFor(() =>
+      expect(
+        Array.from(systemSelect.options).map((option) => option.text),
+      ).toEqual(["Choose a system"]),
+    );
+    expect(systemSelect.value).toBe("");
+    expect(list).toHaveBeenCalledTimes(2);
+  });
+
+  it("creates a named system with the implicit Minimal layout", async () => {
+    const minimal = layoutDefinition(
+      "builtin.layout.application.minimal",
+      "Minimal",
+      ["content"],
+    );
+    const created = {
+      systemId: "system.created",
+      name: "New system",
+      status: "draft",
+    } as SystemBuilderRecord;
+    const create = vi.fn(async () => ({ ok: true as const, value: created }));
+    const pendingRead = new Promise<never>(() => undefined);
+    const client = {
+      ...clientFor(created, {} as SystemBuilderRevision),
+      list: async () => ({ ok: true as const, value: [] }),
+      listComposerAssets: async () => ({
+        ok: true as const,
+        value: { items: [minimal] },
+      }),
+      create,
+      readRevision: () => pendingRead,
+      listRevisions: () => pendingRead,
+    } as SystemBuilderClient;
+
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <SystemBuilderWorkspace workspaceId="workspace-a" client={client} />,
+      );
+    });
+
+    const nameInput = container.querySelector<HTMLInputElement>(
+      '.system-builder__entry-option--new input[placeholder="Customer portal"]',
+    );
+    await act(async () => {
+      if (nameInput) setInputValue(nameInput, "New system");
+    });
+    await act(async () => button(container!, "Create system").click());
+
+    await vi.waitFor(() =>
+      expect(create).toHaveBeenCalledWith({
+        workspaceId: "workspace-a",
+        name: "New system",
+        profile: "interactive",
+        layoutPresetRef: minimal.definitionRef,
+      }),
+    );
+  });
+
+  it("requires a name and uses the primary action when creating from a template", async () => {
+    const template = {
+      templateId: "reference.controlled-chatbot@1.0.0",
+      displayName: "Controlled chatbot",
+    } as SystemBuilderTemplateSummary;
+    const created = {
+      systemId: "system.template",
+      name: "Support assistant",
+      status: "validated",
+    } as SystemBuilderRecord;
+    const createFromTemplate = vi.fn(async () => ({
+      ok: true as const,
+      value: created,
+    }));
+    const pendingRead = new Promise<never>(() => undefined);
+    const client = {
+      ...clientFor(created, {} as SystemBuilderRevision),
+      list: async () => ({ ok: true as const, value: [] }),
+      listTemplates: async () => ({ ok: true as const, value: [template] }),
+      createFromTemplate,
+      readRevision: () => pendingRead,
+      listRevisions: () => pendingRead,
+    } as SystemBuilderClient;
+
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <SystemBuilderWorkspace workspaceId="workspace-a" client={client} />,
+      );
+    });
+
+    const createButton = await vi.waitFor(() =>
+      button(container!, "Create from template"),
+    );
+    expect(createButton.disabled).toBe(true);
+    expect(createButton.classList.contains("ui-button--outline")).toBe(false);
+    const nameInput = container.querySelector<HTMLInputElement>(
+      '.system-builder__entry-option--reference input[placeholder="Use template name"]',
+    );
+    await act(async () => {
+      if (nameInput) setInputValue(nameInput, "Support assistant");
+    });
+    expect(createButton.disabled).toBe(false);
+    await act(async () => createButton.click());
+
+    await vi.waitFor(() =>
+      expect(createFromTemplate).toHaveBeenCalledWith({
+        workspaceId: "workspace-a",
+        templateId: template.templateId,
+        name: "Support assistant",
+      }),
+    );
+  });
+
   it("prefers the nested page content region over an already-full application content region", () => {
     const currentInstance = (
       instanceId: string,
@@ -127,7 +436,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
       definitionRef: {
         kind: "asset-definition-version",
         id: "builtin.system.system",
-        version: "2.0.0",
+        version: "3.0.0",
       },
     } as AssetInstance;
     const shellInstance = {
@@ -140,7 +449,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
       definitionRef: {
         kind: "asset-definition-version",
         id: "builtin.layout.application.standard",
-        version: "2.0.0",
+        version: "3.0.0",
       },
     } as AssetInstance;
     const extraInstance = {
@@ -153,18 +462,20 @@ describe("SystemBuilderWorkspace UI preview", () => {
       definitionRef: {
         kind: "asset-definition-version",
         id: "builtin.state.empty-state",
-        version: "2.0.0",
+        version: "3.0.0",
       },
     } as AssetInstance;
     const standard = layoutDefinition(
       "builtin.layout.application.standard",
       "Standard",
       ["top-bar", "content"],
+      "3.0.0",
     );
     const minimal = layoutDefinition(
       "builtin.layout.application.minimal",
       "Minimal",
       ["content"],
+      "3.0.0",
     );
     const structure = {
       schemaVersion: "system-builder-structure.v1",
@@ -297,6 +608,8 @@ describe("SystemBuilderWorkspace UI preview", () => {
                   "builtin.state.empty-state",
                   "Empty state",
                   [],
+                  false,
+                  "3.0.0",
                 ),
               ],
             },
@@ -317,6 +630,8 @@ describe("SystemBuilderWorkspace UI preview", () => {
                   "builtin.state.empty-state",
                   "Empty state",
                   [],
+                  false,
+                  "3.0.0",
                 ),
               ],
             },
@@ -344,10 +659,20 @@ describe("SystemBuilderWorkspace UI preview", () => {
         <SystemBuilderWorkspace
           workspaceId="workspace-a"
           client={client}
+          initialSystemId={String(record.systemId)}
           onBuildAndTest={onBuildAndTest}
         />,
       );
     });
+
+    const expandLayout = await vi.waitFor(() => {
+      const current = container!.querySelector<HTMLButtonElement>(
+        'button[aria-label="Expand Layout"]',
+      );
+      expect(current).not.toBeNull();
+      return current!;
+    });
+    await act(async () => expandLayout.click());
 
     const minimalChoice = await vi.waitFor(() => {
       const current = container!.querySelector<HTMLInputElement>(
@@ -373,12 +698,19 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await act(async () => minimalChoice.click());
     await vi.waitFor(() => {
       expect(container!.textContent).toContain("Unassigned visual assets");
-      expect(container!.textContent).toContain("Preserved top bar");
       expect(container!.textContent).toContain("Unsaved changes");
       expect(container!.textContent).toContain(
         "The Canvas updated automatically",
       );
     });
+    await act(async () =>
+      container
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="Expand Unassigned visual assets"]',
+        )!
+        .click(),
+    );
+    expect(container!.textContent).toContain("Preserved top bar");
     expect(document.body.querySelector('[role="dialog"]')).toBeNull();
     const changedCanvas = container!.querySelector<HTMLElement>(
       ".system-composer__panel--canvas",
@@ -400,7 +732,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     expect(onBuildAndTest).toHaveBeenCalledWith("system-1");
   });
 
-  it("materializes the Minimal layout for a legacy Controlled Chatbot reference system", async () => {
+  it("requires explicit Foundation upgrade before laying out a legacy Controlled Chatbot reference system", async () => {
     const legacyRoot = {
       ...instance(
         "chatbot-system.system",
@@ -408,14 +740,26 @@ describe("SystemBuilderWorkspace UI preview", () => {
         "Controlled chatbot system",
         { title: "Controlled chatbot" },
       ),
+      definitionRef: {
+        kind: "asset-definition-version",
+        id: "builtin.system.system",
+        version: "1.0.0",
+      },
       metadata: { referenceSystemKind: "controlled-chatbot" },
     } as AssetInstance;
-    const authentication = instance(
-      "chatbot-system.authentication",
-      "builtin.security.authentication-requirement",
-      "Authentication required",
-      { required: true },
-    );
+    const authentication = {
+      ...instance(
+        "chatbot-system.authentication",
+        "builtin.security.authentication-requirement",
+        "Authentication required",
+        { required: true },
+      ),
+      definitionRef: {
+        kind: "asset-definition-version",
+        id: "builtin.security.authentication-requirement",
+        version: "1.0.0",
+      },
+    } as AssetInstance;
     const revision = {
       revisionId: "chatbot-system.r1",
       systemId: "chatbot-system",
@@ -567,33 +911,26 @@ describe("SystemBuilderWorkspace UI preview", () => {
     root = createRoot(container);
     await act(async () => {
       root?.render(
-        <SystemBuilderWorkspace workspaceId="workspace-a" client={client} />,
+        <SystemBuilderWorkspace
+          workspaceId="workspace-a"
+          client={client}
+          initialSystemId={String(record.systemId)}
+        />,
       );
     });
 
-    await vi.waitFor(() =>
-      expect(previewLayoutChange).toHaveBeenCalledTimes(1),
+    const upgradeButton = await vi.waitFor(() => {
+      const current = button(container!, "Upgrade Foundation");
+      expect(current.disabled).toBe(false);
+      return current;
+    });
+    expect(upgradeButton).toBeDefined();
+    expect(previewLayoutChange).not.toHaveBeenCalled();
+    const canvas = container.querySelector<HTMLElement>(
+      ".system-composer__panel--canvas",
     );
-    const minimalChoice = container.querySelector<HTMLInputElement>(
-      'input[value="builtin.layout.application.minimal"]',
-    );
-    expect(minimalChoice?.checked).toBe(true);
-    expect(
-      container
-        .querySelector<HTMLElement>(".system-composer__panel--canvas")
-        ?.getAttribute("data-active-layout"),
-    ).toBe("builtin.layout.application.minimal");
-    expect(container.textContent).toContain("System resources & logic");
-    expect(container.textContent).toContain("Authentication required");
-    expect(container.textContent).not.toContain("Unassigned visual assets");
-    expect(
-      container.querySelector(
-        '[aria-label="Drag Authentication required from Unassigned assets"]',
-      ),
-    ).toBeNull();
-    expect(container.textContent).toContain(
-      "1 nonvisual asset remains under System resources & logic",
-    );
+    expect(canvas?.getAttribute("data-active-layout")).toBeNull();
+    expect(canvas?.querySelector("[data-slot-id]")).toBeNull();
   });
 
   it("opens and closes a modal for the current safe frontend composition", async () => {
@@ -654,7 +991,11 @@ describe("SystemBuilderWorkspace UI preview", () => {
     root = createRoot(container);
     await act(async () => {
       root?.render(
-        <SystemBuilderWorkspace workspaceId="workspace-a" client={client} />,
+        <SystemBuilderWorkspace
+          workspaceId="workspace-a"
+          client={client}
+          initialSystemId={String(record.systemId)}
+        />,
       );
     });
 
@@ -666,6 +1007,16 @@ describe("SystemBuilderWorkspace UI preview", () => {
       expect(button?.disabled).toBe(false);
       return button!;
     });
+    expect(
+      container.querySelector(
+        '.system-builder__entry-option--existing button[aria-haspopup="dialog"]',
+      ),
+    ).toBeNull();
+    expect(
+      previewButton
+        .closest<HTMLElement>('[role="toolbar"]')
+        ?.getAttribute("aria-label"),
+    ).toBe("Loaded system actions");
 
     await act(async () => previewButton.click());
     const dialog = await vi.waitFor(() => {
@@ -693,6 +1044,134 @@ describe("SystemBuilderWorkspace UI preview", () => {
     );
     expect(closeButton).not.toBeNull();
     await act(async () => closeButton!.click());
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it("previews a v2 Foundation upgrade before explicit confirmation", async () => {
+    const rootInstance = {
+      ...instance("system-1.root", "builtin.system.system", "System root", {}),
+      definitionRef: {
+        kind: "asset-definition-version",
+        id: "builtin.system.system",
+        version: "2.0.0",
+      },
+    } as AssetInstance;
+    const revision = {
+      revisionId: "system-1.r1",
+      systemId: "system-1",
+      targetWorkspaceId: "workspace-a",
+      revisionNumber: 1,
+      composition: {
+        compositionId: "system-1.composition",
+        compositionType: "system",
+        displayName: "Legacy assistant",
+        version: "0.1.0",
+        lifecycleStatus: "draft",
+        rootInstanceRefs: [
+          { kind: "asset-instance", id: rootInstance.instanceId },
+        ],
+        instanceRefs: [{ kind: "asset-instance", id: rootInstance.instanceId }],
+        bindingRefs: [],
+        provenance: { sourceKind: "human-authored" },
+      },
+      instances: [rootInstance],
+      bindings: [],
+      validationIssues: [],
+      createdAt: "2026-07-18T00:00:00.000Z",
+      createdBy: "person-1",
+    } as SystemBuilderRevision;
+    const record = {
+      systemId: "system-1",
+      targetWorkspaceId: "workspace-a",
+      name: "Legacy assistant",
+      status: "validated",
+      revision: 1,
+      currentRevisionId: revision.revisionId,
+      composition: revision.composition,
+      createdAt: "2026-07-18T00:00:00.000Z",
+      updatedAt: "2026-07-18T00:00:00.000Z",
+      createdBy: "person-1",
+      updatedBy: "person-1",
+    } as SystemBuilderRecord;
+    const upgradedRoot = {
+      ...rootInstance,
+      definitionRef: { ...rootInstance.definitionRef, version: "3.0.0" },
+    } as AssetInstance;
+    const upgradedRevision = {
+      ...revision,
+      revisionId: "system-1.r2",
+      revisionNumber: 2,
+      instances: [upgradedRoot],
+      createdAt: "2026-07-20T00:00:00.000Z",
+    } as SystemBuilderRevision;
+    const previewFoundationUpgrade = vi.fn(async () => ({
+      ok: true as const,
+      value: {
+        sourceRevisionId: revision.revisionId,
+        sourceVersion: "2.0.0" as const,
+        targetVersion: "3.0.0" as const,
+        eligible: true,
+        mappedInstanceCount: 1,
+        mappedConfigurationFieldCount: 0,
+        issues: [],
+        validationStatus: "valid" as const,
+        validationIssues: [],
+      },
+    }));
+    const upgradeFoundation = vi.fn(async () => ({
+      ok: true as const,
+      value: upgradedRevision,
+    }));
+    const client = {
+      ...clientFor(record, revision),
+      previewFoundationUpgrade,
+      upgradeFoundation,
+    } as SystemBuilderClient;
+
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <SystemBuilderWorkspace
+          workspaceId="workspace-a"
+          client={client}
+          initialSystemId={String(record.systemId)}
+        />,
+      );
+    });
+
+    const upgradeButton = await vi.waitFor(() => {
+      const current = button(container!, "Upgrade Foundation");
+      expect(current.disabled).toBe(false);
+      return current;
+    });
+    await act(async () => upgradeButton.click());
+    expect(previewFoundationUpgrade).toHaveBeenCalledTimes(1);
+    expect(upgradeFoundation).not.toHaveBeenCalled();
+
+    const dialog = await vi.waitFor(() => {
+      const current =
+        document.body.querySelector<HTMLElement>('[role="dialog"]');
+      expect(current?.textContent).toContain("Upgrade System Foundation");
+      return current!;
+    });
+    expect(dialog.textContent).toContain(
+      "The candidate maps without data loss and passes validation.",
+    );
+    await act(async () => button(dialog, "Create upgraded revision").click());
+    expect(upgradeFoundation).toHaveBeenCalledTimes(1);
+    expect(upgradeFoundation.mock.calls[0]?.[0]).toMatchObject({
+      workspaceId: "workspace-a",
+      systemId: "system-1",
+      expectedRecordRevision: 1,
+      sourceRevisionId: revision.revisionId,
+    });
+    await vi.waitFor(() =>
+      expect(container?.textContent).toContain(
+        "System Foundation upgraded to 3.0.0 in a new immutable revision.",
+      ),
+    );
     expect(document.body.querySelector('[role="dialog"]')).toBeNull();
   });
 
@@ -795,10 +1274,8 @@ describe("SystemBuilderWorkspace UI preview", () => {
         placements: input.placements,
       } as SystemBuilderRevision,
     }));
-    const client = {
-      ...clientFor(record, revision),
-      saveRevision,
-      listComposerAssets: async () => ({
+    const listComposerAssets = vi.fn(
+      async (_input: ListSystemBuilderComposerAssetsQuery) => ({
         ok: true as const,
         value: {
           items: [
@@ -810,16 +1287,30 @@ describe("SystemBuilderWorkspace UI preview", () => {
               "3.0.0",
               true,
             ),
-            composerDefinition(
-              "builtin.layout.application.standard",
-              "Standard shell",
-              [],
-              true,
-              "3.0.0",
-            ),
+            {
+              ...composerDefinition(
+                "builtin.layout.application.standard",
+                "Standard shell",
+                ["content"],
+                true,
+                "3.0.0",
+              ),
+              layoutRole: "application-shell" as const,
+              layoutGeometry: {
+                columnPattern: "single" as const,
+                areas: [["content"]],
+                sourceOrder: ["content"],
+                dimensionsLocked: true as const,
+              },
+            },
           ],
         },
       }),
+    );
+    const client = {
+      ...clientFor(record, revision),
+      saveRevision,
+      listComposerAssets,
     } as SystemBuilderClient;
 
     container = document.createElement("div");
@@ -827,10 +1318,17 @@ describe("SystemBuilderWorkspace UI preview", () => {
     root = createRoot(container);
     await act(async () => {
       root?.render(
-        <SystemBuilderWorkspace workspaceId="workspace-a" client={client} />,
+        <SystemBuilderWorkspace
+          workspaceId="workspace-a"
+          client={client}
+          initialSystemId={String(record.systemId)}
+        />,
       );
     });
 
+    await act(async () =>
+      (await vi.waitFor(() => button(container!, "Layers"))).click(),
+    );
     const shellTreeItem = await vi.waitFor(() => {
       const current = Array.from(
         container!.querySelectorAll<HTMLButtonElement>('[role="treeitem"]'),
@@ -842,6 +1340,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await vi.waitFor(() =>
       expect(shellTreeItem.getAttribute("aria-selected")).toBe("true"),
     );
+    await act(async () => button(container!, "Properties").click());
     expect(container.textContent).toContain("Configure Standard shell");
     const designButton = Array.from(container.querySelectorAll("button")).find(
       (button) => button.textContent === "Design",
@@ -852,6 +1351,23 @@ describe("SystemBuilderWorkspace UI preview", () => {
       expect(current).not.toBeNull();
       return current!;
     });
+    await vi.waitFor(() =>
+      expect(
+        listComposerAssets.mock.calls.filter(
+          ([input]) => input.parentDefinitionRef,
+        ),
+      ).toHaveLength(1),
+    );
+    expect(
+      listComposerAssets.mock.calls.filter(([input]) => input.searchText),
+    ).toHaveLength(0);
+    expect(
+      Array.from(container.querySelectorAll("button")).some((candidate) =>
+        ["Clone", "Archive", "Restore"].includes(
+          candidate.textContent?.trim() ?? "",
+        ),
+      ),
+    ).toBe(false);
     await act(async () => {
       const setter = Object.getOwnPropertyDescriptor(
         HTMLInputElement.prototype,
@@ -860,6 +1376,12 @@ describe("SystemBuilderWorkspace UI preview", () => {
       setter?.call(title, "Configured portal");
       title.dispatchEvent(new Event("input", { bubbles: true }));
     });
+    await act(async () => Promise.resolve());
+    expect(
+      listComposerAssets.mock.calls.filter(
+        ([input]) => input.parentDefinitionRef,
+      ),
+    ).toHaveLength(1);
     await act(async () => button(container, "Styling").click());
     const primaryColor = await vi.waitFor(() => {
       const current =
@@ -1022,9 +1544,10 @@ function layoutDefinition(
   definitionId: string,
   displayName: string,
   slotIds: readonly string[],
+  version = "2.0.0",
 ): SystemBuilderComposerAsset {
   return {
-    ...composerDefinition(definitionId, displayName, slotIds),
+    ...composerDefinition(definitionId, displayName, slotIds, false, version),
     layoutRole: "application-shell",
     layoutGeometry: {
       columnPattern: "single",
@@ -1041,6 +1564,13 @@ function button(rootElement: ParentNode, label: string): HTMLButtonElement {
   ).find((candidate) => candidate.textContent === label);
   if (!result) throw new Error(`Missing ${label} button.`);
   return result;
+}
+function setInputValue(input: HTMLInputElement, value: string): void {
+  Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype,
+    "value",
+  )?.set?.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 function clientFor(
   record: SystemBuilderRecord,

@@ -432,6 +432,7 @@ import {
   type DesktopSystemBuilderRevisionListResponse,
   type DesktopSystemBuilderComposerCatalogResponse,
   type DesktopSystemBuilderLayoutChangePreviewResponse,
+  type DesktopSystemBuilderFoundationUpgradePreviewResponse,
   DESKTOP_SYSTEM_BUILD_OPERATIONS,
   DESKTOP_SYSTEM_BUILD_CHANNELS,
   createDesktopSystemBuildRequest,
@@ -477,6 +478,8 @@ import type {
   ListSystemBuilderComposerAssetsQuery,
   ListSystemBuilderManagementQuery,
   PreviewSystemBuilderLayoutChangeCommand,
+  PreviewSystemBuilderFoundationUpgradeCommand,
+  UpgradeSystemBuilderFoundationCommand,
 } from "../../../../modules/contracts/system-builder";
 import type {
   CreateAssetDraftCommand,
@@ -1156,6 +1159,20 @@ export interface DesktopPreloadApi {
     > & { readonly workspaceId: string; readonly systemId: string },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopSystemBuilderLayoutChangePreviewResponse>;
+  previewSystemBuilderFoundationUpgrade: (
+    input: Omit<
+      PreviewSystemBuilderFoundationUpgradeCommand,
+      "actorId" | "workspaceId" | "systemId"
+    > & { readonly workspaceId: string; readonly systemId: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuilderFoundationUpgradePreviewResponse>;
+  upgradeSystemBuilderFoundation: (
+    input: Omit<
+      UpgradeSystemBuilderFoundationCommand,
+      "actorId" | "workspaceId" | "systemId"
+    > & { readonly workspaceId: string; readonly systemId: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuilderRevisionResponse>;
   requestSystemBuild: (
     input: Record<string, unknown>,
     context?: DesktopArtifactUploadBridgeContext,
@@ -4624,6 +4641,22 @@ export function createDesktopPreloadApi(
       return invokeSystemBuilder<DesktopSystemBuilderLayoutChangePreviewResponse>(
         dependencies,
         "previewLayoutChange",
+        input,
+        context,
+      );
+    },
+    async previewSystemBuilderFoundationUpgrade(input, context = {}) {
+      return invokeSystemBuilder<DesktopSystemBuilderFoundationUpgradePreviewResponse>(
+        dependencies,
+        "previewFoundationUpgrade",
+        input,
+        context,
+      );
+    },
+    async upgradeSystemBuilderFoundation(input, context = {}) {
+      return invokeSystemBuilder<DesktopSystemBuilderRevisionResponse>(
+        dependencies,
+        "upgradeFoundation",
         input,
         context,
       );

@@ -73,7 +73,7 @@ export function ImageGenerationFeature(
               </button>
               <button
                 type="button"
-                className="ui-button ui-button--secondary"
+                className="ui-button ui-button--outline"
                 onClick={() => void feature.repairInstall()}
               >
                 <ApplicationIcon name="settings" />
@@ -112,7 +112,7 @@ export function ImageGenerationFeature(
               <div className="ui-workflow__actions">
                 <button
                   type="button"
-                  className="ui-button ui-button--secondary"
+                  className="ui-button ui-button--outline"
                   onClick={() => void feature.cancel()}
                 >
                   <ApplicationIcon name="close" />

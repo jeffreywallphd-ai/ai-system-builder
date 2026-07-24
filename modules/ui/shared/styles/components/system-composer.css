@@ -77,12 +77,18 @@
 
 .system-composer__palette-size-controls {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2xs);
   inline-size: 100%;
 }
 
+.system-composer__panel--library[data-size="maximized"]
+  .system-composer__palette-size-controls {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .system-composer__palette-size-control {
+  inline-size: 100%;
   min-inline-size: 0;
   padding: var(--space-2xs);
   font-size: var(--font-size-xs);
@@ -186,15 +192,30 @@
 }
 
 .system-composer__sidebar-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  align-items: start;
+  justify-items: start;
   gap: var(--space-xs);
-  border-block-end: 1px solid var(--color-border-soft);
 }
 
 .system-composer__sidebar-collapse {
-  flex: 0 0 auto;
+  justify-self: start;
+}
+
+.system-composer__sidebar-heading {
+  min-inline-size: 0;
+}
+
+.system-composer__sidebar-heading h3,
+.system-composer__sidebar-heading p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.system-composer__sidebar-heading p {
+  margin-block-start: var(--space-2xs);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
 .system-composer__panel[data-collapsed="true"] {
@@ -210,7 +231,7 @@
   .system-composer__panel-heading
   > h3,
 .system-composer__panel--details[data-collapsed="true"]
-  .system-composer__sidebar-tabs {
+  .system-composer__sidebar-heading {
   display: none;
 }
 
@@ -240,16 +261,16 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2xs);
   inline-size: 100%;
+  min-inline-size: 0;
+  overflow: hidden;
 }
 
-.system-composer__sidebar-tabs [role="tab"] {
+.system-composer__sidebar-tabs .ui-tabbed-panel__tab {
+  inline-size: 100%;
   min-inline-size: 0;
   padding-inline: var(--space-xs);
-}
-
-.system-composer__sidebar-tabs [role="tab"][aria-selected="true"] {
-  border-color: var(--color-accent);
-  background: var(--color-bg-hover);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .system-composer__sidebar-panel {
@@ -938,7 +959,7 @@
   > .system-composer__slots {
   align-items: stretch;
   min-block-size: 26rem;
-  overflow: auto;
+  overflow: visible;
 }
 
 .system-composer__canvas-node[data-layout-container="true"]
@@ -953,7 +974,7 @@
   > .system-composer__slot {
   min-inline-size: 0;
   min-block-size: 0;
-  overflow: auto;
+  overflow: visible;
 }
 
 .system-composer__drag-overlay {

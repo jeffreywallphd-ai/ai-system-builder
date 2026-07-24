@@ -64,6 +64,12 @@ const services = () =>
     previewLayoutChange: {
       execute: testDouble.fn(async (value: any) => ({ ok: true, value })),
     },
+    previewFoundationUpgrade: {
+      execute: testDouble.fn(async (value: any) => ({ ok: true, value })),
+    },
+    upgradeFoundation: {
+      execute: testDouble.fn(async (value: any) => ({ ok: true, value })),
+    },
   }) as any;
 
 describe("System Builder transport parity", () => {
@@ -88,6 +94,8 @@ describe("System Builder transport parity", () => {
         "/api/systems/composer/assets",
         "/api/systems/manage",
         "/api/systems/layout-change/preview",
+        "/api/systems/foundation-upgrade/preview",
+        "/api/systems/foundation-upgrade",
         "/api/systems/create",
         "/api/systems/rename",
         "/api/systems/templates",
@@ -217,6 +225,43 @@ describe("System Builder transport parity", () => {
         id: "builtin.layout.application.minimal",
       },
     });
+    await routes.post.get("/api/systems/foundation-upgrade/preview")(
+      {
+        body: {
+          workspaceId: "workspace-a",
+          systemId: "system-1",
+          expectedRecordRevision: 1,
+        },
+        securityContext: { principal: { id: "person-1" } },
+      },
+      response,
+    );
+    expect(
+      api.previewFoundationUpgrade.execute.mock.calls[0][0],
+    ).toMatchObject({
+      workspaceId: "workspace-a",
+      systemId: "system-1",
+      expectedRecordRevision: 1,
+      actorId: "person-1",
+    });
+    await routes.post.get("/api/systems/foundation-upgrade")(
+      {
+        body: {
+          workspaceId: "workspace-a",
+          systemId: "system-1",
+          expectedRecordRevision: 1,
+          sourceRevisionId: "system-1.r1",
+        },
+        securityContext: { principal: { id: "person-1" } },
+      },
+      response,
+    );
+    expect(api.upgradeFoundation.execute.mock.calls[0][0]).toMatchObject({
+      workspaceId: "workspace-a",
+      systemId: "system-1",
+      sourceRevisionId: "system-1.r1",
+      actorId: "person-1",
+    });
 
     const handlers = new Map<string, any>();
     const ipc = services();
@@ -299,6 +344,44 @@ describe("System Builder transport parity", () => {
     expect(ipc.previewLayoutChange.execute.mock.calls[0][0]).toMatchObject({
       workspaceId: "workspace-a",
       systemId: "system-1",
+      actorId: "local-user",
+    });
+    await handlers.get(
+      DESKTOP_SYSTEM_BUILDER_CHANNELS.previewFoundationUpgrade.request.value,
+    )(
+      {},
+      {
+        payload: {
+          workspaceId: "workspace-a",
+          systemId: "system-1",
+          expectedRecordRevision: 1,
+        },
+      },
+    );
+    expect(
+      ipc.previewFoundationUpgrade.execute.mock.calls[0][0],
+    ).toMatchObject({
+      workspaceId: "workspace-a",
+      systemId: "system-1",
+      actorId: "local-user",
+    });
+    await handlers.get(
+      DESKTOP_SYSTEM_BUILDER_CHANNELS.upgradeFoundation.request.value,
+    )(
+      {},
+      {
+        payload: {
+          workspaceId: "workspace-a",
+          systemId: "system-1",
+          expectedRecordRevision: 1,
+          sourceRevisionId: "system-1.r1",
+        },
+      },
+    );
+    expect(ipc.upgradeFoundation.execute.mock.calls[0][0]).toMatchObject({
+      workspaceId: "workspace-a",
+      systemId: "system-1",
+      sourceRevisionId: "system-1.r1",
       actorId: "local-user",
     });
   });

@@ -94,7 +94,7 @@ export function AssetMutationConfirmationDialog({
       <div className="asset-mutation-dialog__actions">
         <button
           type="button"
-          className="ui-button ui-button--secondary"
+          className="ui-button ui-button--outline"
           onClick={onCancel}
           disabled={isPending}
           data-modal-initial-focus

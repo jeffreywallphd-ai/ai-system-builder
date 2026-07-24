@@ -26,6 +26,7 @@ export type SystemComposerInspectorMode = "configuration" | "connections";
 
 export interface SystemComposerInspectorProps {
   readonly mode: SystemComposerInspectorMode;
+  readonly embedded?: boolean;
   readonly selectedInstance?: AssetInstance;
   readonly selectedDefinition?: SystemBuilderComposerAsset;
   readonly instances: readonly AssetInstance[];
@@ -41,6 +42,7 @@ export interface SystemComposerInspectorProps {
 
 export function SystemComposerInspector({
   mode,
+  embedded = false,
   selectedInstance,
   selectedDefinition,
   instances,
@@ -76,6 +78,7 @@ export function SystemComposerInspector({
       instance={selectedInstance}
       definition={selectedDefinition}
       catalog={catalog}
+      embedded={embedded}
       onChange={onConfigurationChange}
     />
   );
@@ -85,11 +88,13 @@ function SystemComposerConfiguration({
   instance,
   definition,
   catalog,
+  embedded,
   onChange,
 }: {
   readonly instance: AssetInstance;
   readonly definition: SystemBuilderComposerAsset;
   readonly catalog: readonly SystemBuilderComposerAsset[];
+  readonly embedded: boolean;
   readonly onChange: (values: AssetConfigurationValues) => void;
 }) {
   const values = useMemo(
@@ -143,17 +148,26 @@ function SystemComposerConfiguration({
   return (
     <section
       className="system-composer-inspector"
-      aria-labelledby="system-composer-configuration-title"
+      aria-labelledby={
+        embedded ? undefined : "system-composer-configuration-title"
+      }
+      aria-label={
+        embedded
+          ? `Configure ${instance.displayName ?? definition.displayName}`
+          : undefined
+      }
     >
       <header className="system-composer-inspector__header">
-        <div>
-          <h3 id="system-composer-configuration-title">
-            Configure {instance.displayName ?? definition.displayName}
-          </h3>
-          <p>
-            {definition.definitionId}@{definition.version}
-          </p>
-        </div>
+        {embedded ? null : (
+          <div>
+            <h3 id="system-composer-configuration-title">
+              Configure {instance.displayName ?? definition.displayName}
+            </h3>
+            <p>
+              {definition.definitionId}@{definition.version}
+            </p>
+          </div>
+        )}
         <button
           type="button"
           className="system-composer__flat-control"

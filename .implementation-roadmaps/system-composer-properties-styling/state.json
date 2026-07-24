@@ -157,11 +157,106 @@
         "37 focused tests and applicable repository gates passed"
       ],
       "title": "Shared UI, history, and deterministic preview qualification"
+    },
+    {
+      "areas": [
+        "Reference template registry",
+        "Canonical reference hierarchy",
+        "Structure validation",
+        "Reference previews"
+      ],
+      "chunkId": "v3-reference-system-materialization",
+      "completedAt": "2026-07-24T18:20:26Z",
+      "criteriaIds": [
+        "new-reference-systems-use-v3",
+        "supported-boundaries-roundtrip"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [],
+      "id": "reference-upgrade-production-qualification-v3-reference-system-materialization",
+      "incrementId": "reference-upgrade-production-qualification",
+      "summary": "New reference systems now materialize directly as exact Foundation v3 with a required Minimal layout, root theme defaults, meaningful content, and one complete non-duplicated hierarchy.",
+      "tests": [
+        "21 focused reference-template, structure, layout-change, and semantic HTML checks passed"
+      ],
+      "title": "Direct v3 reference-system materialization"
+    },
+    {
+      "areas": [
+        "System Builder upgrade contracts",
+        "Foundation version mapper",
+        "Immutable revision use cases"
+      ],
+      "chunkId": "explicit-nondestructive-upgrade",
+      "completedAt": "2026-07-24T18:29:08Z",
+      "criteriaIds": [
+        "upgrade-is-explicit-and-nondestructive",
+        "supported-boundaries-roundtrip"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [],
+      "id": "reference-upgrade-production-qualification-explicit-nondestructive-upgrade",
+      "incrementId": "reference-upgrade-production-qualification",
+      "summary": "Added a fail-closed v2-to-v3 mapping preview and explicit confirmation that atomically saves a new validated revision while preserving its exact v2 source.",
+      "tests": [
+        "12 focused upgrade, reference-template, and layout-change checks passed"
+      ],
+      "title": "Previewed and confirmed v2-to-v3 revision upgrade"
+    },
+    {
+      "areas": [
+        "Shared System Composer, preview, management, styling, and Canvas",
+        "Desktop, thin-client, API, IPC, preload, persistence, import, and export boundaries",
+        "Reference templates, exact Foundation catalogs, upgrade mapping, and production builds"
+      ],
+      "chunkId": "host-boundary-production-qualification",
+      "completedAt": "2026-07-24T20:40:50Z",
+      "criteriaIds": [
+        "new-reference-systems-use-v3",
+        "upgrade-is-explicit-and-nondestructive",
+        "supported-boundaries-roundtrip",
+        "production-gates-pass"
+      ],
+      "documentation": [
+        "docs/architecture/system-builder.md",
+        "docs/context/packs/system-builder.pack.md",
+        "modules/ui/shared/README.md",
+        "Temporary implementation report"
+      ],
+      "feedbackAddressed": [
+        "compose-canvas-performance",
+        "canvas-canonical-descendants",
+        "compose-toolbar-cleanup",
+        "reference-placement-slot-validation",
+        "legacy-canvas-region-overlap",
+        "composer-sidebar-tab-overflow",
+        "composer-sidebar-tab-order",
+        "asset-palette-size-controls",
+        "compose-active-system-picker",
+        "foundation-catalog-exact-version-tests",
+        "compose-explicit-entry-boundary",
+        "shared-flat-button-style",
+        "compose-picker-lifecycle-refresh",
+        "canvas-fixed-region-visibility"
+      ],
+      "id": "reference-upgrade-production-qualification-host-boundary-production-qualification",
+      "incrementId": "reference-upgrade-production-qualification",
+      "summary": "Completed shared UI, host transport, persistence, migration, exact-version, performance, Canvas hierarchy, Compose lifecycle, styling, and production qualification for Foundation v3 reference systems and explicit upgrades.",
+      "tests": [
+        "Focused Compose picker lifecycle tests passed: 14",
+        "Focused Canvas region visibility and style tests passed: 9",
+        "Full non-browser suite passed: 2,509 passed, 0 failed, 1 skipped across 482 suites",
+        "Documentation, agent-support, architecture, server, thin-client, and Windows desktop package gates passed"
+      ],
+      "title": "Shared UI, transport, persistence, and production qualification"
     }
   ],
-  "completion": null,
+  "completion": {
+    "completedAt": "2026-07-24T20:40:50Z",
+    "summary": "All three approved increments are implemented, documented, and qualified: property-complete Foundation v3, bounded reusable Styling and property editors, accurate hierarchical previews, explicit immutable upgrades, and production-ready host boundaries."
+  },
   "createdAt": "2026-07-20T21:47:41Z",
-  "currentIncrementId": "reference-upgrade-production-qualification",
+  "currentIncrementId": null,
   "decisions": [
     {
       "approvalNote": "The user explicitly approved Option A: Foundation v3 with a root-instance reusable theme profile and bounded per-asset overrides.",
@@ -354,6 +449,50 @@
       "outcome": "passed",
       "recordedAt": "2026-07-21T00:00:16Z",
       "summary": "Theme and asset property changes survive undo, redo, and canonical save through one draft update path."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "npm test",
+      "criterionId": "new-reference-systems-use-v3",
+      "id": "evidence-8",
+      "incrementId": "reference-upgrade-production-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-24T20:40:49Z",
+      "summary": "The complete non-browser suite passed the direct Foundation v3 reference-template, required Minimal layout, semantic hierarchy, and ideal-HTML preview coverage."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "npm test",
+      "criterionId": "upgrade-is-explicit-and-nondestructive",
+      "id": "evidence-9",
+      "incrementId": "reference-upgrade-production-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-24T20:40:49Z",
+      "summary": "The complete non-browser suite passed preview-only mapping, fail-closed validation, stale-revision rejection, explicit confirmation, and immutable source-history coverage."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "npm test; npm run build:server; npm run build:thin-client; npm run package",
+      "criterionId": "supported-boundaries-roundtrip",
+      "id": "evidence-10",
+      "incrementId": "reference-upgrade-production-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-24T20:40:50Z",
+      "summary": "The full suite and all three production builds passed desktop/thin-client transports, persistence, import/export, exact-version reads, Composer state, preview, and build boundary coverage."
+    },
+    {
+      "artifact": ".local-codex/increment3-gates.log",
+      "command": "python dev-tools/helpers/run_repository_checks.py --repo . --no-install-electron --documentation --agent-support --architecture --no-deployment --full-suite; npm run build:server; npm run build:thin-client; npm run package",
+      "criterionId": "production-gates-pass",
+      "id": "evidence-11",
+      "incrementId": "reference-upgrade-production-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-24T20:40:50Z",
+      "summary": "Documentation, agent-support, architecture, 2,510 non-browser tests, server build, thin-client build, and Windows Electron packaging completed successfully; 2,509 tests passed and one was skipped."
     }
   ],
   "feedback": [
@@ -366,6 +505,146 @@
       "recordedAt": "2026-07-20T22:47:31Z",
       "summary": "The documentation drift gate found three stale discovery-source paths in the generated roadmap: two ADR filenames and the FoundationAssetSurface directory.",
       "targetIncrementId": "foundation-v3-property-model"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "compose-canvas-performance",
+      "impact": "within-increment",
+      "nextAction": "Profile catalog loading and Canvas rendering, remove redundant work, and add focused performance regressions.",
+      "recordedAt": "2026-07-24T18:44:55Z",
+      "summary": "The Compose Canvas loads slowly and becomes laggy during editing.",
+      "targetIncrementId": "reference-upgrade-production-qualification"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "canvas-canonical-descendants",
+      "impact": "within-increment",
+      "nextAction": "Render canonical child placements through bounded read-only structural regions when an exact editable container contract is unavailable, with a mixed-version regression test.",
+      "recordedAt": "2026-07-24T18:48:51Z",
+      "summary": "The Canvas stops rendering deeper canonical assets when an exact container definition is unavailable, although Layers still shows them.",
+      "targetIncrementId": "reference-upgrade-production-qualification"
+    },
+    {
+      "category": "scope",
+      "disposition": "accepted",
+      "id": "compose-toolbar-cleanup",
+      "impact": "within-increment",
+      "nextAction": "Remove redundant Compose Clone and Archive controls and use the shared loading spinner in the layout-loading state.",
+      "recordedAt": "2026-07-24T18:57:26Z",
+      "summary": "Compose should defer duplication and archiving to Manage and show a loading wheel while application layouts load.",
+      "targetIncrementId": "reference-upgrade-production-qualification"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "reference-placement-slot-validation",
+      "impact": "within-increment",
+      "nextAction": "Reproduce the exact reference hierarchy, correct placement parent and slot ownership at materialization or upgrade boundaries, and add validation regressions for every reference template.",
+      "recordedAt": "2026-07-24T19:10:54Z",
+      "summary": "Reference systems can materialize placements whose slot IDs are not declared by the recorded parent, producing repeated blocking Compose validation diagnostics.",
+      "targetIncrementId": "reference-upgrade-production-qualification"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "legacy-canvas-region-overlap",
+      "impact": "within-increment",
+      "nextAction": "Allow read-only structural regions to auto-flow without named-grid overlap, test a multi-region legacy conversation shell, and make v1 references eligible for the explicit v3 repair upgrade.",
+      "recordedAt": "2026-07-24T19:16:41Z",
+      "summary": "Legacy reference containers with several saved structural regions render those regions on the same implicit grid area, hiding embedded UI descendants that remain visible in Layers and Structure.",
+      "targetIncrementId": "reference-upgrade-production-qualification"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "composer-sidebar-tab-overflow",
+      "impact": "within-increment",
+      "nextAction": "Make the Properties, Styling, and Layers and Structure tab controls wrap and size within the sidebar boundary, then add a focused responsive markup/style regression.",
+      "recordedAt": "2026-07-24T19:16:42Z",
+      "summary": "The right Composer sidebar tab labels overflow or collide when the sidebar is narrow.",
+      "targetIncrementId": "reference-upgrade-production-qualification"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "composer-sidebar-tab-order",
+      "impact": "within-increment",
+      "nextAction": "Preserve the requested DOM order, shared tab styling, short labels, and focused interaction coverage.",
+      "recordedAt": "2026-07-24T19:35:01Z",
+      "summary": "Keep the fitted Properties, Styling, and Layers tabs at the top of the right sidebar, followed by the Configure heading and Collapse control.",
+      "targetIncrementId": "reference-upgrade-production-qualification"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "asset-palette-size-controls",
+      "impact": "within-increment",
+      "nextAction": "Use mode-scoped grid styling and retain focused style and interaction regressions.",
+      "recordedAt": "2026-07-24T19:35:01Z",
+      "summary": "Stack Collapse, Normal, and Maximize vertically in normal Asset Palette mode so their labels fit; retain the compact row in maximized mode.",
+      "targetIncrementId": "reference-upgrade-production-qualification"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "compose-active-system-picker",
+      "impact": "within-increment",
+      "nextAction": "Request active records only, defensively filter archived results, and cover selection behavior with a shared interaction regression.",
+      "recordedAt": "2026-07-24T19:37:56Z",
+      "summary": "The Compose system picker exposes archived systems even though archive preview and restoration belong in Manage.",
+      "targetIncrementId": "reference-upgrade-production-qualification"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "foundation-catalog-exact-version-tests",
+      "impact": "within-increment",
+      "nextAction": "Address immutable historical fixtures by exact version and retain separate current-generation reader coverage.",
+      "recordedAt": "2026-07-24T19:46:10Z",
+      "summary": "Completion gates found legacy Foundation catalog tests iterating v1 descriptors through current-generation unversioned readers.",
+      "targetIncrementId": "reference-upgrade-production-qualification"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "compose-explicit-entry-boundary",
+      "impact": "within-increment",
+      "nextAction": "Retain focused regressions for staged editing, lazy catalog loading, implicit Minimal creation, required template naming, and toolbar placement.",
+      "recordedAt": "2026-07-24T20:20:32Z",
+      "summary": "Compose now presents three direct forms with guidance: stage and explicitly edit an active system, create a required-name system with the implicit Minimal layout, or create from a required-name template. Catalog and editor loading are deferred until an action needs them, and loaded-system actions live in a toolbar below the forms.",
+      "targetIncrementId": "reference-upgrade-production-qualification"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "shared-flat-button-style",
+      "impact": "within-increment",
+      "nextAction": "Keep the repository-wide source regression that forbids the deleted modifier and requires the flat base class on every outline action.",
+      "recordedAt": "2026-07-24T20:20:32Z",
+      "summary": "The obsolete grey secondary-button modifier was replaced across authored UI sources by the explicit flat base-plus-outline treatment; native appearance and grey file-selector fills were removed, while primary creation actions remain flat accent buttons.",
+      "targetIncrementId": "reference-upgrade-production-qualification"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "compose-picker-lifecycle-refresh",
+      "impact": "within-increment",
+      "nextAction": "Invalidate and reconcile the shared active-system index after successful Manage duplicate, archive, and restore actions, with focused UI regression coverage.",
+      "recordedAt": "2026-07-24T20:26:35Z",
+      "summary": "After a system was archive-deleted in Manage, the mounted Compose active-system picker retained its stale entry.",
+      "targetIncrementId": "reference-upgrade-production-qualification"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "canvas-fixed-region-visibility",
+      "impact": "within-increment",
+      "nextAction": "Use abstract layout proportions as expanding minimum rows and retain one outer Canvas scroll boundary, with structure and CSS regressions.",
+      "recordedAt": "2026-07-24T20:31:26Z",
+      "summary": "A visual asset dropped into a new fixed top-bar region was present but hidden below a nested region scrollbar in the Canvas.",
+      "targetIncrementId": "reference-upgrade-production-qualification"
     }
   ],
   "finalApproval": null,
@@ -549,6 +828,144 @@
       "recordedAt": "2026-07-21T00:06:14Z",
       "sequence": 30,
       "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "0a65381e1ccd575dfb121b62036cbbd491e6e8d29a1d3768ba81c4dd29a471cb",
+      "recordedAt": "2026-07-24T18:20:26Z",
+      "sequence": 31,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "db1c8df859c5a3943841fbb028cc1b9177c811fda34b05592e1bbaa9d093cbbc",
+      "recordedAt": "2026-07-24T18:29:08Z",
+      "sequence": 32,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "cd3f4a11ebb771432fedb737042690683c441d2adf84ce30b0395d43f48387e5",
+      "recordedAt": "2026-07-24T18:44:55Z",
+      "sequence": 33,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "b9aa87e1489ae00e5b97b3681fcce260c5875015e44565cbec344a547c62d70e",
+      "recordedAt": "2026-07-24T18:48:51Z",
+      "sequence": 34,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "dec72133f27021f5b86b69edff05a93e4e6cc30a26deb400b4aa9170b3479ff6",
+      "recordedAt": "2026-07-24T18:57:26Z",
+      "sequence": 35,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "0b6323e69fe0b7cd209e115f439741bc20264bd621c51ff79a1945ae25e7e4b6",
+      "recordedAt": "2026-07-24T19:10:54Z",
+      "sequence": 36,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "b6237aa99c249616dc46f1c53d206eac4fdf56c6886fe5805807cf627e38520e",
+      "recordedAt": "2026-07-24T19:16:41Z",
+      "sequence": 37,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "125a67e4e67bf708dcbd4ea07edda36b14a425b93bfd02801b9a42f2c38549c1",
+      "recordedAt": "2026-07-24T19:16:42Z",
+      "sequence": 38,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "53733323822efe3d63f37e1a3cb59756218072c04004f5251bf8b90cae9f6e33",
+      "recordedAt": "2026-07-24T19:35:01Z",
+      "sequence": 39,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "c086a955f3e3d0695fcaf240c9de5a928a78e7be15954f69c4e985e9378af5dd",
+      "recordedAt": "2026-07-24T19:35:01Z",
+      "sequence": 40,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "d4bef5080ad8ef08e287aac9a86a8ef24ec541cc653ee62f6fd7da336e02689e",
+      "recordedAt": "2026-07-24T19:37:56Z",
+      "sequence": 41,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "cd07e4bae8539a73317d40cb8c088489ac7af1f5323096d5ab981f5f1810bde2",
+      "recordedAt": "2026-07-24T19:46:10Z",
+      "sequence": 42,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "d82b06d2a26284b216d5603859ceb27bee4af1be947ad6945d442a72df16667e",
+      "recordedAt": "2026-07-24T20:20:32Z",
+      "sequence": 43,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "bcf0ccf1771cbc9c11de622ada1aefb39833e4ba3798847f199ec7e8af53b478",
+      "recordedAt": "2026-07-24T20:20:32Z",
+      "sequence": 44,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "4c7207e38fa33d3a2cfd307ef3d1dd574ccb725fa26a8d2f92a0db4d80051905",
+      "recordedAt": "2026-07-24T20:26:35Z",
+      "sequence": 45,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "290a4b142eedb09a22c9bb7a67b9aabe3bff0bd636aa44576e4fd254fae3d14e",
+      "recordedAt": "2026-07-24T20:31:26Z",
+      "sequence": 46,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "54442c6f71ca37c10660b22f9bf52c6cca9f44f6ed4c9dc4ffff7328519c545b",
+      "recordedAt": "2026-07-24T20:40:49Z",
+      "sequence": 47,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5da6891f97aac36eeb307f042935bb859a49b612620b142d073a2a5cf2638ac6",
+      "recordedAt": "2026-07-24T20:40:49Z",
+      "sequence": 48,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f25fb1f8af3ec94f12d64ed4681be4fbf0f00a43fff355edf156c14bbccc127b",
+      "recordedAt": "2026-07-24T20:40:50Z",
+      "sequence": 49,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d21d0b48f5151c46e86111b1ae8f2e0b6fcbffa22dbdbd80399cb4ff1c8e904e",
+      "recordedAt": "2026-07-24T20:40:50Z",
+      "sequence": 50,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "fc2c71eee1630d63e432cc81afb4b7873e7ba4f7015e65dc0b553308266c28ae",
+      "recordedAt": "2026-07-24T20:40:50Z",
+      "sequence": 51,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "1591cbd3ecbd8d06c0c6db391fdae7db91331ba3055cb93a6f35fc1cfa1a7b68",
+      "recordedAt": "2026-07-24T20:40:50Z",
+      "sequence": 52,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "87ad610a36708e7aaedfc59a6edff02f2f9c74f05c319263368effe26991fce6",
+      "recordedAt": "2026-07-24T20:40:50Z",
+      "sequence": 53,
+      "type": "roadmap-completed"
     }
   ],
   "increments": [
@@ -957,8 +1374,13 @@
         }
       ],
       "allowPendingQualification": false,
-      "completedAt": null,
-      "completedChunks": [],
+      "completedAt": "2026-07-24T20:40:50Z",
+      "completedChunks": [
+        "v3-reference-system-materialization",
+        "explicit-nondestructive-upgrade",
+        "host-boundary-production-qualification"
+      ],
+      "completionSummary": "Foundation v3 reference creation, explicit non-destructive upgrades, durable host boundaries, responsive Composer behavior, and every required production gate are complete.",
       "deliverables": [
         "Foundation v3 reference templates and default style profiles",
         "Explicit upgrade use case, shared UI action, validation, and revision mapping",
@@ -978,6 +1400,7 @@
       "id": "reference-upgrade-production-qualification",
       "number": 3,
       "objective": "Move current reference-system creation to Foundation v3, provide a non-destructive explicit upgrade path for existing v2 systems, and qualify the complete experience across supported hosts and durable boundaries.",
+      "pendingCriteria": [],
       "plan": {
         "assumptions": [
           "Reference template version 1.0.0 is independent from its exact Foundation asset release.",
@@ -1103,7 +1526,7 @@
       ],
       "rollback": "Stop advertising v3 as current and remove the additive upgrade action; exact v1/v2 systems remain loadable and their saved revisions are unchanged.",
       "startedAt": "2026-07-21T00:06:14Z",
-      "status": "implementing",
+      "status": "completed",
       "title": "Reference-system upgrade and production qualification",
       "verification": [
         "Run focused reference-template, upgrade, persistence, import/export, host-contract, and preview-fixture tests while implementing each chunk.",
@@ -1143,6 +1566,6 @@
   },
   "schemaVersion": 1,
   "slug": "system-composer-properties-styling",
-  "status": "executing",
-  "updatedAt": "2026-07-21T00:06:14Z"
+  "status": "completed",
+  "updatedAt": "2026-07-24T20:40:50Z"
 }

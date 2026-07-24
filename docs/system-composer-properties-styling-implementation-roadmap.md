@@ -2,8 +2,8 @@
 
 # System Composer Properties and Styling Implementation Roadmap
 
-- Status: `executing`
-- Updated: `2026-07-21T00:06:14Z`
+- Status: `completed`
+- Updated: `2026-07-24T20:40:50Z`
 
 ## Objective
 
@@ -56,7 +56,7 @@ Foundation v2 cannot be amended without violating the accepted immutable-release
 | --- | --- | --- | --- |
 | 1: Property-complete Foundation v3 | Publish an immutable successor Foundation release whose frontend-backed assets declare every user-owned preview value and whose root asset declares the bounded reusable theme profile approved in Option A. | None | `completed` |
 | 2: Cohesive properties, Styling tab, and live preview experience | Deliver the complete shared System Composer experience for editing all declared asset properties, reusable theme roles, and bounded per-asset overrides with immediate accurate Canvas preview feedback. | foundation-v3-property-model | `completed` |
-| 3: Reference-system upgrade and production qualification | Move current reference-system creation to Foundation v3, provide a non-destructive explicit upgrade path for existing v2 systems, and qualify the complete experience across supported hosts and durable boundaries. | cohesive-styling-editor-preview | `implementing` |
+| 3: Reference-system upgrade and production qualification | Move current reference-system creation to Foundation v3, provide a non-destructive explicit upgrade path for existing v2 systems, and qualify the complete experience across supported hosts and durable boundaries. | cohesive-styling-editor-preview | `completed` |
 
 ## Increment 1: Property-complete Foundation v3
 
@@ -155,7 +155,7 @@ Remove the additive Styling panel, theme projection, and v3-only editor integrat
 ## Increment 3: Reference-system upgrade and production qualification
 
 - Id: `reference-upgrade-production-qualification`
-- Status: `implementing`
+- Status: `completed`
 - Dependencies: `cohesive-styling-editor-preview`
 
 Move current reference-system creation to Foundation v3, provide a non-destructive explicit upgrade path for existing v2 systems, and qualify the complete experience across supported hosts and durable boundaries.
@@ -179,10 +179,10 @@ Move current reference-system creation to Foundation v3, provide a non-destructi
 
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
-| `new-reference-systems-use-v3`: Every newly created reference system selects Foundation v3, has a valid root theme profile and meaningful configurable content defaults, and renders the reviewed deterministic preview structure. | local | not recorded |
-| `upgrade-is-explicit-and-nondestructive`: Upgrading an existing v2 system is an explicit user action that creates a new validated v3 revision, preserves the prior revision, maps supported configuration and composition data, and reports any unmapped value before save. | local | not recorded |
-| `supported-boundaries-roundtrip`: V3 properties and styling round-trip through supported desktop/thin-client clients, persistence, import/export, and build/test output while v1/v2 systems continue to load by exact version. | local | not recorded |
-| `production-gates-pass`: Applicable repository test, architecture, documentation, agent-support, server-build, thin-client-build, and desktop TypeScript/package qualification gates pass or any environment-only limitation is explicitly reported with focused evidence passing. | local | not recorded |
+| `new-reference-systems-use-v3`: Every newly created reference system selects Foundation v3, has a valid root theme profile and meaningful configurable content defaults, and renders the reviewed deterministic preview structure. | local | passed (test) |
+| `upgrade-is-explicit-and-nondestructive`: Upgrading an existing v2 system is an explicit user action that creates a new validated v3 revision, preserves the prior revision, maps supported configuration and composition data, and reports any unmapped value before save. | local | passed (test) |
+| `supported-boundaries-roundtrip`: V3 properties and styling round-trip through supported desktop/thin-client clients, persistence, import/export, and build/test output while v1/v2 systems continue to load by exact version. | local | passed (test) |
+| `production-gates-pass`: Applicable repository test, architecture, documentation, agent-support, server-build, thin-client-build, and desktop TypeScript/package qualification gates pass or any environment-only limitation is explicitly reported with focused evidence passing. | local | passed (test) |
 
 ### Verification
 

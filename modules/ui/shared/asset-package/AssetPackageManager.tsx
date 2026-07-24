@@ -236,7 +236,7 @@ export function AssetPackageManager({
             </div>
             <button
               type="button"
-              className="ui-button ui-button--secondary"
+              className="ui-button ui-button--outline"
               onClick={() => downloadAssetPackageStarter()}
             >
               <ApplicationIcon name="download" />
@@ -269,7 +269,7 @@ export function AssetPackageManager({
             description="Choose an .aisb-package file. Inspection verifies the bounded container, hashes, compatibility, and evidence without running its contents."
             active={!inspection}
           >
-            <label className="asset-package-manager__file ui-button ui-button--secondary">
+            <label className="asset-package-manager__file ui-button ui-button--outline">
               <ApplicationIcon name="upload" />
               <span>{busy ? "Inspecting…" : "Choose package"}</span>
               <input
@@ -439,7 +439,7 @@ export function AssetPackageManager({
                     ) : (
                       <button
                         type="button"
-                        className="ui-button--secondary"
+                        className="ui-button ui-button--outline"
                         disabled={busy}
                         onClick={() => void mutate(record, "disable")}
                       >
@@ -450,7 +450,7 @@ export function AssetPackageManager({
                     {record.previousActiveRecordId ? (
                       <button
                         type="button"
-                        className="ui-button--secondary"
+                        className="ui-button ui-button--outline"
                         disabled={busy}
                         onClick={() => void mutate(record, "rollback")}
                       >

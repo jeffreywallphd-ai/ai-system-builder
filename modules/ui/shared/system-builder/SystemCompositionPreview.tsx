@@ -186,7 +186,7 @@ export function SystemCompositionPreview({
           <button
             key={option}
             type="button"
-            className="ui-button--secondary"
+            className="ui-button ui-button--outline"
             aria-pressed={viewport === option}
             onClick={() => setViewport(option)}
           >

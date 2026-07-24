@@ -921,6 +921,41 @@
 .system-builder__toolbar label {
   flex: 1 1 14rem;
 }
+.system-builder__entry-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+.system-builder__entry-option {
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-panel);
+}
+.system-builder__entry-option legend {
+  max-inline-size: 100%;
+  padding-inline: var(--space-xs);
+  color: var(--color-text-primary);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.system-builder__entry-option > p {
+  min-block-size: 2.5em;
+  margin: 0 0 var(--space-sm);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+.system-builder__entry-option-controls {
+  display: grid;
+  align-content: start;
+  gap: var(--space-sm);
+}
+.system-builder__entry-option-controls > button {
+  inline-size: 100%;
+  justify-content: center;
+}
 .system-builder__status {
   align-items: center;
   color: var(--color-text-muted);
@@ -1016,6 +1051,7 @@
   font-size: 0.8125rem;
 }
 @media (max-width: 1100px) {
+  .system-builder__entry-options,
   .system-builder__workspace {
     grid-template-columns: 1fr;
   }

@@ -188,6 +188,43 @@ describe("desktop preload exposedApi bridge", () => {
     });
   });
 
+  it("keeps Foundation upgrade preview and confirmation on distinct IPC channels", async () => {
+    const responses = [
+      createIpcSuccessResponse(
+        DESKTOP_SYSTEM_BUILDER_CHANNELS.previewFoundationUpgrade.response,
+        { eligible: true },
+      ),
+      createIpcSuccessResponse(
+        DESKTOP_SYSTEM_BUILDER_CHANNELS.upgradeFoundation.response,
+        { revisionId: "system-1.r2" },
+      ),
+    ];
+    const invoke = testDouble
+      .fn<IpcRendererInvokePort["invoke"]>()
+      .mockImplementation(async () => responses.shift());
+    const api = createDesktopPreloadApi({ ipcRenderer: { invoke } });
+    const base = {
+      workspaceId: "workspace-a",
+      systemId: "system-1",
+      expectedRecordRevision: 1,
+    };
+
+    await api.previewSystemBuilderFoundationUpgrade(base);
+    await api.upgradeSystemBuilderFoundation({
+      ...base,
+      sourceRevisionId: "system-1.r1",
+    });
+
+    expect(invoke.mock.calls.map((call) => call[0])).toEqual([
+      DESKTOP_SYSTEM_BUILDER_CHANNELS.previewFoundationUpgrade.request.value,
+      DESKTOP_SYSTEM_BUILDER_CHANNELS.upgradeFoundation.request.value,
+    ]);
+    expect(invoke.mock.calls[0]?.[1]).toMatchObject({ payload: base });
+    expect(invoke.mock.calls[1]?.[1]).toMatchObject({
+      payload: { ...base, sourceRevisionId: "system-1.r1" },
+    });
+  });
+
   it("maps System Builder templates and release-bound data operations to dedicated IPC channels", async () => {
     const responses = [
       createIpcSuccessResponse(

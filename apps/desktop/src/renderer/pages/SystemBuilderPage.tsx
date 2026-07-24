@@ -44,6 +44,7 @@ export function SystemBuilderPage({
   );
   const [activeTabId, setActiveTabId] = useState("compose");
   const [composeSystemId, setComposeSystemId] = useState<string>();
+  const [activeSystemsRevision, setActiveSystemsRevision] = useState(0);
   return (
     <section className="ui-stack ui-stack--sm" aria-labelledby="systems-title">
       <header className="ui-stack ui-stack--sm">
@@ -69,6 +70,9 @@ export function SystemBuilderPage({
                   setComposeSystemId(systemId);
                   setActiveTabId("compose");
                 }}
+                onActiveSystemsChanged={() =>
+                  setActiveSystemsRevision((current) => current + 1)
+                }
               />
             ),
           },
@@ -81,6 +85,7 @@ export function SystemBuilderPage({
                 workspaceId={workspaceId}
                 client={client}
                 initialSystemId={composeSystemId}
+                activeSystemsRevision={activeSystemsRevision}
                 onBuildAndTest={(systemId) => {
                   setComposeSystemId(systemId);
                   setActiveTabId("build-release");

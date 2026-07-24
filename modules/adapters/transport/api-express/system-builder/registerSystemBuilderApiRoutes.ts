@@ -14,6 +14,8 @@ import type {
   RestoreSystemBuilderSystemUseCase,
   SaveSystemBuilderRevisionUseCase,
   PreviewSystemBuilderLayoutChangeUseCase,
+  PreviewSystemBuilderFoundationUpgradeUseCase,
+  UpgradeSystemBuilderFoundationUseCase,
 } from "../../../../application/use-cases/system-builder";
 import {
   API_SYSTEM_BUILDER_OPERATIONS,
@@ -30,6 +32,8 @@ import type {
   CreateSystemBuilderFromTemplateCommand,
   ListSystemBuilderManagementQuery,
   PreviewSystemBuilderLayoutChangeCommand,
+  PreviewSystemBuilderFoundationUpgradeCommand,
+  UpgradeSystemBuilderFoundationCommand,
 } from "../../../../contracts/system-builder";
 import {
   normalizeSystemBuilderRevisionId,
@@ -82,6 +86,11 @@ export interface RegisterSystemBuilderApiRoutesDependencies {
   listRevisions: Pick<ListSystemBuilderRevisionsUseCase, "execute">;
   listComposerAssets: Pick<ListSystemBuilderComposerAssetsUseCase, "execute">;
   previewLayoutChange: Pick<PreviewSystemBuilderLayoutChangeUseCase, "execute">;
+  previewFoundationUpgrade: Pick<
+    PreviewSystemBuilderFoundationUpgradeUseCase,
+    "execute"
+  >;
+  upgradeFoundation: Pick<UpgradeSystemBuilderFoundationUseCase, "execute">;
 }
 
 export function registerSystemBuilderApiRoutes(
@@ -186,6 +195,24 @@ export function registerSystemBuilderApiRoutes(
       "previewLayoutChange",
       d.previewLayoutChange,
       parsePreviewLayoutChange,
+    ),
+  );
+  d.app.post("/api/systems/foundation-upgrade/preview", async (req, res) =>
+    command(
+      req,
+      res,
+      "previewFoundationUpgrade",
+      d.previewFoundationUpgrade,
+      parsePreviewFoundationUpgrade,
+    ),
+  );
+  d.app.post("/api/systems/foundation-upgrade", async (req, res) =>
+    command(
+      req,
+      res,
+      "upgradeFoundation",
+      d.upgradeFoundation,
+      parseFoundationUpgrade,
     ),
   );
 }
@@ -369,6 +396,31 @@ function parsePreviewLayoutChange(
     systemId: normalizeSystemBuilderSystemId(required(body.systemId)),
     actorId,
   } as unknown as PreviewSystemBuilderLayoutChangeCommand;
+}
+function parsePreviewFoundationUpgrade(
+  body: Record<string, unknown>,
+  actorId: string,
+): PreviewSystemBuilderFoundationUpgradeCommand {
+  return {
+    ...body,
+    workspaceId: createWorkspaceId(required(body.workspaceId)),
+    systemId: normalizeSystemBuilderSystemId(required(body.systemId)),
+    actorId,
+  } as unknown as PreviewSystemBuilderFoundationUpgradeCommand;
+}
+function parseFoundationUpgrade(
+  body: Record<string, unknown>,
+  actorId: string,
+): UpgradeSystemBuilderFoundationCommand {
+  return {
+    ...body,
+    workspaceId: createWorkspaceId(required(body.workspaceId)),
+    systemId: normalizeSystemBuilderSystemId(required(body.systemId)),
+    sourceRevisionId: normalizeSystemBuilderRevisionId(
+      required(body.sourceRevisionId),
+    ),
+    actorId,
+  } as unknown as UpgradeSystemBuilderFoundationCommand;
 }
 function result(
   res: ResponseLike,

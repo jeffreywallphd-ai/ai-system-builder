@@ -55,6 +55,7 @@ describe("SystemComposerStructureEditor interactions", () => {
       "start-content",
     );
     const card = composerAsset("builtin.container.card", ["body"]);
+    const emptyState = composerAsset("builtin.state.empty-state", []);
     const policy = {
       ...composerAsset("builtin.security.authorization-policy", []),
       assetType: "policy" as const,
@@ -67,17 +68,23 @@ describe("SystemComposerStructureEditor interactions", () => {
             instance("instance.root", "builtin.system.system", "System root"),
             instance("instance.shell", shell.definitionId, "Application shell"),
             instance("instance.card", card.definitionId, "Unassigned card"),
+            instance(
+              "instance.empty-state",
+              emptyState.definitionId,
+              "Empty state",
+            ),
             instance("instance.policy", policy.definitionId, "Access policy"),
           ],
           placements: [
             placement("instance.root", "application-shell", "instance.shell"),
+            placement("instance.shell", "states", "instance.empty-state"),
           ],
           bindings: [],
         }}
         rootInstanceRefs={[
           { kind: "asset-instance", id: normalizeAssetId("instance.root") },
         ]}
-        catalog={[system, shell, card, policy]}
+        catalog={[system, shell, card, emptyState, policy]}
         compatibleAssets={[card]}
         layoutOptions={[shell]}
         selectedLayoutDefinitionId={shell.definitionId}
@@ -99,10 +106,19 @@ describe("SystemComposerStructureEditor interactions", () => {
       />,
     );
 
+    expect(
+      container!.querySelector('[aria-label="Drag builtin.container.card"]'),
+    ).toBeNull();
+    expect(container!.textContent).not.toContain("Theme controls");
+    expect(
+      container!.querySelectorAll<HTMLButtonElement>('[role="treeitem"]'),
+    ).toHaveLength(0);
+    await click(button("Layers"));
+
     const treeItems = Array.from(
       container!.querySelectorAll<HTMLButtonElement>('[role="treeitem"]'),
     );
-    expect(treeItems).toHaveLength(2);
+    expect(treeItems).toHaveLength(3);
     expect(treeItems[1]?.getAttribute("aria-selected")).toBe("true");
     expect(container!.textContent).toContain("System root");
     expect(container!.textContent).toContain("Application shell");
@@ -116,7 +132,7 @@ describe("SystemComposerStructureEditor interactions", () => {
     await fire(treeItems[0]!, "keydown", { key: "ArrowRight" });
     expect(
       container!.querySelectorAll<HTMLButtonElement>('[role="treeitem"]'),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
 
     expect(
       Array.from(
@@ -148,7 +164,30 @@ describe("SystemComposerStructureEditor interactions", () => {
     expect(
       container!.querySelector("#system-composer-styling-panel")?.textContent,
     ).toContain("Theme controls");
-    await click(button("Layers & Structure"));
+    const sidebarTabList = container!.querySelector<HTMLElement>(
+      ".system-composer__sidebar-tabs",
+    );
+    expect(sidebarTabList?.classList.contains("ui-tabbed-panel__tablist")).toBe(
+      true,
+    );
+    expect(
+      Array.from(
+        sidebarTabList!.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+      ).every((tab) => tab.classList.contains("ui-tabbed-panel__tab")),
+    ).toBe(true);
+    expect(
+      Array.from(
+        sidebarTabList!.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+      ).map((tab) => tab.textContent?.trim()),
+    ).toEqual(["Properties", "Styling", "Layers"]);
+    const sidebarHeader = container!.querySelector<HTMLElement>(
+      ".system-composer__sidebar-header",
+    );
+    expect(
+      sidebarTabList!.compareDocumentPosition(sidebarHeader!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+    await click(button("Layers"));
     expect(
       container!
         .querySelector("#system-composer-properties-panel")
@@ -168,6 +207,9 @@ describe("SystemComposerStructureEditor interactions", () => {
       "button[aria-label='Collapse Composer details sidebar']",
     );
     expect(collapseDetails).not.toBeNull();
+    expect(collapseDetails?.closest("header")?.textContent).toContain(
+      "Configure Application shell",
+    );
     await click(collapseDetails!);
     expect(
       container!
@@ -243,6 +285,13 @@ describe("SystemComposerStructureEditor interactions", () => {
       ),
     ).toEqual(["top-bar", "start-sidebar", "content", "states", "footer"]);
     expect(
+      canvas.querySelector<HTMLElement>(
+        '[data-instance-id="instance.shell"] > .system-composer__slots',
+      )?.style.gridTemplateRows,
+    ).toBe(
+      "minmax(7rem, max-content) minmax(14rem, max-content) minmax(14rem, max-content) minmax(7rem, max-content)",
+    );
+    expect(
       canvas.querySelector('[data-slot-id="application-shell"]'),
     ).toBeNull();
     const statesRegion = canvas.querySelector<HTMLElement>(
@@ -253,12 +302,21 @@ describe("SystemComposerStructureEditor interactions", () => {
     )!;
     expect(statesRegion.getAttribute("data-collapsed")).toBe("true");
     expect(statesContent.hidden).toBe(true);
+    expect(
+      statesRegion.querySelector('[data-instance-id="instance.empty-state"]'),
+    ).toBeNull();
     await click(ariaButton("Expand states region"));
     expect(statesRegion.getAttribute("data-collapsed")).toBe("false");
     expect(statesContent.hidden).toBe(false);
+    expect(
+      statesRegion.querySelector('[data-instance-id="instance.empty-state"]'),
+    ).not.toBeNull();
     await click(ariaButton("Collapse states region"));
     expect(statesRegion.getAttribute("data-collapsed")).toBe("true");
     expect(statesContent.hidden).toBe(true);
+    expect(
+      statesRegion.querySelector('[data-instance-id="instance.empty-state"]'),
+    ).toBeNull();
 
     await click(ariaButton("Expand Assets"));
     const paletteDragHandle = container!.querySelector<HTMLButtonElement>(
@@ -289,7 +347,7 @@ describe("SystemComposerStructureEditor interactions", () => {
     expect(onRemove).not.toHaveBeenCalled();
   });
 
-  it("renders every nested reference container and its draggable child regions", () => {
+  it("renders every nested reference container and its draggable child regions", async () => {
     const system = {
       ...composerAsset("builtin.system.system", ["application-shell"]),
       assetType: "system" as const,
@@ -342,17 +400,29 @@ describe("SystemComposerStructureEditor interactions", () => {
           instances: [
             instance("instance.root", system.definitionId, "System root"),
             instance("instance.shell", shell.definitionId, "Application shell"),
-            instance("instance.page", page.definitionId, "Assistant page"),
+            {
+              ...instance("instance.page", page.definitionId, "Assistant page"),
+              definitionRef: {
+                ...page.definitionRef,
+                version: "1.0.0",
+              },
+            },
             instance(
               "instance.assistant",
               assistant.definitionId,
               "Basic assistant system",
             ),
-            instance(
-              "instance.chat",
-              chatShell.definitionId,
-              "Conversation shell",
-            ),
+            {
+              ...instance(
+                "instance.chat",
+                chatShell.definitionId,
+                "Conversation shell",
+              ),
+              definitionRef: {
+                ...chatShell.definitionRef,
+                version: "1.0.0",
+              },
+            },
             instance("instance.history", history.definitionId, "History"),
             instance("instance.composer", composer.definitionId, "Composer"),
             instance("instance.input", input.definitionId, "Message input"),
@@ -398,23 +468,34 @@ describe("SystemComposerStructureEditor interactions", () => {
     const canvas = container!.querySelector<HTMLElement>(
       ".system-composer__panel--canvas",
     )!;
-    expect(
-      Array.from(
-        canvas.querySelectorAll<HTMLElement>("[data-instance-id]"),
-      ).map((node) => node.dataset.instanceId),
-    ).toEqual([
-      "instance.shell",
-      "instance.page",
-      "instance.assistant",
-      "instance.chat",
-      "instance.history",
-      "instance.composer",
-      "instance.input",
-      "instance.send",
-    ]);
+    const canvasInstanceIds = Array.from(
+      canvas.querySelectorAll<HTMLElement>("[data-instance-id]"),
+    ).map((node) => node.dataset.instanceId);
+    expect(canvasInstanceIds).toHaveLength(8);
+    expect(canvasInstanceIds).toEqual(
+      expect.arrayContaining([
+        "instance.shell",
+        "instance.page",
+        "instance.assistant",
+        "instance.chat",
+        "instance.history",
+        "instance.composer",
+        "instance.input",
+        "instance.send",
+      ]),
+    );
     const assistantNode = canvas.querySelector<HTMLElement>(
       '[data-instance-id="instance.assistant"]',
     );
+    const legacyPageRegion = canvas.querySelector<HTMLElement>(
+      '[data-instance-id="instance.page"] [data-slot-id="content"]',
+    );
+    expect(legacyPageRegion?.dataset.structuralOnly).toBe("true");
+    expect(
+      legacyPageRegion?.querySelector<HTMLButtonElement>(
+        'button[aria-label="Select Content region"]',
+      )?.disabled,
+    ).toBe(true);
     expect(
       assistantNode?.querySelector(
         '[data-slot-id="interface"] [data-instance-id="instance.chat"] [data-slot-id="composer"] [data-instance-id="instance.composer"] [data-slot-id="input"] [data-instance-id="instance.input"]',
@@ -425,6 +506,20 @@ describe("SystemComposerStructureEditor interactions", () => {
         '[data-instance-id="instance.composer"] [data-slot-id="actions"] [data-instance-id="instance.send"]',
       ),
     ).not.toBeNull();
+    const legacyChatRegions = Array.from(
+      canvas.querySelectorAll<HTMLElement>(
+        '[data-instance-id="instance.chat"] > .system-composer__slots > [data-structural-only="true"]',
+      ),
+    );
+    expect(
+      legacyChatRegions
+        .map((region) => region.dataset.slotId)
+        .sort((left, right) => String(left).localeCompare(String(right))),
+    ).toEqual(["composer", "history"]);
+    expect(
+      legacyChatRegions.every((region) => region.style.gridArea === ""),
+    ).toBe(true);
+    await click(ariaButton("Expand Assets"));
     expect(
       container!.querySelector(
         '[aria-label="Drag conversation.basic-assistant-system"]',
@@ -518,7 +613,7 @@ describe("SystemComposerStructureEditor interactions", () => {
     expect(onSelect).toHaveBeenCalledWith(sidebar);
   });
 
-  it("keeps visual assets discoverable before a canvas region is selected", () => {
+  it("keeps visual assets discoverable before a canvas region is selected", async () => {
     const system = composerAsset("builtin.system.system", [
       "application-shell",
     ]);
@@ -562,6 +657,7 @@ describe("SystemComposerStructureEditor interactions", () => {
       />,
     );
 
+    await click(ariaButton("Expand Assets"));
     expect(
       container!.querySelector('[aria-label="Drag builtin.container.card"]'),
     ).not.toBeNull();

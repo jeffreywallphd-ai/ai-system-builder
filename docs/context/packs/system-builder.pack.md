@@ -54,57 +54,55 @@
 - Validation resolves exact definitions and enforces root identity, slot
   declaration and compatibility, cardinality, placement coverage, bounded
   depth, and acyclic containment before a revision can be treated as valid.
-- The workspace-scoped composer catalog supplies exact definitions, schemas,
-  defaults, ports, slots, availability, abstract geometry for every
-  slot-bearing container, and
-  application-owned compatibility. Desktop and thin client share the predefined
-  layout icons in the flat three-column Design workspace: a searchable Asset Palette,
-  a wide Canvas showing all fixed regions of the active application layout, and one tabbed details sidebar containing
-  schema-driven Design/Data/Events Properties, root-scoped Styling, and
-  collapsible Layers and Structure. Styling uses native color pickers and
-  allowlisted typography, density, button, form, and surface selects; semantic
-  style fields are unavailable through Advanced JSON. Per-asset style roles
-  remain bounded selects in Properties. The Asset Palette has collapsed, normal, and maximized sizes; its
-  normal size presents layout choices and asset tiles in one column, while its
-  maximized size borrows Canvas width and uses multi-column galleries without
-  changing the details-sidebar width. Layout, Assets, Unassigned visual assets,
-  and System resources and logic are independent Palette disclosures that start
-  collapsed. Canvas States regions also start collapsed without removing their
-  drop surfaces. Layers and Structure contains only the
-  placed hierarchy. These panel and disclosure states do not change the
-  canonical draft. Square visual asset tiles and Canvas regions are
-  the pointer, touch, and keyboard drag surfaces; the legacy Add-here, move-order,
-  reparent, and wrapper forms are not exposed. All drag paths converge on bounded
-  draft commands, and drag/panel state is not persisted. Foundation layout
-  containers expose semantic labels but not editable
-  dimensions, regions, responsive rules, raw JSON, CSS, or grid coordinates.
-  Ordinary containers retain bounded schema-owned layout controls; their
-  direction, spacing, padding, alignment, columns, wrap, and responsive fields
-  are grouped under Layout, and every declared child region remains a nested
-  Canvas drop surface. Standalone catalog fixtures are never nested into Canvas
-  containers: containers expose structure only, while leaf nodes contribute one
-  composition-aware semantic surface without repeating descendant UI.
-- Layout selections use one application preview operation over HTTP/IPC and
-  immediately update the local undoable Canvas draft. Expected-revision checks
-  and canonical source order produce a preserved/moved/unassigned result without
-  persistence. Opening a closed legacy-flat UI reference system automatically
-  requests the Minimal layout through that same preview operation; an explicit
-  selection can choose another layout. Both paths materialize the protected
-  current Foundation root and fixed-region shell in memory while preserving all
-  historical assets and bindings. Closed reference
-  templates use explicit visual placement profiles and may add bounded current
-  Foundation containers/actions; dependency bindings are never inferred to be
-  containment. Exact composer-catalog asset types split unmatched instances:
-  pages, UI components, features, and trusted declarative Foundation
-  system/subsystem facades with child slots appear under Unassigned visual
-  assets and remain reattachable by drag, while policies, models, workflows, data contracts,
-  unknown definitions, and other nonvisual assets appear separately under System
-  resources and logic without Canvas drag controls. Save alone creates the next
-  immutable revision.
+- The workspace Composer catalog supplies exact definitions, schemas, defaults,
+  ports, slots, availability, container geometry, and compatibility. Both hosts
+  share a three-column Design workspace: searchable Asset Palette, wide Canvas,
+  and one sidebar with fitted top tabs for Properties, Styling, and Layers;
+  Configure identity and Collapse follow below the tabs. Styling uses
+  color pickers and allowlisted typography, density, button, form, and surface
+  selects; semantic styles are unavailable through Advanced JSON, and per-asset
+  roles remain bounded Properties selects. The Palette supports collapsed,
+  one-column normal, and wider multi-column maximized views. Its Layout, Assets,
+  Unassigned visual assets, and System resources and logic disclosures start
+  collapsed. Canvas States also start collapsed while retaining their drop
+  surfaces. Collapsed bodies do not mount hidden drag or preview descendants;
+  only the active details body mounts and rebuilds from the canonical draft.
+  Layers lists only placed hierarchy; presentation state is not persisted.
+  Square tiles and Canvas regions are pointer, touch, and keyboard drag surfaces;
+  legacy Add-here, move-order, reparent, and wrapper forms are absent. Foundation
+  layouts expose labels but no editable dimensions, regions, responsive rules,
+  raw JSON, CSS, or coordinates. Ordinary containers retain bounded Layout
+  fields and nested drop regions. Containers expose structure; leaf nodes render
+  one composition-aware surface without repeating descendant UI. Fixed rows
+  expand for descendants and use the outer Canvas as their scroll boundary.
+- Layout selection uses one HTTP/IPC preview operation and immediately updates
+  the undoable draft. Expected-revision checks and canonical order report
+  preserved, moved, and unassigned assets without persistence. An already-current
+  legacy-flat UI reference may preview Minimal; v1/v2 references require the
+  explicit Foundation upgrade first. Layout application materializes the current
+  root and shell in memory while preserving historical assets and bindings.
+  Reference profiles may add bounded current containers/actions, but bindings
+  never imply containment. Exact catalog types place unmatched pages,
+  components, features, and trusted slot-bearing facades under draggable
+  Unassigned visual assets; policies, models, workflows, contracts, unknowns,
+  and other nonvisual assets remain under nondraggable System resources and
+  logic. Only Save creates the next immutable revision.
+- Canonical saved placement edges remain visible when a historical container's
+  exact catalog definition is unavailable. Canvas exposes a bounded read-only
+  structural region for those occupied edges so traversal does not stop, but it
+  does not infer compatibility, allow drops, change exact versions, or persist
+  synthesized slots. Without exact geometry, regions use source-order auto-flow.
 - System Builder Composer may project the complete exact current built-in
   Foundation catalog for a workspace with an older active trusted Foundation
   generation. This Composer-only seam supplies nested slots and qualified
   previews without widening the workspace Asset Library effective view.
+- Catalog bootstrap uses the complete workspace catalog as the primary read and
+  falls back to a layout-only query only when it contains no application
+  layouts. Mounted-workspace compatibility results are cached by exact parent
+  definition version and region; configuration edits do not refetch them.
+- Foundation v1/v2-to-v3 upgrade is explicit and two-step. Preview is read-only;
+  confirmation requires the exact source revision, rejects lossy or invalid
+  mappings, and creates a new immutable v3 revision while preserving source history.
 - The shared Compose UI preview recursively follows current in-memory placements
   and canonical region order, includes unsaved configuration, exposes unplaced
   visual, nonvisual resource, and unsupported nodes truthfully, and offers
@@ -123,12 +121,16 @@
   Chrome API paths. Treat its sanitized automation as exact-environment
   regression evidence, not as physical-touch, screen-reader, cross-platform,
   manual-security, or production-performance qualification.
-- Systems Manage uses one workspace-scoped application projection for drafts,
-  published systems, and archived systems across API and IPC. The shared desktop
-  and thin-client surface supports search/filter/sort/paging, exact-revision
-  preview, Compose handoff, canonical duplication, archive-backed deletion, and
-  restore. Archive retains immutable revisions and releases and is presented as
-  recoverable rather than as destructive deletion.
+- Systems Manage uses one workspace-scoped application projection for draft,
+  published, and archived systems across API and IPC. Its shared host surface
+  supports search/filter/sort/paging, exact-revision preview, Compose handoff,
+  duplication, archive-backed deletion, and restore. Archive is recoverable and
+  retains immutable history. These actions are not duplicated in Compose, whose
+  active-only picker refreshes after Manage lifecycle changes.
+- Compose shows edit-existing, create-new, and create-from-template forms without
+  eager system or layout loads. Edit stages then loads; new uses Minimal; both
+  creation flows require names. Loaded actions share a toolbar below the forms,
+  and the catalog is requested only for an edit, creation, or Manage handoff.
 - Deterministic attempts and immutable releases live in the separate
   `system-build` contract, application, persistence, storage, API/IPC, and
   shared Build & Release workflow families. Approval re-verifies every artifact

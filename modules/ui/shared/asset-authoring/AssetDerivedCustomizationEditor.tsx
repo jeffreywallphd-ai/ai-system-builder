@@ -715,7 +715,7 @@ export function AssetDerivedCustomizationEditor({
                   </label>
                   <button
                     type="button"
-                    className="ui-button ui-button--secondary"
+                    className="ui-button ui-button--outline"
                     onClick={addResource}
                   >
                     <ApplicationIcon name="add" />
@@ -754,7 +754,7 @@ export function AssetDerivedCustomizationEditor({
                   </button>
                   <button
                     type="button"
-                    className="ui-button--secondary"
+                    className="ui-button ui-button--outline"
                     disabled={
                       busy ||
                       !current ||
@@ -776,7 +776,7 @@ export function AssetDerivedCustomizationEditor({
                   </button>
                   <button
                     type="button"
-                    className="ui-button--secondary"
+                    className="ui-button ui-button--outline"
                     disabled={
                       busy ||
                       !current ||
@@ -857,7 +857,7 @@ export function AssetDerivedCustomizationEditor({
                     item.status !== "abandoned" ? (
                       <button
                         type="button"
-                        className="ui-button--secondary"
+                        className="ui-button ui-button--outline"
                         disabled={busy}
                         onClick={() => setPendingAbandon(item)}
                       >
@@ -893,7 +893,7 @@ export function AssetDerivedCustomizationEditor({
         <div className="ui-workflow__actions">
           <button
             type="button"
-            className="ui-button--secondary"
+            className="ui-button ui-button--outline"
             disabled={busy}
             onClick={() => setPendingTarget(undefined)}
           >
@@ -926,7 +926,7 @@ export function AssetDerivedCustomizationEditor({
         <div className="ui-workflow__actions">
           <button
             type="button"
-            className="ui-button--secondary"
+            className="ui-button ui-button--outline"
             disabled={busy}
             onClick={() => setPendingAbandon(undefined)}
           >

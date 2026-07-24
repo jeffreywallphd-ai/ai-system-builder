@@ -56,6 +56,13 @@ references and backing resources are immutable and must continue to resolve.
 - Persistence, API, Electron IPC/preload, desktop, and thin-client clients carry
   the same structure and placement contracts. The renderer never owns a second
   hierarchy.
+- A renderer must still traverse canonical placement edges when a historical
+  container's exact definition is unavailable. It may project the occupied
+  placement slot IDs as bounded read-only labels, but it must not infer accepted
+  children, expose those labels as drop targets, mutate exact versions, or
+  persist renderer-derived slot definitions. When exact layout geometry is not
+  available, the projected regions remain in source-order auto-flow rather than
+  receiving named grid areas that could overlap.
 
 ## Consequences
 

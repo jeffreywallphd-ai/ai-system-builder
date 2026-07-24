@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
-import type {
-  AssetBinding,
-  AssetConfigurationValues,
-  AssetInstance,
-  AssetPlacement,
-  AssetReference,
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  normalizeAssetId,
+  type AssetBinding,
+  type AssetConfigurationValues,
+  type AssetInstance,
+  type AssetPlacement,
+  type AssetReference,
 } from "../../../contracts/asset";
 import type {
   SystemBuilderRecord,
@@ -18,18 +19,21 @@ import type {
   SystemBuilderManagementPage,
   PreviewSystemBuilderLayoutChangeCommand,
   SystemBuilderLayoutChangePreview,
+  PreviewSystemBuilderFoundationUpgradeCommand,
+  UpgradeSystemBuilderFoundationCommand,
+  SystemBuilderFoundationUpgradePreview,
 } from "../../../contracts/system-builder";
 import {
+  SYSTEM_BUILDER_FOUNDATION_UPGRADE_SOURCE_VERSIONS,
   systemBuilderFailure,
   systemBuilderSuccess,
 } from "../../../contracts/system-builder";
 import { ApplicationIcon } from "../components/ApplicationIcon";
-import { EmptyState } from "../components/EmptyState";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import { ModalDialog } from "../components/ModalDialog";
 import { SystemCompositionPreview } from "./SystemCompositionPreview";
 import {
   SystemComposerStructureEditor,
-  SystemLayoutGallery,
   type SystemComposerTargetSlot,
 } from "./SystemComposerStructureEditor";
 import { SystemComposerInspector } from "./SystemComposerInspector";
@@ -118,17 +122,31 @@ export interface SystemBuilderClient {
       "actorId" | "workspaceId" | "systemId"
     > & { readonly workspaceId: string; readonly systemId: string },
   ): Promise<SystemBuilderResult<SystemBuilderLayoutChangePreview>>;
+  previewFoundationUpgrade(
+    input: Omit<
+      PreviewSystemBuilderFoundationUpgradeCommand,
+      "actorId" | "workspaceId" | "systemId"
+    > & { readonly workspaceId: string; readonly systemId: string },
+  ): Promise<SystemBuilderResult<SystemBuilderFoundationUpgradePreview>>;
+  upgradeFoundation(
+    input: Omit<
+      UpgradeSystemBuilderFoundationCommand,
+      "actorId" | "workspaceId" | "systemId"
+    > & { readonly workspaceId: string; readonly systemId: string },
+  ): Promise<SystemBuilderResult<SystemBuilderRevision>>;
 }
 
 export function SystemBuilderWorkspace({
   workspaceId,
   client,
   initialSystemId,
+  activeSystemsRevision = 0,
   onBuildAndTest,
 }: {
   readonly workspaceId: string;
   readonly client: SystemBuilderClient;
   readonly initialSystemId?: string;
+  readonly activeSystemsRevision?: number;
   readonly onBuildAndTest?: (systemId: string) => void;
 }) {
   const [systems, setSystems] = useState<readonly SystemBuilderRecord[]>([]);
@@ -144,11 +162,21 @@ export function SystemBuilderWorkspace({
   const [compatibleAssets, setCompatibleAssets] = useState<
     readonly SystemBuilderComposerAsset[]
   >([]);
+  const compatibleAssetCache = useRef(
+    new Map<string, readonly SystemBuilderComposerAsset[]>(),
+  );
+  const catalogRequestInFlight = useRef(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
+  const [compatibilityLoading, setCompatibilityLoading] = useState(false);
   const [catalogError, setCatalogError] = useState<string>();
   const [selectedLayoutDefinitionId, setSelectedLayoutDefinitionId] =
     useState<string>();
+  const [existingSystemId, setExistingSystemId] = useState("");
   const [selectedSystemId, setSelectedSystemId] = useState<string>();
+  const [catalogLoadRequest, setCatalogLoadRequest] = useState<{
+    readonly workspaceId: string;
+    readonly attempt: number;
+  }>();
   const [revision, setRevision] = useState<SystemBuilderRevision>();
   const [instances, setInstances] = useState<readonly AssetInstance[]>([]);
   const [bindings, setBindings] = useState<readonly AssetBinding[]>([]);
@@ -166,17 +194,25 @@ export function SystemBuilderWorkspace({
   const [composerMode, setComposerMode] = useState<"design" | "connections">(
     "design",
   );
-  const [name, setName] = useState("");
+  const [newSystemName, setNewSystemName] = useState("");
+  const [referenceSystemName, setReferenceSystemName] = useState("");
   const [revisions, setRevisions] = useState<readonly SystemBuilderRevision[]>(
     [],
   );
   const [busy, setBusy] = useState(false);
+  const [revisionLoading, setRevisionLoading] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [foundationUpgradeOpen, setFoundationUpgradeOpen] = useState(false);
+  const [foundationUpgradePreview, setFoundationUpgradePreview] =
+    useState<SystemBuilderFoundationUpgradePreview>();
   const selectedSystem = systems.find(
     (system) => String(system.systemId) === selectedSystemId,
+  );
+  const existingSystemIsLoaded = Boolean(
+    selectedSystem && revision && existingSystemId === selectedSystemId,
   );
   const selectedInstance = instances.find(
     (instance) => String(instance.instanceId) === selectedInstanceId,
@@ -185,6 +221,9 @@ export function SystemBuilderWorkspace({
     (definition) =>
       definition.definitionId === String(selectedInstance?.definitionRef.id) &&
       definition.version === selectedInstance?.definitionRef.version,
+  );
+  const canUpgradeFoundation = Boolean(
+    revision && usesUpgradeableFoundationVersion(revision),
   );
   const stylingRootInstanceId = String(
     revision?.composition.rootInstanceRefs[0]?.id ?? "",
@@ -197,6 +236,28 @@ export function SystemBuilderWorkspace({
       definition.definitionId ===
         String(stylingRootInstance?.definitionRef.id) &&
       definition.version === stylingRootInstance?.definitionRef.version,
+  );
+  const compatibilityParent = targetSlot
+    ? instances.find(
+        (instance) =>
+          String(instance.instanceId) === targetSlot.parentInstanceId,
+      )
+    : undefined;
+  const compatibilityDefinitionId = String(
+    compatibilityParent?.definitionRef.id ?? "",
+  );
+  const compatibilityDefinitionVersion =
+    compatibilityParent?.definitionRef.version ?? "";
+  const compatibilityDefinitionRef = useMemo<AssetReference | undefined>(
+    () =>
+      compatibilityDefinitionId && compatibilityDefinitionVersion
+        ? {
+            kind: "asset-definition-version",
+            id: normalizeAssetId(compatibilityDefinitionId),
+            version: compatibilityDefinitionVersion,
+          }
+        : undefined,
+    [compatibilityDefinitionId, compatibilityDefinitionVersion],
   );
   const draft = useMemo<SystemComposerDraft>(
     () => ({ instances, placements, bindings, structure }),
@@ -219,41 +280,37 @@ export function SystemBuilderWorkspace({
     [composerCatalog, draft, revision?.composition.rootInstanceRefs],
   );
 
+  function requestComposerCatalog() {
+    if (catalogRequestInFlight.current || composerCatalog.length > 0) return;
+    catalogRequestInFlight.current = true;
+    setCatalogLoadRequest((current) => ({
+      workspaceId,
+      attempt: current?.workspaceId === workspaceId ? current.attempt + 1 : 1,
+    }));
+  }
+
   useEffect(() => {
     let active = true;
     setError(undefined);
     setRevision(undefined);
     setStructure(undefined);
+    setExistingSystemId("");
     setSelectedSystemId(undefined);
+    setCatalogLoadRequest(undefined);
+    setComposerCatalog([]);
+    setSelectedLayoutDefinitionId(undefined);
+    setFoundationUpgradeOpen(false);
+    setFoundationUpgradePreview(undefined);
     setDirty(false);
-    setCatalogLoading(true);
+    compatibleAssetCache.current.clear();
+    catalogRequestInFlight.current = false;
+    setCompatibleAssets([]);
+    setCompatibilityLoading(false);
+    setCatalogLoading(false);
     setCatalogError(undefined);
-    void Promise.all([
-      client.list({ workspaceId, includeArchived: true }),
-      loadComposerCatalog(client, workspaceId),
-      client.listTemplates(),
-    ]).then(([systemResult, catalogResult, templateResult]) => {
+    setSystems([]);
+    void client.listTemplates().then((templateResult) => {
       if (!active) return;
-      if (systemResult.ok) {
-        setSystems(systemResult.value);
-        setSelectedSystemId(
-          String(
-            systemResult.value.find((item) => item.status !== "archived")
-              ?.systemId ??
-              systemResult.value[0]?.systemId ??
-              "",
-          ) || undefined,
-        );
-      } else setError(systemResult.error.message);
-      if (catalogResult.ok) {
-        setComposerCatalog(catalogResult.value.items);
-        setSelectedLayoutDefinitionId(
-          (current) =>
-            current ??
-            defaultApplicationLayout(catalogResult.value.items)?.definitionId,
-        );
-      } else setCatalogError(catalogResult.error.message);
-      setCatalogLoading(false);
       if (templateResult.ok) {
         setTemplates(templateResult.value);
         setSelectedTemplateId(
@@ -267,16 +324,74 @@ export function SystemBuilderWorkspace({
   }, [client, workspaceId]);
 
   useEffect(() => {
+    let active = true;
+    void client
+      .list({ workspaceId, includeArchived: false })
+      .then((systemResult) => {
+        if (!active) return;
+        if (!systemResult.ok) {
+          setError(systemResult.error.message);
+          return;
+        }
+        const activeSystems = systemResult.value.filter(
+          (item) => item.status !== "archived",
+        );
+        const activeSystemIds = new Set(
+          activeSystems.map((item) => String(item.systemId)),
+        );
+        setSystems(activeSystems);
+        setExistingSystemId((current) =>
+          current && !activeSystemIds.has(current) ? "" : current,
+        );
+        setSelectedSystemId((current) =>
+          current && !activeSystemIds.has(current) ? undefined : current,
+        );
+      });
+    return () => {
+      active = false;
+    };
+  }, [activeSystemsRevision, client, workspaceId]);
+
+  useEffect(() => {
+    if (catalogLoadRequest?.workspaceId !== workspaceId) return;
+    let active = true;
+    setCatalogLoading(true);
+    setCatalogError(undefined);
+    void loadComposerCatalog(client, workspaceId).then((catalogResult) => {
+      if (!active) return;
+      if (catalogResult.ok) {
+        setComposerCatalog(catalogResult.value.items);
+        setSelectedLayoutDefinitionId(
+          (current) =>
+            current ??
+            defaultApplicationLayout(catalogResult.value.items)?.definitionId,
+        );
+      } else setCatalogError(catalogResult.error.message);
+      catalogRequestInFlight.current = false;
+      setCatalogLoading(false);
+    });
+    return () => {
+      active = false;
+      catalogRequestInFlight.current = false;
+    };
+  }, [catalogLoadRequest, client, workspaceId]);
+
+  useEffect(() => {
     if (!initialSystemId) return;
     const requestedSystem = systems.find(
       (item) =>
         String(item.systemId) === initialSystemId && item.status !== "archived",
     );
-    if (requestedSystem) setSelectedSystemId(initialSystemId);
+    if (requestedSystem) {
+      setExistingSystemId(initialSystemId);
+      setSelectedSystemId(initialSystemId);
+      requestComposerCatalog();
+    }
   }, [initialSystemId, systems]);
 
   useEffect(() => {
     if (!selectedSystemId) {
+      setRevisionLoading(false);
       setRevision(undefined);
       setInstances([]);
       setBindings([]);
@@ -285,9 +400,18 @@ export function SystemBuilderWorkspace({
       setUndoDrafts([]);
       setRedoDrafts([]);
       setTargetSlot(undefined);
+      setFoundationUpgradeOpen(false);
+      setFoundationUpgradePreview(undefined);
       return;
     }
     let active = true;
+    setRevisionLoading(true);
+    setRevision(undefined);
+    setInstances([]);
+    setBindings([]);
+    setPlacements([]);
+    setStructure(undefined);
+    setRevisions([]);
     void Promise.all([
       client.readRevision({ workspaceId, systemId: selectedSystemId }),
       client.listRevisions({ workspaceId, systemId: selectedSystemId }),
@@ -307,6 +431,8 @@ export function SystemBuilderWorkspace({
         setUndoDrafts([]);
         setRedoDrafts([]);
         setTargetSlot(undefined);
+        setFoundationUpgradeOpen(false);
+        setFoundationUpgradePreview(undefined);
         setSelectedInstanceId(
           String(revisionResult.value.instances[0]?.instanceId ?? "") ||
             undefined,
@@ -314,6 +440,7 @@ export function SystemBuilderWorkspace({
         setDirty(false);
       } else setError(revisionResult.error.message);
       if (historyResult.ok) setRevisions(historyResult.value);
+      setRevisionLoading(false);
     });
     return () => {
       active = false;
@@ -326,6 +453,7 @@ export function SystemBuilderWorkspace({
       structure ||
       dirty ||
       busy ||
+      canUpgradeFoundation ||
       !isLegacyUiReferenceSystem(revision)
     ) {
       return;
@@ -333,7 +461,7 @@ export function SystemBuilderWorkspace({
     const layout = defaultApplicationLayout(layoutOptions);
     if (!layout) return;
     void selectLayout(layout);
-  }, [busy, dirty, layoutOptions, revision, structure]);
+  }, [busy, canUpgradeFoundation, dirty, layoutOptions, revision, structure]);
 
   useEffect(() => {
     if (!revision || composerCatalog.length === 0) return;
@@ -381,56 +509,114 @@ export function SystemBuilderWorkspace({
   useEffect(() => {
     if (!targetSlot) {
       setCompatibleAssets([]);
+      setCompatibilityLoading(false);
       return;
     }
-    const parent = instances.find(
-      (instance) => String(instance.instanceId) === targetSlot.parentInstanceId,
-    );
-    if (!parent) return;
+    if (
+      !compatibilityDefinitionRef ||
+      !compatibilityDefinitionId ||
+      !compatibilityDefinitionVersion
+    ) {
+      setCompatibleAssets([]);
+      setCompatibilityLoading(false);
+      return;
+    }
+    const cacheKey = [
+      workspaceId,
+      compatibilityDefinitionId,
+      compatibilityDefinitionVersion,
+      targetSlot.slotId,
+    ].join("|");
+    const cached = compatibleAssetCache.current.get(cacheKey);
+    if (cached) {
+      setCompatibleAssets(cached);
+      setCatalogError(undefined);
+      setCompatibilityLoading(false);
+      return;
+    }
     let active = true;
-    setCatalogLoading(true);
+    setCompatibilityLoading(true);
     setCatalogError(undefined);
     void listAllComposerAssets(client, {
       workspaceId,
-      parentDefinitionRef: parent.definitionRef,
+      parentDefinitionRef: compatibilityDefinitionRef,
       slotId: targetSlot.slotId,
       compatibleOnly: true,
     }).then((result) => {
       if (!active) return;
-      if (result.ok) setCompatibleAssets(result.value.items);
-      else setCatalogError(result.error.message);
-      setCatalogLoading(false);
+      if (result.ok) {
+        compatibleAssetCache.current.set(cacheKey, result.value.items);
+        setCompatibleAssets(result.value.items);
+      } else setCatalogError(result.error.message);
+      setCompatibilityLoading(false);
     });
     return () => {
       active = false;
     };
-  }, [client, instances, targetSlot, workspaceId]);
+  }, [
+    client,
+    compatibilityDefinitionId,
+    compatibilityDefinitionRef,
+    compatibilityDefinitionVersion,
+    targetSlot?.parentInstanceId,
+    targetSlot?.slotId,
+    workspaceId,
+  ]);
+
+  function editExistingSystem() {
+    if (!existingSystemId) return;
+    if (dirty && existingSystemId !== selectedSystemId) {
+      setError("Save or discard unsaved changes before switching systems.");
+      return;
+    }
+    setError(undefined);
+    setSelectedSystemId(existingSystemId);
+    requestComposerCatalog();
+  }
+
   async function createSystem() {
-    if (!name.trim()) {
+    if (!newSystemName.trim()) {
       setError("Enter a system name.");
       return;
     }
     setBusy(true);
     setError(undefined);
     setNotice(undefined);
-    const layout = layoutOptions.find(
-      (asset) => asset.definitionId === selectedLayoutDefinitionId,
-    );
+    let catalogItems = composerCatalog;
+    if (catalogItems.length === 0) {
+      catalogRequestInFlight.current = true;
+      setCatalogLoading(true);
+      setCatalogError(undefined);
+      const catalogResult = await loadComposerCatalog(client, workspaceId);
+      catalogRequestInFlight.current = false;
+      setCatalogLoading(false);
+      if (!catalogResult.ok) {
+        setCatalogError(catalogResult.error.message);
+        setError(catalogResult.error.message);
+        setBusy(false);
+        return;
+      }
+      catalogItems = catalogResult.value.items;
+      setComposerCatalog(catalogItems);
+    }
+    const layout = defaultApplicationLayout(catalogItems);
     if (!layout) {
-      setError("Choose an application layout before creating the system.");
+      setError("The required Minimal application layout is unavailable.");
       setBusy(false);
       return;
     }
+    setSelectedLayoutDefinitionId(layout.definitionId);
     const result = await client.create({
       workspaceId,
-      name,
+      name: newSystemName.trim(),
       profile: "interactive",
       layoutPresetRef: layout.definitionRef,
     });
     if (result.ok) {
       setSystems((current) => [result.value, ...current]);
+      setExistingSystemId(String(result.value.systemId));
       setSelectedSystemId(String(result.value.systemId));
-      setName("");
+      setNewSystemName("");
       setDirty(false);
       setNotice(
         `${layout.displayName} system created. Drag assets into its canvas regions.`,
@@ -447,18 +633,24 @@ export function SystemBuilderWorkspace({
       setError("No supported reference-system template is available.");
       return;
     }
+    if (!referenceSystemName.trim()) {
+      setError("Enter a template system name.");
+      return;
+    }
     setBusy(true);
     setError(undefined);
     setNotice(undefined);
     const result = await client.createFromTemplate({
       workspaceId,
       templateId: template.templateId,
-      ...(name.trim() ? { name: name.trim() } : {}),
+      name: referenceSystemName.trim(),
     });
     if (result.ok) {
       setSystems((current) => [result.value, ...current]);
+      requestComposerCatalog();
+      setExistingSystemId(String(result.value.systemId));
       setSelectedSystemId(String(result.value.systemId));
-      setName("");
+      setReferenceSystemName("");
       setDirty(false);
       setNotice(
         `${template.displayName} created and validated from canonical assets.`,
@@ -696,6 +888,12 @@ export function SystemBuilderWorkspace({
       setSelectedLayoutDefinitionId(layout.definitionId);
       return;
     }
+    if (canUpgradeFoundation) {
+      setError(
+        "Upgrade this historical System Foundation before selecting a layout.",
+      );
+      return;
+    }
     if (
       structure &&
       String(structure.layoutPresetRef?.id) === layout.definitionId &&
@@ -823,50 +1021,81 @@ export function SystemBuilderWorkspace({
     setBusy(false);
   }
 
-  async function changeArchiveState() {
-    if (!selectedSystem) return;
+  async function previewFoundationUpgrade() {
+    if (!revision || !selectedSystem || dirty) return;
     setBusy(true);
     setError(undefined);
-    const input = {
+    setNotice(undefined);
+    const result = await client.previewFoundationUpgrade({
       workspaceId,
       systemId: String(selectedSystem.systemId),
-      expectedRevision: selectedSystem.revision,
-    };
-    const result =
-      selectedSystem.status === "archived"
-        ? await client.restore(input)
-        : await client.archive(input);
+      expectedRecordRevision: selectedSystem.revision,
+    });
     if (result.ok) {
-      setSystems((current) =>
-        current.map((item) =>
-          String(item.systemId) === selectedSystemId ? result.value : item,
-        ),
-      );
-      setNotice(
-        result.value.status === "archived"
-          ? "System archived."
-          : "System restored.",
-      );
-    } else setError(result.error.message);
+      setFoundationUpgradePreview(result.value);
+      setFoundationUpgradeOpen(true);
+    } else {
+      setError(result.error.message);
+    }
     setBusy(false);
   }
 
-  async function cloneSystem() {
-    if (!selectedSystem) return;
-    const cloneName = `${selectedSystem.name} copy`;
+  async function confirmFoundationUpgrade() {
+    if (
+      !revision ||
+      !selectedSystem ||
+      !foundationUpgradePreview?.eligible ||
+      dirty
+    ) {
+      return;
+    }
     setBusy(true);
     setError(undefined);
-    const result = await client.clone({
+    const result = await client.upgradeFoundation({
       workspaceId,
-      sourceSystemId: String(selectedSystem.systemId),
-      name: cloneName,
+      systemId: String(selectedSystem.systemId),
+      expectedRecordRevision: selectedSystem.revision,
+      sourceRevisionId: foundationUpgradePreview.sourceRevisionId,
     });
     if (result.ok) {
-      setSystems((current) => [result.value, ...current]);
-      setSelectedSystemId(String(result.value.systemId));
+      setRevision(result.value);
+      setInstances(result.value.instances);
+      setBindings(result.value.bindings);
+      setPlacements(result.value.placements ?? []);
+      setStructure(result.value.structure);
+      setSelectedLayoutDefinitionId(
+        result.value.structure?.layoutPresetRef
+          ? String(result.value.structure.layoutPresetRef.id)
+          : undefined,
+      );
+      setSelectedInstanceId(
+        String(result.value.instances[0]?.instanceId ?? "") || undefined,
+      );
+      setUndoDrafts([]);
+      setRedoDrafts([]);
+      setRevisions((current) => [result.value, ...current]);
       setDirty(false);
-      setNotice(`Created ${cloneName}.`);
-    } else setError(result.error.message);
+      setSystems((current) =>
+        current.map((item) =>
+          String(item.systemId) === selectedSystemId
+            ? {
+                ...item,
+                revision: item.revision + 1,
+                currentRevisionId: result.value.revisionId,
+                composition: result.value.composition,
+                status: "validated",
+              }
+            : item,
+        ),
+      );
+      setFoundationUpgradeOpen(false);
+      setFoundationUpgradePreview(undefined);
+      setNotice(
+        "System Foundation upgraded to 3.0.0 in a new immutable revision.",
+      );
+    } else {
+      setError(result.error.message);
+    }
     setBusy(false);
   }
 
@@ -906,154 +1135,184 @@ export function SystemBuilderWorkspace({
               {notice}
             </p>
           ) : null}
-          <div className="system-builder__toolbar">
-            <label>
-              System
-              <select
-                value={selectedSystemId ?? ""}
-                onChange={(event) => {
-                  if (dirty) {
-                    setError(
-                      "Save or discard unsaved changes before switching systems.",
-                    );
-                    return;
-                  }
-                  setSelectedSystemId(event.currentTarget.value || undefined);
-                }}
-              >
-                <option value="">Choose a system</option>
-                {systems.map((system) => (
-                  <option
-                    key={String(system.systemId)}
-                    value={String(system.systemId)}
+          <p id="system-builder-entry-instructions" className="ui-text-muted">
+            Choose an option below to interact with the System Composer.
+          </p>
+          <div
+            className="system-builder__entry-options"
+            role="group"
+            aria-label="Composer entry options"
+            aria-describedby="system-builder-entry-instructions"
+          >
+            <fieldset className="system-builder__entry-option system-builder__entry-option--existing">
+              <legend>1. Edit an existing system</legend>
+              <p>Select an active system, then load it into the Composer.</p>
+              <div className="system-builder__entry-option-controls">
+                <label>
+                  System
+                  <select
+                    value={existingSystemId}
+                    onChange={(event) => {
+                      setExistingSystemId(event.currentTarget.value);
+                    }}
                   >
-                    {system.name}
-                    {system.status === "archived" ? " (archived)" : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              New system name
-              <input
-                value={name}
-                onChange={(event) => setName(event.currentTarget.value)}
-                placeholder="Customer portal"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => void createSystem()}
-              disabled={busy || !selectedLayoutDefinitionId}
-            >
-              <ApplicationIcon name="add" />
-              <span>Create system</span>
-            </button>
-            {selectedSystem ? (
-              <>
+                    <option value="">Choose a system</option>
+                    {systems.map((system) => (
+                      <option
+                        key={String(system.systemId)}
+                        value={String(system.systemId)}
+                      >
+                        {system.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <button
                   type="button"
-                  className="ui-button--secondary"
-                  onClick={() => void cloneSystem()}
-                  disabled={busy || dirty}
+                  onClick={editExistingSystem}
+                  disabled={!existingSystemId || revisionLoading}
                 >
-                  <ApplicationIcon name="copy" />
-                  <span>Clone</span>
-                </button>
-                <button
-                  type="button"
-                  className="ui-button--secondary"
-                  onClick={() => void changeArchiveState()}
-                  disabled={busy || dirty}
-                >
-                  <ApplicationIcon
-                    name={
-                      selectedSystem.status === "archived"
-                        ? "refresh"
-                        : "archive"
-                    }
-                  />
+                  {revisionLoading && existingSystemId === selectedSystemId ? (
+                    <LoadingSpinner label="Loading system into Composer" />
+                  ) : (
+                    <ApplicationIcon name="systems" />
+                  )}
                   <span>
-                    {selectedSystem.status === "archived"
-                      ? "Restore"
-                      : "Archive"}
+                    {revisionLoading && existingSystemId === selectedSystemId
+                      ? "Loading system..."
+                      : "Edit system"}
                   </span>
                 </button>
-              </>
-            ) : null}
-            <label>
-              Reference template
-              <select
-                aria-label="Reference template"
-                value={selectedTemplateId}
-                onChange={(event) =>
-                  setSelectedTemplateId(
-                    event.currentTarget.value as
-                      SystemBuilderTemplateSummary["templateId"] | "",
-                  )
-                }
-              >
-                <option value="">Choose a template</option>
-                {templates.map((template) => (
-                  <option key={template.templateId} value={template.templateId}>
-                    {template.displayName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="button"
-              className="ui-button--secondary"
-              onClick={() => void createReferenceSystem()}
-              disabled={busy || !selectedTemplateId}
+              </div>
+            </fieldset>
+
+            <fieldset className="system-builder__entry-option system-builder__entry-option--new">
+              <legend>2. Create a new system</legend>
+              <p>Start a system with the required default Minimal layout.</p>
+              <div className="system-builder__entry-option-controls">
+                <label>
+                  New system name
+                  <input
+                    value={newSystemName}
+                    onChange={(event) =>
+                      setNewSystemName(event.currentTarget.value)
+                    }
+                    placeholder="Customer portal"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void createSystem()}
+                  disabled={busy || !newSystemName.trim()}
+                >
+                  {busy && catalogLoading ? (
+                    <LoadingSpinner label="Loading application layouts" />
+                  ) : (
+                    <ApplicationIcon name="add" />
+                  )}
+                  <span>
+                    {busy && catalogLoading
+                      ? "Preparing system..."
+                      : "Create system"}
+                  </span>
+                </button>
+              </div>
+            </fieldset>
+
+            <fieldset className="system-builder__entry-option system-builder__entry-option--reference">
+              <legend>3. Create from a template</legend>
+              <p>Start from a validated built-in system template.</p>
+              <div className="system-builder__entry-option-controls">
+                <label>
+                  System template
+                  <select
+                    aria-label="System template"
+                    value={selectedTemplateId}
+                    onChange={(event) =>
+                      setSelectedTemplateId(
+                        event.currentTarget.value as
+                          SystemBuilderTemplateSummary["templateId"] | "",
+                      )
+                    }
+                  >
+                    <option value="">Choose a template</option>
+                    {templates.map((template) => (
+                      <option
+                        key={template.templateId}
+                        value={template.templateId}
+                      >
+                        {template.displayName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Template system name
+                  <input
+                    value={referenceSystemName}
+                    onChange={(event) =>
+                      setReferenceSystemName(event.currentTarget.value)
+                    }
+                    placeholder="Use template name"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void createReferenceSystem()}
+                  disabled={
+                    busy || !selectedTemplateId || !referenceSystemName.trim()
+                  }
+                >
+                  <ApplicationIcon name="systems" />
+                  <span>Create from template</span>
+                </button>
+              </div>
+            </fieldset>
+          </div>
+          {existingSystemIsLoaded && selectedSystem ? (
+            <div
+              className="system-builder__toolbar"
+              role="toolbar"
+              aria-label="Loaded system actions"
             >
-              <ApplicationIcon name="systems" />
-              <span>Create reference system</span>
-            </button>
-            <button
-              type="button"
-              className="ui-button--secondary"
-              onClick={() => setPreviewOpen(true)}
-              disabled={
-                busy || !selectedSystem || !revision || instances.length === 0
-              }
-              aria-haspopup="dialog"
-            >
-              <ApplicationIcon name="play" />
-              <span>Preview UI</span>
-            </button>
-            {onBuildAndTest && selectedSystem ? (
+              {canUpgradeFoundation ? (
+                <button
+                  type="button"
+                  className="ui-button ui-button--outline"
+                  onClick={() => void previewFoundationUpgrade()}
+                  disabled={busy || dirty}
+                  aria-haspopup="dialog"
+                >
+                  <ApplicationIcon name="refresh" />
+                  <span>Upgrade Foundation</span>
+                </button>
+              ) : null}
               <button
                 type="button"
-                className="ui-button--secondary"
-                onClick={() => onBuildAndTest(String(selectedSystem.systemId))}
-                disabled={busy || dirty || selectedSystem.status === "archived"}
+                className="ui-button ui-button--outline"
+                onClick={() => setPreviewOpen(true)}
+                disabled={busy || instances.length === 0}
+                aria-haspopup="dialog"
               >
-                <ApplicationIcon name="systems" />
-                <span>Build &amp; test</span>
+                <ApplicationIcon name="play" />
+                <span>Preview UI</span>
               </button>
-            ) : null}
-          </div>
-          {layoutOptions.length && (!selectedSystem || !revision) ? (
-            <SystemLayoutGallery
-              layouts={layoutOptions}
-              selectedDefinitionId={selectedLayoutDefinitionId}
-              disabled={busy}
-              mode={selectedSystem && revision ? "change" : "create"}
-              onSelect={(layout) => void selectLayout(layout)}
-            />
-          ) : catalogLoading ? (
-            <p className="ui-text-muted" role="status">
-              Loading application layouts...
-            </p>
+              {onBuildAndTest ? (
+                <button
+                  type="button"
+                  className="ui-button ui-button--outline"
+                  onClick={() =>
+                    onBuildAndTest(String(selectedSystem.systemId))
+                  }
+                  disabled={busy || dirty}
+                >
+                  <ApplicationIcon name="systems" />
+                  <span>Build &amp; test</span>
+                </button>
+              ) : null}
+            </div>
           ) : null}
-          {!selectedSystem || !revision ? (
-            <EmptyState
-              title="Create or choose a system"
-              description="Systems keep configuration and connections in immutable workspace-scoped revisions."
-              icon="systems"
-            />
-          ) : (
+          {selectedSystem && revision && existingSystemIsLoaded ? (
             <>
               <div className="system-builder__status">
                 <span
@@ -1103,6 +1362,7 @@ export function SystemBuilderWorkspace({
                   propertiesPanel={
                     <SystemComposerInspector
                       mode="configuration"
+                      embedded
                       selectedInstance={selectedInstance}
                       selectedDefinition={selectedDefinition}
                       instances={instances}
@@ -1121,7 +1381,7 @@ export function SystemBuilderWorkspace({
                       onChange={updateRootStyling}
                     />
                   }
-                  catalogLoading={catalogLoading}
+                  catalogLoading={catalogLoading || compatibilityLoading}
                   catalogError={catalogError}
                   canUndo={undoDrafts.length > 0}
                   canRedo={redoDrafts.length > 0}
@@ -1186,7 +1446,7 @@ export function SystemBuilderWorkspace({
                   {dirty ? (
                     <button
                       type="button"
-                      className="ui-button--secondary"
+                      className="ui-button ui-button--outline"
                       onClick={discardDraft}
                       disabled={busy}
                     >
@@ -1206,7 +1466,7 @@ export function SystemBuilderWorkspace({
                 </div>
               </footer>
             </>
-          )}
+          ) : null}
         </div>
       </section>
       <ModalDialog
@@ -1225,6 +1485,90 @@ export function SystemBuilderWorkspace({
             catalog={composerCatalog}
             includesUnsavedChanges={dirty}
           />
+        ) : null}
+      </ModalDialog>
+      <ModalDialog
+        open={foundationUpgradeOpen && Boolean(foundationUpgradePreview)}
+        title="Upgrade System Foundation"
+        onClose={() => {
+          if (!busy) setFoundationUpgradeOpen(false);
+        }}
+        closeLabel="Close System Foundation upgrade preview"
+      >
+        {foundationUpgradePreview ? (
+          <div className="ui-stack ui-stack--md">
+            <p>
+              This creates a new immutable Foundation 3.0.0 revision. The exact
+              Foundation {foundationUpgradePreview.sourceVersion} source
+              revision remains available in revision history.
+            </p>
+            <dl>
+              <dt>Source revision</dt>
+              <dd>{foundationUpgradePreview.sourceRevisionId}</dd>
+              <dt>Mapped Foundation instances</dt>
+              <dd>{foundationUpgradePreview.mappedInstanceCount}</dd>
+              <dt>Mapped configuration fields</dt>
+              <dd>{foundationUpgradePreview.mappedConfigurationFieldCount}</dd>
+            </dl>
+            {foundationUpgradePreview.issues.length > 0 ? (
+              <div className="ui-status ui-status--error" role="alert">
+                <strong>Upgrade blocked by unmapped data.</strong>
+                <ul>
+                  {foundationUpgradePreview.issues.map((issue, index) => (
+                    <li key={`${issue.code}-${index}`}>{issue.message}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {foundationUpgradePreview.validationIssues.length > 0 ? (
+              <div
+                className={
+                  foundationUpgradePreview.validationStatus === "invalid"
+                    ? "ui-status ui-status--error"
+                    : "ui-status ui-status--warning"
+                }
+                role={
+                  foundationUpgradePreview.validationStatus === "invalid"
+                    ? "alert"
+                    : "status"
+                }
+              >
+                <strong>Candidate validation</strong>
+                <ul>
+                  {foundationUpgradePreview.validationIssues.map(
+                    (issue, index) => (
+                      <li key={`${issue.category}-${index}`}>
+                        {issue.message}
+                      </li>
+                    ),
+                  )}
+                </ul>
+              </div>
+            ) : null}
+            {foundationUpgradePreview.eligible ? (
+              <p className="ui-status ui-status--success" role="status">
+                The candidate maps without data loss and passes validation.
+              </p>
+            ) : null}
+            <div className="ui-inline-actions">
+              <button
+                type="button"
+                className="ui-button ui-button--outline"
+                onClick={() => setFoundationUpgradeOpen(false)}
+                disabled={busy}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmFoundationUpgrade()}
+                disabled={busy || !foundationUpgradePreview.eligible}
+              >
+                <ApplicationIcon name="refresh" />
+                <span>Create upgraded revision</span>
+              </button>
+            </div>
+          </div>
         ) : null}
       </ModalDialog>
     </>
@@ -1266,6 +1610,18 @@ function defaultApplicationLayout(
         asset.layoutRole === "application-shell" &&
         asset.definitionId === DEFAULT_APPLICATION_LAYOUT_DEFINITION_ID,
     ) ?? assets.find((asset) => asset.layoutRole === "application-shell")
+  );
+}
+
+function usesUpgradeableFoundationVersion(
+  revision: SystemBuilderRevision,
+): boolean {
+  return revision.instances.some(
+    (instance) =>
+      instance.definitionRef.kind === "asset-definition-version" &&
+      SYSTEM_BUILDER_FOUNDATION_UPGRADE_SOURCE_VERSIONS.some(
+        (version) => version === instance.definitionRef.version,
+      ),
   );
 }
 
@@ -1373,14 +1729,18 @@ async function loadComposerCatalog(
   client: Pick<SystemBuilderClient, "listComposerAssets">,
   workspaceId: string,
 ): Promise<SystemBuilderResult<SystemBuilderComposerCatalog>> {
-  const [catalog, applicationLayouts] = await Promise.all([
-    listAllComposerAssets(client, { workspaceId }),
-    listAllComposerAssets(client, {
-      workspaceId,
-      searchText: APPLICATION_LAYOUT_CATALOG_QUERY,
-    }),
-  ]);
+  const catalog = await listAllComposerAssets(client, { workspaceId });
   if (!catalog.ok) return catalog;
+  if (
+    catalog.value.items.some((item) => item.layoutRole === "application-shell")
+  ) {
+    return catalog;
+  }
+
+  const applicationLayouts = await listAllComposerAssets(client, {
+    workspaceId,
+    searchText: APPLICATION_LAYOUT_CATALOG_QUERY,
+  });
   if (!applicationLayouts.ok) return applicationLayouts;
 
   const items = new Map<string, SystemBuilderComposerAsset>();
