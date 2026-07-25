@@ -274,6 +274,10 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     "GET /api/systems/composer/assets",
     { public: false, scopes: ["asset:read"] },
   ],
+  [
+    "GET /api/systems/composer/asset",
+    { public: false, scopes: ["asset:read"] },
+  ],
   ["POST /api/systems/create", { public: false, scopes: ["asset:write"] }],
   ["POST /api/systems/rename", { public: false, scopes: ["asset:write"] }],
   ["POST /api/systems/archive", { public: false, scopes: ["asset:write"] }],

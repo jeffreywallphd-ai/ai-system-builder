@@ -68,6 +68,10 @@ export function createDesktopSystemBuilderClient(): SystemBuilderClient {
       typeof api.listSystemBuilderComposerAssets === "function"
         ? unwrap(await api.listSystemBuilderComposerAssets(input))
         : unavailable(),
+    readComposerAsset: async (input) =>
+      typeof api.readSystemBuilderComposerAsset === "function"
+        ? unwrap(await api.readSystemBuilderComposerAsset(input))
+        : unavailable(),
     previewLayoutChange: async (input) =>
       typeof api.previewSystemBuilderLayoutChange === "function"
         ? unwrap(await api.previewSystemBuilderLayoutChange(input))

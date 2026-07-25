@@ -19,6 +19,7 @@ import type {
   AssetRegistryReadOptions,
 } from "../../../services/asset/asset-registry-read-facade.types";
 import { ListSystemBuilderComposerAssetsUseCase } from "../list-system-builder-composer-assets.use-case";
+import { ReadSystemBuilderComposerAssetUseCase } from "../read-system-builder-composer-asset.use-case";
 
 const workspaceId = createWorkspaceId("workspace-composer");
 const parent = definition("builtin.layout.parent", "system", "structural", {
@@ -33,6 +34,7 @@ const parent = definition("builtin.layout.parent", "system", "structural", {
   ],
 });
 const child = definition("workspace.card", "ui-component", "structural", {
+  metadata: { categoryId: "ui-structure" },
   configurationSchema: {
     fields: [
       {
@@ -72,9 +74,9 @@ describe("System Builder composer catalog", () => {
       "definition-only",
     );
     expect(result.value.items[0]?.previewAvailability).toBe("unavailable");
-    expect(result.value.items[0]?.configurationSchema?.fields[0]?.fieldId).toBe(
-      "title",
-    );
+    expect(result.value.items[0]?.categoryId).toBe("ui-structure");
+    expect("configurationSchema" in result.value.items[0]!).toBe(false);
+    expect("defaultConfiguration" in result.value.items[0]!).toBe(false);
     expect(result.value.items[0]?.ports[0]?.portId).toBe("selected");
     expect(registry.listQuery?.workspaceId).toBe(workspaceId);
     expect(registry.listQuery?.limit).toBe(20);
@@ -82,10 +84,57 @@ describe("System Builder composer catalog", () => {
       registry.readOptions.every(
         (options) =>
           options.workspaceId === workspaceId &&
-          options.includeConfigurationSchema === true &&
+          options.includeConfigurationSchema !== true &&
           options.includePorts === true,
       ),
     ).toBe(true);
+  });
+
+  it("loads property schema and defaults only through an exact workspace-scoped detail read", async () => {
+    const registry = new FakeRegistry(parent, child);
+    const result = await new ReadSystemBuilderComposerAssetUseCase(
+      registry,
+    ).execute({
+      workspaceId,
+      definitionRef: exactReference(child),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.definitionId).toBe("workspace.card");
+    expect(result.value.configurationSchema?.fields[0]?.fieldId).toBe("title");
+    expect(result.value.defaultConfiguration).toEqual({ title: "Overview" });
+    expect(result.value.ports[0]?.portId).toBe("selected");
+    expect(registry.readOptions).toEqual([
+      {
+        workspaceId,
+        includeConfigurationSchema: true,
+        includePorts: true,
+      },
+    ]);
+  });
+
+  it("fails exact detail reads closed without exposing registry errors", async () => {
+    const registry: AssetRegistryDefinitionReadPort = {
+      listDefinitionCards: async () => ({ items: [] }),
+      readDefinitionDetail: async () => {
+        throw new Error("C:\\private\\workspace\\definition.json");
+      },
+    };
+    const result = await new ReadSystemBuilderComposerAssetUseCase(
+      registry,
+    ).execute({
+      workspaceId,
+      definitionRef: exactReference(child),
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe(
+        "system-builder.composer-detail-unavailable",
+      );
+      expect(result.error.message.includes("private")).toBe(false);
+    }
   });
 
   it("bounds queries and reports unavailable slots without reading candidates", async () => {
@@ -139,11 +188,7 @@ describe("System Builder composer catalog", () => {
     expect(
       result.value.items[0]?.slots.map((slot) => String(slot.slotId)),
     ).toEqual(["top-bar", "content"]);
-    expect(
-      result.value.items[0]?.configurationSchema?.fields.map(
-        (field) => field.fieldId,
-      ),
-    ).toEqual(["title", "accessibilityLabel"]);
+    expect("configurationSchema" in result.value.items[0]!).toBe(false);
   });
 
   it("offers current application layouts to a trusted Foundation 1.0 workspace without widening ordinary asset visibility", async () => {

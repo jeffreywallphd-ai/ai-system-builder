@@ -13,8 +13,10 @@ import type {
   SystemBuilderRevision,
   SystemBuilderTemplateSummary,
   ListSystemBuilderComposerAssetsQuery,
+  ReadSystemBuilderComposerAssetQuery,
   SystemBuilderComposerCatalog,
   SystemBuilderComposerAsset,
+  SystemBuilderComposerAssetDetail,
   ListSystemBuilderManagementQuery,
   SystemBuilderManagementPage,
   PreviewSystemBuilderLayoutChangeCommand,
@@ -34,6 +36,8 @@ import { ModalDialog } from "../components/ModalDialog";
 import { SystemCompositionPreview } from "./SystemCompositionPreview";
 import {
   SystemComposerStructureEditor,
+  type SystemComposerAssetBrowseRequest,
+  type SystemComposerSidebarTab,
   type SystemComposerTargetSlot,
 } from "./SystemComposerStructureEditor";
 import { SystemComposerInspector } from "./SystemComposerInspector";
@@ -116,6 +120,9 @@ export interface SystemBuilderClient {
   listComposerAssets(
     input: ListSystemBuilderComposerAssetsQuery,
   ): Promise<SystemBuilderResult<SystemBuilderComposerCatalog>>;
+  readComposerAsset?(
+    input: ReadSystemBuilderComposerAssetQuery,
+  ): Promise<SystemBuilderResult<SystemBuilderComposerAssetDetail>>;
   previewLayoutChange(
     input: Omit<
       PreviewSystemBuilderLayoutChangeCommand,
@@ -159,15 +166,8 @@ export function SystemBuilderWorkspace({
   const [composerCatalog, setComposerCatalog] = useState<
     readonly SystemBuilderComposerAsset[]
   >([]);
-  const [compatibleAssets, setCompatibleAssets] = useState<
-    readonly SystemBuilderComposerAsset[]
-  >([]);
-  const compatibleAssetCache = useRef(
-    new Map<string, readonly SystemBuilderComposerAsset[]>(),
-  );
   const catalogRequestInFlight = useRef(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
-  const [compatibilityLoading, setCompatibilityLoading] = useState(false);
   const [catalogError, setCatalogError] = useState<string>();
   const [selectedLayoutDefinitionId, setSelectedLayoutDefinitionId] =
     useState<string>();
@@ -189,8 +189,21 @@ export function SystemBuilderWorkspace({
   const [redoDrafts, setRedoDrafts] = useState<readonly SystemComposerDraft[]>(
     [],
   );
-  const [targetSlot, setTargetSlot] = useState<SystemComposerTargetSlot>();
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>();
+  const [activeSidebarTab, setActiveSidebarTab] =
+    useState<SystemComposerSidebarTab>("properties");
+  const [selectedAssetDetail, setSelectedAssetDetail] =
+    useState<SystemBuilderComposerAssetDetail>();
+  const [selectedAssetDetailLoading, setSelectedAssetDetailLoading] =
+    useState(false);
+  const [selectedAssetDetailError, setSelectedAssetDetailError] =
+    useState<string>();
+  const [stylingRootDetail, setStylingRootDetail] =
+    useState<SystemBuilderComposerAssetDetail>();
+  const [stylingRootDetailLoading, setStylingRootDetailLoading] =
+    useState(false);
+  const [stylingRootDetailError, setStylingRootDetailError] =
+    useState<string>();
   const [composerMode, setComposerMode] = useState<"design" | "connections">(
     "design",
   );
@@ -217,11 +230,12 @@ export function SystemBuilderWorkspace({
   const selectedInstance = instances.find(
     (instance) => String(instance.instanceId) === selectedInstanceId,
   );
-  const selectedDefinition = composerCatalog.find(
+  const selectedDefinitionSummary = composerCatalog.find(
     (definition) =>
       definition.definitionId === String(selectedInstance?.definitionRef.id) &&
       definition.version === selectedInstance?.definitionRef.version,
   );
+  const selectedDefinition = selectedAssetDetail ?? selectedDefinitionSummary;
   const canUpgradeFoundation = Boolean(
     revision && usesUpgradeableFoundationVersion(revision),
   );
@@ -231,34 +245,14 @@ export function SystemBuilderWorkspace({
   const stylingRootInstance = instances.find(
     (instance) => String(instance.instanceId) === stylingRootInstanceId,
   );
-  const stylingRootDefinition = composerCatalog.find(
+  const stylingRootDefinitionSummary = composerCatalog.find(
     (definition) =>
       definition.definitionId ===
         String(stylingRootInstance?.definitionRef.id) &&
       definition.version === stylingRootInstance?.definitionRef.version,
   );
-  const compatibilityParent = targetSlot
-    ? instances.find(
-        (instance) =>
-          String(instance.instanceId) === targetSlot.parentInstanceId,
-      )
-    : undefined;
-  const compatibilityDefinitionId = String(
-    compatibilityParent?.definitionRef.id ?? "",
-  );
-  const compatibilityDefinitionVersion =
-    compatibilityParent?.definitionRef.version ?? "";
-  const compatibilityDefinitionRef = useMemo<AssetReference | undefined>(
-    () =>
-      compatibilityDefinitionId && compatibilityDefinitionVersion
-        ? {
-            kind: "asset-definition-version",
-            id: normalizeAssetId(compatibilityDefinitionId),
-            version: compatibilityDefinitionVersion,
-          }
-        : undefined,
-    [compatibilityDefinitionId, compatibilityDefinitionVersion],
-  );
+  const stylingRootDefinition =
+    stylingRootDetail ?? stylingRootDefinitionSummary;
   const draft = useMemo<SystemComposerDraft>(
     () => ({ instances, placements, bindings, structure }),
     [bindings, instances, placements, structure],
@@ -302,12 +296,15 @@ export function SystemBuilderWorkspace({
     setFoundationUpgradeOpen(false);
     setFoundationUpgradePreview(undefined);
     setDirty(false);
-    compatibleAssetCache.current.clear();
     catalogRequestInFlight.current = false;
-    setCompatibleAssets([]);
-    setCompatibilityLoading(false);
     setCatalogLoading(false);
     setCatalogError(undefined);
+    setSelectedAssetDetail(undefined);
+    setSelectedAssetDetailLoading(false);
+    setSelectedAssetDetailError(undefined);
+    setStylingRootDetail(undefined);
+    setStylingRootDetailLoading(false);
+    setStylingRootDetailError(undefined);
     setSystems([]);
     void client.listTemplates().then((templateResult) => {
       if (!active) return;
@@ -399,7 +396,6 @@ export function SystemBuilderWorkspace({
       setStructure(undefined);
       setUndoDrafts([]);
       setRedoDrafts([]);
-      setTargetSlot(undefined);
       setFoundationUpgradeOpen(false);
       setFoundationUpgradePreview(undefined);
       return;
@@ -430,7 +426,6 @@ export function SystemBuilderWorkspace({
         );
         setUndoDrafts([]);
         setRedoDrafts([]);
-        setTargetSlot(undefined);
         setFoundationUpgradeOpen(false);
         setFoundationUpgradePreview(undefined);
         setSelectedInstanceId(
@@ -464,104 +459,122 @@ export function SystemBuilderWorkspace({
   }, [busy, canUpgradeFoundation, dirty, layoutOptions, revision, structure]);
 
   useEffect(() => {
-    if (!revision || composerCatalog.length === 0) return;
-    const targetParent = targetSlot
-      ? instances.find(
-          (instance) =>
-            String(instance.instanceId) === targetSlot.parentInstanceId,
-        )
-      : undefined;
-    const targetDefinition = targetParent
-      ? composerCatalog.find(
-          (asset) =>
-            asset.definitionId === String(targetParent.definitionRef.id) &&
-            asset.version === targetParent.definitionRef.version,
-        )
-      : undefined;
-    const targetIsAvailable = Boolean(
-      targetSlot &&
-      targetDefinition?.slots.some(
-        (candidate) => candidate.slotId === targetSlot.slotId,
-      ),
-    );
-    if (targetIsAvailable) return;
-    setTargetSlot(
-      preferredSystemComposerTarget({
-        instances,
-        placements,
-        catalog: composerCatalog,
-        activeLayoutDefinitionId: structure?.layoutPresetRef
-          ? String(structure.layoutPresetRef.id)
-          : undefined,
-        selectedInstanceId,
-      }),
-    );
-  }, [
-    composerCatalog,
-    instances,
-    placements,
-    revision,
-    selectedInstanceId,
-    structure?.layoutPresetRef,
-    targetSlot,
-  ]);
-
-  useEffect(() => {
-    if (!targetSlot) {
-      setCompatibleAssets([]);
-      setCompatibilityLoading(false);
-      return;
-    }
+    setSelectedAssetDetail(undefined);
+    setSelectedAssetDetailError(undefined);
     if (
-      !compatibilityDefinitionRef ||
-      !compatibilityDefinitionId ||
-      !compatibilityDefinitionVersion
+      composerMode !== "design" ||
+      activeSidebarTab !== "properties" ||
+      !selectedInstance
     ) {
-      setCompatibleAssets([]);
-      setCompatibilityLoading(false);
+      setSelectedAssetDetailLoading(false);
       return;
     }
-    const cacheKey = [
-      workspaceId,
-      compatibilityDefinitionId,
-      compatibilityDefinitionVersion,
-      targetSlot.slotId,
-    ].join("|");
-    const cached = compatibleAssetCache.current.get(cacheKey);
-    if (cached) {
-      setCompatibleAssets(cached);
-      setCatalogError(undefined);
-      setCompatibilityLoading(false);
+    if (!client.readComposerAsset) {
+      setSelectedAssetDetail(selectedDefinitionSummary);
+      setSelectedAssetDetailLoading(false);
       return;
     }
     let active = true;
-    setCompatibilityLoading(true);
-    setCatalogError(undefined);
-    void listAllComposerAssets(client, {
-      workspaceId,
-      parentDefinitionRef: compatibilityDefinitionRef,
-      slotId: targetSlot.slotId,
-      compatibleOnly: true,
-    }).then((result) => {
-      if (!active) return;
-      if (result.ok) {
-        compatibleAssetCache.current.set(cacheKey, result.value.items);
-        setCompatibleAssets(result.value.items);
-      } else setCatalogError(result.error.message);
-      setCompatibilityLoading(false);
-    });
+    setSelectedAssetDetailLoading(true);
+    void client
+      .readComposerAsset({
+        workspaceId,
+        definitionRef: selectedInstance.definitionRef,
+      })
+      .then((result) => {
+        if (!active) return;
+        if (result.ok) setSelectedAssetDetail(result.value);
+        else setSelectedAssetDetailError(result.error.message);
+        setSelectedAssetDetailLoading(false);
+      });
     return () => {
       active = false;
     };
   }, [
+    activeSidebarTab,
     client,
-    compatibilityDefinitionId,
-    compatibilityDefinitionRef,
-    compatibilityDefinitionVersion,
-    targetSlot?.parentInstanceId,
-    targetSlot?.slotId,
+    composerMode,
+    selectedInstance?.definitionRef.id,
+    selectedInstance?.definitionRef.version,
+    selectedInstanceId,
+    selectedDefinitionSummary,
     workspaceId,
   ]);
+
+  useEffect(() => {
+    setStylingRootDetail(undefined);
+    setStylingRootDetailError(undefined);
+    if (
+      composerMode !== "design" ||
+      activeSidebarTab !== "styling" ||
+      !stylingRootInstance
+    ) {
+      setStylingRootDetailLoading(false);
+      return;
+    }
+    if (!client.readComposerAsset) {
+      setStylingRootDetail(stylingRootDefinitionSummary);
+      setStylingRootDetailLoading(false);
+      return;
+    }
+    let active = true;
+    setStylingRootDetailLoading(true);
+    void client
+      .readComposerAsset({
+        workspaceId,
+        definitionRef: stylingRootInstance.definitionRef,
+      })
+      .then((result) => {
+        if (!active) return;
+        if (result.ok) setStylingRootDetail(result.value);
+        else setStylingRootDetailError(result.error.message);
+        setStylingRootDetailLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    activeSidebarTab,
+    client,
+    composerMode,
+    stylingRootDefinitionSummary,
+    stylingRootInstance?.definitionRef.id,
+    stylingRootInstance?.definitionRef.version,
+    workspaceId,
+  ]);
+
+  function loadLayoutsOnDemand() {
+    return listAllComposerAssets(client, {
+      workspaceId,
+      searchText: APPLICATION_LAYOUT_CATALOG_QUERY,
+    });
+  }
+
+  function loadCompatibleAssetsOnDemand(
+    target: SystemComposerTargetSlot,
+    query: SystemComposerAssetBrowseRequest,
+  ): Promise<SystemBuilderResult<SystemBuilderComposerCatalog>> {
+    const parent = instances.find(
+      (instance) => String(instance.instanceId) === target.parentInstanceId,
+    );
+    if (!parent?.definitionRef.version) {
+      return Promise.resolve(
+        systemBuilderFailure(
+          "system-builder.composer-parent-not-found",
+          "The selected parent asset is unavailable in this system.",
+        ),
+      );
+    }
+    return client.listComposerAssets({
+      workspaceId,
+      parentDefinitionRef: parent.definitionRef,
+      slotId: target.slotId,
+      compatibleOnly: true,
+      ...(query.searchText ? { searchText: query.searchText } : {}),
+      ...(query.cursor ? { cursor: query.cursor } : {}),
+      ...(query.limit !== undefined ? { limit: query.limit } : {}),
+    });
+  }
 
   function editExistingSystem() {
     if (!existingSystemId) return;
@@ -619,7 +632,7 @@ export function SystemBuilderWorkspace({
       setNewSystemName("");
       setDirty(false);
       setNotice(
-        `${layout.displayName} system created. Drag assets into its canvas regions.`,
+        `${layout.displayName} system created. Use Add element in a canvas container to compose its contents.`,
       );
     } else setError(result.error.message);
     setBusy(false);
@@ -793,7 +806,6 @@ export function SystemBuilderWorkspace({
     );
     setUndoDrafts([]);
     setRedoDrafts([]);
-    setTargetSlot(undefined);
     setSelectedInstanceId(
       String(revision.instances[0]?.instanceId ?? "") || undefined,
     );
@@ -1352,42 +1364,63 @@ export function SystemBuilderWorkspace({
                   draft={draft}
                   rootInstanceRefs={revision.composition.rootInstanceRefs}
                   catalog={composerCatalog}
-                  compatibleAssets={compatibleAssets}
-                  layoutOptions={layoutOptions}
                   selectedLayoutDefinitionId={selectedLayoutDefinitionId}
                   layoutSelectionDisabled={busy}
                   selectedInstanceId={selectedInstanceId}
-                  targetSlot={targetSlot}
                   protectedInstanceIds={protectedInstanceIds}
                   propertiesPanel={
-                    <SystemComposerInspector
-                      mode="configuration"
-                      embedded
-                      selectedInstance={selectedInstance}
-                      selectedDefinition={selectedDefinition}
-                      instances={instances}
-                      catalog={composerCatalog}
-                      bindings={bindings}
-                      onConfigurationChange={updateSelectedConfiguration}
-                      onAddConnection={connectDeclaredPorts}
-                      onRemoveConnection={removeBinding}
-                    />
+                    selectedAssetDetailLoading ? (
+                      <div className="system-composer__detail-loading">
+                        <LoadingSpinner label="Loading selected asset properties" />
+                        <span>Loading selected asset properties...</span>
+                      </div>
+                    ) : selectedAssetDetailError ? (
+                      <p className="ui-status ui-status--error" role="alert">
+                        {selectedAssetDetailError}
+                      </p>
+                    ) : (
+                      <SystemComposerInspector
+                        mode="configuration"
+                        embedded
+                        selectedInstance={selectedInstance}
+                        selectedDefinition={selectedDefinition}
+                        instances={instances}
+                        catalog={composerCatalog}
+                        bindings={bindings}
+                        onConfigurationChange={updateSelectedConfiguration}
+                        onAddConnection={connectDeclaredPorts}
+                        onRemoveConnection={removeBinding}
+                      />
+                    )
                   }
                   stylingPanel={
-                    <SystemComposerStylingPanel
-                      rootInstance={stylingRootInstance}
-                      rootDefinition={stylingRootDefinition}
-                      catalog={composerCatalog}
-                      onChange={updateRootStyling}
-                    />
+                    stylingRootDetailLoading ? (
+                      <div className="system-composer__detail-loading">
+                        <LoadingSpinner label="Loading system styling" />
+                        <span>Loading system styling...</span>
+                      </div>
+                    ) : stylingRootDetailError ? (
+                      <p className="ui-status ui-status--error" role="alert">
+                        {stylingRootDetailError}
+                      </p>
+                    ) : (
+                      <SystemComposerStylingPanel
+                        rootInstance={stylingRootInstance}
+                        rootDefinition={stylingRootDefinition}
+                        catalog={composerCatalog}
+                        onChange={updateRootStyling}
+                      />
+                    )
                   }
-                  catalogLoading={catalogLoading || compatibilityLoading}
+                  catalogLoading={catalogLoading}
                   catalogError={catalogError}
                   canUndo={undoDrafts.length > 0}
                   canRedo={redoDrafts.length > 0}
                   onSelect={setSelectedInstanceId}
-                  onTargetSlotChange={setTargetSlot}
                   onSelectLayout={(layout) => void selectLayout(layout)}
+                  loadLayouts={loadLayoutsOnDemand}
+                  loadCompatibleAssets={loadCompatibleAssetsOnDemand}
+                  onSidebarTabChange={setActiveSidebarTab}
                   onAdd={addAsset}
                   onPlace={placeAsset}
                   onRemove={removeSelected}
@@ -1590,7 +1623,7 @@ function layoutSelectionNotice(
   const details: string[] = [];
   if (unassignedVisualCount) {
     details.push(
-      `${unassignedVisualCount} visual asset${unassignedVisualCount === 1 ? " is" : "s are"} available under Unassigned visual assets`,
+      `${unassignedVisualCount} visual asset${unassignedVisualCount === 1 ? " is" : "s are"} available from Add element on a compatible container`,
     );
   }
   if (systemResourceCount) {

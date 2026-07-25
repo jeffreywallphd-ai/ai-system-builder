@@ -54,27 +54,24 @@
 - Validation resolves exact definitions and enforces root identity, slot
   declaration and compatibility, cardinality, placement coverage, bounded
   depth, and acyclic containment before a revision can be treated as valid.
-- The workspace Composer catalog supplies exact definitions, schemas, defaults,
-  ports, slots, availability, container geometry, and compatibility. Both hosts
-  share a three-column Design workspace: searchable Asset Palette, wide Canvas,
-  and one sidebar with fitted top tabs for Properties, Styling, and Layers;
-  Configure identity and Collapse follow below the tabs. Styling uses
-  color pickers and allowlisted typography, density, button, form, and surface
-  selects; semantic styles are unavailable through Advanced JSON, and per-asset
-  roles remain bounded Properties selects. The Palette supports collapsed,
-  one-column normal, and wider multi-column maximized views. Its Layout, Assets,
-  Unassigned visual assets, and System resources and logic disclosures start
-  collapsed. Canvas States also start collapsed while retaining their drop
-  surfaces. Collapsed bodies do not mount hidden drag or preview descendants;
-  only the active details body mounts and rebuilds from the canonical draft.
-  Layers lists only placed hierarchy; presentation state is not persisted.
-  Square tiles and Canvas regions are pointer, touch, and keyboard drag surfaces;
-  legacy Add-here, move-order, reparent, and wrapper forms are absent. Foundation
-  layouts expose labels but no editable dimensions, regions, responsive rules,
-  raw JSON, CSS, or coordinates. Ordinary containers retain bounded Layout
-  fields and nested drop regions. Containers expose structure; leaf nodes render
-  one composition-aware surface without repeating descendant UI. Fixed rows
-  expand for descendants and use the outer Canvas as their scroll boundary.
+- The workspace Composer catalog supplies structural exact-definition summaries,
+  ports, slots, availability, container geometry, and compatibility without
+  eagerly carrying configuration schemas or defaults. Both hosts share a
+  two-column Design workspace: a wide Canvas and one sidebar with fitted top tabs
+  for Properties, Styling, and Layers. Styling uses color pickers and allowlisted typography, density,
+  button, form, and surface selects; semantic styles are unavailable through
+  Advanced JSON, and per-asset roles remain bounded Properties selects. Canvas
+  States start collapsed. Only the active details body mounts and receives exact
+  definition detail for its current asset. Layers also separates System resources and logic.
+  Every exact slot-bearing container exposes Add element. Its shared modal scopes
+  compatible new definitions and unassigned visual instances to the selected
+  region, groups and filters them by UI category, and inserts or reattaches a
+  clicked choice without drag state. Explicit Move up, Move down, and Move to
+  controls preserve accessible ordering and reparenting. Foundation layouts
+  expose labels but no editable dimensions, regions, responsive rules, raw JSON,
+  CSS, or coordinates. Ordinary containers retain bounded Layout fields and
+  nested regions. Containers expose structure; leaf nodes render one
+  composition-aware surface without repeating descendant UI.
 - Layout selection uses one HTTP/IPC preview operation and immediately updates
   the undoable draft. Expected-revision checks and canonical order report
   preserved, moved, and unassigned assets without persistence. An already-current
@@ -83,23 +80,26 @@
   root and shell in memory while preserving historical assets and bindings.
   Reference profiles may add bounded current containers/actions, but bindings
   never imply containment. Exact catalog types place unmatched pages,
-  components, features, and trusted slot-bearing facades under draggable
-  Unassigned visual assets; policies, models, workflows, contracts, unknowns,
-  and other nonvisual assets remain under nondraggable System resources and
-  logic. Only Save creates the next immutable revision.
+  components, features, and trusted slot-bearing facades in the compatible Add
+  element modal as unassigned visual instances; policies, models, workflows,
+  contracts, unknowns, and other nonvisual assets remain under System resources
+  and logic in Layers. Only Save creates the next immutable revision.
 - Canonical saved placement edges remain visible when a historical container's
   exact catalog definition is unavailable. Canvas exposes a bounded read-only
   structural region for those occupied edges so traversal does not stop, but it
-  does not infer compatibility, allow drops, change exact versions, or persist
-  synthesized slots. Without exact geometry, regions use source-order auto-flow.
+  does not infer compatibility, allow insertion, change exact versions, or
+  persist synthesized slots. Without exact geometry, regions use source-order
+  auto-flow.
 - System Builder Composer may project the complete exact current built-in
   Foundation catalog for a workspace with an older active trusted Foundation
   generation. This Composer-only seam supplies nested slots and qualified
   previews without widening the workspace Asset Library effective view.
-- Catalog bootstrap uses the complete workspace catalog as the primary read and
-  falls back to a layout-only query only when it contains no application
-  layouts. Mounted-workspace compatibility results are cached by exact parent
-  definition version and region; configuration edits do not refetch them.
+- Catalog bootstrap reads schema-free structural summaries. The collapsible
+  Layouts bar performs a bounded layout query only when opened. Add element
+  performs a bounded exact-parent and region compatibility query only when its
+  modal opens. Properties reads exact detail only for the selected asset, and
+  Styling reads root detail only while active; stale responses cannot replace a
+  newer selection. Full instance values stay in the canonical local draft.
 - Foundation v1/v2-to-v3 upgrade is explicit and two-step. Preview is read-only;
   confirmation requires the exact source revision, rejects lossy or invalid
   mappings, and creates a new immutable v3 revision while preserving source history.

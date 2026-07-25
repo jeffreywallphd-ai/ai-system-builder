@@ -9,6 +9,7 @@ import {
   ListSystemBuilderSystemsUseCase,
   ListSystemBuilderTemplatesUseCase,
   ListSystemBuilderComposerAssetsUseCase,
+  ReadSystemBuilderComposerAssetUseCase,
   ListSystemBuilderManagementUseCase,
   ReadSystemBuilderRevisionUseCase,
   PreviewSystemBuilderLayoutChangeUseCase,
@@ -75,6 +76,9 @@ export function composeSystemBuilder(options: ComposeSystemBuilderOptions) {
       readRevision: new ReadSystemBuilderRevisionUseCase(repository),
       listRevisions: new ListSystemBuilderRevisionsUseCase(repository),
       listComposerAssets: new ListSystemBuilderComposerAssetsUseCase(
+        options.assetRegistryRead,
+      ),
+      readComposerAsset: new ReadSystemBuilderComposerAssetUseCase(
         options.assetRegistryRead,
       ),
       previewLayoutChange: new PreviewSystemBuilderLayoutChangeUseCase({

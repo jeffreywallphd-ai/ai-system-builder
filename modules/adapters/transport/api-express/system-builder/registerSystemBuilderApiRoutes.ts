@@ -8,6 +8,7 @@ import type {
   ListSystemBuilderManagementUseCase,
   ListSystemBuilderTemplatesUseCase,
   ListSystemBuilderComposerAssetsUseCase,
+  ReadSystemBuilderComposerAssetUseCase,
   ReadSystemBuilderRevisionUseCase,
   ReadSystemBuilderSystemUseCase,
   RenameSystemBuilderSystemUseCase,
@@ -85,6 +86,7 @@ export interface RegisterSystemBuilderApiRoutesDependencies {
   readRevision: Pick<ReadSystemBuilderRevisionUseCase, "execute">;
   listRevisions: Pick<ListSystemBuilderRevisionsUseCase, "execute">;
   listComposerAssets: Pick<ListSystemBuilderComposerAssetsUseCase, "execute">;
+  readComposerAsset: Pick<ReadSystemBuilderComposerAssetUseCase, "execute">;
   previewLayoutChange: Pick<PreviewSystemBuilderLayoutChangeUseCase, "execute">;
   previewFoundationUpgrade: Pick<
     PreviewSystemBuilderFoundationUpgradeUseCase,
@@ -188,6 +190,23 @@ export function registerSystemBuilderApiRoutes(
       );
     }
   });
+  d.app.get("/api/systems/composer/asset", async (req, res) => {
+    try {
+      result(
+        res,
+        "readComposerAsset",
+        await d.readComposerAsset.execute(
+          parseComposerAssetQuery(req.query ?? {}),
+        ),
+      );
+    } catch {
+      invalid(
+        res,
+        "readComposerAsset",
+        "The composer asset detail query is invalid.",
+      );
+    }
+  });
   d.app.post("/api/systems/layout-change/preview", async (req, res) =>
     command(
       req,
@@ -275,6 +294,17 @@ function parseComposerQuery(query: Record<string, unknown>) {
       : {}),
     ...(slotId ? { slotId: normalizeAssetSlotId(slotId) } : {}),
     ...(query.compatibleOnly === "true" ? { compatibleOnly: true } : {}),
+  };
+}
+
+function parseComposerAssetQuery(query: Record<string, unknown>) {
+  return {
+    workspaceId: createWorkspaceId(required(query.workspaceId)),
+    definitionRef: {
+      kind: "asset-definition-version" as const,
+      id: normalizeAssetId(required(query.definitionId)),
+      version: required(query.version),
+    },
   };
 }
 

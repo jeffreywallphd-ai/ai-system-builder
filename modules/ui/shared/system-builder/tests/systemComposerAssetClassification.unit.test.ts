@@ -12,7 +12,7 @@ import {
 } from "../systemComposerAssetClassification";
 
 describe("System Composer unplaced asset classification", () => {
-  it("separates draggable visual assets from nonvisual resources using exact catalog types", () => {
+  it("separates composable visual assets from nonvisual resources using exact catalog types", () => {
     const root = instance("system.root", "builtin.system.system");
     const visual = instance("system.card", "builtin.ui.card");
     const policy = instance("system.policy", "builtin.security.policy");
@@ -75,7 +75,7 @@ describe("System Composer unplaced asset classification", () => {
     expect(isSystemComposerVisualInstance(unknown, catalog)).toBe(false);
   });
 
-  it("does not expose an application layout shell as a draggable unassigned visual", () => {
+  it("does not expose an application layout shell as an available unassigned visual", () => {
     const shell = instance(
       "system.shell",
       "builtin.layout.application.minimal",

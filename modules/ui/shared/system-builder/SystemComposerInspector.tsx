@@ -194,7 +194,7 @@ function SystemComposerConfiguration({
           <p>
             {definition.layoutRole
               ? "Uses predefined, dimension-locked Foundation geometry."
-              : "Uses bounded semantic layout properties with draggable named regions."}
+              : "Uses bounded semantic layout properties with composable named regions."}
           </p>
           <p className="ui-text-muted">
             Arrangement: {definition.layoutGeometry?.columnPattern ?? "single"}

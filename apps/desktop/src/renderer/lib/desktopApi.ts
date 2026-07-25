@@ -74,6 +74,7 @@ import type {
   SystemBuilderComposition,
   SystemBuilderTemplateId,
   ListSystemBuilderComposerAssetsQuery,
+  ReadSystemBuilderComposerAssetQuery,
   ListSystemBuilderManagementQuery,
   PreviewSystemBuilderLayoutChangeCommand,
   PreviewSystemBuilderFoundationUpgradeCommand,
@@ -610,6 +611,10 @@ interface DesktopApiBridge {
   ) => Promise<unknown>;
   listSystemBuilderComposerAssets?: (
     input: ListSystemBuilderComposerAssetsQuery,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  readSystemBuilderComposerAsset?: (
+    input: ReadSystemBuilderComposerAssetQuery,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   previewSystemBuilderLayoutChange?: (

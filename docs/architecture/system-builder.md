@@ -157,50 +157,33 @@ authoring, customization, and single-asset Studio workflows.
   typography, density, buttons, forms, and surfaces; relevant visual assets own
   allowlisted semantic overrides. Exact v1 and v2 definitions remain unchanged.
 - `modules/ui/shared/system-builder` is the shared desktop/thin-client editor.
-  Predefined geometry-aware layout icons inside the Asset Palette create or
-  remap the required root/shell/page-host structure. One
-  canonical in-memory draft drives a flat three-column Design workspace with the
-  searchable Asset Palette, a wide Canvas showing every fixed region of the
-  active application layout, and one details
-  sidebar whose shared-style top row contains three fitted tabs: Properties,
-  Styling, and Layers. The selected asset's Configure heading and the sidebar
-  Collapse control follow directly below that row. The Asset Palette has collapsed, normal, and maximized presentation
-  sizes. Normal presents layout choices and asset tiles in one column; maximized
-  borrows width from the Canvas and uses multi-column galleries while preserving
-  the details-sidebar width. Its Layout, Assets, Unassigned visual assets, and
-  System resources and logic sections are independent disclosures that start
-  collapsed. Canvas States regions also start collapsed without removing their
-  drop surfaces. Collapsed Palette bodies and States content do not mount their
-  hidden draggable or preview descendants. Only the active Properties, Styling,
-  or Layers panel body is mounted; switching panels reconstructs
-  its controls from the canonical parent-owned draft. Layers
-  contains only the placed hierarchy.
-  These presentation states are not persisted. A thin
-  dnd-kit adapter maps pointer,
-  touch, and keyboard insertion/reorder/reparent interactions onto bounded
-  add/place commands; each square visual asset tile is the drag handle and fixed
-  regions are the drop surfaces. The Design workspace does not expose the legacy
-  choose-slot, Add-here, move-order, reparent, or wrapper forms. Drag state is
-  never serialized. Selection, breadcrumbs, protected required nodes, responsive
-  panel focus restoration, and bounded undo/redo remain synchronized across
-  regions. Every exact slot-bearing container recursively exposes its named
-  regions and placed descendants on the Canvas. Trusted Foundation system or
-  subsystem facades with a qualified declarative preview participate as visual
-  containers; ordinary policies, models, workflows, and backend resources do
-  not. Canvas container nodes render only their structural identity and actual
-  named child regions; they never repeat the complete standalone catalog preview.
-  Only leaf nodes render their own composition-aware semantic surface, so each
-  visible detail is contributed by one asset in the hierarchy. Canonical
-  placements remain visible even when a historical container's exact catalog
-  contract is unavailable: the Canvas derives only the occupied region labels
-  needed to traverse those saved edges and marks those regions read-only. It
-  does not infer compatibility, enable drops, rewrite the instance version, or
-  persist a synthesized slot definition. Without exact layout geometry, those
-  regions remain in source-order auto-flow and never receive overlapping named
-  grid areas.
-  Fixed layout rows preserve their abstract proportions as minimum sizes but
-  expand for placed descendants, keeping the Canvas as the sole scroll boundary
-  instead of hiding assigned assets behind nested region scrollbars.
+  One canonical in-memory draft drives a two-column Design workspace: a wide
+  Canvas showing the complete active hierarchy and one details sidebar with
+  fitted Properties, Styling, and Layers tabs. Predefined geometry-aware layout
+  choices live in a collapsible bar below Design and Connections and load only
+  after that bar is opened. States regions start collapsed. Only the active
+  details panel body mounts, and disclosure, selection, focus, and panel state
+  are not persisted.
+  Every exact slot-bearing Canvas container recursively exposes its named
+  regions, placed descendants, and Add element action. Add element opens the
+  shared modal scoped to that exact parent. The user chooses an available region
+  when needed, searches bounded paged compatible candidates, and selects either
+  a new definition or compatible unassigned visual instance. The choice maps to
+  the existing canonical add/place command, closes the modal, selects the
+  result, and reveals it on the Canvas. Layers retain explicit native
+  destination and order controls for reparenting and reorder. There is no
+  persistent Asset Palette, pointer drag behavior, or renderer drag state.
+  Trusted Foundation system/subsystem facades with a qualified declarative
+  preview participate as visual containers; ordinary policies, models,
+  workflows, and backend resources do not. Canvas container nodes render only
+  structural identity and actual named child regions; leaf nodes alone render
+  their composition-aware semantic surface. Canonical placements remain visible
+  when a historical container's exact catalog contract is unavailable: the
+  Canvas derives occupied region labels as read-only traversal surfaces. It does
+  not infer compatibility, accept additions, rewrite exact versions, or persist
+  synthesized slot definitions. Without exact geometry, those regions remain in
+  source-order auto-flow. Fixed rows preserve abstract proportions as minimums
+  but expand for descendants, leaving the Canvas as the sole scroll boundary.
 - An already-current closed legacy-flat UI reference system may invoke the same
   application layout-preview operation with the Minimal default and present the
   result as an unsaved draft. A reference containing v1 or v2 Foundation assets
@@ -233,22 +216,22 @@ authoring, customization, and single-asset Studio workflows.
   bounded validation issues, and does not persist. A successful selection
   immediately commits the returned structure, instances, bindings, and placements
   to the local draft history, where undo/redo includes the layout descriptor.
-  Unassigned visual assets remain selectable and removable at the bottom of the
-  Asset Palette rather than on the
-  Canvas, and are reattachable by dragging them to compatible Canvas regions.
-  Trusted Foundation system/subsystem facades with declared slots and a
-  qualified declarative preview remain draggable visual containers. Nonvisual
-  policies, models, workflows, data contracts, and other system
-  resources appear separately under System resources and logic. They remain
-  selectable for Properties or Connections but are never presented as Canvas
-  drag sources. Missing exact catalog metadata fails closed into the nonvisual
-  group.
-  Save remains a separate optimistic command that creates a new immutable revision.
-- Composer catalog loading reads the complete catalog once and issues the
-  layout-only query only as a bounded compatibility fallback when no application
-  layout is present. Exact parent-definition/region compatibility results are
-  cached for the mounted workspace, so ordinary configuration edits do not
-  repeat transport reads.
+  Unassigned visual assets remain off the Canvas and appear only as compatible
+  choices in an occupied container's Add element modal. Nonvisual policies,
+  models, workflows, data contracts, and other system resources appear
+  separately in the Layers view under System resources and logic. Missing exact
+  catalog metadata fails closed into that nonvisual group. Save remains a
+  separate optimistic command that creates a new immutable revision.
+- Composer startup reads structural catalog summaries that omit configuration
+  schemas and defaults. Opening Layouts performs its bounded layout query on
+  demand. Opening Add element performs a region-scoped compatibility query and
+  presents bounded, searchable pages of new definitions and compatible
+  unassigned visual instances. Properties reads exact detail only for the
+  selected asset. Candidate summaries carry only a lightweight category ID so
+  the modal can group and filter results without loading editable metadata.
+  Styling reads exact detail only for the system root while that tab is active. Responses are scoped to their initiating selection so stale
+  requests cannot replace current detail. Full revision instance values remain
+  in the local draft for preview, undo, redo, and save.
 - Compose provides a design-time UI preview of the current unsaved hierarchy and
   configuration. The shared modal recursively follows canonical placement and
   canonical region order, reports unplaced visual, nonvisual resource, and

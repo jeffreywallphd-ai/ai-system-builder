@@ -10,6 +10,7 @@ import type {
   SystemBuilderRevision,
   SystemBuilderTemplateSummary,
   ListSystemBuilderComposerAssetsQuery,
+  ReadSystemBuilderComposerAssetQuery,
 } from "../../../../contracts/system-builder";
 import {
   preferredSystemComposerTarget,
@@ -430,7 +431,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
     });
   });
 
-  it("loads paged layouts, applies a selection directly to the Canvas, exposes unassigned assets, and undoes", async () => {
+  it("loads layouts on demand, applies one to the Canvas, exposes unassigned assets in the scoped modal, and undoes", async () => {
     const rootInstance = {
       ...instance("system-1.root", "builtin.system.system", "System root", {}),
       definitionRef: {
@@ -667,7 +668,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
 
     const expandLayout = await vi.waitFor(() => {
       const current = container!.querySelector<HTMLButtonElement>(
-        'button[aria-label="Expand Layout"]',
+        'button[aria-label="Show layouts"]',
       );
       expect(current).not.toBeNull();
       return current!;
@@ -682,8 +683,8 @@ describe("SystemBuilderWorkspace UI preview", () => {
       return current!;
     });
     expect(
-      minimalChoice.closest("#system-composer-library-panel")?.textContent,
-    ).toContain("Asset Palette");
+      minimalChoice.closest(".system-composer__layout-bar")?.textContent,
+    ).toContain("Layouts");
     const initialCanvas = container!.querySelector<HTMLElement>(
       ".system-composer__panel--canvas",
     )!;
@@ -697,21 +698,35 @@ describe("SystemBuilderWorkspace UI preview", () => {
     ).toEqual(["top-bar", "content"]);
     await act(async () => minimalChoice.click());
     await vi.waitFor(() => {
-      expect(container!.textContent).toContain("Unassigned visual assets");
       expect(container!.textContent).toContain("Unsaved changes");
       expect(container!.textContent).toContain(
         "The Canvas updated automatically",
+      );
+      expect(container!.textContent).toContain(
+        "available from Add element on a compatible container",
       );
     });
     await act(async () =>
       container
         .querySelector<HTMLButtonElement>(
-          'button[aria-label="Expand Unassigned visual assets"]',
+          'button[aria-label="Add an element inside Standard shell"]',
         )!
         .click(),
     );
-    expect(container!.textContent).toContain("Preserved top bar");
-    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+    const assetDialog = await vi.waitFor(() => {
+      const current =
+        document.body.querySelector<HTMLElement>('[role="dialog"]');
+      expect(current?.textContent).toContain("Preserved top bar");
+      return current!;
+    });
+    expect(assetDialog.textContent).toContain("Unassigned visual assets");
+    await act(async () =>
+      assetDialog
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="Close asset selection"]',
+        )!
+        .click(),
+    );
     const changedCanvas = container!.querySelector<HTMLElement>(
       ".system-composer__panel--canvas",
     )!;
@@ -719,13 +734,13 @@ describe("SystemBuilderWorkspace UI preview", () => {
       "builtin.layout.application.minimal",
     );
     expect(changedCanvas.textContent).not.toContain("Unassigned visual assets");
-    expect(
-      container!.querySelector("#system-composer-library-panel")?.textContent,
-    ).toContain("Unassigned visual assets");
+    expect(container!.textContent).not.toContain("Asset Palette");
     expect(previewLayoutChange).toHaveBeenCalledTimes(1);
     await act(async () => button(container, "Undo").click());
     await vi.waitFor(() => {
-      expect(container!.textContent).not.toContain("Unassigned visual assets");
+      expect(container!.textContent).not.toContain(
+        "available from Add element on a compatible container",
+      );
       expect(minimalChoice.checked).toBe(false);
     });
     await act(async () => button(container, "Build & test").click());
@@ -1274,43 +1289,55 @@ describe("SystemBuilderWorkspace UI preview", () => {
         placements: input.placements,
       } as SystemBuilderRevision,
     }));
+    const rootDetail = composerDefinition(
+      "builtin.system.system",
+      "System root",
+      ["application-shell"],
+      false,
+      "3.0.0",
+      true,
+    );
+    const shellDetail = {
+      ...composerDefinition(
+        "builtin.layout.application.standard",
+        "Standard shell",
+        ["content"],
+        true,
+        "3.0.0",
+      ),
+      layoutRole: "application-shell" as const,
+      layoutGeometry: {
+        columnPattern: "single" as const,
+        areas: [["content"]],
+        sourceOrder: ["content"],
+        dimensionsLocked: true as const,
+      },
+    };
     const listComposerAssets = vi.fn(
       async (_input: ListSystemBuilderComposerAssetsQuery) => ({
         ok: true as const,
         value: {
           items: [
-            composerDefinition(
-              "builtin.system.system",
-              "System root",
-              ["application-shell"],
-              false,
-              "3.0.0",
-              true,
-            ),
-            {
-              ...composerDefinition(
-                "builtin.layout.application.standard",
-                "Standard shell",
-                ["content"],
-                true,
-                "3.0.0",
-              ),
-              layoutRole: "application-shell" as const,
-              layoutGeometry: {
-                columnPattern: "single" as const,
-                areas: [["content"]],
-                sourceOrder: ["content"],
-                dimensionsLocked: true as const,
-              },
-            },
+            withoutComposerDetail(rootDetail),
+            withoutComposerDetail(shellDetail),
           ],
         },
+      }),
+    );
+    const readComposerAsset = vi.fn(
+      async (input: ReadSystemBuilderComposerAssetQuery) => ({
+        ok: true as const,
+        value:
+          String(input.definitionRef.id) === shellDetail.definitionId
+            ? shellDetail
+            : rootDetail,
       }),
     );
     const client = {
       ...clientFor(record, revision),
       saveRevision,
       listComposerAssets,
+      readComposerAsset,
     } as SystemBuilderClient;
 
     container = document.createElement("div");
@@ -1353,11 +1380,16 @@ describe("SystemBuilderWorkspace UI preview", () => {
     });
     await vi.waitFor(() =>
       expect(
-        listComposerAssets.mock.calls.filter(
-          ([input]) => input.parentDefinitionRef,
-        ),
-      ).toHaveLength(1),
+        readComposerAsset.mock.calls[
+          readComposerAsset.mock.calls.length - 1
+        ]?.[0].definitionRef,
+      ).toEqual(shellInstance.definitionRef),
     );
+    expect(
+      listComposerAssets.mock.calls.filter(
+        ([input]) => input.parentDefinitionRef,
+      ),
+    ).toHaveLength(0);
     expect(
       listComposerAssets.mock.calls.filter(([input]) => input.searchText),
     ).toHaveLength(0);
@@ -1377,11 +1409,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
       title.dispatchEvent(new Event("input", { bubbles: true }));
     });
     await act(async () => Promise.resolve());
-    expect(
-      listComposerAssets.mock.calls.filter(
-        ([input]) => input.parentDefinitionRef,
-      ),
-    ).toHaveLength(1);
+    const detailReadsAfterTitleChange = readComposerAsset.mock.calls.length;
     await act(async () => button(container, "Styling").click());
     const primaryColor = await vi.waitFor(() => {
       const current =
@@ -1389,6 +1417,16 @@ describe("SystemBuilderWorkspace UI preview", () => {
       expect(current?.type).toBe("color");
       return current!;
     });
+    await vi.waitFor(() =>
+      expect(
+        readComposerAsset.mock.calls[
+          readComposerAsset.mock.calls.length - 1
+        ]?.[0].definitionRef,
+      ).toEqual(rootInstance.definitionRef),
+    );
+    expect(readComposerAsset.mock.calls.length).toBe(
+      detailReadsAfterTitleChange + 1,
+    );
     await act(async () => {
       const setter = Object.getOwnPropertyDescriptor(
         HTMLInputElement.prototype,
@@ -1556,6 +1594,17 @@ function layoutDefinition(
       dimensionsLocked: true,
     },
   };
+}
+
+function withoutComposerDetail(
+  asset: SystemBuilderComposerAsset,
+): SystemBuilderComposerAsset {
+  const {
+    configurationSchema: _configurationSchema,
+    defaultConfiguration: _defaultConfiguration,
+    ...summary
+  } = asset;
+  return summary;
 }
 
 function button(rootElement: ParentNode, label: string): HTMLButtonElement {

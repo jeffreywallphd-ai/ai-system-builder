@@ -21,45 +21,40 @@
   Keep system records and immutable revision state behind its client interface;
   both desktop and thin-client surfaces must use the workspace-scoped exact
   composer catalog and the same draft, validation, history, and save semantics.
-  The geometry-aware Layout chooser within the Asset Palette, compatible square
-  visual-asset tiles, full active-layout Canvas, and a details sidebar with
-  shared-style fitted top tabs for Properties, Styling, and Layers, followed by
-  Configure identity and Collapse, breadcrumbs, protected-node actions,
-  Connections mode, immediate local layout selection, and recursive preview are shared UI
-  rather than host-specific reconstructions. The Asset Palette has collapsed,
-  normal, and maximized presentation sizes; normal presents layout choices and
-  asset tiles in one column, while maximized borrows width from the Canvas and
-  uses multi-column galleries without changing the details-sidebar width.
-  Layout, Assets, Unassigned visual assets, and System resources and logic are
-  independent Palette disclosures that start collapsed. States regions also
-  start collapsed on the Canvas without removing their drop surface. Collapsed
-  Palette bodies and States content do not mount hidden drag or preview
-  descendants until expanded. Only the active Properties, Styling, or Layers
-  panel body is mounted; controls are rebuilt from the canonical
-  draft when users switch panels. Layers lists only the placed
-  hierarchy.
-  These presentation states are not persisted. Narrow layouts use focus-restoring
-  panel controls. Systems keeps the Compose panel
+  The shared Design surface has a collapsible Layouts bar, a wide full-hierarchy
+  Canvas, and a details sidebar with fitted Properties, Styling, and Layers
+  tabs. Configure identity, Collapse, breadcrumbs, protected-node actions,
+  Connections mode, immediate local layout selection, and recursive preview are
+  shared UI rather than host-specific reconstructions. Layout choices load only
+  after the Layouts bar is opened. States regions start collapsed. Only the
+  active Properties, Styling, or Layers body mounts, and presentation state is
+  not persisted. Narrow layouts use focus-restoring panel controls. Systems
+  keeps the Compose panel
   mounted while sibling tabs are active so its canonical draft and loaded catalog
   survive Manage and Build handoffs; other tab content remains lazy by default.
-  Each asset tile is the pointer, touch, and keyboard drag handle, and every
-  declared container region is a recursive drop surface. The Composer catalog
-  projects abstract source-ordered geometry for all slot-bearing assets so the
-  Canvas never stops at an intermediate page, card, form, conversation, or
-  trusted visual system facade. Do not render standalone catalog fixtures inside
-  those containers: container nodes show their actual named regions and leaf
-  nodes alone render their composition-aware semantic surface. Keep the legacy Add-here, move-order,
-  reparent, and wrapper forms out of the Design workspace; the drag adapter maps
-  interactions to the canonical add/place operations.
+  Every exact slot-bearing Canvas container exposes Add element. It opens the
+  shared modal scoped to that container, lets the user choose an available
+  region, and requests bounded searchable compatible definitions and compatible
+  unassigned visual instances. Results are grouped into labeled UI categories
+  with a category filter directly below search. Selection maps to canonical add/place commands,
+  closes the modal, selects the result, and reveals it on the Canvas. Layers
+  retains explicit native move-destination and order controls. Do not restore a
+  persistent Asset Palette, drag surfaces, or renderer drag state.
+  The structural Composer catalog projects abstract source-ordered geometry for
+  all slot-bearing assets so the Canvas never stops at an intermediate page,
+  card, form, conversation, or trusted visual system facade. Do not render
+  standalone catalog fixtures inside those containers: container nodes show
+  their actual named regions and leaf nodes alone render their
+  composition-aware semantic surface.
   If a saved historical container has canonical child placements but its exact
   catalog contract is unavailable, show those occupied edges through bounded
-  read-only structural regions. Never infer compatibility or enable drops for
+  read-only structural regions. Never infer compatibility or accept additions for
   that fallback, rewrite the exact instance version, or persist renderer-derived
   slots. Without exact geometry, preserve source-order auto-flow rather than
   assigning overlapping named grid areas.
   Fixed layout rows expand to show placed Canvas children without nested region
-  scrollbars; the outer Canvas remains the single scrolling boundary.
-  Never serialize drag, selection, focus, zoom, or panel state.
+  scrollbars; the outer Canvas remains the single scrolling boundary. Never
+  serialize selection, focus, disclosure, or panel state.
   Structured saves must preserve exact root references, structure, placements,
   configuration, and typed bindings. Do not infer a replacement root from visual
   order, accept arbitrary port names, or mix containment with bindings. A
@@ -73,16 +68,17 @@
   editable width, height, region, CSS, responsive-rule, or raw JSON controls.
   Layout selections go through the application preview client, immediately
   update the local undoable Canvas draft, and persist only through the normal
-  immutable-revision save. Classify unmatched instances from their exact catalog
-  definitions: pages, UI components, features, and trusted declarative
-  Foundation system/subsystem facades with child slots belong in draggable
-  Unassigned visual assets. Show every other unmatched instance separately under
-  System resources and logic without a Canvas drag control; missing definitions
-  fail closed into this nonvisual group.
-  Bootstrap the full Composer catalog once and request the layout-only fallback
-  only when the full result has no application layouts. Cache compatibility
-  results by workspace, exact parent definition/version, and region so local
-  property edits do not repeat transport work.
+  immutable-revision save. Classify unmatched instances from exact catalog
+  summaries: compatible visual instances appear only in an Add element modal;
+  policies, models, workflows, contracts, unknowns, and other nonvisual assets
+  remain selectable under System resources and logic in Layers.
+  Structural catalog summaries include exact identity, ports, slots, geometry,
+  availability, and compatibility but omit configuration schemas and defaults.
+  Properties reads exact detail only for the current selection while active;
+  Styling reads only the exact root detail while active. Ignore superseded
+  responses. Candidate searches are exact-parent/region scoped and paged.
+  Full instance configuration remains in the revision draft for preview,
+  undo/redo, validation, and immutable save.
   Compose previews use the shared modal and recursively render current in-memory
   placements and configuration through registered side-effect-free System
   Foundation renderers. Keep node counts and viewport frames bounded, expose

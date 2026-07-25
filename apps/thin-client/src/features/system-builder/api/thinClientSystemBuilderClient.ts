@@ -60,6 +60,8 @@ export function createThinClientSystemBuilderClient(
       ),
     listComposerAssets: (input) =>
       request(`${root}/systems/composer/assets?${composerQuery(input)}`),
+    readComposerAsset: (input) =>
+      request(`${root}/systems/composer/asset?${composerAssetQuery(input)}`),
     previewLayoutChange: (input) =>
       post(`${root}/systems/layout-change/preview`, input),
     previewFoundationUpgrade: (input) =>
@@ -67,6 +69,16 @@ export function createThinClientSystemBuilderClient(
     upgradeFoundation: (input) =>
       post(`${root}/systems/foundation-upgrade`, input),
   };
+}
+
+function composerAssetQuery(
+  input: Parameters<NonNullable<SystemBuilderClient["readComposerAsset"]>>[0],
+): string {
+  return new URLSearchParams({
+    workspaceId: String(input.workspaceId),
+    definitionId: String(input.definitionRef.id),
+    version: String(input.definitionRef.version),
+  }).toString();
 }
 
 function composerQuery(

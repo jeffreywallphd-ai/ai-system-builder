@@ -61,6 +61,12 @@ const services = () =>
         value: { items: [], query: value },
       })),
     },
+    readComposerAsset: {
+      execute: testDouble.fn(async (value: any) => ({
+        ok: true,
+        value,
+      })),
+    },
     previewLayoutChange: {
       execute: testDouble.fn(async (value: any) => ({ ok: true, value })),
     },
@@ -92,6 +98,7 @@ describe("System Builder transport parity", () => {
         "/api/systems/archive",
         "/api/systems/clone",
         "/api/systems/composer/assets",
+        "/api/systems/composer/asset",
         "/api/systems/manage",
         "/api/systems/layout-change/preview",
         "/api/systems/foundation-upgrade/preview",
@@ -163,6 +170,24 @@ describe("System Builder transport parity", () => {
       slotId: "content",
       compatibleOnly: true,
       limit: 20,
+    });
+    await routes.get.get("/api/systems/composer/asset")(
+      {
+        query: {
+          workspaceId: "workspace-a",
+          definitionId: "builtin.ui.card",
+          version: "3.0.0",
+        },
+      },
+      response,
+    );
+    expect(api.readComposerAsset.execute.mock.calls[0][0]).toMatchObject({
+      workspaceId: "workspace-a",
+      definitionRef: {
+        kind: "asset-definition-version",
+        id: "builtin.ui.card",
+        version: "3.0.0",
+      },
     });
     const slotPayload = {
       workspaceId: "workspace-a",
@@ -317,6 +342,29 @@ describe("System Builder transport parity", () => {
       workspaceId: "workspace-a",
       searchText: "card",
       limit: 10,
+    });
+    await handlers.get(
+      DESKTOP_SYSTEM_BUILDER_CHANNELS.readComposerAsset.request.value,
+    )(
+      {},
+      {
+        payload: {
+          workspaceId: "workspace-a",
+          definitionRef: {
+            kind: "asset-definition-version",
+            id: "builtin.ui.card",
+            version: "3.0.0",
+          },
+        },
+      },
+    );
+    expect(ipc.readComposerAsset.execute.mock.calls[0][0]).toMatchObject({
+      workspaceId: "workspace-a",
+      definitionRef: {
+        kind: "asset-definition-version",
+        id: "builtin.ui.card",
+        version: "3.0.0",
+      },
     });
     await handlers.get(
       DESKTOP_SYSTEM_BUILDER_CHANNELS.saveRevision.request.value,

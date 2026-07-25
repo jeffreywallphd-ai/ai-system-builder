@@ -7,7 +7,9 @@ import type {
   SystemBuilderRecord,
   SystemBuilderRevision,
   SystemBuilderComposerCatalog,
+  SystemBuilderComposerAssetDetail,
   ListSystemBuilderManagementQuery,
+  ReadSystemBuilderComposerAssetQuery,
   SystemBuilderManagementPage,
   PreviewSystemBuilderLayoutChangeCommand,
   SystemBuilderLayoutChangePreview,
@@ -40,6 +42,10 @@ export const DESKTOP_SYSTEM_BUILDER_OPERATIONS = {
   listComposerAssets: createTransportOperation(
     "system-builder",
     "list-composer-assets",
+  ),
+  readComposerAsset: createTransportOperation(
+    "system-builder",
+    "read-composer-asset",
   ),
   previewLayoutChange: createTransportOperation(
     "system-builder",
@@ -121,6 +127,12 @@ export type DesktopSystemBuilderRevisionListResponse = IpcResponse<
 >;
 export type DesktopSystemBuilderComposerCatalogResponse =
   IpcResponse<SystemBuilderComposerCatalog>;
+export type DesktopReadSystemBuilderComposerAssetRequest = IpcRequest<
+  ReadSystemBuilderComposerAssetQuery,
+  (typeof DESKTOP_SYSTEM_BUILDER_OPERATIONS)["readComposerAsset"]
+>;
+export type DesktopSystemBuilderComposerAssetDetailResponse =
+  IpcResponse<SystemBuilderComposerAssetDetail>;
 export type DesktopSystemBuilderLayoutChangePreviewResponse =
   IpcResponse<SystemBuilderLayoutChangePreview>;
 export type DesktopSystemBuilderFoundationUpgradePreviewResponse =

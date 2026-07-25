@@ -10,6 +10,7 @@ import {
   normalizeSystemBuilderSystemId,
   normalizeSystemBuilderTemplateId,
 } from "../../../../contracts/system-builder";
+import { normalizeAssetId } from "../../../../contracts/asset";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import type { IpcMainHandlePort } from "../ipcMainHandlePort";
 
@@ -124,6 +125,17 @@ export function registerSystemBuilderIpc(
       workspaceId: createWorkspaceId(required(p.workspaceId)),
     } as any),
   );
+  handle(d, "readComposerAsset", (p) => {
+    const definitionRef = record(p.definitionRef);
+    return d.readComposerAsset.execute({
+      workspaceId: createWorkspaceId(required(p.workspaceId)),
+      definitionRef: {
+        kind: "asset-definition-version",
+        id: normalizeAssetId(required(definitionRef.id)),
+        version: required(definitionRef.version),
+      },
+    });
+  });
   handle(d, "previewLayoutChange", (p) =>
     d.previewLayoutChange.execute({
       ...p,

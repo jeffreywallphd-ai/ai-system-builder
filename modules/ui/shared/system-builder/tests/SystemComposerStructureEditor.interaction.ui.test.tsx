@@ -143,7 +143,6 @@ describe("SystemComposerStructureEditor interactions", () => {
         (panel) => panel.className.match(/system-composer__panel--[a-z]+/)?.[0],
       ),
     ).toEqual([
-      "system-composer__panel--library",
       "system-composer__panel--canvas",
       "system-composer__panel--details",
     ]);
@@ -202,7 +201,7 @@ describe("SystemComposerStructureEditor interactions", () => {
       "#system-composer-layers-panel",
     );
     expect(layersPanel?.textContent).not.toContain("Unassigned visual assets");
-    expect(layersPanel?.textContent).not.toContain("System resources & logic");
+    expect(layersPanel?.textContent).toContain("System resources & logic");
     const collapseDetails = container!.querySelector<HTMLButtonElement>(
       "button[aria-label='Collapse Composer details sidebar']",
     );
@@ -230,49 +229,10 @@ describe("SystemComposerStructureEditor interactions", () => {
     const workspace = container!.querySelector<HTMLElement>(
       ".system-composer__workspace",
     )!;
-    expect(workspace.getAttribute("data-library-size")).toBe("normal");
-    await click(ariaButton("Maximize Asset Palette"));
-    expect(workspace.getAttribute("data-library-size")).toBe("maximized");
-    await click(ariaButton("Normal Asset Palette"));
-    expect(workspace.getAttribute("data-library-size")).toBe("normal");
-    await click(ariaButton("Collapse Asset Palette"));
-    expect(workspace.getAttribute("data-library-size")).toBe("collapsed");
-    expect(workspace.getAttribute("data-library-collapsed")).toBe("true");
-    expect(workspace.getAttribute("data-details-collapsed")).toBe("false");
-    await click(ariaButton("Normal Asset Palette"));
-    expect(workspace.getAttribute("data-library-collapsed")).toBe("false");
-
-    for (const section of [
-      "Layout",
-      "Assets",
-      "Unassigned visual assets",
-      "System resources & logic",
-    ]) {
-      const expand = ariaButton(`Expand ${section}`);
-      const contentId = expand.getAttribute("aria-controls");
-      expect(
-        container!.querySelector<HTMLElement>(`#${contentId}`)?.hidden,
-      ).toBe(true);
-      await click(expand);
-      expect(
-        container!.querySelector<HTMLElement>(`#${contentId}`)?.hidden,
-      ).toBe(false);
-      await click(ariaButton(`Collapse ${section}`));
-      expect(
-        container!.querySelector<HTMLElement>(`#${contentId}`)?.hidden,
-      ).toBe(true);
-    }
-
-    const contentRegion = container!.querySelector<HTMLElement>(
-      '[aria-label="content region"]',
+    expect(workspace.classList).toContain(
+      "system-composer__workspace--without-library",
     );
-    expect(contentRegion).not.toBeNull();
-    expect(contentRegion?.textContent).not.toContain("Add here");
-    await click(button("content"));
-    expect(onTargetSlotChange).toHaveBeenCalledWith({
-      parentInstanceId: "instance.shell",
-      slotId: "content",
-    });
+    expect(container!.textContent).not.toContain("Asset Palette");
 
     const canvas = container!.querySelector<HTMLElement>(
       ".system-composer__panel--canvas",
@@ -318,28 +278,6 @@ describe("SystemComposerStructureEditor interactions", () => {
       statesRegion.querySelector('[data-instance-id="instance.empty-state"]'),
     ).toBeNull();
 
-    await click(ariaButton("Expand Assets"));
-    const paletteDragHandle = container!.querySelector<HTMLButtonElement>(
-      '[aria-label="Drag builtin.container.card"]',
-    );
-    expect(paletteDragHandle).not.toBeNull();
-    expect(
-      paletteDragHandle?.querySelector(".system-composer__palette-icon"),
-    ).not.toBeNull();
-    expect(container!.textContent).not.toContain("Move to another slot");
-    expect(container!.textContent).not.toContain("Move before");
-    expect(container!.textContent).not.toContain("Wrap in a container");
-    expect(container!.textContent?.toLowerCase()).not.toContain("slot");
-    expect(paletteDragHandle?.getAttribute("aria-describedby")).not.toBeNull();
-    expect(container!.textContent).toContain("Press Space to pick up an asset");
-    await fire(paletteDragHandle!, "keydown", { key: " ", code: "Space" });
-    await fire(paletteDragHandle!, "keydown", {
-      key: "Escape",
-      code: "Escape",
-    });
-    expect(container!.textContent).toContain(
-      "Drag cancelled. No composition changes were made.",
-    );
     expect(button("Undo").disabled).toBe(true);
     await click(button("Redo"));
     expect(onRedo).toHaveBeenCalledTimes(1);
@@ -347,7 +285,7 @@ describe("SystemComposerStructureEditor interactions", () => {
     expect(onRemove).not.toHaveBeenCalled();
   });
 
-  it("renders every nested reference container and its draggable child regions", async () => {
+  it("renders every nested reference container and keeps all embedded assets visible", () => {
     const system = {
       ...composerAsset("builtin.system.system", ["application-shell"]),
       assetType: "system" as const,
@@ -492,11 +430,6 @@ describe("SystemComposerStructureEditor interactions", () => {
     );
     expect(legacyPageRegion?.dataset.structuralOnly).toBe("true");
     expect(
-      legacyPageRegion?.querySelector<HTMLButtonElement>(
-        'button[aria-label="Select Content region"]',
-      )?.disabled,
-    ).toBe(true);
-    expect(
       assistantNode?.querySelector(
         '[data-slot-id="interface"] [data-instance-id="instance.chat"] [data-slot-id="composer"] [data-instance-id="instance.composer"] [data-slot-id="input"] [data-instance-id="instance.input"]',
       ),
@@ -519,12 +452,7 @@ describe("SystemComposerStructureEditor interactions", () => {
     expect(
       legacyChatRegions.every((region) => region.style.gridArea === ""),
     ).toBe(true);
-    await click(ariaButton("Expand Assets"));
-    expect(
-      container!.querySelector(
-        '[aria-label="Drag conversation.basic-assistant-system"]',
-      ),
-    ).not.toBeNull();
+    expect(container!.querySelector('[aria-label^="Drag "]')).toBeNull();
 
     for (const instanceId of [
       "instance.shell",
@@ -613,7 +541,7 @@ describe("SystemComposerStructureEditor interactions", () => {
     expect(onSelect).toHaveBeenCalledWith(sidebar);
   });
 
-  it("keeps visual assets discoverable before a canvas region is selected", async () => {
+  it("loads layouts on demand and adds compatible elements through a container-scoped modal", async () => {
     const system = composerAsset("builtin.system.system", [
       "application-shell",
     ]);
@@ -624,51 +552,141 @@ describe("SystemComposerStructureEditor interactions", () => {
       "single",
     );
     const card = composerAsset("builtin.container.card", ["body"]);
+    const formInput = {
+      ...composerAsset("builtin.form.text-input", []),
+      categoryId: "forms-fields",
+    };
+    const onAdd = vi.fn();
+    const onPlace = vi.fn();
+    const onTargetSlotChange = vi.fn();
+    const loadLayouts = vi.fn().mockResolvedValue({
+      ok: true,
+      value: { items: [shell] },
+    });
+    const loadCompatibleAssets = vi.fn().mockResolvedValue({
+      ok: true,
+      value: { items: [card, formInput] },
+    });
 
     render(
       <SystemComposerStructureEditor
         draft={{
           instances: [
             instance("instance.root", "builtin.system.system", "System root"),
+            instance("instance.shell", shell.definitionId, "Application shell"),
+            instance("instance.card", card.definitionId, "Unassigned card"),
           ],
-          placements: [],
+          placements: [
+            placement("instance.root", "application-shell", "instance.shell"),
+          ],
           bindings: [],
         }}
         rootInstanceRefs={[
           { kind: "asset-instance", id: normalizeAssetId("instance.root") },
         ]}
-        catalog={[system, shell, card]}
-        compatibleAssets={[]}
-        layoutOptions={[shell]}
-        selectedLayoutDefinitionId={undefined}
-        selectedInstanceId="instance.root"
-        targetSlot={undefined}
-        protectedInstanceIds={new Set(["instance.root"])}
+        catalog={[system, shell, card, formInput]}
+        compatibleAssets={[card, formInput]}
+        layoutOptions={[]}
+        selectedLayoutDefinitionId={shell.definitionId}
+        selectedInstanceId="instance.shell"
+        protectedInstanceIds={new Set(["instance.root", "instance.shell"])}
         canUndo={false}
         canRedo={false}
         onSelect={vi.fn()}
-        onTargetSlotChange={vi.fn()}
+        onTargetSlotChange={onTargetSlotChange}
         onSelectLayout={vi.fn()}
-        onAdd={vi.fn()}
-        onPlace={vi.fn()}
+        loadLayouts={loadLayouts}
+        loadCompatibleAssets={loadCompatibleAssets}
+        onAdd={onAdd}
+        onPlace={onPlace}
         onRemove={vi.fn()}
         onUndo={vi.fn()}
         onRedo={vi.fn()}
       />,
     );
 
-    await click(ariaButton("Expand Assets"));
+    expect(loadLayouts).not.toHaveBeenCalled();
+    await click(ariaButton("Show layouts"));
+    await flushAsync();
+    expect(loadLayouts).toHaveBeenCalledTimes(1);
     expect(
-      container!.querySelector('[aria-label="Drag builtin.container.card"]'),
-    ).not.toBeNull();
-    expect(
-      container!.querySelector(
-        '[aria-label="Drag builtin.layout.application.standard"]',
+      container!.querySelectorAll<HTMLInputElement>(
+        'input[name="system-layout"]',
       ),
-    ).toBeNull();
-    expect(container!.textContent).toContain(
-      "Select a Canvas region to filter by compatibility.",
+    ).toHaveLength(1);
+
+    const addElement = ariaButton("Add an element inside Application shell");
+    await click(addElement);
+    await flushAsync();
+    expect(loadCompatibleAssets).toHaveBeenCalledWith(
+      { parentInstanceId: "instance.shell", slotId: "top-bar" },
+      { limit: 48 },
     );
+    const modal = document.querySelector<HTMLElement>('[role="dialog"]');
+    expect(modal).not.toBeNull();
+    expect(modal?.textContent).toContain("Unassigned visual assets");
+    expect(modal?.textContent).toContain("Containers and layout");
+    expect(modal?.textContent).toContain("Forms and inputs");
+    const typeFilter = modal!.querySelector<HTMLSelectElement>(
+      '[aria-label="Filter elements by type"]',
+    )!;
+    await act(async () => {
+      typeFilter.value = "forms";
+      typeFilter.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(modal?.textContent).toContain("builtin.form.text-input");
+    expect(modal?.textContent).not.toContain("builtin.container.card");
+    await act(async () => {
+      typeFilter.value = "all";
+      typeFilter.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    const destination = Array.from(
+      modal!.querySelectorAll<HTMLSelectElement>("select"),
+    ).find((candidate) => candidate !== typeFilter)!;
+    await act(async () => {
+      destination.value = "content";
+      destination.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await flushAsync();
+    expect(loadCompatibleAssets).toHaveBeenLastCalledWith(
+      { parentInstanceId: "instance.shell", slotId: "content" },
+      { limit: 48 },
+    );
+    expect(onTargetSlotChange).toHaveBeenLastCalledWith({
+      parentInstanceId: "instance.shell",
+      slotId: "content",
+    });
+    const newCard = Array.from(
+      modal!.querySelectorAll<HTMLButtonElement>(
+        ".system-composer__asset-picker-card",
+      ),
+    ).find((candidate) =>
+      candidate.textContent?.includes("builtin.container.card"),
+    );
+    expect(newCard).not.toBeUndefined();
+    await click(newCard!);
+    expect(onAdd).toHaveBeenCalledWith(card, {
+      parentInstanceId: "instance.shell",
+      slotId: "content",
+    });
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+
+    await click(addElement);
+    await flushAsync();
+    const existingCard = Array.from(
+      document.querySelectorAll<HTMLButtonElement>(
+        ".system-composer__asset-picker-card",
+      ),
+    ).find((candidate) =>
+      candidate.textContent?.includes("Existing unassigned element"),
+    );
+    expect(existingCard).not.toBeUndefined();
+    await click(existingCard!);
+    expect(onPlace).toHaveBeenCalledWith("instance.card", {
+      parentInstanceId: "instance.shell",
+      slotId: "top-bar",
+    });
+    expect(container!.querySelector('[aria-label^="Drag "]')).toBeNull();
   });
 });
 
@@ -718,6 +736,13 @@ async function fire(
 
 async function flushFocus(): Promise<void> {
   await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
+}
+
+async function flushAsync(): Promise<void> {
+  await act(async () => {
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 }
 
 function instance(

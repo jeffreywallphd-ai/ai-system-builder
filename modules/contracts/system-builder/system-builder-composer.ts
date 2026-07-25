@@ -48,10 +48,16 @@ export interface SystemBuilderComposerAsset {
   readonly description: string;
   readonly assetType: AssetType;
   readonly assetFamily: AssetFamily;
+  readonly categoryId?: string;
   readonly lifecycleStatus: AssetLifecycleStatus;
   readonly builtIn: boolean;
   readonly layoutRole?: "application-shell" | "page-layout";
   readonly layoutGeometry?: SystemBuilderComposerLayoutGeometry;
+  /**
+   * Property detail is intentionally omitted by Composer catalog list
+   * operations. It is present only on exact detail projections and on
+   * trusted in-process fixtures retained for preview compatibility.
+   */
   readonly configurationSchema?: AssetConfigurationSchema;
   readonly defaultConfiguration?: AssetConfigurationValues;
   readonly ports: readonly AssetPort[];
@@ -61,6 +67,8 @@ export interface SystemBuilderComposerAsset {
   readonly previewAvailability: SystemBuilderComposerPreviewAvailability;
 }
 
+export interface SystemBuilderComposerAssetDetail extends SystemBuilderComposerAsset {}
+
 export interface ListSystemBuilderComposerAssetsQuery {
   readonly workspaceId: WorkspaceId | string;
   readonly searchText?: string;
@@ -69,6 +77,11 @@ export interface ListSystemBuilderComposerAssetsQuery {
   readonly parentDefinitionRef?: AssetReference;
   readonly slotId?: AssetSlotId | string;
   readonly compatibleOnly?: boolean;
+}
+
+export interface ReadSystemBuilderComposerAssetQuery {
+  readonly workspaceId: WorkspaceId | string;
+  readonly definitionRef: AssetReference;
 }
 
 export interface SystemBuilderComposerCatalog {

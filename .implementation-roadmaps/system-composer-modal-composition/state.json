@@ -1,0 +1,679 @@
+{
+  "blockers": [],
+  "chunks": [
+    {
+      "areas": [
+        "Composer contracts",
+        "Application use cases",
+        "API and IPC transports",
+        "Desktop and thin-client clients"
+      ],
+      "chunkId": "summary-detail-vertical-slice",
+      "completedAt": "2026-07-25T15:05:06Z",
+      "criteriaIds": [
+        "selected-detail-only",
+        "shared-host-parity"
+      ],
+      "documentation": [
+        "ADR-0037",
+        "System Builder architecture",
+        "Shared UI README"
+      ],
+      "feedbackAddressed": [],
+      "id": "complete-modal-composer-summary-detail-vertical-slice",
+      "incrementId": "complete-modal-composer",
+      "summary": "Added schema-free structural summaries and an exact workspace-scoped selected-definition detail read across application, HTTP, IPC, preload, desktop, and thin-client boundaries.",
+      "tests": [
+        "Composer catalog and transport parity tests passed (11 assertions)",
+        "Thin-client, server, and desktop production builds passed"
+      ],
+      "title": "Lightweight summaries and exact selected detail"
+    },
+    {
+      "areas": [
+        "Shared Composer Canvas",
+        "Accessible asset modal",
+        "Layout disclosure",
+        "Shared styles",
+        "Dependency removal"
+      ],
+      "chunkId": "modal-composition-experience",
+      "completedAt": "2026-07-25T15:05:06Z",
+      "criteriaIds": [
+        "modal-add-focus",
+        "complete-without-drag",
+        "layout-bar",
+        "shared-host-parity"
+      ],
+      "documentation": [
+        "ADR-0037",
+        "System Builder architecture",
+        "System Builder context pack",
+        "Shared UI README"
+      ],
+      "feedbackAddressed": [
+        "categorized-asset-modal"
+      ],
+      "id": "complete-modal-composer-modal-composition-experience",
+      "incrementId": "complete-modal-composer",
+      "summary": "Replaced the persistent palette and drag behavior with a container-scoped Add element modal, explicit movement controls, an on-demand layouts bar, and categorized/filterable asset browsing.",
+      "tests": [
+        "Structure editor interaction suite passed (4 tests)",
+        "Workspace interaction suite passed (11 tests)",
+        "Style-token tests passed (5 tests)"
+      ],
+      "title": "Complete click-based modal composition"
+    },
+    {
+      "areas": [
+        "Lazy detail effects",
+        "Request bounds and stale-response guards",
+        "Nested hierarchy",
+        "Security policy",
+        "Production qualification"
+      ],
+      "chunkId": "lazy-performance-qualification",
+      "completedAt": "2026-07-25T15:05:06Z",
+      "criteriaIds": [
+        "selected-detail-only",
+        "shared-host-parity",
+        "performance-regression",
+        "repository-quality"
+      ],
+      "documentation": [
+        "Accepted ADR and decision readiness",
+        "Architecture and context pack",
+        "Temporary roadmap report"
+      ],
+      "feedbackAddressed": [],
+      "id": "complete-modal-composer-lazy-performance-qualification",
+      "incrementId": "complete-modal-composer",
+      "summary": "Qualified selected-only Properties and active-only Styling detail reads, demand-driven modal/layout queries, complete nested Canvas rendering, host parity, and production builds without drag dependencies.",
+      "tests": [
+        "Focused Composer suites passed",
+        "Documentation, architecture, and agent-support gates passed",
+        "Server, thin-client, and desktop package builds passed",
+        "Full non-browser test suite passed"
+      ],
+      "title": "Lazy-loading and performance qualification"
+    }
+  ],
+  "completion": {
+    "completedAt": "2026-07-25T15:05:07Z",
+    "summary": "The approved modal-composer roadmap is implemented, documented, and locally qualified end to end; the temporary report remains available for final user review."
+  },
+  "createdAt": "2026-07-25T13:49:44Z",
+  "currentIncrementId": null,
+  "decisions": [
+    {
+      "approvalNote": "The user explicitly approved Option 1.",
+      "approvedAt": "2026-07-25T13:49:44Z",
+      "approvedFingerprint": "68573e3090865afdaa55794d7300ffc24bcb9ca4857e0092836d9b9145979474",
+      "context": "A UI-only replacement would remove drag registrations but retain the eager property payload, while fully partial revisions would unnecessarily disrupt preview, undo, and immutable revision semantics.",
+      "id": "composer-modal-and-lazy-loading-boundary",
+      "options": [
+        {
+          "consequences": [
+            "All drag code and dnd-kit dependencies can be removed.",
+            "Adding, moving, and ordering assets remain accessible without pointer dragging.",
+            "Only the selected asset property detail and active root Styling detail remain loaded."
+          ],
+          "id": "complete-click-composition-selected-detail",
+          "label": "Complete click-based Composer with true lazy properties",
+          "recommended": true,
+          "summary": "Use container-scoped asset modals, explicit click-based move and order actions, on-demand layouts and compatible candidates, lightweight structural summaries, and exact selected-definition detail reads.",
+          "tradeoffs": [
+            "Touches contracts, application reads, both transports, shared UI, tests, and documentation in one cohesive vertical change.",
+            "Preserves complete saved draft configuration while removing property schemas and defaults from the eager catalog payload."
+          ]
+        },
+        {
+          "consequences": [
+            "Every catalog asset still loads its property schema and defaults before selection."
+          ],
+          "id": "ui-only-modal",
+          "label": "UI-only modal conversion",
+          "recommended": false,
+          "summary": "Replace the palette and drag controls but retain the existing full Composer catalog payload.",
+          "tradeoffs": [
+            "Smaller transport change.",
+            "Does not satisfy true property lazy loading or the requested memory reduction."
+          ]
+        },
+        {
+          "consequences": [
+            "Accurate complete previews and immutable revision editing become materially more complex."
+          ],
+          "id": "fully-partial-revisions",
+          "label": "Fully partial revision loading",
+          "recommended": false,
+          "summary": "Fetch hierarchy, saved configuration, and definition data independently for each selected instance.",
+          "tradeoffs": [
+            "Lowest theoretical retained payload.",
+            "Requires a broad persistence, concurrency, undo, preview, and draft-merge redesign."
+          ]
+        }
+      ],
+      "proposalFingerprint": "68573e3090865afdaa55794d7300ffc24bcb9ca4857e0092836d9b9145979474",
+      "question": "How completely should the drag replacement and selected-property lazy loading be implemented?",
+      "selectedOptionId": "complete-click-composition-selected-detail",
+      "status": "approved",
+      "title": "Composer modal composition and lazy-loading boundary"
+    }
+  ],
+  "discovery": {
+    "constraints": [
+      "Preserve canonical AssetPlacement and named-slot semantics; do not create a renderer-owned hierarchy.",
+      "Keep desktop and thin-client behavior in the shared UI and carry new reads through API and Electron IPC/preload parity.",
+      "Retain saved instance configuration values in the active revision because preview, validation, undo, and saving require the complete draft.",
+      "Keep executable code and backing-resource bytes outside Asset Kernel metadata and preserve existing preview security boundaries.",
+      "Use the shared ModalDialog and provide complete keyboard and focus behavior.",
+      "Run focused tests for internal chunks and repository-wide completion gates only once after the increment is complete."
+    ],
+    "decisionRequired": true,
+    "recordedAt": "2026-07-25T13:49:44Z",
+    "sources": [
+      {
+        "note": "Keeps containment in exact named slots and ordered placements independent of renderer interaction libraries.",
+        "title": "Canonical slot composition decision",
+        "url": "docs/adr/ADR-0036-canonical-slot-composition-and-foundation-layouts.md"
+      },
+      {
+        "note": "Defines shared UI, transport parity, immutable revisions, recursive preview, and bounded Composer behavior.",
+        "title": "System Builder architecture",
+        "url": "docs/architecture/system-builder.md"
+      },
+      {
+        "note": "Owns the Asset Palette, layout gallery, Canvas drag/drop registrations, and selected-panel shell.",
+        "title": "Current shared Composer",
+        "url": "modules/ui/shared/system-builder/SystemComposerStructureEditor.tsx"
+      },
+      {
+        "note": "Reads full definition details, configuration schemas, and defaults for every listed card.",
+        "title": "Current Composer catalog use case",
+        "url": "modules/application/use-cases/system-builder/list-system-builder-composer-assets.use-case.ts"
+      },
+      {
+        "note": "Requires contained keyboard focus, Escape handling, an accessible name, and logical focus restoration.",
+        "title": "WAI-ARIA modal dialog pattern",
+        "url": "https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/examples/dialog/"
+      },
+      {
+        "note": "Documents cleanup needed to ignore stale asynchronous selection results.",
+        "title": "React useEffect guidance",
+        "url": "https://react.dev/reference/react/useEffect"
+      },
+      {
+        "note": "Recommends measuring granular editor work and using memoization only for expensive stable calculations.",
+        "title": "React useMemo guidance",
+        "url": "https://react.dev/reference/react/useMemo"
+      }
+    ],
+    "summary": "The shared Composer currently registers drag, drop, and sort behavior throughout the Canvas and eagerly expands every catalog item with its configuration schema and defaults. Canonical containment already lives in ordered AssetPlacement records, so the interaction can become modal and command driven without changing persisted hierarchy. The shared ModalDialog already owns accessible focus containment and restoration."
+  },
+  "evidence": [
+    {
+      "artifact": null,
+      "command": "npx vitest run modules/ui/shared/system-builder/tests/SystemComposerStructureEditor.interaction.ui.test.tsx",
+      "criterionId": "modal-add-focus",
+      "id": "evidence-1",
+      "incrementId": "complete-modal-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-25T15:05:06Z",
+      "summary": "The shared interaction suite verifies container-scoped opening, region choice, categorized/filterable candidates, add, unassigned reuse, close, selection flow, and absence of drag controls."
+    },
+    {
+      "artifact": null,
+      "command": "focused Composer interaction and draft tests; dependency/source reference audit",
+      "criterionId": "complete-without-drag",
+      "id": "evidence-2",
+      "incrementId": "complete-modal-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-25T15:05:06Z",
+      "summary": "Explicit native move/order controls and canonical draft commands remain covered; dnd-kit dependencies, drag adapter source, and drag tests were removed."
+    },
+    {
+      "artifact": null,
+      "command": "npx vitest run SystemComposerStructureEditor.interaction.ui.test.tsx SystemBuilderWorkspace.interaction.ui.test.tsx",
+      "criterionId": "layout-bar",
+      "id": "evidence-3",
+      "incrementId": "complete-modal-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-25T15:05:07Z",
+      "summary": "Focused editor and workspace tests verify layouts remain unloaded until disclosure and apply through the canonical undoable layout preview flow."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test system-builder-composer-catalog.unit.test.ts; npx vitest run SystemBuilderWorkspace.interaction.ui.test.tsx",
+      "criterionId": "selected-detail-only",
+      "id": "evidence-4",
+      "incrementId": "complete-modal-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-25T15:05:07Z",
+      "summary": "Catalog tests prove schemas/defaults are absent from list summaries; workspace tests prove exact selected Properties and active root Styling reads without reload on ordinary edits."
+    },
+    {
+      "artifact": null,
+      "command": "transport parity tests; npm run build:server; npm run build:thin-client; npm run package",
+      "criterionId": "shared-host-parity",
+      "id": "evidence-5",
+      "incrementId": "complete-modal-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-25T15:05:07Z",
+      "summary": "HTTP, IPC/preload, desktop, and thin clients expose the same exact-detail operation; transport tests and all three production builds passed."
+    },
+    {
+      "artifact": null,
+      "command": "focused Composer catalog, structure editor, workspace, hierarchy, and dependency-removal assertions",
+      "criterionId": "performance-regression",
+      "id": "evidence-6",
+      "incrementId": "complete-modal-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-25T15:05:07Z",
+      "summary": "Focused tests verify demand-driven layouts and compatibility, selected-only property metadata, complete deep hierarchy, stable local draft values, and no drag registrations or dependencies."
+    },
+    {
+      "artifact": null,
+      "command": "npm run docs:check; npm run architecture:check; npm run agent-support:check; npm run build:server; npm run build:thin-client; npm run package; npm test",
+      "criterionId": "repository-quality",
+      "id": "evidence-7",
+      "incrementId": "complete-modal-composer",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-25T15:05:07Z",
+      "summary": "Documentation, architecture, agent-support, server build, thin-client build, desktop package, and the final full non-browser suite passed. Runtime dependency audit is clean; known development-toolchain advisories remain separately reported."
+    }
+  ],
+  "feedback": [
+    {
+      "category": "scope",
+      "disposition": "accepted",
+      "id": "categorized-asset-modal",
+      "impact": "within-increment",
+      "nextAction": "Project lightweight category IDs, group and filter modal results, and add focused interaction coverage.",
+      "recordedAt": "2026-07-25T15:05:06Z",
+      "summary": "Group compatible modal assets into meaningful UI sections and add a type filter beneath search.",
+      "targetIncrementId": "complete-modal-composer"
+    }
+  ],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "2438ceef8ecf3835debcf4ac0d4393fd70851d1b65f27285fb80aef7fef6787c",
+      "recordedAt": "2026-07-25T13:49:44Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "0072d2d76ec84046014e2eafa990cc407c8333f13b5e9329e8c9b335c096081d",
+      "recordedAt": "2026-07-25T13:49:44Z",
+      "sequence": 2,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "cfa6fc1738fc837596cd00ede80a8c58f15c6ef13a219421ee8e61d0b04342d0",
+      "recordedAt": "2026-07-25T13:49:44Z",
+      "sequence": 3,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "fc9bbe2ac2dd8e800e4498e0fb5c881ed839b26a0eb1699ca9dc465eb1c09554",
+      "recordedAt": "2026-07-25T13:49:44Z",
+      "sequence": 4,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "8c7b4019d33b24598611f3a8c2ed44759af973ee821acd7c5dcb48c509182d1d",
+      "recordedAt": "2026-07-25T13:49:44Z",
+      "sequence": 5,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "591415e706f369fe2269ee47b6a33121a18647bb72ba6326edb83f18130c83ed",
+      "recordedAt": "2026-07-25T13:50:27Z",
+      "sequence": 6,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "56b8efc9839b5aaf158f9fa755f843aec9c43518cd921d7b93816113ce87474b",
+      "recordedAt": "2026-07-25T13:50:27Z",
+      "sequence": 7,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "8869c00ea9cc2696fa0079456c01719074359352d69dfbde22bd358219019dbb",
+      "recordedAt": "2026-07-25T13:50:27Z",
+      "sequence": 8,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "28d0970d21bce2f378322894781d87fd44563062f840233ea1104803740074e8",
+      "recordedAt": "2026-07-25T15:05:06Z",
+      "sequence": 9,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "e5f45acc31ce3e01cfcb13a9cdf5c463ec391264758b970097500fc8319a75a3",
+      "recordedAt": "2026-07-25T15:05:06Z",
+      "sequence": 10,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "509c6cd06e189450bd841178daa58972ad473896913e1a13126de3a5dcf60011",
+      "recordedAt": "2026-07-25T15:05:06Z",
+      "sequence": 11,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "dc64e7af9023d49a231084e1f92a17f29b28593a9d92798c8f3b3788f5d47855",
+      "recordedAt": "2026-07-25T15:05:06Z",
+      "sequence": 12,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "f94654b2d0529bc755a19d7a7dbe021e12a9085b4747a12a5f385131128b826e",
+      "recordedAt": "2026-07-25T15:05:06Z",
+      "sequence": 13,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "2f2dd34cae37e7b12fc8c1271aedfb06ff03332dce79ce8d70cddff8d9d34f28",
+      "recordedAt": "2026-07-25T15:05:06Z",
+      "sequence": 14,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "45a883fec8c7c455bd459816bd3dc7d4cb399c2f82c793957a6432e0181c94d8",
+      "recordedAt": "2026-07-25T15:05:07Z",
+      "sequence": 15,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b81a0dcdb8a90f4f6780d046d161437aab9572ecb86f120a968ee1e73bff13e8",
+      "recordedAt": "2026-07-25T15:05:07Z",
+      "sequence": 16,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "0a3ef24181eef70ecddaf75db34028c4da108fc0dd5c2039a3d206e38acf21c5",
+      "recordedAt": "2026-07-25T15:05:07Z",
+      "sequence": 17,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c50945ddac73ca19f77e63284a5b2c3360e86bb3060e812b9bb18640bcd8ef2c",
+      "recordedAt": "2026-07-25T15:05:07Z",
+      "sequence": 18,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "fb0b9572909d67aade285f42807ad6d905a3e1e0233b9d1e45b2069ad78ce571",
+      "recordedAt": "2026-07-25T15:05:07Z",
+      "sequence": 19,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "12b4539e9d26fcd9e58630fb008d16becf1ac5ebdc13bb8a325f1afed84bd803",
+      "recordedAt": "2026-07-25T15:05:07Z",
+      "sequence": 20,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "c82de969118fe42a2e6e18e09af3c015619f27d2e6e3b2ef56a8669482fa6518",
+      "recordedAt": "2026-07-25T15:05:07Z",
+      "sequence": 21,
+      "type": "roadmap-completed"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Every container with an exact declared slot exposes an accessible Add element action; the modal shows only compatible bounded candidates, handles multiple destination regions, supports unassigned visual reuse, and immediately selects, focuses, and reveals the inserted child.",
+          "id": "modal-add-focus",
+          "qualification": "local"
+        },
+        {
+          "description": "Users can add, move, and deterministically reorder eligible assets without pointer or keyboard drag behavior, while canonical ordered AssetPlacement records, compatibility, bounds, undo, save, validation, and recursive preview remain authoritative.",
+          "id": "complete-without-drag",
+          "qualification": "local"
+        },
+        {
+          "description": "The Asset Palette is removed and layouts appear in a collapsible bar directly below Design and Connections, with layout data requested only after the bar is opened and existing reviewed layout-change semantics preserved.",
+          "id": "layout-bar",
+          "qualification": "local"
+        },
+        {
+          "description": "The eager Composer catalog omits configuration schemas and defaults; selecting an asset requests only its exact workspace-scoped property detail, stale responses cannot replace newer selections, and leaving Properties or Styling releases inactive detail rather than growing an unbounded cache.",
+          "id": "selected-detail-only",
+          "qualification": "local"
+        },
+        {
+          "description": "Desktop and thin client expose identical summary, detail, modal composition, loading, empty, error, keyboard, focus-restoration, and failure behavior through their real IPC and HTTP client boundaries.",
+          "id": "shared-host-parity",
+          "qualification": "local"
+        },
+        {
+          "description": "Focused instrumentation proves no Canvas node registers drag/drop/sort behavior, modal compatibility and layout reads are demand-driven and bounded, selection changes do not reload the full catalog, and representative nested reference systems preserve complete Canvas and preview hierarchy without new render or request loops.",
+          "id": "performance-regression",
+          "qualification": "local"
+        },
+        {
+          "description": "Applicable typechecks, desktop and thin-client builds, documentation, architecture, agent-support, packaging, and full test gates pass once after the complete increment, with any environment-limited qualification reported explicitly.",
+          "id": "repository-quality",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-25T15:05:07Z",
+      "completedChunks": [
+        "summary-detail-vertical-slice",
+        "modal-composition-experience",
+        "lazy-performance-qualification"
+      ],
+      "completionSummary": "The shared System Composer now uses accessible categorized modal composition, explicit non-drag movement, on-demand layouts, and selected-context property detail across both hosts, with production builds and the full suite passing.",
+      "deliverables": [
+        "Lightweight Composer summary and exact-definition detail contracts and use cases",
+        "HTTP and Electron IPC/preload/client parity for exact detail reads",
+        "Shared accessible asset-selection modal scoped to an exact parent and named region",
+        "Click-based add, reuse, move, and deterministic ordering behavior",
+        "Collapsible on-demand layout bar below Design and Connections",
+        "Selected-only property and active-only Styling detail loading with stale-response protection",
+        "Removal of Asset Palette drag interactions, drag adapters, drag tests, and dnd-kit dependencies",
+        "Focused contract, application, transport, shared UI, hierarchy, preview, accessibility, request-count, and regression tests",
+        "Updated ADR, architecture, context, README, and contributor guidance"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "Changing canonical AssetPlacement, AssetBinding, immutable revision, build, release, or runtime semantics",
+        "Freeform Canvas positioning, user-authored slots, arbitrary dimensions, or unbounded CSS/code editing",
+        "Partial persistence of revision instance values or a new renderer-owned hierarchy",
+        "Execution of untrusted backing resources, deployment changes, collaboration, marketplace, or unrelated Asset Library redesign",
+        "Virtualizing away selected or expanded hierarchy nodes in a way that hides canonical composition"
+      ],
+      "id": "complete-modal-composer",
+      "number": 1,
+      "objective": "Deliver the complete shared click-based composition experience and its selected-detail loading boundary without changing canonical placement, preview, revision, or security semantics.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "The full active revision and its saved instance configuration values remain necessary for deterministic preview, validation, undo, and save.",
+          "Ports remain in lightweight summaries because Connections can inspect multiple instances without loading property schemas.",
+          "Unassigned visual instances are offered in the scoped add modal, while nonvisual system resources remain visible in the Layers/Structure surface.",
+          "The layout bar starts collapsed and requests layouts on its first expansion.",
+          "A newly added or reattached instance becomes selected and is scrolled into view; the Canvas does not automatically hide unrelated branches."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "selected-detail-only",
+              "shared-host-parity"
+            ],
+            "id": "summary-detail-vertical-slice",
+            "outcome": "All hosts expose bounded structural summaries plus one exact detail read, and focused tests prove schemas/defaults are absent from lists but available only through a workspace-scoped exact request.",
+            "title": "Lightweight summaries and exact selected detail"
+          },
+          {
+            "criteriaIds": [
+              "modal-add-focus",
+              "complete-without-drag",
+              "layout-bar",
+              "shared-host-parity"
+            ],
+            "id": "modal-composition-experience",
+            "outcome": "The shared Composer removes the Asset Palette and dragging, adds container-scoped selection and destination controls, preserves add/reuse/move/order behavior, and exposes layouts in a collapsible on-demand bar.",
+            "title": "Complete click-based modal composition"
+          },
+          {
+            "criteriaIds": [
+              "selected-detail-only",
+              "shared-host-parity",
+              "performance-regression",
+              "repository-quality"
+            ],
+            "id": "lazy-performance-qualification",
+            "outcome": "Selected Properties and active Styling detail are stale-safe and bounded, modal/layout requests are demand-driven, nested hierarchy and preview remain complete, drag dependencies are gone, documentation is reconciled, and completion gates pass.",
+            "title": "Lazy-loading and performance qualification"
+          }
+        ],
+        "completionTests": [
+          "Applicable TypeScript checks and desktop/thin-client builds after every chunk is implemented",
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check",
+          "npm run package",
+          "npm test"
+        ],
+        "documentation": [
+          "New implementation roadmap and concise temporary report",
+          "System Builder ADR and architecture",
+          "System Builder and Asset Kernel context packs",
+          "Shared UI and host-facing README guidance where behavior changes"
+        ],
+        "fingerprint": "e8cf0f3c5ac6d8b2f3738defe546b5e8459e7e658945a80427236125d712101e",
+        "focusedTests": [
+          "Composer contract and application catalog/detail unit tests",
+          "API, IPC, preload, desktop-client, thin-client-client, and transport-parity tests",
+          "Shared structure editor and workspace interaction tests",
+          "Draft placement, nested hierarchy, preview HTML, stale-response, request-count, and dependency-removal assertions"
+        ],
+        "recordedAt": "2026-07-25T13:50:27Z",
+        "rollback": "Restore the prior eager list client and shared palette/drag editor without touching persisted systems or revisions; the additive exact-detail operation may remain unused. Never flatten or rewrite canonical placements.",
+        "steps": [
+          "Add and verify lightweight catalog summaries and exact workspace-scoped definition detail across application, API, IPC/preload, desktop, and thin-client boundaries.",
+          "Build and verify the shared asset-selection modal, destination-region selection, add/reuse/focus flow, explicit move/order actions, and collapsible on-demand layout bar.",
+          "Remove drag adapters and dependencies, make property and Styling detail loading stale-safe and bounded, stabilize expensive hierarchy projections, update canonical guidance, and run completion gates."
+        ],
+        "summary": "Deliver one cohesive vertical increment: establish a lightweight summary/exact-detail boundary, replace palette dragging with an accessible container-scoped modal plus explicit movement controls and a lazy layout bar, then qualify the complete shared experience and measured loading behavior."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-25T13:50:27Z",
+          "risks": [
+            "Removing schemas/defaults from summaries can break add and inspector behavior unless exact detail is loaded before creating a new instance and when selection changes.",
+            "Containers with multiple slots need an explicit destination choice or the modal could create invalid placements.",
+            "Removing drag without replacement controls would regress move and order behavior.",
+            "Styling edits depend on the root definition even when another instance is selected and therefore need an explicit active-tab detail exception.",
+            "Full nested Canvas rendering can still be expensive after drag removal; structural projections and node props must remain stable and measured rather than indiscriminately memoized.",
+            "Foundation definitions can be projected outside an older exact Asset Library activation, so the exact-detail operation must retain the existing trusted Composer-only fallback without widening general Asset Library visibility."
+          ],
+          "sources": [
+            {
+              "title": "Composer draft commands",
+              "url": "modules/ui/shared/system-builder/systemComposerDraft.ts"
+            },
+            {
+              "title": "Current drag adapter",
+              "url": "modules/ui/shared/system-builder/systemComposerDrag.ts"
+            },
+            {
+              "title": "Shared Composer workspace",
+              "url": "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx"
+            },
+            {
+              "title": "Shared structure editor",
+              "url": "modules/ui/shared/system-builder/SystemComposerStructureEditor.tsx"
+            },
+            {
+              "title": "Shared modal",
+              "url": "modules/ui/shared/components/ModalDialog.tsx"
+            },
+            {
+              "title": "Composer catalog contracts",
+              "url": "modules/contracts/system-builder/system-builder-composer.ts"
+            },
+            {
+              "title": "Composer catalog use case",
+              "url": "modules/application/use-cases/system-builder/list-system-builder-composer-assets.use-case.ts"
+            },
+            {
+              "title": "Composer interaction tests",
+              "url": "modules/ui/shared/system-builder/tests/SystemComposerStructureEditor.interaction.ui.test.tsx"
+            },
+            {
+              "title": "Workspace interaction tests",
+              "url": "modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx"
+            }
+          ],
+          "summary": "The existing ordered draft commands already add, attach, reparent, and remove instances independently of dnd-kit, so the canonical mutation layer can remain. The eager list use case expands every card into a full definition; splitting the read model into structural summaries and one exact detail operation is the smallest truthful lazy boundary. The shared ModalDialog and TabbedPanel provide the required accessibility foundations, while the current editor and workspace tests cover nested hierarchy, layouts, properties, preview, and transport parity."
+        }
+      ],
+      "rollback": "Restore the previous shared Composer surface and eager catalog client while preserving all existing immutable revisions, placements, definitions, configurations, and layout selections. The additive exact-detail read can remain unused safely; rollback must not flatten or rewrite canonical hierarchy.",
+      "startedAt": "2026-07-25T13:50:27Z",
+      "status": "completed",
+      "title": "Complete modal-based, lazily loaded System Composer",
+      "verification": [
+        "Run focused Composer contract and application tests for lightweight summaries, exact detail, workspace isolation, exact Foundation fallback, compatibility, bounds, and sanitized failures.",
+        "Run focused API, IPC, preload, desktop-client, thin-client-client, and transport-parity tests for summary and exact-detail reads.",
+        "Run focused shared UI tests for modal accessibility, region choice, paged search, add/reuse/focus, move/order, layout disclosure, nonvisual resource discovery, and removal of drag behavior.",
+        "Run focused request-count, stale-response, retained-detail, nested hierarchy, recursive preview, and representative reference-system regression tests.",
+        "After all internal work packages pass, run the applicable desktop/thin-client builds and npm run docs:check, npm run architecture:check, npm run agent-support:check, npm run package, and npm test once as increment completion gates."
+      ],
+      "workPackages": [
+        {
+          "id": "summary-detail-contracts",
+          "outcome": "Lightweight structural summaries support Canvas, Layers, compatibility, and Connections while an exact workspace-scoped operation loads property schemas and defaults only for the selected editor surface.",
+          "title": "Composer summary and exact-detail boundary"
+        },
+        {
+          "id": "modal-composition",
+          "outcome": "Every exact container exposes Add element, the shared modal selects a destination region and compatible new or unassigned asset, and successful insertion selects, focuses, and reveals the child.",
+          "title": "Container-scoped modal composition"
+        },
+        {
+          "id": "non-drag-complete-controls",
+          "outcome": "Layouts move to a collapsible on-demand bar, placed assets retain explicit move and ordering controls, nonvisual resources remain discoverable, and all drag code and dependencies are removed.",
+          "title": "Complete non-drag placement controls"
+        },
+        {
+          "id": "performance-and-host-parity",
+          "outcome": "Desktop and thin client share stale-safe selected-detail loading, bounded modal paging, on-demand layouts and Styling detail, stable hierarchy rendering, and verified request/payload behavior.",
+          "title": "Lazy-loading, performance, and host parity"
+        }
+      ]
+    }
+  ],
+  "name": "System Composer Modal Composition",
+  "objective": "Replace drag-based System Composer authoring with accessible container-scoped asset selection, preserve complete click-based placement and ordering capabilities, and lazily load only the property detail required by the active editor surface.",
+  "paths": {
+    "report": "docs/tmp/system-composer-modal-composition-implementation-report.md",
+    "roadmap": "docs/system-composer-modal-composition-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/system-composer-modal-composition/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": {
+    "approvedAt": "2026-07-25T13:49:44Z",
+    "fingerprint": "0ef79d5ec667bbe9d4723b5c8475e859654d3258dedaa49b7022bb30dc823a0b",
+    "note": "The user explicitly approved Option 1 and the single cohesive increment."
+  },
+  "schemaVersion": 1,
+  "slug": "system-composer-modal-composition",
+  "status": "completed",
+  "updatedAt": "2026-07-25T15:05:07Z"
+}
