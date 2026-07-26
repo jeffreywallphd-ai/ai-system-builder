@@ -122,11 +122,15 @@ describe("asset core contract vocabularies", () => {
 
   it("keeps lifecycle and review status as separate vocabularies", () => {
     for (const reviewStatus of ASSET_REVIEW_STATUSES) {
-      expect(ASSET_LIFECYCLE_STATUSES.includes(reviewStatus as never)).toBe(false);
+      expect(ASSET_LIFECYCLE_STATUSES.includes(reviewStatus as never)).toBe(
+        false,
+      );
     }
 
     for (const lifecycleStatus of ASSET_LIFECYCLE_STATUSES) {
-      expect(ASSET_REVIEW_STATUSES.includes(lifecycleStatus as never)).toBe(false);
+      expect(ASSET_REVIEW_STATUSES.includes(lifecycleStatus as never)).toBe(
+        false,
+      );
     }
   });
 
@@ -137,6 +141,7 @@ describe("asset core contract vocabularies", () => {
       "asset-instance",
       "asset-composition",
       "asset-binding",
+      "asset-placement",
       "asset-requirement",
       "resource-backed-asset",
       "asset-resource-backing",
@@ -144,8 +149,12 @@ describe("asset core contract vocabularies", () => {
       "resource",
       "external-repository-object",
     ]);
-    expect(normalizeAssetReferenceKind(" Asset-Instance ")).toBe("asset-instance");
-    expect(normalizeAssetReferenceKind(" Asset-Binding ")).toBe("asset-binding");
+    expect(normalizeAssetReferenceKind(" Asset-Instance ")).toBe(
+      "asset-instance",
+    );
+    expect(normalizeAssetReferenceKind(" Asset-Binding ")).toBe(
+      "asset-binding",
+    );
   });
 
   it("allows provenance source kinds without requiring raw prompts or unsafe source details", () => {
@@ -187,7 +196,9 @@ describe("asset core contract vocabularies", () => {
       "system",
       "system-of-subsystems",
     ]);
-    expect(ASSET_COMPOSITION_TYPES.includes("system-of-systems" as never)).toBe(false);
+    expect(ASSET_COMPOSITION_TYPES.includes("system-of-systems" as never)).toBe(
+      false,
+    );
     expect(normalizeAssetCompositionType(" System-Of-Subsystems ")).toBe(
       "system-of-subsystems",
     );
@@ -213,7 +224,9 @@ describe("asset core contract vocabularies", () => {
       "unknown",
     ]);
     expect(normalizeAssetValidationIssueSeverity(" Warning ")).toBe("warning");
-    expect(normalizeAssetValidationIssueCategory(" AI-Context ")).toBe("ai-context");
+    expect(normalizeAssetValidationIssueCategory(" AI-Context ")).toBe(
+      "ai-context",
+    );
   });
 });
 
@@ -256,8 +269,14 @@ describe("asset core contract shapes", () => {
   });
 
   it("creates a minimal AssetComposition that references instances and bindings", () => {
-    const rootInstanceRef = ref("asset-instance", "instance.dashboard.summary.primary");
-    const bindingRef = ref("asset-instance", "binding.dashboard.summary.output");
+    const rootInstanceRef = ref(
+      "asset-instance",
+      "instance.dashboard.summary.primary",
+    );
+    const bindingRef = ref(
+      "asset-instance",
+      "binding.dashboard.summary.output",
+    );
     const composition: AssetComposition = {
       compositionId: normalizeAssetId("composition.dashboard.feature"),
       compositionType: "feature",

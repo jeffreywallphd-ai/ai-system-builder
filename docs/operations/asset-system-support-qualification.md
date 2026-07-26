@@ -58,6 +58,61 @@ tokens, prompts, protected content, provider payloads, host paths, or raw user
 data. Store the evidence artifact under the owning release-retention policy;
 do not commit environment evidence to source control.
 
+## Asset experience qualification
+
+The `asset-experience-automated` check covers representative System Foundation,
+imported, and from-scratch Studio lifecycles; exact backing-resource restoration
+after restart; base immutability; non-execution; fail-closed validation; modal and
+status semantics; and responsive desktop/thin-client presentation. Every
+qualification profile requires this automated evidence.
+
+Automated evidence does not replace `accessibility-manual` or `security-manual`.
+Use the [Asset Experience Controlled Review](asset-experience-controlled-review.md)
+for the reusable keyboard, screen-reader, zoom/reflow, contrast, isolation,
+revocation, and non-execution review procedure. Missing controlled evidence keeps
+the target profile `incomplete`; it is never inferred from repository tests.
+
+### Visual Composer automated qualification
+
+After producing the Windows package, run both configured one-worker projects or
+select one exact host:
+
+```text
+npm run package
+npm run test:visual-composer
+npm run test:visual-composer -- --project packaged-desktop
+npm run test:visual-composer -- --project thin-chrome
+```
+
+The harness uses a fresh ignored run root for Electron user data and for server
+storage/runtime data, drives real preload/IPC and HTTP API clients, bounds startup
+and action waits, and writes immutable sanitized evidence beneath
+`artifacts/qualification/visual-composer/runs`. It checks the shared create,
+layout, pointer drag, keyboard cancellation, undo/redo, configure, preview,
+save/reopen, Manage, Build and Test, axe, 320-CSS-pixel reflow, forced-colors,
+reduced-motion, and renderer/console-error paths.
+
+The ordinary System Builder preview tests also materialize all three closed
+reference templates through the production layout-migration service and compare
+the rendered application surface with checked-in, hand-authored semantic HTML
+mockups. The comparison ignores CSS classes, styling, and runtime trace IDs but
+retains meaningful elements, nesting, labels, controls, states, and text. Run
+the focused oracle with:
+
+```text
+node --import tsx --test modules/ui/shared/system-builder/tests/SystemReferencePreviewHtml.unit.test.tsx
+```
+
+Treat those fixtures as product intent, not generated snapshots. Review fixture
+changes as UI-design changes, and first repair definitions, placements,
+configuration, or trusted renderers when actual output diverges.
+
+This command qualifies only the exact packaged Windows Electron and configured
+local Chrome environments that ran. It does not replace physical touch hardware,
+screen-reader product review, manual security review, other platform/browser
+profiles, or dedicated performance qualification. A shared-workstation duration
+is diagnostic evidence, not a portable performance target.
+
 ## Performance qualification
 
 The manifest defines p95 budgets and exact representative workloads for Catalog

@@ -17,13 +17,23 @@ interface LifecycleEntry {
 }
 
 function normalizeLifecycleEntries(response: unknown): LifecycleEntry[] {
-  if (!response || typeof response !== "object" || !("ok" in response) || (response as { ok?: unknown }).ok !== true) {
+  if (
+    !response ||
+    typeof response !== "object" ||
+    !("ok" in response) ||
+    (response as { ok?: unknown }).ok !== true
+  ) {
     throw new Error("Unable to read lifecycle diagnostics.");
   }
   const value = (response as { value?: { entries?: unknown } }).value;
   if (!value || !Array.isArray(value.entries)) return [];
   return value.entries
-    .filter((entry): entry is LifecycleEntry => Boolean(entry) && typeof entry === "object" && typeof (entry as LifecycleEntry).featureKey === "string")
+    .filter(
+      (entry): entry is LifecycleEntry =>
+        Boolean(entry) &&
+        typeof entry === "object" &&
+        typeof (entry as LifecycleEntry).featureKey === "string",
+    )
     .map((entry) => ({
       featureKey: entry.featureKey,
       policy: String(entry.policy),
@@ -34,12 +44,21 @@ function normalizeLifecycleEntries(response: unknown): LifecycleEntry[] {
 }
 
 function normalizeDisposeResults(response: unknown): string {
-  if (!response || typeof response !== "object" || !("ok" in response) || (response as { ok?: unknown }).ok !== true) {
+  if (
+    !response ||
+    typeof response !== "object" ||
+    !("ok" in response) ||
+    (response as { ok?: unknown }).ok !== true
+  ) {
     return "Unable to dispose idle disposable features.";
   }
-  const results = (response as { value?: { results?: unknown } }).value?.results;
-  if (!Array.isArray(results) || results.length === 0) return "No idle disposable features were disposed.";
-  const disposed = results.filter((result) => Boolean((result as { disposed?: unknown }).disposed)).length;
+  const results = (response as { value?: { results?: unknown } }).value
+    ?.results;
+  if (!Array.isArray(results) || results.length === 0)
+    return "No idle disposable features were disposed.";
+  const disposed = results.filter((result) =>
+    Boolean((result as { disposed?: unknown }).disposed),
+  ).length;
   return `Disposed ${disposed} idle feature(s); ${results.length - disposed} blocked or unchanged.`;
 }
 
@@ -57,7 +76,8 @@ export function SoftwareStatusSection() {
     loadOnMount: false,
     loader: async () => {
       const api = getDesktopApi();
-      if (!api.readFeatureLifecycleState) throw new Error("Feature lifecycle diagnostics are unavailable.");
+      if (!api.readFeatureLifecycleState)
+        throw new Error("Feature lifecycle diagnostics are unavailable.");
       return normalizeLifecycleEntries(await api.readFeatureLifecycleState());
     },
   });
@@ -67,7 +87,8 @@ export function SoftwareStatusSection() {
     initialTrigger: "expanded",
     loadOnMount: false,
     loader: async () => {
-      const result = await createDesktopImageGenerationClient().readComfyUiInstallStatus({});
+      const result =
+        await createDesktopImageGenerationClient().readComfyUiInstallStatus({});
       if (!result.ok) throw new Error(result.error.message);
       return result.value.status;
     },
@@ -81,7 +102,9 @@ export function SoftwareStatusSection() {
     }
     setDisposingIdle(true);
     try {
-      setDisposeMessage(normalizeDisposeResults(await api.disposeIdleFeatures()));
+      setDisposeMessage(
+        normalizeDisposeResults(await api.disposeIdleFeatures()),
+      );
       void lifecycleState.load("refresh");
     } finally {
       setDisposingIdle(false);
@@ -89,17 +112,35 @@ export function SoftwareStatusSection() {
   };
 
   return (
-    <section className="ui-stack ui-stack--sm" aria-label="Software status controls">
-      <p className="ui-text-muted">Inspect the desktop builder, host features, and local runtimes. These operational controls do not describe systems built in a workspace.</p>
+    <section
+      className="ui-stack ui-stack--sm"
+      aria-label="Software status controls"
+    >
+      <p className="ui-text-muted">
+        Inspect the desktop builder, host features, and local runtimes. These
+        operational controls do not describe systems built in a workspace.
+      </p>
 
-      <section className="ui-panel ui-stack ui-stack--sm" aria-label="Basic software diagnostics">
+      <section
+        className="ui-panel ui-stack ui-stack--sm"
+        aria-label="Basic software diagnostics"
+      >
         <h3 className="ui-panel__title">Basic diagnostics</h3>
-        <p>The desktop builder shell is mounted. Runtime status panels remain deferred until opened.</p>
+        <p>
+          The desktop builder shell is mounted. Runtime status panels remain
+          deferred until opened.
+        </p>
       </section>
 
-      <section className="ui-panel ui-stack ui-stack--sm" aria-label="Runtime status overview">
+      <section
+        className="ui-panel ui-stack ui-stack--sm"
+        aria-label="Runtime status overview"
+      >
         <h3 className="ui-panel__title">Runtime status</h3>
-        <p>Python and ComfyUI controls are idle until you expand a runtime section or choose an explicit action.</p>
+        <p>
+          Python and ComfyUI controls are idle until you expand a runtime
+          section or choose an explicit action.
+        </p>
       </section>
 
       {diagnosticsEnabled ? (
@@ -109,24 +150,71 @@ export function SoftwareStatusSection() {
           onToggle={() => {
             setLifecycleExpanded((expanded) => {
               const next = !expanded;
-              if (next && lifecycleState.status === "idle") void lifecycleState.load("expanded");
+              if (next && lifecycleState.status === "idle")
+                void lifecycleState.load("expanded");
               return next;
             });
           }}
         >
-          <p className="ui-text-muted">Developer diagnostics only. This read-only table does not compose unloaded feature graphs. The dispose action only asks the host to dispose idle disposable entries.</p>
-          {lifecycleState.status === "idle" ? <p>Open this section to read host feature lifecycle state.</p> : null}
-          {lifecycleState.status === "loading" ? <SectionLoadingState message="Loading feature lifecycle diagnostics..." /> : null}
-          {lifecycleState.status === "error" ? <SectionErrorState message={lifecycleState.error ?? "Failed to load feature lifecycle diagnostics."} onRetry={() => { void lifecycleState.retry(); }} /> : null}
+          <p className="ui-text-muted">
+            Developer diagnostics only. This read-only table does not compose
+            unloaded feature graphs. The dispose action only asks the host to
+            dispose idle disposable entries.
+          </p>
+          {lifecycleState.status === "idle" ? (
+            <p>Open this section to read host feature lifecycle state.</p>
+          ) : null}
+          {lifecycleState.status === "loading" ? (
+            <SectionLoadingState message="Loading feature lifecycle diagnostics..." />
+          ) : null}
+          {lifecycleState.status === "error" ? (
+            <SectionErrorState
+              message={
+                lifecycleState.error ??
+                "Failed to load feature lifecycle diagnostics."
+              }
+              onRetry={() => {
+                void lifecycleState.retry();
+              }}
+            />
+          ) : null}
           {lifecycleState.status === "success" ? (
-            <section className="ui-stack ui-stack--sm" aria-label="Feature lifecycle state">
+            <section
+              className="ui-stack ui-stack--sm"
+              aria-label="Feature lifecycle state"
+            >
               <div className="ui-actions">
-                <button className="ui-button" type="button" onClick={() => { void lifecycleState.load("refresh"); }}>Refresh</button>
-                <button className="ui-button ui-button--secondary" type="button" disabled={disposingIdle} onClick={() => { void disposeIdleFeatures(); }}>Dispose idle disposable features</button>
+                <button
+                  className="ui-button"
+                  type="button"
+                  onClick={() => {
+                    void lifecycleState.load("refresh");
+                  }}
+                >
+                  Refresh
+                </button>
+                <button
+                  className="ui-button ui-button--outline"
+                  type="button"
+                  disabled={disposingIdle}
+                  onClick={() => {
+                    void disposeIdleFeatures();
+                  }}
+                >
+                  Dispose idle disposable features
+                </button>
               </div>
               {disposeMessage ? <p role="status">{disposeMessage}</p> : null}
               <table className="ui-table">
-                <thead><tr><th>Feature</th><th>Policy</th><th>Loaded</th><th>Idle</th><th>Idle timeout</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>Feature</th>
+                    <th>Policy</th>
+                    <th>Loaded</th>
+                    <th>Idle</th>
+                    <th>Idle timeout</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {lifecycleState.data?.map((entry) => (
                     <tr key={entry.featureKey}>
@@ -134,7 +222,9 @@ export function SoftwareStatusSection() {
                       <td>{entry.policy}</td>
                       <td>{entry.loaded ? "yes" : "no"}</td>
                       <td>{entry.idle ? "yes" : "no"}</td>
-                      <td>{entry.idleTimeoutScheduled ? "scheduled" : "none"}</td>
+                      <td>
+                        {entry.idleTimeoutScheduled ? "scheduled" : "none"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -144,8 +234,19 @@ export function SoftwareStatusSection() {
         </CollapsiblePanel>
       ) : null}
 
-      <CollapsiblePanel title="Python runtime controls" isExpanded={pythonExpanded} onToggle={() => setPythonExpanded((expanded) => !expanded)}>
-        {pythonExpanded ? <PythonRuntimeFooter enabled /> : <p>Open this section to read Python runtime status and logs. Start, stop, and restart remain explicit actions.</p>}
+      <CollapsiblePanel
+        title="Python runtime controls"
+        isExpanded={pythonExpanded}
+        onToggle={() => setPythonExpanded((expanded) => !expanded)}
+      >
+        {pythonExpanded ? (
+          <PythonRuntimeFooter enabled />
+        ) : (
+          <p>
+            Open this section to read Python runtime status and logs. Start,
+            stop, and restart remain explicit actions.
+          </p>
+        )}
       </CollapsiblePanel>
 
       <CollapsiblePanel
@@ -154,18 +255,45 @@ export function SoftwareStatusSection() {
         onToggle={() => {
           setComfyExpanded((expanded) => {
             const next = !expanded;
-            if (next && comfyStatus.status === "idle") void comfyStatus.load("expanded");
+            if (next && comfyStatus.status === "idle")
+              void comfyStatus.load("expanded");
             return next;
           });
         }}
       >
-        {comfyStatus.status === "idle" ? <p>Open this section to check ComfyUI install status.</p> : null}
-        {comfyStatus.status === "loading" ? <SectionLoadingState message="Loading ComfyUI install status..." /> : null}
-        {comfyStatus.status === "error" ? <SectionErrorState message={comfyStatus.error ?? "Failed to load ComfyUI install status."} onRetry={() => { void comfyStatus.retry(); }} /> : null}
+        {comfyStatus.status === "idle" ? (
+          <p>Open this section to check ComfyUI install status.</p>
+        ) : null}
+        {comfyStatus.status === "loading" ? (
+          <SectionLoadingState message="Loading ComfyUI install status..." />
+        ) : null}
+        {comfyStatus.status === "error" ? (
+          <SectionErrorState
+            message={
+              comfyStatus.error ?? "Failed to load ComfyUI install status."
+            }
+            onRetry={() => {
+              void comfyStatus.retry();
+            }}
+          />
+        ) : null}
         {comfyStatus.status === "success" ? (
-          <section className="ui-stack ui-stack--sm" aria-label="ComfyUI runtime status">
-            <p>ComfyUI install status: <strong>{comfyStatus.data}</strong></p>
-            <button className="ui-button" type="button" onClick={() => { void comfyStatus.load("refresh"); }}>Refresh</button>
+          <section
+            className="ui-stack ui-stack--sm"
+            aria-label="ComfyUI runtime status"
+          >
+            <p>
+              ComfyUI install status: <strong>{comfyStatus.data}</strong>
+            </p>
+            <button
+              className="ui-button"
+              type="button"
+              onClick={() => {
+                void comfyStatus.load("refresh");
+              }}
+            >
+              Refresh
+            </button>
           </section>
         ) : null}
       </CollapsiblePanel>

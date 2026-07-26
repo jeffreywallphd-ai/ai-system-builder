@@ -3,6 +3,7 @@ import type { AssetConfigurationMetadata } from "./asset-configuration-value";
 export const ASSET_CONFIGURATION_UI_HINT_KINDS = [
   "text",
   "textarea",
+  "color",
   "number",
   "checkbox",
   "select",

@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { TermWithHint } from "../../../../../../../modules/ui/shared";
+import { ModalDialog } from "../../../../../../../modules/ui/shared/components/ModalDialog";
 import type { AssetLibraryClient } from "../../../../../../../modules/ui/shared/asset-library";
 import {
   buildAssetLibraryMutationCommand,
@@ -26,13 +27,35 @@ interface AssetLibraryFeatureProps {
   readonly client?: AssetLibraryClient;
   readonly workspaceId?: string;
   readonly workspaceName?: string;
+  readonly onCustomizeDefinition?: (
+    definition: import("../../../../../../../modules/ui/shared/asset-library").AssetLibraryDefinitionCard,
+  ) => void;
 }
 
-export function AssetLibraryFeature({ client, workspaceId }: AssetLibraryFeatureProps) {
+type AssetDetailModalState =
+  | { readonly kind: "definition"; readonly id: string; readonly title: string }
+  | {
+      readonly kind: "resource-view";
+      readonly id: string;
+      readonly title: string;
+    };
+
+export function AssetLibraryFeature({
+  client,
+  workspaceId,
+  onCustomizeDefinition,
+}: AssetLibraryFeatureProps) {
   const state = useAssetLibraryFeature(client, workspaceId);
-  const [pendingAction, setPendingAction] = useState<AssetLibraryMutationAction | undefined>();
+  const [detailModal, setDetailModal] = useState<
+    AssetDetailModalState | undefined
+  >();
+  const [pendingAction, setPendingAction] = useState<
+    AssetLibraryMutationAction | undefined
+  >();
   const [isMutating, setIsMutating] = useState(false);
-  const [mutationDisplay, setMutationDisplay] = useState<AssetLibraryMutationDisplay | undefined>();
+  const [mutationDisplay, setMutationDisplay] = useState<
+    AssetLibraryMutationDisplay | undefined
+  >();
   const topLevelDiagnostics = safeDiagnosticMessages(state.diagnostics);
 
   async function confirmMutation() {
@@ -52,10 +75,16 @@ export function AssetLibraryFeature({ client, workspaceId }: AssetLibraryFeature
       setPendingAction(undefined);
       if (result.value.ok === true) {
         await state.refresh();
-        await state.selectResourceBackedView(state.selectedResourceBackedViewDetail);
+        await state.selectResourceBackedView(
+          state.selectedResourceBackedViewDetail,
+        );
       }
     } else {
-      setMutationDisplay({ tone: "error", message: result.error.message || "Unable to complete this asset action." });
+      setMutationDisplay({
+        tone: "error",
+        message:
+          result.error.message || "Unable to complete this asset action.",
+      });
     }
     setIsMutating(false);
   }
@@ -78,75 +107,130 @@ export function AssetLibraryFeature({ client, workspaceId }: AssetLibraryFeature
         isRefreshing={state.isLoadingList}
       />
 
-      {state.isLoadingList ? <div className="ui-status" role="status">Loading asset definitions...</div> : null}
-      {state.listError ? <div className="ui-status" role="alert">{state.listError}</div> : null}
+      {state.isLoadingList ? (
+        <div className="ui-status" role="status">
+          Loading asset definitions...
+        </div>
+      ) : null}
+      {state.listError ? (
+        <div className="ui-status" role="alert">
+          {state.listError}
+        </div>
+      ) : null}
       {topLevelDiagnostics.length > 0 ? (
         <div className="ui-status" role="status">
           {topLevelDiagnostics.join(" ")}
         </div>
       ) : null}
 
-      <div className="asset-library-tabs" role="tablist" aria-label="Asset Library views">
-        <button type="button" role="tab" aria-selected={state.activeTab === "definitions"} onClick={() => state.setActiveTab("definitions")}>
+      <div
+        className="asset-library-tabs"
+        role="tablist"
+        aria-label="Asset Library views"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={state.activeTab === "definitions"}
+          onClick={() => {
+            setDetailModal(undefined);
+            setPendingAction(undefined);
+            state.setActiveTab("definitions");
+          }}
+        >
           Definitions
         </button>
-        <button type="button" role="tab" aria-selected={state.activeTab === "resource-views"} onClick={() => state.setActiveTab("resource-views")}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={state.activeTab === "resource-views"}
+          onClick={() => {
+            setDetailModal(undefined);
+            setPendingAction(undefined);
+            state.setActiveTab("resource-views");
+          }}
+        >
           Resource views
         </button>
       </div>
 
-      <div className="asset-library-layout">
-        {state.activeTab === "definitions" ? (
-          <>
-            <AssetDefinitionList
-              definitions={state.definitions}
-              selectedDefinitionId={state.selectedDefinitionId}
-              hasActiveFilters={state.hasActiveFilters}
-              onSelectDefinition={(definition) => {
-                void state.selectDefinition(definition);
-              }}
-            />
-            <AssetDefinitionDetailPanel
-              detail={state.selectedDetail}
-              isLoading={state.isLoadingDetail}
-              isLoadingValidation={state.isLoadingValidation}
-              error={state.detailError}
-              validationError={state.validationError}
-              onLoadValidationDetails={() => {
-                void state.loadValidationDetails();
-              }}
-            />
-          </>
-        ) : (
-          <>
-            <ResourceBackedViewList
-              views={state.resourceBackedViews}
-              selectedViewId={state.selectedResourceBackedViewId}
-              hasActiveFilters={state.hasActiveFilters}
-              onSelectView={(view) => {
-                void state.selectResourceBackedView(view);
-              }}
-            />
-            <ResourceBackedViewDetailPanel
-              workspaceScoped={Boolean(workspaceId)}
-              detail={state.selectedResourceBackedViewDetail}
-              isLoading={state.isLoadingDetail}
-              error={state.detailError}
-              mutationDisplay={mutationDisplay}
-              isMutating={isMutating}
-              onChooseAction={(action) => {
-                setMutationDisplay(undefined);
-                setPendingAction(action);
-              }}
-            />
-          </>
-        )}
-      </div>
+      {state.activeTab === "definitions" ? (
+        <AssetDefinitionList
+          definitions={state.definitions}
+          selectedDefinitionId={
+            detailModal?.kind === "definition" ? detailModal.id : undefined
+          }
+          hasActiveFilters={state.hasActiveFilters}
+          onSelectDefinition={(definition) => {
+            setDetailModal({
+              kind: "definition",
+              id: definition.id,
+              title: definition.displayName,
+            });
+            void state.selectDefinition(definition);
+          }}
+          onCustomizeDefinition={onCustomizeDefinition}
+        />
+      ) : (
+        <ResourceBackedViewList
+          views={state.resourceBackedViews}
+          selectedViewId={
+            detailModal?.kind === "resource-view" ? detailModal.id : undefined
+          }
+          hasActiveFilters={state.hasActiveFilters}
+          onSelectView={(view) => {
+            setDetailModal({
+              kind: "resource-view",
+              id: view.id,
+              title: view.displayName,
+            });
+            void state.selectResourceBackedView(view);
+          }}
+        />
+      )}
+
+      <ModalDialog
+        open={detailModal !== undefined}
+        title={detailModal?.title ?? "Asset details"}
+        closeLabel="Close asset details"
+        closeDisabled={isMutating || pendingAction !== undefined}
+        onClose={() => {
+          setDetailModal(undefined);
+          setMutationDisplay(undefined);
+        }}
+        dialogClassName="asset-library-detail-dialog"
+      >
+        {detailModal?.kind === "definition" ? (
+          <AssetDefinitionDetailPanel
+            detail={state.selectedDetail}
+            isLoading={state.isLoadingDetail}
+            isLoadingValidation={state.isLoadingValidation}
+            error={state.detailError}
+            validationError={state.validationError}
+            onLoadValidationDetails={() => {
+              void state.loadValidationDetails();
+            }}
+          />
+        ) : detailModal?.kind === "resource-view" ? (
+          <ResourceBackedViewDetailPanel
+            detail={state.selectedResourceBackedViewDetail}
+            isLoading={state.isLoadingDetail}
+            error={state.detailError}
+            mutationDisplay={mutationDisplay}
+            isMutating={isMutating}
+            onChooseAction={(action) => {
+              setMutationDisplay(undefined);
+              setPendingAction(action);
+            }}
+          />
+        ) : null}
+      </ModalDialog>
       {pendingAction && state.selectedResourceBackedViewDetail ? (
         <AssetMutationConfirmationDialog
           action={pendingAction}
           view={state.selectedResourceBackedViewDetail}
           isPending={isMutating}
+          stacked
           onCancel={() => setPendingAction(undefined)}
           onConfirm={() => {
             void confirmMutation();
@@ -171,8 +255,15 @@ function ResourceBackedViewList({
   if (views.length === 0) {
     return (
       <section className="ui-panel asset-library-empty">
-        <h2>{hasActiveFilters ? "No resource views match the current filters." : "No resource-backed views are visible yet."}</h2>
-        <p>Resource-backed views appear when safe descriptor seams are wired for this host.</p>
+        <h2>
+          {hasActiveFilters
+            ? "No resource views match the current filters."
+            : "No resource-backed views are visible yet."}
+        </h2>
+        <p>
+          Resource-backed views appear when safe descriptor seams are wired for
+          this host.
+        </p>
       </section>
     );
   }
@@ -185,21 +276,37 @@ function ResourceBackedViewList({
             key={view.id}
             type="button"
             className={`asset-definition-card${isSelected ? " asset-definition-card--selected" : ""}`}
-            aria-pressed={isSelected}
+            aria-haspopup="dialog"
+            aria-expanded={isSelected}
             onClick={() => onSelectView(view)}
           >
             <span className="asset-definition-card__header">
-              <span className="asset-definition-card__title">{view.displayName}</span>
-              <span className="asset-library-badge asset-library-badge--system">{view.viewKindLabel}</span>
+              <span className="asset-definition-card__title">
+                {view.displayName}
+              </span>
+              <span className="asset-library-badge asset-library-badge--system">
+                {view.viewKindLabel}
+              </span>
             </span>
-            {view.summary ? <span className="asset-definition-card__summary">{view.summary}</span> : null}
-            <span className="asset-library-cues" aria-label="Resource view cues">
+            {view.summary ? (
+              <span className="asset-definition-card__summary">
+                {view.summary}
+              </span>
+            ) : null}
+            <span
+              className="asset-library-cues"
+              aria-label="Resource view cues"
+            >
               <span>{getAssetLibraryTypeLabel(view)}</span>
               <span>{getAssetLibraryFamilyLabel(view)}</span>
               <span>{getAssetLibraryLifecycleStatusLabel(view)}</span>
               <span>{view.registrationStatusLabel}</span>
             </span>
-            {safeDiagnosticMessages(view.diagnostics).length ? <span className="asset-definition-card__updated">{safeDiagnosticMessages(view.diagnostics).join(" ")}</span> : null}
+            {safeDiagnosticMessages(view.diagnostics).length ? (
+              <span className="asset-definition-card__updated">
+                {safeDiagnosticMessages(view.diagnostics).join(" ")}
+              </span>
+            ) : null}
           </button>
         );
       })}
@@ -214,7 +321,6 @@ function ResourceBackedViewDetailPanel({
   mutationDisplay,
   isMutating,
   onChooseAction,
-  workspaceScoped,
 }: {
   readonly detail?: AssetLibraryResourceBackedViewDetail;
   readonly isLoading: boolean;
@@ -222,46 +328,108 @@ function ResourceBackedViewDetailPanel({
   readonly mutationDisplay?: AssetLibraryMutationDisplay;
   readonly isMutating: boolean;
   readonly onChooseAction: (action: AssetLibraryMutationAction) => void;
-  readonly workspaceScoped: boolean;
 }) {
-  if (isLoading) return <section className="ui-panel" role="status">Loading resource view...</section>;
-  if (error) return <section className="ui-panel" role="alert">{error}</section>;
-  if (!detail) return <section className="ui-panel asset-library-empty"><h2>Select a resource view.</h2></section>;
-  const actions = workspaceScoped ? [] : getAssetLibraryMutationActions(detail);
+  if (isLoading)
+    return (
+      <section className="ui-panel" role="status">
+        Loading resource view...
+      </section>
+    );
+  if (error)
+    return (
+      <section className="ui-panel" role="alert">
+        {error}
+      </section>
+    );
+  if (!detail)
+    return (
+      <section className="ui-panel asset-library-empty">
+        <h2>Select a resource view.</h2>
+      </section>
+    );
+  const actions = getAssetLibraryMutationActions(detail);
   return (
-    <section className="ui-panel asset-library-detail" aria-label="Resource view detail">
+    <section
+      className="ui-panel asset-library-detail"
+      aria-label="Resource view detail"
+    >
       <h2>{detail.displayName}</h2>
       {detail.summary ? <p>{detail.summary}</p> : null}
       <dl className="asset-library-detail__facts">
-        <dt><TermWithHint termId="resourceBackedView">View kind</TermWithHint></dt><dd>{detail.viewKindLabel}</dd>
-        <dt><TermWithHint termId="lifecycleStatus">Status</TermWithHint></dt><dd>{detail.registrationStatusLabel}</dd>
-        <dt><TermWithHint termId="assetDefinition">Type</TermWithHint></dt><dd>{getAssetLibraryTypeLabel(detail)}</dd>
-        <dt><TermWithHint termId="assetFamily">Family</TermWithHint></dt><dd>{getAssetLibraryFamilyLabel(detail)}</dd>
-        {detail.sourceKind ? <><dt><TermWithHint termId="source">Source</TermWithHint></dt><dd>{detail.sourceKind}</dd></> : null}
-        {detail.resourceBackingSummary?.resourceKind ? <><dt><TermWithHint termId="backing">Backing</TermWithHint></dt><dd>{detail.resourceBackingSummary.resourceKind}</dd></> : null}
+        <dt>
+          <TermWithHint termId="resourceBackedView">View kind</TermWithHint>
+        </dt>
+        <dd>{detail.viewKindLabel}</dd>
+        <dt>
+          <TermWithHint termId="lifecycleStatus">Status</TermWithHint>
+        </dt>
+        <dd>{detail.registrationStatusLabel}</dd>
+        <dt>
+          <TermWithHint termId="assetDefinition">Type</TermWithHint>
+        </dt>
+        <dd>{getAssetLibraryTypeLabel(detail)}</dd>
+        <dt>
+          <TermWithHint termId="assetFamily">Family</TermWithHint>
+        </dt>
+        <dd>{getAssetLibraryFamilyLabel(detail)}</dd>
+        {detail.sourceKind ? (
+          <>
+            <dt>
+              <TermWithHint termId="source">Source</TermWithHint>
+            </dt>
+            <dd>{detail.sourceKind}</dd>
+          </>
+        ) : null}
+        {detail.resourceBackingSummary?.resourceKind ? (
+          <>
+            <dt>
+              <TermWithHint termId="backing">Backing</TermWithHint>
+            </dt>
+            <dd>{detail.resourceBackingSummary.resourceKind}</dd>
+          </>
+        ) : null}
       </dl>
       {actions.length > 0 ? (
-        <div className="asset-library-actions" aria-label="Resource view actions">
+        <div
+          className="asset-library-actions"
+          aria-label="Resource view actions"
+        >
           {actions.map((action) => (
-            <button key={action.id} type="button" className="ui-button ui-button--primary" onClick={() => onChooseAction(action)} disabled={isMutating || Boolean(action.disabledReason)}>
+            <button
+              key={action.id}
+              type="button"
+              className="ui-button ui-button--primary"
+              onClick={() => onChooseAction(action)}
+              disabled={isMutating || Boolean(action.disabledReason)}
+            >
               {action.label}
             </button>
           ))}
         </div>
       ) : null}
       {mutationDisplay ? (
-        <div className="ui-status" role={mutationDisplay.tone === "error" ? "alert" : "status"}>
+        <div
+          className="ui-status"
+          role={mutationDisplay.tone === "error" ? "alert" : "status"}
+        >
           {mutationDisplay.message}
           {mutationDisplay.details?.length ? (
             <details>
               <summary>Review details</summary>
-              <ul>{mutationDisplay.details.map((detailMessage) => <li key={detailMessage}>{detailMessage}</li>)}</ul>
+              <ul>
+                {mutationDisplay.details.map((detailMessage) => (
+                  <li key={detailMessage}>{detailMessage}</li>
+                ))}
+              </ul>
             </details>
           ) : null}
         </div>
       ) : null}
-      {workspaceScoped ? <div className="ui-status" role="status">Resource-backed asset actions are deferred until workspace resource scoping is implemented.</div> : null}
-      {safeDiagnosticMessages(detail.diagnostics).length ? <div className="ui-status" role="status">{safeDiagnosticMessages(detail.diagnostics).join(" ")}</div> : null}
+      {safeDiagnosticMessages(detail.diagnostics).length ? (
+        <div className="ui-status" role="status">
+          {safeDiagnosticMessages(detail.diagnostics).join(" ")}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -285,9 +453,13 @@ async function callMutationClient(
 }
 
 function assertNever(value: never): never {
-  throw new Error(`Unsupported asset mutation command: ${JSON.stringify(value)}`);
+  throw new Error(
+    `Unsupported asset mutation command: ${JSON.stringify(value)}`,
+  );
 }
 
-function safeDiagnosticMessages(value: readonly string[] | undefined): readonly string[] {
+function safeDiagnosticMessages(
+  value: readonly string[] | undefined,
+): readonly string[] {
   return sanitizeAssetLibraryDiagnosticMessages(value);
 }

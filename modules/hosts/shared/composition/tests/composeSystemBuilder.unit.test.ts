@@ -8,6 +8,10 @@ describe("composeSystemBuilder", () => {
     const builder = composeSystemBuilder({
       documents: createInMemoryStructuredDocumentStore(),
       definitions: { readExactDefinition: async () => undefined },
+      assetRegistryRead: {
+        listDefinitionCards: async () => ({ items: [] }),
+        readDefinitionDetail: async () => undefined,
+      },
       generateSystemId: () => "system-composed",
       now: () => "2026-07-17T00:00:00.000Z",
     });

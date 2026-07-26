@@ -92,6 +92,7 @@ describe("registerAssetRegistryIpc", () => {
         limit: 10,
         cursor: "abc-123",
         includeMetadata: true,
+        workspaceId: "workspace.asset-library-ipc",
         boundary: { host: "desktop", source: "desktop.renderer.asset-registry" },
       },
       { requestId: "r1", correlationId: "c1" },
@@ -109,6 +110,7 @@ describe("registerAssetRegistryIpc", () => {
       includeMetadata: true,
       limit: 10,
       cursor: "abc-123",
+      workspaceId: "workspace.asset-library-ipc",
     });
     expect(response).toMatchObject({ ok: true, operation: "asset.definitions-list", requestId: "r1", correlationId: "c1" });
   });

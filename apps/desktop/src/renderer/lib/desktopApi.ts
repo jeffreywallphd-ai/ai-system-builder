@@ -61,6 +61,11 @@ import type {
   SetAssetPackageActivationCommand,
 } from "../../../../../modules/contracts/asset-package";
 import type {
+  CreateAssetStudioAssetDraftCommand,
+  ListAssetStudioAssetDraftsQuery,
+  ReadAssetStudioAssetDraftQuery,
+  TransitionAssetStudioAssetDraftCommand,
+  UpdateAssetStudioAssetDraftCommand,
   ProposeAssetStudioChangeCommand,
   ReviewAssetStudioProposalCommand,
   StartAssetStudioCommand,
@@ -68,6 +73,12 @@ import type {
 import type {
   SystemBuilderComposition,
   SystemBuilderTemplateId,
+  ListSystemBuilderComposerAssetsQuery,
+  ReadSystemBuilderComposerAssetQuery,
+  ListSystemBuilderManagementQuery,
+  PreviewSystemBuilderLayoutChangeCommand,
+  PreviewSystemBuilderFoundationUpgradeCommand,
+  UpgradeSystemBuilderFoundationCommand,
 } from "../../../../../modules/contracts/system-builder";
 import type { SystemDeploymentCapabilityPolicy } from "../../../../../modules/contracts/system-deployment";
 
@@ -549,6 +560,10 @@ interface DesktopApiBridge {
     input: { workspaceId: string; includeArchived?: boolean },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
+  listSystemBuilderManagement?: (
+    input: ListSystemBuilderManagementQuery,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
   readSystemBuilderSystem?: (
     input: { workspaceId: string; systemId: string },
     context?: DesktopBridgeRequestContext,
@@ -592,6 +607,35 @@ interface DesktopApiBridge {
   ) => Promise<unknown>;
   listSystemBuilderRevisions?: (
     input: { workspaceId: string; systemId: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  listSystemBuilderComposerAssets?: (
+    input: ListSystemBuilderComposerAssetsQuery,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  readSystemBuilderComposerAsset?: (
+    input: ReadSystemBuilderComposerAssetQuery,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  previewSystemBuilderLayoutChange?: (
+    input: Omit<
+      PreviewSystemBuilderLayoutChangeCommand,
+      "actorId" | "workspaceId" | "systemId"
+    > & { readonly workspaceId: string; readonly systemId: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  previewSystemBuilderFoundationUpgrade?: (
+    input: Omit<
+      PreviewSystemBuilderFoundationUpgradeCommand,
+      "actorId" | "workspaceId" | "systemId"
+    > & { readonly workspaceId: string; readonly systemId: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  upgradeSystemBuilderFoundation?: (
+    input: Omit<
+      UpgradeSystemBuilderFoundationCommand,
+      "actorId" | "workspaceId" | "systemId"
+    > & { readonly workspaceId: string; readonly systemId: string },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   requestSystemBuild?: (
@@ -812,6 +856,34 @@ interface DesktopApiBridge {
   ) => Promise<unknown>;
   listAssetStudioWorkflows?: (
     workspaceId: string,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  createAssetStudioAssetDraft?: (
+    input: Omit<CreateAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  updateAssetStudioAssetDraft?: (
+    input: Omit<UpdateAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  readAssetStudioAssetDraft?: (
+    input: ReadAssetStudioAssetDraftQuery,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  listAssetStudioAssetDrafts?: (
+    input: ListAssetStudioAssetDraftsQuery,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  reviewAssetStudioAssetDraft?: (
+    input: Omit<TransitionAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  publishAssetStudioAssetDraft?: (
+    input: Omit<TransitionAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  abandonAssetStudioAssetDraft?: (
+    input: Omit<TransitionAssetStudioAssetDraftCommand, "actorId">,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   readAssetDefinition?: (

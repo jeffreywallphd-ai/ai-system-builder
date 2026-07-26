@@ -1,0 +1,121 @@
+<div>
+  <div>
+    <div data-slot="top-bar"></div>
+    <div data-slot="start-sidebar">
+      <nav aria-label="Data review">
+        <strong>Data review</strong>
+        <ul>
+          <li><button type="button" aria-current="page">Overview</button></li>
+        </ul>
+      </nav>
+    </div>
+    <div data-slot="content">
+      <div>
+        <div data-slot="content">
+          <main>
+            <header><h1>Secured data review</h1></header>
+            <div data-slot="content">
+              <div data-slot="items">
+                <section aria-label="Artifacts">
+                  <header>
+                    <h2>Artifacts</h2>
+                    <p>Browse authorized workspace artifacts.</p>
+                  </header>
+                  <div data-slot="filters">
+                    <label>
+                      <span>Name</span>
+                      <input type="text" />
+                    </label>
+                    <label>
+                      <span>Media type</span>
+                      <select>
+                        <option value="" selected>Select</option>
+                        <option value="all">All supported types</option>
+                        <option value="text">Text and tables</option>
+                        <option value="image">Raster images</option>
+                        <option value="pdf">PDF documents</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div data-slot="results">
+                    <section aria-label="Authorized artifacts">
+                      <h2>Authorized artifacts</h2>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th scope="col">Name</th>
+                            <th scope="col">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>Example record</td>
+                            <td>Ready</td>
+                          </tr>
+                          <tr>
+                            <td>Second record</td>
+                            <td>Draft</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </section>
+                  </div>
+                </section>
+                <article>
+                  <header>
+                    <h2>Artifact details</h2>
+                    <p>
+                      Review safe metadata and a bounded preview for the
+                      selected artifact.
+                    </p>
+                  </header>
+                  <div data-slot="summary">
+                    <section aria-label="Safe metadata">
+                      <h2>Safe metadata</h2>
+                      <dl>
+                        <div>
+                          <dt>Name</dt>
+                          <dd>Example record</dd>
+                        </div>
+                        <div>
+                          <dt>Status</dt>
+                          <dd>Ready</dd>
+                        </div>
+                      </dl>
+                    </section>
+                  </div>
+                  <div data-slot="content">
+                    <section aria-label="Artifact metadata">
+                      <h2>Artifact metadata</h2>
+                      <dl>
+                        <div>
+                          <dt>Name</dt>
+                          <dd>Example record</dd>
+                        </div>
+                        <div>
+                          <dt>Status</dt>
+                          <dd>Ready</dd>
+                        </div>
+                      </dl>
+                    </section>
+                    <section aria-label="Bounded artifact preview">
+                      <h2>Bounded artifact preview</h2>
+                      <div data-slot="previews">
+                        <figure>
+                          <div role="img" aria-label="Bounded Text Preview">
+                            Preview
+                          </div>
+                          <figcaption>Bounded Text Preview</figcaption>
+                        </figure>
+                      </div>
+                    </section>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

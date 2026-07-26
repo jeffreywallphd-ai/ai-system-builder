@@ -413,7 +413,7 @@ export function SystemDeploymentWorkflow({
                   </button>
                   <button
                     type="button"
-                    className="ui-button--secondary"
+                    className="ui-button ui-button--outline"
                     onClick={() => void lifecycle("health")}
                     disabled={busy || selected.status === "revoked"}
                   >
@@ -421,7 +421,7 @@ export function SystemDeploymentWorkflow({
                   </button>
                   <button
                     type="button"
-                    className="ui-button--secondary"
+                    className="ui-button ui-button--outline"
                     onClick={() => void lifecycle("rollback")}
                     disabled={
                       busy ||
@@ -433,7 +433,7 @@ export function SystemDeploymentWorkflow({
                   </button>
                   <button
                     type="button"
-                    className="ui-button--secondary"
+                    className="ui-button ui-button--outline"
                     onClick={() => void lifecycle("revoke")}
                     disabled={busy || selected.status === "revoked"}
                   >
@@ -475,7 +475,7 @@ export function SystemDeploymentWorkflow({
                   {run.status === "queued" || run.status === "running" ? (
                     <button
                       type="button"
-                      className="ui-button--secondary"
+                      className="ui-button ui-button--outline"
                       onClick={() => void cancelRun(String(run.runId))}
                       disabled={busy}
                     >

@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { describe, expect, it } from "../../../../testing/node-test";
 import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import { createWorkspaceId } from "../../../../contracts/workspace";
@@ -5,11 +7,19 @@ import { normalizeAssetId } from "../../../../contracts/asset";
 import {
   SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS,
   SYSTEM_FOUNDATION_PACK_MANIFEST,
+  SYSTEM_FOUNDATION_PACK_V2_MANIFEST,
+  SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS,
 } from "../../../../application/services/asset-packs";
 import type { AssetDefinitionRepositoryPort } from "../../../../application/ports/asset";
+import type { AssetImplementationArtifactPort } from "../../../../application/ports/asset-implementation";
+import {
+  normalizeAssetImplementationArtifactId,
+  normalizeSha256Digest,
+} from "../../../../contracts/asset-implementation";
 import {
   composeAssetImplementationKernel,
   DEFAULT_TRUSTED_ASSET_IMPLEMENTATION_SEEDS,
+  SYSTEM_FOUNDATION_BACKING_RESOURCE_WORKSPACE_ID,
 } from "../composeAssetImplementationKernel";
 
 const definitionRef = {
@@ -46,6 +56,35 @@ const definitions: AssetDefinitionRepositoryPort = {
     return { definitions: [] };
   },
 };
+
+function createArtifacts(): AssetImplementationArtifactPort {
+  const values = new Map<string, Uint8Array>();
+  return {
+    async putImmutable(request) {
+      const bytes =
+        request.content instanceof Uint8Array
+          ? request.content
+          : new TextEncoder().encode(String(request.content));
+      const hex = createHash("sha256").update(bytes).digest("hex");
+      const digest = normalizeSha256Digest(`sha256:${hex}`);
+      values.set(`${request.workspaceId}:${digest}`, bytes);
+      return {
+        artifactId: normalizeAssetImplementationArtifactId(
+          `implementation-artifact.source.${hex}`,
+        ),
+        kind: request.kind,
+        digest,
+        mediaType: request.mediaType,
+        sizeBytes: bytes.byteLength,
+      };
+    },
+    async readVerified(workspaceId, descriptor) {
+      const value = values.get(`${workspaceId}:${descriptor.digest}`);
+      if (!value) throw new Error("Artifact not found.");
+      return value as never;
+    },
+  };
+}
 
 describe("asset implementation host composition", () => {
   it("resolves one trusted built-in release in desktop and server deployment profiles", async () => {
@@ -99,7 +138,10 @@ describe("asset implementation host composition", () => {
 
   it("resolves every foundation default on every supported deployment profile", async () => {
     const byReference = new Map(
-      SYSTEM_FOUNDATION_PACK_MANIFEST.assets.map((entry) => [
+      [
+        ...SYSTEM_FOUNDATION_PACK_MANIFEST.assets,
+        ...SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets,
+      ].map((entry) => [
         `${entry.definition.definitionId}@${entry.definition.version}`,
         entry.definition,
       ]),
@@ -113,12 +155,49 @@ describe("asset implementation host composition", () => {
     const composition = composeAssetImplementationKernel({
       documents: createInMemoryStructuredDocumentStore(),
       definitions: foundationDefinitions,
+      artifacts: createArtifacts(),
       trustedSeeds: DEFAULT_TRUSTED_ASSET_IMPLEMENTATION_SEEDS,
       now: () => "2026-07-17T12:00:00.000Z",
     });
     await composition.ensureTrustedBuiltIns();
+    await composition.ensureTrustedBuiltIns();
 
-    for (const descriptor of SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS) {
+    const backingResources = await composition.backingResources.list(
+      createWorkspaceId("workspace-a"),
+    );
+    expect(backingResources.length).toBe(
+      SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS.length +
+        SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS.length,
+    );
+    expect(
+      backingResources.every(
+        (record) =>
+          record.scope === "system" &&
+          record.artifactWorkspaceId ===
+            SYSTEM_FOUNDATION_BACKING_RESOURCE_WORKSPACE_ID &&
+          record.files.length > 0,
+      ),
+    ).toBe(true);
+
+    expect(
+      backingResources.some(
+        (record) =>
+          record.backingResourceId ===
+          "implementation-backing.builtin.system.system.1",
+      ),
+    ).toBe(true);
+    expect(
+      backingResources.some(
+        (record) =>
+          record.backingResourceId ===
+          "implementation-backing.builtin.system.system.2",
+      ),
+    ).toBe(true);
+
+    for (const descriptor of [
+      ...SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS,
+      ...SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS,
+    ]) {
       for (const profile of descriptor.deploymentProfiles) {
         const result = await composition.resolveFoundationDefault(
           createWorkspaceId("workspace-a"),

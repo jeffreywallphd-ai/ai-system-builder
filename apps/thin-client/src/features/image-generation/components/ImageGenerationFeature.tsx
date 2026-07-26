@@ -230,7 +230,7 @@ export function ImageGenerationFeature({
               onNavigateToModels ? (
                 <button
                   type="button"
-                  className="ui-button ui-button--secondary"
+                  className="ui-button ui-button--outline"
                   onClick={onNavigateToModels}
                 >
                   <ApplicationIcon name="models" />
@@ -297,7 +297,7 @@ export function ImageGenerationFeature({
               <div className="ui-workflow__actions">
                 <button
                   type="button"
-                  className="ui-button ui-button--secondary"
+                  className="ui-button ui-button--outline"
                   onClick={() => void feature.refreshImageArtifacts()}
                   disabled={feature.imageArtifactsLoading}
                 >
@@ -545,7 +545,7 @@ export function ImageGenerationFeature({
                 </span>
               </button>
               <button
-                className="ui-button ui-button--secondary"
+                className="ui-button ui-button--outline"
                 type="button"
                 onClick={() => void feature.cancel()}
                 disabled={feature.isCancelDisabled}
@@ -554,7 +554,7 @@ export function ImageGenerationFeature({
                 <span className="ui-button__label">Cancel</span>
               </button>
               <button
-                className="ui-button ui-button--secondary"
+                className="ui-button ui-button--outline"
                 type="button"
                 onClick={() => onNavigateToArtifacts?.()}
               >
@@ -562,7 +562,7 @@ export function ImageGenerationFeature({
                 <span className="ui-button__label">Open Artifacts</span>
               </button>
               <button
-                className="ui-button ui-button--secondary"
+                className="ui-button ui-button--outline"
                 type="button"
                 onClick={() => void feature.unloadModel()}
                 disabled={feature.isUnloadModelDisabled}

@@ -100,3 +100,18 @@ Do not use this register for:
   - `modules/contracts/ipc/desktop-asset-registry-contract.ts`: imports the same application-owned types.
 - Expected decision: Relocate the transport-facing read-model types to the appropriate contract family, update application and transport consumers, then remove both exact exceptions from `dev-tools/config/architecture-boundaries.json`.
 - Notes: `npm run architecture:check` permits only these two tracked source/target pairs and rejects new contract-to-application dependencies.
+
+### DM-20260718-001
+
+- Status: open
+- Severity: high
+- Drift type: canonical-vs-code
+- Primary doc: `docs/asset-system-composition-implementation-roadmap.md`
+- Compared with: `modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx`, `modules/contracts/asset/asset-instance.ts`
+- Summary: Increment 5 claims a hierarchical System Builder with schema-backed configuration, but Compose persists and edits a flat ordered list with the first item as root and raw JSON configuration.
+- Evidence:
+  - `docs/asset-system-composition-implementation-roadmap.md`: lines 725-730 and 756-765 require parent/child hierarchy, nested composition, and a schema-backed inspector, while lines 782-806 describe that work as implemented and verified.
+  - `modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx`: renders a flat ordered instance list, sets `rootInstanceRefs` from `instanceRefs.slice(0, 1)`, and exposes `selectedConfiguration` through one JSON textarea.
+  - `modules/contracts/asset/asset-instance.ts`: records only `parentCompositionRef`, with no parent-instance, named-slot, or ordered-placement vocabulary.
+- Expected decision: Implement the approved successor slot-composer roadmap, then reconcile the original roadmap evidence and affected architecture/context documents against verified behavior.
+- Notes: `docs/system-builder-slot-composer-implementation-roadmap.md` tracks the approved architectural direction and must not be treated as implementation evidence until its increments pass.

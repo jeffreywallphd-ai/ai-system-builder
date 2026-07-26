@@ -2,7 +2,10 @@ import { createHash } from "node:crypto";
 
 import { describe, expect, it } from "../../../../testing/node-test";
 import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
-import { createStructuredAssetImplementationRepository } from "../../../../adapters/persistence/asset-implementation";
+import {
+  createStructuredAssetImplementationBackingResourceRepository,
+  createStructuredAssetImplementationRepository,
+} from "../../../../adapters/persistence/asset-implementation";
 import { createStructuredAssetPackageRepository } from "../../../../adapters/persistence/asset-package";
 import { createAssetImplementationArtifactAdapter } from "../../../../adapters/storage/asset-implementation";
 import { createAisbPackageInspector } from "../../../../adapters/package/aisb";
@@ -23,6 +26,7 @@ describe("asset package lifecycle", () => {
     const documents = createInMemoryStructuredDocumentStore();
     const packages = createStructuredAssetPackageRepository(documents);
     const implementations = createStructuredAssetImplementationRepository(documents);
+    const backingResources = createStructuredAssetImplementationBackingResourceRepository(documents);
     const artifacts = createAssetImplementationArtifactAdapter(memoryStorage());
     const inspector = createAisbPackageInspector();
     const definitions = memoryDefinitions();
@@ -34,7 +38,7 @@ describe("asset package lifecycle", () => {
     expect(inspected.ok).toBe(true);
     if (!inspected.ok) return;
 
-    const admit = new AdmitAssetPackageUseCase({ inspector, packages, artifacts, trust: createAssetPackageTrustVerifier(), definitions, implementations, now });
+    const admit = new AdmitAssetPackageUseCase({ inspector, packages, artifacts, trust: createAssetPackageTrustVerifier(), definitions, implementations, backingResources, now });
     const admitted = await admit.execute({
       workspaceId: createWorkspaceId("workspace-a"),
       inspectionId: inspected.value.inspectionId,
@@ -47,6 +51,11 @@ describe("asset package lifecycle", () => {
     if (!admitted.ok) return;
     expect(admitted.value.status).toBe("installed");
     expect((await implementations.listReleases(createWorkspaceId("workspace-a"))).length).toBe(1);
+    const backing = await backingResources.list(createWorkspaceId("workspace-a"));
+    expect(backing.length).toBe(1);
+    expect(backing[0]?.origin).toBe("admitted-package");
+    expect(backing[0]?.files.some((file) => file.path.endsWith(".js"))).toBe(true);
+    expect(backing[0]?.files.find((file) => file.path.endsWith(".js"))?.editable).toBe(false);
 
     const activate = new ActivateAssetPackageUseCase(packages, now);
     const firstActive = await activate.execute({ workspaceId: createWorkspaceId("workspace-a"), recordId: admitted.value.recordId, actorId: "user-a" });
@@ -66,13 +75,14 @@ describe("asset package lifecycle", () => {
     const documents = createInMemoryStructuredDocumentStore();
     const packages = createStructuredAssetPackageRepository(documents);
     const implementations = createStructuredAssetImplementationRepository(documents);
+    const backingResources = createStructuredAssetImplementationBackingResourceRepository(documents);
     const artifacts = createAssetImplementationArtifactAdapter(memoryStorage());
     const inspector = createAisbPackageInspector();
     const fixture = await createPackageFixture(inspector);
     const inspect = new InspectAssetPackageUseCase({ inspector, repository: packages, artifacts, nextInspectionId: () => "inspection-2", now: () => "2026-07-17T12:00:00.000Z" });
     const inspected = await inspect.execute({ workspaceId: createWorkspaceId("workspace-a"), bytes: fixture.bytes, actorId: "user-a" });
     if (!inspected.ok) throw new Error(inspected.error.message);
-    const admit = new AdmitAssetPackageUseCase({ inspector, packages, artifacts, trust: createAssetPackageTrustVerifier(), definitions: memoryDefinitions(), implementations, now: () => "2026-07-17T12:00:01.000Z" });
+    const admit = new AdmitAssetPackageUseCase({ inspector, packages, artifacts, trust: createAssetPackageTrustVerifier(), definitions: memoryDefinitions(), implementations, backingResources, now: () => "2026-07-17T12:00:01.000Z" });
     const result = await admit.execute({ workspaceId: createWorkspaceId("workspace-a"), inspectionId: inspected.value.inspectionId, packageDigest: inspected.value.packageDigest, approvalScope: "organization", approvedCapabilities: [], actorId: "admin-a" });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe("package-signature-required");

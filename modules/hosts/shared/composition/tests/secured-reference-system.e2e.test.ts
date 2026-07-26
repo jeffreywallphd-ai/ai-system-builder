@@ -40,6 +40,10 @@ describe("secured data-entry reference system", () => {
           return definitions.get(`${reference.id}@${reference.version}`);
         },
       },
+      assetRegistryRead: {
+        listDefinitionCards: async () => ({ items: [] }),
+        readDefinitionDetail: async () => undefined,
+      },
       generateSystemId: () => "system.secured-reference",
       now: () => timestamp,
     });
@@ -214,6 +218,10 @@ describe("secured data-entry reference system", () => {
         async readExactDefinition(reference) {
           return definitions.get(`${reference.id}@${reference.version}`);
         },
+      },
+      assetRegistryRead: {
+        listDefinitionCards: async () => ({ items: [] }),
+        readDefinitionDetail: async () => undefined,
       },
       generateSystemId: () => "system.controlled-chatbot-reference",
       now: () => timestamp,

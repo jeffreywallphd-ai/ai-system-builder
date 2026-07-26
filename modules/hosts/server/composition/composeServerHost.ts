@@ -168,6 +168,7 @@ import {
 import { composeAssetImplementationKernel } from "../../shared/composition/composeAssetImplementationKernel";
 import { composeAssetPackageLifecycle } from "../../shared/composition/composeAssetPackageLifecycle";
 import { composeAssetStudioWorkflow } from "../../shared/composition/composeAssetStudioWorkflow";
+import { composeAssetDerivedCustomization } from "../../shared/composition/composeAssetDerivedCustomization";
 import { composeSystemBuilder } from "../../shared/composition/composeSystemBuilder";
 import { composeSystemBuild } from "../../shared/composition/composeSystemBuild";
 import { composeSystemData } from "../../shared/composition/composeSystemData";
@@ -1277,11 +1278,11 @@ export function composeServerHost(
         }),
       });
       const foundationReady = internalAssetRegistry.installSystemFoundationPack
-        .install({
+        .installAll({
           allowSystemDefinitionRefresh: true,
         })
-        .then((result) => {
-          if (result.status === "failed") {
+        .then((results) => {
+          if (results.some((result) => result.status === "failed")) {
             throw new Error("System foundation assets are unavailable.");
           }
         });
@@ -1308,6 +1309,7 @@ export function composeServerHost(
                 internalAssetRegistry.assetKernel.repositories
                   .definitionRepository,
               implementations: assetImplementation.repository,
+              backingResources: assetImplementation.backingResources,
               artifacts: createAssetImplementationArtifactAdapter(storage),
               nextInspectionId: () => `package-inspection.${randomUUID()}`,
               now: options.now ?? (() => new Date().toISOString()),
@@ -1319,6 +1321,9 @@ export function composeServerHost(
               documents: organizationDocuments,
               implementations: assetImplementation,
               artifacts: createAssetImplementationArtifactAdapter(storage),
+              definitions:
+                internalAssetRegistry.assetKernel.repositories
+                  .definitionRepository,
               now: options.now ?? (() => new Date().toISOString()),
             })
           : undefined;
@@ -1331,6 +1336,7 @@ export function composeServerHost(
                   reference,
                 ),
             },
+            assetRegistryRead: internalAssetRegistry.workspaceReadFacade,
             generateSystemId: () => `system.${randomUUID()}`,
             now: options.now,
           })
@@ -1811,8 +1817,26 @@ export function composeServerHost(
             new WorkspaceAssetAuthoringReadModelService({
               ...assetAuthoringRepositories,
             });
+          const derivedCustomizations =
+            organizationDocuments && assetImplementation
+              ? composeAssetDerivedCustomization({
+                  documents: organizationDocuments,
+                  definitions:
+                    internalAssetRegistry!.assetKernel.repositories
+                      .definitionRepository,
+                  implementations: assetImplementation,
+                  artifacts: createAssetImplementationArtifactAdapter(storage),
+                  authoredAssets:
+                    assetAuthoringRepositories.authoredAssetRepository,
+                  ensureReady: ensureAssetImplementationReady,
+                  now: options.now ?? (() => new Date().toISOString()),
+                })
+              : undefined;
           return {
             ...assetAuthoringRepositories,
+            ...(derivedCustomizations
+              ? { derivedCustomizations: derivedCustomizations.service }
+              : {}),
             createWorkspaceAuthoredAssetUseCase:
               new CreateWorkspaceAuthoredAssetUseCase({
                 authoredAssetRepository:
@@ -1971,6 +1995,7 @@ export function composeServerHost(
                 review: assetStudio.useCases.review,
                 read: assetStudio.useCases.read,
                 list: assetStudio.useCases.list,
+                assetDrafts: assetStudio.useCases.assetDrafts,
               },
             }
           : {}),

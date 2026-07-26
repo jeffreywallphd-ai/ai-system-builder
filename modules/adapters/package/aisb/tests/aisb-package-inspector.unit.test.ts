@@ -5,9 +5,46 @@ import {
   encodePackage as encode,
 } from "../../../../testing/fixtures/asset-package-fixture";
 import { createWorkspaceId } from "../../../../contracts/workspace";
+import {
+  ASSET_PACKAGE_STARTER_README,
+  createAssetPackageStarter,
+  createAssetPackageStarterBytes,
+  serializeAssetPackageStarter,
+} from "../../../../contracts/asset-package";
 import { createAisbPackageInspector } from "../createAisbPackageInspector";
 
 describe(".aisb-package bounded inspector", () => {
+  it("accepts the deterministic non-executing starter package", async () => {
+    const inspector = createAisbPackageInspector();
+    const firstText = serializeAssetPackageStarter();
+    const secondText = serializeAssetPackageStarter();
+    const first = createAssetPackageStarterBytes();
+    const second = createAssetPackageStarterBytes();
+
+    expect(Array.from(second)).toEqual(Array.from(first));
+    expect(secondText).toBe(firstText);
+    expect(JSON.parse(new TextDecoder().decode(first))).toEqual(
+      createAssetPackageStarter(),
+    );
+    expect(ASSET_PACKAGE_STARTER_README).toContain("add semantic definitions");
+
+    const inspected = await inspector.inspect({
+      inspectionId: "inspection-starter",
+      workspaceId: createWorkspaceId("workspace-a"),
+      bytes: first,
+      inspectedAt: "2026-07-18T12:00:00.000Z",
+    });
+
+    expect(inspected.summary.eligibleForAdmission).toBe(true);
+    expect(inspected.summary.definitionCount).toBe(0);
+    expect(inspected.summary.implementationCount).toBe(0);
+    expect(inspected.summary.entryCount).toBe(1);
+    expect(inspected.summary.requestedCapabilities).toEqual([]);
+    expect(inspected.entries.length).toBe(1);
+    expect(inspected.entries[0]?.path).toBe("README.txt");
+    expect(inspected.entries[0]?.mediaType).toBe("text/plain");
+  });
+
   it("inspects a valid package without executing any entry", async () => {
     const inspector = createAisbPackageInspector();
     const packageFixture = await createPackageFixture(inspector);

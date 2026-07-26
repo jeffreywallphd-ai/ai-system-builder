@@ -863,6 +863,17 @@ export function composeDesktopHost(
                 );
               },
             },
+            assetRegistryRead: {
+              listDefinitionCards: async (query) =>
+                (await getAssetFeatures()).assetRegistryRead.listDefinitionCards(
+                  query,
+                ),
+              readDefinitionDetail: async (reference, readOptions) =>
+                (await getAssetFeatures()).assetRegistryRead.readDefinitionDetail(
+                  reference,
+                  readOptions,
+                ),
+            },
             generateSystemId: () => `system.${randomUUID()}`,
             now: options.now,
           })
@@ -1267,6 +1278,8 @@ export function composeDesktopHost(
           assetDraftRepository,
           assetRevisionRepository,
           assetOverrideRepository,
+          getDerivedCustomizations: async () =>
+            (await getAssetFeatures()).derivedCustomizations?.service,
         },
         userLibrary: {
           ipcMain: registerOptions.ipcMain,
@@ -1495,6 +1508,43 @@ export function composeDesktopHost(
               if (!feature)
                 throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.list.execute(workspaceId);
+            },
+          },
+          assetDrafts: {
+            create: async (command) => {
+              const feature = (await getAssetFeatures()).assetStudio;
+              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              return feature.useCases.assetDrafts.create(command);
+            },
+            update: async (command) => {
+              const feature = (await getAssetFeatures()).assetStudio;
+              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              return feature.useCases.assetDrafts.update(command);
+            },
+            read: async (query) => {
+              const feature = (await getAssetFeatures()).assetStudio;
+              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              return feature.useCases.assetDrafts.read(query);
+            },
+            list: async (query) => {
+              const feature = (await getAssetFeatures()).assetStudio;
+              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              return feature.useCases.assetDrafts.list(query);
+            },
+            review: async (command) => {
+              const feature = (await getAssetFeatures()).assetStudio;
+              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              return feature.useCases.assetDrafts.review(command);
+            },
+            publish: async (command) => {
+              const feature = (await getAssetFeatures()).assetStudio;
+              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              return feature.useCases.assetDrafts.publish(command);
+            },
+            abandon: async (command) => {
+              const feature = (await getAssetFeatures()).assetStudio;
+              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              return feature.useCases.assetDrafts.abandon(command);
             },
           },
         },

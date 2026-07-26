@@ -507,7 +507,7 @@ export function ConversationRunTest({
           client.cancelConversationTurn ? (
             <button
               type="button"
-              className="ui-button--secondary"
+              className="ui-button ui-button--outline"
               disabled={busy}
               onClick={() => void runTurnAction("cancel")}
             >
@@ -519,7 +519,7 @@ export function ConversationRunTest({
           client.retryConversationTurn ? (
             <button
               type="button"
-              className="ui-button--secondary"
+              className="ui-button ui-button--outline"
               disabled={busy}
               onClick={() => void runTurnAction("retry")}
             >

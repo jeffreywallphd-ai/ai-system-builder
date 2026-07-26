@@ -125,6 +125,53 @@ Use only after the user approves the rendered roadmap.
 }
 ```
 
+### `roadmap-revised`
+
+Use after execution starts only to replace the still-pending suffix with a more
+cohesive approved proposal. Completed or implemented-pending-qualification
+increments, chunks, and evidence are preserved exactly. No increment may be active.
+Record the scope or granularity feedback first, then render the revised roadmap and
+obtain a new `roadmap-approved` event before resuming implementation.
+
+```json
+{
+  "type": "roadmap-revised",
+  "reason": "Merge closely coupled UI work to reduce planning and verification overhead.",
+  "increments": [
+    {
+      "id": "cohesive-experience",
+      "number": 2,
+      "title": "Cohesive user experience",
+      "objective": "Deliver the complete user-visible experience as one vertical slice.",
+      "dependsOn": ["completed-foundation"],
+      "workPackages": [
+        {
+          "id": "experience",
+          "title": "Integrated experience",
+          "outcome": "Related UI and supporting behavior work together end to end."
+        }
+      ],
+      "deliverables": ["Integrated behavior", "Tests", "Documentation"],
+      "acceptanceCriteria": [
+        {
+          "id": "experience-works",
+          "description": "The complete experience works across supported hosts.",
+          "qualification": "local"
+        }
+      ],
+      "verification": ["Run focused tests and applicable completion gates."],
+      "rollback": "Revert the integrated experience without changing preserved increments.",
+      "excluded": ["Unrelated scope"],
+      "allowPendingQualification": false
+    }
+  ]
+}
+```
+
+Replacement numbers must continue contiguously after the preserved prefix.
+Dependencies may refer to preserved increments or earlier replacements. This event
+invalidates the prior roadmap approval.
+
 ## Execution events
 
 ### `increment-started`
@@ -171,7 +218,10 @@ Every criterion must be assigned to one or more planned chunks.
         "criteriaIds": ["contract-tests"]
       }
     ],
-    "tests": ["Focused unit tests", "Applicable repository gates"],
+    "focusedTests": ["Focused unit tests for the active chunk"],
+    "completionTests": [
+      "Applicable repository gates after every planned chunk is implemented"
+    ],
     "documentation": ["Nearest README", "Roadmap report"],
     "rollback": "Remove the additive port and use case.",
     "assumptions": ["No persisted-data migration is required."]
@@ -229,6 +279,38 @@ criterion may be pending.
   "summary": "Every increment and controlled-environment criterion passed."
 }
 ```
+
+This records implementation completion but does not remove the temporary report.
+Present the report and wait for explicit user approval of the overall result.
+
+### `report-relocated`
+
+Use this to migrate a legacy active report into ignored `docs/tmp/`.
+
+```json
+{
+  "type": "report-relocated",
+  "reportPath": "docs/tmp/example-feature-implementation-report.md",
+  "reason": "Keep the generated progress summary local and temporary."
+}
+```
+
+The engine writes the new generated report before removing the old generated file.
+It refuses to remove a file without the generated notice.
+
+### `final-approval-recorded`
+
+Use only after `roadmap-completed` and an explicit user approval response.
+
+```json
+{
+  "type": "final-approval-recorded",
+  "note": "The user explicitly approved the completed overall work."
+}
+```
+
+This makes the roadmap final and immutable, removes the generated temporary report,
+and preserves the roadmap and canonical JSON state.
 
 ## Feedback and recovery events
 

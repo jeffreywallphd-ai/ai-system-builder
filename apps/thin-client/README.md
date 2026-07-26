@@ -7,6 +7,7 @@
 Current scope:
 
 - minimal React bootstrap (`src/main.tsx`, `src/App.tsx`)
+- shared application branding for the browser favicon
 - page-first composition (`src/pages/HomePage.tsx`)
 - header shell with a centered compact **Current Workspace** selector between the brand area and the right-side hamburger/settings actions
 - Home page workspace card with a compact responsive equal-width two-column layout: change-workspace controls on the left and create-workspace controls on the right
@@ -82,13 +83,14 @@ From the repository root:
 - `npm run dev:secure-thin-client`
 - `npm run build:thin-client`
 - `npm run preview:thin-client`
+- `npm run test:visual-composer -- --project thin-chrome` to run the isolated
+  real API System Composer workflow in the configured local Chrome channel
 
 From this workspace directly:
 
 - `npm run dev`
 - `npm run build`
 - `npm run preview`
-
 
 ## Thin-client Vite HTTPS development examples
 

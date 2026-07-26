@@ -18,6 +18,9 @@
 
 - A task concerns only System Foundation ownership, a system prompt, or operating-system resources.
 - Runtime diagnostics work does not affect System Builder terminology or placement.
+- Reuse canonical `AssetSlotDefinition` and `AssetPlacement` for containment; do not overload typed bindings or create renderer-owned hierarchy.
+- Slot-aware revisions declare an explicit profile and exact layout identity. Preserve logical start/end names and source order across responsive presentation.
+- Treat omitted structure plus omitted placements as immutable `legacy-flat` data; reads must not synthesize or persist a migration.
 
 ## Core Guidance
 
@@ -42,6 +45,92 @@
   `modules/application/services/system-builder/validate-system-builder-revision.service.ts`.
 - API/IPC transports and clients are present for both hosts; Systems uses the
   shared `modules/ui/shared/system-builder/` editor in desktop and thin client.
+- New interactive records begin with one Foundation v3 system root, a required
+  exact application layout, and a canonical application/page containment tree.
+  The default is `builtin.layout.application.minimal@3.0.0` when no layout is
+  requested. Save, clone, persistence, API, IPC, preload, and shared UI paths
+  preserve exact structure and placements; legacy-flat revisions remain readable
+  without persistence-time synthesis.
+- Validation resolves exact definitions and enforces root identity, slot
+  declaration and compatibility, cardinality, placement coverage, bounded
+  depth, and acyclic containment before a revision can be treated as valid.
+- The workspace Composer catalog supplies structural exact-definition summaries,
+  ports, slots, availability, container geometry, and compatibility without
+  eagerly carrying configuration schemas or defaults. Both hosts share a
+  two-column Design workspace: a wide Canvas and one sidebar with fitted top tabs
+  for Properties, Styling, and Layers. Styling uses color pickers and allowlisted typography, density,
+  button, form, and surface selects; semantic styles are unavailable through
+  Advanced JSON, and per-asset roles remain bounded Properties selects. Canvas
+  States start collapsed. Only the active details body mounts and receives exact
+  definition detail for its current asset. Layers also separates System resources and logic.
+  Every exact slot-bearing container exposes Add element. Its shared modal scopes
+  compatible new definitions and unassigned visual instances to the selected
+  region, groups and filters them by UI category, and inserts or reattaches a
+  clicked choice without drag state. Explicit Move up, Move down, and Move to
+  controls preserve accessible ordering and reparenting. Foundation layouts
+  expose labels but no editable dimensions, regions, responsive rules, raw JSON,
+  CSS, or coordinates. Ordinary containers retain bounded Layout fields and
+  nested regions. Containers expose structure; leaf nodes render one
+  composition-aware surface without repeating descendant UI.
+- Layout selection uses one HTTP/IPC preview operation and immediately updates
+  the undoable draft. Expected-revision checks and canonical order report
+  preserved, moved, and unassigned assets without persistence. An already-current
+  legacy-flat UI reference may preview Minimal; v1/v2 references require the
+  explicit Foundation upgrade first. Layout application materializes the current
+  root and shell in memory while preserving historical assets and bindings.
+  Reference profiles may add bounded current containers/actions, but bindings
+  never imply containment. Exact catalog types place unmatched pages,
+  components, features, and trusted slot-bearing facades in the compatible Add
+  element modal as unassigned visual instances; policies, models, workflows,
+  contracts, unknowns, and other nonvisual assets remain under System resources
+  and logic in Layers. Only Save creates the next immutable revision.
+- Canonical saved placement edges remain visible when a historical container's
+  exact catalog definition is unavailable. Canvas exposes a bounded read-only
+  structural region for those occupied edges so traversal does not stop, but it
+  does not infer compatibility, allow insertion, change exact versions, or
+  persist synthesized slots. Without exact geometry, regions use source-order
+  auto-flow.
+- System Builder Composer may project the complete exact current built-in
+  Foundation catalog for a workspace with an older active trusted Foundation
+  generation. This Composer-only seam supplies nested slots and qualified
+  previews without widening the workspace Asset Library effective view.
+- Catalog bootstrap reads schema-free structural summaries. The collapsible
+  Layouts bar performs a bounded layout query only when opened. Add element
+  performs a bounded exact-parent and region compatibility query only when its
+  modal opens. Properties reads exact detail only for the selected asset, and
+  Styling reads root detail only while active; stale responses cannot replace a
+  newer selection. Full instance values stay in the canonical local draft.
+- Foundation v1/v2-to-v3 upgrade is explicit and two-step. Preview is read-only;
+  confirmation requires the exact source revision, rejects lossy or invalid
+  mappings, and creates a new immutable v3 revision while preserving source history.
+- The shared Compose UI preview recursively follows current in-memory placements
+  and canonical region order, includes unsaved configuration, exposes unplaced
+  visual, nonvisual resource, and unsupported nodes truthfully, and offers
+  desktop/tablet/mobile frames. Exact-version
+  frontend backing programs drive the registered structural, form, display,
+  state, conversation, and preview renderers. Nested regions render as one
+  composed application and primary content suppresses simultaneous alternative
+  states. Foundation v3 root colors become inherited CSS variables, while root
+  and per-asset style choices become stable semantic data roles. The renderer
+  accepts no arbitrary CSS, selector, or dimension. It never executes backend or unqualified implementation
+  source and does not imply build, release, activation, or deployment. Keep the
+  three hand-authored reference-system semantic HTML fixtures as fidelity
+  oracles; do not replace them with generated snapshots.
+- `npm run test:visual-composer` uses one worker and isolated ignored state to
+  qualify the shared workflow through packaged Windows Electron IPC and local
+  Chrome API paths. Treat its sanitized automation as exact-environment
+  regression evidence, not as physical-touch, screen-reader, cross-platform,
+  manual-security, or production-performance qualification.
+- Systems Manage uses one workspace-scoped application projection for draft,
+  published, and archived systems across API and IPC. Its shared host surface
+  supports search/filter/sort/paging, exact-revision preview, Compose handoff,
+  duplication, archive-backed deletion, and restore. Archive is recoverable and
+  retains immutable history. These actions are not duplicated in Compose, whose
+  active-only picker refreshes after Manage lifecycle changes.
+- Compose shows edit-existing, create-new, and create-from-template forms without
+  eager system or layout loads. Edit stages then loads; new uses Minimal; both
+  creation flows require names. Loaded actions share a toolbar below the forms,
+  and the catalog is requested only for an edit, creation, or Manage handoff.
 - Deterministic attempts and immutable releases live in the separate
   `system-build` contract, application, persistence, storage, API/IPC, and
   shared Build & Release workflow families. Approval re-verifies every artifact
@@ -77,6 +166,7 @@
 - Operational diagnostics remain in
   `apps/desktop/src/renderer/features/settings/components/SoftwareStatusSection.tsx`.
 - Deployment is never implied by the design-time editor or a successful build;
+- `docs/adr/ADR-0036-canonical-slot-composition-and-foundation-layouts.md`
   it requires an explicit compatible install and readiness-verified activation.
 
 ## Canonical Source Docs

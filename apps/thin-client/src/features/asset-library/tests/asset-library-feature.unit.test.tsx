@@ -3,7 +3,13 @@ import { JSDOM } from "jsdom";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
-import { afterEach, describe, expect, it, testDouble } from "../../../../../../modules/testing/node-test";
+import {
+  afterEach,
+  describe,
+  expect,
+  it,
+  testDouble,
+} from "../../../../../../modules/testing/node-test";
 import type {
   AssetLibraryClient,
   AssetLibraryDefinitionCard,
@@ -17,8 +23,13 @@ const dom = new JSDOM("<!doctype html><html><body></body></html>");
 (globalThis as any).window = dom.window;
 (globalThis as any).document = dom.window.document;
 (globalThis as any).Event = dom.window.Event;
+(globalThis as any).Node = dom.window.Node;
+(globalThis as any).HTMLElement = dom.window.HTMLElement;
 (globalThis as any).HTMLInputElement = dom.window.HTMLInputElement;
 (globalThis as any).HTMLSelectElement = dom.window.HTMLSelectElement;
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+
+const TEST_WORKSPACE_ID = "workspace.asset-library-tests";
 
 const card: AssetLibraryDefinitionCard = {
   id: "builtin.document@1.0.0",
@@ -121,47 +132,123 @@ const resourceViewDetail: AssetLibraryResourceBackedViewDetail = {
   summary: "External repository object view; not imported or registered.",
 };
 
-function createClient(overrides: Partial<AssetLibraryClient> = {}): AssetLibraryClient {
+function createClient(
+  overrides: Partial<AssetLibraryClient> = {},
+): AssetLibraryClient {
   return {
-    listAssetDefinitions: testDouble.fn().mockResolvedValue({ ok: true, value: { items: [card] } }),
-    readAssetDefinition: testDouble.fn().mockResolvedValue({ ok: true, value: detailWithoutValidation }),
-    readAssetDefinitionVersion: testDouble.fn().mockResolvedValue({ ok: true, value: detailWithoutValidation }),
-    listAssetResourceBackedViews: testDouble.fn().mockResolvedValue({ ok: true, value: { items: [resourceViewCard] } }),
-    readAssetResourceBackedView: testDouble.fn().mockResolvedValue({ ok: true, value: resourceViewDetail }),
-    registerResourceBackedViewAsAsset: testDouble.fn().mockResolvedValue({ ok: true, value: { ok: true, operation: "asset.register-resource-backed-view", status: "created" } }),
-    finalizeGeneratedOutputAsAsset: testDouble.fn().mockResolvedValue({ ok: true, value: { ok: true, operation: "asset.finalize-generated-output", status: "created" } }),
-    importExternalRepositoryObjectAsAsset: testDouble.fn().mockResolvedValue({ ok: true, value: { ok: true, operation: "asset.import-external-repository-object", status: "created" } }),
-    localizeExternalRepositoryObjectAsAsset: testDouble.fn().mockResolvedValue({ ok: true, value: { ok: true, operation: "asset.localize-external-repository-object", status: "created" } }),
+    listAssetDefinitions: testDouble
+      .fn()
+      .mockResolvedValue({ ok: true, value: { items: [card] } }),
+    readAssetDefinition: testDouble
+      .fn()
+      .mockResolvedValue({ ok: true, value: detailWithoutValidation }),
+    readAssetDefinitionVersion: testDouble
+      .fn()
+      .mockResolvedValue({ ok: true, value: detailWithoutValidation }),
+    listAssetResourceBackedViews: testDouble
+      .fn()
+      .mockResolvedValue({ ok: true, value: { items: [resourceViewCard] } }),
+    readAssetResourceBackedView: testDouble
+      .fn()
+      .mockResolvedValue({ ok: true, value: resourceViewDetail }),
+    registerResourceBackedViewAsAsset: testDouble
+      .fn()
+      .mockResolvedValue({
+        ok: true,
+        value: {
+          ok: true,
+          operation: "asset.register-resource-backed-view",
+          status: "created",
+        },
+      }),
+    finalizeGeneratedOutputAsAsset: testDouble
+      .fn()
+      .mockResolvedValue({
+        ok: true,
+        value: {
+          ok: true,
+          operation: "asset.finalize-generated-output",
+          status: "created",
+        },
+      }),
+    importExternalRepositoryObjectAsAsset: testDouble
+      .fn()
+      .mockResolvedValue({
+        ok: true,
+        value: {
+          ok: true,
+          operation: "asset.import-external-repository-object",
+          status: "created",
+        },
+      }),
+    localizeExternalRepositoryObjectAsAsset: testDouble
+      .fn()
+      .mockResolvedValue({
+        ok: true,
+        value: {
+          ok: true,
+          operation: "asset.localize-external-repository-object",
+          status: "created",
+        },
+      }),
     ...overrides,
   };
 }
 
 function queuedListResults(results: readonly unknown[]) {
   const queue = [...results];
-  return testDouble.fn().mockImplementation(() => Promise.resolve(queue.shift()) as any);
+  return testDouble
+    .fn()
+    .mockImplementation(() => Promise.resolve(queue.shift()) as any);
 }
 
 function queuedDetailResults(results: readonly unknown[]) {
   const queue = [...results];
-  return testDouble.fn().mockImplementation(() => Promise.resolve(queue.shift()) as any);
+  return testDouble
+    .fn()
+    .mockImplementation(() => Promise.resolve(queue.shift()) as any);
 }
 
-function setInputValue(input: HTMLInputElement, value: string): void {
-  const descriptor = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value");
-  descriptor?.set?.call(input, value);
-  input.dispatchEvent(new Event("input", { bubbles: true }));
+async function setInputValue(
+  input: HTMLInputElement,
+  value: string,
+): Promise<void> {
+  await act(async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      "value",
+    );
+    descriptor?.set?.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
 }
 
-function setSelectValue(select: HTMLSelectElement, value: string): void {
-  const descriptor = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value");
-  descriptor?.set?.call(select, value);
-  select.dispatchEvent(new Event("change", { bubbles: true }));
+async function setSelectValue(
+  select: HTMLSelectElement,
+  value: string,
+): Promise<void> {
+  await act(async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(
+      window.HTMLSelectElement.prototype,
+      "value",
+    );
+    descriptor?.set?.call(select, value);
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
 }
 
 async function flush() {
   await act(async () => {
     await Promise.resolve();
   });
+}
+
+function getTopmostDialog(): HTMLElement {
+  const dialogs =
+    document.body.querySelectorAll<HTMLElement>("[role='dialog']");
+  const dialog = dialogs[dialogs.length - 1];
+  assert.ok(dialog);
+  return dialog;
 }
 
 describe("thin-client AssetLibraryFeature", () => {
@@ -185,10 +272,12 @@ describe("thin-client AssetLibraryFeature", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<AssetLibraryFeature client={client} />);
+      root.render(
+        <AssetLibraryFeature client={client} workspaceId={TEST_WORKSPACE_ID} />,
+      );
     });
     await flush();
-    return { container, client };
+    return { container: document.body, client };
   }
 
   it("renders cards with category, system default, lifecycle, type, and family cues", async () => {
@@ -204,40 +293,89 @@ describe("thin-client AssetLibraryFeature", () => {
     expect(container.textContent).toContain("v1.0.0");
   });
 
+  it("renders a card grid and opens details in a top-layer modal", async () => {
+    const { container } = await render();
+    const cardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Document"),
+    ) as HTMLButtonElement;
+
+    expect(container.querySelector(".asset-library-layout")).toBe(null);
+    expect(Boolean(container.querySelector(".asset-library-list"))).toBe(true);
+    expect(cardButton.getAttribute("aria-haspopup")).toBe("dialog");
+    expect(document.body.querySelector("[role='dialog']")).toBe(null);
+
+    cardButton.focus();
+    await act(async () => cardButton.click());
+    await flush();
+
+    const dialog = getTopmostDialog();
+    expect(dialog.classList.contains("asset-library-detail-dialog")).toBe(true);
+    expect(dialog.textContent).toContain("Represent document-backed assets");
+    expect(cardButton.getAttribute("aria-expanded")).toBe("true");
+
+    await act(async () => {
+      document.dispatchEvent(
+        new dom.window.KeyboardEvent("keydown", {
+          key: "Escape",
+          bubbles: true,
+        }),
+      );
+    });
+
+    expect(document.body.querySelector("[role='dialog']")).toBe(null);
+    expect(document.activeElement).toBe(cardButton);
+  });
+
   it("renders resource-backed views in a read-only Resource views tab", async () => {
     const { container, client } = await render();
-    const resourceTab = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Resource views") as HTMLButtonElement;
+    const resourceTab = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Resource views",
+    ) as HTMLButtonElement;
 
     await act(async () => resourceTab.click());
     await flush();
 
     expect(container.textContent).toContain("External object");
     expect(container.textContent).toContain("Not imported or registered");
-    const cardButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("External object")) as HTMLButtonElement;
+    const cardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("External object"),
+    ) as HTMLButtonElement;
     await act(async () => cardButton.click());
     await flush();
 
     expect(client.readAssetResourceBackedView).toHaveBeenCalledWith(
       { viewId: "asset-view.external-repository-object.internal.1" },
-      { expand: ["metadata", "resourceBackings"] },
+      {
+        expand: ["metadata", "resourceBackings"],
+        workspaceId: TEST_WORKSPACE_ID,
+      },
     );
     expect(container.textContent).toContain("Import external object");
     expect(container.textContent).toContain("Localize external object");
-    assert.doesNotMatch(container.textContent ?? "", /Create asset|Edit asset|Delete asset|Seed built-ins|Scan resources|Install pack|Import pack|Export pack|Activate pack|Disable pack|Edit override|Override asset/i);
+    assert.doesNotMatch(
+      container.textContent ?? "",
+      /Create asset|Edit asset|Delete asset|Seed built-ins|Scan resources|Install pack|Import pack|Export pack|Activate pack|Disable pack|Edit override|Override asset/i,
+    );
   });
 
   it("requires confirmation and calls the import mutation with a safe thin-client command", async () => {
     const client = createClient();
     const { container } = await render(client);
-    const resourceTab = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Resource views") as HTMLButtonElement;
+    const resourceTab = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Resource views",
+    ) as HTMLButtonElement;
 
     await act(async () => resourceTab.click());
     await flush();
-    const cardButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("External object")) as HTMLButtonElement;
+    const cardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("External object"),
+    ) as HTMLButtonElement;
     await act(async () => cardButton.click());
     await flush();
 
-    const actionButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Import external object") as HTMLButtonElement;
+    const actionButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Import external object",
+    ) as HTMLButtonElement;
     await act(async () => actionButton.click());
     await flush();
 
@@ -245,8 +383,10 @@ describe("thin-client AssetLibraryFeature", () => {
     expect(container.textContent).toContain("Network or provider");
     expect(client.importExternalRepositoryObjectAsAsset).not.toHaveBeenCalled();
 
-    const dialog = container.querySelector("[role='dialog']") as HTMLElement;
-    const confirmButton = Array.from(dialog.querySelectorAll("button")).find((button) => button.textContent === "Import object") as HTMLButtonElement;
+    const dialog = getTopmostDialog();
+    const confirmButton = Array.from(dialog.querySelectorAll("button")).find(
+      (button) => button.textContent === "Import object",
+    ) as HTMLButtonElement;
     await act(async () => confirmButton.click());
     await flush();
 
@@ -268,7 +408,14 @@ describe("thin-client AssetLibraryFeature", () => {
         thinClientSafe: true,
       },
     });
-    expect(/metadata|C:\\|Bearer|base64|workflow|prompt/i.test(JSON.stringify((client.importExternalRepositoryObjectAsAsset as any).mock.calls[0][0]))).toBe(false);
+    expect(
+      /metadata|C:\\|Bearer|base64|workflow|prompt/i.test(
+        JSON.stringify(
+          (client.importExternalRepositoryObjectAsAsset as any).mock
+            .calls[0][0],
+        ),
+      ),
+    ).toBe(false);
     expect(container.textContent).toContain("Asset registered.");
     expect(client.readAssetResourceBackedView).toHaveBeenCalledTimes(2);
   });
@@ -300,7 +447,11 @@ describe("thin-client AssetLibraryFeature", () => {
         value: {
           items: [card],
           diagnostics: [
-            { severity: "info", code: "safe-definition", message: "Safe definition diagnostic." },
+            {
+              severity: "info",
+              code: "safe-definition",
+              message: "Safe definition diagnostic.",
+            },
             ...unsafeTopLevelDiagnostics.map((message, index) => ({
               severity: "warning" as const,
               code: `unsafe-definition-${index}`,
@@ -314,17 +465,34 @@ describe("thin-client AssetLibraryFeature", () => {
         value: {
           items: [resourceViewCard],
           diagnostics: [
-            { severity: "info", code: "safe-resource", message: "Safe aggregate diagnostic." },
-            { severity: "warning", code: "unsafe-resource", message: "/tmp/secret Bearer token data:image base64 raw provider payload command line process.env" },
+            {
+              severity: "info",
+              code: "safe-resource",
+              message: "Safe aggregate diagnostic.",
+            },
+            {
+              severity: "warning",
+              code: "unsafe-resource",
+              message:
+                "/tmp/secret Bearer token data:image base64 raw provider payload command line process.env",
+            },
           ],
         },
       }),
     });
     const { container } = await render(client);
+    const resourceTab = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Resource views",
+    ) as HTMLButtonElement;
+
+    await act(async () => resourceTab.click());
+    await flush();
 
     expect(container.textContent).toContain("Safe definition diagnostic.");
     expect(container.textContent).toContain("Safe aggregate diagnostic.");
-    const diagnosticStatusText = Array.from(container.querySelectorAll("[role='status'], [role='alert']"))
+    const diagnosticStatusText = Array.from(
+      container.querySelectorAll("[role='status'], [role='alert']"),
+    )
       .map((element) => element.textContent ?? "")
       .join(" ");
     assert.doesNotMatch(
@@ -342,13 +510,22 @@ describe("thin-client AssetLibraryFeature", () => {
     });
     const { container } = await render(client);
 
-    expect(container.textContent).toContain("No reusable building blocks are registered yet.");
-    expect(container.textContent).toContain("Built-in assets appear here after they are registered for this workspace.");
+    expect(container.textContent).toContain(
+      "No reusable building blocks are registered yet.",
+    );
+    expect(container.textContent).toContain(
+      "Built-in assets appear here after they are registered for this workspace.",
+    );
 
-    setInputValue(container.querySelector("input[type='search']") as HTMLInputElement, "missing");
+    await setInputValue(
+      container.querySelector("input[type='search']") as HTMLInputElement,
+      "missing",
+    );
     await flush();
 
-    expect(container.textContent).toContain("No assets match the current filters.");
+    expect(container.textContent).toContain(
+      "No assets match the current filters.",
+    );
   });
 
   it("sends filter changes through supported query fields", async () => {
@@ -356,15 +533,18 @@ describe("thin-client AssetLibraryFeature", () => {
     const { container } = await render(client);
     const selects = Array.from(container.querySelectorAll("select"));
 
-    setInputValue(container.querySelector("input[type='search']") as HTMLInputElement, "doc");
+    await setInputValue(
+      container.querySelector("input[type='search']") as HTMLInputElement,
+      "doc",
+    );
     await flush();
-    setSelectValue(selects[0] as HTMLSelectElement, "document");
+    await setSelectValue(selects[0] as HTMLSelectElement, "document");
     await flush();
-    setSelectValue(selects[1] as HTMLSelectElement, "resource-backed");
+    await setSelectValue(selects[1] as HTMLSelectElement, "resource-backed");
     await flush();
-    setSelectValue(selects[2] as HTMLSelectElement, "published");
+    await setSelectValue(selects[2] as HTMLSelectElement, "published");
     await flush();
-    setSelectValue(selects[3] as HTMLSelectElement, "built-in");
+    await setSelectValue(selects[3] as HTMLSelectElement, "built-in");
     await flush();
 
     expect(client.listAssetDefinitions).toHaveBeenCalledWith({
@@ -374,6 +554,7 @@ describe("thin-client AssetLibraryFeature", () => {
       assetFamilies: ["resource-backed"],
       lifecycleStatuses: ["published"],
       builtIn: "built-in",
+      workspaceId: TEST_WORKSPACE_ID,
     });
   });
 
@@ -389,6 +570,7 @@ describe("thin-client AssetLibraryFeature", () => {
               id: "builtin.form.form@1.0.0",
               definitionId: "builtin.form.form",
               displayName: "Form",
+              summary: "Form building block",
               packCategoryId: "forms-fields",
               packCategoryDisplayName: "Forms and Fields",
               categoryLabel: "Forms and Fields",
@@ -400,23 +582,27 @@ describe("thin-client AssetLibraryFeature", () => {
     const { container } = await render(client);
     const selects = Array.from(container.querySelectorAll("select"));
 
-    setSelectValue(selects[6] as HTMLSelectElement, "forms-fields");
+    await setSelectValue(selects[6] as HTMLSelectElement, "forms-fields");
     await flush();
 
     expect(container.textContent).toContain("Form");
     expect(container.textContent).toContain("Forms and Fields");
     expect(container.textContent).not.toContain("Document building block");
 
-    setSelectValue(selects[5] as HTMLSelectElement, "imported-pack");
+    await setSelectValue(selects[5] as HTMLSelectElement, "imported-pack");
     await flush();
 
-    expect(container.textContent).toContain("No assets match the current filters.");
+    expect(container.textContent).toContain(
+      "No assets match the current filters.",
+    );
   });
 
   it("loads selected detail without validation and keeps advanced sections collapsed by default", async () => {
     const client = createClient();
     const { container } = await render(client);
-    const cardButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Document")) as HTMLButtonElement;
+    const cardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Document"),
+    ) as HTMLButtonElement;
 
     await act(async () => cardButton.click());
     await flush();
@@ -424,16 +610,33 @@ describe("thin-client AssetLibraryFeature", () => {
     expect(client.readAssetDefinitionVersion).toHaveBeenCalledWith(
       { definitionId: "builtin.document", version: "1.0.0" },
       {
-        expand: ["aiContext", "configurationSchema", "ports", "requirements", "provenance", "metadata"],
+        expand: [
+          "aiContext",
+          "configurationSchema",
+          "ports",
+          "requirements",
+          "provenance",
+          "metadata",
+        ],
+        workspaceId: TEST_WORKSPACE_ID,
       },
     );
-    expect((client.readAssetDefinitionVersion as ReturnType<typeof testDouble.fn>).mock.calls
-      .some((call) => call[1]?.includeValidation === true)).toBe(false);
-    expect(container.textContent).toContain("Reusable document descriptor");
+    expect(
+      (
+        client.readAssetDefinitionVersion as ReturnType<typeof testDouble.fn>
+      ).mock.calls.some((call) => call[1]?.includeValidation === true),
+    ).toBe(false);
+    expect(container.textContent).toContain("Represent document-backed assets");
 
-    const advancedToggle = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("AI-readable context")) as HTMLButtonElement;
+    const advancedToggle = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) =>
+      button.textContent?.includes("AI-readable context"),
+    ) as HTMLButtonElement;
     expect(advancedToggle.getAttribute("aria-expanded")).toBe("false");
-    const controlledPanel = document.getElementById(advancedToggle.getAttribute("aria-controls") ?? "") as HTMLDivElement;
+    const controlledPanel = document.getElementById(
+      advancedToggle.getAttribute("aria-controls") ?? "",
+    ) as HTMLDivElement;
     expect(controlledPanel.hidden).toBe(true);
   });
 
@@ -445,28 +648,50 @@ describe("thin-client AssetLibraryFeature", () => {
       ]),
     });
     const { container } = await render(client);
-    const cardButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Document")) as HTMLButtonElement;
+    const cardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Document"),
+    ) as HTMLButtonElement;
 
     await act(async () => cardButton.click());
     await flush();
 
-    expect(container.textContent).toContain("Validation details are loaded only when requested.");
+    expect(container.textContent).toContain(
+      "Validation details are loaded only when requested.",
+    );
     expect(container.textContent).not.toContain("Validation summary");
     expect(container.textContent).not.toContain("Valid With Warnings");
-    const validationButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Check validation details")) as HTMLButtonElement;
+    const validationButton = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) =>
+      button.textContent?.includes("Check validation details"),
+    ) as HTMLButtonElement;
     await act(async () => validationButton.click());
     await flush();
 
-    const calls = (client.readAssetDefinitionVersion as ReturnType<typeof testDouble.fn>).mock.calls;
+    const calls = (
+      client.readAssetDefinitionVersion as ReturnType<typeof testDouble.fn>
+    ).mock.calls;
     expect(calls[calls.length - 1]).toEqual([
       { definitionId: "builtin.document", version: "1.0.0" },
       {
-        expand: ["aiContext", "configurationSchema", "ports", "requirements", "provenance", "metadata"],
+        expand: [
+          "aiContext",
+          "configurationSchema",
+          "ports",
+          "requirements",
+          "provenance",
+          "metadata",
+        ],
         includeValidation: true,
+        workspaceId: TEST_WORKSPACE_ID,
       },
     ]);
     expect(container.textContent).toContain("Validation summary");
-    const validationToggle = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Validation summary")) as HTMLButtonElement;
+    const validationToggle = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) =>
+      button.textContent?.includes("Validation summary"),
+    ) as HTMLButtonElement;
     expect(validationToggle.getAttribute("aria-expanded")).toBe("false");
   });
 
@@ -476,35 +701,61 @@ describe("thin-client AssetLibraryFeature", () => {
         { ok: true, value: detailWithoutValidation },
         {
           ok: false,
-          error: { code: "internal", message: "Unable to read Asset Library data." },
+          error: {
+            code: "internal",
+            message: "Unable to read Asset Library data.",
+          },
         },
       ]),
     });
     const { container } = await render(client);
-    const cardButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Document")) as HTMLButtonElement;
+    const cardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Document"),
+    ) as HTMLButtonElement;
 
     await act(async () => cardButton.click());
     await flush();
-    const validationButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Check validation details")) as HTMLButtonElement;
+    const validationButton = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) =>
+      button.textContent?.includes("Check validation details"),
+    ) as HTMLButtonElement;
     await act(async () => validationButton.click());
     await flush();
 
-    expect(container.querySelector("[role='alert']")?.textContent).toContain("Unable to read Asset Library data.");
+    expect(container.querySelector("[role='alert']")?.textContent).toContain(
+      "Unable to read Asset Library data.",
+    );
   });
 
   it("renders available advanced sections only and hides safe metadata until expanded", async () => {
     const { container } = await render();
-    const cardButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Document")) as HTMLButtonElement;
+    const cardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Document"),
+    ) as HTMLButtonElement;
 
     await act(async () => cardButton.click());
     await flush();
 
-    for (const label of ["Configuration", "Inputs and outputs", "Requirements", "Pack and source", "Source", "Details"]) {
+    for (const label of [
+      "Configuration",
+      "Inputs and outputs",
+      "Requirements",
+      "Pack and source",
+      "Source",
+      "Details",
+    ]) {
       expect(container.textContent).toContain(label);
     }
 
-    const metadataToggle = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Details")) as HTMLButtonElement;
-    const metadataPanel = document.getElementById(metadataToggle.getAttribute("aria-controls") ?? "") as HTMLDivElement;
+    const metadataToggle = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) =>
+      button.textContent?.includes("Details"),
+    ) as HTMLButtonElement;
+    const metadataPanel = document.getElementById(
+      metadataToggle.getAttribute("aria-controls") ?? "",
+    ) as HTMLDivElement;
     expect(metadataPanel.hidden).toBe(true);
     await act(async () => metadataToggle.click());
 
@@ -513,26 +764,39 @@ describe("thin-client AssetLibraryFeature", () => {
   });
 
   it("does not render unsafe detail values or unsupported action buttons", async () => {
-    const { container } = await render(createClient({
-      readAssetDefinitionVersion: testDouble.fn().mockResolvedValue({ ok: true, value: detailWithoutValidation }),
-    }));
-    const cardButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Document")) as HTMLButtonElement;
+    const { container } = await render(
+      createClient({
+        readAssetDefinitionVersion: testDouble
+          .fn()
+          .mockResolvedValue({ ok: true, value: detailWithoutValidation }),
+      }),
+    );
+    const cardButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Document"),
+    ) as HTMLButtonElement;
 
     await act(async () => cardButton.click());
     await flush();
 
     const text = container.textContent ?? "";
-    assert.doesNotMatch(text, /Create asset|Edit asset|Delete asset|Seed built-ins|Scan resources|Execute workflow|Install pack|Import pack|Export pack|Activate pack|Disable pack|Edit override|Override asset/i);
+    assert.doesNotMatch(
+      text,
+      /Create asset|Edit asset|Delete asset|Seed built-ins|Scan resources|Execute workflow|Install pack|Import pack|Export pack|Activate pack|Disable pack|Edit override|Override asset/i,
+    );
     expect(text).not.toContain("C:\\Users\\name\\secret");
     expect(text).not.toContain("Bearer abc");
   });
 
   it("uses accessible loading and error states with safe messages", async () => {
     const slowClient = createClient({
-      listAssetDefinitions: testDouble.fn().mockImplementation(() => new Promise(() => undefined) as any),
+      listAssetDefinitions: testDouble
+        .fn()
+        .mockImplementation(() => new Promise(() => undefined) as any),
     });
     const loading = await render(slowClient);
-    expect(loading.container.querySelector("[role='status']")?.textContent).toContain("Loading asset definitions");
+    expect(
+      loading.container.querySelector("[role='status']")?.textContent,
+    ).toContain("Loading asset definitions");
 
     await act(async () => mountedRoot?.unmount());
     mountedContainer?.remove();
@@ -542,11 +806,16 @@ describe("thin-client AssetLibraryFeature", () => {
     const failingClient = createClient({
       listAssetDefinitions: testDouble.fn().mockResolvedValue({
         ok: false,
-        error: { code: "internal", message: "Unable to read Asset Library data." },
+        error: {
+          code: "internal",
+          message: "Unable to read Asset Library data.",
+        },
       }),
     });
     const failing = await render(failingClient);
 
-    expect(failing.container.querySelector("[role='alert']")?.textContent).toBe("Unable to read Asset Library data.");
+    expect(failing.container.querySelector("[role='alert']")?.textContent).toBe(
+      "Unable to read Asset Library data.",
+    );
   });
 });

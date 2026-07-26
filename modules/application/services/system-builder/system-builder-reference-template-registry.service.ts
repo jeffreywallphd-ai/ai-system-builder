@@ -10,6 +10,10 @@ import type {
   SystemBuilderTemplateMaterialization,
   SystemBuilderTemplateSummary,
 } from "../../../contracts/system-builder";
+import {
+  exactSystemFoundationDefinitionReference,
+  SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST,
+} from "../asset-packs/system-packs";
 
 const SECURED_DATA_ENTRY_TEMPLATE: SystemBuilderTemplateSummary = {
   templateId: "reference.secured-data-entry@1.0.0",
@@ -79,14 +83,9 @@ function createSecuredDataEntryTemplate(
     selectedConfiguration: AssetConfigurationValues,
   ): AssetInstance => ({
     instanceId: input.systemId + "." + suffix,
-    definitionRef: {
-      kind: "asset-definition-version",
-      id: normalizeAssetId(definitionId),
-      version: "1.0.0",
-    },
+    ...currentFoundationSelection(definitionId, selectedConfiguration),
     displayName,
     lifecycleStatus: "draft",
-    selectedConfiguration,
     parentCompositionRef: {
       kind: "asset-composition",
       id: normalizeAssetId(compositionId),
@@ -382,14 +381,9 @@ function createControlledChatbotTemplate(
     selectedConfiguration: AssetConfigurationValues,
   ): AssetInstance => ({
     instanceId: input.systemId + "." + suffix,
-    definitionRef: {
-      kind: "asset-definition-version",
-      id: normalizeAssetId(definitionId),
-      version: "1.0.0",
-    },
+    ...currentFoundationSelection(definitionId, selectedConfiguration),
     displayName,
     lifecycleStatus: "draft",
-    selectedConfiguration,
     parentCompositionRef: {
       kind: "asset-composition",
       id: normalizeAssetId(compositionId),
@@ -703,14 +697,9 @@ function createSecuredDataReviewTemplate(
     selectedConfiguration: AssetConfigurationValues,
   ): AssetInstance => ({
     instanceId: input.systemId + "." + suffix,
-    definitionRef: {
-      kind: "asset-definition-version",
-      id: normalizeAssetId(definitionId),
-      version: "1.0.0",
-    },
+    ...currentFoundationSelection(definitionId, selectedConfiguration),
     displayName,
     lifecycleStatus: "draft",
-    selectedConfiguration,
     parentCompositionRef: {
       kind: "asset-composition",
       id: normalizeAssetId(compositionId),
@@ -1025,4 +1014,23 @@ function createSecuredDataReviewTemplate(
 
 function safeActor(value: string): string {
   return value.trim().slice(0, 160) || "unknown-actor";
+}
+
+function currentFoundationSelection(
+  definitionId: string,
+  selectedConfiguration: AssetConfigurationValues,
+): Pick<AssetInstance, "definitionRef" | "selectedConfiguration"> {
+  const entry = SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST.assets.find(
+    (candidate) => String(candidate.definition.definitionId) === definitionId,
+  );
+  if (!entry) {
+    throw new Error("A reference-system Foundation asset is unavailable.");
+  }
+  return {
+    definitionRef: exactSystemFoundationDefinitionReference(definitionId),
+    selectedConfiguration: {
+      ...(entry.definition.defaultConfiguration ?? {}),
+      ...selectedConfiguration,
+    },
+  };
 }

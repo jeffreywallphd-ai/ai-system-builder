@@ -8,7 +8,12 @@
       "id": "repository-overview",
       "path": "docs/context/packs/repository-overview.pack.md",
       "description": "Repository layout, package placement, and delivery-surface orientation.",
-      "taskSignals": ["repository layout", "package placement", "new module", "repository structure"],
+      "taskSignals": [
+        "repository layout",
+        "package placement",
+        "new module",
+        "repository structure"
+      ],
       "pathSignals": ["package.json", "apps/", "modules/", "dev-tools/"],
       "verification": ["npm run architecture:check", "npm test"]
     },
@@ -16,191 +21,459 @@
       "id": "architecture",
       "path": "docs/context/packs/architecture.pack.md",
       "description": "Cross-layer architecture and dependency-boundary decisions.",
-      "taskSignals": ["architecture", "dependency boundary", "layer direction", "cross-boundary"],
-      "pathSignals": ["docs/architecture/", "modules/domain/", "modules/application/", "modules/adapters/", "modules/hosts/"],
+      "taskSignals": [
+        "architecture",
+        "dependency boundary",
+        "layer direction",
+        "cross-boundary"
+      ],
+      "pathSignals": [
+        "docs/architecture/",
+        "modules/domain/",
+        "modules/application/",
+        "modules/adapters/",
+        "modules/hosts/"
+      ],
       "verification": ["npm run architecture:check", "npm test"]
     },
     {
       "id": "asset-kernel",
       "path": "docs/context/packs/asset-kernel.pack.md",
       "description": "Asset Kernel vocabulary, registry/library behavior, packs, and resource-backed views.",
-      "taskSignals": ["asset kernel", "asset registry", "asset library", "resource-backed", "system foundation"],
-      "pathSignals": ["modules/contracts/asset/", "modules/application/services/asset/", "modules/application/services/asset-packs/", "modules/ui/shared/asset-library/"],
+      "taskSignals": [
+        "asset kernel",
+        "asset registry",
+        "asset library",
+        "resource-backed",
+        "system foundation"
+      ],
+      "pathSignals": [
+        "modules/contracts/asset/",
+        "modules/application/services/asset/",
+        "modules/application/services/asset-packs/",
+        "modules/ui/shared/asset-library/"
+      ],
       "verification": ["npm run architecture:check", "npm test"]
     },
     {
       "id": "user-library",
       "path": "docs/context/packs/user-library.pack.md",
       "description": "User Library promotion, linking, copying, imports, provenance, and propagation.",
-      "taskSignals": ["user library", "cross-workspace", "promote asset", "detached copy", "asset link"],
-      "pathSignals": ["modules/contracts/user-library/", "modules/application/use-cases/user-library/", "modules/adapters/persistence/user-library/"],
+      "taskSignals": [
+        "user library",
+        "cross-workspace",
+        "promote asset",
+        "detached copy",
+        "asset link"
+      ],
+      "pathSignals": [
+        "modules/contracts/user-library/",
+        "modules/application/use-cases/user-library/",
+        "modules/adapters/persistence/user-library/"
+      ],
       "verification": ["npm test"]
     },
     {
       "id": "asset-authoring",
       "path": "docs/context/packs/asset-authoring.pack.md",
-      "description": "Workspace asset drafts, revisions, publication, customization, and overrides.",
-      "taskSignals": ["asset authoring", "authored draft", "asset override", "publish revision", "customization"],
-      "pathSignals": ["modules/contracts/asset-authoring/", "modules/application/use-cases/asset-authoring/", "modules/adapters/persistence/asset-authoring/"],
+      "description": "Workspace asset drafts, revisions, publication, overrides, and layered definition/source customization.",
+      "taskSignals": [
+        "asset authoring",
+        "authored draft",
+        "asset override",
+        "publish revision",
+        "customization",
+        "layered customization",
+        "source overlay",
+        "customize asset code"
+      ],
+      "pathSignals": [
+        "modules/contracts/asset-authoring/",
+        "modules/application/use-cases/asset-authoring/",
+        "modules/adapters/persistence/asset-authoring/"
+      ],
       "verification": ["npm test"]
     },
     {
       "id": "effective-asset-projections",
       "path": "docs/context/packs/effective-asset-projections.pack.md",
       "description": "Effective/materialized asset projections, diagnostics, conflicts, and consumability.",
-      "taskSignals": ["effective asset projection", "materialized projection", "projection conflict", "projection readiness"],
-      "pathSignals": ["modules/contracts/effective-asset-projections/", "modules/application/use-cases/effective-asset-projections/", "modules/adapters/persistence/effective-asset-projections/"],
+      "taskSignals": [
+        "effective asset projection",
+        "materialized projection",
+        "projection conflict",
+        "projection readiness"
+      ],
+      "pathSignals": [
+        "modules/contracts/effective-asset-projections/",
+        "modules/application/use-cases/effective-asset-projections/",
+        "modules/adapters/persistence/effective-asset-projections/"
+      ],
       "verification": ["npm test"]
     },
     {
       "id": "asset-composition-planning",
       "path": "docs/context/packs/asset-composition-planning.pack.md",
       "description": "Non-executing composition plans, relationships, compatibility, and blockers.",
-      "taskSignals": ["asset composition", "composition plan", "compatibility", "planning blocker"],
-      "pathSignals": ["modules/contracts/asset-composition/", "modules/application/use-cases/asset-composition/", "modules/adapters/persistence/asset-composition/"],
+      "taskSignals": [
+        "asset composition",
+        "composition plan",
+        "compatibility",
+        "planning blocker"
+      ],
+      "pathSignals": [
+        "modules/contracts/asset-composition/",
+        "modules/application/use-cases/asset-composition/",
+        "modules/adapters/persistence/asset-composition/"
+      ],
       "verification": ["npm test"]
     },
     {
       "id": "system-builder",
       "path": "docs/context/packs/system-builder.pack.md",
       "description": "Workspace-owned composed systems, System Builder records, and Systems/Software status placement.",
-      "taskSignals": ["system builder", "composed system", "systems page", "system record", "software status"],
-      "pathSignals": ["modules/contracts/system-builder/", "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx", "apps/desktop/src/renderer/features/settings/components/SoftwareStatusSection.tsx"],
+      "taskSignals": [
+        "system builder",
+        "composed system",
+        "systems page",
+        "system record",
+        "software status"
+      ],
+      "pathSignals": [
+        "modules/contracts/system-builder/",
+        "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx",
+        "apps/desktop/src/renderer/features/settings/components/SoftwareStatusSection.tsx"
+      ],
       "verification": ["npm run architecture:check", "npm test"]
     },
     {
       "id": "runtime-readiness-binding",
       "path": "docs/context/packs/runtime-readiness-binding.pack.md",
       "description": "Runtime capability inventory, readiness bindings, matching, and non-executing checks.",
-      "taskSignals": ["runtime readiness", "capability matching", "readiness binding", "runtime inventory"],
-      "pathSignals": ["modules/contracts/runtime-readiness/", "modules/application/use-cases/runtime-readiness/", "modules/application/services/runtime-readiness/", "modules/adapters/persistence/runtime-readiness/"],
+      "taskSignals": [
+        "runtime readiness",
+        "capability matching",
+        "readiness binding",
+        "runtime inventory"
+      ],
+      "pathSignals": [
+        "modules/contracts/runtime-readiness/",
+        "modules/application/use-cases/runtime-readiness/",
+        "modules/application/services/runtime-readiness/",
+        "modules/adapters/persistence/runtime-readiness/"
+      ],
       "verification": ["npm test"]
     },
     {
       "id": "execution-plan-preparation",
       "path": "docs/context/packs/execution-plan-preparation.pack.md",
       "description": "Inspectable execution intent, preflight, safety gates, estimates, and approvals.",
-      "taskSignals": ["execution plan", "preflight", "safety gate", "dry run", "execution approval"],
-      "pathSignals": ["modules/contracts/execution-plans/", "modules/application/use-cases/execution-plans/", "modules/adapters/persistence/execution-plans/"],
+      "taskSignals": [
+        "execution plan",
+        "preflight",
+        "safety gate",
+        "dry run",
+        "execution approval"
+      ],
+      "pathSignals": [
+        "modules/contracts/execution-plans/",
+        "modules/application/use-cases/execution-plans/",
+        "modules/adapters/persistence/execution-plans/"
+      ],
       "verification": ["npm test"]
     },
     {
       "id": "controlled-conversational-system-execution",
       "path": "docs/context/packs/controlled-conversational-system-execution.pack.md",
       "description": "Approved conversational sessions, turns, runs, results, and supported text execution.",
-      "taskSignals": ["conversational execution", "conversation session", "conversation turn", "chat execution", "streaming conversation"],
-      "pathSignals": ["modules/contracts/conversations/", "modules/contracts/execution-runs/", "modules/application/services/conversational-execution/", "modules/application/use-cases/conversations/"],
+      "taskSignals": [
+        "conversational execution",
+        "conversation session",
+        "conversation turn",
+        "chat execution",
+        "streaming conversation"
+      ],
+      "pathSignals": [
+        "modules/contracts/conversations/",
+        "modules/contracts/execution-runs/",
+        "modules/application/services/conversational-execution/",
+        "modules/application/use-cases/conversations/"
+      ],
       "verification": ["npm test"]
     },
     {
       "id": "runtime",
       "path": "docs/context/packs/runtime.pack.md",
       "description": "Runtime contracts, adapters, execution, supervisors, and capability guards.",
-      "taskSignals": ["runtime adapter", "runtime execution", "runtime supervisor", "sidecar", "provider runtime"],
-      "pathSignals": ["modules/contracts/runtime/", "modules/application/ports/runtime/", "modules/application/services/runtime/", "modules/adapters/runtime/"],
+      "taskSignals": [
+        "runtime adapter",
+        "runtime execution",
+        "runtime supervisor",
+        "sidecar",
+        "provider runtime"
+      ],
+      "pathSignals": [
+        "modules/contracts/runtime/",
+        "modules/application/ports/runtime/",
+        "modules/application/services/runtime/",
+        "modules/adapters/runtime/"
+      ],
       "verification": ["npm run architecture:check", "npm test"]
     },
     {
       "id": "runtime-task-registry",
       "path": "docs/context/packs/runtime-task-registry.pack.md",
       "description": "Long-running task lifecycle, status, progress, cancellation, and retention.",
-      "taskSignals": ["task registry", "long-running task", "task progress", "task cancellation", "task retention"],
-      "pathSignals": ["modules/application/ports/runtime/runtime-task-registry.port.ts", "modules/application/services/runtime/runtime-task-registry.service.ts", "modules/adapters/runtime/python/createPythonRuntimeTaskRegistryAdapter.ts"],
+      "taskSignals": [
+        "task registry",
+        "long-running task",
+        "task progress",
+        "task cancellation",
+        "task retention"
+      ],
+      "pathSignals": [
+        "modules/application/ports/runtime/runtime-task-registry.port.ts",
+        "modules/application/services/runtime/runtime-task-registry.service.ts",
+        "modules/adapters/runtime/python/createPythonRuntimeTaskRegistryAdapter.ts"
+      ],
       "verification": ["npm test"]
     },
     {
       "id": "runtime-installer",
       "path": "docs/context/packs/runtime-installer.pack.md",
       "description": "Runtime installation, repair, install state, and strategy adapters.",
-      "taskSignals": ["runtime installer", "install runtime", "repair runtime", "comfyui install", "git installer"],
-      "pathSignals": ["modules/contracts/runtime-installer/", "modules/application/ports/runtime-installer/", "modules/adapters/runtime/installer/"],
+      "taskSignals": [
+        "runtime installer",
+        "install runtime",
+        "repair runtime",
+        "comfyui install",
+        "git installer"
+      ],
+      "pathSignals": [
+        "modules/contracts/runtime-installer/",
+        "modules/application/ports/runtime-installer/",
+        "modules/adapters/runtime/installer/"
+      ],
       "verification": ["npm test"]
     },
     {
       "id": "image-generation",
       "path": "docs/context/packs/image-generation.pack.md",
       "description": "Image generation use cases, ComfyUI execution, and generated image finalization.",
-      "taskSignals": ["image generation", "comfyui", "generated image", "image workflow", "checkpoint"],
-      "pathSignals": ["modules/contracts/image-generation/", "modules/application/use-cases/image-generation/", "modules/adapters/runtime/comfyui/", "apps/desktop/src/renderer/features/image-generation/"],
+      "taskSignals": [
+        "image generation",
+        "comfyui",
+        "generated image",
+        "image workflow",
+        "checkpoint"
+      ],
+      "pathSignals": [
+        "modules/contracts/image-generation/",
+        "modules/application/use-cases/image-generation/",
+        "modules/adapters/runtime/comfyui/",
+        "apps/desktop/src/renderer/features/image-generation/"
+      ],
       "verification": ["npm test"]
     },
     {
       "id": "desktop-host",
       "path": "docs/context/packs/desktop-host.pack.md",
       "description": "Electron main-process lifecycle, composition, IPC registration, and preload ownership.",
-      "taskSignals": ["desktop host", "electron main", "desktop composition", "preload", "desktop lifecycle"],
-      "pathSignals": ["modules/hosts/desktop/", "apps/desktop/src/main/", "apps/desktop/src/preload/"],
+      "taskSignals": [
+        "desktop host",
+        "electron main",
+        "desktop composition",
+        "preload",
+        "desktop lifecycle"
+      ],
+      "pathSignals": [
+        "modules/hosts/desktop/",
+        "apps/desktop/src/main/",
+        "apps/desktop/src/preload/"
+      ],
       "verification": ["npm run architecture:check", "npm test"]
     },
     {
       "id": "ipc-electron",
       "path": "docs/context/packs/ipc-electron.pack.md",
       "description": "Electron IPC contracts, channels, handlers, invoke boundaries, and preload bridges.",
-      "taskSignals": ["electron ipc", "ipc channel", "ipc handler", "preload bridge", "desktop contract"],
-      "pathSignals": ["modules/contracts/ipc/", "modules/adapters/transport/ipc-electron/", "apps/desktop/src/preload/"],
+      "taskSignals": [
+        "electron ipc",
+        "ipc channel",
+        "ipc handler",
+        "preload bridge",
+        "desktop contract"
+      ],
+      "pathSignals": [
+        "modules/contracts/ipc/",
+        "modules/adapters/transport/ipc-electron/",
+        "apps/desktop/src/preload/"
+      ],
       "verification": ["npm test"]
     },
     {
       "id": "desktop-implementation",
       "path": "docs/context/packs/desktop-implementation.pack.md",
       "description": "Renderer and thin-client feature/page/component state and client boundaries.",
-      "taskSignals": ["renderer", "desktop ui", "thin-client ui", "react component", "client state"],
-      "pathSignals": ["apps/desktop/src/renderer/", "apps/thin-client/src/", "modules/ui/"],
+      "taskSignals": [
+        "renderer",
+        "desktop ui",
+        "thin-client ui",
+        "react component",
+        "client state"
+      ],
+      "pathSignals": [
+        "apps/desktop/src/renderer/",
+        "apps/thin-client/src/",
+        "modules/ui/"
+      ],
       "verification": ["npm test", "npm run build:thin-client"]
     },
     {
       "id": "desktop-styling",
       "path": "docs/context/packs/desktop-styling.pack.md",
       "description": "Shared renderer styling layers, tokens, responsive behavior, and local styles.",
-      "taskSignals": ["css", "styling", "design token", "responsive layout", "renderer style"],
-      "pathSignals": ["apps/desktop/src/renderer/styles/", "apps/thin-client/src/styles/", "modules/ui/"],
+      "taskSignals": [
+        "css",
+        "styling",
+        "design token",
+        "responsive layout",
+        "renderer style"
+      ],
+      "pathSignals": [
+        "apps/desktop/src/renderer/styles/",
+        "apps/thin-client/src/styles/",
+        "modules/ui/"
+      ],
       "verification": ["npm test", "npm run build:thin-client"]
     },
     {
       "id": "server-host",
       "path": "docs/context/packs/server-host.pack.md",
       "description": "Server lifecycle, Express routes, API registration, and thin-client coupling.",
-      "taskSignals": ["server host", "express route", "server api", "server composition", "thin-client api"],
-      "pathSignals": ["modules/hosts/server/", "modules/adapters/transport/api-express/", "apps/server/"],
-      "verification": ["npm run architecture:check", "npm test", "npm run build:server"]
+      "taskSignals": [
+        "server host",
+        "express route",
+        "server api",
+        "server composition",
+        "thin-client api"
+      ],
+      "pathSignals": [
+        "modules/hosts/server/",
+        "modules/adapters/transport/api-express/",
+        "apps/server/"
+      ],
+      "verification": [
+        "npm run architecture:check",
+        "npm test",
+        "npm run build:server"
+      ]
     },
     {
       "id": "persistence-storage",
       "path": "docs/context/packs/persistence-storage.pack.md",
       "description": "Structured persistence, database deployment, recovery, blobs/resources, roots, and workspace isolation.",
-      "taskSignals": ["persistence", "database", "sqlite", "postgres", "deployment shape", "storage", "artifact bytes", "migration", "backup", "restore"],
-      "pathSignals": ["modules/contracts/persistence/", "modules/contracts/storage/", "modules/contracts/config/deployment-persistence-target.ts", "modules/adapters/persistence/", "modules/adapters/storage/", "config/environments/server/", "deployments/server/", "docs/operations/"],
-      "verification": ["npm run docs:check", "npm run architecture:check", "npm test"]
+      "taskSignals": [
+        "persistence",
+        "database",
+        "sqlite",
+        "postgres",
+        "deployment shape",
+        "storage",
+        "artifact bytes",
+        "migration",
+        "backup",
+        "restore"
+      ],
+      "pathSignals": [
+        "modules/contracts/persistence/",
+        "modules/contracts/storage/",
+        "modules/contracts/config/deployment-persistence-target.ts",
+        "modules/adapters/persistence/",
+        "modules/adapters/storage/",
+        "config/environments/server/",
+        "deployments/server/",
+        "docs/operations/"
+      ],
+      "verification": [
+        "npm run docs:check",
+        "npm run architecture:check",
+        "npm test"
+      ]
     },
     {
       "id": "security",
       "path": "docs/context/packs/security.pack.md",
       "description": "Authentication, authorization, TLS, route policy, credentials, audit, and sanitization.",
-      "taskSignals": ["security", "oauth", "authentication", "authorization", "tls", "token", "credential"],
-      "pathSignals": ["modules/contracts/security/", "modules/application/services/security/", "modules/adapters/security/", "modules/adapters/transport/api-express/security/", "apps/thin-client/src/security/"],
+      "taskSignals": [
+        "security",
+        "oauth",
+        "authentication",
+        "authorization",
+        "tls",
+        "token",
+        "credential"
+      ],
+      "pathSignals": [
+        "modules/contracts/security/",
+        "modules/application/services/security/",
+        "modules/adapters/security/",
+        "modules/adapters/transport/api-express/security/",
+        "apps/thin-client/src/security/"
+      ],
       "verification": ["npm test"]
     },
     {
       "id": "logging",
       "path": "docs/context/packs/logging.pack.md",
       "description": "Structured events, verbosity, safe diagnostics, and logging ports/sinks.",
-      "taskSignals": ["logging", "structured log", "diagnostic event", "verbosity", "log redaction"],
-      "pathSignals": ["modules/contracts/logging/", "modules/application/ports/logging/", "modules/adapters/observability/logging/"],
+      "taskSignals": [
+        "logging",
+        "structured log",
+        "diagnostic event",
+        "verbosity",
+        "log redaction"
+      ],
+      "pathSignals": [
+        "modules/contracts/logging/",
+        "modules/application/ports/logging/",
+        "modules/adapters/observability/logging/"
+      ],
       "verification": ["npm test"]
     },
     {
       "id": "docs-standards",
       "path": "docs/context/packs/docs-standards.pack.md",
       "description": "Documentation governance, agent work cycle, decision readiness, and change impact.",
-      "taskSignals": ["documentation", "docs", "adr", "decision readiness", "agent governance", "change impact"],
-      "pathSignals": ["AGENTS.md", "README.md", "CONTRIBUTING.md", "docs/", ".github/"],
+      "taskSignals": [
+        "documentation",
+        "docs",
+        "adr",
+        "decision readiness",
+        "agent governance",
+        "change impact"
+      ],
+      "pathSignals": [
+        "AGENTS.md",
+        "README.md",
+        "CONTRIBUTING.md",
+        "docs/",
+        ".github/"
+      ],
       "verification": ["npm run docs:check", "npm run agent-support:check"]
     },
     {
       "id": "testing",
       "path": "docs/context/packs/testing.pack.md",
       "description": "Test strategy, regression coverage, placement, determinism, and repository test gates.",
-      "taskSignals": ["test", "regression", "coverage", "fixture", "verification", "evaluation"],
+      "taskSignals": [
+        "test",
+        "regression",
+        "coverage",
+        "fixture",
+        "verification",
+        "evaluation"
+      ],
       "pathSignals": ["dev-tools/scripts/testing/", "tests/"],
       "verification": ["npm test"]
     },
@@ -208,7 +481,15 @@
       "id": "debugging-error-handling",
       "path": "docs/context/packs/debugging-error-handling.pack.md",
       "description": "Failure localization, timelines, error mapping, hangs, timeouts, and lifecycle-safe fixes.",
-      "taskSignals": ["bug", "debug", "failure", "exception", "hang", "timeout", "broken"],
+      "taskSignals": [
+        "bug",
+        "debug",
+        "failure",
+        "exception",
+        "hang",
+        "timeout",
+        "broken"
+      ],
       "pathSignals": ["artifacts/test-reports/", "docs/diagnostics/"],
       "verification": ["npm test"]
     }

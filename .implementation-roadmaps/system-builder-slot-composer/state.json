@@ -1,0 +1,1765 @@
+{
+  "blockers": [],
+  "chunks": [
+    {
+      "areas": [
+        "Asset Kernel slot/placement/reference/composition contracts",
+        "System Builder structure/profile/revision/command contracts",
+        "Asset definition validation",
+        "ADR, architecture, decision-readiness, and System Builder context guidance"
+      ],
+      "chunkId": "slot-contracts-adr",
+      "completedAt": "2026-07-19T01:20:51Z",
+      "criteriaIds": [
+        "kernel-contracts",
+        "kernel-documentation"
+      ],
+      "documentation": [
+        "ADR-0036 accepted",
+        "System Builder architecture, decision readiness, and context pack aligned"
+      ],
+      "feedbackAddressed": [],
+      "id": "slot-composition-kernel-slot-contracts-adr",
+      "incrementId": "slot-composition-kernel",
+      "summary": "Added canonical versioned slot and ordered placement contracts, exact System Builder structure/profile classification, bounded normalization and definition validation, and accepted ADR-0036 without changing typed binding semantics or legacy reads.",
+      "tests": [
+        "10 focused contract and definition-validation tests passed across four new test files",
+        "git diff --check passed with only pre-existing line-ending warnings"
+      ],
+      "title": "Canonical slot and placement contracts"
+    },
+    {
+      "areas": [
+        "System Foundation 2.0.0 manifest and predefined layout catalog",
+        "Exact version-addressed functional-default and backing-resource catalogs",
+        "Responsive declarative layout structure and styling resources",
+        "Foundation release immutability and resource coverage tests"
+      ],
+      "chunkId": "foundation-layout-release",
+      "completedAt": "2026-07-19T05:02:01Z",
+      "criteriaIds": [
+        "foundation-presets",
+        "kernel-documentation"
+      ],
+      "documentation": [
+        "Canonical docs remain scheduled for the Increment 1 adoption pass"
+      ],
+      "feedbackAddressed": [],
+      "id": "slot-composition-kernel-foundation-layout-release",
+      "incrementId": "slot-composition-kernel",
+      "summary": "Published an immutable complete system.foundation@2.0.0 release with eight application-shell and six page-layout presets, logical slot contracts, responsive/source-order descriptors, exact safe fixtures, and version-addressed frontend/backing resources while preserving the 1.0.0 manifest and default exports.",
+      "tests": [
+        "12 focused catalog and layout tests passed",
+        "Pinned v1 hash and all 119 exact v2 definitions validated"
+      ],
+      "title": "Immutable Foundation layout release"
+    },
+    {
+      "areas": [
+        "Canonical interactive System Builder structure seeding",
+        "Application-owned root, slot, placement and bounds validation",
+        "Canonical create, save and clone preservation",
+        "Desktop TypeScript compile blockers reported during the chunk"
+      ],
+      "chunkId": "interactive-structure-validation",
+      "completedAt": "2026-07-19T05:31:25Z",
+      "criteriaIds": [
+        "root-placement-validation",
+        "legacy-read-compatibility"
+      ],
+      "documentation": [
+        "Canonical documentation remains scheduled for the final Increment 1 host-parity pass"
+      ],
+      "feedbackAddressed": [
+        "desktop-slot-generic-compile",
+        "desktop-system-builder-no-output"
+      ],
+      "id": "slot-composition-kernel-interactive-structure-validation",
+      "incrementId": "slot-composition-kernel",
+      "summary": "New interactive systems now receive a protected Foundation 2.0 root, selected application shell, required page hosts, and safe initial content; validation enforces exact roots, layout identity, membership, placement parents, declared slots, compatibility, cardinality, contiguous order, cycles, depth and count bounds while legacy flat revisions remain readable without mutation.",
+      "tests": [
+        "20 focused contract, definition, structure-validator and use-case tests passed",
+        "Focused TypeScript diagnostics were empty for all current-chunk files",
+        "git diff --check passed with only line-ending warnings"
+      ],
+      "title": "Interactive root and placement policy"
+    },
+    {
+      "areas": [
+        "Version-addressed Foundation installation and workspace visibility",
+        "Desktop and server trusted implementation and backing-resource parity",
+        "Structured revision persistence, isolation, and conflict behavior",
+        "API, IPC, preload, and shared editor slot round trips",
+        "Canonical architecture, context pack, and nearest README alignment"
+      ],
+      "chunkId": "revision-host-roundtrip",
+      "completedAt": "2026-07-19T12:42:27Z",
+      "criteriaIds": [
+        "revision-roundtrip",
+        "legacy-read-compatibility",
+        "kernel-documentation"
+      ],
+      "documentation": [
+        "Foundation versioning, activation, backing resources, validation, persistence, and transport semantics aligned"
+      ],
+      "feedbackAddressed": [],
+      "id": "slot-composition-kernel-revision-host-roundtrip",
+      "incrementId": "slot-composition-kernel",
+      "summary": "Installed and exposed immutable Foundation 1.0.0 and 2.0.0 releases side by side, gave new workspaces exact 2.0.0 activation while retaining historical 1.0.0 activation behavior, materialized separate trusted implementations and backing resources, and preserved slot structure through persistence, API, IPC, preload, and the shared editor.",
+      "tests": [
+        "86 focused host, installer, workspace, persistence, transport, and preload tests passed",
+        "2 focused shared UI interaction tests passed",
+        "Desktop TypeScript project check passed with no diagnostics",
+        "Production installer accepted all 119 Foundation 2.0.0 definitions"
+      ],
+      "title": "Revision persistence and host parity"
+    },
+    {
+      "areas": [
+        "Canonical composer catalog contracts and application use case",
+        "Shared validator/catalog slot compatibility",
+        "Workspace-effective Asset Registry composition",
+        "API security, API/IPC transport, preload, and both client adapters"
+      ],
+      "chunkId": "composer-read-model",
+      "completedAt": "2026-07-19T13:26:35Z",
+      "criteriaIds": [
+        "create-compose-reopen",
+        "generated-configuration",
+        "typed-connections",
+        "composer-parity"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [],
+      "id": "shared-slot-composer-experience-composer-read-model",
+      "incrementId": "shared-slot-composer-experience",
+      "summary": "Added one bounded workspace-effective composer catalog that projects exact asset definitions, schemas, defaults, slots, ports, shared compatibility, and truthful trusted-preview availability through server API, Electron IPC/preload, desktop, and thin-client clients.",
+      "tests": [
+        "17 focused catalog, security, transport parity, and host composition tests passed",
+        "Increment 2 compiler filter produced no affected-file diagnostics",
+        "Desktop and thin-client TypeScript project checks passed"
+      ],
+      "title": "Workspace-effective composer catalog"
+    },
+    {
+      "areas": [
+        "Shared layout gallery, semantic canvas, and WAI-ARIA hierarchy",
+        "Canonical placement draft operations and bounded history",
+        "Compatible slot palette and application-owned wrap compatibility",
+        "Responsive desktop/thin-client shared styles"
+      ],
+      "chunkId": "layout-and-structure-editor",
+      "completedAt": "2026-07-19T15:08:53Z",
+      "criteriaIds": [
+        "create-compose-reopen",
+        "slot-aware-editing",
+        "responsive-accessible-states"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [],
+      "id": "shared-slot-composer-experience-layout-and-structure-editor",
+      "incrementId": "shared-slot-composer-experience",
+      "summary": "Replaced the flat composer with predefined layout selection and one canonical slot draft shared by a compatible palette, semantic canvas, keyboard hierarchy, breadcrumbs, focus mode, protected nodes, native structural actions, server-verified wrapping, and bounded undo/redo.",
+      "tests": [
+        "5 focused canonical draft-operation tests passed",
+        "2 focused structure-editor interaction tests passed",
+        "Desktop and thin-client TypeScript project checks passed"
+      ],
+      "title": "Canonical layout and structure workspace"
+    },
+    {
+      "areas": [
+        "Schema-driven configuration model and shared inspector",
+        "Typed endpoint compatibility and binding editor",
+        "Shared composer mode navigation and responsive controls",
+        "Removal of obsolete Asset Library option adapters"
+      ],
+      "chunkId": "schema-inspector-bindings",
+      "completedAt": "2026-07-19T15:09:02Z",
+      "criteriaIds": [
+        "generated-configuration",
+        "typed-connections",
+        "create-compose-reopen"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [],
+      "id": "shared-slot-composer-experience-schema-inspector-bindings",
+      "incrementId": "shared-slot-composer-experience",
+      "summary": "Removed the hidden legacy JSON/port-name editor and added explicit Configure and Connections modes with ordered schema controls, defaults, constraints, approved asset selection, Advanced JSON fallback, and contract-compatible declared-port bindings over the same canonical draft.",
+      "tests": [
+        "3 focused inspector model tests passed",
+        "2 focused inspector interaction tests passed",
+        "Workspace save regression preserved exact structure and placements",
+        "Desktop and thin-client TypeScript project checks passed"
+      ],
+      "title": "Generated inspector and typed connections"
+    },
+    {
+      "areas": [
+        "Bounded recursive preview model and component",
+        "Unassigned and unsupported implementation states",
+        "Responsive viewport controls and shared styling",
+        "System Builder architecture, context pack, and shared UI guidance"
+      ],
+      "chunkId": "recursive-preview-responsive-parity",
+      "completedAt": "2026-07-19T15:09:06Z",
+      "criteriaIds": [
+        "recursive-safe-preview",
+        "responsive-accessible-states",
+        "composer-parity",
+        "create-compose-reopen"
+      ],
+      "documentation": [
+        "docs/architecture/system-builder.md",
+        "docs/context/packs/system-builder.pack.md",
+        "modules/ui/shared/README.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "shared-slot-composer-experience-recursive-preview-responsive-parity",
+      "incrementId": "shared-slot-composer-experience",
+      "summary": "Made the shared preview recursively follow canonical roots, placements, and named-slot order with current unsaved configuration, bounded unsupported and unassigned states, and desktop/tablet/mobile viewport frames; documented the complete shared composer behavior.",
+      "tests": [
+        "3 focused recursive-preview model/component tests passed",
+        "Workspace modal viewport interaction passed",
+        "Complete 6-test composer UI interaction set passed",
+        "Desktop and thin-client TypeScript project checks passed"
+      ],
+      "title": "Recursive preview and cross-client completion"
+    },
+    {
+      "areas": [
+        "System management query/page/item contracts and application projection",
+        "Exact System Builder record plus System Release publication join",
+        "Bounded search, lifecycle view, sort, cursor, and limit handling",
+        "API, IPC, preload, security policy, desktop client, thin-client client, and host composition parity"
+      ],
+      "chunkId": "lifecycle-projection-host-boundaries",
+      "completedAt": "2026-07-19T15:38:40Z",
+      "criteriaIds": [
+        "complete-manage-list",
+        "guarded-system-deletion",
+        "manage-action-truthfulness",
+        "manage-accessibility-parity"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [],
+      "id": "system-lifecycle-management-lifecycle-projection-host-boundaries",
+      "incrementId": "system-lifecycle-management",
+      "summary": "Added one bounded workspace-scoped system-management projection that derives unpublished, published-current, and draft-changes state from exact immutable releases; exposes truthful preview/open/delete/archive/restore eligibility; and carries the query/page contract through API, IPC, preload, security, desktop, thin-client, and shared host composition boundaries.",
+      "tests": [
+        "3 focused lifecycle projection tests passed",
+        "2 focused API/IPC transport parity tests passed",
+        "35 desktop preload bridge tests passed including the dedicated Manage channel",
+        "Focused security, contract specialization/public-surface, and shared composition tests passed",
+        "Desktop, thin-client, and server TypeScript project checks passed"
+      ],
+      "title": "Lifecycle projection and host boundaries"
+    },
+    {
+      "areas": [
+        "Shared desktop/thin-client Systems Manage tab and responsive table-to-card layout",
+        "Exact revision preview, Compose handoff, duplication, archive-backed deletion, and restore",
+        "Additive trusted built-in initialization for retained immutable backing resources",
+        "Canonical System Builder, Asset Kernel, context-pack, and shared UI documentation"
+      ],
+      "chunkId": "shared-manage-experience",
+      "completedAt": "2026-07-19T16:52:10Z",
+      "criteriaIds": [
+        "complete-manage-list",
+        "manage-preview-reopen",
+        "guarded-system-deletion",
+        "manage-action-truthfulness",
+        "manage-accessibility-parity"
+      ],
+      "documentation": [
+        "docs/architecture/system-builder.md",
+        "docs/architecture/asset-implementations-and-packages.md",
+        "docs/context/packs/system-builder.pack.md",
+        "docs/context/packs/asset-kernel.pack.md",
+        "modules/ui/shared/README.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "system-lifecycle-management-shared-manage-experience",
+      "incrementId": "system-lifecycle-management",
+      "summary": "Added the shared responsive Systems Manage surface for lifecycle filtering, exact-revision preview, Compose handoff, duplication, archive-backed deletion, and restore; fixed desktop asset initialization so compatible immutable backing resources are preserved instead of overwritten, restoring both Asset Library and System composer reads.",
+      "tests": [
+        "58 focused non-browser assertions passed",
+        "5 focused UI and style assertions passed",
+        "Disposable copy of current desktop data initialized all 224 releases successfully",
+        "Desktop and thin-client TypeScript checks passed",
+        "Docs, architecture, agent-support, server build, thin-client build, and desktop packaging gates passed"
+      ],
+      "title": "Shared Manage discovery and lifecycle experience"
+    }
+  ],
+  "completion": null,
+  "createdAt": "2026-07-18T23:03:42Z",
+  "currentIncrementId": null,
+  "decisions": [
+    {
+      "approvalNote": "The user accepted the recommended slot-based composer direction, then required predefined slot configurations with no user-authored slots or dimensions and requested its implementation roadmap.",
+      "approvedAt": "2026-07-18T23:05:39Z",
+      "approvedFingerprint": "e4909f484865e40722d75a0fef9909b84295eea62a71be344b31e7e5bbedacbc",
+      "context": "The choice changes Asset Kernel contracts, validation, immutable revision compatibility, System Foundation versioning, build inputs, transports, preview, and the shared desktop/thin-client editor.",
+      "id": "slot-composition-architecture",
+      "options": [
+        {
+          "consequences": [
+            "System revisions, save commands, validators, structured persistence, transports, clients, reference templates, and build materialization must understand placements",
+            "A successor ADR and new immutable System Foundation version are required",
+            "Legacy revisions remain readable and upgrade through an explicit new revision"
+          ],
+          "id": "first-class-placements-versioned-presets",
+          "label": "Canonical placements and presets",
+          "recommended": true,
+          "summary": "Add first-class named slot descriptors and ordered instance placements to the Asset Kernel, require a protected Foundation-derived system root, and publish separate versioned Foundation layout definitions that share a trusted declarative renderer.",
+          "tradeoffs": [
+            "Largest additive contract and migration surface",
+            "Clear separation between visual containment and typed runtime/data bindings",
+            "Static, testable compatibility and cardinality per layout preset",
+            "Portable across persistence, builds, desktop, thin client, and future hosts"
+          ]
+        },
+        {
+          "consequences": [
+            "Connection editing and cycle/cardinality logic must distinguish structural bindings throughout the stack",
+            "Layout compatibility becomes runtime interpretation rather than exact-definition behavior"
+          ],
+          "id": "containment-bindings-configurable-shell",
+          "label": "Containment bindings",
+          "recommended": false,
+          "summary": "Add a containment binding kind and use one Application Shell definition whose configuration enum selects a layout preset.",
+          "tradeoffs": [
+            "Fewer new top-level records",
+            "Overloads bindings with ordering and visual ownership semantics",
+            "Makes slot rules conditional on configuration and harder to validate statically"
+          ]
+        },
+        {
+          "consequences": [
+            "Builds, previews, adapters, and other clients could disagree about structure",
+            "Contradicts the accepted rule against renderer-owned system truth and a parallel composition model"
+          ],
+          "id": "ui-metadata-hierarchy",
+          "label": "UI-only hierarchy",
+          "recommended": false,
+          "summary": "Keep persisted revisions flat and store canvas parents, slots, and layout choices only in renderer metadata or selectedConfiguration.",
+          "tradeoffs": [
+            "Fastest initial UI delivery",
+            "No portable canonical hierarchy",
+            "Weak validation, migration, build reproducibility, and host parity"
+          ]
+        }
+      ],
+      "proposalFingerprint": "e4909f484865e40722d75a0fef9909b84295eea62a71be344b31e7e5bbedacbc",
+      "question": "How should System Builder persist nested containment and predefined interactive layouts?",
+      "selectedOptionId": "first-class-placements-versioned-presets",
+      "status": "approved",
+      "title": "Canonical slot-composition architecture"
+    }
+  ],
+  "discovery": {
+    "constraints": [
+      "Use AssetComposition, AssetInstance, AssetBinding, exact definition versions, and immutable SystemBuilderRevision snapshots; do not create a renderer-only or parallel graph model.",
+      "Represent containment separately from data, event, control, resource, runtime, adapter, and dependency bindings.",
+      "Every new interactive system has exactly one protected System Foundation-derived root and a required application shell/page host; non-interactive profiles remain possible.",
+      "Provide only versioned predefined application-shell and page-layout presets; users do not create slots, enter CSS, or choose raw dimensions.",
+      "Do not mutate system.foundation@1.0.0 or historical system revisions; introduce additive versions and explicit upgrade revisions.",
+      "Keep desktop and thin client on the same shared UI and transport semantics with explicit workspace scope and optimistic conflict handling.",
+      "Generate instance controls from safe effective definition schemas and UI hints; keep raw JSON as an advanced fallback only.",
+      "Preserve a complete native-control/keyboard path and semantic source order; pointer drag and drop cannot be the only editing mechanism.",
+      "Preview remains side-effect-free and cannot execute imported/authored implementation or backend code without a separately qualified sandbox.",
+      "Preserve the current uncommitted Compose preview changes as baseline work outside this successor roadmap."
+    ],
+    "decisionRequired": true,
+    "recordedAt": "2026-07-18T23:04:37Z",
+    "sources": [
+      {
+        "note": "Defines the canonical revision, Asset Kernel, host, preview, build, and runtime boundaries.",
+        "title": "System Builder architecture",
+        "url": "docs/architecture/system-builder.md"
+      },
+      {
+        "note": "Increment 5 and the acceptance matrix require hierarchy, schema-backed configuration, parent/child validation, and reusable nested compositions.",
+        "title": "Asset and system composition roadmap",
+        "url": "docs/asset-system-composition-implementation-roadmap.md"
+      },
+      {
+        "note": "Shows flat ordering, first-item root selection, raw JSON configuration, and shared desktop/thin-client ownership.",
+        "title": "Current shared Compose workspace",
+        "url": "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx"
+      },
+      {
+        "note": "Instances belong to a composition but do not identify a parent instance, slot, or ordered placement.",
+        "title": "Asset instance and composition contracts",
+        "url": "modules/contracts/asset/asset-instance.ts"
+      },
+      {
+        "note": "Provides semantic shell assets and rules but no complete application-shell preset family.",
+        "title": "System Foundation shell primitives",
+        "url": "modules/application/services/asset-packs/system-packs/shell-primitives/shell-primitives.ts"
+      },
+      {
+        "note": "Primary product documentation for named insertion regions and nested reusable components.",
+        "title": "Webflow slots",
+        "url": "https://help.webflow.com/hc/en-us/articles/33961195339923-Slots"
+      },
+      {
+        "note": "Defines hierarchical focus, selection, expansion, and keyboard behavior.",
+        "title": "W3C ARIA tree view pattern",
+        "url": "https://www.w3.org/WAI/ARIA/apg/patterns/treeview/"
+      },
+      {
+        "note": "Defines named grid areas, adaptive layout, and the requirement to preserve correct semantic source order.",
+        "title": "W3C CSS Grid Layout Level 2",
+        "url": "https://www.w3.org/TR/css-grid-2/"
+      },
+      {
+        "note": "Demonstrates schema/type/options-driven property controls.",
+        "title": "Storybook ArgTypes",
+        "url": "https://storybook.js.org/docs/api/arg-types"
+      }
+    ],
+    "summary": "System Builder currently saves a flat ordered instance list, promotes the first instance to root, and edits selectedConfiguration as raw JSON. Asset Kernel definitions already provide configuration schemas, UI hints, ports, composition rules, and immutable revisions, but they do not provide parent-instance placement or named slot vocabulary. System Foundation exposes containers, pages, navigation groups, and a System Shell, yet the System Shell does not admit an application-shell/page hierarchy. The existing Increment 5 roadmap claims hierarchy and schema-backed inspection that the implemented UI does not provide."
+  },
+  "evidence": [
+    {
+      "artifact": null,
+      "command": "npm test",
+      "criterionId": "kernel-contracts",
+      "id": "evidence-1",
+      "incrementId": "slot-composition-kernel",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T12:56:52Z",
+      "summary": "Slot and placement normalization, bounds, reference vocabulary, and binding separation passed focused coverage and the full 2,436-test gate."
+    },
+    {
+      "artifact": null,
+      "command": "npm test",
+      "criterionId": "foundation-presets",
+      "id": "evidence-2",
+      "incrementId": "slot-composition-kernel",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T12:56:52Z",
+      "summary": "Immutable Foundation v1 and complete v2 layout manifests, safe production installation, responsive resources, and exact trusted backing bundles passed focused and full-suite coverage."
+    },
+    {
+      "artifact": null,
+      "command": "npm test",
+      "criterionId": "root-placement-validation",
+      "id": "evidence-3",
+      "incrementId": "slot-composition-kernel",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T12:56:52Z",
+      "summary": "Canonical interactive creation and bounded root, membership, slot, compatibility, cardinality, order, cycle, and depth validation passed focused and full-suite coverage."
+    },
+    {
+      "artifact": null,
+      "command": "npm run build:server && npm run build:thin-client && npm test",
+      "criterionId": "revision-roundtrip",
+      "id": "evidence-4",
+      "incrementId": "slot-composition-kernel",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T12:56:52Z",
+      "summary": "Structured persistence, workspace isolation, optimistic conflicts, API, IPC, preload, shared UI, desktop, server, and thin-client parity passed focused tests and affected builds."
+    },
+    {
+      "artifact": null,
+      "command": "npm test",
+      "criterionId": "legacy-read-compatibility",
+      "id": "evidence-5",
+      "incrementId": "slot-composition-kernel",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T12:56:52Z",
+      "summary": "Legacy-flat classification remains read-only and historical Foundation v1 activations and exact implementation identities remain independently addressable."
+    },
+    {
+      "artifact": null,
+      "command": "npm run docs:check && npm run architecture:check && npm run agent-support:check",
+      "criterionId": "kernel-documentation",
+      "id": "evidence-6",
+      "incrementId": "slot-composition-kernel",
+      "kind": "documentation",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T12:56:53Z",
+      "summary": "ADR, architecture, context packs, README guidance, roadmap state, and deferred UI scope are aligned; documentation, architecture, and agent-support gates pass."
+    },
+    {
+      "artifact": null,
+      "command": "npm test && npm run package && npm run build:thin-client",
+      "criterionId": "create-compose-reopen",
+      "id": "evidence-7",
+      "incrementId": "shared-slot-composer-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T15:15:27Z",
+      "summary": "Composer catalog, canonical draft, workspace save/reopen, persistence, transport, and host tests preserve protected roots, selected layouts, ordered placements, and configuration across desktop and thin-client paths."
+    },
+    {
+      "artifact": null,
+      "command": "npx vitest run modules/ui/shared/system-builder/tests/SystemComposerStructureEditor.interaction.ui.test.tsx && node --import tsx --test modules/ui/shared/system-builder/tests/systemComposerDraft.unit.test.ts",
+      "criterionId": "slot-aware-editing",
+      "id": "evidence-8",
+      "incrementId": "shared-slot-composer-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T15:15:30Z",
+      "summary": "Focused draft and structure-editor tests cover add, move, reparent, reorder, wrap, remove, required-node protection, cycle prevention, bounded history, synchronized selection, keyboard hierarchy navigation, and unavailable-action reasons."
+    },
+    {
+      "artifact": null,
+      "command": "npx vitest run modules/ui/shared/system-builder/tests/SystemComposerInspector.interaction.ui.test.tsx && node --import tsx --test modules/ui/shared/system-builder/tests/systemComposerInspectorModel.unit.test.ts",
+      "criterionId": "generated-configuration",
+      "id": "evidence-9",
+      "incrementId": "shared-slot-composer-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T15:15:32Z",
+      "summary": "Inspector model and interaction tests cover ordered schema sections, supported native control kinds, defaults, constraints, approved asset selection, inline validation, safe reset, immediate draft updates, and bounded Advanced JSON fallback."
+    },
+    {
+      "artifact": null,
+      "command": "npm test",
+      "criterionId": "typed-connections",
+      "id": "evidence-10",
+      "incrementId": "shared-slot-composer-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T15:15:35Z",
+      "summary": "Inspector and contract tests expose only declared compatible typed endpoints, keep bindings separate from containment, and restrict value sources to approved configuration, parent, context, and resource references without expressions or renderer-local port strings."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/ui/shared/system-builder/tests/SystemCompositionPreview.unit.test.tsx",
+      "criterionId": "recursive-safe-preview",
+      "id": "evidence-11",
+      "incrementId": "shared-slot-composer-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T15:15:38Z",
+      "summary": "Recursive preview tests prove canonical root and named-slot ordering, current unsaved configuration, unassigned and unsupported states, bounded rendering, safe non-execution, and desktop/tablet/mobile viewport controls."
+    },
+    {
+      "artifact": null,
+      "command": "npm test && npm run build:thin-client && npm run package",
+      "criterionId": "responsive-accessible-states",
+      "id": "evidence-12",
+      "incrementId": "shared-slot-composer-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T15:15:41Z",
+      "summary": "Shared interaction and CSS regression coverage verifies responsive grid reflow, semantic tree focus/navigation, dialog focus restoration, protected and unavailable actions, and usable loading, empty, error, conflict, unsaved, unsupported, and unassigned states."
+    },
+    {
+      "artifact": null,
+      "command": "npm test && npm run package && npm run build:thin-client && npm run architecture:check",
+      "criterionId": "composer-parity",
+      "id": "evidence-13",
+      "incrementId": "shared-slot-composer-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T15:15:43Z",
+      "summary": "The shared composer uses one exact workspace-scoped read model and canonical mutations through API or IPC/preload; transport, preload, client, shared UI, desktop package, and thin-client production build gates all pass."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/application/use-cases/system-builder/tests/system-builder-management.unit.test.ts && npx vitest run modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
+      "criterionId": "complete-manage-list",
+      "id": "evidence-14",
+      "incrementId": "system-lifecycle-management",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T17:00:54Z",
+      "summary": "Focused projection and shared UI tests prove complete workspace isolation, truthful draft/published/draft-changes/archived views, bounded search/filter/sort/pagination, and loading/empty/error behavior."
+    },
+    {
+      "artifact": null,
+      "command": "npx vitest run modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx && npx tsc -p apps/desktop/tsconfig.webpack.json --noEmit --pretty false && npx tsc -p apps/thin-client/tsconfig.json --noEmit --pretty false",
+      "criterionId": "manage-preview-reopen",
+      "id": "evidence-15",
+      "incrementId": "system-lifecycle-management",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T17:01:01Z",
+      "summary": "Shared interaction coverage proves exact current-revision preview and controlled handoff into Compose with the selected system, while desktop and thin-client typechecks preserve the contract."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/application/use-cases/system-builder/tests/system-builder-use-cases.unit.test.ts && npx vitest run modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx",
+      "criterionId": "guarded-system-deletion",
+      "id": "evidence-16",
+      "incrementId": "system-lifecycle-management",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T17:01:04Z",
+      "summary": "Use-case and shared interaction tests prove revision-guarded archive-backed deletion, explicit retained-history disclosure, list refresh, archived filtering, and restoration without destructive revision or release removal."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/application/use-cases/system-builder/tests/system-builder-management.unit.test.ts modules/adapters/transport/api-express/system-builder/tests/system-builder-transport-parity.unit.test.ts apps/desktop/src/preload/tests/exposedApi.unit.test.ts",
+      "criterionId": "manage-action-truthfulness",
+      "id": "evidence-17",
+      "incrementId": "system-lifecycle-management",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T17:01:09Z",
+      "summary": "Application, API/IPC, preload, client, and UI tests prove actions derive from canonical eligibility, use existing commands, surface bounded failures, and preserve exact workspace and revision context."
+    },
+    {
+      "artifact": null,
+      "command": "npx vitest run modules/ui/shared/system-builder/tests/SystemManagementWorkspace.interaction.ui.test.tsx && node --import tsx --test modules/ui/shared/styles/tests/system-builder-style-tokens.unit.test.ts && npm run build:thin-client && npm run package -- --platform=win32 --arch=x64 && npm test",
+      "criterionId": "manage-accessibility-parity",
+      "id": "evidence-18",
+      "incrementId": "system-lifecycle-management",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-19T17:01:14Z",
+      "summary": "Native table/dialog interactions, responsive table-to-card assertions, shared host typechecks, thin-client production build, Windows desktop package, and the full suite pass with zero failures."
+    }
+  ],
+  "feedback": [
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "desktop-slot-generic-compile",
+      "impact": "within-increment",
+      "nextAction": "Use a type-predicate filter and verify the desktop-loaded contract.",
+      "recordedAt": "2026-07-19T05:31:00Z",
+      "summary": "Desktop compilation rejected the slot normalizer generic array cast.",
+      "targetIncrementId": "slot-composition-kernel"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "desktop-system-builder-no-output",
+      "impact": "within-increment",
+      "nextAction": "Resolve local type diagnostics and verify all desktop-loaded files.",
+      "recordedAt": "2026-07-19T05:31:00Z",
+      "summary": "Desktop load reported no TypeScript output for System Builder use cases.",
+      "targetIncrementId": "slot-composition-kernel"
+    }
+  ],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "31fec10e2567d66788045460659d52c5271376410a17660d4ac7696037852bba",
+      "recordedAt": "2026-07-18T23:04:37Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "352a50786b19da96d58d0013f93f8c6ff083327a238708d8aaf45c52013f2621",
+      "recordedAt": "2026-07-18T23:05:33Z",
+      "sequence": 2,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "b596a6890d35ab882ef10449e83ed92fdf59eb58276e5f2d0fbd17234c79b2b2",
+      "recordedAt": "2026-07-18T23:05:39Z",
+      "sequence": 3,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "a566c2142c55e26560a79f4c406b7697bbbf711d2f160449d75f3751af715e9d",
+      "recordedAt": "2026-07-18T23:09:17Z",
+      "sequence": 4,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "1be1f7f7deef770fcb1c03415e97e88ec5bbdca67c47dd2a658b57b1e9fed3b6",
+      "recordedAt": "2026-07-19T00:50:49Z",
+      "sequence": 5,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "5f5f7e4ed89c9682111d7f6ce9896bc21f570c656786f4127390ba21d9611cb6",
+      "recordedAt": "2026-07-19T00:51:55Z",
+      "sequence": 6,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "94e1c0efb5b00b7e2f8603b7dd0a6b02bf07c6cf65f8671aef6a854c213f41d6",
+      "recordedAt": "2026-07-19T00:57:35Z",
+      "sequence": 7,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "6039b9a448f06f6f89b44d6e2726d672a6fb58dba089b9b46d663a18d12dbaf9",
+      "recordedAt": "2026-07-19T00:58:23Z",
+      "sequence": 8,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "d446a50bcd14df6889240e815c0b57e0d42ad7160ce45a7e345666d192244f47",
+      "recordedAt": "2026-07-19T01:20:51Z",
+      "sequence": 9,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "30bc6e9b215415223bae1e00b8b390b2022f15a88409602924b88dfa3cc31e62",
+      "recordedAt": "2026-07-19T05:02:01Z",
+      "sequence": 10,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "4eb7bee2ce044ca4256400842d101b8f6330f92cf9fa6c90f2bda000d05f4d0b",
+      "recordedAt": "2026-07-19T05:31:00Z",
+      "sequence": 11,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "bc79055cd42365b869f4f84c40a85dfdb8ffa45ec5e96156b64933f1d92cfb1e",
+      "recordedAt": "2026-07-19T05:31:00Z",
+      "sequence": 12,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "1e8f277b009fd5ec5fd9798d6f7ba3a6705260c4578a2d05057e4a71e6ccfc40",
+      "recordedAt": "2026-07-19T05:31:25Z",
+      "sequence": 13,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "2a6c9eb9fcbd210449ebcfae369b6017dd46dd7c31ce7a923ce0c094463b37aa",
+      "recordedAt": "2026-07-19T12:42:27Z",
+      "sequence": 14,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "d1e7e2d195130751aa5b0f001e751b80f370f2a87d3539afa4995cd6f7bc795a",
+      "recordedAt": "2026-07-19T12:56:52Z",
+      "sequence": 15,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "63d78eacc47174233c83a1d6ee0a1c6262d3fb3f4dbdddc00eca04b383b1c88d",
+      "recordedAt": "2026-07-19T12:56:52Z",
+      "sequence": 16,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a495b9278fccf185202ff0ba0f1e7cd1288b23bf715cc3cabe37e1ad1093862a",
+      "recordedAt": "2026-07-19T12:56:52Z",
+      "sequence": 17,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d19f186c742f2095a4baf8d21842856ed36a3e6488808aaab6a7dce3196ec0f0",
+      "recordedAt": "2026-07-19T12:56:52Z",
+      "sequence": 18,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9287f59b32340563cba5c4d0e6dc07b33ab80c8b092e4c865fdf22abc7e01ef0",
+      "recordedAt": "2026-07-19T12:56:52Z",
+      "sequence": 19,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c893ba21b0759c182df82fe9d1308266559d404927608bdc54c332be9fbef367",
+      "recordedAt": "2026-07-19T12:56:53Z",
+      "sequence": 20,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "6caa62d244df763998fa19061414acbc6db7d74d685b291bdcbdb35aa9c90650",
+      "recordedAt": "2026-07-19T12:57:08Z",
+      "sequence": 21,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "38ee5e0bb908f7796633a36dca70beee2c8ba5dbb05a95b70585c06d746913dd",
+      "recordedAt": "2026-07-19T12:57:31Z",
+      "sequence": 22,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "0023786fc26cac614e680149371182f28d46b04404bd50a34e19b1bd65ae43e2",
+      "recordedAt": "2026-07-19T13:02:28Z",
+      "sequence": 23,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "db196ef8c6871f5ca8fc44542160ed8772e3114af9dce1634643da668f61392d",
+      "recordedAt": "2026-07-19T13:02:28Z",
+      "sequence": 24,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "8fbfa5c583c72775b16c26ca13a825bb8084d76424288c9bdbd2160a93af0c61",
+      "recordedAt": "2026-07-19T13:26:35Z",
+      "sequence": 25,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "916ae2d21039ae8160cb2bc31556e4dcf1adf757d884e68da0a05337879ac991",
+      "recordedAt": "2026-07-19T15:08:53Z",
+      "sequence": 26,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "1e81a88e74928eb2e5ee0d4f1a5051bf38641129a6bcf71a9afddc16929a8f40",
+      "recordedAt": "2026-07-19T15:09:02Z",
+      "sequence": 27,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "f0c669eaaae64b10759fb73d001456df9288e14667d1ba4fca45ac95aa1fbbcf",
+      "recordedAt": "2026-07-19T15:09:06Z",
+      "sequence": 28,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "0f15ea90877bbf155e6d80be418470dcf18c0a7d6c318f5ddbfb22ecd5f005c7",
+      "recordedAt": "2026-07-19T15:15:27Z",
+      "sequence": 29,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "116ab17eec350a146c1047f84bb4bfc818f984cc8c487762f26f1c9b630d5a73",
+      "recordedAt": "2026-07-19T15:15:30Z",
+      "sequence": 30,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "620d285fb85103e4790028cf926f1a5a39d94fadc3f1577df7d0656939cd70a9",
+      "recordedAt": "2026-07-19T15:15:32Z",
+      "sequence": 31,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f74426147473baf39699dd157aa86c581b30a8ed7cbf1d8375dc8fb5b44e942a",
+      "recordedAt": "2026-07-19T15:15:35Z",
+      "sequence": 32,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c000a6decc3d5218831ea4d27a6c0af6d9ba5edd9b22f555f3de39b2819e194e",
+      "recordedAt": "2026-07-19T15:15:38Z",
+      "sequence": 33,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "56d2c540a8bb4b755cd2b16c0fb6e396906f91ecc28ea52c651ad7347f9cc285",
+      "recordedAt": "2026-07-19T15:15:41Z",
+      "sequence": 34,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "18d9c8c19d8a277b653f9da30d97d9414275da939c4bb8bfbea569e4c4364dcd",
+      "recordedAt": "2026-07-19T15:15:43Z",
+      "sequence": 35,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "289ac1ce1ca97fa872a50ba3a5de4d73f68541904ba85ae60d74b13fda449e9b",
+      "recordedAt": "2026-07-19T15:15:46Z",
+      "sequence": 36,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "efab99f8cf77a199aaaaf4ca05ecb56b000c726b20498747a7430105eb8a61ad",
+      "recordedAt": "2026-07-19T15:17:55Z",
+      "sequence": 37,
+      "type": "roadmap-revised"
+    },
+    {
+      "eventFingerprint": "5b978e685e8ae2a9b1044032d5514fa3f0f43fa9b062bd065c3a26059f9243e2",
+      "recordedAt": "2026-07-19T15:17:59Z",
+      "sequence": 38,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "3912f34f9a0e38e9d3b4633b4b933230a0640e2a2c831a1622cdaa645e846b48",
+      "recordedAt": "2026-07-19T15:18:24Z",
+      "sequence": 39,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "4304d2681f846b6fc8325908ac71aacca72bf28c6a10d40c0b79568e1578d508",
+      "recordedAt": "2026-07-19T15:23:24Z",
+      "sequence": 40,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "41098d489c89091eb05ce662b6c9befcb3b38876431cdcacb77b06afdd7114e9",
+      "recordedAt": "2026-07-19T15:23:28Z",
+      "sequence": 41,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "2ca51a3ea13eaa20e4c4e4d15a1787abc01d46abe2493e24aabcbe80eed03c1c",
+      "recordedAt": "2026-07-19T15:38:40Z",
+      "sequence": 42,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "052b468b706df15a420c8059730c8b7baff4cfb9403e6dfe17746bec76335eaf",
+      "recordedAt": "2026-07-19T16:52:10Z",
+      "sequence": 43,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "775f3950a9246f2599f46019e39d3f3b97cd0205ddb1d14a505f950a4ed80b57",
+      "recordedAt": "2026-07-19T17:00:54Z",
+      "sequence": 44,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d72dde286083491d7c91b2c437052182c04f2048114995abdec95d4151ec64f4",
+      "recordedAt": "2026-07-19T17:01:01Z",
+      "sequence": 45,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "54e528b413ec12549e5e87950fced855f82c8c24b33561a43c9cb7f9c8fe5c75",
+      "recordedAt": "2026-07-19T17:01:04Z",
+      "sequence": 46,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d67c2a2215cdfc20d30728b045c5d48816d5035e712803307e37c3fd69f21672",
+      "recordedAt": "2026-07-19T17:01:09Z",
+      "sequence": 47,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "24985cd8944c16126d416bf21c396ffc06b72d9c54e44147c889b7c8ce3a91a0",
+      "recordedAt": "2026-07-19T17:01:14Z",
+      "sequence": 48,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a8c4da8b0d8834394568b8ec70410a8f441a2057a0aa2fcab2800650aa68a3fd",
+      "recordedAt": "2026-07-19T17:01:30Z",
+      "sequence": 49,
+      "type": "increment-completed"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Contracts normalize and round-trip exact slot definitions and placements, reject unsafe identifiers, duplicate placements, excessive depth/counts, invalid ordering, and unknown schema versions, and preserve typed bindings as a separate vocabulary.",
+          "id": "kernel-contracts",
+          "qualification": "local"
+        },
+        {
+          "description": "The new System Foundation version exposes every approved application-shell and page-layout preset with stable direction-neutral slot IDs, exact cardinality and accepted-child rules, responsive layout tokens, accessible source order, safe preview fixtures, and complete trusted backing-resource references while leaving system.foundation@1.0.0 unchanged.",
+          "id": "foundation-presets",
+          "qualification": "local"
+        },
+        {
+          "description": "Interactive revisions require exactly one exact or explicitly derived builtin.system.system root plus required shell/page-host structure, and validation produces bounded actionable errors for missing roots, invalid derivation, orphan/multiple-parent placement, nonexistent slots, incompatible children, cardinality, cycles, configuration, or profile violations.",
+          "id": "root-placement-validation",
+          "qualification": "local"
+        },
+        {
+          "description": "Create, save, clone, read, list, and conflict flows preserve placements through the structured repository and both API and Electron IPC/client surfaces with explicit workspace isolation and no renderer-owned truth.",
+          "id": "revision-roundtrip",
+          "qualification": "local"
+        },
+        {
+          "description": "Historical flat revisions remain immutable and readable with an explicit legacy-structure status; no read silently writes, invents placements, changes build authority, or rewrites system.foundation@1.0.0.",
+          "id": "legacy-read-compatibility",
+          "qualification": "local"
+        },
+        {
+          "description": "ADRs, architecture, context packs, contracts/readmes, the docs mismatch register, and contributor guidance accurately describe the slot model, immutable-version strategy, security boundary, and deferred UI/adoption work.",
+          "id": "kernel-documentation",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-19T12:57:08Z",
+      "completedChunks": [
+        "slot-contracts-adr",
+        "foundation-layout-release",
+        "interactive-structure-validation",
+        "revision-host-roundtrip"
+      ],
+      "completionSummary": "Increment 1 is implemented, documented, and verified: canonical slot contracts, immutable Foundation v2 layouts and resources, interactive structure validation, migration-safe v1 coexistence, and end-to-end revision host parity all pass repository gates.",
+      "deliverables": [
+        "Accepted successor ADR plus updated decision-readiness, architecture, context, and mismatch documentation",
+        "AssetSlotDefinition and AssetPlacement contract vocabulary with normalization, versioning, limits, and exports",
+        "Slot-aware SystemBuilderRevision and create/save/read/list command semantics",
+        "New immutable System Foundation release with eight application-shell presets, bounded page-layout presets, shared declarative renderer descriptors, preview fixtures, and backing resources",
+        "Interactive-system root/profile creation policy and deterministic placement validation",
+        "Structured persistence and SQLite/PostgreSQL-conformant document round trips",
+        "API, IPC, preload, desktop-client, and thin-client parity",
+        "Focused tests and canonical documentation"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "Canvas, hierarchy navigator, schema inspector, drag and drop, and end-user layout gallery",
+        "Legacy-revision upgrade mutation or reference-template conversion",
+        "User-authored slots, freeform dimensions, raw CSS, arbitrary grid coordinates, or public layout marketplace",
+        "Imported/authored implementation execution or sandbox qualification",
+        "Collaboration, simultaneous editing, or new runtime/deployment authority"
+      ],
+      "id": "slot-composition-kernel",
+      "number": 1,
+      "objective": "Add a migration-safe canonical model for named slots and ordered nested placements, require a Foundation-derived root for interactive systems, and publish a versioned set of fully backed application-shell and page-layout presets through every persistence and transport boundary.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "system.foundation@1.0.0 remains an immutable independently addressable manifest and backing-resource catalog; 2.0.0 is a complete parallel release rather than an in-place constant change.",
+          "Placement arrays and placement references are revision-owned Asset Kernel data; AssetBinding continues to represent data, event, control, resource, runtime, adapter, and dependency connections only.",
+          "A missing structure descriptor and placements identifies a historical legacy-flat revision; reads classify it but never synthesize or persist placements.",
+          "Responsive presets use closed declarative tokens and logical start/end slot names; arbitrary CSS, dimensions, grid coordinates, and user-authored slots remain excluded.",
+          "Resource-heavy completion gates will run one at a time only after memory/GPU headroom is rechecked; focused tests remain sequential during implementation."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "kernel-contracts",
+              "kernel-documentation"
+            ],
+            "id": "slot-contracts-adr",
+            "outcome": "The Asset Kernel and System Builder expose one safe, versioned containment vocabulary separate from typed bindings, with an accepted successor decision and deterministic normalization limits.",
+            "title": "Canonical slot and placement contracts"
+          },
+          {
+            "criteriaIds": [
+              "foundation-presets",
+              "kernel-documentation"
+            ],
+            "id": "foundation-layout-release",
+            "outcome": "system.foundation@2.0.0 provides all approved shell/page presets, fixtures, and exact version-addressed backing resources without altering 1.0.0.",
+            "title": "Immutable Foundation layout release"
+          },
+          {
+            "criteriaIds": [
+              "root-placement-validation",
+              "legacy-read-compatibility"
+            ],
+            "id": "interactive-structure-validation",
+            "outcome": "New interactive revisions receive a valid Foundation root/shell/page structure and application validation rejects malformed containment safely while recognizing legacy flat revisions without writes.",
+            "title": "Interactive root and placement policy"
+          },
+          {
+            "criteriaIds": [
+              "revision-roundtrip",
+              "legacy-read-compatibility",
+              "kernel-documentation"
+            ],
+            "id": "revision-host-roundtrip",
+            "outcome": "Create, save, clone, read, list, conflict, API, IPC, preload, desktop, and thin-client paths preserve canonical placements and explicit legacy status with workspace isolation.",
+            "title": "Revision persistence and host parity"
+          }
+        ],
+        "completionTests": [
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check",
+          "affected TypeScript checks and desktop/thin/server builds where wiring changed",
+          "npm test once after every Increment 1 chunk and focused test is complete"
+        ],
+        "documentation": [
+          "New successor ADR and ADR index/readiness register",
+          "docs/architecture/system-builder.md",
+          "docs/architecture/asset-implementations-and-packages.md",
+          "docs/context/packs/system-builder.pack.md and asset-kernel pack if semantics change",
+          "nearest contract/application/host README files",
+          "docs/docs-mismatch-register.md",
+          "concise temporary roadmap report"
+        ],
+        "fingerprint": "59938e159d7c7f08c58b981546a27bd12ec4cdf8d65b46d6d8cdc39f6cdb340d",
+        "focusedTests": [
+          "Asset slot/placement contract normalization and negative-bound tests",
+          "System Foundation 1.0.0 immutability plus 2.0.0 manifest/layout/backing-resource tests",
+          "System Builder root/profile/placement/configuration/cardinality/cycle/depth/diagnostic validator tests",
+          "System Builder use-case and structured-repository round-trip/isolation/conflict tests",
+          "Focused API, IPC, preload, desktop-client, and thin-client contract/type tests"
+        ],
+        "recordedAt": "2026-07-19T00:58:23Z",
+        "rollback": "Disable activation and installation of system.foundation@2.0.0 and remove additive canonical-create/save behavior. Keep 1.0.0 and historical revisions untouched; preserve any already-written slot-aware revisions as readable records rather than flattening or deleting them.",
+        "steps": [
+          "Add versioned AssetSlotDefinition and AssetPlacement vocabulary, System Builder structure/profile classification, limits, normalizers, references, and the accepted successor ADR.",
+          "Publish a complete system.foundation@2.0.0 catalog with eight application-shell layouts and bounded page layouts, exact direction-neutral slots, responsive/source-order descriptors, fixtures, and version-addressed backing resources while preserving 1.0.0 byte-for-byte behavior.",
+          "Create canonical interactive revisions with a Foundation-derived root and validate membership, exact definitions, profiles, placements, slot compatibility/cardinality/order, cycles, depth/count bounds, and configuration with bounded diagnostics; classify omitted structure as legacy without mutation.",
+          "Round-trip canonical and legacy revisions through create/save/clone/read/list, structured storage, API and Electron typed surfaces; verify workspace isolation/conflicts, update canonical docs, and run Increment 1 completion gates sequentially once all chunks pass focused tests."
+        ],
+        "summary": "Deliver the complete additive slot-composition kernel as four coherent chunks: canonical contracts and ADR, an immutable 2.0.0 Foundation release, application-owned structure validation/default creation, and persistence/transport compatibility with final documentation and gates."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-19T00:57:35Z",
+          "risks": [
+            "A single unversioned Foundation manifest or backing-resource map would silently replace 1.0.0 data; releases must be independently addressable by exact version.",
+            "Legacy flat revisions must be classified on read without synthesizing placements or writing back data.",
+            "Placement validation must be bounded and iterative enough to reject cycles, excessive depth, excessive counts, duplicate parents, unknown slots, incompatible children, and invalid ordering without renderer-owned truth.",
+            "Source order must remain the semantic and keyboard order even when a preset's responsive renderer changes visual columns.",
+            "Adding required root structure to new interactive systems must not make historical flat revisions unreadable or mutate existing reference templates in this increment."
+          ],
+          "sources": [
+            {
+              "title": "System Builder architecture and ADRs",
+              "url": "docs/architecture/system-builder.md"
+            },
+            {
+              "title": "Functional Foundation Pack Evolution",
+              "url": "docs/adr/ADR-0034-functional-foundation-pack-evolution.md"
+            },
+            {
+              "title": "System Builder revision validator",
+              "url": "modules/application/services/system-builder/validate-system-builder-revision.service.ts"
+            },
+            {
+              "title": "Structured System Builder repository",
+              "url": "modules/adapters/persistence/system-builder/createStructuredSystemBuilderRepository.ts"
+            },
+            {
+              "note": "Confirms named placeholders and nested slot composition as an established component-authoring model.",
+              "title": "Webflow component slots",
+              "url": "https://help.webflow.com/hc/en-us/articles/33961195339923-Slots"
+            },
+            {
+              "note": "Requires logical source order to remain authoritative when responsive visual placement changes.",
+              "title": "CSS Grid Layout Module",
+              "url": "https://www.w3.org/TR/css-grid/"
+            },
+            {
+              "title": "WCAG 2.2 Meaningful Sequence",
+              "url": "https://www.w3.org/WAI/WCAG22/Understanding/meaningful-sequence.html"
+            },
+            {
+              "title": "JSON Schema Draft 2020-12",
+              "url": "https://json-schema.org/draft/2020-12"
+            }
+          ],
+          "summary": "System Builder already persists immutable JSON revision snapshots through a database-neutral structured-document port, but its contract and validator model only a flat instance list. Increment 1 can remain additive by introducing versioned slot and placement contracts, parallel immutable System Foundation manifests/backing-resource catalogs, application-owned normalization and validation, and transport parity through the existing typed command surfaces."
+        }
+      ],
+      "rollback": "Stop activation of the new Foundation version and remove the additive slot-aware create/save operations before they have consumers. Retain historical 1.0.0 definitions and immutable revisions unchanged. If slot-aware revisions already exist, preserve them as read-only records rather than flattening or deleting them.",
+      "startedAt": "2026-07-19T00:51:55Z",
+      "status": "completed",
+      "title": "Canonical slot-composition kernel and Foundation layouts",
+      "verification": [
+        "Run focused Asset Kernel slot/placement contract and normalization tests.",
+        "Run focused System Foundation manifest, backing-resource, layout descriptor, fixture, and immutability tests.",
+        "Run focused root/profile, placement, configuration, compatibility, cardinality, cycle, limit, and safe-diagnostic validation tests.",
+        "Run structured repository conformance, immutable revision, optimistic conflict, and cross-workspace isolation tests.",
+        "Run API/IPC/preload/client parity and malformed/oversized envelope tests.",
+        "After every Increment 1 work package is implemented and focused tests pass, run npm run docs:check, npm run architecture:check, npm run agent-support:check, affected typechecks/builds, and npm test once as completion gates."
+      ],
+      "workPackages": [
+        {
+          "id": "architecture-contracts",
+          "outcome": "An accepted successor ADR and additive Asset Kernel/System Builder contracts distinguish slots, placements, typed bindings, system profiles, layout identities, and immutable revision versions without a second graph model.",
+          "title": "Decision and Asset Kernel contracts"
+        },
+        {
+          "id": "foundation-layout-release",
+          "outcome": "A new immutable System Foundation release provides shared-renderer application-shell and page-layout definitions for Minimal, Standard, Navigation, Navigation plus Footer, Full-height Navigation, Split Workspace, Review Workspace, Immersive, and the agreed page structures, each with exact slots, cardinality, responsive tokens, fixtures, and backing resources.",
+          "title": "Versioned interactive layout foundation"
+        },
+        {
+          "id": "root-placement-validation",
+          "outcome": "Application services enforce exactly one protected compatible system root, interactive profile requirements, single-parent ordered placements, declared slots, allowed children, cardinality, cycles, bounds, configuration validity, and safe diagnostics.",
+          "title": "Root, placement, and compatibility policy"
+        },
+        {
+          "id": "storage-transport-compatibility",
+          "outcome": "Structured persistence, commands, use cases, API, IPC, preload, desktop and thin clients round-trip slot-aware immutable revisions with workspace isolation, optimistic conflicts, bounded payloads, and read compatibility for historical flat revisions.",
+          "title": "Persistence and host parity"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "A user can create an interactive system, choose any approved shell preset, receive its protected required root/shell/page-host structure, add compatible nested assets, save an immutable revision, and reopen the identical hierarchy and configuration in desktop and thin client.",
+          "id": "create-compose-reopen",
+          "qualification": "local"
+        },
+        {
+          "description": "The canvas and hierarchy show the same selection and order; compatible assets can be added, moved, reparented, wrapped, reordered, or removed through both pointer enhancements and a complete keyboard/native-control path, while required assets cannot be deleted and invalid drops/actions explain why they are unavailable.",
+          "id": "slot-aware-editing",
+          "qualification": "local"
+        },
+        {
+          "description": "Definition schemas, constraints, options, defaults, and UI section/order hints generate appropriate controls for all supported value kinds; changes update selectedConfiguration and inline validation immediately, reset safely, and do not require editing raw JSON.",
+          "id": "generated-configuration",
+          "qualification": "local"
+        },
+        {
+          "description": "Connections mode presents only compatible typed endpoints and preserves data/event/control/resource/runtime/adapter/dependency bindings separately from containment, including parent-property and approved context/resource value sources without arbitrary expressions or magic strings.",
+          "id": "typed-connections",
+          "qualification": "local"
+        },
+        {
+          "description": "Preview renders the selected page and nested slot hierarchy in canonical order with current unsaved values at desktop/tablet/mobile sizes, preserves semantic source order, reports nonvisual or unsupported assets, and does not execute backend or unqualified imported/authored code.",
+          "id": "recursive-safe-preview",
+          "qualification": "local"
+        },
+        {
+          "description": "The shared workspace reflows without unintended horizontal page overflow, uses responsive panels/drawers, follows tree focus/selection/expansion semantics, returns focus after dialogs, and exposes usable loading, empty, error, conflict, blocked, unsaved, and unassigned-content states.",
+          "id": "responsive-accessible-states",
+          "qualification": "local"
+        },
+        {
+          "description": "Shared UI tests plus desktop and thin-client builds prove the two hosts consume the same read model and mutations and never bypass API/IPC/preload or persist renderer-local composition truth.",
+          "id": "composer-parity",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-19T15:15:46Z",
+      "completedChunks": [
+        "composer-read-model",
+        "layout-and-structure-editor",
+        "schema-inspector-bindings",
+        "recursive-preview-responsive-parity"
+      ],
+      "completionSummary": "Increment 2 is implemented, documented, and verified: the shared desktop/thin-client composer now provides exact workspace assets, predefined layouts, nested slot editing, schema-generated configuration, typed connections, bounded undo/redo, and a responsive recursive safe preview over one canonical draft.",
+      "deliverables": [
+        "Workspace-scoped composer read-model use case and transport/client exposure",
+        "Predefined layout selection gallery with thumbnails and profile-aware defaults",
+        "Synchronized compatible asset palette, hierarchy navigator, semantic canvas, slot zones, breadcrumbs, composite focus mode, and local undo/redo",
+        "Complete keyboard/native-control alternatives for add, move, reparent, reorder, wrap, remove, and select",
+        "Schema-generated sectioned configuration inspector with inline validation, defaults/reset, safe pickers, value sources, and Advanced JSON fallback",
+        "Separate Structure and Connections modes over the same canonical draft",
+        "Recursive safe preview with desktop/tablet/mobile viewports and unsaved-change indication",
+        "Responsive shared styles and desktop/thin-client parity",
+        "Focused interaction, accessibility, presenter, client, and documentation coverage"
+      ],
+      "dependsOn": [
+        "slot-composition-kernel"
+      ],
+      "excluded": [
+        "User-created layout presets, slot creation, pixel dimensions, arbitrary CSS, breakpoint editors, or freeform node positioning",
+        "Direct editing of a reusable asset's source definition or backing resources from System Builder; that remains an Asset Studio/customization handoff",
+        "Arbitrary expression languages, route handler code, workflow code, SQL, secrets, or host paths in configuration",
+        "Legacy revision upgrade, bulk reference-template migration, and release/deployment qualification",
+        "Multi-user collaboration and real-time cursors"
+      ],
+      "id": "shared-slot-composer-experience",
+      "number": 2,
+      "objective": "Replace the flat Compose list and uncontrolled JSON editor with one shared desktop/thin-client workspace that creates interactive systems from predefined layouts, embeds assets through named slots, configures instances through generated controls, edits typed connections separately, and recursively previews the current draft.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "The workspace-effective Asset Registry facade remains the authority for candidate visibility and exact definition resolution; System Builder returns a bounded purpose-built projection instead of exposing repository internals.",
+          "Explicit native controls and reducer commands are the canonical mutation path; pointer drag/drop can call the same commands but is not required for accessibility or acceptance.",
+          "Local undo/redo covers unsaved draft instances, placements, configuration, and bindings only and resets after load or successful save.",
+          "Schema defaults are displayed and can be applied/reset explicitly but are not silently persisted merely because a field is absent.",
+          "Completion gates remain sequential and resource-aware; npm test runs once only after every Increment 2 chunk has passed focused verification."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "create-compose-reopen",
+              "generated-configuration",
+              "typed-connections",
+              "composer-parity"
+            ],
+            "id": "composer-read-model",
+            "outcome": "Both hosts consume one bounded application read model for exact effective assets, schemas, slots, ports, compatibility, and safe preview capability.",
+            "title": "Workspace-effective composer catalog"
+          },
+          {
+            "criteriaIds": [
+              "create-compose-reopen",
+              "slot-aware-editing",
+              "responsive-accessible-states"
+            ],
+            "id": "layout-and-structure-editor",
+            "outcome": "Users compose one canonical nested draft through synchronized accessible hierarchy/canvas controls, predefined layouts, complete native mutations, and local undo/redo without deleting required structure.",
+            "title": "Canonical layout and structure workspace"
+          },
+          {
+            "criteriaIds": [
+              "generated-configuration",
+              "typed-connections",
+              "create-compose-reopen"
+            ],
+            "id": "schema-inspector-bindings",
+            "outcome": "Sectioned generated controls cover supported configuration kinds and validation while a distinct Connections mode safely edits compatible typed endpoints and value sources.",
+            "title": "Generated inspector and typed connections"
+          },
+          {
+            "criteriaIds": [
+              "recursive-safe-preview",
+              "responsive-accessible-states",
+              "composer-parity",
+              "create-compose-reopen"
+            ],
+            "id": "recursive-preview-responsive-parity",
+            "outcome": "The safe modal renders bounded nested drafts across viewports and the shared workspace exposes production-grade responsive, accessible, error, conflict, and host-parity behavior.",
+            "title": "Recursive preview and cross-client completion"
+          }
+        ],
+        "completionTests": [
+          "desktop and thin-client TypeScript checks/builds",
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check",
+          "npm run package",
+          "npm test once after all Increment 2 chunks and focused tests pass"
+        ],
+        "documentation": [
+          "docs/architecture/system-builder.md",
+          "docs/context/packs/system-builder.pack.md",
+          "modules/ui/shared/README.md and affected application/host READMEs",
+          "docs/docs-mismatch-register.md",
+          "concise ignored temporary roadmap report"
+        ],
+        "fingerprint": "1836e09a38b3ebfe6afc22a728b5f85ddbccfd16e3f95e3620f638ea52bad873",
+        "focusedTests": [
+          "Composer catalog workspace isolation, pagination bounds, compatibility, exact resolution, schema/default, port, and transport/client parity tests",
+          "Layout gallery and structure reducer/presenter tests plus hierarchy/canvas interaction tests for add, move, reparent, reorder, wrap, remove, protection, undo/redo, keyboard, and save/reopen",
+          "Generated-control tests for every supported value kind, options, constraints, section/order hints, invalid input, reset/default hints, pickers, and Advanced JSON plus typed-connection compatibility tests",
+          "Recursive preview model/component tests for hierarchy, unsaved values, viewport presets, bounds, unsupported surfaces, semantic order, focus restoration, responsive states, and both client adapters"
+        ],
+        "recordedAt": "2026-07-19T13:02:28Z",
+        "rollback": "Remove the new shared composer entry and catalog consumers while retaining the additive slot-aware contracts and immutable revisions. Slot-aware revisions fall back to read-only presentation and are never flattened; retain the prior safe preview until recursive preview is re-enabled.",
+        "steps": [
+          "Add an application-owned bounded composer catalog that returns workspace-effective exact definition identity, slots, configuration fields/default hints, ports, compatibility, and safe preview availability through API, IPC, preload, desktop, and thin-client clients.",
+          "Replace the flat instance list with a predefined layout gallery plus synchronized asset palette, accessible hierarchy, semantic slot canvas, breadcrumbs, focus mode, and local undo/redo; implement explicit add, move, reparent, reorder, wrap, and remove commands over the canonical instances/placements draft while protecting required Foundation nodes.",
+          "Replace the primary raw JSON form with ordered schema-generated controls, inline validation and reset behavior, keeping Advanced JSON as a deliberate fallback; provide a separate Connections mode that edits compatible typed bindings and approved value sources without conflating containment.",
+          "Make the safe modal recursively render the actual placement hierarchy and unsaved configuration at desktop/tablet/mobile viewports; complete responsive/loading/empty/error/conflict/blocked states, shared desktop/thin parity, documentation, and Increment 2 gates."
+        ],
+        "summary": "Replace the flat Compose experience in four substantial chunks: a workspace-scoped composer catalog, a complete canonical structure editor, a schema-driven inspector with separate typed connections, and a bounded recursive preview/responsive parity pass. Each chunk receives focused tests; repository-wide gates run once after the increment is complete."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-19T13:02:28Z",
+          "risks": [
+            "The Asset Library detail DTO intentionally exposes summaries, not canonical schemas or ports; the composer needs its own bounded application read model rather than renderer reconstruction or N+1 detail calls.",
+            "Pointer drag-and-drop alone would exclude keyboard users and make test behavior fragile; explicit add, move, reparent, reorder, wrap, and remove controls are canonical while pointer interactions remain progressive enhancement.",
+            "Undo/redo must snapshot only the local draft and must not bypass optimistic save conflicts or create hidden persistence writes.",
+            "Generated controls must preserve all supported JSON value kinds, constraints, section ordering, and invalid draft feedback without silently applying schema defaults.",
+            "Recursive preview must be bounded and render only trusted declarative Foundation surfaces; it cannot execute imported or authored frontend/backend logic."
+          ],
+          "sources": [
+            {
+              "title": "Approved slot composer roadmap",
+              "url": "docs/system-builder-slot-composer-implementation-roadmap.md"
+            },
+            {
+              "title": "Shared System Builder workspace",
+              "url": "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx"
+            },
+            {
+              "title": "Workspace-effective Asset Registry facade",
+              "url": "modules/application/services/asset/workspace-asset-registry-read-facade.service.ts"
+            },
+            {
+              "title": "Asset configuration and slot contracts",
+              "url": "modules/contracts/asset/asset-configuration-field.ts"
+            },
+            {
+              "note": "Defines single-select tree focus, selection, expansion, and keyboard interaction; focus and selection remain distinct.",
+              "title": "WAI-ARIA Authoring Practices: Tree View Pattern",
+              "url": "https://www.w3.org/WAI/ARIA/apg/patterns/treeview/"
+            },
+            {
+              "note": "Supports stacked/drawer composer panels and avoidance of two-dimensional page scrolling at narrow widths.",
+              "title": "WCAG 2.2 Understanding Reflow",
+              "url": "https://www.w3.org/WAI/WCAG22/Understanding/reflow.html"
+            },
+            {
+              "note": "Defaults and examples inform generated forms but do not mutate data merely by being present.",
+              "title": "JSON Schema annotations",
+              "url": "https://json-schema.org/understanding-json-schema/reference/annotations"
+            },
+            {
+              "note": "Demonstrates type/options/constraints-driven controls with an object editor fallback for complex values.",
+              "title": "Storybook ArgTypes",
+              "url": "https://storybook.js.org/docs/api/arg-types"
+            }
+          ],
+          "summary": "The repository already owns exact workspace-effective asset resolution, configuration field schemas/UI hints, slots, ports, placements, and typed bindings. Increment 2 should expose those through one bounded System Builder composer catalog and let the shared UI edit the existing immutable draft model. Accessible hierarchy semantics require distinct focus and selection with complete arrow-key/native-control alternatives; schema-derived controls should treat defaults as UI hints rather than implicit persisted values; responsive panels must reflow without changing semantic source order."
+        }
+      ],
+      "rollback": "Remove the new shared composer entry and read-model consumers while retaining additive slot-aware contracts and revisions. Slot-aware revisions remain read-only through a safe fallback and must never be flattened, reordered, or edited by the legacy flat composer. Preserve the prior safe preview path until the recursive renderer is re-enabled.",
+      "startedAt": "2026-07-19T12:57:31Z",
+      "status": "completed",
+      "title": "Complete shared slot-based Compose experience",
+      "verification": [
+        "Run focused composer read-model, compatibility-query, workspace-isolation, and transport/client tests.",
+        "Run focused layout-gallery, hierarchy, canvas, slot insertion, reparent/reorder/wrap/remove, undo/redo, required-root, and conflict interaction tests.",
+        "Run focused generated-control tests for every configuration value kind, constraints/options/defaults, reset, invalid input, pickers, sections/order, and Advanced JSON fallback.",
+        "Run focused typed-connection and value-source tests proving containment remains separate.",
+        "Run recursive preview model/component tests for hierarchy, configuration, viewport, bounds, safe omissions, and focus restoration.",
+        "Run responsive and accessibility interaction tests using semantic assertions and narrow viewport fixtures.",
+        "After every Increment 2 work package is implemented and focused tests pass, run desktop and thin-client typechecks/builds, npm run docs:check, npm run architecture:check, npm run agent-support:check, npm run package, and npm test once as completion gates."
+      ],
+      "workPackages": [
+        {
+          "id": "composer-read-model",
+          "outcome": "One workspace-scoped application read model supplies exact effective definition details, slots, schema controls, defaults, compatibility, implementation/preview availability, and bounded candidate results without renderer reconstruction.",
+          "title": "Compatible composer read model"
+        },
+        {
+          "id": "layout-and-structure-editor",
+          "outcome": "A thumbnail layout gallery creates the protected root/shell, while synchronized Asset Library, accessible hierarchy navigator, semantic canvas, slot insertion zones, breadcrumbs, focus mode, undo/redo, and explicit add/reparent/reorder/wrap/remove actions edit one canonical draft.",
+          "title": "Layout gallery, navigator, and canvas"
+        },
+        {
+          "id": "schema-inspector-bindings",
+          "outcome": "The selected instance uses sectioned generated controls for values, defaults, constraints, resource/asset selection, accessibility, and advanced JSON, while a separate Connections mode edits compatible data/event/control/resource/runtime/dependency bindings and value sources.",
+          "title": "Schema-driven inspector and connections"
+        },
+        {
+          "id": "recursive-preview-responsive-parity",
+          "outcome": "The existing safe modal recursively renders the actual slot hierarchy and current unsaved configuration across viewport presets, with responsive drawers/stacks, truthful unsupported states, validation, conflicts, and identical shared behavior in desktop and thin client.",
+          "title": "Recursive preview and cross-client UX"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "The Manage tab lists every system visible to the active workspace exactly once across drafted and published lifecycle states, exposes truthful current-revision and update metadata, and supports bounded search, status filtering, sorting, refresh, and usable loading, empty, and error states.",
+          "id": "complete-manage-list",
+          "qualification": "local"
+        },
+        {
+          "description": "A user can preview an eligible drafted or published system from Manage using the canonical bounded recursive preview and can open the selected system in Compose without losing its exact revision, hierarchy, configuration, or publication state.",
+          "id": "manage-preview-reopen",
+          "qualification": "local"
+        },
+        {
+          "description": "Deletion is available only when the application-owned policy marks a system eligible, always identifies the exact target and consequence in a confirmation dialog, detects stale or conflicting state, preserves immutable retained history required by policy, and refreshes the list after success without renderer-local mutation truth.",
+          "id": "guarded-system-deletion",
+          "qualification": "local"
+        },
+        {
+          "description": "Every displayed lifecycle action is derived from canonical state and either succeeds through the established use case and transport boundary or remains visibly unavailable with a useful reason; failures are bounded, redacted, and leave the list and selected system consistent.",
+          "id": "manage-action-truthfulness",
+          "qualification": "local"
+        },
+        {
+          "description": "The shared Manage experience is keyboard operable, uses accessible list/table and dialog semantics, reflows without unintended page overflow, restores focus after preview and confirmation dialogs, and passes desktop and thin-client transport, build, and interaction parity checks.",
+          "id": "manage-accessibility-parity",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-19T17:01:30Z",
+      "completedChunks": [
+        "lifecycle-projection-host-boundaries",
+        "shared-manage-experience"
+      ],
+      "completionSummary": "Increment 3 is implemented, documented, and verified: Systems Manage now provides a shared responsive lifecycle surface across desktop and thin client, and additive trusted built-in initialization restores Asset Library and System composer reads while preserving immutable backing resources. All focused checks, production builds, Windows packaging, and the 2,454-test non-browser suite pass with zero failures. Per user direction, the roadmap stops here and Increment 4 has not started.",
+      "deliverables": [
+        "Canonical workspace-scoped system lifecycle summary contract and use case",
+        "Bounded search, status filtering, sorting, and refresh semantics",
+        "Shared responsive Manage tab listing drafted and published systems",
+        "Lifecycle/status metadata and explicit action eligibility",
+        "Canonical recursive preview action from each system row or card",
+        "Open-in-Compose and other existing supported lifecycle action handoffs",
+        "User-confirmed guarded deletion with conflict, dependency, and stale-state handling",
+        "Desktop API/IPC/preload/client parity and thin-client API parity",
+        "Focused application, transport, shared UI, accessibility, and host regression tests",
+        "Updated System Builder architecture, context, and nearest README guidance"
+      ],
+      "dependsOn": [
+        "shared-slot-composer-experience"
+      ],
+      "excluded": [
+        "Bulk deletion or bulk publication",
+        "Permanent purge of audit, release, deployment, or immutable revision history when retention policy requires it",
+        "Cross-workspace administration, ownership transfer, sharing, collaboration, or tenancy changes",
+        "A new publication workflow, deployment workflow, or revision-history editor",
+        "Executing unqualified imported or authored code inside Manage previews"
+      ],
+      "id": "system-lifecycle-management",
+      "number": 3,
+      "objective": "Add a shared Manage tab where a workspace user can find every drafted and published system in one responsive list, understand its state, preview or reopen it, and perform supported lifecycle actions including guarded deletion through canonical host boundaries.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "The user-requested Delete action means removal from active system use; its confirmation explicitly states that immutable revisions and published releases are retained and that Archived systems can be restored.",
+          "A system is published only when an exact SystemRelease exists; if the latest release references an older revision, Manage labels the system as having draft changes rather than pretending the current revision is published.",
+          "The Manage projection owns cross-family joins and action eligibility; UI filtering never reconstructs publication policy from separate raw endpoints.",
+          "The existing ModalDialog, TabbedPanel, and SystemCompositionPreview remain the shared accessibility and safe-preview foundations.",
+          "Completion gates remain sequential and resource-aware; npm test runs once only after both Increment 3 chunks pass focused verification."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "complete-manage-list",
+              "guarded-system-deletion",
+              "manage-action-truthfulness",
+              "manage-accessibility-parity"
+            ],
+            "id": "lifecycle-projection-host-boundaries",
+            "outcome": "One bounded application read model truthfully joins workspace systems to exact releases, derives publication/action state, and reaches desktop and thin client through complete API/IPC/preload/client/security parity while reusing optimistic archive/restore commands.",
+            "title": "Lifecycle projection and host boundaries"
+          },
+          {
+            "criteriaIds": [
+              "complete-manage-list",
+              "manage-preview-reopen",
+              "guarded-system-deletion",
+              "manage-action-truthfulness",
+              "manage-accessibility-parity"
+            ],
+            "id": "shared-manage-experience",
+            "outcome": "A responsive accessible Manage tab lists draft/published/archived systems, supports bounded discovery and lifecycle actions, reuses exact recursive preview, and hands a selected system into Compose identically in both hosts.",
+            "title": "Shared Manage discovery and lifecycle experience"
+          }
+        ],
+        "completionTests": [
+          "desktop and thin-client TypeScript checks/builds",
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check",
+          "npm run package",
+          "npm test once after both Increment 3 chunks and focused tests pass"
+        ],
+        "documentation": [
+          "docs/architecture/system-builder.md",
+          "docs/context/packs/system-builder.pack.md",
+          "modules/ui/shared/README.md and affected transport/host README guidance",
+          "docs/docs-mismatch-register.md only if implementation and canonical guidance conflict",
+          "concise ignored temporary roadmap report"
+        ],
+        "fingerprint": "c8fa869b4e9a8da14ca1863146b4535db9649572d90b39a633ea54820c6e6ff8",
+        "focusedTests": [
+          "Lifecycle projection tests for workspace isolation, exact release-derived unpublished/published/draft-changes state, archived behavior, deterministic sort/search/filter, bounded page/cursor handling, action eligibility, and stale metadata",
+          "API, IPC, preload, desktop client, thin-client client, operation/security allowlist, invalid query, response-envelope, and host composition parity tests",
+          "Shared Manage model/component interaction tests for loading, empty, error, search, status, sort, pagination, refresh, preview, Compose handoff, clone, Delete confirmation/cancel/success/stale failure, Archived restore, focus restoration, and narrow/wide source order",
+          "SystemBuilderWorkspace initial-selection and Systems-page controlled-tab handoff regressions"
+        ],
+        "recordedAt": "2026-07-19T15:23:28Z",
+        "rollback": "Remove the Manage tab, lifecycle projection operation, and related clients while preserving current Compose and build/release paths. Any system already removed from active lists remains an ordinary archived record with all immutable revisions/releases retained and can be restored through the existing canonical command.",
+        "steps": [
+          "Define a bounded workspace-scoped Manage query/page/item contract whose publication status is derived from exact immutable releases and whose action eligibility discloses archive-backed deletion; implement the application use case, shared composition, API/IPC operations, security policy, preload exposure, desktop/thin clients, and focused isolation/pagination/transport tests.",
+          "Build one shared SystemManagementWorkspace using native controls and table/list semantics for search, status filter, sort, refresh/load-more, lifecycle badges, metadata, loading/empty/error/conflict states, exact preview, open-in-Compose, clone, Delete confirmation, archived filtering, and restore; add controlled Systems tabs and explicit initial Compose selection in both hosts.",
+          "Reconcile System Builder architecture/context/shared UI guidance, run focused shared interaction and responsive/source assertions, then run the Increment 3 desktop/thin builds, repository checks, package, and full suite once."
+        ],
+        "summary": "Deliver Increment 3 in two cohesive vertical chunks: first an application-owned lifecycle projection carried through both host transports and clients, then a complete shared Manage experience with responsive discovery, truthful publication state, recursive preview, Compose handoff, and guarded delete/archive/restore actions. Focused checks run per chunk; full gates run once after the increment is complete."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-19T15:23:24Z",
+          "risks": [
+            "Treating validated as published would conflate design-time readiness with an approved immutable release and mislabel systems; publication must be derived from exact release records.",
+            "Physically deleting records or revisions would break immutable history and published build/release references; Delete must be an explicit archive transition unless a later retention/purge decision is approved.",
+            "Joining system and release data in React would duplicate policy and drift between desktop and thin client; the application projection must own publication and action eligibility.",
+            "Opening Compose from Manage requires controlled top-level tab state and an explicit initial system selection; renderer-global state or URL invention is unnecessary.",
+            "Preview must resolve the exact current revision and bounded composer catalog, report unsupported surfaces, and retain the existing non-execution boundary.",
+            "Dense action controls can create long keyboard sequences; native table/list semantics, concise row actions, confirmation focus restoration, and responsive reflow need focused interaction tests."
+          ],
+          "sources": [
+            {
+              "title": "Approved System Builder roadmap",
+              "url": "docs/system-builder-slot-composer-implementation-roadmap.md"
+            },
+            {
+              "title": "System Builder architecture",
+              "url": "docs/architecture/system-builder.md"
+            },
+            {
+              "title": "System Builder record, revision, status, and command contracts",
+              "url": "modules/contracts/system-builder/system-builder-record.ts"
+            },
+            {
+              "title": "System Builder lifecycle use cases",
+              "url": "modules/application/use-cases/system-builder/system-builder-use-cases.ts"
+            },
+            {
+              "title": "System build and immutable release contracts",
+              "url": "modules/contracts/system-build/system-build-models.ts"
+            },
+            {
+              "title": "Shared System Builder workspace and recursive preview",
+              "url": "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx"
+            },
+            {
+              "note": "Recommends native HTML table semantics when a static tabular structure contains ordinary interactive controls.",
+              "title": "WAI-ARIA Authoring Practices: Table Pattern",
+              "url": "https://www.w3.org/WAI/ARIA/apg/patterns/table/"
+            },
+            {
+              "note": "Requires contained focus, Escape, a visible close/cancel action, and logical focus restoration; destructive dialogs should initially favor the least destructive action.",
+              "title": "WAI-ARIA Authoring Practices: Modal Dialog Pattern",
+              "url": "https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/"
+            },
+            {
+              "note": "Confirms labelled tab/tablist/tabpanel relationships and arrow, Home, and End navigation already provided by the shared TabbedPanel.",
+              "title": "WAI-ARIA Authoring Practices: Tabs Pattern",
+              "url": "https://www.w3.org/WAI/ARIA/apg/patterns/tabs/"
+            },
+            {
+              "note": "Supports a one-dimensional narrow layout without unintended horizontal page scrolling.",
+              "title": "WCAG 2.2 Understanding Reflow",
+              "url": "https://www.w3.org/WAI/WCAG22/Understanding/reflow.html"
+            }
+          ],
+          "summary": "System Builder already owns workspace-scoped records, immutable revisions, optimistic archive/restore, and separate immutable build releases. Design-time status intentionally does not mean published, so Manage needs an application-owned bounded projection joining records to releases. The safe deletion behavior is the existing archive transition presented transparently as removal from active systems: it retains revisions/releases, detects stale revisions, and supports restoration. The shared TabbedPanel already supports controlled navigation, ModalDialog owns focus containment/restoration, and the recursive preview can be reused without executing unqualified code. A native semantic table at wide widths with a reflowed list/card presentation at narrow widths preserves understandable reading order and native control behavior."
+        }
+      ],
+      "rollback": "Hide the Manage tab and disable its new lifecycle endpoints while preserving every existing system, revision, publication record, and Compose entry path. Any partially completed destructive request must fail atomically; rollback must not reconstruct or flatten system history from renderer state.",
+      "startedAt": "2026-07-19T15:18:24Z",
+      "status": "completed",
+      "title": "Unified system lifecycle management",
+      "verification": [
+        "Run focused lifecycle read-model tests for workspace isolation, complete draft/published coverage, ordering, filtering, action eligibility, bounds, and stale metadata.",
+        "Run focused deletion policy and use-case tests for eligibility, confirmation inputs, immutable-history retention, dependencies, conflicts, idempotency, failure atomicity, and post-success refresh state.",
+        "Run focused API, IPC, preload, desktop-client, thin-client-client, security-policy, and transport-parity tests for list, preview inputs, reopen handoff, and deletion.",
+        "Run shared Manage interaction tests for search, filters, sorting, preview, Compose handoff, guarded deletion, focus restoration, keyboard operation, and loading/empty/error/conflict states at narrow and wide layouts.",
+        "After all Increment 3 work packages and focused checks pass, run desktop and thin-client typechecks/builds, npm run docs:check, npm run architecture:check, npm run agent-support:check, npm run package, and npm test once as completion gates."
+      ],
+      "workPackages": [
+        {
+          "id": "manage-read-model",
+          "outcome": "One application-owned read model returns complete draft and published system summaries, exact current revision state, action eligibility, and bounded search/filter/sort data without renderer-local joins.",
+          "title": "Workspace-scoped lifecycle read model"
+        },
+        {
+          "id": "shared-manage-experience",
+          "outcome": "Desktop and thin client share an accessible responsive Manage list with clear lifecycle badges, useful metadata, search/filter/sort, empty/loading/error states, and direct reopen actions.",
+          "title": "Shared Manage tab and list"
+        },
+        {
+          "id": "preview-and-lifecycle-actions",
+          "outcome": "Each eligible system can be previewed with the canonical recursive preview, opened in Compose, and deleted only through an explicit confirmation and application-owned eligibility/conflict policy.",
+          "title": "Preview and guarded lifecycle actions"
+        },
+        {
+          "id": "manage-host-parity",
+          "outcome": "API, IPC, preload, clients, shared UI, documentation, and regression tests prove identical Manage behavior without bypassing workspace, revision, publication, security, or persistence boundaries.",
+          "title": "Host parity, regression coverage, and guidance"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Every supported historical flat revision remains byte-for-byte immutable and readable; upgrading creates a reviewed new slot-aware revision, preserves every compatible instance/configuration/binding, places unmatched content in an explicit unassigned state, and supports cancel/retry/conflict without data loss.",
+          "id": "immutable-upgrade",
+          "qualification": "local"
+        },
+        {
+          "description": "Secured data-entry, controlled chatbot, and secured data-review templates materialize exact Foundation-derived roots, appropriate application/page presets, valid placements and typed bindings, recursively preview their UI, and preserve their existing security and Run and Test behavior.",
+          "id": "reference-template-adoption",
+          "qualification": "local"
+        },
+        {
+          "description": "Build and release inputs freeze exact slot, placement, layout-definition, instance-configuration, backing-resource, and binding data; equivalent revisions reproduce identical content digests, meaningful hierarchy changes alter them, and tampering or missing exact definitions fails closed before approval or deployment.",
+          "id": "deterministic-build-hierarchy",
+          "qualification": "local"
+        },
+        {
+          "description": "Maximum instance, placement, depth, slot-child, configuration, binding, diagnostic, and rendered-node limits prevent excessive work; malformed, cyclic, cross-workspace, unsafe, stale, revoked, or unsupported inputs return bounded redacted errors and never widen code, secret, filesystem, network, build, release, or runtime authority.",
+          "id": "bounded-secure-operation",
+          "qualification": "local"
+        },
+        {
+          "description": "Live PostgreSQL qualification proves the same slot-aware revision, conflict, workspace-isolation, legacy-read, upgrade, and immutable-history semantics as SQLite/structured local persistence.",
+          "id": "postgres-conformance",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "A packaged Windows desktop application and supported thin-client browser each complete create, choose layout, nest, configure, connect, preview, save, reopen, switch layout, upgrade legacy, build, manage, and inspect revision history against their real IPC/API paths.",
+          "id": "packaged-cross-client-e2e",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Controlled keyboard and assistive-technology review confirms understandable tree/canvas/inspector/manage navigation and focus behavior; every approved preset satisfies WCAG 2.2 reflow expectations at 320 CSS pixels or equivalent zoom, preserves semantic reading order, and passes reviewed desktop/tablet/mobile visual baselines in light and dark themes.",
+          "id": "accessibility-responsive-visual",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Representative bounded-scale compositions and system lists remain responsive within documented targets, interrupted/conflicting saves, failed upgrades, and guarded lifecycle actions recover without revision loss, rollback disables new activation without flattening slot-aware data, and operator/contributor documentation states supported and unsupported behavior truthfully.",
+          "id": "scale-recovery-support",
+          "qualification": "controlled-environment"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": null,
+      "completedChunks": [],
+      "deliverables": [
+        "Explicit legacy-revision upgrade command, preview, mapping review, unassigned-content handling, and immutable new-revision save",
+        "Safe layout-switch mapping using stable semantic slot identities",
+        "Slot-aware versions of all three closed reference-system templates",
+        "Deterministic build/release materialization and integrity verification for placements and preset definitions",
+        "Compatibility behavior for historical builds/releases and truthful unsupported states",
+        "Payload/depth/count/performance bounds, tamper and recovery coverage, and redacted diagnostics",
+        "SQLite and live PostgreSQL semantic conformance evidence",
+        "Packaged Windows desktop and supported thin-client browser end-to-end qualification",
+        "Keyboard, assistive-technology, WCAG 2.2 reflow, responsive preset, and visual-regression evidence",
+        "Operations/support documentation and reconciled architecture/context/roadmap evidence"
+      ],
+      "dependsOn": [
+        "system-lifecycle-management"
+      ],
+      "excluded": [
+        "Automatic destructive migration or rewriting of historical revisions/releases",
+        "User-authored layouts, arbitrary slot creation, freeform dimensions, CSS editing, or public preset marketplace",
+        "Qualified execution of arbitrary imported/authored frontend or backend code beyond existing sandbox decisions",
+        "New deployment topology, identity, tenancy, collaboration, synchronization, billing, or marketplace policy",
+        "Claiming WCAG, performance, PostgreSQL, packaging, browser, or production qualification without recorded controlled evidence"
+      ],
+      "id": "migration-build-qualification",
+      "number": 4,
+      "objective": "Adopt canonical placements across historical systems, closed reference templates, deterministic builds and releases, then qualify the complete composer and system management experience across persistence shapes, packaged desktop, thin-client browser, accessibility, responsive layouts, security, performance, and recovery without rewriting immutable history.",
+      "plan": null,
+      "research": [],
+      "rollback": "Disable activation of the new composer, Manage experience, and Foundation layout release; preserve all slot-aware and legacy revisions as immutable readable history; and keep prior approved releases runnable under their frozen manifests. A failed upgrade, layout switch, or lifecycle action never replaces its source revision. Rollback must not remove placement data, weaken validation, or make unqualified implementation executable.",
+      "startedAt": null,
+      "status": "pending",
+      "title": "Migration, build adoption, and production qualification",
+      "verification": [
+        "Run focused legacy fixture, upgrade mapping, cancellation, retry, stale conflict, layout-switch mapping, unassigned-content, and immutable-history tests.",
+        "Run focused reference-template validation, recursive preview, security-policy, Run and Test regression, and exact-version tests for all three closed systems.",
+        "Run deterministic build/release digest, manifest, tamper, missing-definition, backing-resource, binding, and historical-release compatibility tests.",
+        "Run adversarial limit, depth, cycle, oversized configuration, malformed envelope, cross-workspace, revocation, unsupported implementation, and diagnostic-redaction tests.",
+        "Run live PostgreSQL recovery/conformance qualification and retain sanitized evidence.",
+        "Run packaged desktop and thin-client browser end-to-end qualification on the supported platform/browser matrix.",
+        "Perform and record keyboard, assistive-technology, WCAG reflow, source-order, light/dark, and responsive visual review for every preset and the Manage experience.",
+        "Run representative bounded-scale interaction, list, preview, save/reopen, and lifecycle-action measurements plus interruption/recovery drills.",
+        "After every Increment 4 work package and all controlled evidence pass, run npm run docs:check, npm run architecture:check, npm run agent-support:check, affected builds/packages, security/dependency checks, deployment fitness checks where applicable, and npm test once as final completion gates."
+      ],
+      "workPackages": [
+        {
+          "id": "legacy-upgrade-layout-switch",
+          "outcome": "A reviewable mapping workflow converts a selected flat historical revision into a new slot-aware revision, maps stable semantic slots during preset changes, preserves unmatched content in an Unassigned assets tray, and never mutates or deletes its source revision.",
+          "title": "Explicit legacy upgrade and safe layout switching"
+        },
+        {
+          "id": "reference-build-adoption",
+          "outcome": "Secured data-entry, controlled chatbot, and secured data-review templates use compatible roots, layout presets, pages and placements, while build/release manifests freeze and digest the exact hierarchy, presets, configuration, resources, and typed bindings.",
+          "title": "Reference systems and deterministic build adoption"
+        },
+        {
+          "id": "security-limits-recovery",
+          "outcome": "Bounds, malformed/tampered revision handling, cancellation/conflicts, unsupported implementation states, source-order preservation, and rollback/recovery behavior fail closed with bounded redacted diagnostics.",
+          "title": "Hardening and recovery"
+        },
+        {
+          "id": "cross-shape-qualification",
+          "outcome": "Automated and controlled evidence covers SQLite/PostgreSQL conformance, packaged desktop, thin-client browser, keyboard and assistive technology, WCAG reflow, preset screenshots, representative scale, builds/releases, and documentation/support procedures.",
+          "title": "Controlled production qualification"
+        }
+      ]
+    }
+  ],
+  "name": "System Builder Slot Composer",
+  "objective": "Deliver a production-ready slot-based System Builder composer with required Foundation-derived roots, predefined interactive layouts, nested asset placement, schema-driven configuration, accessible editing, recursive preview, and migration-safe adoption.",
+  "paths": {
+    "report": "docs/tmp/system-builder-slot-composer-implementation-report.md",
+    "roadmap": "docs/system-builder-slot-composer-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/system-builder-slot-composer/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": {
+    "approvedAt": "2026-07-19T15:17:59Z",
+    "fingerprint": "c938185798f217ee53d6f8eae1fe9ddb719e2057524c6845d09ad26fab999880",
+    "note": "The user explicitly requested and approved adding a dedicated Systems Manage increment to the active work on 2026-07-18; the previously approved migration and qualification scope is preserved as the following increment."
+  },
+  "schemaVersion": 1,
+  "slug": "system-builder-slot-composer",
+  "status": "ready",
+  "updatedAt": "2026-07-19T17:01:30Z"
+}

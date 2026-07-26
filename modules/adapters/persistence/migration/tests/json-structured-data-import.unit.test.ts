@@ -14,13 +14,25 @@ test("inventory only includes enumerated structured JSON families", async () => 
   const root = await mkdtemp(path.join(tmpdir(), "json-inventory-"));
   try {
     await mkdir(path.join(root, "workspaces"), { recursive: true });
+    await mkdir(path.join(root, "system-builder", "revisions"), {
+      recursive: true,
+    });
     await mkdir(path.join(root, "runtime-cache"), { recursive: true });
     await writeFile(path.join(root, "workspaces", "index.json"), '[{"workspaceId":"workspace-a"}]');
+    await writeFile(
+      path.join(root, "system-builder", "revisions", "system-1.r2.json"),
+      '{"revisionId":"system-1.r2","foundationVersion":"3.0.0","selectedConfiguration":{"themeColorPrimary":"#2563eb"}}',
+    );
     await writeFile(path.join(root, "runtime-cache", "not-structured.json"), '{"secret":"excluded"}');
     const inventory = await inventoryJsonStructuredData(root);
-    assert.equal(inventory.files.length, 1);
-    assert.equal(inventory.files[0]?.relativePath, "workspaces/index.json");
-    assert.equal(inventory.totalRecords, 1);
+    assert.deepEqual(
+      inventory.files.map((file) => file.relativePath),
+      [
+        "system-builder/revisions/system-1.r2.json",
+        "workspaces/index.json",
+      ],
+    );
+    assert.equal(inventory.totalRecords, 2);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

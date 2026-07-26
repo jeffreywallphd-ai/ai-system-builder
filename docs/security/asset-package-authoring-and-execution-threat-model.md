@@ -2,7 +2,7 @@
 
 - Status: current
 - Scope: executable asset packages, Asset Studio, coding models, system builds, previews, capability brokerage, and system-release execution
-- Related: ADR-0015, ADR-0029, ADR-0030 through ADR-0034
+- Related: ADR-0015, ADR-0029, ADR-0030 through ADR-0035
 - Verification: automated negative tests plus Increment 11 manual security review
 
 ## Assets to protect
@@ -42,6 +42,8 @@ Untrusted inputs cross boundaries at package receipt, archive parsing, manifest 
 | Unsafe migrations                    | destructive cross-tenant schema/data change                     | analyzed migration plan; organization scope; compatibility/rollback checks; approval; host-owned migration runner                                                             |
 | Build/release tampering              | swap artifact after tests                                       | content-addressed artifacts; test/evidence digests; immutable release; verify before activation/run; revoke on mismatch                                                       |
 | Stale approval                       | code/capability/dependency changed after review                 | approvals bind exact source, lock, capability, and evidence digests; change invalidates approval                                                                              |
+| Layer/base substitution              | overlay is applied to a newer release or different snapshot     | exact definition-version, release, source-snapshot, and artifact-digest pins; optimistic revision; verify-before-materialize; no floating rebase                              |
+| Overlay metadata leakage             | source paths/text copied into list DTOs, logs, or diagnostics   | raw overlay files only in authorized proposal/artifact boundaries; structured records retain counts/descriptors; bounded sanitized diagnostics                                |
 | Audit evasion/privacy leak           | secrets in logs or missing denial events                        | separate append-only security audit; required events; structured redaction; bounded diagnostics; access/retention policy                                                      |
 
 ## Abuse cases that must fail closed
@@ -57,6 +59,9 @@ Untrusted inputs cross boundaries at package receipt, archive parsing, manifest 
 9. Submit conversational text that requests protected instructions, provider
    payloads, credentials, tools, retrieval, memory, or authority not granted by
    the execution plan and host policy.
+10. Materialize a layered customization after its base release, source snapshot,
+    source digest, semantic patch, source overlay, dependency consent, capability
+    consent, or optimistic revision no longer matches the reviewed values.
 
 ## Residual risk and release gates
 

@@ -1,11 +1,13 @@
 import type {
   AssetBinding,
   AssetInstance,
+  AssetPlacement,
   AssetValidationIssue,
 } from "../asset";
 import type { WorkspaceId } from "../workspace";
 import type { SystemBuilderComposition } from "./system-builder-composition";
 import type { SystemBuilderSystemId } from "./system-builder-id";
+import type { SystemBuilderStructure } from "./system-builder-structure";
 
 export type SystemBuilderRevisionId = string & {
   readonly __systemBuilderRevisionIdBrand: unique symbol;
@@ -29,6 +31,8 @@ export interface SystemBuilderRevision {
   readonly composition: SystemBuilderComposition;
   readonly instances: readonly AssetInstance[];
   readonly bindings: readonly AssetBinding[];
+  readonly structure?: SystemBuilderStructure;
+  readonly placements?: readonly AssetPlacement[];
   readonly validationIssues: readonly AssetValidationIssue[];
   readonly createdAt: string;
   readonly createdBy: string;

@@ -18,6 +18,7 @@ const ELIGIBLE_ROOTS = [
   "execution-runs",
   "model-registry",
   "runtime-readiness",
+  "system-builder",
   "user-library",
   "workspaces",
 ] as const;

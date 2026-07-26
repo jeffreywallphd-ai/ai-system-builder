@@ -97,6 +97,7 @@ describe("asset configuration contract vocabularies", () => {
     expect([...ASSET_CONFIGURATION_UI_HINT_KINDS]).toEqual([
       "text",
       "textarea",
+      "color",
       "number",
       "checkbox",
       "select",

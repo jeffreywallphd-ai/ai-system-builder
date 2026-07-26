@@ -419,13 +419,21 @@ import {
   type DesktopAssetStudioWorkflowResponse,
   type DesktopAssetStudioListResponse,
   type DesktopAssetStudioDraftResponse,
+  type DesktopAssetStudioAssetDraftResponse,
+  type DesktopAssetStudioAssetDraftViewResponse,
+  type DesktopAssetStudioAssetDraftListResponse,
   DESKTOP_SYSTEM_BUILDER_OPERATIONS,
   DESKTOP_SYSTEM_BUILDER_CHANNELS,
   createDesktopSystemBuilderRequest,
   type DesktopSystemBuilderRecordResponse,
   type DesktopSystemBuilderListResponse,
+  type DesktopSystemBuilderManagementResponse,
   type DesktopSystemBuilderRevisionResponse,
   type DesktopSystemBuilderRevisionListResponse,
+  type DesktopSystemBuilderComposerCatalogResponse,
+  type DesktopSystemBuilderComposerAssetDetailResponse,
+  type DesktopSystemBuilderLayoutChangePreviewResponse,
+  type DesktopSystemBuilderFoundationUpgradePreviewResponse,
   DESKTOP_SYSTEM_BUILD_OPERATIONS,
   DESKTOP_SYSTEM_BUILD_CHANNELS,
   createDesktopSystemBuildRequest,
@@ -452,9 +460,14 @@ import type {
   SetAssetPackageActivationCommand,
 } from "../../../../modules/contracts/asset-package";
 import type {
+  CreateAssetStudioAssetDraftCommand,
+  ListAssetStudioAssetDraftsQuery,
   ProposeAssetStudioChangeCommand,
+  ReadAssetStudioAssetDraftQuery,
   ReviewAssetStudioProposalCommand,
   StartAssetStudioCommand,
+  TransitionAssetStudioAssetDraftCommand,
+  UpdateAssetStudioAssetDraftCommand,
 } from "../../../../modules/contracts/asset-studio";
 import type {
   ChangeSystemBuilderArchiveStateCommand,
@@ -463,6 +476,12 @@ import type {
   CreateSystemBuilderFromTemplateCommand,
   RenameSystemBuilderSystemCommand,
   SaveSystemBuilderRevisionCommand,
+  ListSystemBuilderComposerAssetsQuery,
+  ReadSystemBuilderComposerAssetQuery,
+  ListSystemBuilderManagementQuery,
+  PreviewSystemBuilderLayoutChangeCommand,
+  PreviewSystemBuilderFoundationUpgradeCommand,
+  UpgradeSystemBuilderFoundationCommand,
 } from "../../../../modules/contracts/system-builder";
 import type {
   CreateAssetDraftCommand,
@@ -472,6 +491,12 @@ import type {
   PublishAssetDraftCommand,
   UpdateAssetDraftCommand,
   UpdateAssetOverrideCommand,
+  CreateAssetDerivedCustomizationCommand,
+  UpdateAssetDerivedCustomizationCommand,
+  ReviewAssetDerivedCustomizationCommand,
+  ListAssetDerivedCustomizationTargetsQuery,
+  ReadAssetDerivedCustomizationTargetQuery,
+  ListAssetDerivedCustomizationsQuery,
 } from "../../../../modules/contracts/asset-authoring";
 import type {
   FinalizeGeneratedOutputCommand,
@@ -1045,6 +1070,34 @@ export interface DesktopPreloadApi {
     workspaceId: string,
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopAssetStudioListResponse>;
+  createAssetStudioAssetDraft: (
+    input: Omit<CreateAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftResponse>;
+  updateAssetStudioAssetDraft: (
+    input: Omit<UpdateAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftResponse>;
+  readAssetStudioAssetDraft: (
+    input: ReadAssetStudioAssetDraftQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftViewResponse>;
+  listAssetStudioAssetDrafts: (
+    input: ListAssetStudioAssetDraftsQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftListResponse>;
+  reviewAssetStudioAssetDraft: (
+    input: Omit<TransitionAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftResponse>;
+  publishAssetStudioAssetDraft: (
+    input: Omit<TransitionAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftResponse>;
+  abandonAssetStudioAssetDraft: (
+    input: Omit<TransitionAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftResponse>;
   createSystemBuilderSystem: (
     input: Omit<CreateSystemBuilderSystemCommand, "actorId">,
     context?: DesktopArtifactUploadBridgeContext,
@@ -1053,6 +1106,10 @@ export interface DesktopPreloadApi {
     input: { workspaceId: string; includeArchived?: boolean },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopSystemBuilderListResponse>;
+  listSystemBuilderManagement: (
+    input: ListSystemBuilderManagementQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuilderManagementResponse>;
   listSystemBuilderTemplates: (
     input?: Record<string, never>,
     context?: DesktopArtifactUploadBridgeContext,
@@ -1093,6 +1150,35 @@ export interface DesktopPreloadApi {
     input: { workspaceId: string; systemId: string },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopSystemBuilderRevisionListResponse>;
+  listSystemBuilderComposerAssets: (
+    input: ListSystemBuilderComposerAssetsQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuilderComposerCatalogResponse>;
+  readSystemBuilderComposerAsset: (
+    input: ReadSystemBuilderComposerAssetQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuilderComposerAssetDetailResponse>;
+  previewSystemBuilderLayoutChange: (
+    input: Omit<
+      PreviewSystemBuilderLayoutChangeCommand,
+      "actorId" | "workspaceId" | "systemId"
+    > & { readonly workspaceId: string; readonly systemId: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuilderLayoutChangePreviewResponse>;
+  previewSystemBuilderFoundationUpgrade: (
+    input: Omit<
+      PreviewSystemBuilderFoundationUpgradeCommand,
+      "actorId" | "workspaceId" | "systemId"
+    > & { readonly workspaceId: string; readonly systemId: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuilderFoundationUpgradePreviewResponse>;
+  upgradeSystemBuilderFoundation: (
+    input: Omit<
+      UpgradeSystemBuilderFoundationCommand,
+      "actorId" | "workspaceId" | "systemId"
+    > & { readonly workspaceId: string; readonly systemId: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuilderRevisionResponse>;
   requestSystemBuild: (
     input: Record<string, unknown>,
     context?: DesktopArtifactUploadBridgeContext,
@@ -1354,6 +1440,42 @@ export interface DesktopPreloadApi {
     },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopAssetAuthoringListEffectiveSummariesResponse>;
+  listAssetDerivedCustomizationTargets: (
+    input: ListAssetDerivedCustomizationTargetsQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationListTargetsResponse>;
+  readAssetDerivedCustomizationTarget: (
+    input: ReadAssetDerivedCustomizationTargetQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationReadTargetResponse>;
+  createAssetDerivedCustomization: (
+    input: Omit<CreateAssetDerivedCustomizationCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationCreateResponse>;
+  updateAssetDerivedCustomization: (
+    input: Omit<UpdateAssetDerivedCustomizationCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationUpdateResponse>;
+  reviewAssetDerivedCustomization: (
+    input: Omit<ReviewAssetDerivedCustomizationCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationReviewResponse>;
+  publishAssetDerivedCustomization: (
+    input: Omit<ReviewAssetDerivedCustomizationCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationPublishResponse>;
+  abandonAssetDerivedCustomization: (
+    input: Omit<ReviewAssetDerivedCustomizationCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationAbandonResponse>;
+  listAssetDerivedCustomizations: (
+    input: ListAssetDerivedCustomizationsQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationListResponse>;
+  readAssetDerivedCustomization: (
+    input: { workspaceId: string; customizationId: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationReadResponse>;
   listAssetDefinitions: (
     input?: DesktopAssetDefinitionsListBridgeInput,
     context?: DesktopArtifactUploadBridgeContext,
@@ -3116,6 +3238,78 @@ export function createDesktopPreloadApi(
         },
       );
     },
+    async listAssetDerivedCustomizationTargets(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "listTargets",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationListTargetsResponse>;
+    },
+    async readAssetDerivedCustomizationTarget(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "readTarget",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationReadTargetResponse>;
+    },
+    async createAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "create",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationCreateResponse>;
+    },
+    async updateAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "update",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationUpdateResponse>;
+    },
+    async reviewAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "review",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationReviewResponse>;
+    },
+    async publishAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "publish",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationPublishResponse>;
+    },
+    async abandonAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "abandon",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationAbandonResponse>;
+    },
+    async listAssetDerivedCustomizations(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "list",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationListResponse>;
+    },
+    async readAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "read",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationReadResponse>;
+    },
     async listAssetDefinitions(input = {}, context = {}) {
       const request = createDesktopAssetDefinitionsListRequest(
         {
@@ -4281,6 +4475,62 @@ export function createDesktopPreloadApi(
         context,
       );
     },
+    async createAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftResponse>(
+        dependencies,
+        "createAssetDraft",
+        input,
+        context,
+      );
+    },
+    async updateAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftResponse>(
+        dependencies,
+        "updateAssetDraft",
+        input,
+        context,
+      );
+    },
+    async readAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftViewResponse>(
+        dependencies,
+        "readAssetDraft",
+        input,
+        context,
+      );
+    },
+    async listAssetStudioAssetDrafts(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftListResponse>(
+        dependencies,
+        "listAssetDrafts",
+        input,
+        context,
+      );
+    },
+    async reviewAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftResponse>(
+        dependencies,
+        "reviewAssetDraft",
+        input,
+        context,
+      );
+    },
+    async publishAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftResponse>(
+        dependencies,
+        "publishAssetDraft",
+        input,
+        context,
+      );
+    },
+    async abandonAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftResponse>(
+        dependencies,
+        "abandonAssetDraft",
+        input,
+        context,
+      );
+    },
     async createSystemBuilderSystem(input, context = {}) {
       return invokeSystemBuilder<DesktopSystemBuilderRecordResponse>(
         dependencies,
@@ -4293,6 +4543,14 @@ export function createDesktopPreloadApi(
       return invokeSystemBuilder<DesktopSystemBuilderListResponse>(
         dependencies,
         "list",
+        input,
+        context,
+      );
+    },
+    async listSystemBuilderManagement(input, context = {}) {
+      return invokeSystemBuilder<DesktopSystemBuilderManagementResponse>(
+        dependencies,
+        "listManagement",
         input,
         context,
       );
@@ -4373,6 +4631,46 @@ export function createDesktopPreloadApi(
       return invokeSystemBuilder<DesktopSystemBuilderRevisionListResponse>(
         dependencies,
         "listRevisions",
+        input,
+        context,
+      );
+    },
+    async listSystemBuilderComposerAssets(input, context = {}) {
+      return invokeSystemBuilder<DesktopSystemBuilderComposerCatalogResponse>(
+        dependencies,
+        "listComposerAssets",
+        input,
+        context,
+      );
+    },
+    async readSystemBuilderComposerAsset(input, context = {}) {
+      return invokeSystemBuilder<DesktopSystemBuilderComposerAssetDetailResponse>(
+        dependencies,
+        "readComposerAsset",
+        input,
+        context,
+      );
+    },
+    async previewSystemBuilderLayoutChange(input, context = {}) {
+      return invokeSystemBuilder<DesktopSystemBuilderLayoutChangePreviewResponse>(
+        dependencies,
+        "previewLayoutChange",
+        input,
+        context,
+      );
+    },
+    async previewSystemBuilderFoundationUpgrade(input, context = {}) {
+      return invokeSystemBuilder<DesktopSystemBuilderFoundationUpgradePreviewResponse>(
+        dependencies,
+        "previewFoundationUpgrade",
+        input,
+        context,
+      );
+    },
+    async upgradeSystemBuilderFoundation(input, context = {}) {
+      return invokeSystemBuilder<DesktopSystemBuilderRevisionResponse>(
+        dependencies,
+        "upgradeFoundation",
         input,
         context,
       );
@@ -4667,6 +4965,38 @@ async function invokeSystemDeployment(
     },
   );
 }
+
+async function invokeAssetDerivedCustomization(
+  dependencies: CreateDesktopPreloadApiDependencies,
+  key: keyof typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS,
+  payload: unknown,
+  context: DesktopArtifactUploadBridgeContext,
+): Promise<unknown> {
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    !("workspaceId" in payload) ||
+    typeof payload.workspaceId !== "string" ||
+    !payload.workspaceId.trim()
+  )
+    throw new Error("Invalid request.");
+  const descriptor = DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS[key];
+  const response = await dependencies.ipcRenderer.invoke(
+    descriptor.request.value,
+    {
+      payload,
+      operation: descriptor.operation,
+      channel: descriptor.request.value,
+      requestId: context.requestId,
+      correlationId: context.correlationId,
+    },
+  );
+  return assertDesktopEnvelopeResponse(response, {
+    operation: descriptor.operation,
+    channel: descriptor.response.value,
+    message: `Received invalid desktop asset derived customization ${key} IPC response envelope.`,
+  });
+}
 import {
   DESKTOP_ASSET_AUTHORING_CREATE_WORKSPACE_AUTHORED_ASSET_OPERATION,
   DESKTOP_ASSET_AUTHORING_CREATE_WORKSPACE_AUTHORED_ASSET_REQUEST_CHANNEL,
@@ -4716,6 +5046,7 @@ import {
   DESKTOP_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_OPERATION,
   DESKTOP_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_REQUEST_CHANNEL,
   DESKTOP_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_RESPONSE_CHANNEL,
+  DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS,
   type DesktopAssetAuthoringCreateWorkspaceAuthoredAssetResponse,
   type DesktopAssetAuthoringCreateDraftResponse,
   type DesktopAssetAuthoringUpdateDraftResponse,
@@ -4732,6 +5063,15 @@ import {
   type DesktopAssetAuthoringListOverridesResponse,
   type DesktopAssetAuthoringReadOverrideResponse,
   type DesktopAssetAuthoringListEffectiveSummariesResponse,
+  type DesktopAssetDerivedCustomizationListTargetsResponse,
+  type DesktopAssetDerivedCustomizationReadTargetResponse,
+  type DesktopAssetDerivedCustomizationCreateResponse,
+  type DesktopAssetDerivedCustomizationUpdateResponse,
+  type DesktopAssetDerivedCustomizationReviewResponse,
+  type DesktopAssetDerivedCustomizationPublishResponse,
+  type DesktopAssetDerivedCustomizationAbandonResponse,
+  type DesktopAssetDerivedCustomizationListResponse,
+  type DesktopAssetDerivedCustomizationReadResponse,
 } from "../../../../modules/contracts/ipc";
 import type {
   CopyUserLibraryAssetToWorkspaceCommand,

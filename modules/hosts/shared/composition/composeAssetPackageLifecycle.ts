@@ -1,6 +1,7 @@
 import type { AssetDefinitionRepositoryPort } from "../../../application/ports/asset";
 import type {
   AssetImplementationArtifactPort,
+  AssetImplementationBackingResourceRepositoryPort,
   AssetImplementationRepositoryPort,
 } from "../../../application/ports/asset-implementation";
 import {
@@ -23,6 +24,7 @@ export function composeAssetPackageLifecycle(options: {
   readonly documents: StructuredDocumentStore;
   readonly definitions: AssetDefinitionRepositoryPort;
   readonly implementations: AssetImplementationRepositoryPort;
+  readonly backingResources: AssetImplementationBackingResourceRepositoryPort;
   readonly artifacts: AssetImplementationArtifactPort;
   readonly signatureVerifier?: AssetPackageSignatureVerifier;
   readonly nextInspectionId: () => string;
@@ -49,6 +51,7 @@ export function composeAssetPackageLifecycle(options: {
         trust,
         definitions: options.definitions,
         implementations: options.implementations,
+        backingResources: options.backingResources,
         now: options.now,
       }),
       list: new ListAssetPackagesUseCase(repository),

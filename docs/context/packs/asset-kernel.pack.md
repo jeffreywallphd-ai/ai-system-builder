@@ -33,7 +33,10 @@ Use this pack for tasks involving:
 - Resource-backed views are computed descriptor read models; they must not scan storage, read bytes/content, call providers/network/runtimes, or persist mappings by default.
 - Generated outputs become reusable only after explicit finalization/registration; external repository objects become assets only after explicit import/localization/registration.
 - Workspace-aware Asset Library reads require explicit workspace context and must not fall back to global records.
-- System Foundation availability is by `system.foundation@1.0.0` workspace activation reference; workspace creation must not install/copy/seed pack definitions.
+- System Foundation availability is by an exact workspace activation reference.
+  Existing `system.foundation@1.0.0` activations remain valid; newly created
+  workspaces reference `system.foundation@3.0.0`. Workspace creation must not
+  install, copy, or seed definitions.
 - Executable source, bundles, evidence, and host components live outside Asset Kernel records. Exact implementation releases bind to definitions through ADR-0030 contracts.
 
 ## Canonical Asset Terminology
@@ -60,10 +63,24 @@ Use this pack for tasks involving:
 - Local JSON persistence adapters live in `modules/adapters/persistence/asset` and store JSON-compatible metadata only.
 - Host composition uses internal helpers under `modules/hosts/shared/composition` and must keep runtime roots separate from Asset Kernel records.
 - Desktop IPC, server API, preload, renderer, and thin-client surfaces consume read/mutation wrappers rather than local persistence, host helpers, or application services directly.
-- `system.foundation@1.0.0` includes a functional construction kit whose exact
-  definitions resolve through closed trusted built-in or declarative-engine
-  bindings. Shared Catalog previews are bounded and side-effect free; policy
-  defaults fail closed and cannot expand platform authority.
+- `system.foundation@1.0.0`, `system.foundation@2.0.0`, and
+  `system.foundation@3.0.0` are independently addressable immutable construction
+  kits. Hosts install all releases and seed
+  exact, separate trusted implementation bindings and backing resources. Shared
+  Catalog previews are bounded and side-effect free; policy defaults fail closed
+  and cannot expand platform authority. V3 adds property-complete presentation
+  schemas and bounded semantic theme roles without exposing arbitrary CSS.
+- Only the current release adds definition-owned visual slots. Qualified current
+  visual backing bundles contain the real declarative frontend structure,
+  bounded named regions, fixtures, and styles interpreted by trusted renderers;
+  legacy definitions remain unchanged and backing files are not reduced to
+  metadata about absent implementation resources.
+- Trusted built-in initialization preserves an existing compatible immutable
+  backing-resource record for an exact release. Upgrades may fill missing exact
+  resources, but must not overwrite retained release artifacts or digests.
+- Preview or resource enrichment must also preserve the exact release's facet,
+  runtime, entry-key, and compatibility identity; changing those semantics
+  requires a new release instead of rewriting a trusted seed in place.
 
 ## Resource-Backed View Rules
 
