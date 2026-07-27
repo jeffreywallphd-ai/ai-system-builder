@@ -751,9 +751,14 @@ def _emit_rows(
     base_name: str,
     metadata: dict[str, object],
     task_type: str,
+    output_directory: Path | None = None,
 ) -> PythonRuntimeOutputDescriptor:
     suffix = {"jsonl": ".jsonl", "json": ".json", "csv": ".csv", "parquet": ".parquet"}[output_format]
-    fd, temp_path = tempfile.mkstemp(prefix=f"{base_name}-{role}-", suffix=suffix)
+    fd, temp_path = tempfile.mkstemp(
+        prefix=f"{base_name}-{role}-",
+        suffix=suffix,
+        dir=str(output_directory) if output_directory is not None else None,
+    )
     path = Path(temp_path)
 
     try:
@@ -798,6 +803,7 @@ def _emit_rows(
     return PythonRuntimeOutputDescriptor(
         name=base_name if role == "dataset" else f"{base_name}-{role}",
         role=role,
+        outputHandle=path.name,
         tempPath=temp_path,
         mediaType=media_type,
         sizeBytes=path.stat().st_size,
@@ -1184,6 +1190,7 @@ def prepare_training_dataset(
     example_generator: Callable[[list, object], list[GeneratedQaExample]] = generate_qa_examples_for_chunks,
     text_value_generator: Callable[[str, object], str] = generate_text_value,
     on_generation_progress: Callable[[dict[str, int]], None] | None = None,
+    output_directory: Path | None = None,
 ) -> PrepareTrainingDatasetResult:
     task_type, task_recipe = _resolve_task_recipe(payload)
     try:
@@ -1242,6 +1249,7 @@ def prepare_training_dataset(
         base_name,
         {**output_metadata, "partition": "dataset"},
         task_type,
+        output_directory,
     )
 
     summary = DatasetPreparationSummary(

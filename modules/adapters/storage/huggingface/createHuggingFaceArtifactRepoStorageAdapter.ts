@@ -13,9 +13,11 @@ import {
   type RetrieveArtifactFromRepoRequest,
   type StoreArtifactInRepoRequest,
 } from "../../../contracts/storage";
+import { SecureEgressBroker } from "../../security/egress";
 
 const HUGGING_FACE_PROVIDER = "huggingface" as const;
 const DEFAULT_REVISION = "main" as const;
+const CONVERTED_PARQUET_REVISION = "refs/convert/parquet" as const;
 const DEFAULT_HUB_BASE_URL = "https://huggingface.co" as const;
 
 type HuggingFaceRepoType = "dataset" | "model";
@@ -34,6 +36,8 @@ export interface HuggingFaceFetchResponse {
   headers: HuggingFaceFetchResponseHeaders;
   arrayBuffer: () => Promise<ArrayBuffer>;
   json: <T = unknown>() => Promise<T>;
+  readonly url?: string;
+  readonly body?: ReadableStream<Uint8Array> | null;
 }
 
 export type HuggingFaceFetchImplementation = (
@@ -115,7 +119,7 @@ function toUploadContent(content: Uint8Array, mediaType?: string): Blob | Uint8A
 
 export interface CreateHuggingFaceArtifactRepoStorageAdapterOptions {
   accessToken?: string;
-  accessTokenProvider?: () => string | undefined;
+  accessTokenProvider?: () => string | undefined | Promise<string | undefined>;
   fetchImplementation?: HuggingFaceFetchImplementation;
   hubBaseUrl?: string;
   defaultRepoType?: HuggingFaceRepoType;
@@ -124,6 +128,14 @@ export interface CreateHuggingFaceArtifactRepoStorageAdapterOptions {
     fetchImplementation: HuggingFaceFetchImplementation,
     hubBaseUrl: string,
   ) => Promise<HuggingFaceHubClient>;
+  authorizeRepositoryCreate?: (request: {
+    readonly provider: "huggingface";
+    readonly repository: string;
+    readonly visibility: "private" | "public";
+  }) => Promise<boolean>;
+  egressBroker?: Pick<SecureEgressBroker, "createSession">;
+  maximumDownloadBytes?: number;
+  maximumDatasetParquetFiles?: number;
 }
 
 function resolveRequestContext(
@@ -354,6 +366,20 @@ function toRepoDesignation(target: ResolvedHuggingFaceTarget): HuggingFaceRepoDe
   };
 }
 
+function encodeHubPath(value: string): string {
+  return value.split("/").map((segment) => encodeURIComponent(segment)).join("/");
+}
+
+function toBrokeredDownloadUrl(hubBaseUrl: string, target: ResolvedHuggingFaceTarget): string {
+  if (target.repoType === "dataset" && target.revision === CONVERTED_PARQUET_REVISION) {
+    return `${hubBaseUrl}/api/datasets/${encodeHubPath(target.repositoryName)}`
+      + `/parquet/${encodeHubPath(target.pathInRepo)}`;
+  }
+  const repositoryPrefix = target.repoType === "dataset" ? "datasets/" : "";
+  return `${hubBaseUrl}/${repositoryPrefix}${encodeHubPath(target.repositoryName)}`
+    + `/resolve/${encodeURIComponent(target.revision)}/${encodeHubPath(target.pathInRepo)}`;
+}
+
 function resolveRepositoryIdentity(repositoryName: string): ResolvedHuggingFaceRepositoryIdentity {
   const [namespace, ...nameSegments] = repositoryName.split("/");
   const name = nameSegments.join("/");
@@ -524,7 +550,7 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
 ): ArtifactRepoStoragePort & HuggingFaceRepoBrowserPort {
   const fallbackToken = options.accessToken ?? process.env.HF_TOKEN ?? process.env.HUGGING_FACE_TOKEN;
   const accessTokenProvider = options.accessTokenProvider;
-  const getAccessToken = () => accessTokenProvider?.() ?? fallbackToken;
+  const getAccessToken = async () => (await accessTokenProvider?.()) ?? fallbackToken;
   const maybeFetchImplementation = options.fetchImplementation
     ?? (globalThis as { fetch?: HuggingFaceFetchImplementation }).fetch;
   if (!maybeFetchImplementation) {
@@ -535,6 +561,14 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
   const resolvedFetchImplementation: HuggingFaceFetchImplementation = maybeFetchImplementation;
   const hubBaseUrl = options.hubBaseUrl?.replace(/\/$/, "") ?? DEFAULT_HUB_BASE_URL;
   const defaultRepoType = options.defaultRepoType ?? "dataset";
+  const egressBroker = options.egressBroker ?? new SecureEgressBroker({
+    policy: { allowedProtocols: ["https:"] },
+  });
+  const maximumDownloadBytes = options.maximumDownloadBytes ?? 512 * 1024 * 1024;
+  const maximumDatasetParquetFiles = options.maximumDatasetParquetFiles ?? 2_000;
+  if (!Number.isSafeInteger(maximumDatasetParquetFiles) || maximumDatasetParquetFiles < 1) {
+    throw new Error("maximumDatasetParquetFiles must be a positive safe integer.");
+  }
   const providedHubClient = options.hubClient;
   const officialHubClientLoader = options.officialHubClientLoader ?? loadOfficialHubClient;
   let lazyHubClientPromise: Promise<HuggingFaceHubClient> | undefined;
@@ -574,7 +608,7 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     return normalized;
   }
 
-  function toDatasetTreeBrowsePath(repository: string, revision: string): string {
+  function toDatasetParquetBrowsePath(repository: string): string {
     const [namespace, ...datasetNameSegments] = repository.split("/");
     const datasetName = datasetNameSegments.join("/");
     if (!namespace?.trim() || !datasetName.trim()) {
@@ -585,13 +619,52 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
 
     const encodedNamespace = encodeURIComponent(namespace.trim());
     const encodedDatasetName = encodeURIComponent(datasetName.trim());
-    const encodedRevision = encodeURIComponent(revision);
-    return `/api/datasets/${encodedNamespace}/${encodedDatasetName}/tree/${encodedRevision}?recursive=1`;
+    return `/api/datasets/${encodedNamespace}/${encodedDatasetName}/parquet`;
   }
 
-  async function fetchJsonFromHub<T>(path: string, operation: HuggingFaceOperation, context: ApplicationRequestContext): Promise<T> {
+  function parseLogicalParquetPath(repository: string, value: string): string {
+    const url = new URL(value);
+    const hub = new URL(hubBaseUrl);
+    if (
+      url.origin !== hub.origin
+      || url.username.length > 0
+      || url.password.length > 0
+      || url.search.length > 0
+      || url.hash.length > 0
+    ) {
+      throw new HuggingFaceAdapterValidationError(
+        "Dataset parquet listing returned a URL outside the configured Hugging Face hub.",
+      );
+    }
+    const expectedPrefix = `/api/datasets/${encodeHubPath(repository)}/parquet/`;
+    if (!url.pathname.startsWith(expectedPrefix)) {
+      throw new HuggingFaceAdapterValidationError(
+        "Dataset parquet listing returned an unexpected logical file URL.",
+      );
+    }
+    const path = url.pathname.slice(expectedPrefix.length)
+      .split("/")
+      .map((segment) => decodeURIComponent(segment));
+    if (
+      path.length < 3
+      || path.some((segment) => !segment || segment === "." || segment === "..")
+      || !path[path.length - 1]?.toLowerCase().endsWith(".parquet")
+    ) {
+      throw new HuggingFaceAdapterValidationError(
+        "Dataset parquet listing returned an invalid logical file path.",
+      );
+    }
+    return path.join("/");
+  }
+
+  async function fetchJsonFromHub<T>(
+    path: string,
+    operation: HuggingFaceOperation,
+    context: ApplicationRequestContext,
+    accessToken: string | undefined,
+  ): Promise<T> {
     const headers: Record<string, string> = {};
-    const token = getAccessToken()?.trim();
+    const token = accessToken?.trim();
     if (token) {
       headers.authorization = `Bearer ${token}`;
     }
@@ -617,6 +690,7 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
   async function createDatasetRepositoryIfMissing(
     target: ResolvedHuggingFaceTarget,
     accessToken: string,
+    visibility: "private" | "public",
   ): Promise<void> {
     const repositoryIdentity = resolveRepositoryIdentity(target.repositoryName);
     const response = await resolvedFetchImplementation(`${hubBaseUrl}/api/repos/create`, {
@@ -629,6 +703,7 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
         name: repositoryIdentity.name,
         organization: repositoryIdentity.namespace,
         type: target.repoType,
+        private: visibility === "private",
       }),
     });
 
@@ -668,7 +743,30 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
       }
     }
 
-    await createDatasetRepositoryIfMissing(target, accessToken);
+    const creation = request.repositoryCreation;
+    if (!creation?.approved) {
+      throw createContractError(
+        "not-found",
+        "The target repository does not exist. Explicit repository-creation approval is required.",
+        { details: { provider: HUGGING_FACE_PROVIDER, repository: target.repositoryName } },
+      );
+    }
+    const authorized = options.authorizeRepositoryCreate
+      ? await options.authorizeRepositoryCreate({
+          provider: HUGGING_FACE_PROVIDER,
+          repository: target.repositoryName,
+          visibility: creation.visibility,
+        })
+      : true;
+    if (!authorized) {
+      throw createContractError(
+        "unavailable",
+        "Provider repository creation is not authorized for this principal.",
+        { details: { provider: HUGGING_FACE_PROVIDER, repository: target.repositoryName } },
+      );
+    }
+
+    await createDatasetRepositoryIfMissing(target, accessToken, creation.visibility);
 
     await hubClient.uploadFile({
       repo: toRepoDesignation(target),
@@ -687,21 +785,23 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     context: ApplicationRequestContext = {},
   ) => {
     const requestContext = resolveRequestContext(context);
+    let accessToken: string | undefined;
 
     try {
+      accessToken = await getAccessToken();
       const resolvedTarget = resolveTarget(request.target, defaultRepoType);
       const hubClient = await resolveHubClient();
       const exists = await hubClient.fileExists({
         repo: toRepoDesignation(resolvedTarget),
         path: resolvedTarget.pathInRepo,
         revision: resolvedTarget.revision,
-        accessToken: getAccessToken(),
+        accessToken,
       });
 
       return createHasArtifactInRepoSuccessResult(exists, requestContext);
     } catch (error) {
       return createHasArtifactInRepoFailureResult(
-        mapUnexpectedHubError("hasArtifactInRepo", error, getAccessToken()),
+        mapUnexpectedHubError("hasArtifactInRepo", error, accessToken),
         requestContext,
       );
     }
@@ -712,10 +812,11 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     context: ApplicationRequestContext = {},
   ) => {
     const requestContext = resolveRequestContext(context);
+    let token: string | undefined;
 
     try {
       const resolvedTarget = resolveTarget(request.target, defaultRepoType);
-      const token = getAccessToken()?.trim();
+      token = (await getAccessToken())?.trim();
       logHuggingFaceOperation("storeArtifactInRepo", "start", {
         repository: resolvedTarget.repositoryName,
         repoType: resolvedTarget.repoType,
@@ -770,12 +871,12 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
       const mappedError = mapUnexpectedHubError(
         "storeArtifactInRepo",
         error,
-        getAccessToken(),
+        token,
         {
           repository: request.target.repository,
           pathInRepo: request.target.path,
           revision: request.target.revision,
-          hasAccessToken: Boolean(getAccessToken()?.trim()),
+          hasAccessToken: Boolean(token),
           contentSizeBytes: request.content.byteLength,
         },
       );
@@ -801,41 +902,61 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     context: ApplicationRequestContext = {},
   ) => {
     const requestContext = resolveRequestContext(context);
+    let accessToken: string | undefined;
 
     try {
+      accessToken = await getAccessToken();
       const resolvedTarget = resolveTarget(request.target, defaultRepoType);
-      const hubClient = await resolveHubClient();
-      const response = await hubClient.downloadFile({
-        repo: toRepoDesignation(resolvedTarget),
-        path: resolvedTarget.pathInRepo,
-        revision: resolvedTarget.revision,
-        accessToken: getAccessToken(),
+      const response = await egressBroker.createSession({
+        allowedMediaTypes: [
+          "application/gzip",
+          "application/json",
+          "application/octet-stream",
+          "application/pdf",
+          "application/safetensors",
+          "application/vnd.apache.parquet",
+          "application/x-gzip",
+          "application/x-hdf5",
+          "application/x-parquet",
+          "application/x-tar",
+          "application/zip",
+          "audio/*",
+          "image/*",
+          "text/*",
+          "video/*",
+        ],
+        maximumResponseBytes: maximumDownloadBytes,
+        maximumTotalBytes: maximumDownloadBytes,
+        timeoutMs: 60_000,
+      }).fetch(toBrokeredDownloadUrl(hubBaseUrl, resolvedTarget), {
+        headers: accessToken?.trim()
+          ? { authorization: `Bearer ${accessToken.trim()}` }
+          : {},
       });
-      if (!response.ok) {
+      if (response.status < 200 || response.status >= 300) {
         return createRetrieveArtifactFromRepoFailureResult(
           mapProviderStatusError(
             "retrieveArtifactFromRepo",
             response.status,
-            getAccessToken(),
-            response.statusText,
+            accessToken,
+            undefined,
           ),
           requestContext,
         );
       }
 
-      const bytes = new Uint8Array(await response.arrayBuffer());
       return createRetrieveArtifactFromRepoSuccessResult(
         {
           target: request.target,
-          mediaType: extractMediaType(response.headers.get("content-type")),
-          sizeBytes: bytes.byteLength,
+          mediaType: extractMediaType(response.headers["content-type"] ?? null),
+          sizeBytes: response.bytes.byteLength,
         },
-        bytes,
+        response.bytes,
         requestContext,
       );
     } catch (error) {
       return createRetrieveArtifactFromRepoFailureResult(
-        mapUnexpectedHubError("retrieveArtifactFromRepo", error, getAccessToken()),
+        mapUnexpectedHubError("retrieveArtifactFromRepo", error, accessToken),
         requestContext,
       );
     }
@@ -846,13 +967,16 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     context: ApplicationRequestContext = {},
   ) => {
     const requestContext = resolveRequestContext(context);
+    let accessToken: string | undefined;
 
     try {
+      accessToken = await getAccessToken();
       const normalizedNamespace = normalizeNamespace(namespace);
       const payload = await fetchJsonFromHub<Array<{ id?: unknown }>>(
         `/api/datasets?author=${encodeURIComponent(normalizedNamespace)}&limit=100`,
         "listNamespaceDatasets",
         requestContext,
+        accessToken,
       );
       if (!Array.isArray(payload)) {
         return {
@@ -880,7 +1004,7 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     } catch (error) {
       return {
         ok: false as const,
-        error: toRepoBrowserError(mapUnexpectedHubError("listNamespaceDatasets", error, getAccessToken())),
+        error: toRepoBrowserError(mapUnexpectedHubError("listNamespaceDatasets", error, accessToken)),
         ...requestContext,
       };
     }
@@ -891,43 +1015,66 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     context: ApplicationRequestContext = {},
   ) => {
     const requestContext = resolveRequestContext(context);
+    let accessToken: string | undefined;
     try {
+      accessToken = await getAccessToken();
       const repository = normalizeDatasetRepository(input.repository);
       const revision = input.revision?.trim() || DEFAULT_REVISION;
-      const payload = await fetchJsonFromHub<Array<{ path?: unknown; type?: unknown; size?: unknown }>>(
-        toDatasetTreeBrowsePath(repository, revision),
+      if (revision !== DEFAULT_REVISION) {
+        throw new HuggingFaceAdapterValidationError(
+          "Logical parquet browsing currently supports only the default dataset revision.",
+        );
+      }
+      const payload = await fetchJsonFromHub<Record<string, Record<string, unknown>>>(
+        toDatasetParquetBrowsePath(repository),
         "listDatasetParquetFiles",
         requestContext,
+        accessToken,
       );
-      if (!Array.isArray(payload)) {
+      if (!isObjectRecord(payload) || Array.isArray(payload)) {
         return {
           ok: false as const,
           error: toRepoBrowserError(
-            createContractError("internal", "Unexpected Hugging Face dataset tree response shape."),
+            createContractError("internal", "Unexpected Hugging Face dataset parquet response shape."),
           ),
           ...requestContext,
         };
       }
 
-      const files = payload
-        .filter((entry) => (entry.type === "file" || typeof entry.type !== "string"))
-        .map((entry) => ({
-          path: typeof entry.path === "string" ? entry.path.trim() : "",
-          sizeBytes: typeof entry.size === "number" ? entry.size : undefined,
-        }))
-        .filter((entry) => entry.path.length > 0)
-        .map((entry) => ({
+      const logicalUrls: string[] = [];
+      for (const splits of Object.values(payload)) {
+        if (!isObjectRecord(splits) || Array.isArray(splits)) {
+          throw new HuggingFaceAdapterValidationError(
+            "Dataset parquet listing returned an invalid configuration entry.",
+          );
+        }
+        for (const urls of Object.values(splits)) {
+          if (!Array.isArray(urls) || urls.some((url) => typeof url !== "string")) {
+            throw new HuggingFaceAdapterValidationError(
+              "Dataset parquet listing returned an invalid split entry.",
+            );
+          }
+          if (logicalUrls.length + urls.length > maximumDatasetParquetFiles) {
+            throw new HuggingFaceAdapterValidationError(
+              `Dataset parquet listing exceeds the ${maximumDatasetParquetFiles}-file limit.`,
+            );
+          }
+          logicalUrls.push(...urls as string[]);
+        }
+      }
+
+      const files = [...new Set(logicalUrls.map((url) => parseLogicalParquetPath(repository, url)))]
+        .map((path) => ({
           repository,
-          path: entry.path,
-          revision,
-          sizeBytes: entry.sizeBytes,
+          path,
+          revision: CONVERTED_PARQUET_REVISION,
         }));
 
       return {
         ok: true as const,
         value: {
           repository,
-          revision,
+          revision: CONVERTED_PARQUET_REVISION,
           files,
         },
         ...requestContext,
@@ -935,7 +1082,7 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     } catch (error) {
       return {
         ok: false as const,
-        error: toRepoBrowserError(mapUnexpectedHubError("listDatasetParquetFiles", error, getAccessToken())),
+        error: toRepoBrowserError(mapUnexpectedHubError("listDatasetParquetFiles", error, accessToken)),
         ...requestContext,
       };
     }

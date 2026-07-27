@@ -199,7 +199,7 @@ export class AdmitAssetPackageUseCase {
           workspaceId: command.workspaceId,
           definitionRef: declaration.definitionRef,
           releaseId: release.releaseId,
-          status: "active",
+          status: "disabled",
           priority: 100,
           revision: 1,
           createdAt: now,

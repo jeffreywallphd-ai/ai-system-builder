@@ -1,11 +1,13 @@
+import type { Request } from "express";
 import type { ApproveSystemReleaseUseCase, CancelSystemBuildUseCase, CompareSystemReleasesUseCase, ListSystemBuildsUseCase, ListSystemReleasesUseCase, ReadSystemBuildUseCase, ReadSystemReleaseUseCase, RequestSystemBuildUseCase } from "../../../../application/use-cases/system-build";
 import { API_SYSTEM_BUILD_OPERATIONS, createApiError, createApiFailureResponse, createApiSuccessResponse } from "../../../../contracts/api";
 import { normalizeAssetImplementationDeploymentProfile, normalizeAssetImplementationTrustLevel } from "../../../../contracts/asset-implementation";
 import { normalizeSystemBuildId, normalizeSystemReleaseId } from "../../../../contracts/system-build";
 import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../../contracts/system-builder";
 import { createWorkspaceId } from "../../../../contracts/workspace";
+import { requireExpressAuthenticatedPrincipalId } from "../security/expressAuthContext";
 
-interface RequestLike { body?: unknown; query?: Record<string, unknown>; securityContext?: { principal?: { id?: string } } }
+interface RequestLike { body?: unknown; query?: Record<string, unknown> }
 interface ResponseLike { status(code: number): ResponseLike; json(body: unknown): void }
 export interface SystemBuildExpressPort { get(path: string, handler: (request: RequestLike, response: ResponseLike) => Promise<void>): void; post(path: string, handler: (request: RequestLike, response: ResponseLike) => Promise<void>): void; }
 export interface RegisterSystemBuildApiRoutesDependencies {
@@ -50,7 +52,7 @@ async function runList(_req: RequestLike, res: ResponseLike, operation: keyof ty
 function success(res: ResponseLike, operation: keyof typeof API_SYSTEM_BUILD_OPERATIONS, value: unknown): void { res.status(200).json(createApiSuccessResponse(API_SYSTEM_BUILD_OPERATIONS[operation], value)); }
 function invalid(res: ResponseLike, operation: keyof typeof API_SYSTEM_BUILD_OPERATIONS): void { failure(res, operation, "validation", "The system build request is invalid."); }
 function failure(res: ResponseLike, operation: keyof typeof API_SYSTEM_BUILD_OPERATIONS, code: string, message: string): void { const kind = code.includes("not-found") ? "not-found" : code.includes("conflict") ? "conflict" : "validation"; res.status(kind === "not-found" ? 404 : kind === "conflict" ? 409 : 400).json(createApiFailureResponse(createApiError(API_SYSTEM_BUILD_OPERATIONS[operation], kind, message))); }
-const actor = (request: RequestLike) => request.securityContext?.principal?.id?.trim() || "authenticated-user";
+const actor = (request: RequestLike) => requireExpressAuthenticatedPrincipalId(request as Request);
 const record = (value: unknown): Record<string, unknown> => { if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(); return value as Record<string, unknown>; };
 const required = (value: unknown): string => { if (typeof value !== "string" || !value.trim()) throw new Error(); return value.trim(); };
 const optional = (value: unknown): string | undefined => typeof value === "string" && value.trim() ? value.trim() : undefined;

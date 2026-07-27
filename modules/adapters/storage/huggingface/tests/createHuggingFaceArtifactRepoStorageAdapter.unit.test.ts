@@ -9,6 +9,7 @@ import {
   createHuggingFaceArtifactRepoStorageAdapter,
   type HuggingFaceFetchImplementation,
 } from "../createHuggingFaceArtifactRepoStorageAdapter";
+import { SecureEgressBroker } from "../../../security/egress";
 
 function createHubClientDouble() {
   return {
@@ -21,6 +22,24 @@ function createHubClientDouble() {
       },
     })),
   };
+}
+
+function createEgressBrokerDouble(
+  implementation: (url: string, options?: { headers?: Readonly<Record<string, string>> }) => Promise<{
+    url: string;
+    status: number;
+    headers: Readonly<Record<string, string>>;
+    bytes: Uint8Array;
+  }> = async (url) => ({
+    url,
+    status: 200,
+    headers: { "content-type": "image/png" },
+    bytes: new Uint8Array([1, 2, 3]),
+  }),
+) {
+  const fetch = testDouble.fn(implementation);
+  const createSession = testDouble.fn(() => ({ fetch }));
+  return { broker: { createSession } as never, createSession, fetch };
 }
 
 describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
@@ -91,11 +110,13 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
     expect(result.error.code).toBe("validation");
   });
 
-  it("uses official hub-client methods for has/store/retrieve", async () => {
+  it("uses official hub-client methods for has/store and the bounded broker for retrieve", async () => {
     const hubClient = createHubClientDouble();
+    const egress = createEgressBrokerDouble();
     const adapter = createHuggingFaceArtifactRepoStorageAdapter({
       hubClient,
       accessToken: "token-123",
+      egressBroker: egress.broker,
     });
 
     const hasResult = await adapter.hasArtifactInRepo(
@@ -134,12 +155,12 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
       revision: "main",
       accessToken: "token-123",
     });
-    const uploadCall = hubClient.uploadFile.mock.calls[0]?.[0] as {
+    const uploadCall = (hubClient.uploadFile.mock.calls as unknown as Array<[{
       repo: { type: string; name: string };
       branch: string;
       accessToken: string;
       file: { content: Blob | Uint8Array };
-    };
+    }]>)[0]?.[0]!;
     expect(uploadCall.repo).toEqual({ type: "dataset", name: "openai/demo" });
     expect(uploadCall.branch).toBe("main");
     expect(uploadCall.accessToken).toBe("token-123");
@@ -148,12 +169,73 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
     } else {
       expect(uploadCall.file.content instanceof Uint8Array).toBe(true);
     }
-    expect(hubClient.downloadFile).toHaveBeenCalledWith({
-      repo: { type: "dataset", name: "openai/demo" },
-      path: "artifacts/a.bin",
-      revision: "main",
-      accessToken: "token-123",
+    expect(hubClient.downloadFile).not.toHaveBeenCalled();
+    expect(egress.fetch).toHaveBeenCalledWith(
+      "https://huggingface.co/datasets/openai/demo/resolve/main/artifacts/a.bin",
+      { headers: { authorization: "Bearer token-123" } },
+    );
+    expect(egress.createSession).toHaveBeenCalledWith({
+      allowedMediaTypes: expect.any(Array),
+      maximumResponseBytes: 512 * 1024 * 1024,
+      maximumTotalBytes: 512 * 1024 * 1024,
+      timeoutMs: 60_000,
     });
+  });
+
+  it("rejects a streamed provider download that exceeds the localization byte limit", async () => {
+    const broker = new SecureEgressBroker({
+      resolveDns: async () => [{ address: "8.8.8.8", family: 4 }],
+      requestImplementation: async () => ({
+        status: 200,
+        headers: { "content-type": "application/octet-stream" },
+        body: (async function* () {
+          yield new Uint8Array(3);
+          yield new Uint8Array(3);
+        })(),
+      }),
+    });
+    const adapter = createHuggingFaceArtifactRepoStorageAdapter({
+      hubClient: createHubClientDouble(),
+      egressBroker: broker,
+      maximumDownloadBytes: 5,
+    });
+
+    const result = await adapter.retrieveArtifactFromRepo(
+      createRetrieveArtifactFromRepoRequest({
+        provider: "huggingface",
+        repository: "openai/demo",
+        path: "oversized.bin",
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected bounded localization failure.");
+    expect(result.error.message).toContain("byte limit");
+  });
+
+  it("rejects a provider download with a disallowed content type", async () => {
+    const broker = new SecureEgressBroker({
+      resolveDns: async () => [{ address: "8.8.8.8", family: 4 }],
+      requestImplementation: async () => ({
+        status: 200,
+        headers: { "content-type": "application/x-msdownload" },
+        body: (async function* () { yield new Uint8Array([1]); })(),
+      }),
+    });
+    const adapter = createHuggingFaceArtifactRepoStorageAdapter({
+      hubClient: createHubClientDouble(),
+      egressBroker: broker,
+    });
+
+    const result = await adapter.retrieveArtifactFromRepo(
+      createRetrieveArtifactFromRepoRequest({
+        provider: "huggingface",
+        repository: "openai/demo",
+        path: "unsafe.exe",
+      }),
+    );
+
+    expect(result.ok).toBe(false);
   });
 
   it("requires token for store and returns explicit unavailable auth-required error", async () => {
@@ -183,24 +265,20 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
   it("maps provider status errors to explicit contract codes", async () => {
     const hubClient = createHubClientDouble();
     let callCount = 0;
-    hubClient.downloadFile = testDouble.fn(async () => {
+    const egress = createEgressBrokerDouble(async (url) => {
       callCount += 1;
-      if (callCount === 1) {
-        throw {
-          statusCode: 404,
-          message: "Missing file",
-        };
-      }
-
-      throw {
-        statusCode: 503,
-        message: "Provider down",
+      return {
+        url,
+        status: callCount === 1 ? 404 : 503,
+        headers: { "content-type": "application/octet-stream" },
+        bytes: new Uint8Array(),
       };
     });
 
     const adapter = createHuggingFaceArtifactRepoStorageAdapter({
       hubClient,
       accessToken: "token",
+      egressBroker: egress.broker,
     });
 
     const notFound = await adapter.retrieveArtifactFromRepo(
@@ -260,7 +338,67 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
     expect(result.error.details?.contentSizeBytes).toBe(3);
   });
 
-  it("creates dataset repository and retries upload when store fails with provider 404", async () => {
+  it("does not create a missing repository without explicit approval", async () => {
+    const hubClient = createHubClientDouble();
+    hubClient.uploadFile = testDouble.fn(async () => {
+      throw { statusCode: 404, message: "Repository not found" };
+    });
+    const fetchImplementation = testDouble.fn(async () => new Response(null, { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+    const adapter = createHuggingFaceArtifactRepoStorageAdapter({
+      hubClient,
+      fetchImplementation,
+      accessToken: "hf_test",
+    });
+
+    const result = await adapter.storeArtifactInRepo(
+      createStoreArtifactInRepoRequest(new Uint8Array([1]), {
+        target: {
+          provider: "huggingface",
+          repository: "OpenFinAL/missing",
+          path: "dataset/train.parquet",
+        },
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(fetchImplementation).toHaveBeenCalledTimes(0);
+  });
+
+  it("does not create a missing repository when managed authorization denies it", async () => {
+    const hubClient = createHubClientDouble();
+    hubClient.uploadFile = testDouble.fn(async () => {
+      throw { statusCode: 404, message: "Repository not found" };
+    });
+    const fetchImplementation = testDouble.fn(async () => new Response(null, { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+    const authorizeRepositoryCreate = testDouble.fn(async () => false);
+    const adapter = createHuggingFaceArtifactRepoStorageAdapter({
+      hubClient,
+      fetchImplementation,
+      accessToken: "hf_test",
+      authorizeRepositoryCreate,
+    });
+
+    const result = await adapter.storeArtifactInRepo(
+      createStoreArtifactInRepoRequest(new Uint8Array([1]), {
+        target: {
+          provider: "huggingface",
+          repository: "OpenFinAL/denied",
+          path: "dataset/train.parquet",
+        },
+        repositoryCreation: { approved: true, visibility: "private" },
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(authorizeRepositoryCreate).toHaveBeenCalledWith({
+      provider: "huggingface",
+      repository: "OpenFinAL/denied",
+      visibility: "private",
+    });
+    expect(fetchImplementation).toHaveBeenCalledTimes(0);
+  });
+
+  it("creates a private dataset repository and retries upload after explicit approval", async () => {
     const hubClient = createHubClientDouble();
     let uploadAttempt = 0;
     hubClient.uploadFile = testDouble.fn(async () => {
@@ -287,6 +425,7 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
           revision: "main",
           path: "dataset/train.parquet",
         },
+        repositoryCreation: { approved: true, visibility: "private" },
       }),
     );
 
@@ -304,6 +443,7 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
           name: "ai-system-builder-test-2",
           organization: "OpenFinAL",
           type: "dataset",
+          private: true,
         }),
       },
     );
@@ -336,6 +476,7 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
           revision: "main",
           path: "dataset/eval.parquet",
         },
+        repositoryCreation: { approved: true, visibility: "public" },
       }),
     );
 
@@ -375,16 +516,17 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
 
   it("maps provider 403 with token to invalid-token-or-access-denied unavailable failure", async () => {
     const hubClient = createHubClientDouble();
-    hubClient.downloadFile = testDouble.fn(async () => {
-      throw {
-        statusCode: 403,
-        message: "Forbidden",
-      };
-    });
+    const egress = createEgressBrokerDouble(async (url) => ({
+      url,
+      status: 403,
+      headers: { "content-type": "application/octet-stream" },
+      bytes: new Uint8Array(),
+    }));
 
     const adapter = createHuggingFaceArtifactRepoStorageAdapter({
       hubClient,
       accessToken: "hf_xxx",
+      egressBroker: egress.broker,
     });
 
     const result = await adapter.retrieveArtifactFromRepo(
@@ -406,13 +548,16 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
 
   it("maps non-ok download response statuses (401/403 family) without reporting not-found", async () => {
     const hubClient = createHubClientDouble();
-    hubClient.downloadFile = testDouble.fn(async () => new Response(null, {
+    const egress = createEgressBrokerDouble(async (url) => ({
+      url,
       status: 401,
-      statusText: "Unauthorized",
+      headers: { "content-type": "application/octet-stream" },
+      bytes: new Uint8Array(),
     }));
 
     const adapter = createHuggingFaceArtifactRepoStorageAdapter({
       hubClient,
+      egressBroker: egress.broker,
     });
 
     const result = await adapter.retrieveArtifactFromRepo(
@@ -456,12 +601,13 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
     expect(fetchImplementation).toHaveBeenCalled();
   });
 
-  it("lists dataset repository files", async () => {
-    const fetchImplementation = testDouble.fn(async () => new Response(JSON.stringify([
-      { path: "data/train-00000.parquet", type: "file", size: 1234 },
-      { path: "data/README.md", type: "file", size: 45 },
-      { path: "data/sub/test-00000.parquet", type: "file", size: 321 },
-    ]), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+  it("lists only bounded logical dataset parquet files", async () => {
+    const fetchImplementation = testDouble.fn(async () => new Response(JSON.stringify({
+      default: {
+        train: ["https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet/default/train/0.parquet"],
+        test: ["https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet/default/test/0.parquet"],
+      },
+    }), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
     const adapter = createHuggingFaceArtifactRepoStorageAdapter({
       hubClient: createHubClientDouble(),
       fetchImplementation,
@@ -479,27 +625,78 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
     expect(result.value.files).toEqual([
       {
         repository: "OpenFinAL/financial-news",
-        path: "data/train-00000.parquet",
-        revision: "main",
-        sizeBytes: 1234,
+        path: "default/train/0.parquet",
+        revision: "refs/convert/parquet",
       },
       {
         repository: "OpenFinAL/financial-news",
-        path: "data/README.md",
-        revision: "main",
-        sizeBytes: 45,
-      },
-      {
-        repository: "OpenFinAL/financial-news",
-        path: "data/sub/test-00000.parquet",
-        revision: "main",
-        sizeBytes: 321,
+        path: "default/test/0.parquet",
+        revision: "refs/convert/parquet",
       },
     ]);
+    expect(result.value.revision).toBe("refs/convert/parquet");
     expect(fetchImplementation).toHaveBeenCalledWith(
-      "https://huggingface.co/api/datasets/OpenFinAL/financial-news/tree/main?recursive=1",
+      "https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet",
       { headers: {} },
     );
+  });
+
+  it("retrieves a listed converted parquet file through its logical API URL", async () => {
+    const egress = createEgressBrokerDouble();
+    const adapter = createHuggingFaceArtifactRepoStorageAdapter({
+      hubClient: createHubClientDouble(),
+      egressBroker: egress.broker,
+    });
+
+    const result = await adapter.retrieveArtifactFromRepo(
+      createRetrieveArtifactFromRepoRequest({
+        provider: "huggingface",
+        repository: "OpenFinAL/financial-news",
+        path: "default/train/0.parquet",
+        revision: "refs/convert/parquet",
+      }),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(egress.fetch.mock.calls[0]?.[0]).toBe(
+      "https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet/default/train/0.parquet",
+    );
+  });
+
+  it("rejects external logical file URLs and oversized parquet listings", async () => {
+    const externalFetch = testDouble.fn(async () => new Response(JSON.stringify({
+      default: { train: ["https://attacker.example/private.parquet"] },
+    }), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+    const externalAdapter = createHuggingFaceArtifactRepoStorageAdapter({
+      hubClient: createHubClientDouble(),
+      fetchImplementation: externalFetch,
+    });
+    const external = await externalAdapter.listDatasetParquetFiles({
+      repository: "OpenFinAL/financial-news",
+    });
+    expect(external.ok).toBe(false);
+    if (external.ok) throw new Error("Expected external URL rejection.");
+    expect(external.error.code).toBe("validation");
+
+    const oversizedFetch = testDouble.fn(async () => new Response(JSON.stringify({
+      default: {
+        train: [
+          "https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet/default/train/0.parquet",
+          "https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet/default/train/1.parquet",
+        ],
+      },
+    }), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+    const oversizedAdapter = createHuggingFaceArtifactRepoStorageAdapter({
+      hubClient: createHubClientDouble(),
+      fetchImplementation: oversizedFetch,
+      maximumDatasetParquetFiles: 1,
+    });
+    const oversized = await oversizedAdapter.listDatasetParquetFiles({
+      repository: "OpenFinAL/financial-news",
+    });
+    expect(oversized.ok).toBe(false);
+    if (oversized.ok) throw new Error("Expected bounded listing rejection.");
+    expect(oversized.error.code).toBe("validation");
   });
 
   it("maps non-browser contract error codes to internal for repo-browser responses", async () => {

@@ -348,6 +348,16 @@ This keeps storage generic while preventing image-only/file-only semantic drift 
 Current implementation note:
 
 - Image upload is the active vertical slice and is treated as a specialized ingestion path.
+- Upload admission requires a coherent allowlisted extension/media-type pair
+  plus bounded content evidence before storage. Binary formats require their
+  expected signature; JSON must parse as UTF-8; text-like formats must be valid
+  UTF-8 without NUL bytes. A caller-supplied media type or filename alone never
+  establishes the artifact type.
+- Website HTML acquisition uses one secure-egress boundary in desktop and server
+  composition. Simple HTTP and rendered-browser requests share scheme, DNS,
+  redirect, byte, deadline, media-type, and concurrency controls; browser
+  document/subresource traffic cannot bypass that boundary through service
+  workers or WebSockets.
 - This does not imply a full ingestion engine, catalog, or ELT orchestration is implemented yet.
 
 ## Artifact browser read-side direction (initial image-backed slice)
@@ -355,6 +365,10 @@ Current implementation note:
 The first read-side browser/viewer slice is image-backed but artifact-shaped.
 
 - `artifact.browse` is a metadata/query concern for catalog-style listing of existing artifacts through an explicit artifact catalog application-port seam (append/browse/read catalog records).
+- Browse adapters sort and cap results before local-availability work, batch
+  storage-binding reads, and bound any remaining availability probes. This
+  prevents a large catalog or binding collection from causing unbounded
+  per-record I/O.
 - `artifact.read` is a single-artifact detail/read-model concern for selected artifact metadata from the same catalog seam.
 - `artifact.content.read` is a descriptor-oriented artifact-content contract and must not be collapsed into browse/detail contracts or byte payload contracts.
 - actual image/media bytes for rendering should be delivered through a separate retrieval path that still resolves by storage key at the boundary.
@@ -408,11 +422,25 @@ Desktop host composition also wires the shared `PublishArtifactToRepoUseCase` wi
 
 ### Hugging Face provider hardening status
 
-The Hugging Face adapter remains one provider behind the generic artifact-repo port and uses the official `@huggingface/hub` client methods (`fileExists`, `uploadFile`, `downloadFile`) as the only integration path.
+The Hugging Face adapter remains one provider behind the generic artifact-repo
+port. Existence checks and uploads use the official `@huggingface/hub` client;
+localization constructs the validated provider resolve URL and streams it
+through the shared secure-egress broker so provider redirects, response bytes,
+media type, deadline, and concurrency are bounded before local persistence.
 
 - Provider/repo/path validation is explicit and deterministic.
+- Dataset browse uses the provider's logical converted-Parquet inventory rather
+  than a recursive raw-file tree. It accepts only bounded same-Hub URLs for the
+  exact dataset and exposes stable logical config/split paths.
 - Auth is adapter-boundary-only and required for write operations.
+- A missing repository is not auto-created. Creation requires an explicit
+  approved request with a private/public choice; managed hosts additionally
+  authorize the exact provider repository for the active organization before
+  provider I/O. Private is the UI default and public is never inferred.
 - Provider status mapping is explicit (`validation`, `not-found`, `unavailable`, `internal`).
+- Localization drops provider authorization on cross-origin redirects, rejects
+  private/reserved redirect targets, and returns no partial content when a
+  transfer violates its configured bounds.
 - Published-backing linkage is persisted as `ArtifactStorageBinding` (`role = published`, `kind = artifact-repo`) after successful publish verification.
 - Artifact detail read flow can surface published-backing metadata from binding records so thin-client detail panels can render durable remote backing state.
 - Published backing data is now hardened as a structured target + verification model:
@@ -434,9 +462,21 @@ The Hugging Face adapter remains one provider behind the generic artifact-repo p
 ## Hugging Face token persistence
 
 - Hugging Face token configuration is stored as host-side config, not browser-only state.
-- Server path persists token under server storage root config directory and surfaces masked status to thin client.
+- Managed server paths persist a separate owner-only provider credential beneath
+  the server storage root for each organization. The active authenticated
+  organization is required for status, mutation, and use; status and API
+  responses never contain the raw secret.
+- Managed token updates through both the focused token API and generic Settings
+  API converge on the same organization-aware credential service. There is no
+  second global in-memory token slot.
+- A legacy server token or `HF_TOKEN`/`HUGGING_FACE_TOKEN` value is never
+  assigned across a pooled deployment. Migration requires an explicit target
+  organization (or the one organization in dedicated placement), writes the
+  target atomically, and retires the legacy file only after success.
 - Desktop path persists token under desktop AppData artifact config directory and surfaces masked status to renderer via preload/IPC.
-- Hugging Face artifact-repo storage adapter resolves token dynamically from this config seam for publish/register/localize/verify workflows.
+- Hugging Face artifact-repo and model adapters resolve one token dynamically
+  for the active operation; managed hosts supply the organization-aware
+  provider while local hosts retain their device-local provider.
 
 ## Asset Kernel local record persistence
 
@@ -481,6 +521,15 @@ Workspace system-pack activation storage remains a reference-record store only. 
 ## Workspace-scoped artifacts and uploads
 
 Artifact catalog browse, artifact detail/content reads, and upload/store flows are workspace-scoped. Callers must provide an explicit workspace id; missing or invalid workspace context fails safely and must not fall back to legacy global artifact catalog records. New uploaded artifact records carry workspace ownership, and upload-generated storage keys use a workspace namespace under `workspaces/<workspaceId>/artifacts/files/` rather than display names or raw host paths. Legacy unscoped artifact records are not auto-migrated or shown in workspace-scoped artifact pages; any future import/migration must be explicit.
+
+Desktop artifact publication is also workspace-scoped. The use case authorizes
+the workspace principal before artifact/catalog/binding/credential/provider
+reads, requires artifact-write and provider-credential-use capabilities, and
+requires the repository-create capability plus explicit approval when a missing
+repository may be created. Desktop authorization decisions use a security audit
+sink distinct from diagnostics. Renderer media previews use revocable Blob
+object URLs over exact bounded byte slices; data URLs and base64 copies are not
+part of the desktop preview transport.
 
 User/workspace-owned image asset records, generated-output descriptors/finalization, dataset preparation outputs, model inventory records, and runtime task outputs created from workspace actions require an explicit workspace id. Missing workspace context must fail safely and must not fall back to global records. Workspace-owned records from one workspace must not be listed or read as another workspace. Generated-output finalization validates source workspace ownership before writing finalized image assets or Asset Kernel instances, and finalized provenance/metadata carries workspace context. Legacy global image/model/dataset/generated-output records are not silently assigned to a hidden/default workspace and are not auto-migrated; any import/migration flow must be explicit. Global runtime readiness, installed-runtime/model diagnostics, and provider configuration diagnostics may remain global, but they must not be presented as workspace-owned resource records. User Library and cross-workspace reuse remain governed by their own canonical docs.
 

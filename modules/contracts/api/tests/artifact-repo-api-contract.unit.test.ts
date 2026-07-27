@@ -36,6 +36,7 @@ describe("artifact-repo api contracts", () => {
         path: "artifacts/a.bin",
       },
       contentBase64: "AQID",
+      repositoryCreation: { approved: true, visibility: "private" },
       boundary: {
         host: "server",
         source: " thin-client.repo-store ",
@@ -49,6 +50,10 @@ describe("artifact-repo api contracts", () => {
       path: "artifacts/a.bin",
     });
     expect(storeRequest.payload.boundary.source).toBe("thin-client.repo-store");
+    expect(storeRequest.payload.repositoryCreation).toEqual({
+      approved: true,
+      visibility: "private",
+    });
     expect("status" in hasRequest).toBe(false);
   });
 

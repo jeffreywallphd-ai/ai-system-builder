@@ -93,6 +93,7 @@ class CountingSourceIdentityService extends AssetSourceIdentityService {
 function command(overrides: Partial<LocalizeExternalRepositoryObjectCommand> = {}): LocalizeExternalRepositoryObjectCommand {
   return {
     operation: "asset.localize-external-repository-object",
+    workspaceId: "workspace-a" as never,
     viewId: "view.external",
     approval: {
       userConfirmed: true,

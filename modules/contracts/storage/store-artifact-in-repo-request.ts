@@ -9,6 +9,12 @@ export interface StoreArtifactInRepoRequest {
   mediaType?: string;
   metadata?: Readonly<Record<string, unknown>>;
   overwrite?: boolean;
+  repositoryCreation?: ArtifactRepositoryCreationPolicy;
+}
+
+export interface ArtifactRepositoryCreationPolicy {
+  readonly approved: true;
+  readonly visibility: "private" | "public";
 }
 
 export function createStoreArtifactInRepoRequest(
@@ -18,13 +24,29 @@ export function createStoreArtifactInRepoRequest(
     mediaType?: string;
     metadata?: Readonly<Record<string, unknown>>;
     overwrite?: boolean;
+    repositoryCreation?: ArtifactRepositoryCreationPolicy;
   },
 ): StoreArtifactInRepoRequest {
+  const repositoryCreation = normalizeRepositoryCreationPolicy(options.repositoryCreation);
   return {
     target: normalizeArtifactRepoTarget(options.target),
     content,
     mediaType: options.mediaType,
     metadata: options.metadata,
     overwrite: options.overwrite,
+    ...(repositoryCreation ? { repositoryCreation } : {}),
   };
+}
+
+function normalizeRepositoryCreationPolicy(
+  value: ArtifactRepositoryCreationPolicy | undefined,
+): ArtifactRepositoryCreationPolicy | undefined {
+  if (!value) return undefined;
+  if (value.approved !== true) {
+    throw new Error("Repository creation requires explicit approval.");
+  }
+  if (value.visibility !== "private" && value.visibility !== "public") {
+    throw new Error("Repository creation visibility must be private or public.");
+  }
+  return { approved: true, visibility: value.visibility };
 }

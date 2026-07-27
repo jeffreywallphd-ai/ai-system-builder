@@ -1,0 +1,11 @@
+{
+  "name": "brace-expansion",
+  "version": "5.0.8",
+  "private": true,
+  "type": "commonjs",
+  "main": "index.cjs",
+  "license": "MIT",
+  "dependencies": {
+    "brace-expansion-upstream": "npm:brace-expansion@5.0.8"
+  }
+}

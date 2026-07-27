@@ -212,6 +212,7 @@ describe("registerArtifactRepoApiRoutes", () => {
             path: "artifacts/a.bin",
           },
           contentBase64: Buffer.from([1, 2, 3]).toString("base64"),
+          repositoryCreation: { approved: true, visibility: "private" },
         },
         headers: {},
       },
@@ -229,7 +230,12 @@ describe("registerArtifactRepoApiRoutes", () => {
       },
       { requestId: undefined, correlationId: undefined },
     );
-    expect(storeArtifactInRepoUseCase.execute).toHaveBeenCalled();
+    expect(storeArtifactInRepoUseCase.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repositoryCreation: { approved: true, visibility: "private" },
+      }),
+      { requestId: undefined, correlationId: undefined },
+    );
     await handlers.get("/api/artifact/publish")?.(
       {
         body: {
@@ -239,22 +245,27 @@ describe("registerArtifactRepoApiRoutes", () => {
             repository: "openai/demo",
             path: "artifacts/a.bin",
           },
+          repositoryCreation: { approved: true, visibility: "public" },
         },
         headers: {},
       },
       response,
     );
 
-    expect(publishArtifactToRepoUseCase.execute).toHaveBeenCalledWith({
-      artifactId: "uploads/a.bin",
-      target: {
-        provider: "huggingface",
-        repository: "openai/demo",
-        revision: undefined,
-        path: "artifacts/a.bin",
+    expect(publishArtifactToRepoUseCase.execute).toHaveBeenCalledWith(
+      {
+        artifactId: "uploads/a.bin",
+        target: {
+          provider: "huggingface",
+          repository: "openai/demo",
+          revision: undefined,
+          path: "artifacts/a.bin",
+        },
+        mediaType: undefined,
+        repositoryCreation: { approved: true, visibility: "public" },
       },
-      mediaType: undefined,
-    });
+      { requestId: undefined, correlationId: undefined },
+    );
     expect(response.status).toHaveBeenCalledWith(200);
 
     await handlers.get("/api/artifact/source/verify")?.(

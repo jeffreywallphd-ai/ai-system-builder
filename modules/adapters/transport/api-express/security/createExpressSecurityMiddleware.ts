@@ -65,7 +65,7 @@ export function createExpressSecurityMiddleware(deps: { verifyToken: (req: { tok
       const organizationContext = organizationResult.organizationId
         ? setOrganizationContext(request, context, organizationResult.organizationId)
         : undefined;
-      if (policy.scopes?.some((scope) => !context.principal.scopes.includes(scope as AuthContext["principal"]["scopes"][number]))) {
+      if (deps.mode !== "oidc-bearer" && policy.scopes?.some((scope) => !context.principal.scopes.includes(scope))) {
         return response.status(403).json(createSecurityApiFailure({ status: 403, code: "security.forbidden", message: "Forbidden." }));
       }
       if (organizationContext && deps.organizationContextScope) {

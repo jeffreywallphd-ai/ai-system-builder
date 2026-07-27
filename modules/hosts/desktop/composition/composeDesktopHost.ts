@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { cpus, freemem, totalmem } from "node:os";
+import path from "node:path";
 import type { LoggingPort } from "../../../application/ports/logging";
 import type {
   ApplicationSecretsPort,
@@ -102,6 +103,10 @@ import { composeExecutionPlanServices } from "../../shared/composition/composeEx
 import { composeConversationExecutionServices } from "../../shared/composition/composeConversationExecutionServices";
 import { registerElectronIpc } from "../../../adapters/transport/ipc-electron/registerElectronIpc";
 import type { IpcMainHandlePort } from "../../../adapters/transport/ipc-electron/ipcMainHandlePort";
+import type { IpcSenderTrustPolicy } from "../../../adapters/transport/ipc-electron/ipcMainHandlePort";
+import { createJsonlSecurityAuditLogAdapter } from "../../../adapters/security/audit/createJsonlSecurityAuditLogAdapter";
+import type { LocalIdentityProfile } from "../../../contracts/organization";
+import { composeDesktopWorkspaceAuthorization } from "./composeDesktopWorkspaceAuthorization";
 import {
   createLoggingConfig,
   type LoggingConfig,
@@ -222,6 +227,7 @@ export interface ComposeDesktopHostLoggingOptions {
 }
 
 export interface ComposeDesktopHostOptions {
+  localIdentity?: LocalIdentityProfile;
   persistence?: {
     documents: StructuredDocumentStore;
     organizationDocuments?: StructuredDocumentStore;
@@ -245,6 +251,7 @@ export interface ComposeDesktopHostOptions {
 
 export interface RegisterDesktopArtifactUploadIpcOptions {
   ipcMain: IpcMainHandlePort;
+  senderTrust: IpcSenderTrustPolicy;
   storageRootDirectory: string;
   runtimeRootDirectory?: string;
 }
@@ -672,6 +679,21 @@ export function composeDesktopHost(
         },
       );
       const startupWorkspaceShell = getStartupWorkspaceShell();
+      const workspaceAuthorization =
+        options.persistence?.documents && options.localIdentity
+          ? composeDesktopWorkspaceAuthorization({
+              documents: options.persistence.documents,
+              localIdentity: options.localIdentity,
+              audit: createJsonlSecurityAuditLogAdapter(
+                path.join(
+                  registerOptions.storageRootDirectory,
+                  "security",
+                  "authorization-audit.jsonl",
+                ),
+              ),
+              now: options.now,
+            })
+          : undefined;
       const runtimeReadiness = createDesktopRuntimeReadinessService({
         readPythonSupervisorState: () => "stopped",
         readComfyUiLifecycleState: () => "uninitialized",
@@ -692,6 +714,7 @@ export function composeDesktopHost(
               loggingPort,
               now: options.now,
               workspaceShell: startupWorkspaceShell,
+              workspaceAuthorization,
               documents: organizationDocuments,
             });
         },
@@ -705,6 +728,8 @@ export function composeDesktopHost(
           return async () =>
             module.composeDesktopArtifactRemoteFeature({
               artifacts: await getArtifactFeatures(),
+              workspaceShell: startupWorkspaceShell,
+              workspaceAuthorization,
               loggingPort,
               now: options.now,
               tokenProvider: () => tokenConfigStore.getToken(),
@@ -1235,6 +1260,7 @@ export function composeDesktopHost(
         },
         artifact: {
           ipcMain: registerOptions.ipcMain,
+          senderTrust: registerOptions.senderTrust,
           tokens: {
             getHuggingFaceTokenStatus: () => tokenConfigStore.getStatus(),
             setHuggingFaceToken: (token) => tokenConfigStore.setToken(token),

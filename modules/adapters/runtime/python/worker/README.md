@@ -4,11 +4,23 @@
 
 This directory contains the managed Python sidecar worker.
 
+The worker must be launched by a host supervisor on `127.0.0.1`, `localhost`, or
+`::1` with a non-privileged port and a `PYTHON_RUNTIME_AUTH_TOKEN` of at least 32
+characters. Startup rejects remote/wildcard binding and missing authentication.
+Every endpoint requires `Authorization: Bearer <current-launch-token>`; this
+includes health and capabilities. The token is private launch state and must not
+be logged or returned.
+
 Endpoints:
 
 - `GET /health`
 - `GET /capabilities`
 - `POST /models/ensure-downloaded`
+- `GET /models/status`
+- `POST /models/unload`
+- `POST /tasks/start`
+- `GET /tasks/{request_id}`
+- `POST /tasks/{request_id}/cancel`
 
 Dependency files:
 

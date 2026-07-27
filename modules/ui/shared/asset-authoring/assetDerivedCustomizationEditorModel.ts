@@ -204,6 +204,17 @@ export function buildAssetCustomizationSubmission(
   };
 }
 
+export function buildAssetCustomizationSourceUpdate(
+  hasExistingSourceOverlay: boolean,
+  sourceChanges: readonly AssetCustomizationSourceFileChange[],
+): {
+  readonly sourceChanges?: readonly AssetCustomizationSourceFileChange[];
+  readonly clearSourceOverlay?: true;
+} {
+  if (sourceChanges.length > 0) return { sourceChanges };
+  return hasExistingSourceOverlay ? { clearSourceOverlay: true } : {};
+}
+
 export function resourceRoleLabel(
   role: AssetImplementationBackingResourceRole,
 ): string {

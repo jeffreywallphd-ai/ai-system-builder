@@ -9,3 +9,7 @@ export interface IpcMainHandlePort {
     listener: IpcMainHandleListener<TRequest, TResponse>,
   ): void;
 }
+
+export interface IpcSenderTrustPolicy {
+  isTrustedSender(event: unknown): boolean;
+}

@@ -11,7 +11,8 @@ export function createExpressOrganizationAuthorizationMiddleware(deps: {
   authorizer: AuthorizeOperationService;
 }) {
   return async (request: Request, response: Response, next: NextFunction) => {
-    if (resolveApiRoutePolicy(request.method, request.path).public) return next();
+    const policy = resolveApiRoutePolicy(request.method, request.path);
+    if (policy.public) return next();
     const authContext = getExpressAuthContext(request);
     const organizationContext = getExpressOrganizationContext(request);
     if (!authContext || !organizationContext) {
@@ -27,8 +28,9 @@ export function createExpressOrganizationAuthorizationMiddleware(deps: {
         organizationId: organizationContext.organizationId,
         requestId: organizationContext.requestId,
         correlationId: organizationContext.correlationId,
-        operation: `api.${request.method.toLowerCase()}`,
-        requiredScopes: [],
+        operation: `${request.method.toUpperCase()} ${request.path}`,
+        requiredScopes: [...(policy.scopes ?? [])],
+        requiredOrganizationRoles: policy.organizationRoles,
       });
       return next();
     } catch (error) {

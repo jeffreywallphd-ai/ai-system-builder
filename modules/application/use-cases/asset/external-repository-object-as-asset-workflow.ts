@@ -107,6 +107,7 @@ export class ExternalRepositoryObjectAsAssetWorkflow<TCommand extends ExternalRe
         includeMetadata: true,
         includeResourceBackings: true,
         includeValidation: true,
+        workspaceId: command.workspaceId,
       });
       if (!detail) {
         return this.failureResult(this.failure("not-found", "External repository object view was not found.", [
@@ -128,7 +129,7 @@ export class ExternalRepositoryObjectAsAssetWorkflow<TCommand extends ExternalRe
       }
       const sourceIdentity = sourceIdentityResult.sourceIdentity;
 
-      const preDuplicate = await this.findDuplicate([sourceIdentity]);
+      const preDuplicate = await this.findDuplicate(command.workspaceId!, [sourceIdentity]);
       if (preDuplicate.result) return preDuplicate.result;
 
       const target = await this.resolveTargetDefinition(command, sourceView);
@@ -160,7 +161,7 @@ export class ExternalRepositoryObjectAsAssetWorkflow<TCommand extends ExternalRe
         resourceRefs: safeInternal.resourceRefs,
         backings: safeInternal.backings,
       });
-      const postDuplicate = await this.findDuplicate([sourceIdentity, importedIdentity], target.definitionRef);
+      const postDuplicate = await this.findDuplicate(command.workspaceId!, [sourceIdentity, importedIdentity], target.definitionRef);
       if (postDuplicate.result) return postDuplicate.result;
 
       const createdAt = this.now();
@@ -356,6 +357,7 @@ export class ExternalRepositoryObjectAsAssetWorkflow<TCommand extends ExternalRe
   }
 
   private async findDuplicate(
+    workspaceId: string,
     identities: readonly AssetSourceIdentity[],
     targetDefinitionRef?: AssetReference,
   ): Promise<{ readonly result?: AssetMutationResult; readonly diagnostics: readonly AssetMutationDiagnostic[] }> {
@@ -365,7 +367,7 @@ export class ExternalRepositoryObjectAsAssetWorkflow<TCommand extends ExternalRe
       }),
     ];
     const keys = new Set(identities.map((identity) => identity.deduplicationKey));
-    const list = await this.dependencies.instanceRepository.listInstances({ limit: this.duplicateSearchLimit });
+    const list = await this.dependencies.instanceRepository.listInstances({ limit: this.duplicateSearchLimit, workspaceId });
     const matching = list.instances.filter((instance) => storedDeduplicationKeys(instance).some((key) => keys.has(key)));
     if (matching.length === 0) return { diagnostics };
 
@@ -433,6 +435,7 @@ export class ExternalRepositoryObjectAsAssetWorkflow<TCommand extends ExternalRe
       metadata: sanitizeAssetMetadata({
         [this.options.metadataFlag]: true,
         externalRepositoryObject: {
+          workspaceId: input.command.workspaceId,
           operation: this.options.operation,
           createdAt: input.createdAt,
           sourceIdentity: input.sourceIdentity,

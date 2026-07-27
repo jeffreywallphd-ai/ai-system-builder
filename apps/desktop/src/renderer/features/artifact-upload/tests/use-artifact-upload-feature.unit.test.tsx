@@ -2,6 +2,7 @@ import { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { ARTIFACT_UPLOAD_MAXIMUM_BYTES } from "../../../../../../../modules/contracts/artifact-upload";
 import { useArtifactUploadFeature } from "../hooks/useArtifactUploadFeature";
 import type { ArtifactUploadClient } from "../api/desktopArtifactUploadClient";
 
@@ -141,6 +142,50 @@ describe("useArtifactUploadFeature", () => {
     expect(container.querySelector("[data-testid='status']")?.textContent).toBe("error");
     expect(container.querySelector("[data-testid='message']")?.textContent).toBe(
       "Select one or more artifact files before uploading.",
+    );
+  });
+
+  it("rejects oversized files before allocating their bytes", async () => {
+    const uploadArtifact = vi.fn();
+    const getAcceptedTypes = vi.fn().mockResolvedValue({
+      acceptedExtensions: [".bin"],
+      acceptedMediaTypes: ["application/octet-stream"],
+      maximumBytes: ARTIFACT_UPLOAD_MAXIMUM_BYTES,
+    });
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoot = root;
+    mountedContainer = container;
+
+    await act(async () => {
+      root.render(<HookProbe client={{ uploadArtifact, getAcceptedTypes }} />);
+    });
+
+    const input = container.querySelector("input[type='file']") as HTMLInputElement;
+    const form = container.querySelector("form") as HTMLFormElement;
+    const file = new File([new Uint8Array([1])], "oversized.bin", {
+      type: "application/octet-stream",
+    });
+    Object.defineProperty(file, "size", {
+      configurable: true,
+      value: ARTIFACT_UPLOAD_MAXIMUM_BYTES + 1,
+    });
+    const arrayBuffer = vi.fn();
+    Object.defineProperty(file, "arrayBuffer", { value: arrayBuffer });
+
+    await act(async () => {
+      setInputFiles(input, [file]);
+    });
+    await act(async () => {
+      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(arrayBuffer).not.toHaveBeenCalled();
+    expect(uploadArtifact).not.toHaveBeenCalled();
+    expect(container.querySelector("[data-testid='status']")?.textContent).toBe("error");
+    expect(container.querySelector("[data-testid='message']")?.textContent).toContain(
+      `must not exceed ${ARTIFACT_UPLOAD_MAXIMUM_BYTES} bytes`,
     );
   });
 

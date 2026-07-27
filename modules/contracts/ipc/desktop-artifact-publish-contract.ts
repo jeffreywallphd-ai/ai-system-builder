@@ -1,4 +1,5 @@
 import { API_ARTIFACT_PUBLISH_OPERATION } from "../api";
+import { createWorkspaceId } from "../workspace";
 import {
   createIpcChannel,
   type IpcChannel,
@@ -31,6 +32,7 @@ export interface DesktopArtifactPublishBoundaryContext {
 }
 
 export interface DesktopArtifactPublishRequestPayload {
+  workspaceId: string;
   artifactId: string;
   target: {
     provider: string;
@@ -40,6 +42,10 @@ export interface DesktopArtifactPublishRequestPayload {
   };
   mediaType?: string;
   verify?: boolean;
+  repositoryCreation?: {
+    approved: true;
+    visibility: "private" | "public";
+  };
   boundary: DesktopArtifactPublishBoundaryContext;
 }
 
@@ -85,6 +91,7 @@ function normalizeDesktopArtifactPublishPayload(
   payload: DesktopArtifactPublishRequestPayload,
 ): DesktopArtifactPublishRequestPayload {
   return {
+    workspaceId: createWorkspaceId(payload.workspaceId),
     artifactId: normalizeRequiredTextField(payload.artifactId, "artifactId"),
     target: {
       provider: normalizeRequiredTextField(payload.target.provider, "target.provider"),
@@ -94,11 +101,25 @@ function normalizeDesktopArtifactPublishPayload(
     },
     mediaType: payload.mediaType?.trim() || undefined,
     verify: payload.verify ?? true,
+    repositoryCreation: normalizeRepositoryCreation(payload.repositoryCreation),
     boundary: {
       host: "desktop",
       source: normalizeRequiredTextField(payload.boundary.source, "boundary.source"),
     },
   };
+}
+
+function normalizeRepositoryCreation(
+  value: DesktopArtifactPublishRequestPayload["repositoryCreation"],
+): DesktopArtifactPublishRequestPayload["repositoryCreation"] {
+  if (!value) return undefined;
+  if (value.approved !== true) {
+    throw new Error("repositoryCreation.approved must be true when repository creation is requested.");
+  }
+  if (value.visibility !== "private" && value.visibility !== "public") {
+    throw new Error("repositoryCreation.visibility must be private or public.");
+  }
+  return { approved: true, visibility: value.visibility };
 }
 
 export function createDesktopArtifactPublishRequest(

@@ -69,7 +69,15 @@ This ADR remains the canonical architecture decision. Current implementation is 
     routes, and organization-owned persistence/storage require the same request
     context.
 - Security status supports both public discovery and authenticated principal validation when a bearer token is sent.
-- Unknown `/api/*` routes are denied by centralized route policy with `security.route-policy-missing`.
+- API route identity is lowercase and case-sensitive at Express dispatch. The
+  centralized policy recognizes case, encoded, slash, and backslash variants of
+  the API namespace and denies non-canonical or unknown variants with
+  `security.route-policy-missing` before feature handlers run.
+- Security and managed-organization admission execute before JSON or multipart
+  request parsing. The current JSON transport ceiling is 5 MiB; parser failures
+  use the sanitized `api.request-body` failure envelope. Artifact multipart
+  uploads accept one bounded file plus the declared metadata fields, and the
+  application upload policy currently caps file bytes at 64 MiB.
 - Canonical security API failures in active use include:
   - `security.unauthenticated`
   - `security.invalid-token`
@@ -314,6 +322,7 @@ Application boundary:
 
 Adapter boundary:
   enforce filesystem containment
+  broker outbound network access
   handle credential storage
   encrypt/decrypt if configured
   harden runtime process invocation
@@ -412,6 +421,38 @@ Route policy should be centralized, not scattered ad hoc across handlers.
 - Generated outputs should finalize into artifact storage without exposing runtime temp paths.
 - Optional encryption at rest should be added via `DataProtectionPort`.
 - API responses should not expose local filesystem paths.
+
+## Outbound network security
+
+- Host-composed ingestion and provider-localization adapters must use the shared
+  secure-egress broker rather than calling ambient `fetch` or allowing a browser
+  engine to make unrestricted requests.
+- The broker permits only configured HTTP(S) schemes, rejects URL credentials,
+  validates every DNS answer, pins the validated address set for the connection,
+  and repeats validation for every redirect.
+- Loopback, private, link-local, carrier-grade NAT, documentation, multicast,
+  metadata-service, and other reserved IPv4/IPv6 destinations fail closed.
+- Cross-origin redirects lose authorization and cookie headers. Rendered-browser
+  acquisition blocks service workers and WebSockets and fulfills every routed
+  document/subresource request through the broker.
+- Response, session, deadline, redirect, media-type, and concurrency limits are
+  enforced while streaming. External localization must finish within those
+  bounds before bytes may enter canonical storage.
+
+## Managed sidecar identity
+
+- A managed local sidecar is not trusted merely because it listens on
+  localhost. Host composition owns a canonical loopback-only bind/client
+  endpoint and rejects remote, wildcard, credentialed, or path-bearing values.
+- Each spawned Python runtime receives a new cryptographically random bearer
+  token through its child-only environment. The host client reads the current
+  value for every call, and the worker authenticates every endpoint using a
+  constant-time comparison.
+- Health and capability probes are authenticated. A fresh host foundation must
+  not attach to an ambient loopback process without the current launch identity.
+- Launch credentials must not be persisted, logged, included in readiness or
+  diagnostics, exposed to renderer/client transports, or written to the parent
+  process environment.
 
 ## Secrets and credentials
 

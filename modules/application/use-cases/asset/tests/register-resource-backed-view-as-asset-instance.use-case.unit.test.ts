@@ -78,6 +78,7 @@ class CountingSourceIdentityService extends AssetSourceIdentityService {
 function command(overrides: Partial<RegisterResourceBackedViewCommand> = {}): RegisterResourceBackedViewCommand {
   return {
     operation: "asset.register-resource-backed-view",
+    workspaceId: "workspace-a" as never,
     viewId: "view.artifact",
     approval: { userConfirmed: true, confirmationKind: "register-resource-backed-view" },
     actor: { initiatedBy: "human", actorRef: "user.1", actorDisplayName: "User One" },

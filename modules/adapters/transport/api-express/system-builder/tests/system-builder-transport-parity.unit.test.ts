@@ -1,3 +1,4 @@
+import type { Request } from "express";
 import {
   describe,
   expect,
@@ -6,7 +7,22 @@ import {
 } from "../../../../../testing/node-test";
 import { DESKTOP_SYSTEM_BUILDER_CHANNELS } from "../../../../../contracts/ipc";
 import { registerSystemBuilderIpc } from "../../../ipc-electron/system-builder/registerSystemBuilderIpc";
+import { setExpressAuthContext } from "../../security/expressAuthContext";
 import { registerSystemBuilderApiRoutes } from "../registerSystemBuilderApiRoutes";
+
+function authenticatedRequest<T extends object>(request: T): T {
+  setExpressAuthContext(request as Request, {
+    authenticated: true,
+    authMethod: "oidc-bearer",
+    principal: {
+      principalId: "person-1",
+      kind: "user",
+      roles: ["organization-member"],
+      scopes: ["system:write"],
+    },
+  });
+  return request;
+}
 
 const services = () =>
   ({
@@ -119,10 +135,9 @@ describe("System Builder transport parity", () => {
       json: testDouble.fn(),
     };
     await routes.post.get("/api/systems/create")(
-      {
+      authenticatedRequest({
         body: { workspaceId: "workspace-a", name: "Portal" },
-        securityContext: { principal: { id: "person-1" } },
-      },
+      }),
       response,
     );
     expect(api.create.execute.mock.calls[0][0]).toMatchObject({
@@ -217,10 +232,9 @@ describe("System Builder transport parity", () => {
       ],
     };
     await routes.post.get("/api/systems/revisions/save")(
-      {
+      authenticatedRequest({
         body: slotPayload,
-        securityContext: { principal: { id: "person-1" } },
-      },
+      }),
       response,
     );
     expect(api.saveRevision.execute.mock.calls[0][0]).toMatchObject({
@@ -229,7 +243,7 @@ describe("System Builder transport parity", () => {
       actorId: "person-1",
     });
     await routes.post.get("/api/systems/layout-change/preview")(
-      {
+      authenticatedRequest({
         body: {
           ...slotPayload,
           targetLayoutPresetRef: {
@@ -238,8 +252,7 @@ describe("System Builder transport parity", () => {
             version: "2.0.0",
           },
         },
-        securityContext: { principal: { id: "person-1" } },
-      },
+      }),
       response,
     );
     expect(api.previewLayoutChange.execute.mock.calls[0][0]).toMatchObject({
@@ -251,34 +264,32 @@ describe("System Builder transport parity", () => {
       },
     });
     await routes.post.get("/api/systems/foundation-upgrade/preview")(
-      {
+      authenticatedRequest({
         body: {
           workspaceId: "workspace-a",
           systemId: "system-1",
           expectedRecordRevision: 1,
         },
-        securityContext: { principal: { id: "person-1" } },
-      },
+      }),
       response,
     );
-    expect(
-      api.previewFoundationUpgrade.execute.mock.calls[0][0],
-    ).toMatchObject({
-      workspaceId: "workspace-a",
-      systemId: "system-1",
-      expectedRecordRevision: 1,
-      actorId: "person-1",
-    });
-    await routes.post.get("/api/systems/foundation-upgrade")(
+    expect(api.previewFoundationUpgrade.execute.mock.calls[0][0]).toMatchObject(
       {
+        workspaceId: "workspace-a",
+        systemId: "system-1",
+        expectedRecordRevision: 1,
+        actorId: "person-1",
+      },
+    );
+    await routes.post.get("/api/systems/foundation-upgrade")(
+      authenticatedRequest({
         body: {
           workspaceId: "workspace-a",
           systemId: "system-1",
           expectedRecordRevision: 1,
           sourceRevisionId: "system-1.r1",
         },
-        securityContext: { principal: { id: "person-1" } },
-      },
+      }),
       response,
     );
     expect(api.upgradeFoundation.execute.mock.calls[0][0]).toMatchObject({
@@ -406,13 +417,13 @@ describe("System Builder transport parity", () => {
         },
       },
     );
-    expect(
-      ipc.previewFoundationUpgrade.execute.mock.calls[0][0],
-    ).toMatchObject({
-      workspaceId: "workspace-a",
-      systemId: "system-1",
-      actorId: "local-user",
-    });
+    expect(ipc.previewFoundationUpgrade.execute.mock.calls[0][0]).toMatchObject(
+      {
+        workspaceId: "workspace-a",
+        systemId: "system-1",
+        actorId: "local-user",
+      },
+    );
     await handlers.get(
       DESKTOP_SYSTEM_BUILDER_CHANNELS.upgradeFoundation.request.value,
     )(

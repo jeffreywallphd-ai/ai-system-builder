@@ -447,6 +447,7 @@ import {
   DESKTOP_SYSTEM_DEPLOYMENT_CHANNELS,
   createDesktopSystemDeploymentRequest,
 } from "../../../../modules/contracts/ipc";
+import { ARTIFACT_UPLOAD_MAXIMUM_BYTES } from "../../../../modules/contracts/artifact-upload";
 import type { SystemDeploymentCapabilityPolicy } from "../../../../modules/contracts/system-deployment";
 import type {
   ActiveWorkspaceSelection,
@@ -1538,15 +1539,11 @@ export interface DesktopPreloadApi {
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopImageGenerationFinalizeResponse>;
   readComfyUiInstallStatus: (
-    input?: { installRoot?: string },
+    input?: Record<string, never>,
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<any>;
   repairComfyUiInstall: (
-    input?: {
-      installRoot?: string;
-      allowUpdate?: boolean;
-      forceRepair?: boolean;
-    },
+    input?: Record<string, never>,
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<any>;
   browseArtifacts: (
@@ -1583,6 +1580,7 @@ export interface DesktopPreloadApi {
   ) => Promise<DesktopArtifactMediaViewResponse>;
   publishArtifactToRepo: (
     input: {
+      workspaceId: string;
       artifactId: string;
       target: {
         provider: string;
@@ -1591,6 +1589,10 @@ export interface DesktopPreloadApi {
         revision?: string;
       };
       mediaType?: string;
+      repositoryCreation?: {
+        approved: true;
+        visibility: "private" | "public";
+      };
     },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopArtifactPublishResponse>;
@@ -1764,6 +1766,7 @@ export function createDesktopPreloadApi(
   const uploadSource = dependencies.uploadSource ?? DEFAULT_UPLOAD_SOURCE;
   const artifactSource = dependencies.artifactSource ?? DEFAULT_ARTIFACT_SOURCE;
   const assetRegistrySource = DEFAULT_ASSET_REGISTRY_SOURCE;
+  let artifactUploadInFlight = false;
 
   return {
     memoryDiagnosticsEnabled: dependencies.memoryDiagnosticsEnabled === true,
@@ -1912,6 +1915,20 @@ export function createDesktopPreloadApi(
     },
 
     async uploadArtifact(input, context = {}) {
+      if (
+        !(input.bytes instanceof Uint8Array) ||
+        input.bytes.byteLength === 0
+      ) {
+        throw new Error("Artifact upload bytes are required.");
+      }
+      if (input.bytes.byteLength > ARTIFACT_UPLOAD_MAXIMUM_BYTES) {
+        throw new Error(
+          `Artifact uploads must not exceed ${ARTIFACT_UPLOAD_MAXIMUM_BYTES} bytes.`,
+        );
+      }
+      if (artifactUploadInFlight) {
+        throw new Error("An artifact upload is already in progress.");
+      }
       const request: DesktopArtifactUploadRequest =
         createDesktopArtifactUploadRequest(
           {
@@ -1929,20 +1946,25 @@ export function createDesktopPreloadApi(
             correlationId: context.correlationId,
           },
         );
-      const response = await dependencies.ipcRenderer.invoke(
-        DESKTOP_ARTIFACT_UPLOAD_REQUEST_CHANNEL.value,
-        request,
-      );
+      artifactUploadInFlight = true;
+      try {
+        const response = await dependencies.ipcRenderer.invoke(
+          DESKTOP_ARTIFACT_UPLOAD_REQUEST_CHANNEL.value,
+          request,
+        );
 
-      return assertDesktopEnvelopeResponse<DesktopArtifactUploadResponse>(
-        response,
-        {
-          operation: DESKTOP_ARTIFACT_UPLOAD_OPERATION,
-          channel: DESKTOP_ARTIFACT_UPLOAD_RESPONSE_CHANNEL.value,
-          message:
-            "Received invalid desktop artifact upload IPC response envelope.",
-        },
-      );
+        return assertDesktopEnvelopeResponse<DesktopArtifactUploadResponse>(
+          response,
+          {
+            operation: DESKTOP_ARTIFACT_UPLOAD_OPERATION,
+            channel: DESKTOP_ARTIFACT_UPLOAD_RESPONSE_CHANNEL.value,
+            message:
+              "Received invalid desktop artifact upload IPC response envelope.",
+          },
+        );
+      } finally {
+        artifactUploadInFlight = false;
+      }
     },
 
     async getArtifactUploadPolicy(context = {}) {
@@ -3903,6 +3925,7 @@ export function createDesktopPreloadApi(
       const request: DesktopArtifactPublishRequest =
         createDesktopArtifactPublishRequest(
           {
+            workspaceId: input.workspaceId ?? context.workspaceId ?? "",
             artifactId: input.artifactId,
             target: {
               provider: input.target.provider,
@@ -3911,6 +3934,7 @@ export function createDesktopPreloadApi(
               revision: input.target.revision,
             },
             mediaType: input.mediaType,
+            repositoryCreation: input.repositoryCreation,
             verify: true,
             boundary: {
               host: "desktop",

@@ -1,4 +1,5 @@
 import type { DesktopPythonRuntimeLogEntry, DesktopPythonRuntimeStatusPayload } from "../../../contracts/ipc";
+import { resolvePythonRuntimeLoopbackEndpoint } from "../../../adapters/runtime/python";
 
 const PYTHON_RUNTIME_MANAGED_BASE_PORT = 43111;
 const PYTHON_RUNTIME_MANAGED_PORT_SPAN = 10_000;
@@ -27,23 +28,18 @@ export function resolveDefaultManagedPythonRuntimePort(processId: number = proce
 }
 
 export function resolvePythonRuntimeHostAndPort(env: NodeJS.ProcessEnv = process.env): { host: string; port: string } {
-  const configuredBaseUrl = env.PYTHON_RUNTIME_BASE_URL?.trim();
-  if (configuredBaseUrl) {
-    try {
-      const parsed = new URL(configuredBaseUrl);
-      return { host: env.PYTHON_RUNTIME_HOST?.trim() || parsed.hostname || "127.0.0.1", port: env.PYTHON_RUNTIME_PORT?.trim() || parsed.port || (parsed.protocol === "https:" ? "443" : "80") };
-    } catch {
-      return { host: env.PYTHON_RUNTIME_HOST?.trim() || "127.0.0.1", port: env.PYTHON_RUNTIME_PORT?.trim() || resolveDefaultManagedPythonRuntimePort() };
-    }
-  }
-  return { host: env.PYTHON_RUNTIME_HOST?.trim() || "127.0.0.1", port: env.PYTHON_RUNTIME_PORT?.trim() || resolveDefaultManagedPythonRuntimePort() };
+  const endpoint = resolvePythonRuntimeLoopbackEndpoint({
+    env,
+    defaultPort: resolveDefaultManagedPythonRuntimePort(),
+  });
+  return { host: endpoint.host, port: endpoint.port };
 }
 
 export function resolvePythonRuntimeBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
-  const configuredBaseUrl = env.PYTHON_RUNTIME_BASE_URL?.trim();
-  if (configuredBaseUrl) return configuredBaseUrl;
-  const { host, port } = resolvePythonRuntimeHostAndPort(env);
-  return `http://${host}:${port}`;
+  return resolvePythonRuntimeLoopbackEndpoint({
+    env,
+    defaultPort: resolveDefaultManagedPythonRuntimePort(),
+  }).baseUrl;
 }
 
 export function createUnavailablePythonRuntimeStatus(input: {

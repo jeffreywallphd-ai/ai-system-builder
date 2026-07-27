@@ -7,6 +7,7 @@ import { recordDesktopMemorySnapshot } from "../../../../modules/hosts/desktop/d
 import { resolveLocalSqliteDatabasePolicy, openLocalSqliteDatabase } from "../../../../modules/adapters/persistence/sqlite";
 import { importJsonStructuredData } from "../../../../modules/adapters/persistence/migration";
 import { initializeLocalIdentityProfile, readLocalIdentityProfile } from "../../../../modules/adapters/security/local-identity";
+import { isTrustedIpcSender } from "./trustedIpcSender";
 
 recordDesktopMemorySnapshot({
   milestone: "desktop.main.module.loaded",
@@ -129,6 +130,7 @@ app.whenReady().then(async () => {
     component: "desktop-main",
   });
   const desktopHost = composeDesktopHost({
+    localIdentity: localIdentityProfile,
     persistence: { documents: sqliteDatabase.documents, organizationDocuments },
     logging: {
       verbosity: process.env.LOG_VERBOSITY,
@@ -160,6 +162,9 @@ app.whenReady().then(async () => {
   });
   desktopHost.registerDesktopIpc({
     ipcMain,
+    senderTrust: {
+      isTrustedSender: (event) => isTrustedIpcSender(event, openWindows),
+    },
     storageRootDirectory,
     runtimeRootDirectory: desktopDataRootDirectory,
   });

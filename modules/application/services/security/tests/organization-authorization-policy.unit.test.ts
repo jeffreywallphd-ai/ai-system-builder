@@ -32,7 +32,7 @@ function auth(principalId = "principal-1"): AuthContext {
 function policy(input?: {
   organizationStatus?: "active" | "suspended";
   membershipStatus?: "active" | "suspended" | "removed";
-  role?: "owner" | "admin" | "member";
+  role?: "owner" | "admin" | "operator" | "member";
   placement?: ReturnType<typeof createTenantPlacementConfig>;
 }) {
   return createOrganizationAuthorizationPolicy({
@@ -73,7 +73,44 @@ describe("organization authorization policy", () => {
       requiredScopes: ["workspace:read"],
       resource: { kind: "workspace", id: "workspace-a", organizationId: orgA },
     });
-    assert.deepEqual(decision, { allowed: true });
+    assert.deepEqual(decision, { allowed: true, organizationRole: "member" });
+  });
+
+  it("derives least-privilege capabilities from trusted membership roles", async () => {
+    const memberSettingsWrite = await policy({ role: "member" }).authorize({
+      authContext: auth(),
+      organizationId: orgA,
+      operation: "settings.update",
+      requiredScopes: ["settings:write"],
+    });
+    assert.equal(memberSettingsWrite.reasonCode, "missing-scopes");
+    assert.deepEqual(memberSettingsWrite.missingScopes, ["settings:write"]);
+
+    const operatorSettingsWrite = await policy({ role: "operator" }).authorize({
+      authContext: { ...auth(), principal: { ...auth().principal, scopes: [] } },
+      organizationId: orgA,
+      operation: "settings.update",
+      requiredScopes: ["settings:write"],
+    });
+    assert.deepEqual(operatorSettingsWrite, {
+      allowed: true,
+      organizationRole: "operator",
+    });
+  });
+
+  it("fails closed for managed resources without organization ownership", async () => {
+    const decision = await policy().authorize({
+      authContext: auth(),
+      organizationId: orgA,
+      operation: "workspace.read",
+      requiredScopes: ["workspace:read"],
+      resource: {
+        kind: "workspace",
+        id: "legacy-workspace",
+        requiresOrganizationOwnership: true,
+      },
+    });
+    assert.equal(decision.reasonCode, "resource-organization-required");
   });
 
   it("denies cross-tenant resources, missing membership, inactive state, and insufficient roles", async () => {
@@ -145,6 +182,7 @@ describe("organization authorization policy", () => {
       { kind: "authz.allowed", outcome: "allowed" },
       { kind: "authz.denied", outcome: "denied" },
     ]);
+    assert.equal(events[0]?.organizationRole, "member");
     assert.equal(JSON.stringify(events).includes("token"), false);
   });
 });

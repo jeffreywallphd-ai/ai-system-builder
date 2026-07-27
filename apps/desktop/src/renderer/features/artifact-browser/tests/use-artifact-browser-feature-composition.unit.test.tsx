@@ -39,7 +39,7 @@ vi.mock("../hooks/useArtifactBrowserMutations", () => ({
 }));
 
 function HookHarness(props: { onState: (state: ReturnType<typeof useArtifactBrowserFeature>) => void; client: unknown }) {
-  const state = useArtifactBrowserFeature(props.client as never);
+  const state = useArtifactBrowserFeature(props.client as never, "workspace-a");
   props.onState(state);
   return null;
 }

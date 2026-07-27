@@ -8,6 +8,7 @@ import {
 } from "../AssetDerivedCustomizationEditor";
 import {
   buildAssetCustomizationSubmission,
+  buildAssetCustomizationSourceUpdate,
   createAssetCustomizationEditorValues,
   createAssetCustomizationResourceDrafts,
 } from "../assetDerivedCustomizationEditorModel";
@@ -151,5 +152,12 @@ describe("AssetDerivedCustomizationEditor", () => {
         createAssetCustomizationResourceDrafts(target),
       ),
     ).toThrow("Ports must be valid JSON.");
+  });
+
+  it("clears a persisted source overlay when all resources return to their base content", () => {
+    expect(buildAssetCustomizationSourceUpdate(true, [])).toEqual({
+      clearSourceOverlay: true,
+    });
+    expect(buildAssetCustomizationSourceUpdate(false, [])).toEqual({});
   });
 });

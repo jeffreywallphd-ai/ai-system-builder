@@ -1,3 +1,4 @@
+import type { Request } from "express";
 import type {
   AssetStudioAssetDraftWorkflowUseCase,
   ListAssetStudioWorkflowsUseCase,
@@ -22,11 +23,11 @@ import type {
   UpdateAssetStudioAssetDraftCommand,
 } from "../../../../contracts/asset-studio";
 import { createWorkspaceId } from "../../../../contracts/workspace";
+import { requireExpressAuthenticatedPrincipalId } from "../security/expressAuthContext";
 
 interface RequestLike {
   body?: unknown;
   query?: Record<string, unknown>;
-  securityContext?: { principal?: { id?: string } };
 }
 interface ResponseLike {
   status(code: number): ResponseLike;
@@ -359,4 +360,4 @@ const optionalBoolean = (value: unknown): boolean | undefined =>
             throw new Error();
           })();
 const actor = (request: RequestLike) =>
-  request.securityContext?.principal?.id?.trim() || "authenticated-user";
+  requireExpressAuthenticatedPrincipalId(request as Request);

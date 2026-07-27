@@ -1,10 +1,37 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createDesktopArtifactBrowserClient } from "../api/desktopArtifactBrowserClient";
 
+async function readBlobBytes(blob: Blob): Promise<number[]> {
+  const bytes = await new Promise<ArrayBuffer>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(reader.result as ArrayBuffer));
+    reader.addEventListener("error", () => reject(reader.error));
+    reader.readAsArrayBuffer(blob);
+  });
+  return Array.from(new Uint8Array(bytes));
+}
+
 describe("desktop artifact browser client", () => {
+  const originalCreateObjectUrl = URL.createObjectURL;
+  const createObjectUrl = vi.fn().mockReturnValue("blob:desktop-artifact");
+
+  beforeEach(() => {
+    createObjectUrl.mockReset().mockReturnValue("blob:desktop-artifact");
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      writable: true,
+      value: createObjectUrl,
+    });
+  });
+
   afterEach(() => {
     delete window.desktopApi;
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      writable: true,
+      value: originalCreateObjectUrl,
+    });
     vi.restoreAllMocks();
   });
 
@@ -84,9 +111,18 @@ describe("desktop artifact browser client", () => {
     expect(content.retrieval).toBe("deferred");
     expect(detail.metadata?.websiteCapture?.acquisitionMechanismUsed).toBe("simple-http");
     expect(Array.from(mediaBytes.bytes)).toEqual([1, 2, 3]);
-    expect(window.desktopApi.readArtifactViewerMedia).toHaveBeenCalledWith({ storageKey: "uploads/cat.png" });
-    expect(mediaUrl).toContain("data:image/png;base64,");
-    expect(window.desktopApi.browseArtifacts).toHaveBeenCalledWith({ artifactFamily: undefined });
+    expect(window.desktopApi.readArtifactViewerMedia).toHaveBeenCalledWith(
+      { storageKey: "uploads/cat.png" },
+      { workspaceId: undefined, maximumBytes: undefined },
+    );
+    expect(mediaUrl).toBe("blob:desktop-artifact");
+    const mediaBlob = createObjectUrl.mock.calls[0]![0] as Blob;
+    expect(mediaBlob.type).toBe("image/png");
+    expect(await readBlobBytes(mediaBlob)).toEqual([1, 2, 3]);
+    expect(window.desktopApi.browseArtifacts).toHaveBeenCalledWith(
+      { artifactFamily: undefined, workspaceId: undefined },
+      { workspaceId: undefined },
+    );
   });
 
   it("supports browsing/registering/deleting unregistered artifacts", async () => {
@@ -212,7 +248,9 @@ describe("desktop artifact browser client", () => {
     const client = createDesktopArtifactBrowserClient();
 
     const mediaUrl = await client.createArtifactMediaViewUrl({ storageKey: "uploads/cat.png" });
-    expect(mediaUrl).toContain("data:image/png;base64,");
+    expect(mediaUrl).toBe("blob:desktop-artifact");
+    const mediaBlob = createObjectUrl.mock.calls[0]![0] as Blob;
+    expect(await readBlobBytes(mediaBlob)).toEqual([1, 2, 3]);
   });
 
   it("publishes artifact backing through preload publish bridge", async () => {
@@ -249,22 +287,29 @@ describe("desktop artifact browser client", () => {
 
     const client = createDesktopArtifactBrowserClient();
     const result = await client.publishArtifactToHuggingFace({
+      workspaceId: "workspace-a",
       artifactId: "uploads/cat.png",
       repository: "openai/demo",
       path: "images/cat.png",
       revision: "main",
+      repositoryCreation: { approved: true, visibility: "private" },
     });
 
-    expect(window.desktopApi.publishArtifactToRepo).toHaveBeenCalledWith({
-      artifactId: "uploads/cat.png",
-      target: {
-        provider: "huggingface",
-        repository: "openai/demo",
-        path: "images/cat.png",
-        revision: "main",
+    expect(window.desktopApi.publishArtifactToRepo).toHaveBeenCalledWith(
+      {
+        workspaceId: "workspace-a",
+        artifactId: "uploads/cat.png",
+        target: {
+          provider: "huggingface",
+          repository: "openai/demo",
+          path: "images/cat.png",
+          revision: "main",
+        },
+        mediaType: undefined,
+        repositoryCreation: { approved: true, visibility: "private" },
       },
-      mediaType: undefined,
-    });
+      { workspaceId: "workspace-a" },
+    );
     expect(result.verification.exists).toBe(true);
   });
 
@@ -441,7 +486,7 @@ describe("desktop artifact browser client", () => {
     expect(result.verification.exists).toBe(true);
   });
 
-  it("normalizes object-like byte payloads before building media data urls", async () => {
+  it("normalizes object-like byte payloads before building object urls", async () => {
     window.desktopApi = {
       uploadArtifact: vi.fn().mockRejectedValue(new Error("unused")),
       browseArtifacts: vi.fn().mockResolvedValue({ ok: true, value: { items: [] } }),
@@ -465,6 +510,6 @@ describe("desktop artifact browser client", () => {
     const mediaUrl = await client.createArtifactMediaViewUrl({ storageKey: "uploads/cat.png" });
 
     expect(Array.from(media.bytes)).toEqual([4, 5, 6]);
-    expect(mediaUrl).toContain("data:image/png;base64,");
+    expect(mediaUrl).toBe("blob:desktop-artifact");
   });
 });

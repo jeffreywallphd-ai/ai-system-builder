@@ -10,6 +10,7 @@ import express from "express";
 import { composeServerHost } from "../../../modules/hosts/server";
 import {
   applySecurityHeaders,
+  createExpressJsonBodyErrorMiddleware,
   createExpressOrganizationAuthorizationMiddleware,
   createHttpsServerOptions,
   registerSecurityRoutes,
@@ -245,6 +246,21 @@ export async function createServer(options: CreateServerOptions = {}): Promise<C
         security.organizationContextScope,
       )
       : options.structuredDocuments;
+    const organizationAuthorizer = postgresDatabase && security.config.mode === "oidc-bearer"
+      ? new AuthorizeOperationService(
+        createOrganizationAuthorizationPolicy({
+          ...createStructuredOrganizationRepositories(postgresDatabase.documents),
+          tenantPlacement: security.config.tenantPlacement,
+        }),
+        {
+          audit: createJsonlSecurityAuditLogAdapter(
+            path.join(config.runtimeRootDirectory, "security", "authorization-audit.jsonl"),
+          ),
+          createEventId: () => `evt-${randomUUID()}`,
+          now: options.now,
+        },
+      )
+      : undefined;
     const serverHost = composeServerHost({
       env: options.env,
       logging: {
@@ -257,6 +273,7 @@ export async function createServer(options: CreateServerOptions = {}): Promise<C
       organizationContextProvider: postgresDatabase
         ? security.organizationContextScope
         : undefined,
+      organizationAuthorizer,
       ...(persistenceDocuments ? {
         persistence: {
           documents: persistenceDocuments,
@@ -266,11 +283,21 @@ export async function createServer(options: CreateServerOptions = {}): Promise<C
       artifactRepo: {
         huggingFaceAccessToken: options.env?.HF_TOKEN ?? options.env?.HUGGING_FACE_TOKEN,
         huggingFaceTokenConfigFilePath: path.join(config.storageRootDirectory, "config", "hugging-face-token.json"),
+        providerCredentialRootDirectory: path.join(
+          config.storageRootDirectory,
+          "config",
+          "provider-credentials",
+        ),
+        huggingFaceCredentialMigrationOrganizationId:
+          options.env?.HF_TOKEN_ORGANIZATION_ID ??
+          (security.config.tenantPlacement.mode === "dedicated"
+            ? security.config.tenantPlacement.organizationId
+            : undefined),
       },
     });
 
     const app = express();
-    app.use(express.json({ limit: "5mb" }));
+    app.enable("case sensitive routing");
     applySecurityHeaders(app);
     registerOperationalHealthRoutes(
       app,
@@ -279,25 +306,13 @@ export async function createServer(options: CreateServerOptions = {}): Promise<C
       postgresDatabase,
     );
     app.use(security.middleware);
-    if (postgresDatabase && security.config.mode === "oidc-bearer") {
-      const organizationRepositories = createStructuredOrganizationRepositories(postgresDatabase.documents);
-      const organizationAuthorizer = new AuthorizeOperationService(
-        createOrganizationAuthorizationPolicy({
-          ...organizationRepositories,
-          tenantPlacement: security.config.tenantPlacement,
-        }),
-        {
-          audit: createJsonlSecurityAuditLogAdapter(
-            path.join(config.runtimeRootDirectory, "security", "authorization-audit.jsonl"),
-          ),
-          createEventId: () => `evt-${randomUUID()}`,
-          now: options.now,
-        },
-      );
+    if (organizationAuthorizer) {
       app.use(createExpressOrganizationAuthorizationMiddleware({
         authorizer: organizationAuthorizer,
       }));
     }
+    app.use(express.json({ limit: "5mb" }));
+    app.use(createExpressJsonBodyErrorMiddleware());
     registerSecurityRoutes(app, {
       getStatus: async (authContext) => ({ ...(await security.services.getStatusService.execute({ config: { mode: security.config.mode, httpsRequired: security.config.httpsRequired, authRequired: security.config.authRequired, allowLocalhostWithoutAuth: security.config.allowLocalhostWithoutAuth }, httpsEnabled: security.config.httpsEnabled, pairingEnabled: security.config.pairingEnabled, now: new Date(), currentAuthContext: authContext, devSecurityToggleEnabled: security.config.devSecurityToggleEnabled, devSecurityEnforcementMode: security.devSecurityEnforcement.isEnabled() ? security.devSecurityEnforcement.getMode() : undefined, requiresRestartToChangeTransportSecurity: true })), tls: security.config.tlsStatus }),
       completePairing: (body) => security.services.completePairing.execute(body),

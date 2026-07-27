@@ -1,7 +1,10 @@
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { ArtifactStorageBindingPort } from "../../../../application/ports/storage";
+import type {
+  ArtifactStorageBindingBatchReadPort,
+  ArtifactStorageBindingPort,
+} from "../../../../application/ports/storage";
 import { createContractError, createFailureResult, createSuccessResult } from "../../../../contracts/shared";
 import {
   normalizeArtifactStorageBinding,
@@ -63,7 +66,7 @@ function parseBindingLine(line: string): ArtifactStorageBindingLine | undefined 
 
 export function createLocalArtifactStorageBindingAdapter(
   options: CreateLocalArtifactStorageBindingAdapterOptions,
-): ArtifactStorageBindingPort {
+): ArtifactStorageBindingPort & ArtifactStorageBindingBatchReadPort {
   const rootDirectory = path.resolve(options.rootDirectory);
   const bindingsFile = options.bindingsFile ?? DEFAULT_BINDINGS_FILE;
   const bindingsPath = path.join(rootDirectory, bindingsFile);
@@ -180,6 +183,31 @@ export function createLocalArtifactStorageBindingAdapter(
 
       const workspaceId = request.workspaceId?.trim();
       const bindings = (await readBindings()).filter((entry) => entry.artifactId === artifactId && (!workspaceId || entry.workspaceId === workspaceId));
+      return createSuccessResult({ bindings }, context);
+    },
+
+    async readArtifactStorageBindingsBatch(request, context = {}) {
+      const artifactIds = [...new Set(request.artifactIds.map((value) => value.trim()))];
+      if (
+        artifactIds.length === 0
+        || artifactIds.length > 250
+        || artifactIds.some((artifactId) => artifactId.length === 0)
+      ) {
+        return createFailureResult(
+          createContractError(
+            "validation",
+            "artifactIds must contain between 1 and 250 unique non-empty identifiers.",
+          ),
+          context,
+        );
+      }
+
+      const selectedIds = new Set(artifactIds);
+      const workspaceId = request.workspaceId?.trim();
+      const bindings = (await readBindings()).filter((entry) => (
+        selectedIds.has(entry.artifactId)
+        && (!workspaceId || entry.workspaceId === workspaceId)
+      ));
       return createSuccessResult({ bindings }, context);
     },
 

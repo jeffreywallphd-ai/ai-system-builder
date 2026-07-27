@@ -1,3 +1,4 @@
+import type { Request } from "express";
 import type {
   ArchiveSystemBuilderSystemUseCase,
   CloneSystemBuilderSystemUseCase,
@@ -50,11 +51,11 @@ import {
   normalizeAssetSlotId,
 } from "../../../../contracts/asset";
 import { createWorkspaceId } from "../../../../contracts/workspace";
+import { requireExpressAuthenticatedPrincipalId } from "../security/expressAuthContext";
 
 interface RequestLike {
   body?: unknown;
   query?: Record<string, unknown>;
-  securityContext?: { principal?: { id?: string } };
 }
 interface ResponseLike {
   status(code: number): ResponseLike;
@@ -499,7 +500,7 @@ function failure(
     );
 }
 const actor = (request: RequestLike): string =>
-  request.securityContext?.principal?.id?.trim() || "authenticated-user";
+  requireExpressAuthenticatedPrincipalId(request as Request);
 const record = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new Error();

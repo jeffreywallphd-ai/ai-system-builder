@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 LORA_KEY_PATTERNS = ("lora_", ".lora_", "lora_A", "lora_B")
 RECURRENT_KEY_PATTERNS = ("recurrent", "gru", "lstm")
+MAX_SAFETENSORS_INDEX_BYTES = 8 * 1024 * 1024
+MAX_SAFETENSORS_INDEX_MEMBERS = 100_000
+WINDOWS_DRIVE_PREFIX = re.compile(r"^[A-Za-z]:")
 
 
 def _detect_format(output_dir: Path) -> str:
@@ -54,12 +58,46 @@ def _read_safetensors_tensors(path: Path) -> tuple[set[str], dict[str, list[int]
     return keys, shapes, None
 
 
+def _resolve_contained_shard(output_dir: Path, shard_name: str) -> Path:
+    if (
+        not shard_name
+        or len(shard_name) > 512
+        or "\\" in shard_name
+        or shard_name.startswith("/")
+        or shard_name.startswith("//")
+        or WINDOWS_DRIVE_PREFIX.match(shard_name)
+    ):
+        raise ValueError("Safetensors index contains an unsafe shard reference.")
+    parts = shard_name.split("/")
+    if any(not part or part in {".", ".."} for part in parts):
+        raise ValueError("Safetensors index contains an unsafe shard reference.")
+
+    canonical_root = output_dir.resolve(strict=True)
+    candidate = canonical_root.joinpath(*parts)
+    if not candidate.exists():
+        return candidate
+    if candidate.is_symlink():
+        raise ValueError("Safetensors index cannot reference linked shards.")
+    canonical_candidate = candidate.resolve(strict=True)
+    try:
+        canonical_candidate.relative_to(canonical_root)
+    except ValueError as error:
+        raise ValueError(
+            "Safetensors index contains an out-of-root shard reference."
+        ) from error
+    if not canonical_candidate.is_file():
+        raise ValueError("Safetensors index must reference regular shard files.")
+    return canonical_candidate
+
+
 def _read_safetensors_index(output_dir: Path) -> tuple[dict[str, str], list[str], str | None]:
     index_file = output_dir / "model.safetensors.index.json"
     if not index_file.exists():
         return {}, [], None
 
     try:
+        if index_file.is_symlink() or index_file.stat().st_size > MAX_SAFETENSORS_INDEX_BYTES:
+            return {}, [], "model.safetensors.index.json is not an approved regular index file."
         data = json.loads(index_file.read_text(encoding="utf-8"))
     except Exception:
         return {}, [], "model.safetensors.index.json could not be parsed."
@@ -68,12 +106,21 @@ def _read_safetensors_index(output_dir: Path) -> tuple[dict[str, str], list[str]
     if not isinstance(weight_map, dict):
         return {}, [], "model.safetensors.index.json weight_map is invalid."
 
+    if len(weight_map) > MAX_SAFETENSORS_INDEX_MEMBERS:
+        return {}, [], "model.safetensors.index.json exceeds the shard member limit."
+
     normalized: dict[str, str] = {}
     missing = []
     for tensor_key, shard in weight_map.items():
-        shard_name = str(shard)
-        normalized[str(tensor_key)] = shard_name
-        if not (output_dir / shard_name).exists() and shard_name not in missing:
+        if not isinstance(tensor_key, str) or not tensor_key or not isinstance(shard, str):
+            return {}, [], "model.safetensors.index.json weight_map is invalid."
+        shard_name = shard.strip()
+        try:
+            shard_path = _resolve_contained_shard(output_dir, shard_name)
+        except ValueError as error:
+            return {}, [], str(error)
+        normalized[tensor_key] = shard_name
+        if not shard_path.exists() and shard_name not in missing:
             missing.append(shard_name)
 
     return normalized, missing, None
@@ -92,9 +139,9 @@ def validate_model_output(
     warnings: list[str] = []
     errors: list[str] = []
     if not output_dir.exists():
-        errors.append(f"Model path does not exist: {output_dir}")
+        errors.append("Model path does not exist.")
     elif not output_dir.is_dir():
-        errors.append(f"Model path is not a directory: {output_dir}")
+        errors.append("Model path is not a directory.")
 
     if errors:
         report_path: str | None = None
@@ -111,7 +158,7 @@ def validate_model_output(
                         "errors": errors,
                         "warnings": warnings,
                         "validationStrictness": validation_strictness,
-                        "validatedModelPath": str(output_dir),
+                        "validatedModelRef": "registered-model",
                     },
                     indent=2,
                     ensure_ascii=False,
@@ -146,7 +193,7 @@ def validate_model_output(
             "detectedRecurrentAdditions": False,
             "tensorChecksCompleted": False,
             "validationStrictness": validation_strictness,
-            "validatedModelPath": str(output_dir),
+            "validatedModelRef": "registered-model",
             "validatedAt": datetime.now(timezone.utc).isoformat(),
         }
     format_name = _detect_format(output_dir)
@@ -192,7 +239,7 @@ def validate_model_output(
             by_shard.setdefault(shard_name, set()).add(tensor_key)
 
         for shard_name, expected_keys in by_shard.items():
-            shard_path = output_dir / shard_name
+            shard_path = _resolve_contained_shard(output_dir, shard_name)
             present_keys, shapes, shard_warning = _read_safetensors_tensors(shard_path)
             all_tensor_keys.update(present_keys)
             tensor_shape_summary.update(shapes)
@@ -295,7 +342,7 @@ def validate_model_output(
         },
         "tensorChecksCompleted": tensor_checks_completed if tensor_checks_required else True,
         "validationStrictness": validation_strictness,
-        "validatedModelPath": str(output_dir),
+        "validatedModelRef": "registered-model",
     }
 
     diff_path = output_dir / "model_validation_diff.json"
@@ -335,6 +382,6 @@ def validate_model_output(
         "detectedRecurrentAdditions": detected_recurrent,
         "tensorChecksCompleted": tensor_checks_completed if tensor_checks_required else True,
         "validationStrictness": validation_strictness,
-        "validatedModelPath": str(output_dir),
+        "validatedModelRef": "registered-model",
         "validatedAt": datetime.now(timezone.utc).isoformat(),
     }

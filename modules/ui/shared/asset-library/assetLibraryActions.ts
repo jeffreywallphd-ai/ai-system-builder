@@ -119,8 +119,12 @@ export function buildAssetLibraryMutationCommand({
     automationSafe: false,
     ...(thinClientSafe === true ? { thinClientSafe: true } : {}),
   };
+  if (!workspaceId) {
+    throw new Error("Workspace is required for asset mutations.");
+  }
   const base = {
     operation: action.operation,
+    workspaceId,
     approval,
     actor,
     ...(context ? { context } : {}),
@@ -134,9 +138,6 @@ export function buildAssetLibraryMutationCommand({
         viewId: view.viewId,
       };
     case "asset.finalize-generated-output":
-      if (!workspaceId) {
-        throw new Error("Workspace is required to finalize generated outputs.");
-      }
       return {
         ...base,
         operation: "asset.finalize-generated-output",

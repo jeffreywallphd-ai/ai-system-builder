@@ -40,6 +40,8 @@ describe("api route security policy coverage", () => {
       API_ROUTE_POLICIES.get("GET /api/systems/composer/asset"),
     ).toMatchObject({ public: false, scopes: ["asset:read"] });
     expect(API_ROUTE_POLICIES.get("GET /api/systems/data/form")).toMatchObject({ public: false, scopes: ["asset:read"] });
+    expect(API_ROUTE_POLICIES.get("GET /api/systems/review/artifacts")).toMatchObject({ public: false, scopes: ["artifact:read"] });
+    expect(API_ROUTE_POLICIES.get("GET /api/systems/review/artifact")).toMatchObject({ public: false, scopes: ["artifact:read"] });
     expect(API_ROUTE_POLICIES.get("POST /api/systems/data/records/update")).toMatchObject({ public: false, scopes: ["asset:write"] });
     expect(API_ROUTE_POLICIES.get("GET /api/asset-authoring/workspaces/:workspaceId/drafts")).toMatchObject({ public: false, scopes: ["asset:read"] });
     expect(API_ROUTE_POLICIES.get("POST /api/asset-authoring/workspaces/:workspaceId/drafts")).toMatchObject({ public: false, scopes: ["asset:write"] });
@@ -48,6 +50,29 @@ describe("api route security policy coverage", () => {
 
   it("denies unknown api routes", () => {
     expect(resolveApiRoutePolicy("GET", "/api/unknown")).toMatchObject({ deny: true, securityCode: "security.route-policy-missing" });
+  });
+
+  it("fails closed for case, encoded, and namespace-root API variants", () => {
+    for (const requestPath of [
+      "/API/model/download",
+      "/Api/artifact/upload",
+      "/%61pi/image-generation/start",
+      "/%41PI/artifact-repo/store",
+      "/api",
+      "/API",
+      "/api\\model\\download",
+    ]) {
+      expect(resolveApiRoutePolicy("POST", requestPath)).toMatchObject({
+        public: false,
+        deny: true,
+        securityCode: "security.route-policy-missing",
+      });
+    }
+  });
+
+  it("does not classify non-API paths with a similar prefix as API routes", () => {
+    expect(resolveApiRoutePolicy("GET", "/apiary/status")).toEqual({ public: true });
+    expect(resolveApiRoutePolicy("GET", "/application/status")).toEqual({ public: true });
   });
 
   it("resolves concrete Asset Library read paths through registered route templates", () => {
@@ -65,6 +90,27 @@ describe("api route security policy coverage", () => {
 });
 
 describe("security middleware", () => {
+  it("denies case-variant API routes even when disabled-development authentication is off", async () => {
+    const middleware = createExpressSecurityMiddleware({
+      httpsRequired: false,
+      authRequired: false,
+      mode: "disabled-dev",
+      verifyToken: async () => ({
+        principal: { id: "p", scopes: ["model:write"] },
+        auth: { method: "bearer-token" },
+      } as any),
+    });
+    const req:any = { method: "POST", path: "/API/model/download", protocol: "http", headers: {} };
+    const res:any = { statusCode: 200, body: undefined, status(code:number){this.statusCode=code;return this;}, json(body:unknown){this.body=body;return this;} };
+    let nextCalled = false;
+
+    await middleware(req, res, () => { nextCalled = true; });
+
+    expect(nextCalled).toBe(false);
+    expect(res.statusCode).toBe(403);
+    expect(res.body.error.operation).toBe("security.route-policy-missing");
+  });
+
   it("disabled-dev allows missing token", async () => {
     const middleware = createExpressSecurityMiddleware({ httpsRequired: false, authRequired: false, mode: "disabled-dev", verifyToken: async () => ({ principal: { id: "p", scopes: ["model:read"] }, auth: { method: "bearer-token" } } as any) });
     const req:any = { method: "POST", path: "/api/model/browse", protocol: "http", headers: {} };
@@ -116,7 +162,7 @@ describe("security middleware", () => {
           principalId: "principal-1",
           kind: "user",
           roles: [],
-          scopes: ["workspace:read"],
+          scopes: [],
         },
       }),
     });
@@ -145,7 +191,7 @@ describe("security middleware", () => {
       verifyToken: async () => ({
         authenticated: true,
         authMethod: "oidc-bearer",
-        principal: { principalId: "principal-1", kind: "user", roles: [], scopes: ["workspace:read"] },
+        principal: { principalId: "principal-1", kind: "user", roles: [], scopes: [] },
       }),
     });
     const response = () => ({ statusCode: 200, body: undefined as any, status(code:number){this.statusCode=code;return this;}, json(body:unknown){this.body=body;return this;} });

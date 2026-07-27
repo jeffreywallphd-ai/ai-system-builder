@@ -80,12 +80,20 @@ export interface UseArtifactBrowserFeatureResult {
     path: string;
     revision?: string;
     mediaType?: string;
+    repositoryCreation?: {
+      approved: true;
+      visibility: "private" | "public";
+    };
   }) => Promise<void>;
   registerArtifactFromHuggingFace: (input?: {
     repository?: string;
     pathInRepo?: string;
     revision?: string;
     mediaType?: string;
+    repositoryCreation?: {
+      approved: true;
+      visibility: "private" | "public";
+    };
   }) => Promise<void>;
   registerHuggingFaceNamespace: () => Promise<void>;
   browseHuggingFaceDatasetParquetFiles: (repository: string) => Promise<void>;
@@ -218,6 +226,7 @@ export function useArtifactBrowserFeature(
 
   const publishLogic = useArtifactBrowserPublishLogic<ThinClientArtifactDetail>(
     {
+      workspaceId,
       selectedStorageKey,
       client: artifactClient,
       async readSelectedArtifactDetail() {

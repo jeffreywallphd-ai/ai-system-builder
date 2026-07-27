@@ -16,6 +16,10 @@ export interface StoreArtifactInRepoCommand {
   mediaType?: string;
   metadata?: Readonly<Record<string, unknown>>;
   overwrite?: boolean;
+  repositoryCreation?: {
+    readonly approved: true;
+    readonly visibility: "private" | "public";
+  };
 }
 
 export interface RetrieveArtifactFromRepoCommand {

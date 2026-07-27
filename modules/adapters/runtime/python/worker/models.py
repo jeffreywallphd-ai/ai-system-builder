@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PythonRuntimeError(BaseModel):
@@ -48,7 +48,7 @@ class EnsureModelDownloadResult(BaseModel):
     modelId: str
     downloaded: bool
     fromCache: bool
-    localPath: str | None = None
+    modelHandle: str | None = None
 
 
 class LoadedModelDescriptor(BaseModel):
@@ -218,7 +218,8 @@ class PrepareTrainingDatasetRequest(BaseModel):
 class PythonRuntimeOutputDescriptor(BaseModel):
     name: str
     role: Literal["dataset", "train", "test", "metrics", "report", "artifact"] | None = None
-    tempPath: str
+    outputHandle: str
+    tempPath: str = Field(exclude=True)
     mediaType: str
     sizeBytes: int | None = None
     metadata: dict[str, Any] | None = None
@@ -290,9 +291,10 @@ class TrainModelTaskResult(BaseModel):
 
 
 class ValidateModelTaskRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     modelRecordId: str
     modelPath: str
-    reportOutputDirectory: str | None = None
     expectedLoRA: bool | None = None
     expectedRecurrentAdditions: bool | None = None
     validationStrictness: Literal["normal", "publish"] | None = None

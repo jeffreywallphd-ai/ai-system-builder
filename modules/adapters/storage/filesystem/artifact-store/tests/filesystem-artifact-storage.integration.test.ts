@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
@@ -359,6 +359,57 @@ describe("desktop filesystem artifact-object storage adapter integration", () =>
     expect(result.error.details).toMatchObject({
       operation: "storeArtifact",
     });
+  });
+
+  it("rejects alternate separators, drive paths, UNC paths, empty segments, and reserved Windows names", async () => {
+    const rootDirectory = await createTempRoot();
+    const adapter = createFilesystemArtifactObjectStorageAdapter({ rootDirectory });
+
+    for (const key of [
+      "uploads\\outside.png",
+      "C:/outside.png",
+      "//server/share/outside.png",
+      "uploads//outside.png",
+      "uploads/CON.txt",
+    ]) {
+      const result = await adapter.storeArtifact(createStoreArtifactRequest(
+        new Uint8Array([1]),
+        { descriptor: { key, mediaType: "image/png" } },
+      ));
+      expect(result.ok).toBe(false);
+      if (result.ok) throw new Error(`Expected unsafe key rejection for ${key}.`);
+      expect(result.error.code).toBe("validation");
+    }
+  });
+
+  it("rejects junction traversal for read, overwrite, and delete", async () => {
+    const rootDirectory = await createTempRoot();
+    const outsideDirectory = await createTempRoot();
+    await mkdir(path.join(rootDirectory, "uploads"), { recursive: true });
+    await writeFile(path.join(outsideDirectory, "secret.bin"), new Uint8Array([9, 9, 9]));
+    await symlink(
+      outsideDirectory,
+      path.join(rootDirectory, "uploads", "escape"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    const adapter = createFilesystemArtifactObjectStorageAdapter({ rootDirectory });
+    const key = "uploads/escape/secret.bin";
+
+    const read = await adapter.retrieveArtifact(createRetrieveArtifactRequest(key));
+    const overwrite = await adapter.storeArtifact(createStoreArtifactRequest(
+      new Uint8Array([1]),
+      { descriptor: { key }, overwrite: true },
+    ));
+    const deleted = await adapter.deleteArtifact(createDeleteArtifactRequest(key));
+
+    for (const result of [read, overwrite, deleted]) {
+      expect(result.ok).toBe(false);
+      if (result.ok) throw new Error("Expected junction containment rejection.");
+      expect(result.error.code).toBe("validation");
+    }
+    expect(new Uint8Array(await readFile(path.join(outsideDirectory, "secret.bin")))).toEqual(
+      new Uint8Array([9, 9, 9]),
+    );
   });
 
   it("retrieves stored bytes, keeps descriptor key logical, and does not leak host paths", async () => {

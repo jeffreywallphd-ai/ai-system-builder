@@ -8,6 +8,7 @@ import {
 import {
   DESKTOP_ARTIFACT_BROWSE_REQUEST_CHANNEL,
   DESKTOP_ARTIFACT_PUBLISH_REQUEST_CHANNEL,
+  type DesktopArtifactPublishRequest,
   DESKTOP_ARTIFACT_PUBLISH_VERIFY_REQUEST_CHANNEL,
   DESKTOP_ARTIFACT_SOURCE_VERIFY_REQUEST_CHANNEL,
   DESKTOP_ARTIFACT_REGISTER_FROM_REPO_REQUEST_CHANNEL,
@@ -981,6 +982,45 @@ describe("desktop preload exposedApi bridge", () => {
     });
   });
 
+  it("rejects concurrent artifact uploads before invoking IPC twice", async () => {
+    let resolveUpload:
+      | ((value: ReturnType<typeof createDesktopArtifactUploadSuccessResponse>) => void)
+      | undefined;
+    const firstUpload = new Promise<
+      ReturnType<typeof createDesktopArtifactUploadSuccessResponse>
+    >((resolve) => {
+      resolveUpload = resolve;
+    });
+    const invoke = testDouble
+      .fn<IpcRendererInvokePort["invoke"]>()
+      .mockImplementation(async () => firstUpload);
+    const api = createDesktopPreloadApi({ ipcRenderer: { invoke } });
+    const input = {
+      fileName: "kitten.png",
+      mediaType: "image/png",
+      bytes: new Uint8Array([137, 80, 78, 71]),
+      workspaceId: "workspace-a",
+    };
+
+    const pendingUpload = api.uploadArtifact(input);
+    await expect(api.uploadArtifact(input)).rejects.toThrow(
+      "An artifact upload is already in progress.",
+    );
+    expect(invoke).toHaveBeenCalledTimes(1);
+
+    resolveUpload?.(
+      createDesktopArtifactUploadSuccessResponse({
+        sourceKind: "upload",
+        storage: {
+          key: "uploads/kitten.png",
+          mediaType: "image/png",
+          sizeBytes: 4,
+        },
+      }),
+    );
+    await expect(pendingUpload).resolves.toMatchObject({ ok: true });
+  });
+
   it("maps artifact browse and media-view operations to separate request channels", async () => {
     const responses = [
       createDesktopArtifactBrowseSuccessResponse({ items: [] }),
@@ -1066,12 +1106,14 @@ describe("desktop preload exposedApi bridge", () => {
     const api = createDesktopPreloadApi({ ipcRenderer: { invoke } });
 
     const response = await api.publishArtifactToRepo({
+      workspaceId: "workspace-a",
       artifactId: "uploads/cat.png",
       target: {
         provider: "huggingface",
         repository: "openai/demo",
         path: "images/cat.png",
       },
+      repositoryCreation: { approved: true, visibility: "private" },
     });
 
     expect(response.ok).toBe(true);
@@ -1079,6 +1121,14 @@ describe("desktop preload exposedApi bridge", () => {
     expect(invoke.mock.calls[0]?.[0]).toBe(
       DESKTOP_ARTIFACT_PUBLISH_REQUEST_CHANNEL.value,
     );
+    expect((invoke.mock.calls[0]?.[1] as DesktopArtifactPublishRequest).payload.repositoryCreation).toEqual({
+      approved: true,
+      visibility: "private",
+    });
+    expect(
+      (invoke.mock.calls[0]?.[1] as DesktopArtifactPublishRequest).payload
+        .workspaceId,
+    ).toBe("workspace-a");
   });
 
   it("throws when IPC returns a response envelope for the wrong operation or channel", async () => {

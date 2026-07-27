@@ -19,6 +19,7 @@ export interface UseArtifactBrowserArtifactsResult {
   items: DesktopArtifactBrowseItem[];
   uploadedItems: DesktopArtifactBrowseItem[];
   generatedItems: DesktopArtifactBrowseItem[];
+  otherItems: DesktopArtifactBrowseItem[];
   unregisteredItems: DesktopUnregisteredArtifactBrowseItem[];
   selectedArtifactFamily: DesktopArtifactFamily | "all";
   setSelectedArtifactFamily: (value: DesktopArtifactFamily | "all") => void;
@@ -72,11 +73,15 @@ export function useArtifactBrowserArtifacts({
 
   const uploadedItems = items.filter(isUploadedArtifact);
   const generatedItems = items.filter(isGeneratedArtifact);
+  const otherItems = items.filter(
+    (item) => !isUploadedArtifact(item) && !isGeneratedArtifact(item),
+  );
 
   return {
     items,
     uploadedItems,
     generatedItems,
+    otherItems,
     unregisteredItems,
     selectedArtifactFamily,
     setSelectedArtifactFamily,

@@ -44,6 +44,17 @@
 - Managed production requires `oidc-bearer`, exact HTTPS issuer/audience/JWKS
   configuration, PostgreSQL, and active application-managed organization
   membership. Provider claims do not grant membership.
+- Managed capabilities come from the current organization role, not token role
+  claims. Ordinary members cannot mutate shared settings or credentials;
+  administrator-only package-source settings use validated allowlisted values.
+- Missing provider repositories require explicit creation approval, an explicit
+  private/public choice, and managed `provider-repository:create` authorization
+  before provider I/O. Private is the user-interface default.
+- Desktop artifact IPC accepts only the exact main frame of a live host-owned
+  window. Main-process handlers revalidate contracts; artifact publication is
+  workspace/capability authorized before reads or provider I/O. Uploads use one
+  shared 64 MiB limit before renderer byte allocation, again before preload IPC
+  serialization, and again in main; preload permits only one in-flight upload.
 - Pooled tenant placement is the default. Premium dedicated placement allows
   only one configured organization while retaining the same release and schema.
 - Thin-client secure fetch adds `Authorization: Bearer` when a paired token exists.
@@ -77,12 +88,34 @@
 - Runtime/readiness failures may include safe capability ids, status, summaries, reason codes/categories, and recommended actions.
 - Resource-backed view diagnostics must be sanitized by provider/facade/transport/UI layers, not merely hidden in CSS.
 - Asset mutation guards must fail before source reads or side effects when approval, actor, capability, or request context is invalid.
+- Outbound website acquisition and external-provider localization use the shared
+  secure-egress broker. It validates and pins public DNS answers per hop, strips
+  credentials across origins, and bounds redirects, streamed bytes, media type,
+  time, and concurrency. Rendered browsers block service workers/WebSockets and
+  route document and subresource traffic through the same broker.
+- Upload classification verifies coherent metadata and content evidence before
+  persistence. Artifact browsing and provider logical listings apply hard
+  result/I/O bounds. Runtime reference images use catalog-owned bounded reads,
+  signature checks, contained randomized staging, and deterministic cleanup.
+- Declarative system/foundation previews bound graph breadth/depth,
+  configuration complexity, text, option, region, and table sizes before
+  rendering. Desktop artifact media uses revocable Blob object URLs rather than
+  base64/data URLs.
 
 ## Route, Storage, Secret, And Audit Principles
 
 - Keep route policy centralized rather than scattered across handlers.
+- Treat lowercase canonical API paths as route identity. Express dispatch must
+  stay case-sensitive, while API-namespace detection must recognize case and
+  encoded variants so non-canonical and unknown paths fail closed.
+- Authenticate and establish managed organization context before installing
+  body parsers for protected APIs. Keep JSON and streaming multipart limits
+  explicit, validate legacy byte arrays before typed-array allocation, and map
+  parser failures to sanitized API envelopes without raw parser details.
 - Treat storage keys as opaque and enforce filesystem path containment in adapters.
 - Treat secrets/credentials as sensitive configuration, not normal settings.
+- Treat repository creation and installer-source changes as privileged audited
+  operations, not ordinary artifact writes or free-form settings.
 - Keep audit logs distinct from normal diagnostics.
 - Active workspace selection is routing context, not authorization.
 - Active organization selection is also routing context. Managed requests must

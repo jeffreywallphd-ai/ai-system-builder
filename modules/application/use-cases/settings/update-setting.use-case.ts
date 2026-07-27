@@ -2,26 +2,38 @@ import type {
   ApplicationSettingValue,
   UpdateApplicationSettingRequest,
 } from "../../../contracts/settings";
-import type { ApplicationSecretsPort, ApplicationSettingsPort } from "../../ports/settings";
+import type {
+  ApplicationSecretsPort,
+  ApplicationSettingAuthorizationPort,
+  ApplicationSettingsPort,
+} from "../../ports/settings";
 import { getKnownSettingDefinition } from "./setting-definition-guards";
+import { validateSettingUpdate } from "./validate-setting-update";
 
 const SECRET_MASK = "********";
 
 export interface UpdateSettingUseCaseDependencies {
   settings: ApplicationSettingsPort;
   secrets: ApplicationSecretsPort;
+  authorization?: ApplicationSettingAuthorizationPort;
 }
 
 export class UpdateSettingUseCase {
   private readonly settings: ApplicationSettingsPort;
   private readonly secrets: ApplicationSecretsPort;
+  private readonly authorization?: ApplicationSettingAuthorizationPort;
 
   public constructor(dependencies: UpdateSettingUseCaseDependencies) {
     this.settings = dependencies.settings;
     this.secrets = dependencies.secrets;
+    this.authorization = dependencies.authorization;
   }
 
   public async execute(request: UpdateApplicationSettingRequest): Promise<ApplicationSettingValue> {
+    await this.authorization?.authorizeSettingMutation({
+      key: request.key,
+      operation: "update",
+    });
     const definition = await getKnownSettingDefinition(this.settings, request.key);
     if (definition.valueKind === "secret") {
       const rawSecret = this.parseRawSecret(request.value);
@@ -40,6 +52,7 @@ export class UpdateSettingUseCase {
       };
     }
 
+    validateSettingUpdate(definition, request.value);
     return this.settings.updateValue(request);
   }
 

@@ -35,6 +35,9 @@
 - Storage contracts are family-specific: shared foundation identity, artifact-object key/blob semantics, artifact-repo provider/repository/revision/path semantics, and ingestion/staged-artifact intake semantics.
 - Artifact browser list/detail/content concerns stay separated; media/content retrieval must not collapse into descriptor-first browse contracts.
 - Artifact previews are bounded read-side renderers: sample text-like content, prefer compressed/downscaled image object URLs, constrain video/PDF display, keep Office previews placeholder-only without a safe parser, and leave full-fidelity viewing to download/open actions.
+- Artifact upload classification requires coherent filename/media metadata and
+  content evidence; binary signatures and valid UTF-8/JSON checks fail closed
+  before storage.
 - Storage keys are opaque contract vocabulary and must flow through shared helpers; UI-facing contracts must stay path-agnostic.
 - Application logic depends on persistence/storage ports, not direct DB/filesystem/provider details.
 - Host wiring composes concrete adapters and roots; runtime roots must not be used as persistence or asset-resource roots unless a canonical doc explicitly says so.
@@ -82,8 +85,18 @@
   rollback source. Ordinary startup never assigns ownership.
 - Artifact-object storage owns key/byte/checksum/metadata behavior.
 - Artifact-repo storage owns provider/repository/revision/path import and publish behavior; Hugging Face is one provider adapter, not the whole storage family.
-- Hugging Face token configuration is host-side persisted config, not client-only state.
+- Hugging Face token configuration is host-side persisted config, not
+  client-only state. Managed servers isolate it by authenticated organization,
+  use one credential service for token and Settings APIs, and require an
+  explicit organization target before migrating any legacy/environment token;
+  desktop/local hosts retain device-local scope.
+- Hugging Face publication does not auto-create a missing repository. Creation
+  requires explicit approval and visibility, plus active-organization
+  capability authorization in managed hosts; private is the UI default.
 - Artifact browser reads normalize internal artifacts across backing-store differences.
+- Artifact browse caps sorted results, batches backing bindings, and bounds
+  availability probes. Hugging Face dataset browse uses a capped logical
+  converted-Parquet inventory and rejects foreign or malformed URLs.
 - Remote registration/localization flows create or localize internal artifacts through shared application use cases.
 - Workspace local persistence uses a `workspaces/` namespace for workspace records, active selection preference, and system-pack activation references.
 - Workspace resource scoping applies where implemented for artifacts/uploads, image assets, generated outputs/finalization, dataset outputs, model inventory records, and runtime task outputs.

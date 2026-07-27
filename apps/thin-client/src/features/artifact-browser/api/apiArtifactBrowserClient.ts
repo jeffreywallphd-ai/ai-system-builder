@@ -100,6 +100,10 @@ export interface ThinClientLocalizedArtifactFromRepo {
   localObject: {
     key: string;
     mediaType?: string;
+    repositoryCreation?: {
+      approved: true;
+      visibility: "private" | "public";
+    };
     sizeBytes: number;
   };
   source: {
@@ -207,6 +211,10 @@ export interface ArtifactBrowserApiClient {
     path: string;
     revision?: string;
     mediaType?: string;
+    repositoryCreation?: {
+      approved: true;
+      visibility: "private" | "public";
+    };
   }) => Promise<ThinClientPublishedBacking>;
   verifyPublishedArtifactBacking: (input: {
     artifactId: string;
@@ -626,6 +634,7 @@ export function createApiArtifactBrowserClient(
               path: input.path,
             },
             mediaType: input.mediaType,
+            repositoryCreation: input.repositoryCreation,
             verify: true,
             source,
           }),

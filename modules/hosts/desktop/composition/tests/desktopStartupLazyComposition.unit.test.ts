@@ -69,6 +69,7 @@ async function composeRegisteredHost() {
   });
   host.registerDesktopIpc({
     ipcMain: harness.ipcMain,
+    senderTrust: { isTrustedSender: () => true },
     storageRootDirectory,
     runtimeRootDirectory,
   });
@@ -134,7 +135,12 @@ describe("desktop startup lazy composition contract", () => {
         artifactRepo: { huggingFaceTokenConfigFilePath: join(storageRootDirectory, "config", "hf-token.json") },
         settings: { localSettingsFilePath: join(storageRootDirectory, "config", "settings.json") },
       });
-      host.registerDesktopIpc({ ipcMain: harness.ipcMain, storageRootDirectory, runtimeRootDirectory });
+      host.registerDesktopIpc({
+        ipcMain: harness.ipcMain,
+        senderTrust: { isTrustedSender: () => true },
+        storageRootDirectory,
+        runtimeRootDirectory,
+      });
       return host;
     });
 

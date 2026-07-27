@@ -35,6 +35,11 @@ export interface SystemComposerTreeNode {
   readonly children: readonly SystemComposerTreeNode[];
 }
 
+export interface BuildSystemComposerTreeOptions {
+  readonly maximumDepth?: number;
+  readonly maximumNodes?: number;
+}
+
 export type SystemComposerDraftResult =
   | { readonly ok: true; readonly value: SystemComposerDraft }
   | { readonly ok: false; readonly message: string };
@@ -388,7 +393,16 @@ export function wrapSystemComposerAsset(
 export function buildSystemComposerTree(
   draft: SystemComposerDraft,
   rootInstanceRefs: readonly AssetReference[],
+  options: BuildSystemComposerTreeOptions = {},
 ): readonly SystemComposerTreeNode[] {
+  const maximumDepth = options.maximumDepth ?? 32;
+  const maximumNodes = options.maximumNodes ?? 512;
+  if (!Number.isSafeInteger(maximumDepth) || maximumDepth < 1) {
+    throw new Error("maximumDepth must be a positive safe integer.");
+  }
+  if (!Number.isSafeInteger(maximumNodes) || maximumNodes < 1) {
+    throw new Error("maximumNodes must be a positive safe integer.");
+  }
   const byId = new Map(
     draft.instances.map((instance) => [String(instance.instanceId), instance]),
   );
@@ -403,6 +417,7 @@ export function buildSystemComposerTree(
         left.slotId.localeCompare(right.slotId) || left.order - right.order,
     );
   }
+  let visitedNodes = 0;
   const visit = (
     instanceId: string,
     depth: number,
@@ -410,7 +425,13 @@ export function buildSystemComposerTree(
     placement?: AssetPlacement,
   ): SystemComposerTreeNode | undefined => {
     const instance = byId.get(instanceId);
-    if (!instance || path.has(instanceId) || depth > 32) return undefined;
+    if (
+      !instance ||
+      path.has(instanceId) ||
+      depth > maximumDepth ||
+      visitedNodes >= maximumNodes
+    ) return undefined;
+    visitedNodes += 1;
     const nextPath = new Set(path).add(instanceId);
     const children = (byParent.get(instanceId) ?? []).flatMap(
       (childPlacement) => {
@@ -425,7 +446,7 @@ export function buildSystemComposerTree(
     );
     return { instance, ...(placement ? { placement } : {}), depth, children };
   };
-  return rootInstanceRefs.flatMap((reference) => {
+  return rootInstanceRefs.slice(0, maximumNodes).flatMap((reference) => {
     const node = visit(String(reference.id), 1, new Set());
     return node ? [node] : [];
   });

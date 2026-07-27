@@ -434,15 +434,11 @@ export interface DesktopImageGenerationApi {
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   readComfyUiInstallStatus?: (
-    input?: { installRoot?: string },
+    input?: Record<string, never>,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   repairComfyUiInstall?: (
-    input?: {
-      installRoot?: string;
-      allowUpdate?: boolean;
-      forceRepair?: boolean;
-    },
+    input?: Record<string, never>,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
 }
@@ -939,15 +935,11 @@ interface DesktopApiBridge {
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   readComfyUiInstallStatus?: (
-    input?: { installRoot?: string },
+    input?: Record<string, never>,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   repairComfyUiInstall?: (
-    input?: {
-      installRoot?: string;
-      allowUpdate?: boolean;
-      forceRepair?: boolean;
-    },
+    input?: Record<string, never>,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   browseArtifacts: (
@@ -982,16 +974,24 @@ interface DesktopApiBridge {
     locator: DesktopArtifactBrowserLocator,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
-  publishArtifactToRepo: (input: {
-    artifactId: string;
-    target: {
-      provider: string;
-      repository: string;
-      path: string;
-      revision?: string;
-    };
-    mediaType?: string;
-  }) => Promise<unknown>;
+  publishArtifactToRepo: (
+    input: {
+      workspaceId: string;
+      artifactId: string;
+      target: {
+        provider: string;
+        repository: string;
+        path: string;
+        revision?: string;
+      };
+      mediaType?: string;
+      repositoryCreation?: {
+        approved: true;
+        visibility: "private" | "public";
+      };
+    },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
   verifyPublishedArtifactBacking: (input: {
     artifactId: string;
   }) => Promise<unknown>;

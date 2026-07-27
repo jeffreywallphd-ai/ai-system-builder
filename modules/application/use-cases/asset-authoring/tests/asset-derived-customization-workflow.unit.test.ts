@@ -219,6 +219,72 @@ describe("derived asset customization workflow", () => {
       fixture.derivedRef,
     );
   });
+  it("clears a reverted source overlay before review and publishes the exact base resources", async () => {
+    const fixture = await createFixture();
+    const created = await fixture.workflow.create({
+      workspaceId: fixture.workspaceA,
+      baseDefinitionRef: fixture.baseRef,
+      baseImplementationReleaseId: fixture.releaseId,
+      derivedDefinitionRef: fixture.derivedRef,
+      semanticPatch: { "display-name": "Customized tool" },
+      sourceChanges: [{
+        operation: "upsert",
+        path: "backend/logic.ts",
+        role: "backend-logic",
+        mediaType: "text/typescript",
+        content: "export const behavior = 'temporary edit';",
+      }],
+      actorId: "actor-a",
+    });
+    expect(created.kind).toBe("success");
+    if (created.kind !== "success") return;
+
+    const reverted = await fixture.workflow.update({
+      workspaceId: fixture.workspaceA,
+      customizationId: created.value.customizationId,
+      expectedRevision: 1,
+      semanticPatch: created.value.semanticPatch,
+      clearSourceOverlay: true,
+      actorId: "actor-a",
+    });
+    expect(reverted.kind).toBe("success");
+    if (reverted.kind !== "success") return;
+    expect(reverted.value.sourceOverlay).toBeUndefined();
+
+    const reviewed = await fixture.workflow.review({
+      workspaceId: fixture.workspaceA,
+      customizationId: reverted.value.customizationId,
+      expectedRevision: 2,
+      actorId: "reviewer-a",
+    });
+    if (reviewed.kind !== "success") {
+      throw new Error(JSON.stringify(reviewed.failure));
+    }
+    expect(reviewed.kind).toBe("success");
+    const published = await fixture.workflow.publish({
+      workspaceId: fixture.workspaceA,
+      customizationId: reviewed.value.customizationId,
+      expectedRevision: 3,
+      actorId: "publisher-a",
+    });
+    expect(published.kind).toBe("success");
+    if (published.kind !== "success") return;
+
+    const snapshot = await fixture.implementations.readSourceSnapshot(
+      fixture.workspaceA,
+      published.value.publication!.sourceSnapshotId,
+    );
+    const snapshotBytes = await fixture.artifacts.readVerified<Uint8Array>(
+      fixture.workspaceA,
+      snapshot!.artifact,
+    );
+    const materialized = JSON.parse(new TextDecoder().decode(snapshotBytes));
+    expect(
+      materialized.files.find((file: any) => file.path === "backend/logic.ts")
+        .content,
+    ).toContain("base");
+    expect(JSON.stringify(materialized)).not.toContain("temporary edit");
+  });
   it("fails closed when a base is revoked or revocation truth is unavailable", async () => {
     const revokedFixture = await createFixture();
     await revokedFixture.implementations.saveRevocation(

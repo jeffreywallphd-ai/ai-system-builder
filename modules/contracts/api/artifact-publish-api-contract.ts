@@ -14,6 +14,10 @@ export interface ApiArtifactPublishRequestPayload {
   };
   mediaType?: string;
   verify?: boolean;
+  repositoryCreation?: {
+    approved: true;
+    visibility: "private" | "public";
+  };
   source: string;
 }
 
@@ -57,6 +61,7 @@ export function createApiArtifactPublishRequest(
   payload: ApiArtifactPublishRequestPayload,
   options?: { requestId?: string; correlationId?: string },
 ): ApiArtifactPublishRequest {
+  const repositoryCreation = normalizeRepositoryCreation(payload.repositoryCreation);
   return createApiRequest(API_ARTIFACT_PUBLISH_OPERATION, {
     artifactId: normalizeRequired(payload.artifactId, "artifactId"),
     target: {
@@ -67,8 +72,22 @@ export function createApiArtifactPublishRequest(
     },
     mediaType: payload.mediaType?.trim() || undefined,
     verify: payload.verify ?? true,
+    ...(repositoryCreation ? { repositoryCreation } : {}),
     source: normalizeRequired(payload.source, "source"),
   }, options);
+}
+
+function normalizeRepositoryCreation(
+  value: ApiArtifactPublishRequestPayload["repositoryCreation"],
+): ApiArtifactPublishRequestPayload["repositoryCreation"] {
+  if (!value) return undefined;
+  if (value.approved !== true) {
+    throw new Error("repositoryCreation.approved must be true when repository creation is requested.");
+  }
+  if (value.visibility !== "private" && value.visibility !== "public") {
+    throw new Error("repositoryCreation.visibility must be private or public.");
+  }
+  return { approved: true, visibility: value.visibility };
 }
 
 export function createApiArtifactPublishSuccessResponse(

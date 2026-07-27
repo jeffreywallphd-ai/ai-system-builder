@@ -242,7 +242,7 @@ describe("ArtifactBrowserFeature", () => {
     mountedRoot = root;
     mountedContainer = container;
 
-    await act(async () => { root.render(<ArtifactBrowserFeature client={client} />); });
+    await act(async () => { root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />); });
 
     const [selectAllCheckbox, ...artifactCheckboxes] = Array.from(container.querySelectorAll("input[type='checkbox']")) as HTMLInputElement[];
     expect(selectAllCheckbox?.checked).toBe(false);
@@ -281,7 +281,7 @@ describe("ArtifactBrowserFeature", () => {
     mountedRoot = root;
     mountedContainer = container;
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     expect(container.textContent).not.toContain("Hugging Face token");
@@ -339,7 +339,7 @@ describe("ArtifactBrowserFeature", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     const artifactButton = Array.from(container.querySelectorAll("button"))
@@ -366,6 +366,7 @@ describe("ArtifactBrowserFeature", () => {
       publishButton.click();
     });
     expect(client.publishArtifactToHuggingFace).toHaveBeenCalledWith({
+      workspaceId: "workspace-a",
       artifactId: "uploads/cat.png",
       repository: "openai/demo",
       path: "cat.png",
@@ -409,7 +410,7 @@ describe("ArtifactBrowserFeature", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     const firstArtifactButton = Array.from(container.querySelectorAll("button"))
@@ -488,7 +489,7 @@ describe("ArtifactBrowserFeature", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     const artifactButton = Array.from(container.querySelectorAll("button"))
@@ -553,7 +554,7 @@ describe("ArtifactBrowserFeature", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     const registerToggle = Array.from(container.querySelectorAll("button"))
@@ -633,7 +634,7 @@ describe("ArtifactBrowserFeature", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     const registerToggle = Array.from(container.querySelectorAll("button"))
@@ -712,7 +713,7 @@ describe("ArtifactBrowserFeature", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     const registerToggle = Array.from(container.querySelectorAll("button"))
@@ -801,7 +802,7 @@ describe("ArtifactBrowserFeature", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     const artifactButton = Array.from(container.querySelectorAll("button"))
@@ -895,7 +896,7 @@ describe("ArtifactBrowserFeature", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     expect(container.textContent).toContain("Remote only");

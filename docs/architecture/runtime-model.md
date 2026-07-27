@@ -51,6 +51,14 @@ Runtime adapters should not own:
 - cross-use-case orchestration that belongs in application,
 - domain invariants.
 
+Declarative system and foundation-asset previews are non-executing runtime
+views. Preview input is bounded before tree construction and rendering: system
+composition limits instances, placements, roots, total tree nodes, depth,
+configuration depth/keys/array entries/text, while foundation surfaces bound
+regions, options, table rows/columns, and text. Values beyond those budgets are
+truncated or omitted deterministically. Preview code must not execute authored
+HTML, scripts, handlers, workflows, or imported backing resources.
+
 ## Contract-first runtime integration
 
 Runtime interactions must be described by explicit contracts (via `modules/contracts/`), such as:
@@ -146,9 +154,34 @@ Runtime contracts and adapters are shared; runtime instances are owned by the ex
 
 Desktop and server may both use ComfyUI adapters, but each host owns its own process/install/cache state by default. Runtime roots store sidecar installs, managed Python environments, dependency state, caches, and temp outputs. Artifact storage stores durable user/system artifacts.
 
+ComfyUI reference-image preparation resolves workspace-owned catalog artifacts
+through the bounded artifact-view retrieval seam. Only signature-verified PNG,
+JPEG, or WebP content within the configured byte ceiling may be staged into the
+contained ComfyUI input root. Randomized staging names are deleted after
+terminal task status and after preparation, submission, or runtime-read
+failures; callers cannot supply host paths or staging filenames.
+
 Configured shared model storage is host-owned runtime-adjacent input, not a runtime install root and not workspace persistence. The model registry/checkpoint resolver may scan the configured host-local folder for Hugging Face cache directories and checkpoint files, then resolve selected shared models for the executing host's ComfyUI/Python runtime. Desktop uses the desktop machine's configured folder; server/thin-client mode uses a folder readable by the server process. Thin clients must not assume the browser's local filesystem path is usable by the server.
 
 `SERVER_RUNTIME_ROOT` and `SERVER_STORAGE_ROOT` should be separate. Remote execution placement should be implemented in host composition through adapter/client substitution, not by changing application/domain logic.
+
+The managed Python sidecar is a host-private process boundary, not a general
+network service. Desktop and server composition canonicalize its bind and client
+endpoint to `http://127.0.0.1:<host-selected-port>` and reject wildcard, LAN,
+public, credentialed, HTTPS, path-bearing, query-bearing, fragment-bearing, or
+privileged-port configuration. `PYTHON_RUNTIME_BASE_URL`,
+`PYTHON_RUNTIME_HOST`, and `PYTHON_RUNTIME_PORT` may select only a consistent
+loopback endpoint; they cannot convert the managed sidecar into a remote runtime.
+
+Each supervisor spawn receives a new cryptographically random launch token in
+the child-only `PYTHON_RUNTIME_AUTH_TOKEN` environment. The HTTP client reads the
+current token for every request and sends it as a bearer credential. The worker
+authenticates every endpoint, including health and capability probes, using a
+constant-time comparison and fails startup when its token is absent. The token
+must never enter logs, readiness snapshots, public diagnostics, renderer state,
+or process-wide environment mutation. A newly composed foundation therefore
+cannot attach to an ambient or spoofed loopback service that does not possess
+its launch identity.
 
 ADR-0013 is the canonical cross-host runtime ownership ADR.
 

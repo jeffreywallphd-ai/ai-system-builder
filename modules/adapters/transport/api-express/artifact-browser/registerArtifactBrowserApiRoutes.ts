@@ -160,6 +160,8 @@ function resolveStatusCode(
   switch (response.error.code) {
     case "validation":
       return 400;
+    case "forbidden":
+      return 403;
     case "not-found":
       return 404;
     case "unavailable":
@@ -307,7 +309,9 @@ export function mapBrowseArtifactsResultToApiResponse(
   }
 
   return createApiArtifactBrowseFailureResponse(
-    result.error.code === "validation" || result.error.code === "unavailable"
+    result.error.code === "validation" ||
+      result.error.code === "forbidden" ||
+      result.error.code === "unavailable"
       ? result.error.code
       : "internal",
     result.error.message,
@@ -332,6 +336,7 @@ export function mapReadArtifactDetailResultToApiResponse(
 
   return createApiArtifactReadFailureResponse(
     result.error.code === "validation" ||
+      result.error.code === "forbidden" ||
       result.error.code === "not-found" ||
       result.error.code === "unavailable"
       ? result.error.code
@@ -358,6 +363,7 @@ export function mapReadArtifactContentResultToApiResponse(
 
   return createApiArtifactContentReadFailureResponse(
     result.error.code === "validation" ||
+      result.error.code === "forbidden" ||
       result.error.code === "not-found" ||
       result.error.code === "unavailable"
       ? result.error.code
@@ -498,6 +504,7 @@ export function registerArtifactBrowserApiRoutes(
     if (!result.ok) {
       const apiResponse = createApiArtifactRegisteredDeleteFailureResponse(
         result.error.code === "validation" ||
+          result.error.code === "forbidden" ||
           result.error.code === "not-found" ||
           result.error.code === "unavailable"
           ? result.error.code

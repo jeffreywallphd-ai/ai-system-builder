@@ -1,13 +1,20 @@
 import { createContractError, createFailureResult, type ContractResult } from "../../contracts/shared";
 import { isWorkspaceId, type WorkspaceId } from "../../contracts/workspace";
 import type { ApplicationRequestContext } from "../ports";
+import type { WorkspaceOperationAuthorizationPort } from "../ports/security";
 import type { WorkspaceRepository } from "../ports/workspace";
+import type { SecurityScope } from "../../contracts/security";
 
 export type ArtifactWorkspaceFailureCode = "validation" | "not-found" | "unavailable";
 
 export async function resolveArtifactWorkspaceContext(
   context: ApplicationRequestContext | undefined,
   workspaceRepository?: Pick<WorkspaceRepository, "readWorkspace">,
+  authorization?: {
+    readonly port: WorkspaceOperationAuthorizationPort;
+    readonly operation: string;
+    readonly requiredScopes: readonly SecurityScope[];
+  },
 ): Promise<ContractResult<{ workspaceId: WorkspaceId }>> {
   const requestContext = {
     requestId: context?.requestId,
@@ -54,6 +61,23 @@ export async function resolveArtifactWorkspaceContext(
         }),
         requestContext,
       );
+    }
+    if (authorization) {
+      try {
+        await authorization.port.authorizeWorkspaceOperation({
+          workspace,
+          operation: authorization.operation,
+          requiredScopes: authorization.requiredScopes,
+        });
+      } catch {
+        return createFailureResult(
+          createContractError("forbidden", "Workspace access is forbidden.", {
+            ...requestContext,
+            details: { code: "workspace-forbidden" },
+          }),
+          requestContext,
+        );
+      }
     }
   }
 

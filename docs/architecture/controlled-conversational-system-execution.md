@@ -250,6 +250,7 @@ system.foundation primitives
 
 Runtime records are operational records only and are never reusable asset substitutes.
 
+<<<<<<< ours
 ## Boundary repair status
 
 - Session/source summaries derive reusable/customized conversational-system claims from structured verified source evidence. A composition-plan id, label, summary, runtime capability string, or renderer/browser-provided text is not proof of conversational origin.
@@ -262,3 +263,9 @@ Runtime records are operational records only and are never reusable asset substi
   uses real execution-plan identity, bounded accessible transcript rendering,
   safe nested transport-envelope normalization, and truthful unsupported
   capability copy; the former UI correctness gap is closed.
+=======
+
+## Phase 13 Prompt 5 status
+
+Application-facing conversational invocation seams now exist for protected context preparation, adapter catalog selection, runtime guard checks, and single-turn orchestration. This phase remains non-executing: no concrete text-generation runtime adapter is implemented, production response generation remains deferred/unsupported, Prompt 6 will add the first supported adapter, and Prompt 7 will add persisted turn/run/result lifecycle integration. Approval/session eligibility and asset-derived source boundaries remain mandatory prerequisites.
+>>>>>>> theirs

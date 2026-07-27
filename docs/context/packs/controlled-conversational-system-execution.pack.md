@@ -98,6 +98,7 @@ Tools/function-calling, retrieval/RAG, memory, multimodal IO, image generation/C
 - Conversational starter-system/run-surface changes must include asset/foundation/composition packs, not only execution packs.
 - Runtime conversation/execution records are not reusable assets; reusable conversational assets must remain importable/customizable and lineage-linked to foundation primitives.
 
+<<<<<<< ours
 ## Current Adapter Status
 
 Application-facing conversational invocation seams exist for protected context preparation, adapter catalog selection, runtime guard checks, single-turn orchestration, and the supported Python text-generation runtime adapter path. Approval/session eligibility, reviewed execution-plan identity, runtime readiness, and asset-derived source boundaries remain mandatory prerequisites.
@@ -109,3 +110,9 @@ Application-facing conversational invocation seams exist for protected context p
   release approval does not activate it or bypass reviewed plan, readiness, and
   session approval requirements.
 - No fake response generator is allowed in production host composition. Hosts may expose only capabilities they actually compose; cancel, retry, and streaming stay unsupported unless implemented end to end.
+=======
+
+## Phase 13 Prompt 5 status
+
+Application-facing conversational invocation seams now exist for protected context preparation, adapter catalog selection, runtime guard checks, and single-turn orchestration. This phase remains non-executing: no concrete text-generation runtime adapter is implemented, production response generation remains deferred/unsupported, Prompt 6 will add the first supported adapter, and Prompt 7 will add persisted turn/run/result lifecycle integration. Approval/session eligibility and asset-derived source boundaries remain mandatory prerequisites.
+>>>>>>> theirs

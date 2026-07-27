@@ -26,7 +26,7 @@ test("managed organization middleware passes immutable auth and request context 
     correlationId: "correlation-a",
   });
   let continued = false;
-  await middleware(request, response(), () => { continued = true; });
+  await middleware(request, response() as never, () => { continued = true; });
   assert.equal(continued, true);
   assert.deepEqual(requests, [{
     authContext: {
@@ -37,9 +37,61 @@ test("managed organization middleware passes immutable auth and request context 
     organizationId,
     requestId: "request-a",
     correlationId: "correlation-a",
-    operation: "api.get",
-    requiredScopes: [],
+    operation: "GET /api/workspaces",
+    requiredScopes: ["workspace:read"],
+    requiredOrganizationRoles: undefined,
   }]);
+});
+
+test("managed organization middleware forwards privileged route roles and scopes", async () => {
+  const requests: any[] = [];
+  const middleware = createExpressOrganizationAuthorizationMiddleware({
+    authorizer: { execute: async (request: unknown) => { requests.push(request); } } as never,
+  });
+  const request: any = { method: "POST", path: "/api/security/token/revoke" };
+  setExpressAuthContext(request, {
+    authenticated: true,
+    authMethod: "oidc-bearer",
+    principal: { principalId: "principal-a", kind: "user", roles: [], scopes: [] },
+  });
+  setExpressOrganizationContext(request, {
+    organizationId: createOrganizationId("org-a"),
+    principalId: "principal-a",
+  });
+  await middleware(request, response() as never, () => {});
+  assert.deepEqual(requests[0].requiredScopes, ["security:admin"]);
+});
+
+test("managed organization middleware protects settings, credentials, and restart with dedicated capabilities", async () => {
+  const requests: any[] = [];
+  const middleware = createExpressOrganizationAuthorizationMiddleware({
+    authorizer: { execute: async (request: unknown) => { requests.push(request); } } as never,
+  });
+  for (const [method, path] of [
+    ["POST", "/api/application-settings/update"],
+    ["POST", "/api/config/huggingface-token"],
+    ["POST", "/api/server/restart"],
+  ]) {
+    const request: any = { method, path };
+    setExpressAuthContext(request, {
+      authenticated: true,
+      authMethod: "oidc-bearer",
+      principal: { principalId: "principal-a", kind: "user", roles: [], scopes: [] },
+    });
+    setExpressOrganizationContext(request, {
+      organizationId: createOrganizationId("org-a"),
+      principalId: "principal-a",
+    });
+    await middleware(request, response() as never, () => {});
+  }
+  assert.deepEqual(requests.map((request) => request.requiredScopes), [
+    ["settings:write"],
+    ["provider-credential:write"],
+    ["runtime:admin"],
+  ]);
+  assert.ok(requests.every((request) =>
+    request.requiredOrganizationRoles.includes("operator") &&
+    !request.requiredOrganizationRoles.includes("member")));
 });
 
 test("managed organization middleware denies missing context and sanitizes policy denials", async () => {

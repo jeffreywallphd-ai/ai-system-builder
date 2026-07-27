@@ -15,6 +15,7 @@ import { ModalDialog } from "../components/ModalDialog";
 import { WorkflowSequence, WorkflowStep } from "../components/WorkflowSequence";
 import {
   buildAssetCustomizationSubmission,
+  buildAssetCustomizationSourceUpdate,
   createAssetCustomizationEditorValues,
   createAssetCustomizationResourceDrafts,
   resourceRoleLabel,
@@ -288,9 +289,10 @@ export function AssetDerivedCustomizationEditor({
       const input = {
         workspaceId,
         semanticPatch: submission.semanticPatch,
-        ...(submission.sourceChanges.length
-          ? { sourceChanges: submission.sourceChanges }
-          : {}),
+        ...buildAssetCustomizationSourceUpdate(
+          Boolean(current?.sourceOverlay),
+          submission.sourceChanges,
+        ),
       };
       const result = current
         ? await client.updateDerivedCustomization({

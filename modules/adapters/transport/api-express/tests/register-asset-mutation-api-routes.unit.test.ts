@@ -27,6 +27,7 @@ function useCase(result: any = { ok: true, operation: "asset.register-resource-b
 function command(operation: string, extra: Record<string, unknown> = {}) {
   return {
     operation,
+    workspaceId: "workspace-a",
     viewId: "asset-view.external.1",
     approval: { userConfirmed: true, confirmationKind: "register-resource-backed-view" },
     actor: { initiatedBy: "human" },

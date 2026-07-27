@@ -9,6 +9,9 @@ import type {
   PythonRuntimeUnloadModelsResult,
 } from "../../../../contracts/runtime";
 import { randomUUID } from "node:crypto";
+import { lstat, realpath } from "node:fs/promises";
+import { homedir } from "node:os";
+import path from "node:path";
 
 import {
   mapCancelTaskResponse,
@@ -20,6 +23,7 @@ import {
   mapTaskStatusResponse,
   mapUnloadModelsResponseFromHttpPayload,
 } from "../protocol/pythonRuntimeHttpProtocol";
+import { normalizePythonRuntimeLoopbackBaseUrl } from "../config/pythonRuntimeEndpoint";
 
 export interface PythonRuntimeHttpClient {
   getHealthStatus(): Promise<PythonRuntimeHealthCheckResult>;
@@ -39,18 +43,23 @@ export interface PythonRuntimeHttpClient {
   }>;
   getModelStatus(): Promise<PythonRuntimeModelStatusResult>;
   unloadModels(): Promise<PythonRuntimeUnloadModelsResult>;
-  startTask(request: StartPythonRuntimeTaskRequest): Promise<StartPythonRuntimeTaskResult>;
+  startTask(
+    request: StartPythonRuntimeTaskRequest,
+  ): Promise<StartPythonRuntimeTaskResult>;
   readTaskStatus(requestId: string): Promise<PythonRuntimeTaskStatusResult>;
   cancelTask(requestId: string): Promise<CancelPythonRuntimeTaskResult>;
 }
 
 export interface CreatePythonRuntimeHttpClientOptions {
   baseUrl: string;
+  authorizationToken?: string;
+  authorizationTokenProvider?: () => string;
   fetchImplementation?: typeof fetch;
   defaultTaskTimeoutMs?: number;
   transportRequestTimeoutMs?: number;
   modelDownloadTimeoutMs?: number;
   modelDownloadPollIntervalMs?: number;
+  environment?: NodeJS.ProcessEnv;
 }
 
 async function parseJsonResponseSafe(
@@ -88,35 +97,138 @@ function mapRuntimeResponsePayload<T>(
       );
     }
 
-    throw new Error(`Python runtime request failed for ${endpoint} with invalid JSON response body.`);
+    throw new Error(
+      `Python runtime request failed for ${endpoint} with invalid JSON response body.`,
+    );
   }
 }
 
-function trimTrailingSlash(value: string): string {
-  return value.endsWith("/") ? value.slice(0, -1) : value;
+function resolveConfiguredModelCacheRoot(
+  environment: NodeJS.ProcessEnv,
+): string {
+  const configured =
+    environment.HF_HUB_CACHE?.trim() ||
+    environment.TRANSFORMERS_CACHE?.trim();
+  if (configured) {
+    if (!path.isAbsolute(configured)) {
+      throw new TypeError("Python runtime model cache root must be absolute.");
+    }
+    return path.resolve(configured);
+  }
+  const hfHome = environment.HF_HOME?.trim();
+  if (hfHome) {
+    if (!path.isAbsolute(hfHome)) {
+      throw new TypeError("Python runtime Hugging Face home must be absolute.");
+    }
+    return path.resolve(hfHome, "hub");
+  }
+  return path.join(homedir(), ".cache", "huggingface", "hub");
 }
 
-function mapModelDownloadPayload(endpoint: string, payload: unknown) {
+async function resolveModelCacheHandle(
+  cacheRoot: string,
+  modelHandle: string,
+): Promise<string> {
+  if (
+    modelHandle.length > 1_024 ||
+    modelHandle.includes("\\") ||
+    path.posix.isAbsolute(modelHandle)
+  ) {
+    throw new TypeError("Python runtime returned an invalid model cache handle.");
+  }
+  const segments = modelHandle.split("/");
+  if (
+    segments.length < 3 ||
+    segments.some(
+      (segment) =>
+        !segment ||
+        segment === "." ||
+        segment === ".." ||
+        !/^[A-Za-z0-9._-]+$/.test(segment),
+    )
+  ) {
+    throw new TypeError("Python runtime returned an invalid model cache handle.");
+  }
+  const rootStats = await lstat(cacheRoot);
+  if (rootStats.isSymbolicLink() || !rootStats.isDirectory()) {
+    throw new TypeError("Python runtime model cache root is invalid.");
+  }
+  const canonicalRoot = await realpath(cacheRoot);
+  let candidate = canonicalRoot;
+  for (const segment of segments) {
+    candidate = path.join(candidate, segment);
+    const stats = await lstat(candidate);
+    if (stats.isSymbolicLink() || !stats.isDirectory()) {
+      throw new TypeError("Python runtime model cache handle is invalid.");
+    }
+    candidate = await realpath(candidate);
+    const relativeCandidate = path.relative(canonicalRoot, candidate);
+    if (
+      relativeCandidate.startsWith("..") ||
+      path.isAbsolute(relativeCandidate)
+    ) {
+      throw new TypeError("Python runtime model cache handle escaped its root.");
+    }
+  }
+  return candidate;
+}
+
+async function mapModelDownloadPayload(
+  endpoint: string,
+  payload: unknown,
+  cacheRoot: string,
+) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    throw new Error(`Python runtime request failed for ${endpoint} with invalid structured payload.`);
+    throw new Error(
+      `Python runtime request failed for ${endpoint} with invalid structured payload.`,
+    );
   }
 
   const record = payload as Record<string, unknown>;
-  if (record.provider !== "transformers" || typeof record.modelId !== "string") {
-    throw new Error(`Python runtime request failed for ${endpoint} with invalid structured payload.`);
+  if (
+    record.provider !== "transformers" ||
+    typeof record.modelId !== "string" ||
+    typeof record.modelHandle !== "string" ||
+    "localPath" in record
+  ) {
+    throw new Error(
+      `Python runtime request failed for ${endpoint} with invalid structured payload.`,
+    );
   }
 
+  const localPath = await resolveModelCacheHandle(
+    cacheRoot,
+    record.modelHandle,
+  );
   return {
     provider: "transformers" as const,
     modelId: record.modelId,
     downloaded: record.downloaded === true,
     fromCache: record.fromCache === true,
-    localPath: typeof record.localPath === "string" && record.localPath.length > 0 ? record.localPath : undefined,
+    localPath,
   };
 }
 
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+const RUNTIME_REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
+const HUGGING_FACE_MODEL_ID_PATTERN =
+  /^[A-Za-z0-9][A-Za-z0-9._-]{0,95}\/[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/;
+
+function assertRuntimeRequestId(requestId: string): void {
+  if (!RUNTIME_REQUEST_ID_PATTERN.test(requestId)) {
+    throw new TypeError("Python runtime task identifier is invalid.");
+  }
+}
+
+function assertHuggingFaceModelId(modelId: string): void {
+  if (modelId.length > 193 || !HUGGING_FACE_MODEL_ID_PATTERN.test(modelId)) {
+    throw new TypeError(
+      "Python runtime model identifier must use the canonical owner/model format.",
+    );
+  }
 }
 
 function summarizeError(error: unknown): string {
@@ -139,7 +251,9 @@ function readErrorCode(error: unknown): string | undefined {
   }
 
   const causeCode = (cause as { code?: unknown }).code;
-  return typeof causeCode === "string" && causeCode.length > 0 ? causeCode : undefined;
+  return typeof causeCode === "string" && causeCode.length > 0
+    ? causeCode
+    : undefined;
 }
 
 function isRecoverableRuntimePollError(error: unknown): boolean {
@@ -163,42 +277,104 @@ export function createPythonRuntimeHttpClient(
   options: CreatePythonRuntimeHttpClientOptions,
 ): PythonRuntimeHttpClient {
   const fetcher = options.fetchImplementation ?? fetch;
-  const baseUrl = trimTrailingSlash(options.baseUrl);
-  const defaultTaskTimeoutMs = options.defaultTaskTimeoutMs ?? 120_000;
-  const transportRequestTimeoutMs = options.transportRequestTimeoutMs ?? 9 * 60 * 1000;
-  const modelDownloadTimeoutMs = options.modelDownloadTimeoutMs ?? 2 * 60 * 60 * 1000;
-  const modelDownloadPollIntervalMs = options.modelDownloadPollIntervalMs ?? 2_000;
+  const modelCacheRoot = resolveConfiguredModelCacheRoot(
+    options.environment ?? process.env,
+  );
+  const baseUrl = normalizePythonRuntimeLoopbackBaseUrl(options.baseUrl);
+  const defaultTaskTimeoutMs = Math.min(
+    Math.max(options.defaultTaskTimeoutMs ?? 120_000, 1_000),
+    24 * 60 * 60 * 1_000,
+  );
+  const transportRequestTimeoutMs = Math.min(
+    Math.max(options.transportRequestTimeoutMs ?? 30_000, 100),
+    120_000,
+  );
+  const modelDownloadTimeoutMs = Math.min(
+    Math.max(options.modelDownloadTimeoutMs ?? 2 * 60 * 60 * 1_000, 1_000),
+    2 * 60 * 60 * 1_000,
+  );
+  const modelDownloadPollIntervalMs = Math.min(
+    Math.max(options.modelDownloadPollIntervalMs ?? 2_000, 10),
+    10_000,
+  );
+  const authenticatedFetch = async (
+    endpoint: string,
+    diagnosticEndpoint: string,
+    init: RequestInit,
+  ): Promise<Response> => {
+    const authorizationToken = (
+      options.authorizationTokenProvider?.() ?? options.authorizationToken
+    )?.trim();
+    if (!authorizationToken || authorizationToken.length < 32) {
+      throw new Error("Python runtime launch authentication is unavailable.");
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(
+      () => controller.abort(),
+      transportRequestTimeoutMs,
+    );
+    try {
+      return await fetcher(`${baseUrl}${endpoint}`, {
+        ...init,
+        headers: {
+          ...(init.headers as Readonly<Record<string, string>> | undefined),
+          authorization: `Bearer ${authorizationToken}`,
+        },
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new Error(
+          `Python runtime request timed out for ${diagnosticEndpoint}.`,
+        );
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
 
   return {
     async getHealthStatus() {
-      const response = await fetcher(`${baseUrl}/health`, { method: "GET" });
+      const response = await authenticatedFetch("/health", "/health", {
+        method: "GET",
+      });
       const payload = await parseJsonResponseSafe(response);
-      return mapRuntimeResponsePayload("/health", response, payload, mapHealthResponseFromHttpPayload);
+      return mapRuntimeResponsePayload(
+        "/health",
+        response,
+        payload,
+        mapHealthResponseFromHttpPayload,
+      );
     },
 
     async getCapabilities() {
-      const response = await fetcher(`${baseUrl}/capabilities`, { method: "GET" });
+      const response = await authenticatedFetch(
+        "/capabilities",
+        "/capabilities",
+        { method: "GET" },
+      );
       const payload = await parseJsonResponseSafe(response);
-      return mapRuntimeResponsePayload("/capabilities", response, payload, mapCapabilitiesResponseFromHttpPayload);
+      return mapRuntimeResponsePayload(
+        "/capabilities",
+        response,
+        payload,
+        mapCapabilitiesResponseFromHttpPayload,
+      );
     },
 
     async ensureModelDownloaded(request) {
+      assertHuggingFaceModelId(request.modelId);
       const requestId = `model-download-${randomUUID()}`;
       await this.startTask({
         requestId,
         taskType: "ensure-model-download",
         payload: request,
         timeoutMs: modelDownloadTimeoutMs,
-        metadata: {
-          provider: request.provider,
-          modelId: request.modelId,
-          operation: "model.download",
-        },
       });
 
       const deadline = Date.now() + modelDownloadTimeoutMs;
       let recoverablePollFailureCount = 0;
-      let lastRecoverablePollFailure: string | undefined;
       while (Date.now() <= deadline) {
         let status: PythonRuntimeTaskStatusResult;
         try {
@@ -209,76 +385,143 @@ export function createPythonRuntimeHttpClient(
           }
 
           recoverablePollFailureCount += 1;
-          lastRecoverablePollFailure = summarizeError(error);
           await delay(modelDownloadPollIntervalMs);
           continue;
         }
 
         if (status.status === "succeeded") {
-          return mapModelDownloadPayload(`/tasks/${requestId}`, status.data);
+          return await mapModelDownloadPayload(
+            "/tasks/:requestId",
+            status.data,
+            modelCacheRoot,
+          );
         }
         if (status.status === "failed" || status.status === "cancelled") {
-          const message = status.error?.message ?? `Python runtime model download task ended with status ${status.status}.`;
+          const message =
+            status.error?.message ??
+            `Python runtime model download task ended with status ${status.status}.`;
           throw new Error(`Python runtime model download failed: ${message}`);
         }
         await delay(modelDownloadPollIntervalMs);
       }
 
-      const pollFailureDetail = recoverablePollFailureCount > 0
-        ? ` Last runtime task polling error after ${recoverablePollFailureCount} recoverable failure(s): ${lastRecoverablePollFailure}.`
-        : "";
-      throw new Error(`Python runtime model download timed out after ${modelDownloadTimeoutMs}ms.${pollFailureDetail}`);
+      await this.cancelTask(requestId).catch(() => undefined);
+      throw new Error(
+        `Python runtime model download timed out after ${modelDownloadTimeoutMs}ms${
+          recoverablePollFailureCount > 0
+            ? ` following ${recoverablePollFailureCount} recoverable polling failure(s)`
+            : ""
+        }.`,
+      );
     },
 
     async getModelStatus() {
-      const response = await fetcher(`${baseUrl}/models/status`, { method: "GET" });
+      const response = await authenticatedFetch(
+        "/models/status",
+        "/models/status",
+        { method: "GET" },
+      );
       const payload = await parseJsonResponseSafe(response);
-      return mapRuntimeResponsePayload("/models/status", response, payload, mapModelStatusResponseFromHttpPayload);
+      return mapRuntimeResponsePayload(
+        "/models/status",
+        response,
+        payload,
+        mapModelStatusResponseFromHttpPayload,
+      );
     },
 
     async unloadModels() {
-      const response = await fetcher(`${baseUrl}/models/unload`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
+      const response = await authenticatedFetch(
+        "/models/unload",
+        "/models/unload",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
         },
-      });
+      );
       const payload = await parseJsonResponseSafe(response);
-      if (!response.ok && payload && typeof payload === "object" && "error" in payload) {
+      if (
+        !response.ok &&
+        payload &&
+        typeof payload === "object" &&
+        "error" in payload
+      ) {
         const error = (payload as { error?: { message?: unknown } }).error;
-        const message = typeof error?.message === "string"
-          ? error.message
-          : `Python runtime request failed for /models/unload with status ${response.status}.`;
+        const message =
+          typeof error?.message === "string"
+            ? error.message
+            : `Python runtime request failed for /models/unload with status ${response.status}.`;
         throw new Error(`Python runtime model unload failed: ${message}`);
       }
 
-      return mapRuntimeResponsePayload("/models/unload", response, payload, mapUnloadModelsResponseFromHttpPayload);
+      return mapRuntimeResponsePayload(
+        "/models/unload",
+        response,
+        payload,
+        mapUnloadModelsResponseFromHttpPayload,
+      );
     },
     async startTask(request: StartPythonRuntimeTaskRequest) {
-      const response = await fetcher(`${baseUrl}/tasks/start`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
+      assertRuntimeRequestId(request.requestId);
+      const timeoutMs = Math.min(
+        Math.max(request.timeoutMs ?? defaultTaskTimeoutMs, 1_000),
+        24 * 60 * 60 * 1_000,
+      );
+      const response = await authenticatedFetch(
+        "/tasks/start",
+        "/tasks/start",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify(mapStartTaskRequest({ ...request, timeoutMs })),
         },
-        body: JSON.stringify(mapStartTaskRequest(request)),
-      });
+      );
       const payload = await parseJsonResponseSafe(response);
-      return mapRuntimeResponsePayload("/tasks/start", response, payload, mapStartTaskResponse);
+      return mapRuntimeResponsePayload(
+        "/tasks/start",
+        response,
+        payload,
+        mapStartTaskResponse,
+      );
     },
     async readTaskStatus(requestId: string) {
-      const response = await fetcher(`${baseUrl}/tasks/${encodeURIComponent(requestId)}`, { method: "GET" });
+      assertRuntimeRequestId(requestId);
+      const response = await authenticatedFetch(
+        `/tasks/${encodeURIComponent(requestId)}`,
+        "/tasks/:requestId",
+        { method: "GET" },
+      );
       const payload = await parseJsonResponseSafe(response);
-      return mapRuntimeResponsePayload(`/tasks/${requestId}`, response, payload, mapTaskStatusResponse);
+      return mapRuntimeResponsePayload(
+        "/tasks/:requestId",
+        response,
+        payload,
+        mapTaskStatusResponse,
+      );
     },
     async cancelTask(requestId: string) {
-      const response = await fetcher(`${baseUrl}/tasks/${encodeURIComponent(requestId)}/cancel`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
+      assertRuntimeRequestId(requestId);
+      const response = await authenticatedFetch(
+        `/tasks/${encodeURIComponent(requestId)}/cancel`,
+        "/tasks/:requestId/cancel",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
         },
-      });
+      );
       const payload = await parseJsonResponseSafe(response);
-      return mapRuntimeResponsePayload(`/tasks/${requestId}/cancel`, response, payload, mapCancelTaskResponse);
+      return mapRuntimeResponsePayload(
+        "/tasks/:requestId/cancel",
+        response,
+        payload,
+        mapCancelTaskResponse,
+      );
     },
   };
 }

@@ -66,3 +66,8 @@ The controlled conversational orchestration model must later support additional 
 - The starter conversational system must be importable/customizable through existing asset authoring/override/effective-projection behavior.
 - Runtime records are operational and are not reusable asset definitions.
 - Later execution use cases must originate from execution plans derived from composed conversational assets.
+
+
+## Phase 13 Prompt 5 status
+
+Application-facing conversational invocation seams now exist for protected context preparation, adapter catalog selection, runtime guard checks, and single-turn orchestration. This phase remains non-executing: no concrete text-generation runtime adapter is implemented, production response generation remains deferred/unsupported, Prompt 6 will add the first supported adapter, and Prompt 7 will add persisted turn/run/result lifecycle integration. Approval/session eligibility and asset-derived source boundaries remain mandatory prerequisites.

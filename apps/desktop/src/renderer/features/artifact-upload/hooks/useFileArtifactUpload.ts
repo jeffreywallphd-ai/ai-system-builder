@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from "react";
 
+import { ARTIFACT_UPLOAD_MAXIMUM_BYTES } from "../../../../../../../modules/contracts/artifact-upload";
 import type { ArtifactUploadClient } from "../api/desktopArtifactUploadClient";
 import type { UploadFileResult, UploadViewState } from "../components/ArtifactUploadForm";
 import { resolveArtifactUploadMediaType } from "./resolveArtifactUploadMediaType";
@@ -81,7 +82,7 @@ function createCanceledViewState(results: readonly UploadFileResult[], totalFile
 export function useFileArtifactUpload(
   uploadClient: ArtifactUploadClient,
   onUploadComplete?: () => void,
-  options: { persistState?: boolean; workspaceId?: string } = {},
+  options: { persistState?: boolean; workspaceId?: string; maximumBytes?: number } = {},
 ): UseFileArtifactUploadResult {
   const shouldPersistState = options.persistState ?? true;
   const [selectedFiles, setSelectedFiles] = useState<File[]>(shouldPersistState ? persistedFileUploadState.selectedFiles : []);
@@ -106,6 +107,17 @@ export function useFileArtifactUpload(
 
   async function uploadFile(file: File): Promise<UploadFileResult> {
     try {
+      const maximumBytes = Math.min(
+        options.maximumBytes ?? ARTIFACT_UPLOAD_MAXIMUM_BYTES,
+        ARTIFACT_UPLOAD_MAXIMUM_BYTES,
+      );
+      if (file.size > maximumBytes) {
+        return {
+          fileName: file.name,
+          status: "error",
+          message: `Artifact uploads must not exceed ${maximumBytes} bytes.`,
+        };
+      }
       const response = await uploadClient.uploadArtifact({
         workspaceId: options.workspaceId ?? "",
         fileName: file.name,

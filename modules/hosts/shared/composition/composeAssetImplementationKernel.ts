@@ -8,6 +8,7 @@ import type {
   AssetImplementationArtifactPort,
   AssetImplementationBuilderPort,
 } from "../../../application/ports/asset-implementation";
+import type { AssetPackageRepositoryPort } from "../../../application/ports/asset-package";
 import {
   BindAssetImplementationReleaseUseCase,
   CreateAssetImplementationDraftUseCase,
@@ -108,6 +109,7 @@ export interface ComposeAssetImplementationKernelOptions {
   readonly trustedSeeds?: readonly TrustedBuiltInImplementationSeed[];
   readonly now?: () => string;
   readonly createRevocationId?: () => string;
+  readonly packageRepository?: Pick<AssetPackageRepositoryPort, "listPackages">;
 }
 
 export function composeAssetImplementationKernel(
@@ -166,7 +168,10 @@ export function composeAssetImplementationKernel(
         (() => `implementation-revocation.${Date.now()}`),
       now,
     ),
-    resolve: new ResolveAssetImplementationUseCase(repository),
+    resolve: new ResolveAssetImplementationUseCase(
+      repository,
+      options.packageRepository,
+    ),
     listReleases: new ListAssetImplementationReleasesUseCase(repository),
   };
 

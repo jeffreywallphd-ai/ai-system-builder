@@ -1,3 +1,4 @@
+import type { Request } from "express";
 import type { WorkspaceAssetAuthoringReadModelService } from "../../../../application/services/asset/workspace-asset-authoring-read-model.service";
 import type { AssetDerivedCustomizationApplicationPort, AuthoredAssetRepositoryPort, AssetDraftRepositoryPort, AssetOverrideRepositoryPort, AssetRevisionRepositoryPort } from "../../../../application/ports/asset-authoring";
 import type { CreateWorkspaceAuthoredAssetUseCase, CreateAssetDraftUseCase, UpdateAssetDraftUseCase, PublishAssetDraftUseCase, CreateAssetOverrideUseCase, UpdateAssetOverrideUseCase, DisableAssetOverrideUseCase } from "../../../../application/use-cases/asset-authoring";
@@ -6,9 +7,10 @@ import { normalizeAssetCustomizationId, normalizeAssetDraftId, normalizeAssetOve
 import { normalizeAssetImplementationReleaseId } from "../../../../contracts/asset-implementation";
 import { normalizeAssetId } from "../../../../contracts/asset";
 import { createWorkspaceId } from "../../../../contracts/workspace";
+import { requireExpressAuthenticatedPrincipalId } from "../security/expressAuthContext";
 
 interface App { get: (p: string, h: (req: Req, res: Res) => Promise<void> | void) => void; post: (p: string, h: (req: Req, res: Res) => Promise<void> | void) => void; patch: (p: string, h: (req: Req, res: Res) => Promise<void> | void) => void; }
-type Req = { params?: Record<string, unknown>; query?: Record<string, unknown>; body?: Record<string, unknown>; securityContext?: { principal?: { id?: string } } };
+type Req = { params?: Record<string, unknown>; query?: Record<string, unknown>; body?: Record<string, unknown> };
 type Res = { status: (code: number) => Res; json: (payload: unknown) => void };
 type AssetAuthoringCommandUseCase<TCommand, TResult> = { execute(command: TCommand): Promise<TResult> };
 
@@ -268,5 +270,5 @@ function optionalText(value: unknown): string | undefined {
 }
 
 function actor(request: Req): string {
-  return request.securityContext?.principal?.id?.trim() || "authenticated-user";
+  return requireExpressAuthenticatedPrincipalId(request as Request);
 }

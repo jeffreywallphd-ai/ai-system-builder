@@ -6,23 +6,23 @@ import {
 } from "../../../contracts/ingestion";
 import type { WebsiteHtmlAcquisitionStrategy } from "../../../application/ports/ingestion";
 import type { ApplicationRequestContext } from "../../../application/ports";
-
-type FetchLike = (input: string, init?: { headers?: Record<string, string> }) => Promise<{
-  url: string;
-  status: number;
-  headers: { get(name: string): string | null };
-  text(): Promise<string>;
-}>;
+import { SecureEgressBroker } from "../../security/egress";
 
 export interface SimpleHttpWebsiteHtmlAcquisitionAdapterDependencies {
-  fetchImpl?: FetchLike;
+  egressBroker?: Pick<SecureEgressBroker, "createSession">;
+  maximumHtmlBytes?: number;
+  timeoutMs?: number;
 }
 
 export class SimpleHttpWebsiteHtmlAcquisitionAdapter implements WebsiteHtmlAcquisitionStrategy {
-  private readonly fetchImpl: FetchLike;
+  private readonly egressBroker: Pick<SecureEgressBroker, "createSession">;
+  private readonly maximumHtmlBytes: number;
+  private readonly timeoutMs: number;
 
   public constructor(dependencies?: SimpleHttpWebsiteHtmlAcquisitionAdapterDependencies) {
-    this.fetchImpl = dependencies?.fetchImpl ?? ((input, init) => fetch(input, init) as ReturnType<FetchLike>);
+    this.egressBroker = dependencies?.egressBroker ?? new SecureEgressBroker();
+    this.maximumHtmlBytes = dependencies?.maximumHtmlBytes ?? 5 * 1024 * 1024;
+    this.timeoutMs = dependencies?.timeoutMs ?? 15_000;
   }
 
   public async acquireWebsiteHtml(
@@ -31,22 +31,27 @@ export class SimpleHttpWebsiteHtmlAcquisitionAdapter implements WebsiteHtmlAcqui
   ): Promise<WebsiteHtmlAcquisitionResult> {
     const normalizedRequest = normalizeWebsiteHtmlAcquisitionRequest(request);
 
-    const response = await this.fetchImpl(normalizedRequest.target.url, {
+    const response = await this.egressBroker.createSession({
+      allowedMediaTypes: ["text/html", "application/xhtml+xml"],
+      maximumResponseBytes: this.maximumHtmlBytes,
+      maximumTotalBytes: this.maximumHtmlBytes,
+      timeoutMs: this.timeoutMs,
+    }).fetch(normalizedRequest.target.url, {
       headers: {
         accept: "text/html,application/xhtml+xml",
       },
     });
 
-    const html = (await response.text()).trim();
+    const html = new TextDecoder().decode(response.bytes).trim();
 
     return normalizeWebsiteHtmlAcquisitionResult({
       sourceKind: "scrape",
-      resolvedUrl: response.url || normalizedRequest.target.url,
+      resolvedUrl: response.url,
       html,
       mediaType: "text/html",
       acquisitionMechanismUsed: "simple-http",
       httpStatus: response.status,
-      contentTypeHeader: response.headers.get("content-type") ?? undefined,
+      contentTypeHeader: response.headers["content-type"],
     });
   }
 }

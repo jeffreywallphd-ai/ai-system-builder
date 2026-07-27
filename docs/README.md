@@ -53,6 +53,13 @@ This directory separates canonical system guidance from downstream task context 
   - Successor delivery plan for canonical named slots and ordered placements,
     predefined interactive layouts, the shared visual Compose experience,
     immutable legacy upgrades, build adoption, and controlled qualification.
+- `docs/security-vulnerability-remediation-implementation-roadmap.md`
+  - Severity-ordered delivery plan for closing the audited API, authorization,
+    storage, network, runtime, IPC, diagnostic, and development-host security
+    boundaries without removing supported workflows.
+- `docs/security-vulnerability-remediation-finding-register.md`
+  - Permanent issue-level traceability for the 78 supplied findings, including
+    baseline state, owning increment, required control, and closure evidence.
 - `docs/context/templates/`
   - Templates for durable epic, feature, and story context artifacts.
 
@@ -89,6 +96,9 @@ This directory separates canonical system guidance from downstream task context 
 - Architecture verification: use `docs/architecture/architecture-verification.md` to distinguish direct fitness functions from representative coverage and known gaps.
 - Agent-support evaluation: use `docs/context/pack-catalog.json`, `dev-tools/agent-evals/scenarios.json`, and `docs/standards/agent-support-evaluation-standards.md`.
 - Security-sensitive work: add `docs/context/packs/security.pack.md` and inspect `docs/security/`.
+- Security vulnerability remediation from the supplied audit: use
+  `docs/security-vulnerability-remediation-implementation-roadmap.md` and keep
+  every row current in `docs/security-vulnerability-remediation-finding-register.md`.
 
 If context guidance conflicts with an ADR, architecture document, or standard, the canonical source takes precedence and the conflict must be corrected or recorded.
 

@@ -1,4 +1,5 @@
 export * from "./client/createPythonRuntimeHttpClient";
+export * from "./config/pythonRuntimeEndpoint";
 export * from "./supervisor/createPythonRuntimeSupervisor";
 export * from "./protocol/pythonRuntimeHttpProtocol";
 export * from "./createPythonRuntimePort";

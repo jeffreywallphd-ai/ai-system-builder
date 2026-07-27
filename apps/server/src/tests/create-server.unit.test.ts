@@ -158,6 +158,12 @@ describe("resolveServerRuntimeConfig", () => {
     ]);
   });
 
+  it("enables case-sensitive API routing", async () => {
+    const { app } = await createServer({ env: {} });
+
+    expect(app.enabled("case sensitive routing")).toBe(true);
+  });
+
   it("createServer passes explicit environment into server runtime composition", async () => {
     const previousPythonRuntimeBaseUrl = process.env.PYTHON_RUNTIME_BASE_URL;
     process.env.PYTHON_RUNTIME_BASE_URL = "http://127.0.0.1:49999";
