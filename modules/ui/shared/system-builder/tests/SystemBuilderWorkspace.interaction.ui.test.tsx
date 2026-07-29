@@ -744,7 +744,14 @@ describe("SystemBuilderWorkspace UI preview", () => {
       expect(minimalChoice.checked).toBe(false);
     });
     await act(async () => button(container, "Build & test").click());
-    expect(onBuildAndTest).toHaveBeenCalledWith("system-1");
+    expect(onBuildAndTest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        system: expect.objectContaining({ systemId: "system-1" }),
+        revision: expect.objectContaining({
+          revisionId: "system-revision-layout-1",
+        }),
+      }),
+    );
   });
 
   it("requires explicit Foundation upgrade before laying out a legacy Controlled Chatbot reference system", async () => {

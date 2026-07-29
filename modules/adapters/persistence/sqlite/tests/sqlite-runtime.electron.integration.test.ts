@@ -60,6 +60,23 @@ test("Electron's production runtime executes SQLite migrations, transactions, he
       systemDataTitle: string;
       systemDataAuditCount: number;
       systemDataConflict: boolean;
+      systemBuildConformance: {
+        buildCount: number;
+        releaseCount: number;
+        staleConflict: boolean;
+        immutableReleaseConflict: boolean;
+        workspaceIsolation: boolean;
+        rollbackSafe: boolean;
+        restartSafe: boolean;
+        newestVersionNumber: number;
+      };
+      systemDeploymentConformance: {
+        currentConflict: boolean;
+        retainedDeploymentCount: number;
+        retainedRunCount: number;
+        restartSafe: boolean;
+        workspaceIsolation: boolean;
+      };
     };
     assert.equal(output.health.healthy, true);
     assert.equal(output.health.schemaVersion, 2);
@@ -70,6 +87,24 @@ test("Electron's production runtime executes SQLite migrations, transactions, he
     assert.equal(output.systemDataTitle, "SQLite updated");
     assert.equal(output.systemDataAuditCount, 2);
     assert.equal(output.systemDataConflict, true);
+    assert.deepEqual(output.systemBuildConformance, {
+      ...output.systemBuildConformance,
+      buildCount: 36,
+      releaseCount: 1,
+      staleConflict: true,
+      immutableReleaseConflict: true,
+      workspaceIsolation: true,
+      rollbackSafe: true,
+      restartSafe: true,
+      newestVersionNumber: 36,
+    });
+    assert.deepEqual(output.systemDeploymentConformance, {
+      currentConflict: true,
+      retainedDeploymentCount: 2,
+      retainedRunCount: 1,
+      restartSafe: true,
+      workspaceIsolation: true,
+    });
     assert.equal(output.rolledBackPresent, false);
     assert.equal(output.workspaceDisplayName, "SQLite workspace");
     assert.equal(output.workspaceJsonWritten, false);

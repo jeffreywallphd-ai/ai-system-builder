@@ -26,6 +26,24 @@ describe("api route security policy coverage", () => {
     expect(API_ROUTE_POLICIES.get("GET /api/systems")).toMatchObject({ public: false, scopes: ["asset:read"] });
     expect(API_ROUTE_POLICIES.get("POST /api/systems/revisions/save")).toMatchObject({ public: false, scopes: ["asset:write"] });
     expect(
+      API_ROUTE_POLICIES.get("GET /api/systems/builds/preparation"),
+    ).toMatchObject({ public: false, scopes: ["asset:read"] });
+    expect(
+      API_ROUTE_POLICIES.get("POST /api/systems/builds/request"),
+    ).toMatchObject({ public: false, scopes: ["asset:write"] });
+    expect(
+      API_ROUTE_POLICIES.get("GET /api/systems/publication"),
+    ).toMatchObject({ public: false, scopes: ["asset:read"] });
+    expect(
+      API_ROUTE_POLICIES.get("GET /api/systems/published-lifecycle"),
+    ).toMatchObject({ public: false, scopes: ["asset:read"] });
+    expect(
+      API_ROUTE_POLICIES.get("POST /api/systems/published-lifecycle/invoke"),
+    ).toMatchObject({ public: false, scopes: ["asset:write"] });
+    expect(
+      API_ROUTE_POLICIES.get("POST /api/systems/releases/approve"),
+    ).toMatchObject({ public: false, scopes: ["asset:write"] });
+    expect(
       API_ROUTE_POLICIES.get(
         "POST /api/systems/foundation-upgrade/preview",
       ),
@@ -43,6 +61,9 @@ describe("api route security policy coverage", () => {
     expect(API_ROUTE_POLICIES.get("GET /api/systems/review/artifacts")).toMatchObject({ public: false, scopes: ["artifact:read"] });
     expect(API_ROUTE_POLICIES.get("GET /api/systems/review/artifact")).toMatchObject({ public: false, scopes: ["artifact:read"] });
     expect(API_ROUTE_POLICIES.get("POST /api/systems/data/records/update")).toMatchObject({ public: false, scopes: ["asset:write"] });
+    expect(API_ROUTE_POLICIES.get("GET /api/systems/run-workflows")).toMatchObject({ public: false, scopes: ["asset:read"] });
+    expect(API_ROUTE_POLICIES.get("POST /api/systems/run-workflows/prepare")).toMatchObject({ public: false, scopes: ["asset:read"] });
+    expect(API_ROUTE_POLICIES.get("POST /api/systems/run-workflows/invoke")).toMatchObject({ public: false, scopes: ["asset:write"] });
     expect(API_ROUTE_POLICIES.get("GET /api/asset-authoring/workspaces/:workspaceId/drafts")).toMatchObject({ public: false, scopes: ["asset:read"] });
     expect(API_ROUTE_POLICIES.get("POST /api/asset-authoring/workspaces/:workspaceId/drafts")).toMatchObject({ public: false, scopes: ["asset:write"] });
     expect(API_ROUTE_POLICIES.get("POST /api/asset-authoring/workspaces/:workspaceId/drafts/:draftId/publish")).toMatchObject({ public: false, scopes: ["asset:write"] });

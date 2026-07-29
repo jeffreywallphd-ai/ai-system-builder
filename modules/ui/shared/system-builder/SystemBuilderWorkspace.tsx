@@ -24,6 +24,8 @@ import type {
   PreviewSystemBuilderFoundationUpgradeCommand,
   UpgradeSystemBuilderFoundationCommand,
   SystemBuilderFoundationUpgradePreview,
+  SystemBuilderModelOption,
+  SystemBuilderModelOptionCatalog,
 } from "../../../contracts/system-builder";
 import {
   SYSTEM_BUILDER_FOUNDATION_UPGRADE_SOURCE_VERSIONS,
@@ -123,6 +125,9 @@ export interface SystemBuilderClient {
   readComposerAsset?(
     input: ReadSystemBuilderComposerAssetQuery,
   ): Promise<SystemBuilderResult<SystemBuilderComposerAssetDetail>>;
+  listModelOptions?(input: {
+    workspaceId: string;
+  }): Promise<SystemBuilderResult<SystemBuilderModelOptionCatalog>>;
   previewLayoutChange(
     input: Omit<
       PreviewSystemBuilderLayoutChangeCommand,
@@ -154,7 +159,10 @@ export function SystemBuilderWorkspace({
   readonly client: SystemBuilderClient;
   readonly initialSystemId?: string;
   readonly activeSystemsRevision?: number;
-  readonly onBuildAndTest?: (systemId: string) => void;
+  readonly onBuildAndTest?: (input: {
+    readonly system: SystemBuilderRecord;
+    readonly revision: SystemBuilderRevision;
+  }) => void;
 }) {
   const [systems, setSystems] = useState<readonly SystemBuilderRecord[]>([]);
   const [templates, setTemplates] = useState<
@@ -198,6 +206,12 @@ export function SystemBuilderWorkspace({
     useState(false);
   const [selectedAssetDetailError, setSelectedAssetDetailError] =
     useState<string>();
+  const [modelOptions, setModelOptions] = useState<
+    readonly SystemBuilderModelOption[]
+  >([]);
+  const [modelOptionsLoading, setModelOptionsLoading] = useState(false);
+  const [modelOptionsLoaded, setModelOptionsLoaded] = useState(false);
+  const [modelOptionsError, setModelOptionsError] = useState<string>();
   const [stylingRootDetail, setStylingRootDetail] =
     useState<SystemBuilderComposerAssetDetail>();
   const [stylingRootDetailLoading, setStylingRootDetailLoading] =
@@ -302,6 +316,10 @@ export function SystemBuilderWorkspace({
     setSelectedAssetDetail(undefined);
     setSelectedAssetDetailLoading(false);
     setSelectedAssetDetailError(undefined);
+    setModelOptions([]);
+    setModelOptionsLoading(false);
+    setModelOptionsLoaded(false);
+    setModelOptionsError(undefined);
     setStylingRootDetail(undefined);
     setStylingRootDetailLoading(false);
     setStylingRootDetailError(undefined);
@@ -498,6 +516,44 @@ export function SystemBuilderWorkspace({
     selectedInstance?.definitionRef.version,
     selectedInstanceId,
     selectedDefinitionSummary,
+    workspaceId,
+  ]);
+
+  useEffect(() => {
+    if (
+      composerMode !== "design" ||
+      activeSidebarTab !== "properties" ||
+      selectedDefinition?.definitionId !== "conversation.message-composer" ||
+      modelOptionsLoaded
+    ) {
+      return;
+    }
+    if (!client.listModelOptions) {
+      setModelOptionsError("Compatible models are unavailable.");
+      return;
+    }
+    let active = true;
+    setModelOptionsLoading(true);
+    setModelOptionsError(undefined);
+    void client.listModelOptions({ workspaceId }).then((result) => {
+      if (!active) return;
+      if (result.ok) {
+        setModelOptions(result.value.options);
+        setModelOptionsLoaded(true);
+      } else {
+        setModelOptionsError(result.error.message);
+      }
+      setModelOptionsLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [
+    activeSidebarTab,
+    client,
+    composerMode,
+    modelOptionsLoaded,
+    selectedDefinition?.definitionId,
     workspaceId,
   ]);
 
@@ -1314,7 +1370,8 @@ export function SystemBuilderWorkspace({
                   type="button"
                   className="ui-button ui-button--outline"
                   onClick={() =>
-                    onBuildAndTest(String(selectedSystem.systemId))
+                    revision &&
+                    onBuildAndTest({ system: selectedSystem, revision })
                   }
                   disabled={busy || dirty}
                 >
@@ -1387,6 +1444,9 @@ export function SystemBuilderWorkspace({
                         instances={instances}
                         catalog={composerCatalog}
                         bindings={bindings}
+                        modelOptions={modelOptions}
+                        modelOptionsLoading={modelOptionsLoading}
+                        modelOptionsError={modelOptionsError}
                         onConfigurationChange={updateSelectedConfiguration}
                         onAddConnection={connectDeclaredPorts}
                         onRemoveConnection={removeBinding}
@@ -1435,6 +1495,9 @@ export function SystemBuilderWorkspace({
                   instances={instances}
                   catalog={composerCatalog}
                   bindings={bindings}
+                  modelOptions={modelOptions}
+                  modelOptionsLoading={modelOptionsLoading}
+                  modelOptionsError={modelOptionsError}
                   onConfigurationChange={updateSelectedConfiguration}
                   onAddConnection={connectDeclaredPorts}
                   onRemoveConnection={removeBinding}

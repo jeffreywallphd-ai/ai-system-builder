@@ -22,7 +22,7 @@
     "test": "node --preserve-symlinks --preserve-symlinks-main dev-tools/scripts/testing/run-non-browser-tests.mjs",
     "test:non-browser": "node --preserve-symlinks --preserve-symlinks-main dev-tools/scripts/testing/run-non-browser-tests.mjs",
     "test:visual-composer": "playwright test --config dev-tools/config/playwright.visual-composer.config.ts",
-    "test:postgres-live": "node --import tsx --test modules/adapters/persistence/postgres/tests/postgres-database.live.integration.test.ts",
+    "test:postgres-live": "node --import tsx --test modules/adapters/persistence/postgres/tests/postgres-database.live.integration.test.ts modules/adapters/persistence/system-runtime/tests/managed-postgres-system-runtime-database.live.integration.test.ts",
     "test:postgres-recovery": "node --import tsx dev-tools/scripts/persistence/postgres-recovery-drill.mjs",
     "docs:check": "node --preserve-symlinks --preserve-symlinks-main dev-tools/scripts/docs/check-doc-drift.mjs",
     "architecture:check": "node --preserve-symlinks --preserve-symlinks-main dev-tools/scripts/architecture/check-module-dependencies.mjs",

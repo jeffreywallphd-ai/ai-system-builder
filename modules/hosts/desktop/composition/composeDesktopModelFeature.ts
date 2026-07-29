@@ -50,6 +50,7 @@ export function composeDesktopModelFeature(options: ComposeDesktopModelFeatureOp
     } },
   });
   return {
+    modelRegistry,
     browseModelsUseCase: new BrowseModelsUseCase({ providers: { huggingface: huggingFaceModelBrowseDetails } }),
     getModelDetailsUseCase: new GetModelDetailsUseCase({ providers: { huggingface: huggingFaceModelBrowseDetails } }),
     listModelsUseCase: new ListModelsUseCase({ modelRegistry }),

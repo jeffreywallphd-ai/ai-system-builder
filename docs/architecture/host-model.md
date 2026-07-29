@@ -1,7 +1,7 @@
 # Host Model
 
 - Status: current
-- Related decisions: `docs/adr/ADR-0003-host-model-and-transport-separation.md`, `docs/adr/ADR-0013-host-owned-runtime-execution-and-feature-placement.md`, `docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md`, `docs/adr/ADR-0025-deployment-shaped-structured-persistence.md`, `docs/adr/ADR-0026-local-sqlite-runtime.md`, `docs/adr/ADR-0027-managed-postgresql-runtime.md`
+- Related decisions: `docs/adr/ADR-0003-host-model-and-transport-separation.md`, `docs/adr/ADR-0013-host-owned-runtime-execution-and-feature-placement.md`, `docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md`, `docs/adr/ADR-0025-deployment-shaped-structured-persistence.md`, `docs/adr/ADR-0026-local-sqlite-runtime.md`, `docs/adr/ADR-0027-managed-postgresql-runtime.md`, `docs/adr/ADR-0039-dedicated-system-runtime-data-plane.md`
 - Verification: `docs/architecture/architecture-verification.md`
 
 ## Asset Kernel relationship
@@ -38,6 +38,16 @@ Hosts are implemented under `modules/hosts/` and surfaced through `apps/*` entry
   application-data persistence root. Desktop startup migrates SQLite, performs
   the explicit rollback-preserving legacy import, and then composes typed
   repositories on the database seam before registering IPC.
+- Installed system runtimes use a separate host-owned SQLite adapter that
+  derives one contained database per opaque runtime instance. Desktop shutdown
+  closes all open runtime databases; renderers receive neither paths nor handles.
+- Published visual systems run in a bounded registry of dedicated sandboxed
+  `BrowserWindow` instances with a separate minimal preload. Main owns the exact
+  window-to-lifecycle-session association, denies navigation, popups, permission
+  requests, and foreign/subframe IPC, and performs ordered shutdown: runtime
+  windows and conversation sessions, sidecar, runtime databases, then platform
+  database. Electron objects remain in app/host code and never enter shared host
+  context or application contracts.
 
 ## Server host
 
@@ -49,6 +59,9 @@ Hosts are implemented under `modules/hosts/` and surfaced through `apps/*` entry
   client/server connection. Explicit managed shapes migrate/import before API
   registration and fail closed; only an unshaped non-production server retains
   named JSON compatibility behavior.
+- Managed system runtimes use a provisioner-controlled PostgreSQL adapter that
+  creates one database and least-privilege runtime role per opaque instance.
+  Runtime pools are bounded and drained before the platform pool on shutdown.
 
 ## Why hosts are separate from transport adapters
 
@@ -155,6 +168,34 @@ deployment lifecycle and run-handoff use cases. The thin client is a command and
 safe-read surface only; request bodies cannot select principal, organization,
 host capabilities, runtime ABI, or sandbox qualification.
 
+Published-build lifecycle composition is host-owned. Each host injects its
+target ID, runtime profile, compatibility policy, capabilities, secret and
+egress policy, platform policy, identifier generators, and actor context behind
+the application facade. API and IPC accept only workspace, exact release,
+projected action, and opaque expected revision. They ignore or reject
+renderer-supplied deployment IDs, run IDs, policy, capabilities, secrets, and
+egress values.
+
+Activation and start re-read the immutable release and verify its exact digest
+before runtime authority is granted. Runtime adapters classify a run as
+`visual` or `service`. A visual adapter may return a bounded host launch
+descriptor tied to the exact release and runtime profile; a service adapter
+starts without a browser surface. The renderer never supplies a launch URL,
+path, component, executable, or runtime target.
+
+On desktop, a visual launch descriptor is consumed only by host composition.
+The host prepares the required sidecar and opens or focuses one dedicated
+runtime window for the exact started deployment. The runtime preload carries no
+authority identifiers; main derives them from its bounded window registry and
+revalidates before each transcript read or turn submission. A launch failure
+compensates with Stop rather than leaving hidden runtime authority active.
+
+Deployment and run records are retained across process restart. A separate
+atomic current-deployment pointer selects at most one non-retired deployment
+for an organization, workspace, exact release, and host target. Uninstall
+retires that pointer only after runtime authority is removed, preserving prior
+generations and audit history for recovery and investigation.
+
 Future execution placement should be per feature rather than all-or-nothing. Example future placement:
 
 - image generation: remote
@@ -209,7 +250,7 @@ Host-specific Asset Library UI actions use only the existing public API/preload 
 
 - Server host exposes organization-scoped Hugging Face credential status and
   mutation for thin-client users (`GET/POST/DELETE
-  /api/config/huggingface-token`). Managed access requires the active
+/api/config/huggingface-token`). Managed access requires the active
   organization plus an owner, administrator, or operator role; the raw value is
   not returned.
 - Desktop host exposes equivalent token config through preload/IPC so renderer flows can save/update/clear token without environment restarts.

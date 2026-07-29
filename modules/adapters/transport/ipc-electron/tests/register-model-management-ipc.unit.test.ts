@@ -24,6 +24,7 @@ import {
 } from "../../../../contracts/ipc";
 import {
   createBrowseModelsIpcHandler,
+  createListModelsIpcHandler,
   createReadModelTrainingStatusIpcHandler,
   createTrainModelIpcHandler,
   createPublishModelIpcHandler,
@@ -92,6 +93,38 @@ describe("registerModelManagementIpc", () => {
     });
     expect(JSON.stringify(response)).not.toContain("/tmp/secret");
     expect(JSON.stringify(response)).not.toContain("stack trace");
+  });
+
+  it("reports model-list failures without changing the sanitized response", async () => {
+    const failure = Object.assign(new Error("C:\\private\\models.json"), {
+      code: "SQLITE_BUSY",
+    });
+    const reporter = testDouble.fn(async () => undefined);
+    const handler = createListModelsIpcHandler(
+      {
+        execute: testDouble.fn(async () => {
+          throw failure;
+        }),
+      },
+      reporter,
+    );
+
+    const response = await handler(
+      {},
+      {
+        payload: {},
+        operation: "model.list",
+        channel: DESKTOP_MODEL_LIST_REQUEST_CHANNEL.value,
+        requestId: "req-model-list",
+      } as never,
+    );
+
+    expect(reporter).toHaveBeenCalledWith("listModels.execute", failure);
+    expect(response).toMatchObject({
+      ok: false,
+      error: { code: "internal", message: "Model management request failed." },
+    });
+    expect(JSON.stringify(response)).not.toContain("private");
   });
 
   it("maps train handler to use case", async () => {

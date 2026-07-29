@@ -6,7 +6,12 @@ import type {
   AssetConfigurationValues,
   AssetInstance,
 } from "../../../contracts/asset";
-import type { SystemBuilderComposerAsset } from "../../../contracts/system-builder";
+import {
+  readSystemBuilderModelBinding,
+  SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID,
+  type SystemBuilderComposerAsset,
+  type SystemBuilderModelOption,
+} from "../../../contracts/system-builder";
 import { ApplicationIcon } from "../components/ApplicationIcon";
 import { EmptyState } from "../components/EmptyState";
 import {
@@ -32,6 +37,9 @@ export interface SystemComposerInspectorProps {
   readonly instances: readonly AssetInstance[];
   readonly catalog: readonly SystemBuilderComposerAsset[];
   readonly bindings: readonly AssetBinding[];
+  readonly modelOptions?: readonly SystemBuilderModelOption[];
+  readonly modelOptionsLoading?: boolean;
+  readonly modelOptionsError?: string;
   readonly onConfigurationChange: (values: AssetConfigurationValues) => void;
   readonly onAddConnection: (
     source: SystemComposerPortEndpoint,
@@ -48,6 +56,9 @@ export function SystemComposerInspector({
   instances,
   catalog,
   bindings,
+  modelOptions = [],
+  modelOptionsLoading = false,
+  modelOptionsError,
   onConfigurationChange,
   onAddConnection,
   onRemoveConnection,
@@ -78,6 +89,9 @@ export function SystemComposerInspector({
       instance={selectedInstance}
       definition={selectedDefinition}
       catalog={catalog}
+      modelOptions={modelOptions}
+      modelOptionsLoading={modelOptionsLoading}
+      modelOptionsError={modelOptionsError}
       embedded={embedded}
       onChange={onConfigurationChange}
     />
@@ -88,12 +102,18 @@ function SystemComposerConfiguration({
   instance,
   definition,
   catalog,
+  modelOptions,
+  modelOptionsLoading,
+  modelOptionsError,
   embedded,
   onChange,
 }: {
   readonly instance: AssetInstance;
   readonly definition: SystemBuilderComposerAsset;
   readonly catalog: readonly SystemBuilderComposerAsset[];
+  readonly modelOptions: readonly SystemBuilderModelOption[];
+  readonly modelOptionsLoading: boolean;
+  readonly modelOptionsError?: string;
   readonly embedded: boolean;
   readonly onChange: (values: AssetConfigurationValues) => void;
 }) {
@@ -131,6 +151,10 @@ function SystemComposerConfiguration({
       new Set(
         definition.configurationSchema?.fields
           .filter((field) => !isSystemComposerSemanticStyleField(field))
+          .filter(
+            (field) =>
+              field.fieldId !== SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID,
+          )
           .map((field) => field.fieldId) ?? [],
       ),
     [definition.configurationSchema],
@@ -247,6 +271,9 @@ function SystemComposerConfiguration({
                       field={field}
                       value={values[field.fieldId]}
                       catalog={catalog}
+                      modelOptions={modelOptions}
+                      modelOptionsLoading={modelOptionsLoading}
+                      modelOptionsError={modelOptionsError}
                       errors={errors[field.fieldId] ?? []}
                       onChange={(value) => update(field.fieldId, value)}
                     />
@@ -291,12 +318,18 @@ export function SystemComposerConfigurationField({
   field,
   value,
   catalog,
+  modelOptions = [],
+  modelOptionsLoading = false,
+  modelOptionsError,
   errors,
   onChange,
 }: {
   readonly field: AssetConfigurationField;
   readonly value: AssetConfigurationValue | undefined;
   readonly catalog: readonly SystemBuilderComposerAsset[];
+  readonly modelOptions?: readonly SystemBuilderModelOption[];
+  readonly modelOptionsLoading?: boolean;
+  readonly modelOptionsError?: string;
   readonly errors: readonly string[];
   readonly onChange: (value: AssetConfigurationValue) => void;
 }) {
@@ -386,6 +419,49 @@ export function SystemComposerConfigurationField({
           </option>
         ))}
       </select>
+    );
+  } else if (
+    field.valueKind === "resource-reference" &&
+    field.metadata?.resourceKind === "model"
+  ) {
+    const selectedModelRecordId =
+      readSystemBuilderModelBinding(value)?.modelRecordId ?? "";
+    control = (
+      <>
+        <select
+          {...common}
+          value={selectedModelRecordId}
+          disabled={modelOptionsLoading}
+          onChange={(event) => {
+            const selected = modelOptions.find(
+              (option) =>
+                option.binding.modelRecordId === event.currentTarget.value,
+            );
+            if (selected) onChange(selected.binding);
+          }}
+        >
+          <option value="">
+            {modelOptionsLoading
+              ? "Loading compatible models..."
+              : modelOptions.length
+                ? `Choose ${label}`
+                : "No compatible models available"}
+          </option>
+          {modelOptions.map((option) => (
+            <option
+              key={option.binding.modelRecordId}
+              value={option.binding.modelRecordId}
+            >
+              {option.displayName}
+            </option>
+          ))}
+        </select>
+        {modelOptionsError ? (
+          <p className="ui-field-error" role="alert">
+            {modelOptionsError}
+          </p>
+        ) : null}
+      </>
     );
   } else if (
     [

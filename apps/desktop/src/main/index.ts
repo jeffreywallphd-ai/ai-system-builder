@@ -4,10 +4,22 @@ import { app, BrowserWindow, dialog, ipcMain } from "electron";
 
 import { composeDesktopHost } from "../../../../modules/hosts/desktop";
 import { recordDesktopMemorySnapshot } from "../../../../modules/hosts/desktop/diagnostics";
-import { resolveLocalSqliteDatabasePolicy, openLocalSqliteDatabase } from "../../../../modules/adapters/persistence/sqlite";
+import {
+  resolveLocalSqliteDatabasePolicy,
+  openLocalSqliteDatabase,
+} from "../../../../modules/adapters/persistence/sqlite";
 import { importJsonStructuredData } from "../../../../modules/adapters/persistence/migration";
-import { initializeLocalIdentityProfile, readLocalIdentityProfile } from "../../../../modules/adapters/security/local-identity";
+import {
+  initializeLocalIdentityProfile,
+  readLocalIdentityProfile,
+} from "../../../../modules/adapters/security/local-identity";
 import { isTrustedIpcSender } from "./trustedIpcSender";
+import {
+  createSystemRuntimeWindowManager,
+  type RuntimeBrowserWindowLike,
+} from "./systemRuntimeWindowManager";
+import { registerSystemRuntimeConversationIpc } from "../../../../modules/adapters/transport/ipc-electron/system-runtime-conversation";
+import { shutdownDesktopRuntimeResources } from "./shutdownDesktopRuntimeResources";
 
 recordDesktopMemorySnapshot({
   milestone: "desktop.main.module.loaded",
@@ -78,25 +90,36 @@ app.whenReady().then(async () => {
 
   const desktopDataRootDirectory = app.getPath("userData");
   const storageRootDirectory = path.join(desktopDataRootDirectory, "artifacts");
-  const sqlitePolicy = resolveLocalSqliteDatabasePolicy({ dataRootDirectory: desktopDataRootDirectory });
-  const sqliteDatabase = await openLocalSqliteDatabase({ policy: sqlitePolicy });
+  const sqlitePolicy = resolveLocalSqliteDatabasePolicy({
+    dataRootDirectory: desktopDataRootDirectory,
+  });
+  const sqliteDatabase = await openLocalSqliteDatabase({
+    policy: sqlitePolicy,
+  });
   try {
     await importJsonStructuredData({
       sourceRootDirectory: storageRootDirectory,
-      rollbackRootDirectory: path.join(sqlitePolicy.persistenceRootDirectory, "json-rollback"),
+      rollbackRootDirectory: path.join(
+        sqlitePolicy.persistenceRootDirectory,
+        "json-rollback",
+      ),
       documents: sqliteDatabase.documents,
     });
   } catch (error) {
     sqliteDatabase.close();
     throw error;
   }
-  let localIdentityProfile = await readLocalIdentityProfile(sqliteDatabase.documents);
+  let localIdentityProfile = await readLocalIdentityProfile(
+    sqliteDatabase.documents,
+  );
   if (!localIdentityProfile) {
     const setup = await dialog.showMessageBox({
       type: "question",
       title: "Set up local identity",
-      message: "Create a private local organization and owner profile for this installation?",
-      detail: "Identifiers are generated and stored only in the local SQLite database. Existing legacy data is not assigned automatically.",
+      message:
+        "Create a private local organization and owner profile for this installation?",
+      detail:
+        "Identifiers are generated and stored only in the local SQLite database. Existing legacy data is not assigned automatically.",
       buttons: ["Create local profile", "Quit"],
       defaultId: 0,
       cancelId: 1,
@@ -132,13 +155,19 @@ app.whenReady().then(async () => {
   const desktopHost = composeDesktopHost({
     localIdentity: localIdentityProfile,
     persistence: { documents: sqliteDatabase.documents, organizationDocuments },
+    runtimeDataRootDirectory: desktopDataRootDirectory,
     logging: {
       verbosity: process.env.LOG_VERBOSITY,
       level: "info",
     },
     artifactRepo: {
-      huggingFaceAccessToken: process.env.HF_TOKEN ?? process.env.HUGGING_FACE_TOKEN,
-      huggingFaceTokenConfigFilePath: path.join(storageRootDirectory, "config", "hugging-face-token.json"),
+      huggingFaceAccessToken:
+        process.env.HF_TOKEN ?? process.env.HUGGING_FACE_TOKEN,
+      huggingFaceTokenConfigFilePath: path.join(
+        storageRootDirectory,
+        "config",
+        "hugging-face-token.json",
+      ),
     },
     folderPicker: {
       async selectFolder(options) {
@@ -156,6 +185,18 @@ app.whenReady().then(async () => {
     component: "desktop-main",
   });
 
+  const systemRuntimeWindows = createSystemRuntimeWindowManager({
+    entryUrl: SYSTEM_RUNTIME_WEBPACK_ENTRY,
+    preloadPath: SYSTEM_RUNTIME_PRELOAD_WEBPACK_ENTRY,
+    developmentMode: !app.isPackaged,
+    createWindow: (windowOptions) =>
+      new BrowserWindow(windowOptions) as unknown as RuntimeBrowserWindowLike,
+  });
+  registerSystemRuntimeConversationIpc({
+    ipcMain,
+    resolveSession: (event) => systemRuntimeWindows.resolveSession(event),
+  });
+
   recordDesktopMemorySnapshot({
     milestone: "desktop.ipc.register.before",
     component: "desktop-main",
@@ -167,6 +208,7 @@ app.whenReady().then(async () => {
     },
     storageRootDirectory,
     runtimeRootDirectory: desktopDataRootDirectory,
+    systemRuntimeWindows,
   });
   recordDesktopMemorySnapshot({
     milestone: "desktop.ipc.register.after",
@@ -189,13 +231,27 @@ app.whenReady().then(async () => {
     }
   });
 
-  app.on("before-quit", () => {
+  let shutdownStarted = false;
+  let shutdownComplete = false;
+  app.on("before-quit", (event) => {
     recordDesktopMemorySnapshot({
       milestone: "desktop.before-quit",
       component: "desktop-main",
     });
-    void desktopHost.stopPythonRuntime();
-    sqliteDatabase.close();
+    if (shutdownComplete) return;
+    event.preventDefault();
+    if (shutdownStarted) return;
+    shutdownStarted = true;
+    void shutdownDesktopRuntimeResources({
+      closeRuntimeWindows: () => systemRuntimeWindows.closeAll(),
+      stopPythonRuntime: () => desktopHost.stopPythonRuntime(),
+      closeRuntimeDatabases: () =>
+        desktopHost.systemRuntimeDatabases?.closeAll() ?? Promise.resolve(),
+      closePlatformDatabase: () => sqliteDatabase.close(),
+    }).finally(() => {
+      shutdownComplete = true;
+      app.quit();
+    });
   });
 });
 

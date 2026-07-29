@@ -46,6 +46,9 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         channel: process.env.VISUAL_COMPOSER_CHROME_CHANNEL?.trim() || "chrome",
+        // The test injects a short-lived bearer token into localStorage. Keeping
+        // traces for this project would retain that credential in failure output.
+        trace: "off",
       },
     },
     {

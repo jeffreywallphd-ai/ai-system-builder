@@ -41,6 +41,20 @@ The workflow requires:
 7. coherent work chunks with tests, documentation, feedback, and evidence;
 8. final verification that distinguishes local checks from
    controlled-environment qualification.
+9. a mandatory security impact disposition in discovery and per-increment security
+   review acceptance evidence, with proportional threat/control, denial-path,
+   rollback, and residual-risk coverage.
+
+Security is not an optional increment or a late release gate. Every increment uses
+`security-impact-reviewed` or a more specific criterion. A
+`not-security-relevant` result requires review evidence and a concrete rationale;
+a `security-relevant` result requires mapped controls, abuse/failure cases, focused
+negative tests, safe rollback, and residual-risk evidence. Roadmap artifacts use
+sanitized summaries and never store secrets, protected prompts, raw private
+payloads, personal data, or exploitable production details.
+The state engine enforces a structured discovery disposition and rejects new or
+revised increments without `security-impact-reviewed` or a specific `security-*`
+criterion while retaining compatibility with existing stored roadmap state.
 
 Use **increment**, not phase, in roadmap and status artifacts.
 
@@ -159,6 +173,9 @@ Skill changes require:
 - no credentials, personal names, absolute local paths, or private task text;
 - synchronized `AGENTS.md`, `docs/README.md`, skill references, and
   installation guidance.
+- positive and negative tests that keep the security impact screen, per-increment
+  security criterion, safe evidence rules, and repository security standard links
+  synchronized across skill releases.
 
 Review future repetitive interactions for new skills or bounded helpers, but do
 not combine unrelated authority or destructive behavior merely to reduce

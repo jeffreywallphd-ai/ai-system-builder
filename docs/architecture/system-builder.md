@@ -113,10 +113,13 @@ Design-time statuses are `draft`, `in-composition`, `blocked`, `ready-for-valida
 
 **Systems** is a top-level, workspace-required destination. It owns system lists, revision-safe creation/editing, validation, builds, releases, and system-level Run & Test through explicit contracts and use cases. Surfaces must remain truthful while each operation is increment-gated.
 
-General asset composition planning is presented in Systems / Plans as an
-input-building workflow. System-specific assembly, record management, and
-system-level Run & Test belong in Systems. Assets owns catalog, package import,
-authoring, customization, and single-asset Studio workflows.
+Systems does not expose a separate Plans page. System-specific structure and
+typed relationships are edited directly through Compose and its Connections
+surface. This removes a duplicate user workflow; it does not remove or redefine
+the lower-level asset-composition planning contracts used by controlled
+application behavior. System record management, publication, and system-level
+Run & Test remain in Systems. Assets owns catalog, package import, authoring,
+customization, and single-asset Studio workflows.
 
 ## Implemented composition boundary
 
@@ -261,9 +264,14 @@ authoring, customization, and single-asset Studio workflows.
   they do not qualify another operating system, browser, physical touch device,
   screen reader, manual security review, or production performance profile.
 - Compose exposes a shared Build & test handoff in both hosts. The handoff is
-  disabled for dirty or archived systems and opens the existing Build & Release
-  workflow for the selected saved system; it does not build from renderer state or
-  combine design validation with release/runtime authority.
+  disabled for dirty or archived systems and opens a focused modal for the exact
+  selected saved revision. An application preparation use case re-reads that
+  revision, checks current/active/validation state, verifies that every part has
+  a supported implementation at the host-owned target, and supplies that target
+  policy. The renderer cannot choose deployment profile, capability,
+  trust, ABI, or toolchain policy. The modal reports plain-language readiness and
+  bounded results; it does not build from renderer state, publish, install,
+  activate, or combine design validation with runtime authority.
 - Compose presents three explicit semantic entry groups: edit an active existing
   system, create a named blank system with the required default Minimal layout,
   or create from a validated template. The two creation groups keep independent
@@ -294,9 +302,22 @@ authoring, customization, and single-asset Studio workflows.
   and the matching persistence/storage/transport adapters own deterministic
   attempts and immutable releases without adding runtime state to system
   records.
-- Systems / Build & Release freezes an exact revision and deployment profile,
-  exposes safe diagnostics and evidence, and requires an explicit integrity-
-  verified approval before a release exists.
+- Systems / Publish uses an application-owned workspace projection of active
+  systems and their build versions. It defaults to a ready build where one
+  exists, distinguishes unavailable and already-published builds, and requires
+  an explicit confirmation naming the system and build. The existing release
+  use case re-verifies the expected lock digest and every artifact before an
+  immutable release exists. Publish does not install, activate, deploy, or run a
+  system, and transport errors remain bounded rather than exposing storage,
+  provider, command, environment, or stack details.
+- Controlled support evidence for this lifecycle is intentionally
+  environment-specific. Packaged Windows Electron and local Chrome exercise the
+  real host boundaries; Electron SQLite exercises representative 36-build
+  history, conflicts, immutable releases, rollback, restart, backup, and
+  restore. Live PostgreSQL parity remains unqualified whenever
+  `TEST_POSTGRES_URL` is absent or its test is skipped. See
+  [System Build and Release](system-build-and-release.md#qualification-limits-and-recovery)
+  and [Persistence Operations](../operations/persistence-operations.md).
 
 **Settings / Software status** owns:
 
@@ -323,21 +344,37 @@ application layer allowlists fields and values, enforces action policy, masks
 protected fields, bounds reads, and atomically commits optimistic record writes
 with append-only redacted audit entries.
 
-Desktop and thin-client Systems pages share the same native-control Run & Test
-presenter. API identity comes from authenticated request context, desktop IPC
-uses its explicit local trusted principal, and neither renderer can select or
-broaden the effective principal. This is a finite built-in release runtime, not
-authorization for arbitrary release code, deployment activation, or a second
-data/policy architecture.
+Desktop and thin-client Systems pages share the application-owned Run & Test
+workflow boundary in `docs/architecture/system-run-workflows.md`. API identity
+comes from authenticated request context, desktop IPC uses its explicit local
+trusted principal, and neither renderer can select or broaden the effective
+principal. Finite handlers adapt the existing release-bound data, review,
+conversation, and deployment use cases; this is not authorization for arbitrary
+release code or a second data/policy architecture.
 
 ## Controlled chatbot reference system
 
 Increment 8 adds the closed `reference.controlled-chatbot@1.0.0` template. It
-atomically creates and validates a 31-instance Asset Kernel composition using
+atomically creates an Asset Kernel composition using
 exact-version shell, conversation, model/context, protected instruction,
 bounded generation, narrowing policy, audit, controlled inference, fallback,
-and complete-state assets. The template does not create a provider client,
-runtime session, execution plan, deployment, or activation.
+and complete-state assets. The template deliberately contains no default model
+record and no example transcript. Its first revision therefore remains blocked
+until the user selects one compatible workspace model through the required
+message-composer resource picker. The template does not create a provider
+client, runtime session, execution plan, deployment, or activation.
+
+One typed `conversation-turn` control binding connects the message composer to
+the message-history display with `persisted-only` transcript semantics. The
+binding is composition data rather than executable asset code. Composer model
+options are a sanitized application projection; Advanced JSON cannot replace
+the selected model resource and renderers cannot submit a provider, path, or
+free-form model identifier.
+
+An explicit Foundation 1.x/2.x-to-3.x upgrade may persist the structurally
+mapped revision when missing model selection is its only validation blocker,
+but the resulting system remains `blocked` until the user selects and saves an
+authorized model. Other mapping or validation failures still prevent upgrade.
 
 The existing deterministic build and approval families produce its immutable
 release. Systems Run & Test remains a distinct downstream workflow: desktop and
@@ -388,8 +425,9 @@ closed reference-system kinds and returns a bounded release-bound handoff. Thin
 client can install, activate, inspect health/history, roll back, revoke, and
 request a server run through authenticated HTTP, but it never receives local
 runtime, filesystem, secret, capability, sandbox, organization, or principal
-authority. The shared `SystemDeploymentWorkflow` presents these truthful
-states in both hosts.
+authority. The shared `SystemRunWorkflow` presents deployment together with
+other supported application-owned profiles through the same bounded, ordered
+Run & Test experience in both hosts.
 
 Policy is deny-by-default and can only narrow platform ceilings. Capability,
 opaque secret-reference, HTTPS-origin egress, duration, memory, output, and

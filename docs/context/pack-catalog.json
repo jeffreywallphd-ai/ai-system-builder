@@ -404,21 +404,31 @@
     {
       "id": "security",
       "path": "docs/context/packs/security.pack.md",
-      "description": "Authentication, authorization, TLS, route policy, credentials, audit, and sanitization.",
+      "description": "Security impact, threat boundaries, authentication, authorization, TLS, credentials, audit, sanitization, executable inputs, and supply-chain controls.",
       "taskSignals": [
         "security",
+        "security impact",
+        "threat model",
         "oauth",
         "authentication",
         "authorization",
         "tls",
         "token",
-        "credential"
+        "credential",
+        "public api",
+        "file upload",
+        "untrusted input",
+        "outbound network",
+        "sensitive data",
+        "dependency supply chain"
       ],
       "pathSignals": [
         "modules/contracts/security/",
         "modules/application/services/security/",
         "modules/adapters/security/",
         "modules/adapters/transport/api-express/security/",
+        ".github/workflows/",
+        "package-lock.json",
         "apps/thin-client/src/security/"
       ],
       "verification": ["npm test"]

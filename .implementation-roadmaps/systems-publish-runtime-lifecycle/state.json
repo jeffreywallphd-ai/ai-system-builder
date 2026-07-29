@@ -1,0 +1,1276 @@
+{
+  "blockers": [],
+  "chunks": [
+    {
+      "areas": [
+        "System deployment contracts",
+        "Application lifecycle orchestration",
+        "Deployment state transitions",
+        "Host composition seam"
+      ],
+      "chunkId": "lifecycle-contract-and-orchestration",
+      "completedAt": "2026-07-29T04:31:13Z",
+      "criteriaIds": [
+        "lifecycle-transition-matrix",
+        "partial-failure-truthfulness",
+        "security-lifecycle-reviewed"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [],
+      "id": "published-lifecycle-runtime-foundation-lifecycle-contract-and-orchestration",
+      "incrementId": "published-lifecycle-runtime-foundation",
+      "summary": "Added versioned Publish lifecycle projections and minimal intent commands, application-owned identifier and policy derivation, install-and-activate, state-valid activate/deactivate/start/stop/uninstall transitions, stale-state rejection, retained partial-failure behavior, and active-source isolation.",
+      "tests": [
+        "Focused lifecycle state-machine test passed: 4 tests",
+        "Focused TypeScript lifecycle error filter returned no lifecycle errors"
+      ],
+      "title": "Lifecycle contract and application orchestration"
+    },
+    {
+      "areas": [
+        "System deployment repository port",
+        "Structured deployment persistence",
+        "SQLite qualification",
+        "PostgreSQL qualification"
+      ],
+      "chunkId": "retained-current-projection",
+      "completedAt": "2026-07-29T04:31:13Z",
+      "criteriaIds": [
+        "idempotent-retained-state",
+        "partial-failure-truthfulness",
+        "security-lifecycle-reviewed"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [],
+      "id": "published-lifecycle-runtime-foundation-retained-current-projection",
+      "incrementId": "published-lifecycle-runtime-foundation",
+      "summary": "Added an atomic current-deployment projection per organization, workspace, exact release, and host target; retained uninstall and subsequent installation generations; long-lived active run recovery; legacy fallback reads; and shared structured-store conformance wired into SQLite and PostgreSQL qualification.",
+      "tests": [
+        "Structured deployment repository and conformance passed: 6 tests",
+        "SQLite production-runtime qualification passed: 4 tests",
+        "PostgreSQL live conformance entry loaded and skipped because no live test URL was configured"
+      ],
+      "title": "Retained current projection and recovery"
+    },
+    {
+      "areas": [
+        "Trusted system deployment runtime",
+        "Desktop and server host composition",
+        "API and Electron IPC lifecycle transports",
+        "Desktop preload and desktop/thin-client lifecycle clients"
+      ],
+      "chunkId": "release-runtime-and-host-parity",
+      "completedAt": "2026-07-29T04:43:34Z",
+      "criteriaIds": [
+        "release-bound-runtime",
+        "partial-failure-truthfulness",
+        "lifecycle-host-parity",
+        "security-lifecycle-reviewed"
+      ],
+      "documentation": [
+        "System build/release, host, workflow, transport, shared UI, and system-builder pack guidance updated."
+      ],
+      "feedbackAddressed": [],
+      "id": "published-lifecycle-runtime-foundation-release-runtime-and-host-parity",
+      "incrementId": "published-lifecycle-runtime-foundation",
+      "summary": "Implemented truthful long-lived visual and service runtime sessions, exact-release verification, bounded launch descriptors, minimal application-owned lifecycle transports, and desktop/server/preload/client parity without renderer-selected identifiers or policy.",
+      "tests": [
+        "Runtime adapter and lifecycle tests passed for visual, service, unsupported, exact-release mismatch, stop failure, and uninstall retry paths.",
+        "API/IPC parity, preload, desktop/thin-client client, and host composition tests passed.",
+        "Relevant TypeScript diagnostic filter returned no lifecycle errors."
+      ],
+      "title": "Release-bound runtime and host parity"
+    },
+    {
+      "areas": [
+        "Canonical architecture and host guidance",
+        "System-builder context pack and nearest READMEs",
+        "Route-security policy coverage",
+        "Increment-wide production qualification"
+      ],
+      "chunkId": "lifecycle-foundation-qualification",
+      "completedAt": "2026-07-29T04:53:29Z",
+      "criteriaIds": [
+        "lifecycle-transition-matrix",
+        "idempotent-retained-state",
+        "release-bound-runtime",
+        "partial-failure-truthfulness",
+        "lifecycle-host-parity",
+        "security-lifecycle-reviewed",
+        "lifecycle-foundation-gates"
+      ],
+      "documentation": [
+        "docs/architecture/system-build-and-release.md",
+        "docs/architecture/system-run-workflows.md",
+        "docs/architecture/host-model.md",
+        "docs/context/packs/system-builder.pack.md",
+        "modules/adapters/transport/ipc-electron/README.md",
+        "modules/ui/shared/README.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "published-lifecycle-runtime-foundation-lifecycle-foundation-qualification",
+      "incrementId": "published-lifecycle-runtime-foundation",
+      "summary": "Documented the retained published lifecycle, host-owned authority, exact-release runtime, recovery semantics, transport boundary, and shared UI obligations; all focused and increment-wide gates pass.",
+      "tests": [
+        "Documentation, architecture, agent-support, and dependency-security gates passed.",
+        "Server and thin-client production builds passed.",
+        "Full non-browser suite passed 2670 tests with 0 failures and 2 environment skips across 522 discovered files."
+      ],
+      "title": "Lifecycle foundation documentation and qualification"
+    },
+    {
+      "areas": [
+        "Shared Publish workspace",
+        "Published lifecycle card",
+        "Desktop and thin-client lifecycle wiring",
+        "Responsive lifecycle styling"
+      ],
+      "chunkId": "published-build-lifecycle-cards",
+      "completedAt": "2026-07-29T05:10:18Z",
+      "criteriaIds": [
+        "publish-action-progression",
+        "no-manual-deployment-internals",
+        "active-source-identity",
+        "accessible-responsive-controls",
+        "security-publish-reviewed"
+      ],
+      "documentation": [
+        "Shared UI lifecycle guidance updated."
+      ],
+      "feedbackAddressed": [],
+      "id": "publish-lifecycle-experience-published-build-lifecycle-cards",
+      "incrementId": "publish-lifecycle-experience",
+      "summary": "Added recognizable exact-build lifecycle cards in Publish with application-projected controls, automatic install-and-activate feedback, duplicate-submit guards, stale-response cancellation, safe status retry, and no renderer-entered deployment internals.",
+      "tests": [
+        "Focused lifecycle and Publish interaction suites passed 7 tests.",
+        "Focused host-page and static UI suites passed 14 tests.",
+        "Filtered TypeScript diagnostics reported no errors in the changed lifecycle UI and host page files."
+      ],
+      "title": "Published-build lifecycle cards"
+    },
+    {
+      "areas": [
+        "Trusted published runtime modal",
+        "Exact immutable revision loading",
+        "Bounded System Foundation catalog loading",
+        "Automatic visual and service start presentation"
+      ],
+      "chunkId": "automatic-release-runtime-surface",
+      "completedAt": "2026-07-29T05:10:18Z",
+      "criteriaIds": [
+        "automatic-launch-without-open-control",
+        "active-source-identity",
+        "accessible-responsive-controls",
+        "security-publish-reviewed"
+      ],
+      "documentation": [
+        "System build/release architecture, advanced workflow boundary, system-builder context pack, and shared UI guidance updated."
+      ],
+      "feedbackAddressed": [],
+      "id": "publish-lifecycle-experience-automatic-release-runtime-surface",
+      "incrementId": "publish-lifecycle-experience",
+      "summary": "Added automatic visual launch after Start through the existing modal system, exact release and immutable revision verification, bounded catalog paging, registered trusted declarative rendering, service no-launch behavior, and fail-closed stale or mismatched response handling.",
+      "tests": [
+        "Focused automatic-launch, exact-release rendering, mismatch denial, read denial, and stale-response suites passed.",
+        "The exact published System Foundation hierarchy renders through the registered declarative surface."
+      ],
+      "title": "Automatic exact-release runtime surface"
+    },
+    {
+      "areas": [
+        "Desktop and thin-client Systems navigation",
+        "Publish lifecycle integration",
+        "Controlled visual lifecycle qualification",
+        "Canonical lifecycle and qualification guidance"
+      ],
+      "chunkId": "run-test-cutover-and-qualification",
+      "completedAt": "2026-07-29T05:35:22Z",
+      "criteriaIds": [
+        "publish-action-progression",
+        "automatic-launch-without-open-control",
+        "no-manual-deployment-internals",
+        "active-source-identity",
+        "run-test-removed",
+        "accessible-responsive-controls",
+        "security-publish-reviewed",
+        "publish-experience-gates"
+      ],
+      "documentation": [
+        "System build and release architecture",
+        "System run workflow architecture",
+        "Asset and System Support Qualification",
+        "System Builder context pack and shared UI guidance"
+      ],
+      "feedbackAddressed": [],
+      "id": "publish-lifecycle-experience-run-test-cutover-and-qualification",
+      "incrementId": "publish-lifecycle-experience",
+      "summary": "Removed the standalone desktop and thin-client Run & Test experience, mounted exact published-build lifecycle clients in Publish, qualified automatic visual launch and retained lifecycle progression across the current packaged Windows worktree and local Chrome, and corrected the qualification harness to use isolated dedicated tenancy and never accept a stale package as current evidence.",
+      "tests": [
+        "Focused Publish lifecycle interactions passed",
+        "Focused qualification host and bounded package-command tests passed",
+        "Packaged Windows desktop and thin-client Chrome lifecycle qualification passed",
+        "Documentation and agent-support checks passed after qualification guidance updates"
+      ],
+      "title": "Run & Test retirement and production qualification"
+    }
+  ],
+  "completion": {
+    "completedAt": "2026-07-29T05:35:24Z",
+    "summary": "Both approved increments are implemented and verified: the retained application-owned release lifecycle is production-ready for qualified trusted reference systems, and Publish now provides the complete cross-host install, activate, start or automatic launch, stop, deactivate or reactivate, and stopped-state uninstall experience."
+  },
+  "createdAt": "2026-07-29T04:11:07Z",
+  "currentIncrementId": null,
+  "decisions": [
+    {
+      "approvalNote": "The user explicitly approved the revised intent-driven retained lifecycle, including install-and-activate, stopped-state uninstall, automatic visual launch on Start, server-only Start behavior, and Stop as the only running-state action.",
+      "approvedAt": "2026-07-29T04:11:08Z",
+      "approvedFingerprint": "071014dc08347e601c48f8af8f163926cdcff05887cb997c5ed1c6bbb8bc9496",
+      "context": "Publish consolidation is user-directed. The lifecycle must preserve exact-release integrity, workspace isolation, truthful retained state, audit history, and secure runtime authority while presenting only actions that are valid for the current system state.",
+      "id": "published-system-lifecycle-model",
+      "options": [
+        {
+          "consequences": [
+            "Not installed exposes Install; Install performs install then activation without exposing a separate initial Activate step",
+            "Installed, active, and stopped exposes Start, Deactivate, and Uninstall; installed, inactive, and stopped exposes Activate and Uninstall",
+            "Running exposes Stop only; Stop returns the system to its installed activation state and eligible stopped controls",
+            "Uninstall is available for any stopped installed system and records an auditable retained transition instead of deleting history",
+            "Opaque deployment and run identifiers remain internal, duplicate install intents are idempotent, and the standalone Run & Test tab is removed",
+            "Qualified built-in visual systems open automatically from verified exact-release declarative content and typed runtime bindings; nonvisual servers start without an Open control; imported or authored execution remains unavailable without a qualified sandbox"
+          ],
+          "id": "retained-stateful-lifecycle",
+          "label": "Intent-driven retained lifecycle",
+          "recommended": true,
+          "summary": "Retain one application-owned current deployment per release and host target. Install also activates. Stopped systems expose only state-valid Start, Activate or Deactivate, and Uninstall controls; running systems expose only Stop. Start automatically opens a qualified visual system and starts a nonvisual server without an Open System control.",
+          "tradeoffs": [
+            "Provides the complete user outcome but requires coordinated contract, application, persistence, runtime-session, host, transport, shared-UI, release-rendering, and documentation changes",
+            "Preserves audit, rollback, exact-release integrity, workspace isolation, and truthful lifecycle state",
+            "Requires explicit handling for partial install-and-activate failure and for a runtime that starts successfully when automatic visual launch fails"
+          ]
+        },
+        {
+          "consequences": [
+            "The interface becomes simpler but continues to overstate runtime functionality",
+            "Uninstall and deactivate remain aliases or unsupported",
+            "A visual system still cannot open after Start"
+          ],
+          "id": "existing-command-facade",
+          "label": "Existing command facade",
+          "recommended": false,
+          "summary": "Move the existing operations into Publish, automatically select identifiers, and keep the current install, activate, and zero-output run semantics.",
+          "tradeoffs": [
+            "Smaller and faster interface change",
+            "Avoids new persistence and runtime-session contracts",
+            "Does not launch the created system or provide meaningful Start and Stop behavior"
+          ]
+        },
+        {
+          "consequences": [
+            "Uninstall physically removes state and can orphan or erase historical evidence",
+            "Failure recovery cannot reliably distinguish stopped, lost, or deleted sessions",
+            "Conflicts with the repository's retained immutable release and audited deployment posture"
+          ],
+          "id": "ephemeral-destructive-lifecycle",
+          "label": "Ephemeral destructive lifecycle",
+          "recommended": false,
+          "summary": "Launch a temporary interface directly from a release and delete deployment and session records when stopped or uninstalled.",
+          "tradeoffs": [
+            "Simple visible lifecycle with fewer retained records",
+            "Weakens audit, rollback, reconciliation, recovery, and operational history",
+            "Creates destructive deletion and cross-host consistency problems"
+          ]
+        }
+      ],
+      "proposalFingerprint": "071014dc08347e601c48f8af8f163926cdcff05887cb997c5ed1c6bbb8bc9496",
+      "question": "How should Publish expose install, activation, execution, launch, stop, and uninstall without asking users to manage deployment internals?",
+      "selectedOptionId": "retained-stateful-lifecycle",
+      "status": "approved",
+      "title": "Published system lifecycle model"
+    }
+  ],
+  "discovery": {
+    "constraints": [
+      "Preserve the two completed general-workflow increments and reuse their application-owned catalog, handler, transport, and bounded presentation foundations where they remain appropriate.",
+      "Published build cards, not renderer-entered deployment or run identifiers, own normal lifecycle interaction.",
+      "Install performs install-and-activate; an activation failure must retain truthful installed state and recoverable actions rather than silently rolling back or reporting success.",
+      "Any stopped installed system may be uninstalled. Active stopped installations expose Start, Deactivate, and Uninstall; inactive stopped installations expose Activate and Uninstall; running installations expose Stop only.",
+      "Start automatically opens qualified visual systems in a host-owned isolated runtime surface and starts nonvisual servers without any Open System control.",
+      "Every lifecycle command re-resolves workspace, active owning system, exact approved release, host target, current deployment, session state, authorization, and supported runtime capability.",
+      "Immutable builds, releases, revisions, historical deployments, sessions, runs, and audit evidence are retained; uninstall is a lifecycle transition, not destructive history deletion.",
+      "Imported or authored executable content remains unavailable until a qualified sandbox and controlled-environment evidence exist.",
+      "The standalone Run & Test navigation, manual deployment identifier, requested-capability, secret-reference, egress-origin, and generic review forms are removed after Publish reaches feature parity.",
+      "Use focused tests for internal chunks and run full repository gates only once after all chunks in each approved successor increment are complete."
+    ],
+    "decisionRequired": true,
+    "recordedAt": "2026-07-29T04:11:08Z",
+    "securityImpact": {
+      "abuseCases": [
+        "A forged deployment, run, release, workspace, or host-target identifier controls another system",
+        "Duplicate, racing, stale, or reordered intents create multiple current deployments or impossible state",
+        "An archived, deleted, cross-workspace, mismatched, or superseded release remains operable",
+        "Imported or authored executable content reaches a trusted runtime or host launch surface without sandbox qualification",
+        "A visual runtime surface receives Node, filesystem, unrestricted network, or host-process authority",
+        "Partial install, activation, launch, stop, persistence, or adapter failure produces false state or hides required recovery actions",
+        "Raw adapter failures or runtime content leak credentials, paths, provider payloads, private data, or exploitable details"
+      ],
+      "assets": [
+        "Workspace-owned active systems, builds, exact approved releases, and lifecycle authority",
+        "Deployment, runtime-session, health, execution, and audit integrity",
+        "Host process isolation and trusted declarative system UI",
+        "Authorization, policy-derived capability, secret-reference, egress, and quota decisions",
+        "Private system content, runtime diagnostics, conversation data, and artifact references"
+      ],
+      "controls": [
+        "Application-owned intent use cases derive internal identifiers and eligible actions from authoritative workspace-scoped state",
+        "Exact-release verification, active-owner checks, optimistic concurrency, idempotency keys, finite transitions, and one-current-deployment reconciliation fail closed",
+        "Retained transitions and audit records preserve recovery evidence; uninstall never erases immutable or operational history",
+        "Only qualified trusted declarative releases produce bounded launch descriptors; unsupported executable content is denied",
+        "Host-owned runtime surfaces use least privilege, strict context isolation, no renderer host authority, bounded messaging, and allowlisted resources",
+        "Policy-derived capabilities, secret references, egress, quotas, and authorization remain outside renderer input",
+        "Bounded safe diagnostics and explicit partial-failure states prevent disclosure and misleading success"
+      ],
+      "disposition": "security-relevant",
+      "residualRisks": [
+        "Imported or authored executable systems remain unavailable until an independently qualified sandbox exists.",
+        "The trusted local reference runtime is not remote production orchestration; public ingress, multi-node scheduling, autoscaling, and managed deployment remain outside this successor.",
+        "Automated host checks do not replace production capacity, physical assistive-technology, or managed-environment qualification."
+      ],
+      "summary": "The successor changes deployment authority, retained operational state, runtime lifetime, exact-release rendering, automatic host launch, workspace isolation, audit history, and UI-to-host trust boundaries.",
+      "trustBoundaries": [
+        "Publish shared UI to desktop IPC or authenticated server API",
+        "Application lifecycle orchestration to deployment and runtime-session repositories",
+        "Application runtime authority to host-composed runtime adapters",
+        "Verified immutable release content to the trusted declarative renderer",
+        "Application-issued launch descriptor to a desktop window or thin-client runtime surface"
+      ],
+      "verification": [
+        "Transition, race, idempotency, stale-state, cross-workspace, forged-identity, partial-failure, and restart-recovery tests",
+        "Structured, SQLite, and PostgreSQL repository conformance for retained deployment and session state",
+        "Runtime adapter and declarative renderer tests for visual, nonvisual, unsupported, and failing releases",
+        "IPC, API, preload, client, authorization, safe-diagnostic, and host-composition parity tests",
+        "Packaged desktop and thin-client end-to-end qualification of automatic launch, Stop-only running state, recovery, and archive/delete exclusion",
+        "Architecture, documentation, agent-support, security, build, and full repository completion gates"
+      ]
+    },
+    "sources": [
+      {
+        "note": "Provides completed capability-driven workflow and shared-host foundations that the successor preserves.",
+        "title": "Completed general workflow roadmap",
+        "url": "docs/systems-general-run-workflow-implementation-roadmap.md"
+      },
+      {
+        "note": "Identifies archived-system release leakage and opaque Publish-to-runtime identity that this successor absorbs.",
+        "title": "Pending active-source eligibility roadmap",
+        "url": "docs/systems-run-workflow-active-source-implementation-roadmap.md"
+      },
+      {
+        "note": "Defines immutable release identity, finite typed workflows, and separation between build, deployment, and runtime records.",
+        "title": "System build and release architecture",
+        "url": "docs/architecture/system-build-and-release.md"
+      },
+      {
+        "note": "Keeps workflow descriptors inert and action authority application-owned.",
+        "title": "Application-owned system workflow decision",
+        "url": "docs/adr/ADR-0038-application-owned-system-run-workflows.md"
+      },
+      {
+        "note": "Current install, activate, run, rollback, and revoke semantics lack uninstall, user-facing deactivate, persistent runtime sessions, and visual launch.",
+        "title": "Deployment contracts and use cases",
+        "url": "modules/application/use-cases/system-deployment/system-deployment-use-cases.ts"
+      },
+      {
+        "note": "Current Start activates and immediately reports a terminal handoff instead of maintaining a launchable runtime.",
+        "title": "Trusted deployment runtime adapter",
+        "url": "modules/adapters/runtime/system-deployment/createTrustedSystemDeploymentRuntimeAdapter.ts"
+      },
+      {
+        "note": "Publish and the generic workflow are currently separate experiences with duplicated release context.",
+        "title": "Publish and workflow shared UI",
+        "url": "modules/ui/shared/system-builder/SystemPublishWorkspace.tsx"
+      }
+    ],
+    "summary": "The completed general Run & Test roadmap introduced an application-owned capability catalog and shared workflow shell, but the resulting user experience still exposes deployment internals and its current Start action records an immediate bookkeeping handoff rather than a persistent openable system. Publish already owns recognizable builds and immutable releases. The successor should retain the reusable application foundations, correlate lifecycle state to each active published build, replace manual identifiers with intent commands, introduce a truthful long-lived runtime session, automatically launch qualified visual systems, start nonvisual servers without an Open control, and remove the standalone Run & Test surface. The earlier active-source eligibility proposal is absorbed into the same Publish correlation and lifecycle boundary."
+  },
+  "evidence": [
+    {
+      "artifact": null,
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts",
+      "criterionId": "lifecycle-transition-matrix",
+      "id": "evidence-1",
+      "incrementId": "published-lifecycle-runtime-foundation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T04:53:29Z",
+      "summary": "Focused lifecycle tests prove install-and-activate, active and inactive stopped action sets, Stop-only running state, stale rejection, invalid-action denial, and retained uninstall."
+    },
+    {
+      "artifact": null,
+      "command": "focused structured-system-deployment repository and SQLite production-runtime tests",
+      "criterionId": "idempotent-retained-state",
+      "id": "evidence-2",
+      "incrementId": "published-lifecycle-runtime-foundation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T04:53:29Z",
+      "summary": "Structured and production SQLite conformance prove atomic current-deployment conflicts, retained generations and runs, uninstall retirement without deletion, workspace isolation, legacy fallback, and restart reads. PostgreSQL uses the same conformance and remains an environment-qualified CI path when TEST_POSTGRES_URL is present."
+    },
+    {
+      "artifact": null,
+      "command": "focused trusted system-deployment runtime and use-case tests",
+      "criterionId": "release-bound-runtime",
+      "id": "evidence-3",
+      "incrementId": "published-lifecycle-runtime-foundation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T04:53:29Z",
+      "summary": "Trusted runtime tests prove long-lived visual sessions with bounded exact-release descriptors, service sessions without descriptors, exact-digest re-verification, and fail-closed unsupported or sandbox-required execution."
+    },
+    {
+      "artifact": null,
+      "command": "focused published lifecycle partial-failure tests",
+      "criterionId": "partial-failure-truthfulness",
+      "id": "evidence-4",
+      "incrementId": "published-lifecycle-runtime-foundation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T04:53:30Z",
+      "summary": "Activation failure retains Activate and Uninstall, stop failure retains Stop only, uninstall interruption retains Uninstall only, and adapter details remain sanitized; recovery retries reach authoritative stopped or uninstalled state."
+    },
+    {
+      "artifact": null,
+      "command": "focused transport parity, preload, client, and host-composition tests",
+      "criterionId": "lifecycle-host-parity",
+      "id": "evidence-5",
+      "incrementId": "published-lifecycle-runtime-foundation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T04:53:30Z",
+      "summary": "API, IPC, preload, desktop and thin clients, and desktop/server host-composition tests use the same minimal intents, host-derived authority and policy, exact-release verification, and sanitized response contracts."
+    },
+    {
+      "artifact": null,
+      "command": "focused denial tests; npm run architecture:check; npm run security:dependencies",
+      "criterionId": "security-lifecycle-reviewed",
+      "id": "evidence-6",
+      "incrementId": "published-lifecycle-runtime-foundation",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T04:53:30Z",
+      "summary": "Security review covers workspace and exact-release binding, active-source denial, atomic races, retained audit, host-owned identifiers and policy, bounded launch descriptors, unsupported execution denial, safe diagnostics, recovery, explicit API route policy, and residual live PostgreSQL/environment qualification limits."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "npm run docs:check; npm run architecture:check; npm run agent-support:check; npm run security:dependencies; npm run build:server; npm run build:thin-client; npm test",
+      "criterionId": "lifecycle-foundation-gates",
+      "id": "evidence-7",
+      "incrementId": "published-lifecycle-runtime-foundation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T04:53:30Z",
+      "summary": "All focused suites passed before one completed-increment qualification: docs, architecture, agent support, dependency security, server build, thin-client build, and the full 2670-test non-browser suite passed with zero failures."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-07-29t05-29-38-141z-02970835/evidence.json",
+      "command": "npx vitest run modules/ui/shared/system-builder/tests/SystemBuildPublish.interaction.ui.test.tsx modules/ui/shared/system-builder/tests/SystemPublishedLifecycle.interaction.ui.test.tsx; npm run test:visual-composer",
+      "criterionId": "publish-action-progression",
+      "id": "evidence-8",
+      "incrementId": "publish-lifecycle-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T05:35:22Z",
+      "summary": "Focused interaction tests and both controlled hosts passed the exact Install, active stopped, running Stop-only, stopped, deactivate, reactivate, and uninstall progression."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-07-29t05-29-38-141z-02970835/evidence.json",
+      "command": "npm run test:visual-composer",
+      "criterionId": "automatic-launch-without-open-control",
+      "id": "evidence-9",
+      "incrementId": "publish-lifecycle-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T05:35:23Z",
+      "summary": "Current packaged desktop and thin-client Chrome automatically opened the exact qualified controlled-chatbot surface after Start without an Open System control, retained Stop-only running state, and completed recovery actions."
+    },
+    {
+      "artifact": null,
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts apps/desktop/src/renderer/tests/page-section-loading.unit.test.tsx; npx vitest run modules/ui/shared/system-builder/tests/SystemPublishedLifecycle.interaction.ui.test.tsx",
+      "criterionId": "no-manual-deployment-internals",
+      "id": "evidence-10",
+      "incrementId": "publish-lifecycle-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T05:35:23Z",
+      "summary": "Shared Publish and host-page regression tests prove normal lifecycle controls accept only workspace, exact published release, projected action, and freshness state; deployment ids, run ids, capability lists, secret references, egress origins, and policy inputs are absent."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-07-29t05-29-38-141z-02970835/evidence.json",
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test modules/application/use-cases/system-build/tests/guided-system-build.use-cases.unit.test.ts modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts; npm run test:visual-composer",
+      "criterionId": "active-source-identity",
+      "id": "evidence-11",
+      "incrementId": "publish-lifecycle-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T05:35:23Z",
+      "summary": "Publication projections label exact system and build versions, lifecycle reads re-resolve the active owning system and immutable release, and focused denial plus controlled host tests exclude archived, deleted, cross-workspace, stale, and mismatched sources."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-07-29t05-29-38-141z-02970835/evidence.json",
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts apps/desktop/src/renderer/tests/page-section-loading.unit.test.tsx; npm run test:visual-composer",
+      "criterionId": "run-test-removed",
+      "id": "evidence-12",
+      "incrementId": "publish-lifecycle-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T05:35:23Z",
+      "summary": "Desktop and thin-client Systems pages no longer mount or construct the standalone Run & Test tab, its manual forms were removed from both host surfaces, and the controlled packaged build confirmed the current UI rather than a stale executable."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-07-29t05-29-38-141z-02970835/evidence.json",
+      "command": "npx vitest run modules/ui/shared/system-builder/tests/SystemBuildPublish.interaction.ui.test.tsx modules/ui/shared/system-builder/tests/SystemPublishedLifecycle.interaction.ui.test.tsx; npm run test:visual-composer",
+      "criterionId": "accessible-responsive-controls",
+      "id": "evidence-13",
+      "incrementId": "publish-lifecycle-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T05:35:23Z",
+      "summary": "Focused interaction tests cover loading, status, stale response, duplicate submission, dialog focus, and safe failure behavior; the one-worker desktop and browser qualification passed its supported accessibility and reflow checks with flat responsive lifecycle cards."
+    },
+    {
+      "artifact": null,
+      "command": "npm run security:dependencies; npm run architecture:check; focused lifecycle denial, transport parity, runtime adapter, renderer mismatch, and qualification helper tests",
+      "criterionId": "security-publish-reviewed",
+      "id": "evidence-14",
+      "incrementId": "publish-lifecycle-experience",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T05:35:24Z",
+      "summary": "The completed review and denial evidence cover exact-release and workspace binding, active-source revalidation, application-owned identifiers and policy, stale and duplicate intents, bounded registered declarative rendering, isolated automatic launch, safe diagnostics, retained recovery, dedicated qualification tenancy, and residual sandbox and environment limits."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-07-29t05-29-38-141z-02970835/evidence.json",
+      "command": "npm run docs:check; npm run architecture:check; npm run agent-support:check; npm run security:dependencies; npm run build:server; npm run build:thin-client; npm test; npm run test:visual-composer",
+      "criterionId": "publish-experience-gates",
+      "id": "evidence-15",
+      "incrementId": "publish-lifecycle-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T05:35:24Z",
+      "summary": "All focused tests passed, then documentation, architecture, agent-support, dependency-security, server build, thin-client build, and the single full non-browser suite passed; the final current-worktree packaged desktop and thin-client controlled qualification also passed."
+    }
+  ],
+  "feedback": [],
+  "finalApproval": {
+    "approvedAt": "2026-07-29T11:51:52Z",
+    "note": "The user explicitly confirmed that the completed roadmap is approved."
+  },
+  "history": [
+    {
+      "eventFingerprint": "0a139ef8f03a635d90f063c6423dedc705585ff71cb0ec3d0cd0a0e0bbe25f83",
+      "recordedAt": "2026-07-29T04:11:08Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "60d1da4d1f2b04c3aea238c4d369c250e777d703a06ac07c15dfc591007aa128",
+      "recordedAt": "2026-07-29T04:11:08Z",
+      "sequence": 2,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "302a5a7e2dd67de4f5e5b81e6de7ebb921f10c163cf45a5162fc5135290397b1",
+      "recordedAt": "2026-07-29T04:11:08Z",
+      "sequence": 3,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "5a8a518c586ee36ce97288fca50952ba0c0bb56387c1d846df9a66a16e65ea1e",
+      "recordedAt": "2026-07-29T04:11:08Z",
+      "sequence": 4,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "69fcd9524c4a624a688fb933e7aa45d9c8cd9b54ff5efc734b4cb73deba5da07",
+      "recordedAt": "2026-07-29T04:16:05Z",
+      "sequence": 5,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "1b3dd4e06ccb5c5b283776660986148affa38820df7e2836bc5e822b2d900407",
+      "recordedAt": "2026-07-29T04:16:06Z",
+      "sequence": 6,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "81ce2d1f04b1e7e08ea5d559857fa0a40de23bfa627f98b62e3a3e75f815d019",
+      "recordedAt": "2026-07-29T04:20:01Z",
+      "sequence": 7,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "15f176fb22b8f2c0c5b0b6ac8998f5dbbe19a02f5f21bf9ee2c8a51200cef3f2",
+      "recordedAt": "2026-07-29T04:20:15Z",
+      "sequence": 8,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "1b68f3097fef6afcb061a8c47002f63e43adf99ebaab43c3024aba291e4a99ee",
+      "recordedAt": "2026-07-29T04:31:13Z",
+      "sequence": 9,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "b30c477d4f69e7c2631987383fb3cd43755b31439df510a7d73f6db00929d5de",
+      "recordedAt": "2026-07-29T04:31:13Z",
+      "sequence": 10,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "a2aafcb5310aee5939781ef07baa22d77277f0084a12a3e57936d68b47e44e4b",
+      "recordedAt": "2026-07-29T04:43:34Z",
+      "sequence": 11,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "ba2659aefb2047855b83d71539b87d28d8d1d110c9fddc2a9ba074e3da3413a8",
+      "recordedAt": "2026-07-29T04:53:29Z",
+      "sequence": 12,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "552d30259c51e5386fe2890b104c2d90bea65d9407011a932a9bc5488cfe1292",
+      "recordedAt": "2026-07-29T04:53:29Z",
+      "sequence": 13,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3dd61fc7095e8834807cdfec2f2d96468d963995d4976b8824ab1120bf013a90",
+      "recordedAt": "2026-07-29T04:53:29Z",
+      "sequence": 14,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "cd2b4846060a913e938e42b5cb59e15bebfc96d6a0a0cc0b11f7bd8ab3f4a614",
+      "recordedAt": "2026-07-29T04:53:29Z",
+      "sequence": 15,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "2ed64e05950e2921c9186e5ed56bf619ec7f6b5bdadd0f32855f0a6d7da03011",
+      "recordedAt": "2026-07-29T04:53:30Z",
+      "sequence": 16,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "11906ded7ac60c1e7217a666be5554324949b71936d104ddeab985a053e3ad2b",
+      "recordedAt": "2026-07-29T04:53:30Z",
+      "sequence": 17,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5fb08dc7c0464923a471857186d8a2eaa09495da03ebc3e99b14665b2f53c27b",
+      "recordedAt": "2026-07-29T04:53:30Z",
+      "sequence": 18,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "959be235a09b122c99911a7a0f17f1da87996c41ad46813d35f6037b83cadb2d",
+      "recordedAt": "2026-07-29T04:53:30Z",
+      "sequence": 19,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b097691f67d1132a1a391de3a3015f1da77d9188b2019810d5d21bf0784bd827",
+      "recordedAt": "2026-07-29T04:53:40Z",
+      "sequence": 20,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "18f3d82942556418f531ca019c4a5041207120b81ebbe7d87a5e6c44a28aad50",
+      "recordedAt": "2026-07-29T04:53:57Z",
+      "sequence": 21,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "886c29105122b7b24e6ffaa8352ed80e3f6e243d6414a612ad7fe57ab68e847c",
+      "recordedAt": "2026-07-29T04:56:59Z",
+      "sequence": 22,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "52e00d1f67b0ecb7718db73571a7a1ade8b3f46589e9fc3ad3a893079569db56",
+      "recordedAt": "2026-07-29T04:56:59Z",
+      "sequence": 23,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "039f04c8d123c9a81ff1abe95564a9258f0629ec821a9d0e4a4e21c263b8329c",
+      "recordedAt": "2026-07-29T05:10:18Z",
+      "sequence": 24,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "f8e273002a54877ddc46d59a34fd0b718d5aff870965b6829a435cd45aa31850",
+      "recordedAt": "2026-07-29T05:10:18Z",
+      "sequence": 25,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "421182294031c8eb08a723802d7210c5d712fdf855776863c437289a90ff4275",
+      "recordedAt": "2026-07-29T05:35:22Z",
+      "sequence": 26,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "4b8b3a695b2a7d2ebeff8c1d30e1212b1fd3baa859600c9382d2b7e17c496db5",
+      "recordedAt": "2026-07-29T05:35:22Z",
+      "sequence": 27,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1df31f74d11348ce0c68633c31b197ca73c89fa6160fd2837a9b00aeb322f611",
+      "recordedAt": "2026-07-29T05:35:23Z",
+      "sequence": 28,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9e16e03ebea54cf5752d4c3f8a1fb3679d29fe689b27d4c3b4f59368a54cded8",
+      "recordedAt": "2026-07-29T05:35:23Z",
+      "sequence": 29,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "7c75db9a6a81f13d4fb8ae828bae1246ab252ec2054c53fbe0fb58355cb06948",
+      "recordedAt": "2026-07-29T05:35:23Z",
+      "sequence": 30,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3917e0097ebaf62636dda15f5513bed30f73eaf33ab70184320747000bb5ef65",
+      "recordedAt": "2026-07-29T05:35:23Z",
+      "sequence": 31,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f3e9c7dfb9d54669ca16df5d1f9d0674c9a35d0f6ba50a83b07b83adb373d30d",
+      "recordedAt": "2026-07-29T05:35:23Z",
+      "sequence": 32,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e575b467b56baee4ed8f9d3573b9f859ae1aca02c70fc642ea146994da98f956",
+      "recordedAt": "2026-07-29T05:35:24Z",
+      "sequence": 33,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "30ff8eb4164cdd9e3a29e175e4798538ea9ebe6243d3bf7ebba9793904dbaff3",
+      "recordedAt": "2026-07-29T05:35:24Z",
+      "sequence": 34,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9d185dcccd785010a0a4fde7388594efae71d179e51fc59f35f53bc0cc1c5673",
+      "recordedAt": "2026-07-29T05:35:24Z",
+      "sequence": 35,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "67d0bfe4bee45ceba4797252e086c6d9f039d939d927bcd2a2dc841aaa8c9df3",
+      "recordedAt": "2026-07-29T05:35:24Z",
+      "sequence": 36,
+      "type": "roadmap-completed"
+    },
+    {
+      "eventFingerprint": "6d777cf09aaca6900440ba1a0b14fa2c863f583c707214cccecf3493259ccd4b",
+      "recordedAt": "2026-07-29T11:51:52Z",
+      "sequence": 37,
+      "type": "final-approval-recorded"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "The application-owned transition matrix implements Install as install-and-activate; permits Start, Deactivate, and Uninstall for an active stopped installation; permits Activate and Uninstall for an inactive stopped installation; exposes Stop as the only running action; and rejects stale or invalid transitions without side effects.",
+          "id": "lifecycle-transition-matrix",
+          "qualification": "local"
+        },
+        {
+          "description": "Repeated intents reconcile to one workspace-scoped current deployment per exact release and host target while preserving immutable release identity, audit history, prior deployments, uninstall history, and restart recovery without destructive deletion.",
+          "id": "idempotent-retained-state",
+          "qualification": "local"
+        },
+        {
+          "description": "Start creates a truthful long-lived runtime session bound to the selected active system and exact approved release; qualified visual releases receive a bounded launch descriptor, nonvisual releases start without one, and unsupported imported or authored execution fails closed.",
+          "id": "release-bound-runtime",
+          "qualification": "local"
+        },
+        {
+          "description": "Activation, automatic visual launch, stop, deactivation, uninstall, adapter, and persistence failures leave a recoverable authoritative state, expose only valid retry or cleanup actions, and never report a system as running, stopped, active, or uninstalled contrary to retained evidence.",
+          "id": "partial-failure-truthfulness",
+          "qualification": "local"
+        },
+        {
+          "description": "Desktop and server hosts enforce identical exact-release, workspace, authorization, state-transition, and action-eligibility semantics through allowlisted IPC and API projections with safe diagnostics.",
+          "id": "lifecycle-host-parity",
+          "qualification": "local"
+        },
+        {
+          "description": "Workspace isolation, exact-release integrity, runtime authority, launch isolation, fail-closed unsupported execution, transition races, idempotency, audit retention, sanitized diagnostics, secure rollback, and residual risk are documented and evidenced with denial and failure-path tests.",
+          "id": "security-lifecycle-reviewed",
+          "qualification": "local"
+        },
+        {
+          "description": "Focused contract, use-case, persistence, runtime, host, transport, and recovery tests pass before the applicable documentation, architecture, server/thin-client build, security, and full repository gates run once for the completed increment.",
+          "id": "lifecycle-foundation-gates",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-29T04:53:40Z",
+      "completedChunks": [
+        "lifecycle-contract-and-orchestration",
+        "retained-current-projection",
+        "release-runtime-and-host-parity",
+        "lifecycle-foundation-qualification"
+      ],
+      "completionSummary": "Increment 1 delivers a production-qualified, retained, exact-release lifecycle foundation with application-owned actions and identifiers, atomic current state, long-lived visual or service sessions, secure host/transport parity, truthful recovery, and passing repository gates. Live PostgreSQL conformance remains environment-qualified when TEST_POSTGRES_URL is supplied; local structured and production SQLite conformance passed.",
+      "deliverables": [
+        "Versioned lifecycle state, action-eligibility, intent, result, and launch-descriptor contracts",
+        "Application orchestration for install-and-activate, activate, deactivate, start, stop, and stopped-state uninstall",
+        "Idempotent retained deployment and runtime-session repositories with compatibility handling for existing records",
+        "Trusted exact-release visual renderer and nonvisual server runtime boundaries",
+        "Desktop and server composition plus IPC, API, preload, and client parity",
+        "Focused state-machine, repository-conformance, isolation, denial, partial-failure, restart-recovery, and runtime tests",
+        "Updated lifecycle, build/release, runtime, security, and host architecture documentation"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "Arbitrary imported or authored code execution before a qualified sandbox exists",
+        "Remote cluster scheduling, multi-node orchestration, autoscaling, and public ingress provisioning",
+        "Deleting immutable builds, releases, revisions, deployment history, runtime-session history, or audit evidence",
+        "Replacing domain-specific conversation, data, review, or execution authorization with renderer-owned workflow metadata"
+      ],
+      "id": "published-lifecycle-runtime-foundation",
+      "number": 1,
+      "objective": "Replace bookkeeping-only deployment runs with an application-owned retained lifecycle, idempotent current-deployment projection, and long-lived release-bound runtime session that supports install-and-activate, activate or deactivate, start or stop, stopped-state uninstall, and qualified visual launch.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "Existing deployment run records can be evolved compatibly into retained runtime-session records, avoiding destructive migration or a duplicate operational store.",
+          "The current host deployment profile is the stable host-target identity until multi-host remote orchestration is introduced.",
+          "Published reference releases provide enough immutable runtime-profile identity to classify trusted visual versus nonvisual execution without reading renderer-supplied metadata.",
+          "Increment 2 will own the visible Publish lifecycle controls, automatic surface presentation, and removal of the standalone Run & Test navigation after this foundation is verified."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "lifecycle-transition-matrix",
+              "partial-failure-truthfulness",
+              "security-lifecycle-reviewed"
+            ],
+            "id": "lifecycle-contract-and-orchestration",
+            "outcome": "A versioned application-owned transition matrix resolves an exact release and host target, derives internal identifiers and policy, exposes only valid actions, and leaves truthful recoverable state after invalid or partial transitions.",
+            "title": "Lifecycle contract and application orchestration"
+          },
+          {
+            "criteriaIds": [
+              "idempotent-retained-state",
+              "partial-failure-truthfulness",
+              "security-lifecycle-reviewed"
+            ],
+            "id": "retained-current-projection",
+            "outcome": "Atomic structured persistence reconciles one current deployment and active session per workspace-scoped exact release and host target while retaining deployment, session, uninstall, and audit history across duplicate intents, conflicts, and restarts.",
+            "title": "Retained current projection and recovery"
+          },
+          {
+            "criteriaIds": [
+              "release-bound-runtime",
+              "partial-failure-truthfulness",
+              "lifecycle-host-parity",
+              "security-lifecycle-reviewed"
+            ],
+            "id": "release-runtime-and-host-parity",
+            "outcome": "Trusted visual and nonvisual exact releases start as truthful long-lived sessions; only qualified visual systems receive bounded launch descriptors; unsupported execution fails closed; desktop and server transports enforce the same minimal intent semantics and safe diagnostics.",
+            "title": "Release-bound runtime and host parity"
+          },
+          {
+            "criteriaIds": [
+              "lifecycle-transition-matrix",
+              "idempotent-retained-state",
+              "release-bound-runtime",
+              "partial-failure-truthfulness",
+              "lifecycle-host-parity",
+              "security-lifecycle-reviewed",
+              "lifecycle-foundation-gates"
+            ],
+            "id": "lifecycle-foundation-qualification",
+            "outcome": "Canonical guidance and focused evidence cover lifecycle, persistence, runtime, recovery, host parity, denial paths, residual risk, and all applicable repository completion gates.",
+            "title": "Lifecycle foundation documentation and qualification"
+          }
+        ],
+        "completionTests": [
+          "Run applicable documentation, architecture, agent-support, security, server build, thin-client build, and full npm test gates once after every Increment 1 chunk is implemented"
+        ],
+        "documentation": [
+          "docs/architecture/system-build-and-release.md",
+          "docs/architecture/system-run-workflows.md",
+          "docs/architecture/host-model.md",
+          "docs/standards/security-by-design-standards.md or the nearest lifecycle security guidance when behavior-specific detail belongs outside the standard",
+          "docs/context/packs/system-builder.pack.md",
+          "Nearest system-deployment and transport README files",
+          "Concise temporary roadmap report"
+        ],
+        "fingerprint": "12dfe66bed4db625e37297b9d365c8dce1fc2106ef9faac0b51a9337c4737b2d",
+        "focusedTests": [
+          "Contract and use-case tests for every valid action set, stale expected revision, invalid transition, duplicate intent, forged workspace or release identity, activation failure, and sanitized failure",
+          "Structured repository tests for atomic current projection, concurrent conflict, retained uninstall history, active-session uniqueness, legacy normalization, and restart recovery",
+          "Trusted runtime tests for visual, nonvisual, unsupported custom, exact-release mismatch, launch failure, stop failure, and adapter loss",
+          "IPC and API parity tests for minimal input, authenticated workspace scoping, host-derived policy, malformed input, cross-workspace denial, and safe diagnostic envelopes",
+          "Focused host composition and TypeScript checks after each affected boundary is complete"
+        ],
+        "recordedAt": "2026-07-29T04:20:15Z",
+        "rollback": "Disable the additive lifecycle facade, intent transports, and launch descriptor consumption while leaving every retained deployment, session, and audit record readable; render affected releases read-only and unavailable rather than restoring manual identifiers or bookkeeping-only execution.",
+        "steps": [
+          "Add versioned lifecycle intents, authoritative projections, state-valid action derivation, bounded launch descriptors, and application orchestration that owns identifiers and policy.",
+          "Add atomic current-deployment reconciliation and compatible retained deployment/session persistence with idempotent conflict handling and restart recovery.",
+          "Evolve the trusted exact-release runtime into long-lived visual or service sessions and expose the same minimal workspace-scoped lifecycle operations through desktop IPC and authenticated server API.",
+          "Update canonical lifecycle, build/release, runtime, host, and security guidance, then run the increment completion gates once after all chunks are complete."
+        ],
+        "summary": "Deliver one cohesive lifecycle foundation through four substantial chunks: application contracts and orchestration, atomic retained persistence and recovery, release-bound runtime plus host/transport parity, then canonical documentation and increment-wide qualification."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-29T04:20:01Z",
+          "risks": [
+            "Concurrent duplicate install or start intents can create multiple current records unless the repository owns an atomic exact-release and host-target projection and the application reconciles conflicts.",
+            "Existing deployment and run records lack host-target and launch metadata, so compatibility normalization must fail closed while preserving readable retained history.",
+            "Install followed by activation, start followed by automatic launch, and stop followed by persistence are multi-step operations whose partial failures must remain distinguishable and recoverable.",
+            "A renderer-supplied deployment id, run id, capability, secret reference, egress origin, policy, or launch target would widen authority across the Publish-to-host boundary.",
+            "A trusted runtime descriptor must be bounded to a verified exact release and supported runtime profile; imported or authored executable content must remain unavailable without a qualified sandbox.",
+            "Raw repository, runtime, or host-launch failures can disclose local paths, private content, provider details, or exploitable implementation data unless the lifecycle facade emits sanitized diagnostics.",
+            "Desktop IPC and authenticated server API can drift unless both parse the same minimal intent contract and invoke the same application-owned lifecycle use cases.",
+            "Long-lived runtime state may outlive a process; restart reconciliation must report a recoverable stopped or unavailable state instead of claiming that an in-memory session is still running."
+          ],
+          "sources": [
+            {
+              "title": "System deployment contracts",
+              "url": "modules/contracts/system-deployment/system-deployment-models.ts"
+            },
+            {
+              "title": "System deployment use cases",
+              "url": "modules/application/use-cases/system-deployment/system-deployment-use-cases.ts"
+            },
+            {
+              "title": "Structured deployment repository",
+              "url": "modules/adapters/persistence/system-deployment/createStructuredSystemDeploymentRepository.ts"
+            },
+            {
+              "title": "Trusted deployment runtime adapter",
+              "url": "modules/adapters/runtime/system-deployment/createTrustedSystemDeploymentRuntimeAdapter.ts"
+            },
+            {
+              "title": "Deployment workflow handler",
+              "url": "modules/application/services/system-run-workflow/system-deployment-workflow-handler.service.ts"
+            },
+            {
+              "title": "Deployment API and desktop IPC adapters",
+              "url": "modules/adapters/transport/api-express/system-deployment/registerSystemDeploymentApiRoutes.ts"
+            },
+            {
+              "title": "Guided publication workspace",
+              "url": "modules/application/use-cases/system-build/guided-system-build.use-cases.ts"
+            },
+            {
+              "title": "Publish shared UI",
+              "url": "modules/ui/shared/system-builder/SystemPublishWorkspace.tsx"
+            }
+          ],
+          "summary": "The existing deployment domain already verifies immutable releases, compatibility, runtime profiles, optimistic revisions, retained runs, and audit entries, but its public commands accept deployment, run, policy, capability, secret, and egress inputs that normal Publish interaction must not own. The structured repository retains deployment and run records but lacks an atomic current-deployment projection by exact release and host target. The trusted runtime verifies supported exact reference releases but reports Start as an immediate terminal handoff and has no bounded launch descriptor. The current deployment workflow generates identifiers inside a host-owned handler, while its generic presentation still exposes manual identifiers and policy-derived fields. Publish already lists only non-archived systems and correlates each published build to its exact immutable release. The cohesive implementation is therefore an additive lifecycle facade that derives identifiers and policy from trusted composition, reconciles a retained current projection, treats active runs as long-lived sessions, and exposes only bounded state/action projections through parity transports."
+        }
+      ],
+      "rollback": "Disable the new intent handlers and launch boundary while retaining all newly written deployment, session, and audit records; fall back to a read-only unavailable state rather than restoring identifier-driven or bookkeeping-only execution paths.",
+      "startedAt": "2026-07-29T04:16:06Z",
+      "status": "completed",
+      "title": "Truthful retained lifecycle and release-bound runtime",
+      "verification": [
+        "Run focused transition-matrix tests for valid, stale, duplicate, racing, and invalid lifecycle intents.",
+        "Run shared repository conformance against structured, SQLite, and PostgreSQL adapters for current-deployment uniqueness, retained history, uninstall, and restart recovery.",
+        "Run focused runtime and launch tests for trusted visual releases, nonvisual servers, unsupported authored/imported content, launch failure, stop failure, and adapter loss.",
+        "Run focused IPC, API, preload, client, host-composition, cross-workspace, forged-identity, malformed-input, and sanitized-diagnostic tests.",
+        "After every planned chunk is complete, run applicable docs, architecture, agent-support, security, server/thin-client build, and npm test gates once for increment 1."
+      ],
+      "workPackages": [
+        {
+          "id": "lifecycle-contracts-and-orchestration",
+          "outcome": "Versioned contracts and application use cases expose authoritative state, state-valid actions, and intent commands without accepting renderer-supplied deployment or run authority.",
+          "title": "Intent lifecycle and eligibility projection"
+        },
+        {
+          "id": "retained-persistence-and-recovery",
+          "outcome": "One current deployment per exact release and host target is reconciled from retained records; install, activation, deactivation, stop, and uninstall transitions remain auditable, retryable, and truthful across partial failures and restarts.",
+          "title": "Idempotent retained persistence"
+        },
+        {
+          "id": "release-runtime-and-launch-boundary",
+          "outcome": "A long-lived runtime session starts and stops trusted exact-release systems, distinguishes visual and nonvisual releases, produces a bounded host-owned launch descriptor for qualified visual systems, and fails closed for unsupported executable content.",
+          "title": "Release-bound runtime and launch descriptor"
+        },
+        {
+          "id": "host-transport-security-parity",
+          "outcome": "Desktop IPC and authenticated server API expose identical workspace-scoped lifecycle behavior with sanitized failures, bounded status projections, exact-release checks, and no client-controlled internal identifiers.",
+          "title": "Host and transport parity"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "An unpublished or unsupported build has no lifecycle controls; a published uninstalled build shows Install; successful Install also activates and then shows Start, Deactivate, and Uninstall; inactive stopped installations show Activate and Uninstall; running systems show Stop only; Stop restores Start, Deactivate, and Uninstall for an active installation.",
+          "id": "publish-action-progression",
+          "qualification": "local"
+        },
+        {
+          "description": "Starting a qualified visual system automatically opens its exact-release interface without displaying an Open System action, while starting a nonvisual server starts it without opening a visual surface; launch and server-start failures produce truthful recoverable UI.",
+          "id": "automatic-launch-without-open-control",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Users never enter or select deployment ids, run ids, requested capability lists, raw secret references, or egress origins for normal Publish lifecycle actions; internal identifiers and policy-derived configuration remain application-owned.",
+          "id": "no-manual-deployment-internals",
+          "qualification": "local"
+        },
+        {
+          "description": "Every active published build is recognizable by system name and build version and maps to its exact immutable release, while archived, deleted, cross-workspace, stale, or mismatched sources never appear as operable lifecycle cards.",
+          "id": "active-source-identity",
+          "qualification": "local"
+        },
+        {
+          "description": "Desktop and thin-client Systems navigation no longer expose a standalone Run & Test tab or the superseded multi-step workflow, and direct stale routes or calls fail safely without reviving renderer-owned authority.",
+          "id": "run-test-removed",
+          "qualification": "local"
+        },
+        {
+          "description": "Lifecycle controls use the existing flat design system, fit supported widths, expose loading and status feedback, preserve keyboard and focus behavior, prevent duplicate action submission, and do not flash stale or ineligible actions during refresh.",
+          "id": "accessible-responsive-controls",
+          "qualification": "local"
+        },
+        {
+          "description": "Automatic launch, host surface isolation, workspace and exact-release binding, archive/delete lifecycle exclusion, idempotency, policy-derived configuration, no client authority, safe diagnostics, stop and uninstall recovery, secure rollback, and residual risks are documented and evidenced.",
+          "id": "security-publish-reviewed",
+          "qualification": "local"
+        },
+        {
+          "description": "Focused shared UI and host tests pass before packaged desktop and thin-client end-to-end qualification plus applicable documentation, architecture, agent-support, security, build, and full repository gates run once for the completed increment.",
+          "id": "publish-experience-gates",
+          "qualification": "controlled-environment"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-29T05:35:24Z",
+      "completedChunks": [
+        "published-build-lifecycle-cards",
+        "automatic-release-runtime-surface",
+        "run-test-cutover-and-qualification"
+      ],
+      "completionSummary": "Publish is now the single recognizable exact-build lifecycle surface across desktop and thin client, with truthful retained actions, automatic bounded visual launch, no manual deployment internals or standalone Run & Test tab, current-worktree controlled qualification, tests, and canonical guidance complete.",
+      "deliverables": [
+        "Responsive accessible published-build lifecycle cards and progress/status feedback",
+        "Exact action progression for Install, Start or Stop, Activate or Deactivate, and Uninstall with no visible Open System control",
+        "Automatic qualified visual launch in host-owned runtime surfaces and nonvisual server start behavior",
+        "Removal of the standalone Run & Test tab and identifier-driven configuration experience",
+        "Active-system and exact-build correlation that excludes archived, deleted, cross-workspace, stale, and mismatched releases while retaining history",
+        "Desktop and thin-client clients, loading states, error recovery, and duplicate-action protection",
+        "Shared UI, host integration, packaged desktop, thin-client, accessibility, and regression tests",
+        "Updated Systems, Publish, lifecycle, operations, security, context-pack, and contributor documentation"
+      ],
+      "dependsOn": [
+        "published-lifecycle-runtime-foundation"
+      ],
+      "excluded": [
+        "A general operations dashboard for fleet-wide deployment management",
+        "Manual secret, capability, egress, or policy authoring inside Publish",
+        "Arbitrary user-authored runtime UI code before sandbox qualification",
+        "Public URL provisioning, remote hosting, autoscaling, and external production deployment",
+        "Changes to Compose, Manage, Models, Data, or Image Generation unrelated to Publish lifecycle integration"
+      ],
+      "id": "publish-lifecycle-experience",
+      "number": 2,
+      "objective": "Make each recognizable active published build the single place to install, operate, automatically launch, stop, deactivate or reactivate, and uninstall its system while removing the standalone Run & Test tab and all manual deployment internals.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "Publication projection continues to return only active systems and exact release plus immutable revision identity for published builds.",
+          "Registered System Foundation backing resources are the only visual content permitted in the automatic surface until a separately qualified authored-code sandbox exists.",
+          "A modal runtime surface in the already context-isolated desktop/thin renderer is sufficient for the current trusted declarative runtime; no arbitrary URL, raw HTML, script, or new Electron authority is required.",
+          "Closing the visual surface does not stop the retained session; the Publish card remains authoritative and exposes Stop only.",
+          "The generic application workflow family may remain for internal or advanced diagnostics even though the Systems host-page Run & Test tab and routine manual experience are removed."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "publish-action-progression",
+              "no-manual-deployment-internals",
+              "active-source-identity",
+              "accessible-responsive-controls",
+              "security-publish-reviewed"
+            ],
+            "id": "published-build-lifecycle-cards",
+            "outcome": "Each active published build is a responsive recognizable card whose flat controls exactly follow authoritative lifecycle actions, never request deployment internals, prevent duplicate submissions, and recover safely from stale or failed operations.",
+            "title": "Published-build lifecycle cards"
+          },
+          {
+            "criteriaIds": [
+              "automatic-launch-without-open-control",
+              "active-source-identity",
+              "accessible-responsive-controls",
+              "security-publish-reviewed"
+            ],
+            "id": "automatic-release-runtime-surface",
+            "outcome": "Start automatically opens a bounded declarative surface only for a matching qualified visual release, starts services without a surface, and retains truthful Stop-only recovery when launch presentation fails.",
+            "title": "Automatic exact-release runtime surface"
+          },
+          {
+            "criteriaIds": [
+              "publish-action-progression",
+              "automatic-launch-without-open-control",
+              "no-manual-deployment-internals",
+              "active-source-identity",
+              "run-test-removed",
+              "accessible-responsive-controls",
+              "security-publish-reviewed",
+              "publish-experience-gates"
+            ],
+            "id": "run-test-cutover-and-qualification",
+            "outcome": "Desktop and thin-client Systems expose one Publish lifecycle without the superseded Run & Test tab or manual forms, and focused plus packaged cross-host evidence and canonical guidance qualify the complete experience.",
+            "title": "Run & Test retirement and production qualification"
+          }
+        ],
+        "completionTests": [
+          "Packaged Windows Electron and local browser visual-composer lifecycle qualification",
+          "Applicable documentation, architecture, agent-support, dependency-security, server build, thin-client build, and full npm test gates once after all Increment 2 chunks are implemented"
+        ],
+        "documentation": [
+          "docs/architecture/system-build-and-release.md",
+          "docs/architecture/system-run-workflows.md",
+          "docs/architecture/host-model.md",
+          "docs/context/packs/system-builder.pack.md",
+          "modules/ui/shared/README.md",
+          "Nearest desktop/thin System Builder and qualification guidance",
+          "Concise temporary roadmap report"
+        ],
+        "fingerprint": "5c4a71ce937b51597d82b0d91623ca1ebedc0ebbdb0474cb2b53ab960556e982",
+        "focusedTests": [
+          "Shared Publish interaction tests for every projected state and action set, loading, stale refresh, duplicate click, safe failure, recovery, archived/deleted denial, and no manual identifiers or Open System control",
+          "Automatic runtime-surface tests for exact release matching, immutable revision and bounded catalog reads, visual launch, service no-launch, stale async cancellation, unsupported content, launch read failure, close behavior, keyboard focus, and cleanup",
+          "Desktop and thin lifecycle client, preload, API/IPC parity, host-page static cutover, page lazy-loading, and responsive CSS tests",
+          "Focused TypeScript and architecture checks after each affected boundary is complete"
+        ],
+        "recordedAt": "2026-07-29T04:56:59Z",
+        "rollback": "Remove the new Publish cards and surface presentation while leaving retained lifecycle records readable and rendering published builds as read-only unavailable; do not restore renderer-entered identifiers, the superseded Run & Test tab, or unsupported executable content.",
+        "steps": [
+          "Mount the existing minimal lifecycle clients in Publish, render active published builds as recognizable cards, and drive every button solely from the application-projected eligible action set with bounded loading, stale-response, duplicate-submit, failure, and recovery behavior.",
+          "Add an automatic runtime surface that matches the host-issued visual launch descriptor to the selected exact release, reads only its immutable revision and bounded registered Foundation catalog, renders the composed surface without design controls or executable content, and leaves nonvisual services without a UI surface.",
+          "Remove the standalone Run & Test host tab and client construction, update navigation and end-to-end qualification for Publish lifecycle progression and launch, update canonical guidance, and run the increment-wide gates once."
+        ],
+        "summary": "Deliver the unified Publish lifecycle in three cohesive chunks: responsive exact-build lifecycle cards, automatic bounded visual or service launch behavior, then Run & Test cutover with cross-host production qualification."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-29T04:56:59Z",
+          "risks": [
+            "Lifecycle reads for multiple published builds can flash stale controls or overwrite a newer workspace selection unless each card owns bounded request state and discards stale responses.",
+            "Duplicate action submission can race expected revisions unless every card disables controls through invoke and refresh.",
+            "A launch descriptor can be mismatched to a different build unless the surface requires exact release equality before reading the immutable revision.",
+            "A runtime may start successfully while visual revision or catalog loading fails; the UI must retain Stop-only state and report launch failure rather than claiming the session stopped.",
+            "Closing an automatically opened visual surface must not silently stop or mutate the retained runtime session.",
+            "Archived or deleted sources can become stale after initial publication load; lifecycle denial must remove operable controls and refresh must not resurrect them.",
+            "Reusing the design renderer must omit design-time claims and expose only registered declarative resources; authored HTML, scripts, URLs, components, Node, filesystem, and host authority remain forbidden.",
+            "Removing the Run & Test tab must also remove host-page client construction and static navigation references without deleting the authoritative application workflow family still used by non-routine diagnostics.",
+            "Packaged desktop and local browser qualification is exact-environment evidence and does not establish other-platform, physical assistive-technology, or production-capacity claims."
+          ],
+          "sources": [
+            {
+              "title": "Publish shared workspace",
+              "url": "modules/ui/shared/system-builder/SystemPublishWorkspace.tsx"
+            },
+            {
+              "title": "Published lifecycle client contract",
+              "url": "modules/ui/shared/system-builder/SystemPublishedLifecycleClient.ts"
+            },
+            {
+              "title": "Bounded declarative composition renderer",
+              "url": "modules/ui/shared/system-builder/SystemCompositionPreview.tsx"
+            },
+            {
+              "title": "Publication projection",
+              "url": "modules/application/use-cases/system-build/guided-system-build.use-cases.ts"
+            },
+            {
+              "title": "Desktop Systems host page",
+              "url": "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx"
+            },
+            {
+              "title": "Thin-client Systems host page",
+              "url": "apps/thin-client/src/pages/SystemBuilderPage.tsx"
+            },
+            {
+              "title": "Packaged lifecycle qualification helper",
+              "url": "dev-tools/scripts/qualification/visual-composer/e2e/guided-system-lifecycle.ts"
+            }
+          ],
+          "summary": "Publish already projects active systems and correlates each published build to an exact release and immutable revision. Minimal desktop and thin lifecycle clients exist but are not mounted. Desktop and thin pages still construct the generic Run & Test presenter. The existing bounded System Composition renderer can render only registered side-effect-free Foundation resources from an exact immutable revision, so it can be reused as the automatic visual surface after matching an application-issued launch descriptor to the selected published release. Routine lifecycle UI therefore needs no deployment, run, capability, secret, egress, policy, URL, path, component, or executable input."
+        }
+      ],
+      "rollback": "Remove the new Publish action controls and automatic launch integration while leaving authoritative lifecycle records intact and rendering affected builds read-only; do not restore the manual identifier workflow, stale Run & Test routes, or unsupported execution.",
+      "startedAt": "2026-07-29T04:53:57Z",
+      "status": "completed",
+      "title": "Unified Publish lifecycle and automatic system launch",
+      "verification": [
+        "Run focused shared UI tests across every lifecycle state, eligible action set, duplicate click, loading, refresh, empty, blocked, archived, deleted, stale, cross-workspace, error, and recovery path.",
+        "Run focused desktop and thin-client client and transport tests proving identifiers remain internal and automatic launch consumes only application-issued bounded descriptors.",
+        "Run focused navigation and static cutover checks proving Run & Test and its manual forms are absent without leaving direct-call authority.",
+        "Run packaged desktop and thin-client end-to-end qualification for build publication, install-and-activate, automatic visual launch or nonvisual start, Stop-only running state, stop, deactivate or reactivate, stopped-state uninstall, restart recovery, and archived/deleted exclusion.",
+        "After every planned chunk is complete, run applicable docs, architecture, agent-support, security, server/thin-client build, and npm test gates once for increment 2."
+      ],
+      "workPackages": [
+        {
+          "id": "published-build-lifecycle-cards",
+          "outcome": "Publish correlates system name, build version, exact release, lifecycle state, health, and the next valid actions on one build card, with duplicate submissions guarded and invalid controls absent.",
+          "title": "State-aware published build controls"
+        },
+        {
+          "id": "automatic-host-launch",
+          "outcome": "Start automatically opens qualified visual systems in a dedicated host-owned runtime surface, starts nonvisual servers without navigation, and keeps Stop as the only running-state control.",
+          "title": "Automatic host-native visual launch"
+        },
+        {
+          "id": "run-test-cutover",
+          "outcome": "The standalone tab, manual deployment identifier, requested-capability, secret-reference, egress-origin, and generic review forms are removed from the Systems navigation while reusable application-owned workflow foundations remain behind bounded lifecycle orchestration where appropriate.",
+          "title": "Run & Test retirement"
+        },
+        {
+          "id": "qualification-and-guidance",
+          "outcome": "Shared interaction, accessibility, packaged-desktop, thin-client, lifecycle, automatic-launch, archive/delete exclusion, and recovery tests prove the simplified end-to-end experience and canonical documentation describes it.",
+          "title": "Cross-host qualification and guidance"
+        }
+      ]
+    }
+  ],
+  "name": "Systems Publish Runtime Lifecycle",
+  "objective": "Consolidate system deployment and runtime controls into Publish with intent-driven retained state and automatic qualified system launch, replacing the standalone Run & Test experience.",
+  "paths": {
+    "report": "docs/tmp/systems-publish-runtime-lifecycle-implementation-report.md",
+    "roadmap": "docs/systems-publish-runtime-lifecycle-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/systems-publish-runtime-lifecycle/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": {
+    "approvedAt": "2026-07-29T04:16:05Z",
+    "fingerprint": "2fd9e7b184519aacbcea51cdcdb4d1c45f44a36279cc80f81f918151f9e5ec8d",
+    "note": "The user explicitly approved implementation of the successor roadmap increment by increment through a production-ready end-to-end solution."
+  },
+  "schemaVersion": 1,
+  "slug": "systems-publish-runtime-lifecycle",
+  "status": "final-approved",
+  "updatedAt": "2026-07-29T11:51:52Z"
+}

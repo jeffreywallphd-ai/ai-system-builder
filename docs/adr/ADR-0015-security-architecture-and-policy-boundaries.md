@@ -3,7 +3,7 @@
 - Status: accepted
 - Date: 2026-05-04
 - Deciders: ai-system-builder maintainers
-- Related: ADR-0003, ADR-0013, docs/architecture/system-overview.md, docs/architecture/host-model.md, docs/architecture/persistence-and-storage.md, docs/architecture/runtime-model.md, docs/architecture/module-dependency-rules.md
+- Related: ADR-0003, ADR-0013, docs/architecture/system-overview.md, docs/architecture/host-model.md, docs/architecture/persistence-and-storage.md, docs/architecture/runtime-model.md, docs/architecture/module-dependency-rules.md, docs/standards/security-by-design-standards.md
 
 ## Context
 
@@ -25,6 +25,8 @@ Clean architecture constraints apply: security mechanisms should be adapter-driv
 
 Security is a cross-cutting architecture concern implemented through shared contracts, application ports/services, adapters, and host composition.
 
+Every repository change performs the security impact screen defined by `docs/standards/security-by-design-standards.md`. This is mandatory even when a task is not labeled security-sensitive and when the implementation is outside a security-named directory. A `security-relevant` result requires a proportional threat review that identifies protected assets, actors and authority, trust boundaries, abuse/failure cases, controls, rollback safety, evidence, and residual risk before completion. A `not-security-relevant` result requires a concrete rationale and must be revisited if scope reveals another boundary.
+
 - Not all security-related code belongs in `security/` folders.
 - Shared security primitives belong in security folders.
 - Feature-specific security declarations and enforcement remain near feature/transport boundaries while consuming shared security contracts/ports.
@@ -37,6 +39,8 @@ Security is a cross-cutting architecture concern implemented through shared cont
 - Initial LAN implementation target: `HTTPS + LAN pairing bearer token`.
 - Managed production identity and organization authorization follow ADR-0029.
 - Future modes are added by new adapters, not use-case rewrites.
+- Security cannot be deferred or excluded as a whole. A specific hardening item may be deferred only with a named boundary, residual risk, and explicit decision or successor work.
+- Migration, compatibility, recovery, and rollback paths must not weaken the forward security posture or restore a known-vulnerable mode.
 
 ## Current first implementation status (rebuild branch)
 

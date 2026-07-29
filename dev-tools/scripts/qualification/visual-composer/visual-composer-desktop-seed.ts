@@ -15,7 +15,7 @@ async function main(): Promise<void> {
     throw new Error("VISUAL_COMPOSER_DESKTOP_DATA_ROOT is required.");
   }
   const normalized = path.resolve(dataRoot).replaceAll("\\", "/");
-  if (!normalized.includes("/artifacts/qualification/visual-composer/runs/")) {
+  if (!normalized.includes("/artifacts/qualification/visual-composer/d/")) {
     throw new Error(
       "Desktop qualification identity must remain inside the isolated run root.",
     );

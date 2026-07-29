@@ -26,7 +26,10 @@ function authenticatedRequest<T extends object>(request: T): T {
 
 function services() {
   return {
-    request: {
+    prepare: {
+      execute: testDouble.fn(async (value: unknown) => ({ ok: true, value })),
+    },
+    guidedRequest: {
       execute: testDouble.fn(async (value: unknown) => ({ ok: true, value })),
     },
     cancel: {
@@ -43,6 +46,7 @@ function services() {
       execute: testDouble.fn(async (value: unknown) => ({ ok: true, value })),
     },
     listReleases: { execute: testDouble.fn(async () => []) },
+    publicationWorkspace: { execute: testDouble.fn(async () => ({ systems: [] })) },
     compareReleases: {
       execute: testDouble.fn(async (value: unknown) => ({ ok: true, value })),
     },
@@ -54,14 +58,6 @@ const requestPayload = {
   buildId: "build-1",
   systemId: "system-1",
   systemRevisionId: "revision-1",
-  deploymentProfile: "local-desktop",
-  availableCapabilities: ["model.invoke"],
-  permittedTrustLevels: ["system-trusted"],
-  hostApiVersion: "1.0.0",
-  runtimeAbiVersion: "1.0.0",
-  toolchainProfile: "builder/1.0.0",
-  actorId: "untrusted-client-value",
-  unexpected: "must-not-cross-boundary",
 };
 
 describe("system build transport parity", () => {
@@ -81,12 +77,14 @@ describe("system build transport parity", () => {
       [
         "/api/systems/build",
         "/api/systems/builds",
+        "/api/systems/builds/preparation",
         "/api/systems/builds/cancel",
         "/api/systems/builds/request",
         "/api/systems/release",
         "/api/systems/releases",
         "/api/systems/releases/approve",
         "/api/systems/releases/compare",
+        "/api/systems/publication",
       ].sort(),
     );
 
@@ -102,7 +100,7 @@ describe("system build transport parity", () => {
     );
   });
 
-  it("derives actors at each trust boundary and drops unexpected build fields", async () => {
+  it("derives actors and accepts only the guided request shape", async () => {
     const routes = {
       get: new Map<string, any>(),
       post: new Map<string, any>(),
@@ -123,11 +121,9 @@ describe("system build transport parity", () => {
       authenticatedRequest({ body: requestPayload }),
       response,
     );
-    expect(api.request.execute.mock.calls[0][0]).toMatchObject({
+    expect(api.guidedRequest.execute.mock.calls[0][0]).toMatchObject({
       actorId: "person-1",
-      runtimeAbiVersion: "1.0.0",
     });
-    expect(api.request.execute.mock.calls[0][0].unexpected).toBeUndefined();
 
     const handlers = new Map<string, any>();
     const ipc = services();
@@ -139,10 +135,44 @@ describe("system build transport parity", () => {
       {},
       { payload: requestPayload },
     );
-    expect(ipc.request.execute.mock.calls[0][0]).toMatchObject({
+    expect(ipc.guidedRequest.execute.mock.calls[0][0]).toMatchObject({
       actorId: "local-user",
-      runtimeAbiVersion: "1.0.0",
     });
-    expect(ipc.request.execute.mock.calls[0][0].unexpected).toBeUndefined();
+  });
+
+  it("rejects renderer-supplied policy and infrastructure fields", async () => {
+    const routes = { get: new Map<string, any>(), post: new Map<string, any>() };
+    const api = services();
+    registerSystemBuildApiRoutes({
+      app: {
+        get: (path, handler) => routes.get.set(path, handler),
+        post: (path, handler) => routes.post.set(path, handler),
+      },
+      ...api,
+    });
+    const response: any = {
+      status: testDouble.fn(() => response),
+      json: testDouble.fn(),
+    };
+    await routes.post.get("/api/systems/builds/request")(
+      authenticatedRequest({
+        body: { ...requestPayload, availableCapabilities: ["model.invoke"] },
+      }),
+      response,
+    );
+    expect(api.guidedRequest.execute).not.toHaveBeenCalled();
+    expect(response.status).toHaveBeenCalledWith(400);
+
+    const handlers = new Map<string, any>();
+    const ipc = services();
+    registerSystemBuildIpc({
+      ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
+      ...ipc,
+    });
+    const result = await handlers.get(
+      DESKTOP_SYSTEM_BUILD_CHANNELS.request.request.value,
+    )({}, { payload: { ...requestPayload, toolchainProfile: "untrusted" } });
+    expect(ipc.guidedRequest.execute).not.toHaveBeenCalled();
+    expect(result.ok).toBe(false);
   });
 });

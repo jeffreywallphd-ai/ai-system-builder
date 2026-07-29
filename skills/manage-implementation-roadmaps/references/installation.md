@@ -78,6 +78,10 @@ Before publishing or changing the skill:
    `SKILL.md`.
 8. Confirm the target repository ignores `docs/tmp/`, progress reports remain
    concise and local, and explicit final approval removes the generated report.
+9. Confirm roadmap discovery requires a security impact disposition, every increment
+   carries security review acceptance evidence, and sanitized evidence cannot copy
+   secrets, protected prompts, private payloads, personal data, or exploitable
+   production details.
 
 ## Primary references
 

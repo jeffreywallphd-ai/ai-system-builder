@@ -36,6 +36,17 @@ module.exports = {
               js: path.resolve(__dirname, 'src/preload/index.ts'),
             },
           },
+          {
+            html: path.resolve(__dirname, 'src/system-runtime/index.html'),
+            js: path.resolve(__dirname, 'src/system-runtime/main.tsx'),
+            name: 'system_runtime',
+            preload: {
+              js: path.resolve(
+                __dirname,
+                'src/system-runtime-preload/index.ts',
+              ),
+            },
+          },
         ],
       },
     }),

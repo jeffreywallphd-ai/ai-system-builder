@@ -69,8 +69,13 @@ describe("System Builder Foundation upgrade", () => {
     expect(preview.value.eligible).toBe(true);
     expect(preview.value.sourceVersion).toBe("2.0.0");
     expect(preview.value.targetVersion).toBe("3.0.0");
-    expect(preview.value.validationStatus).toBe("valid");
+    expect(preview.value.validationStatus).toBe("invalid");
     expect(preview.value.issues).toEqual([]);
+    expect(
+      preview.value.validationIssues.every(
+        (issue) => issue.path?.[issue.path.length - 1] === "modelBinding",
+      ),
+    ).toBe(true);
     expect(preview.value.mappedInstanceCount).toBe(
       fixture.sourceRevision.instances.length,
     );
@@ -105,7 +110,11 @@ describe("System Builder Foundation upgrade", () => {
           instance.definitionRef.version === "3.0.0",
       ),
     ).toBe(true);
-    expect(upgraded.value.validationIssues).toEqual([]);
+    expect(
+      upgraded.value.validationIssues.every(
+        (issue) => issue.path?.[issue.path.length - 1] === "modelBinding",
+      ),
+    ).toBe(true);
 
     const revisions = await fixture.repository.listRevisions(
       workspaceId,
@@ -133,6 +142,14 @@ describe("System Builder Foundation upgrade", () => {
         )
       )?.currentRevisionId,
     ).toBe(upgraded.value.revisionId);
+    expect(
+      (
+        await fixture.repository.readRecord(
+          workspaceId,
+          fixture.record.systemId,
+        )
+      )?.status,
+    ).toBe("blocked");
   });
 
   it("explicitly upgrades a flat v1 reference while preserving its exact source", async () => {
@@ -166,7 +183,11 @@ describe("System Builder Foundation upgrade", () => {
     });
     expect(upgraded.ok).toBe(true);
     if (!upgraded.ok) return;
-    expect(upgraded.value.validationIssues).toEqual([]);
+    expect(
+      upgraded.value.validationIssues.every(
+        (issue) => issue.path?.[issue.path.length - 1] === "modelBinding",
+      ),
+    ).toBe(true);
     expect(
       upgraded.value.instances.every(
         (instance) => instance.definitionRef.version === "3.0.0",
@@ -216,7 +237,7 @@ describe("System Builder Foundation upgrade", () => {
     expect(preview.ok).toBe(true);
     if (!preview.ok) return;
     expect(preview.value.sourceVersion).toBe("1.0.0");
-    expect(preview.value.validationStatus).toBe("valid");
+    expect(preview.value.validationStatus).toBe("invalid");
     expect(preview.value.eligible).toBe(true);
 
     const upgraded = await new UpgradeSystemBuilderFoundationUseCase(
@@ -230,7 +251,11 @@ describe("System Builder Foundation upgrade", () => {
     });
     expect(upgraded.ok).toBe(true);
     if (!upgraded.ok) return;
-    expect(upgraded.value.validationIssues).toEqual([]);
+    expect(
+      upgraded.value.validationIssues.every(
+        (issue) => issue.path?.[issue.path.length - 1] === "modelBinding",
+      ),
+    ).toBe(true);
     expect(upgraded.value.placements?.length).toBeGreaterThan(3);
   });
 

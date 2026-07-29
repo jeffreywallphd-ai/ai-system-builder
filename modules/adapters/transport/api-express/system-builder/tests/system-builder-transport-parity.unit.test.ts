@@ -83,6 +83,12 @@ const services = () =>
         value,
       })),
     },
+    listModelOptions: {
+      execute: testDouble.fn(async (value: any) => ({
+        ok: true,
+        value: { options: [], query: value },
+      })),
+    },
     previewLayoutChange: {
       execute: testDouble.fn(async (value: any) => ({ ok: true, value })),
     },
@@ -115,6 +121,7 @@ describe("System Builder transport parity", () => {
         "/api/systems/clone",
         "/api/systems/composer/assets",
         "/api/systems/composer/asset",
+        "/api/systems/composer/model-options",
         "/api/systems/manage",
         "/api/systems/layout-change/preview",
         "/api/systems/foundation-upgrade/preview",
@@ -203,6 +210,13 @@ describe("System Builder transport parity", () => {
         id: "builtin.ui.card",
         version: "3.0.0",
       },
+    });
+    await routes.get.get("/api/systems/composer/model-options")(
+      { query: { workspaceId: "workspace-a" } },
+      response,
+    );
+    expect(api.listModelOptions.execute.mock.calls[0][0]).toMatchObject({
+      workspaceId: "workspace-a",
     });
     const slotPayload = {
       workspaceId: "workspace-a",
@@ -376,6 +390,15 @@ describe("System Builder transport parity", () => {
         id: "builtin.ui.card",
         version: "3.0.0",
       },
+    });
+    await handlers.get(
+      DESKTOP_SYSTEM_BUILDER_CHANNELS.listModelOptions.request.value,
+    )(
+      {},
+      { payload: { workspaceId: "workspace-a" } },
+    );
+    expect(ipc.listModelOptions.execute.mock.calls[0][0]).toMatchObject({
+      workspaceId: "workspace-a",
     });
     await handlers.get(
       DESKTOP_SYSTEM_BUILDER_CHANNELS.saveRevision.request.value,

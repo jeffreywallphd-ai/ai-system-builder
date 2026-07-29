@@ -116,65 +116,63 @@
   source and does not imply build, release, activation, or deployment. Keep the
   three hand-authored reference-system semantic HTML fixtures as fidelity
   oracles; do not replace them with generated snapshots.
-- `npm run test:visual-composer` uses one worker and isolated ignored state to
-  qualify the shared workflow through packaged Windows Electron IPC and local
-  Chrome API paths. Treat its sanitized automation as exact-environment
-  regression evidence, not as physical-touch, screen-reader, cross-platform,
-  manual-security, or production-performance qualification.
-- Systems Manage uses one workspace-scoped application projection for draft,
-  published, and archived systems across API and IPC. Its shared host surface
-  supports search/filter/sort/paging, exact-revision preview, Compose handoff,
-  duplication, archive-backed deletion, and restore. Archive is recoverable and
-  retains immutable history. These actions are not duplicated in Compose, whose
-  active-only picker refreshes after Manage lifecycle changes.
-- Compose shows edit-existing, create-new, and create-from-template forms without
-  eager system or layout loads. Edit stages then loads; new uses Minimal; both
-  creation flows require names. Loaded actions share a toolbar below the forms,
-  and the catalog is requested only for an edit, creation, or Manage handoff.
-- Deterministic attempts and immutable releases live in the separate
-  `system-build` contract, application, persistence, storage, API/IPC, and
-  shared Build & Release workflow families. Approval re-verifies every artifact
-  and derives release identity from content.
-- Plans and whole-system Run & Test live under Systems, not Assets.
-- The closed secured data-entry template and its release-bound `system-data`
-  runtime are implemented. Runtime schema/policy comes only from one verified
-  approved manifest; application services own validation, authorization,
-  masking, optimistic writes, and redacted audit. Desktop and thin-client use
-  the shared `SystemDataRunTest` presenter.
-- The closed controlled-chatbot template composes reusable foundation and
-  conversation assets, builds through the existing immutable release pipeline,
-  and uses the shared `ConversationRunTest` presenter with real execution-plan
-  identity. Protected instructions stay behind application boundaries; release
-  approval is not runtime activation.
-- The closed secured data-review template composes reusable browser, masking,
-  policy, audit, and preview assets. Its `system-review` runtime resolves policy
-  only from a verified approved release, uses opaque artifact references,
-  bounds storage reads before byte materialization, masks metadata, and records
-  redacted audit. Desktop and thin client use the shared
-  `SystemReviewRunTest` presenter; release approval is still not deployment.
+- `npm run test:visual-composer` rebuilds the current packaged Windows worktree and qualifies it plus local Chrome against isolated stores and a dedicated test organization; it does not qualify physical assistive technology, other platforms, manual security review, or production performance.
+- Persistence conformance uses 36 builds to check status, isolation, associations,
+  conflicts, immutable releases, rollback, restart, and ordering through Electron
+  SQLite. PostgreSQL is unqualified when its live test skips; 36 is not a maximum
+  or SLO.
+- Systems Manage uses one workspace-scoped draft/published/archived projection
+  across API and IPC. It owns search/filter/sort/paging, exact-revision preview,
+  Compose handoff, duplication, recoverable archive, and restore while retaining
+  immutable history; Compose refreshes its active-only picker after changes.
+- Compose shows edit-existing, create-new, and create-from-template forms without eager system or layout loads. Edit stages then loads; new uses Minimal; both creation flows require names. Loaded actions share a toolbar below the forms, and the catalog is requested only for an edit, creation, or Manage handoff.
+- Separate `system-build` seams own attempts and releases. Guided preparation
+  re-reads, validates, and resolves every implementation against the build's
+  host-owned target; renderers cannot choose technical policy. Foundation 3.0 has
+  exact trusted implementations/resources while immutable 1.0/2.0 remain. Publish
+  confirms explicitly before approval re-verifies artifacts and derives identity.
+- The controlled-chatbot template has no seeded transcript or default model. Its required message-composer picker lists sanitized compatible workspace models; one typed persisted-only `conversation-turn` binding connects composer to history. Authority re-resolves the exact model, the build lock records its revision digest, and runtime start never substitutes a caller-supplied or fallback model.
+- Systems has Manage, Compose, and Publish; Compose Connections replaces the duplicate Plans page without removing planning contracts. Publish owns routine exact-release lifecycle controls and automatically opens a matching trusted declarative visual interface after Start. The bounded generic workflow catalog remains an unmounted advanced application boundary rather than a standalone Run & Test tab.
+- The closed secured data-entry, controlled-chatbot, and secured data-review
+  capabilities retain their separate authoritative records and use cases.
+  Desktop and thin client expose them only through the shared
+  `SystemRunWorkflow` presenter and application-owned profiles. Runtime schema,
+  authorization, masking, protected instructions, optimistic writes, bounded
+  previews, and redacted audit remain behind trusted boundaries; approval is
+  not activation.
 - The separate `system-deployment` family now owns organization/workspace-scoped
-  install, activation, readiness, rollback, revocation, bounded run history,
-  and redacted audit. Desktop maps only the three closed references to the local
-  trusted adapter; managed server maps campus/corporate and cloud profiles.
-  Thin client is control/read only, and imported/authored execution remains
-  `sandbox-unavailable` without an independently qualified adapter.
+  install, activation, readiness, rollback, revocation, retained run history,
+  uninstall, and redacted audit. One atomic current pointer exists per exact
+  release and host target; retirement preserves earlier generations and
+  restart-safe evidence. Desktop maps only trusted exact releases to its local
+  adapter; managed server maps host-owned profiles. Thin client is control/read
+  only, and imported/authored execution remains `sandbox-unavailable` without
+  an independently qualified adapter.
+- Routine Publish controls use `system-published-lifecycle`; renderers send only exact release, projected action, and opaque revision;
+  application and host layers resolve all IDs and inject authority, profile,
+  capabilities, secrets, egress, and policy. Install also activates. Running
+  projects Stop only; active stopped projects Start, Deactivate, and Uninstall;
+  inactive stopped projects Activate and Uninstall. Visual runs may return a
+  bounded exact-release launch descriptor; Publish verifies the selected build,
+  reads its exact revision, and renders trusted resources. Services have no UI.
+- `system-run-workflow` is the shared application catalog over those distinct record families. Its inert bounded descriptors cannot carry policy or code; API/IPC inject authority at trusted boundaries, exact source identity is rechecked, and deployment dispatch uses stable runtime profile IDs with explicit legacy decoding.
 - `dev-tools/config/asset-system-qualification.json` owns the versioned
   compatibility, deprecation, performance, admission, and profile evidence
   matrix. Deployment re-reads frozen implementation revocations before every
   privileged lifecycle transition; missing controlled/manual evidence keeps a
   profile incomplete.
-- Operational diagnostics remain in
-  `apps/desktop/src/renderer/features/settings/components/SoftwareStatusSection.tsx`.
-- Deployment is never implied by the design-time editor or a successful build;
+- Operational diagnostics remain in `apps/desktop/src/renderer/features/settings/components/SoftwareStatusSection.tsx`.
+- Deployment is never implied by the design-time editor or a successful build; it requires an explicit compatible install and readiness-verified activation.
 - `docs/adr/ADR-0036-canonical-slot-composition-and-foundation-layouts.md`
-  it requires an explicit compatible install and readiness-verified activation.
 
 ## Canonical Source Docs
 
 - `docs/architecture/system-builder.md`
 - `docs/architecture/system-build-and-release.md`
+- `docs/architecture/system-run-workflows.md`
 - `docs/adr/ADR-0024-system-builder-area-and-software-status-placement.md`
 - `docs/adr/ADR-0033-system-builds-releases-security-and-workflows.md`
+- `docs/adr/ADR-0038-application-owned-system-run-workflows.md`
 - `docs/architecture/asset-kernel.md`
 - `docs/architecture/asset-composition-planning.md`
 - `docs/architecture/workspace-model.md`

@@ -7,11 +7,16 @@ export type DesktopModelIpcFeature = Omit<RegisterModelManagementIpcDependencies
 export interface RegisterDesktopModelIpcDependencies {
   ipcMain: IpcMainHandlePort;
   getModelFeature: AsyncFeatureProvider<DesktopModelIpcFeature>;
+  reportOperationFailure?: (
+    operation: string,
+    error: unknown,
+  ) => void | Promise<void>;
 }
 
 export function registerDesktopModelIpc(dependencies: RegisterDesktopModelIpcDependencies): void {
   registerModelManagementIpc({
     ipcMain: dependencies.ipcMain,
+    reportOperationFailure: dependencies.reportOperationFailure,
     browseModelsUseCase: lazyProvidedObject(dependencies.getModelFeature, (feature) => feature.browseModelsUseCase),
     getModelDetailsUseCase: lazyProvidedObject(dependencies.getModelFeature, (feature) => feature.getModelDetailsUseCase),
     listModelsUseCase: lazyProvidedObject(dependencies.getModelFeature, (feature) => feature.listModelsUseCase),

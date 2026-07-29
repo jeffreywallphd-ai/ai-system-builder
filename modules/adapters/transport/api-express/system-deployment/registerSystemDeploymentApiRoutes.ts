@@ -11,6 +11,8 @@ import type {
   RevokeSystemDeploymentUseCase,
   RollbackSystemDeploymentUseCase,
   StartSystemDeploymentRunUseCase,
+  InvokeSystemPublishedLifecycleUseCase,
+  ReadSystemPublishedLifecycleUseCase,
 } from "../../../../application/use-cases/system-deployment";
 import {
   API_SYSTEM_DEPLOYMENT_OPERATIONS,
@@ -62,6 +64,8 @@ export interface SystemDeploymentHostContext {
 export interface RegisterSystemDeploymentApiRoutesDependencies {
   readonly app: SystemDeploymentExpressPort;
   readonly host: SystemDeploymentHostContext;
+  readonly lifecycleRead?: Pick<ReadSystemPublishedLifecycleUseCase, "execute">;
+  readonly lifecycleInvoke?: Pick<InvokeSystemPublishedLifecycleUseCase, "execute">;
   readonly install: Pick<InstallSystemDeploymentUseCase, "execute">;
   readonly activate: Pick<ActivateSystemDeploymentUseCase, "execute">;
   readonly health: Pick<ReconcileSystemDeploymentHealthUseCase, "execute">;
@@ -78,6 +82,22 @@ export interface RegisterSystemDeploymentApiRoutesDependencies {
 export function registerSystemDeploymentApiRoutes(
   d: RegisterSystemDeploymentApiRoutesDependencies,
 ): void {
+  if (d.lifecycleRead && d.lifecycleInvoke) {
+    d.app.get("/api/systems/published-lifecycle", (req, res) =>
+      runResult(req, res, "lifecycleRead", d.lifecycleRead!, (_body, context) => ({
+        ...context,
+        releaseId: normalizeSystemReleaseId(required(req.query?.releaseId)),
+      })),
+    );
+    d.app.post("/api/systems/published-lifecycle/invoke", (req, res) =>
+      runResult(req, res, "lifecycleInvoke", d.lifecycleInvoke!, (body, context) => ({
+        ...context,
+        releaseId: normalizeSystemReleaseId(required(body.releaseId)),
+        action: lifecycleAction(body.action),
+        expectedRevision: required(body.expectedRevision),
+      })),
+    );
+  }
   d.app.post("/api/systems/deployments/install", (req, res) =>
     runResult(req, res, "install", d.install, (body, context) => {
       const deploymentProfile = normalizeAssetImplementationDeploymentProfile(
@@ -327,3 +347,9 @@ const requiredInteger = (value: unknown) => {
 };
 const integer = (value: unknown) =>
   value === undefined ? undefined : requiredInteger(Number(value));
+const lifecycleAction = (value: unknown) => {
+  const action = required(value);
+  if (!["install", "activate", "deactivate", "start", "stop", "uninstall"].includes(action))
+    throw new Error();
+  return action as "install" | "activate" | "deactivate" | "start" | "stop" | "uninstall";
+};

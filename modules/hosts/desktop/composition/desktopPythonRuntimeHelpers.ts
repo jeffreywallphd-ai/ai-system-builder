@@ -1,4 +1,7 @@
-import type { DesktopPythonRuntimeLogEntry, DesktopPythonRuntimeStatusPayload } from "../../../contracts/ipc";
+import type {
+  DesktopPythonRuntimeLogEntry,
+  DesktopPythonRuntimeStatusPayload,
+} from "../../../contracts/ipc";
 import { resolvePythonRuntimeLoopbackEndpoint } from "../../../adapters/runtime/python";
 
 const PYTHON_RUNTIME_MANAGED_BASE_PORT = 43111;
@@ -14,20 +17,38 @@ export interface DesktopPythonRuntimeFeature {
   runtimePort: any;
 }
 
-export function classifyPythonRuntimeStdioLogLevel(stream: "stdout" | "stderr", message: string): "info" | "warn" | "error" {
+export function classifyPythonRuntimeStdioLogLevel(
+  stream: "stdout" | "stderr",
+  message: string,
+): "info" | "warn" | "error" {
   if (stream === "stdout") return "info";
   const normalizedMessage = message.trim();
-  if (/^(ERROR|CRITICAL):/i.test(normalizedMessage) || normalizedMessage.includes("Traceback (most recent call last)")) return "error";
-  if (/^WARNING:/i.test(normalizedMessage) || /\b(?:UserWarning|FutureWarning|RuntimeWarning|DeprecationWarning):/.test(normalizedMessage)) return "warn";
+  if (
+    /^(ERROR|CRITICAL):/i.test(normalizedMessage) ||
+    normalizedMessage.includes("Traceback (most recent call last)")
+  )
+    return "error";
+  if (
+    /^WARNING:/i.test(normalizedMessage) ||
+    /\b(?:UserWarning|FutureWarning|RuntimeWarning|DeprecationWarning):/.test(
+      normalizedMessage,
+    )
+  )
+    return "warn";
   return "info";
 }
 
-export function resolveDefaultManagedPythonRuntimePort(processId: number = process.pid): string {
-  const processPortOffset = Math.abs(processId) % PYTHON_RUNTIME_MANAGED_PORT_SPAN;
+export function resolveDefaultManagedPythonRuntimePort(
+  processId: number = process.pid,
+): string {
+  const processPortOffset =
+    Math.abs(processId) % PYTHON_RUNTIME_MANAGED_PORT_SPAN;
   return String(PYTHON_RUNTIME_MANAGED_BASE_PORT + processPortOffset);
 }
 
-export function resolvePythonRuntimeHostAndPort(env: NodeJS.ProcessEnv = process.env): { host: string; port: string } {
+export function resolvePythonRuntimeHostAndPort(
+  env: NodeJS.ProcessEnv = process.env,
+): { host: string; port: string } {
   const endpoint = resolvePythonRuntimeLoopbackEndpoint({
     env,
     defaultPort: resolveDefaultManagedPythonRuntimePort(),
@@ -35,11 +56,20 @@ export function resolvePythonRuntimeHostAndPort(env: NodeJS.ProcessEnv = process
   return { host: endpoint.host, port: endpoint.port };
 }
 
-export function resolvePythonRuntimeBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+export function resolvePythonRuntimeBaseUrl(
+  env: NodeJS.ProcessEnv = process.env,
+): string {
   return resolvePythonRuntimeLoopbackEndpoint({
     env,
     defaultPort: resolveDefaultManagedPythonRuntimePort(),
   }).baseUrl;
+}
+
+export function shouldPreparePythonRuntimeWorkerDependencies(
+  command: string,
+): boolean {
+  const executableName = command.trim().replaceAll("\\", "/").split("/").pop();
+  return /^python(?:3(?:\.\d+)?)?(?:\.exe)?$/i.test(executableName ?? "");
 }
 
 export function createUnavailablePythonRuntimeStatus(input: {

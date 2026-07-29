@@ -1,5 +1,16 @@
 {
-  "blockers": [],
+  "blockers": [
+    {
+      "id": "live-postgresql-conformance-endpoint",
+      "kind": "environment",
+      "recordedAt": "2026-07-28T17:51:37Z",
+      "requiredAction": "Provide TEST_POSTGRES_URL through the controlled test environment for an isolated disposable PostgreSQL database, then rerun npm run test:postgres-live and record passing parity evidence.",
+      "resolution": "Docker Desktop supplied an isolated disposable PostgreSQL 18 database on a loopback-only random port; the container used no host volume and was removed after qualification.",
+      "resolvedAt": "2026-07-29T01:11:42Z",
+      "status": "resolved",
+      "summary": "Increment 5 cannot close because the required live PostgreSQL conformance test has no isolated disposable endpoint and therefore skipped."
+    }
+  ],
   "chunks": [
     {
       "areas": [
@@ -290,9 +301,177 @@
         "Docs, architecture, agent-support, server build, thin-client build, and desktop packaging gates passed"
       ],
       "title": "Shared Manage discovery and lifecycle experience"
+    },
+    {
+      "areas": [
+        "System build contracts",
+        "Application use cases",
+        "Desktop and server composition",
+        "HTTP and IPC transports",
+        "Preload and renderer clients"
+      ],
+      "chunkId": "guided-application-boundaries",
+      "completedAt": "2026-07-28T16:49:53Z",
+      "criteriaIds": [
+        "guided-build-test-modal",
+        "publish-systems-and-versions",
+        "explicit-immutable-publication",
+        "security-publish-boundary"
+      ],
+      "documentation": [
+        "docs/architecture/system-build-and-release.md",
+        "docs/adr/ADR-0033-system-builds-releases-security-and-workflows.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "guided-build-publish-experience-guided-application-boundaries",
+      "incrementId": "guided-build-publish-experience",
+      "summary": "Added exact-revision preparation, host-owned guided build requests, publication projections, and parity transport composition without renderer-controlled infrastructure policy.",
+      "tests": [
+        "Guided system build use-case suite passed",
+        "System build HTTP/IPC parity suite passed",
+        "Preload bridge and API authorization suites passed",
+        "Filtered TypeScript diagnostics contain no increment-scoped errors"
+      ],
+      "title": "Authoritative guided build and publication boundaries"
+    },
+    {
+      "areas": [
+        "Shared System Builder UI",
+        "Desktop Systems page",
+        "Thin-client Systems page",
+        "Obsolete Plans page removal"
+      ],
+      "chunkId": "shared-build-publish-experience",
+      "completedAt": "2026-07-28T16:49:53Z",
+      "criteriaIds": [
+        "simplified-navigation",
+        "guided-build-test-modal",
+        "plain-language-build-results",
+        "publish-systems-and-versions",
+        "explicit-immutable-publication",
+        "shared-accessible-parity"
+      ],
+      "documentation": [
+        "docs/architecture/system-builder.md",
+        "modules/ui/shared/README.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "guided-build-publish-experience-shared-build-publish-experience",
+      "incrementId": "guided-build-publish-experience",
+      "summary": "Replaced the technical combined workflow with a shared Build & test modal and Publish workspace, removed the redundant Plans page, and wired identical desktop/thin Systems navigation.",
+      "tests": [
+        "Guided build and Publish interaction suite passed",
+        "System Builder Compose interaction suite passed",
+        "Desktop/thin navigation wording suites passed",
+        "Desktop page-section loading suite passed"
+      ],
+      "title": "Shared Build & test modal and Publish experience"
+    },
+    {
+      "areas": [
+        "Transport input allowlists",
+        "API authorization policy",
+        "Desktop preload parity",
+        "Canonical architecture and ADR guidance",
+        "Context packs and regression guards"
+      ],
+      "chunkId": "lifecycle-security-parity-guidance",
+      "completedAt": "2026-07-28T16:49:53Z",
+      "criteriaIds": [
+        "simplified-navigation",
+        "plain-language-build-results",
+        "shared-accessible-parity",
+        "security-publish-boundary",
+        "lifecycle-documentation"
+      ],
+      "documentation": [
+        "docs/context/packs/system-builder.pack.md",
+        "docs/adr/ADR-0024-system-builder-area-and-software-status-placement.md",
+        "docs/adr/ADR-0033-system-builds-releases-security-and-workflows.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "guided-build-publish-experience-lifecycle-security-parity-guidance",
+      "incrementId": "guided-build-publish-experience",
+      "summary": "Added fail-closed policy-input rejection, exact channel and authorization coverage, preserved controlled planning/runtime separation, and reconciled canonical lifecycle guidance.",
+      "tests": [
+        "Technical policy fields are rejected at HTTP and IPC boundaries",
+        "Build preparation/publication routes require explicit asset scopes",
+        "Renderer/preload request shape omits deployment and toolchain policy",
+        "Focused reference-system, runtime wording, and lifecycle suites passed"
+      ],
+      "title": "Security, parity, regressions, and guidance"
+    },
+    {
+      "areas": [
+        "Packaged Windows desktop lifecycle",
+        "Authenticated thin-client lifecycle",
+        "Shared modal accessibility",
+        "Guided build readiness",
+        "System Foundation trusted implementations",
+        "Sanitized qualification harness"
+      ],
+      "chunkId": "real-host-lifecycle-qualification",
+      "completedAt": "2026-07-28T17:39:03Z",
+      "criteriaIds": [
+        "packaged-cross-host-lifecycle",
+        "accessible-nontechnical-lifecycle",
+        "security-controlled-publication"
+      ],
+      "documentation": [
+        "Sanitized ignored evidence recorded by the visual-composer qualification reporter"
+      ],
+      "feedbackAddressed": [],
+      "id": "controlled-build-publish-qualification-real-host-lifecycle-qualification",
+      "incrementId": "controlled-build-publish-qualification",
+      "summary": "Qualified the simplified guided lifecycle in fresh isolated stores through packaged Windows Electron IPC/preload and token-enforced thin-client API paths, fixing modal focus containment and exact System Foundation 3.0.0 implementation registration discovered by the controlled run.",
+      "tests": [
+        "npm run test:visual-composer passed both packaged-desktop and thin-chrome scenarios",
+        "Shared modal and guided build/publish interaction tests passed",
+        "Guided readiness and trusted implementation seed tests passed"
+      ],
+      "title": "Real packaged desktop and browser lifecycle"
+    },
+    {
+      "areas": [
+        "System-build structured persistence conformance",
+        "Electron SQLite production runtime qualification",
+        "PostgreSQL live conformance integration",
+        "Guided build implementation readiness",
+        "Controlled publication security",
+        "Canonical support and recovery documentation"
+      ],
+      "chunkId": "persistence-security-scale-qualification",
+      "completedAt": "2026-07-28T17:51:37Z",
+      "criteriaIds": [
+        "postgres-sqlite-conformance",
+        "security-controlled-publication",
+        "scale-recovery-support"
+      ],
+      "documentation": [
+        "System Build and Release qualification, limits, and recovery",
+        "System Builder controlled support boundary",
+        "System Builder context pack",
+        "Shared UI lifecycle guidance"
+      ],
+      "feedbackAddressed": [],
+      "id": "controlled-build-publish-qualification-persistence-security-scale-qualification",
+      "incrementId": "controlled-build-publish-qualification",
+      "summary": "Added and qualified a storage-neutral build/publication conformance scenario, fail-closed implementation readiness and publication controls, representative bounded-history and recovery behavior, and truthful canonical support guidance. SQLite and security evidence pass; live PostgreSQL qualification remains externally blocked.",
+      "tests": [
+        "Representative 36-build SQLite conformance passed with isolation, conflicts, immutable releases, rollback, restart, backup, and restore",
+        "Controlled authentication, authorization, revocation, unavailable-implementation, stale, tamper, interruption, cancellation, and non-disclosure tests passed",
+        "Packaged Windows Electron and authenticated local Chrome lifecycle passed",
+        "Completion gates and production builds passed",
+        "Full non-browser report: 2,628 passed, 5 unrelated pre-existing failures, 2 skipped",
+        "Live PostgreSQL test skipped because the controlled endpoint was unavailable"
+      ],
+      "title": "Persistence, security, recovery, and bounded scale"
     }
   ],
-  "completion": null,
+  "completion": {
+    "completedAt": "2026-07-29T01:11:42Z",
+    "summary": "All five approved Systems roadmap increments are implemented, documented, and qualified across supported shared, desktop, thin-client, SQLite, and live PostgreSQL boundaries."
+  },
   "createdAt": "2026-07-18T23:03:42Z",
   "currentIncrementId": null,
   "decisions": [
@@ -356,6 +535,68 @@
       "selectedOptionId": "first-class-placements-versioned-presets",
       "status": "approved",
       "title": "Canonical slot-composition architecture"
+    },
+    {
+      "approvalNote": "User explicitly approved Option A, the recommended guided two-stage Build & test and Publish lifecycle.",
+      "approvedAt": "2026-07-28T16:20:58Z",
+      "approvedFingerprint": "ce857e21743878de24f695e2744772cfd79e0710b32d64145073fa33eb00d00c",
+      "context": "All options remove the Plans tab, make Compose connections the visible relationship editor, open Build & test in a modal for the selected saved system, and replace Build & Release with Publish. The decision is whether build, test, and publication remain explicit stages or are combined. Publication must continue to use authoritative workspace policy, deterministic build evidence, integrity re-verification, immutable releases, and sanitized failures; UI labels or selections never grant authority.",
+      "id": "simplified-build-publish-lifecycle",
+      "options": [
+        {
+          "consequences": [
+            "The modal cannot build unsaved or archived systems and cannot accept arbitrary capability or toolchain text",
+            "Publish defaults to the newest eligible build but exposes other versions through a labeled selector",
+            "The existing Run & Test surface remains a separate post-release/runtime concern unless a later approved roadmap changes it"
+          ],
+          "id": "guided-two-stage",
+          "label": "Guided two-stage",
+          "recommended": true,
+          "summary": "Compose opens a one-action Build & test modal for the selected saved revision using host-owned defaults; Publish separately lists systems and eligible build versions and requires an explicit publish confirmation.",
+          "tradeoffs": [
+            "Fewest routine choices while keeping build/test and publication conceptually distinct",
+            "Required selections use friendly dropdowns; infrastructure versions, capabilities, digests, and evidence move to read-only progressive disclosure",
+            "Users perform two intentional actions when they want to publish"
+          ]
+        },
+        {
+          "consequences": [
+            "The Publish workspace owns both build orchestration and release approval",
+            "Cancellation, retry, and partial-failure states become more prominent in the publication flow",
+            "The design has greater risk of users misunderstanding what has already been published"
+          ],
+          "id": "automatic-build-on-publish",
+          "label": "Build on publish",
+          "recommended": false,
+          "summary": "The Compose modal performs readiness checks only; Publish automatically builds and tests the selected saved version before asking for final publication confirmation.",
+          "tradeoffs": [
+            "One less lifecycle action for users who always intend to publish",
+            "Publish becomes slower and combines preparation with an externally consequential action",
+            "Build failures appear later and are harder to distinguish from publish failures"
+          ]
+        },
+        {
+          "consequences": [
+            "The Compose modal becomes a substantial workflow rather than a focused build/test action",
+            "Users face more choice points despite friendlier wording",
+            "Security and accessibility verification must cover two publication entry points"
+          ],
+          "id": "single-lifecycle-wizard",
+          "label": "Lifecycle wizard",
+          "recommended": false,
+          "summary": "Build, test, evidence review, and optional publication run as a guided multi-step modal from Compose, while Publish is primarily a version history and secondary publication surface.",
+          "tradeoffs": [
+            "Provides the most in-context guidance",
+            "Adds modal steps, branching, and more focus/state management",
+            "Duplicates publication entry points between Compose and Publish"
+          ]
+        }
+      ],
+      "proposalFingerprint": "ce857e21743878de24f695e2744772cfd79e0710b32d64145073fa33eb00d00c",
+      "question": "How much lifecycle automation should the simplified Systems experience perform?",
+      "selectedOptionId": "guided-two-stage",
+      "status": "approved",
+      "title": "Simplified build and publish lifecycle"
     }
   ],
   "discovery": {
@@ -620,6 +861,160 @@
       "outcome": "passed",
       "recordedAt": "2026-07-19T17:01:14Z",
       "summary": "Native table/dialog interactions, responsive table-to-card assertions, shared host typechecks, thin-client production build, Windows desktop package, and the full suite pass with zero failures."
+    },
+    {
+      "artifact": null,
+      "command": "npx vitest run apps/desktop/src/renderer/features/execution-plans/tests/execution-plan-preview-wording.unit.test.ts apps/thin-client/src/features/execution-plans/tests/execution-plan-preview-wording.unit.test.ts && npx tsx --test apps/desktop/src/renderer/tests/page-section-loading.unit.test.tsx",
+      "criterionId": "simplified-navigation",
+      "id": "evidence-19",
+      "incrementId": "guided-build-publish-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-28T17:01:30Z",
+      "summary": "Desktop and thin Systems expose Manage, Compose, Publish, and Run & Test with no Plans or Build & Release tab; obsolete Plans page files were removed."
+    },
+    {
+      "artifact": null,
+      "command": "npx vitest run modules/ui/shared/system-builder/tests/SystemBuildPublish.interaction.ui.test.tsx modules/ui/shared/system-builder/tests/SystemBuilderWorkspace.interaction.ui.test.tsx",
+      "criterionId": "guided-build-test-modal",
+      "id": "evidence-20",
+      "incrementId": "guided-build-publish-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-28T17:01:31Z",
+      "summary": "Compose hands the exact saved revision to an accessible modal, preparation re-reads it, and one guided request omits renderer-selected technical policy."
+    },
+    {
+      "artifact": null,
+      "command": "npx tsx --test modules/ui/shared/system-builder/tests/SystemBuildReleaseWorkflow.unit.test.tsx && npx vitest run modules/ui/shared/system-builder/tests/SystemBuildPublish.interaction.ui.test.tsx",
+      "criterionId": "plain-language-build-results",
+      "id": "evidence-21",
+      "incrementId": "guided-build-publish-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-28T17:01:31Z",
+      "summary": "The modal presents readiness and result summaries in plain language while keeping bounded identifiers and counts under progressive technical details."
+    },
+    {
+      "artifact": null,
+      "command": "npx tsx --test modules/application/use-cases/system-build/tests/guided-system-build.use-cases.unit.test.ts && npx vitest run modules/ui/shared/system-builder/tests/SystemBuildPublish.interaction.ui.test.tsx",
+      "criterionId": "publish-systems-and-versions",
+      "id": "evidence-22",
+      "incrementId": "guided-build-publish-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-28T17:01:31Z",
+      "summary": "The application-owned publication projection lists active systems and stable build versions, distinguishes readiness states, and defaults to the newest ready build."
+    },
+    {
+      "artifact": null,
+      "command": "npx vitest run modules/ui/shared/system-builder/tests/SystemBuildPublish.interaction.ui.test.tsx && npx tsx --test modules/adapters/transport/api-express/system-build/tests/system-build-transport-parity.unit.test.ts",
+      "criterionId": "explicit-immutable-publication",
+      "id": "evidence-23",
+      "incrementId": "guided-build-publish-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-28T17:01:31Z",
+      "summary": "Publish names the system/build in an explicit confirmation and supplies the expected lock digest to the existing authorized, artifact-reverifying immutable release use case."
+    },
+    {
+      "artifact": null,
+      "command": "npm run build:thin-client && npm run build:server && npm run package",
+      "criterionId": "shared-accessible-parity",
+      "id": "evidence-24",
+      "incrementId": "guided-build-publish-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-28T17:01:31Z",
+      "summary": "Shared modal/Publish presenters are used by both hosts; thin-client production build, server build, and packaged Windows desktop all passed."
+    },
+    {
+      "artifact": null,
+      "command": "npx tsx --test modules/adapters/transport/api-express/system-build/tests/system-build-transport-parity.unit.test.ts apps/desktop/src/preload/tests/exposedApi.unit.test.ts modules/adapters/transport/api-express/security/security-enforcement.unit.test.ts",
+      "criterionId": "security-publish-boundary",
+      "id": "evidence-25",
+      "incrementId": "guided-build-publish-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-28T17:01:31Z",
+      "summary": "HTTP and IPC reject caller-supplied deployment/capability/trust/ABI/toolchain policy, preload omits it, routes require explicit scopes, and publication retains expected-digest/artifact verification."
+    },
+    {
+      "artifact": null,
+      "command": "npm run docs:check",
+      "criterionId": "lifecycle-documentation",
+      "id": "evidence-26",
+      "incrementId": "guided-build-publish-experience",
+      "kind": "documentation",
+      "outcome": "passed",
+      "recordedAt": "2026-07-28T17:01:31Z",
+      "summary": "Canonical architecture, ADRs, context pack, and shared UI guidance describe the four-part lifecycle and its security boundaries; documentation drift checks pass."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-07-28t17-36-28-773z-a50db851/evidence.json",
+      "command": "npm run test:visual-composer",
+      "criterionId": "packaged-cross-host-lifecycle",
+      "id": "evidence-27",
+      "incrementId": "controlled-build-publish-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-28T17:39:04Z",
+      "summary": "Fresh isolated packaged Windows Electron and token-enforced thin-client Chrome runs completed create, keyboard layout edit, save, guided build, result review, Publish selection, explicit confirmation, immutable publication, and published-history inspection through real host boundaries."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-07-28t17-36-28-773z-a50db851/evidence.json",
+      "command": "npm run test:visual-composer",
+      "criterionId": "accessible-nontechnical-lifecycle",
+      "id": "evidence-28",
+      "incrementId": "controlled-build-publish-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-28T17:39:04Z",
+      "summary": "Both supported hosts passed keyboard activation, modal naming, asynchronous focus containment, Escape and close focus restoration, exact dropdown labels, plain-language routine workflow checks, serious/critical axe analysis, reduced-motion/forced-color exercise, and 320 CSS-pixel reflow without horizontal overflow."
+    },
+    {
+      "artifact": null,
+      "command": "npm run test:visual-composer; focused API security, IPC/preload, guided-build, resolver, system-build, release, and persistence-conformance tests",
+      "criterionId": "security-controlled-publication",
+      "id": "evidence-29",
+      "incrementId": "controlled-build-publish-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-28T17:51:37Z",
+      "summary": "Controlled host, transport, application, resolver, and persistence checks proved authentication and authorization enforcement, workspace isolation, stale and tampered evidence rejection, revoked or unavailable implementation denial, missing-policy failure, interrupted or cancelled attempt retention without release creation, explicit confirmation, immutable release re-verification, and bounded public diagnostics. Credential material was ephemeral and excluded from retained traces. Live PostgreSQL operational parity remains pending under its separate criterion."
+    },
+    {
+      "artifact": null,
+      "command": "focused system-build persistence conformance and Electron SQLite integration tests; npm run docs:check",
+      "criterionId": "scale-recovery-support",
+      "id": "evidence-30",
+      "incrementId": "controlled-build-publish-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-28T17:51:37Z",
+      "summary": "The shared conformance scenario completed a representative 36-build history with deterministic newest-first projection, success/failure/cancellation retention, optimistic conflict handling, immutable and idempotent releases, rollback-safe transactions, restart-safe reads, and workspace isolation. Electron SQLite health, backup, explicit restore, and rollback checks passed. Canonical documentation records the 5,000-instance and 200-diagnostic bounds, recovery steps, exact environment limits, and that the representative workload is not a product maximum or service level."
+    },
+    {
+      "artifact": null,
+      "command": "npm run test:postgres-live",
+      "criterionId": "postgres-sqlite-conformance",
+      "id": "evidence-31",
+      "incrementId": "controlled-build-publish-qualification",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-07-28T17:51:37Z",
+      "summary": "The complete shared scenario passed through the production Electron SQLite runtime, but the live PostgreSQL test skipped because no isolated disposable TEST_POSTGRES_URL was available. SQLite success and an in-memory substitute are not treated as PostgreSQL parity evidence."
+    },
+    {
+      "artifact": null,
+      "command": "npm run test:postgres-live",
+      "criterionId": "postgres-sqlite-conformance",
+      "id": "evidence-32",
+      "incrementId": "controlled-build-publish-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T01:11:42Z",
+      "summary": "The live PostgreSQL 18 conformance suite passed against an isolated disposable loopback-only database with no persistent volume. It verified migrations, transaction rollback, organization isolation, optimistic conflicts, concurrent mutation safety, health, and the representative 36-build immutable-release persistence scenario with no failures or skips."
     }
   ],
   "feedback": [
@@ -642,6 +1037,16 @@
       "recordedAt": "2026-07-19T05:31:00Z",
       "summary": "Desktop load reported no TypeScript output for System Builder use cases.",
       "targetIncrementId": "slot-composition-kernel"
+    },
+    {
+      "category": "scope",
+      "disposition": "needs-decision",
+      "id": "feedback-simplified-build-publish-ux",
+      "impact": "scope-change",
+      "nextAction": "Obtain approval for the remaining lifecycle interaction model, then replace the pending roadmap suffix with the fewest cohesive security-reviewed increments while preserving completed increments and evidence.",
+      "recordedAt": "2026-07-28T16:11:46Z",
+      "summary": "Revise the pending System Builder roadmap suffix to remove the redundant Systems Plans surface, open Build & test from Compose in a guided modal, replace Build & Release with a plain-language Publish workspace, and simplify Build/Test/Release choices across desktop and thin client. Security impact is relevant because the UI crosses publication and release-integrity authority boundaries: protect exact saved revisions, deterministic build evidence, immutable releases, workspace authorization, and safe diagnostics; prevent stale, tampered, ineligible, or unauthorized publication; keep publication explicit and fail closed; and verify denial, non-disclosure, accessibility, and cross-host parity. Residual controlled-environment qualification remains visible rather than being claimed from local tests.",
+      "targetIncrementId": "migration-build-qualification"
     }
   ],
   "finalApproval": null,
@@ -939,6 +1344,216 @@
       "recordedAt": "2026-07-19T17:01:30Z",
       "sequence": 49,
       "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "6f2cbea5b175a34c2d8226f31a3ae78e10ce9adfd3be21f1c9a73ae558acc877",
+      "recordedAt": "2026-07-28T16:11:46Z",
+      "sequence": 50,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "0cc722f3b3319d4c98fb2306c1a8b0bd9814eb7f369eec46e4ab2f2182d07d81",
+      "recordedAt": "2026-07-28T16:12:05Z",
+      "sequence": 51,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "0ac866ec1008b24273cd609febe3aede848bdde11a86345643d988721d988f14",
+      "recordedAt": "2026-07-28T16:20:58Z",
+      "sequence": 52,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "3470b3fa92ad382cba9c504607780ef04a5bf77f2ba763751d1889a9255cd8de",
+      "recordedAt": "2026-07-28T16:22:39Z",
+      "sequence": 53,
+      "type": "roadmap-revised"
+    },
+    {
+      "eventFingerprint": "11ff68d37cee480a476178e8cceb4b540af514ee3123acaa8415a0249c2da47b",
+      "recordedAt": "2026-07-28T16:28:29Z",
+      "sequence": 54,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "30f38e23bafe940179862aa30b927cd043513393bbab5a9f12cbeef3e60f5369",
+      "recordedAt": "2026-07-28T16:28:44Z",
+      "sequence": 55,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "ad3c3655d8c904bb0618b2c5dde6633bfb7a2a8937df72385c1f46b50150ede9",
+      "recordedAt": "2026-07-28T16:31:14Z",
+      "sequence": 56,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "1b467f519f3e5863bbb99604f8e63d8394a772444685e2de8f09faa3ac2853a7",
+      "recordedAt": "2026-07-28T16:31:23Z",
+      "sequence": 57,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "288c68fd73be06da30eb3bd49d13d9e5359c587143cdb19a8c49af995d8ea374",
+      "recordedAt": "2026-07-28T16:49:53Z",
+      "sequence": 58,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "a85e804e691e7d2ce7d7c4b3843a960bb931968ea065134b4313289f4c7aab1a",
+      "recordedAt": "2026-07-28T16:49:53Z",
+      "sequence": 59,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "ad5aa32ffffabbab3add8371019b6494463b4e50365640ce6c59614c9f8e2e9a",
+      "recordedAt": "2026-07-28T16:49:53Z",
+      "sequence": 60,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "ade696d761f671b44f1837334bc3b255bb7b00f8701c10bf35543644f7e210d3",
+      "recordedAt": "2026-07-28T17:01:30Z",
+      "sequence": 61,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "89000078a242caec977d59a2c62f7b986bc82f16e2aa268d912225d1cb77607a",
+      "recordedAt": "2026-07-28T17:01:31Z",
+      "sequence": 62,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f027dcf6b191494e38167a3c3a29e3ae199abb1366fd4b667629bfe6fcbbfc18",
+      "recordedAt": "2026-07-28T17:01:31Z",
+      "sequence": 63,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9c93472f75ebb572de7160c175c5278bf8775407dbb334b1154cb0e589327ec2",
+      "recordedAt": "2026-07-28T17:01:31Z",
+      "sequence": 64,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "cf958501235e587ea26b155079540031b6085c9983b5d4b7bc8a7fa4eb01b403",
+      "recordedAt": "2026-07-28T17:01:31Z",
+      "sequence": 65,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f6708d80299ebfab468c262b424dbdde36f070db449931b0c8068edfdf3fd062",
+      "recordedAt": "2026-07-28T17:01:31Z",
+      "sequence": 66,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d07391439dcad01b1a7b277ac73b946ae13e3a27d353a93f699f7bbde4f7780e",
+      "recordedAt": "2026-07-28T17:01:31Z",
+      "sequence": 67,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "304f25c808c49616b334372ff63a4d23576fe6766107c2ec3ac192dbfd9f31e3",
+      "recordedAt": "2026-07-28T17:01:31Z",
+      "sequence": 68,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "52a478a8c9163dda46bef548e5ccb815e042ea046530ec7aebc29a101b1227e1",
+      "recordedAt": "2026-07-28T17:01:31Z",
+      "sequence": 69,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "8afa83ebb2cdd560accb044351fa199b89320fed274f7a7d1bc5a4afca6e8898",
+      "recordedAt": "2026-07-28T17:02:11Z",
+      "sequence": 70,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "9c044ab69523fabd3c8b40a8b2fd35c07793f071adf097053d649216f769b8e1",
+      "recordedAt": "2026-07-28T17:03:31Z",
+      "sequence": 71,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "ba9ca7d342b925d1756dd220e4de4cfc51889360640530092e1301b83e9c98d5",
+      "recordedAt": "2026-07-28T17:03:31Z",
+      "sequence": 72,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "cf9dba9b79002ffea2607f45c9775c1e9efcfe4ca58f01868005476507167680",
+      "recordedAt": "2026-07-28T17:39:03Z",
+      "sequence": 73,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "87787d5838da5d3ae615cf2cd1836bd11639deea9fa89b963bb0636e13b2d831",
+      "recordedAt": "2026-07-28T17:39:04Z",
+      "sequence": 74,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "69eba4afcfbc36a21c0614e036a1cc747d006cd5477f9981586f2bc9575fb873",
+      "recordedAt": "2026-07-28T17:39:04Z",
+      "sequence": 75,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5f7af3a0e674ed0fcad8fbbe9c7197a3198629c693efa49cc724a65bf35fa1cf",
+      "recordedAt": "2026-07-28T17:51:37Z",
+      "sequence": 76,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d1609d9cd86cd651d1218a03fb04bc4b7dd0c27cd5a870635bc90433e86a483e",
+      "recordedAt": "2026-07-28T17:51:37Z",
+      "sequence": 77,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "502af3de317408cfdf2b1e3d35ec2d3838f0f843f4aef77340c54ec46eb63aa3",
+      "recordedAt": "2026-07-28T17:51:37Z",
+      "sequence": 78,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "94223b700ba6d54c7f0d61dafea87489ccb14300662f4f8c52e436a8546197c0",
+      "recordedAt": "2026-07-28T17:51:37Z",
+      "sequence": 79,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "ca550b4280dcfaf365ecac07e0e7fd7e5963e5f963f96d3b7af0d48d70606ee0",
+      "recordedAt": "2026-07-28T17:51:37Z",
+      "sequence": 80,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "773cdfd8fa7a8b74fc68ed7cc8e46c046fe61c29c17ec8068a07605d9121f9c1",
+      "recordedAt": "2026-07-29T01:11:42Z",
+      "sequence": 81,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "c8bccc994450409b13905e87435f660c6b451f0a016b95604420bf01cf7e71c5",
+      "recordedAt": "2026-07-29T01:11:42Z",
+      "sequence": 82,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "af1cddb264366fa48dfd7a34d1aed85fcc41ff996812f0c71cb8f9b443380357",
+      "recordedAt": "2026-07-29T01:11:42Z",
+      "sequence": 83,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "1af1f5215de7e854ed98589fa139f8f36d37e4a096d82b7b5e2f41024c623776",
+      "recordedAt": "2026-07-29T01:11:42Z",
+      "sequence": 84,
+      "type": "roadmap-completed"
     }
   ],
   "increments": [
@@ -1636,111 +2251,432 @@
     {
       "acceptanceCriteria": [
         {
-          "description": "Every supported historical flat revision remains byte-for-byte immutable and readable; upgrading creates a reviewed new slot-aware revision, preserves every compatible instance/configuration/binding, places unmatched content in an explicit unassigned state, and supports cancel/retry/conflict without data loss.",
-          "id": "immutable-upgrade",
+          "description": "Systems presents Manage, Compose, Publish, and Run & Test with no Plans tab or Build & Release label in either host; opening Systems or Compose performs no asset-plan read, and removing the page does not delete, migrate, or reinterpret optional source composition plan contracts, records, or references.",
+          "id": "simplified-navigation",
           "qualification": "local"
         },
         {
-          "description": "Secured data-entry, controlled chatbot, and secured data-review templates materialize exact Foundation-derived roots, appropriate application/page presets, valid placements and typed bindings, recursively preview their UI, and preserve their existing security and Run and Test behavior.",
-          "id": "reference-template-adoption",
+          "description": "Build & test opens one accessible modal for the exact selected saved system revision, is unavailable for dirty, archived, missing, stale, or validation-blocked inputs, derives approved host/build settings from authoritative application/host state, exposes no free-form API, ABI, toolchain, capability, trust-level, path, command, environment, or secret inputs, and completes through one clear primary action.",
+          "id": "guided-build-test-modal",
           "qualification": "local"
         },
         {
-          "description": "Build and release inputs freeze exact slot, placement, layout-definition, instance-configuration, backing-resource, and binding data; equivalent revisions reproduce identical content digests, meaningful hierarchy changes alter them, and tampering or missing exact definitions fails closed before approval or deployment.",
-          "id": "deterministic-build-hierarchy",
+          "description": "The modal explains readiness, progress, checks, completion, cancellation, and safe failure in non-technical language; technical identifiers, compatibility facts, evidence counts, bounded diagnostics, and digests are read-only progressive detail and never expose raw logs, paths, commands, stack traces, credentials, protected content, or provider/runtime payloads.",
+          "id": "plain-language-build-results",
           "qualification": "local"
         },
         {
-          "description": "Maximum instance, placement, depth, slot-child, configuration, binding, diagnostic, and rendered-node limits prevent excessive work; malformed, cyclic, cross-workspace, unsafe, stale, revoked, or unsupported inputs return bounded redacted errors and never widen code, secret, filesystem, network, build, release, or runtime authority.",
-          "id": "bounded-secure-operation",
+          "description": "Publish lists workspace-visible systems and their build versions with understandable labels and statuses, supports friendly system and build-version selection, defaults to but does not silently publish the newest eligible build, distinguishes built from published state, and displays why an unavailable version cannot be published.",
+          "id": "publish-systems-and-versions",
           "qualification": "local"
         },
         {
-          "description": "Live PostgreSQL qualification proves the same slot-aware revision, conflict, workspace-isolation, legacy-read, upgrade, and immutable-history semantics as SQLite/structured local persistence.",
-          "id": "postgres-conformance",
-          "qualification": "controlled-environment"
+          "description": "Publishing requires an explicit confirmation naming the system and build version, reuses the canonical authorized approval command, re-reads eligibility, re-verifies expected lock and artifact integrity, creates or returns only the immutable content-addressed release, refreshes publication state, and never implies deployment, activation, or runtime execution.",
+          "id": "explicit-immutable-publication",
+          "qualification": "local"
         },
         {
-          "description": "A packaged Windows desktop application and supported thin-client browser each complete create, choose layout, nest, configure, connect, preview, save, reopen, switch layout, upgrade legacy, build, manage, and inspect revision history against their real IPC/API paths.",
-          "id": "packaged-cross-client-e2e",
-          "qualification": "controlled-environment"
+          "description": "Desktop and thin client use the same shared modal, Publish presenter, terminology, focus behavior, keyboard path, loading/empty/error states, and application truth through their established API or IPC/preload clients, with responsive behavior and no renderer-local build, release, authorization, or eligibility policy.",
+          "id": "shared-accessible-parity",
+          "qualification": "local"
         },
         {
-          "description": "Controlled keyboard and assistive-technology review confirms understandable tree/canvas/inspector/manage navigation and focus behavior; every approved preset satisfies WCAG 2.2 reflow expectations at 320 CSS pixels or equivalent zoom, preserves semantic reading order, and passes reviewed desktop/tablet/mobile visual baselines in light and dark themes.",
-          "id": "accessibility-responsive-visual",
-          "qualification": "controlled-environment"
+          "description": "Security impact is reviewed and evidenced: workspace and actor authority remain application-owned; UI selection is never authorization; unauthorized, cross-workspace, stale, tampered, revoked, ineligible, missing-policy, and adapter-failure paths fail closed before publication; diagnostics are bounded and redacted; rollback preserves immutable revisions/releases and does not restore a weaker publication path; residual controlled-environment risks remain explicit.",
+          "id": "security-publish-boundary",
+          "qualification": "local"
         },
         {
-          "description": "Representative bounded-scale compositions and system lists remain responsive within documented targets, interrupted/conflicting saves, failed upgrades, and guarded lifecycle actions recover without revision loss, rollback disables new activation without flattening slot-aware data, and operator/contributor documentation states supported and unsupported behavior truthfully.",
-          "id": "scale-recovery-support",
-          "qualification": "controlled-environment"
+          "description": "Canonical architecture, relevant ADR consequences where necessary, context packs, tests, and user-facing terminology consistently describe Plans as no longer a Systems surface, Build & test as preparation of an exact saved revision, Publish as explicit immutable release approval, and Run & Test as a separate post-release/runtime concern.",
+          "id": "lifecycle-documentation",
+          "qualification": "local"
         }
       ],
       "allowPendingQualification": false,
-      "completedAt": null,
-      "completedChunks": [],
+      "completedAt": "2026-07-28T17:01:31Z",
+      "completedChunks": [
+        "guided-application-boundaries",
+        "shared-build-publish-experience",
+        "lifecycle-security-parity-guidance"
+      ],
+      "completionSummary": "The guided Build & test and Publish experience is implemented across application, transport, preload, desktop, and thin-client boundaries, documented, packaged, and verified. The repository-wide non-browser run completed with nine unrelated pre-existing failures outside this increment; all increment-focused suites and other completion gates passed.",
       "deliverables": [
-        "Explicit legacy-revision upgrade command, preview, mapping review, unassigned-content handling, and immutable new-revision save",
-        "Safe layout-switch mapping using stable semantic slot identities",
-        "Slot-aware versions of all three closed reference-system templates",
-        "Deterministic build/release materialization and integrity verification for placements and preset definitions",
-        "Compatibility behavior for historical builds/releases and truthful unsupported states",
-        "Payload/depth/count/performance bounds, tamper and recovery coverage, and redacted diagnostics",
-        "SQLite and live PostgreSQL semantic conformance evidence",
-        "Packaged Windows desktop and supported thin-client browser end-to-end qualification",
-        "Keyboard, assistive-technology, WCAG 2.2 reflow, responsive preset, and visual-regression evidence",
-        "Operations/support documentation and reconciled architecture/context/roadmap evidence"
+        "Systems navigation with Plans removed and Build & Release renamed Publish in desktop and thin client",
+        "Removal of unreferenced host-specific Plans page/component wiring while retaining underlying planning contracts and services",
+        "Shared accessible Build & test modal opened from the Compose toolbar for the exact selected saved revision",
+        "Application-owned build preparation and eligibility projection with host-approved presets and safe default selection",
+        "Plain-language build readiness, progress, success, blocked, failed, cancelled, and stale states",
+        "Shared Publish workspace listing systems, successful build versions, publication eligibility, and existing published versions",
+        "Friendly system, build version, and approved target dropdowns only where a real choice exists",
+        "Explicit publish confirmation and existing integrity-verifying immutable release command",
+        "Read-only progressive disclosure for exact revision identity, evidence, diagnostics, digests, compatibility, and provenance",
+        "Focused application, transport, shared UI, accessibility, denial, non-disclosure, and cross-host tests",
+        "Reconciled System Builder and build/release architecture, context, terminology, and contributor guidance"
       ],
       "dependsOn": [
         "system-lifecycle-management"
       ],
       "excluded": [
-        "Automatic destructive migration or rewriting of historical revisions/releases",
-        "User-authored layouts, arbitrary slot creation, freeform dimensions, CSS editing, or public preset marketplace",
-        "Qualified execution of arbitrary imported/authored frontend or backend code beyond existing sandbox decisions",
-        "New deployment topology, identity, tenancy, collaboration, synchronization, billing, or marketplace policy",
-        "Claiming WCAG, performance, PostgreSQL, packaging, browser, or production qualification without recorded controlled evidence"
+        "Deleting asset composition planning contracts, persistence, source-plan references, or non-Systems consumers",
+        "Automatic build-on-publish, automatic publication, bulk publication, or publication from unsaved renderer state",
+        "Redesigning, renaming, or merging the separate Run & Test, deployment, activation, cancellation, or retry workflows",
+        "User-entered host API, runtime ABI, toolchain, capability, trust, path, command, environment, credential, or secret values",
+        "New authorization roles, tenancy policy, deployment topology, runtime/provider adapters, arbitrary imported/authored execution, or public marketplace behavior",
+        "User-authored layouts, CSS, arbitrary slots, or unrelated Compose/Manage redesign"
       ],
-      "id": "migration-build-qualification",
+      "id": "guided-build-publish-experience",
       "number": 4,
-      "objective": "Adopt canonical placements across historical systems, closed reference templates, deterministic builds and releases, then qualify the complete composer and system management experience across persistence shapes, packaged desktop, thin-client browser, accessibility, responsive layouts, security, performance, and recovery without rewriting immutable history.",
-      "plan": null,
-      "research": [],
-      "rollback": "Disable activation of the new composer, Manage experience, and Foundation layout release; preserve all slot-aware and legacy revisions as immutable readable history; and keep prior approved releases runnable under their frozen manifests. A failed upgrade, layout switch, or lifecycle action never replaces its source revision. Rollback must not remove placement data, weaken validation, or make unqualified implementation executable.",
-      "startedAt": null,
-      "status": "pending",
-      "title": "Migration, build adoption, and production qualification",
+      "objective": "Deliver one shared, non-technical Systems lifecycle in which Compose opens a guided Build & test modal for the selected saved revision and Publish lists systems plus eligible build versions for explicit integrity-verified publication, while removing the redundant Plans surface and preserving canonical design, build, release, and runtime boundaries.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "The existing low-level RequestSystemBuildUseCase remains the internal deterministic engine and may continue to be used by trusted tests or host composition.",
+          "Host-owned profiles use the already-supported deployment profiles, API/toolchain versions, capabilities, and trust ceilings; the UI receives only safe labels and readiness summaries.",
+          "Run & Test and deployment remain separate and are regression-tested but not redesigned.",
+          "Underlying asset composition planning contracts and records remain supported even though their Systems tab/page is removed."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "guided-build-test-modal",
+              "publish-systems-and-versions",
+              "explicit-immutable-publication",
+              "security-publish-boundary"
+            ],
+            "id": "guided-application-boundaries",
+            "outcome": "Application-owned preparation and publication projections plus host-owned guided request profiles remove renderer-controlled infrastructure inputs while preserving exact-revision validation and immutable approval.",
+            "title": "Authoritative guided build and publication boundaries"
+          },
+          {
+            "criteriaIds": [
+              "simplified-navigation",
+              "guided-build-test-modal",
+              "plain-language-build-results",
+              "publish-systems-and-versions",
+              "explicit-immutable-publication",
+              "shared-accessible-parity"
+            ],
+            "id": "shared-build-publish-experience",
+            "outcome": "Desktop and thin client share the simplified navigation, one-action modal, friendly version selection, explicit confirmation, progressive detail, and responsive accessible states.",
+            "title": "Shared Build & test modal and Publish experience"
+          },
+          {
+            "criteriaIds": [
+              "simplified-navigation",
+              "plain-language-build-results",
+              "shared-accessible-parity",
+              "security-publish-boundary",
+              "lifecycle-documentation"
+            ],
+            "id": "lifecycle-security-parity-guidance",
+            "outcome": "Focused negative tests, host parity checks, preserved planning/runtime boundaries, and canonical documentation make the simplified lifecycle safe and truthful.",
+            "title": "Security, parity, regressions, and guidance"
+          }
+        ],
+        "completionTests": [
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check",
+          "affected desktop and thin-client TypeScript/build checks",
+          "npm test"
+        ],
+        "documentation": [
+          "docs/architecture/system-builder.md",
+          "docs/architecture/system-build-and-release.md",
+          "docs/context/packs/system-builder.pack.md",
+          "ADR consequence text only if the accepted UI placement or security consequence needs clarification",
+          "nearest tests and generated roadmap report"
+        ],
+        "fingerprint": "3aa355593a6e8e47b3d17e123753d86bd330ec71ed0ea47c11f9f15dc6ae9d20",
+        "focusedTests": [
+          "System build contract and guided use-case tests for host-owned defaults, exact revision, stale/archived/blocked preparation, deterministic request mapping, publication ordering/eligibility, workspace isolation, lock mismatch, artifact integrity failure, and safe diagnostics",
+          "API/IPC operation, parser, security-policy, preload exposure, client, and host-composition tests proving technical request fields are absent/rejected and actor/workspace context remains authoritative",
+          "Shared SystemBuilderWorkspace, Build & test modal, Publish workspace, and Systems page interaction tests for no Plans tab, focus restoration, dirty/blocked states, one-action build, results, details, dropdowns, confirmation, refresh, and responsive keyboard operation",
+          "Focused legacy composition-plan/source-reference, Manage, Run & Test, reference-system, deterministic build/release, and deployment-separation regressions",
+          "Focused source assertions that public UI/read models do not expose forbidden technical or sensitive fields"
+        ],
+        "recordedAt": "2026-07-28T16:31:23Z",
+        "rollback": "Disable the guided modal and Publish workspace and their additive projection operations while preserving immutable data. Never restore client-editable authority fields or a publication path that omits authorization and integrity verification.",
+        "steps": [
+          "Add safe guided build preparation/request and publication projection contracts and application use cases, compose host-owned profiles, and expose parity API/IPC/preload/client methods without renderer-supplied technical authority.",
+          "Replace the shared combined workflow with an accessible Build & test modal and Publish workspace, wire both Systems hosts, remove Plans presentation wiring, and preserve Manage and Run & Test.",
+          "Add denial, stale, tamper, isolation, non-disclosure, navigation, modal, publication, accessibility, and host-parity regressions; reconcile canonical docs/context; then run completion gates."
+        ],
+        "summary": "Implement the guided lifecycle as three coherent chunks: authoritative application/transport seams, the complete shared modal and Publish experience plus navigation, then security/parity/documentation reconciliation and completion qualification."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-28T16:31:14Z",
+          "risks": [
+            "Security relevant: a stale or malicious renderer must not select capability, trust, toolchain, deployment, or compatibility inputs that widen the host policy ceiling.",
+            "A guided preparation result can become stale; guided request and publication must re-read authoritative workspace records and fail closed rather than trust the displayed state.",
+            "Removing Plans from Systems must not delete optional composition-plan contracts, records, or source references used by application and execution-planning boundaries.",
+            "Friendly labels must not obscure whether a build failed, remains unpublished, or has become an immutable release; publication remains an explicit confirmed authority transition.",
+            "Build diagnostics and advanced detail must stay bounded and sanitized and must not expose paths, commands, environment data, credentials, protected content, raw logs, stack traces, or provider/runtime payloads.",
+            "Desktop and thin client must share UI behavior but use host-selected profiles through their real IPC/preload or authenticated API boundaries.",
+            "Rollback must disable the guided surfaces if necessary without restoring renderer-owned authority or mutating existing revisions, attempts, releases, plans, or audit evidence.",
+            "Existing unrelated conversational and security changes are present in the worktree and must be preserved."
+          ],
+          "sources": [
+            {
+              "note": "Defines Systems placement, exact saved revisions, Compose handoff, and separate build/release/runtime authority.",
+              "title": "System Builder architecture",
+              "url": "docs/architecture/system-builder.md"
+            },
+            {
+              "note": "Defines deterministic locks, immutable releases, integrity verification, and lifecycle separation.",
+              "title": "System build and release architecture",
+              "url": "docs/architecture/system-build-and-release.md"
+            },
+            {
+              "note": "Requires fail-closed implementation resolution, composed-policy limits, approved immutable releases, and host-owned execution.",
+              "title": "System build/release ADR",
+              "url": "docs/adr/ADR-0033-system-builds-releases-security-and-workflows.md"
+            },
+            {
+              "note": "Shows renderer-editable technical build inputs and the combined build/release/compare experience.",
+              "title": "Current shared build workflow",
+              "url": "modules/ui/shared/system-builder/SystemBuildReleaseWorkflow.tsx"
+            },
+            {
+              "note": "Provides exact-revision validation, deterministic locks, bounded safe diagnostics, artifact verification, and immutable release approval.",
+              "title": "Current system build use cases",
+              "url": "modules/application/use-cases/system-build/system-build-use-cases.ts"
+            },
+            {
+              "note": "Desktop and thin-client counterparts duplicate tab wiring and currently navigate Compose Build & test to Build & Release.",
+              "title": "Current Systems host pages",
+              "url": "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx"
+            },
+            {
+              "note": "Requires authoritative structured policy, fail-closed publication, non-disclosure, denial testing, and secure rollback.",
+              "title": "Security-by-design standard",
+              "url": "docs/standards/security-by-design-standards.md"
+            }
+          ],
+          "summary": "The shared Systems pages currently expose Manage, Compose, Plans, Build & Release, and Run & Test. Compose hands Build & test to the tab-level workflow. The shared build workflow asks renderers for deployment profile, host API and runtime ABI versions, toolchain, available capabilities, and trust levels, then combines build attempts, diagnostics, release approval, and comparison. The underlying RequestSystemBuildUseCase already re-reads an exact workspace revision, validates it, resolves permitted implementations, creates a deterministic lock, bounds diagnostics, and sanitizes unexpected failures. ApproveSystemReleaseUseCase already requires a successful evidence-backed build, checks the expected lock digest, re-verifies every artifact, derives the immutable release identity from content, and rejects integrity failure. The correct simplification is therefore an additive host-configured guided request/preparation seam plus an application-owned publication projection, followed by shared modal/Publish UI and removal of only the redundant Plans presentation. ModalDialog already supplies focus containment, Escape handling, and focus restoration. Security impact remains relevant because renderer input currently influences capability/trust/build-profile fields and publication is externally consequential."
+        }
+      ],
+      "rollback": "Hide the new modal and Publish workspace and disable their new preparation/projection entry points while preserving every system revision, build attempt, release, plan record, and audit record. If a prior UI is temporarily restored, it must continue to use authoritative host defaults, authorization, integrity re-verification, bounded diagnostics, and explicit publication; otherwise publication remains disabled rather than reopening a weaker path.",
+      "startedAt": "2026-07-28T16:28:44Z",
+      "status": "completed",
+      "title": "Guided Build & test and Publish experience",
       "verification": [
-        "Run focused legacy fixture, upgrade mapping, cancellation, retry, stale conflict, layout-switch mapping, unassigned-content, and immutable-history tests.",
-        "Run focused reference-template validation, recursive preview, security-policy, Run and Test regression, and exact-version tests for all three closed systems.",
-        "Run deterministic build/release digest, manifest, tamper, missing-definition, backing-resource, binding, and historical-release compatibility tests.",
-        "Run adversarial limit, depth, cycle, oversized configuration, malformed envelope, cross-workspace, revocation, unsupported implementation, and diagnostic-redaction tests.",
-        "Run live PostgreSQL recovery/conformance qualification and retain sanitized evidence.",
-        "Run packaged desktop and thin-client browser end-to-end qualification on the supported platform/browser matrix.",
-        "Perform and record keyboard, assistive-technology, WCAG reflow, source-order, light/dark, and responsive visual review for every preset and the Manage experience.",
-        "Run representative bounded-scale interaction, list, preview, save/reopen, and lifecycle-action measurements plus interruption/recovery drills.",
-        "After every Increment 4 work package and all controlled evidence pass, run npm run docs:check, npm run architecture:check, npm run agent-support:check, affected builds/packages, security/dependency checks, deployment fitness checks where applicable, and npm test once as final completion gates."
+        "Run focused application tests for build preparation defaults, eligible version projection, exact-revision association, authorization, stale state, tamper/integrity failure, cancellation mapping, immutable approval, workspace isolation, and sanitized errors.",
+        "Run focused API and IPC/preload/client parity tests for any additive preparation or publication projection operations, including malformed, oversized, unauthorized, wrong-workspace, and unavailable-adapter paths.",
+        "Run shared UI interaction tests for tab removal, Compose modal open/close/focus restoration, dirty and blocked states, single-action build, plain-language results, progressive detail, system/build dropdowns, publish confirmation/cancel/success/failure, refresh, keyboard operation, and narrow layouts.",
+        "Run regression tests proving asset composition plan records and source references remain intact while the Systems Plans UI and eager reads are absent.",
+        "Run focused Run & Test, deterministic build/release, legacy upgrade/layout switching, reference-template, and Manage regressions to prove the simplification does not collapse design, publication, deployment, or runtime boundaries.",
+        "Run documentation, architecture, agent-support, desktop/thin-client build or typecheck, and repository-wide completion gates once every Increment 4 chunk and focused test passes."
       ],
       "workPackages": [
         {
-          "id": "legacy-upgrade-layout-switch",
-          "outcome": "A reviewable mapping workflow converts a selected flat historical revision into a new slot-aware revision, maps stable semantic slots during preset changes, preserves unmatched content in an Unassigned assets tray, and never mutates or deletes its source revision.",
-          "title": "Explicit legacy upgrade and safe layout switching"
+          "id": "simplified-systems-navigation",
+          "outcome": "Desktop and thin client remove the Plans tab and its unreferenced page wiring, retain Manage, Compose, Publish, and Run & Test, and do not delete or reinterpret the underlying optional asset-composition plan contracts or records.",
+          "title": "Simplified Systems navigation"
         },
         {
-          "id": "reference-build-adoption",
-          "outcome": "Secured data-entry, controlled chatbot, and secured data-review templates use compatible roots, layout presets, pages and placements, while build/release manifests freeze and digest the exact hierarchy, presets, configuration, resources, and typed bindings.",
-          "title": "Reference systems and deterministic build adoption"
+          "id": "guided-build-test-modal",
+          "outcome": "Compose opens an accessible modal pinned to the selected clean saved revision, derives approved host/build defaults through an application-owned preparation seam, presents one primary Build & test action, and shows plain-language checks and results with technical evidence available only as bounded read-only detail.",
+          "title": "Guided Build & test modal"
         },
         {
-          "id": "security-limits-recovery",
-          "outcome": "Bounds, malformed/tampered revision handling, cancellation/conflicts, unsupported implementation states, source-order preservation, and rollback/recovery behavior fail closed with bounded redacted diagnostics.",
-          "title": "Hardening and recovery"
+          "id": "publication-workspace",
+          "outcome": "A shared Publish workspace uses application-owned eligibility summaries and friendly system/build-version selectors, defaults to the newest eligible build without hiding alternatives, and performs explicit authorized publication with stale-state and integrity re-verification.",
+          "title": "Publication workspace"
         },
         {
-          "id": "cross-shape-qualification",
-          "outcome": "Automated and controlled evidence covers SQLite/PostgreSQL conformance, packaged desktop, thin-client browser, keyboard and assistive technology, WCAG reflow, preset screenshots, representative scale, builds/releases, and documentation/support procedures.",
-          "title": "Controlled production qualification"
+          "id": "boundary-parity-documentation",
+          "outcome": "Contracts, application behavior, API/IPC/preload clients where required, shared UI, tests, architecture guidance, and context packs describe the simplified lifecycle consistently without changing Run & Test or creating renderer-owned authority.",
+          "title": "Boundary parity, regression coverage, and guidance"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "A freshly packaged supported Windows desktop and supported thin-client browser each complete select/edit/save, Build & test modal, build-result review, Publish system/build selection, confirmation, immutable publication, refresh, and published-version inspection through their real IPC/preload or authenticated API paths without host-specific behavior drift.",
+          "id": "packaged-cross-host-lifecycle",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Live PostgreSQL and SQLite qualification prove equivalent workspace isolation, exact revision/build association, eligible version ordering, optimistic/stale handling, approval integrity re-verification, immutable release history, cancellation/failure retention, and rollback-safe reads.",
+          "id": "postgres-sqlite-conformance",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Controlled keyboard and assistive-technology review proves understandable tab order, modal naming and focus containment/restoration, dropdown labeling, progress/status announcements, confirmation, error recovery, and 320 CSS-pixel reflow; representative users can identify what is built versus published without interpreting API, ABI, toolchain, capability, digest, or assurance jargon.",
+          "id": "accessible-nontechnical-lifecycle",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Controlled security review proves unauthenticated/unauthorized, wrong-workspace, stale, tampered, revoked, ineligible, missing-policy, unavailable-adapter, and interrupted publication attempts fail closed before release creation; public UI/API/IPC evidence contains no secrets, protected content, raw payloads, host paths, commands, stack traces, or raw logs; rollback and recovery remain at least as restrictive as the forward path.",
+          "id": "security-controlled-publication",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Representative bounded system/build histories remain responsive; interrupted builds, cancellation, stale confirmation, refresh races, failed publication, and host restart recover without duplicate or mutable releases; documentation records supported limits, residual risks, deferred Run & Test redesign, and operator recovery steps truthfully.",
+          "id": "scale-recovery-support",
+          "qualification": "controlled-environment"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-29T01:11:42Z",
+      "completedChunks": [
+        "real-host-lifecycle-qualification",
+        "persistence-security-scale-qualification"
+      ],
+      "completionSummary": "Increment 5 completed controlled packaged-desktop, authenticated thin-client, SQLite, live PostgreSQL 18, accessibility, security, recovery, and representative bounded-scale qualification.",
+      "deliverables": [
+        "Packaged Windows desktop Build & test modal and Publish workflow evidence through real IPC/preload",
+        "Supported thin-client browser workflow evidence through authenticated API paths",
+        "Live PostgreSQL and SQLite semantic conformance evidence for builds, releases, workspace isolation, and immutable history",
+        "Keyboard, screen-reader or equivalent assistive-technology, focus restoration, WCAG reflow, and narrow/wide responsive evidence",
+        "Representative non-technical terminology and task-completion review",
+        "Controlled authorization, cross-workspace, stale, tampered, revoked, missing-policy, redaction, and adapter-failure evidence",
+        "Interruption, cancellation, conflict, refresh, recovery, rollback, and representative-scale evidence",
+        "Final support guidance with truthful supported, deferred, and residual-risk statements"
+      ],
+      "dependsOn": [
+        "guided-build-publish-experience"
+      ],
+      "excluded": [
+        "Claiming qualification for unsupported operating systems, browsers, screen readers, deployment shapes, or production environments",
+        "Automatic or bulk publication and build-on-publish",
+        "Redesigning the separate Run & Test, deployment, activation, cancellation, or retry product workflows",
+        "New identity, role, tenancy, synchronization, sandbox, runtime/provider, marketplace, billing, or public-internet policy",
+        "Destructive migration or rewriting historical revisions, build attempts, releases, plans, or audit evidence"
+      ],
+      "id": "controlled-build-publish-qualification",
+      "number": 5,
+      "objective": "Qualify the approved guided lifecycle across real persistence and host boundaries, representative non-technical use, accessibility, responsive layouts, security denials, interruption/recovery, and bounded scale before claiming production readiness.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "Windows desktop packaging and local Chrome remain the supported controlled host/browser targets for this increment.",
+          "The existing isolated visual-composer lifecycle and sanitized reporter remain the canonical real-host harness.",
+          "A real PostgreSQL endpoint must be provided through TEST_POSTGRES_URL; Docker or an embedded substitute is not silently treated as equivalent live PostgreSQL evidence.",
+          "The existing full-suite failures are unrelated unless a rerun identifies a failure in a file changed by this increment."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "packaged-cross-host-lifecycle",
+              "accessible-nontechnical-lifecycle",
+              "security-controlled-publication"
+            ],
+            "id": "real-host-lifecycle-qualification",
+            "outcome": "Supported Windows Electron and Chrome complete the same guided Build/Test/Publish lifecycle through real IPC/preload and authenticated API boundaries with accessible responsive evidence.",
+            "title": "Real packaged desktop and browser lifecycle"
+          },
+          {
+            "criteriaIds": [
+              "postgres-sqlite-conformance",
+              "security-controlled-publication",
+              "scale-recovery-support"
+            ],
+            "id": "persistence-security-scale-qualification",
+            "outcome": "Reusable controlled scenarios prove SQLite/PostgreSQL parity, fail-closed publication, immutable history, recovery, and representative bounded-history behavior with truthful support limits.",
+            "title": "Persistence, security, recovery, and bounded scale"
+          }
+        ],
+        "completionTests": [
+          "npm run test:visual-composer",
+          "npm run test:postgres-live",
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check",
+          "npm run security:dependencies",
+          "npm run build:thin-client",
+          "npm run build:server",
+          "npm run package",
+          "npm test"
+        ],
+        "documentation": [
+          "docs/architecture/system-builder.md",
+          "docs/architecture/system-build-and-release.md",
+          "docs/context/packs/system-builder.pack.md",
+          "nearest qualification README or support guidance",
+          "generated roadmap report and sanitized ignored evidence"
+        ],
+        "fingerprint": "2b69caf63307386d584ca2db2d8aaf364c29f0a3cf9161258a018751dbb6d394",
+        "focusedTests": [
+          "Playwright packaged-desktop and thin-Chrome lifecycle scenarios with axe, keyboard/focus, status announcements, explicit confirmation, refresh, published history, 320px reflow, and sanitized browser/renderer error capture",
+          "SQLite conformance for workspace isolation, exact revision/build association, stable eligible ordering, stale handling, integrity re-verification, immutable history, cancellation/failure retention, restart-safe reads, and representative bounded histories",
+          "The same conformance scenario through the live PostgreSQL structured document store when TEST_POSTGRES_URL is available",
+          "Controlled transport/application denials for unauthorized, wrong-workspace, stale, tampered, missing-policy, unavailable-adapter, interrupted, and diagnostic non-disclosure paths"
+        ],
+        "recordedAt": "2026-07-28T17:03:31Z",
+        "rollback": "Disable the guided Systems lifecycle entry points while preserving all revisions, attempts, releases, plans, and qualification evidence. Do not restore automatic publication, renderer-owned authority, unbounded diagnostics, or editable infrastructure inputs.",
+        "steps": [
+          "Replace obsolete packaged desktop and thin-client Playwright actions with representative create/edit/save, guided Build & test, explicit Publish, immutable-history, keyboard/focus, axe, and 320px reflow flows while retaining isolated sanitized evidence.",
+          "Add storage-neutral build/publication conformance and bounded-scale/recovery scenarios that run against SQLite locally and the existing live PostgreSQL harness when TEST_POSTGRES_URL is supplied; add denial/non-disclosure assertions without weakening production boundaries.",
+          "Run packaged Windows and Chrome qualification, SQLite and available live PostgreSQL conformance, security/recovery/scale checks, and final repository gates; record passed controlled criteria and stop with an explicit environment blocker if live PostgreSQL cannot run."
+        ],
+        "summary": "Upgrade and run the existing real-host qualification for the guided lifecycle, add reusable persistence/security/scale conformance scenarios, and record only controlled evidence actually produced by supported environments."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-28T17:03:31Z",
+          "risks": [
+            "Security impact is relevant: controlled evidence must not capture secrets, protected content, raw payloads, host paths, commands, stack traces, or raw logs.",
+            "The Playwright flow must prove real IPC/preload and authenticated API behavior, not mock the lifecycle or bypass host authority.",
+            "Build and publication qualification must remain separate from deployment and Run & Test.",
+            "Live PostgreSQL is a hard controlled-environment dependency and the roadmap cannot be completed truthfully with only SQLite or an in-memory substitute.",
+            "The repository-wide non-browser gate currently has nine unrelated failures that must remain separately reported."
+          ],
+          "sources": [
+            {
+              "title": "Visual composer Playwright configuration",
+              "url": "dev-tools/config/playwright.visual-composer.config.ts"
+            },
+            {
+              "title": "Packaged desktop qualification",
+              "url": "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-visual-composer.e2e.spec.ts"
+            },
+            {
+              "title": "Thin-client qualification",
+              "url": "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-visual-composer.e2e.spec.ts"
+            },
+            {
+              "title": "Live PostgreSQL integration harness",
+              "url": "modules/adapters/persistence/postgres/tests/postgres-database.live.integration.test.ts"
+            },
+            {
+              "title": "Sanitized qualification reporter",
+              "url": "dev-tools/scripts/qualification/visual-composer/sanitized-qualification-reporter.mjs"
+            }
+          ],
+          "summary": "The existing one-worker visual-composer qualification already packages Windows Electron, starts an authenticated local server/thin client with isolated roots, launches Chrome, runs axe, checks 320px reflow, and writes sanitized immutable evidence. Its two Playwright scenarios still encode obsolete palette/drag and Build & Release behavior and must be upgraded to the guided modal and Publish lifecycle. Structured-document and build/release repositories can support reusable SQLite/PostgreSQL conformance scenarios, but this workstation currently has neither TEST_POSTGRES_URL, Docker, nor local PostgreSQL binaries, so live PostgreSQL evidence cannot be claimed until an external database is supplied."
+        }
+      ],
+      "rollback": "Disable the new Systems lifecycle surfaces and their entry points while preserving all immutable revisions, attempts, releases, plans, and audit evidence. Do not restore automatic publication, client-owned authority, unbounded diagnostics, or editable infrastructure inputs; keep publication unavailable if the authoritative preparation, authorization, or integrity dependencies cannot be qualified.",
+      "startedAt": "2026-07-28T17:02:11Z",
+      "status": "completed",
+      "title": "Controlled Build/Test/Publish qualification",
+      "verification": [
+        "Run the packaged Windows Electron qualification through real IPC/preload and isolated storage with sanitized evidence.",
+        "Run the supported local thin-client browser qualification through authenticated API paths and isolated server storage.",
+        "Run live PostgreSQL/SQLite conformance and recovery scenarios for the application-owned preparation/publication projections and canonical build/release commands.",
+        "Perform keyboard, assistive-technology, focus, status-announcement, terminology, and WCAG reflow review using representative non-technical Build/Test/Publish tasks.",
+        "Run controlled authorization, cross-workspace, tamper, stale, revocation, missing-policy, adapter-failure, diagnostic non-disclosure, interruption, cancellation, conflict, and rollback scenarios.",
+        "Run representative bounded-scale system/build history measurements and refresh/recovery drills.",
+        "After every controlled criterion passes, run the final documentation, architecture, agent-support, security/dependency where applicable, supported builds/packages, and repository-wide completion gates once."
+      ],
+      "workPackages": [
+        {
+          "id": "real-boundary-qualification",
+          "outcome": "Packaged Windows desktop, supported thin-client browser, SQLite, and live PostgreSQL prove the same exact-revision build, version listing, publication, immutable history, and recovery semantics.",
+          "title": "Real host and persistence qualification"
+        },
+        {
+          "id": "accessible-nontechnical-review",
+          "outcome": "Keyboard, assistive-technology, reflow, focus, terminology, and representative task review demonstrate that routine Build/Test/Publish work is understandable without infrastructure knowledge.",
+          "title": "Accessible non-technical usability review"
+        },
+        {
+          "id": "security-recovery-scale",
+          "outcome": "Controlled denial, tamper, isolation, non-disclosure, interruption, conflict, adapter-failure, and representative-scale checks prove safe behavior and documented limits.",
+          "title": "Security, recovery, and bounded-scale qualification"
         }
       ]
     }
@@ -1752,14 +2688,20 @@
     "roadmap": "docs/system-builder-slot-composer-implementation-roadmap.md",
     "state": ".implementation-roadmaps/system-builder-slot-composer/state.json"
   },
-  "resumeAudits": [],
+  "resumeAudits": [
+    {
+      "blockerId": "live-postgresql-conformance-endpoint",
+      "reconciliation": "Re-inspected the dirty worktree and durable roadmap state, preserved all existing Systems and unrelated security work, confirmed the approved Increment 5 plan remained current, and reran the sole pending controlled PostgreSQL check.",
+      "recordedAt": "2026-07-29T01:11:42Z"
+    }
+  ],
   "roadmapApproval": {
-    "approvedAt": "2026-07-19T15:17:59Z",
-    "fingerprint": "c938185798f217ee53d6f8eae1fe9ddb719e2057524c6845d09ad26fab999880",
-    "note": "The user explicitly requested and approved adding a dedicated Systems Manage increment to the active work on 2026-07-18; the previously approved migration and qualification scope is preserved as the following increment."
+    "approvedAt": "2026-07-28T16:28:29Z",
+    "fingerprint": "1de8135a5aa6c03a164be66ed1d191d430e72d73838217e38f9f47074440efa8",
+    "note": "User explicitly approved implementation of the revised roadmap increment by increment through the end-to-end solution."
   },
   "schemaVersion": 1,
   "slug": "system-builder-slot-composer",
-  "status": "ready",
-  "updatedAt": "2026-07-19T17:01:30Z"
+  "status": "completed",
+  "updatedAt": "2026-07-29T01:11:42Z"
 }

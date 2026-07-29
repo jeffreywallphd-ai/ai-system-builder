@@ -1,6 +1,7 @@
 import { describe, expect, it } from "../../../../testing/node-test";
 import {
   normalizeAssetId,
+  type AssetBinding,
   type AssetDefinition,
   type AssetInstance,
   type AssetReference,
@@ -10,10 +11,14 @@ import {
   normalizeAssetImplementationReleaseId,
 } from "../../../../contracts/asset-implementation";
 import {
+  createSystemBuilderModelBinding,
+  createSystemBuilderConversationInteractionMetadata,
   normalizeSystemBuilderRevisionId,
   normalizeSystemBuilderSystemId,
+  SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID,
   type SystemBuilderRevision,
 } from "../../../../contracts/system-builder";
+import type { ModelInventoryRecord } from "../../../../contracts/model";
 import {
   normalizeSystemBuildArtifactId,
   normalizeSystemBuildId,
@@ -24,7 +29,10 @@ import { createWorkspaceId } from "../../../../contracts/workspace";
 import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import { createStructuredSystemBuildRepository } from "../../../../adapters/persistence/system-build";
 import { createSha256SystemBuildHasher } from "../../../../adapters/storage/system-build";
-import { ValidateSystemBuilderRevisionService } from "../../../services/system-builder";
+import {
+  SystemBuilderModelAuthorityService,
+  ValidateSystemBuilderRevisionService,
+} from "../../../services/system-builder";
 import { createDeterministicSystemBuildMaterializer } from "../../../services/system-build";
 import type { SystemBuilderRepositoryPort } from "../../../ports/system-builder";
 import type {
@@ -307,6 +315,190 @@ describe("system build and release use cases", () => {
       sameArtifacts: true,
       changedImplementationInstanceIds: [],
     });
+  });
+
+  it("materializes an exact deterministic model binding and changes the lock when the model revision changes", async () => {
+    const repository = createStructuredSystemBuildRepository(
+      createInMemoryStructuredDocumentStore(),
+    );
+    const hasher = createSha256SystemBuildHasher();
+    const artifacts = artifactPort(hasher);
+    const composerDefinition: AssetDefinition = {
+      ...definition,
+      definitionId: normalizeAssetId("conversation.message-composer"),
+      assetType: "ui-component",
+      assetFamily: "composition",
+      displayName: "Message composer",
+    };
+    const composerInstance: AssetInstance = {
+      ...instance,
+      instanceId: normalizeAssetId("instance.message-composer"),
+      definitionRef: {
+        kind: "asset-definition-version",
+        id: normalizeAssetId(String(composerDefinition.definitionId)),
+        version: composerDefinition.version,
+      },
+      selectedConfiguration: {
+        [SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID]:
+          createSystemBuilderModelBinding("model.chat.local"),
+      },
+    };
+    const historyDefinition: AssetDefinition = {
+      ...definition,
+      definitionId: normalizeAssetId("conversation.message-history-display"),
+      assetType: "ui-component",
+      assetFamily: "composition",
+      displayName: "Message history",
+    };
+    const historyInstance: AssetInstance = {
+      ...instance,
+      instanceId: normalizeAssetId("instance.message-history"),
+      definitionRef: {
+        kind: "asset-definition-version",
+        id: normalizeAssetId(String(historyDefinition.definitionId)),
+        version: historyDefinition.version,
+      },
+    };
+    const conversationBinding: AssetBinding = {
+      bindingId: "binding.message-composer-history",
+      bindingKind: "control",
+      sourceRef: {
+        kind: "asset-instance",
+        id: composerInstance.instanceId,
+      },
+      targetRef: {
+        kind: "asset-instance",
+        id: historyInstance.instanceId,
+      },
+      lifecycleStatus: "draft",
+      provenance: { sourceKind: "human-authored" },
+      metadata: createSystemBuilderConversationInteractionMetadata(),
+    };
+    const composerRevision: SystemBuilderRevision = {
+      ...revision,
+      composition: {
+        ...revision.composition,
+        rootInstanceRefs: [
+          {
+            kind: "asset-instance",
+            id: normalizeAssetId(String(composerInstance.instanceId)),
+          },
+          {
+            kind: "asset-instance",
+            id: normalizeAssetId(String(historyInstance.instanceId)),
+          },
+        ],
+        instanceRefs: [
+          {
+            kind: "asset-instance",
+            id: normalizeAssetId(String(composerInstance.instanceId)),
+          },
+          {
+            kind: "asset-instance",
+            id: normalizeAssetId(String(historyInstance.instanceId)),
+          },
+        ],
+        bindingRefs: [
+          {
+            kind: "asset-binding",
+            id: conversationBinding.bindingId,
+          },
+        ],
+      },
+      instances: [composerInstance, historyInstance],
+      bindings: [conversationBinding],
+    };
+    const modelRecord = (
+      modelId: string,
+      updatedAt: string,
+    ): ModelInventoryRecord => ({
+      workspaceId,
+      modelRecordId: "model.chat.local",
+      displayName: "Local chat",
+      source: "local",
+      lifecycleStatus: "validated",
+      artifactForm: "full-model",
+      provider: "huggingface",
+      modelId,
+      createdAt: "2026-07-29T00:00:00.000Z",
+      updatedAt,
+      taskTags: ["chat"],
+      validationStatus: "valid",
+    });
+    const createBuild = (record: ModelInventoryRecord) => {
+      const modelAuthority = new SystemBuilderModelAuthorityService({
+        async listModels() {
+          return { models: [record] };
+        },
+        async getModelRecord(requestedWorkspaceId, modelRecordId) {
+          return requestedWorkspaceId === workspaceId &&
+            modelRecordId === record.modelRecordId
+            ? record
+            : undefined;
+        },
+      });
+      return new RequestSystemBuildUseCase({
+        repository,
+        systems: systemRepository(composerRevision),
+        validator: new ValidateSystemBuilderRevisionService(
+          {
+            readExactDefinition: async (reference) =>
+              String(reference.id) === String(historyDefinition.definitionId)
+                ? historyDefinition
+                : composerDefinition,
+          },
+          () => "2026-07-29T00:00:00.000Z",
+          modelAuthority,
+        ),
+        resolver: resolver(),
+        artifacts: artifacts.port,
+        hasher,
+        materializer: createDeterministicSystemBuildMaterializer(),
+        modelAuthority,
+        now: () => "2026-07-29T00:00:00.000Z",
+      });
+    };
+
+    const first = await createBuild(
+      modelRecord("local/chat-v1", "2026-07-29T01:00:00.000Z"),
+    ).execute(command("build.model-one"));
+    const repeated = await createBuild(
+      modelRecord("local/chat-v1", "2026-07-29T01:00:00.000Z"),
+    ).execute(command("build.model-two"));
+    const changed = await createBuild(
+      modelRecord("local/chat-v2", "2026-07-29T02:00:00.000Z"),
+    ).execute(command("build.model-three"));
+
+    if (
+      !first.ok ||
+      !repeated.ok ||
+      !changed.ok ||
+      !first.value.lock ||
+      !repeated.value.lock ||
+      !changed.value.lock
+    ) {
+      throw new Error("Expected successful model-bound builds.");
+    }
+    expect(first.value.lock.runtimeResourceBindings?.length).toBe(1);
+    expect(first.value.lock.runtimeResourceBindings?.[0]).toMatchObject({
+      instanceId: "instance.message-composer",
+      bindingKind: "model-record",
+      capabilityKind: "text-generation",
+      modelRecordId: "model.chat.local",
+    });
+    expect(first.value.lock.runtimeInteractionBindings).toEqual([
+      {
+        interactionKind: "conversation-turn",
+        composerInstanceId: "instance.message-composer",
+        historyInstanceId: "instance.message-history",
+        transcriptMode: "persisted-only",
+      },
+    ]);
+    expect(first.value.lockDigest).toBe(repeated.value.lockDigest);
+    expect(first.value.lockDigest === changed.value.lockDigest).toBe(false);
+    expect(
+      JSON.stringify(first.value.lock).includes("local/chat-v1"),
+    ).toBe(false);
   });
 
   it("fails closed for unresolved implementations and tampered evidence", async () => {

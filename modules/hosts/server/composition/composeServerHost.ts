@@ -43,6 +43,7 @@ import { createLocalConversationRepositoryAdapters } from "../../../adapters/per
 import { createLocalExecutionRunRepositoryAdapters } from "../../../adapters/persistence/execution-runs";
 import { LinkUserLibraryAssetToWorkspaceUseCase } from "../../../application/use-cases/user-library";
 import type { LoggingPort } from "../../../application/ports/logging";
+import type { SystemRuntimeDatabaseLifecyclePort } from "../../../application/ports/system-deployment";
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
 import {
   AuthorizeApplicationSettingMutationService,
@@ -157,11 +158,24 @@ import { WorkspaceAssetCompositionReadModelService } from "../../../application/
 import { composeExecutionPlanServices } from "../../shared/composition/composeExecutionPlanServices";
 import { composeConversationExecutionServices } from "../../shared/composition/composeConversationExecutionServices";
 import {
+  createConversationWorkflowHandler,
+  createSystemDataWorkflowHandler,
+  createSystemDeploymentWorkflowHandler,
+  createSystemReviewWorkflowHandler,
+} from "../../../application/services/system-run-workflow";
+import { composeSystemRunWorkflow } from "../../shared/composition/composeSystemRunWorkflow";
+import {
   createPythonConversationalRuntimeAdapterCatalog,
   createPythonConversationalRuntimeGuard,
   createPythonConversationalTextGenerationInvocationAdapter,
 } from "../../../adapters/runtime/conversational-text-generation";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
+import {
+  createFilesystemSystemRuntimePostgresCredentialStore,
+  createManagedPostgresSystemRuntimeDatabaseAdapter,
+  type SystemRuntimeStructuredDataSessionProvider,
+} from "../../../adapters/persistence/system-runtime";
+import { resolvePostgresPoolConfig } from "../../../adapters/persistence/postgres";
 import { createStructuredAssetPackageRepository } from "../../../adapters/persistence/asset-package";
 import { createAssetImplementationArtifactAdapter } from "../../../adapters/storage/asset-implementation";
 import {
@@ -181,6 +195,8 @@ import {
   createDefaultSystemDeploymentPolicy,
 } from "../../shared/composition/composeSystemDeployment";
 import { createTrustedSystemDeploymentRuntimeAdapter } from "../../../adapters/runtime/system-deployment";
+import { SystemDeploymentReleaseBindingService } from "../../../application/services/system-deployment";
+import { normalizeSystemRuntimeInstanceId } from "../../../contracts/system-deployment";
 import type { AssetImplementationDeploymentProfile } from "../../../contracts/asset-implementation";
 import type {
   AssetMutationCommandBase,
@@ -304,7 +320,14 @@ export interface ComposeServerHostOptions {
   settings?: {
     localSettingsFilePath?: string;
   };
+  runtimeDatabases?: ServerSystemRuntimeDatabaseAdapter;
 }
+
+export type ServerSystemRuntimeDatabaseAdapter =
+  SystemRuntimeDatabaseLifecyclePort &
+    SystemRuntimeStructuredDataSessionProvider & {
+      closeAll(): Promise<void>;
+    };
 
 export function resolveServerSystemDeploymentProfile(
   env: NodeJS.ProcessEnv = process.env,
@@ -543,6 +566,7 @@ export interface ServerHostComposition {
   clearHuggingFaceToken: () => Promise<ProviderCredentialStatus>;
   registerApi: (options: RegisterServerApiOptions) => void;
   waitForAssetFoundation: () => Promise<void>;
+  closeRuntimeDatabases: () => Promise<void>;
   getInternalAssetRegistry: () => InternalAssetRegistryComposition | undefined;
 }
 
@@ -630,6 +654,7 @@ export function composeServerHost(
 
   let internalAssetRegistry: InternalAssetRegistryComposition | undefined;
   let assetFoundationReady: Promise<void> = Promise.resolve();
+  let systemRuntimeDatabases = options.runtimeDatabases;
 
   return {
     loggingPort,
@@ -650,6 +675,9 @@ export function composeServerHost(
     waitForAssetFoundation() {
       return assetFoundationReady;
     },
+    async closeRuntimeDatabases() {
+      await systemRuntimeDatabases?.closeAll();
+    },
     registerApi(registerOptions) {
       const env = options.env ?? process.env;
       const organizationDocuments =
@@ -659,6 +687,22 @@ export function composeServerHost(
         dirname(registerOptions.storageRootDirectory),
         "server-runtime",
       );
+      if (
+        !systemRuntimeDatabases &&
+        env.DEPLOYMENT_SHAPE?.trim() &&
+        env.DATABASE_URL?.trim()
+      ) {
+        systemRuntimeDatabases = createManagedPostgresSystemRuntimeDatabaseAdapter({
+          provisioningConfig: resolvePostgresPoolConfig(env),
+          credentials: createFilesystemSystemRuntimePostgresCredentialStore(
+            joinHostPath(
+              registerOptions.runtimeRootDirectory ?? defaultRuntimeRootDirectory,
+              "secrets",
+            ),
+          ),
+          now: options.now,
+        });
+      }
       const applicationSettings = createLocalApplicationSettingsAdapter({
         filePath:
           options.settings?.localSettingsFilePath ??
@@ -1430,11 +1474,13 @@ export function composeServerHost(
                 ),
             },
             assetRegistryRead: internalAssetRegistry.workspaceReadFacade,
+            modelRegistry,
             generateSystemId: () => `system.${randomUUID()}`,
             now: options.now,
           })
         : undefined;
       const systemBuildArtifacts = createSystemBuildArtifactAdapter(storage);
+      const systemDeploymentProfile = resolveServerSystemDeploymentProfile(env);
       const systemBuild =
         organizationDocuments && systemBuilder && assetImplementation
           ? composeSystemBuild({
@@ -1448,6 +1494,22 @@ export function composeServerHost(
               },
               artifacts: systemBuildArtifacts,
               hasher: createSha256SystemBuildHasher(),
+              guidedProfile: {
+                id: systemDeploymentProfile,
+                label:
+                  systemDeploymentProfile === "cloud-server"
+                    ? "Cloud workspace"
+                    : "Organization server",
+                deploymentProfile: systemDeploymentProfile,
+                availableCapabilities: [],
+                permittedTrustLevels: [
+                  "system-trusted",
+                  "organization-approved",
+                  "workspace-approved",
+                ],
+                hostApiVersion: "1.0.0",
+                toolchainProfile: "ai-system-builder/1.0.0",
+              },
               now: options.now,
             })
           : undefined;
@@ -1473,9 +1535,16 @@ export function composeServerHost(
               now: options.now,
             })
           : undefined;
-      const systemDeploymentProfile = resolveServerSystemDeploymentProfile(env);
+      const systemDeploymentReleaseBindings =
+        systemBuild && systemBuilder
+          ? new SystemDeploymentReleaseBindingService({
+              builds: systemBuild.repository,
+              modelAuthority: systemBuilder.modelAuthority,
+              hasher: createSha256SystemBuildHasher(),
+            })
+          : undefined;
       const systemDeployment =
-        organizationDocuments && systemBuild
+        organizationDocuments && systemBuild && systemRuntimeDatabases
           ? composeSystemDeployment({
               documents: organizationDocuments,
               builds: systemBuild.repository,
@@ -1483,7 +1552,21 @@ export function composeServerHost(
               runtime: createTrustedSystemDeploymentRuntimeAdapter({
                 deploymentProfiles: [systemDeploymentProfile],
                 now: options.now,
+                verifyReferenceRelease: async (deployment) => {
+                  const release = await systemBuild.repository.readRelease(
+                    deployment.workspaceId,
+                    deployment.releaseId,
+                  );
+                  return (
+                    !!release &&
+                    release.releaseDigest === deployment.releaseDigest &&
+                    release.systemId !== undefined
+                  );
+                },
+                resolveReleaseBindings: (deployment) =>
+                  systemDeploymentReleaseBindings!.resolve(deployment),
               }),
+              runtimeDatabases: systemRuntimeDatabases,
               revocations: {
                 async listRevokedImplementationReleaseIds(
                   _workspaceId,
@@ -1498,6 +1581,24 @@ export function composeServerHost(
               },
               platformPolicy: createDefaultSystemDeploymentPolicy(),
               generateAuditId: () => `system-deployment-audit.${randomUUID()}`,
+              generateRuntimeInstanceId: () =>
+                normalizeSystemRuntimeInstanceId(
+                  `system-runtime-instance.${randomUUID()}`,
+                ),
+              publishedLifecycle: {
+                systems: systemBuilder!.repository,
+                hostTargetId: systemDeploymentProfile,
+                deploymentProfile: systemDeploymentProfile,
+                hostApiVersion: "1.0.0",
+                hostCapabilities: [],
+                sandboxQualified: false,
+                generateDeploymentId: () =>
+                  `system-deployment.${randomUUID()}`,
+                generateRunId: () =>
+                  `system-deployment-run.${randomUUID()}`,
+                resolveReleaseBindings: (deployment) =>
+                  systemDeploymentReleaseBindings!.resolve(deployment),
+              },
               now: options.now,
             })
           : undefined;
@@ -1833,6 +1934,7 @@ export function composeServerHost(
           invocationPort:
             createPythonConversationalTextGenerationInvocationAdapter(
               pythonRuntimeFoundation.runtimePort,
+              modelRegistry,
             ),
           hostCapabilities: {
             submitTurn: "supported",
@@ -1842,6 +1944,53 @@ export function composeServerHost(
           },
           now: options.now,
         });
+      const systemRunWorkflow = composeSystemRunWorkflow({
+        handlers: [
+          createConversationWorkflowHandler({
+            executionPlans: executionPlanRepository,
+            conversations: conversationExecutionServices,
+            now: options.now,
+          }),
+          ...(systemBuild && systemData
+            ? [
+                createSystemDataWorkflowHandler({
+                  builds: systemBuild.repository,
+                  definitions: systemData.definitions,
+                  runtime: systemData.runtime,
+                  now: options.now,
+                }),
+              ]
+            : []),
+          ...(systemBuild && systemReview
+            ? [
+                createSystemReviewWorkflowHandler({
+                  builds: systemBuild.repository,
+                  definitions: systemReview.definitions,
+                  runtime: systemReview.runtime,
+                  now: options.now,
+                }),
+              ]
+            : []),
+          ...(systemBuild && systemDeployment
+            ? [
+                createSystemDeploymentWorkflowHandler({
+                  builds: systemBuild.repository,
+                  useCases: systemDeployment.useCases,
+                  deploymentProfiles: [systemDeploymentProfile],
+                  hostApiVersion: "1.0.0",
+                  hostCapabilities: [],
+                  sandboxQualified: false,
+                  installationPolicy: createDefaultSystemDeploymentPolicy(),
+                  generateDeploymentId: () =>
+                    `system-deployment.${randomUUID()}`,
+                  generateRunId: () =>
+                    `system-deployment-run.${randomUUID()}`,
+                  now: options.now,
+                }),
+              ]
+            : []),
+        ],
+      });
 
       registerExpressApi({
         app: registerOptions.app,
@@ -2152,9 +2301,18 @@ export function composeServerHost(
                   sandboxQualified: false,
                 },
                 ...systemDeployment.useCases,
+                ...(systemDeployment.publishedLifecycle
+                  ? {
+                      lifecycleRead: systemDeployment.publishedLifecycle.read,
+                      lifecycleInvoke: systemDeployment.publishedLifecycle.invoke,
+                    }
+                  : {}),
               },
             }
           : {}),
+        systemRunWorkflowServices: {
+          workflows: systemRunWorkflow.useCases,
+        },
         ...(systemBuild ? { systemBuildServices: systemBuild.useCases } : {}),
       });
     },

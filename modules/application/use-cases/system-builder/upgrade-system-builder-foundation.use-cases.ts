@@ -12,6 +12,7 @@ import {
   systemBuilderFailure,
   systemBuilderSuccess,
   SYSTEM_BUILDER_FOUNDATION_UPGRADE_TARGET_VERSION,
+  SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID,
 } from "../../../contracts/system-builder";
 import type { SystemBuilderRepositoryPort } from "../../ports/system-builder";
 import {
@@ -112,7 +113,12 @@ export class UpgradeSystemBuilderFoundationUseCase {
           }
         : {}),
       currentRevisionId: revisionId,
-      status: revision.instances.length === 0 ? "draft" : "validated",
+      status:
+        revision.instances.length === 0
+          ? "draft"
+          : prepared.value.preview.validationStatus === "invalid"
+            ? "blocked"
+            : "validated",
       revision: prepared.value.record.revision + 1,
       updatedAt: prepared.value.timestamp,
       updatedBy: safeActor(command.actorId),
@@ -191,11 +197,22 @@ async function prepareFoundationUpgrade(
     timestamp,
   });
   const validation = await dependencies.validator.execute(mapping.candidate);
+  const modelSelectionIsTheOnlyBlocker =
+    validation.status === "invalid" &&
+    validation.issues.length > 0 &&
+    validation.issues.every(
+      (issue) =>
+        issue.category === "configuration" &&
+        issue.path?.[issue.path.length - 1] ===
+          SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID,
+    );
   const preview: SystemBuilderFoundationUpgradePreview = {
     sourceRevisionId: sourceRevision.revisionId,
     sourceVersion: mapping.sourceVersion,
     targetVersion: SYSTEM_BUILDER_FOUNDATION_UPGRADE_TARGET_VERSION,
-    eligible: mapping.issues.length === 0 && validation.status !== "invalid",
+    eligible:
+      mapping.issues.length === 0 &&
+      (validation.status !== "invalid" || modelSelectionIsTheOnlyBlocker),
     mappedInstanceCount: mapping.mappedInstanceCount,
     mappedConfigurationFieldCount: mapping.mappedConfigurationFieldCount,
     issues: mapping.issues,

@@ -83,6 +83,8 @@ export interface OpenPostgresDatabaseOptions {
   readonly config: ResolvedPostgresPoolConfig;
   readonly pool?: PostgresPoolLike;
   readonly now?: () => string;
+  /** Provisioned runtime roles validate but never execute DDL migrations. */
+  readonly migrate?: boolean;
 }
 
 export async function openPostgresDatabase(options: OpenPostgresDatabaseOptions): Promise<OpenedPostgresDatabase> {
@@ -97,7 +99,11 @@ export async function openPostgresDatabase(options: OpenPostgresDatabaseOptions)
   try {
     const client = await pool.connect();
     try {
-      await migratePostgresDatabase(client, now);
+      if (options.migrate === false) {
+        await validatePostgresDatabaseSchema(client);
+      } else {
+        await migratePostgresDatabase(client, now);
+      }
       await client.query("SELECT 1 AS healthy");
     } finally {
       client.release();
@@ -136,6 +142,20 @@ export async function openPostgresDatabase(options: OpenPostgresDatabaseOptions)
       await pool.end();
     },
   };
+}
+
+export async function validatePostgresDatabaseSchema(
+  client: PostgresQueryable,
+): Promise<void> {
+  const current = await client.query<{ version: number }>(
+    "SELECT COALESCE(MAX(version), 0)::int AS version FROM schema_migrations",
+  );
+  const version = current.rows[0]?.version ?? 0;
+  if (version !== POSTGRES_SCHEMA_VERSION) {
+    throw new Error(
+      `PostgreSQL schema version ${version} does not match supported version ${POSTGRES_SCHEMA_VERSION}.`,
+    );
+  }
 }
 
 export async function migratePostgresDatabase(

@@ -113,7 +113,9 @@ import {
   DESKTOP_CONVERSATION_EXECUTION_V2_CANCEL_TURN_REQUEST_CHANNEL,
   DESKTOP_CONVERSATION_EXECUTION_V2_RETRY_TURN_REQUEST_CHANNEL,
   DESKTOP_SYSTEM_BUILDER_CHANNELS,
+  DESKTOP_SYSTEM_BUILD_CHANNELS,
   DESKTOP_SYSTEM_DATA_CHANNELS,
+  DESKTOP_SYSTEM_DEPLOYMENT_CHANNELS,
   DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS,
   createIpcSuccessResponse,
 } from "../../../../../modules/contracts/ipc";
@@ -144,6 +146,89 @@ import {
 } from "../exposedApi";
 
 describe("desktop preload exposedApi bridge", () => {
+  it("maps published lifecycle reads and intents without internal deployment authority", async () => {
+    const responses = [
+      createIpcSuccessResponse(
+        DESKTOP_SYSTEM_DEPLOYMENT_CHANNELS.lifecycleRead.response,
+        { state: "not-installed", eligibleActions: ["install"] },
+      ),
+      createIpcSuccessResponse(
+        DESKTOP_SYSTEM_DEPLOYMENT_CHANNELS.lifecycleInvoke.response,
+        { state: "active-stopped", eligibleActions: ["start", "deactivate", "uninstall"] },
+      ),
+    ];
+    const invoke = testDouble
+      .fn<IpcRendererInvokePort["invoke"]>()
+      .mockImplementation(async () => responses.shift());
+    const api = createDesktopPreloadApi({ ipcRenderer: { invoke } });
+
+    await api.readPublishedSystemLifecycle({
+      workspaceId: "workspace-a",
+      releaseId: "release-a",
+    });
+    await api.invokePublishedSystemLifecycle({
+      workspaceId: "workspace-a",
+      releaseId: "release-a",
+      action: "install",
+      expectedRevision: "not-installed",
+    });
+
+    expect(invoke.mock.calls.map((call) => call[0])).toEqual([
+      DESKTOP_SYSTEM_DEPLOYMENT_CHANNELS.lifecycleRead.request.value,
+      DESKTOP_SYSTEM_DEPLOYMENT_CHANNELS.lifecycleInvoke.request.value,
+    ]);
+    const payload = (invoke.mock.calls[1]?.[1] as {
+      payload: Record<string, unknown>;
+    }).payload;
+    expect(payload).toEqual({
+      workspaceId: "workspace-a",
+      releaseId: "release-a",
+      action: "install",
+      expectedRevision: "not-installed",
+    });
+    expect("deploymentId" in payload).toBe(false);
+    expect("runId" in payload).toBe(false);
+    expect("policy" in payload).toBe(false);
+  });
+
+  it("maps guided build preparation, request, and publication reads to dedicated IPC channels", async () => {
+    const responses = [
+      createIpcSuccessResponse(DESKTOP_SYSTEM_BUILD_CHANNELS.prepare.response, {}),
+      createIpcSuccessResponse(DESKTOP_SYSTEM_BUILD_CHANNELS.request.response, {}),
+      createIpcSuccessResponse(
+        DESKTOP_SYSTEM_BUILD_CHANNELS.publicationWorkspace.response,
+        { systems: [] },
+      ),
+    ];
+    const invoke = testDouble
+      .fn<IpcRendererInvokePort["invoke"]>()
+      .mockImplementation(async () => responses.shift());
+    const api = createDesktopPreloadApi({ ipcRenderer: { invoke } });
+    const target = {
+      workspaceId: "workspace-a",
+      systemId: "system-1",
+      systemRevisionId: "revision-2",
+    };
+
+    await api.prepareSystemBuild(target);
+    await api.requestSystemBuild({ ...target, buildId: "build-2" });
+    await api.listSystemPublicationWorkspace({ workspaceId: "workspace-a" });
+
+    expect(invoke.mock.calls.map((call) => call[0])).toEqual([
+      DESKTOP_SYSTEM_BUILD_CHANNELS.prepare.request.value,
+      DESKTOP_SYSTEM_BUILD_CHANNELS.request.request.value,
+      DESKTOP_SYSTEM_BUILD_CHANNELS.publicationWorkspace.request.value,
+    ]);
+    expect(invoke.mock.calls[1]?.[1]).toMatchObject({
+      payload: { ...target, buildId: "build-2" },
+    });
+    const requestPayload = (invoke.mock.calls[1]?.[1] as {
+      payload: Record<string, unknown>;
+    }).payload;
+    expect("deploymentProfile" in requestPayload).toBe(false);
+    expect("toolchainProfile" in requestPayload).toBe(false);
+  });
+
   it("preserves slot structure and placements in revision-save payloads", async () => {
     const response = createIpcSuccessResponse(
       DESKTOP_SYSTEM_BUILDER_CHANNELS.saveRevision.response,
@@ -233,6 +318,10 @@ describe("desktop preload exposedApi bridge", () => {
         [],
       ),
       createIpcSuccessResponse(
+        DESKTOP_SYSTEM_BUILDER_CHANNELS.listModelOptions.response,
+        { items: [] },
+      ),
+      createIpcSuccessResponse(
         DESKTOP_SYSTEM_BUILDER_CHANNELS.listManagement.response,
         {
           items: [],
@@ -278,6 +367,10 @@ describe("desktop preload exposedApi bridge", () => {
     };
 
     await api.listSystemBuilderTemplates({}, context);
+    await api.listSystemBuilderModelOptions(
+      { workspaceId: "workspace.a" },
+      context,
+    );
     await api.listSystemBuilderManagement(
       { workspaceId: "workspace.a", view: "published" },
       context,
@@ -313,6 +406,7 @@ describe("desktop preload exposedApi bridge", () => {
 
     expect(invoke.mock.calls.map((call) => call[0])).toEqual([
       DESKTOP_SYSTEM_BUILDER_CHANNELS.listTemplates.request.value,
+      DESKTOP_SYSTEM_BUILDER_CHANNELS.listModelOptions.request.value,
       DESKTOP_SYSTEM_BUILDER_CHANNELS.listManagement.request.value,
       DESKTOP_SYSTEM_BUILDER_CHANNELS.createFromTemplate.request.value,
       DESKTOP_SYSTEM_DATA_CHANNELS.describe.request.value,
@@ -322,7 +416,7 @@ describe("desktop preload exposedApi bridge", () => {
       DESKTOP_SYSTEM_DATA_CHANNELS.list.request.value,
       DESKTOP_SYSTEM_DATA_CHANNELS.listAudit.request.value,
     ]);
-    expect(invoke.mock.calls[2]?.[1]).toMatchObject({
+    expect(invoke.mock.calls[3]?.[1]).toMatchObject({
       payload: {
         workspaceId: "workspace.a",
         templateId: "reference.secured-data-entry@1.0.0",

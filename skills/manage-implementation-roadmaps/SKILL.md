@@ -13,15 +13,20 @@ resume faithfully without committing verbose progress reports.
 
 1. Read the repository agent instructions, root README, documentation entry point,
    current worktree status, affected code, nearest README files, tests, architecture
-   decisions, and change-impact guidance before proposing work.
+   decisions, change-impact guidance, and
+   `docs/standards/security-by-design-standards.md` before proposing work.
 2. Read [workflow.md](references/workflow.md) and
    [events.md](references/events.md) completely.
 3. Locate an existing roadmap, temporary report, and state file for the requested
    work. Resume those artifacts when they exist; do not silently create a competing
    roadmap.
-4. Treat user feedback, CI output, interrupted work, and uncommitted changes as
+4. Apply the repository's mandatory security impact screen before planning. Record
+   `not-security-relevant` with a concrete rationale or `security-relevant` with
+   protected assets, actors/authority, trust boundaries, abuse/failure cases,
+   controls, verification, and residual risk.
+5. Treat user feedback, CI output, interrupted work, and uncommitted changes as
    inputs to reconcile before making new edits.
-5. Use the term **increment**. Do not rename increments to phases.
+6. Use the term **increment**. Do not rename increments to phases.
 
 Resolve all script and reference paths from the directory containing this
 `SKILL.md`. Do not assume an agent-specific skill environment variable.
@@ -43,21 +48,34 @@ approval from a request to draft or inspect a roadmap.
 1. Research the repository and relevant primary sources. Record a concise discovery
    summary, constraints, and source links; never copy private chat transcripts or
    machine-specific paths into tracked artifacts.
-2. Identify decisions that materially affect architecture, scope, compatibility,
+2. Record the security impact disposition and sources in discovery. Load the
+   repository security pack and applicable canonical threat models for
+   `security-relevant` work. Re-run the screen if scope changes.
+   The state engine rejects discovery without this structured disposition.
+3. Identify decisions that materially affect architecture, scope, compatibility,
    security, data, operations, or user experience.
-3. For each high-level decision, present two or three mutually exclusive options.
+4. For each high-level decision, present two or three mutually exclusive options.
    Mark exactly one as recommended and explain tradeoffs and consequences.
-4. Stop for explicit user approval of the high-level option. Record
+5. Stop for explicit user approval of the high-level option. Record
    `decision-approved` only after the user actually selects or accepts an option.
-5. Define the fewest ordered, contiguous increments that provide sensible approval,
+6. Define the fewest ordered, contiguous increments that provide sensible approval,
    rollback, and verification boundaries. Each increment must include dependencies,
    an objective, deliverables, acceptance criteria, verification, rollback, and
-   exclusions. Keep closely coupled work as chunks inside one cohesive vertical
-   slice.
-6. Present the complete roadmap and stop for explicit user approval. Record
+   exclusions. Every increment includes `security-impact-reviewed` or a more
+   specific security acceptance criterion, even when the expected evidence is a
+   concise `not-security-relevant` review. Keep closely coupled work as chunks
+   inside one cohesive vertical slice.
+   The state engine rejects new or revised increments that omit this criterion.
+7. Present the complete roadmap and stop for explicit user approval. Record
    `roadmap-approved` only after that approval.
 
 Do not start implementation while an option or roadmap approval is missing or stale.
+
+Security is a non-functional constraint and cannot be excluded as a whole. A
+roadmap may exclude a specific threat or hardening item only when it names the
+boundary, explains why it is outside approved scope, records residual risk, and
+identifies the decision or successor work required. Never use compatibility,
+rollback, or availability as a reason to restore an insecure path.
 
 ## Size increments economically
 
@@ -119,15 +137,21 @@ For every approved increment, repeat this loop:
 
 1. Inspect all current uncommitted changes and reconcile them with the roadmap.
 2. Start only the next pending increment; do not skip dependencies.
-3. Conduct increment-specific repository and primary-source research.
+3. Conduct increment-specific repository and primary-source research and refresh
+   the security impact screen against the current scope and implementation.
 4. Write the increment implementation plan before editing. Map every acceptance
    criterion to at least one coherent work chunk. Separately name focused tests
    for internal chunks and completion tests for the whole increment, plus
-   documentation, assumptions, and rollback.
+   documentation, assumptions, and rollback. Map the increment's security criterion
+   to the chunks, threat-model or design notes, focused denial/failure-path tests,
+   applicable completion gates, and a rollback at least as secure as the forward
+   path.
 5. Implement one coherent chunk at a time. A chunk is a reviewable outcome, not an
    individual file write.
-6. Add or update tests and documentation with the behavior. Run only the narrow
-   tests for the current chunk while iterating. Never run a full suite while any
+6. Add or update tests and documentation with the behavior. For security-relevant
+   work, cover relevant denial, malformed-input, isolation, bounds,
+   non-disclosure, and adapter-failure behavior as well as the happy path. Run only
+   the narrow tests for the current chunk while iterating. Never run a full suite while any
    planned chunk in the increment remains unimplemented. After every planned chunk
    is implemented and its focused tests pass, run the completion tests and costly
    repository-wide gates once for the whole increment, immediately before recording
@@ -139,9 +163,12 @@ For every approved increment, repeat this loop:
    remains in JSON state and the roadmap. Provide the user a clickable report link
    after a user-visible slice or natural checkpoint, not after every file change or
    minor internal chunk.
-8. Attach evidence to every acceptance criterion. Distinguish local passes from
-   controlled-environment qualification; never describe pending external evidence
-   as passed.
+8. Attach evidence to every acceptance criterion, including the security impact
+   criterion. A `not-security-relevant` criterion uses review evidence with its
+   concrete rationale; a `security-relevant` criterion cites implemented controls,
+   tests, documentation, residual risk, and any controlled-environment gap.
+   Distinguish local passes from controlled-environment qualification; never
+   describe pending external evidence as passed.
 9. Complete the increment only when all planned chunks and required evidence are
    accounted for. Then begin research and planning for the next increment.
 
@@ -152,6 +179,8 @@ For every approved increment, repeat this loop:
 - Keep in-scope defects within the current increment when its approved objective is
   unchanged.
 - Invalidate approval and stop when feedback changes a high-level decision or scope.
+- Re-run the security impact screen for feedback that changes scope, data flow,
+  authority, side effects, dependencies, rollback, or an implementation boundary.
 - Record blockers with the action required to clear them.
 - On resume, inspect worktree and artifact drift, resolve the blocker, document the
   reconciliation, re-run affected checks, and continue from the last proven state.
@@ -176,8 +205,10 @@ Start from [roadmap-config.example.json](assets/roadmap-config.example.json). Ke
 the state and roadmap repository-relative and tracked. Keep the concise report under
 ignored `docs/tmp/`; it is a temporary progress view, not a release artifact. Use
 `report-relocated` to migrate a legacy active report. Use temporary event files and
-do not commit reports, secrets, raw private conversations, credentials, or local
-absolute paths.
+do not commit reports, secrets, raw private conversations, credentials, protected
+prompts, raw sensitive payloads, exploitable production details, personal data, or
+local absolute paths. Security evidence uses synthetic fixtures and sanitized
+summaries.
 
 ## Close
 
@@ -186,7 +217,9 @@ Before claiming completion:
 1. Confirm every increment is complete and no controlled-environment evidence is
    pending.
 2. Run the applicable repository gates and validate generated artifacts.
-3. Reconcile documentation, feedback, blockers, assumptions, and excluded work.
+3. Reconcile documentation, feedback, blockers, assumptions, excluded work, the
+   final security impact disposition, security evidence, residual risk, and any
+   controlled-environment qualification.
 4. Record roadmap completion, provide the temporary report link, and ask for
    explicit final approval of the completed overall work.
 5. Only after the user gives that final approval, record

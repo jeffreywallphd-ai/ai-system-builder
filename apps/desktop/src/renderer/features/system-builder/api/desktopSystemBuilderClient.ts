@@ -72,6 +72,10 @@ export function createDesktopSystemBuilderClient(): SystemBuilderClient {
       typeof api.readSystemBuilderComposerAsset === "function"
         ? unwrap(await api.readSystemBuilderComposerAsset(input))
         : unavailable(),
+    listModelOptions: async (input) =>
+      typeof api.listSystemBuilderModelOptions === "function"
+        ? unwrap(await api.listSystemBuilderModelOptions(input as any))
+        : unavailable("Compatible models are unavailable."),
     previewLayoutChange: async (input) =>
       typeof api.previewSystemBuilderLayoutChange === "function"
         ? unwrap(await api.previewSystemBuilderLayoutChange(input))

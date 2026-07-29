@@ -75,6 +75,79 @@ describe("desktop feature lifecycle registry", () => {
     expect(loggingPort.log).toHaveBeenCalledOnce();
   });
 
+  it("logs a bounded import failure, clears rejected memoization, and retries", async () => {
+    const loggingPort = createLoggingPort();
+    let importCount = 0;
+    const registry = createDesktopFeatureLifecycleRegistry({ loggingPort });
+    const getFeature = registry.registerAsyncFeature({
+      featureKey: "model-registry",
+      policy: "retained",
+      milestoneBase: "desktop.host.model-features",
+      importFeature: async () => {
+        importCount += 1;
+        if (importCount === 1) {
+          throw Object.assign(new Error("C:\\private\\feature.js"), {
+            code: "MODULE_NOT_FOUND",
+          });
+        }
+        return async () => ({ ready: true });
+      },
+    });
+
+    await expect(getFeature()).rejects.toThrow();
+    await expect(getFeature()).resolves.toEqual({ ready: true });
+
+    expect(importCount).toBe(2);
+    expect(loggingPort.log.mock.calls[0]?.[0]).toMatchObject({
+      event: "desktop.host.feature.load.failed",
+      data: {
+        featureKey: "model-registry",
+        stage: "import",
+        errorName: "Error",
+        errorCode: "MODULE_NOT_FOUND",
+      },
+    });
+    expect(JSON.stringify(loggingPort.log.mock.calls[0]?.[0])).not.toContain(
+      "private",
+    );
+  });
+
+  it("does not disclose unsafe error codes from compose failures and permits retry", async () => {
+    const loggingPort = createLoggingPort();
+    let composeCount = 0;
+    const registry = createDesktopFeatureLifecycleRegistry({ loggingPort });
+    const getFeature = registry.registerAsyncFeature({
+      featureKey: "model-registry",
+      policy: "retained",
+      milestoneBase: "desktop.host.model-features",
+      importFeature: async () => async () => {
+        composeCount += 1;
+        if (composeCount === 1) {
+          throw Object.assign(new Error("sensitive payload"), {
+            code: "C:\\private\\module.js",
+          });
+        }
+        return { ready: true };
+      },
+    });
+
+    await expect(getFeature()).rejects.toThrow();
+    await expect(getFeature()).resolves.toEqual({ ready: true });
+
+    const logged = loggingPort.log.mock.calls[0]?.[0];
+    expect(logged).toMatchObject({
+      event: "desktop.host.feature.load.failed",
+      data: {
+        featureKey: "model-registry",
+        stage: "compose",
+        errorName: "Error",
+      },
+    });
+    expect(JSON.stringify(logged)).not.toContain("private");
+    expect(JSON.stringify(logged)).not.toContain("sensitive payload");
+    expect((logged?.data as Record<string, unknown>).errorCode).toBeUndefined();
+  });
+
   it("does not dispose retained or explicit-unload-only features through generic disposal", async () => {
     const registry = createDesktopFeatureLifecycleRegistry({ loggingPort: createLoggingPort() });
     let retainedDisposed = false;

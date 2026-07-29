@@ -31,6 +31,13 @@
 ## Host-Owned Runtime Guidance
 
 - Desktop local runtime roots are desktop-owned and separate from server runtime roots by default.
+- Published systems use one host-derived contained SQLite database per opaque
+  runtime instance. IPC/renderers never receive paths or database handles, and
+  desktop shutdown drains all open runtime sessions.
+- Published visual systems use a bounded dedicated-window registry and a
+  separate minimal preload. Main derives release/session authority from the
+  exact live main frame, denies navigation/popups/permissions/foreign IPC, and
+  closes windows and conversation sessions before runtime and platform stores.
 - Runtime readiness IPC depends on application `RuntimeReadinessPort` and shared runtime readiness contracts.
 - Readiness providers must read non-starting supervisor/installer signals only.
 - Runtime-backed start use cases may receive readiness guards; read/cancel/finalize paths should not be guarded unless the contract requires it.

@@ -1,5 +1,6 @@
 import type { AssetDefinitionVersionReaderPort } from "../../../application/ports/asset-implementation";
 import type { AssetRegistryDefinitionReadPort } from "../../../application/ports/asset";
+import type { ModelRegistryPort } from "../../../application/ports/model";
 import {
   ArchiveSystemBuilderSystemUseCase,
   CloneSystemBuilderSystemUseCase,
@@ -11,6 +12,7 @@ import {
   ListSystemBuilderComposerAssetsUseCase,
   ReadSystemBuilderComposerAssetUseCase,
   ListSystemBuilderManagementUseCase,
+  ListSystemBuilderModelOptionsUseCase,
   ReadSystemBuilderRevisionUseCase,
   PreviewSystemBuilderLayoutChangeUseCase,
   ReadSystemBuilderSystemUseCase,
@@ -22,6 +24,7 @@ import {
 } from "../../../application/use-cases/system-builder";
 import {
   SystemBuilderReferenceTemplateRegistry,
+  SystemBuilderModelAuthorityService,
   ValidateSystemBuilderRevisionService,
 } from "../../../application/services/system-builder";
 import { createStructuredSystemBuilderRepository } from "../../../adapters/persistence/system-builder";
@@ -32,6 +35,10 @@ export interface ComposeSystemBuilderOptions {
   readonly documents: StructuredDocumentStore;
   readonly definitions: AssetDefinitionVersionReaderPort;
   readonly assetRegistryRead: AssetRegistryDefinitionReadPort;
+  readonly modelRegistry?: Pick<
+    ModelRegistryPort,
+    "listModels" | "getModelRecord"
+  >;
   readonly generateSystemId: () => string;
   readonly now?: () => string;
 }
@@ -41,9 +48,20 @@ export function composeSystemBuilder(options: ComposeSystemBuilderOptions) {
   const buildRepository = createStructuredSystemBuildRepository(
     options.documents,
   );
+  const modelAuthority = new SystemBuilderModelAuthorityService(
+    options.modelRegistry ?? {
+      async listModels() {
+        throw new Error("Model Registry is unavailable.");
+      },
+      async getModelRecord() {
+        return undefined;
+      },
+    },
+  );
   const validator = new ValidateSystemBuilderRevisionService(
     options.definitions,
     options.now,
+    modelAuthority,
   );
   const templates = new SystemBuilderReferenceTemplateRegistry();
   const dependencies = {
@@ -55,6 +73,7 @@ export function composeSystemBuilder(options: ComposeSystemBuilderOptions) {
   return {
     repository,
     validator,
+    modelAuthority,
     useCases: {
       create: new CreateSystemBuilderSystemUseCase(dependencies),
       listTemplates: new ListSystemBuilderTemplatesUseCase(templates),
@@ -66,6 +85,9 @@ export function composeSystemBuilder(options: ComposeSystemBuilderOptions) {
       listManagement: new ListSystemBuilderManagementUseCase(
         repository,
         buildRepository,
+      ),
+      listModelOptions: new ListSystemBuilderModelOptionsUseCase(
+        modelAuthority,
       ),
       read: new ReadSystemBuilderSystemUseCase(repository),
       rename: new RenameSystemBuilderSystemUseCase(dependencies),

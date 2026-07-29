@@ -19,6 +19,22 @@ roadmap = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(roadmap)
 
 
+def security_impact() -> dict:
+    return {
+        "disposition": "not-security-relevant",
+        "summary": (
+            "The test roadmap changes no trust, authority, sensitive-data, "
+            "execution, dependency, or public diagnostic boundary."
+        ),
+        "assets": [],
+        "trustBoundaries": [],
+        "abuseCases": [],
+        "controls": [],
+        "verification": [],
+        "residualRisks": [],
+    }
+
+
 def increment_definition(
     identifier: str,
     number: int,
@@ -46,6 +62,14 @@ def increment_definition(
                 "id": f"criterion-{number}",
                 "description": f"Criterion {number} is satisfied.",
                 "qualification": qualification,
+            },
+            {
+                "id": "security-impact-reviewed",
+                "description": (
+                    "The increment security impact disposition is reviewed "
+                    "and evidenced."
+                ),
+                "qualification": "local",
             }
         ],
         "verification": [f"Run verification {number}."],
@@ -64,7 +88,10 @@ def implementation_plan(number: int) -> dict:
                 "id": f"chunk-{number}",
                 "title": f"Chunk {number}",
                 "outcome": f"Outcome {number} works end to end.",
-                "criteriaIds": [f"criterion-{number}"],
+                "criteriaIds": [
+                    f"criterion-{number}",
+                    "security-impact-reviewed",
+                ],
             }
         ],
         "focusedTests": [f"Focused test {number}"],
@@ -102,6 +129,7 @@ class RoadmapEngineTest(unittest.TestCase):
                 "summary": "Repository and primary-source research is complete.",
                 "sources": [{"title": "Repository guidance"}],
                 "constraints": ["Preserve approved dependency direction."],
+                "securityImpact": security_impact(),
                 "decisionRequired": False,
             }
         )
@@ -153,6 +181,19 @@ class RoadmapEngineTest(unittest.TestCase):
         )
         self.apply(
             {
+                "type": "evidence-recorded",
+                "incrementId": identifier,
+                "criterionId": "security-impact-reviewed",
+                "kind": "review",
+                "outcome": "passed",
+                "summary": (
+                    "The not-security-relevant disposition and rationale "
+                    "were reviewed."
+                ),
+            }
+        )
+        self.apply(
+            {
                 "type": "increment-completed",
                 "summary": f"Increment {number} is accounted for.",
             }
@@ -188,7 +229,7 @@ class RoadmapEngineTest(unittest.TestCase):
         self.assertIn("## Recent progress", report)
         self.assertIn("Chunk 2", report)
         self.assertIn("## Increment 2: Increment 2", rendered_roadmap)
-        self.assertIn("1 passed, 0 pending, 0 failed, 0 missing", report)
+        self.assertIn("2 passed, 0 pending, 0 failed, 0 missing", report)
         self.assertNotIn("## Evidence ledger", report)
         self.assertLess(len(report), 5000)
 
@@ -339,6 +380,49 @@ class RoadmapEngineTest(unittest.TestCase):
         self.assertIn("temporary", diagnostics_text.lower())
         self.assertIn("docs/tmp/", gitignore_text)
 
+    def test_skill_requires_security_by_design_evidence(self) -> None:
+        skill_root = MODULE_PATH.parent.parent
+        repository_root = skill_root.parents[1]
+        sources = {
+            "skill": (skill_root / "SKILL.md").read_text(encoding="utf-8"),
+            "workflow": (skill_root / "references" / "workflow.md").read_text(
+                encoding="utf-8"
+            ),
+            "events": (skill_root / "references" / "events.md").read_text(
+                encoding="utf-8"
+            ),
+            "installation": (
+                skill_root / "references" / "installation.md"
+            ).read_text(encoding="utf-8"),
+            "diagnostics": (
+                repository_root
+                / "docs"
+                / "diagnostics"
+                / "implementation-roadmap-skill.md"
+            ).read_text(encoding="utf-8"),
+        }
+
+        self.assertIn(
+            "docs/standards/security-by-design-standards.md", sources["skill"]
+        )
+        self.assertIn("mandatory security impact screen", sources["skill"])
+        self.assertIn("not-security-relevant", sources["skill"])
+        self.assertIn("security-relevant", sources["skill"])
+        self.assertIn("security-impact-reviewed", sources["skill"])
+        self.assertIn("Security cannot be excluded as a whole", sources["workflow"])
+        self.assertIn("Positive-only testing is insufficient", sources["workflow"])
+        self.assertIn("Security evidence convention", sources["events"])
+        self.assertIn("synthetic fixtures", sources["events"])
+        self.assertIn("security impact disposition", sources["installation"])
+        self.assertIn("per-increment security", sources["diagnostics"])
+
+        for source in sources.values():
+            self.assertRegex(source, r"(?i)secret")
+            self.assertRegex(
+                source,
+                r"(?i)(?:protected\s+prompts?|private\s+payloads?|sensitive\s+payloads?)",
+            )
+
     def test_plan_separates_focused_and_increment_completion_tests(self) -> None:
         self.define_and_approve([increment_definition("increment-1", 1)])
         self.apply({"type": "increment-started", "incrementId": "increment-1"})
@@ -383,6 +467,7 @@ class RoadmapEngineTest(unittest.TestCase):
                 "summary": "A high-level choice is required.",
                 "sources": [],
                 "constraints": [],
+                "securityImpact": security_impact(),
                 "decisionRequired": True,
             }
         )
@@ -600,6 +685,65 @@ class RoadmapEngineTest(unittest.TestCase):
         with self.assertRaisesRegex(roadmap.RoadmapError, "Unsupported event type"):
             self.apply({"type": "execute-command", "command": "do-not-run"})
 
+    def test_security_impact_and_increment_security_criterion_are_required(self) -> None:
+        with self.assertRaisesRegex(roadmap.RoadmapError, "securityImpact"):
+            self.apply(
+                {
+                    "type": "discovery-recorded",
+                    "summary": "Security disposition is missing.",
+                    "sources": [],
+                    "constraints": [],
+                    "decisionRequired": False,
+                }
+            )
+
+        incomplete_relevant_impact = security_impact()
+        incomplete_relevant_impact["disposition"] = "security-relevant"
+        with self.assertRaisesRegex(roadmap.RoadmapError, "securityImpact.assets"):
+            self.apply(
+                {
+                    "type": "discovery-recorded",
+                    "summary": "Relevant security detail is incomplete.",
+                    "sources": [],
+                    "constraints": [],
+                    "securityImpact": incomplete_relevant_impact,
+                    "decisionRequired": False,
+                }
+            )
+
+        self.apply(
+            {
+                "type": "discovery-recorded",
+                "summary": "The security impact is dispositioned.",
+                "sources": [],
+                "constraints": [],
+                "securityImpact": security_impact(),
+                "decisionRequired": False,
+            }
+        )
+        missing_security = increment_definition("increment-1", 1)
+        missing_security["acceptanceCriteria"] = [
+            criterion
+            for criterion in missing_security["acceptanceCriteria"]
+            if criterion["id"] != "security-impact-reviewed"
+        ]
+        with self.assertRaisesRegex(roadmap.RoadmapError, "security-impact-reviewed"):
+            self.apply(
+                {"type": "roadmap-defined", "increments": [missing_security]}
+            )
+
+        specific_security = increment_definition("increment-1", 1)
+        specific_security["acceptanceCriteria"][-1]["id"] = (
+            "security-authorization-reviewed"
+        )
+        self.apply({"type": "roadmap-defined", "increments": [specific_security]})
+        self.assertEqual(self.state["status"], "roadmap-review")
+
+        tampered = copy.deepcopy(self.state)
+        tampered["discovery"]["securityImpact"]["disposition"] = "ignored"
+        with self.assertRaisesRegex(roadmap.RoadmapError, "disposition"):
+            roadmap.validate_state_shape(self.repo, tampered)
+
     def test_sources_and_nested_arrays_are_strictly_validated(self) -> None:
         with self.assertRaisesRegex(roadmap.RoadmapError, "array"):
             self.apply(
@@ -625,6 +769,7 @@ class RoadmapEngineTest(unittest.TestCase):
                     },
                 ],
                 "constraints": [],
+                "securityImpact": security_impact(),
                 "decisionRequired": False,
             }
         )
@@ -848,6 +993,7 @@ class RoadmapEngineTest(unittest.TestCase):
                     "summary": "CLI discovery is complete.",
                     "sources": [],
                     "constraints": [],
+                    "securityImpact": security_impact(),
                     "decisionRequired": False,
                 }
             ),

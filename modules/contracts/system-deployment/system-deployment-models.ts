@@ -4,13 +4,19 @@ import type {
   AssetImplementationTrustLevel,
 } from "../asset-implementation";
 import type { OrganizationId } from "../organization";
-import type { SystemBuildDigest, SystemReleaseId } from "../system-build";
+import type {
+  SystemBuildDigest,
+  SystemBuildRuntimeInteractionBinding,
+  SystemBuildRuntimeResourceBinding,
+  SystemReleaseId,
+} from "../system-build";
 import type { WorkspaceId } from "../workspace";
 import type {
   SystemDeploymentAuditId,
   SystemDeploymentId,
   SystemDeploymentRunId,
 } from "./system-deployment-id";
+import type { SystemRuntimeInstanceId } from "./system-runtime-instance";
 
 export type SystemReferenceRuntimeKind =
   | "secured-data-entry"
@@ -18,12 +24,94 @@ export type SystemReferenceRuntimeKind =
   | "secured-data-review"
   | "custom";
 
+export const SYSTEM_RUNTIME_PROFILE_IDS = {
+  securedDataEntry: "builtin.runtime.secured-data-entry@1.0.0",
+  controlledChatbot: "builtin.runtime.controlled-chatbot@1.0.0",
+  securedDataReview: "builtin.runtime.secured-data-review@1.0.0",
+  unqualifiedCustom: "custom.runtime.unqualified@1.0.0",
+} as const;
+
+export type SystemRuntimeProfileId = string;
+
+const SAFE_RUNTIME_PROFILE_ID = /^[a-zA-Z0-9][a-zA-Z0-9._:@/-]{0,199}$/;
+const SAFE_HOST_TARGET_ID = /^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,159}$/;
+
+export const normalizeSystemRuntimeProfileId = (
+  value: unknown,
+): SystemRuntimeProfileId => {
+  if (
+    typeof value !== "string" ||
+    !SAFE_RUNTIME_PROFILE_ID.test(value.trim()) ||
+    value.includes("..")
+  )
+    throw new Error("System runtime profile id is invalid.");
+  return value.trim();
+};
+
+export const normalizeSystemDeploymentHostTargetId = (
+  value: unknown,
+): string => {
+  if (
+    typeof value !== "string" ||
+    !SAFE_HOST_TARGET_ID.test(value.trim()) ||
+    value.includes("..")
+  )
+    throw new Error("System deployment host target id is invalid.");
+  return value.trim();
+};
+
+export const resolveSystemDeploymentHostTargetId = (
+  deployment: Pick<SystemDeployment, "hostTargetId" | "deploymentProfile">,
+): string =>
+  normalizeSystemDeploymentHostTargetId(
+    deployment.hostTargetId ?? deployment.deploymentProfile,
+  );
+
+export const mapLegacySystemReferenceRuntimeKind = (
+  kind: SystemReferenceRuntimeKind,
+): SystemRuntimeProfileId =>
+  ({
+    "secured-data-entry": SYSTEM_RUNTIME_PROFILE_IDS.securedDataEntry,
+    "controlled-chatbot": SYSTEM_RUNTIME_PROFILE_IDS.controlledChatbot,
+    "secured-data-review": SYSTEM_RUNTIME_PROFILE_IDS.securedDataReview,
+    custom: SYSTEM_RUNTIME_PROFILE_IDS.unqualifiedCustom,
+  })[kind];
+
+export const normalizeSystemDeploymentRuntimeIdentity = <
+  T extends {
+    readonly runtimeProfileId?: unknown;
+    readonly referenceRuntimeKind?: unknown;
+  },
+>(
+  deployment: T,
+): T & { readonly runtimeProfileId: SystemRuntimeProfileId } => {
+  const legacy = deployment.referenceRuntimeKind;
+  const legacyProfile =
+    legacy === "secured-data-entry" ||
+    legacy === "controlled-chatbot" ||
+    legacy === "secured-data-review" ||
+    legacy === "custom"
+      ? mapLegacySystemReferenceRuntimeKind(legacy)
+      : undefined;
+  const runtimeProfileId =
+    deployment.runtimeProfileId === undefined
+      ? legacyProfile
+      : normalizeSystemRuntimeProfileId(deployment.runtimeProfileId);
+  if (!runtimeProfileId)
+    throw new Error("System deployment runtime identity is missing.");
+  if (legacyProfile && legacyProfile !== runtimeProfileId)
+    throw new Error("System deployment runtime identities conflict.");
+  return { ...deployment, runtimeProfileId };
+};
+
 export type SystemDeploymentStatus =
   | "installed"
   | "activating"
   | "active"
   | "degraded"
   | "inactive"
+  | "uninstalling"
+  | "uninstalled"
   | "rolling-back"
   | "failed"
   | "revoked";
@@ -81,8 +169,15 @@ export interface SystemDeployment {
   readonly workspaceId: WorkspaceId;
   readonly releaseId: SystemReleaseId;
   readonly releaseDigest: SystemBuildDigest;
-  readonly referenceRuntimeKind: SystemReferenceRuntimeKind;
+  /** Opaque host-owned data-plane identity; physical database details stay private. */
+  readonly runtimeInstanceId?: SystemRuntimeInstanceId;
+  /** Stable application-owned runtime handler identity for new records. */
+  readonly runtimeProfileId?: SystemRuntimeProfileId;
+  /** @deprecated Read-only compatibility input for records written before runtime profiles. */
+  readonly referenceRuntimeKind?: SystemReferenceRuntimeKind;
   readonly deploymentProfile: AssetImplementationDeploymentProfile;
+  /** Stable host-owned target. Legacy records use deploymentProfile. */
+  readonly hostTargetId?: string;
   readonly status: SystemDeploymentStatus;
   readonly revision: number;
   readonly previousDeploymentId?: SystemDeploymentId;
@@ -96,10 +191,24 @@ export interface SystemDeployment {
   readonly activatedBy?: string;
   readonly revokedAt?: string;
   readonly revokedBy?: string;
+  readonly uninstalledAt?: string;
+  readonly uninstalledBy?: string;
 }
 
 export type SystemDeploymentRunStatus =
-  "queued" | "running" | "succeeded" | "failed" | "cancelled";
+  "queued" | "running" | "stopping" | "succeeded" | "failed" | "cancelled";
+
+export type SystemDeploymentRuntimeKind = "visual" | "service";
+
+export interface SystemDeploymentLaunchDescriptor {
+  readonly schemaVersion: "1.0";
+  readonly kind: "trusted-declarative";
+  readonly releaseId: SystemReleaseId;
+  readonly releaseDigest: SystemBuildDigest;
+  readonly runtimeProfileId: SystemRuntimeProfileId;
+  readonly runtimeResourceBindings?: readonly SystemBuildRuntimeResourceBinding[];
+  readonly runtimeInteractionBindings?: readonly SystemBuildRuntimeInteractionBinding[];
+}
 
 export interface SystemDeploymentRunUsage {
   readonly durationMilliseconds: number;
@@ -112,6 +221,8 @@ export interface SystemDeploymentRun {
   readonly organizationId: OrganizationId;
   readonly workspaceId: WorkspaceId;
   readonly releaseId: SystemReleaseId;
+  readonly runtimeKind?: SystemDeploymentRuntimeKind;
+  readonly launchDescriptor?: SystemDeploymentLaunchDescriptor;
   readonly status: SystemDeploymentRunStatus;
   readonly revision: number;
   readonly cancellationRequested: boolean;
@@ -133,9 +244,11 @@ export interface SystemDeploymentAuditEntry {
   readonly deploymentId: SystemDeploymentId;
   readonly runId?: SystemDeploymentRunId;
   readonly action:
-    | "install"
-    | "activate"
-    | "health"
+      | "install"
+      | "activate"
+      | "deactivate"
+      | "uninstall"
+      | "health"
     | "rollback"
     | "revoke"
     | "run-start"

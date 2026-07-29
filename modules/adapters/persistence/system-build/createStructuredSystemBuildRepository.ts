@@ -36,7 +36,7 @@ export function createStructuredSystemBuildRepository(documents: StructuredDocum
       const key = releaseKey(release.targetWorkspaceId, release.releaseId);
       const current = await documents.readDocument<SystemRelease>(RELEASE_NAMESPACE, key);
       if (current) {
-        if (JSON.stringify(current.value) === JSON.stringify(release)) return cloneStructuredJson(release);
+        if (stableStructuredJson(current.value) === stableStructuredJson(release)) return cloneStructuredJson(release);
         throw new StructuredDocumentConflictError(RELEASE_NAMESPACE, key, 0);
       }
       await documents.writeDocument(RELEASE_NAMESPACE, key, cloneStructuredJson(release), { expectedRevision: 0 });
@@ -56,3 +56,14 @@ export function createStructuredSystemBuildRepository(documents: StructuredDocum
 
 const buildKey = (workspaceId: WorkspaceId, buildId: SystemBuildId) => `${workspaceId}/${buildId}`;
 const releaseKey = (workspaceId: WorkspaceId, releaseId: SystemReleaseId) => `${workspaceId}/${releaseId}`;
+
+function stableStructuredJson(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableStructuredJson).join(",")}]`;
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([, entry]) => entry !== undefined)
+    .sort(([left], [right]) => left.localeCompare(right));
+  return `{${entries
+    .map(([key, entry]) => `${JSON.stringify(key)}:${stableStructuredJson(entry)}`)
+    .join(",")}}`;
+}

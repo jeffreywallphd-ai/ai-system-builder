@@ -14,6 +14,7 @@
 - Local AppData/server storage-root decisions, temp/staged intake, persistence adapters, or storage adapters.
 - SQLite, PostgreSQL, database migration, backup/restore, or deployment-shape
   persistence selection.
+- Published-system runtime-instance placement, retention, or physical database isolation.
 - Workspace-scoped resource storage, artifact reads, or model/image/dataset persistence.
 
 ## Do Not Use When
@@ -30,6 +31,9 @@
 - Host composition, not the config contract alone, selects the active adapter.
   Existing JSON records require the implemented explicit
   inventory/import/verification/rollback workflow before cutover.
+- Keep platform control-plane persistence separate from published-system runtime
+  data. Each runtime instance owns one physical SQLite/PostgreSQL database;
+  application and renderer inputs never choose its location or credentials.
 - AppData/server path conventions are deployment details, not architecture boundaries.
 - Persistence contracts are record-oriented and operation-identity driven.
 - Storage contracts are family-specific: shared foundation identity, artifact-object key/blob semantics, artifact-repo provider/repository/revision/path semantics, and ingestion/staged-artifact intake semantics.
@@ -75,6 +79,15 @@
   images, a restricted single-replica Compose/Kubernetes posture, separate
   liveness/readiness semantics, and retained scan/smoke/render evidence. Do not
   increase replicas before identity/tenancy and target-platform qualification.
+- Runtime-instance adapters bound handles/pools, retain on uninstall, require
+  stopped-state migration/restore and exact deletion confirmation, and never
+  substitute a blank or foreign database. Managed runtime roles are
+  least-privilege and live PostgreSQL qualification proves cross-database and
+  provisioning denial.
+- Desktop published conversation sessions are composed only after exact
+  lifecycle/runtime-window authority is revalidated. Stop and application
+  shutdown close conversation sessions before runtime database handles, and
+  restart reopens the retained transcript from the same instance database.
 - Schema version 2 adds organization-keyed documents. PostgreSQL enables and
   forces RLS with transaction-local tenant binding; SQLite provides the same
   logical partition for a generated local profile.

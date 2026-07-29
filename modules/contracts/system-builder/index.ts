@@ -12,3 +12,5 @@ export * from "./system-builder-composer";
 export * from "./system-builder-management";
 export * from "./system-builder-layout-change";
 export * from "./system-builder-foundation-upgrade";
+export * from "./system-builder-model-binding";
+export * from "./system-builder-conversation-interaction";

@@ -10,6 +10,10 @@ import type {
   SystemBuilderRevision,
   SystemBuilderValidationResult,
 } from "../../../contracts/system-builder";
+import {
+  readSystemBuilderModelBinding,
+  SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID,
+} from "../../../contracts/system-builder";
 import type { AssetDefinitionVersionReaderPort } from "../../ports/asset-implementation";
 import {
   deriveAssetValidationStatus,
@@ -18,6 +22,7 @@ import {
   validateAssetInstance,
 } from "../asset";
 import { validateSystemBuilderStructure } from "./validate-system-builder-structure.service";
+import type { SystemBuilderModelAuthorityService } from "./system-builder-model-authority.service";
 
 const MAX_ISSUES = 200;
 export const MAX_SYSTEM_BUILDER_INSTANCES = 513;
@@ -35,13 +40,19 @@ export class ValidateSystemBuilderRevisionService {
   public constructor(
     private readonly definitionReader: AssetDefinitionVersionReaderPort,
     private readonly now: () => string = () => new Date().toISOString(),
+    private readonly modelAuthority?: SystemBuilderModelAuthorityService,
   ) {}
 
   public async execute(
     revision: Pick<
       SystemBuilderRevision,
-      "composition" | "instances" | "bindings" | "structure" | "placements"
-    >,
+      | "composition"
+      | "instances"
+      | "bindings"
+      | "structure"
+      | "placements"
+    > &
+      Partial<Pick<SystemBuilderRevision, "targetWorkspaceId">>,
   ): Promise<SystemBuilderValidationResult> {
     const boundsIssue = revisionBoundsIssue(revision);
     if (boundsIssue) {
@@ -120,6 +131,7 @@ export class ValidateSystemBuilderRevisionService {
       instancesById,
       issues,
     );
+    await this.validateModelBindings(revision, issues);
 
     const boundedIssues = issues.slice(0, MAX_ISSUES);
     if (issues.length > MAX_ISSUES) {
@@ -173,6 +185,43 @@ export class ValidateSystemBuilderRevisionService {
       definitions.set(String(definition.definitionId), definition);
     }
     return definitions;
+  }
+
+  private async validateModelBindings(
+    revision: Pick<SystemBuilderRevision, "instances"> &
+      Partial<Pick<SystemBuilderRevision, "targetWorkspaceId">>,
+    issues: AssetValidationIssue[],
+  ): Promise<void> {
+    for (const [index, instance] of revision.instances.entries()) {
+      if (String(instance.definitionRef.id) !== "conversation.message-composer") {
+        continue;
+      }
+      const binding = readSystemBuilderModelBinding(
+        instance.selectedConfiguration?.[
+          SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID
+        ],
+      );
+      const resolution = this.modelAuthority && revision.targetWorkspaceId
+        ? await this.modelAuthority.resolve(revision.targetWorkspaceId, binding)
+        : {
+            status: "denied" as const,
+            message: "Model selection authority is unavailable.",
+          };
+      if (resolution.status === "denied") {
+        issues.push({
+          severity: "error",
+          category: "configuration",
+          message: resolution.message,
+          assetRef: instanceReference(instance),
+          path: [
+            "instances",
+            String(index),
+            "selectedConfiguration",
+            SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID,
+          ],
+        });
+      }
+    }
   }
 }
 

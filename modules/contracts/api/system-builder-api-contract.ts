@@ -25,6 +25,10 @@ export const API_SYSTEM_BUILDER_OPERATIONS = {
     "system-builder",
     "read-composer-asset",
   ),
+  listModelOptions: createTransportOperation(
+    "system-builder",
+    "list-model-options",
+  ),
   previewLayoutChange: createTransportOperation(
     "system-builder",
     "preview-layout-change",

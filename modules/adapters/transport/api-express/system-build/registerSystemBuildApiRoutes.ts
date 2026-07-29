@@ -1,7 +1,6 @@
 import type { Request } from "express";
-import type { ApproveSystemReleaseUseCase, CancelSystemBuildUseCase, CompareSystemReleasesUseCase, ListSystemBuildsUseCase, ListSystemReleasesUseCase, ReadSystemBuildUseCase, ReadSystemReleaseUseCase, RequestSystemBuildUseCase } from "../../../../application/use-cases/system-build";
+import type { ApproveSystemReleaseUseCase, CancelSystemBuildUseCase, CompareSystemReleasesUseCase, ListSystemBuildsUseCase, ListSystemPublicationWorkspaceUseCase, ListSystemReleasesUseCase, PrepareGuidedSystemBuildUseCase, ReadSystemBuildUseCase, ReadSystemReleaseUseCase, RequestGuidedSystemBuildUseCase } from "../../../../application/use-cases/system-build";
 import { API_SYSTEM_BUILD_OPERATIONS, createApiError, createApiFailureResponse, createApiSuccessResponse } from "../../../../contracts/api";
-import { normalizeAssetImplementationDeploymentProfile, normalizeAssetImplementationTrustLevel } from "../../../../contracts/asset-implementation";
 import { normalizeSystemBuildId, normalizeSystemReleaseId } from "../../../../contracts/system-build";
 import { normalizeSystemBuilderRevisionId, normalizeSystemBuilderSystemId } from "../../../../contracts/system-builder";
 import { createWorkspaceId } from "../../../../contracts/workspace";
@@ -12,35 +11,34 @@ interface ResponseLike { status(code: number): ResponseLike; json(body: unknown)
 export interface SystemBuildExpressPort { get(path: string, handler: (request: RequestLike, response: ResponseLike) => Promise<void>): void; post(path: string, handler: (request: RequestLike, response: ResponseLike) => Promise<void>): void; }
 export interface RegisterSystemBuildApiRoutesDependencies {
   app: SystemBuildExpressPort;
-  request: Pick<RequestSystemBuildUseCase, "execute">; cancel: Pick<CancelSystemBuildUseCase, "execute">;
+  prepare: Pick<PrepareGuidedSystemBuildUseCase, "execute">;
+  guidedRequest: Pick<RequestGuidedSystemBuildUseCase, "execute">; cancel: Pick<CancelSystemBuildUseCase, "execute">;
   read: Pick<ReadSystemBuildUseCase, "execute">; list: Pick<ListSystemBuildsUseCase, "execute">;
   approve: Pick<ApproveSystemReleaseUseCase, "execute">; readRelease: Pick<ReadSystemReleaseUseCase, "execute">;
   listReleases: Pick<ListSystemReleasesUseCase, "execute">; compareReleases: Pick<CompareSystemReleasesUseCase, "execute">;
+  publicationWorkspace: Pick<ListSystemPublicationWorkspaceUseCase, "execute">;
 }
 
 export function registerSystemBuildApiRoutes(d: RegisterSystemBuildApiRoutesDependencies): void {
-  d.app.post("/api/systems/builds/request", async (req, res) => runResult(req, res, "request", d.request, parseRequest));
+  d.app.get("/api/systems/builds/preparation", async (req, res) => runResult(req, res, "prepare", d.prepare, () => ({ workspaceId: createWorkspaceId(required(req.query?.workspaceId)), systemId: normalizeSystemBuilderSystemId(required(req.query?.systemId)), systemRevisionId: normalizeSystemBuilderRevisionId(required(req.query?.systemRevisionId)) })));
+  d.app.post("/api/systems/builds/request", async (req, res) => runResult(req, res, "request", d.guidedRequest, parseRequest));
   d.app.post("/api/systems/builds/cancel", async (req, res) => runResult(req, res, "cancel", d.cancel, (body, actorId) => ({ workspaceId: createWorkspaceId(required(body.workspaceId)), buildId: normalizeSystemBuildId(required(body.buildId)), actorId })));
   d.app.get("/api/systems/build", async (req, res) => runResult(req, res, "read", d.read, () => ({ workspaceId: createWorkspaceId(required(req.query?.workspaceId)), buildId: normalizeSystemBuildId(required(req.query?.buildId)) })));
   d.app.get("/api/systems/builds", async (req, res) => runList(req, res, "list", () => d.list.execute({ workspaceId: createWorkspaceId(required(req.query?.workspaceId)), ...(req.query?.systemId ? { systemId: normalizeSystemBuilderSystemId(required(req.query.systemId)) } : {}) })));
   d.app.post("/api/systems/releases/approve", async (req, res) => runResult(req, res, "approve", d.approve, (body, actorId) => ({ workspaceId: createWorkspaceId(required(body.workspaceId)), buildId: normalizeSystemBuildId(required(body.buildId)), expectedLockDigest: required(body.expectedLockDigest), ...(body.releaseId ? { releaseId: normalizeSystemReleaseId(required(body.releaseId)) } : {}), actorId })));
   d.app.get("/api/systems/release", async (req, res) => runResult(req, res, "readRelease", d.readRelease, () => ({ workspaceId: createWorkspaceId(required(req.query?.workspaceId)), releaseId: normalizeSystemReleaseId(required(req.query?.releaseId)) })));
   d.app.get("/api/systems/releases", async (req, res) => runList(req, res, "listReleases", () => d.listReleases.execute({ workspaceId: createWorkspaceId(required(req.query?.workspaceId)), ...(req.query?.systemId ? { systemId: normalizeSystemBuilderSystemId(required(req.query.systemId)) } : {}) })));
+  d.app.get("/api/systems/publication", async (req, res) => runList(req, res, "publicationWorkspace", () => d.publicationWorkspace.execute({ workspaceId: createWorkspaceId(required(req.query?.workspaceId)) })));
   d.app.get("/api/systems/releases/compare", async (req, res) => runResult(req, res, "compareReleases", d.compareReleases, () => ({ workspaceId: createWorkspaceId(required(req.query?.workspaceId)), leftReleaseId: normalizeSystemReleaseId(required(req.query?.leftReleaseId)), rightReleaseId: normalizeSystemReleaseId(required(req.query?.rightReleaseId)) })));
 }
 
 function parseRequest(body: Record<string, unknown>, actorId: string) {
+  exactKeys(body, ["buildId", "workspaceId", "systemId", "systemRevisionId"]);
   return {
     buildId: normalizeSystemBuildId(required(body.buildId)),
     workspaceId: createWorkspaceId(required(body.workspaceId)),
     systemId: normalizeSystemBuilderSystemId(required(body.systemId)),
     systemRevisionId: normalizeSystemBuilderRevisionId(required(body.systemRevisionId)),
-    deploymentProfile: normalizeAssetImplementationDeploymentProfile(required(body.deploymentProfile)),
-    permittedTrustLevels: array(body.permittedTrustLevels).map((item) => normalizeAssetImplementationTrustLevel(required(item))),
-    availableCapabilities: array(body.availableCapabilities).map(required),
-    hostApiVersion: required(body.hostApiVersion),
-    ...(optional(body.runtimeAbiVersion) ? { runtimeAbiVersion: optional(body.runtimeAbiVersion) } : {}),
-    toolchainProfile: required(body.toolchainProfile),
     actorId,
   };
 }
@@ -55,5 +53,6 @@ function failure(res: ResponseLike, operation: keyof typeof API_SYSTEM_BUILD_OPE
 const actor = (request: RequestLike) => requireExpressAuthenticatedPrincipalId(request as Request);
 const record = (value: unknown): Record<string, unknown> => { if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(); return value as Record<string, unknown>; };
 const required = (value: unknown): string => { if (typeof value !== "string" || !value.trim()) throw new Error(); return value.trim(); };
-const optional = (value: unknown): string | undefined => typeof value === "string" && value.trim() ? value.trim() : undefined;
-const array = (value: unknown): readonly unknown[] => Array.isArray(value) ? value : [];
+function exactKeys(value: Record<string, unknown>, allowed: readonly string[]): void {
+  if (Object.keys(value).some((key) => !allowed.includes(key))) throw new Error();
+}

@@ -1,7 +1,7 @@
 # Persistence and Storage
 
 - Status: current
-- Related decisions: `docs/adr/ADR-0004-persistence-and-storage-separation.md`, `docs/adr/ADR-0025-deployment-shaped-structured-persistence.md`, `docs/adr/ADR-0026-local-sqlite-runtime.md`, `docs/adr/ADR-0027-managed-postgresql-runtime.md`, `docs/adr/ADR-0028-atomic-structured-document-mutations.md`, `docs/adr/ADR-0029-organization-tenancy-identity-and-authorization.md`
+- Related decisions: `docs/adr/ADR-0004-persistence-and-storage-separation.md`, `docs/adr/ADR-0025-deployment-shaped-structured-persistence.md`, `docs/adr/ADR-0026-local-sqlite-runtime.md`, `docs/adr/ADR-0027-managed-postgresql-runtime.md`, `docs/adr/ADR-0028-atomic-structured-document-mutations.md`, `docs/adr/ADR-0029-organization-tenancy-identity-and-authorization.md`, `docs/adr/ADR-0039-dedicated-system-runtime-data-plane.md`
 - Verification: `docs/architecture/architecture-verification.md`
 
 ## Asset Kernel relationship
@@ -114,6 +114,30 @@ by callers. Object reads, writes, existence checks, deletes, generated-image
 finalization, and unregistered-file access fail closed without organization
 context. A future external object-service adapter must preserve those ownership
 semantics rather than expose provider bucket/key construction to use cases.
+
+### Dedicated published-system runtime data plane
+
+Published-system operational data is distinct from the platform control plane.
+Deployment, release, lifecycle, placement, and audit records remain in the
+active platform database and contain only opaque runtime-instance and binding
+identities. Conversation and system-owned repositories are created from the
+exact runtime database session after organization, workspace, deployment,
+release, lifecycle, binding, schema, and health validation.
+
+Desktop stores each runtime instance in a contained host-derived SQLite file at
+`<desktop-app-data>/runtime-data/instances/<opaque-id>/persistence/runtime.sqlite3`.
+Managed hosts provision one non-semantic PostgreSQL database name and one
+least-privilege login role per instance. The provisioner owns database/schema
+creation and migration; the runtime role receives only connect plus required
+schema/data privileges and cannot provision or connect to another instance.
+
+Stop releases handles but preserves data. A compatible upgrade may reuse a
+stopped instance only through explicit migration, health validation, and a new
+exact deployment/release binding. A clone or separate installation receives a
+new database. Uninstall retains data; deletion is separate, retained-state only,
+and requires exact confirmation. Missing storage never falls back to a new blank
+database. Managed backup/restore remains unavailable until a platform recovery
+adapter is configured and qualified.
 
 ### Database portability and migrations
 

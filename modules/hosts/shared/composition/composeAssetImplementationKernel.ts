@@ -3,6 +3,7 @@ import {
   readSystemFoundationBackingResourceBundle,
   SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS,
   SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS,
+  SYSTEM_FOUNDATION_V3_FUNCTIONAL_DEFAULTS,
 } from "../../../application/services/asset-packs";
 import type {
   AssetImplementationArtifactPort,
@@ -67,10 +68,18 @@ export const SYSTEM_FOUNDATION_V2_TRUSTED_IMPLEMENTATION_SEEDS: readonly Trusted
     "2",
   );
 
+/** Exact, independently addressable implementation bindings for 3.0.0. */
+export const SYSTEM_FOUNDATION_V3_TRUSTED_IMPLEMENTATION_SEEDS: readonly TrustedBuiltInImplementationSeed[] =
+  createFoundationTrustedImplementationSeeds(
+    SYSTEM_FOUNDATION_V3_FUNCTIONAL_DEFAULTS,
+    "3",
+  );
+
 export const DEFAULT_TRUSTED_ASSET_IMPLEMENTATION_SEEDS: readonly TrustedBuiltInImplementationSeed[] =
   [
     ...SYSTEM_FOUNDATION_TRUSTED_IMPLEMENTATION_SEEDS,
     ...SYSTEM_FOUNDATION_V2_TRUSTED_IMPLEMENTATION_SEEDS,
+    ...SYSTEM_FOUNDATION_V3_TRUSTED_IMPLEMENTATION_SEEDS,
   ];
 
 function createFoundationTrustedImplementationSeeds(

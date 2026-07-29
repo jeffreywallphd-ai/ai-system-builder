@@ -1,16 +1,20 @@
 import type { SystemDeploymentRuntimePort } from "../../../application/ports/system-deployment";
+import type { SystemDeploymentReleaseBindingResolution } from "../../../application/services/system-deployment";
 import type { AssetImplementationDeploymentProfile } from "../../../contracts/asset-implementation";
-import type {
-  SystemDeployment,
-  SystemDeploymentDiagnostic,
-  SystemDeploymentHealth,
-  SystemReferenceRuntimeKind,
+import {
+  SYSTEM_RUNTIME_PROFILE_IDS,
+  normalizeSystemDeploymentRuntimeIdentity,
+  type SystemDeployment,
+  type SystemDeploymentDiagnostic,
+  type SystemDeploymentHealth,
+  type SystemDeploymentRuntimeKind,
+  type SystemRuntimeProfileId,
 } from "../../../contracts/system-deployment";
 
-const TRUSTED_REFERENCE_KINDS = new Set<SystemReferenceRuntimeKind>([
-  "secured-data-entry",
-  "controlled-chatbot",
-  "secured-data-review",
+const TRUSTED_RUNTIME_PROFILES = new Set<SystemRuntimeProfileId>([
+  SYSTEM_RUNTIME_PROFILE_IDS.securedDataEntry,
+  SYSTEM_RUNTIME_PROFILE_IDS.controlledChatbot,
+  SYSTEM_RUNTIME_PROFILE_IDS.securedDataReview,
 ]);
 
 export interface CreateTrustedSystemDeploymentRuntimeAdapterOptions {
@@ -19,6 +23,12 @@ export interface CreateTrustedSystemDeploymentRuntimeAdapterOptions {
   readonly verifyReferenceRelease?: (
     deployment: SystemDeployment,
   ) => Promise<boolean>;
+  readonly resolveReleaseBindings?: (
+    deployment: SystemDeployment,
+  ) => Promise<SystemDeploymentReleaseBindingResolution>;
+  readonly classifyRuntime?: (
+    deployment: SystemDeployment,
+  ) => SystemDeploymentRuntimeKind;
 }
 
 export function createTrustedSystemDeploymentRuntimeAdapter(
@@ -38,10 +48,18 @@ export function createTrustedSystemDeploymentRuntimeAdapter(
   });
 
   return {
-    supportsReferenceRuntime: (kind) => TRUSTED_REFERENCE_KINDS.has(kind),
+    supportsRuntimeProfile: (profileId) =>
+      TRUSTED_RUNTIME_PROFILES.has(profileId),
     async inspect(deployment) {
       const diagnostics: SystemDeploymentDiagnostic[] = [];
-      if (!TRUSTED_REFERENCE_KINDS.has(deployment.referenceRuntimeKind))
+      let runtimeProfileId: SystemRuntimeProfileId | undefined;
+      try {
+        runtimeProfileId =
+          normalizeSystemDeploymentRuntimeIdentity(deployment).runtimeProfileId;
+      } catch {
+        // The public diagnostic remains intentionally non-sensitive.
+      }
+      if (!runtimeProfileId || !TRUSTED_RUNTIME_PROFILES.has(runtimeProfileId))
         diagnostics.push(
           error(
             "deployment.runtime.unavailable",
@@ -68,8 +86,16 @@ export function createTrustedSystemDeploymentRuntimeAdapter(
       };
     },
     async activate(deployment) {
+      let runtimeProfileId: SystemRuntimeProfileId | undefined;
+      try {
+        runtimeProfileId =
+          normalizeSystemDeploymentRuntimeIdentity(deployment).runtimeProfileId;
+      } catch {
+        // Fail closed below.
+      }
       if (
-        !TRUSTED_REFERENCE_KINDS.has(deployment.referenceRuntimeKind) ||
+        !runtimeProfileId ||
+        !TRUSTED_RUNTIME_PROFILES.has(runtimeProfileId) ||
         !supportsProfile(deployment.deploymentProfile) ||
         deployment.compatibility.sandboxRequired
       )
@@ -89,6 +115,35 @@ export function createTrustedSystemDeploymentRuntimeAdapter(
             "The release-bound reference runtime could not verify its manifest.",
           ),
         ]);
+      if (
+        runtimeProfileId === SYSTEM_RUNTIME_PROFILE_IDS.controlledChatbot &&
+        !options.resolveReleaseBindings
+      )
+        return ready([
+          error(
+            "deployment.runtime.binding-authority-unavailable",
+            "The release-bound runtime configuration is unavailable.",
+          ),
+        ]);
+      if (options.resolveReleaseBindings) {
+        try {
+          const bindings = await options.resolveReleaseBindings(deployment);
+          if (bindings.status !== "ready")
+            return ready([
+              error(
+                `deployment.runtime.${bindings.code}`,
+                bindings.message,
+              ),
+            ]);
+        } catch {
+          return ready([
+            error(
+              "deployment.runtime.binding-unavailable",
+              "The release-bound runtime configuration is unavailable.",
+            ),
+          ]);
+        }
+      }
       return ready([
         {
           severity: "info",
@@ -105,18 +160,60 @@ export function createTrustedSystemDeploymentRuntimeAdapter(
       const health = await this.activate(deployment);
       if (health.status !== "ready")
         return { status: "failed", diagnostics: health.diagnostics };
+      const runtimeProfileId =
+        normalizeSystemDeploymentRuntimeIdentity(deployment).runtimeProfileId;
+      const runtimeKind = options.classifyRuntime?.(deployment) ?? "visual";
+      let bindings: SystemDeploymentReleaseBindingResolution | undefined;
+      if (options.resolveReleaseBindings) {
+        try {
+          bindings = await options.resolveReleaseBindings(deployment);
+        } catch {
+          return {
+            status: "failed",
+            diagnostics: [
+              error(
+                "deployment.runtime.binding-unavailable",
+                "The release-bound runtime configuration is unavailable.",
+              ),
+            ],
+          };
+        }
+      }
+      if (bindings?.status === "denied")
+        return {
+          status: "failed",
+          diagnostics: [
+            error(`deployment.runtime.${bindings.code}`, bindings.message),
+          ],
+        };
       return {
-        status: "succeeded",
+        status: "running",
+        runtimeKind,
+        ...(runtimeKind === "visual"
+          ? {
+              launchDescriptor: {
+                schemaVersion: "1.0" as const,
+                kind: "trusted-declarative" as const,
+                releaseId: deployment.releaseId,
+                releaseDigest: deployment.releaseDigest,
+                runtimeProfileId,
+                ...(bindings?.status === "ready"
+                  ? {
+                      runtimeResourceBindings: bindings.resourceBindings,
+                      runtimeInteractionBindings: bindings.interactionBindings,
+                    }
+                  : {}),
+              },
+            }
+          : {}),
         diagnostics: [
           {
             severity: "info",
-            code: "deployment.run.handoff-ready",
+            code: "deployment.runtime.session-running",
             message:
-              "The trusted release-bound runtime accepted the deployment handoff.",
+              "The trusted release-bound runtime session is running.",
           },
         ],
-        durationMilliseconds: 0,
-        outputBytes: 0,
       };
     },
     async cancel() {},

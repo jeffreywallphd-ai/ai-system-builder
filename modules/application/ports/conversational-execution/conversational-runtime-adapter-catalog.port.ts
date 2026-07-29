@@ -1,11 +1,32 @@
-import type { ConversationalInvocationRuntimeReference } from './conversation-turn-invocation.port';
+import type {
+  ApprovedConversationalInvocationSource,
+  ConversationalInvocationRuntimeReference,
+} from "./conversation-turn-invocation.port";
 
-export type ConversationalAdapterCapability = { progress: boolean; cancellation: boolean };
+export type ConversationalAdapterCapability = Readonly<{
+  progress: boolean;
+  cancellation: boolean;
+}>;
+
+export type ConversationalAdapterSelectionRequest = Readonly<{
+  source: ApprovedConversationalInvocationSource;
+  runtime: ConversationalInvocationRuntimeReference;
+}>;
 
 export type ConversationalAdapterSelection =
-  | { status: 'supported'; adapterId: string; capabilityKind: 'text-generation'; capabilities: ConversationalAdapterCapability }
-  | { status: 'deferred' | 'unsupported' | 'unavailable' | 'invalid' | 'blocked' };
+  | Readonly<{
+      status: "supported";
+      adapterId: string;
+      capabilityKind: "text-generation";
+      capabilities: ConversationalAdapterCapability;
+    }>
+  | Readonly<{
+      status:
+        "deferred" | "unsupported" | "unavailable" | "invalid" | "blocked";
+    }>;
 
 export interface ConversationalRuntimeAdapterCatalogPort {
-  resolveForRuntime(runtime: ConversationalInvocationRuntimeReference): Promise<ConversationalAdapterSelection>;
+  resolveForRuntime(
+    request: ConversationalAdapterSelectionRequest,
+  ): Promise<ConversationalAdapterSelection>;
 }

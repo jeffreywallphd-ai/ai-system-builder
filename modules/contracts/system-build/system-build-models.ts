@@ -58,6 +58,21 @@ export interface SystemBuildResolvedImplementation {
   readonly facets: readonly AssetImplementationFacet[];
 }
 
+export interface SystemBuildRuntimeResourceBinding {
+  readonly instanceId: string;
+  readonly bindingKind: "model-record";
+  readonly capabilityKind: "text-generation";
+  readonly modelRecordId: string;
+  readonly modelRevisionDigest: SystemBuildDigest;
+}
+
+export interface SystemBuildRuntimeInteractionBinding {
+  readonly interactionKind: "conversation-turn";
+  readonly composerInstanceId: string;
+  readonly historyInstanceId: string;
+  readonly transcriptMode: "persisted-only";
+}
+
 export interface SystemBuildLockManifest {
   readonly schemaVersion: "1.0";
   readonly systemId: SystemBuilderSystemId;
@@ -71,6 +86,13 @@ export interface SystemBuildLockManifest {
   readonly workflowCompilerVersion: string;
   readonly schemaCompilerVersion: string;
   readonly resolvedImplementations: readonly SystemBuildResolvedImplementation[];
+  /**
+   * Additive for persisted 1.0 locks. New interactive builds always materialize
+   * this list; older locks remain readable and fail closed when a runtime
+   * requires a binding that they do not contain.
+   */
+  readonly runtimeResourceBindings?: readonly SystemBuildRuntimeResourceBinding[];
+  readonly runtimeInteractionBindings?: readonly SystemBuildRuntimeInteractionBinding[];
 }
 
 export interface SystemBuildRecord {

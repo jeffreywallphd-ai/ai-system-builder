@@ -10,6 +10,7 @@ const recoveryImplementation =
 
 test("CI continuously runs the disposable PostgreSQL 18 live conformance suite", async () => {
   const workflow = await readFile(".github/workflows/ci.yml", "utf8");
+  const packageJson = await readFile("package.json", "utf8");
   const recoveryDrill = await readFile(recoveryImplementation, "utf8");
   const recoveryLauncher = await readFile(recoveryEntrypoint, "utf8");
 
@@ -20,6 +21,10 @@ test("CI continuously runs the disposable PostgreSQL 18 live conformance suite",
     /pg_isready -U ai_system_builder -d ai_system_builder_qualification/,
   );
   assert.match(workflow, /run: npm run test:postgres-live/);
+  assert.match(
+    packageJson,
+    /managed-postgres-system-runtime-database\.live\.integration\.test\.ts/,
+  );
   assert.match(workflow, /run: npm run test:postgres-recovery/);
   assert.match(
     workflow,

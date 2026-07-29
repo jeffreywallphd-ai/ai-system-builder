@@ -15,6 +15,7 @@ import {
 
 export const DEFAULT_VISUAL_COMPOSER_SERVER_PORT = 43_170;
 export const DEFAULT_VISUAL_COMPOSER_THIN_CLIENT_PORT = 43_171;
+export const DEFAULT_VISUAL_COMPOSER_RUNTIME_PORT = 43_172;
 export const DEFAULT_VISUAL_COMPOSER_STARTUP_TIMEOUT_MS = 30_000;
 export const DEFAULT_VISUAL_COMPOSER_SHUTDOWN_TIMEOUT_MS = 5_000;
 export const VISUAL_COMPOSER_PROCESS_LOG_LIMIT = 16_000;
@@ -40,6 +41,13 @@ const DESKTOP_IDENTITY_SEED_RELATIVE_PATH = path.join(
   "qualification",
   "visual-composer",
   "visual-composer-desktop-seed.ts",
+);
+const CONTROLLED_CONVERSATION_WORKER_RELATIVE_PATH = path.join(
+  "dev-tools",
+  "scripts",
+  "qualification",
+  "visual-composer",
+  "controlled-conversation-runtime-worker.mjs",
 );
 
 export function getVisualComposerRepositoryRoot(scriptUrl = import.meta.url) {
@@ -68,7 +76,12 @@ export function createVisualComposerHostLaunchPlan(options = {}) {
     DEFAULT_VISUAL_COMPOSER_THIN_CLIENT_PORT,
     "thin client",
   );
-  if (serverPort === thinClientPort) {
+  const runtimePort = normalizePort(
+    options.runtimePort,
+    DEFAULT_VISUAL_COMPOSER_RUNTIME_PORT,
+    "controlled runtime",
+  );
+  if (new Set([serverPort, thinClientPort, runtimePort]).size !== 3) {
     throw new Error("Visual composer qualification ports must be different.");
   }
 
@@ -104,6 +117,14 @@ export function createVisualComposerHostLaunchPlan(options = {}) {
   const desktopEnvironment = {
     ...baseEnvironment,
     VISUAL_COMPOSER_DESKTOP_DATA_ROOT: paths.desktopDataRoot,
+    PYTHON_RUNTIME_BASE_URL: `http://${LOOPBACK_HOST}:${runtimePort}`,
+    PYTHON_RUNTIME_HOST: LOOPBACK_HOST,
+    PYTHON_RUNTIME_PORT: String(runtimePort),
+    PYTHON_RUNTIME_COMMAND: process.execPath,
+    PYTHON_RUNTIME_ARGS:
+      CONTROLLED_CONVERSATION_WORKER_RELATIVE_PATH.replaceAll("\\", "/"),
+    PYTHON_RUNTIME_WORKER_DIR: repoRoot,
+    PYTHON_RUNTIME_STARTUP_TIMEOUT_MS: "15000",
   };
 
   return {
@@ -112,6 +133,7 @@ export function createVisualComposerHostLaunchPlan(options = {}) {
     paths,
     serverOrigin,
     thinClientOrigin,
+    runtimeOrigin: new URL(`http://${LOOPBACK_HOST}:${runtimePort}`),
     server: {
       command: process.execPath,
       args: [
@@ -200,6 +222,7 @@ export async function startVisualComposerHostLifecycle(options = {}) {
         userRoot: options.userRoot,
       },
     );
+    await enableVisualComposerTokenEnforcement(launchPlan.serverOrigin);
 
     const thinClient = startOwnedProcess(
       "thin-client",
@@ -344,7 +367,9 @@ function createServerEnvironment(baseEnvironment, paths, serverPort) {
     SERVER_RUNTIME_ROOT: paths.thinRuntimeRoot,
     AI_SYSTEM_BUILDER_SECURITY_MODE: "disabled-dev",
     AI_SYSTEM_BUILDER_HTTPS_ENABLED: "false",
-    AI_SYSTEM_BUILDER_DEV_SECURITY_TOGGLE_ENABLED: "false",
+    AI_SYSTEM_BUILDER_DEV_SECURITY_TOGGLE_ENABLED: "true",
+    AI_SYSTEM_BUILDER_TENANT_PLACEMENT_MODE: "dedicated",
+    AI_SYSTEM_BUILDER_DEDICATED_ORGANIZATION_ID: "qualification.local",
   };
   for (const key of [
     "DEPLOYMENT_SHAPE",
@@ -359,6 +384,22 @@ function createServerEnvironment(baseEnvironment, paths, serverPort) {
     delete environment[key];
   }
   return environment;
+}
+
+async function enableVisualComposerTokenEnforcement(serverOrigin) {
+  const response = await fetch(
+    new URL("/api/security/dev-mode", serverOrigin),
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ mode: "lan-token-enforced" }),
+    },
+  );
+  if (!response.ok) {
+    throw new Error(
+      "Visual composer qualification could not enable controlled token enforcement.",
+    );
+  }
 }
 
 function createThinClientEnvironment(baseEnvironment, serverOrigin) {

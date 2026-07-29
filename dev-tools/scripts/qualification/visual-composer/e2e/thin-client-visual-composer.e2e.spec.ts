@@ -1,10 +1,16 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import {
+  assertGuidedLifecycleReflow,
+  completeGuidedSystemLifecycle,
+} from "./guided-system-lifecycle";
 
-test.setTimeout(120_000);
+test.setTimeout(180_000);
+const QUALIFICATION_MODEL_NAME = "Controlled qualification model";
 
-test("thin client completes the real visual composer workflow", async ({
+test("thin client completes the guided build and publication lifecycle", async ({
   page,
+  request,
 }) => {
   const browserErrors: string[] = [];
   page.on("console", (message) => {
@@ -20,123 +26,74 @@ test("thin client completes the real visual composer workflow", async ({
   });
 
   const origin = requiredEnvironment("VISUAL_COMPOSER_THIN_CLIENT_ORIGIN");
+  const serverOrigin = requiredEnvironment("VISUAL_COMPOSER_SERVER_ORIGIN");
+  const bearerToken = requiredEnvironment(
+    "VISUAL_COMPOSER_THIN_CLIENT_BEARER_TOKEN",
+  );
+  const denied = await request.get(
+    new URL("/api/workspaces", serverOrigin).href,
+  );
+  expect(denied.status()).toBe(401);
+  await page.addInitScript(
+    ({ token }) =>
+      localStorage.setItem("ai-system-builder.paired-device-token", token),
+    { token: bearerToken },
+  );
   await page.setViewportSize({ width: 1_440, height: 1_000 });
   await page.goto(new URL("/systems", origin).href);
-
   await expect(
     page.getByRole("region", { name: "Workspace required" }),
   ).toBeVisible();
   await page
     .locator('input[name="workspaceName"]')
-    .fill("Composer qualification");
+    .fill("Browser lifecycle qualification");
   await page.getByRole("button", { name: "Create workspace" }).click();
-
   await expect(
     page.getByRole("heading", { name: "Systems", level: 1 }),
   ).toBeVisible();
-  await expect(page.getByRole("tab", { name: "Compose" })).toHaveAttribute(
-    "aria-selected",
-    "true",
+  const workspaceId = await page
+    .getByLabel("Select current workspace")
+    .inputValue();
+  const authorization = { authorization: `Bearer ${bearerToken}` };
+  const savedModelResponse = await request.post(
+    new URL("/api/model/reference/save", serverOrigin).href,
+    {
+      headers: authorization,
+      data: {
+        workspaceId,
+        provider: "huggingface",
+        modelId: "qualification/controlled-chat",
+        displayName: QUALIFICATION_MODEL_NAME,
+        inferenceMode: "chat",
+        taskTags: ["text-generation"],
+        artifactForm: "full-model",
+      },
+    },
   );
-  const standardLayout = page.getByRole("radio", { name: /Standard/ });
-  await expect(standardLayout).toBeVisible({ timeout: 30_000 });
-  await standardLayout.check();
-  await page.getByLabel("New system name").fill("Qualified portal");
-  await page.getByRole("button", { name: "Create system" }).click();
-
-  await expect(
-    page.getByText("Standard system created", { exact: false }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Canvas", level: 3 }),
-  ).toBeVisible({ timeout: 30_000 });
-  await expect(
-    page.getByRole("heading", { name: "Asset Palette", level: 3 }),
-  ).toBeVisible();
-  await expect(page.getByLabel("Search compatible assets")).toBeVisible();
-  const card = page.getByRole("button", { name: "Drag Card", exact: true });
-  await expect(card).toBeVisible({ timeout: 30_000 });
-  const activeRegion = page.locator(
-    '.system-composer__slot[data-target="true"]',
+  expect(savedModelResponse.ok()).toBe(true);
+  const savedModel = await savedModelResponse.json();
+  const modelRecordId = savedModel?.value?.model?.modelRecordId;
+  expect(typeof modelRecordId).toBe("string");
+  const updatedModelResponse = await request.post(
+    new URL("/api/model/record/update", serverOrigin).href,
+    {
+      headers: authorization,
+      data: {
+        workspaceId,
+        modelRecordId,
+        patch: { lifecycleStatus: "downloaded", validationStatus: "valid" },
+      },
+    },
   );
-  await expect(activeRegion).toHaveCount(1);
-  await card.focus();
-  await card.press("Space");
-  await card.press("Escape");
-  await expect(
-    page.getByText("Drag cancelled. No composition changes were made."),
-  ).toBeVisible();
-  await card.dragTo(activeRegion);
-  await expect(
-    page.getByText(
-      "Asset added locally. Save the revision to validate and persist it.",
-      { exact: true },
-    ),
-  ).toBeVisible();
+  expect(updatedModelResponse.ok()).toBe(true);
 
-  const properties = page.locator("#system-composer-properties-panel");
-  await expect(
-    properties.getByRole("heading", { name: "Configure Card" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Undo" }).click();
-  await expect(page.getByText("Last composition change undone.")).toBeVisible();
-  await page.getByRole("button", { name: "Redo" }).click();
-  await expect(page.getByText("Composition change restored.")).toBeVisible();
-  await expect(
-    properties.getByRole("heading", { name: "Configure Card" }),
-  ).toBeVisible();
-  await properties
-    .getByRole("textbox", { name: "Title", exact: true })
-    .fill("Qualification summary");
-  await expect(
-    page.getByText("Unsaved changes", { exact: true }),
-  ).toBeVisible();
-
-  await page.getByRole("button", { name: "Preview UI" }).click();
-  const preview = page.getByRole("dialog", {
-    name: "Qualified portal UI preview",
+  await completeGuidedSystemLifecycle(page, "Browser portal", {
+    modelDisplayName: QUALIFICATION_MODEL_NAME,
   });
-  await expect(preview).toBeVisible();
-  await expect(preview.getByText("Qualification summary")).toBeVisible();
-  await preview
-    .getByRole("button", { name: "Close system UI preview" })
-    .click();
-
-  await page
-    .getByRole("button", { name: "Save and validate revision" })
-    .click();
-  await expect(page.getByText("Revision saved and validated.")).toBeVisible();
-
-  await page.getByRole("tab", { name: "Manage" }).click();
-  const systemRow = page.getByRole("row", { name: /Qualified portal/ });
-  await expect(systemRow).toBeVisible({ timeout: 30_000 });
-  await systemRow.getByRole("button", { name: "Preview" }).click();
-  const managePreview = page.getByRole("dialog", {
-    name: "Preview: Qualified portal",
-  });
-  await expect(managePreview.getByText("Qualification summary")).toBeVisible({
-    timeout: 30_000,
-  });
-  await managePreview.getByRole("button", { name: "Close dialog" }).click();
-  await systemRow.getByRole("button", { name: "Open in Compose" }).click();
-  await expect(page.getByRole("tab", { name: "Compose" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  const buildAndTest = page.getByRole("button", { name: "Build & test" });
-  await expect(buildAndTest).toBeVisible({ timeout: 30_000 });
-  await buildAndTest.click();
-  await expect(
-    page.getByRole("tab", { name: "Build & Release" }),
-  ).toHaveAttribute("aria-selected", "true");
-
-  await page.getByRole("tab", { name: "Compose" }).click();
-  const axe = await new AxeBuilder({ page })
-    .include(".system-builder")
-    .analyze();
+  const axe = await new AxeBuilder({ page }).include(".system-build").analyze();
   expect(
-    axe.violations.filter((violation) =>
-      ["serious", "critical"].includes(violation.impact ?? ""),
+    axe.violations.filter(({ impact }) =>
+      ["serious", "critical"].includes(impact ?? ""),
     ),
   ).toEqual([]);
 
@@ -145,16 +102,7 @@ test("thin client completes the real visual composer workflow", async ({
     reducedMotion: "reduce",
     forcedColors: "active",
   });
-  await page.setViewportSize({ width: 320, height: 1_000 });
-  await expect(
-    page.getByRole("heading", { name: "Canvas", level: 3 }),
-  ).toBeVisible({ timeout: 30_000 });
-  const pageOverflow = await page.evaluate(
-    () =>
-      document.documentElement.scrollWidth -
-      document.documentElement.clientWidth,
-  );
-  expect(pageOverflow).toBeLessThanOrEqual(1);
+  await assertGuidedLifecycleReflow(page);
   expect(browserErrors).toEqual([]);
 });
 

@@ -4,6 +4,9 @@ import {
   it,
   testDouble,
 } from "../../../../testing/node-test";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { createPythonRuntimeHttpClient } from "../client/createPythonRuntimeHttpClient";
 
 const RUNTIME_TOKEN = "runtime-test-token-0123456789abcdef";
@@ -108,6 +111,13 @@ describe("createPythonRuntimeHttpClient", () => {
   });
 
   it("runs model downloads through async task polling instead of a long request", async () => {
+    const modelCacheRoot = await mkdtemp(
+      path.join(tmpdir(), "aisb-python-model-cache-"),
+    );
+    const modelHandle =
+      "models--stabilityai--stable-diffusion-xl-base-1.0/snapshots/sdxl";
+    const modelPath = path.join(modelCacheRoot, ...modelHandle.split("/"));
+    await mkdir(modelPath, { recursive: true });
     const responses = [
       {
         ok: true,
@@ -131,7 +141,7 @@ describe("createPythonRuntimeHttpClient", () => {
             modelId: "stabilityai/stable-diffusion-xl-base-1.0",
             downloaded: true,
             fromCache: false,
-            localPath: "/hf/snapshots/sdxl",
+            modelHandle,
           },
         }),
       },
@@ -148,6 +158,7 @@ describe("createPythonRuntimeHttpClient", () => {
       authorizationToken: RUNTIME_TOKEN,
       fetchImplementation: fetcher as never,
       modelDownloadPollIntervalMs: 1,
+      environment: { HF_HUB_CACHE: modelCacheRoot },
     });
 
     const result = await client.ensureModelDownloaded({
@@ -180,11 +191,19 @@ describe("createPythonRuntimeHttpClient", () => {
       modelId: "stabilityai/stable-diffusion-xl-base-1.0",
       downloaded: true,
       fromCache: false,
-      localPath: "/hf/snapshots/sdxl",
+      localPath: modelPath,
     });
+    await rm(modelCacheRoot, { recursive: true, force: true });
   });
 
   it("continues polling model downloads after recoverable task status transport failures", async () => {
+    const modelCacheRoot = await mkdtemp(
+      path.join(tmpdir(), "aisb-python-model-cache-"),
+    );
+    const modelHandle =
+      "models--stabilityai--stable-diffusion-xl-base-1.0/snapshots/sdxl";
+    const modelPath = path.join(modelCacheRoot, ...modelHandle.split("/"));
+    await mkdir(modelPath, { recursive: true });
     const responses = [
       {
         ok: true,
@@ -222,7 +241,7 @@ describe("createPythonRuntimeHttpClient", () => {
             modelId: "stabilityai/stable-diffusion-xl-base-1.0",
             downloaded: true,
             fromCache: false,
-            localPath: "/hf/snapshots/sdxl",
+            modelHandle,
           },
         }),
       },
@@ -242,6 +261,7 @@ describe("createPythonRuntimeHttpClient", () => {
       authorizationToken: RUNTIME_TOKEN,
       fetchImplementation: fetcher as never,
       modelDownloadPollIntervalMs: 1,
+      environment: { HF_HUB_CACHE: modelCacheRoot },
     });
 
     const result = await client.ensureModelDownloaded({
@@ -250,7 +270,8 @@ describe("createPythonRuntimeHttpClient", () => {
     });
 
     expect(fetcher).toHaveBeenCalledTimes(4);
-    expect(result.localPath).toBe("/hf/snapshots/sdxl");
+    expect(result.localPath).toBe(modelPath);
+    await rm(modelCacheRoot, { recursive: true, force: true });
   });
 
   it("aborts bounded transport requests and reports only the endpoint class", async () => {

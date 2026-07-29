@@ -17,6 +17,7 @@ This directory separates canonical system guidance from downstream task context 
     admitting bounded `.aisb-package` files from the downloadable starter.
 - `docs/standards/`
   - Canonical implementation and documentation rules.
+  - `docs/standards/security-by-design-standards.md` requires a security impact disposition for every change and proportional threat, control, rollback, and evidence review for security-relevant work.
   - `docs/standards/dependency-supply-chain-standards.md` defines lockfile,
     advisory, SBOM, and workflow-integrity requirements.
 - `docs/context/`
@@ -25,7 +26,7 @@ This directory separates canonical system guidance from downstream task context 
 ## Supporting Areas
 
 - `docs/security/`
-  - Security-oriented operational checks and manual verification guidance.
+  - Canonical threat models plus security-oriented operational checks and manual verification guidance.
 - `docs/diagnostics/`
   - Focused diagnostic and regression-check procedures.
   - `contributor-helper-loops.md` documents the configurable, bounded helper
@@ -65,7 +66,7 @@ This directory separates canonical system guidance from downstream task context 
 
 ## Start by Task
 
-- Any repository task: read the root `AGENTS.md`, then `docs/context/packs/index.pack.md`.
+- Any repository task: read the root `AGENTS.md`, then `docs/context/packs/index.pack.md`, and record the mandatory security impact disposition from `docs/standards/security-by-design-standards.md`.
 - Implementation roadmap preparation, review, execution, continuation, or
   resumption: use `skills/manage-implementation-roadmaps/SKILL.md`. Invoke it
   from intent even without the exact skill name; a request such as "use a skill
@@ -95,7 +96,7 @@ This directory separates canonical system guidance from downstream task context 
 - Automated or repository-scale implementation: read `docs/standards/ai-agent-development-standards.md`, apply `docs/standards/change-impact-matrix.md`, and check `docs/adr/decision-readiness.md`.
 - Architecture verification: use `docs/architecture/architecture-verification.md` to distinguish direct fitness functions from representative coverage and known gaps.
 - Agent-support evaluation: use `docs/context/pack-catalog.json`, `dev-tools/agent-evals/scenarios.json`, and `docs/standards/agent-support-evaluation-standards.md`.
-- Security-sensitive work: add `docs/context/packs/security.pack.md` and inspect `docs/security/`.
+- Security-relevant work: add `docs/context/packs/security.pack.md`, read ADR-0015 and the applicable canonical security/threat-model sources, and include denial/failure-path evidence. The universal impact screen applies even when the user did not label the task as security work.
 - Security vulnerability remediation from the supplied audit: use
   `docs/security-vulnerability-remediation-implementation-roadmap.md` and keep
   every row current in `docs/security-vulnerability-remediation-finding-register.md`.
@@ -114,10 +115,11 @@ If context guidance conflicts with an ADR, architecture document, or standard, t
 - Asset package creation and import: `docs/asset-package-authoring-guide.md`; use
   the Assets **Import Assets** tab to download the canonical starter.
 - Asset authoring/execution security: `docs/architecture/asset-authoring-and-execution-security.md`, `docs/security/asset-package-authoring-and-execution-threat-model.md`, and ADR-0032.
-- System Builder: `docs/architecture/system-builder.md`, `docs/architecture/system-build-and-release.md`, ADR-0024, and ADR-0033; Systems is workspace-scoped while builder-application status belongs to Settings / Software status.
+- System Builder, Publish lifecycle, and advanced workflow boundary: `docs/architecture/system-builder.md`, `docs/architecture/system-build-and-release.md`, `docs/architecture/system-run-workflows.md`, ADR-0024, ADR-0033, and ADR-0038; Systems is workspace-scoped while builder-application status belongs to Settings / Software status.
 - Runtime readiness binding: `docs/architecture/runtime-readiness-binding.md` and ADR-0021.
 - Execution plan preparation: `docs/architecture/execution-plan-preparation.md` and ADR-0022.
-- Controlled conversational execution: `docs/architecture/controlled-conversational-system-execution.md` and ADR-0023.
+- Controlled conversational execution and its dedicated runtime data plane: `docs/architecture/controlled-conversational-system-execution.md`, `docs/architecture/persistence-and-storage.md`, ADR-0023, ADR-0039, and `docs/security/system-runtime-data-plane-threat-model.md`.
+- Cross-cutting secure design: `docs/standards/security-by-design-standards.md`, ADR-0015, and the boundary-specific threat models under `docs/security/`.
 
 ## Agent Context
 
@@ -136,5 +138,7 @@ If context guidance conflicts with an ADR, architecture document, or standard, t
 - During roadmap execution, run focused tests for each internal chunk and defer
   the full suite until every planned chunk in the increment is implemented.
 - Run `npm run docs:check` after documentation or context changes.
+- Run `npm run agent-support:check` after agent guidance, context routing, skill, or evaluation changes.
+- Run `npm run security:dependencies` when dependency, lockfile, workflow, container, SBOM, or release dependency inputs change.
 - Run `npm test` after implementation changes and before handoff when practical.
 - Continuous integration enforces both gates for pull requests and changes to the default branch.

@@ -83,8 +83,7 @@ describe("System Foundation v3 property-complete presentation contracts", () => 
       "title",
       "userRoleLabel",
       "assistantRoleLabel",
-      "sampleUserMessage",
-      "sampleAssistantMessage",
+      "emptyMessage",
       "accessibilityLabel",
     ]) {
       assert.ok(
@@ -94,6 +93,31 @@ describe("System Foundation v3 property-complete presentation contracts", () => 
         fieldId,
       );
     }
+    assert.equal(
+      history.configurationSchema?.fields.some((field) =>
+        /^sample/i.test(field.fieldId),
+      ),
+      false,
+    );
+  });
+
+  it("requires an authority-backed model binding on message composers", () => {
+    const composer = definition("conversation.message-composer", "3.0.0");
+    const binding = composer.configurationSchema?.fields.find(
+      (field) => field.fieldId === "modelBinding",
+    );
+
+    assert.equal(binding?.valueKind, "resource-reference");
+    assert.equal(binding?.required, true);
+    assert.equal(binding?.uiHint?.hintKind, "resource-picker");
+    assert.equal(binding?.uiHint?.metadata?.resourceKind, "model");
+    assert.equal(
+      binding?.metadata?.resourceScope,
+      "workspace-model-registry",
+    );
+    assert.ok(
+      composer.configurationSchema?.requiredFieldIds.includes("modelBinding"),
+    );
   });
 
   it("uses bounded semantic theme tokens and relevant per-asset overrides", () => {

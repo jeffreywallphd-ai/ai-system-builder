@@ -26,6 +26,12 @@ const policy = {
 function services() {
   const value = (input: unknown) => ({ ok: true as const, value: input });
   return {
+    lifecycleRead: {
+      execute: testDouble.fn(async (input: unknown) => value(input)),
+    },
+    lifecycleInvoke: {
+      execute: testDouble.fn(async (input: unknown) => value(input)),
+    },
     install: { execute: testDouble.fn(async (input: unknown) => value(input)) },
     activate: {
       execute: testDouble.fn(async (input: unknown) => value(input)),
@@ -74,6 +80,7 @@ describe("system deployment transport parity", () => {
         "/api/systems/deployments",
         "/api/systems/deployments/runs",
         "/api/systems/deployments/audit",
+        "/api/systems/published-lifecycle",
       ].sort(),
     );
     expect([...posts.keys()].sort()).toEqual(
@@ -85,6 +92,7 @@ describe("system deployment transport parity", () => {
         "/api/systems/deployments/revoke",
         "/api/systems/deployments/runs/start",
         "/api/systems/deployments/runs/cancel",
+        "/api/systems/published-lifecycle/invoke",
       ].sort(),
     );
 
@@ -93,6 +101,10 @@ describe("system deployment transport parity", () => {
       ipcMain: {
         handle: (channel: string, handler: any) =>
           handlers.set(channel, handler),
+      },
+      authority: {
+        organizationId: createOrganizationId("org-desktop"),
+        actorId: "desktop-principal",
       },
       host: { ...host, deploymentProfiles: ["local-desktop"] },
       ...services(),
@@ -163,6 +175,10 @@ describe("system deployment transport parity", () => {
         handle: (channel: string, handler: any) =>
           handlers.set(channel, handler),
       },
+      authority: {
+        organizationId: createOrganizationId("org-desktop"),
+        actorId: "desktop-principal",
+      },
       host: { ...host, deploymentProfiles: ["local-desktop"] },
       ...desktopServices,
     } as any);
@@ -178,10 +194,51 @@ describe("system deployment transport parity", () => {
       },
     );
     expect(desktopServices.install.execute.mock.calls[0][0]).toMatchObject({
-      organizationId: "local",
-      actorId: "local-user",
+      organizationId: "org-desktop",
+      actorId: "desktop-principal",
       hostCapabilities: ["artifact:read"],
       sandboxQualified: false,
+    });
+
+    const lifecycleRequest: any = {
+      body: {
+        workspaceId: "workspace-a",
+        releaseId: "release-a",
+        action: "start",
+        expectedRevision: "deployment:2:session:none",
+        deploymentId: "attacker-deployment",
+        runId: "attacker-run",
+        policy,
+        requestedCapabilities: ["host:filesystem"],
+        requestedSecretReferences: ["secret.private"],
+        requestedEgressOrigins: ["https://attacker.invalid"],
+      },
+    };
+    setExpressAuthContext(lifecycleRequest, {
+      authenticated: true,
+      authMethod: "oidc-bearer",
+      principal: {
+        principalId: "person-a",
+        kind: "user",
+        roles: [],
+        scopes: ["asset:write"],
+      },
+    });
+    setExpressOrganizationContext(lifecycleRequest, {
+      organizationId: createOrganizationId("org-a"),
+      principalId: "person-a",
+    });
+    await posts.get("/api/systems/published-lifecycle/invoke")(
+      lifecycleRequest,
+      response,
+    );
+    expect(apiServices.lifecycleInvoke.execute.mock.calls[0][0]).toEqual({
+      organizationId: "org-a",
+      workspaceId: "workspace-a",
+      actorId: "person-a",
+      releaseId: "release-a",
+      action: "start",
+      expectedRevision: "deployment:2:session:none",
     });
   });
 });

@@ -780,12 +780,11 @@ describe("server ComfyUI python/runtime resolution", () => {
       pythonRuntimeArgsConfigured: false,
       taskRegistryOwnership: "server",
     });
-    expect(pythonLog?.data).not.toMatchObject({
-      pythonRuntimeBaseUrl: expect.anything(),
-      pythonRuntimeWorkerDirectory: expect.anything(),
-      pythonRuntimeCommand: expect.anything(),
-      pythonRuntimeArgs: expect.anything(),
-    });
+    const pythonRuntimeData = pythonLog?.data ?? {};
+    expect("pythonRuntimeBaseUrl" in pythonRuntimeData).toBe(false);
+    expect("pythonRuntimeWorkerDirectory" in pythonRuntimeData).toBe(false);
+    expect("pythonRuntimeCommand" in pythonRuntimeData).toBe(false);
+    expect("pythonRuntimeArgs" in pythonRuntimeData).toBe(false);
     expect(pythonLog?.data).not.toMatchObject({
       pythonRuntimeMode: "ambient-only",
       pythonRuntimeRootDirectory: null,

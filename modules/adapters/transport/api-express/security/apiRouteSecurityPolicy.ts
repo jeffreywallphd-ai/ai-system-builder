@@ -310,6 +310,10 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     { public: false, scopes: ["asset:read"] },
   ],
   [
+    "GET /api/systems/composer/model-options",
+    { public: false, scopes: ["asset:read"] },
+  ],
+  [
     "GET /api/systems/composer/asset",
     { public: false, scopes: ["asset:read"] },
   ],
@@ -335,6 +339,10 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     { public: false, scopes: ["asset:write"] },
   ],
   [
+    "GET /api/systems/builds/preparation",
+    { public: false, scopes: ["asset:read"] },
+  ],
+  [
     "POST /api/systems/builds/request",
     { public: false, scopes: ["asset:write"] },
   ],
@@ -350,6 +358,15 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   ],
   ["GET /api/systems/release", { public: false, scopes: ["asset:read"] }],
   ["GET /api/systems/releases", { public: false, scopes: ["asset:read"] }],
+  ["GET /api/systems/publication", { public: false, scopes: ["asset:read"] }],
+  [
+    "GET /api/systems/published-lifecycle",
+    { public: false, scopes: ["asset:read"] },
+  ],
+  [
+    "POST /api/systems/published-lifecycle/invoke",
+    { public: false, scopes: ["asset:write"] },
+  ],
   [
     "GET /api/systems/releases/compare",
     { public: false, scopes: ["asset:read"] },
@@ -418,6 +435,18 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   ],
   ["GET /api/systems/data/records", { public: false, scopes: ["asset:read"] }],
   ["GET /api/systems/data/audit", { public: false, scopes: ["asset:read"] }],
+  [
+    "GET /api/systems/run-workflows",
+    { public: false, scopes: ["asset:read"] },
+  ],
+  [
+    "POST /api/systems/run-workflows/prepare",
+    { public: false, scopes: ["asset:read"] },
+  ],
+  [
+    "POST /api/systems/run-workflows/invoke",
+    { public: false, scopes: ["asset:write"] },
+  ],
 
   [
     "GET /api/asset-authoring/workspaces/:workspaceId/authored-assets",

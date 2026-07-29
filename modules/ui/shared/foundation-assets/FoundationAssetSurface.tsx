@@ -471,26 +471,10 @@ export function FoundationAssetSurface({
         }
       >
         <h3>{historyTitle}</h3>
-        <ol>
-          <li>
-            <strong>
-              {stringValue(configuration?.userRoleLabel) || "You"}
-            </strong>
-            <p>
-              {stringValue(configuration?.sampleUserMessage) ||
-                "How can this system help?"}
-            </p>
-          </li>
-          <li>
-            <strong>
-              {stringValue(configuration?.assistantRoleLabel) || "Assistant"}
-            </strong>
-            <p>
-              {stringValue(configuration?.sampleAssistantMessage) ||
-                "This is a safe preview response."}
-            </p>
-          </li>
-        </ol>
+        <ol />
+        <p role="status">
+          {stringValue(configuration?.emptyMessage) || "No messages yet."}
+        </p>
         {hasRegion("messages") ? (
           <div data-slot="messages">{region("messages")}</div>
         ) : null}
@@ -540,7 +524,7 @@ export function FoundationAssetSurface({
             "Message"
           }
           placeholder={stringValue(configuration?.placeholder) || undefined}
-          value={stringValue(configuration?.previewValue) || "Preview message"}
+          value=""
           readOnly
         />
       </label>

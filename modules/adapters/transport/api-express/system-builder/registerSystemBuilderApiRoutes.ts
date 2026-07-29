@@ -9,6 +9,7 @@ import type {
   ListSystemBuilderManagementUseCase,
   ListSystemBuilderTemplatesUseCase,
   ListSystemBuilderComposerAssetsUseCase,
+  ListSystemBuilderModelOptionsUseCase,
   ReadSystemBuilderComposerAssetUseCase,
   ReadSystemBuilderRevisionUseCase,
   ReadSystemBuilderSystemUseCase,
@@ -88,6 +89,7 @@ export interface RegisterSystemBuilderApiRoutesDependencies {
   listRevisions: Pick<ListSystemBuilderRevisionsUseCase, "execute">;
   listComposerAssets: Pick<ListSystemBuilderComposerAssetsUseCase, "execute">;
   readComposerAsset: Pick<ReadSystemBuilderComposerAssetUseCase, "execute">;
+  listModelOptions: Pick<ListSystemBuilderModelOptionsUseCase, "execute">;
   previewLayoutChange: Pick<PreviewSystemBuilderLayoutChangeUseCase, "execute">;
   previewFoundationUpgrade: Pick<
     PreviewSystemBuilderFoundationUpgradeUseCase,
@@ -205,6 +207,23 @@ export function registerSystemBuilderApiRoutes(
         res,
         "readComposerAsset",
         "The composer asset detail query is invalid.",
+      );
+    }
+  });
+  d.app.get("/api/systems/composer/model-options", async (req, res) => {
+    try {
+      result(
+        res,
+        "listModelOptions",
+        await d.listModelOptions.execute({
+          workspaceId: createWorkspaceId(required(req.query?.workspaceId)),
+        }),
+      );
+    } catch {
+      invalid(
+        res,
+        "listModelOptions",
+        "The model options query is invalid.",
       );
     }
   });

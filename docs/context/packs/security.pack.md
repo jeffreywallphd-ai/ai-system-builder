@@ -4,7 +4,7 @@
 
 ## Purpose
 
-- Route prompts that touch authentication, authorization, TLS, route policy, credential handling, safe diagnostics, and public payload sanitization.
+- Route prompts whose mandatory security impact screen identifies a changed trust, authority, data, execution, diagnostic, dependency, or supply-chain boundary, including authentication, authorization, TLS, route policy, credential handling, safe diagnostics, and public payload sanitization.
 - Keep security work aligned to ADR-0015 without moving feature code into a monolithic security layer.
 
 ## Use When
@@ -12,15 +12,18 @@
 - Authn/authz, route policy, secure fetch, bearer tokens, pairing, TLS/HTTPS, cert modes, token storage, audit, rate limiting, or security configuration are in scope.
 - Public API/IPC/preload/UI payloads may expose errors, metadata, runtime diagnostics, asset/resource descriptors, or mutation results.
 - Storage, runtime, provider, model, artifact, image, dataset, external repository, or Asset Kernel work needs sanitization or permission guardrails.
+- New or changed APIs, IPC/preload surfaces, uploads, parsers, outbound network access, executable inputs, dependency/build inputs, migrations, recovery, rollback, AI context assembly, or protected-content flows introduce abuse or failure cases that require design evidence.
 
 ## Do Not Use When
 
 - The task is entirely internal pure-domain logic with no user, host, storage, provider, runtime, transport, or diagnostic boundary.
 - A narrower pack already covers a purely non-security concern and no public/sensitive data can cross boundaries.
+- Even then, record the baseline `not-security-relevant` rationale required by `docs/standards/security-by-design-standards.md`; omitting this pack does not omit the security impact screen.
 
 ## Core Posture
 
 - Security is layered and adapter-based, not monolithic.
+- Security review is universal and proportional. A `security-relevant` change documents protected assets, actors and authority, trust boundaries, abuse/failure cases, owning controls, safe rollback, verification, and residual risk before completion.
 - Shared security primitives belong in contracts/ports/adapters; feature code consumes shared seams.
 - Bearer tokens authenticate clients; HTTPS/TLS provides confidentiality and integrity.
 - Route policy is centralized; unknown `/api/*` routes are denied with `security.route-policy-missing`.
@@ -57,6 +60,11 @@
   serialization, and again in main; preload permits only one in-flight upload.
 - Pooled tenant placement is the default. Premium dedicated placement allows
   only one configured organization while retaining the same release and schema.
+- Published runtimes use one opaque-instance SQLite or least-privilege PostgreSQL
+  database. Storage details stay host-only; destructive and recovery actions
+  require exact lifecycle authority.
+- Desktop runtime windows are sandboxed, nonpersistent, CSP-restricted, and
+  main-frame bound; Stop revokes the session and failed launch compensates.
 - Thin-client secure fetch adds `Authorization: Bearer` when a paired token exists.
 - Release-bound system data derives a finite allowlist and narrowing roles from
   one verified approved manifest. Host-derived principals, trusted validation,
@@ -76,6 +84,15 @@
 - Adapter boundary: enforce path containment, credential storage rules, redaction, runtime/process hardening, and optional encryption.
 - Host composition: select security mode, TLS mode, security store, and concrete adapters.
 - UI/client boundary: preserve safe codes/statuses and present user-friendly messages without raw internals.
+
+## Security Design Review
+
+- Identify the security delta before implementation; update an existing threat model rather than creating a parallel source when one owns the boundary.
+- Derive identity, authorization, ownership, approval, revocation, and capability from authoritative structured records, never display labels, ambient state, substring heuristics, or client assertions.
+- Include positive behavior plus denial, malformed-input, boundary, non-disclosure, resource-bound, or adapter-failure evidence appropriate to the change.
+- Keep migration, compatibility, recovery, and rollback paths at least as secure as the forward path. Do not add an insecure availability fallback.
+- Security cannot be excluded as a whole. Name any deferred hardening boundary, residual risk, and successor decision explicitly.
+- Never store secrets, protected prompts, raw sensitive payloads, private content, or exploitable production detail in roadmap state, evidence, tests, documentation, logs, or reports.
 
 ## Sanitization Rules
 
@@ -150,6 +167,7 @@
 ## Canonical Source Docs
 
 - `docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md` - canonical security architecture and policy boundary.
+- `docs/standards/security-by-design-standards.md` - mandatory impact screen, threat/control review, verification, and completion evidence.
 - `docs/adr/ADR-0029-organization-tenancy-identity-and-authorization.md` - organization, managed OIDC, authorization, audit, and placement decision.
 - `docs/architecture/organization-tenancy-and-identity.md` - current end-to-end implementation model and operator flow.
 - `docs/architecture/host-model.md` - host composition and mode selection.
@@ -176,5 +194,5 @@
 
 ## Prompt Assembly Notes
 
-- Include this pack for any public boundary where sensitive data, route policy, TLS/auth state, or sanitized diagnostics may change.
+- Include this pack whenever the baseline impact screen returns `security-relevant`, including implicit trust/data/execution/supply-chain boundary changes that the prompt does not call security work.
 - Read ADR-0015 directly when changing route policy, token handling, security modes, pairing, route errors, TLS behavior, or security API semantics.

@@ -164,6 +164,17 @@ describe("resolveServerRuntimeConfig", () => {
     expect(app.enabled("case sensitive routing")).toBe(true);
   });
 
+  it("rejects the explicit qualification runtime seam before production composition", async () => {
+    await expect(
+      createServer({
+        env: { NODE_ENV: "production" },
+        runtimeDatabases: {} as never,
+      }),
+    ).rejects.toThrow(
+      "The explicit runtime database seam is unavailable in production server startup.",
+    );
+  });
+
   it("createServer passes explicit environment into server runtime composition", async () => {
     const previousPythonRuntimeBaseUrl = process.env.PYTHON_RUNTIME_BASE_URL;
     process.env.PYTHON_RUNTIME_BASE_URL = "http://127.0.0.1:49999";
@@ -209,10 +220,17 @@ describe("resolveServerRuntimeConfig", () => {
         "huggingface",
       ),
       pythonRuntimeRootSource: "SERVER_RUNTIME_ROOT",
-      pythonRuntimeBaseUrl: "http://127.0.0.1:43112",
-      pythonRuntimeCommand: "python-custom",
-      pythonRuntimeArgs: ["worker.py", "--ready"],
+      pythonRuntimeMode: "worker-sidecar",
+      pythonRuntimeEndpointScope: "loopback",
+      pythonRuntimeCommandConfigured: true,
+      pythonRuntimeArgsConfigured: true,
+      taskRegistryOwnership: "server",
     });
+    const pythonRuntimeData = pythonRuntimeLog?.data ?? {};
+    expect("pythonRuntimeBaseUrl" in pythonRuntimeData).toBe(false);
+    expect("pythonRuntimeCommand" in pythonRuntimeData).toBe(false);
+    expect("pythonRuntimeArgs" in pythonRuntimeData).toBe(false);
+    expect("pythonRuntimeWorkerDirectory" in pythonRuntimeData).toBe(false);
   });
 
   it("index startup log uses structured server host logging", () => {
