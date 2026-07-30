@@ -21,7 +21,8 @@
     "start": "npm run dev:desktop",
     "test": "node --preserve-symlinks --preserve-symlinks-main dev-tools/scripts/testing/run-non-browser-tests.mjs",
     "test:non-browser": "node --preserve-symlinks --preserve-symlinks-main dev-tools/scripts/testing/run-non-browser-tests.mjs",
-    "test:postgres-live": "node --import tsx --test modules/adapters/persistence/postgres/tests/postgres-database.live.integration.test.ts",
+    "test:visual-composer": "playwright test --config dev-tools/config/playwright.visual-composer.config.ts",
+    "test:postgres-live": "node --import tsx --test modules/adapters/persistence/postgres/tests/postgres-database.live.integration.test.ts modules/adapters/persistence/system-runtime/tests/managed-postgres-system-runtime-database.live.integration.test.ts",
     "test:postgres-recovery": "node --import tsx dev-tools/scripts/persistence/postgres-recovery-drill.mjs",
     "docs:check": "node --preserve-symlinks --preserve-symlinks-main dev-tools/scripts/docs/check-doc-drift.mjs",
     "architecture:check": "node --preserve-symlinks --preserve-symlinks-main dev-tools/scripts/architecture/check-module-dependencies.mjs",
@@ -53,16 +54,19 @@
     "selfsigned": "5.5.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.12.1",
     "@electron-forge/cli": "^7.10.2",
     "@electron-forge/maker-squirrel": "^7.10.2",
     "@electron-forge/maker-zip": "^7.10.2",
     "@electron-forge/plugin-webpack": "^7.10.2",
+    "@playwright/test": "1.61.1",
     "@types/busboy": "^1.5.4",
     "@types/node": "^24.7.2",
     "@types/pg": "^8.20.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "@vercel/webpack-asset-relocator-loader": "^1.10.0",
+    "brace-expansion": "file:dev-tools/vendor/brace-expansion-compat",
     "css-loader": "^7.1.2",
     "electron": "41.10.2",
     "jsdom": "^26.1.0",
@@ -75,7 +79,9 @@
     "webpack": "^5.99.9"
   },
   "overrides": {
-    "tar": "7.5.20",
+    "brace-expansion": "$brace-expansion",
+    "fast-uri": "3.1.4",
+    "tar": "7.5.22",
     "tmp": "0.2.7",
     "webpack-dev-server": "5.2.6",
     "sockjs": {

@@ -138,6 +138,7 @@ export function ArtifactIngestionFeature({ client, ingestionClient, onUploadComp
             onFileChange={onFileChange}
             onSubmit={(event) => void onUploadSubmit(event)}
             onCancelUpload={onCancelUpload}
+            workspaceId={workspaceId}
           />
         </CollapsiblePanel>
 
@@ -160,6 +161,7 @@ export function ArtifactIngestionFeature({ client, ingestionClient, onUploadComp
             setWebsiteBatchMode={setWebsiteBatchMode}
             ingestWebsiteSingle={ingestWebsiteSingle}
             ingestWebsiteBatch={ingestWebsiteBatch}
+            workspaceId={workspaceId}
           />
         </CollapsiblePanel>
 
@@ -169,7 +171,7 @@ export function ArtifactIngestionFeature({ client, ingestionClient, onUploadComp
           isExpanded={expandedPanels.importFromHuggingFace}
           onToggle={() => togglePanel("importFromHuggingFace")}
         >
-          <ArtifactHuggingFaceForm client={ingestionClient} onRegistered={() => onUploadComplete?.()} />
+          <ArtifactHuggingFaceForm client={ingestionClient} onRegistered={() => onUploadComplete?.()} workspaceId={workspaceId} />
         </CollapsiblePanel>
       </div>
     </section>

@@ -7,9 +7,13 @@ import path from "node:path";
 
 import express from "express";
 
-import { composeServerHost } from "../../../modules/hosts/server";
+import {
+  composeServerHost,
+  type ServerSystemRuntimeDatabaseAdapter,
+} from "../../../modules/hosts/server";
 import {
   applySecurityHeaders,
+  createExpressJsonBodyErrorMiddleware,
   createExpressOrganizationAuthorizationMiddleware,
   createHttpsServerOptions,
   registerSecurityRoutes,
@@ -17,12 +21,25 @@ import {
 import { composeServerSecurity } from "../../../modules/hosts/server/security/composeServerSecurity";
 import type { LoggingPort } from "../../../modules/application/ports/logging";
 import type { StructuredLogSink } from "../../../modules/adapters/observability/logging";
-import { normalizeDeploymentShape, type DeploymentShape } from "../../../modules/contracts/config";
-import { openPostgresDatabase, resolvePostgresPoolConfig, type OpenedPostgresDatabase } from "../../../modules/adapters/persistence/postgres";
+import {
+  normalizeDeploymentShape,
+  type DeploymentShape,
+} from "../../../modules/contracts/config";
+import {
+  openPostgresDatabase,
+  resolvePostgresPoolConfig,
+  type OpenedPostgresDatabase,
+} from "../../../modules/adapters/persistence/postgres";
 import { importJsonStructuredData } from "../../../modules/adapters/persistence/migration";
-import { createOrganizationContextStructuredDocumentStore } from "../../../modules/adapters/persistence/shared";
+import {
+  createOrganizationContextStructuredDocumentStore,
+  type StructuredDocumentStore,
+} from "../../../modules/adapters/persistence/shared";
 import { createStructuredOrganizationRepositories } from "../../../modules/adapters/persistence/organization";
-import { AuthorizeOperationService, createOrganizationAuthorizationPolicy } from "../../../modules/application/services/security";
+import {
+  AuthorizeOperationService,
+  createOrganizationAuthorizationPolicy,
+} from "../../../modules/application/services/security";
 import { createJsonlSecurityAuditLogAdapter } from "../../../modules/adapters/security/audit/createJsonlSecurityAuditLogAdapter";
 
 export const DEFAULT_SERVER_PORT = 3010;
@@ -51,6 +68,10 @@ export interface CreateServerOptions {
   now?: () => string;
   restartServer?: () => void | Promise<void>;
   postgresDatabase?: OpenedPostgresDatabase;
+  /** Explicit non-production composition seam for controlled tests and qualification. */
+  structuredDocuments?: StructuredDocumentStore;
+  /** Explicit non-production runtime-data seam for controlled tests and qualification. */
+  runtimeDatabases?: ServerSystemRuntimeDatabaseAdapter;
 }
 
 export interface CreatedServer {
@@ -108,7 +129,9 @@ function isServerAppRootDirectory(directory: string): boolean {
   }
 
   try {
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as { name?: unknown };
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
+      name?: unknown;
+    };
     return packageJson.name === "@ai-system-builder/server";
   } catch {
     return false;
@@ -135,13 +158,14 @@ function findServerAppRootFromSeed(seedDirectory: string): string | undefined {
   }
 }
 
-export function resolveServerAppRootDirectory(options: ServerRootResolutionOptions = {}): string {
+export function resolveServerAppRootDirectory(
+  options: ServerRootResolutionOptions = {},
+): string {
   const env = options.env ?? process.env;
-  const seedDirectories = [
-    options.cwd,
-    env.INIT_CWD,
-    process.cwd(),
-  ].filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+  const seedDirectories = [options.cwd, env.INIT_CWD, process.cwd()].filter(
+    (value): value is string =>
+      typeof value === "string" && value.trim().length > 0,
+  );
 
   for (const seedDirectory of seedDirectories) {
     const serverAppRoot = findServerAppRootFromSeed(seedDirectory);
@@ -153,11 +177,18 @@ export function resolveServerAppRootDirectory(options: ServerRootResolutionOptio
   return path.resolve("apps", "server");
 }
 
-export function resolveDefaultServerStorageRootDirectory(options: ServerRootResolutionOptions = {}): string {
-  return path.join(resolveServerAppRootDirectory(options), DEFAULT_SERVER_STORAGE_ROOT_DIRECTORY_NAME);
+export function resolveDefaultServerStorageRootDirectory(
+  options: ServerRootResolutionOptions = {},
+): string {
+  return path.join(
+    resolveServerAppRootDirectory(options),
+    DEFAULT_SERVER_STORAGE_ROOT_DIRECTORY_NAME,
+  );
 }
 
-export function resolveDefaultServerRuntimeRootDirectory(options: ServerRootResolutionOptions = {}): string {
+export function resolveDefaultServerRuntimeRootDirectory(
+  options: ServerRootResolutionOptions = {},
+): string {
   return path.join(
     resolveServerAppRootDirectory(options),
     DEFAULT_SERVER_LOCAL_STATE_DIRECTORY_NAME,
@@ -188,7 +219,11 @@ export function resolveServerRuntimePaths(
       : resolveDefaultServerStorageRootDirectory(rootResolutionOptions);
 
   const runtimeRootDirectory = resolveServerRuntimeRootDirectory(env, options);
-  return { port: normalizePort(env.PORT), storageRootDirectory, runtimeRootDirectory };
+  return {
+    port: normalizePort(env.PORT),
+    storageRootDirectory,
+    runtimeRootDirectory,
+  };
 }
 
 export function resolveServerRuntimeConfig(
@@ -198,30 +233,57 @@ export function resolveServerRuntimeConfig(
   return resolveServerRuntimePaths(env, options);
 }
 
-export async function createServer(options: CreateServerOptions = {}): Promise<CreatedServer> {
+export async function createServer(
+  options: CreateServerOptions = {},
+): Promise<CreatedServer> {
   const env = options.env ?? process.env;
   const runtimePaths = resolveServerRuntimePaths(options.env);
-  const security = await composeServerSecurity(env, runtimePaths.storageRootDirectory);
+  if (env.NODE_ENV === "production" && options.runtimeDatabases) {
+    throw new Error(
+      "The explicit runtime database seam is unavailable in production server startup.",
+    );
+  }
+  const security = await composeServerSecurity(
+    env,
+    runtimePaths.storageRootDirectory,
+  );
   const deploymentShapeValue = env.DEPLOYMENT_SHAPE?.trim();
   if (!deploymentShapeValue && env.NODE_ENV === "production") {
-    throw new Error("DEPLOYMENT_SHAPE is required for production server startup.");
+    throw new Error(
+      "DEPLOYMENT_SHAPE is required for production server startup.",
+    );
   }
-  const deploymentShape = deploymentShapeValue ? normalizeDeploymentShape(deploymentShapeValue) : undefined;
+  const deploymentShape = deploymentShapeValue
+    ? normalizeDeploymentShape(deploymentShapeValue)
+    : undefined;
   if (deploymentShape === "local") {
-    throw new Error("The server host cannot use the local deployment shape; use the desktop host for local SQLite.");
+    throw new Error(
+      "The server host cannot use the local deployment shape; use the desktop host for local SQLite.",
+    );
   }
   if (env.NODE_ENV === "production" && security.config.mode !== "oidc-bearer") {
-    throw new Error("Production managed-server startup requires AI_SYSTEM_BUILDER_SECURITY_MODE=oidc-bearer.");
+    throw new Error(
+      "Production managed-server startup requires AI_SYSTEM_BUILDER_SECURITY_MODE=oidc-bearer.",
+    );
   }
   const postgresDatabase = deploymentShape
-    ? options.postgresDatabase ?? await openPostgresDatabase({ config: resolvePostgresPoolConfig(env), now: options.now })
+    ? (options.postgresDatabase ??
+      (await openPostgresDatabase({
+        config: resolvePostgresPoolConfig(env),
+        now: options.now,
+      })))
     : undefined;
   let startupSucceeded = false;
+  let closeRuntimeDatabasesOnFailure: (() => Promise<void>) | undefined;
   try {
     if (postgresDatabase) {
       await importJsonStructuredData({
         sourceRootDirectory: runtimePaths.storageRootDirectory,
-        rollbackRootDirectory: path.join(runtimePaths.runtimeRootDirectory, "persistence", "json-rollback"),
+        rollbackRootDirectory: path.join(
+          runtimePaths.runtimeRootDirectory,
+          "persistence",
+          "json-rollback",
+        ),
         documents: postgresDatabase.documents,
         now: options.now,
       });
@@ -232,12 +294,36 @@ export async function createServer(options: CreateServerOptions = {}): Promise<C
       ...(deploymentShape ? { deploymentShape } : {}),
       persistenceAdapter: postgresDatabase ? "postgres" : "json-compatibility",
     };
+    const persistenceDocuments =
+      postgresDatabase?.documents ?? options.structuredDocuments;
     const organizationDocuments = postgresDatabase
       ? createOrganizationContextStructuredDocumentStore(
-        postgresDatabase.documents,
-        security.organizationContextScope,
-      )
-      : undefined;
+          postgresDatabase.documents,
+          security.organizationContextScope,
+        )
+      : options.structuredDocuments;
+    const organizationAuthorizer =
+      postgresDatabase && security.config.mode === "oidc-bearer"
+        ? new AuthorizeOperationService(
+            createOrganizationAuthorizationPolicy({
+              ...createStructuredOrganizationRepositories(
+                postgresDatabase.documents,
+              ),
+              tenantPlacement: security.config.tenantPlacement,
+            }),
+            {
+              audit: createJsonlSecurityAuditLogAdapter(
+                path.join(
+                  config.runtimeRootDirectory,
+                  "security",
+                  "authorization-audit.jsonl",
+                ),
+              ),
+              createEventId: () => `evt-${randomUUID()}`,
+              now: options.now,
+            },
+          )
+        : undefined;
     const serverHost = composeServerHost({
       env: options.env,
       logging: {
@@ -250,20 +336,40 @@ export async function createServer(options: CreateServerOptions = {}): Promise<C
       organizationContextProvider: postgresDatabase
         ? security.organizationContextScope
         : undefined,
-      ...(postgresDatabase ? {
-        persistence: {
-          documents: postgresDatabase.documents,
-          organizationDocuments,
-        },
-      } : {}),
+      organizationAuthorizer,
+      runtimeDatabases: options.runtimeDatabases,
+      ...(persistenceDocuments
+        ? {
+            persistence: {
+              documents: persistenceDocuments,
+              organizationDocuments,
+            },
+          }
+        : {}),
       artifactRepo: {
-        huggingFaceAccessToken: options.env?.HF_TOKEN ?? options.env?.HUGGING_FACE_TOKEN,
-        huggingFaceTokenConfigFilePath: path.join(config.storageRootDirectory, "config", "hugging-face-token.json"),
+        huggingFaceAccessToken:
+          options.env?.HF_TOKEN ?? options.env?.HUGGING_FACE_TOKEN,
+        huggingFaceTokenConfigFilePath: path.join(
+          config.storageRootDirectory,
+          "config",
+          "hugging-face-token.json",
+        ),
+        providerCredentialRootDirectory: path.join(
+          config.storageRootDirectory,
+          "config",
+          "provider-credentials",
+        ),
+        huggingFaceCredentialMigrationOrganizationId:
+          options.env?.HF_TOKEN_ORGANIZATION_ID ??
+          (security.config.tenantPlacement.mode === "dedicated"
+            ? security.config.tenantPlacement.organizationId
+            : undefined),
       },
     });
+    closeRuntimeDatabasesOnFailure = () => serverHost.closeRuntimeDatabases();
 
     const app = express();
-    app.use(express.json({ limit: "5mb" }));
+    app.enable("case sensitive routing");
     applySecurityHeaders(app);
     registerOperationalHealthRoutes(
       app,
@@ -272,32 +378,55 @@ export async function createServer(options: CreateServerOptions = {}): Promise<C
       postgresDatabase,
     );
     app.use(security.middleware);
-    if (postgresDatabase && security.config.mode === "oidc-bearer") {
-      const organizationRepositories = createStructuredOrganizationRepositories(postgresDatabase.documents);
-      const organizationAuthorizer = new AuthorizeOperationService(
-        createOrganizationAuthorizationPolicy({
-          ...organizationRepositories,
-          tenantPlacement: security.config.tenantPlacement,
+    if (organizationAuthorizer) {
+      app.use(
+        createExpressOrganizationAuthorizationMiddleware({
+          authorizer: organizationAuthorizer,
         }),
-        {
-          audit: createJsonlSecurityAuditLogAdapter(
-            path.join(config.runtimeRootDirectory, "security", "authorization-audit.jsonl"),
-          ),
-          createEventId: () => `evt-${randomUUID()}`,
-          now: options.now,
-        },
       );
-      app.use(createExpressOrganizationAuthorizationMiddleware({
-        authorizer: organizationAuthorizer,
-      }));
     }
+    app.use(express.json({ limit: "5mb" }));
+    app.use(createExpressJsonBodyErrorMiddleware());
     registerSecurityRoutes(app, {
-      getStatus: async (authContext) => ({ ...(await security.services.getStatusService.execute({ config: { mode: security.config.mode, httpsRequired: security.config.httpsRequired, authRequired: security.config.authRequired, allowLocalhostWithoutAuth: security.config.allowLocalhostWithoutAuth }, httpsEnabled: security.config.httpsEnabled, pairingEnabled: security.config.pairingEnabled, now: new Date(), currentAuthContext: authContext, devSecurityToggleEnabled: security.config.devSecurityToggleEnabled, devSecurityEnforcementMode: security.devSecurityEnforcement.isEnabled() ? security.devSecurityEnforcement.getMode() : undefined, requiresRestartToChangeTransportSecurity: true })), tls: security.config.tlsStatus }),
-      completePairing: (body) => security.services.completePairing.execute(body),
-      revokeToken: (body) => security.credentials.revokeDevice({ deviceId: body.deviceId, revokedAt: new Date() }),
-      getDevMode: security.devSecurityEnforcement.isEnabled() ? () => security.devSecurityEnforcement.getMode() : undefined,
-      setDevMode: security.devSecurityEnforcement.isEnabled() ? (mode) => security.devSecurityEnforcement.setMode(mode) : undefined,
-      getLocalCaPem: security.config.tlsStatus?.mode === "auto-local-ca" ? security.config.tlsMaterial?.getLocalCaPublicCertificatePem : undefined,
+      getStatus: async (authContext) => ({
+        ...(await security.services.getStatusService.execute({
+          config: {
+            mode: security.config.mode,
+            httpsRequired: security.config.httpsRequired,
+            authRequired: security.config.authRequired,
+            allowLocalhostWithoutAuth:
+              security.config.allowLocalhostWithoutAuth,
+          },
+          httpsEnabled: security.config.httpsEnabled,
+          pairingEnabled: security.config.pairingEnabled,
+          now: new Date(),
+          currentAuthContext: authContext,
+          devSecurityToggleEnabled: security.config.devSecurityToggleEnabled,
+          devSecurityEnforcementMode:
+            security.devSecurityEnforcement.isEnabled()
+              ? security.devSecurityEnforcement.getMode()
+              : undefined,
+          requiresRestartToChangeTransportSecurity: true,
+        })),
+        tls: security.config.tlsStatus,
+      }),
+      completePairing: (body) =>
+        security.services.completePairing.execute(body),
+      revokeToken: (body) =>
+        security.credentials.revokeDevice({
+          deviceId: body.deviceId,
+          revokedAt: new Date(),
+        }),
+      getDevMode: security.devSecurityEnforcement.isEnabled()
+        ? () => security.devSecurityEnforcement.getMode()
+        : undefined,
+      setDevMode: security.devSecurityEnforcement.isEnabled()
+        ? (mode) => security.devSecurityEnforcement.setMode(mode)
+        : undefined,
+      getLocalCaPem:
+        security.config.tlsStatus?.mode === "auto-local-ca"
+          ? security.config.tlsMaterial?.getLocalCaPublicCertificatePem
+          : undefined,
     });
 
     serverHost.registerApi({
@@ -316,11 +445,15 @@ export async function createServer(options: CreateServerOptions = {}): Promise<C
       async closePersistence() {
         if (persistenceClosed) return;
         persistenceClosed = true;
+        await serverHost.closeRuntimeDatabases();
         await postgresDatabase?.close();
       },
     };
   } finally {
-    if (!startupSucceeded) await postgresDatabase?.close();
+    if (!startupSucceeded) {
+      await closeRuntimeDatabasesOnFailure?.();
+      await postgresDatabase?.close();
+    }
   }
 }
 
@@ -334,13 +467,23 @@ function registerOperationalHealthRoutes(
     response.status(200).json({ status: "live" });
   });
   app.get("/health/ready", async (_request, response) => {
-    const [persistenceResult, artifactStorageResult] = await Promise.allSettled([
-      postgresDatabase?.checkHealth() ?? Promise.resolve(undefined),
-      checkArtifactStorageReadiness(storageRootDirectory),
-    ]);
-    const persistenceHealth = persistenceResult.status === "fulfilled" ? persistenceResult.value : undefined;
-    const persistenceReady = persistenceResult.status === "fulfilled" && (persistenceHealth?.healthy ?? true);
-    const artifactStorage = artifactStorageResult.status === "fulfilled" ? artifactStorageResult.value : undefined;
+    const [persistenceResult, artifactStorageResult] = await Promise.allSettled(
+      [
+        postgresDatabase?.checkHealth() ?? Promise.resolve(undefined),
+        checkArtifactStorageReadiness(storageRootDirectory),
+      ],
+    );
+    const persistenceHealth =
+      persistenceResult.status === "fulfilled"
+        ? persistenceResult.value
+        : undefined;
+    const persistenceReady =
+      persistenceResult.status === "fulfilled" &&
+      (persistenceHealth?.healthy ?? true);
+    const artifactStorage =
+      artifactStorageResult.status === "fulfilled"
+        ? artifactStorageResult.value
+        : undefined;
     const artifactStorageReady = artifactStorageResult.status === "fulfilled";
     const ready = persistenceReady && artifactStorageReady;
     const payload: PersistenceReadinessResponse = {
@@ -349,12 +492,14 @@ function registerOperationalHealthRoutes(
         persistence: {
           status: persistenceReady ? "ready" : "not-ready",
           adapter,
-          ...(persistenceHealth ? {
-            schemaVersion: persistenceHealth.schemaVersion,
-            expectedSchemaVersion: persistenceHealth.expectedSchemaVersion,
-            queryLatencyMs: persistenceHealth.queryLatencyMs,
-            pool: persistenceHealth.pool,
-          } : {}),
+          ...(persistenceHealth
+            ? {
+                schemaVersion: persistenceHealth.schemaVersion,
+                expectedSchemaVersion: persistenceHealth.expectedSchemaVersion,
+                queryLatencyMs: persistenceHealth.queryLatencyMs,
+                pool: persistenceHealth.pool,
+              }
+            : {}),
         },
         artifactStorage: {
           status: artifactStorageReady ? "ready" : "not-ready",
@@ -377,9 +522,14 @@ async function checkArtifactStorageReadiness(
   };
 }
 
-export function createServerListener(createdServer: CreatedServer): ServerListener {
+export function createServerListener(
+  createdServer: CreatedServer,
+): ServerListener {
   if (createdServer.config.security.httpsEnabled) {
-    return https.createServer(createHttpsServerOptions(createdServer.config.security.tlsMaterial), createdServer.app);
+    return https.createServer(
+      createHttpsServerOptions(createdServer.config.security.tlsMaterial),
+      createdServer.app,
+    );
   }
 
   return http.createServer(createdServer.app);

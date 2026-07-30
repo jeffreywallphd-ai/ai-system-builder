@@ -1,0 +1,402 @@
+{
+  "blockers": [],
+  "chunks": [
+    {
+      "areas": [
+        "System Compose draft history and property editing",
+        "Asset customization and studio draft editing",
+        "Composition preview presentation"
+      ],
+      "chunkId": "quiet-draft-editing",
+      "completedAt": "2026-07-29T23:51:04Z",
+      "criteriaIds": [
+        "automatic-pre-save-notices-removed",
+        "actionable-save-feedback-preserved"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [],
+      "id": "remove-automatic-pre-save-reminders-quiet-draft-editing",
+      "incrementId": "remove-automatic-pre-save-reminders",
+      "summary": "Removed automatic draft-change and save-later messages from System Compose property, styling, asset, connection, undo/redo, layout, asset customization, asset studio, and preview paths while preserving the compact dirty-state badge and actionable blockers.",
+      "tests": [
+        "System Compose and asset customization interaction tests passed",
+        "Composition preview and asset studio tests passed",
+        "Desktop and thin-client renderer typechecks passed",
+        "Production source scan found no prohibited pre-save reminder copy"
+      ],
+      "title": "Quiet draft editing"
+    },
+    {
+      "areas": [
+        "modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts",
+        "modules/ui/shared/system-builder/tests",
+        "modules/ui/shared/asset-authoring/tests",
+        "modules/ui/shared/asset-studio/tests"
+      ],
+      "chunkId": "feedback-guard-and-qualification",
+      "completedAt": "2026-07-30T00:00:09Z",
+      "criteriaIds": [
+        "automatic-pre-save-notices-removed",
+        "actionable-save-feedback-preserved",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "modules/ui/shared/README.md",
+        "docs/context/packs/desktop-styling.pack.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "remove-automatic-pre-save-reminders-feedback-guard-and-qualification",
+      "incrementId": "remove-automatic-pre-save-reminders",
+      "summary": "Added a production-source regression guard for automatic pre-save reminder copy, preserved actionable save and blocked-action feedback, documented the quiet-draft policy, and completed focused plus repository-wide verification.",
+      "tests": [
+        "Focused notification, System Builder, asset customization, and Asset Studio tests passed.",
+        "Desktop and thin-client TypeScript checks passed.",
+        "npm test passed: 2755 tests, 2752 passed, 3 skipped, 0 failed.",
+        "npm run package passed."
+      ],
+      "title": "Feedback guard and qualification"
+    }
+  ],
+  "completion": {
+    "completedAt": "2026-07-30T00:00:10Z",
+    "summary": "Completed the quiet pre-save feedback refinement end to end with regression coverage, documented interaction guidance, full-suite verification, and successful desktop packaging."
+  },
+  "createdAt": "2026-07-29T23:46:53Z",
+  "currentIncrementId": null,
+  "decisions": [],
+  "discovery": {
+    "constraints": [
+      "Remove automatic messages that merely report a local draft edit or remind the user to save.",
+      "Retain the existing quiet unsaved/dirty affordance without creating notifications.",
+      "Retain save-attempt validation, errors, and action blockers that users must resolve.",
+      "Do not change save, persistence, authorization, validation, or runtime behavior.",
+      "Preserve all unrelated uncommitted work."
+    ],
+    "decisionRequired": false,
+    "recordedAt": "2026-07-29T23:46:57Z",
+    "securityImpact": {
+      "abuseCases": [],
+      "assets": [],
+      "controls": [],
+      "disposition": "not-security-relevant",
+      "residualRisks": [],
+      "summary": "This refinement only removes renderer-level pre-save reminders; it does not change a trust boundary, authority decision, persisted data, sensitive payload, executable input, dependency, or side effect, and required fail-closed blockers remain inline.",
+      "trustBoundaries": [],
+      "verification": []
+    },
+    "sources": [
+      {
+        "note": "Owns draft history, dirty state, and fine-grained composition notices.",
+        "title": "System Compose workspace",
+        "url": "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx"
+      },
+      {
+        "note": "Provides the existing repository-wide feedback anti-drift boundary.",
+        "title": "Notification migration guard",
+        "url": "modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts"
+      },
+      {
+        "note": "Defines transient versus contextual feedback ownership.",
+        "title": "Shared UI guidance",
+        "url": "modules/ui/shared/README.md"
+      }
+    ],
+    "summary": "System Compose emits edit-by-edit draft notices for property, styling, asset, connection, undo/redo, and layout changes; equivalent automatic save-later prompts also exist in asset customization, asset studio, and unsaved preview surfaces."
+  },
+  "evidence": [
+    {
+      "artifact": null,
+      "command": "npm test",
+      "criterionId": "automatic-pre-save-notices-removed",
+      "id": "evidence-1",
+      "incrementId": "remove-automatic-pre-save-reminders",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T00:00:10Z",
+      "summary": "Renderer interaction tests and the production-source migration guard confirm that draft edits no longer emit automatic save-later or fine-grained local-change notices."
+    },
+    {
+      "artifact": null,
+      "command": "npm test",
+      "criterionId": "actionable-save-feedback-preserved",
+      "id": "evidence-2",
+      "incrementId": "remove-automatic-pre-save-reminders",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T00:00:10Z",
+      "summary": "Regression assertions retain blocked-navigation guidance, save-attempt validation, save errors, and post-save outcomes while compact dirty-state indicators remain visible."
+    },
+    {
+      "artifact": "docs/tmp/quiet-pre-save-feedback-refinement-implementation-report.md",
+      "command": null,
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-3",
+      "incrementId": "remove-automatic-pre-save-reminders",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T00:00:10Z",
+      "summary": "Recorded as not-security-relevant: the change only removes renderer presentation reminders and does not alter authority, persistence, transport, runtime execution, or fail-closed validation; actionable blockers remain."
+    }
+  ],
+  "feedback": [],
+  "finalApproval": {
+    "approvedAt": "2026-07-30T00:05:25Z",
+    "note": "User explicitly approved the completed notification-center work and its quiet pre-save feedback refinement on 2026-07-29."
+  },
+  "history": [
+    {
+      "eventFingerprint": "bc0b79f1d1e0753c12336d5dc58b3a1fe44183870553ab83e884f2e05363f960",
+      "recordedAt": "2026-07-29T23:46:57Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "27a31cc58c752e5dffb32fc67797f3cba101c004a3052126cd8415a17e2b8951",
+      "recordedAt": "2026-07-29T23:46:59Z",
+      "sequence": 2,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "a215ecdca747875c71e20840c8e50a6801d2f07ff9bf6e333f3b7ca3c164877e",
+      "recordedAt": "2026-07-29T23:48:07Z",
+      "sequence": 3,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "f3789969ee5e094becd4105fa691b2c1495ad1ed08c99bae336cb3d3d3f9ed55",
+      "recordedAt": "2026-07-29T23:48:11Z",
+      "sequence": 4,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "f461d7fc4134169916f4b32ac0f1263fb456eb53e328ce0c638006ea450f109c",
+      "recordedAt": "2026-07-29T23:48:14Z",
+      "sequence": 5,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "ad90d74a97cc05332c75b91363694038a27d420e867789d3e8d323297643b1d3",
+      "recordedAt": "2026-07-29T23:48:18Z",
+      "sequence": 6,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "6767cdcd0375af2e7c26de58093790b6c29dc21841ef84dbee600d5c3d573997",
+      "recordedAt": "2026-07-29T23:51:04Z",
+      "sequence": 7,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "9604dc2cc19b155de9d3dea2da89e47896894d22f9a166cf8d6d8347634e29b4",
+      "recordedAt": "2026-07-30T00:00:09Z",
+      "sequence": 8,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "2b3a361f034bc991a1d78e036a7f1272b600cd02cfcef4c2bc2234d1f6e3fb3c",
+      "recordedAt": "2026-07-30T00:00:10Z",
+      "sequence": 9,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "42f19813f42eafca72a8515e53d1fc830ac3e782912203b5bfedfcd8705c909d",
+      "recordedAt": "2026-07-30T00:00:10Z",
+      "sequence": 10,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a2182e543cf7109e30999207ef4d1257ee5fccd7b5ae4303350eddfce2516c9e",
+      "recordedAt": "2026-07-30T00:00:10Z",
+      "sequence": 11,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3cdceefb15d45f2b46d4cad387864361dcf1ffec6c4ab8786bec143d74ab3b28",
+      "recordedAt": "2026-07-30T00:00:10Z",
+      "sequence": 12,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "973c25fd7dd49b63d69762465ab63ea6266bd76202f7ad846dd99c787d1dd803",
+      "recordedAt": "2026-07-30T00:00:10Z",
+      "sequence": 13,
+      "type": "roadmap-completed"
+    },
+    {
+      "eventFingerprint": "162f437436031ec46f9899c1a5b7567bca7997296bdaf25bde177846c18da043",
+      "recordedAt": "2026-07-30T00:05:25Z",
+      "sequence": 14,
+      "type": "final-approval-recorded"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Draft changes no longer produce notifications or inline messages that merely announce the edit or instruct the user to save.",
+          "id": "automatic-pre-save-notices-removed",
+          "qualification": "local"
+        },
+        {
+          "description": "Dirty-state affordances, save-attempt validation, persistence failures, and action blockers remain accessible and actionable.",
+          "id": "actionable-save-feedback-preserved",
+          "qualification": "local"
+        },
+        {
+          "description": "The not-security-relevant disposition is confirmed and no required fail-closed security or readiness blocker is removed.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-30T00:00:10Z",
+      "completedChunks": [
+        "quiet-draft-editing",
+        "feedback-guard-and-qualification"
+      ],
+      "completionSummary": "Automatic pre-save and fine-grained draft-change messages are removed across the renderer, actionable save feedback remains, and all focused and repository completion checks pass.",
+      "deliverables": [
+        "Systemwide removal of automatic draft-change and save-later messages",
+        "Preserved quiet dirty-state indicator and actionable save/blocking feedback",
+        "Anti-drift coverage for prohibited pre-save reminder copy",
+        "Updated shared UI producer guidance",
+        "Focused and repository completion evidence"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "Removing post-save success or save-failure outcomes",
+        "Removing validation shown after a save attempt",
+        "Removing blockers shown when switching, publishing, or reviewing would lose or misuse unsaved work",
+        "Changing persistence, draft, undo/redo, authorization, or runtime semantics"
+      ],
+      "id": "remove-automatic-pre-save-reminders",
+      "number": 1,
+      "objective": "Stop edit-by-edit and save-later messages throughout supported renderer surfaces while preserving actionable contextual feedback.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "The existing compact Unsaved changes badge is the desired quiet draft-state affordance.",
+          "Messages produced only after a save attempt or a blocked navigation/review/publish action remain in scope as actionable feedback."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "automatic-pre-save-notices-removed",
+              "actionable-save-feedback-preserved"
+            ],
+            "id": "quiet-draft-editing",
+            "outcome": "Draft changes update visible state without automatic pre-save messages, while quiet dirty state and action blockers remain.",
+            "title": "Quiet draft editing"
+          },
+          {
+            "criteriaIds": [
+              "automatic-pre-save-notices-removed",
+              "actionable-save-feedback-preserved",
+              "security-impact-reviewed"
+            ],
+            "id": "feedback-guard-and-qualification",
+            "outcome": "Tests and guidance prevent automatic pre-save reminders from returning and verify the non-security-relevant boundary.",
+            "title": "Feedback guard and qualification"
+          }
+        ],
+        "completionTests": [
+          "Documentation and architecture checks",
+          "Server and thin-client builds",
+          "Desktop Electron Forge package",
+          "Full repository non-browser suite"
+        ],
+        "documentation": [
+          "Shared UI notification producer guidance",
+          "Successor roadmap and temporary report"
+        ],
+        "fingerprint": "1812cac9129052f0e095da0229b181cf2801767db34d08d86a2296b850cb26a8",
+        "focusedTests": [
+          "System Builder workspace interaction tests for property/layout draft changes and blockers",
+          "Asset customization/studio and composition preview tests",
+          "Notification migration anti-drift guard",
+          "Desktop and thin-client renderer typechecks"
+        ],
+        "recordedAt": "2026-07-29T23:48:18Z",
+        "rollback": "Restore only removed presentation copy without changing dirty state, draft history, save behavior, or blockers.",
+        "steps": [
+          "Make System Compose draft changes clear stale notices without producing edit-by-edit messages.",
+          "Remove equivalent automatic save-later copy from asset customization, asset studio, and composition preview.",
+          "Update tests and the migration guard to require quiet draft changes while retaining actionable blockers.",
+          "Update shared UI guidance and run focused plus repository completion gates."
+        ],
+        "summary": "Remove automatic pre-save copy at shared draft boundaries, retain quiet dirty state and actionable blockers, then enforce the distinction with focused anti-drift coverage and completion gates."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-29T23:48:14Z",
+          "risks": [
+            "A broad removal could accidentally hide validation or a blocker shown only after a user action.",
+            "Stale success or informational copy could remain visible after a later draft edit unless the central edit boundary clears it.",
+            "The refinement is not security relevant because it changes presentation only; security/readiness blockers must remain inline."
+          ],
+          "sources": [
+            {
+              "title": "System Compose workspace",
+              "url": "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx"
+            },
+            {
+              "title": "Asset customization editor",
+              "url": "modules/ui/shared/asset-authoring/AssetDerivedCustomizationEditor.tsx"
+            },
+            {
+              "title": "Asset studio",
+              "url": "modules/ui/shared/asset-studio/UnifiedAssetStudio.tsx"
+            },
+            {
+              "title": "Composition preview",
+              "url": "modules/ui/shared/system-builder/SystemCompositionPreview.tsx"
+            },
+            {
+              "title": "Notification migration guard",
+              "url": "modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts"
+            }
+          ],
+          "summary": "System Compose centralizes draft-change feedback through commitDraft/applyDraftHistory, so clearing notices at that boundary removes property, styling, add/remove/move, connection, undo/redo, and layout reminders without changing draft semantics. Additional automatic pre-save copy is isolated to asset customization, asset studio, and composition preview presentation."
+        }
+      ],
+      "rollback": "Restore only the removed presentation copy without changing draft state, save behavior, or blockers.",
+      "startedAt": "2026-07-29T23:48:11Z",
+      "status": "completed",
+      "title": "Quiet draft editing feedback",
+      "verification": [
+        "Run focused System Compose, asset customization/studio, preview, and notification migration guard tests.",
+        "Run desktop and thin-client typechecks plus applicable documentation, architecture, build, package, and full-suite completion gates.",
+        "Review the final diff to confirm unrelated work and required blockers remain intact."
+      ],
+      "workPackages": [
+        {
+          "id": "quiet-draft-editing",
+          "outcome": "Composition, property, asset, and preview changes update their visible state without emitting automatic pre-save messages.",
+          "title": "Quiet draft editing"
+        },
+        {
+          "id": "feedback-guard-and-qualification",
+          "outcome": "Focused tests and guidance prevent pre-save reminders from returning while preserving validation and blockers.",
+          "title": "Feedback guard and qualification"
+        }
+      ]
+    }
+  ],
+  "name": "Quiet Pre-Save Feedback Refinement",
+  "objective": "Remove automatic pre-save reminders from draft editing while preserving actionable validation, blockers, and quiet dirty-state affordances.",
+  "paths": {
+    "report": "docs/tmp/quiet-pre-save-feedback-refinement-implementation-report.md",
+    "roadmap": "docs/quiet-pre-save-feedback-refinement-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/quiet-pre-save-feedback-refinement/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": {
+    "approvedAt": "2026-07-29T23:48:07Z",
+    "fingerprint": "68fd9be6d77f1cd2621ef550b7f88bb3d35e8e100dc5860ae8b5f2484312307e",
+    "note": "The user explicitly approved the one-increment quiet pre-save feedback refinement by saying Proceed."
+  },
+  "schemaVersion": 1,
+  "slug": "quiet-pre-save-feedback-refinement",
+  "status": "final-approved",
+  "updatedAt": "2026-07-30T00:05:25Z"
+}

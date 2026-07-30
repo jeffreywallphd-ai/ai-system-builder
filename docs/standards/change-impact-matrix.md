@@ -6,6 +6,10 @@
 
 Use this matrix before editing. “Inspect” does not mean “change”: it identifies evidence needed to preserve existing contracts and dependency direction. Add narrower checks when the affected area has them.
 
+## Universal Security Impact Screen
+
+Before selecting rows, apply `docs/standards/security-by-design-standards.md` and record `not-security-relevant` with a concrete rationale or `security-relevant` with protected assets, trust boundaries, abuse/failure cases, controls, verification, and residual risk. Apply every matching row; a change does not stop being security-relevant because it lives outside a security folder. Re-run the screen if another boundary appears during implementation.
+
 | Change trigger | Inspect before editing | Likely coordinated updates | Minimum verification |
 | --- | --- | --- | --- |
 | Domain entity, value object, or invariant | Domain callers, application use cases, serializers/mappers, domain tests | Domain tests; application mapping only when the public shape changes; ADR/architecture for semantic decisions | Focused domain and application tests; `npm test` |
@@ -21,6 +25,7 @@ Use this matrix before editing. “Inspect” does not mean “change”: it ide
 | Shared or platform UI | UI-facing contract/client, presenter/mapper, accessibility and empty/error states | Desktop/thin-client parity only when requested; UI tests/styles/readmes | Presenter/component tests and affected client build |
 | Workspace-owned behavior | Contract request context, clients, all transports, use cases, ports, providers, persistence keys | Every propagation layer and workspace docs/context | Missing-context failure, cross-workspace isolation, same-id non-overwrite, legacy fallback rejection |
 | Security boundary or policy | Threat/trust boundary, authn/authz ports, transport enforcement, credential store, audit/redaction | ADR/security architecture, host config, tests, operator guidance | Denial paths, privilege boundaries, secret/path redaction, secure-mode startup |
+| New or changed trust/data/execution boundary | Protected assets, actors/authority, entry points, untrusted inputs/outputs, side effects, bounds, rollback and residual risk | Security standard, ADR-0015, applicable threat model, owning contracts/services/adapters/hosts | Positive behavior plus denial/malformed/failure-path, isolation, bounds, and non-disclosure evidence |
 | Logging or diagnostics | Logging port, event taxonomy, sanitization, host sink, operational consumers | Logging standard/context and affected tests | Structured shape, level filtering, sink failure, sensitive-data negative assertions |
 | Repository script, test runner, or CI | Local command parity, failure/exit semantics, generated artifacts, workflow permissions/actions | `package.json`, contributor/agent docs, workflow and script tests | Direct command, negative fixture where feasible, `git diff --check` |
 | Dependency or build configuration | Import sites, lock/version policy, licenses/provenance, runtime compatibility, packaging | Package/build config, CI, security and deployment docs | Clean install/build in affected target; tests; audit findings reviewed rather than auto-fixed |
@@ -32,13 +37,14 @@ Use this matrix before editing. “Inspect” does not mean “change”: it ide
 When several rows apply, plan in dependency order:
 
 1. Clarify or approve the decision.
-2. Define domain semantics and stable contract/port boundaries.
-3. Implement application behavior.
-4. Implement adapters.
-5. Compose in hosts and expose through transports.
-6. Update clients and UI.
-7. Reconcile canonical docs and downstream context.
-8. Run focused checks, builds, and repository gates.
+2. Record the security impact disposition and threat/control delta.
+3. Define domain semantics and stable contract/port boundaries.
+4. Implement application behavior.
+5. Implement adapters.
+6. Compose in hosts and expose through transports.
+7. Update clients and UI.
+8. Reconcile canonical docs and downstream context.
+9. Run focused checks, builds, and repository gates.
 
 This order describes reasoning and validation; it does not require changing every layer.
 
@@ -50,6 +56,8 @@ Stop and request a decision before implementation when the change would:
 - select an unspecified database, tenancy, migration, synchronization, identity, or deployment policy,
 - make a deferred or proposed capability publicly supported,
 - weaken workspace isolation, authorization, redaction, or compatibility behavior,
+- introduce an unresolved trust, identity, tenancy, secret, sandbox, public exposure, encryption, retention, audit, or residual-risk policy,
+- require a rollback, migration, recovery, or compatibility path that is weaker than the forward security posture,
 - add a new public operation without a clear owning use case and contract family,
 - require destructive migration, credential use, production mutation, or publication.
 

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 
+import { ARTIFACT_UPLOAD_MAXIMUM_BYTES } from "../../../../../../../modules/contracts/artifact-upload";
 import { useArtifactUploadClient } from "./useArtifactUploadClient";
 import type { ArtifactUploadClient, WebsiteIngestionMode } from "../api/desktopArtifactUploadClient";
 import type { UploadViewState } from "../components/ArtifactUploadForm";
@@ -47,15 +48,28 @@ export function useArtifactUploadFeature(
 ): UseArtifactUploadFeatureResult {
   const uploadClient = useArtifactUploadClient(client);
   const [acceptedFileTypes, setAcceptedFileTypes] = useState<string>("*");
+  const [maximumUploadBytes, setMaximumUploadBytes] = useState(
+    ARTIFACT_UPLOAD_MAXIMUM_BYTES,
+  );
 
-  const fileUpload = useFileArtifactUpload(uploadClient, onUploadComplete, { persistState: client === undefined, workspaceId });
+  const fileUpload = useFileArtifactUpload(uploadClient, onUploadComplete, {
+    persistState: client === undefined,
+    workspaceId,
+    maximumBytes: maximumUploadBytes,
+  });
   const websiteIngestion = useWebsiteArtifactIngestion(uploadClient, onUploadComplete, workspaceId);
 
   useEffect(() => {
     void uploadClient.getAcceptedTypes().then((policy) => {
       setAcceptedFileTypes(toHtmlFileAcceptAttribute(policy));
+      setMaximumUploadBytes(
+        typeof policy.maximumBytes === "number" && Number.isFinite(policy.maximumBytes) && policy.maximumBytes > 0
+          ? Math.min(policy.maximumBytes, ARTIFACT_UPLOAD_MAXIMUM_BYTES)
+          : ARTIFACT_UPLOAD_MAXIMUM_BYTES,
+      );
     }).catch(() => {
       setAcceptedFileTypes("*");
+      setMaximumUploadBytes(ARTIFACT_UPLOAD_MAXIMUM_BYTES);
     });
   }, [uploadClient]);
 

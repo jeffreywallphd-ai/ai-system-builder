@@ -21,7 +21,20 @@ export interface SystemDeploymentRepositoryPort {
     workspaceId: WorkspaceId,
     releaseId?: SystemReleaseId,
   ): Promise<readonly SystemDeployment[]>;
+  readCurrentDeployment(
+    organizationId: OrganizationId,
+    workspaceId: WorkspaceId,
+    releaseId: SystemReleaseId,
+    hostTargetId: string,
+  ): Promise<SystemDeployment | undefined>;
+  createCurrentDeployment(
+    deployment: SystemDeployment,
+  ): Promise<SystemDeployment>;
   updateDeployment(
+    deployment: SystemDeployment,
+    expectedRevision: number,
+  ): Promise<SystemDeployment>;
+  retireCurrentDeployment(
     deployment: SystemDeployment,
     expectedRevision: number,
   ): Promise<SystemDeployment>;

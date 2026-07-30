@@ -1,6 +1,7 @@
 import type { AssetDefinitionRepositoryPort } from "../../../application/ports/asset";
 import type {
   AssetImplementationArtifactPort,
+  AssetImplementationBackingResourceRepositoryPort,
   AssetImplementationRepositoryPort,
 } from "../../../application/ports/asset-implementation";
 import {
@@ -23,15 +24,23 @@ export function composeAssetPackageLifecycle(options: {
   readonly documents: StructuredDocumentStore;
   readonly definitions: AssetDefinitionRepositoryPort;
   readonly implementations: AssetImplementationRepositoryPort;
+  readonly backingResources: AssetImplementationBackingResourceRepositoryPort;
   readonly artifacts: AssetImplementationArtifactPort;
   readonly signatureVerifier?: AssetPackageSignatureVerifier;
   readonly nextInspectionId: () => string;
   readonly now: () => string;
+  readonly repository?: ReturnType<typeof createStructuredAssetPackageRepository>;
 }) {
-  const repository = createStructuredAssetPackageRepository(options.documents);
+  const repository =
+    options.repository ??
+    createStructuredAssetPackageRepository(options.documents);
   const inspector = createAisbPackageInspector();
   const trust = createAssetPackageTrustVerifier({ signatures: options.signatureVerifier });
-  const activate = new ActivateAssetPackageUseCase(repository, options.now);
+  const activate = new ActivateAssetPackageUseCase(
+    repository,
+    options.implementations,
+    options.now,
+  );
   return {
     repository,
     useCases: {
@@ -49,11 +58,16 @@ export function composeAssetPackageLifecycle(options: {
         trust,
         definitions: options.definitions,
         implementations: options.implementations,
+        backingResources: options.backingResources,
         now: options.now,
       }),
       list: new ListAssetPackagesUseCase(repository),
       activate,
-      disable: new DisableAssetPackageUseCase(repository, options.now),
+      disable: new DisableAssetPackageUseCase(
+        repository,
+        options.implementations,
+        options.now,
+      ),
       rollback: new RollbackAssetPackageUseCase(repository, activate),
     },
   };

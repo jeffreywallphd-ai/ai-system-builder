@@ -39,6 +39,7 @@ describe("OIDC bearer token verifier", () => {
     });
     assert.equal(context.authMethod, "oidc-bearer");
     assert.equal(context.principal.kind, "user");
+    assert.deepEqual(context.principal.scopes, []);
     assert.deepEqual(context.principal.externalIdentity, {
       issuer: config.issuer,
       subject: "subject-1",

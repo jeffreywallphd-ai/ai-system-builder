@@ -2,7 +2,13 @@
 import { JSDOM } from "jsdom";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "../../../../../modules/testing/node-test";
+import {
+  afterEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "../../../../../modules/testing/node-test";
 
 import { ArtifactsPage } from "../pages/ArtifactsPage";
 import { AssetLibraryPage } from "../pages/AssetLibraryPage";
@@ -12,7 +18,9 @@ import { SettingsPage } from "../pages/SettingsPage";
 import { SystemBuilderPage } from "../pages/SystemBuilderPage";
 import { pageSectionLoadingPolicy } from "../pageSectionLoadingPolicy";
 
-const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://localhost/" });
+const dom = new JSDOM("<!doctype html><html><body></body></html>", {
+  url: "http://localhost/",
+});
 (globalThis as any).window = dom.window;
 (globalThis as any).document = dom.window.document;
 (globalThis as any).Event = dom.window.Event;
@@ -37,53 +45,178 @@ function createDesktopApiMock(): DesktopApiMock {
     memoryDiagnosticsEnabled: false,
     listModels: vi.fn().mockResolvedValue(envelope({ models: [] })),
     browseModels: vi.fn().mockResolvedValue(envelope({ models: [] })),
-    trainModel: vi.fn().mockResolvedValue(envelope({ runId: "r1", status: "queued" })),
-    readModelTrainingStatus: vi.fn().mockResolvedValue(envelope({ runId: "r1", status: "succeeded" })),
+    trainModel: vi
+      .fn()
+      .mockResolvedValue(envelope({ runId: "r1", status: "queued" })),
+    readModelTrainingStatus: vi
+      .fn()
+      .mockResolvedValue(envelope({ runId: "r1", status: "succeeded" })),
     validateModel: vi.fn().mockResolvedValue(envelope({ status: "valid" })),
     publishModel: vi.fn().mockResolvedValue(envelope({ published: true })),
-    downloadModel: vi.fn().mockResolvedValue(envelope({ model: {}, download: {} })),
+    downloadModel: vi
+      .fn()
+      .mockResolvedValue(envelope({ model: {}, download: {} })),
     saveModelReference: vi.fn().mockResolvedValue(envelope({ model: {} })),
     getModelDetails: vi.fn().mockResolvedValue(envelope({ model: {} })),
-    deleteModelRecord: vi.fn().mockResolvedValue(envelope({ deletedModelRecordId: "m1" })),
+    deleteModelRecord: vi
+      .fn()
+      .mockResolvedValue(envelope({ deletedModelRecordId: "m1" })),
     browseArtifacts: vi.fn().mockResolvedValue(envelope({ items: [] })),
-    browseUnregisteredArtifacts: vi.fn().mockResolvedValue(envelope({ items: [] })),
-    readArtifactDetail: vi.fn().mockResolvedValue(envelope({ locator: { storageKey: "uploads/a.txt" } })),
-    readArtifactContentDescriptor: vi.fn().mockResolvedValue(envelope({ availability: "available" })),
-    readArtifactMedia: vi.fn().mockResolvedValue({ mediaType: "text/plain", bytes: new Uint8Array() }),
+    browseUnregisteredArtifacts: vi
+      .fn()
+      .mockResolvedValue(envelope({ items: [] })),
+    readArtifactDetail: vi
+      .fn()
+      .mockResolvedValue(
+        envelope({ locator: { storageKey: "uploads/a.txt" } }),
+      ),
+    readArtifactContentDescriptor: vi
+      .fn()
+      .mockResolvedValue(envelope({ availability: "available" })),
+    readArtifactMedia: vi
+      .fn()
+      .mockResolvedValue({ mediaType: "text/plain", bytes: new Uint8Array() }),
     createArtifactMediaViewUrl: vi.fn().mockResolvedValue("blob:preview"),
-    getHuggingFaceTokenStatus: vi.fn().mockResolvedValue(envelope({ configured: false })),
+    getHuggingFaceTokenStatus: vi
+      .fn()
+      .mockResolvedValue(envelope({ configured: false })),
     publishArtifactToRepo: vi.fn().mockResolvedValue(envelope({})),
     localizeArtifactFromRepo: vi.fn().mockResolvedValue(envelope({})),
     registerArtifactFromRepo: vi.fn().mockResolvedValue(envelope({})),
-    browseHuggingFaceNamespaceDatasets: vi.fn().mockResolvedValue(envelope({ datasets: [] })),
-    browseHuggingFaceDatasetParquetFiles: vi.fn().mockResolvedValue(envelope({ files: [] })),
+    browseHuggingFaceNamespaceDatasets: vi
+      .fn()
+      .mockResolvedValue(envelope({ datasets: [] })),
+    browseHuggingFaceDatasetParquetFiles: vi
+      .fn()
+      .mockResolvedValue(envelope({ files: [] })),
     uploadArtifact: vi.fn().mockResolvedValue(envelope({})),
-    getArtifactUploadPolicy: vi.fn().mockResolvedValue(envelope({ maxFileSizeBytes: 1_000_000, allowedMediaTypes: [] })),
+    getArtifactUploadPolicy: vi
+      .fn()
+      .mockResolvedValue(
+        envelope({ maxFileSizeBytes: 1_000_000, allowedMediaTypes: [] }),
+      ),
     ingestWebsitePage: vi.fn().mockResolvedValue(envelope({})),
     ingestWebsitePagesBatch: vi.fn().mockResolvedValue(envelope({})),
     listAssetDefinitions: vi.fn().mockResolvedValue(envelope({ items: [] })),
     readAssetDefinition: vi.fn().mockResolvedValue(envelope({})),
     readAssetDefinitionVersion: vi.fn().mockResolvedValue(envelope({})),
-    listAssetResourceBackedViews: vi.fn().mockResolvedValue(envelope({ items: [] })),
+    listAssetResourceBackedViews: vi
+      .fn()
+      .mockResolvedValue(envelope({ items: [] })),
     readAssetResourceBackedView: vi.fn().mockResolvedValue(envelope({})),
     registerResourceBackedViewAsAsset: vi.fn().mockResolvedValue(envelope({})),
     finalizeGeneratedOutputAsAsset: vi.fn().mockResolvedValue(envelope({})),
-    importExternalRepositoryObjectAsAsset: vi.fn().mockResolvedValue(envelope({})),
-    localizeExternalRepositoryObjectAsAsset: vi.fn().mockResolvedValue(envelope({})),
-    listApplicationSettingDefinitions: vi.fn().mockResolvedValue(envelope({ definitions: [] })),
-    readApplicationSettings: vi.fn().mockResolvedValue(envelope({ values: [] })),
+    importExternalRepositoryObjectAsAsset: vi
+      .fn()
+      .mockResolvedValue(envelope({})),
+    localizeExternalRepositoryObjectAsAsset: vi
+      .fn()
+      .mockResolvedValue(envelope({})),
+    listApplicationSettingDefinitions: vi
+      .fn()
+      .mockResolvedValue(envelope({ definitions: [] })),
+    readApplicationSettings: vi
+      .fn()
+      .mockResolvedValue(envelope({ values: [] })),
     updateApplicationSetting: vi.fn().mockResolvedValue(envelope({})),
     clearApplicationSetting: vi.fn().mockResolvedValue(envelope({})),
-    readPythonRuntimeStatus: vi.fn().mockResolvedValue(envelope({ supervisorStatus: "stopped", runtimeStatus: "stopped", healthy: false, capabilities: [], activeTaskCount: 0, loadedModels: [], logs: [] })),
-    controlPythonRuntime: vi.fn().mockResolvedValue(envelope({ supervisorStatus: "stopped", runtimeStatus: "stopped", healthy: false, capabilities: [], activeTaskCount: 0, loadedModels: [], logs: [] })),
-    startImageGeneration: vi.fn().mockResolvedValue(envelope({ requestId: "img1" })),
-    readImageGeneration: vi.fn().mockResolvedValue(envelope({ status: "succeeded", outputs: [] })),
-    finalizeImageGenerationIfCompleted: vi.fn().mockResolvedValue(envelope({ assets: [] })),
-    cancelImageGeneration: vi.fn().mockResolvedValue(envelope({ cancelled: true })),
-    readComfyUiInstallStatus: vi.fn().mockResolvedValue(envelope({ targetId: "comfyui", status: "installed" })),
-    repairComfyUiInstall: vi.fn().mockResolvedValue(envelope({ targetId: "comfyui", status: "installed" })),
-    readFeatureLifecycleState: vi.fn().mockResolvedValue(envelope({ entries: [{ featureKey: "artifact-remote", policy: "disposable", loaded: false, idle: false, idleTimeoutScheduled: false }] })),
+    readPythonRuntimeStatus: vi
+      .fn()
+      .mockResolvedValue(
+        envelope({
+          supervisorStatus: "stopped",
+          runtimeStatus: "stopped",
+          healthy: false,
+          capabilities: [],
+          activeTaskCount: 0,
+          loadedModels: [],
+          logs: [],
+        }),
+      ),
+    controlPythonRuntime: vi
+      .fn()
+      .mockResolvedValue(
+        envelope({
+          supervisorStatus: "stopped",
+          runtimeStatus: "stopped",
+          healthy: false,
+          capabilities: [],
+          activeTaskCount: 0,
+          loadedModels: [],
+          logs: [],
+        }),
+      ),
+    startImageGeneration: vi
+      .fn()
+      .mockResolvedValue(envelope({ requestId: "img1" })),
+    readImageGeneration: vi
+      .fn()
+      .mockResolvedValue(envelope({ status: "succeeded", outputs: [] })),
+    finalizeImageGenerationIfCompleted: vi
+      .fn()
+      .mockResolvedValue(envelope({ assets: [] })),
+    cancelImageGeneration: vi
+      .fn()
+      .mockResolvedValue(envelope({ cancelled: true })),
+    readComfyUiInstallStatus: vi
+      .fn()
+      .mockResolvedValue(
+        envelope({ targetId: "comfyui", status: "installed" }),
+      ),
+    repairComfyUiInstall: vi
+      .fn()
+      .mockResolvedValue(
+        envelope({ targetId: "comfyui", status: "installed" }),
+      ),
+    readFeatureLifecycleState: vi
+      .fn()
+      .mockResolvedValue(
+        envelope({
+          entries: [
+            {
+              featureKey: "artifact-remote",
+              policy: "disposable",
+              loaded: false,
+              idle: false,
+              idleTimeoutScheduled: false,
+            },
+          ],
+        }),
+      ),
     disposeIdleFeatures: vi.fn().mockResolvedValue(envelope({ results: [] })),
+    listSystemRunWorkflowProfiles: vi
+      .fn()
+      .mockResolvedValue(envelope([])),
+    listSystemPublicationWorkspace: vi.fn().mockResolvedValue(envelope({
+      systems: [{
+        systemId: "system-1",
+        name: "Published assistant",
+        builds: [{
+          buildId: "build-1",
+          systemRevisionId: "revision-1",
+          versionNumber: 1,
+          status: "succeeded",
+          publicationStatus: "published",
+          statusMessage: "Published",
+          releaseId: "release-1",
+          createdAt: "2026-07-29T00:00:00.000Z",
+          publishedAt: "2026-07-29T00:01:00.000Z",
+          outputCount: 1,
+          evidenceCount: 1,
+          diagnosticCount: 0,
+        }],
+      }],
+    })),
+    readPublishedSystemLifecycle: vi.fn().mockResolvedValue(envelope({
+      schemaVersion: "1.0",
+      releaseId: "release-1",
+      state: "not-installed",
+      revision: "lifecycle-1",
+      eligibleActions: ["install"],
+      health: "unknown",
+      diagnostics: [],
+    })),
+    invokePublishedSystemLifecycle: vi.fn(),
   };
 }
 
@@ -120,7 +253,9 @@ describe("desktop page section loading", () => {
   }
 
   it("renders the Models shell without remote browse, training, validation, or publish calls", async () => {
-    const { container: c, api } = await mount(<ModelsPage workspaceId="w1" workspaceName="Workspace" />);
+    const { container: c, api } = await mount(
+      <ModelsPage workspaceId="w1" workspaceName="Workspace" />,
+    );
     expect(c.textContent).toContain("Model Management");
     expect(api.listModels).toHaveBeenCalled();
     expect(api.browseModels).not.toHaveBeenCalled();
@@ -130,7 +265,9 @@ describe("desktop page section loading", () => {
   });
 
   it("renders Image Generation shell without starting Python, ComfyUI, or device detection", async () => {
-    const { container: c, api } = await mount(<ImageGenerationPage workspaceId="w1" workspaceName="Workspace" />);
+    const { container: c, api } = await mount(
+      <ImageGenerationPage workspaceId="w1" workspaceName="Workspace" />,
+    );
     expect(c.textContent).toContain("Image Generation");
     expect(c.textContent).toContain("Runtime readiness");
     expect(api.startImageGeneration).not.toHaveBeenCalled();
@@ -140,7 +277,14 @@ describe("desktop page section loading", () => {
   });
 
   it("renders Artifacts shell and upload form without remote artifact operations or selected detail reads", async () => {
-    const { container: c, api } = await mount(<ArtifactsPage workspaceId="w1" workspaceName="Workspace" refreshToken={0} onUploaded={() => undefined} />);
+    const { container: c, api } = await mount(
+      <ArtifactsPage
+        workspaceId="w1"
+        workspaceName="Workspace"
+        refreshToken={0}
+        onUploaded={() => undefined}
+      />,
+    );
     expect(c.textContent).toContain("Data Management");
     expect(c.textContent).toContain("Artifact Ingestion");
     expect(api.publishArtifactToRepo).not.toHaveBeenCalled();
@@ -151,24 +295,72 @@ describe("desktop page section loading", () => {
 
   it("loads artifact detail only after the browser section selects an artifact", async () => {
     const api = createDesktopApiMock();
-    api.browseArtifacts = vi.fn().mockResolvedValue(envelope({ items: [{ storageKey: "uploads/a.txt", originalName: "a.txt", artifactFamily: "document", mediaType: "text/plain" }] }));
-    const { container: c } = await mount(<ArtifactsPage workspaceId="w1" workspaceName="Workspace" refreshToken={0} onUploaded={() => undefined} />, api);
-    const browserTab = Array.from(c.querySelectorAll("button")).find((button) => button.textContent === "Artifact Browser");
-    await act(async () => { browserTab?.click(); await Promise.resolve(); });
+    api.browseArtifacts = vi
+      .fn()
+      .mockResolvedValue(
+        envelope({
+          items: [
+            {
+              storageKey: "uploads/a.txt",
+              originalName: "a.txt",
+              artifactFamily: "document",
+              mediaType: "text/plain",
+            },
+          ],
+        }),
+      );
+    const { container: c } = await mount(
+      <ArtifactsPage
+        workspaceId="w1"
+        workspaceName="Workspace"
+        refreshToken={0}
+        onUploaded={() => undefined}
+      />,
+      api,
+    );
+    expect(
+      c
+        .querySelector("[role='tablist']")
+        ?.classList.contains("ui-tabbed-panel__tablist"),
+    ).toBe(true);
+    expect(
+      c
+        .querySelector("[role='tabpanel']")
+        ?.classList.contains("ui-tabbed-panel__panel"),
+    ).toBe(true);
+    const browserTab = Array.from(c.querySelectorAll("button")).find(
+      (button) => button.textContent === "Artifact Browser",
+    );
+    await act(async () => {
+      browserTab?.click();
+      await Promise.resolve();
+    });
     expect(api.readArtifactDetail).not.toHaveBeenCalled();
     expect(c.textContent).toContain("a.txt");
-    const artifactButton = Array.from(c.querySelectorAll("button")).find((button) => button.textContent?.includes("View Details"));
-    await act(async () => { artifactButton?.click(); await Promise.resolve(); });
+    const artifactButton = Array.from(c.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("View Details"),
+    );
+    await act(async () => {
+      artifactButton?.click();
+      await Promise.resolve();
+    });
     expect(api.readArtifactDetail).toHaveBeenCalled();
   });
 
   it("keeps Asset Library resource-backed views separate from initial definitions", async () => {
-    const { container: c, api } = await mount(<AssetLibraryPage workspaceId="w1" workspaceName="Workspace" />);
+    const { container: c, api } = await mount(
+      <AssetLibraryPage workspaceId="w1" workspaceName="Workspace" />,
+    );
     expect(c.textContent).toContain("Assets");
     expect(api.listAssetDefinitions).toHaveBeenCalled();
     expect(api.listAssetResourceBackedViews).not.toHaveBeenCalled();
-    const tab = Array.from(c.querySelectorAll("button")).find((button) => button.textContent === "Resource views");
-    await act(async () => { tab?.click(); await Promise.resolve(); });
+    const tab = Array.from(c.querySelectorAll("button")).find(
+      (button) => button.textContent === "Resource views",
+    );
+    await act(async () => {
+      tab?.click();
+      await Promise.resolve();
+    });
     expect(api.listAssetResourceBackedViews).toHaveBeenCalled();
   });
 
@@ -176,35 +368,98 @@ describe("desktop page section loading", () => {
     const { container: c, api } = await mount(<SettingsPage />);
     expect(c.textContent).toContain("Settings");
     expect(api.listApplicationSettingDefinitions).toHaveBeenCalledTimes(2);
-    const runtimeButton = Array.from(c.querySelectorAll("button")).find((button) => button.textContent?.includes("Runtime settings"));
-    await act(async () => { runtimeButton?.click(); await Promise.resolve(); });
+    const runtimeButton = Array.from(c.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Runtime settings"),
+    );
+    await act(async () => {
+      runtimeButton?.click();
+      await Promise.resolve();
+    });
     expect(api.listApplicationSettingDefinitions).toHaveBeenCalledTimes(3);
     expect(api.readComfyUiInstallStatus).not.toHaveBeenCalled();
   });
 
-
   it("keeps the Systems builder shell free of operational software reads", async () => {
-    const { container: c, api } = await mount(<SystemBuilderPage workspaceId="w1" workspaceName="Workspace" />);
+    const { container: c, api } = await mount(
+      <SystemBuilderPage workspaceId="w1" workspaceName="Workspace" />,
+    );
     expect(c.textContent).toContain("System Builder");
-    expect(c.textContent).toContain("Plans");
-    expect(c.textContent).toContain("Run & Test");
+    expect(c.textContent).not.toContain("Plans");
+    expect(c.textContent).toContain("Publish");
+    expect(c.textContent).not.toContain("Build & Release");
+    expect(c.textContent).not.toContain("Run & Test");
+    expect(
+      c
+        .querySelector("[role='tablist']")
+        ?.classList.contains("ui-tabbed-panel__tablist"),
+    ).toBe(true);
+    expect(
+      c
+        .querySelector("[role='tabpanel']")
+        ?.classList.contains("ui-tabbed-panel__panel"),
+    ).toBe(true);
     expect(api.readFeatureLifecycleState).not.toHaveBeenCalled();
     expect(api.readPythonRuntimeStatus).not.toHaveBeenCalled();
     expect(api.readComfyUiInstallStatus).not.toHaveBeenCalled();
+  });
+
+  it("does not expose or load the retired standalone Run & Test workflow", async () => {
+    const { container: c, api } = await mount(
+      <SystemBuilderPage workspaceId="w1" workspaceName="Workspace" />,
+    );
+    expect(api.listSystemRunWorkflowProfiles).not.toHaveBeenCalled();
+    expect(c.textContent).not.toContain("Run & Test");
+    expect(c.textContent).not.toContain("Configure an action");
+    expect(c.textContent).toContain("Publish");
+  });
+
+  it("loads published lifecycle cards only after Publish is opened", async () => {
+    const { container: c, api } = await mount(
+      <SystemBuilderPage workspaceId="w1" workspaceName="Workspace" />,
+    );
+    expect(api.listSystemPublicationWorkspace).not.toHaveBeenCalled();
+    expect(api.readPublishedSystemLifecycle).not.toHaveBeenCalled();
+    const publishTab = Array.from(c.querySelectorAll("button")).find(
+      (candidate) => candidate.textContent === "Publish",
+    );
+    await act(async () => {
+      publishTab?.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(api.listSystemPublicationWorkspace).toHaveBeenCalledWith({
+      workspaceId: "w1",
+    });
+    expect(api.readPublishedSystemLifecycle).toHaveBeenCalledWith({
+      workspaceId: "w1",
+      releaseId: "release-1",
+    });
+    expect(c.textContent).toContain("Published assistant");
+    expect(c.textContent).toContain("Install");
   });
 
   it("loads Settings software lifecycle diagnostics only when diagnostics are enabled and expanded", async () => {
     const api = createDesktopApiMock();
     api.memoryDiagnosticsEnabled = true;
     const { container: c } = await mount(<SettingsPage />, api);
-    const softwareStatusButton = Array.from(c.querySelectorAll("button")).find((button) => button.textContent?.includes("Software status"));
-    await act(async () => { softwareStatusButton?.click(); await Promise.resolve(); });
+    const softwareStatusButton = Array.from(c.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Software status"),
+    );
+    await act(async () => {
+      softwareStatusButton?.click();
+      await Promise.resolve();
+    });
     expect(c.textContent).toContain("Feature lifecycle diagnostics");
     expect(api.readFeatureLifecycleState).not.toHaveBeenCalled();
     expect(api.readPythonRuntimeStatus).not.toHaveBeenCalled();
     expect(api.readComfyUiInstallStatus).not.toHaveBeenCalled();
-    const lifecycleButton = Array.from(c.querySelectorAll("button")).find((button) => button.textContent?.includes("Feature lifecycle diagnostics"));
-    await act(async () => { lifecycleButton?.click(); await Promise.resolve(); });
+    const lifecycleButton = Array.from(c.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Feature lifecycle diagnostics"),
+    );
+    await act(async () => {
+      lifecycleButton?.click();
+      await Promise.resolve();
+    });
     expect(api.readFeatureLifecycleState).toHaveBeenCalledTimes(1);
     expect(api.readPythonRuntimeStatus).not.toHaveBeenCalled();
     expect(api.readComfyUiInstallStatus).not.toHaveBeenCalled();
@@ -212,24 +467,38 @@ describe("desktop page section loading", () => {
 
   it("defers Settings software runtime controls until their nested sections expand", async () => {
     const { container: c, api } = await mount(<SettingsPage />);
-    const softwareStatusButton = Array.from(c.querySelectorAll("button")).find((button) => button.textContent?.includes("Software status"));
-    await act(async () => { softwareStatusButton?.click(); await Promise.resolve(); });
+    const softwareStatusButton = Array.from(c.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Software status"),
+    );
+    await act(async () => {
+      softwareStatusButton?.click();
+      await Promise.resolve();
+    });
     expect(c.textContent).toContain("Software status");
     expect(api.readPythonRuntimeStatus).not.toHaveBeenCalled();
     expect(api.controlPythonRuntime).not.toHaveBeenCalled();
     expect(api.readComfyUiInstallStatus).not.toHaveBeenCalled();
     expect(api.readFeatureLifecycleState).not.toHaveBeenCalled();
-    const comfyButton = Array.from(c.querySelectorAll("button")).find((button) => button.textContent?.includes("ComfyUI"));
-    await act(async () => { comfyButton?.click(); await Promise.resolve(); });
+    const comfyButton = Array.from(c.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("ComfyUI"),
+    );
+    await act(async () => {
+      comfyButton?.click();
+      await Promise.resolve();
+    });
     expect(api.readComfyUiInstallStatus).toHaveBeenCalledTimes(1);
     expect(api.controlPythonRuntime).not.toHaveBeenCalled();
   });
 });
 
-
 describe("page section loading policy classification", () => {
   it("classifies every final cleanup page section with an explicit trigger", () => {
-    const policy = new Map(pageSectionLoadingPolicy.map((entry) => [`${entry.page}:${entry.section}`, entry.trigger]));
+    const policy = new Map(
+      pageSectionLoadingPolicy.map((entry) => [
+        `${entry.page}:${entry.section}`,
+        entry.trigger,
+      ]),
+    );
     for (const key of [
       "models:local model list",
       "models:remote browse",
@@ -269,7 +538,10 @@ describe("page section loading policy classification", () => {
     ]) {
       expect(policy.has(key)).toBe(true);
     }
-    expect(policy.get("settings:lifecycle diagnostics")).toEqual(["expanded", "refresh"]);
+    expect(policy.get("settings:lifecycle diagnostics")).toEqual([
+      "expanded",
+      "refresh",
+    ]);
     expect(policy.get("image-generation:generate")).toBe("user-action");
   });
 });

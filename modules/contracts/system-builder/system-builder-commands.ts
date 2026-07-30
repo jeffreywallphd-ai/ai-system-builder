@@ -1,8 +1,9 @@
-import type { AssetBinding, AssetInstance } from "../asset";
+import type { AssetBinding, AssetInstance, AssetPlacement, AssetReference } from "../asset";
 import type { WorkspaceId } from "../workspace";
 import type { SystemBuilderComposition } from "./system-builder-composition";
 import type { SystemBuilderSystemId } from "./system-builder-id";
 import type { SystemBuilderRevisionId } from "./system-builder-revision";
+import type { SystemBuilderProfile, SystemBuilderStructure } from "./system-builder-structure";
 
 interface SystemCommandContext {
   readonly workspaceId: WorkspaceId;
@@ -13,6 +14,8 @@ export interface CreateSystemBuilderSystemCommand extends SystemCommandContext {
   readonly name: string;
   readonly description?: string;
   readonly compositionType?: SystemBuilderComposition["compositionType"];
+  readonly profile?: SystemBuilderProfile;
+  readonly layoutPresetRef?: AssetReference;
 }
 
 export interface ReadSystemBuilderSystemQuery {
@@ -48,6 +51,8 @@ export interface SaveSystemBuilderRevisionCommand extends SystemCommandContext {
   readonly composition: SystemBuilderComposition;
   readonly instances: readonly AssetInstance[];
   readonly bindings: readonly AssetBinding[];
+  readonly structure?: SystemBuilderStructure;
+  readonly placements?: readonly AssetPlacement[];
 }
 
 export interface ReadSystemBuilderRevisionQuery {

@@ -69,6 +69,10 @@ interface ArtifactRepoStoreApiRequestBody extends ArtifactRepoHasApiRequestBody 
   contentBase64: string;
   mediaType?: string;
   overwrite?: boolean;
+  repositoryCreation?: {
+    approved?: boolean;
+    visibility?: string;
+  };
 }
 
 interface ArtifactPublishApiRequestBody {
@@ -81,6 +85,10 @@ interface ArtifactPublishApiRequestBody {
   };
   mediaType?: string;
   verify?: boolean;
+  repositoryCreation?: {
+    approved?: boolean;
+    visibility?: string;
+  };
   source?: string;
 }
 
@@ -185,9 +193,9 @@ export interface ArtifactRepoExpressRoutePort {
 
 export interface RegisterArtifactRepoApiRoutesDependencies {
   app: ArtifactRepoExpressRoutePort;
-  getHuggingFaceTokenStatus: () => { configured: boolean; maskedToken?: string };
-  setHuggingFaceToken: (token: string) => { configured: boolean; maskedToken?: string };
-  clearHuggingFaceToken: () => { configured: boolean; maskedToken?: string };
+  getHuggingFaceTokenStatus: () => MaybePromise<{ configured: boolean; maskedToken?: string }>;
+  setHuggingFaceToken: (token: string) => MaybePromise<{ configured: boolean; maskedToken?: string }>;
+  clearHuggingFaceToken: () => MaybePromise<{ configured: boolean; maskedToken?: string }>;
   hasArtifactInRepoUseCase: HasArtifactInRepoUseCasePort;
   browseHuggingFaceNamespaceDatasetsUseCase: Pick<BrowseHuggingFaceNamespaceDatasetsUseCase, "execute">;
   browseHuggingFaceDatasetParquetFilesUseCase: Pick<BrowseHuggingFaceDatasetParquetFilesUseCase, "execute">;
@@ -199,6 +207,8 @@ export interface RegisterArtifactRepoApiRoutesDependencies {
   registerArtifactFromRepoUseCase: Pick<RegisterArtifactFromRepoUseCase, "execute">;
   localizeArtifactFromRepoUseCase: Pick<LocalizeArtifactFromRepoUseCase, "execute">;
 }
+
+type MaybePromise<T> = T | Promise<T>;
 
 function getRequestHeader(
   headers: Record<string, string | string[] | undefined> | undefined,
@@ -252,6 +262,7 @@ function mapApiStoreRequestToCommand(
       contentBase64: requestBody.contentBase64,
       mediaType: requestBody.mediaType,
       overwrite: requestBody.overwrite,
+      repositoryCreation: parseRepositoryCreation(requestBody.repositoryCreation),
       boundary: {
         host: "server",
         source: normalizeSource(requestBody.source),
@@ -265,7 +276,23 @@ function mapApiStoreRequestToCommand(
     content: new Uint8Array(Buffer.from(apiRequest.payload.contentBase64, "base64")),
     mediaType: apiRequest.payload.mediaType,
     overwrite: apiRequest.payload.overwrite,
+    repositoryCreation: apiRequest.payload.repositoryCreation,
   };
+}
+
+function parseRepositoryCreation(value: {
+  approved?: boolean;
+  visibility?: string;
+} | undefined): { approved: true; visibility: "private" | "public" } | undefined {
+  if (!value) return undefined;
+  if (value.approved !== true) {
+    throw new Error("repositoryCreation.approved must be true.");
+  }
+  const visibility = value.visibility;
+  if (visibility !== "private" && visibility !== "public") {
+    throw new Error("repositoryCreation.visibility must be private or public.");
+  }
+  return { approved: true, visibility };
 }
 
 function mapStatusCode(response: ApiArtifactRepoHasResponse | ApiArtifactRepoStoreResponse): number {
@@ -382,7 +409,7 @@ export function registerArtifactRepoApiRoutes(
   dependencies.app.get?.("/api/config/huggingface-token", async (_request, response) => {
     const apiResponse: HuggingFaceTokenConfigApiResponse = {
       ok: true,
-      value: dependencies.getHuggingFaceTokenStatus(),
+      value: await dependencies.getHuggingFaceTokenStatus(),
     };
     response.status(200).json(apiResponse);
   });
@@ -394,7 +421,7 @@ export function registerArtifactRepoApiRoutes(
         : "";
       const apiResponse: HuggingFaceTokenConfigApiResponse = {
         ok: true,
-        value: dependencies.setHuggingFaceToken(token),
+        value: await dependencies.setHuggingFaceToken(token),
       };
       response.status(200).json(apiResponse);
     } catch (error) {
@@ -412,7 +439,7 @@ export function registerArtifactRepoApiRoutes(
   dependencies.app.delete?.("/api/config/huggingface-token", async (_request, response) => {
     const apiResponse: HuggingFaceTokenConfigApiResponse = {
       ok: true,
-      value: dependencies.clearHuggingFaceToken(),
+      value: await dependencies.clearHuggingFaceToken(),
     };
     response.status(200).json(apiResponse);
   });
@@ -596,6 +623,9 @@ export function registerArtifactRepoApiRoutes(
         },
         mediaType: (request.body as ArtifactPublishApiRequestBody).mediaType,
         verify: (request.body as ArtifactPublishApiRequestBody).verify,
+        repositoryCreation: parseRepositoryCreation(
+          (request.body as ArtifactPublishApiRequestBody).repositoryCreation,
+        ),
         source: normalizeSource((request.body as ArtifactPublishApiRequestBody).source),
       }, context);
     } catch (error) {
@@ -612,7 +642,8 @@ export function registerArtifactRepoApiRoutes(
       artifactId: apiRequest.payload.artifactId,
       target: apiRequest.payload.target,
       mediaType: apiRequest.payload.mediaType,
-    });
+      repositoryCreation: apiRequest.payload.repositoryCreation,
+    }, context);
 
     const apiResponse = result.ok
       ? createApiArtifactPublishSuccessResponse(result.value, context)

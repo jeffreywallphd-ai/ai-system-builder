@@ -40,6 +40,10 @@ describe("secured data-entry reference system", () => {
           return definitions.get(`${reference.id}@${reference.version}`);
         },
       },
+      assetRegistryRead: {
+        listDefinitionCards: async () => ({ items: [] }),
+        readDefinitionDetail: async () => undefined,
+      },
       generateSystemId: () => "system.secured-reference",
       now: () => timestamp,
     });
@@ -73,6 +77,15 @@ describe("secured data-entry reference system", () => {
       resolver: createReferenceImplementationResolver(),
       artifacts,
       hasher,
+      guidedProfile: {
+        id: "local-desktop",
+        label: "This computer",
+        deploymentProfile: "local-desktop",
+        availableCapabilities: [],
+        permittedTrustLevels: ["system-trusted"],
+        hostApiVersion: "1.0.0",
+        toolchainProfile: "system-builder/1.0.0",
+      },
       now: () => timestamp,
     });
     const built = await builds.useCases.request.execute({
@@ -215,6 +228,10 @@ describe("secured data-entry reference system", () => {
           return definitions.get(`${reference.id}@${reference.version}`);
         },
       },
+      assetRegistryRead: {
+        listDefinitionCards: async () => ({ items: [] }),
+        readDefinitionDetail: async () => undefined,
+      },
       generateSystemId: () => "system.controlled-chatbot-reference",
       now: () => timestamp,
     });
@@ -249,6 +266,15 @@ describe("secured data-entry reference system", () => {
       resolver: createAnyFacetImplementationResolver(),
       artifacts,
       hasher,
+      guidedProfile: {
+        id: "local-desktop",
+        label: "This computer",
+        deploymentProfile: "local-desktop",
+        availableCapabilities: [],
+        permittedTrustLevels: ["system-trusted"],
+        hostApiVersion: "1.0.0",
+        toolchainProfile: "system-builder/1.0.0",
+      },
       now: () => timestamp,
     });
     const built = await builds.useCases.request.execute({

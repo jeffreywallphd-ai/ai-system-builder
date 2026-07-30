@@ -19,6 +19,7 @@ export class AuthorizeOperationService {
       occurredAt: this.options.now?.() ?? new Date().toISOString(),
       principalId: request.authContext.principal.principalId,
       organizationId: request.organizationId,
+      organizationRole: decision.organizationRole,
       requestId: request.requestId,
       correlationId: request.correlationId,
       operation: request.operation,

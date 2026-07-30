@@ -12,6 +12,7 @@ import type {
 } from "../../../contracts/asset";
 import { sanitizeAssetViewValue } from "../../../application/services/asset/asset-safe-metadata";
 import type { ContractErrorCode } from "../../../contracts/shared";
+import { isWorkspaceId } from "../../../contracts/workspace";
 
 export type AssetMutationCommandForOperation<TOperation extends AssetMutationOperation> =
   TOperation extends "asset.register-resource-backed-view"
@@ -68,6 +69,9 @@ export function parseAssetMutationCommand<TOperation extends AssetMutationOperat
   }
   if (!asRecord(record.actor)) {
     return invalid(operation, "Asset mutation command actor must be supplied.", requestContext);
+  }
+  if (!isWorkspaceId(record.workspaceId)) {
+    return invalid(operation, "Asset mutation command workspaceId must be a valid workspace id.", requestContext);
   }
   if (!hasRequiredIdentifier(record, operation)) {
     return invalid(operation, requiredIdentifierMessage(operation), requestContext);

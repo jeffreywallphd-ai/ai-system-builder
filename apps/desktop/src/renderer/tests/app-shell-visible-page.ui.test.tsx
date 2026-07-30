@@ -32,16 +32,19 @@ describe("desktop AppShell visible workspace page state", () => {
     const { ActiveWorkspaceProvider } = await import("../features/workspace");
     const { AppShell } = await import("../components/layout/AppShell");
     const { desktopPageDefinitions } = await import("../routes/desktopPages");
+    const { NotificationProvider } = await import("../../../../../modules/ui/shared/notifications");
     const html = renderToString(
-      <ActiveWorkspaceProvider client={workspaceClient()}>
-        <AppShell
-          activePage={undefined}
-          pages={desktopPageDefinitions}
-          onNavigate={() => undefined}
-        >
-          <section>Workspace required</section>
-        </AppShell>
-      </ActiveWorkspaceProvider>,
+      <NotificationProvider>
+        <ActiveWorkspaceProvider client={workspaceClient()}>
+          <AppShell
+            activePage={undefined}
+            pages={desktopPageDefinitions}
+            onNavigate={() => undefined}
+          >
+            <section>Workspace required</section>
+          </AppShell>
+        </ActiveWorkspaceProvider>
+      </NotificationProvider>,
     );
 
     expect(html).toContain("Workspace required");
@@ -52,6 +55,8 @@ describe("desktop AppShell visible workspace page state", () => {
     expect(html).toContain('aria-expanded="true"');
     expect(html).toContain("ui-app-icon");
     expect(html).toContain("Collapse sidebar");
+    expect(html).toContain('id="application-notification-bell"');
+    expect(html.indexOf('id="application-notification-bell"') < html.indexOf('aria-label="Settings"')).toBe(true);
     expect(html).not.toContain('aria-current="page"');
   });
 });

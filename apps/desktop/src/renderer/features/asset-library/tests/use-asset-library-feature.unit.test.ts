@@ -25,6 +25,15 @@ const card: AssetLibraryDefinitionCard = {
   updatedAt: "2026-05-02T00:00:00.000Z",
 };
 
+const alternateCard: AssetLibraryDefinitionCard = {
+  ...card,
+  id: "builtin.dataset@1.0.0",
+  definitionId: "builtin.dataset",
+  displayName: "Dataset",
+  summary: "Dataset building block",
+  assetType: "dataset",
+};
+
 const resourceViewCard: AssetLibraryResourceBackedViewCard = {
   id: "asset-view.external-repository-object.internal.1",
   viewId: "asset-view.external-repository-object.internal.1",
@@ -134,9 +143,8 @@ describe("useAssetLibraryFeature", () => {
     await render(client);
 
     expect(client.listAssetDefinitions).toHaveBeenCalledTimes(1);
-    expect(client.listAssetResourceBackedViews).toHaveBeenCalledTimes(1);
+    expect(client.listAssetResourceBackedViews).not.toHaveBeenCalled();
     expect(client.listAssetDefinitions).toHaveBeenCalledWith({ limit: 50, workspaceId: "workspace.alpha" });
-    expect(client.listAssetResourceBackedViews).toHaveBeenCalledWith({ limit: 50, workspaceId: "workspace.alpha" });
   });
 
   it("sends supported query fields when filters change and refreshes the current query", async () => {
@@ -201,6 +209,53 @@ describe("useAssetLibraryFeature", () => {
     expect(states[states.length - 1]?.selectedDetail?.definitionId).toBe("builtin.document");
   });
 
+  it("keeps the newest modal detail when an older read finishes later", async () => {
+    let resolveFirst!: (value: unknown) => void;
+    let resolveSecond!: (value: unknown) => void;
+    const readAssetDefinitionVersion = testDouble.fn().mockImplementation(
+      (input: { definitionId: string }) =>
+        new Promise((resolve) => {
+          if (input.definitionId === card.definitionId) {
+            resolveFirst = resolve;
+          } else {
+            resolveSecond = resolve;
+          }
+        }),
+    );
+    const client = createClient({
+      listAssetDefinitions: testDouble.fn().mockResolvedValue({
+        ok: true,
+        value: { items: [card, alternateCard] },
+      }),
+      readAssetDefinitionVersion,
+    });
+    const { states } = await render(client);
+
+    const firstRead = states[states.length - 1]?.selectDefinition(card);
+    const secondRead = states[states.length - 1]?.selectDefinition(alternateCard);
+    await act(async () => {
+      resolveSecond({
+        ok: true,
+        value: {
+          ...alternateCard,
+          overview: { description: "Newest detail" },
+        },
+      });
+      await secondRead;
+    });
+    await act(async () => {
+      resolveFirst({
+        ok: true,
+        value: { ...card, overview: { description: "Stale detail" } },
+      });
+      await firstRead;
+    });
+
+    expect(states[states.length - 1]?.selectedDetail?.definitionId).toBe(
+      alternateCard.definitionId,
+    );
+  });
+
   it("loads validation only through the explicit validation action", async () => {
     const client = createClient();
     const { container, states } = await render(client);
@@ -249,5 +304,19 @@ describe("useAssetLibraryFeature", () => {
 
     expect(states[states.length - 1]?.listError).toBe("Unable to read Asset Library data.");
     expect(states[states.length - 1]?.definitions).toEqual([]);
+  });
+
+  it("converts rejected workspace reads into a safe recoverable error", async () => {
+    const client = createClient({
+      listAssetDefinitions: testDouble
+        .fn()
+        .mockRejectedValue(new Error("C:\\private\\asset-library.json")),
+    });
+    const { states } = await render(client);
+    const latest = states[states.length - 1];
+
+    expect(latest?.listError).toBe("Unable to read Asset Library data.");
+    expect(latest?.isLoadingList).toBe(false);
+    expect(JSON.stringify(latest)).not.toContain("private");
   });
 });

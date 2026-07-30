@@ -8,6 +8,7 @@ export const ASSET_REFERENCE_KINDS = [
   "asset-instance",
   "asset-composition",
   "asset-binding",
+  "asset-placement",
   "asset-requirement",
   "resource-backed-asset",
   "asset-resource-backing",

@@ -17,6 +17,8 @@ import {
   createLocalWorkspaceSystemPackActivationRepository,
 } from "../../workspace";
 import { createStructuredSystemDataRepository } from "../../system-data";
+import { runSystemBuildPersistenceConformance } from "../../system-build/tests/system-build-persistence-conformance";
+import { runSystemDeploymentPersistenceConformance } from "../../system-deployment/tests/system-deployment-persistence-conformance";
 
 async function main(): Promise<void> {
   const rootDirectory = process.argv[2];
@@ -158,6 +160,15 @@ async function main(): Promise<void> {
     .readDocument<{ owner: string }>("tenant-test", "shared"))?.value.owner;
   const platformOwner = (await restored.documents
     .readDocument<{ owner: string }>("tenant-test", "shared"))?.value.owner;
+  const systemBuildConformance = await runSystemBuildPersistenceConformance(
+    restored.documents,
+    "sqlite",
+  );
+  const systemDeploymentConformance =
+    await runSystemDeploymentPersistenceConformance(
+      restored.documents,
+      "sqlite",
+    );
   restored.close();
 
   process.stdout.write(JSON.stringify({
@@ -181,6 +192,8 @@ async function main(): Promise<void> {
     organizationAOwner,
     organizationBOwner,
     platformOwner,
+    systemBuildConformance,
+    systemDeploymentConformance,
   }));
 }
 

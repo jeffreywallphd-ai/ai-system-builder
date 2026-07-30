@@ -25,7 +25,7 @@ describe("ipc main handle port contract", () => {
       DESKTOP_ARTIFACT_UPLOAD_REQUEST_CHANNEL.value,
       createDesktopArtifactUploadIpcHandler({
         execute: testDouble.fn() as StoreArtifactUploadUseCasePort["execute"],
-      }),
+      }, { isTrustedSender: () => true }),
     );
     ipcMain.handle(
       DESKTOP_ARTIFACT_BROWSE_REQUEST_CHANNEL.value,

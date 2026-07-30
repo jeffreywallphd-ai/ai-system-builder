@@ -8,6 +8,8 @@ import {
 } from "../../../application/use-cases";
 import { createLocalImageAssetRegistryAdapter } from "../../../adapters/persistence/image";
 import { createLocalModelRegistryAdapter } from "../../../adapters/persistence/model";
+import { createLocalAuthoredAssetRepositoryAdapter } from "../../../adapters/persistence/asset-authoring";
+import { createStructuredAssetPackageRepository } from "../../../adapters/persistence/asset-package";
 import {
   composeInternalAssetRegistry,
   type InternalAssetRegistryComposition,
@@ -18,6 +20,7 @@ import { createAssetImplementationArtifactAdapter } from "../../../adapters/stor
 import { composeAssetImplementationKernel } from "../../shared/composition/composeAssetImplementationKernel";
 import { composeAssetPackageLifecycle } from "../../shared/composition/composeAssetPackageLifecycle";
 import { composeAssetStudioWorkflow } from "../../shared/composition/composeAssetStudioWorkflow";
+import { composeAssetDerivedCustomization } from "../../shared/composition/composeAssetDerivedCustomization";
 
 export interface ComposeDesktopAssetFeatureOptions {
   storageRootDirectory: string;
@@ -67,21 +70,26 @@ export async function composeDesktopAssetFeature(
     }),
   });
   options.onInternalAssetRegistry?.(internalAssetRegistry);
-  const foundationInstall =
-    await internalAssetRegistry.installSystemFoundationPack.install({
+  const foundationInstalls =
+    await internalAssetRegistry.installSystemFoundationPack.installAll({
       allowSystemDefinitionRefresh: true,
     });
-  if (foundationInstall.status === "failed") {
+  if (foundationInstalls.some((result) => result.status === "failed")) {
     throw new Error("System foundation assets are unavailable.");
   }
+  const implementationArtifacts = createAssetImplementationArtifactAdapter(
+    options.artifacts.storage,
+  );
+  const assetPackageRepository = options.documents
+    ? createStructuredAssetPackageRepository(options.documents)
+    : undefined;
   const assetImplementation = options.documents
     ? composeAssetImplementationKernel({
         documents: options.documents,
         definitions:
           internalAssetRegistry.assetKernel.repositories.definitionRepository,
-        artifacts: createAssetImplementationArtifactAdapter(
-          options.artifacts.storage,
-        ),
+        artifacts: implementationArtifacts,
+        packageRepository: assetPackageRepository,
         now: options.now,
       })
     : undefined;
@@ -93,9 +101,9 @@ export async function composeDesktopAssetFeature(
           definitions:
             internalAssetRegistry.assetKernel.repositories.definitionRepository,
           implementations: assetImplementation.repository,
-          artifacts: createAssetImplementationArtifactAdapter(
-            options.artifacts.storage,
-          ),
+          backingResources: assetImplementation.backingResources,
+          artifacts: implementationArtifacts,
+          repository: assetPackageRepository,
           nextInspectionId: () => `package-inspection.${randomUUID()}`,
           now: options.now,
         })
@@ -105,9 +113,25 @@ export async function composeDesktopAssetFeature(
       ? composeAssetStudioWorkflow({
           documents: options.documents,
           implementations: assetImplementation,
-          artifacts: createAssetImplementationArtifactAdapter(
-            options.artifacts.storage,
-          ),
+          artifacts: implementationArtifacts,
+          definitions:
+            internalAssetRegistry.assetKernel.repositories.definitionRepository,
+          now: options.now,
+        })
+      : undefined;
+  const derivedCustomizations =
+    options.documents && assetImplementation
+      ? composeAssetDerivedCustomization({
+          documents: options.documents,
+          definitions:
+            internalAssetRegistry.assetKernel.repositories.definitionRepository,
+          implementations: assetImplementation,
+          artifacts: implementationArtifacts,
+          authoredAssets: createLocalAuthoredAssetRepositoryAdapter({
+            rootDir: options.storageRootDirectory,
+            documents: options.documents,
+            now: options.now,
+          }),
           now: options.now,
         })
       : undefined;
@@ -120,6 +144,7 @@ export async function composeDesktopAssetFeature(
     assetImplementation,
     assetPackages,
     assetStudio,
+    derivedCustomizations,
     assetMutationUseCases: {
       registerResourceBackedViewAsAsset:
         new RegisterResourceBackedViewAsAssetInstanceUseCase({

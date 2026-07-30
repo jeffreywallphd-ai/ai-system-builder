@@ -3,7 +3,13 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, expectTypeOf, it, testDouble } from "../../../../testing/node-test";
+import {
+  describe,
+  expect,
+  expectTypeOf,
+  it,
+  testDouble,
+} from "../../../../testing/node-test";
 
 import type { LoggingPort } from "../../../../application/ports/logging";
 import type { StructuredLogEvent } from "../../../../contracts/logging";
@@ -59,14 +65,16 @@ describe("composeServerHost", () => {
     });
   });
 
-
-
   it("composes artifact-repo storage with huggingface provider registration", async () => {
-    const fetchMock = testDouble.fn(async () => new Response(null, { status: 404 })) as unknown as HuggingFaceFetchImplementation;
+    const fetchMock = testDouble.fn(
+      async () => new Response(null, { status: 404 }),
+    ) as unknown as HuggingFaceFetchImplementation;
     const hubClient = {
       fileExists: testDouble.fn(async () => false),
       uploadFile: testDouble.fn(async () => undefined),
-      downloadFile: testDouble.fn(async () => new Response(new Uint8Array([]), { status: 200 })),
+      downloadFile: testDouble.fn(
+        async () => new Response(new Uint8Array([]), { status: 200 }),
+      ),
     };
 
     const host = composeServerHost({
@@ -96,7 +104,9 @@ describe("composeServerHost", () => {
     const hubClient = {
       fileExists: testDouble.fn(async () => false),
       uploadFile: testDouble.fn(async () => undefined),
-      downloadFile: testDouble.fn(async () => new Response(new Uint8Array([]), { status: 200 })),
+      downloadFile: testDouble.fn(
+        async () => new Response(new Uint8Array([]), { status: 200 }),
+      ),
     };
 
     const host = composeServerHost({
@@ -120,15 +130,20 @@ describe("composeServerHost", () => {
     const hubClient = {
       fileExists: testDouble.fn(async () => true),
       uploadFile: testDouble.fn(async () => undefined),
-      downloadFile: testDouble.fn(async () => new Response(new Uint8Array([1]), { status: 200 })),
+      downloadFile: testDouble.fn(
+        async () => new Response(new Uint8Array([1]), { status: 200 }),
+      ),
     };
     const host = composeServerHost({
       artifactRepo: {
         huggingFaceHubClient: hubClient,
-        huggingFaceTokenConfigFilePath: join(tmpdir(), `server-host-token-${Date.now()}.json`),
+        huggingFaceTokenConfigFilePath: join(
+          tmpdir(),
+          `server-host-token-${Date.now()}.json`,
+        ),
       },
     });
-    host.setHuggingFaceToken("hf_token_updated");
+    await host.setHuggingFaceToken("hf_token_updated");
     await host.artifactRepoStorage.storeArtifactInRepo({
       target: {
         provider: "huggingface",
@@ -137,7 +152,9 @@ describe("composeServerHost", () => {
       },
       content: new Uint8Array([1, 2, 3]),
     });
-    const uploadCall = hubClient.uploadFile.mock.calls[0]?.[0] as { accessToken?: string };
+    const uploadCall = hubClient.uploadFile.mock.calls[0]?.[0] as {
+      accessToken?: string;
+    };
     expect(uploadCall.accessToken).toBe("hf_token_updated");
   });
 
@@ -148,11 +165,15 @@ describe("composeServerHost", () => {
       patch: testDouble.fn(),
       delete: testDouble.fn(),
     };
-    const artifactRepoFetch = testDouble.fn(async () => new Response(null, { status: 404 })) as unknown as HuggingFaceFetchImplementation;
+    const artifactRepoFetch = testDouble.fn(
+      async () => new Response(null, { status: 404 }),
+    ) as unknown as HuggingFaceFetchImplementation;
     const hubClient = {
       fileExists: testDouble.fn(async () => false),
       uploadFile: testDouble.fn(async () => undefined),
-      downloadFile: testDouble.fn(async () => new Response(new Uint8Array([]), { status: 200 })),
+      downloadFile: testDouble.fn(
+        async () => new Response(new Uint8Array([]), { status: 200 }),
+      ),
     };
 
     const host = composeServerHost({
@@ -162,7 +183,10 @@ describe("composeServerHost", () => {
       },
     });
 
-    const storageRootDirectory = join(tmpdir(), `server-artifact-upload-test-${Date.now()}`);
+    const storageRootDirectory = join(
+      tmpdir(),
+      `server-artifact-upload-test-${Date.now()}`,
+    );
     const runtimeRootDirectory = join(tmpdir(), `server-runtime-${Date.now()}`);
 
     host.registerApi({
@@ -220,38 +244,81 @@ describe("composeServerHost", () => {
     ]) {
       expect(registeredPaths).toContain(expectedPath);
     }
-    expect(registeredPaths.filter((path) => String(path).startsWith("/api/assets"))).toEqual([
+    expect(
+      registeredPaths.filter((path) => String(path).startsWith("/api/assets")),
+    ).toEqual([
       "/api/assets/register-resource-backed-view",
       "/api/assets/finalize-generated-output",
       "/api/assets/import-external-repository-object",
       "/api/assets/localize-external-repository-object",
     ]);
-    expect(existsSync(join(storageRootDirectory, "asset-kernel", "manifest.json"))).toBe(true);
-    expect(existsSync(join(runtimeRootDirectory, "asset-kernel", "manifest.json"))).toBe(false);
+    expect(
+      existsSync(join(storageRootDirectory, "asset-kernel", "manifest.json")),
+    ).toBe(true);
+    expect(
+      existsSync(join(runtimeRootDirectory, "asset-kernel", "manifest.json")),
+    ).toBe(false);
     const internalRegistry = host.getInternalAssetRegistry();
     expect(internalRegistry).toBeDefined();
     expect(internalRegistry?.resourceBackedViewProvider).toBeDefined();
     expect(internalRegistry?.diagnostics.resourceBackedViewsEnabled).toBe(true);
-    const resourceBacked = await internalRegistry?.readFacade.listResourceBackedViewCards({ limit: 10 });
+    const resourceBacked =
+      await internalRegistry?.readFacade.listResourceBackedViewCards({
+        limit: 10,
+      });
     expect(resourceBacked?.items).toEqual([]);
-    expect(resourceBacked?.diagnostics?.some((diagnostic) => diagnostic.code.includes("source-unavailable") || diagnostic.code.includes("unsupported") || diagnostic.code.includes("workspace"))).toBe(true);
-    const missingResourceBackedDetail = await internalRegistry!.readFacade.readResourceBackedViewDetail("asset-view.image.internal.missing");
+    expect(
+      resourceBacked?.diagnostics?.some(
+        (diagnostic) =>
+          diagnostic.code.includes("source-unavailable") ||
+          diagnostic.code.includes("unsupported") ||
+          diagnostic.code.includes("workspace"),
+      ),
+    ).toBe(true);
+    const missingResourceBackedDetail =
+      await internalRegistry!.readFacade.readResourceBackedViewDetail(
+        "asset-view.image.internal.missing",
+      );
     expect(missingResourceBackedDetail).toBeUndefined();
     expect(artifactRepoFetch).not.toHaveBeenCalled();
     expect(hubClient.fileExists).not.toHaveBeenCalled();
     expect(hubClient.uploadFile).not.toHaveBeenCalled();
     expect(hubClient.downloadFile).not.toHaveBeenCalled();
-    expect(existsSync(join(runtimeRootDirectory, "asset-kernel", "manifest.json"))).toBe(false);
     expect(
-      await internalRegistry?.readFacade.listDefinitionCards({ includeBuiltIns: true, includeCustom: true }),
+      existsSync(join(runtimeRootDirectory, "asset-kernel", "manifest.json")),
+    ).toBe(false);
+    expect(
+      await internalRegistry?.readFacade.listDefinitionCards({
+        includeBuiltIns: true,
+        includeCustom: true,
+      }),
     ).toEqual({ items: [] });
     const registeredGetPaths = app.get.mock.calls.map((call) => call[0]);
 
     expect(registeredGetPaths).toContain("/api/assets/definitions");
-    expect([...registeredPaths, ...app.patch.mock.calls.map((call) => call[0]), ...app.delete.mock.calls.map((call) => call[0])]
-      .some((path) => /\/api\/assets.*(create|update|delete|patch|edit|seed|publish|execute|run|scan)/i.test(String(path)))).toBe(false);
-    expect(readFileSync(resolve("modules/hosts/server/composition/composeServerHost.ts"), "utf8")).toContain("assetRegistryRead: internalAssetRegistry.readFacade");
-    expect(readFileSync(resolve("modules/hosts/server/composition/composeServerHost.ts"), "utf8")).toContain("assetMutationUseCases");
+    expect(
+      [
+        ...registeredPaths,
+        ...app.patch.mock.calls.map((call) => call[0]),
+        ...app.delete.mock.calls.map((call) => call[0]),
+      ].some((path) =>
+        /\/api\/assets.*(create|update|delete|patch|edit|seed|publish|execute|run|scan)/i.test(
+          String(path),
+        ),
+      ),
+    ).toBe(false);
+    expect(
+      readFileSync(
+        resolve("modules/hosts/server/composition/composeServerHost.ts"),
+        "utf8",
+      ),
+    ).toContain("assetRegistryRead: internalAssetRegistry.readFacade");
+    expect(
+      readFileSync(
+        resolve("modules/hosts/server/composition/composeServerHost.ts"),
+        "utf8",
+      ),
+    ).toContain("assetMutationUseCases");
     for (const expectedPath of [
       "/api/artifact/upload/policy",
       "/api/artifact/media/view",
@@ -273,6 +340,10 @@ describe("composeServerHost", () => {
       "/api/asset-authoring/workspaces/:workspaceId/overrides",
       "/api/asset-authoring/workspaces/:workspaceId/overrides/:overrideId",
       "/api/asset-authoring/workspaces/:workspaceId/effective-summaries",
+      "/api/asset-authoring/workspaces/:workspaceId/customization-targets",
+      "/api/asset-authoring/workspaces/:workspaceId/customization-targets/:implementationReleaseId",
+      "/api/asset-authoring/workspaces/:workspaceId/derived-customizations",
+      "/api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId",
       "/api/assets/resource-backed-views",
       "/api/assets/resource-backed-views/:viewId",
       "/api/assets/definitions/:definitionId",
@@ -293,9 +364,16 @@ describe("composeServerHost", () => {
     });
 
     const snapshot = await service.getReadinessSnapshot();
-    expect(snapshot.capabilities.find((capability) => capability.capabilityId === "model-publishing")).toMatchObject({
+    expect(
+      snapshot.capabilities.find(
+        (capability) => capability.capabilityId === "model-publishing",
+      ),
+    ).toMatchObject({
       status: "unavailable",
-      reason: { code: "runtime.model-publishing.not-implemented", category: "unavailable" },
+      reason: {
+        code: "runtime.model-publishing.not-implemented",
+        category: "unavailable",
+      },
     });
   });
 
@@ -309,26 +387,44 @@ describe("composeServerHost", () => {
 
     const snapshot = await service.getReadinessSnapshot();
 
-    expect(snapshot.capabilities.find((capability) => capability.capabilityId === "model-training")).toMatchObject({
+    expect(
+      snapshot.capabilities.find(
+        (capability) => capability.capabilityId === "model-training",
+      ),
+    ).toMatchObject({
       status: "failed",
       dependencies: [{ capabilityId: "python-runtime", status: "failed" }],
     });
-    expect(snapshot.capabilities.find((capability) => capability.capabilityId === "model-validation")).toMatchObject({
+    expect(
+      snapshot.capabilities.find(
+        (capability) => capability.capabilityId === "model-validation",
+      ),
+    ).toMatchObject({
       status: "failed",
       dependencies: [{ capabilityId: "python-runtime", status: "failed" }],
     });
-    expect(snapshot.capabilities.find((capability) => capability.capabilityId === "model-publishing")).toMatchObject({
+    expect(
+      snapshot.capabilities.find(
+        (capability) => capability.capabilityId === "model-publishing",
+      ),
+    ).toMatchObject({
       status: "unavailable",
       reason: { code: "runtime.model-publishing.not-implemented" },
     });
   });
 
   it("wires Hugging Face browse use-cases to the dedicated Hugging Face adapter seam", () => {
-    const canonicalSourcePath = resolve("modules/hosts/server/composition/composeServerHost.ts");
-    const typeScriptPath = fileURLToPath(new URL("../composeServerHost.ts", import.meta.url));
+    const canonicalSourcePath = resolve(
+      "modules/hosts/server/composition/composeServerHost.ts",
+    );
+    const typeScriptPath = fileURLToPath(
+      new URL("../composeServerHost.ts", import.meta.url),
+    );
     const sourcePath = existsSync(canonicalSourcePath)
       ? canonicalSourcePath
-      : (existsSync(typeScriptPath) ? typeScriptPath : typeScriptPath.replace(/\.ts$/, ".js"));
+      : existsSync(typeScriptPath)
+        ? typeScriptPath
+        : typeScriptPath.replace(/\.ts$/, ".js");
     const source = readFileSync(sourcePath, "utf8");
 
     expect(source).toMatchObject(
@@ -345,40 +441,93 @@ describe("composeServerHost", () => {
     const previous = process.env.COMFYUI_RUNTIME_DEVICE_MODE;
     process.env.COMFYUI_RUNTIME_DEVICE_MODE = "vulkan";
     const host = composeServerHost();
-    expect(() => host.registerApi({ app: { post: testDouble.fn(), get: testDouble.fn(), patch: testDouble.fn(), delete: testDouble.fn() }, storageRootDirectory: join(tmpdir(), "server-invalid-runtime") })).toThrow("Unsupported COMFYUI runtime mode");
+    expect(() =>
+      host.registerApi({
+        app: {
+          post: testDouble.fn(),
+          get: testDouble.fn(),
+          patch: testDouble.fn(),
+          delete: testDouble.fn(),
+        },
+        storageRootDirectory: join(tmpdir(), "server-invalid-runtime"),
+      }),
+    ).toThrow("Unsupported COMFYUI runtime mode");
     process.env.COMFYUI_RUNTIME_DEVICE_MODE = previous;
   });
 
   it("accepts cpu and directml COMFYUI runtime modes", () => {
     const previous = process.env.COMFYUI_RUNTIME_DEVICE_MODE;
     process.env.COMFYUI_RUNTIME_DEVICE_MODE = "cpu";
-    expect(() => composeServerHost().registerApi({ app: { post: testDouble.fn(), get: testDouble.fn(), patch: testDouble.fn(), delete: testDouble.fn() }, storageRootDirectory: join(tmpdir(), "server-runtime-cpu") })).not.toThrow();
+    expect(() =>
+      composeServerHost().registerApi({
+        app: {
+          post: testDouble.fn(),
+          get: testDouble.fn(),
+          patch: testDouble.fn(),
+          delete: testDouble.fn(),
+        },
+        storageRootDirectory: join(tmpdir(), "server-runtime-cpu"),
+      }),
+    ).not.toThrow();
     process.env.COMFYUI_RUNTIME_DEVICE_MODE = "directml";
-    expect(() => composeServerHost().registerApi({ app: { post: testDouble.fn(), get: testDouble.fn(), patch: testDouble.fn(), delete: testDouble.fn() }, storageRootDirectory: join(tmpdir(), "server-runtime-directml") })).not.toThrow();
+    expect(() =>
+      composeServerHost().registerApi({
+        app: {
+          post: testDouble.fn(),
+          get: testDouble.fn(),
+          patch: testDouble.fn(),
+          delete: testDouble.fn(),
+        },
+        storageRootDirectory: join(tmpdir(), "server-runtime-directml"),
+      }),
+    ).not.toThrow();
     process.env.COMFYUI_RUNTIME_DEVICE_MODE = previous;
   });
 
   it("resolves request-selected server image-generation runtime modes when no env override is set", () => {
-    expect(resolveServerComfyUiRuntimeDeviceMode({} as NodeJS.ProcessEnv, "cuda")).toBe("cuda");
-    expect(resolveServerComfyUiRuntimeDeviceMode({} as NodeJS.ProcessEnv, "directml")).toBe("directml");
-    expect(resolveServerComfyUiRuntimeDeviceMode({} as NodeJS.ProcessEnv, "cpu")).toBe("cpu");
-    expect(resolveServerComfyUiRuntimeDeviceMode({} as NodeJS.ProcessEnv, "nvidia")).toBe("cuda");
-    expect(resolveServerComfyUiRuntimeDeviceMode({ COMFYUI_RUNTIME_DEVICE_MODE: "cpu" } as NodeJS.ProcessEnv, "cuda")).toBe("cpu");
+    expect(
+      resolveServerComfyUiRuntimeDeviceMode({} as NodeJS.ProcessEnv, "cuda"),
+    ).toBe("cuda");
+    expect(
+      resolveServerComfyUiRuntimeDeviceMode(
+        {} as NodeJS.ProcessEnv,
+        "directml",
+      ),
+    ).toBe("directml");
+    expect(
+      resolveServerComfyUiRuntimeDeviceMode({} as NodeJS.ProcessEnv, "cpu"),
+    ).toBe("cpu");
+    expect(
+      resolveServerComfyUiRuntimeDeviceMode({} as NodeJS.ProcessEnv, "nvidia"),
+    ).toBe("cuda");
+    expect(
+      resolveServerComfyUiRuntimeDeviceMode(
+        { COMFYUI_RUNTIME_DEVICE_MODE: "cpu" } as NodeJS.ProcessEnv,
+        "cuda",
+      ),
+    ).toBe("cpu");
   });
 
-
   it("wires server model download through python runtime instead of unavailable stub", () => {
-    const canonicalSourcePath = resolve("modules/hosts/server/composition/composeServerHost.ts");
+    const canonicalSourcePath = resolve(
+      "modules/hosts/server/composition/composeServerHost.ts",
+    );
     const source = readFileSync(canonicalSourcePath, "utf8");
-    expect(source).toContain("pythonRuntimeFoundation.runtimePort.ensureModelDownloaded");
+    expect(source).toContain(
+      "pythonRuntimeFoundation.runtimePort.ensureModelDownloaded",
+    );
     expect(source).toContain("runtime.python.model_download.requested");
     expect(source).toContain("runtime.python.model_download.succeeded");
     expect(source).toContain("runtime.python.model_download.failed");
-    expect(source).not.toContain("Model download runtime is unavailable on server host.");
+    expect(source).not.toContain(
+      "Model download runtime is unavailable on server host.",
+    );
   });
 
   it("wires server Python runtime supervisor activity into structured logs", () => {
-    const canonicalSourcePath = resolve("modules/hosts/server/composition/composeServerHost.ts");
+    const canonicalSourcePath = resolve(
+      "modules/hosts/server/composition/composeServerHost.ts",
+    );
     const source = readFileSync(canonicalSourcePath, "utf8");
     expect(source).toContain("onEvent(event)");
     expect(source).toContain("runtime.python.server.activity");
@@ -389,10 +538,13 @@ describe("composeServerHost", () => {
     const workerDirectory = resolveServerPythonRuntimeWorkerDirectory({
       cwd: resolve("apps/server"),
       startDirectory: resolve("dist/modules/hosts/server/composition"),
-      exists: (candidate) => candidate === resolve("modules/adapters/runtime/python/worker"),
+      exists: (candidate) =>
+        candidate === resolve("modules/adapters/runtime/python/worker"),
     });
 
-    expect(workerDirectory).toBe(resolve("modules/adapters/runtime/python/worker"));
+    expect(workerDirectory).toBe(
+      resolve("modules/adapters/runtime/python/worker"),
+    );
   });
 
   it("keeps explicit server Python runtime worker directory overrides absolute", () => {
@@ -406,22 +558,30 @@ describe("composeServerHost", () => {
   });
 
   it("passes model-management logger into Hugging Face browse/details adapter", () => {
-    const canonicalSourcePath = resolve("modules/hosts/server/composition/composeServerHost.ts");
+    const canonicalSourcePath = resolve(
+      "modules/hosts/server/composition/composeServerHost.ts",
+    );
     const source = readFileSync(canonicalSourcePath, "utf8");
     expect(source).toContain("createHuggingFaceModelBrowseDetailsAdapter({");
     expect(source).toContain("logger: modelManagementLogger");
   });
 
   it("prepares ComfyUI before synchronizing selected model checkpoints", () => {
-    const canonicalSourcePath = resolve("modules/hosts/server/composition/composeServerHost.ts");
+    const canonicalSourcePath = resolve(
+      "modules/hosts/server/composition/composeServerHost.ts",
+    );
     const source = readFileSync(canonicalSourcePath, "utf8");
     expect(source).toContain("createRuntimePreparedModelCheckpointResolver");
     expect(source).toContain("runtime: comfyUiSupervisor");
-    expect(source).toContain("modelCheckpointResolver: localModelCheckpointResolver");
+    expect(source).toContain(
+      "modelCheckpointResolver: localModelCheckpointResolver",
+    );
   });
 
   it("wires a command runner into the server ComfyUI installer by default", () => {
-    const canonicalSourcePath = resolve("modules/hosts/server/composition/composeServerHost.ts");
+    const canonicalSourcePath = resolve(
+      "modules/hosts/server/composition/composeServerHost.ts",
+    );
     const source = readFileSync(canonicalSourcePath, "utf8");
     expect(source).toContain("const execFileWithTimeout = async");
     expect(source).toMatchObject(
@@ -431,7 +591,6 @@ describe("composeServerHost", () => {
     );
     expect(source).toContain("execFile: execFileWithTimeout");
   });
-
 });
 
 describe("server runtime/comfy root resolution", () => {
@@ -449,23 +608,32 @@ describe("server runtime/comfy root resolution", () => {
       env: { SERVER_RUNTIME_ROOT: " /tmp/runtime-root " } as NodeJS.ProcessEnv,
       runtimeRootDirectory: "/app/server-runtime",
     });
-    expect(installRoot).toBe(resolve("/tmp/runtime-root", "runtime-installs", "comfyui"));
+    expect(installRoot).toBe(
+      resolve("/tmp/runtime-root", "runtime-installs", "comfyui"),
+    );
     expect(source).toBe("SERVER_RUNTIME_ROOT");
   });
 
   it("ignores COMFYUI_INSTALL_ROOT and keeps server ComfyUI under server runtime root", () => {
     const { installRoot, source } = resolveServerComfyUiInstallRoot({
-      env: { SERVER_RUNTIME_ROOT: "/tmp/runtime-root", COMFYUI_INSTALL_ROOT: " /tmp/custom-comfy " } as NodeJS.ProcessEnv,
+      env: {
+        SERVER_RUNTIME_ROOT: "/tmp/runtime-root",
+        COMFYUI_INSTALL_ROOT: " /tmp/custom-comfy ",
+      } as NodeJS.ProcessEnv,
       runtimeRootDirectory: "/app/server-runtime",
     });
-    expect(installRoot).toBe(resolve("/tmp/runtime-root", "runtime-installs", "comfyui"));
+    expect(installRoot).toBe(
+      resolve("/tmp/runtime-root", "runtime-installs", "comfyui"),
+    );
     expect(source).toBe("SERVER_RUNTIME_ROOT");
   });
 });
 
 describe("server ComfyUI python/runtime resolution", () => {
   it("defaults to managed-venv mode and managed launch executable", () => {
-    const mode = resolveServerComfyUiPythonEnvironmentMode({} as NodeJS.ProcessEnv);
+    const mode = resolveServerComfyUiPythonEnvironmentMode(
+      {} as NodeJS.ProcessEnv,
+    );
     expect(mode).toEqual({ pythonEnvironmentMode: "managed-venv" });
     const launch = resolveServerComfyUiLaunchPythonExecutable({
       installRoot: "/tmp/server-runtime/runtime-installs/comfyui",
@@ -475,13 +643,16 @@ describe("server ComfyUI python/runtime resolution", () => {
       platform: "linux",
     });
     expect(launch).toEqual({
-      launchPythonExecutable: "/tmp/server-runtime/runtime-installs/comfyui/.venv/bin/python",
+      launchPythonExecutable:
+        "/tmp/server-runtime/runtime-installs/comfyui/.venv/bin/python",
       source: "managed-venv",
     });
   });
 
   it("uses ambient mode and COMFYUI_PYTHON_COMMAND as launch python", () => {
-    const mode = resolveServerComfyUiPythonEnvironmentMode({ COMFYUI_PYTHON_ENVIRONMENT_MODE: "ambient" } as NodeJS.ProcessEnv);
+    const mode = resolveServerComfyUiPythonEnvironmentMode({
+      COMFYUI_PYTHON_ENVIRONMENT_MODE: "ambient",
+    } as NodeJS.ProcessEnv);
     expect(mode.pythonEnvironmentMode).toBe("ambient");
     const launch = resolveServerComfyUiLaunchPythonExecutable({
       installRoot: "/tmp/comfy",
@@ -489,7 +660,10 @@ describe("server ComfyUI python/runtime resolution", () => {
       pythonEnvironmentMode: mode.pythonEnvironmentMode,
       skipPythonSetup: false,
     });
-    expect(launch).toEqual({ launchPythonExecutable: "python3.11", source: "ambient" });
+    expect(launch).toEqual({
+      launchPythonExecutable: "python3.11",
+      source: "ambient",
+    });
   });
 
   it("uses base python command when skip python setup is enabled", () => {
@@ -499,20 +673,46 @@ describe("server ComfyUI python/runtime resolution", () => {
       pythonEnvironmentMode: "managed-venv",
       skipPythonSetup: true,
     });
-    expect(launch).toEqual({ launchPythonExecutable: "python-custom", source: "skip-python-setup" });
+    expect(launch).toEqual({
+      launchPythonExecutable: "python-custom",
+      source: "skip-python-setup",
+    });
   });
 
   it("falls back to managed-venv for invalid environment mode values", () => {
-    const mode = resolveServerComfyUiPythonEnvironmentMode({ COMFYUI_PYTHON_ENVIRONMENT_MODE: "global" } as NodeJS.ProcessEnv);
-    expect(mode).toEqual({ pythonEnvironmentMode: "managed-venv", invalidValue: "global" });
+    const mode = resolveServerComfyUiPythonEnvironmentMode({
+      COMFYUI_PYTHON_ENVIRONMENT_MODE: "global",
+    } as NodeJS.ProcessEnv);
+    expect(mode).toEqual({
+      pythonEnvironmentMode: "managed-venv",
+      invalidValue: "global",
+    });
   });
 
   it("resolves runtime device mode from COMFYUI_RUNTIME_DEVICE_MODE and COMFYUI_ACCELERATOR", () => {
-    expect(resolveServerComfyUiRuntimeDeviceMode({} as NodeJS.ProcessEnv)).toBe("cpu");
-    expect(resolveServerComfyUiRuntimeDeviceMode({ COMFYUI_RUNTIME_DEVICE_MODE: "directml" } as NodeJS.ProcessEnv)).toBe("directml");
-    expect(resolveServerComfyUiRuntimeDeviceMode({ COMFYUI_ACCELERATOR: "cpu" } as NodeJS.ProcessEnv)).toBe("cpu");
-    expect(resolveServerComfyUiRuntimeDeviceMode({ COMFYUI_RUNTIME_DEVICE_MODE: "auto" } as NodeJS.ProcessEnv)).toBe("auto");
-    expect(resolveServerComfyUiRuntimeDeviceMode({ COMFYUI_RUNTIME_DEVICE_MODE: "unknown" } as NodeJS.ProcessEnv)).toBe("cpu");
+    expect(resolveServerComfyUiRuntimeDeviceMode({} as NodeJS.ProcessEnv)).toBe(
+      "cpu",
+    );
+    expect(
+      resolveServerComfyUiRuntimeDeviceMode({
+        COMFYUI_RUNTIME_DEVICE_MODE: "directml",
+      } as NodeJS.ProcessEnv),
+    ).toBe("directml");
+    expect(
+      resolveServerComfyUiRuntimeDeviceMode({
+        COMFYUI_ACCELERATOR: "cpu",
+      } as NodeJS.ProcessEnv),
+    ).toBe("cpu");
+    expect(
+      resolveServerComfyUiRuntimeDeviceMode({
+        COMFYUI_RUNTIME_DEVICE_MODE: "auto",
+      } as NodeJS.ProcessEnv),
+    ).toBe("auto");
+    expect(
+      resolveServerComfyUiRuntimeDeviceMode({
+        COMFYUI_RUNTIME_DEVICE_MODE: "unknown",
+      } as NodeJS.ProcessEnv),
+    ).toBe("cpu");
   });
 
   it("logs structured ComfyUI python/runtime diagnostics", () => {
@@ -521,14 +721,20 @@ describe("server ComfyUI python/runtime resolution", () => {
     const storageRootDirectory = join(tmpdir(), "server-storage");
     const runtimeRootDirectory = join(tmpdir(), "server-runtime");
     host.registerApi({
-      app: { post: testDouble.fn(), get: testDouble.fn(), patch: testDouble.fn(), delete: testDouble.fn() },
+      app: {
+        post: testDouble.fn(),
+        get: testDouble.fn(),
+        patch: testDouble.fn(),
+        delete: testDouble.fn(),
+      },
       storageRootDirectory,
       runtimeRootDirectory,
     });
     const comfyLog = sink.mock.calls
       .map((call) => call[1] as StructuredLogEvent)
       .find((event) => event.event === "runtime.comfyui.server.configuration");
-    const expectedBasePythonCommand = process.platform === "win32" ? "python" : "python3";
+    const expectedBasePythonCommand =
+      process.platform === "win32" ? "python" : "python3";
     expect(comfyLog?.data).toMatchObject({
       pythonEnvironmentMode: "managed-venv",
       basePythonCommand: expectedBasePythonCommand,
@@ -546,7 +752,12 @@ describe("server ComfyUI python/runtime resolution", () => {
     const storageRootDirectory = join(tmpdir(), "server-storage");
     const runtimeRootDirectory = join(tmpdir(), "server-runtime");
     host.registerApi({
-      app: { post: testDouble.fn(), get: testDouble.fn(), patch: testDouble.fn(), delete: testDouble.fn() },
+      app: {
+        post: testDouble.fn(),
+        get: testDouble.fn(),
+        patch: testDouble.fn(),
+        delete: testDouble.fn(),
+      },
       storageRootDirectory,
       runtimeRootDirectory,
     });
@@ -558,13 +769,22 @@ describe("server ComfyUI python/runtime resolution", () => {
       serverStorageRootDirectory: storageRootDirectory,
       serverRuntimeRootDirectory: runtimeRootDirectory,
       pythonRuntimeMode: "worker-sidecar",
-      pythonRuntimeRootDirectory: join(runtimeRootDirectory, "models", "huggingface"),
+      pythonRuntimeRootDirectory: join(
+        runtimeRootDirectory,
+        "models",
+        "huggingface",
+      ),
       pythonRuntimeRootSource: "default-server-runtime-root",
-      pythonRuntimeBaseUrl: "http://127.0.0.1:43111",
-      pythonRuntimeWorkerDirectory: expect.stringMatching(/modules[\\/]adapters[\\/]runtime[\\/]python[\\/]worker$/),
-      pythonRuntimeArgs: ["main.py"],
+      pythonRuntimeEndpointScope: "loopback",
+      pythonRuntimeCommandConfigured: false,
+      pythonRuntimeArgsConfigured: false,
       taskRegistryOwnership: "server",
     });
+    const pythonRuntimeData = pythonLog?.data ?? {};
+    expect("pythonRuntimeBaseUrl" in pythonRuntimeData).toBe(false);
+    expect("pythonRuntimeWorkerDirectory" in pythonRuntimeData).toBe(false);
+    expect("pythonRuntimeCommand" in pythonRuntimeData).toBe(false);
+    expect("pythonRuntimeArgs" in pythonRuntimeData).toBe(false);
     expect(pythonLog?.data).not.toMatchObject({
       pythonRuntimeMode: "ambient-only",
       pythonRuntimeRootDirectory: null,
@@ -572,26 +792,62 @@ describe("server ComfyUI python/runtime resolution", () => {
   });
 
   it("keeps server host composition free of desktop-host imports", () => {
-    const sourcePath = resolve("modules/hosts/server/composition/composeServerHost.ts");
+    const sourcePath = resolve(
+      "modules/hosts/server/composition/composeServerHost.ts",
+    );
     const source = readFileSync(sourcePath, "utf8");
     expect(source).not.toContain("hosts/desktop");
     expect(source).not.toContain("transport/ipc-electron");
   });
 
   it("keeps Hugging Face Xet enabled by default while assigning a server-owned Xet cache", () => {
-    const sourcePath = resolve("modules/hosts/server/composition/composeServerHost.ts");
+    const sourcePath = resolve(
+      "modules/hosts/server/composition/composeServerHost.ts",
+    );
     const source = readFileSync(sourcePath, "utf8");
 
     expect(source).toContain("HF_XET_CACHE");
-    expect(source).toContain("joinHostPath(pythonRuntimeRoot, \"xet\")");
-    expect(source).not.toContain("HF_HUB_DISABLE_XET: env.HF_HUB_DISABLE_XET ?? \"1\"");
+    expect(source).toContain('joinHostPath(pythonRuntimeRoot, "xet")');
+    expect(source).not.toContain(
+      'HF_HUB_DISABLE_XET: env.HF_HUB_DISABLE_XET ?? "1"',
+    );
+  });
+
+  it("stages ComfyUI references through catalog ownership, bounded reads, contained writes, and cleanup", () => {
+    const source = readFileSync(
+      resolve("modules/hosts/server/composition/composeServerHost.ts"),
+      "utf8",
+    );
+    const preparation = source.slice(
+      source.indexOf("prepareLatentReferenceImage:"),
+      source.indexOf(
+        "mapperOptions:",
+        source.indexOf("prepareLatentReferenceImage:"),
+      ),
+    );
+
+    expect(preparation).toContain("retrieveArtifactViewerMediaByStorageKey");
+    expect(preparation).toContain("maximumBytes: 16 * 1024 * 1024");
+    expect(preparation).toContain("hasReferenceImageSignature");
+    expect(preparation).toContain("writeContainedFile");
+    expect(preparation).toContain("deleteContainedFile");
+    expect(preparation).not.toContain("storage.retrieveArtifact");
+    expect(preparation).not.toContain("writeFile(");
   });
 });
 
 describe("server host composition decomposition", () => {
   it("keeps runtime readiness wiring in a focused helper without Express transport imports", () => {
-    const hostSource = readFileSync(resolve("modules/hosts/server/composition/composeServerHost.ts"), "utf8");
-    const helperSource = readFileSync(resolve("modules/hosts/server/composition/composeServerRuntimeReadiness.ts"), "utf8");
+    const hostSource = readFileSync(
+      resolve("modules/hosts/server/composition/composeServerHost.ts"),
+      "utf8",
+    );
+    const helperSource = readFileSync(
+      resolve(
+        "modules/hosts/server/composition/composeServerRuntimeReadiness.ts",
+      ),
+      "utf8",
+    );
 
     expect(hostSource).toContain("./composeServerRuntimeReadiness");
     expect(helperSource).toContain("RuntimeReadinessService");
@@ -600,11 +856,23 @@ describe("server host composition decomposition", () => {
   });
 
   it("keeps image-generation runtime task registry wiring in a focused helper without Express transport imports", () => {
-    const hostSource = readFileSync(resolve("modules/hosts/server/composition/composeServerHost.ts"), "utf8");
-    const helperSource = readFileSync(resolve("modules/hosts/server/composition/composeServerImageGenerationRuntimeTaskRegistry.ts"), "utf8");
+    const hostSource = readFileSync(
+      resolve("modules/hosts/server/composition/composeServerHost.ts"),
+      "utf8",
+    );
+    const helperSource = readFileSync(
+      resolve(
+        "modules/hosts/server/composition/composeServerImageGenerationRuntimeTaskRegistry.ts",
+      ),
+      "utf8",
+    );
 
-    expect(hostSource).toContain("./composeServerImageGenerationRuntimeTaskRegistry");
-    expect(helperSource).toContain("createComfyUiImageGenerationRuntimeAdapter");
+    expect(hostSource).toContain(
+      "./composeServerImageGenerationRuntimeTaskRegistry",
+    );
+    expect(helperSource).toContain(
+      "createComfyUiImageGenerationRuntimeAdapter",
+    );
     expect(helperSource).not.toContain("api-express");
     expect(helperSource).not.toContain("registerExpressApi");
   });

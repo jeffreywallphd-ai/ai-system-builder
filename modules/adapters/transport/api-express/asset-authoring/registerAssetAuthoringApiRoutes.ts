@@ -1,9 +1,13 @@
+import type { Request } from "express";
 import type { WorkspaceAssetAuthoringReadModelService } from "../../../../application/services/asset/workspace-asset-authoring-read-model.service";
-import type { AuthoredAssetRepositoryPort, AssetDraftRepositoryPort, AssetOverrideRepositoryPort, AssetRevisionRepositoryPort } from "../../../../application/ports/asset-authoring";
+import type { AssetDerivedCustomizationApplicationPort, AuthoredAssetRepositoryPort, AssetDraftRepositoryPort, AssetOverrideRepositoryPort, AssetRevisionRepositoryPort } from "../../../../application/ports/asset-authoring";
 import type { CreateWorkspaceAuthoredAssetUseCase, CreateAssetDraftUseCase, UpdateAssetDraftUseCase, PublishAssetDraftUseCase, CreateAssetOverrideUseCase, UpdateAssetOverrideUseCase, DisableAssetOverrideUseCase } from "../../../../application/use-cases/asset-authoring";
-import { createApiAssetAuthoringFailureResponse, createApiAssetAuthoringOperationSuccessResponse, API_ASSET_AUTHORING_CREATE_WORKSPACE_AUTHORED_ASSET_OPERATION, API_ASSET_AUTHORING_CREATE_DRAFT_OPERATION, API_ASSET_AUTHORING_UPDATE_DRAFT_OPERATION, API_ASSET_AUTHORING_PUBLISH_DRAFT_OPERATION, API_ASSET_AUTHORING_CREATE_OVERRIDE_OPERATION, API_ASSET_AUTHORING_UPDATE_OVERRIDE_OPERATION, API_ASSET_AUTHORING_DISABLE_OVERRIDE_OPERATION, API_ASSET_AUTHORING_LIST_AUTHORED_ASSETS_OPERATION, API_ASSET_AUTHORING_READ_AUTHORED_ASSET_OPERATION, API_ASSET_AUTHORING_LIST_DRAFTS_OPERATION, API_ASSET_AUTHORING_READ_DRAFT_OPERATION, API_ASSET_AUTHORING_LIST_REVISIONS_OPERATION, API_ASSET_AUTHORING_READ_REVISION_OPERATION, API_ASSET_AUTHORING_LIST_OVERRIDES_OPERATION, API_ASSET_AUTHORING_READ_OVERRIDE_OPERATION, API_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_OPERATION } from "../../../../contracts/api";
-import { normalizeAssetDraftId, normalizeAssetOverrideId, normalizeAssetRevisionId, normalizeAuthoredAssetId, type AssetAuthoringFailureCode } from "../../../../contracts/asset-authoring";
+import { createApiAssetAuthoringFailureResponse, createApiAssetAuthoringOperationSuccessResponse, API_ASSET_AUTHORING_CREATE_WORKSPACE_AUTHORED_ASSET_OPERATION, API_ASSET_AUTHORING_CREATE_DRAFT_OPERATION, API_ASSET_AUTHORING_UPDATE_DRAFT_OPERATION, API_ASSET_AUTHORING_PUBLISH_DRAFT_OPERATION, API_ASSET_AUTHORING_CREATE_OVERRIDE_OPERATION, API_ASSET_AUTHORING_UPDATE_OVERRIDE_OPERATION, API_ASSET_AUTHORING_DISABLE_OVERRIDE_OPERATION, API_ASSET_AUTHORING_LIST_AUTHORED_ASSETS_OPERATION, API_ASSET_AUTHORING_READ_AUTHORED_ASSET_OPERATION, API_ASSET_AUTHORING_LIST_DRAFTS_OPERATION, API_ASSET_AUTHORING_READ_DRAFT_OPERATION, API_ASSET_AUTHORING_LIST_REVISIONS_OPERATION, API_ASSET_AUTHORING_READ_REVISION_OPERATION, API_ASSET_AUTHORING_LIST_OVERRIDES_OPERATION, API_ASSET_AUTHORING_READ_OVERRIDE_OPERATION, API_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_OPERATION, API_ASSET_DERIVED_CUSTOMIZATION_LIST_TARGETS_OPERATION, API_ASSET_DERIVED_CUSTOMIZATION_READ_TARGET_OPERATION, API_ASSET_DERIVED_CUSTOMIZATION_CREATE_OPERATION, API_ASSET_DERIVED_CUSTOMIZATION_UPDATE_OPERATION, API_ASSET_DERIVED_CUSTOMIZATION_REVIEW_OPERATION, API_ASSET_DERIVED_CUSTOMIZATION_PUBLISH_OPERATION, API_ASSET_DERIVED_CUSTOMIZATION_ABANDON_OPERATION, API_ASSET_DERIVED_CUSTOMIZATION_LIST_OPERATION, API_ASSET_DERIVED_CUSTOMIZATION_READ_OPERATION } from "../../../../contracts/api";
+import { normalizeAssetCustomizationId, normalizeAssetDraftId, normalizeAssetOverrideId, normalizeAssetRevisionId, normalizeAuthoredAssetId, normalizeExactAssetDefinitionReference, type AssetAuthoringFailureCode } from "../../../../contracts/asset-authoring";
+import { normalizeAssetImplementationReleaseId } from "../../../../contracts/asset-implementation";
+import { normalizeAssetId } from "../../../../contracts/asset";
 import { createWorkspaceId } from "../../../../contracts/workspace";
+import { requireExpressAuthenticatedPrincipalId } from "../security/expressAuthContext";
 
 interface App { get: (p: string, h: (req: Req, res: Res) => Promise<void> | void) => void; post: (p: string, h: (req: Req, res: Res) => Promise<void> | void) => void; patch: (p: string, h: (req: Req, res: Res) => Promise<void> | void) => void; }
 type Req = { params?: Record<string, unknown>; query?: Record<string, unknown>; body?: Record<string, unknown> };
@@ -24,6 +28,7 @@ export interface RegisterAssetAuthoringApiRoutesDependencies {
   assetRevisionRepository?: AssetRevisionRepositoryPort;
   assetOverrideRepository?: AssetOverrideRepositoryPort;
   effectiveSummaryReader?: WorkspaceAssetAuthoringReadModelService;
+  derivedCustomizations?: AssetDerivedCustomizationApplicationPort;
 }
 
 const text = (value: unknown) => (typeof value === "string" ? value.trim() : "");
@@ -154,6 +159,97 @@ export function registerAssetAuthoringApiRoutes(dependencies: RegisterAssetAutho
 
   dependencies.app.get("/api/asset-authoring/workspaces/:workspaceId/effective-summaries", async (_req, res) =>
     fail(res, API_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_OPERATION, "unavailable", 503, "Workspace-wide effective summaries are deferred in Phase 8."));
+
+  registerDerivedCustomizationRoutes(dependencies);
+}
+
+function registerDerivedCustomizationRoutes(dependencies: RegisterAssetAuthoringApiRoutesDependencies): void {
+  const unavailable = (res: Res, operation: string) =>
+    fail(res, operation, "unavailable", 503, "Derived customization is unavailable.");
+  const workspace = (req: Req) => {
+    const value = required(req, "workspaceId");
+    return value.ok ? createWorkspaceId(value.value) : undefined;
+  };
+
+  dependencies.app.get("/api/asset-authoring/workspaces/:workspaceId/customization-targets", async (req, res) => {
+    const service = dependencies.derivedCustomizations;
+    if (!service) return unavailable(res, API_ASSET_DERIVED_CUSTOMIZATION_LIST_TARGETS_OPERATION);
+    const workspaceId = workspace(req);
+    if (!workspaceId) return fail(res, API_ASSET_DERIVED_CUSTOMIZATION_LIST_TARGETS_OPERATION, "validation", 400, "workspaceId is required.");
+    try {
+      const value = await service.listTargets({ workspaceId, text: optionalText(req.query?.text), sourceKind: optionalText(req.query?.sourceKind) as never, eligibility: optionalText(req.query?.eligibility) as never, limit: toLimit(req.query?.limit), cursor: optionalText(req.query?.cursor) });
+      return res.status(200).json(createApiAssetAuthoringOperationSuccessResponse(API_ASSET_DERIVED_CUSTOMIZATION_LIST_TARGETS_OPERATION, value));
+    } catch {
+      return fail(res, API_ASSET_DERIVED_CUSTOMIZATION_LIST_TARGETS_OPERATION, "validation", 400, "Customization target query is invalid.");
+    }
+  });
+
+  dependencies.app.get("/api/asset-authoring/workspaces/:workspaceId/customization-targets/:implementationReleaseId", async (req, res) => {
+    const service = dependencies.derivedCustomizations;
+    if (!service) return unavailable(res, API_ASSET_DERIVED_CUSTOMIZATION_READ_TARGET_OPERATION);
+    const workspaceId = workspace(req);
+    const releaseId = required(req, "implementationReleaseId");
+    const definitionId = optionalText(req.query?.definitionId);
+    const definitionVersion = optionalText(req.query?.definitionVersion);
+    if (!workspaceId || !releaseId.ok || !definitionId || !definitionVersion) return fail(res, API_ASSET_DERIVED_CUSTOMIZATION_READ_TARGET_OPERATION, "validation", 400, "workspaceId, definitionId, definitionVersion, and implementationReleaseId are required.");
+    try {
+      const value = await service.readTarget({ workspaceId, definitionRef: normalizeExactAssetDefinitionReference({ kind: "asset-definition-version", id: normalizeAssetId(definitionId), version: definitionVersion }), implementationReleaseId: normalizeAssetImplementationReleaseId(releaseId.value) });
+      if (!value) return fail(res, API_ASSET_DERIVED_CUSTOMIZATION_READ_TARGET_OPERATION, "not-found", 404, "Customization target was not found.");
+      return res.status(200).json(createApiAssetAuthoringOperationSuccessResponse(API_ASSET_DERIVED_CUSTOMIZATION_READ_TARGET_OPERATION, value));
+    } catch {
+      return fail(res, API_ASSET_DERIVED_CUSTOMIZATION_READ_TARGET_OPERATION, "validation", 400, "Customization target identity is invalid.");
+    }
+  });
+
+  dependencies.app.get("/api/asset-authoring/workspaces/:workspaceId/derived-customizations", async (req, res) => {
+    const service = dependencies.derivedCustomizations;
+    if (!service) return unavailable(res, API_ASSET_DERIVED_CUSTOMIZATION_LIST_OPERATION);
+    const workspaceId = workspace(req);
+    if (!workspaceId) return fail(res, API_ASSET_DERIVED_CUSTOMIZATION_LIST_OPERATION, "validation", 400, "workspaceId is required.");
+    try {
+      const value = await service.list({ workspaceId, status: optionalText(req.query?.status) as never, text: optionalText(req.query?.text), limit: toLimit(req.query?.limit), cursor: optionalText(req.query?.cursor) });
+      return res.status(200).json(createApiAssetAuthoringOperationSuccessResponse(API_ASSET_DERIVED_CUSTOMIZATION_LIST_OPERATION, { customizations: value.records, nextCursor: value.nextCursor }));
+    } catch {
+      return fail(res, API_ASSET_DERIVED_CUSTOMIZATION_LIST_OPERATION, "validation", 400, "Customization query is invalid.");
+    }
+  });
+
+  dependencies.app.get("/api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId", async (req, res) => {
+    const service = dependencies.derivedCustomizations;
+    if (!service) return unavailable(res, API_ASSET_DERIVED_CUSTOMIZATION_READ_OPERATION);
+    const workspaceId = workspace(req);
+    const customizationId = required(req, "customizationId");
+    if (!workspaceId || !customizationId.ok) return fail(res, API_ASSET_DERIVED_CUSTOMIZATION_READ_OPERATION, "validation", 400, "workspaceId and customizationId are required.");
+    try {
+      const value = await service.read(workspaceId, normalizeAssetCustomizationId(customizationId.value));
+      if (!value) return fail(res, API_ASSET_DERIVED_CUSTOMIZATION_READ_OPERATION, "not-found", 404, "Derived customization was not found.");
+      return res.status(200).json(createApiAssetAuthoringOperationSuccessResponse(API_ASSET_DERIVED_CUSTOMIZATION_READ_OPERATION, value));
+    } catch {
+      return fail(res, API_ASSET_DERIVED_CUSTOMIZATION_READ_OPERATION, "validation", 400, "Customization identity is invalid.");
+    }
+  });
+
+  const mutation = (method: "post" | "patch", path: string, operation: string, execute: (service: AssetDerivedCustomizationApplicationPort, command: Record<string, unknown>) => Promise<unknown>) => dependencies.app[method](path, async (req, res) => {
+    const service = dependencies.derivedCustomizations;
+    if (!service) return unavailable(res, operation);
+    const workspaceId = workspace(req);
+    if (!workspaceId) return fail(res, operation, "validation", 400, "workspaceId is required.");
+    const command = { ...(req.body ?? {}), workspaceId, ...(req.params?.customizationId ? { customizationId: text(req.params.customizationId) } : {}), actorId: actor(req) };
+    try {
+      const result = await execute(service, command) as { kind?: string; value?: unknown; failure?: { code: AssetAuthoringFailureCode; message: string } };
+      if (result.kind === "failure" && result.failure) return fail(res, operation, result.failure.code, mapStatus(result.failure.code), result.failure.message);
+      if (result.kind !== "success") return fail(res, operation, "internal", 500, "Operation failed.");
+      return res.status(200).json(createApiAssetAuthoringOperationSuccessResponse(operation, result.value));
+    } catch {
+      return fail(res, operation, "validation", 400, "Derived customization request is invalid.");
+    }
+  });
+
+  mutation("post", "/api/asset-authoring/workspaces/:workspaceId/derived-customizations", API_ASSET_DERIVED_CUSTOMIZATION_CREATE_OPERATION, (service, command) => service.create(command as never));
+  mutation("patch", "/api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId", API_ASSET_DERIVED_CUSTOMIZATION_UPDATE_OPERATION, (service, command) => service.update(command as never));
+  mutation("post", "/api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId/review", API_ASSET_DERIVED_CUSTOMIZATION_REVIEW_OPERATION, (service, command) => service.review(command as never));
+  mutation("post", "/api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId/publish", API_ASSET_DERIVED_CUSTOMIZATION_PUBLISH_OPERATION, (service, command) => service.publish(command as never));
+  mutation("post", "/api/asset-authoring/workspaces/:workspaceId/derived-customizations/:customizationId/abandon", API_ASSET_DERIVED_CUSTOMIZATION_ABANDON_OPERATION, (service, command) => service.abandon(command as never));
 }
 
 function commandBody(req: Req, workspaceField: "workspaceId" | "targetWorkspaceId", workspaceId: string): Record<string, unknown> {
@@ -171,4 +267,8 @@ function commandBody(req: Req, workspaceField: "workspaceId" | "targetWorkspaceI
 function optionalText(value: unknown): string | undefined {
   const normalized = text(value);
   return normalized || undefined;
+}
+
+function actor(request: Req): string {
+  return requireExpressAuthenticatedPrincipalId(request as Request);
 }

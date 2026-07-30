@@ -38,6 +38,7 @@ export class StoreArtifactInRepoUseCase {
           mediaType: command.mediaType,
           metadata: command.metadata,
           overwrite: command.overwrite,
+          repositoryCreation: command.repositoryCreation,
         }),
         context,
       );

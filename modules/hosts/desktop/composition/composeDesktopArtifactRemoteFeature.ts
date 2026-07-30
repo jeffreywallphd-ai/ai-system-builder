@@ -1,4 +1,5 @@
 import type { LoggingPort } from "../../../application/ports/logging";
+import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import { SystemArtifactIdFactory } from "../../../domain/artifact";
 import {
   BrowseHuggingFaceDatasetParquetFilesUseCase,
@@ -15,6 +16,8 @@ import { createHuggingFaceArtifactRepoStorageAdapter, type HuggingFaceFetchImple
 
 export interface ComposeDesktopArtifactRemoteFeatureOptions {
   artifacts: any;
+  workspaceShell: any;
+  workspaceAuthorization?: WorkspaceOperationAuthorizationPort;
   loggingPort: LoggingPort;
   now?: () => string;
   tokenProvider: () => string | undefined;
@@ -36,7 +39,7 @@ export function composeDesktopArtifactRemoteFeature(options: ComposeDesktopArtif
     get disposed() { return disposed; },
     huggingFaceArtifactRepoStorage,
     artifactRepoStorage,
-    publishArtifactToRepoUseCase: new PublishArtifactToRepoUseCase({ artifactStorage: foundation.storage, artifactRepoStorage, artifactBindingStorage: foundation.artifactBindings, now: options.now }),
+    publishArtifactToRepoUseCase: new PublishArtifactToRepoUseCase({ artifactStorage: foundation.storage, artifactCatalogRead: foundation.artifactCatalog, artifactRepoStorage, artifactBindingStorage: foundation.artifactBindings, workspaceRepository: options.workspaceShell.workspaceRepository, workspaceAuthorization: options.workspaceAuthorization, now: options.now }),
     browseHuggingFaceNamespaceDatasetsUseCase: new BrowseHuggingFaceNamespaceDatasetsUseCase({ repoBrowser: huggingFaceArtifactRepoStorage, logging: options.loggingPort, now: options.now }),
     browseHuggingFaceDatasetParquetFilesUseCase,
     importHuggingFaceFilesUseCase: new ImportHuggingFaceFilesUseCase({ browseFiles: browseHuggingFaceDatasetParquetFilesUseCase, registerArtifact: registerArtifactFromRepoUseCase, logging: options.loggingPort, now: options.now }),

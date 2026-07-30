@@ -9,6 +9,7 @@ export * from "./asset-resource-backed-view.service";
 export * from "./asset-source-identity.service";
 export * from "./asset-mutation-provenance.service";
 export * from "./asset-mutation-guard.service";
+export * from "./asset-mutation-workspace-guard.service";
 export * from "./asset-resource-backed-view-aggregate-provider.service";
 export * from "./asset-artifact-resource-backed-view-provider.service";
 export * from "./asset-image-resource-backed-view-provider.service";
@@ -25,3 +26,4 @@ export * from "./workspace-effective-asset-source-resolver.service";
 export * from "./workspace-effective-asset-projection-read-model.service";
 
 export * from "./workspace-asset-composition-read-model.service";
+export * from "./asset-derived-customization-target-catalog.service";

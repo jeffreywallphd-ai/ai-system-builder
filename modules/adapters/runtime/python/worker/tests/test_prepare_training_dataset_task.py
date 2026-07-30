@@ -94,6 +94,9 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         self.assertEqual(result.summary.trainRowCount, 3)
         self.assertEqual(result.summary.testRowCount, 0)
         self.assertTrue(any(warning.code == "document_normalization_skipped" for warning in result.warnings or []))
+        serialized_output = result.model_dump(mode="json")["outputs"][0]
+        self.assertRegex(serialized_output["outputHandle"], r"^[A-Za-z0-9._-]+$")
+        self.assertNotIn("tempPath", serialized_output)
 
     def test_writes_generated_schema_as_jsonl_json_and_csv(self) -> None:
         def generator(chunks, _config):

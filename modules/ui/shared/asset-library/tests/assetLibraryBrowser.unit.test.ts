@@ -107,4 +107,40 @@ describe("asset library browser helpers", () => {
     expect(formatAssetLibraryBoolean(undefined)).toBe("Not specified");
     expect(formatAssetLibraryDate("not a date")).toBeUndefined();
   });
+
+  it("uses reflow-safe filter and card grids without a side detail layout", () => {
+    const styles = readFileSync(
+      join(
+        process.cwd(),
+        "modules/ui/shared/styles/components/feature-surfaces.css",
+      ),
+      "utf8",
+    );
+    const desktopFeature = readFileSync(
+      join(
+        process.cwd(),
+        "apps/desktop/src/renderer/features/asset-library/components/AssetLibraryFeature.tsx",
+      ),
+      "utf8",
+    );
+    const thinFeature = readFileSync(
+      join(
+        process.cwd(),
+        "apps/thin-client/src/features/asset-library/components/AssetLibraryFeature.tsx",
+      ),
+      "utf8",
+    );
+
+    expect(styles).toMatch(
+      /grid-template-columns:\s*repeat\([\s\S]*?auto-fit[\s\S]*?minmax\(min\(100%,\s*10\.5rem\),\s*1fr\)/,
+    );
+    expect(styles).toMatch(
+      /\.asset-library-list\s*\{[\s\S]*?repeat\(auto-fit,\s*minmax\(min\(100%,\s*18rem\),\s*1fr\)\)/,
+    );
+    expect(styles).not.toMatch(/\.asset-library-layout\s*\{/);
+    expect(desktopFeature).not.toMatch(/className="asset-library-layout"/);
+    expect(thinFeature).not.toMatch(/className="asset-library-layout"/);
+    expect(desktopFeature).toMatch(/aria-haspopup="dialog"/);
+    expect(thinFeature).toMatch(/aria-haspopup="dialog"/);
+  });
 });

@@ -31,16 +31,26 @@ Asset Kernel remains authoritative for definitions, instances, ports, bindings, 
 
 ## Canonical records
 
-| Record                          | Mutability                  | Scope                         | Responsibility                                                     |
-| ------------------------------- | --------------------------- | ----------------------------- | ------------------------------------------------------------------ |
-| `AssetImplementationDraft`      | mutable with revision token | workspace                     | authoring intent and current source snapshot reference             |
-| `AssetSourceSnapshot`           | immutable                   | workspace/organization        | content digest and source artifact descriptor                      |
-| `AssetImplementationBuild`      | immutable attempt record    | workspace/organization        | toolchain inputs, status, bounded log/evidence references          |
-| `AssetImplementationRelease`    | immutable                   | workspace/organization/system | facets, digests, compatibility, capabilities, provenance, evidence |
-| `AssetImplementationBinding`    | revisioned policy record    | workspace/organization/system | exact definition-to-release association and activation state       |
-| `AssetImplementationRevocation` | append-only                 | authority scope               | reason, authority, timestamp, affected digest/identity             |
+| Record                                     | Mutability                   | Scope                         | Responsibility                                                          |
+| ------------------------------------------ | ---------------------------- | ----------------------------- | ----------------------------------------------------------------------- |
+| `AssetImplementationDraft`                 | mutable with revision token  | workspace                     | authoring intent and current source snapshot reference                  |
+| `AssetSourceSnapshot`                      | immutable                    | workspace/organization        | content digest and source artifact descriptor                           |
+| `AssetImplementationBuild`                 | immutable attempt record     | workspace/organization        | toolchain inputs, status, bounded log/evidence references               |
+| `AssetImplementationRelease`               | immutable                    | workspace/organization/system | facets, digests, compatibility, capabilities, provenance, evidence      |
+| `AssetImplementationBinding`               | revisioned policy record     | workspace/organization/system | exact definition-to-release association and activation state            |
+| `AssetImplementationRevocation`            | append-only                  | authority scope               | reason, authority, timestamp, affected digest/identity                  |
+| `AssetImplementationBackingResourceRecord` | immutable exact-release link | workspace/system              | safe descriptors linking an exact release to one verified source bundle |
 
 The structured records use opaque identifiers, media types, digests, byte sizes, and storage keys. They reject code strings, raw package bytes, source files, filesystem paths, credentials, environment values, provider payloads, and unbounded logs.
+
+Actual implementation backing resources remain in immutable artifact storage.
+Their bounded bundle may contain frontend structure, frontend styling, backend
+logic, and other definition/source files. The structured record retains only
+safe descriptors and the verified artifact identity. System Foundation previews
+consume the same canonical declarative resource programs stored for customization;
+admitted packages retain their inspected text facet resources. Compiled JavaScript
+is visible but read-only, while allowlisted TypeScript/TSX/JSON/CSS/Markdown source
+may participate in a reviewed sparse overlay.
 
 ## Facets
 
@@ -105,15 +115,50 @@ Signature verification, SLSA-compatible provenance, SBOM, dependency scanning, a
 
 Foundation upgrades publish a new immutable pack version. Exact old references continue to resolve if not revoked and retained. Deprecation supplies replacement guidance and support dates; it never rewrites a consumer's lock.
 
-The current `system.foundation@1.0.0` construction kit has 87 exact semantic
-definitions. The functional-default catalog maps every definition to a closed
-entry key, facet, deployment compatibility set, bounded preview fixture, and
-trusted built-in or declarative-engine release. The shared Catalog preview is
-available to desktop and thin-client renderers and has no external side
+The original `system.foundation@1.0.0` release remains immutable and contains
+105 exact semantic definitions. `system.foundation@2.0.0` remains immutable
+with 119 definitions: the complete v1 vocabulary at exact v2 references plus
+eight application layouts and six page layouts. The current
+`system.foundation@3.0.0` release preserves those 119 definition identities at
+exact v3 references and adds property-complete presentation schemas, a bounded
+root theme contract, and semantic per-asset style overrides. All three releases
+are installed and materialized independently; existing workspace activations
+and implementation identities are not rewritten, while newly created
+interactive systems select v3 by exact reference.
+
+The version-addressed functional-default catalog maps every definition to a
+closed entry key, facet, deployment compatibility set, bounded preview fixture,
+and trusted built-in or declarative-engine release. The shared Catalog preview
+is available to desktop and thin-client renderers and has no external side
 effects. Policy and security entries deny by default and request no authority;
 platform authorization remains authoritative. Record-form, data-preview, and
-basic-assistant composites reference the same lower-level definitions and
-typed composition model used by System Builder.
+basic-assistant composites reference the same lower-level definitions and typed
+composition model used by System Builder.
+
+Every definition in all Foundation releases has an exact bounded backing
+bundle. Depending on the asset, it contains the canonical frontend structure,
+CSS, declarative backend logic, definition JSON, or an appropriate combination.
+The v2 layout resources include named-slot structure, logical source order,
+responsive area maps, and working grid CSS. V3 resources additionally expose
+allowlisted semantic CSS variables and role selectors for theme inheritance;
+they never accept raw stylesheet text, arbitrary selectors, or dimensions from
+configuration. These resources are persisted as
+separate immutable artifacts when trusted built-ins are ensured; they are not
+metadata-only placeholders and they do not copy protected host implementation
+code into Asset Kernel records.
+
+Trusted built-in initialization is additive. When an exact implementation
+release already has a compatible system-owned backing-resource record, host
+composition preserves that immutable record and its artifact digest rather than
+attempting an in-place replacement. Missing release resources may still be
+materialized independently during an upgrade.
+
+Preview classification and backing-resource enrichment do not change the
+identity fields of an already-published trusted implementation release. In
+particular, facet kind, runtime kind, entry key, compatibility, and deployment
+profiles remain stable for an exact release so retained installations continue
+to initialize. A change to those runtime semantics requires a new release and
+pack identity rather than an in-place seed rewrite.
 
 ## Ownership and dependency direction
 
@@ -139,13 +184,25 @@ organization admission additionally requires a configured verified signature.
 Definitions and implementation releases use same-identity/same-content
 idempotency and reject replacement with different content.
 
-The Assets **Import packages** tab provides the same three-step inspection,
-permission review, install, activate, disable, and rollback workflow in desktop
-and thin-client surfaces. The API routes require `asset:read` or `asset:write`;
+Admission also creates one immutable implementation backing bundle per admitted
+release from the exact inspected definition and readable facet entries. Workspace
+authorization and release visibility govern reads; unsupported/binary resources
+remain unavailable rather than being decoded or executed.
+
+The Assets **Import Assets** tab provides a canonical deterministic,
+inspector-valid, non-executing `.aisb-package` starter plus complete authoring
+guidance and the same three-step inspection, permission review, install,
+activate, disable, and rollback workflow in desktop and thin-client surfaces.
+The starter download is generated locally and performs no inspection,
+installation, network access, activation, or execution. The API routes require
+`asset:read` or `asset:write`;
 desktop IPC exposes only typed package lifecycle channels. Package browse or
 inspection never resolves or executes an implementation. Public registries,
 automatic updates, package removal, and public marketplace behavior remain
 unsupported.
+
+`docs/asset-package-authoring-guide.md` documents the contract-aligned authoring
+sequence, bounded entry descriptors, evidence, and separate trust decisions.
 
 ## Research basis
 

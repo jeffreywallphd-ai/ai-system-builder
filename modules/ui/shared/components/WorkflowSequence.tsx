@@ -18,6 +18,7 @@ export function WorkflowSequence({
   return (
     <div
       className={joinClassNames("ui-workflow", className)}
+      role="list"
       aria-label={ariaLabel}
     >
       {children}
@@ -45,6 +46,7 @@ export function WorkflowStep({
   return (
     <section
       className={joinClassNames("ui-workflow__step", className)}
+      role="listitem"
       aria-labelledby={headingId}
       data-active={active ? "true" : undefined}
     >

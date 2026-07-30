@@ -356,6 +356,18 @@ import {
   DESKTOP_MODEL_DOWNLOAD_OPERATION,
   DESKTOP_MODEL_DOWNLOAD_REQUEST_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_START_OPERATION,
+  DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_READ_OPERATION,
+  DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION,
+  DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_CANCEL_OPERATION,
+  DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_CANCEL_RESPONSE_CHANNEL,
   DESKTOP_MODEL_RECORD_UPDATE_OPERATION,
   DESKTOP_MODEL_RECORD_UPDATE_REQUEST_CHANNEL,
   DESKTOP_MODEL_RECORD_UPDATE_RESPONSE_CHANNEL,
@@ -367,6 +379,10 @@ import {
   createDesktopModelListRequest,
   createDesktopModelReferenceSaveRequest,
   createDesktopModelDownloadRequest,
+  createDesktopModelDownloadStartRequest,
+  createDesktopModelDownloadReadRequest,
+  createDesktopModelDownloadListRequest,
+  createDesktopModelDownloadCancelRequest,
   createDesktopModelRecordUpdateRequest,
   createDesktopModelRecordDeleteRequest,
   createDesktopModelTrainRequest,
@@ -378,6 +394,10 @@ import {
   type DesktopModelListResponse,
   type DesktopModelReferenceSaveResponse,
   type DesktopModelDownloadResponse,
+  type DesktopModelDownloadStartResponse,
+  type DesktopModelDownloadReadResponse,
+  type DesktopModelDownloadListResponse,
+  type DesktopModelDownloadCancelResponse,
   type DesktopModelRecordUpdateResponse,
   type DesktopModelRecordDeleteResponse,
   type DesktopModelTrainResponse,
@@ -419,13 +439,22 @@ import {
   type DesktopAssetStudioWorkflowResponse,
   type DesktopAssetStudioListResponse,
   type DesktopAssetStudioDraftResponse,
+  type DesktopAssetStudioAssetDraftResponse,
+  type DesktopAssetStudioAssetDraftViewResponse,
+  type DesktopAssetStudioAssetDraftListResponse,
   DESKTOP_SYSTEM_BUILDER_OPERATIONS,
   DESKTOP_SYSTEM_BUILDER_CHANNELS,
   createDesktopSystemBuilderRequest,
   type DesktopSystemBuilderRecordResponse,
   type DesktopSystemBuilderListResponse,
+  type DesktopSystemBuilderManagementResponse,
   type DesktopSystemBuilderRevisionResponse,
   type DesktopSystemBuilderRevisionListResponse,
+  type DesktopSystemBuilderComposerCatalogResponse,
+  type DesktopSystemBuilderComposerAssetDetailResponse,
+  type DesktopSystemBuilderModelOptionCatalogResponse,
+  type DesktopSystemBuilderLayoutChangePreviewResponse,
+  type DesktopSystemBuilderFoundationUpgradePreviewResponse,
   DESKTOP_SYSTEM_BUILD_OPERATIONS,
   DESKTOP_SYSTEM_BUILD_CHANNELS,
   createDesktopSystemBuildRequest,
@@ -438,8 +467,20 @@ import {
   DESKTOP_SYSTEM_DEPLOYMENT_OPERATIONS,
   DESKTOP_SYSTEM_DEPLOYMENT_CHANNELS,
   createDesktopSystemDeploymentRequest,
+  DESKTOP_SYSTEM_RUN_WORKFLOW_OPERATIONS,
+  DESKTOP_SYSTEM_RUN_WORKFLOW_CHANNELS,
+  createDesktopSystemRunWorkflowRequest,
 } from "../../../../modules/contracts/ipc";
-import type { SystemDeploymentCapabilityPolicy } from "../../../../modules/contracts/system-deployment";
+import { ARTIFACT_UPLOAD_MAXIMUM_BYTES } from "../../../../modules/contracts/artifact-upload";
+import type {
+  SystemDeploymentCapabilityPolicy,
+  SystemPublishedLifecycleAction,
+} from "../../../../modules/contracts/system-deployment";
+import type {
+  InvokeSystemRunWorkflowCommand,
+  ListSystemRunWorkflowProfilesQuery,
+  PrepareSystemRunWorkflowQuery,
+} from "../../../../modules/contracts/system-run-workflow";
 import type {
   ActiveWorkspaceSelection,
   CreateWorkspaceCommand,
@@ -452,9 +493,14 @@ import type {
   SetAssetPackageActivationCommand,
 } from "../../../../modules/contracts/asset-package";
 import type {
+  CreateAssetStudioAssetDraftCommand,
+  ListAssetStudioAssetDraftsQuery,
   ProposeAssetStudioChangeCommand,
+  ReadAssetStudioAssetDraftQuery,
   ReviewAssetStudioProposalCommand,
   StartAssetStudioCommand,
+  TransitionAssetStudioAssetDraftCommand,
+  UpdateAssetStudioAssetDraftCommand,
 } from "../../../../modules/contracts/asset-studio";
 import type {
   ChangeSystemBuilderArchiveStateCommand,
@@ -463,6 +509,13 @@ import type {
   CreateSystemBuilderFromTemplateCommand,
   RenameSystemBuilderSystemCommand,
   SaveSystemBuilderRevisionCommand,
+  ListSystemBuilderComposerAssetsQuery,
+  ReadSystemBuilderComposerAssetQuery,
+  ListSystemBuilderModelOptionsQuery,
+  ListSystemBuilderManagementQuery,
+  PreviewSystemBuilderLayoutChangeCommand,
+  PreviewSystemBuilderFoundationUpgradeCommand,
+  UpgradeSystemBuilderFoundationCommand,
 } from "../../../../modules/contracts/system-builder";
 import type {
   CreateAssetDraftCommand,
@@ -472,6 +525,12 @@ import type {
   PublishAssetDraftCommand,
   UpdateAssetDraftCommand,
   UpdateAssetOverrideCommand,
+  CreateAssetDerivedCustomizationCommand,
+  UpdateAssetDerivedCustomizationCommand,
+  ReviewAssetDerivedCustomizationCommand,
+  ListAssetDerivedCustomizationTargetsQuery,
+  ReadAssetDerivedCustomizationTargetQuery,
+  ListAssetDerivedCustomizationsQuery,
 } from "../../../../modules/contracts/asset-authoring";
 import type {
   FinalizeGeneratedOutputCommand,
@@ -556,6 +615,13 @@ export interface DesktopSystemReviewEnvelope {
   readonly error?: unknown;
 }
 export interface DesktopSystemDeploymentEnvelope {
+  readonly operation: string;
+  readonly channel: string;
+  readonly ok?: boolean;
+  readonly value?: unknown;
+  readonly error?: unknown;
+}
+export interface DesktopSystemRunWorkflowEnvelope {
   readonly operation: string;
   readonly channel: string;
   readonly ok?: boolean;
@@ -1045,6 +1111,34 @@ export interface DesktopPreloadApi {
     workspaceId: string,
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopAssetStudioListResponse>;
+  createAssetStudioAssetDraft: (
+    input: Omit<CreateAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftResponse>;
+  updateAssetStudioAssetDraft: (
+    input: Omit<UpdateAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftResponse>;
+  readAssetStudioAssetDraft: (
+    input: ReadAssetStudioAssetDraftQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftViewResponse>;
+  listAssetStudioAssetDrafts: (
+    input: ListAssetStudioAssetDraftsQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftListResponse>;
+  reviewAssetStudioAssetDraft: (
+    input: Omit<TransitionAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftResponse>;
+  publishAssetStudioAssetDraft: (
+    input: Omit<TransitionAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftResponse>;
+  abandonAssetStudioAssetDraft: (
+    input: Omit<TransitionAssetStudioAssetDraftCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetStudioAssetDraftResponse>;
   createSystemBuilderSystem: (
     input: Omit<CreateSystemBuilderSystemCommand, "actorId">,
     context?: DesktopArtifactUploadBridgeContext,
@@ -1053,6 +1147,10 @@ export interface DesktopPreloadApi {
     input: { workspaceId: string; includeArchived?: boolean },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopSystemBuilderListResponse>;
+  listSystemBuilderManagement: (
+    input: ListSystemBuilderManagementQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuilderManagementResponse>;
   listSystemBuilderTemplates: (
     input?: Record<string, never>,
     context?: DesktopArtifactUploadBridgeContext,
@@ -1093,8 +1191,54 @@ export interface DesktopPreloadApi {
     input: { workspaceId: string; systemId: string },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopSystemBuilderRevisionListResponse>;
+  listSystemBuilderComposerAssets: (
+    input: ListSystemBuilderComposerAssetsQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuilderComposerCatalogResponse>;
+  readSystemBuilderComposerAsset: (
+    input: ReadSystemBuilderComposerAssetQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuilderComposerAssetDetailResponse>;
+  listSystemBuilderModelOptions: (
+    input: ListSystemBuilderModelOptionsQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuilderModelOptionCatalogResponse>;
+  previewSystemBuilderLayoutChange: (
+    input: Omit<
+      PreviewSystemBuilderLayoutChangeCommand,
+      "actorId" | "workspaceId" | "systemId"
+    > & { readonly workspaceId: string; readonly systemId: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuilderLayoutChangePreviewResponse>;
+  previewSystemBuilderFoundationUpgrade: (
+    input: Omit<
+      PreviewSystemBuilderFoundationUpgradeCommand,
+      "actorId" | "workspaceId" | "systemId"
+    > & { readonly workspaceId: string; readonly systemId: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuilderFoundationUpgradePreviewResponse>;
+  upgradeSystemBuilderFoundation: (
+    input: Omit<
+      UpgradeSystemBuilderFoundationCommand,
+      "actorId" | "workspaceId" | "systemId"
+    > & { readonly workspaceId: string; readonly systemId: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuilderRevisionResponse>;
+  prepareSystemBuild: (
+    input: {
+      workspaceId: string;
+      systemId: string;
+      systemRevisionId: string;
+    },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuildEnvelope>;
   requestSystemBuild: (
-    input: Record<string, unknown>,
+    input: {
+      workspaceId: string;
+      buildId: string;
+      systemId: string;
+      systemRevisionId: string;
+    },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopSystemBuildEnvelope>;
   cancelSystemBuild: (
@@ -1124,6 +1268,10 @@ export interface DesktopPreloadApi {
   ) => Promise<DesktopSystemBuildEnvelope>;
   listSystemReleases: (
     input: { workspaceId: string; systemId?: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemBuildEnvelope>;
+  listSystemPublicationWorkspace: (
+    input: { workspaceId: string },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopSystemBuildEnvelope>;
   compareSystemReleases: (
@@ -1196,6 +1344,19 @@ export interface DesktopPreloadApi {
     input: DesktopSystemReviewContextInput & { limit?: number },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopSystemReviewEnvelope>;
+  readPublishedSystemLifecycle: (
+    input: { workspaceId: string; releaseId: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemDeploymentEnvelope>;
+  invokePublishedSystemLifecycle: (
+    input: {
+      workspaceId: string;
+      releaseId: string;
+      action: SystemPublishedLifecycleAction;
+      expectedRevision: string;
+    },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemDeploymentEnvelope>;
   installSystemDeployment: (
     input: DesktopSystemDeploymentContextInput & {
       releaseId: string;
@@ -1249,6 +1410,18 @@ export interface DesktopPreloadApi {
     input: DesktopSystemDeploymentContextInput & { limit?: number },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopSystemDeploymentEnvelope>;
+  listSystemRunWorkflowProfiles: (
+    input: ListSystemRunWorkflowProfilesQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemRunWorkflowEnvelope>;
+  prepareSystemRunWorkflow: (
+    input: PrepareSystemRunWorkflowQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemRunWorkflowEnvelope>;
+  invokeSystemRunWorkflow: (
+    input: InvokeSystemRunWorkflowCommand,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopSystemRunWorkflowEnvelope>;
   updateAssetDraft: (
     command: UpdateAssetDraftCommand,
     context?: DesktopArtifactUploadBridgeContext,
@@ -1354,6 +1527,42 @@ export interface DesktopPreloadApi {
     },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopAssetAuthoringListEffectiveSummariesResponse>;
+  listAssetDerivedCustomizationTargets: (
+    input: ListAssetDerivedCustomizationTargetsQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationListTargetsResponse>;
+  readAssetDerivedCustomizationTarget: (
+    input: ReadAssetDerivedCustomizationTargetQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationReadTargetResponse>;
+  createAssetDerivedCustomization: (
+    input: Omit<CreateAssetDerivedCustomizationCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationCreateResponse>;
+  updateAssetDerivedCustomization: (
+    input: Omit<UpdateAssetDerivedCustomizationCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationUpdateResponse>;
+  reviewAssetDerivedCustomization: (
+    input: Omit<ReviewAssetDerivedCustomizationCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationReviewResponse>;
+  publishAssetDerivedCustomization: (
+    input: Omit<ReviewAssetDerivedCustomizationCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationPublishResponse>;
+  abandonAssetDerivedCustomization: (
+    input: Omit<ReviewAssetDerivedCustomizationCommand, "actorId">,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationAbandonResponse>;
+  listAssetDerivedCustomizations: (
+    input: ListAssetDerivedCustomizationsQuery,
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationListResponse>;
+  readAssetDerivedCustomization: (
+    input: { workspaceId: string; customizationId: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopAssetDerivedCustomizationReadResponse>;
   listAssetDefinitions: (
     input?: DesktopAssetDefinitionsListBridgeInput,
     context?: DesktopArtifactUploadBridgeContext,
@@ -1416,15 +1625,11 @@ export interface DesktopPreloadApi {
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopImageGenerationFinalizeResponse>;
   readComfyUiInstallStatus: (
-    input?: { installRoot?: string },
+    input?: Record<string, never>,
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<any>;
   repairComfyUiInstall: (
-    input?: {
-      installRoot?: string;
-      allowUpdate?: boolean;
-      forceRepair?: boolean;
-    },
+    input?: Record<string, never>,
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<any>;
   browseArtifacts: (
@@ -1461,6 +1666,7 @@ export interface DesktopPreloadApi {
   ) => Promise<DesktopArtifactMediaViewResponse>;
   publishArtifactToRepo: (
     input: {
+      workspaceId: string;
       artifactId: string;
       target: {
         provider: string;
@@ -1469,6 +1675,10 @@ export interface DesktopPreloadApi {
         revision?: string;
       };
       mediaType?: string;
+      repositoryCreation?: {
+        approved: true;
+        visibility: "private" | "public";
+      };
     },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopArtifactPublishResponse>;
@@ -1551,6 +1761,10 @@ export interface DesktopPreloadApi {
     input: Parameters<typeof createDesktopModelDownloadRequest>[0],
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopModelDownloadResponse>;
+  startModelDownload: (input: Parameters<typeof createDesktopModelDownloadStartRequest>[0], context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopModelDownloadStartResponse>;
+  readModelDownload: (input: Parameters<typeof createDesktopModelDownloadReadRequest>[0], context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopModelDownloadReadResponse>;
+  listModelDownloads: (input: Parameters<typeof createDesktopModelDownloadListRequest>[0], context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopModelDownloadListResponse>;
+  cancelModelDownload: (input: Parameters<typeof createDesktopModelDownloadCancelRequest>[0], context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopModelDownloadCancelResponse>;
   updateModelRecord: (
     input: Parameters<typeof createDesktopModelRecordUpdateRequest>[0],
     context?: DesktopArtifactUploadBridgeContext,
@@ -1642,6 +1856,7 @@ export function createDesktopPreloadApi(
   const uploadSource = dependencies.uploadSource ?? DEFAULT_UPLOAD_SOURCE;
   const artifactSource = dependencies.artifactSource ?? DEFAULT_ARTIFACT_SOURCE;
   const assetRegistrySource = DEFAULT_ASSET_REGISTRY_SOURCE;
+  let artifactUploadInFlight = false;
 
   return {
     memoryDiagnosticsEnabled: dependencies.memoryDiagnosticsEnabled === true,
@@ -1790,6 +2005,20 @@ export function createDesktopPreloadApi(
     },
 
     async uploadArtifact(input, context = {}) {
+      if (
+        !(input.bytes instanceof Uint8Array) ||
+        input.bytes.byteLength === 0
+      ) {
+        throw new Error("Artifact upload bytes are required.");
+      }
+      if (input.bytes.byteLength > ARTIFACT_UPLOAD_MAXIMUM_BYTES) {
+        throw new Error(
+          `Artifact uploads must not exceed ${ARTIFACT_UPLOAD_MAXIMUM_BYTES} bytes.`,
+        );
+      }
+      if (artifactUploadInFlight) {
+        throw new Error("An artifact upload is already in progress.");
+      }
       const request: DesktopArtifactUploadRequest =
         createDesktopArtifactUploadRequest(
           {
@@ -1807,20 +2036,25 @@ export function createDesktopPreloadApi(
             correlationId: context.correlationId,
           },
         );
-      const response = await dependencies.ipcRenderer.invoke(
-        DESKTOP_ARTIFACT_UPLOAD_REQUEST_CHANNEL.value,
-        request,
-      );
+      artifactUploadInFlight = true;
+      try {
+        const response = await dependencies.ipcRenderer.invoke(
+          DESKTOP_ARTIFACT_UPLOAD_REQUEST_CHANNEL.value,
+          request,
+        );
 
-      return assertDesktopEnvelopeResponse<DesktopArtifactUploadResponse>(
-        response,
-        {
-          operation: DESKTOP_ARTIFACT_UPLOAD_OPERATION,
-          channel: DESKTOP_ARTIFACT_UPLOAD_RESPONSE_CHANNEL.value,
-          message:
-            "Received invalid desktop artifact upload IPC response envelope.",
-        },
-      );
+        return assertDesktopEnvelopeResponse<DesktopArtifactUploadResponse>(
+          response,
+          {
+            operation: DESKTOP_ARTIFACT_UPLOAD_OPERATION,
+            channel: DESKTOP_ARTIFACT_UPLOAD_RESPONSE_CHANNEL.value,
+            message:
+              "Received invalid desktop artifact upload IPC response envelope.",
+          },
+        );
+      } finally {
+        artifactUploadInFlight = false;
+      }
     },
 
     async getArtifactUploadPolicy(context = {}) {
@@ -3116,6 +3350,78 @@ export function createDesktopPreloadApi(
         },
       );
     },
+    async listAssetDerivedCustomizationTargets(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "listTargets",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationListTargetsResponse>;
+    },
+    async readAssetDerivedCustomizationTarget(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "readTarget",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationReadTargetResponse>;
+    },
+    async createAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "create",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationCreateResponse>;
+    },
+    async updateAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "update",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationUpdateResponse>;
+    },
+    async reviewAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "review",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationReviewResponse>;
+    },
+    async publishAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "publish",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationPublishResponse>;
+    },
+    async abandonAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "abandon",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationAbandonResponse>;
+    },
+    async listAssetDerivedCustomizations(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "list",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationListResponse>;
+    },
+    async readAssetDerivedCustomization(input, context = {}) {
+      return invokeAssetDerivedCustomization(
+        dependencies,
+        "read",
+        input,
+        context,
+      ) as Promise<DesktopAssetDerivedCustomizationReadResponse>;
+    },
     async listAssetDefinitions(input = {}, context = {}) {
       const request = createDesktopAssetDefinitionsListRequest(
         {
@@ -3709,6 +4015,7 @@ export function createDesktopPreloadApi(
       const request: DesktopArtifactPublishRequest =
         createDesktopArtifactPublishRequest(
           {
+            workspaceId: input.workspaceId ?? context.workspaceId ?? "",
             artifactId: input.artifactId,
             target: {
               provider: input.target.provider,
@@ -3717,6 +4024,7 @@ export function createDesktopPreloadApi(
               revision: input.target.revision,
             },
             mediaType: input.mediaType,
+            repositoryCreation: input.repositoryCreation,
             verify: true,
             boundary: {
               host: "desktop",
@@ -4058,6 +4366,26 @@ export function createDesktopPreloadApi(
         },
       );
     },
+    async startModelDownload(input, context = {}) {
+      const request = createDesktopModelDownloadStartRequest(input, context);
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL.value, request);
+      return assertDesktopEnvelopeResponse<DesktopModelDownloadStartResponse>(response, { operation: DESKTOP_MODEL_DOWNLOAD_START_OPERATION, channel: DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL.value, message: "Received invalid desktop model download-start IPC response envelope." });
+    },
+    async readModelDownload(input, context = {}) {
+      const request = createDesktopModelDownloadReadRequest(input, context);
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL.value, request);
+      return assertDesktopEnvelopeResponse<DesktopModelDownloadReadResponse>(response, { operation: DESKTOP_MODEL_DOWNLOAD_READ_OPERATION, channel: DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL.value, message: "Received invalid desktop model download-read IPC response envelope." });
+    },
+    async listModelDownloads(input, context = {}) {
+      const request = createDesktopModelDownloadListRequest(input, context);
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL.value, request);
+      return assertDesktopEnvelopeResponse<DesktopModelDownloadListResponse>(response, { operation: DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION, channel: DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL.value, message: "Received invalid desktop model download-list IPC response envelope." });
+    },
+    async cancelModelDownload(input, context = {}) {
+      const request = createDesktopModelDownloadCancelRequest(input, context);
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL.value, request);
+      return assertDesktopEnvelopeResponse<DesktopModelDownloadCancelResponse>(response, { operation: DESKTOP_MODEL_DOWNLOAD_CANCEL_OPERATION, channel: DESKTOP_MODEL_DOWNLOAD_CANCEL_RESPONSE_CHANNEL.value, message: "Received invalid desktop model download-cancel IPC response envelope." });
+    },
     async updateModelRecord(input, context = {}) {
       const request = createDesktopModelRecordUpdateRequest(input, context);
       const response = await dependencies.ipcRenderer.invoke(
@@ -4281,6 +4609,62 @@ export function createDesktopPreloadApi(
         context,
       );
     },
+    async createAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftResponse>(
+        dependencies,
+        "createAssetDraft",
+        input,
+        context,
+      );
+    },
+    async updateAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftResponse>(
+        dependencies,
+        "updateAssetDraft",
+        input,
+        context,
+      );
+    },
+    async readAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftViewResponse>(
+        dependencies,
+        "readAssetDraft",
+        input,
+        context,
+      );
+    },
+    async listAssetStudioAssetDrafts(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftListResponse>(
+        dependencies,
+        "listAssetDrafts",
+        input,
+        context,
+      );
+    },
+    async reviewAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftResponse>(
+        dependencies,
+        "reviewAssetDraft",
+        input,
+        context,
+      );
+    },
+    async publishAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftResponse>(
+        dependencies,
+        "publishAssetDraft",
+        input,
+        context,
+      );
+    },
+    async abandonAssetStudioAssetDraft(input, context = {}) {
+      return invokeAssetStudio<DesktopAssetStudioAssetDraftResponse>(
+        dependencies,
+        "abandonAssetDraft",
+        input,
+        context,
+      );
+    },
     async createSystemBuilderSystem(input, context = {}) {
       return invokeSystemBuilder<DesktopSystemBuilderRecordResponse>(
         dependencies,
@@ -4293,6 +4677,14 @@ export function createDesktopPreloadApi(
       return invokeSystemBuilder<DesktopSystemBuilderListResponse>(
         dependencies,
         "list",
+        input,
+        context,
+      );
+    },
+    async listSystemBuilderManagement(input, context = {}) {
+      return invokeSystemBuilder<DesktopSystemBuilderManagementResponse>(
+        dependencies,
+        "listManagement",
         input,
         context,
       );
@@ -4377,6 +4769,57 @@ export function createDesktopPreloadApi(
         context,
       );
     },
+    async listSystemBuilderComposerAssets(input, context = {}) {
+      return invokeSystemBuilder<DesktopSystemBuilderComposerCatalogResponse>(
+        dependencies,
+        "listComposerAssets",
+        input,
+        context,
+      );
+    },
+    async readSystemBuilderComposerAsset(input, context = {}) {
+      return invokeSystemBuilder<DesktopSystemBuilderComposerAssetDetailResponse>(
+        dependencies,
+        "readComposerAsset",
+        input,
+        context,
+      );
+    },
+    async listSystemBuilderModelOptions(input, context = {}) {
+      return invokeSystemBuilder<DesktopSystemBuilderModelOptionCatalogResponse>(
+        dependencies,
+        "listModelOptions",
+        input,
+        context,
+      );
+    },
+    async previewSystemBuilderLayoutChange(input, context = {}) {
+      return invokeSystemBuilder<DesktopSystemBuilderLayoutChangePreviewResponse>(
+        dependencies,
+        "previewLayoutChange",
+        input,
+        context,
+      );
+    },
+    async previewSystemBuilderFoundationUpgrade(input, context = {}) {
+      return invokeSystemBuilder<DesktopSystemBuilderFoundationUpgradePreviewResponse>(
+        dependencies,
+        "previewFoundationUpgrade",
+        input,
+        context,
+      );
+    },
+    async upgradeSystemBuilderFoundation(input, context = {}) {
+      return invokeSystemBuilder<DesktopSystemBuilderRevisionResponse>(
+        dependencies,
+        "upgradeFoundation",
+        input,
+        context,
+      );
+    },
+    async prepareSystemBuild(input, context = {}) {
+      return invokeSystemBuild(dependencies, "prepare", input, context);
+    },
     async requestSystemBuild(input, context = {}) {
       return invokeSystemBuild(dependencies, "request", input, context);
     },
@@ -4397,6 +4840,14 @@ export function createDesktopPreloadApi(
     },
     async listSystemReleases(input, context = {}) {
       return invokeSystemBuild(dependencies, "listReleases", input, context);
+    },
+    async listSystemPublicationWorkspace(input, context = {}) {
+      return invokeSystemBuild(
+        dependencies,
+        "publicationWorkspace",
+        input,
+        context,
+      );
     },
     async compareSystemReleases(input, context = {}) {
       return invokeSystemBuild(dependencies, "compareReleases", input, context);
@@ -4434,6 +4885,12 @@ export function createDesktopPreloadApi(
     async listSystemReviewAudit(input, context = {}) {
       return invokeSystemReview(dependencies, "listAudit", input, context);
     },
+    async readPublishedSystemLifecycle(input, context = {}) {
+      return invokeSystemDeployment(dependencies, "lifecycleRead", input, context);
+    },
+    async invokePublishedSystemLifecycle(input, context = {}) {
+      return invokeSystemDeployment(dependencies, "lifecycleInvoke", input, context);
+    },
     async installSystemDeployment(input, context = {}) {
       return invokeSystemDeployment(dependencies, "install", input, context);
     },
@@ -4466,6 +4923,20 @@ export function createDesktopPreloadApi(
     },
     async listSystemDeploymentAudit(input, context = {}) {
       return invokeSystemDeployment(dependencies, "listAudit", input, context);
+    },
+    async listSystemRunWorkflowProfiles(input, context = {}) {
+      return invokeSystemRunWorkflow(
+        dependencies,
+        "listProfiles",
+        input,
+        context,
+      );
+    },
+    async prepareSystemRunWorkflow(input, context = {}) {
+      return invokeSystemRunWorkflow(dependencies, "prepare", input, context);
+    },
+    async invokeSystemRunWorkflow(input, context = {}) {
+      return invokeSystemRunWorkflow(dependencies, "invoke", input, context);
     },
   };
 }
@@ -4667,6 +5138,64 @@ async function invokeSystemDeployment(
     },
   );
 }
+
+async function invokeSystemRunWorkflow(
+  dependencies: CreateDesktopPreloadApiDependencies,
+  operation: keyof typeof DESKTOP_SYSTEM_RUN_WORKFLOW_OPERATIONS,
+  payload: unknown,
+  context: DesktopArtifactUploadBridgeContext,
+): Promise<DesktopSystemRunWorkflowEnvelope> {
+  const request = createDesktopSystemRunWorkflowRequest(
+    operation,
+    payload,
+    context,
+  );
+  const channels = DESKTOP_SYSTEM_RUN_WORKFLOW_CHANNELS[operation];
+  const response = await dependencies.ipcRenderer.invoke(
+    channels.request.value,
+    request,
+  );
+  return assertDesktopEnvelopeResponse<DesktopSystemRunWorkflowEnvelope>(
+    response,
+    {
+      operation: DESKTOP_SYSTEM_RUN_WORKFLOW_OPERATIONS[operation],
+      channel: channels.response.value,
+      message: `Received invalid desktop System Run Workflow ${operation} IPC response envelope.`,
+    },
+  );
+}
+
+async function invokeAssetDerivedCustomization(
+  dependencies: CreateDesktopPreloadApiDependencies,
+  key: keyof typeof DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS,
+  payload: unknown,
+  context: DesktopArtifactUploadBridgeContext,
+): Promise<unknown> {
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    !("workspaceId" in payload) ||
+    typeof payload.workspaceId !== "string" ||
+    !payload.workspaceId.trim()
+  )
+    throw new Error("Invalid request.");
+  const descriptor = DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS[key];
+  const response = await dependencies.ipcRenderer.invoke(
+    descriptor.request.value,
+    {
+      payload,
+      operation: descriptor.operation,
+      channel: descriptor.request.value,
+      requestId: context.requestId,
+      correlationId: context.correlationId,
+    },
+  );
+  return assertDesktopEnvelopeResponse(response, {
+    operation: descriptor.operation,
+    channel: descriptor.response.value,
+    message: `Received invalid desktop asset derived customization ${key} IPC response envelope.`,
+  });
+}
 import {
   DESKTOP_ASSET_AUTHORING_CREATE_WORKSPACE_AUTHORED_ASSET_OPERATION,
   DESKTOP_ASSET_AUTHORING_CREATE_WORKSPACE_AUTHORED_ASSET_REQUEST_CHANNEL,
@@ -4716,6 +5245,7 @@ import {
   DESKTOP_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_OPERATION,
   DESKTOP_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_REQUEST_CHANNEL,
   DESKTOP_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_RESPONSE_CHANNEL,
+  DESKTOP_ASSET_DERIVED_CUSTOMIZATION_CHANNELS,
   type DesktopAssetAuthoringCreateWorkspaceAuthoredAssetResponse,
   type DesktopAssetAuthoringCreateDraftResponse,
   type DesktopAssetAuthoringUpdateDraftResponse,
@@ -4732,6 +5262,15 @@ import {
   type DesktopAssetAuthoringListOverridesResponse,
   type DesktopAssetAuthoringReadOverrideResponse,
   type DesktopAssetAuthoringListEffectiveSummariesResponse,
+  type DesktopAssetDerivedCustomizationListTargetsResponse,
+  type DesktopAssetDerivedCustomizationReadTargetResponse,
+  type DesktopAssetDerivedCustomizationCreateResponse,
+  type DesktopAssetDerivedCustomizationUpdateResponse,
+  type DesktopAssetDerivedCustomizationReviewResponse,
+  type DesktopAssetDerivedCustomizationPublishResponse,
+  type DesktopAssetDerivedCustomizationAbandonResponse,
+  type DesktopAssetDerivedCustomizationListResponse,
+  type DesktopAssetDerivedCustomizationReadResponse,
 } from "../../../../modules/contracts/ipc";
 import type {
   CopyUserLibraryAssetToWorkspaceCommand,

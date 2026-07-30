@@ -54,3 +54,5 @@ export * from "./desktop-system-build-contract";
 export * from "./desktop-system-data-contract";
 export * from "./desktop-system-review-contract";
 export * from "./desktop-system-deployment-contract";
+export * from "./desktop-system-run-workflow-contract";
+export * from "./desktop-system-runtime-conversation-contract";

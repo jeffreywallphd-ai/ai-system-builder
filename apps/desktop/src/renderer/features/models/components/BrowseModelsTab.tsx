@@ -1,5 +1,5 @@
 import type { useModelsFeature } from "../hooks/useModelsFeature";
-import { TermWithHint } from "../../../../../../../modules/ui/shared";
+import { TermWithHint, TransientNotificationPublisher } from "../../../../../../../modules/ui/shared";
 
 type ModelsState = ReturnType<typeof useModelsFeature>;
 
@@ -39,8 +39,8 @@ export function BrowseModelsTab(props: { state: ModelsState }) {
           </article>
         ))}
       </section>
-      {s.saveState.message ? <p role={s.saveState.status === "error" ? "alert" : "status"}>{s.saveState.message}</p> : null}
-      {s.downloadState.message ? <p role={s.downloadState.status === "error" ? "alert" : "status"}>{s.downloadState.message}</p> : null}
+      <TransientNotificationPublisher message={s.saveState.message} title={s.saveState.status === "error" ? "Model save needs attention" : "Model reference saved"} tone={s.saveState.status === "error" ? "error" : "success"} source="Models" workspaceId={s.workspaceId} />
+      <TransientNotificationPublisher message={s.downloadState.status === "error" ? s.downloadState.message : undefined} title="Model download needs attention" tone="error" source="Models" workspaceId={s.workspaceId} />
     </section>
   );
 }

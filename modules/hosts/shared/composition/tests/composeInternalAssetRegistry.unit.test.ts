@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 
 import type { AssetDefinition, AssetReference, AssetResourceBackedView } from "../../../../contracts/asset";
+import { createWorkspaceId } from "../../../../contracts/workspace";
 import type { AssetResourceBackedViewListQuery, AssetResourceBackedViewListResult, AssetResourceBackedViewProvider } from "../../../../application/ports/asset";
 import { BuiltInAssetDefinitionSeedingService } from "../../../../application/services/asset/built-in-asset-definition-seeding.service";
 import { AssetRegistryReadFacade, AssetRegistryReadFacadeError } from "../../../../application/services/asset/asset-registry-read-facade.service";
@@ -141,6 +142,36 @@ describe("composeInternalAssetRegistry", () => {
     assert.equal(result.createdCount, 2);
     const cards = await composition.readFacade.listDefinitionCards({ includeBuiltIns: true, includeCustom: false });
     assert.deepEqual(cards.items.map((card) => card.builtIn), [true, true]);
+  });
+
+  it("serves the workspace Asset Library immediately after workspace creation", async () => {
+    const composition = composeInternalAssetRegistry({
+      rootDirectory: await tempRoot(),
+      now: () => "2026-05-09T00:00:00.000Z",
+    });
+    const workspaceId = createWorkspaceId(
+      "workspace.asset-library-composition",
+    );
+    const created = await composition.workspaceUseCases.createWorkspace.execute({
+      command: { displayName: "Asset Library Workspace" },
+      generateWorkspaceId: () => workspaceId,
+      now: () => new Date("2026-05-09T00:00:00.000Z"),
+    });
+
+    assert.equal(created.status, "created");
+    const result = await composition.workspaceReadFacade.listDefinitionCards({
+      workspaceId,
+      limit: 50,
+    });
+
+    assert.ok(result.items.length > 0);
+    assert.ok(
+      result.items.every(
+        (item) =>
+          item.sourcePackId === "system.foundation" &&
+          item.sourceLayer === "system-default",
+      ),
+    );
   });
 
   it("does not install the system foundation pack during helper composition", async () => {

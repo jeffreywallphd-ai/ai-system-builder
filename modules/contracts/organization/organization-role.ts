@@ -1,4 +1,4 @@
-export const ORGANIZATION_ROLES = ["owner", "admin", "member"] as const;
+export const ORGANIZATION_ROLES = ["owner", "admin", "operator", "member"] as const;
 export type OrganizationRole = (typeof ORGANIZATION_ROLES)[number];
 
 export function isOrganizationRole(value: unknown): value is OrganizationRole {

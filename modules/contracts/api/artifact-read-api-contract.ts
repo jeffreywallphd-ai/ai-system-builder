@@ -106,7 +106,7 @@ export function createApiArtifactReadSuccessResponse<
 }
 
 export function createApiArtifactReadFailureResponse(
-  code: "validation" | "not-found" | "internal" | "unavailable",
+  code: "validation" | "forbidden" | "not-found" | "internal" | "unavailable",
   message: string,
   options?: {
     details?: Record<string, unknown>;

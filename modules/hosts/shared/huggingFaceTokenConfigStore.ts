@@ -74,8 +74,11 @@ export function createHuggingFaceTokenConfigStore(
 
     setToken(nextToken: string) {
       const normalized = normalizeToken(nextToken);
-      mkdirSync(path.dirname(options.filePath), { recursive: true });
-      writeFileSync(options.filePath, JSON.stringify({ token: normalized }), "utf8");
+      mkdirSync(path.dirname(options.filePath), { recursive: true, mode: 0o700 });
+      writeFileSync(options.filePath, JSON.stringify({ token: normalized }), {
+        encoding: "utf8",
+        mode: 0o600,
+      });
       token = normalized;
       return {
         configured: true,

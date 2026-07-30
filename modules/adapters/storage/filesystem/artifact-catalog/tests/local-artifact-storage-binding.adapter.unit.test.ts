@@ -28,4 +28,39 @@ describe("createLocalArtifactStorageBindingAdapter", () => {
     expect(workspaceBRead.value.bindings.map((binding) => binding.workspaceId)).toEqual(["workspace-b"]);
     expect(JSON.stringify(workspaceARead.value.bindings)).not.toContain("workspace-b/generated");
   });
+
+  it("reads a bounded set of artifact bindings in one workspace-scoped batch", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "artifact-binding-batch-"));
+    const adapter = createLocalArtifactStorageBindingAdapter({ rootDirectory: root });
+    for (const artifactId of ["artifact-1", "artifact-2", "artifact-3"]) {
+      await adapter.upsertArtifactStorageBinding({
+        binding: {
+          workspaceId: "workspace-a" as never,
+          artifactId,
+          role: "primary",
+          backing: {
+            kind: "artifact-object",
+            provider: "filesystem",
+            locator: `workspaces/workspace-a/${artifactId}`,
+          },
+        },
+      });
+    }
+
+    const result = await adapter.readArtifactStorageBindingsBatch({
+      workspaceId: "workspace-a" as never,
+      artifactIds: ["artifact-1", "artifact-3"],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected batch binding read success.");
+    expect(result.value.bindings.map((binding) => binding.artifactId).sort()).toEqual([
+      "artifact-1",
+      "artifact-3",
+    ]);
+
+    const oversized = await adapter.readArtifactStorageBindingsBatch({
+      artifactIds: Array.from({ length: 251 }, (_, index) => `artifact-${index}`),
+    });
+    expect(oversized.ok).toBe(false);
+  });
 });

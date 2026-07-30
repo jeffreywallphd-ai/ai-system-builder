@@ -15,6 +15,8 @@ From the repository root:
 - `npm run dev:desktop`
 - `npm run package`
 - `npm run make`
+- `npm run test:visual-composer -- --project packaged-desktop` after packaging,
+  to run the isolated real preload/IPC System Composer workflow on Windows
 
 ## Local structured persistence
 
@@ -69,6 +71,10 @@ Current methods:
 - `ingestWebsitePagesBatch(input, context?)`
   - maps UI batch website-scrape payload into the `artifact.ingest-website-pages-batch` IPC request envelope
   - forwards explicit `context.workspaceId` to the desktop host use case for workspace-scoped artifact catalog writes
+- `startModelDownload`, `readModelDownload`, `listModelDownloads`, and
+  `cancelModelDownload` expose the short model-download task lifecycle. The
+  preload validates typed response envelopes and never receives a local cache
+  path.
 
 Design constraints:
 
@@ -105,6 +111,15 @@ Renderer constraints for this slice:
 
 ## Renderer Shell And Workspace UI
 
+- The sticky top bar places a Notifications bell immediately before Settings.
+  Its fixed dropdown is available from every page; page messages display for
+  five seconds and then fade, while model-download activities remain in bounded
+  workspace-scoped history and update from authoritative runtime task progress.
+- Terminal save, create, update, delete/archive, upload/import/localize/publish,
+  build/run, settings, image, model, and similar action outcomes publish to this
+  center instead of rendering duplicative page-level banners. Field validation,
+  loading and empty states, confirmation/build diagnostics, readiness or
+  security blockers, retry context, and active task controls remain inline.
 - Desktop primary navigation is exposed through a plain hamburger menu in the right side of the header, directly before the themed settings gear.
 - The header centers a compact **Current Workspace** selector with an explicit **Change** action between the brand area and the right-side menu/settings actions.
 - The Home page keeps the fuller workspace card in a compact responsive equal-width two-column layout, with change-workspace controls on the left and create-workspace controls on the right.
@@ -118,7 +133,6 @@ Renderer constraints for this slice:
 - Configure `HF_TOKEN` or `HUGGING_FACE_TOKEN` (or desktop host `huggingFaceAccessToken`) in the **desktop host** environment for private/gated Hugging Face repositories.
 - Public repositories may work without a token depending on repository visibility/provider policy.
 - Missing/invalid token and access-denied responses are surfaced with explicit auth guidance in UI messaging.
-
 
 ## Hugging Face token configuration UI
 

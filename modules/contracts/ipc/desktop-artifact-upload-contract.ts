@@ -1,5 +1,6 @@
 import { createWorkspaceId } from "../workspace";
 import {
+  ARTIFACT_UPLOAD_MAXIMUM_BYTES,
   ARTIFACT_UPLOAD_OPERATION,
   ARTIFACT_UPLOAD_POLICY_READ_OPERATION,
   type ArtifactUploadAcceptedTypePolicy,
@@ -117,8 +118,16 @@ function normalizeRequiredTextField(value: string, fieldName: string): string {
 function normalizeDesktopArtifactUploadPayload(
   payload: DesktopArtifactUploadRequestPayload,
 ): DesktopArtifactUploadRequestPayload {
+  if (!(payload.bytes instanceof Uint8Array)) {
+    throw new Error("bytes must be a Uint8Array.");
+  }
   if (payload.bytes.length === 0) {
     throw new Error("bytes must contain at least one byte.");
+  }
+  if (payload.bytes.byteLength > ARTIFACT_UPLOAD_MAXIMUM_BYTES) {
+    throw new Error(
+      `bytes must not exceed ${ARTIFACT_UPLOAD_MAXIMUM_BYTES} bytes.`,
+    );
   }
 
   return {

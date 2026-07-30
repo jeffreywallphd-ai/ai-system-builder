@@ -1,6 +1,7 @@
 import type { AssetDefinitionRepositoryPort } from "../../ports/asset";
 import type {
   AssetImplementationArtifactPort,
+  AssetImplementationBackingResourceRepositoryPort,
   AssetImplementationRepositoryPort,
 } from "../../ports/asset-implementation";
 import type {
@@ -15,7 +16,12 @@ import type {
 import {
   normalizeAssetImplementationBinding,
   normalizeAssetImplementationBindingId,
+  normalizeAssetImplementationBackingResourceBundle,
   normalizeAssetImplementationRelease,
+  normalizeAssetSourceSnapshotId,
+  ASSET_IMPLEMENTATION_BACKING_RESOURCE_MEDIA_TYPE,
+  describeAssetImplementationBackingResourceFiles,
+  type AssetImplementationBackingResourceFile,
   type AssetImplementationArtifactDescriptor,
   type AssetImplementationTrustLevel,
 } from "../../../contracts/asset-implementation";
@@ -31,6 +37,7 @@ export class AdmitAssetPackageUseCase {
       readonly trust: AssetPackageTrustVerifierPort;
       readonly definitions: AssetDefinitionRepositoryPort;
       readonly implementations: AssetImplementationRepositoryPort;
+      readonly backingResources: AssetImplementationBackingResourceRepositoryPort;
       readonly now: () => string;
     },
   ) {}
@@ -103,7 +110,7 @@ export class AdmitAssetPackageUseCase {
     const trustLevel: AssetImplementationTrustLevel =
       command.approvalScope === "organization" ? "organization-approved" : "workspace-approved";
     const now = this.dependencies.now();
-    for (const declaration of manifest.implementations) {
+    for (const [implementationIndex, declaration] of manifest.implementations.entries()) {
       const release = normalizeAssetImplementationRelease({
         releaseId: declaration.releaseId,
         workspaceId: command.workspaceId,
@@ -127,13 +134,72 @@ export class AdmitAssetPackageUseCase {
         publishedBy: command.actorId,
       });
       await this.dependencies.implementations.saveRelease(release);
+      const backingBundle = normalizeAssetImplementationBackingResourceBundle({
+        formatVersion: "1.0",
+        files: [
+          {
+            path: "other/definition.json",
+            role: "other",
+            mediaType: "application/json",
+            content: JSON.stringify(
+              manifest.semanticManifest.assets.find(
+                (entry) =>
+                  entry.definitionRef.id === declaration.definitionRef.id &&
+                  entry.definitionRef.version === declaration.definitionRef.version,
+              )?.definition,
+              null,
+              2,
+            ),
+          },
+          ...declaration.facets.flatMap((facet) => {
+            if (!facet.packageEntryPath) return [];
+            const inspectedEntry = inspected.entries.find(
+              (entry) => entry.path === facet.packageEntryPath,
+            );
+            if (!inspectedEntry) return [];
+            const content = decodeTextBackingResource(inspectedEntry.bytes);
+            if (content === undefined) return [];
+            return [
+              {
+                path: inspectedEntry.path,
+                role: backingRole(facet.kind, inspectedEntry.path),
+                mediaType: inspectedEntry.mediaType,
+                content,
+              } satisfies AssetImplementationBackingResourceFile,
+            ];
+          }),
+        ],
+      });
+      const backingArtifact = await this.dependencies.artifacts.putImmutable({
+        workspaceId: command.workspaceId,
+        kind: "source",
+        mediaType: ASSET_IMPLEMENTATION_BACKING_RESOURCE_MEDIA_TYPE,
+        content: JSON.stringify(backingBundle),
+      });
+      const backingIdentity = `${command.packageDigest.slice(-12)}.${implementationIndex + 1}`;
+      await this.dependencies.backingResources.save({
+        backingResourceId: `implementation-backing.package.${backingIdentity}`,
+        origin: "admitted-package",
+        releaseId: release.releaseId,
+        definitionRef: release.definitionRef,
+        scope: "workspace",
+        workspaceId: command.workspaceId,
+        artifactWorkspaceId: command.workspaceId,
+        sourceSnapshotId: normalizeAssetSourceSnapshotId(
+          `source-snapshot.package.${backingIdentity}`,
+        ),
+        artifact: backingArtifact,
+        files: describeAssetImplementationBackingResourceFiles(backingBundle),
+        createdAt: now,
+        createdBy: command.actorId,
+      });
       await this.dependencies.implementations.createBinding(
         normalizeAssetImplementationBinding({
           bindingId: normalizeAssetImplementationBindingId(`package.${manifest.packageId}.${manifest.version}.${release.releaseId}`),
           workspaceId: command.workspaceId,
           definitionRef: declaration.definitionRef,
           releaseId: release.releaseId,
-          status: "active",
+          status: "disabled",
           priority: 100,
           revision: 1,
           createdAt: now,
@@ -211,4 +277,24 @@ function versionSatisfies(version: string, range: string): boolean {
   if (range === "*" || range === version) return true;
   const major = version.split(".")[0];
   return range === `^${version}` || range.startsWith(`^${major}.`) || range.includes(version);
+}
+
+function decodeTextBackingResource(bytes: Uint8Array): string | undefined {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return undefined;
+  }
+}
+
+function backingRole(
+  facetKind: string,
+  path: string,
+): AssetImplementationBackingResourceFile["role"] {
+  if (/\.s?css$/i.test(path)) return "frontend-style";
+  if (facetKind === "ui") return "frontend-structure";
+  if (["logic", "workflow", "data", "policy", "migration"].includes(facetKind)) {
+    return "backend-logic";
+  }
+  return "other";
 }

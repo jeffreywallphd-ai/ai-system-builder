@@ -1,3 +1,4 @@
+import type { Request } from "express";
 import type {
   ActivateAssetPackageUseCase,
   AdmitAssetPackageUseCase,
@@ -9,11 +10,11 @@ import type {
 import { API_ASSET_PACKAGE_OPERATIONS, createApiError, createApiFailureResponse, createApiSuccessResponse } from "../../../../contracts/api";
 import { normalizeSha256Digest } from "../../../../contracts/asset-implementation";
 import { createWorkspaceId } from "../../../../contracts/workspace";
+import { requireExpressAuthenticatedPrincipalId } from "../security/expressAuthContext";
 
 interface RequestLike {
   body?: unknown;
   query?: Record<string, unknown>;
-  securityContext?: { principal?: { id?: string } };
 }
 interface ResponseLike { status(code: number): ResponseLike; json(body: unknown): void }
 export interface AssetPackageExpressPort {
@@ -79,4 +80,4 @@ const record = (value: unknown): Record<string, unknown> => { if (typeof value !
 const required = (value: unknown): string => { if (typeof value !== "string" || !value.trim()) throw new Error(); return value.trim(); };
 const requiredWorkspace = (value: unknown) => createWorkspaceId(required(value));
 const strings = (value: unknown): readonly string[] => Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string").map((entry) => entry.trim()).filter(Boolean) : [];
-const actor = (request: RequestLike) => request.securityContext?.principal?.id?.trim() || "authenticated-user";
+const actor = (request: RequestLike) => requireExpressAuthenticatedPrincipalId(request as Request);

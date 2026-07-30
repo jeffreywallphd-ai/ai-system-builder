@@ -69,6 +69,7 @@ import {
   createDesktopArtifactContentReadSuccessResponse,
   createDesktopArtifactMediaViewSuccessResponse,
   createDesktopArtifactReadSuccessResponse,
+  createDesktopArtifactPublishRequest,
   createDesktopArtifactPublishSuccessResponse,
   createDesktopArtifactPublishVerifySuccessResponse,
   createDesktopArtifactSourceVerifySuccessResponse,
@@ -132,11 +133,15 @@ import {
   type DesktopHuggingFaceFilesImportResponse,
 } from "../../../../contracts/ipc";
 import { normalizeArtifactFamily } from "../../../../domain/artifact";
-import type { IpcMainHandlePort } from "../ipcMainHandlePort";
+import type {
+  IpcMainHandlePort,
+  IpcSenderTrustPolicy,
+} from "../ipcMainHandlePort";
 export type { IpcMainHandlePort } from "../ipcMainHandlePort";
 
 export interface RegisterArtifactBrowserIpcDependencies {
   ipcMain: IpcMainHandlePort;
+  senderTrust: IpcSenderTrustPolicy;
   getHuggingFaceTokenStatus: () => {
     configured: boolean;
     maskedToken?: string;
@@ -222,6 +227,7 @@ export function mapDesktopArtifactPublishRequestToCommand(
     artifactId: request.payload.artifactId,
     target: request.payload.target,
     mediaType: request.payload.mediaType,
+    repositoryCreation: request.payload.repositoryCreation,
   };
 }
 
@@ -347,7 +353,11 @@ function mapDesktopHuggingFaceFilesImportRequestToCommand(
 }
 
 function mapIpcFailure(code: string) {
-  return code === "validation" || code === "not-found" || code === "unavailable"
+  return code === "validation" ||
+    code === "unauthorized" ||
+    code === "forbidden" ||
+    code === "not-found" ||
+    code === "unavailable"
     ? code
     : "internal";
 }
@@ -881,21 +891,45 @@ export function createDesktopArtifactMediaViewIpcHandler(
 
 export function createDesktopArtifactPublishIpcHandler(
   publishArtifactToRepoUseCase: Pick<PublishArtifactToRepoUseCase, "execute">,
+  senderTrust: IpcSenderTrustPolicy,
 ) {
   return async (
-    _event: unknown,
+    event: unknown,
     request: DesktopArtifactPublishRequest,
   ): Promise<DesktopArtifactPublishResponse> => {
+    if (!senderTrust.isTrustedSender(event)) {
+      return mapPublishFailure(request, {
+        code: "forbidden",
+        message: "The desktop IPC sender is not trusted.",
+      });
+    }
+    let normalizedRequest: DesktopArtifactPublishRequest;
+    try {
+      normalizedRequest = createDesktopArtifactPublishRequest(
+        request.payload,
+        {
+          requestId: request.requestId,
+          correlationId: request.correlationId,
+        },
+      );
+    } catch (error) {
+      return mapPublishFailure(request, {
+        code: "validation",
+        message:
+          error instanceof Error ? error.message : "Invalid publish request.",
+      });
+    }
     const result = await publishArtifactToRepoUseCase.execute(
-      mapDesktopArtifactPublishRequestToCommand(request),
+      mapDesktopArtifactPublishRequestToCommand(normalizedRequest),
+      mapDesktopArtifactRequestContext(normalizedRequest),
     );
     if (!result.ok) {
-      return mapPublishFailure(request, result.error);
+      return mapPublishFailure(normalizedRequest, result.error);
     }
 
     return createDesktopArtifactPublishSuccessResponse(result.value, {
-      requestId: request.requestId,
-      correlationId: request.correlationId,
+      requestId: normalizedRequest.requestId,
+      correlationId: normalizedRequest.correlationId,
     });
   };
 }
@@ -1264,6 +1298,7 @@ export function registerArtifactBrowserIpc(
     DESKTOP_ARTIFACT_PUBLISH_REQUEST_CHANNEL.value,
     createDesktopArtifactPublishIpcHandler(
       dependencies.publishArtifactToRepoUseCase,
+      dependencies.senderTrust,
     ),
   );
   dependencies.ipcMain.handle(

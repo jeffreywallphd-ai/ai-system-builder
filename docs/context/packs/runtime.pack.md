@@ -39,6 +39,12 @@
 - Readiness snapshots are host-scoped and should read each top-level provider at most once per snapshot.
 - Missing-provider statuses are for direct or explicitly requested capabilities, not every unsupported future capability.
 - Readiness reads, task status reads, task cancel reads, and task list reads must not start, stop, install, repair, or unboundedly probe runtimes.
+- The managed Python sidecar is host-private: bind/client configuration is
+  canonical loopback HTTP only, and every endpoint (including readiness probes)
+  requires the current per-launch bearer token. Rotate that child-only token
+  before every spawn and never expose it through logs, UI, diagnostics, or
+  process-wide environment mutation. Do not attach to unauthenticated ambient
+  loopback services.
 - Provider failures become sanitized readiness/status objects with safe codes/details.
 
 ## Key Constraints
@@ -48,6 +54,9 @@
 - Keep filesystem paths, temp paths, env values, secrets, tokens, raw exception messages, command lines, HTTP internals, process internals, and raw adapter payloads out of public readiness/task payloads.
 - Runtime/model/plugin downloads are supply-chain concerns and should route through installer/security/storage guidance when touched.
 - Runtime roots are not Asset Kernel record roots or resource-backed view discovery roots.
+- ComfyUI reference images must be retrieved through workspace/catalog-owned,
+  byte-bounded artifact media reads, signature-checked, staged with contained
+  randomized filenames, and cleaned after terminal or failed execution.
 
 ## Asset Kernel Notes
 

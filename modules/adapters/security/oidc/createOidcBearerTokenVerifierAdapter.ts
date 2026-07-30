@@ -9,21 +9,8 @@ import {
   type SecurityScope,
 } from "../../../contracts/security";
 
-export const MANAGED_USER_SCOPES: readonly SecurityScope[] = [
-  "artifact:read",
-  "artifact:write",
-  "asset:read",
-  "asset:write",
-  "workspace:read",
-  "workspace:write",
-  "model:read",
-  "model:write",
-  "image-generation:read",
-  "image-generation:write",
-  "runtime:read",
-  "settings:read",
-  "settings:write",
-];
+/** OIDC proves identity only. Managed capabilities come from trusted organization membership. */
+export const MANAGED_IDENTITY_SCOPES: readonly SecurityScope[] = [];
 
 interface VerifiedJwtPayload {
   readonly iss?: string;
@@ -48,7 +35,7 @@ export function createOidcBearerTokenVerifierAdapter(input: {
   applicationScopes?: readonly SecurityScope[];
 }): TokenVerifierPort {
   const verifier = input.jwtVerifier ?? createJoseRemoteJwksVerifier();
-  const scopes = [...(input.applicationScopes ?? MANAGED_USER_SCOPES)];
+  const scopes = [...(input.applicationScopes ?? MANAGED_IDENTITY_SCOPES)];
   return {
     async verifyToken({ token }): Promise<AuthContext> {
       try {

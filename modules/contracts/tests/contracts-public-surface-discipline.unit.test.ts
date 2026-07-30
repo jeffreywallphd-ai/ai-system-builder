@@ -38,6 +38,7 @@ const CONTRACT_FAMILIES = [
   "systemBuilder",
   "systemDeployment",
   "systemReview",
+  "systemRunWorkflow",
   "runtimeReadiness",
   "executionRuns",
   "conversations",

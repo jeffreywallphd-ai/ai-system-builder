@@ -158,6 +158,6 @@ describe("useArtifactBrowserArtifacts", () => {
     expect(hookState?.items[0]?.originalName).toBe("host-model.md");
     expect(hookState?.uploadedItems[0]?.storageKey).toBe(storageKey);
     expect(hookState?.generatedItems).toEqual([]);
-    expect(setViewState).toHaveBeenLastCalledWith({ status: "success", message: "Loaded artifacts." });
+    expect(setViewState).toHaveBeenLastCalledWith({ status: "success" });
   });
 });

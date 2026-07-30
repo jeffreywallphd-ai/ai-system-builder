@@ -14,6 +14,7 @@
 - Local AppData/server storage-root decisions, temp/staged intake, persistence adapters, or storage adapters.
 - SQLite, PostgreSQL, database migration, backup/restore, or deployment-shape
   persistence selection.
+- Published-system runtime-instance placement, retention, or physical database isolation.
 - Workspace-scoped resource storage, artifact reads, or model/image/dataset persistence.
 
 ## Do Not Use When
@@ -30,11 +31,17 @@
 - Host composition, not the config contract alone, selects the active adapter.
   Existing JSON records require the implemented explicit
   inventory/import/verification/rollback workflow before cutover.
+- Keep platform control-plane persistence separate from published-system runtime
+  data. Each runtime instance owns one physical SQLite/PostgreSQL database;
+  application and renderer inputs never choose its location or credentials.
 - AppData/server path conventions are deployment details, not architecture boundaries.
 - Persistence contracts are record-oriented and operation-identity driven.
 - Storage contracts are family-specific: shared foundation identity, artifact-object key/blob semantics, artifact-repo provider/repository/revision/path semantics, and ingestion/staged-artifact intake semantics.
 - Artifact browser list/detail/content concerns stay separated; media/content retrieval must not collapse into descriptor-first browse contracts.
 - Artifact previews are bounded read-side renderers: sample text-like content, prefer compressed/downscaled image object URLs, constrain video/PDF display, keep Office previews placeholder-only without a safe parser, and leave full-fidelity viewing to download/open actions.
+- Artifact upload classification requires coherent filename/media metadata and
+  content evidence; binary signatures and valid UTF-8/JSON checks fail closed
+  before storage.
 - Storage keys are opaque contract vocabulary and must flow through shared helpers; UI-facing contracts must stay path-agnostic.
 - Application logic depends on persistence/storage ports, not direct DB/filesystem/provider details.
 - Host wiring composes concrete adapters and roots; runtime roots must not be used as persistence or asset-resource roots unless a canonical doc explicitly says so.
@@ -72,6 +79,15 @@
   images, a restricted single-replica Compose/Kubernetes posture, separate
   liveness/readiness semantics, and retained scan/smoke/render evidence. Do not
   increase replicas before identity/tenancy and target-platform qualification.
+- Runtime-instance adapters bound handles/pools, retain on uninstall, require
+  stopped-state migration/restore and exact deletion confirmation, and never
+  substitute a blank or foreign database. Managed runtime roles are
+  least-privilege and live PostgreSQL qualification proves cross-database and
+  provisioning denial.
+- Desktop published conversation sessions are composed only after exact
+  lifecycle/runtime-window authority is revalidated. Stop and application
+  shutdown close conversation sessions before runtime database handles, and
+  restart reopens the retained transcript from the same instance database.
 - Schema version 2 adds organization-keyed documents. PostgreSQL enables and
   forces RLS with transaction-local tenant binding; SQLite provides the same
   logical partition for a generated local profile.
@@ -82,8 +98,18 @@
   rollback source. Ordinary startup never assigns ownership.
 - Artifact-object storage owns key/byte/checksum/metadata behavior.
 - Artifact-repo storage owns provider/repository/revision/path import and publish behavior; Hugging Face is one provider adapter, not the whole storage family.
-- Hugging Face token configuration is host-side persisted config, not client-only state.
+- Hugging Face token configuration is host-side persisted config, not
+  client-only state. Managed servers isolate it by authenticated organization,
+  use one credential service for token and Settings APIs, and require an
+  explicit organization target before migrating any legacy/environment token;
+  desktop/local hosts retain device-local scope.
+- Hugging Face publication does not auto-create a missing repository. Creation
+  requires explicit approval and visibility, plus active-organization
+  capability authorization in managed hosts; private is the UI default.
 - Artifact browser reads normalize internal artifacts across backing-store differences.
+- Artifact browse caps sorted results, batches backing bindings, and bounds
+  availability probes. Hugging Face dataset browse uses a capped logical
+  converted-Parquet inventory and rejects foreign or malformed URLs.
 - Remote registration/localization flows create or localize internal artifacts through shared application use cases.
 - Workspace local persistence uses a `workspaces/` namespace for workspace records, active selection preference, and system-pack activation references.
 - Workspace resource scoping applies where implemented for artifacts/uploads, image assets, generated outputs/finalization, dataset outputs, model inventory records, and runtime task outputs.

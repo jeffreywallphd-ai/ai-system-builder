@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -571,5 +571,109 @@ describe("filesystem artifact browser read adapter", () => {
       throw new Error("Expected browse success.");
     }
     expect(listResult.value.items.find((item) => item.storageKey === "uploads/session/delete-me.txt")).toBeUndefined();
+  });
+
+  it("rejects traversal and junction escape attempts in unregistered registration and deletion", async () => {
+    const rootDirectory = await createTempRoot();
+    const outsideDirectory = await createTempRoot();
+    const artifactCatalog = createLocalArtifactCatalogPersistenceAdapter({ rootDirectory });
+    const browserRead = createFilesystemArtifactBrowserReadAdapter({
+      rootDirectory,
+      artifactCatalogRead: artifactCatalog,
+      artifactCatalogAppend: artifactCatalog,
+    });
+
+    const traversalRegistration = await browserRead.registerUnregisteredArtifact({
+      storageKey: "uploads/../../outside.bin",
+    });
+    const traversalDeletion = await browserRead.deleteUnregisteredArtifact({
+      storageKey: "uploads/../../outside.bin",
+    });
+    expect(traversalRegistration.ok).toBe(false);
+    expect(traversalDeletion.ok).toBe(false);
+    if (traversalRegistration.ok || traversalDeletion.ok) {
+      throw new Error("Expected traversal attempts to be rejected.");
+    }
+    expect(traversalRegistration.error.code).toBe("validation");
+    expect(traversalDeletion.error.code).toBe("validation");
+
+    await mkdir(path.join(rootDirectory, "uploads"), { recursive: true });
+    await writeFile(path.join(outsideDirectory, "secret.bin"), new Uint8Array([4, 5, 6]));
+    await symlink(
+      outsideDirectory,
+      path.join(rootDirectory, "uploads", "escape"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    const junctionRegistration = await browserRead.registerUnregisteredArtifact({
+      storageKey: "uploads/escape/secret.bin",
+    });
+    const junctionDeletion = await browserRead.deleteUnregisteredArtifact({
+      storageKey: "uploads/escape/secret.bin",
+    });
+    expect(junctionRegistration.ok).toBe(false);
+    expect(junctionDeletion.ok).toBe(false);
+    if (junctionRegistration.ok || junctionDeletion.ok) {
+      throw new Error("Expected junction attempts to be rejected.");
+    }
+    expect(junctionRegistration.error.code).toBe("validation");
+    expect(junctionDeletion.error.code).toBe("validation");
+    expect(new Uint8Array(await readFile(path.join(outsideDirectory, "secret.bin")))).toEqual(
+      new Uint8Array([4, 5, 6]),
+    );
+  });
+
+  it("caps browse enrichment, batches binding reads, and limits availability concurrency", async () => {
+    const rootDirectory = await createTempRoot();
+    const records = Array.from({ length: 6 }, (_, index) => ({
+      workspaceId: "workspace-a",
+      storageKey: `uploads/item-${index}.png`,
+      artifactFamily: "image" as const,
+      mediaType: "image/png",
+      createdAt: `2026-07-27T00:00:0${index}.000Z`,
+    }));
+    let activeAvailabilityReads = 0;
+    let maximumActiveAvailabilityReads = 0;
+    let batchReads = 0;
+    let singleBindingReads = 0;
+    const browserRead = createFilesystemArtifactBrowserReadAdapter({
+      rootDirectory,
+      artifactCatalogRead: {
+        browseArtifactCatalogRecords: async () => ({ ok: true as const, value: { records } }),
+        readArtifactCatalogRecord: async () => ({ ok: false as const, error: { code: "not-found", message: "missing" } }),
+      } as any,
+      artifactCatalogAppend: {} as any,
+      artifactBindingRead: {
+        readArtifactStorageBindings: async () => {
+          singleBindingReads += 1;
+          return { ok: true as const, value: { bindings: [] } };
+        },
+        readArtifactStorageBindingsBatch: async () => {
+          batchReads += 1;
+          return { ok: true as const, value: { bindings: [] } };
+        },
+      },
+      storage: {
+        hasArtifact: async () => {
+          activeAvailabilityReads += 1;
+          maximumActiveAvailabilityReads = Math.max(
+            maximumActiveAvailabilityReads,
+            activeAvailabilityReads,
+          );
+          await new Promise<void>((resolve) => setImmediate(resolve));
+          activeAvailabilityReads -= 1;
+          return { ok: true as const, value: { exists: true } };
+        },
+      },
+      maximumBrowseItems: 3,
+      browseAvailabilityConcurrency: 2,
+    });
+
+    const result = await browserRead.browseArtifacts({}, { workspaceId: "workspace-a" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected bounded browse success.");
+    expect(result.value.items.length).toBe(3);
+    expect(batchReads).toBe(1);
+    expect(singleBindingReads).toBe(0);
+    expect(maximumActiveAvailabilityReads <= 2).toBe(true);
   });
 });

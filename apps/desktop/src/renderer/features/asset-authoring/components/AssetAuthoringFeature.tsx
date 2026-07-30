@@ -6,8 +6,11 @@ import type {
   AuthoredAssetRecord,
 } from "../../../../../../../modules/contracts/asset-authoring";
 import {
+  AssetDerivedCustomizationEditor,
   PanelHeading,
   TermWithHint,
+  TransientNotificationPublisher,
+  type AssetCustomizationTargetSelection,
 } from "../../../../../../../modules/ui/shared";
 import { createDesktopAssetAuthoringClient } from "../api/desktopAssetAuthoringClient";
 
@@ -111,9 +114,11 @@ const mapSummary = (
 export function AssetAuthoringFeature({
   workspaceId,
   initialSection = "create",
+  initialCustomizationTarget,
 }: {
   workspaceId: string;
   initialSection?: "create" | "drafts" | "customizations";
+  initialCustomizationTarget?: AssetCustomizationTargetSelection;
 }) {
   const client = useMemo(() => createDesktopAssetAuthoringClient(), []);
   const [authored, setAuthored] = useState<RowVm[]>([]);
@@ -122,6 +127,8 @@ export function AssetAuthoringFeature({
   const [summaries, setSummaries] = useState<RowVm[]>([]);
   const [summariesUnavailable, setSummariesUnavailable] = useState(false);
   const [message, setMessage] = useState("");
+  const contextualMessage = message === "Some data is not available yet." || message === "Name is required.";
+  const successfulMessage = ["Draft published.", "Draft changes saved.", "Saved as draft."].includes(message);
   const [name, setName] = useState("");
   const [summary, setSummary] = useState("");
   const [description, setDescription] = useState("");
@@ -167,8 +174,18 @@ export function AssetAuthoringFeature({
   };
 
   useEffect(() => {
-    void refresh();
-  }, [workspaceId]);
+    if (initialSection !== "customizations") void refresh();
+  }, [initialSection, workspaceId]);
+
+  if (initialSection === "customizations") {
+    return (
+      <AssetDerivedCustomizationEditor
+        workspaceId={workspaceId}
+        client={client}
+        initialTarget={initialCustomizationTarget}
+      />
+    );
+  }
 
   return (
     <section className="asset-authoring ui-panel ui-stack">
@@ -325,39 +342,6 @@ export function AssetAuthoringFeature({
           Create asset draft
         </button>
       </form>
-      {sectionMatches.customizations ? <h3>Customizations</h3> : null}
-      <p>
-        <small>Creating new customizations is not available yet.</small>
-      </p>
-      <ul>
-        {overrides.length ? (
-          overrides.map((override) => (
-            <li key={override.id}>
-              {override.label} - {override.statusLabel}{" "}
-              {override.canDisable ? (
-                <button
-                  onClick={async () => {
-                    const result = await client.disableOverride(
-                      workspaceId,
-                      override.id,
-                    );
-                    setMessage(
-                      result.ok === true
-                        ? "Customization turned off."
-                        : result.error.message,
-                    );
-                    if (result.ok === true) await refresh();
-                  }}
-                >
-                  Disable customization
-                </button>
-              ) : null}
-            </li>
-          ))
-        ) : (
-          <li>No customizations yet.</li>
-        )}
-      </ul>
       <h3>What this workspace is using</h3>
       {summariesUnavailable ? (
         <p>Workspace usage summaries are not available yet.</p>
@@ -374,7 +358,8 @@ export function AssetAuthoringFeature({
           )}
         </ul>
       )}
-      {message ? <p>{message}</p> : null}
+      {contextualMessage ? <p role="alert">{message}</p> : null}
+      <TransientNotificationPublisher message={!contextualMessage ? message : undefined} title={successfulMessage ? "Asset authoring updated" : "Asset authoring needs attention"} tone={successfulMessage ? "success" : "error"} source="Asset Authoring" workspaceId={workspaceId} />
     </section>
   );
 }

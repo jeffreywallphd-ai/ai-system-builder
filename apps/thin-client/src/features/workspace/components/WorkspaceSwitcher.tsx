@@ -93,7 +93,7 @@ export function WorkspaceSwitcher({
             <WorkspaceCreateForm compact onCreated={() => setCreating(false)} />
           ) : (
             <button
-              className="ui-button ui-button--secondary"
+              className="ui-button ui-button--outline"
               type="button"
               onClick={() => setCreating(true)}
             >

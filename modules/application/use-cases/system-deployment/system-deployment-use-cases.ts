@@ -2,6 +2,8 @@ import type {
   SystemDeploymentRepositoryPort,
   SystemDeploymentRevocationPort,
   SystemDeploymentRuntimePort,
+  SystemRuntimeInstanceLifecyclePort,
+  SystemRuntimeInstanceRepositoryPort,
 } from "../../ports/system-deployment";
 import type {
   SystemBuildArtifactPort,
@@ -18,6 +20,7 @@ import {
   systemDeploymentSuccess,
   type ActivateSystemDeploymentCommand,
   type CancelSystemDeploymentRunCommand,
+  type DeactivateSystemDeploymentCommand,
   type InstallSystemDeploymentCommand,
   type ListSystemDeploymentAuditQuery,
   type ListSystemDeploymentRunsQuery,
@@ -32,7 +35,13 @@ import {
   type SystemDeploymentDiagnostic,
   type SystemDeploymentResult,
   type SystemDeploymentRun,
+  type SystemRuntimeInstance,
+  isSystemRuntimeInstanceBoundToDeployment,
   type SystemReferenceRuntimeKind,
+  type SystemRuntimeInstanceId,
+  type SystemRuntimeProfileId,
+  type UninstallSystemDeploymentCommand,
+  mapLegacySystemReferenceRuntimeKind,
 } from "../../../contracts/system-deployment";
 
 const MAX_MANIFEST_BYTES = 8 * 1024 * 1024;
@@ -47,11 +56,14 @@ export interface SystemDeploymentUseCaseDependencies {
   readonly builds: SystemBuildRepositoryPort;
   readonly artifacts: SystemBuildArtifactPort;
   readonly runtime: SystemDeploymentRuntimePort;
+  readonly runtimeInstances: SystemRuntimeInstanceLifecyclePort;
+  readonly runtimeInstanceRepository: SystemRuntimeInstanceRepositoryPort;
   readonly revocations: SystemDeploymentRevocationPort;
   readonly compatibility: SystemDeploymentCompatibilityService;
   readonly policy: SystemDeploymentPolicyService;
   readonly platformPolicy: SystemDeployment["policy"];
   readonly generateAuditId: () => string;
+  readonly generateRuntimeInstanceId: () => SystemRuntimeInstanceId;
   readonly now?: () => string;
 }
 
@@ -93,9 +105,9 @@ export class InstallSystemDeploymentUseCase {
           ? "The approved release contains a revoked implementation."
           : "Revocation status could not be verified safely.",
       );
-    let referenceRuntimeKind: SystemReferenceRuntimeKind;
+    let runtimeProfileId: SystemRuntimeProfileId;
     try {
-      referenceRuntimeKind = await verifyAndClassifyRelease(
+      runtimeProfileId = await verifyAndResolveRuntimeProfile(
         this.d.artifacts,
         release,
       );
@@ -109,7 +121,7 @@ export class InstallSystemDeploymentUseCase {
     const compatibility = await this.d.compatibility.evaluate(
       command,
       release,
-      referenceRuntimeKind,
+      runtimeProfileId,
       installedAt,
     );
     if (!compatibility.compatible) {
@@ -119,6 +131,21 @@ export class InstallSystemDeploymentUseCase {
       return systemDeploymentFailure(
         first?.code ?? "deployment.incompatible",
         first?.message ?? "The release is incompatible with this host.",
+      );
+    }
+    let runtimeInstance: SystemRuntimeInstance;
+    try {
+      runtimeInstance = await this.d.runtimeInstances.allocate({
+        runtimeInstanceId: this.d.generateRuntimeInstanceId(),
+        organizationId: command.organizationId,
+        workspaceId: command.workspaceId,
+        deploymentId: command.deploymentId,
+        releaseId: release.releaseId,
+      });
+    } catch {
+      return systemDeploymentFailure(
+        "deployment.runtime-data.unavailable",
+        "The isolated runtime data plane could not be allocated safely.",
       );
     }
     const previous = (
@@ -137,8 +164,10 @@ export class InstallSystemDeploymentUseCase {
       workspaceId: command.workspaceId,
       releaseId: release.releaseId,
       releaseDigest: release.releaseDigest,
-      referenceRuntimeKind,
+      runtimeInstanceId: runtimeInstance.runtimeInstanceId,
+      runtimeProfileId,
       deploymentProfile: command.deploymentProfile,
+      ...(command.hostTargetId ? { hostTargetId: command.hostTargetId } : {}),
       status: "installed",
       revision: 0,
       ...(previous ? { previousDeploymentId: previous.deploymentId } : {}),
@@ -155,7 +184,9 @@ export class InstallSystemDeploymentUseCase {
     };
     let saved: SystemDeployment | undefined;
     try {
-      saved = await this.d.repository.createDeployment(deployment);
+      saved = command.hostTargetId
+        ? await this.d.repository.createCurrentDeployment(deployment)
+        : await this.d.repository.createDeployment(deployment);
       await this.audit(
         saved,
         "install",
@@ -234,7 +265,7 @@ export class ActivateSystemDeploymentUseCase {
       command.actorId,
     );
     if (revocationStatus !== "clear")
-      return revocationFailure(
+      return revocationFailure<SystemDeployment>(
         revocationStatus,
         "The deployment cannot be activated.",
       );
@@ -248,6 +279,7 @@ export class ActivateSystemDeploymentUseCase {
         "This deployment cannot be activated from its current state.",
       );
     let activating: SystemDeployment | undefined;
+    let runtimeInstance: SystemRuntimeInstance | undefined;
     try {
       await this.d.repository.appendAudit(
         auditEntry(
@@ -273,8 +305,11 @@ export class ActivateSystemDeploymentUseCase {
         },
         deployment.revision,
       );
+      runtimeInstance = await readRuntimeInstance(this.d, activating);
+      runtimeInstance = await this.d.runtimeInstances.activate(runtimeInstance);
       const health = await this.d.runtime.activate(activating);
       if (health.status !== "ready") {
+        await this.d.runtimeInstances.stop(runtimeInstance);
         const failed = await this.d.repository.updateDeployment(
           {
             ...activating,
@@ -308,6 +343,9 @@ export class ActivateSystemDeploymentUseCase {
         );
         if (previous?.status === "active") {
           await this.d.runtime.deactivate(previous);
+          await this.d.runtimeInstances.stop(
+            await readRuntimeInstance(this.d, previous),
+          );
           await this.d.repository.updateDeployment(
             {
               ...previous,
@@ -338,6 +376,20 @@ export class ActivateSystemDeploymentUseCase {
       );
       return systemDeploymentSuccess(active);
     } catch {
+      if (activating) {
+        try {
+          await this.d.runtime.deactivate(activating);
+        } catch {
+          // Continue fail-safe data-plane cleanup without exposing adapter detail.
+        }
+      }
+      if (runtimeInstance) {
+        try {
+          await this.d.runtimeInstances.stop(runtimeInstance);
+        } catch {
+          // Reconciliation can recover a retained open data plane.
+        }
+      }
       if (activating) {
         try {
           await this.d.repository.updateDeployment(
@@ -373,6 +425,182 @@ export class ActivateSystemDeploymentUseCase {
   }
 }
 
+export class DeactivateSystemDeploymentUseCase {
+  private readonly now: () => string;
+  public constructor(private readonly d: SystemDeploymentUseCaseDependencies) {
+    this.now = d.now ?? (() => new Date().toISOString());
+  }
+
+  async execute(
+    command: DeactivateSystemDeploymentCommand,
+  ): Promise<SystemDeploymentResult<SystemDeployment>> {
+    const deployment = await readDeployment(this.d.repository, command);
+    if (!deployment)
+      return systemDeploymentFailure(
+        "deployment.not-found",
+        "Deployment was not found.",
+      );
+    if (deployment.status === "inactive")
+      return systemDeploymentSuccess(deployment);
+    if (!["active", "degraded"].includes(deployment.status))
+      return systemDeploymentFailure(
+        "deployment.deactivation.conflict",
+        "This deployment cannot be deactivated from its current state.",
+      );
+    const runs = await this.d.repository.listRuns(
+      command.organizationId,
+      command.workspaceId,
+      deployment.deploymentId,
+    );
+    if (
+      runs.some((run) => ["queued", "running", "stopping"].includes(run.status))
+    )
+      return systemDeploymentFailure(
+        "deployment.deactivation.running",
+        "Stop the running system before deactivating it.",
+      );
+    try {
+      await this.d.repository.appendAudit(
+        auditEntry(
+          this.d,
+          deployment,
+          "deactivate",
+          "allowed",
+          command.actorId,
+          "deployment.deactivation.authorized",
+        ),
+      );
+      await this.d.runtime.deactivate(deployment);
+      const runtimeInstance = await readOptionalRuntimeInstance(
+        this.d,
+        deployment,
+      );
+      if (runtimeInstance) await this.d.runtimeInstances.stop(runtimeInstance);
+      return systemDeploymentSuccess(
+        await this.d.repository.updateDeployment(
+          {
+            ...deployment,
+            status: "inactive",
+            revision: deployment.revision + 1,
+            updatedAt: this.now(),
+            health: {
+              status: "stopped",
+              checkedAt: this.now(),
+              diagnostics: [],
+            },
+          },
+          deployment.revision,
+        ),
+      );
+    } catch {
+      return systemDeploymentFailure(
+        "deployment.deactivation.failed",
+        "Deployment deactivation failed safely.",
+      );
+    }
+  }
+}
+
+export class UninstallSystemDeploymentUseCase {
+  private readonly now: () => string;
+  public constructor(private readonly d: SystemDeploymentUseCaseDependencies) {
+    this.now = d.now ?? (() => new Date().toISOString());
+  }
+
+  async execute(
+    command: UninstallSystemDeploymentCommand,
+  ): Promise<SystemDeploymentResult<SystemDeployment>> {
+    const deployment = await readDeployment(this.d.repository, command);
+    if (!deployment)
+      return systemDeploymentFailure(
+        "deployment.not-found",
+        "Deployment was not found.",
+      );
+    if (deployment.status === "uninstalled")
+      return systemDeploymentSuccess(deployment);
+    if (
+      ![
+        "installed",
+        "active",
+        "inactive",
+        "failed",
+        "degraded",
+        "uninstalling",
+      ].includes(deployment.status)
+    )
+      return systemDeploymentFailure(
+        "deployment.uninstall.conflict",
+        "This deployment cannot be uninstalled from its current state.",
+      );
+    const runs = await this.d.repository.listRuns(
+      command.organizationId,
+      command.workspaceId,
+      deployment.deploymentId,
+    );
+    if (
+      runs.some((run) => ["queued", "running", "stopping"].includes(run.status))
+    )
+      return systemDeploymentFailure(
+        "deployment.uninstall.running",
+        "Stop the running system before uninstalling it.",
+      );
+    let uninstalling = deployment;
+    try {
+      await this.d.repository.appendAudit(
+        auditEntry(
+          this.d,
+          deployment,
+          "uninstall",
+          "allowed",
+          command.actorId,
+          "deployment.uninstall.authorized",
+        ),
+      );
+      if (deployment.status !== "uninstalling")
+        uninstalling = await this.d.repository.updateDeployment(
+          {
+            ...deployment,
+            status: "uninstalling",
+            revision: deployment.revision + 1,
+            updatedAt: this.now(),
+          },
+          deployment.revision,
+        );
+      await this.d.runtime.deactivate(uninstalling);
+      const runtimeInstance = await readOptionalRuntimeInstance(
+        this.d,
+        uninstalling,
+      );
+      if (runtimeInstance)
+        await this.d.runtimeInstances.retain(runtimeInstance);
+      const completedAt = this.now();
+      return systemDeploymentSuccess(
+        await this.d.repository.retireCurrentDeployment(
+          {
+            ...uninstalling,
+            status: "uninstalled",
+            revision: uninstalling.revision + 1,
+            updatedAt: completedAt,
+            uninstalledAt: completedAt,
+            uninstalledBy: safeActor(command.actorId),
+            health: {
+              status: "stopped",
+              checkedAt: completedAt,
+              diagnostics: [],
+            },
+          },
+          uninstalling.revision,
+        ),
+      );
+    } catch {
+      return systemDeploymentFailure(
+        "deployment.uninstall.failed",
+        "Deployment uninstall did not complete; retained state is available for recovery.",
+      );
+    }
+  }
+}
+
 export class ReconcileSystemDeploymentHealthUseCase {
   private readonly now: () => string;
   public constructor(private readonly d: SystemDeploymentUseCaseDependencies) {
@@ -391,7 +619,7 @@ export class ReconcileSystemDeploymentHealthUseCase {
       command.actorId,
     );
     if (revocationStatus !== "clear")
-      return revocationFailure(
+      return revocationFailure<SystemDeployment>(
         revocationStatus,
         "Deployment health is unavailable.",
       );
@@ -465,7 +693,7 @@ export class RollbackSystemDeploymentUseCase {
       command.actorId,
     );
     if (revocationStatus !== "clear")
-      return revocationFailure(
+      return revocationFailure<SystemDeployment>(
         revocationStatus,
         "The previous deployment cannot be restored.",
       );
@@ -489,8 +717,15 @@ export class RollbackSystemDeploymentUseCase {
         },
         current.revision,
       );
+      const previousRuntimeInstance = await readRuntimeInstance(
+        this.d,
+        previous,
+      );
+      const activePreviousRuntimeInstance =
+        await this.d.runtimeInstances.activate(previousRuntimeInstance);
       const health = await this.d.runtime.activate(previous);
       if (health.status !== "ready") {
+        await this.d.runtimeInstances.stop(activePreviousRuntimeInstance);
         await this.d.repository.updateDeployment(
           {
             ...rolling,
@@ -518,6 +753,9 @@ export class RollbackSystemDeploymentUseCase {
         previous.revision,
       );
       await this.d.runtime.deactivate(rolling);
+      await this.d.runtimeInstances.stop(
+        await readRuntimeInstance(this.d, rolling),
+      );
       await this.d.repository.updateDeployment(
         {
           ...rolling,
@@ -567,8 +805,12 @@ export class RevokeSystemDeploymentUseCase {
           "deployment.revocation.authorized",
         ),
       );
-      if (["active", "degraded", "activating"].includes(deployment.status))
+      if (["active", "degraded", "activating"].includes(deployment.status)) {
         await this.d.runtime.deactivate(deployment);
+        await this.d.runtimeInstances.stop(
+          await readRuntimeInstance(this.d, deployment),
+        );
+      }
       return systemDeploymentSuccess(
         await this.d.repository.updateDeployment(
           {
@@ -618,7 +860,7 @@ export class StartSystemDeploymentRunUseCase {
       command.actorId,
     );
     if (revocationStatus !== "clear")
-      return revocationFailure(
+      return revocationFailure<SystemDeploymentRun>(
         revocationStatus,
         "The deployment cannot start a run.",
       );
@@ -664,6 +906,9 @@ export class StartSystemDeploymentRunUseCase {
     }
     let running: SystemDeploymentRun | undefined;
     try {
+      await this.d.runtimeInstances.activate(
+        await readRuntimeInstance(this.d, deployment),
+      );
       const queued = await this.d.repository.createRun(draft);
       running = await this.d.repository.updateRun(
         { ...queued, status: "running", revision: 1, startedAt: this.now() },
@@ -681,7 +926,23 @@ export class StartSystemDeploymentRunUseCase {
         runId: command.runId,
       });
       const result = await this.d.runtime.start(deployment, running);
-      if (result.status === "running") return systemDeploymentSuccess(running);
+      if (result.status === "running")
+        return systemDeploymentSuccess(
+          await this.d.repository.updateRun(
+            {
+              ...running,
+              revision: running.revision + 1,
+              diagnostics: result.diagnostics,
+              ...(result.runtimeKind
+                ? { runtimeKind: result.runtimeKind }
+                : {}),
+              ...(result.launchDescriptor
+                ? { launchDescriptor: result.launchDescriptor }
+                : {}),
+            },
+            running.revision,
+          ),
+        );
       const completed = await this.d.repository.updateRun(
         {
           ...running,
@@ -746,7 +1007,7 @@ export class CancelSystemDeploymentRunUseCase {
         "deployment.run.not-found",
         "Deployment run was not found.",
       );
-    if (!["queued", "running"].includes(run.status))
+    if (!["queued", "running", "stopping"].includes(run.status))
       return systemDeploymentFailure(
         "deployment.run.cancel-conflict",
         "Only queued or running deployments can be cancelled.",
@@ -762,16 +1023,28 @@ export class CancelSystemDeploymentRunUseCase {
         "Deployment was not found.",
       );
     try {
-      await this.d.runtime.cancel(deployment, run);
+      const stopping =
+        run.status === "stopping"
+          ? run
+          : await this.d.repository.updateRun(
+              {
+                ...run,
+                status: "stopping",
+                revision: run.revision + 1,
+                cancellationRequested: true,
+              },
+              run.revision,
+            );
+      await this.d.runtime.cancel(deployment, stopping);
       const cancelled = await this.d.repository.updateRun(
         {
-          ...run,
+          ...stopping,
           status: "cancelled",
-          revision: run.revision + 1,
+          revision: stopping.revision + 1,
           cancellationRequested: true,
           completedAt: this.now(),
         },
-        run.revision,
+        stopping.revision,
       );
       await this.d.repository.appendAudit({
         ...auditEntry(
@@ -849,10 +1122,10 @@ export class ListSystemDeploymentAuditUseCase {
   }
 }
 
-async function verifyAndClassifyRelease(
+async function verifyAndResolveRuntimeProfile(
   artifacts: SystemBuildArtifactPort,
   release: SystemRelease,
-): Promise<SystemReferenceRuntimeKind> {
+): Promise<SystemRuntimeProfileId> {
   let manifest: unknown;
   for (const descriptor of release.artifacts) {
     if (
@@ -889,7 +1162,7 @@ async function verifyAndClassifyRelease(
       kinds.add(candidate as SystemReferenceRuntimeKind);
   }
   if (kinds.size > 1) throw new Error("Reference runtime kinds conflict.");
-  return [...kinds][0] ?? "custom";
+  return mapLegacySystemReferenceRuntimeKind([...kinds][0] ?? "custom");
 }
 
 type DeploymentRevocationStatus = "clear" | "revoked" | "unavailable";
@@ -931,6 +1204,12 @@ async function enforceDeploymentRevocation(
     } catch {
       // New starts remain denied even when runtime cleanup requires operator
       // follow-up. Do not expose adapter diagnostics through this boundary.
+    }
+    try {
+      await d.runtimeInstances.stop(await readRuntimeInstance(d, deployment));
+    } catch {
+      // Revocation remains fail-closed even when data-plane cleanup needs
+      // operator reconciliation.
     }
   }
   const occurredAt = d.now?.() ?? new Date().toISOString();
@@ -990,6 +1269,60 @@ function revocationFailure<T>(
       ? `${context} A frozen implementation is revoked.`
       : `${context} Revocation status could not be verified safely.`,
   );
+}
+
+async function readRuntimeInstance(
+  d: Pick<SystemDeploymentUseCaseDependencies, "runtimeInstanceRepository">,
+  deployment: SystemDeployment,
+): Promise<SystemRuntimeInstance> {
+  if (!deployment.runtimeInstanceId) {
+    throw new Error(
+      "The deployment does not have an isolated runtime data allocation.",
+    );
+  }
+  const instance =
+    await d.runtimeInstanceRepository.readRuntimeInstanceByDeployment(
+      deployment.organizationId,
+      deployment.workspaceId,
+      deployment.deploymentId,
+    );
+  if (
+    !instance ||
+    instance.runtimeInstanceId !== deployment.runtimeInstanceId ||
+    !isSystemRuntimeInstanceBoundToDeployment(
+      instance,
+      deployment.deploymentId,
+      deployment.releaseId,
+    ) ||
+    instance.status === "deleted"
+  ) {
+    throw new Error("The deployment runtime data allocation is unavailable.");
+  }
+  return instance;
+}
+
+async function readOptionalRuntimeInstance(
+  d: Pick<SystemDeploymentUseCaseDependencies, "runtimeInstanceRepository">,
+  deployment: SystemDeployment,
+): Promise<SystemRuntimeInstance | undefined> {
+  if (deployment.runtimeInstanceId) return readRuntimeInstance(d, deployment);
+  const instance =
+    await d.runtimeInstanceRepository.readRuntimeInstanceByDeployment(
+      deployment.organizationId,
+      deployment.workspaceId,
+      deployment.deploymentId,
+    );
+  if (!instance) return undefined;
+  if (
+    !isSystemRuntimeInstanceBoundToDeployment(
+      instance,
+      deployment.deploymentId,
+      deployment.releaseId,
+    ) ||
+    instance.status === "deleted"
+  )
+    throw new Error("The deployment runtime data allocation is unavailable.");
+  return instance;
 }
 
 function readDeployment(

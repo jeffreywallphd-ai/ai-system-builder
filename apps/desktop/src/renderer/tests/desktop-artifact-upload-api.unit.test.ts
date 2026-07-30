@@ -29,6 +29,7 @@ describe("desktopApi bridge access", () => {
         fileName: "cat.png",
         mediaType: "image/png",
         bytes: new Uint8Array([1]),
+        workspaceId: "workspace-a",
       }),
     ).rejects.toThrow("not implemented");
     expect(uploadArtifact).toHaveBeenCalledTimes(1);

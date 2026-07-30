@@ -104,7 +104,7 @@ interface HuggingFaceModelHubClient {
 
 export interface CreateHuggingFaceModelBrowseDetailsAdapterOptions {
   accessToken?: string;
-  accessTokenProvider?: () => string | undefined;
+  accessTokenProvider?: () => string | undefined | Promise<string | undefined>;
   hubClient?: HuggingFaceModelHubClient;
   officialHubClientLoader?: () => Promise<HuggingFaceModelHubClient>;
   logger?: { info:(event:string,data:Record<string,unknown>)=>void; warn:(event:string,data:Record<string,unknown>)=>void };
@@ -469,7 +469,7 @@ export function createHuggingFaceModelBrowseDetailsAdapter(
   const accessTokenProvider = options.accessTokenProvider;
   const officialHubClientLoader = options.officialHubClientLoader ?? loadOfficialHubClient;
 
-  const resolveAccessToken = () => accessTokenProvider?.() ?? fallbackAccessToken;
+  const resolveAccessToken = async () => (await accessTokenProvider?.()) ?? fallbackAccessToken;
   let lazyHubClient: Promise<HuggingFaceModelHubClient> | undefined;
   const expandedModelFields = ["author", "cardData", "config", "sha", "tags", "safetensors", "transformersInfo"] as const;
 
@@ -526,7 +526,8 @@ export function createHuggingFaceModelBrowseDetailsAdapter(
     async browseModels(request: BrowseModelsRequest): Promise<BrowseModelsResult> {
       try {
         const hubClient = await resolveHubClient();
-        logger?.info("hf.adapter.browse.request",{query:request.query,owner:request.authorOrOrg,task:request.taskTags?.[0],limit:request.limit,hasToken:Boolean(resolveAccessToken())});
+        const accessToken = await resolveAccessToken();
+        logger?.info("hf.adapter.browse.request",{query:request.query,owner:request.authorOrOrg,task:request.taskTags?.[0],limit:request.limit,hasToken:Boolean(accessToken)});
         const items = await collectListModels(await hubClient.listModels({
           search: {
             query: request.query,
@@ -537,7 +538,7 @@ export function createHuggingFaceModelBrowseDetailsAdapter(
           sort: request.sort,
           limit: request.limit,
           additionalFields: [...expandedModelFields],
-          accessToken: resolveAccessToken(),
+          accessToken,
           fetch: createDiagnosticFetch("browseModels"),
         }));
 
@@ -562,10 +563,11 @@ export function createHuggingFaceModelBrowseDetailsAdapter(
     async getModelDetails(request: GetModelDetailsRequest): Promise<GetModelDetailsResult> {
       try {
         const hubClient = await resolveHubClient();
-        logger?.info("hf.adapter.details.request",{modelId:request.modelId,hasToken:Boolean(resolveAccessToken())});
+        const accessToken = await resolveAccessToken();
+        logger?.info("hf.adapter.details.request",{modelId:request.modelId,hasToken:Boolean(accessToken)});
         const info = await hubClient.modelInfo({
           name: request.modelId,
-          accessToken: resolveAccessToken(),
+          accessToken,
           additionalFields: [...expandedModelFields],
           fetch: createDiagnosticFetch("getModelDetails"),
         });

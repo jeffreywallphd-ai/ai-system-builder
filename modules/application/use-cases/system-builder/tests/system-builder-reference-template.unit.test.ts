@@ -2,11 +2,11 @@ import { describe, expect, it } from "../../../../testing/node-test";
 import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import { createStructuredSystemBuilderRepository } from "../../../../adapters/persistence/system-builder";
 import { createWorkspaceId } from "../../../../contracts/workspace";
-import { CONVERSATION_ASSET_DEFINITIONS } from "../../../services/asset-packs/system-packs/conversation-assets";
-import { DISPLAY_PRIMITIVE_DEFINITIONS } from "../../../services/asset-packs/system-packs/display-primitives";
-import { FORM_PRIMITIVE_DEFINITIONS } from "../../../services/asset-packs/system-packs/form-primitives";
-import { FUNCTIONAL_DEFAULT_DEFINITIONS } from "../../../services/asset-packs/system-packs/functional-defaults";
-import { SHELL_PRIMITIVE_DEFINITIONS } from "../../../services/asset-packs/system-packs/shell-primitives";
+import {
+  readSystemBuilderConversationInteraction,
+  type SystemBuilderRevision,
+} from "../../../../contracts/system-builder";
+import { SYSTEM_FOUNDATION_PACK_V3_MANIFEST } from "../../../services/asset-packs/system-packs";
 import {
   SystemBuilderReferenceTemplateRegistry,
   ValidateSystemBuilderRevisionService,
@@ -14,13 +14,9 @@ import {
 import { CreateSystemBuilderFromTemplateUseCase } from "../system-builder-use-cases";
 
 const workspaceId = createWorkspaceId("workspace-reference");
-const definitions = [
-  ...CONVERSATION_ASSET_DEFINITIONS,
-  ...SHELL_PRIMITIVE_DEFINITIONS,
-  ...FORM_PRIMITIVE_DEFINITIONS,
-  ...DISPLAY_PRIMITIVE_DEFINITIONS,
-  ...FUNCTIONAL_DEFAULT_DEFINITIONS,
-];
+const definitions = SYSTEM_FOUNDATION_PACK_V3_MANIFEST.assets.map(
+  (entry) => entry.definition,
+);
 const validator = new ValidateSystemBuilderRevisionService(
   {
     async readExactDefinition(reference) {
@@ -55,7 +51,7 @@ describe("secured data-entry system template", () => {
       value.instances.every(
         (item) =>
           item.definitionRef.kind === "asset-definition-version" &&
-          item.definitionRef.version === "1.0.0",
+          item.definitionRef.version === "3.0.0",
       ),
     ).toBe(true);
     expect(
@@ -99,11 +95,12 @@ describe("secured data-entry system template", () => {
     expect(revisions.length).toBe(1);
     expect(revisions[0].instances.length).toBeGreaterThan(30);
     expect(revisions[0].validationIssues).toEqual([]);
+    expectCurrentReferenceRevision(revisions[0]);
   });
 });
 
 describe("controlled chatbot system template", () => {
-  it("materializes a closed, fail-closed assistant composition that passes real validation", async () => {
+  it("materializes a sample-free assistant composition that requires an authority-selected model", async () => {
     const registry = new SystemBuilderReferenceTemplateRegistry();
     const value = registry.materialize("reference.controlled-chatbot@1.0.0", {
       systemId: "controlled-chatbot",
@@ -140,18 +137,40 @@ describe("controlled chatbot system template", () => {
       value.instances.every(
         (item) =>
           item.definitionRef.kind === "asset-definition-version" &&
-          item.definitionRef.version === "1.0.0",
+          item.definitionRef.version === "3.0.0",
       ),
     ).toBe(true);
+    expect(
+      value.bindings
+        .map(readSystemBuilderConversationInteraction)
+        .filter(Boolean),
+    ).toEqual([
+      {
+        schemaVersion: "1.0",
+        kind: "conversation-turn",
+        composerInstanceId: "controlled-chatbot.composer",
+        historyInstanceId: "controlled-chatbot.history-display",
+        transcriptMode: "persisted-only",
+      },
+    ]);
+    expect(JSON.stringify(value)).not.toContain("model.default");
+    expect(JSON.stringify(value)).not.toContain("sampleUserMessage");
+    expect(JSON.stringify(value)).not.toContain("sampleAssistantMessage");
     const validation = await validator.execute(value);
-    expect(validation.issues).toEqual([]);
-    expect(validation.status).toBe("valid");
+    expect(validation.status).toBe("invalid");
+    expect(
+      validation.issues.some(
+        (issue) =>
+          issue.severity === "error" &&
+          issue.message === "Model selection authority is unavailable.",
+      ),
+    ).toBe(true);
     expect(JSON.stringify(validation)).not.toContain(
       "Answer clearly, use only approved context",
     );
   });
 
-  it("creates a validated record with template-specific product copy", async () => {
+  it("creates a blocked draft until its required model is selected", async () => {
     const repository = createStructuredSystemBuilderRepository(
       createInMemoryStructuredDocumentStore(),
     );
@@ -172,9 +191,24 @@ describe("controlled chatbot system template", () => {
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.status).toBe("validated");
+    expect(result.value.status).toBe("blocked");
     expect(result.value.name).toBe("Reference system");
     expect(result.value.description).toContain("release-bound text assistant");
+    const revisions = await repository.listRevisions(
+      workspaceId,
+      result.value.systemId,
+    );
+    expectCurrentReferenceRevision(revisions[0]);
+    expect(
+      revisions[0].validationIssues.some(
+        (issue) => issue.message === "Model selection authority is unavailable.",
+      ),
+    ).toBe(true);
+    const chatShell = revisions[0].instances.find(
+      (instance) =>
+        String(instance.definitionRef.id) === "conversation.chat-shell",
+    );
+    expect(chatShell?.selectedConfiguration?.title).toBe("Conversation");
   });
 });
 
@@ -238,7 +272,7 @@ describe("secured data-review system template", () => {
       value.instances.every(
         (item) =>
           item.definitionRef.kind === "asset-definition-version" &&
-          item.definitionRef.version === "1.0.0",
+          item.definitionRef.version === "3.0.0",
       ),
     ).toBe(true);
     const validation = await validator.execute(value);
@@ -271,5 +305,38 @@ describe("secured data-review system template", () => {
     expect(result.value.status).toBe("validated");
     expect(result.value.name).toBe("Production data review");
     expect(result.value.description).toContain("bounded previews");
+    const revisions = await repository.listRevisions(
+      workspaceId,
+      result.value.systemId,
+    );
+    expectCurrentReferenceRevision(revisions[0]);
   });
 });
+
+function expectCurrentReferenceRevision(
+  revision: SystemBuilderRevision | undefined,
+): void {
+  expect(revision).toBeDefined();
+  if (!revision) return;
+  expect(
+    revision.instances.every(
+      (instance) => instance.definitionRef.version === "3.0.0",
+    ),
+  ).toBe(true);
+  expect(String(revision.structure?.layoutPresetRef?.id)).toBe(
+    "builtin.layout.application.minimal",
+  );
+  expect(revision.structure?.layoutPresetRef?.version).toBe("3.0.0");
+  expect(revision.placements?.length ?? 0).toBeGreaterThan(2);
+  expect(
+    new Set(revision.instances.map((instance) => String(instance.instanceId)))
+      .size,
+  ).toBe(revision.instances.length);
+  const root = revision.instances.find(
+    (instance) =>
+      String(instance.instanceId) ===
+      String(revision.composition.rootInstanceRefs[0]?.id),
+  );
+  expect(root?.selectedConfiguration?.themeColorPrimary).toBe("#2563eb");
+  expect(root?.selectedConfiguration?.themeButtonTreatment).toBe("solid");
+}

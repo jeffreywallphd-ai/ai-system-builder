@@ -267,6 +267,7 @@ describe("composeDesktopHost", () => {
 
     host.registerArtifactUploadIpc({
       ipcMain,
+      senderTrust: { isTrustedSender: () => true },
       storageRootDirectory,
       runtimeRootDirectory,
     });
@@ -382,9 +383,12 @@ describe("composeDesktopHost", () => {
     expect(preloadSource).toContain("finalizeGeneratedOutputAsAsset");
     expect(preloadSource).toContain("importExternalRepositoryObjectAsAsset");
     expect(preloadSource).toContain("localizeExternalRepositoryObjectAsAsset");
+    expect(preloadSource).toContain("listAssetDerivedCustomizationTargets");
+    expect(preloadSource).toContain("createAssetDerivedCustomization");
     expect(/createAssetDefinition|updateAssetDefinition|deleteAssetDefinition|patchAsset|editAsset|seedAsset|publishAssetDefinition|publishAssetInstance|listAssetInstances|readAssetInstance/i.test(preloadSource)).toBe(false);
     const hostSource = readFileSync(resolve("modules/hosts/desktop/composition/composeDesktopHost.ts"), "utf8");
     expect(hostSource).toContain("await import(\"./composeDesktopAssetFeature\")");
+    expect(hostSource).toContain("getDerivedCustomizations");
     expect(hostSource).not.toContain("import { composeInternalAssetRegistry");
     expect(hostSource).not.toContain("assetRegistryRead: internalAssetRegistry,");
     const listener = ipcMain.handle.mock.calls[0]?.[1];
@@ -606,7 +610,7 @@ describe("composeDesktopHost", () => {
     const previousBaseUrl = process.env.PYTHON_RUNTIME_BASE_URL;
     process.env.PYTHON_RUNTIME_COMMAND = "__missing_python_runtime_command__";
     process.env.PYTHON_RUNTIME_ARGS = "";
-    process.env.PYTHON_RUNTIME_BASE_URL = "http://127.0.0.1:1";
+    process.env.PYTHON_RUNTIME_BASE_URL = "http://127.0.0.1:49998";
 
     try {
       const host = composeDesktopHost();

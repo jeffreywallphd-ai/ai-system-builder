@@ -1,4 +1,5 @@
 :where(.ui-button, button:not([class])) {
+  appearance: none;
   min-height: var(--control-height-sm);
   display: inline-flex;
   align-items: center;
@@ -7,20 +8,16 @@
   padding: var(--space-xs) var(--space-md);
   border: 1px solid rgb(89 150 255 / 55%);
   border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, #2378f2, var(--color-bg-accent));
+  background: var(--color-bg-accent);
   color: var(--color-text-inverse);
-  box-shadow:
-    inset 0 1px rgb(255 255 255 / 15%),
-    var(--shadow-accent);
+  box-shadow: none;
   font-size: var(--font-size-sm);
   font-weight: 650;
   line-height: 1.2;
   cursor: pointer;
   transition:
     background var(--transition-fast),
-    border-color var(--transition-fast),
-    box-shadow var(--transition-fast),
-    transform var(--transition-fast);
+    border-color var(--transition-fast);
 }
 
 :where(.ui-button, button:not([class])) .ui-app-icon {
@@ -35,12 +32,7 @@
 
 :where(.ui-button, button:not([class])):hover:enabled {
   border-color: #8bb7ff;
-  background: linear-gradient(180deg, #3688ff, var(--color-bg-accent-hover));
-  transform: translateY(-1px);
-}
-
-:where(.ui-button, button:not([class])):active:enabled {
-  transform: translateY(0);
+  background: var(--color-bg-accent-hover);
 }
 
 :where(.ui-button, button:not([class])):focus-visible,
@@ -73,15 +65,15 @@
   box-shadow: none;
 }
 
-.ui-button--secondary,
+.ui-button--outline,
 .ui-button[aria-current="page"] {
   border-color: var(--color-border);
-  background: var(--color-bg-elevated);
+  background: transparent;
   color: var(--color-text-primary);
-  box-shadow: inset 0 1px rgb(255 255 255 / 5%);
+  box-shadow: none;
 }
 
-.ui-button--secondary:hover:enabled,
+.ui-button--outline:hover:enabled,
 .ui-button[aria-current="page"]:hover:enabled {
   border-color: var(--color-border-inverse);
   background: var(--color-bg-hover);
@@ -238,11 +230,12 @@ label > span:first-child {
 }
 
 .ui-file-input::file-selector-button {
+  appearance: none;
   margin-inline-end: var(--space-sm);
   padding: var(--space-xs) var(--space-sm);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: var(--color-bg-elevated);
+  background: transparent;
   color: var(--color-text-primary);
   cursor: pointer;
 }

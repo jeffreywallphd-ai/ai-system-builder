@@ -23,11 +23,13 @@ function post<T>(url: string, body: unknown): Promise<SystemBuildResult<T>> {
 export function createThinClientSystemBuildClient(baseUrl = "/api"): SystemBuildClient {
   const root = baseUrl.replace(/\/+$/, "");
   return {
+    prepare: (input) => request(`${root}/systems/builds/preparation?workspaceId=${encodeURIComponent(input.workspaceId)}&systemId=${encodeURIComponent(input.systemId)}&systemRevisionId=${encodeURIComponent(input.systemRevisionId)}`),
     request: (input) => post(`${root}/systems/builds/request`, input),
     cancel: (input) => post(`${root}/systems/builds/cancel`, input),
     listBuilds: (input) => request(`${root}/systems/builds?workspaceId=${encodeURIComponent(input.workspaceId)}${input.systemId ? `&systemId=${encodeURIComponent(input.systemId)}` : ""}`),
     approve: (input) => post(`${root}/systems/releases/approve`, input),
     listReleases: (input) => request(`${root}/systems/releases?workspaceId=${encodeURIComponent(input.workspaceId)}${input.systemId ? `&systemId=${encodeURIComponent(input.systemId)}` : ""}`),
+    publicationWorkspace: (input) => request(`${root}/systems/publication?workspaceId=${encodeURIComponent(input.workspaceId)}`),
     compare: (input) => request(`${root}/systems/releases/compare?workspaceId=${encodeURIComponent(input.workspaceId)}&leftReleaseId=${encodeURIComponent(input.leftReleaseId)}&rightReleaseId=${encodeURIComponent(input.rightReleaseId)}`),
   };
 }

@@ -6,9 +6,12 @@ import type {
   AuthoredAssetRecord,
 } from "../../../../../../modules/contracts/asset-authoring";
 import {
-  PanelHeading,
-  TermWithHint,
-} from "../../../../../../modules/ui/shared";
+  AssetDerivedCustomizationEditor,
+  type AssetCustomizationTargetSelection,
+} from "../../../../../../modules/ui/shared/asset-authoring";
+import { PanelHeading } from "../../../../../../modules/ui/shared/components/PanelHeading";
+import { TermWithHint } from "../../../../../../modules/ui/shared/glossary/GlossaryHint";
+import { TransientNotificationPublisher } from "../../../../../../modules/ui/shared/notifications/TransientNotificationPublisher";
 import { createThinClientAssetAuthoringClient } from "../api/thinClientAssetAuthoringClient";
 
 type RowVm = {
@@ -80,9 +83,11 @@ const summaryVm = (
 export function AssetAuthoringFeature({
   workspaceId,
   initialSection = "create",
+  initialCustomizationTarget,
 }: {
   workspaceId: string;
   initialSection?: Section;
+  initialCustomizationTarget?: AssetCustomizationTargetSelection;
 }) {
   const client = useMemo(
     () => createThinClientAssetAuthoringClient("/api"),
@@ -94,6 +99,8 @@ export function AssetAuthoringFeature({
   const [summaries, setSummaries] = useState<RowVm[]>([]);
   const [summariesUnavailable, setSummariesUnavailable] = useState(false);
   const [message, setMessage] = useState("");
+  const contextualMessage = message === "Some asset records are unavailable." || message === "Display name is required.";
+  const successfulMessage = ["Draft created.", "Draft published.", "Draft saved."].includes(message);
   const [displayName, setDisplayName] = useState("");
   const [summary, setSummary] = useState("");
   const [description, setDescription] = useState("");
@@ -127,8 +134,18 @@ export function AssetAuthoringFeature({
   };
 
   useEffect(() => {
-    void refresh();
-  }, [workspaceId]);
+    if (initialSection !== "customizations") void refresh();
+  }, [initialSection, workspaceId]);
+
+  if (initialSection === "customizations") {
+    return (
+      <AssetDerivedCustomizationEditor
+        workspaceId={workspaceId}
+        client={client}
+        initialTarget={initialCustomizationTarget}
+      />
+    );
+  }
 
   const createDraft = async (event: FormEvent) => {
     event.preventDefault();
@@ -289,42 +306,6 @@ export function AssetAuthoringFeature({
         </section>
       ) : null}
 
-      {initialSection === "customizations" ? (
-        <section className="ui-panel ui-stack">
-          <h3>Customizations</h3>
-          <p>
-            <small>Creating new customizations is not available yet.</small>
-          </p>
-          <ul>
-            {overrides.length ? (
-              overrides.map((override) => (
-                <li key={override.id}>
-                  <AssetRow row={override} />{" "}
-                  <button
-                    onClick={async () => {
-                      const result = await client.disableOverride(
-                        workspaceId,
-                        override.id,
-                      );
-                      setMessage(
-                        result.ok
-                          ? "Customization disabled."
-                          : result.error.message,
-                      );
-                      if (result.ok) await refresh();
-                    }}
-                  >
-                    Disable
-                  </button>
-                </li>
-              ))
-            ) : (
-              <li>No customizations yet.</li>
-            )}
-          </ul>
-        </section>
-      ) : null}
-
       <section className="ui-panel">
         <h3>Readiness</h3>
         {summariesUnavailable ? (
@@ -344,7 +325,8 @@ export function AssetAuthoringFeature({
         )}
       </section>
 
-      {message ? <p role="status">{message}</p> : null}
+      {contextualMessage ? <p role="alert">{message}</p> : null}
+      <TransientNotificationPublisher message={!contextualMessage ? message : undefined} title={successfulMessage ? "Asset authoring updated" : "Asset authoring needs attention"} tone={successfulMessage ? "success" : "error"} source="Asset Authoring" workspaceId={workspaceId} />
     </section>
   );
 }

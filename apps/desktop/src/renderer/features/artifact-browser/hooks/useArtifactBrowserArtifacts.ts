@@ -19,6 +19,7 @@ export interface UseArtifactBrowserArtifactsResult {
   items: DesktopArtifactBrowseItem[];
   uploadedItems: DesktopArtifactBrowseItem[];
   generatedItems: DesktopArtifactBrowseItem[];
+  otherItems: DesktopArtifactBrowseItem[];
   unregisteredItems: DesktopUnregisteredArtifactBrowseItem[];
   selectedArtifactFamily: DesktopArtifactFamily | "all";
   setSelectedArtifactFamily: (value: DesktopArtifactFamily | "all") => void;
@@ -58,9 +59,9 @@ export function useArtifactBrowserArtifacts({
       setUnregisteredItems(unregistered);
       setViewState({
         status: "success",
-        message: (filteredByStorage.length + unregistered.length) > 0
-          ? "Loaded artifacts."
-          : "No artifacts found yet.",
+        ...((filteredByStorage.length + unregistered.length) > 0
+          ? {}
+          : { message: "No artifacts found yet." }),
       });
     } catch (error) {
       setViewState({
@@ -72,11 +73,15 @@ export function useArtifactBrowserArtifacts({
 
   const uploadedItems = items.filter(isUploadedArtifact);
   const generatedItems = items.filter(isGeneratedArtifact);
+  const otherItems = items.filter(
+    (item) => !isUploadedArtifact(item) && !isGeneratedArtifact(item),
+  );
 
   return {
     items,
     uploadedItems,
     generatedItems,
+    otherItems,
     unregisteredItems,
     selectedArtifactFamily,
     setSelectedArtifactFamily,

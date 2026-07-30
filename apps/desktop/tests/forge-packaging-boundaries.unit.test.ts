@@ -6,6 +6,18 @@ import test from "node:test";
 const requireFromRoot = createRequire(path.resolve("package.json"));
 const forgeConfig = requireFromRoot("./apps/desktop/forge.config.js") as {
   packagerConfig?: { ignore?: (file: string) => boolean };
+  plugins?: Array<{
+    config?: {
+      renderer?: {
+        entryPoints?: Array<{
+          name?: string;
+          html?: string;
+          js?: string;
+          preload?: { js?: string };
+        }>;
+      };
+    };
+  }>;
 };
 
 test("desktop packaging includes only webpack output and excludes runtime data", () => {
@@ -18,4 +30,22 @@ test("desktop packaging includes only webpack output and excludes runtime data",
   assert.equal(ignored?.("/apps/desktop/src/main/index.ts"), true);
   assert.equal(ignored?.("/.webpack/main/index.js"), false);
   assert.equal(ignored?.("/.webpack/main/index.js.map"), true);
+});
+
+test("desktop packaging includes a separately bundled minimal system runtime entry", () => {
+  const entries = forgeConfig.plugins?.flatMap(
+    (plugin) => plugin.config?.renderer?.entryPoints ?? [],
+  ) ?? [];
+  const runtime = entries.find((entry) => entry.name === "system_runtime");
+  assert.ok(runtime);
+  assert.match(runtime.html ?? "", /system-runtime[\\/]index\.html$/);
+  assert.match(runtime.js ?? "", /system-runtime[\\/]main\.tsx$/);
+  assert.match(
+    runtime.preload?.js ?? "",
+    /system-runtime-preload[\\/]index\.ts$/,
+  );
+  assert.notEqual(
+    runtime.preload?.js,
+    entries.find((entry) => entry.name === "main_window")?.preload?.js,
+  );
 });

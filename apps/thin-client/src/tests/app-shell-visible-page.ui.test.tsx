@@ -42,17 +42,20 @@ vi.mock("../features/workspace", () => ({
 
 import { AppShell } from "../components/layout/AppShell";
 import { thinClientPageDefinitions } from "../routes/thinClientPages";
+import { NotificationProvider } from "../../../../modules/ui/shared/notifications";
 
 describe("thin-client AppShell visible workspace page state", () => {
   it("does not mark a pending workspace-required route active while setup is visible", () => {
     const html = renderToString(
-      <AppShell
-        activePage={undefined}
-        pages={thinClientPageDefinitions}
-        onNavigate={() => undefined}
-      >
-        <section>Workspace required</section>
-      </AppShell>,
+      <NotificationProvider>
+        <AppShell
+          activePage={undefined}
+          pages={thinClientPageDefinitions}
+          onNavigate={() => undefined}
+        >
+          <section>Workspace required</section>
+        </AppShell>
+      </NotificationProvider>,
     );
 
     expect(html).toContain("Workspace required");
@@ -63,6 +66,8 @@ describe("thin-client AppShell visible workspace page state", () => {
     expect(html).toContain('aria-expanded="true"');
     expect(html).toContain("ui-app-icon");
     expect(html).toContain("Collapse sidebar");
+    expect(html).toContain('id="application-notification-bell"');
+    expect(html.indexOf('id="application-notification-bell"') < html.indexOf('aria-label="Settings"')).toBe(true);
     expect(html).not.toContain('aria-current="page"');
   });
 });

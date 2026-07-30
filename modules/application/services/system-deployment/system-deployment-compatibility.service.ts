@@ -3,7 +3,7 @@ import type {
   InstallSystemDeploymentCommand,
   SystemDeploymentCompatibilityEvidence,
   SystemDeploymentDiagnostic,
-  SystemReferenceRuntimeKind,
+  SystemRuntimeProfileId,
 } from "../../../contracts/system-deployment";
 import type { SystemRelease } from "../../../contracts/system-build";
 
@@ -19,7 +19,7 @@ export class SystemDeploymentCompatibilityService {
   async evaluate(
     command: InstallSystemDeploymentCommand,
     release: SystemRelease,
-    referenceRuntimeKind: SystemReferenceRuntimeKind,
+    runtimeProfileId: SystemRuntimeProfileId,
     checkedAt: string,
   ): Promise<SystemDeploymentCompatibilityEvidence> {
     const diagnostics: SystemDeploymentDiagnostic[] = [];
@@ -109,7 +109,7 @@ export class SystemDeploymentCompatibilityService {
           "A qualified sandbox is required for this release.",
         ),
       );
-    if (!this.runtime.supportsReferenceRuntime(referenceRuntimeKind))
+    if (!this.runtime.supportsRuntimeProfile(runtimeProfileId))
       diagnostics.push(
         error(
           "deployment.runtime.unavailable",
@@ -133,7 +133,7 @@ export class SystemDeploymentCompatibilityService {
     };
     if (diagnostics.length === 0) {
       const runtime = await this.runtime.inspect({
-        referenceRuntimeKind,
+        runtimeProfileId,
         deploymentProfile: command.deploymentProfile,
         compatibility: preliminary,
         policy: command.policy,

@@ -4,5 +4,5 @@
   "objective": "Deliver the approved feature as independently verified increments.",
   "statePath": ".implementation-roadmaps/example-feature/state.json",
   "roadmapPath": "docs/example-feature-implementation-roadmap.md",
-  "reportPath": "docs/example-feature-implementation-report.md"
+  "reportPath": "docs/tmp/example-feature-implementation-report.md"
 }

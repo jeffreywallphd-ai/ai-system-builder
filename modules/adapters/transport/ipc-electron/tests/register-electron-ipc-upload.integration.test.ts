@@ -48,12 +48,14 @@ describe("desktop artifact upload IPC integration", () => {
       logging: createLoggingPort(log),
       now: () => "2026-04-14T12:00:00.000Z",
     });
-    const handler = createDesktopArtifactUploadIpcHandler(useCase);
+    const handler = createDesktopArtifactUploadIpcHandler(useCase, {
+      isTrustedSender: () => true,
+    });
     const request = createDesktopArtifactUploadRequest(
       {
         fileName: "cat.png",
         mediaType: "image/png",
-        bytes: new Uint8Array([137, 80, 78, 71]),
+        bytes: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
         workspaceId: "workspace-a",
         boundary: {
           host: "desktop",
@@ -78,10 +80,12 @@ describe("desktop artifact upload IPC integration", () => {
     expect(response.correlationId).toBe("corr-ipc-integration-1");
     expect(path.isAbsolute(response.value.descriptor.storage.key)).toBe(false);
     expect(response.value.descriptor.storage.mediaType).toBe("image/png");
-    expect(response.value.descriptor.storage.sizeBytes).toBe(4);
+    expect(response.value.descriptor.storage.sizeBytes).toBe(8);
 
     const writtenBytes = await readFile(path.join(rootDirectory, ...response.value.descriptor.storage.key.split("/")));
-    expect(new Uint8Array(writtenBytes)).toEqual(new Uint8Array([137, 80, 78, 71]));
+    expect(new Uint8Array(writtenBytes)).toEqual(
+      new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+    );
 
     const events = log.mock.calls.map(
       ([event]: Parameters<LoggingPort["log"]>) => event.event,
@@ -101,7 +105,9 @@ describe("desktop artifact upload IPC integration", () => {
       logging: createLoggingPort(),
       now: () => "2026-04-14T12:00:00.000Z",
     });
-    const handler = createDesktopArtifactUploadIpcHandler(useCase);
+    const handler = createDesktopArtifactUploadIpcHandler(useCase, {
+      isTrustedSender: () => true,
+    });
     const request = createDesktopArtifactUploadRequest(
       {
         fileName: "brochure.zip",

@@ -6,6 +6,7 @@ import {
   formatImageGenerationModelDropdownLabel,
   PanelHeading,
   TermWithHint,
+  TransientNotificationPublisher,
   WorkflowSequence,
   WorkflowStep,
 } from "../../../../../../modules/ui/shared";
@@ -230,7 +231,7 @@ export function ImageGenerationFeature({
               onNavigateToModels ? (
                 <button
                   type="button"
-                  className="ui-button ui-button--secondary"
+                  className="ui-button ui-button--outline"
                   onClick={onNavigateToModels}
                 >
                   <ApplicationIcon name="models" />
@@ -297,7 +298,7 @@ export function ImageGenerationFeature({
               <div className="ui-workflow__actions">
                 <button
                   type="button"
-                  className="ui-button ui-button--secondary"
+                  className="ui-button ui-button--outline"
                   onClick={() => void feature.refreshImageArtifacts()}
                   disabled={feature.imageArtifactsLoading}
                 >
@@ -545,7 +546,7 @@ export function ImageGenerationFeature({
                 </span>
               </button>
               <button
-                className="ui-button ui-button--secondary"
+                className="ui-button ui-button--outline"
                 type="button"
                 onClick={() => void feature.cancel()}
                 disabled={feature.isCancelDisabled}
@@ -554,7 +555,7 @@ export function ImageGenerationFeature({
                 <span className="ui-button__label">Cancel</span>
               </button>
               <button
-                className="ui-button ui-button--secondary"
+                className="ui-button ui-button--outline"
                 type="button"
                 onClick={() => onNavigateToArtifacts?.()}
               >
@@ -562,7 +563,7 @@ export function ImageGenerationFeature({
                 <span className="ui-button__label">Open Artifacts</span>
               </button>
               <button
-                className="ui-button ui-button--secondary"
+                className="ui-button ui-button--outline"
                 type="button"
                 onClick={() => void feature.unloadModel()}
                 disabled={feature.isUnloadModelDisabled}
@@ -613,17 +614,7 @@ export function ImageGenerationFeature({
                 <p>Request ID: {feature.requestId}</p>
               ) : null}
               {feature.error ? <p role="alert">{feature.error}</p> : null}
-              {feature.unloadModelState.message ? (
-                <p
-                  role={
-                    feature.unloadModelState.status === "error"
-                      ? "alert"
-                      : "status"
-                  }
-                >
-                  {feature.unloadModelState.message}
-                </p>
-              ) : null}
+              <TransientNotificationPublisher message={feature.unloadModelState.status !== "loading" ? feature.unloadModelState.message : undefined} title={feature.unloadModelState.status === "error" ? "Model unload needs attention" : "Model unloaded"} tone={feature.unloadModelState.status === "error" ? "error" : "success"} source="Image Generation" workspaceId={workspaceId} />
             </div>
           </WorkflowStep>
 

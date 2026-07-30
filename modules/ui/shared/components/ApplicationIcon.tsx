@@ -11,6 +11,7 @@ export type ApplicationIconName =
   | "collapse"
   | "dataset"
   | "delete"
+  | "download"
   | "expand"
   | "home"
   | "info"
@@ -19,6 +20,7 @@ export type ApplicationIconName =
   | "link"
   | "menu"
   | "models"
+  | "notifications"
   | "play"
   | "refresh"
   | "save"
@@ -71,11 +73,26 @@ function renderIconPaths(name: ApplicationIconName) {
         </>
       );
     case "archive":
-      return <><path d="M4 7h16v13H4V7Z" /><path d="M3 4h18v3H3zM9 11h6" /></>;
+      return (
+        <>
+          <path d="M4 7h16v13H4V7Z" />
+          <path d="M3 4h18v3H3zM9 11h6" />
+        </>
+      );
     case "copy":
-      return <><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" /></>;
+      return (
+        <>
+          <rect x="8" y="8" width="12" height="12" rx="2" />
+          <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
+        </>
+      );
     case "link":
-      return <><path d="m9 15-1.5 1.5a3.5 3.5 0 0 1-5-5L6 8a3.5 3.5 0 0 1 5 0" /><path d="m15 9 1.5-1.5a3.5 3.5 0 0 1 5 5L18 16a3.5 3.5 0 0 1-5 0M8 12h8" /></>;
+      return (
+        <>
+          <path d="m9 15-1.5 1.5a3.5 3.5 0 0 1-5-5L6 8a3.5 3.5 0 0 1 5 0" />
+          <path d="m15 9 1.5-1.5a3.5 3.5 0 0 1 5 5L18 16a3.5 3.5 0 0 1-5 0M8 12h8" />
+        </>
+      );
     case "chevron":
       return <path d="m7 9 5 5 5-5" />;
     case "close":
@@ -133,6 +150,13 @@ function renderIconPaths(name: ApplicationIconName) {
           <path d="M12 5.75v3M12 15v3.25M6.7 9l2.7 1.5M14.6 13.5l2.7 1.5M17.3 9l-2.7 1.5M9.4 13.5 6.7 15" />
         </>
       );
+    case "notifications":
+      return (
+        <>
+          <path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 6 2.5 6 2.5 7.5H4c0-1.5 2.5-1.5 2.5-7.5Z" />
+          <path d="M9.5 20h5M10 4.5a2 2 0 0 1 4 0" />
+        </>
+      );
     case "image-generation":
       return (
         <>
@@ -186,6 +210,13 @@ function renderIconPaths(name: ApplicationIconName) {
       return (
         <>
           <path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" />
+        </>
+      );
+    case "download":
+      return (
+        <>
+          <path d="M12 4v12M7.5 11.5 12 16l4.5-4.5" />
+          <path d="M5 14v5h14v-5" />
         </>
       );
     case "play":

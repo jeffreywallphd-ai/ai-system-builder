@@ -24,5 +24,13 @@ restore, and deterministic portable export through the same Electron runtime.
 Artifact bytes, model files, datasets, generated images, provider repository
 objects, runtime installations, and secrets do not belong in this database.
 
+Published-system data uses the sibling `system-runtime` adapter, not this
+platform database. It derives one contained SQLite file per opaque runtime
+instance, refuses missing or mismatched bindings, bounds open handles, runs
+migration before a compatible deployment binding, performs online backup and
+verified restore, retains data on uninstall, and requires exact confirmation
+before deleting a retained instance. Physical locations never enter renderer or
+application contracts.
+
 The checked-in SQL under `migrations/sqlite` must remain semantically identical
 to the runtime migration constant; an automated test enforces that relationship.

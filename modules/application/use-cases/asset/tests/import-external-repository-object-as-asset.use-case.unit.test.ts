@@ -94,6 +94,7 @@ class CountingSourceIdentityService extends AssetSourceIdentityService {
 function command(overrides: Partial<ImportExternalRepositoryObjectCommand> = {}): ImportExternalRepositoryObjectCommand {
   return {
     operation: "asset.import-external-repository-object",
+    workspaceId: "workspace-a" as never,
     viewId: "view.external",
     importMode: "catalog-registration",
     approval: {

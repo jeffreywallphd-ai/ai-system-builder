@@ -41,17 +41,45 @@ drain the database pool idempotently. Deployment templates live under
 
 ## Hugging Face token configuration
 
-- Server-host artifact-repo composition reads Hugging Face token from:
-  1. `artifactRepo.huggingFaceAccessToken` composition option, then
-  2. `HF_TOKEN`, then
-  3. `HUGGING_FACE_TOKEN`.
-- Thin-client Hugging Face register/localize/publish/verify flows depend on this server-side configuration for private/gated repositories.
+- Managed OIDC deployments store one Hugging Face credential per organization
+  under the server-owned provider-credential directory. Status is masked, raw
+  values remain below the application boundary, and credential read/write
+  routes require an owner, administrator, or operator.
+- `HF_TOKEN` and `HUGGING_FACE_TOKEN` are deployment-local compatibility inputs.
+  A managed deployment will not assign either value to every organization.
+  Set `HF_TOKEN_ORGANIZATION_ID` to perform an explicit one-time assignment, or
+  use dedicated tenant placement, whose sole organization is an explicit
+  assignment target. The legacy token file is removed only after the
+  organization credential write succeeds.
+- Disabled-development and other deployment-local modes retain a single
+  host-owned credential. Thin-client private/gated repository workflows still
+  consume the credential only through the server application boundary.
+
+## Privileged settings and repository creation
+
+- Managed setting mutations require an authenticated organization role. Owners,
+  administrators, and operators may change ordinary shared settings; changing
+  the shared model folder or PyTorch/CUDA wheel index is administrator-only.
+- PyTorch wheel indexes must be credential-free HTTPS URLs on
+  `download.pytorch.org` under a supported `/whl/...` channel. Arbitrary package
+  hosts, ports, query strings, and fragments are rejected before persistence.
+- Publishing does not create a missing Hugging Face repository implicitly. The
+  request must explicitly approve creation and choose `private` or `public`;
+  the UI defaults that choice to private. Managed creation also requires the
+  `provider-repository:create` capability and records the allow/deny decision.
 
 ## Local runtime state
 
 - `SERVER_STORAGE_ROOT` overrides server artifact storage.
 - `SERVER_RUNTIME_ROOT` overrides server-owned runtime state for ComfyUI, Python worker caches, and managed runtime dependencies.
 - Without overrides, server runtime state lives under `apps/server/.local/server-runtime`, which keeps dev runtime installs out of the source tree and separate from artifact storage.
+- The managed Python worker is loopback-only. `PYTHON_RUNTIME_BASE_URL`,
+  `PYTHON_RUNTIME_HOST`, and `PYTHON_RUNTIME_PORT` may select only a consistent
+  `http://127.0.0.1:<non-privileged-port>` endpoint; wildcard, LAN, public,
+  credentialed, HTTPS, and path-bearing values fail startup.
+- Server composition generates and rotates the worker bearer credential for
+  every spawn. Operators must not set, persist, or expose
+  `PYTHON_RUNTIME_AUTH_TOKEN`; it is child-only launch state.
 
 ## Security modes and HTTPS startup
 

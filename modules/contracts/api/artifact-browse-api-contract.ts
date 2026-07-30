@@ -98,7 +98,7 @@ export function createApiArtifactBrowseSuccessResponse(
 }
 
 export function createApiArtifactBrowseFailureResponse(
-  code: "validation" | "internal" | "unavailable",
+  code: "validation" | "forbidden" | "internal" | "unavailable",
   message: string,
   options?: {
     details?: Record<string, unknown>;

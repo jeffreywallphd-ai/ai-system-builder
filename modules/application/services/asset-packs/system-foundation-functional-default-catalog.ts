@@ -1,11 +1,21 @@
-import type { AssetDefinition, AssetMetadata, AssetType } from "../../../contracts/asset";
+import type {
+  AssetDefinition,
+  AssetMetadata,
+  AssetPackVersion,
+  AssetType,
+} from "../../../contracts/asset";
 import type {
   AssetImplementationFacetKind,
+  AssetImplementationRuntimeKind,
   SystemFoundationFunctionalDefault,
   SystemFoundationPreviewKind,
 } from "../../../contracts/asset-implementation";
 
-import { SYSTEM_FOUNDATION_PACK_MANIFEST } from "./system-packs";
+import {
+  SYSTEM_FOUNDATION_PACK_V3_MANIFEST,
+  SYSTEM_FOUNDATION_PACK_MANIFEST,
+  SYSTEM_FOUNDATION_PACK_V2_MANIFEST,
+} from "./system-packs";
 
 const ALL_PROFILES = [
   "local-desktop",
@@ -14,13 +24,64 @@ const ALL_PROFILES = [
   "thin-client",
 ] as const;
 
+/** Immutable functional descriptors for the original 1.0.0 release. */
 export const SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS: readonly SystemFoundationFunctionalDefault[] =
   SYSTEM_FOUNDATION_PACK_MANIFEST.assets.map((entry) =>
     createFunctionalDefault(entry.definition),
   );
 
-const functionalDefaultByDefinitionId = new Map(
+/** Functional descriptors for the complete 2.0.0 release, including layouts. */
+export const SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS: readonly SystemFoundationFunctionalDefault[] =
+  SYSTEM_FOUNDATION_PACK_V2_MANIFEST.assets.map((entry) =>
+    createFunctionalDefault(entry.definition),
+  );
+
+/** Functional descriptors for the property-complete current 3.0.0 release. */
+export const SYSTEM_FOUNDATION_V3_FUNCTIONAL_DEFAULTS: readonly SystemFoundationFunctionalDefault[] =
+  SYSTEM_FOUNDATION_PACK_V3_MANIFEST.assets.map((entry) =>
+    createFunctionalDefault(entry.definition),
+  );
+
+export const SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS_BY_VERSION: ReadonlyMap<
+  AssetPackVersion,
+  readonly SystemFoundationFunctionalDefault[]
+> = new Map([
+  [
+    SYSTEM_FOUNDATION_PACK_MANIFEST.version,
+    SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS,
+  ],
+  [
+    SYSTEM_FOUNDATION_PACK_V2_MANIFEST.version,
+    SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS,
+  ],
+  [
+    SYSTEM_FOUNDATION_PACK_V3_MANIFEST.version,
+    SYSTEM_FOUNDATION_V3_FUNCTIONAL_DEFAULTS,
+  ],
+]);
+
+const functionalDefaultByExactReference = new Map(
+  [...SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS_BY_VERSION.values()]
+    .flat()
+    .map((item) => [exactKey(item.definitionId, item.definitionVersion), item]),
+);
+
+const legacyFunctionalDefaultByDefinitionId = new Map(
   SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS.map((item) => [
+    item.definitionId,
+    item,
+  ]),
+);
+
+const currentFunctionalDefaultByDefinitionId = new Map(
+  SYSTEM_FOUNDATION_V3_FUNCTIONAL_DEFAULTS.map((item) => [
+    item.definitionId,
+    item,
+  ]),
+);
+
+const v2FunctionalDefaultByDefinitionId = new Map(
+  SYSTEM_FOUNDATION_V2_FUNCTIONAL_DEFAULTS.map((item) => [
     item.definitionId,
     item,
   ]),
@@ -28,8 +89,22 @@ const functionalDefaultByDefinitionId = new Map(
 
 export function readSystemFoundationFunctionalDefault(
   definitionId: string,
+  version?: AssetPackVersion,
 ): SystemFoundationFunctionalDefault | undefined {
-  return functionalDefaultByDefinitionId.get(definitionId);
+  if (version) {
+    return functionalDefaultByExactReference.get(
+      exactKey(definitionId, version),
+    );
+  }
+  return (
+    currentFunctionalDefaultByDefinitionId.get(definitionId) ??
+    v2FunctionalDefaultByDefinitionId.get(definitionId) ??
+    legacyFunctionalDefaultByDefinitionId.get(definitionId)
+  );
+}
+
+function exactKey(definitionId: string, version: string): string {
+  return `${definitionId}@${version}`;
 }
 
 function createFunctionalDefault(
@@ -45,16 +120,39 @@ function createFunctionalDefault(
     displayName: definition.displayName,
     entryKey: `foundation.${String(definition.definitionId)}`,
     facetKind: facetKindFor(definition.assetType),
-    runtimeKind: previewKind === "layout" || previewKind === "form" || previewKind === "data" || previewKind === "state" || previewKind === "conversation"
-      ? "trusted-built-in"
-      : "declarative-engine",
+    runtimeKind: runtimeKindFor(definition, previewKind),
     deploymentProfiles: ALL_PROFILES,
     previewKind,
     previewConfiguration: definition.defaultConfiguration ?? {},
-    previewFixture: fixtureFor(previewKind, definition.displayName, failClosed),
+    previewFixture: fixtureFor(
+      previewKind,
+      definition.displayName,
+      failClosed,
+      definition,
+    ),
     failClosed,
     requiredCapabilities: [],
   };
+}
+
+function runtimeKindFor(
+  definition: AssetDefinition,
+  previewKind: SystemFoundationPreviewKind,
+): AssetImplementationRuntimeKind {
+  // Preview enrichment must not rewrite an already-published implementation
+  // release. The v2 System root was originally seeded as declarative-engine;
+  // its later composable visual program changes presentation, not runtime
+  // identity.
+  if (String(definition.definitionId) === "builtin.system.system") {
+    return "declarative-engine";
+  }
+  return previewKind === "layout" ||
+    previewKind === "form" ||
+    previewKind === "data" ||
+    previewKind === "state" ||
+    previewKind === "conversation"
+    ? "trusted-built-in"
+    : "declarative-engine";
 }
 
 function facetKindFor(assetType: AssetType): AssetImplementationFacetKind {
@@ -84,15 +182,37 @@ function facetKindFor(assetType: AssetType): AssetImplementationFacetKind {
   }
 }
 
-function previewKindFor(definition: AssetDefinition): SystemFoundationPreviewKind {
+function previewKindFor(
+  definition: AssetDefinition,
+): SystemFoundationPreviewKind {
   const id = String(definition.definitionId);
-  if (id.startsWith("builtin.form.") || id === "builtin.feature.record-form") return "form";
-  if (id.startsWith("builtin.display.") || id.startsWith("builtin.preview.") || id === "builtin.feature.data-preview") return "data";
+  if (id === "builtin.system.system" && (definition.slots?.length ?? 0) > 0) {
+    return "layout";
+  }
+  if (id.startsWith("builtin.form.") || id === "builtin.feature.record-form")
+    return "form";
+  if (
+    id.startsWith("builtin.display.") ||
+    id.startsWith("builtin.preview.") ||
+    id === "builtin.feature.data-preview"
+  )
+    return "data";
   if (id.startsWith("builtin.state.")) return "state";
   if (id.startsWith("conversation.")) return "conversation";
-  if (definition.assetType === "policy" || id.startsWith("builtin.security.")) return "policy";
-  if (definition.assetType === "workflow" || definition.assetType === "workflow-step" || id.startsWith("builtin.logic.")) return "workflow";
-  if (id.startsWith("builtin.ui.") || id.startsWith("builtin.shell.")) return "layout";
+  if (definition.assetType === "policy" || id.startsWith("builtin.security."))
+    return "policy";
+  if (
+    definition.assetType === "workflow" ||
+    definition.assetType === "workflow-step" ||
+    id.startsWith("builtin.logic.")
+  )
+    return "workflow";
+  if (
+    id.startsWith("builtin.ui.") ||
+    id.startsWith("builtin.shell.") ||
+    id.startsWith("builtin.layout.")
+  )
+    return "layout";
   return "semantic";
 }
 
@@ -100,14 +220,25 @@ function fixtureFor(
   kind: SystemFoundationPreviewKind,
   displayName: string,
   failClosed: boolean,
+  definition: AssetDefinition,
 ): AssetMetadata {
   switch (kind) {
     case "form":
       return {
         title: displayName,
         fields: [
-          { id: "name", label: "Name", value: "Example record", required: true },
-          { id: "summary", label: "Summary", value: "Safe preview data", required: false },
+          {
+            id: "name",
+            label: "Name",
+            value: "Example record",
+            required: true,
+          },
+          {
+            id: "summary",
+            label: "Summary",
+            value: "Safe preview data",
+            required: false,
+          },
         ],
         submitLabel: "Save",
       };
@@ -125,19 +256,44 @@ function fixtureFor(
         title: displayName,
         messages: [
           { role: "user", text: "Show a safe preview." },
-          { role: "assistant", text: "This is a bounded system-default preview." },
+          {
+            role: "assistant",
+            text: "This is a bounded system-default preview.",
+          },
         ],
       };
     case "workflow":
-      return { title: displayName, steps: ["Validate input", "Apply finite rule", "Produce typed output"] };
+      return {
+        title: displayName,
+        steps: ["Validate input", "Apply finite rule", "Produce typed output"],
+      };
     case "policy":
-      return { title: displayName, decision: "deny", reason: failClosed ? "Required evidence has not been provided." : "Policy review is required." };
+      return {
+        title: displayName,
+        decision: "deny",
+        reason: failClosed
+          ? "Required evidence has not been provided."
+          : "Policy review is required.",
+      };
     case "state":
-      return { title: displayName, message: "This preview demonstrates the declared application state." };
+      return {
+        title: displayName,
+        message: "This preview demonstrates the declared application state.",
+      };
     case "layout":
-      return { title: displayName, regions: ["Header", "Content", "Actions"] };
+      return {
+        title: displayName,
+        regions: definition.slots?.map((slot) => slot.displayName) ?? [
+          "Header",
+          "Content",
+          "Actions",
+        ],
+      };
     default:
-      return { title: displayName, summary: "Portable semantic asset interpreted by the system foundation engine." };
+      return {
+        title: displayName,
+        summary:
+          "Portable semantic asset interpreted by the system foundation engine.",
+      };
   }
 }
-

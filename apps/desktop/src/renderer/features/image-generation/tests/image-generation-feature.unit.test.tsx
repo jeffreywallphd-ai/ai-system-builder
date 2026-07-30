@@ -51,7 +51,7 @@ vi.mock("../hooks/useImageGenerationFeature", () => ({
     availableImageArtifacts: [],
     artifactLoadMessage: undefined,
     modelLoadStatus: "success",
-    modelLoadMessage: "Loaded 1 image generation model.",
+    modelLoadMessage: undefined,
     validationError: undefined,
     isStartDisabled: true,
     start: vi.fn(),
@@ -72,6 +72,7 @@ describe("ImageGenerationFeature", () => {
     expect(c.textContent).toContain("doing work");
     expect(c.textContent).toContain("Asset ID: as1");
     expect(c.textContent).toContain("cancel unsupported");
+    expect(c.textContent).not.toContain("Loaded 1 image generation model.");
     expect(c.querySelectorAll(".ui-workflow__step").length).toBeGreaterThan(4);
     await act(async () => {
       root.unmount();

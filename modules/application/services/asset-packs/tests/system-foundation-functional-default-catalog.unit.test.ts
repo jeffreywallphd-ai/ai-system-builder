@@ -15,13 +15,16 @@ describe("system foundation functional-default catalog", () => {
       SYSTEM_FOUNDATION_PACK_MANIFEST.assets.length,
     );
     assert.equal(
-      new Set(SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS.map((item) => item.definitionId)).size,
+      new Set(
+        SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS.map((item) => item.definitionId),
+      ).size,
       SYSTEM_FOUNDATION_FUNCTIONAL_DEFAULTS.length,
     );
 
     for (const entry of SYSTEM_FOUNDATION_PACK_MANIFEST.assets) {
       const descriptor = readSystemFoundationFunctionalDefault(
         String(entry.definition.definitionId),
+        entry.definition.version,
       );
       assert.ok(descriptor, entry.entryId);
       assert.equal(descriptor.definitionVersion, entry.definition.version);
@@ -33,8 +36,14 @@ describe("system foundation functional-default catalog", () => {
         descriptor.deploymentProfiles,
         ASSET_IMPLEMENTATION_DEPLOYMENT_PROFILES,
       );
-      assert.equal(JSON.stringify(descriptor.previewFixture).length < 10_000, true);
-      assert.equal(JSON.stringify(descriptor.previewConfiguration).length < 10_000, true);
+      assert.equal(
+        JSON.stringify(descriptor.previewFixture).length < 10_000,
+        true,
+      );
+      assert.equal(
+        JSON.stringify(descriptor.previewConfiguration).length < 10_000,
+        true,
+      );
       assert.deepEqual(descriptor.requiredCapabilities, []);
     }
   });
@@ -60,8 +69,10 @@ describe("system foundation functional-default catalog", () => {
       "builtin.feature.data-preview",
       "conversation.basic-assistant-system",
     ]) {
-      assert.ok(readSystemFoundationFunctionalDefault(definitionId), definitionId);
+      assert.ok(
+        readSystemFoundationFunctionalDefault(definitionId),
+        definitionId,
+      );
     }
   });
 });
-

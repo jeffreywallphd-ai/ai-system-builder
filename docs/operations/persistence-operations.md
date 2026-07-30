@@ -3,7 +3,7 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 - Status: active operator runbook
-- Decision authority: [ADR-0025](../adr/ADR-0025-deployment-shaped-structured-persistence.md), [ADR-0026](../adr/ADR-0026-local-sqlite-runtime.md), [ADR-0027](../adr/ADR-0027-managed-postgresql-runtime.md), and [ADR-0029](../adr/ADR-0029-organization-tenancy-identity-and-authorization.md)
+- Decision authority: [ADR-0025](../adr/ADR-0025-deployment-shaped-structured-persistence.md), [ADR-0026](../adr/ADR-0026-local-sqlite-runtime.md), [ADR-0027](../adr/ADR-0027-managed-postgresql-runtime.md), [ADR-0029](../adr/ADR-0029-organization-tenancy-identity-and-authorization.md), and [ADR-0039](../adr/ADR-0039-dedicated-system-runtime-data-plane.md)
 - Architecture authority: [Persistence and Storage](../architecture/persistence-and-storage.md)
 
 This runbook covers the implemented database boundary. Artifact bytes have a
@@ -153,6 +153,29 @@ under `artifacts/qualification/postgres-recovery`. Never point this command at a
 shared, staging, or production database: destruction is intentional.
 CI verifies the required evidence files independently; artifact retention is
 best-effort and cannot replace that verification gate.
+
+## Published-system runtime databases
+
+Inventory runtime-instance placement from the platform control plane; do not
+enumerate filesystem names or PostgreSQL databases and infer ownership. Desktop
+instances live beneath the application data root and managed instances use
+provisioner-derived non-semantic database/role names. Never expose either through
+user interfaces, ordinary diagnostics, or roadmap evidence.
+
+- Stop before migration or restore. Verify a backup and schema health first.
+- Compatible upgrade keeps the same opaque instance only through the explicit
+  migration/binding operation. Separate installs and clones use new instances.
+- Uninstall is retention, not deletion. Apply the approved retention policy,
+  verify a recoverable backup, and require the exact instance confirmation for a
+  later destructive delete.
+- A missing database, credential, recovery adapter, or mismatched binding is an
+  incident. Do not create a replacement or point the instance at shared storage.
+- Bound and monitor open SQLite handles, PostgreSQL pools, database/role count,
+  backup age, migration failures, and retained-instance growth.
+
+Managed backup/restore must be supplied by the owning database platform through
+the runtime recovery port and separately qualified. Repository code intentionally
+reports recovery unavailable when that adapter is absent.
 
 ## Release-bound system-data recovery checks
 

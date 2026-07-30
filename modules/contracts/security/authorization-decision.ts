@@ -7,6 +7,8 @@ export interface AuthorizationResource {
   id?: string;
   organizationId?: OrganizationId;
   workspaceId?: string;
+  /** Fail closed when a managed resource has not been assigned to an organization. */
+  requiresOrganizationOwnership?: boolean;
 }
 
 export interface AuthorizationRequest {
@@ -29,6 +31,7 @@ export const AUTHORIZATION_REASON_CODES = [
   "organization-membership-inactive",
   "organization-role-insufficient",
   "tenant-placement-denied",
+  "resource-organization-required",
   "resource-organization-mismatch",
   "missing-scopes",
 ] as const;
@@ -38,6 +41,7 @@ export type AuthorizationReasonCode =
 
 export interface AuthorizationDecision {
   allowed: boolean;
+  organizationRole?: OrganizationRole;
   reasonCode?: AuthorizationReasonCode;
   reason?: string;
   missingScopes?: SecurityScope[];

@@ -19,7 +19,19 @@ import type {
   UpdateAssetDraftCommand,
   UpdateAssetOverrideCommand,
   AssetAuthoringFailureCode,
+  AbandonAssetDerivedCustomizationCommand,
+  AssetDerivedCustomizationDraftRecord,
+  AssetDerivedCustomizationTargetDetail,
+  CreateAssetDerivedCustomizationCommand,
+  ListAssetDerivedCustomizationsQuery,
+  ListAssetDerivedCustomizationTargetsQuery,
+  ListAssetDerivedCustomizationTargetsResult,
+  PublishAssetDerivedCustomizationCommand,
+  ReadAssetDerivedCustomizationTargetQuery,
+  ReviewAssetDerivedCustomizationCommand,
+  UpdateAssetDerivedCustomizationCommand,
 } from "../asset-authoring";
+import { ASSET_DERIVED_CUSTOMIZATION_OPERATIONS } from "../asset-authoring";
 import type { WorkspaceId } from "../workspace";
 import { createTransportOperation } from "../transport";
 import { createApiError } from "./api-error";
@@ -42,6 +54,15 @@ export const API_ASSET_AUTHORING_READ_REVISION_OPERATION = createTransportOperat
 export const API_ASSET_AUTHORING_LIST_OVERRIDES_OPERATION = createTransportOperation("asset-authoring", "list-overrides");
 export const API_ASSET_AUTHORING_READ_OVERRIDE_OPERATION = createTransportOperation("asset-authoring", "read-override");
 export const API_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_OPERATION = createTransportOperation("asset-authoring", "list-effective-summaries");
+export const API_ASSET_DERIVED_CUSTOMIZATION_LIST_TARGETS_OPERATION = ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.listTargets;
+export const API_ASSET_DERIVED_CUSTOMIZATION_READ_TARGET_OPERATION = ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.readTarget;
+export const API_ASSET_DERIVED_CUSTOMIZATION_CREATE_OPERATION = ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.create;
+export const API_ASSET_DERIVED_CUSTOMIZATION_UPDATE_OPERATION = ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.update;
+export const API_ASSET_DERIVED_CUSTOMIZATION_REVIEW_OPERATION = ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.review;
+export const API_ASSET_DERIVED_CUSTOMIZATION_PUBLISH_OPERATION = ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.publish;
+export const API_ASSET_DERIVED_CUSTOMIZATION_ABANDON_OPERATION = ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.abandon;
+export const API_ASSET_DERIVED_CUSTOMIZATION_LIST_OPERATION = ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.list;
+export const API_ASSET_DERIVED_CUSTOMIZATION_READ_OPERATION = ASSET_DERIVED_CUSTOMIZATION_OPERATIONS.read;
 
 export interface ApiAssetAuthoringListAuthoredAssetsRequestPayload { readonly workspaceId: WorkspaceId; readonly status?: AuthoredAssetRecord["status"]; readonly assetKind?: string; readonly authoredAssetId?: AuthoredAssetId; readonly text?: string; readonly limit?: number; readonly cursor?: string; }
 export interface ApiAssetAuthoringReadAuthoredAssetRequestPayload { readonly workspaceId: WorkspaceId; readonly authoredAssetId: AuthoredAssetId; }
@@ -86,6 +107,26 @@ export type ApiAssetAuthoringReadRevisionResponse = ApiResponse<AuthoredAssetRev
 export type ApiAssetAuthoringListOverridesResponse = ApiResponse<{ readonly overrides: readonly AssetOverrideRecord[]; readonly nextCursor?: string }, Record<string, unknown>, typeof API_ASSET_AUTHORING_LIST_OVERRIDES_OPERATION, Record<string, never>>;
 export type ApiAssetAuthoringReadOverrideResponse = ApiResponse<AssetOverrideRecord, Record<string, unknown>, typeof API_ASSET_AUTHORING_READ_OVERRIDE_OPERATION, Record<string, never>>;
 export type ApiAssetAuthoringListEffectiveSummariesResponse = ApiResponse<{ readonly items: readonly AssetAuthoringEffectiveSourceSummary[]; readonly nextCursor?: string }, Record<string, unknown>, typeof API_ASSET_AUTHORING_LIST_EFFECTIVE_SUMMARIES_OPERATION, Record<string, never>>;
+
+export type ApiAssetDerivedCustomizationListTargetsRequest = ApiRequest<ListAssetDerivedCustomizationTargetsQuery, typeof API_ASSET_DERIVED_CUSTOMIZATION_LIST_TARGETS_OPERATION, Record<string, never>>;
+export type ApiAssetDerivedCustomizationReadTargetRequest = ApiRequest<ReadAssetDerivedCustomizationTargetQuery, typeof API_ASSET_DERIVED_CUSTOMIZATION_READ_TARGET_OPERATION, Record<string, never>>;
+export type ApiAssetDerivedCustomizationCreateRequest = ApiRequest<Omit<CreateAssetDerivedCustomizationCommand, "actorId">, typeof API_ASSET_DERIVED_CUSTOMIZATION_CREATE_OPERATION, Record<string, never>>;
+export type ApiAssetDerivedCustomizationUpdateRequest = ApiRequest<Omit<UpdateAssetDerivedCustomizationCommand, "actorId">, typeof API_ASSET_DERIVED_CUSTOMIZATION_UPDATE_OPERATION, Record<string, never>>;
+export type ApiAssetDerivedCustomizationReviewRequest = ApiRequest<Omit<ReviewAssetDerivedCustomizationCommand, "actorId">, typeof API_ASSET_DERIVED_CUSTOMIZATION_REVIEW_OPERATION, Record<string, never>>;
+export type ApiAssetDerivedCustomizationPublishRequest = ApiRequest<Omit<PublishAssetDerivedCustomizationCommand, "actorId">, typeof API_ASSET_DERIVED_CUSTOMIZATION_PUBLISH_OPERATION, Record<string, never>>;
+export type ApiAssetDerivedCustomizationAbandonRequest = ApiRequest<Omit<AbandonAssetDerivedCustomizationCommand, "actorId">, typeof API_ASSET_DERIVED_CUSTOMIZATION_ABANDON_OPERATION, Record<string, never>>;
+export type ApiAssetDerivedCustomizationListRequest = ApiRequest<ListAssetDerivedCustomizationsQuery, typeof API_ASSET_DERIVED_CUSTOMIZATION_LIST_OPERATION, Record<string, never>>;
+export type ApiAssetDerivedCustomizationReadRequest = ApiRequest<{ readonly workspaceId: WorkspaceId; readonly customizationId: string }, typeof API_ASSET_DERIVED_CUSTOMIZATION_READ_OPERATION, Record<string, never>>;
+
+export type ApiAssetDerivedCustomizationListTargetsResponse = ApiResponse<ListAssetDerivedCustomizationTargetsResult, Record<string, unknown>, typeof API_ASSET_DERIVED_CUSTOMIZATION_LIST_TARGETS_OPERATION, Record<string, never>>;
+export type ApiAssetDerivedCustomizationReadTargetResponse = ApiResponse<AssetDerivedCustomizationTargetDetail, Record<string, unknown>, typeof API_ASSET_DERIVED_CUSTOMIZATION_READ_TARGET_OPERATION, Record<string, never>>;
+export type ApiAssetDerivedCustomizationCreateResponse = ApiResponse<AssetDerivedCustomizationDraftRecord, Record<string, unknown>, typeof API_ASSET_DERIVED_CUSTOMIZATION_CREATE_OPERATION, Record<string, never>>;
+export type ApiAssetDerivedCustomizationUpdateResponse = ApiResponse<AssetDerivedCustomizationDraftRecord, Record<string, unknown>, typeof API_ASSET_DERIVED_CUSTOMIZATION_UPDATE_OPERATION, Record<string, never>>;
+export type ApiAssetDerivedCustomizationReviewResponse = ApiResponse<AssetDerivedCustomizationDraftRecord, Record<string, unknown>, typeof API_ASSET_DERIVED_CUSTOMIZATION_REVIEW_OPERATION, Record<string, never>>;
+export type ApiAssetDerivedCustomizationPublishResponse = ApiResponse<AssetDerivedCustomizationDraftRecord, Record<string, unknown>, typeof API_ASSET_DERIVED_CUSTOMIZATION_PUBLISH_OPERATION, Record<string, never>>;
+export type ApiAssetDerivedCustomizationAbandonResponse = ApiResponse<AssetDerivedCustomizationDraftRecord, Record<string, unknown>, typeof API_ASSET_DERIVED_CUSTOMIZATION_ABANDON_OPERATION, Record<string, never>>;
+export type ApiAssetDerivedCustomizationListResponse = ApiResponse<{ readonly customizations: readonly AssetDerivedCustomizationDraftRecord[]; readonly nextCursor?: string }, Record<string, unknown>, typeof API_ASSET_DERIVED_CUSTOMIZATION_LIST_OPERATION, Record<string, never>>;
+export type ApiAssetDerivedCustomizationReadResponse = ApiResponse<AssetDerivedCustomizationDraftRecord, Record<string, unknown>, typeof API_ASSET_DERIVED_CUSTOMIZATION_READ_OPERATION, Record<string, never>>;
 
 export const createApiAssetAuthoringOperationSuccessResponse = <TOperation extends string, TValue>(operation: TOperation, value: TValue, options?: { requestId?: string; correlationId?: string }) => createApiSuccessResponse(operation as never, value, options);
 export const createApiAssetAuthoringFailureResponse = (operation: string, code: AssetAuthoringFailureCode, message: string, options?: { requestId?: string; correlationId?: string; details?: Record<string, unknown> }) => createApiFailureResponse(createApiError(operation as never, code === "unsupported" ? "not-supported" : code, message, options), options);

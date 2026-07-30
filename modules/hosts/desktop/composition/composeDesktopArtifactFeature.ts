@@ -1,4 +1,5 @@
 import type { LoggingPort } from "../../../application/ports/logging";
+import type { WorkspaceOperationAuthorizationPort } from "../../../application/ports/security";
 import {
   BrowseArtifactsUseCase,
   BrowseUnregisteredArtifactsUseCase,
@@ -23,6 +24,7 @@ export interface ComposeDesktopArtifactFeatureOptions {
   loggingPort: LoggingPort;
   now?: () => string;
   workspaceShell: any;
+  workspaceAuthorization?: WorkspaceOperationAuthorizationPort;
   documents?: StructuredDocumentStore;
 }
 
@@ -50,13 +52,13 @@ export function composeDesktopArtifactFeature(options: ComposeDesktopArtifactFea
     storage,
     artifactBrowserRead,
     artifactMediaViewRetrieval,
-    storeArtifactUploadUseCase: new StoreArtifactUploadUseCase({ storage, logging: options.loggingPort, now: options.now, workspaceRepository: options.workspaceShell.workspaceRepository }),
-    browseArtifactsUseCase: new BrowseArtifactsUseCase({ artifactBrowserMetadataRead: artifactBrowserRead, workspaceRepository: options.workspaceShell.workspaceRepository }),
+    storeArtifactUploadUseCase: new StoreArtifactUploadUseCase({ storage, logging: options.loggingPort, now: options.now, workspaceRepository: options.workspaceShell.workspaceRepository, workspaceAuthorization: options.workspaceAuthorization }),
+    browseArtifactsUseCase: new BrowseArtifactsUseCase({ artifactBrowserMetadataRead: artifactBrowserRead, workspaceRepository: options.workspaceShell.workspaceRepository, workspaceAuthorization: options.workspaceAuthorization }),
     browseUnregisteredArtifactsUseCase: new BrowseUnregisteredArtifactsUseCase({ artifactBrowserUnregistered: artifactBrowserRead }),
     registerUnregisteredArtifactUseCase: new RegisterUnregisteredArtifactUseCase({ artifactBrowserUnregistered: artifactBrowserRead }),
     deleteUnregisteredArtifactUseCase: new DeleteUnregisteredArtifactUseCase({ artifactBrowserUnregistered: artifactBrowserRead }),
-    deleteRegisteredArtifactUseCase: new DeleteRegisteredArtifactUseCase({ artifactCatalogRead: artifactCatalog, artifactCatalogDelete: artifactCatalog, storage, artifactBindingStorage: artifactBindings, workspaceRepository: options.workspaceShell.workspaceRepository }),
-    readArtifactDetailUseCase: new ReadArtifactDetailUseCase({ artifactBrowserMetadataRead: artifactBrowserRead, workspaceRepository: options.workspaceShell.workspaceRepository }),
-    readArtifactContentUseCase: new ReadArtifactContentUseCase({ artifactBrowserContentRead: artifactBrowserRead, workspaceRepository: options.workspaceShell.workspaceRepository }),
+    deleteRegisteredArtifactUseCase: new DeleteRegisteredArtifactUseCase({ artifactCatalogRead: artifactCatalog, artifactCatalogDelete: artifactCatalog, storage, artifactBindingStorage: artifactBindings, workspaceRepository: options.workspaceShell.workspaceRepository, workspaceAuthorization: options.workspaceAuthorization }),
+    readArtifactDetailUseCase: new ReadArtifactDetailUseCase({ artifactBrowserMetadataRead: artifactBrowserRead, workspaceRepository: options.workspaceShell.workspaceRepository, workspaceAuthorization: options.workspaceAuthorization }),
+    readArtifactContentUseCase: new ReadArtifactContentUseCase({ artifactBrowserContentRead: artifactBrowserRead, workspaceRepository: options.workspaceShell.workspaceRepository, workspaceAuthorization: options.workspaceAuthorization }),
   };
 }

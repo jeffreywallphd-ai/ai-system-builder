@@ -58,6 +58,89 @@ tokens, prompts, protected content, provider payloads, host paths, or raw user
 data. Store the evidence artifact under the owning release-retention policy;
 do not commit environment evidence to source control.
 
+## Asset experience qualification
+
+The `asset-experience-automated` check covers representative System Foundation,
+imported, and from-scratch Studio lifecycles; exact backing-resource restoration
+after restart; base immutability; non-execution; fail-closed validation; modal and
+status semantics; and responsive desktop/thin-client presentation. Every
+qualification profile requires this automated evidence.
+
+Automated evidence does not replace `accessibility-manual` or `security-manual`.
+Use the [Asset Experience Controlled Review](asset-experience-controlled-review.md)
+for the reusable keyboard, screen-reader, zoom/reflow, contrast, isolation,
+revocation, and non-execution review procedure. Missing controlled evidence keeps
+the target profile `incomplete`; it is never inferred from repository tests.
+
+### Visual Composer automated qualification
+
+Run both configured one-worker projects or select one exact host:
+
+```text
+npm run test:visual-composer
+npm run test:visual-composer -- --project packaged-desktop
+npm run test:visual-composer -- --project thin-chrome
+```
+
+When the packaged project is selected, the harness first rebuilds the Windows
+package from the current worktree through the fixed repository `package` script;
+an existing executable is not accepted as current evidence. The harness uses a
+fresh ignored run root for Electron user data and for server storage/runtime
+data, drives real preload/IPC and HTTP API clients, bounds startup and action
+waits, and writes immutable sanitized evidence beneath
+`artifacts/qualification/visual-composer/runs`. It checks the shared create,
+layout, pointer drag, keyboard cancellation, undo/redo, configure, preview,
+save/reopen, Manage, Build and Test, axe, 320-CSS-pixel reflow, forced-colors,
+reduced-motion, and renderer/console-error paths.
+
+The packaged desktop path also provisions a synthetic, workspace-scoped model
+record through public IPC and starts a loopback-only authenticated controlled
+conversation worker. It publishes, installs, starts, and stops the controlled
+chatbot; requires a separate hardened Electron runtime window; proves an empty
+initial transcript; submits one button and one keyboard turn; restarts and
+verifies transcript persistence; and bounds the live window count. After clean
+shutdown, an Electron-as-Node verifier opens the exact retained runtime database
+and requires the two conversation turns and two execution runs there while the
+platform control-plane repositories contain none. The fixture uses no provider
+credential or real model and proves architecture/lifecycle behavior, not model
+quality or production accelerator performance.
+
+The thin-client project exercises the same guided publish and lifecycle API
+surface against a real server process. Its Node 20 qualification host receives
+an explicit, per-runtime in-memory data-plane adapter so browser automation does
+not depend on Electron's `node:sqlite`; the adapter enforces exact runtime
+identity and separate document stores. `createServer` rejects that explicit
+adapter seam in production. This browser check therefore proves transport,
+authority, lifecycle, and runtime/control-plane separation in one process, but
+does not claim server durability. Managed-server durability and physical
+database isolation require the PostgreSQL live and recovery qualifications.
+
+The ordinary System Builder preview tests also materialize all three closed
+reference templates through the production layout-migration service and compare
+the rendered application surface with checked-in, hand-authored semantic HTML
+mockups. The comparison ignores CSS classes, styling, and runtime trace IDs but
+retains meaningful elements, nesting, labels, controls, states, and text. Run
+the focused oracle with:
+
+```text
+node --import tsx --test modules/ui/shared/system-builder/tests/SystemReferencePreviewHtml.unit.test.tsx
+```
+
+Treat those fixtures as product intent, not generated snapshots. Review fixture
+changes as UI-design changes, and first repair definitions, placements,
+configuration, or trusted renderers when actual output diverges.
+
+This command qualifies only the exact packaged Windows Electron and configured
+local Chrome environments that ran. It does not replace physical touch hardware,
+screen-reader product review, manual security review, other platform/browser
+profiles, or dedicated performance qualification. A shared-workstation duration
+is diagnostic evidence, not a portable performance target.
+
+If runtime Start returns the generic unavailable message, inspect host-owned
+sidecar readiness and packaged runtime logs; never expose worker command lines,
+tokens, model paths, database paths, or raw adapter errors through the runtime
+window. A failed launch must leave the deployment stopped.
+
 ## Performance qualification
 
 The manifest defines p95 budgets and exact representative workloads for Catalog

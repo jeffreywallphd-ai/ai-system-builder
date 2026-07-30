@@ -9,6 +9,7 @@ import {
   ArtifactPreviewPanel,
   PanelHeading,
   TermWithHint,
+  TransientNotificationPublisher,
   TypeBadge,
   type PublishedBackingView,
 } from "../../../../../../../modules/ui/shared";
@@ -69,6 +70,7 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
   const {
     uploadedItems,
     generatedItems,
+    otherItems,
     unregisteredItems,
     selectedStorageKey,
     detail,
@@ -103,9 +105,15 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
     setPathInRepo,
     setRevision,
     setMediaType,
+    setCreateRepositoryIfMissing,
+    setRepositoryVisibility,
     togglePublishForm,
     readArtifactMedia,
   } = useArtifactBrowserFeature(client, workspaceId);
+  const transientViewState = Boolean(viewState.message && (
+    /^(Deleted|Registered)\b/.test(viewState.message)
+    || (viewState.status === "error" && !/^(Failed to load|Unable to load|Delete cancelled)/i.test(viewState.message))
+  ));
   const backingState = deriveArtifactBackingState(detail, content);
   const defaultNamespace = settings.valuesByKey.get("huggingface.defaultNamespace")?.value;
 
@@ -189,7 +197,8 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
         <PanelHeading icon="browse" tone="violet">Artifact Browser</PanelHeading>
       </header>
       <div className="ui-panel__section-body ui-stack ui-stack--sm">
-      {viewState.message ? <p role={viewState.status === "error" ? "alert" : "status"}>{viewState.message}</p> : null}
+      {viewState.message && !transientViewState ? <p role={viewState.status === "error" ? "alert" : "status"}>{viewState.message}</p> : null}
+      <TransientNotificationPublisher message={transientViewState ? viewState.message : undefined} title={viewState.status === "error" ? "Artifact action needs attention" : "Artifacts updated"} tone={viewState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
       <section className="ui-stack ui-stack--sm">
         <label className="ui-stack ui-stack--sm">
           <span><TermWithHint termId="artifactFamily">Artifact family</TermWithHint></span>
@@ -301,6 +310,27 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
               </section>
             ))}
           </section>
+          <h3>Other Registered Artifacts</h3>
+          <section className="artifact-browser__uploaded-grid" aria-label="Other registered artifacts">
+            {otherItems.length === 0 ? (
+              <p className="ui-text-muted artifact-browser__empty-note">There are currently no other registered artifacts in the workspace.</p>
+            ) : null}
+            {otherItems.map((item) => (
+              <article className="artifact-browser__artifact-card ui-stack ui-stack--sm" key={item.storageKey}>
+                <div className="ui-stack ui-stack--sm">
+                  <div className="ui-type-label"><TypeBadge value={item.mediaType ?? item.originalName ?? item.storageKey} /><h4 className="artifact-browser__artifact-card-title">{item.originalName ?? item.storageKey}</h4></div>
+                  <p className="artifact-browser__artifact-card-key">{item.storageKey}</p>
+                </div>
+                <p className="artifact-browser__artifact-card-status">
+                  Status: {item.metadata?.backingState ? deriveArtifactListStatusLabels(item.metadata.backingState).join(" | ") : "registered"}
+                </p>
+                <button className="ui-button" type="button" onClick={() => void openArtifactDetails(item.storageKey)} disabled={viewState.status === "loading" && selectedStorageKey === item.storageKey}>
+                  <ApplicationIcon name="browse" />
+                  <span className="ui-button__label">View Details</span>
+                </button>
+              </article>
+            ))}
+          </section>
           <section className="ui-stack ui-stack--sm artifact-browser__list-section">
             <h3>Unregistered Artifacts</h3>
             <ul className="ui-stack ui-stack--sm">
@@ -402,7 +432,7 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
                 Download artifact
               </button>
               <button className="ui-button ui-button--destructive" type="button" onClick={() => requestDeleteRegisteredArtifact(detail.locator.storageKey)}>Delete registered artifact</button>
-              {downloadState.message ? <p role="alert">{downloadState.message}</p> : null}
+              <TransientNotificationPublisher message={downloadState.message} title="Artifact download needs attention" tone="error" source="Artifact Browser" workspaceId={workspaceId} />
               <h3>Local Object State</h3>
               <dl className="ui-grid ui-grid--two">
                 <dt><TermWithHint termId="localObject">Local object availability</TermWithHint></dt>
@@ -452,12 +482,8 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
                   {localizeState.status === "loading" ? "Localizing..." : "Localize artifact"}
                 </button>
               ) : null}
-              {sourceVerifyState.message ? (
-                <p role={sourceVerifyState.status === "error" ? "alert" : "status"}>{sourceVerifyState.message}</p>
-              ) : null}
-              {localizeState.message ? (
-                <p role={localizeState.status === "error" ? "alert" : "status"}>{localizeState.message}</p>
-              ) : null}
+              <TransientNotificationPublisher message={sourceVerifyState.status !== "loading" ? sourceVerifyState.message : undefined} title={sourceVerifyState.status === "error" ? "Source verification needs attention" : "Source verification completed"} tone={sourceVerifyState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
+              <TransientNotificationPublisher message={localizeState.status !== "loading" ? localizeState.message : undefined} title={localizeState.status === "error" ? "Artifact localization needs attention" : "Artifact localized"} tone={localizeState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
               {localizedArtifact ? (
                 <p role="status">Localized bytes key: {localizedArtifact.localObject.key}</p>
               ) : null}
@@ -509,6 +535,28 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
                         </label>
                       </div>
                       <label className="ui-stack ui-stack--sm"><span><TermWithHint termId="mediaType">Media type</TermWithHint> (optional)</span><input className="ui-input" value={publishForm.mediaType} onChange={(event) => setMediaType(event.target.value)} /></label>
+                      <label className="ui-checkbox-row">
+                        <input
+                          type="checkbox"
+                          checked={publishForm.createRepositoryIfMissing}
+                          onChange={(event) => setCreateRepositoryIfMissing(event.target.checked)}
+                        />
+                        <span>Create the repository if it does not exist</span>
+                      </label>
+                      {publishForm.createRepositoryIfMissing ? (
+                        <label className="ui-stack ui-stack--sm">
+                          <span>New repository visibility</span>
+                          <select
+                            className="ui-select"
+                            value={publishForm.repositoryVisibility}
+                            onChange={(event) => setRepositoryVisibility(event.target.value as "private" | "public")}
+                          >
+                            <option value="private">Private (recommended)</option>
+                            <option value="public">Public</option>
+                          </select>
+                          <small className="ui-text-muted">This choice is used only if the target repository must be created.</small>
+                        </label>
+                      ) : null}
                       <button
                         className="ui-button"
                         type="button"
@@ -518,6 +566,9 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
                           path: resolvePublishPath(),
                           revision: publishForm.revision,
                           mediaType: publishForm.mediaType,
+                          repositoryCreation: publishForm.createRepositoryIfMissing
+                            ? { approved: true, visibility: publishForm.repositoryVisibility }
+                            : undefined,
                         })}
                       >
                         {publishState.status === "loading" ? "Publishing..." : "Publish"}
@@ -528,7 +579,7 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
               ) : (
                 <p role="status">Publish is available after local bytes are present.</p>
               )}
-              {publishState.message ? (<p role={publishState.status === "error" ? "alert" : "status"}>{publishState.message}</p>) : null}
+              <TransientNotificationPublisher message={publishState.status !== "loading" ? publishState.message : undefined} title={publishState.status === "error" ? "Artifact publishing needs attention" : "Artifact published"} tone={publishState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
             </section>
           ) : null}
 

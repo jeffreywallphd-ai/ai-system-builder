@@ -5,11 +5,16 @@ import type {
   AssetReference,
 } from "../../../contracts/asset";
 import { normalizeAssetId } from "../../../contracts/asset";
-import type {
-  SystemBuilderTemplateId,
-  SystemBuilderTemplateMaterialization,
-  SystemBuilderTemplateSummary,
+import {
+  createSystemBuilderConversationInteractionMetadata,
+  type SystemBuilderTemplateId,
+  type SystemBuilderTemplateMaterialization,
+  type SystemBuilderTemplateSummary,
 } from "../../../contracts/system-builder";
+import {
+  exactSystemFoundationDefinitionReference,
+  SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST,
+} from "../asset-packs/system-packs";
 
 const SECURED_DATA_ENTRY_TEMPLATE: SystemBuilderTemplateSummary = {
   templateId: "reference.secured-data-entry@1.0.0",
@@ -79,14 +84,9 @@ function createSecuredDataEntryTemplate(
     selectedConfiguration: AssetConfigurationValues,
   ): AssetInstance => ({
     instanceId: input.systemId + "." + suffix,
-    definitionRef: {
-      kind: "asset-definition-version",
-      id: normalizeAssetId(definitionId),
-      version: "1.0.0",
-    },
+    ...currentFoundationSelection(definitionId, selectedConfiguration),
     displayName,
     lifecycleStatus: "draft",
-    selectedConfiguration,
     parentCompositionRef: {
       kind: "asset-composition",
       id: normalizeAssetId(compositionId),
@@ -382,14 +382,9 @@ function createControlledChatbotTemplate(
     selectedConfiguration: AssetConfigurationValues,
   ): AssetInstance => ({
     instanceId: input.systemId + "." + suffix,
-    definitionRef: {
-      kind: "asset-definition-version",
-      id: normalizeAssetId(definitionId),
-      version: "1.0.0",
-    },
+    ...currentFoundationSelection(definitionId, selectedConfiguration),
     displayName,
     lifecycleStatus: "draft",
-    selectedConfiguration,
     parentCompositionRef: {
       kind: "asset-composition",
       id: normalizeAssetId(compositionId),
@@ -443,10 +438,6 @@ function createControlledChatbotTemplate(
       "Conversation audit declaration",
       { eventType: "conversation.turn", outcome: "recorded" },
     ),
-    instance("model", "builtin.ai.model-reference", "Registered text model", {
-      modelRef: "model.default",
-      capability: "text-generation",
-    }),
     instance(
       "context",
       "builtin.ai.context-source",
@@ -614,7 +605,27 @@ function createControlledChatbotTemplate(
       createdBy: safeActor(input.actorId),
     },
   });
+  const conversationInteraction = (): AssetBinding => ({
+    bindingId: input.systemId + ".binding.composer-history",
+    bindingKind: "control",
+    sourceRef: {
+      kind: "asset-instance",
+      id: normalizeAssetId(input.systemId + ".composer"),
+    },
+    targetRef: {
+      kind: "asset-instance",
+      id: normalizeAssetId(input.systemId + ".history-display"),
+    },
+    lifecycleStatus: "draft",
+    provenance: {
+      sourceKind: "system-generated",
+      createdAt: input.timestamp,
+      createdBy: safeActor(input.actorId),
+    },
+    metadata: createSystemBuilderConversationInteractionMetadata(),
+  });
   const bindings: readonly AssetBinding[] = [
+    conversationInteraction(),
     dependency("navigation-system", "navigation", "system"),
     dependency("page-navigation", "page", "navigation"),
     dependency("starter-page", "starter", "page"),
@@ -635,7 +646,7 @@ function createControlledChatbotTemplate(
     dependency("history-behavior-starter", "history-behavior", "starter"),
     dependency("runtime-response", "runtime-requirement", "response-behavior"),
     dependency("inference-response", "inference", "response-behavior"),
-    dependency("model-inference", "model", "inference"),
+    dependency("composer-inference", "composer", "inference"),
     dependency("instruction-inference", "instruction", "inference"),
     dependency("generation-inference", "generation", "inference"),
     dependency("policy-inference", "policy", "inference"),
@@ -703,14 +714,9 @@ function createSecuredDataReviewTemplate(
     selectedConfiguration: AssetConfigurationValues,
   ): AssetInstance => ({
     instanceId: input.systemId + "." + suffix,
-    definitionRef: {
-      kind: "asset-definition-version",
-      id: normalizeAssetId(definitionId),
-      version: "1.0.0",
-    },
+    ...currentFoundationSelection(definitionId, selectedConfiguration),
     displayName,
     lifecycleStatus: "draft",
-    selectedConfiguration,
     parentCompositionRef: {
       kind: "asset-composition",
       id: normalizeAssetId(compositionId),
@@ -1025,4 +1031,23 @@ function createSecuredDataReviewTemplate(
 
 function safeActor(value: string): string {
   return value.trim().slice(0, 160) || "unknown-actor";
+}
+
+function currentFoundationSelection(
+  definitionId: string,
+  selectedConfiguration: AssetConfigurationValues,
+): Pick<AssetInstance, "definitionRef" | "selectedConfiguration"> {
+  const entry = SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST.assets.find(
+    (candidate) => String(candidate.definition.definitionId) === definitionId,
+  );
+  if (!entry) {
+    throw new Error("A reference-system Foundation asset is unavailable.");
+  }
+  return {
+    definitionRef: exactSystemFoundationDefinitionReference(definitionId),
+    selectedConfiguration: {
+      ...(entry.definition.defaultConfiguration ?? {}),
+      ...selectedConfiguration,
+    },
+  };
 }

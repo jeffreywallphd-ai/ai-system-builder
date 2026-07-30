@@ -1,5 +1,5 @@
 import type { WebsiteIngestionMode } from "../api/desktopArtifactUploadClient";
-import { TermWithHint } from "../../../../../../../modules/ui/shared";
+import { TermWithHint, TransientNotificationPublisher } from "../../../../../../../modules/ui/shared";
 import type {
   DesktopWebsitePageIngestionResult,
   DesktopWebsitePagesBatchSummary,
@@ -30,6 +30,7 @@ export interface ArtifactScrapeFormProps {
   setWebsiteBatchMode: (mode: WebsiteIngestionMode) => void;
   ingestWebsiteSingle: () => Promise<void>;
   ingestWebsiteBatch: () => Promise<void>;
+  workspaceId?: string;
 }
 
 export function ArtifactScrapeForm({
@@ -45,6 +46,7 @@ export function ArtifactScrapeForm({
   setWebsiteBatchMode,
   ingestWebsiteSingle,
   ingestWebsiteBatch,
+  workspaceId,
 }: ArtifactScrapeFormProps) {
   return (
     <section className="ui-stack ui-stack--sm">
@@ -71,9 +73,8 @@ export function ArtifactScrapeForm({
       <button className="ui-button" type="button" onClick={() => void ingestWebsiteSingle()} disabled={websiteSingleViewState.status === "loading"}>
         {websiteSingleViewState.status === "loading" ? "Ingesting..." : "Ingest page"}
       </button>
-      {websiteSingleViewState.message ? (
-        <p role={websiteSingleViewState.status === "error" ? "alert" : "status"}>{websiteSingleViewState.message}</p>
-      ) : null}
+      {websiteSingleViewState.status === "loading" && websiteSingleViewState.message ? <p role="status">{websiteSingleViewState.message}</p> : null}
+      <TransientNotificationPublisher message={websiteSingleViewState.status === "success" || websiteSingleViewState.status === "error" ? websiteSingleViewState.message : undefined} title={websiteSingleViewState.status === "error" ? "Website ingestion needs attention" : "Website ingested"} tone={websiteSingleViewState.status === "error" ? "error" : "success"} source="Artifact Ingestion" workspaceId={workspaceId} />
       {websiteSingleViewState.result?.stagedArtifact ? (
         <dl className="ui-grid ui-grid--two">
           <dt><TermWithHint termId="singlePageMode">Requested mode</TermWithHint></dt>
@@ -111,9 +112,8 @@ export function ArtifactScrapeForm({
       <button className="ui-button" type="button" onClick={() => void ingestWebsiteBatch()} disabled={websiteBatchViewState.status === "loading"}>
         {websiteBatchViewState.status === "loading" ? "Ingesting batch..." : "Ingest batch"}
       </button>
-      {websiteBatchViewState.message ? (
-        <p role={websiteBatchViewState.status === "error" ? "alert" : "status"}>{websiteBatchViewState.message}</p>
-      ) : null}
+      {websiteBatchViewState.status === "loading" && websiteBatchViewState.message ? <p role="status">{websiteBatchViewState.message}</p> : null}
+      <TransientNotificationPublisher message={websiteBatchViewState.status === "success" || websiteBatchViewState.status === "error" ? websiteBatchViewState.message : undefined} title={websiteBatchViewState.status === "error" ? "Website batch needs attention" : "Website batch ingested"} tone={websiteBatchViewState.status === "error" ? "error" : "success"} source="Artifact Ingestion" workspaceId={workspaceId} />
       {websiteBatchViewState.summary ? (
         <dl className="ui-grid ui-grid--two">
           <dt>Attempted</dt>

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import importlib.util
 import json
 import subprocess
@@ -16,6 +17,22 @@ if SPEC is None or SPEC.loader is None:
     raise RuntimeError("Unable to load roadmap engine.")
 roadmap = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(roadmap)
+
+
+def security_impact() -> dict:
+    return {
+        "disposition": "not-security-relevant",
+        "summary": (
+            "The test roadmap changes no trust, authority, sensitive-data, "
+            "execution, dependency, or public diagnostic boundary."
+        ),
+        "assets": [],
+        "trustBoundaries": [],
+        "abuseCases": [],
+        "controls": [],
+        "verification": [],
+        "residualRisks": [],
+    }
 
 
 def increment_definition(
@@ -45,6 +62,14 @@ def increment_definition(
                 "id": f"criterion-{number}",
                 "description": f"Criterion {number} is satisfied.",
                 "qualification": qualification,
+            },
+            {
+                "id": "security-impact-reviewed",
+                "description": (
+                    "The increment security impact disposition is reviewed "
+                    "and evidenced."
+                ),
+                "qualification": "local",
             }
         ],
         "verification": [f"Run verification {number}."],
@@ -63,10 +88,14 @@ def implementation_plan(number: int) -> dict:
                 "id": f"chunk-{number}",
                 "title": f"Chunk {number}",
                 "outcome": f"Outcome {number} works end to end.",
-                "criteriaIds": [f"criterion-{number}"],
+                "criteriaIds": [
+                    f"criterion-{number}",
+                    "security-impact-reviewed",
+                ],
             }
         ],
-        "tests": [f"Focused test {number}", "Repository gates"],
+        "focusedTests": [f"Focused test {number}"],
+        "completionTests": ["Repository gates after every chunk is implemented"],
         "documentation": [f"Documentation {number}"],
         "rollback": f"Remove the increment {number} slice.",
         "assumptions": ["The approved scope remains unchanged."],
@@ -100,6 +129,7 @@ class RoadmapEngineTest(unittest.TestCase):
                 "summary": "Repository and primary-source research is complete.",
                 "sources": [{"title": "Repository guidance"}],
                 "constraints": ["Preserve approved dependency direction."],
+                "securityImpact": security_impact(),
                 "decisionRequired": False,
             }
         )
@@ -151,6 +181,19 @@ class RoadmapEngineTest(unittest.TestCase):
         )
         self.apply(
             {
+                "type": "evidence-recorded",
+                "incrementId": identifier,
+                "criterionId": "security-impact-reviewed",
+                "kind": "review",
+                "outcome": "passed",
+                "summary": (
+                    "The not-security-relevant disposition and rationale "
+                    "were reviewed."
+                ),
+            }
+        )
+        self.apply(
+            {
                 "type": "increment-completed",
                 "summary": f"Increment {number} is accounted for.",
             }
@@ -183,10 +226,12 @@ class RoadmapEngineTest(unittest.TestCase):
             self.repo / self.state["paths"]["roadmap"]
         ).read_text(encoding="utf-8")
         self.assertEqual(self.state["status"], "completed")
-        self.assertIn("## Completed chunks", report)
+        self.assertIn("## Recent progress", report)
         self.assertIn("Chunk 2", report)
         self.assertIn("## Increment 2: Increment 2", rendered_roadmap)
-        self.assertIn("**passed**", report)
+        self.assertIn("2 passed, 0 pending, 0 failed, 0 missing", report)
+        self.assertNotIn("## Evidence ledger", report)
+        self.assertLess(len(report), 5000)
 
     def test_cannot_skip_the_next_increment(self) -> None:
         self.define_and_approve(
@@ -202,6 +247,219 @@ class RoadmapEngineTest(unittest.TestCase):
                 {"type": "increment-started", "incrementId": "increment-2"}
             )
 
+    def test_revision_preserves_completed_work_and_replaces_pending_suffix(self) -> None:
+        self.define_and_approve(
+            [
+                increment_definition("increment-1", 1),
+                increment_definition(
+                    "increment-2", 2, depends_on=["increment-1"]
+                ),
+                increment_definition(
+                    "increment-3", 3, depends_on=["increment-2"]
+                ),
+            ]
+        )
+        self.execute_increment(1)
+        preserved = copy.deepcopy(self.state["increments"][0])
+        preserved_chunks = copy.deepcopy(self.state["chunks"])
+        preserved_evidence = copy.deepcopy(self.state["evidence"])
+        self.apply(
+            {
+                "type": "feedback-recorded",
+                "id": "cohesion-feedback",
+                "summary": "Pending increments are too fine-grained.",
+                "category": "scope",
+                "impact": "scope-change",
+                "targetIncrementId": "increment-2",
+                "disposition": "accepted",
+                "nextAction": "Replace the pending suffix with one cohesive increment.",
+            }
+        )
+        replacement = increment_definition(
+            "cohesive-increment", 2, depends_on=["increment-1"]
+        )
+        self.apply(
+            {
+                "type": "roadmap-revised",
+                "reason": "Merge coupled work to reduce fixed roadmap overhead.",
+                "increments": [replacement],
+            }
+        )
+
+        self.assertEqual(
+            [item["id"] for item in self.state["increments"]],
+            ["increment-1", "cohesive-increment"],
+        )
+        self.assertEqual(self.state["increments"][0], preserved)
+        self.assertEqual(self.state["chunks"], preserved_chunks)
+        self.assertEqual(self.state["evidence"], preserved_evidence)
+        self.assertIsNone(self.state["roadmapApproval"])
+        self.assertEqual(self.state["status"], "roadmap-review")
+
+        self.apply(
+            {
+                "type": "roadmap-approved",
+                "note": "The user approved the consolidated pending roadmap.",
+            }
+        )
+        self.assertEqual(self.state["status"], "ready")
+        self.apply(
+            {
+                "type": "increment-started",
+                "incrementId": "cohesive-increment",
+            }
+        )
+        self.assertEqual(
+            self.state["currentIncrementId"], "cohesive-increment"
+        )
+
+    def test_revision_rejects_an_active_increment_and_invalid_dependencies(self) -> None:
+        self.define_and_approve(
+            [
+                increment_definition("increment-1", 1),
+                increment_definition(
+                    "increment-2", 2, depends_on=["increment-1"]
+                ),
+            ]
+        )
+        self.apply(
+            {"type": "increment-started", "incrementId": "increment-1"}
+        )
+        with self.assertRaisesRegex(roadmap.RoadmapError, "active increment"):
+            self.apply(
+                {
+                    "type": "roadmap-revised",
+                    "reason": "This must wait.",
+                    "increments": [increment_definition("replacement", 1)],
+                }
+            )
+
+        self.state["currentIncrementId"] = None
+        self.state["increments"][0]["status"] = "completed"
+        with self.assertRaisesRegex(roadmap.RoadmapError, "unknown increment"):
+            self.apply(
+                {
+                    "type": "roadmap-revised",
+                    "reason": "Reject a dependency on removed pending work.",
+                    "increments": [
+                        increment_definition(
+                            "replacement", 2, depends_on=["increment-2"]
+                        )
+                    ],
+                }
+            )
+
+    def test_skill_requires_economically_cohesive_increments(self) -> None:
+        skill_root = MODULE_PATH.parent.parent
+        skill_text = (skill_root / "SKILL.md").read_text(encoding="utf-8")
+        workflow_text = (skill_root / "references" / "workflow.md").read_text(
+            encoding="utf-8"
+        )
+        diagnostics_text = (
+            skill_root.parents[1]
+            / "docs"
+            / "diagnostics"
+            / "implementation-roadmap-skill.md"
+        ).read_text(encoding="utf-8")
+        gitignore_text = (skill_root.parents[1] / ".gitignore").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("Size increments economically", skill_text)
+        self.assertIn("fewest increments", skill_text)
+        self.assertIn("shared UI primitive", skill_text)
+        self.assertIn("repository-wide gates once", skill_text)
+        self.assertIn("Never run a full suite", skill_text)
+        self.assertIn("adjacent-increment cohesion audit", skill_text)
+        self.assertIn("Define economically cohesive increments", workflow_text)
+        self.assertIn("roadmap-revised", workflow_text)
+        self.assertIn("docs/tmp", skill_text)
+        self.assertIn("summary", skill_text.lower())
+        self.assertIn("final-approval-recorded", workflow_text)
+        self.assertIn("Only after every planned chunk is implemented", workflow_text)
+        self.assertIn("temporary", diagnostics_text.lower())
+        self.assertIn("docs/tmp/", gitignore_text)
+
+    def test_skill_requires_security_by_design_evidence(self) -> None:
+        skill_root = MODULE_PATH.parent.parent
+        repository_root = skill_root.parents[1]
+        sources = {
+            "skill": (skill_root / "SKILL.md").read_text(encoding="utf-8"),
+            "workflow": (skill_root / "references" / "workflow.md").read_text(
+                encoding="utf-8"
+            ),
+            "events": (skill_root / "references" / "events.md").read_text(
+                encoding="utf-8"
+            ),
+            "installation": (
+                skill_root / "references" / "installation.md"
+            ).read_text(encoding="utf-8"),
+            "diagnostics": (
+                repository_root
+                / "docs"
+                / "diagnostics"
+                / "implementation-roadmap-skill.md"
+            ).read_text(encoding="utf-8"),
+        }
+
+        self.assertIn(
+            "docs/standards/security-by-design-standards.md", sources["skill"]
+        )
+        self.assertIn("mandatory security impact screen", sources["skill"])
+        self.assertIn("not-security-relevant", sources["skill"])
+        self.assertIn("security-relevant", sources["skill"])
+        self.assertIn("security-impact-reviewed", sources["skill"])
+        self.assertIn("Security cannot be excluded as a whole", sources["workflow"])
+        self.assertIn("Positive-only testing is insufficient", sources["workflow"])
+        self.assertIn("Security evidence convention", sources["events"])
+        self.assertIn("synthetic fixtures", sources["events"])
+        self.assertIn("security impact disposition", sources["installation"])
+        self.assertIn("per-increment security", sources["diagnostics"])
+
+        for source in sources.values():
+            self.assertRegex(source, r"(?i)secret")
+            self.assertRegex(
+                source,
+                r"(?i)(?:protected\s+prompts?|private\s+payloads?|sensitive\s+payloads?)",
+            )
+
+    def test_plan_separates_focused_and_increment_completion_tests(self) -> None:
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        self.apply({"type": "increment-started", "incrementId": "increment-1"})
+        self.apply(
+            {
+                "type": "increment-research-recorded",
+                "summary": "Increment research is complete.",
+                "sources": [{"title": "Current implementation"}],
+                "risks": ["Verification timing must remain economical."],
+            }
+        )
+
+        legacy_plan = implementation_plan(1)
+        legacy_plan["tests"] = legacy_plan.pop("focusedTests")
+        legacy_plan.pop("completionTests")
+        with self.assertRaisesRegex(roadmap.RoadmapError, "unsupported field"):
+            self.apply({"type": "increment-plan-recorded", "plan": legacy_plan})
+
+        missing_completion = implementation_plan(1)
+        missing_completion.pop("completionTests")
+        with self.assertRaisesRegex(roadmap.RoadmapError, "completionTests"):
+            self.apply(
+                {"type": "increment-plan-recorded", "plan": missing_completion}
+            )
+
+        self.apply(
+            {"type": "increment-plan-recorded", "plan": implementation_plan(1)}
+        )
+        self.assertEqual(
+            self.state["increments"][0]["plan"]["focusedTests"],
+            ["Focused test 1"],
+        )
+        self.assertEqual(
+            self.state["increments"][0]["plan"]["completionTests"],
+            ["Repository gates after every chunk is implemented"],
+        )
+
     def test_decision_requires_two_to_three_options_and_one_recommendation(self) -> None:
         self.apply(
             {
@@ -209,6 +467,7 @@ class RoadmapEngineTest(unittest.TestCase):
                 "summary": "A high-level choice is required.",
                 "sources": [],
                 "constraints": [],
+                "securityImpact": security_impact(),
                 "decisionRequired": True,
             }
         )
@@ -272,6 +531,21 @@ class RoadmapEngineTest(unittest.TestCase):
         )
         self.apply(
             {
+                "type": "increment-research-recorded",
+                "summary": "Increment research is complete.",
+                "sources": [{"title": "Current implementation"}],
+                "risks": ["Approval continuity must preserve the plan."],
+            }
+        )
+        self.apply(
+            {
+                "type": "increment-plan-recorded",
+                "plan": implementation_plan(1),
+            }
+        )
+        original_plan = copy.deepcopy(self.state["increments"][0]["plan"])
+        self.apply(
+            {
                 "type": "feedback-recorded",
                 "id": "feedback-1",
                 "summary": "The user requested a renewed high-level choice.",
@@ -332,7 +606,8 @@ class RoadmapEngineTest(unittest.TestCase):
         )
         self.apply({"type": "roadmap-approved"})
         self.assertEqual(self.state["status"], "executing")
-        self.assertEqual(self.state["increments"][0]["status"], "researching")
+        self.assertEqual(self.state["increments"][0]["status"], "implementing")
+        self.assertEqual(self.state["increments"][0]["plan"], original_plan)
 
     def test_pending_controlled_evidence_promotes_after_later_pass(self) -> None:
         self.define_and_approve(
@@ -375,9 +650,25 @@ class RoadmapEngineTest(unittest.TestCase):
                     "name": "Unsafe",
                     "slug": "unsafe",
                     "objective": "Attempt to escape.",
-                    "reportPath": "../outside.md",
+                    "statePath": "../outside.json",
                 },
             )
+        with self.assertRaisesRegex(roadmap.RoadmapError, "docs/tmp"):
+            roadmap.initial_state(
+                self.repo,
+                {
+                    "name": "Tracked report",
+                    "slug": "tracked-report",
+                    "objective": "Reject a tracked implementation report.",
+                    "reportPath": "docs/tracked-implementation-report.md",
+                },
+            )
+
+    def test_report_defaults_to_temporary_docs_directory(self) -> None:
+        self.assertEqual(
+            self.state["paths"]["report"],
+            "docs/tmp/portable-roadmap-implementation-report.md",
+        )
 
     def test_unknown_fields_and_event_types_are_rejected(self) -> None:
         with self.assertRaisesRegex(roadmap.RoadmapError, "unsupported field"):
@@ -394,6 +685,65 @@ class RoadmapEngineTest(unittest.TestCase):
         with self.assertRaisesRegex(roadmap.RoadmapError, "Unsupported event type"):
             self.apply({"type": "execute-command", "command": "do-not-run"})
 
+    def test_security_impact_and_increment_security_criterion_are_required(self) -> None:
+        with self.assertRaisesRegex(roadmap.RoadmapError, "securityImpact"):
+            self.apply(
+                {
+                    "type": "discovery-recorded",
+                    "summary": "Security disposition is missing.",
+                    "sources": [],
+                    "constraints": [],
+                    "decisionRequired": False,
+                }
+            )
+
+        incomplete_relevant_impact = security_impact()
+        incomplete_relevant_impact["disposition"] = "security-relevant"
+        with self.assertRaisesRegex(roadmap.RoadmapError, "securityImpact.assets"):
+            self.apply(
+                {
+                    "type": "discovery-recorded",
+                    "summary": "Relevant security detail is incomplete.",
+                    "sources": [],
+                    "constraints": [],
+                    "securityImpact": incomplete_relevant_impact,
+                    "decisionRequired": False,
+                }
+            )
+
+        self.apply(
+            {
+                "type": "discovery-recorded",
+                "summary": "The security impact is dispositioned.",
+                "sources": [],
+                "constraints": [],
+                "securityImpact": security_impact(),
+                "decisionRequired": False,
+            }
+        )
+        missing_security = increment_definition("increment-1", 1)
+        missing_security["acceptanceCriteria"] = [
+            criterion
+            for criterion in missing_security["acceptanceCriteria"]
+            if criterion["id"] != "security-impact-reviewed"
+        ]
+        with self.assertRaisesRegex(roadmap.RoadmapError, "security-impact-reviewed"):
+            self.apply(
+                {"type": "roadmap-defined", "increments": [missing_security]}
+            )
+
+        specific_security = increment_definition("increment-1", 1)
+        specific_security["acceptanceCriteria"][-1]["id"] = (
+            "security-authorization-reviewed"
+        )
+        self.apply({"type": "roadmap-defined", "increments": [specific_security]})
+        self.assertEqual(self.state["status"], "roadmap-review")
+
+        tampered = copy.deepcopy(self.state)
+        tampered["discovery"]["securityImpact"]["disposition"] = "ignored"
+        with self.assertRaisesRegex(roadmap.RoadmapError, "disposition"):
+            roadmap.validate_state_shape(self.repo, tampered)
+
     def test_sources_and_nested_arrays_are_strictly_validated(self) -> None:
         with self.assertRaisesRegex(roadmap.RoadmapError, "array"):
             self.apply(
@@ -405,6 +755,28 @@ class RoadmapEngineTest(unittest.TestCase):
                     "decisionRequired": False,
                 }
             )
+
+    def test_repository_sources_render_relative_to_the_roadmap(self) -> None:
+        self.apply(
+            {
+                "type": "discovery-recorded",
+                "summary": "Repository source links are recorded from the root.",
+                "sources": [
+                    {"title": "Agent guide", "url": "AGENTS.md"},
+                    {
+                        "title": "Architecture",
+                        "url": "docs/architecture/README.md",
+                    },
+                ],
+                "constraints": [],
+                "securityImpact": security_impact(),
+                "decisionRequired": False,
+            }
+        )
+
+        rendered = roadmap.render_roadmap(self.state)
+        self.assertIn("(<../AGENTS.md>)", rendered)
+        self.assertIn("(<architecture/README.md>)", rendered)
         with self.assertRaisesRegex(roadmap.RoadmapError, "unsupported link scheme"):
             self.apply(
                 {
@@ -455,6 +827,82 @@ class RoadmapEngineTest(unittest.TestCase):
             )
         )
         roadmap.ensure_documents_match(self.repo, self.state)
+
+    def test_relocates_a_legacy_generated_report_without_losing_state(self) -> None:
+        legacy_report = "docs/legacy-implementation-report.md"
+        self.state["paths"]["report"] = legacy_report
+        roadmap.validate_state_shape(self.repo, self.state)
+        roadmap.write_project_files(self.repo, self.state)
+        history_before = copy.deepcopy(self.state["history"])
+
+        updated = roadmap.apply_event(
+            self.state,
+            {
+                "type": "report-relocated",
+                "reportPath": "docs/tmp/portable-roadmap-implementation-report.md",
+                "reason": "Keep the progress report temporary and ignored.",
+            },
+        )
+        roadmap.validate_state_shape(self.repo, updated)
+        roadmap.write_project_files(
+            self.repo,
+            updated,
+            previous_report_path=legacy_report,
+        )
+
+        self.assertFalse((self.repo / legacy_report).exists())
+        self.assertTrue((self.repo / updated["paths"]["report"]).exists())
+        self.assertEqual(updated["history"][:-1], history_before)
+        self.assertEqual(updated["history"][-1]["type"], "report-relocated")
+        roadmap.ensure_documents_match(self.repo, updated)
+
+    def test_final_approval_removes_only_the_generated_temporary_report(self) -> None:
+        with self.assertRaisesRegex(roadmap.RoadmapError, "Complete the roadmap"):
+            self.apply(
+                {
+                    "type": "final-approval-recorded",
+                    "note": "The user approved the overall work.",
+                }
+            )
+
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        self.execute_increment(1)
+        self.apply(
+            {
+                "type": "roadmap-completed",
+                "summary": "The one-increment roadmap is complete.",
+            }
+        )
+        roadmap.write_project_files(self.repo, self.state)
+        report_path = self.repo / self.state["paths"]["report"]
+        roadmap_path = self.repo / self.state["paths"]["roadmap"]
+        self.assertTrue(report_path.exists())
+
+        self.apply(
+            {
+                "type": "final-approval-recorded",
+                "note": "The user explicitly approved the completed overall work.",
+            }
+        )
+        roadmap.write_project_files(self.repo, self.state)
+
+        self.assertEqual(self.state["status"], "final-approved")
+        self.assertFalse(report_path.exists())
+        self.assertTrue(roadmap_path.exists())
+        roadmap.ensure_documents_match(self.repo, self.state)
+        with self.assertRaisesRegex(roadmap.RoadmapError, "immutable"):
+            self.apply(
+                {
+                    "type": "feedback-recorded",
+                    "id": "late-feedback",
+                    "summary": "New work belongs in a successor roadmap.",
+                    "category": "scope",
+                    "impact": "scope-change",
+                    "targetIncrementId": "increment-1",
+                    "disposition": "needs-decision",
+                    "nextAction": "Create a successor roadmap.",
+                }
+            )
 
     def test_state_is_written_before_generated_documents(self) -> None:
         writes: list[Path] = []
@@ -545,6 +993,7 @@ class RoadmapEngineTest(unittest.TestCase):
                     "summary": "CLI discovery is complete.",
                     "sources": [],
                     "constraints": [],
+                    "securityImpact": security_impact(),
                     "decisionRequired": False,
                 }
             ),

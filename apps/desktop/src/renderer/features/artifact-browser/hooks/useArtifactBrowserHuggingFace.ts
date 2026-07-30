@@ -176,7 +176,7 @@ export function useArtifactBrowserHuggingFace({
           files,
           state: {
             status: "success",
-            message: files.length > 0 ? `Loaded ${files.length} file(s).` : "No files found for this dataset.",
+            ...(files.length > 0 ? {} : { message: "No files found for this dataset." }),
           },
         },
       }));

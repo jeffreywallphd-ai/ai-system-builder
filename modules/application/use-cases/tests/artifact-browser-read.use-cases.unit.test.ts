@@ -5,6 +5,8 @@ import {
   type ArtifactBrowseItem,
 } from "../../../contracts/artifact-browser";
 import { createContractError } from "../../../contracts/shared";
+import { createSecurityApplicationError } from "../../../contracts/security";
+import { createWorkspaceId } from "../../../contracts/workspace";
 import type {
   ArtifactBrowserContentReadPort,
   ArtifactBrowserMetadataReadPort,
@@ -35,6 +37,35 @@ function createContentReadPort(
 }
 
 describe("artifact browser read use cases", () => {
+  it("denies workspace access before artifact reads when managed authorization rejects", async () => {
+    const browseArtifacts = testDouble.fn<ArtifactBrowserMetadataReadPort["browseArtifacts"]>();
+    const authorizeWorkspaceOperation = testDouble.fn().mockRejectedValue(
+      createSecurityApplicationError("security.forbidden", "private policy detail"),
+    );
+    const useCase = new BrowseArtifactsUseCase({
+      artifactBrowserMetadataRead: createMetadataReadPort({ browseArtifacts }),
+      workspaceRepository: {
+        readWorkspace: async () => ({
+          organizationId: "org-b" as never,
+          workspaceId: createWorkspaceId("workspace-a"),
+          displayName: "Other tenant workspace",
+          status: "active",
+          createdAt: "2026-07-27T00:00:00.000Z",
+          updatedAt: "2026-07-27T00:00:00.000Z",
+        }),
+      },
+      workspaceAuthorization: { authorizeWorkspaceOperation } as never,
+    });
+
+    const result = await useCase.execute({}, { workspaceId: "workspace-a" });
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected authorization failure.");
+    expect(result.error.code).toBe("forbidden");
+    expect(result.error.message).toBe("Workspace access is forbidden.");
+    expect(JSON.stringify(result)).not.toContain("private policy detail");
+    expect(browseArtifacts).not.toHaveBeenCalled();
+  });
+
   it("browse returns metadata-oriented image browse results", async () => {
     const browseArtifacts = testDouble
       .fn<ArtifactBrowserMetadataReadPort["browseArtifacts"]>()

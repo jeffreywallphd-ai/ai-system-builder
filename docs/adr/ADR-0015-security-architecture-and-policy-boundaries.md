@@ -3,7 +3,7 @@
 - Status: accepted
 - Date: 2026-05-04
 - Deciders: ai-system-builder maintainers
-- Related: ADR-0003, ADR-0013, docs/architecture/system-overview.md, docs/architecture/host-model.md, docs/architecture/persistence-and-storage.md, docs/architecture/runtime-model.md, docs/architecture/module-dependency-rules.md
+- Related: ADR-0003, ADR-0013, docs/architecture/system-overview.md, docs/architecture/host-model.md, docs/architecture/persistence-and-storage.md, docs/architecture/runtime-model.md, docs/architecture/module-dependency-rules.md, docs/standards/security-by-design-standards.md
 
 ## Context
 
@@ -25,6 +25,8 @@ Clean architecture constraints apply: security mechanisms should be adapter-driv
 
 Security is a cross-cutting architecture concern implemented through shared contracts, application ports/services, adapters, and host composition.
 
+Every repository change performs the security impact screen defined by `docs/standards/security-by-design-standards.md`. This is mandatory even when a task is not labeled security-sensitive and when the implementation is outside a security-named directory. A `security-relevant` result requires a proportional threat review that identifies protected assets, actors and authority, trust boundaries, abuse/failure cases, controls, rollback safety, evidence, and residual risk before completion. A `not-security-relevant` result requires a concrete rationale and must be revisited if scope reveals another boundary.
+
 - Not all security-related code belongs in `security/` folders.
 - Shared security primitives belong in security folders.
 - Feature-specific security declarations and enforcement remain near feature/transport boundaries while consuming shared security contracts/ports.
@@ -37,6 +39,8 @@ Security is a cross-cutting architecture concern implemented through shared cont
 - Initial LAN implementation target: `HTTPS + LAN pairing bearer token`.
 - Managed production identity and organization authorization follow ADR-0029.
 - Future modes are added by new adapters, not use-case rewrites.
+- Security cannot be deferred or excluded as a whole. A specific hardening item may be deferred only with a named boundary, residual risk, and explicit decision or successor work.
+- Migration, compatibility, recovery, and rollback paths must not weaken the forward security posture or restore a known-vulnerable mode.
 
 ## Current first implementation status (rebuild branch)
 
@@ -69,7 +73,15 @@ This ADR remains the canonical architecture decision. Current implementation is 
     routes, and organization-owned persistence/storage require the same request
     context.
 - Security status supports both public discovery and authenticated principal validation when a bearer token is sent.
-- Unknown `/api/*` routes are denied by centralized route policy with `security.route-policy-missing`.
+- API route identity is lowercase and case-sensitive at Express dispatch. The
+  centralized policy recognizes case, encoded, slash, and backslash variants of
+  the API namespace and denies non-canonical or unknown variants with
+  `security.route-policy-missing` before feature handlers run.
+- Security and managed-organization admission execute before JSON or multipart
+  request parsing. The current JSON transport ceiling is 5 MiB; parser failures
+  use the sanitized `api.request-body` failure envelope. Artifact multipart
+  uploads accept one bounded file plus the declared metadata fields, and the
+  application upload policy currently caps file bytes at 64 MiB.
 - Canonical security API failures in active use include:
   - `security.unauthenticated`
   - `security.invalid-token`
@@ -314,6 +326,7 @@ Application boundary:
 
 Adapter boundary:
   enforce filesystem containment
+  broker outbound network access
   handle credential storage
   encrypt/decrypt if configured
   harden runtime process invocation
@@ -412,6 +425,38 @@ Route policy should be centralized, not scattered ad hoc across handlers.
 - Generated outputs should finalize into artifact storage without exposing runtime temp paths.
 - Optional encryption at rest should be added via `DataProtectionPort`.
 - API responses should not expose local filesystem paths.
+
+## Outbound network security
+
+- Host-composed ingestion and provider-localization adapters must use the shared
+  secure-egress broker rather than calling ambient `fetch` or allowing a browser
+  engine to make unrestricted requests.
+- The broker permits only configured HTTP(S) schemes, rejects URL credentials,
+  validates every DNS answer, pins the validated address set for the connection,
+  and repeats validation for every redirect.
+- Loopback, private, link-local, carrier-grade NAT, documentation, multicast,
+  metadata-service, and other reserved IPv4/IPv6 destinations fail closed.
+- Cross-origin redirects lose authorization and cookie headers. Rendered-browser
+  acquisition blocks service workers and WebSockets and fulfills every routed
+  document/subresource request through the broker.
+- Response, session, deadline, redirect, media-type, and concurrency limits are
+  enforced while streaming. External localization must finish within those
+  bounds before bytes may enter canonical storage.
+
+## Managed sidecar identity
+
+- A managed local sidecar is not trusted merely because it listens on
+  localhost. Host composition owns a canonical loopback-only bind/client
+  endpoint and rejects remote, wildcard, credentialed, or path-bearing values.
+- Each spawned Python runtime receives a new cryptographically random bearer
+  token through its child-only environment. The host client reads the current
+  value for every call, and the worker authenticates every endpoint using a
+  constant-time comparison.
+- Health and capability probes are authenticated. A fresh host foundation must
+  not attach to an ambient loopback process without the current launch identity.
+- Launch credentials must not be persisted, logged, included in readiness or
+  diagnostics, exposed to renderer/client transports, or written to the parent
+  process environment.
 
 ## Secrets and credentials
 

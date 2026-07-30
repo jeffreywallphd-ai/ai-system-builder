@@ -17,7 +17,7 @@ function createCommand(overrides: Partial<StoreArtifactUploadCommand> = {}) {
   return {
     fileName: "kitten.png",
     mediaType: "image/png",
-    bytes: new Uint8Array([137, 80, 78, 71]),
+    bytes: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
     ...overrides,
   } satisfies StoreArtifactUploadCommand;
 }
@@ -120,7 +120,7 @@ describe("StoreArtifactUploadUseCase", () => {
             originalFileName: "kitten.png",
           },
         },
-        content: new Uint8Array([137, 80, 78, 71]),
+        content: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
         overwrite: undefined,
         requestId: undefined,
         correlationId: undefined,
@@ -216,6 +216,53 @@ describe("StoreArtifactUploadUseCase", () => {
         errorType: "validation",
       },
     });
+  });
+
+  it("rejects type-confused and signature-spoofed uploads before storage", async () => {
+    const storeArtifact = testDouble.fn<ArtifactStoragePort["storeArtifact"]>();
+    const useCase = new StoreArtifactUploadUseCase({
+      storage: createStoragePort({ storeArtifact }),
+      logging: createLoggingPort(),
+    });
+
+    const mismatched = await useCase.execute(
+      createCommand({ fileName: "payload.txt", mediaType: "image/png" }),
+      createCommandContext(),
+    );
+    const spoofed = await useCase.execute(
+      createCommand({ bytes: new TextEncoder().encode("not a png") }),
+      createCommandContext(),
+    );
+
+    expect(mismatched.ok).toBe(false);
+    expect(spoofed.ok).toBe(false);
+    expect(storeArtifact).not.toHaveBeenCalled();
+  });
+
+  it("rejects uploads above the configured byte limit before storage", async () => {
+    const storeArtifact = testDouble.fn<ArtifactStoragePort["storeArtifact"]>();
+    const useCase = new StoreArtifactUploadUseCase({
+      storage: createStoragePort({ storeArtifact }),
+      logging: createLoggingPort(),
+      maximumBytes: 3,
+    });
+
+    const result = await useCase.execute(createCommand(), createCommandContext());
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected byte-limit validation failure.");
+    expect(result.error.code).toBe("validation");
+    expect(result.error.message).toBe("Artifact upload exceeds the 3-byte limit.");
+    expect(storeArtifact).not.toHaveBeenCalled();
+    expect(useCase.getAcceptedUploadPolicy().maximumBytes).toBe(3);
+  });
+
+  it("rejects invalid configured upload limits at composition time", () => {
+    expect(() => new StoreArtifactUploadUseCase({
+      storage: createStoragePort(),
+      logging: createLoggingPort(),
+      maximumBytes: 0,
+    })).toThrow("Artifact upload maximumBytes must be a positive safe integer.");
   });
 
   it("returns storage failures and logs failed storage outcomes", async () => {

@@ -107,7 +107,10 @@ describe("artifact upload cross-transport equivalence", () => {
           sourceKind: "upload",
         },
       });
-    const ipcHandler = createDesktopArtifactUploadIpcHandler(createIpcUseCaseStub(executeFromIpc));
+    const ipcHandler = createDesktopArtifactUploadIpcHandler(
+      createIpcUseCaseStub(executeFromIpc),
+      { isTrustedSender: () => true },
+    );
 
     await ipcHandler(
       {},
@@ -195,6 +198,7 @@ describe("artifact upload cross-transport equivalence", () => {
           correlationId: "corr-transport-2",
         }),
       ),
+      { isTrustedSender: () => true },
     )(
       {},
       createDesktopArtifactUploadRequest(
@@ -260,6 +264,7 @@ describe("artifact upload cross-transport equivalence", () => {
           correlationId: "corr-transport-3",
         }),
       ),
+      { isTrustedSender: () => true },
     )(
       {},
       createDesktopArtifactUploadRequest(

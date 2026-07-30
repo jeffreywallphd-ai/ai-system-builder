@@ -253,6 +253,7 @@ class LocalTextGenerationTests(unittest.TestCase):
         with (
             patch.dict(sys.modules, {"huggingface_hub": fake_hub}),
             patch("modules.adapters.runtime.python.worker.tasks.local_text_generation._snapshot_file_stats", return_value={"fileCount": 1, "totalBytes": 7}),
+            patch("modules.adapters.runtime.python.worker.tasks.local_text_generation._validate_huggingface_snapshot_path"),
             patch("modules.adapters.runtime.python.worker.tasks.local_text_generation._validate_snapshot_profile_result"),
         ):
             result = ensure_generation_model_downloaded(
@@ -315,7 +316,7 @@ class LocalTextGenerationTests(unittest.TestCase):
         self.assertEqual(byte_progress[-1]["stage"], "snapshot-progress")
         self.assertEqual(byte_progress[-1]["downloadedBytes"], 30)
         self.assertEqual(byte_progress[-1]["totalBytes"], 100)
-        self.assertEqual(byte_progress[-1]["downloadName"], "sd_xl_base_1.0.safetensors")
+        self.assertNotIn("downloadName", byte_progress[-1])
         self.assertEqual(byte_progress[-1]["downloadBackend"], "http")
 
     def test_structured_snapshot_tqdm_supports_concurrent_download_lock_protocol(self) -> None:
@@ -408,6 +409,7 @@ class LocalTextGenerationTests(unittest.TestCase):
         with (
             patch.dict(sys.modules, {"huggingface_hub": fake_hub}),
             patch("modules.adapters.runtime.python.worker.tasks.local_text_generation._snapshot_file_stats", return_value={"fileCount": 1, "totalBytes": 7}),
+            patch("modules.adapters.runtime.python.worker.tasks.local_text_generation._validate_huggingface_snapshot_path"),
             patch("modules.adapters.runtime.python.worker.tasks.local_text_generation._validate_snapshot_profile_result"),
         ):
             ensure_generation_model_downloaded(
@@ -418,7 +420,7 @@ class LocalTextGenerationTests(unittest.TestCase):
 
         cache_miss_event = next(event for event in progress_events if event.get("stage") == "cache-miss")
         self.assertEqual(cache_miss_event["errorType"], "RuntimeError")
-        self.assertEqual(cache_miss_event["errorMessage"], "cache is incomplete")
+        self.assertNotIn("errorMessage", cache_miss_event)
         self.assertEqual(cache_miss_event["profile"], "checkpoint")
 
     def test_model_download_returns_after_valid_profile_cache_hit(self) -> None:
@@ -432,6 +434,7 @@ class LocalTextGenerationTests(unittest.TestCase):
         with (
             patch.dict(sys.modules, {"huggingface_hub": fake_hub}),
             patch("modules.adapters.runtime.python.worker.tasks.local_text_generation._snapshot_file_stats", return_value={"fileCount": 1, "totalBytes": 7}),
+            patch("modules.adapters.runtime.python.worker.tasks.local_text_generation._validate_huggingface_snapshot_path"),
             patch("modules.adapters.runtime.python.worker.tasks.local_text_generation._validate_snapshot_profile_result"),
         ):
             result = ensure_generation_model_downloaded(
@@ -458,6 +461,7 @@ class LocalTextGenerationTests(unittest.TestCase):
         fake_hub = SimpleNamespace(snapshot_download=fake_snapshot_download)
         with (
             patch.dict(sys.modules, {"huggingface_hub": fake_hub}),
+            patch("modules.adapters.runtime.python.worker.tasks.local_text_generation._validate_huggingface_snapshot_path"),
             patch("modules.adapters.runtime.python.worker.tasks.local_text_generation._validate_snapshot_profile_result", side_effect=fail_validation),
         ):
             with self.assertRaisesRegex(RuntimeError, "top-level .safetensors or .ckpt"):
@@ -465,6 +469,44 @@ class LocalTextGenerationTests(unittest.TestCase):
                     LocalModelConfig(provider="transformers", modelId="stabilityai/stable-diffusion-xl-base-1.0"),
                     download_context={"inferenceMode": "text-to-image"},
                 )
+
+    def test_model_download_rejects_noncanonical_ids_before_cache_or_network_access(self) -> None:
+        with self.assertRaisesRegex(ValueError, "canonical owner/model"):
+            ensure_generation_model_downloaded(
+                LocalModelConfig(provider="transformers", modelId="../private-model")
+            )
+
+    def test_snapshot_progress_rejects_declared_downloads_above_the_byte_budget(self) -> None:
+        progress_events: list[dict] = []
+        with patch.dict(environ, {"AI_SYSTEM_BUILDER_HF_MAX_MODEL_BYTES": "1024"}):
+            tqdm_class = _create_structured_snapshot_tqdm(
+                "test-org/test-model",
+                "checkpoint",
+                progress_events.append,
+            )
+            with self.assertRaisesRegex(RuntimeError, "byte limit"):
+                tqdm_class(total=2048, unit="B")
+
+    def test_download_progress_and_events_do_not_disclose_model_ids_paths_or_raw_errors(self) -> None:
+        progress_events: list[dict] = []
+        with patch("builtins.print") as print_mock:
+            from modules.adapters.runtime.python.worker.tasks.local_text_generation import _report_model_download_progress
+
+            _report_model_download_progress(
+                "private-org/private-model",
+                progress_events.append,
+                "snapshot-failed",
+                "Download failed.",
+                localPath="C:/private/cache/model",
+                errorMessage="token=secret",
+                errorType="RuntimeError",
+            )
+
+        serialized = str(progress_events) + str(print_mock.call_args_list)
+        self.assertNotIn("private-org/private-model", serialized)
+        self.assertNotIn("C:/private/cache/model", serialized)
+        self.assertNotIn("token=secret", serialized)
+        self.assertIn("RuntimeError", serialized)
 
     def test_auto_device_uses_transformers_device_map(self) -> None:
         config = ExampleGenerationConfig.model_validate(

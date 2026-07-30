@@ -123,7 +123,9 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(
+        <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+      );
     });
 
     const artifactButton = findArtifactDetailsButton(container, "uploads/cat.png");
@@ -140,6 +142,11 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     const inputs = Array.from(container.querySelectorAll("input"));
     setInputValue(inputs[0] as HTMLInputElement, "openai/demo");
     setInputValue(inputs[2] as HTMLInputElement, "images");
+    const creationCheckbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    await act(async () => {
+      creationCheckbox.click();
+    });
+    expect(container.textContent).toContain("Private (recommended)");
 
     const publishButton = Array.from(container.querySelectorAll("button"))
       .find((button) => button.textContent === "Publish") as HTMLButtonElement;
@@ -148,11 +155,13 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     });
 
     expect(client.publishArtifactToHuggingFace).toHaveBeenCalledWith({
+      workspaceId: "workspace-a",
       artifactId: "uploads/cat.png",
       repository: "openai/demo",
       path: "images/cat.png",
       revision: "main",
       mediaType: "",
+      repositoryCreation: { approved: true, visibility: "private" },
     });
     expect(container.textContent).toContain("Published Backing");
     expect(container.textContent).toContain("openai/demo");
@@ -194,7 +203,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     const artifactButton = findArtifactDetailsButton(container, "uploads/cat.png");
@@ -257,7 +266,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     const artifactButton = findArtifactDetailsButton(container, "uploads/cat.png");
@@ -294,11 +303,11 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     expect(container.textContent).toContain("Artifact Browser");
-    expect(container.textContent).toContain("Hugging Face settings");
+    expect(container.textContent).toContain("Artifact family");
     expect(container.textContent).toContain("There are currently no uploaded artifacts in the workspace.");
     expect(container.textContent).toContain("There are currently no generated artifacts in the workspace.");
     expect(container.textContent).not.toContain("Register from Hugging Face");
@@ -340,7 +349,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     expect(container.textContent).toContain("uploads/train.parquet");
@@ -390,7 +399,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     expect(container.textContent).toContain("Unregistered Artifacts");
@@ -419,8 +428,8 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       confirmDeleteButton.click();
     });
 
-    expect(client.registerUnregisteredArtifact).toHaveBeenCalledWith({ storageKey: "uploads/orphan/report.pdf" });
-    expect(client.deleteUnregisteredArtifact).toHaveBeenCalledWith({ storageKey: "uploads/orphan/report.pdf" });
+    expect(client.registerUnregisteredArtifact).toHaveBeenCalledWith({ storageKey: "uploads/orphan/report.pdf", workspaceId: "workspace-a" });
+    expect(client.deleteUnregisteredArtifact).toHaveBeenCalledWith({ storageKey: "uploads/orphan/report.pdf", workspaceId: "workspace-a" });
   });
 
   it("blocks unregistered delete when typed confirmation is not exact and supports cancel", async () => {
@@ -456,7 +465,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     const deleteButton = Array.from(container.querySelectorAll("button"))
@@ -517,7 +526,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     const artifactButton = findArtifactDetailsButton(container, "uploads/cat.png");
@@ -574,7 +583,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     const artifactButton = findArtifactDetailsButton(container, "uploads/cat.png");
@@ -598,7 +607,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       confirmDeleteButton.click();
     });
 
-    expect(client.deleteRegisteredArtifact).toHaveBeenCalledWith({ storageKey: "uploads/cat.png" });
+    expect(client.deleteRegisteredArtifact).toHaveBeenCalledWith({ storageKey: "uploads/cat.png", workspaceId: "workspace-a" });
   });
 
 
@@ -625,10 +634,10 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
-    expect(container.textContent).toContain("Filter by family");
+    expect(container.textContent).toContain("Artifact family");
     const familySelect = container.querySelector("select") as HTMLSelectElement;
     expect(familySelect).toBeTruthy();
     expect(Array.from(familySelect.options).map((option) => option.value)).toContain("all");
@@ -638,7 +647,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       setSelectValue(familySelect, "tabular");
     });
 
-    expect(client.browseArtifacts).toHaveBeenCalledWith({ artifactFamily: "tabular" });
+    expect(client.browseArtifacts).toHaveBeenCalledWith({ artifactFamily: "tabular", workspaceId: "workspace-a" });
   });
 
   it("re-checks published backing existence from the artifact detail panel", async () => {
@@ -695,7 +704,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     const artifactButton = findArtifactDetailsButton(container, "uploads/cat.png");
@@ -777,7 +786,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     const artifactButton = findArtifactDetailsButton(container, "artifacts/20260418000000-local01");
@@ -844,6 +853,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
         retrieval: "deferred" as const,
       }),
       createArtifactMediaViewUrl: vi.fn().mockResolvedValue(""),
+      readArtifactMedia: vi.fn().mockResolvedValue({ mediaType: "text/plain", bytes: new Uint8Array([97]) }),
       getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
       setHuggingFaceToken: vi.fn().mockResolvedValue({ configured: true, maskedToken: "••••1234" }),
       clearHuggingFaceToken: vi.fn().mockResolvedValue({ configured: false }),
@@ -869,7 +879,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} />);
+      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
     });
 
     expect(container.textContent).toContain("Remote only");
@@ -933,7 +943,7 @@ it("renders website capture metadata and HTML source preview for website-ingeste
   const root = createRoot(container);
 
   await act(async () => {
-    root.render(<ArtifactBrowserFeature client={client} />);
+    root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
   });
 
   const artifactButton = findArtifactDetailsButton(container, "staged/website/example.com/index.html");
@@ -948,7 +958,10 @@ it("renders website capture metadata and HTML source preview for website-ingeste
   expect(container.textContent).toContain("HTML source preview");
   expect(container.textContent).toContain("<html><body><h1>Hello</h1></body></html>");
   expect(client.createArtifactMediaViewUrl).not.toHaveBeenCalled();
-  expect(client.readArtifactMedia).toHaveBeenCalledWith({ storageKey: "staged/website/example.com/index.html" });
+  expect(client.readArtifactMedia).toHaveBeenCalledWith(
+    { storageKey: "staged/website/example.com/index.html" },
+    { maximumBytes: 65_536, workspaceId: "workspace-a" },
+  );
 
   await act(async () => {
     root.unmount();
@@ -998,7 +1011,7 @@ it("revokes prior object URLs when image preview selection changes and on unmoun
   const root = createRoot(container);
 
   await act(async () => {
-    root.render(<ArtifactBrowserFeature client={client} />);
+    root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
   });
 
   const first = findArtifactDetailsButton(container, "uploads/cat-1.png");

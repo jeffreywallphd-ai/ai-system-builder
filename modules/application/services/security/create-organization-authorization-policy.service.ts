@@ -12,6 +12,7 @@ import type {
   OrganizationRepositoryPort,
 } from "../../ports/organization";
 import type { AuthorizationPolicyPort } from "../../ports/security";
+import { capabilitiesForOrganizationRole } from "./organization-role-capabilities";
 
 export function createOrganizationAuthorizationPolicy(deps: {
   organizations: OrganizationRepositoryPort;
@@ -37,6 +38,16 @@ export function createOrganizationAuthorizationPolicy(deps: {
         return denied(
           "tenant-placement-denied",
           "The organization is not assigned to this deployment.",
+          request,
+        );
+      }
+      if (
+        request.resource?.requiresOrganizationOwnership &&
+        !request.resource.organizationId
+      ) {
+        return denied(
+          "resource-organization-required",
+          "The resource has not been assigned to an organization.",
           request,
         );
       }
@@ -89,14 +100,17 @@ export function createOrganizationAuthorizationPolicy(deps: {
         request.requiredOrganizationRoles?.length &&
         !request.requiredOrganizationRoles.includes(membership.role)
       ) {
-        return denied(
+        return {
+          ...denied(
           "organization-role-insufficient",
           "The organization role does not permit this operation.",
           request,
-        );
+          ),
+          organizationRole: membership.role,
+        };
       }
       const missingScopes = missingSecurityScopes(
-        request.authContext.principal.scopes,
+        capabilitiesForOrganizationRole(membership.role),
         request.requiredScopes,
       );
       if (missingScopes.length > 0) {
@@ -106,10 +120,11 @@ export function createOrganizationAuthorizationPolicy(deps: {
             "Required operation scopes are missing.",
             request,
           ),
+          organizationRole: membership.role,
           missingScopes,
         };
       }
-      return { allowed: true };
+      return { allowed: true, organizationRole: membership.role };
     },
   };
 }

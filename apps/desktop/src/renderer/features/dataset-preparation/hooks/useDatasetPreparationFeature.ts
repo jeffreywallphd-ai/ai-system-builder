@@ -1068,7 +1068,7 @@ export function useDatasetPreparationFeature(
       return;
     }
     applyTrainingSettingsSnapshot(selected.settings);
-    setStatus({ kind: "idle", message: "Training settings loaded." });
+    setStatus({ kind: "idle" });
   }, [applyTrainingSettingsSnapshot, savedTrainingSettings, selectedSavedTrainingSettingsId]);
 
   const onSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {

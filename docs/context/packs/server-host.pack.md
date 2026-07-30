@@ -23,6 +23,9 @@
 - Server is a host responsible for process lifecycle, configuration, and composition.
 - Express is a transport adapter, not the application architecture center.
 - Keep route/controller code thin and delegate use-case behavior inward.
+- Managed published-system runtimes use provisioner-created per-instance
+  PostgreSQL databases and distinct least-privilege runtime roles. Runtime code
+  never receives provisioner authority and host shutdown drains runtime pools.
 - Keep API contracts as transport specializations over shared envelopes and operation identities.
 - Keep HTTP request/response details out of domain/application models.
 - Pass small JSON-serializable host context inward; do not pass framework/session/window objects.

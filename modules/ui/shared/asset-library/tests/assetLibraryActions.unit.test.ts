@@ -77,10 +77,12 @@ describe("asset library mutation action helpers", () => {
       } as any),
       userConfirmed: true,
       thinClientSafe: true,
+      workspaceId: "workspace-a" as never,
     });
 
     expect(command).toEqual({
       operation: "asset.import-external-repository-object",
+      workspaceId: "workspace-a",
       viewId: "external-view-1",
       importMode: "remote-reference",
       approval: {

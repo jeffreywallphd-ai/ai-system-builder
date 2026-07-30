@@ -24,6 +24,15 @@ upgrade.
 - Major runtime or packaging-tool upgrades require compatibility testing; do not
   apply `npm audit fix --force` or an unreviewed bulk remediation.
 
+When a patched transitive package has intentionally changed its public module
+shape, a build-tool-only compatibility package may preserve the legacy interface
+while delegating all implementation behavior to an exact patched upstream
+release. Such a package must remain local, contain no independent parsing or
+expansion logic, expose only the interfaces required by reviewed consumers, and
+have focused tests for both the legacy consumer and the current interface. Remove
+the compatibility boundary when every dependent tool supports the patched
+upstream interface directly.
+
 ## Advisory policy
 
 `npm run security:dependencies` evaluates two scopes:
