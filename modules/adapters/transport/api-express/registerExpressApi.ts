@@ -160,6 +160,7 @@ export interface RegisterExpressApiDependencies {
   listModelsUseCase: RegisterModelManagementApiRoutesDependencies["listModelsUseCase"];
   saveModelReferenceUseCase: RegisterModelManagementApiRoutesDependencies["saveModelReferenceUseCase"];
   downloadModelUseCase: RegisterModelManagementApiRoutesDependencies["downloadModelUseCase"];
+  modelDownloadTasksUseCase?: RegisterModelManagementApiRoutesDependencies["modelDownloadTasksUseCase"];
   updateModelRecordUseCase: RegisterModelManagementApiRoutesDependencies["updateModelRecordUseCase"];
   deleteModelRecordUseCase: RegisterModelManagementApiRoutesDependencies["deleteModelRecordUseCase"];
   validateModelUseCase?: RegisterModelManagementApiRoutesDependencies["validateModelUseCase"];
@@ -281,6 +282,7 @@ export function registerExpressApi(
     listModelsUseCase: dependencies.listModelsUseCase,
     saveModelReferenceUseCase: dependencies.saveModelReferenceUseCase,
     downloadModelUseCase: dependencies.downloadModelUseCase,
+    modelDownloadTasksUseCase: dependencies.modelDownloadTasksUseCase,
     updateModelRecordUseCase: dependencies.updateModelRecordUseCase,
     deleteModelRecordUseCase: dependencies.deleteModelRecordUseCase,
     validateModelUseCase: dependencies.validateModelUseCase,

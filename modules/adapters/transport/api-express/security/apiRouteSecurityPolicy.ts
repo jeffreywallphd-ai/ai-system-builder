@@ -46,6 +46,10 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     { public: false, scopes: ["model:write"] },
   ],
   ["POST /api/model/download", { public: false, scopes: ["model:write"] }],
+  ["POST /api/model/download/start", { public: false, scopes: ["model:write"] }],
+  ["POST /api/model/download/read", { public: false, scopes: ["model:read"] }],
+  ["POST /api/model/download/list", { public: false, scopes: ["model:read"] }],
+  ["POST /api/model/download/cancel", { public: false, scopes: ["model:write"] }],
   ["POST /api/model/record/update", { public: false, scopes: ["model:write"] }],
   ["POST /api/model/record/delete", { public: false, scopes: ["model:write"] }],
 

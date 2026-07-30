@@ -5,6 +5,7 @@
 @import "./layout/primitives.css";
 
 @import "./components/shell.css";
+@import "./components/notifications.css";
 @import "./components/controls.css";
 @import "./components/badges.css";
 @import "./components/surfaces.css";

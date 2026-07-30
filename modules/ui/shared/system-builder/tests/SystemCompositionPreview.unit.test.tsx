@@ -59,11 +59,10 @@ describe("SystemCompositionPreview", () => {
       <SystemCompositionPreview
         systemName="Requests"
         instances={instances}
-        includesUnsavedChanges
       />,
     );
     expect(html).toContain('aria-label="Requests current UI preview"');
-    expect(html).toContain(
+    expect(html).not.toContain(
       "This preview includes unsaved composition changes.",
     );
     expect(html).toContain("2 frontend surfaces");
@@ -89,7 +88,6 @@ describe("SystemCompositionPreview", () => {
         instances={[
           instance("policy", "builtin.security.authorization-policy"),
         ]}
-        includesUnsavedChanges={false}
       />,
     );
     expect(html).toContain("Visual preview unavailable");
@@ -151,7 +149,6 @@ describe("SystemCompositionPreview", () => {
         systemName="Bounded"
         instances={[wide[0]!]}
         catalog={[composerDefinition("builtin.display.table", [])]}
-        includesUnsavedChanges={false}
       />,
     );
     expect(html).not.toContain(
@@ -242,7 +239,6 @@ describe("SystemCompositionPreview", () => {
           { kind: "asset-instance", id: root.instanceId } as never,
         ]}
         catalog={catalog}
-        includesUnsavedChanges={false}
       />,
     );
     expect(html).toContain(

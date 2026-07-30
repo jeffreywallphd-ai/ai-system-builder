@@ -17,6 +17,10 @@ describe("api route security policy coverage", () => {
     expect(API_ROUTE_POLICIES.get("GET /api/workspaces/active-selection")).toMatchObject({ public: false, scopes: ["workspace:read"] });
     expect(API_ROUTE_POLICIES.get("POST /api/workspaces/active-selection")).toMatchObject({ public: false, scopes: ["workspace:write"] });
     expect(API_ROUTE_POLICIES.get("POST /api/workspaces/active-selection/clear")).toMatchObject({ public: false, scopes: ["workspace:write"] });
+    expect(API_ROUTE_POLICIES.get("POST /api/model/download/start")).toMatchObject({ public: false, scopes: ["model:write"] });
+    expect(API_ROUTE_POLICIES.get("POST /api/model/download/read")).toMatchObject({ public: false, scopes: ["model:read"] });
+    expect(API_ROUTE_POLICIES.get("POST /api/model/download/list")).toMatchObject({ public: false, scopes: ["model:read"] });
+    expect(API_ROUTE_POLICIES.get("POST /api/model/download/cancel")).toMatchObject({ public: false, scopes: ["model:write"] });
     expect(API_ROUTE_POLICIES.get("GET /api/assets/definitions")).toMatchObject({ public: false, scopes: ["asset:read"] });
     expect(API_ROUTE_POLICIES.get("GET /api/assets/resource-backed-views")).toMatchObject({ public: false, scopes: ["asset:read"] });
     expect(API_ROUTE_POLICIES.get("POST /api/assets/register-resource-backed-view")).toMatchObject({ public: false, scopes: ["asset:write"] });

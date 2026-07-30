@@ -6,6 +6,7 @@ import type {
 } from "../../../contracts/system-deployment";
 import { ApplicationIcon } from "../components/ApplicationIcon";
 import { LoadingSpinner } from "../components/LoadingSpinner";
+import { TransientNotificationPublisher } from "../notifications/TransientNotificationPublisher";
 import type { SystemPublishedLifecycleClient } from "./SystemPublishedLifecycleClient";
 
 export function SystemPublishedLifecycleCard({
@@ -180,11 +181,7 @@ export function SystemPublishedLifecycleCard({
           ) : null}
         </div>
       ) : null}
-      {notice ? (
-        <p className="ui-status ui-status--success" role="status">
-          {notice}
-        </p>
-      ) : null}
+      <TransientNotificationPublisher message={notice} title="Published system updated" tone="success" source="Published Systems" workspaceId={workspaceId} />
       {!error && diagnostic ? (
         <p
           className={`ui-status ui-status--${diagnostic.severity === "error" ? "error" : "warning"}`}

@@ -20,6 +20,7 @@ export type ApplicationIconName =
   | "link"
   | "menu"
   | "models"
+  | "notifications"
   | "play"
   | "refresh"
   | "save"
@@ -147,6 +148,13 @@ function renderIconPaths(name: ApplicationIconName) {
           <path d="m12 2.75 7.5 4.5v9.5l-7.5 4.5-7.5-4.5v-9.5l7.5-4.5Z" />
           <circle cx="12" cy="12" r="3" />
           <path d="M12 5.75v3M12 15v3.25M6.7 9l2.7 1.5M14.6 13.5l2.7 1.5M17.3 9l-2.7 1.5M9.4 13.5 6.7 15" />
+        </>
+      );
+    case "notifications":
+      return (
+        <>
+          <path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 6 2.5 6 2.5 7.5H4c0-1.5 2.5-1.5 2.5-7.5Z" />
+          <path d="M9.5 20h5M10 4.5a2 2 0 0 1 4 0" />
         </>
       );
     case "image-generation":

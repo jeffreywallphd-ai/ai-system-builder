@@ -16,6 +16,7 @@ import {
 import { createComfyUiRuntimeInstaller } from "../../../adapters/runtime/installer/comfyui/createComfyUiRuntimeInstaller";
 import {
   createPythonRuntimeAdapterFoundation,
+  createPythonRuntimeTaskRegistryAdapter,
   ensurePythonRuntimeWorkerDependencies,
   resolvePythonRuntimeLoopbackEndpoint,
 } from "../../../adapters/runtime/python";
@@ -78,6 +79,7 @@ import {
   ListModelsUseCase,
   SaveModelReferenceUseCase,
   DownloadModelUseCase,
+  ModelDownloadTasksUseCase,
   UpdateModelRecordUseCase,
   DeleteModelRecordUseCase,
   ListSettingsDefinitionsUseCase,
@@ -103,6 +105,7 @@ import {
   UpdateAssetCompositionPlanUseCase,
   ValidateAssetCompositionPlanUseCase,
 } from "../../../application/use-cases";
+import { createRuntimeTaskRegistryRouter } from "../../../adapters/runtime/createRuntimeTaskRegistryRouter";
 import {
   createLogger,
   type StructuredLogSink,
@@ -1277,7 +1280,7 @@ export function composeServerHost(
           return { memoryUsagePercent, cpuUsagePercent, gpuUsagePercent };
         },
       };
-      const runtimeTaskRegistry =
+      const imageRuntimeTaskRegistry =
         createServerImageGenerationRuntimeTaskRegistry({
           client: comfyUiClient,
           supervisor: comfyUiSupervisorPort,
@@ -1748,6 +1751,20 @@ export function composeServerHost(
           },
         },
       });
+      const pythonRuntimeTaskRegistry = createPythonRuntimeTaskRegistryAdapter(
+        pythonRuntimeFoundation.runtimePort,
+        { ensureRuntimeReady: () => pythonRuntimeFoundation.supervisor.start() },
+      );
+      const runtimeTaskRegistry = createRuntimeTaskRegistryRouter({
+        image: imageRuntimeTaskRegistry,
+        python: pythonRuntimeTaskRegistry,
+      });
+      const modelDownloadTasksUseCase = new ModelDownloadTasksUseCase({
+        runtimeTaskRegistry,
+        modelDownloadCompletion: pythonRuntimeTaskRegistry,
+        modelRegistry,
+        now: options.now,
+      });
       const downloadModelUseCase = new DownloadModelUseCase({
         modelRegistry,
         modelDownloader: {
@@ -2026,6 +2043,7 @@ export function composeServerHost(
         listModelsUseCase,
         saveModelReferenceUseCase,
         downloadModelUseCase,
+        modelDownloadTasksUseCase,
         updateModelRecordUseCase,
         deleteModelRecordUseCase,
         generateImageUseCase,

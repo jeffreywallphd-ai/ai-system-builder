@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { TermWithHint } from "../../../../../../../modules/ui/shared";
+import { TermWithHint, TransientNotificationPublisher } from "../../../../../../../modules/ui/shared";
 import { ModalDialog } from "../../../../../../../modules/ui/shared/components/ModalDialog";
 import type { AssetLibraryClient } from "../../../../../../../modules/ui/shared/asset-library";
 import {
@@ -217,6 +217,7 @@ export function AssetLibraryFeature({
             isLoading={state.isLoadingDetail}
             error={state.detailError}
             mutationDisplay={mutationDisplay}
+            workspaceId={workspaceId}
             isMutating={isMutating}
             onChooseAction={(action) => {
               setMutationDisplay(undefined);
@@ -319,6 +320,7 @@ function ResourceBackedViewDetailPanel({
   isLoading,
   error,
   mutationDisplay,
+  workspaceId,
   isMutating,
   onChooseAction,
 }: {
@@ -326,6 +328,7 @@ function ResourceBackedViewDetailPanel({
   readonly isLoading: boolean;
   readonly error?: string;
   readonly mutationDisplay?: AssetLibraryMutationDisplay;
+  readonly workspaceId?: string;
   readonly isMutating: boolean;
   readonly onChooseAction: (action: AssetLibraryMutationAction) => void;
 }) {
@@ -407,24 +410,8 @@ function ResourceBackedViewDetailPanel({
           ))}
         </div>
       ) : null}
-      {mutationDisplay ? (
-        <div
-          className="ui-status"
-          role={mutationDisplay.tone === "error" ? "alert" : "status"}
-        >
-          {mutationDisplay.message}
-          {mutationDisplay.details?.length ? (
-            <details>
-              <summary>Review details</summary>
-              <ul>
-                {mutationDisplay.details.map((detailMessage) => (
-                  <li key={detailMessage}>{detailMessage}</li>
-                ))}
-              </ul>
-            </details>
-          ) : null}
-        </div>
-      ) : null}
+      <TransientNotificationPublisher message={mutationDisplay?.message} title={mutationDisplay?.tone === "error" ? "Asset library action needs attention" : "Asset library updated"} tone={mutationDisplay?.tone === "error" ? "error" : "success"} source="Asset Library" workspaceId={workspaceId} />
+      {mutationDisplay?.details?.length ? <details><summary>Review action details</summary><ul>{mutationDisplay.details.map((detailMessage) => <li key={detailMessage}>{detailMessage}</li>)}</ul></details> : null}
       {safeDiagnosticMessages(detail.diagnostics).length ? (
         <div className="ui-status" role="status">
           {safeDiagnosticMessages(detail.diagnostics).join(" ")}

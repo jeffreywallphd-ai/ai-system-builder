@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { UserLibraryAssetRecord, UserLibraryEffectiveSourceKind, UserLibraryEffectiveSourceSummary, WorkspaceUserLibraryLinkRecord } from '../../../../../../../modules/contracts/user-library';
+import { TransientNotificationPublisher } from '../../../../../../../modules/ui/shared';
 import { createDesktopUserLibraryClient } from '../api/desktopUserLibraryClient';
 
 type AssetViewModel = { assetId: string; version: string; title: string };
@@ -15,6 +16,7 @@ export function UserLibraryFeature({ workspaceId }: { workspaceId: string }) {
   const [sources, setSources] = useState<ReturnType<typeof toEffectiveSourceViewModel>[]>([]);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const contextualMessage = message.includes('temporarily unavailable') || message.startsWith('Linking');
 
   const refresh = async () => {
     setLoading(true);
@@ -28,5 +30,5 @@ export function UserLibraryFeature({ workspaceId }: { workspaceId: string }) {
 
   useEffect(() => { void refresh(); }, [workspaceId]);
 
-  return <section><h2>Reusable Library</h2><p>Saved reusable assets</p><p><small>Promote/import flows are deferred in this minimal Phase 7 UI. Detached copy actions are unavailable in Phase 7 UI.</small></p>{loading ? <p>Loading reusable library data…</p> : null}{message ? <p>{message}</p> : null}<ul>{assets.length === 0 ? <li>No reusable assets yet.</li> : assets.map((a) => <li key={`${a.assetId}:${a.version}`}><strong>{a.title}</strong><button onClick={async () => { setMessage('Linking…'); const r = await client.link(workspaceId, { assetId: a.assetId, version: a.version }); setMessage(r.ok ? 'Linked to this workspace.' : 'Could not link this asset.'); await refresh(); }}>Link to this workspace</button></li>)}</ul><h3>Linked to this workspace</h3><ul>{links.length === 0 ? <li>No links in this workspace.</li> : links.map((l) => <li key={l.id}>{l.title} — {l.propagationPolicy === 'explicit-update' ? 'Updates only when you choose to update' : 'Pinned version — no automatic updates'}</li>)}</ul><h3>What this workspace is using</h3><ul>{sources.length === 0 ? <li>No effective-source records yet.</li> : sources.map((s) => <li key={s.key}>{s.label}</li>)}</ul></section>;
+  return <section><h2>Reusable Library</h2><p>Saved reusable assets</p><p><small>Promote/import flows are deferred in this minimal Phase 7 UI. Detached copy actions are unavailable in Phase 7 UI.</small></p>{loading ? <p>Loading reusable library data…</p> : null}{contextualMessage ? <p role="status">{message}</p> : null}<TransientNotificationPublisher message={!contextualMessage ? message : undefined} title={message.startsWith('Linked') ? 'Reusable library updated' : 'Reusable library needs attention'} tone={message.startsWith('Linked') ? 'success' : 'error'} source="Reusable Library" workspaceId={workspaceId} /><ul>{assets.length === 0 ? <li>No reusable assets yet.</li> : assets.map((a) => <li key={`${a.assetId}:${a.version}`}><strong>{a.title}</strong><button onClick={async () => { setMessage('Linking…'); const r = await client.link(workspaceId, { assetId: a.assetId, version: a.version }); setMessage(r.ok ? 'Linked to this workspace.' : 'Could not link this asset.'); await refresh(); }}>Link to this workspace</button></li>)}</ul><h3>Linked to this workspace</h3><ul>{links.length === 0 ? <li>No links in this workspace.</li> : links.map((l) => <li key={l.id}>{l.title} — {l.propagationPolicy === 'explicit-update' ? 'Updates only when you choose to update' : 'Pinned version — no automatic updates'}</li>)}</ul><h3>What this workspace is using</h3><ul>{sources.length === 0 ? <li>No effective-source records yet.</li> : sources.map((s) => <li key={s.key}>{s.label}</li>)}</ul></section>;
 }

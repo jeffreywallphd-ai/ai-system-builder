@@ -2,6 +2,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { NotificationTestHarness, readNotificationMessages } from "../../../../../../../modules/ui/shared/notifications/tests/NotificationTestHarness";
 import { ArtifactIngestionFeature } from "../components/ArtifactIngestionFeature";
 
 function setInputValue(input: HTMLInputElement, value: string): void {
@@ -113,7 +114,11 @@ describe("ArtifactIngestionFeature", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactIngestionFeature client={uploadClient} ingestionClient={ingestionClient} />);
+      root.render(
+        <NotificationTestHarness>
+          <ArtifactIngestionFeature client={uploadClient} ingestionClient={ingestionClient} />
+        </NotificationTestHarness>,
+      );
     });
 
     const huggingFaceToggle = Array.from(container.querySelectorAll("button")).find((button) => button.textContent?.includes("Import from Hugging Face")) as HTMLButtonElement;
@@ -132,6 +137,8 @@ describe("ArtifactIngestionFeature", () => {
     });
 
     expect(ingestionClient.browseHuggingFaceNamespaceDatasets).toHaveBeenCalledWith({ namespace: "openai" });
+    expect(readNotificationMessages(container)).not.toContain("Found 2 dataset(s).");
+    expect(container.textContent).not.toContain("Found 2 dataset(s).");
     expect(container.textContent).toContain("View importable files from dataset");
     expect(container.textContent).toContain("Import all files from selected datasets");
 

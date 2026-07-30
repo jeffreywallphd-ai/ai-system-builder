@@ -2,6 +2,7 @@
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { NotificationTestHarness, readNotificationMessages } from '../../../../../../../modules/ui/shared/notifications/tests/NotificationTestHarness';
 
 const client = {
   listAuthoredAssets: vi.fn(), listDrafts: vi.fn(), listOverrides: vi.fn(), listEffectiveSummaries: vi.fn(),
@@ -20,12 +21,13 @@ describe('AssetAuthoringFeature desktop', () => {
     client.updateDraft.mockResolvedValue({ ok: false, error: { code: 'validation', message: 'bad update' } });
     const c = document.createElement('div'); document.body.appendChild(c);
     const root = createRoot(c);
-    await act(async () => { root.render(<AssetAuthoringFeature workspaceId='w1' />); });
+    await act(async () => { root.render(<NotificationTestHarness><AssetAuthoringFeature workspaceId='w1' /></NotificationTestHarness>); });
     expect(c.textContent).toContain('Workspace usage summaries are not available yet.');
     expect(c.textContent).toContain('Writer Agent');
     const btn = Array.from(c.querySelectorAll('button')).find((b) => b.textContent?.includes('Save safe edit'));
     await act(async () => { btn?.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    expect(c.textContent).toContain('bad update');
+    expect(readNotificationMessages(c)).toContain('bad update');
+    expect(c.textContent).not.toContain('bad update');
     expect(c.textContent).not.toContain('Draft updated.');
     root.unmount(); c.remove();
   });

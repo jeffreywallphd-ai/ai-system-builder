@@ -2,6 +2,7 @@ import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { NotificationTestHarness, readNotificationMessages } from "../../../../../../../modules/ui/shared/notifications/tests/NotificationTestHarness";
 import { SettingsPanel } from "../components/SettingsPanel";
 import type { DesktopApplicationSettingsClient } from "../api/desktopApplicationSettingsClient";
 
@@ -83,7 +84,11 @@ async function renderPanel(props: Partial<ComponentProps<typeof SettingsPanel>> 
   document.body.appendChild(container);
   root = createRoot(container);
   await act(async () => {
-    root?.render(<SettingsPanel title="Test" {...props} />);
+    root?.render(
+      <NotificationTestHarness>
+        <SettingsPanel title="Test" {...props} />
+      </NotificationTestHarness>,
+    );
   });
 }
 
@@ -211,7 +216,8 @@ describe("SettingsPanel", () => {
     listDefinitions.mockRejectedValueOnce(new Error("settings unavailable"));
     await renderPanel();
 
-    expect(container?.textContent).toContain("settings unavailable");
+    expect(readNotificationMessages(container!)).toContain("settings unavailable");
+    expect(container?.textContent).not.toContain("settings unavailable");
   });
 
   it("supports compact feature-local rendering", async () => {

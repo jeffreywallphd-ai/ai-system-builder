@@ -7,6 +7,7 @@ import type {
   SystemBuilderRevision,
 } from "../../../contracts/system-builder";
 import { ModalDialog } from "../components/ModalDialog";
+import { TransientNotificationPublisher } from "../notifications/TransientNotificationPublisher";
 import { SystemCompositionPreview } from "./SystemCompositionPreview";
 import type { SystemBuilderClient } from "./SystemBuilderWorkspace";
 
@@ -312,12 +313,8 @@ export function SystemManagementWorkspace({
         </div>
       </form>
 
-      {error ? <p className="ui-alert ui-alert--danger">{error}</p> : null}
-      {notice ? (
-        <p className="ui-alert ui-alert--success" role="status">
-          {notice}
-        </p>
-      ) : null}
+      <TransientNotificationPublisher message={error} title="Systems need attention" tone="error" source="System Management" workspaceId={workspaceId} />
+      <TransientNotificationPublisher message={notice} title="Systems updated" tone="success" source="System Management" workspaceId={workspaceId} />
 
       {loading ? (
         <p role="status">Loading systems…</p>
@@ -465,7 +462,6 @@ export function SystemManagementWorkspace({
             placements={preview.revision.placements ?? []}
             rootInstanceRefs={preview.revision.composition.rootInstanceRefs}
             catalog={preview.catalog}
-            includesUnsavedChanges={false}
           />
         ) : null}
       </ModalDialog>

@@ -160,14 +160,12 @@ export function SystemCompositionPreview({
   placements = [],
   rootInstanceRefs = [],
   catalog = [],
-  includesUnsavedChanges,
 }: {
   readonly systemName: string;
   readonly instances: readonly AssetInstance[];
   readonly placements?: readonly AssetPlacement[];
   readonly rootInstanceRefs?: readonly AssetReference[];
   readonly catalog?: readonly SystemBuilderComposerAsset[];
-  readonly includesUnsavedChanges: boolean;
 }) {
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">(
     "desktop",
@@ -215,12 +213,6 @@ export function SystemCompositionPreview({
           ) : null}
         </div>
       </div>
-
-      {includesUnsavedChanges ? (
-        <p className="ui-status ui-status--warning" role="status">
-          This preview includes unsaved composition changes.
-        </p>
-      ) : null}
 
       <div
         className="system-composition-preview__viewports"

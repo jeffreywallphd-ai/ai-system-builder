@@ -29,6 +29,13 @@ import type {
   DeleteModelRecordResult,
   DownloadModelRequest,
   DownloadModelResult,
+  StartModelDownloadTaskResult,
+  ReadModelDownloadTaskRequest,
+  ReadModelDownloadTaskResult,
+  ListModelDownloadTasksRequest,
+  ListModelDownloadTasksResult,
+  CancelModelDownloadTaskRequest,
+  CancelModelDownloadTaskResult,
   ListModelsRequest,
   ModelTrainingRequest,
   ModelTrainingResult,
@@ -1100,6 +1107,10 @@ interface DesktopApiBridge {
     input: DesktopDownloadModelRequest,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
+  startModelDownload?: (input: DesktopDownloadModelRequest, context?: DesktopBridgeRequestContext) => Promise<unknown>;
+  readModelDownload?: (input: DesktopReadModelDownloadRequest, context?: DesktopBridgeRequestContext) => Promise<unknown>;
+  listModelDownloads?: (input: DesktopListModelDownloadsRequest, context?: DesktopBridgeRequestContext) => Promise<unknown>;
+  cancelModelDownload?: (input: DesktopCancelModelDownloadRequest, context?: DesktopBridgeRequestContext) => Promise<unknown>;
   updateModelRecord?: (
     input: DesktopUpdateModelRecordRequest,
     context?: DesktopBridgeRequestContext,
@@ -1251,6 +1262,13 @@ export interface DesktopSaveModelReferenceResult {
 }
 export type DesktopDownloadModelRequest = DownloadModelRequest;
 export type DesktopDownloadModelResult = DownloadModelResult;
+export type DesktopStartModelDownloadResult = StartModelDownloadTaskResult;
+export type DesktopReadModelDownloadRequest = ReadModelDownloadTaskRequest;
+export type DesktopReadModelDownloadResult = ReadModelDownloadTaskResult;
+export type DesktopListModelDownloadsRequest = ListModelDownloadTasksRequest;
+export type DesktopListModelDownloadsResult = ListModelDownloadTasksResult;
+export type DesktopCancelModelDownloadRequest = CancelModelDownloadTaskRequest;
+export type DesktopCancelModelDownloadResult = CancelModelDownloadTaskResult;
 export type DesktopUpdateModelRecordRequest = UpdateModelRecordRequest;
 export interface DesktopUpdateModelRecordResult {
   model: ModelInventoryRecord;

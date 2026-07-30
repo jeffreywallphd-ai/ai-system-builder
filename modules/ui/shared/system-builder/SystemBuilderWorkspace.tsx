@@ -27,6 +27,7 @@ import type {
   SystemBuilderModelOption,
   SystemBuilderModelOptionCatalog,
 } from "../../../contracts/system-builder";
+import { TransientNotificationPublisher } from "../notifications/TransientNotificationPublisher";
 import {
   SYSTEM_BUILDER_FOUNDATION_UPGRADE_SOURCE_VERSIONS,
   systemBuilderFailure,
@@ -46,6 +47,8 @@ import { SystemComposerInspector } from "./SystemComposerInspector";
 import { SystemComposerStylingPanel } from "./SystemComposerStylingPanel";
 import {
   bindingKindForSystemComposerEndpoint,
+  canRepairSystemComposerConversationInteraction,
+  sanitizeSystemComposerInstanceConfigurations,
   type SystemComposerPortEndpoint,
 } from "./systemComposerInspectorModel";
 import {
@@ -231,6 +234,9 @@ export function SystemBuilderWorkspace({
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
+  const contextualNotice = Boolean(
+    notice?.includes("already the active layout"),
+  );
   const [previewOpen, setPreviewOpen] = useState(false);
   const [foundationUpgradeOpen, setFoundationUpgradeOpen] = useState(false);
   const [foundationUpgradePreview, setFoundationUpgradePreview] =
@@ -270,6 +276,10 @@ export function SystemBuilderWorkspace({
   const draft = useMemo<SystemComposerDraft>(
     () => ({ instances, placements, bindings, structure }),
     [bindings, instances, placements, structure],
+  );
+  const canRepairConversationInteraction = useMemo(
+    () => canRepairSystemComposerConversationInteraction(instances, bindings),
+    [bindings, instances],
   );
   const layoutOptions = useMemo(
     () =>
@@ -730,7 +740,6 @@ export function SystemBuilderWorkspace({
 
   function applyDraftHistory(
     history: ReturnType<typeof createSystemComposerDraftHistory>,
-    message?: string,
   ) {
     setInstances(history.present.instances);
     setPlacements(history.present.placements);
@@ -745,16 +754,15 @@ export function SystemBuilderWorkspace({
     setRedoDrafts(history.future);
     setDirty(history.past.length > 0);
     setError(undefined);
-    setNotice(message);
+    setNotice(undefined);
   }
 
-  function commitDraft(next: SystemComposerDraft, message?: string) {
+  function commitDraft(next: SystemComposerDraft) {
     applyDraftHistory(
       commitSystemComposerDraft(
         { past: undoDrafts, present: draft, future: redoDrafts },
         next,
       ),
-      message,
     );
   }
 
@@ -765,7 +773,6 @@ export function SystemBuilderWorkspace({
         present: draft,
         future: redoDrafts,
       }),
-      "Last composition change undone.",
     );
   }
 
@@ -776,7 +783,6 @@ export function SystemBuilderWorkspace({
         present: draft,
         future: redoDrafts,
       }),
-      "Composition change restored.",
     );
   }
 
@@ -798,10 +804,7 @@ export function SystemBuilderWorkspace({
       setError(result.message);
       return;
     }
-    commitDraft(
-      result.value,
-      "Asset added locally. Save the revision to validate and persist it.",
-    );
+    commitDraft(result.value);
     setSelectedInstanceId(instanceId);
   }
 
@@ -820,7 +823,7 @@ export function SystemBuilderWorkspace({
       setError(result.message);
       return;
     }
-    commitDraft(result.value, "Selected asset subtree removed locally.");
+    commitDraft(result.value);
     setSelectedInstanceId(parentId ? String(parentId) : undefined);
   }
 
@@ -843,10 +846,7 @@ export function SystemBuilderWorkspace({
       setError(result.message);
       return;
     }
-    commitDraft(
-      result.value,
-      "Asset moved to the selected canvas region locally.",
-    );
+    commitDraft(result.value);
     setSelectedInstanceId(instanceId);
   }
   function discardDraft() {
@@ -871,22 +871,18 @@ export function SystemBuilderWorkspace({
   }
 
   function removeBinding(bindingId: string) {
-    commitDraft(
-      {
-        ...draft,
-        bindings: draft.bindings.filter(
-          (binding) => String(binding.bindingId) !== bindingId,
-        ),
-      },
-      "Connection removed locally.",
-    );
+    commitDraft({
+      ...draft,
+      bindings: draft.bindings.filter(
+        (binding) => String(binding.bindingId) !== bindingId,
+      ),
+    });
   }
   function updateSelectedConfiguration(values: AssetConfigurationValues) {
     if (!selectedInstanceId) return;
     updateInstanceConfiguration(
       selectedInstanceId,
       values,
-      "Configuration updated locally. Save the revision to persist it.",
     );
   }
 
@@ -895,26 +891,21 @@ export function SystemBuilderWorkspace({
     updateInstanceConfiguration(
       stylingRootInstanceId,
       values,
-      "System styling updated locally. Save the revision to persist it.",
     );
   }
 
   function updateInstanceConfiguration(
     instanceId: string,
     values: AssetConfigurationValues,
-    message: string,
   ) {
-    commitDraft(
-      {
-        ...draft,
-        instances: draft.instances.map((item) =>
-          String(item.instanceId) === instanceId
-            ? { ...item, selectedConfiguration: values }
-            : item,
-        ),
-      },
-      message,
-    );
+    commitDraft({
+      ...draft,
+      instances: draft.instances.map((item) =>
+        String(item.instanceId) === instanceId
+          ? { ...item, selectedConfiguration: values }
+          : item,
+      ),
+    });
     setError(undefined);
   }
 
@@ -944,10 +935,7 @@ export function SystemBuilderWorkspace({
       lifecycleStatus: "draft",
       provenance: { sourceKind: "human-authored" },
     };
-    commitDraft(
-      { ...draft, bindings: [...draft.bindings, binding] },
-      "Typed connection added locally.",
-    );
+    commitDraft({ ...draft, bindings: [...draft.bindings, binding] });
     setError(undefined);
   }
 
@@ -985,31 +973,12 @@ export function SystemBuilderWorkspace({
       ...(structure ? { structure } : {}),
     });
     if (result.ok) {
-      const unassignedIds = new Set(
-        result.value.unassignedInstanceRefs.map((reference) =>
-          String(reference.id),
-        ),
-      );
-      const unplaced = result.value.instances.filter((instance) =>
-        unassignedIds.has(String(instance.instanceId)),
-      );
-      const unassignedVisualCount = unplaced.filter((instance) =>
-        isSystemComposerVisualInstance(instance, composerCatalog),
-      ).length;
-      const systemResourceCount = unplaced.length - unassignedVisualCount;
-      commitDraft(
-        {
-          instances: result.value.instances,
-          placements: result.value.placements,
-          bindings: result.value.bindings,
-          structure: result.value.structure,
-        },
-        layoutSelectionNotice(
-          layout.displayName,
-          unassignedVisualCount,
-          systemResourceCount,
-        ),
-      );
+      commitDraft({
+        instances: result.value.instances,
+        placements: result.value.placements,
+        bindings: result.value.bindings,
+        structure: result.value.structure,
+      });
       setSelectedLayoutDefinitionId(layout.definitionId);
     } else setError(result.error.message);
     setBusy(false);
@@ -1020,7 +989,56 @@ export function SystemBuilderWorkspace({
     setBusy(true);
     setError(undefined);
     setNotice(undefined);
-    const instanceRefs = instances.map(
+    const saveCatalog: SystemBuilderComposerAsset[] = [
+      ...composerCatalog,
+      ...(selectedAssetDetail ? [selectedAssetDetail] : []),
+      ...(stylingRootDetail ? [stylingRootDetail] : []),
+    ];
+    if (client.readComposerAsset) {
+      const detailedDefinitionKeys = new Set(
+        saveCatalog
+          .filter((definition) => definition.configurationSchema)
+          .map(
+            (definition) => `${definition.definitionId}@${definition.version}`,
+          ),
+      );
+      const missingConfiguredDefinitionRefs = new Map<string, AssetReference>();
+      for (const instance of instances) {
+        if (Object.keys(instance.selectedConfiguration ?? {}).length === 0) {
+          continue;
+        }
+        const definitionKey = `${String(instance.definitionRef.id)}@${instance.definitionRef.version ?? ""}`;
+        if (!detailedDefinitionKeys.has(definitionKey)) {
+          missingConfiguredDefinitionRefs.set(
+            definitionKey,
+            instance.definitionRef,
+          );
+        }
+      }
+      const detailResults = await Promise.all(
+        [...missingConfiguredDefinitionRefs.values()].map((definitionRef) =>
+          client.readComposerAsset!({ workspaceId, definitionRef }),
+        ),
+      );
+      const failedDetail = detailResults.find((result) => !result.ok);
+      if (failedDetail && !failedDetail.ok) {
+        setError(
+          `Unable to verify configured asset properties before saving. ${failedDetail.error.message}`,
+        );
+        setBusy(false);
+        return;
+      }
+      saveCatalog.push(
+        ...detailResults
+          .filter((result) => result.ok)
+          .map((result) => result.value),
+      );
+    }
+    const saveInstances = sanitizeSystemComposerInstanceConfigurations(
+      instances,
+      saveCatalog,
+    );
+    const instanceRefs = saveInstances.map(
       (item) =>
         ({ kind: "asset-instance", id: item.instanceId }) as AssetReference,
     );
@@ -1045,7 +1063,7 @@ export function SystemBuilderWorkspace({
       systemId: String(selectedSystem.systemId),
       expectedRecordRevision: selectedSystem.revision,
       composition,
-      instances,
+      instances: saveInstances,
       bindings,
       structure,
       placements,
@@ -1193,16 +1211,9 @@ export function SystemBuilderWorkspace({
           </div>
         </header>
         <div className="ui-panel__section-body ui-stack ui-stack--md">
-          {error ? (
-            <p className="ui-status ui-status--error" role="alert">
-              {error}
-            </p>
-          ) : null}
-          {notice ? (
-            <p className="ui-status ui-status--success" role="status">
-              {notice}
-            </p>
-          ) : null}
+          <TransientNotificationPublisher message={error} title="System Composer needs attention" tone="error" source="System Composer" workspaceId={workspaceId} />
+          {contextualNotice ? <p className="ui-status" role="status">{notice}</p> : null}
+          <TransientNotificationPublisher message={!contextualNotice ? notice : undefined} title="System Composer updated" tone="success" source="System Composer" workspaceId={workspaceId} />
           <p id="system-builder-entry-instructions" className="ui-text-muted">
             Choose an option below to interact with the System Composer.
           </p>
@@ -1553,7 +1564,11 @@ export function SystemBuilderWorkspace({
                     type="button"
                     onClick={() => void save()}
                     disabled={
-                      busy || !dirty || selectedSystem.status === "archived"
+                      busy ||
+                      (!dirty &&
+                        selectedSystem.status !== "blocked" &&
+                        !canRepairConversationInteraction) ||
+                      selectedSystem.status === "archived"
                     }
                   >
                     <ApplicationIcon name="save" />
@@ -1579,7 +1594,6 @@ export function SystemBuilderWorkspace({
             placements={placements}
             rootInstanceRefs={revision?.composition.rootInstanceRefs ?? []}
             catalog={composerCatalog}
-            includesUnsavedChanges={dirty}
           />
         ) : null}
       </ModalDialog>
@@ -1676,26 +1690,6 @@ const COMPOSER_CATALOG_MAX_PAGES = 10;
 const APPLICATION_LAYOUT_CATALOG_QUERY = "builtin.layout.application";
 const DEFAULT_APPLICATION_LAYOUT_DEFINITION_ID =
   "builtin.layout.application.minimal";
-
-function layoutSelectionNotice(
-  layoutName: string,
-  unassignedVisualCount: number,
-  systemResourceCount: number,
-): string {
-  const prefix = `${layoutName} selected. The Canvas updated automatically.`;
-  const details: string[] = [];
-  if (unassignedVisualCount) {
-    details.push(
-      `${unassignedVisualCount} visual asset${unassignedVisualCount === 1 ? " is" : "s are"} available from Add element on a compatible container`,
-    );
-  }
-  if (systemResourceCount) {
-    details.push(
-      `${systemResourceCount} nonvisual asset${systemResourceCount === 1 ? " remains" : "s remain"} under System resources & logic`,
-    );
-  }
-  return details.length ? `${prefix} ${details.join("; ")}.` : prefix;
-}
 
 function defaultApplicationLayout(
   assets: readonly SystemBuilderComposerAsset[],

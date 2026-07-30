@@ -10,6 +10,10 @@ import {
   DESKTOP_MODEL_RECORD_UPDATE_REQUEST_CHANNEL,
   DESKTOP_MODEL_REFERENCE_SAVE_REQUEST_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL,
   DESKTOP_MODEL_BROWSE_RESPONSE_CHANNEL,
   DESKTOP_MODEL_TRAIN_REQUEST_CHANNEL,
   DESKTOP_MODEL_TRAIN_RESPONSE_CHANNEL,
@@ -21,6 +25,7 @@ import {
   createDesktopModelTrainRequest,
   createDesktopModelTrainStatusRequest,
   createDesktopModelPublishRequest,
+  createDesktopModelDownloadListRequest,
 } from "../../../../contracts/ipc";
 import {
   createBrowseModelsIpcHandler,
@@ -28,6 +33,7 @@ import {
   createReadModelTrainingStatusIpcHandler,
   createTrainModelIpcHandler,
   createPublishModelIpcHandler,
+  createListModelDownloadsIpcHandler,
   registerModelManagementIpc,
 } from "../model/registerModelManagementIpc";
 
@@ -93,6 +99,23 @@ describe("registerModelManagementIpc", () => {
     });
     expect(JSON.stringify(response)).not.toContain("/tmp/secret");
     expect(JSON.stringify(response)).not.toContain("stack trace");
+  });
+
+  it("registers and maps model-download lifecycle channels", async () => {
+    const channels: string[] = [];
+    const tasks = { start: testDouble.fn(), read: testDouble.fn(), list: testDouble.fn(async () => ({ activities: [] })), cancel: testDouble.fn() };
+    registerModelManagementIpc({
+      ipcMain: { handle: testDouble.fn((channel: string) => channels.push(channel)) },
+      browseModelsUseCase: { execute: testDouble.fn() }, getModelDetailsUseCase: { execute: testDouble.fn() }, listModelsUseCase: { execute: testDouble.fn() }, saveModelReferenceUseCase: { execute: testDouble.fn() }, downloadModelUseCase: { execute: testDouble.fn() }, modelDownloadTasksUseCase: tasks, updateModelRecordUseCase: { execute: testDouble.fn() }, deleteModelRecordUseCase: { execute: testDouble.fn() }, trainModelUseCase: { execute: testDouble.fn(), read: testDouble.fn() }, validateModelUseCase: { execute: testDouble.fn() }, publishModelUseCase: { execute: testDouble.fn() },
+    });
+    expect(channels).toContain(DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL.value);
+    expect(channels).toContain(DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL.value);
+    expect(channels).toContain(DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL.value);
+    expect(channels).toContain(DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL.value);
+    const handler = createListModelDownloadsIpcHandler(tasks);
+    const response = await handler({}, createDesktopModelDownloadListRequest({ workspaceId: 'workspace-a' as never, includeCompleted: true }));
+    expect(response.ok).toBe(true);
+    expect(tasks.list).toHaveBeenCalled();
   });
 
   it("reports model-list failures without changing the sanitized response", async () => {

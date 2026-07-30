@@ -9,6 +9,7 @@ import {
   ArtifactPreviewPanel,
   PanelHeading,
   TermWithHint,
+  TransientNotificationPublisher,
   TypeBadge,
   type PublishedBackingView,
 } from "../../../../../../../modules/ui/shared";
@@ -109,6 +110,10 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
     togglePublishForm,
     readArtifactMedia,
   } = useArtifactBrowserFeature(client, workspaceId);
+  const transientViewState = Boolean(viewState.message && (
+    /^(Deleted|Registered)\b/.test(viewState.message)
+    || (viewState.status === "error" && !/^(Failed to load|Unable to load|Delete cancelled)/i.test(viewState.message))
+  ));
   const backingState = deriveArtifactBackingState(detail, content);
   const defaultNamespace = settings.valuesByKey.get("huggingface.defaultNamespace")?.value;
 
@@ -192,7 +197,8 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
         <PanelHeading icon="browse" tone="violet">Artifact Browser</PanelHeading>
       </header>
       <div className="ui-panel__section-body ui-stack ui-stack--sm">
-      {viewState.message ? <p role={viewState.status === "error" ? "alert" : "status"}>{viewState.message}</p> : null}
+      {viewState.message && !transientViewState ? <p role={viewState.status === "error" ? "alert" : "status"}>{viewState.message}</p> : null}
+      <TransientNotificationPublisher message={transientViewState ? viewState.message : undefined} title={viewState.status === "error" ? "Artifact action needs attention" : "Artifacts updated"} tone={viewState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
       <section className="ui-stack ui-stack--sm">
         <label className="ui-stack ui-stack--sm">
           <span><TermWithHint termId="artifactFamily">Artifact family</TermWithHint></span>
@@ -426,7 +432,7 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
                 Download artifact
               </button>
               <button className="ui-button ui-button--destructive" type="button" onClick={() => requestDeleteRegisteredArtifact(detail.locator.storageKey)}>Delete registered artifact</button>
-              {downloadState.message ? <p role="alert">{downloadState.message}</p> : null}
+              <TransientNotificationPublisher message={downloadState.message} title="Artifact download needs attention" tone="error" source="Artifact Browser" workspaceId={workspaceId} />
               <h3>Local Object State</h3>
               <dl className="ui-grid ui-grid--two">
                 <dt><TermWithHint termId="localObject">Local object availability</TermWithHint></dt>
@@ -476,12 +482,8 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
                   {localizeState.status === "loading" ? "Localizing..." : "Localize artifact"}
                 </button>
               ) : null}
-              {sourceVerifyState.message ? (
-                <p role={sourceVerifyState.status === "error" ? "alert" : "status"}>{sourceVerifyState.message}</p>
-              ) : null}
-              {localizeState.message ? (
-                <p role={localizeState.status === "error" ? "alert" : "status"}>{localizeState.message}</p>
-              ) : null}
+              <TransientNotificationPublisher message={sourceVerifyState.status !== "loading" ? sourceVerifyState.message : undefined} title={sourceVerifyState.status === "error" ? "Source verification needs attention" : "Source verification completed"} tone={sourceVerifyState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
+              <TransientNotificationPublisher message={localizeState.status !== "loading" ? localizeState.message : undefined} title={localizeState.status === "error" ? "Artifact localization needs attention" : "Artifact localized"} tone={localizeState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
               {localizedArtifact ? (
                 <p role="status">Localized bytes key: {localizedArtifact.localObject.key}</p>
               ) : null}
@@ -577,7 +579,7 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
               ) : (
                 <p role="status">Publish is available after local bytes are present.</p>
               )}
-              {publishState.message ? (<p role={publishState.status === "error" ? "alert" : "status"}>{publishState.message}</p>) : null}
+              <TransientNotificationPublisher message={publishState.status !== "loading" ? publishState.message : undefined} title={publishState.status === "error" ? "Artifact publishing needs attention" : "Artifact published"} tone={publishState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
             </section>
           ) : null}
 

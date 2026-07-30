@@ -1,6 +1,33 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 - User-facing glossary hints live in `modules/ui/shared/glossary`; add or update entries when introducing novel form-field or detail-label terms.
+- Global renderer notifications live in `modules/ui/shared/notifications`. Desktop
+  and thin-client shells mount one provider, place the bell immediately before
+  Settings, and render the fixed dropdown/toast viewport below the top bar.
+  Transient messages remain visible for five seconds before a short fade;
+  activity records use bounded structured progress and persist in the dropdown.
+  Keep records workspace-filtered, bounded, sanitized, and free of paths,
+  secrets, stacks, prompts, logs, and raw provider/runtime payloads. Contextual
+  validation, blocking diagnostics, empty state, loading state, and form help
+  remain inline rather than being converted into transient notifications.
+  Draft edits must stay quiet: do not publish or render automatic messages that
+  merely announce a local change or remind the user to save. Use a compact dirty
+  state affordance instead, and show save guidance only after a save attempt or
+  when another requested action is genuinely blocked by unsaved work.
+  Routine successful reads must also stay quiet when the resulting content
+  already confirms success, including initial loads, refreshes, searches, and
+  detail selection. Keep empty results contextual and inline. Do not publish a
+  separate queued message when durable task activity already represents the
+  same background work.
+  Existing feature state should publish terminal outcomes through
+  `TransientNotificationPublisher`; authoritative long-running work should use
+  the typed notification-center task API. Every producer supplies a stable,
+  user-facing `source`, the owning `workspaceId` when applicable, and bounded
+  safe copy. Do not render the same transient outcome locally. Add every new or
+  changed alert/status surface to the classified inventory in
+  `notifications/tests/notificationMigrationInventory.ts`; its guard permits
+  necessary contextual feedback while preventing removed page-level patterns
+  from returning.
 - Keep glossary hint buttons off broad page headings and descriptive home-area cards. Use them beside form labels, filters, and compact detail rows where users need help understanding what to enter or read.
 - Shared buttons use the centralized controls stylesheet. Keep primary and
   outline buttons flat and rounded. Outline actions must include both `ui-button`

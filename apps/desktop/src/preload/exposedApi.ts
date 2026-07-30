@@ -356,6 +356,18 @@ import {
   DESKTOP_MODEL_DOWNLOAD_OPERATION,
   DESKTOP_MODEL_DOWNLOAD_REQUEST_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_START_OPERATION,
+  DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_READ_OPERATION,
+  DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION,
+  DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_CANCEL_OPERATION,
+  DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_CANCEL_RESPONSE_CHANNEL,
   DESKTOP_MODEL_RECORD_UPDATE_OPERATION,
   DESKTOP_MODEL_RECORD_UPDATE_REQUEST_CHANNEL,
   DESKTOP_MODEL_RECORD_UPDATE_RESPONSE_CHANNEL,
@@ -367,6 +379,10 @@ import {
   createDesktopModelListRequest,
   createDesktopModelReferenceSaveRequest,
   createDesktopModelDownloadRequest,
+  createDesktopModelDownloadStartRequest,
+  createDesktopModelDownloadReadRequest,
+  createDesktopModelDownloadListRequest,
+  createDesktopModelDownloadCancelRequest,
   createDesktopModelRecordUpdateRequest,
   createDesktopModelRecordDeleteRequest,
   createDesktopModelTrainRequest,
@@ -378,6 +394,10 @@ import {
   type DesktopModelListResponse,
   type DesktopModelReferenceSaveResponse,
   type DesktopModelDownloadResponse,
+  type DesktopModelDownloadStartResponse,
+  type DesktopModelDownloadReadResponse,
+  type DesktopModelDownloadListResponse,
+  type DesktopModelDownloadCancelResponse,
   type DesktopModelRecordUpdateResponse,
   type DesktopModelRecordDeleteResponse,
   type DesktopModelTrainResponse,
@@ -1741,6 +1761,10 @@ export interface DesktopPreloadApi {
     input: Parameters<typeof createDesktopModelDownloadRequest>[0],
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopModelDownloadResponse>;
+  startModelDownload: (input: Parameters<typeof createDesktopModelDownloadStartRequest>[0], context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopModelDownloadStartResponse>;
+  readModelDownload: (input: Parameters<typeof createDesktopModelDownloadReadRequest>[0], context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopModelDownloadReadResponse>;
+  listModelDownloads: (input: Parameters<typeof createDesktopModelDownloadListRequest>[0], context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopModelDownloadListResponse>;
+  cancelModelDownload: (input: Parameters<typeof createDesktopModelDownloadCancelRequest>[0], context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopModelDownloadCancelResponse>;
   updateModelRecord: (
     input: Parameters<typeof createDesktopModelRecordUpdateRequest>[0],
     context?: DesktopArtifactUploadBridgeContext,
@@ -4341,6 +4365,26 @@ export function createDesktopPreloadApi(
             "Received invalid desktop model download IPC response envelope.",
         },
       );
+    },
+    async startModelDownload(input, context = {}) {
+      const request = createDesktopModelDownloadStartRequest(input, context);
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL.value, request);
+      return assertDesktopEnvelopeResponse<DesktopModelDownloadStartResponse>(response, { operation: DESKTOP_MODEL_DOWNLOAD_START_OPERATION, channel: DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL.value, message: "Received invalid desktop model download-start IPC response envelope." });
+    },
+    async readModelDownload(input, context = {}) {
+      const request = createDesktopModelDownloadReadRequest(input, context);
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL.value, request);
+      return assertDesktopEnvelopeResponse<DesktopModelDownloadReadResponse>(response, { operation: DESKTOP_MODEL_DOWNLOAD_READ_OPERATION, channel: DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL.value, message: "Received invalid desktop model download-read IPC response envelope." });
+    },
+    async listModelDownloads(input, context = {}) {
+      const request = createDesktopModelDownloadListRequest(input, context);
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL.value, request);
+      return assertDesktopEnvelopeResponse<DesktopModelDownloadListResponse>(response, { operation: DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION, channel: DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL.value, message: "Received invalid desktop model download-list IPC response envelope." });
+    },
+    async cancelModelDownload(input, context = {}) {
+      const request = createDesktopModelDownloadCancelRequest(input, context);
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL.value, request);
+      return assertDesktopEnvelopeResponse<DesktopModelDownloadCancelResponse>(response, { operation: DESKTOP_MODEL_DOWNLOAD_CANCEL_OPERATION, channel: DESKTOP_MODEL_DOWNLOAD_CANCEL_RESPONSE_CHANNEL.value, message: "Received invalid desktop model download-cancel IPC response envelope." });
     },
     async updateModelRecord(input, context = {}) {
       const request = createDesktopModelRecordUpdateRequest(input, context);

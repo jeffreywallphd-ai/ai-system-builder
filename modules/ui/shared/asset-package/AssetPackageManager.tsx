@@ -12,6 +12,7 @@ import {
 import { ApplicationIcon } from "../components/ApplicationIcon";
 import { EmptyState } from "../components/EmptyState";
 import { WorkflowSequence, WorkflowStep } from "../components/WorkflowSequence";
+import { TransientNotificationPublisher } from "../notifications/TransientNotificationPublisher";
 
 export type AssetPackageClientResult<T> =
   | { readonly ok: true; readonly value: T }
@@ -211,16 +212,8 @@ export function AssetPackageManager({
         </div>
       </header>
       <div className="ui-panel__section-body ui-stack">
-        {error ? (
-          <p className="ui-status ui-status--error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        {notice ? (
-          <p className="ui-status ui-status--success" role="status">
-            {notice}
-          </p>
-        ) : null}
+        <TransientNotificationPublisher message={error} title="Asset package needs attention" tone="error" source="Asset Packages" workspaceId={workspaceId} />
+        <TransientNotificationPublisher message={notice} title="Asset package updated" tone="success" source="Asset Packages" workspaceId={workspaceId} />
         <section
           className="asset-package-manager__starter ui-workflow__subpanel"
           aria-labelledby="asset-package-starter-title"

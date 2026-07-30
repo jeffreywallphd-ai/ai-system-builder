@@ -7,3 +7,4 @@ export * from "./materialize-reference-system-visual-hierarchy.service";
 export * from "./materialize-reference-system-template-structure.service";
 export * from "./map-system-builder-foundation-upgrade.service";
 export * from "./system-builder-model-authority.service";
+export * from "./reconcile-system-builder-conversation-interactions.service";

@@ -8,6 +8,7 @@ import {
   type AssetType,
 } from "../../../contracts/asset";
 import type { AuthoredAssetDraftRecord } from "../../../contracts/asset-authoring";
+import { TransientNotificationPublisher } from "../notifications/TransientNotificationPublisher";
 import {
   ASSET_IMPLEMENTATION_BACKING_RESOURCE_ROLES,
   type AssetImplementationBackingResourceFile,
@@ -244,9 +245,6 @@ export function AssetStudioWorkspace({
         if (result.ok) {
           setEditor(createAssetStudioEditorState(result.value));
           setRecord(result.value.record);
-          setNotice(
-            "Saved draft reopened with its semantic data and backing resources.",
-          );
         } else {
           setError(result.error.message);
         }
@@ -441,16 +439,8 @@ export function AssetStudioWorkspace({
         </span>
       </header>
       <div className="ui-panel__section-body ui-stack">
-        {error ? (
-          <p className="ui-status ui-status--error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        {notice ? (
-          <p className="ui-status ui-status--success" role="status">
-            {notice}
-          </p>
-        ) : null}
+        <TransientNotificationPublisher message={error} title="Asset Studio needs attention" tone="error" source="Asset Studio" workspaceId={workspaceId} />
+        <TransientNotificationPublisher message={notice} title="Asset Studio updated" tone="success" source="Asset Studio" workspaceId={workspaceId} />
         <WorkflowSequence ariaLabel="Unified Asset Studio sections">
           <WorkflowStep
             title="Identity and classification"
@@ -709,11 +699,6 @@ export function AssetStudioWorkspace({
                 Abandon draft
               </button>
             </div>
-            {dirty && record ? (
-              <p className="ui-status">
-                Unsaved changes must be saved before review or publication.
-              </p>
-            ) : null}
           </WorkflowStep>
         </WorkflowSequence>
       </div>
@@ -1085,11 +1070,7 @@ export function SavedAssetDrafts({
             Search
           </button>
         </form>
-        {error ? (
-          <p className="ui-status ui-status--error" role="alert">
-            {error}
-          </p>
-        ) : null}
+        <TransientNotificationPublisher message={error} title="Saved assets need attention" tone="error" source="Asset Studio" workspaceId={workspaceId} />
         {itemCount ? (
           <div className="asset-studio__saved-grid">
             {drafts.map((draft) => (

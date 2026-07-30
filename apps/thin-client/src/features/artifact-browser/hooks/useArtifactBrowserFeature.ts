@@ -269,10 +269,9 @@ export function useArtifactBrowserFeature(
       );
       setViewState({
         status: "success",
-        message:
-          browseItems.length > 0
-            ? "Loaded data artifacts."
-            : "No data artifacts found yet.",
+        ...(browseItems.length > 0
+          ? {}
+          : { message: "No data artifacts found yet." }),
       });
     } catch (error) {
       setViewState({
@@ -435,7 +434,7 @@ export function useArtifactBrowserFeature(
         setArtifactPreview(createUnavailableArtifactPreview({ storageKey }));
       }
 
-      setViewState({ status: "success", message: `Loaded ${storageKey}.` });
+      setViewState({ status: "success" });
     } catch (error) {
       setDetail(undefined);
       setContent(undefined);
@@ -705,10 +704,9 @@ export function useArtifactBrowserFeature(
           files,
           state: {
             status: "success",
-            message:
-              files.length > 0
-                ? `Loaded ${files.length} file(s).`
-                : "No files found for this dataset.",
+            ...(files.length > 0
+              ? {}
+              : { message: "No files found for this dataset." }),
           },
         },
       }));

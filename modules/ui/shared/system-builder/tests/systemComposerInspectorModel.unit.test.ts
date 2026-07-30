@@ -10,9 +10,11 @@ import {
   bindingKindForSystemComposerEndpoint,
   buildSystemComposerConfigurationSections,
   buildSystemComposerPropertyPanelSections,
+  canRepairSystemComposerConversationInteraction,
   listCompatibleSystemComposerTargets,
   listSystemComposerPortEndpoints,
   materializeSystemComposerConfiguration,
+  sanitizeSystemComposerInstanceConfigurations,
   validateSystemComposerConfiguration,
 } from "../systemComposerInspectorModel";
 
@@ -101,6 +103,77 @@ describe("System composer inspector model", () => {
     expect(errors.title).toEqual(["Title is too short."]);
     expect(errors.count?.[0]).toContain("does not satisfy min");
     expect(errors.mode?.[0]).toContain("approved option");
+  });
+
+  it("removes undeclared legacy preview fields only for strict definitions", () => {
+    const strict = asset("conversation.history", [], {
+      strict: true,
+      fields: [{ fieldId: "title", valueKind: "string" }],
+    });
+    const loose = asset("custom.history", [], {
+      strict: false,
+      fields: [{ fieldId: "title", valueKind: "string" }],
+    });
+    const strictInstance = instance("instance.strict", strict);
+    const looseInstance = instance("instance.loose", loose);
+    const legacy = {
+      title: "Conversation",
+      sampleUserMessage: "Example question",
+      sampleAssistantMessage: "Example response",
+      previewValue: "Example preview",
+    };
+
+    expect(materializeSystemComposerConfiguration(strict, legacy)).toEqual({
+      title: "Conversation",
+    });
+    const sanitized = sanitizeSystemComposerInstanceConfigurations(
+      [
+        { ...strictInstance, selectedConfiguration: legacy },
+        { ...looseInstance, selectedConfiguration: legacy },
+      ],
+      [strict, loose],
+    );
+    expect(sanitized[0]?.selectedConfiguration).toEqual({
+      title: "Conversation",
+    });
+    expect(sanitized[1]?.selectedConfiguration).toEqual(legacy);
+  });
+
+  it("enables an explicit save repair only for an unambiguous chatbot reference interaction gap", () => {
+    const composerDefinition = asset("conversation.message-composer");
+    const historyDefinition = asset("conversation.message-history-display");
+    const referenceInstance = (
+      instanceId: string,
+      definition: SystemBuilderComposerAsset,
+    ): AssetInstance => ({
+      ...instance(instanceId, definition),
+      metadata: { referenceSystemKind: "controlled-chatbot" },
+    });
+    const composer = referenceInstance("chat.composer", composerDefinition);
+    const history = referenceInstance("chat.history", historyDefinition);
+
+    expect(
+      canRepairSystemComposerConversationInteraction([composer, history], []),
+    ).toBe(true);
+    expect(
+      canRepairSystemComposerConversationInteraction(
+        [
+          composer,
+          history,
+          referenceInstance("chat.history-2", historyDefinition),
+        ],
+        [],
+      ),
+    ).toBe(false);
+    expect(
+      canRepairSystemComposerConversationInteraction(
+        [
+          { ...composer, metadata: undefined },
+          { ...history, metadata: undefined },
+        ],
+        [],
+      ),
+    ).toBe(false);
   });
 
   it("groups schema fields into deterministic Design, Data, and Events panels", () => {

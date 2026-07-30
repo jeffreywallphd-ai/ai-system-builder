@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { ModelDownloadNotificationBridge, NotificationProvider, useNotificationCenter } from "../../../modules/ui/shared";
 
 import { AppShell } from "./components/layout/AppShell";
 import { AssetLibraryPage } from "./pages/AssetLibraryPage";
@@ -18,8 +19,13 @@ import {
   type ThinClientPageKey,
 } from "./routes/thinClientPages";
 import { resolveThinClientWorkspaceRouteBoundary } from "./routes/workspaceRouteBoundary";
+import { createApiModelManagementClient } from "./features/model-management/api/apiModelManagementClient";
 
 type ThinClientWorkspacePageKey = Extract<ThinClientPageKey, "systems" | "artifacts" | "assets" | "user-library" | "models" | "image-generation">;
+const modelDownloadNotificationClient = createApiModelManagementClient();
+const thinClientDownloadNotificationBridgeClient = {
+  listModelDownloads: modelDownloadNotificationClient.listModelDownloads!,
+};
 
 function navigateToPage(page: ThinClientPageKey): void {
   const path = page === "systems" ? "/systems" : page === "artifacts" ? "/artifacts" : page === "assets" ? "/assets" : page === "user-library" ? "/user-library" : page === "image-generation" ? "/image-generation" : page === "models" ? "/models" : page === "security" ? "/security" : page === "settings" ? "/settings" : "/";
@@ -29,7 +35,9 @@ function navigateToPage(page: ThinClientPageKey): void {
 export function App() {
   return (
     <ActiveWorkspaceProvider>
-      <WorkspaceAwareThinClientApp />
+      <NotificationProvider>
+        <WorkspaceAwareThinClientApp />
+      </NotificationProvider>
     </ActiveWorkspaceProvider>
   );
 }
@@ -37,6 +45,11 @@ export function App() {
 function WorkspaceAwareThinClientApp() {
   const [activePage, setActivePage] = useState<ThinClientPageKey>(resolveThinClientPage(window.location.pathname));
   const workspace = useActiveWorkspace();
+  const notifications = useNotificationCenter();
+  const setNotificationWorkspace = notifications.setActiveWorkspaceId;
+  useEffect(() => {
+    setNotificationWorkspace(workspace.activeWorkspaceId);
+  }, [setNotificationWorkspace, workspace.activeWorkspaceId]);
   const activePageDefinition = thinClientPageDefinitions.find((page) => page.key === activePage);
   const routeRequiresWorkspace = thinClientPageRequiresWorkspace(activePage);
   const routeBoundary = resolveThinClientWorkspaceRouteBoundary(activePage, workspace.status);
@@ -92,13 +105,16 @@ function WorkspaceAwareThinClientApp() {
   ) : renderGlobalPageContent(activePage);
 
   return (
-    <AppShell
-      activePage={routeBoundary.visibleActivePage}
-      pages={thinClientPageDefinitions}
-      onNavigate={setRoute}
-    >
-      {content}
-    </AppShell>
+    <>
+      <ModelDownloadNotificationBridge client={thinClientDownloadNotificationBridgeClient} workspaceId={workspace.activeWorkspaceId} />
+      <AppShell
+        activePage={routeBoundary.visibleActivePage}
+        pages={thinClientPageDefinitions}
+        onNavigate={setRoute}
+      >
+        {content}
+      </AppShell>
+    </>
   );
 }
 

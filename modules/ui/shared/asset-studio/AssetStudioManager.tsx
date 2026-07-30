@@ -7,6 +7,7 @@ import type {
   AssetStudioResult,
   AssetStudioWorkflowRecord,
 } from "../../../contracts/asset-studio";
+import { TransientNotificationPublisher } from "../notifications/TransientNotificationPublisher";
 import type {
   AssetStudioAssetDraftListView,
   AssetStudioAssetDraftRecord,
@@ -240,16 +241,8 @@ export function AssetStudioManager({
         </div>
       </header>
       <div className="ui-panel__section-body ui-stack">
-        {error ? (
-          <p className="ui-status ui-status--error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        {notice ? (
-          <p className="ui-status ui-status--success" role="status">
-            {notice}
-          </p>
-        ) : null}
+        <TransientNotificationPublisher message={error} title="Asset workflow needs attention" tone="error" source="Asset Studio" workspaceId={workspaceId} />
+        <TransientNotificationPublisher message={notice} title="Asset workflow updated" tone="success" source="Asset Studio" workspaceId={workspaceId} />
         <WorkflowSequence ariaLabel="Asset Studio authoring steps">
           <WorkflowStep
             title="Choose the contract"

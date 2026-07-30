@@ -242,6 +242,7 @@ describe("DatasetPreparationFeature", () => {
     const modelIdInput = Array.from(container.querySelectorAll("input")).find((input) =>
       input.value === "Qwen/Qwen2.5-3B-Instruct") as HTMLInputElement | undefined;
     expect(modelIdInput).toBeTruthy();
+    expect(container.textContent).not.toContain("Training settings loaded.");
   });
 
   it("shows error state when preparation fails", async () => {
@@ -1378,7 +1379,7 @@ describe("DatasetPreparationFeature", () => {
     });
 
     expect(runtimeStatusClient.controlRuntime).toHaveBeenCalledWith("unload-model");
-    expect(container.textContent).toContain("Model unloaded from memory.");
+    expect(container.textContent).not.toContain("Model unloaded from memory.");
   });
 
   it("does not render model generation settings keys", async () => {

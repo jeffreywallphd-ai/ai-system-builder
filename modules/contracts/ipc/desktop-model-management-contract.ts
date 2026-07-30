@@ -5,6 +5,13 @@ import type {
   DeleteModelRecordResult,
   DownloadModelRequest,
   DownloadModelResult,
+  StartModelDownloadTaskResult,
+  ReadModelDownloadTaskRequest,
+  ReadModelDownloadTaskResult,
+  ListModelDownloadTasksRequest,
+  ListModelDownloadTasksResult,
+  CancelModelDownloadTaskRequest,
+  CancelModelDownloadTaskResult,
   GetModelDetailsRequest,
   GetModelDetailsResult,
   ListModelsRequest,
@@ -31,6 +38,10 @@ export const DESKTOP_MODEL_DETAILS_READ_OPERATION = createTransportOperation("mo
 export const DESKTOP_MODEL_LIST_OPERATION = createTransportOperation("model", "list");
 export const DESKTOP_MODEL_REFERENCE_SAVE_OPERATION = createTransportOperation("model", "reference-save");
 export const DESKTOP_MODEL_DOWNLOAD_OPERATION = createTransportOperation("model", "download");
+export const DESKTOP_MODEL_DOWNLOAD_START_OPERATION = createTransportOperation("model", "download-start");
+export const DESKTOP_MODEL_DOWNLOAD_READ_OPERATION = createTransportOperation("model", "download-read");
+export const DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION = createTransportOperation("model", "download-list");
+export const DESKTOP_MODEL_DOWNLOAD_CANCEL_OPERATION = createTransportOperation("model", "download-cancel");
 export const DESKTOP_MODEL_RECORD_UPDATE_OPERATION = createTransportOperation("model", "record-update");
 export const DESKTOP_MODEL_RECORD_DELETE_OPERATION = createTransportOperation("model", "record-delete");
 export const DESKTOP_MODEL_TRAIN_OPERATION = createTransportOperation("model", "train");
@@ -48,6 +59,14 @@ export const DESKTOP_MODEL_REFERENCE_SAVE_REQUEST_CHANNEL = createIpcChannel(DES
 export const DESKTOP_MODEL_REFERENCE_SAVE_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_MODEL_REFERENCE_SAVE_OPERATION, "response");
 export const DESKTOP_MODEL_DOWNLOAD_REQUEST_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_OPERATION, "request");
 export const DESKTOP_MODEL_DOWNLOAD_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_OPERATION, "response");
+export const DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_START_OPERATION, "request");
+export const DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_START_OPERATION, "response");
+export const DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_READ_OPERATION, "request");
+export const DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_READ_OPERATION, "response");
+export const DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION, "request");
+export const DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION, "response");
+export const DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_CANCEL_OPERATION, "request");
+export const DESKTOP_MODEL_DOWNLOAD_CANCEL_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_MODEL_DOWNLOAD_CANCEL_OPERATION, "response");
 export const DESKTOP_MODEL_RECORD_UPDATE_REQUEST_CHANNEL = createIpcChannel(DESKTOP_MODEL_RECORD_UPDATE_OPERATION, "request");
 export const DESKTOP_MODEL_RECORD_UPDATE_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_MODEL_RECORD_UPDATE_OPERATION, "response");
 export const DESKTOP_MODEL_RECORD_DELETE_REQUEST_CHANNEL = createIpcChannel(DESKTOP_MODEL_RECORD_DELETE_OPERATION, "request");
@@ -126,6 +145,14 @@ export type DesktopModelDownloadResponse = IpcResponse<
   Record<string, never>,
   typeof DESKTOP_MODEL_DOWNLOAD_RESPONSE_CHANNEL.value
 >;
+export type DesktopModelDownloadStartRequest = IpcRequest<DownloadModelRequest, typeof DESKTOP_MODEL_DOWNLOAD_START_OPERATION, Record<string, never>, typeof DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL.value>;
+export type DesktopModelDownloadStartResponse = IpcResponse<StartModelDownloadTaskResult, Record<string, unknown>, typeof DESKTOP_MODEL_DOWNLOAD_START_OPERATION, Record<string, never>, typeof DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL.value>;
+export type DesktopModelDownloadReadRequest = IpcRequest<ReadModelDownloadTaskRequest, typeof DESKTOP_MODEL_DOWNLOAD_READ_OPERATION, Record<string, never>, typeof DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL.value>;
+export type DesktopModelDownloadReadResponse = IpcResponse<ReadModelDownloadTaskResult, Record<string, unknown>, typeof DESKTOP_MODEL_DOWNLOAD_READ_OPERATION, Record<string, never>, typeof DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL.value>;
+export type DesktopModelDownloadListRequest = IpcRequest<ListModelDownloadTasksRequest, typeof DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION, Record<string, never>, typeof DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL.value>;
+export type DesktopModelDownloadListResponse = IpcResponse<ListModelDownloadTasksResult, Record<string, unknown>, typeof DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION, Record<string, never>, typeof DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL.value>;
+export type DesktopModelDownloadCancelRequest = IpcRequest<CancelModelDownloadTaskRequest, typeof DESKTOP_MODEL_DOWNLOAD_CANCEL_OPERATION, Record<string, never>, typeof DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL.value>;
+export type DesktopModelDownloadCancelResponse = IpcResponse<CancelModelDownloadTaskResult, Record<string, unknown>, typeof DESKTOP_MODEL_DOWNLOAD_CANCEL_OPERATION, Record<string, never>, typeof DESKTOP_MODEL_DOWNLOAD_CANCEL_RESPONSE_CHANNEL.value>;
 export type DesktopModelRecordUpdateRequest = IpcRequest<
   UpdateModelRecordRequest,
   typeof DESKTOP_MODEL_RECORD_UPDATE_OPERATION,
@@ -236,6 +263,14 @@ export function createDesktopModelDownloadRequest(payload: DownloadModelRequest,
 export function createDesktopModelDownloadSuccessResponse(result: DownloadModelResult, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadResponse {
   return createIpcSuccessResponse(DESKTOP_MODEL_DOWNLOAD_RESPONSE_CHANNEL, result, options) as DesktopModelDownloadResponse;
 }
+export function createDesktopModelDownloadStartRequest(payload: DownloadModelRequest, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadStartRequest { return createIpcRequest(DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL, payload, options); }
+export function createDesktopModelDownloadStartSuccessResponse(result: StartModelDownloadTaskResult, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadStartResponse { return createIpcSuccessResponse(DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL, result, options) as DesktopModelDownloadStartResponse; }
+export function createDesktopModelDownloadReadRequest(payload: ReadModelDownloadTaskRequest, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadReadRequest { return createIpcRequest(DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL, payload, options); }
+export function createDesktopModelDownloadReadSuccessResponse(result: ReadModelDownloadTaskResult, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadReadResponse { return createIpcSuccessResponse(DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL, result, options) as DesktopModelDownloadReadResponse; }
+export function createDesktopModelDownloadListRequest(payload: ListModelDownloadTasksRequest, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadListRequest { return createIpcRequest(DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL, payload, options); }
+export function createDesktopModelDownloadListSuccessResponse(result: ListModelDownloadTasksResult, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadListResponse { return createIpcSuccessResponse(DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL, result, options) as DesktopModelDownloadListResponse; }
+export function createDesktopModelDownloadCancelRequest(payload: CancelModelDownloadTaskRequest, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadCancelRequest { return createIpcRequest(DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL, payload, options); }
+export function createDesktopModelDownloadCancelSuccessResponse(result: CancelModelDownloadTaskResult, options?: { requestId?: string; correlationId?: string }): DesktopModelDownloadCancelResponse { return createIpcSuccessResponse(DESKTOP_MODEL_DOWNLOAD_CANCEL_RESPONSE_CHANNEL, result, options) as DesktopModelDownloadCancelResponse; }
 export function createDesktopModelRecordUpdateRequest(payload: UpdateModelRecordRequest, options?: { requestId?: string; correlationId?: string }): DesktopModelRecordUpdateRequest {
   return createIpcRequest(DESKTOP_MODEL_RECORD_UPDATE_REQUEST_CHANNEL, payload, options);
 }

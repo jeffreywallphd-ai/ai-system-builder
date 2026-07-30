@@ -71,7 +71,9 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
       setSelectedBrowseModel(undefined);
       setSelectedBrowseModelDetails(undefined);
       setDetailsState({ status: "idle" });
-      setBrowseState({ status: "success", message: result.models.length > 0 ? "Loaded model results." : "No model results found." });
+      setBrowseState(result.models.length > 0
+        ? { status: "success" }
+        : { status: "success", message: "No model results found." });
       recordSectionLoadMilestone("renderer.section.load.resolved", { pageKey: "models", sectionKey: "models.remote-browse", trigger: "search" });
     } catch (error) {
       setBrowseState({ status: "error", message: error instanceof Error ? error.message : "Failed to browse models." });
@@ -92,7 +94,9 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
       setSelectedBrowseModel(undefined);
       setSelectedBrowseModelDetails(undefined);
       setDetailsState({ status: "idle" });
-      setBrowseState({ status: "success", message: result.models.length > 0 ? "Loaded popular models." : "No popular models available right now." });
+      setBrowseState(result.models.length > 0
+        ? { status: "success" }
+        : { status: "success", message: "No popular models available right now." });
     } catch (error) {
       setBrowseState({ status: "error", message: error instanceof Error ? error.message : "Failed to load popular models." });
     }
@@ -105,7 +109,7 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
     try {
       const details = await modelClient.getModelDetails({ provider: "huggingface", modelId: model.modelId });
       setSelectedBrowseModelDetails(details);
-      setDetailsState({ status: "success", message: "Loaded model details." });
+      setDetailsState({ status: "success" });
     } catch (error) {
       setSelectedBrowseModelDetails(undefined);
       setDetailsState({ status: "error", message: error instanceof Error ? error.message : "Failed to load model details." });
@@ -155,7 +159,9 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
       }) : [];
       setModels(listed);
       setSelectedManagedModel((current) => listed.find((item) => item.modelRecordId === current?.modelRecordId));
-      setManageState({ status: "success", message: listed.length > 0 ? "Loaded model inventory." : "No model records found." });
+      setManageState(listed.length > 0
+        ? { status: "success" }
+        : { status: "success", message: "No model records found." });
       recordSectionLoadMilestone("renderer.section.load.resolved", { pageKey: "models", sectionKey: "models.local-list", trigger: "initial" });
     } catch (error) {
       setManageState({ status: "error", message: error instanceof Error ? error.message : "Failed to list model records." });
@@ -182,7 +188,7 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
     setDownloadState({ status: "loading", message: "Downloading model..." });
     try {
       if (!workspaceId) { setDownloadState({ status: "error", message: "Select a workspace before downloading models." }); return; }
-      const result = await modelClient.downloadModel({
+      const downloadRequest = {
         workspaceId,
         modelId: modelToDownload.modelId,
         displayName: modelToDownload.displayName,
@@ -196,9 +202,15 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
           private: modelToDownload.private,
           license: modelToDownload.license,
         },
-      });
-      setDownloadState({ status: "success", message: `Model downloaded to ${result.download.localPath}.` });
-      await refreshModels();
+      };
+      if (modelClient.startModelDownload) {
+        await modelClient.startModelDownload(downloadRequest);
+        setDownloadState({ status: "success" });
+      } else {
+        await modelClient.downloadModel(downloadRequest);
+        setDownloadState({ status: "success", message: "Model downloaded." });
+        await refreshModels();
+      }
     } catch (error) {
       setDownloadState({ status: "error", message: error instanceof Error ? error.message : "Failed to download model." });
     }
@@ -230,8 +242,8 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
     try {
       if (!workspaceId) { setManageState({ status: "error", message: "Select a workspace before validating models." }); return; }
       const result = await modelClient.validateModel({ workspaceId, modelRecordId: selectedManagedModel.modelRecordId });
-      setManageState({ status: result.status === "invalid" ? "error" : "success", message: `Validation ${result.status}.` });
       await refreshModels();
+      setManageState({ status: result.status === "invalid" ? "error" : "success", message: `Validation ${result.status}.` });
     } catch (error) {
       setManageState({ status: "error", message: error instanceof Error ? error.message : "Validation failed." });
     }
@@ -245,14 +257,15 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
     try {
       if (!workspaceId) { setManageState({ status: "error", message: "Select a workspace before publishing models." }); return; }
       const result = await modelClient.publishModel({ workspaceId, modelRecordId: selectedManagedModel.modelRecordId, repository: publishRepository.trim() });
-      setManageState({ status: result.published ? "success" : "error", message: result.published ? "Model published." : "Publish failed." });
       await refreshModels();
+      setManageState({ status: result.published ? "success" : "error", message: result.published ? "Model published." : "Publish failed." });
     } catch (error) {
       setManageState({ status: "error", message: error instanceof Error ? error.message : "Publish failed." });
     }
   }, [modelClient, publishRepository, refreshModels, selectedManagedModel, workspaceId]);
 
   return {
+    workspaceId,
     browseQuery,
     setBrowseQuery,
     browseTaskTag,

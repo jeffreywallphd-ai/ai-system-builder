@@ -2,6 +2,7 @@ import type {
   BrowseModelsUseCase,
   DeleteModelRecordUseCase,
   DownloadModelUseCase,
+  ModelDownloadTasksUseCase,
   GetModelDetailsUseCase,
   ListModelsUseCase,
   SaveModelReferenceUseCase,
@@ -28,6 +29,14 @@ import {
   DESKTOP_MODEL_TRAIN_STATUS_RESPONSE_CHANNEL,
   DESKTOP_MODEL_RECORD_UPDATE_RESPONSE_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_CANCEL_RESPONSE_CHANNEL,
   DESKTOP_MODEL_REFERENCE_SAVE_RESPONSE_CHANNEL,
   DESKTOP_MODEL_VALIDATE_REQUEST_CHANNEL,
   DESKTOP_MODEL_VALIDATE_RESPONSE_CHANNEL,
@@ -41,6 +50,10 @@ import {
   createDesktopModelTrainStatusSuccessResponse,
   createDesktopModelRecordUpdateSuccessResponse,
   createDesktopModelDownloadSuccessResponse,
+  createDesktopModelDownloadStartSuccessResponse,
+  createDesktopModelDownloadReadSuccessResponse,
+  createDesktopModelDownloadListSuccessResponse,
+  createDesktopModelDownloadCancelSuccessResponse,
   createDesktopModelReferenceSaveSuccessResponse,
   createDesktopModelValidateSuccessResponse,
   createDesktopModelPublishSuccessResponse,
@@ -65,6 +78,14 @@ import {
   type DesktopModelRecordUpdateResponse,
   type DesktopModelDownloadRequest,
   type DesktopModelDownloadResponse,
+  type DesktopModelDownloadStartRequest,
+  type DesktopModelDownloadStartResponse,
+  type DesktopModelDownloadReadRequest,
+  type DesktopModelDownloadReadResponse,
+  type DesktopModelDownloadListRequest,
+  type DesktopModelDownloadListResponse,
+  type DesktopModelDownloadCancelRequest,
+  type DesktopModelDownloadCancelResponse,
   type DesktopModelReferenceSaveRequest,
   type DesktopModelReferenceSaveResponse,
   type DesktopModelValidateRequest,
@@ -83,6 +104,7 @@ export interface RegisterModelManagementIpcDependencies {
   listModelsUseCase: Pick<ListModelsUseCase, "execute">;
   saveModelReferenceUseCase: Pick<SaveModelReferenceUseCase, "execute">;
   downloadModelUseCase: Pick<DownloadModelUseCase, "execute">;
+  modelDownloadTasksUseCase?: Pick<ModelDownloadTasksUseCase, "start" | "read" | "list" | "cancel">;
   updateModelRecordUseCase: Pick<UpdateModelRecordUseCase, "execute">;
   deleteModelRecordUseCase: Pick<DeleteModelRecordUseCase, "execute">;
   trainModelUseCase: Pick<TrainModelUseCase, "execute" | "read">;
@@ -264,6 +286,46 @@ export function createDownloadModelIpcHandler(
   };
 }
 
+export function createStartModelDownloadIpcHandler(useCase: Pick<ModelDownloadTasksUseCase, "start">) {
+  return async (_event: unknown, request: DesktopModelDownloadStartRequest): Promise<DesktopModelDownloadStartResponse> => {
+    try {
+      return createDesktopModelDownloadStartSuccessResponse(await useCase.start(request.payload), request);
+    } catch (error) {
+      return toFailureResponse<DesktopModelDownloadStartResponse>(DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL, error, request);
+    }
+  };
+}
+
+export function createReadModelDownloadIpcHandler(useCase: Pick<ModelDownloadTasksUseCase, "read">) {
+  return async (_event: unknown, request: DesktopModelDownloadReadRequest): Promise<DesktopModelDownloadReadResponse> => {
+    try {
+      return createDesktopModelDownloadReadSuccessResponse(await useCase.read(request.payload), request);
+    } catch (error) {
+      return toFailureResponse<DesktopModelDownloadReadResponse>(DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL, error, request);
+    }
+  };
+}
+
+export function createListModelDownloadsIpcHandler(useCase: Pick<ModelDownloadTasksUseCase, "list">) {
+  return async (_event: unknown, request: DesktopModelDownloadListRequest): Promise<DesktopModelDownloadListResponse> => {
+    try {
+      return createDesktopModelDownloadListSuccessResponse(await useCase.list(request.payload), request);
+    } catch (error) {
+      return toFailureResponse<DesktopModelDownloadListResponse>(DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL, error, request);
+    }
+  };
+}
+
+export function createCancelModelDownloadIpcHandler(useCase: Pick<ModelDownloadTasksUseCase, "cancel">) {
+  return async (_event: unknown, request: DesktopModelDownloadCancelRequest): Promise<DesktopModelDownloadCancelResponse> => {
+    try {
+      return createDesktopModelDownloadCancelSuccessResponse(await useCase.cancel(request.payload), request);
+    } catch (error) {
+      return toFailureResponse<DesktopModelDownloadCancelResponse>(DESKTOP_MODEL_DOWNLOAD_CANCEL_RESPONSE_CHANNEL, error, request);
+    }
+  };
+}
+
 export function createUpdateModelRecordIpcHandler(
   useCase: Pick<UpdateModelRecordUseCase, "execute">,
 ) {
@@ -428,6 +490,12 @@ export function registerModelManagementIpc(
     DESKTOP_MODEL_DOWNLOAD_REQUEST_CHANNEL.value,
     createDownloadModelIpcHandler(dependencies.downloadModelUseCase),
   );
+  if (dependencies.modelDownloadTasksUseCase) {
+    dependencies.ipcMain.handle(DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL.value, createStartModelDownloadIpcHandler(dependencies.modelDownloadTasksUseCase));
+    dependencies.ipcMain.handle(DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL.value, createReadModelDownloadIpcHandler(dependencies.modelDownloadTasksUseCase));
+    dependencies.ipcMain.handle(DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL.value, createListModelDownloadsIpcHandler(dependencies.modelDownloadTasksUseCase));
+    dependencies.ipcMain.handle(DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL.value, createCancelModelDownloadIpcHandler(dependencies.modelDownloadTasksUseCase));
+  }
   dependencies.ipcMain.handle(
     DESKTOP_MODEL_RECORD_UPDATE_REQUEST_CHANNEL.value,
     createUpdateModelRecordIpcHandler(dependencies.updateModelRecordUseCase),

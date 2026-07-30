@@ -91,6 +91,15 @@ Readiness does not replace `RuntimeTaskRegistryPort`. Readiness answers whether 
 
 Runtime Task Registry reads are read-side lifecycle operations, not readiness checks. `getTaskStatus`, `cancelTask`, and `listTasks` must not start Python, start ComfyUI, install, repair, or perform heavy sidecar probes. Router-level task correlation may use current-process `requestId` indexes and safe delegate reads to recover missing correlation, but missing tasks must produce explicit unknown/not-found status (including `recordType: "not-found"` when no task family is known) or structured task errors rather than synthetic records that imply accepted work. Unknown/not-found task status must not fake an invalid `TaskType`; use the explicit `recordType: "not-found"` status contract when the task family is genuinely unknown, or a valid task family when a delegate knows it. `listTasks` is best-effort across task families: adapters that track current-process records should return them, and adapters without a safe list endpoint or delegates that fail during listing should report sanitized unsupported task-family metadata or warnings without breaking unrelated delegate listings. Delegate warning details may include delegate name, requested task types, and `failureKind`, but not raw exception messages or environment/path/protocol details. Readiness-guard-rejected starts happen before task creation; transports should return unavailable start failures and no pollable task id, and later status reads for that caller correlation id should remain unknown/not-found unless a task was actually accepted.
 
+Model downloads use `TaskType.MODEL_DOWNLOAD` and the same start/read/list/cancel
+lifecycle in desktop and server hosts. Start requests return promptly; UI and
+compatibility clients poll through short requests. The application-owned model
+download lifecycle validates workspace ownership, projects allowlisted public
+progress, and performs model-registry finalization exactly once after runtime
+success. Python cache handles and resolved host paths remain private completion
+data: they may be passed to the model registry but must not enter generic task
+records, API/IPC/preload responses, notification state, or logs.
+
 ## Dataset Preparation and Model Training Task Profiles
 
 Dataset preparation is the dataset-producing contract boundary. Model training is the model-producing runtime task boundary. Dataset preparation requests may declare a task profile that describes the dataset shape being prepared for a training family. Model training requests may carry the selected training task so the runtime can validate task support and tag generated model records, but model training remains responsible for base model selection, training method, hyperparameters, output registration, and validation.

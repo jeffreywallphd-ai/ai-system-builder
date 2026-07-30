@@ -365,7 +365,7 @@ export function useImageGenerationFeature(
         setModelLoadStatus("success");
         setModelLoadMessage(
           options.length > 0
-            ? `Loaded ${options.length} image generation model${options.length === 1 ? "" : "s"}.`
+            ? undefined
             : `Loaded ${models.length} model record${models.length === 1 ? "" : "s"}; found zero compatible image-generation models.`,
         );
         recordSectionLoadMilestone("renderer.section.load.resolved", {

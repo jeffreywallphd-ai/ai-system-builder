@@ -416,7 +416,7 @@ describe("thin-client AssetLibraryFeature", () => {
         ),
       ),
     ).toBe(false);
-    expect(container.textContent).toContain("Asset registered.");
+    expect(container.textContent).not.toContain("Asset registered.");
     expect(client.readAssetResourceBackedView).toHaveBeenCalledTimes(2);
   });
 

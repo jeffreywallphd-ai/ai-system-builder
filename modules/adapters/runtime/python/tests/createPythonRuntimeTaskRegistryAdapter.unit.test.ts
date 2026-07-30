@@ -73,6 +73,35 @@ it("maps DATASET_PREPARATION startTask to python runtime task type", async () =>
     expect(runtimePort.startTask).toHaveBeenCalledWith({ requestId: "req-2", taskType: "train-model", payload: {}, metadata: { workspaceId } });
   });
 
+  it("maps MODEL_DOWNLOAD progress and keeps the resolved local path private", async () => {
+    const runtimePort: any = {
+      startTask: testDouble.fn(async (request) => ({ requestId: request.requestId, status: "queued" })),
+      readTaskStatus: testDouble.fn(async () => ({
+        requestId: "download-1",
+        taskType: "ensure-model-download",
+        status: "succeeded",
+        metadata: { workspaceId },
+        progress: { message: "Downloading C:\\private\\model", progressUnit: "bytes", downloadedBytes: 25, totalBytes: 100, downloadPercent: 25, token: "secret" },
+        data: { provider: "transformers", modelId: "org/model", downloaded: true, fromCache: false, modelHandle: "models--org--model/snapshots/revision" },
+      })),
+      resolveModelDownloadTaskResult: testDouble.fn(async () => ({ provider: "transformers", modelId: "org/model", downloaded: true, fromCache: false, localPath: "C:\\cache\\private" })),
+      cancelTask: testDouble.fn(), getHealthStatus: testDouble.fn(), getCapabilities: testDouble.fn(), ensureModelDownloaded: testDouble.fn(), getModelStatus: testDouble.fn(), unloadModels: testDouble.fn(),
+    };
+    const adapter = createPythonRuntimeTaskRegistryAdapter(runtimePort);
+    await adapter.startTask({ workspaceId, requestId: "download-1", taskType: TaskType.MODEL_DOWNLOAD, concurrencyClass: "io", payload: { provider: "transformers", modelId: "org/model" } });
+    const record = await adapter.getTaskStatus("download-1");
+
+    expect(runtimePort.startTask.mock.calls[0]?.[0]?.taskType).toBe("ensure-model-download");
+    expect(record).toMatchObject({ taskType: TaskType.MODEL_DOWNLOAD, status: "succeeded", progress: { current: 25, total: 100, percent: 25, unit: "bytes" }, data: { modelId: "org/model" } });
+    expect(JSON.stringify(record)).not.toContain("modelHandle");
+    expect(JSON.stringify(record)).not.toContain("C:\\cache");
+    expect(JSON.stringify(record)).not.toContain("secret");
+    expect((await adapter.readCompletedModelDownload("download-1"))?.localPath).toBe("C:\\cache\\private");
+
+    const listed = await adapter.listTasks({ workspaceId, taskTypes: [TaskType.MODEL_DOWNLOAD], includeCompleted: true });
+    expect(listed.tasks.map((task) => task.requestId)).toEqual(["download-1"]);
+  });
+
   
   it("maps MODEL_VALIDATION startTask type", async () => {
     const runtimePort: any = { startTask: testDouble.fn(async (request) => ({ requestId: request.requestId })), readTaskStatus: testDouble.fn(), cancelTask: testDouble.fn(), getHealthStatus: testDouble.fn(), getCapabilities: testDouble.fn(), ensureModelDownloaded: testDouble.fn(), getModelStatus: testDouble.fn(), unloadModels: testDouble.fn() };
@@ -134,14 +163,14 @@ it("generates non-timestamp request ids when caller does not provide one", async
     expect(result.status).toBe("unknown");
   });
 
-  it("returns explicit unsupported metadata instead of throwing for listTasks", async () => {
+  it("returns explicit unsupported metadata only for unsupported task families", async () => {
     const runtimePort: any = { startTask: testDouble.fn(), readTaskStatus: testDouble.fn(), cancelTask: testDouble.fn(), getHealthStatus: testDouble.fn(), getCapabilities: testDouble.fn(), ensureModelDownloaded: testDouble.fn(), getModelStatus: testDouble.fn(), unloadModels: testDouble.fn() };
     const adapter = createPythonRuntimeTaskRegistryAdapter(runtimePort);
-    const result = await adapter.listTasks({ workspaceId, taskTypes: [TaskType.MODEL_TRAINING] });
+    const result = await adapter.listTasks({ workspaceId, taskTypes: [TaskType.MODEL_PUBLISHING] });
     expect(result).toMatchObject({
       tasks: [],
-      unsupportedTaskTypes: [TaskType.MODEL_TRAINING],
-      warnings: [{ code: "python_runtime_task_listing_unsupported", taskTypes: [TaskType.MODEL_TRAINING] }],
+      unsupportedTaskTypes: [TaskType.MODEL_PUBLISHING],
+      warnings: [{ code: "python_runtime_task_listing_unsupported", taskTypes: [TaskType.MODEL_PUBLISHING] }],
     });
     expect(result.warnings?.[0]?.details).toBeUndefined();
     expect(JSON.stringify(result)).not.toContain("/tmp");

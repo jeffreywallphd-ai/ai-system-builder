@@ -17,6 +17,7 @@ import {
   SystemBuilderWorkspace,
   type SystemBuilderClient,
 } from "../SystemBuilderWorkspace";
+import { NotificationTestHarness, readNotificationMessages } from "../../notifications/tests/NotificationTestHarness";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -699,10 +700,10 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await act(async () => minimalChoice.click());
     await vi.waitFor(() => {
       expect(container!.textContent).toContain("Unsaved changes");
-      expect(container!.textContent).toContain(
+      expect(container!.textContent).not.toContain(
         "The Canvas updated automatically",
       );
-      expect(container!.textContent).toContain(
+      expect(container!.textContent).not.toContain(
         "available from Add element on a compatible container",
       );
     });
@@ -933,11 +934,13 @@ describe("SystemBuilderWorkspace UI preview", () => {
     root = createRoot(container);
     await act(async () => {
       root?.render(
-        <SystemBuilderWorkspace
-          workspaceId="workspace-a"
-          client={client}
-          initialSystemId={String(record.systemId)}
-        />,
+        <NotificationTestHarness>
+          <SystemBuilderWorkspace
+            workspaceId="workspace-a"
+            client={client}
+            initialSystemId={String(record.systemId)}
+          />
+        </NotificationTestHarness>,
       );
     });
 
@@ -1155,11 +1158,13 @@ describe("SystemBuilderWorkspace UI preview", () => {
     root = createRoot(container);
     await act(async () => {
       root?.render(
-        <SystemBuilderWorkspace
-          workspaceId="workspace-a"
-          client={client}
-          initialSystemId={String(record.systemId)}
-        />,
+        <NotificationTestHarness>
+          <SystemBuilderWorkspace
+            workspaceId="workspace-a"
+            client={client}
+            initialSystemId={String(record.systemId)}
+          />
+        </NotificationTestHarness>,
       );
     });
 
@@ -1189,11 +1194,8 @@ describe("SystemBuilderWorkspace UI preview", () => {
       expectedRecordRevision: 1,
       sourceRevisionId: revision.revisionId,
     });
-    await vi.waitFor(() =>
-      expect(container?.textContent).toContain(
-        "System Foundation upgraded to 3.0.0 in a new immutable revision.",
-      ),
-    );
+    await vi.waitFor(() => expect(readNotificationMessages(container!)).toContain("System Foundation upgraded to 3.0.0 in a new immutable revision."));
+    expect(container?.textContent).not.toContain("System Foundation upgraded to 3.0.0 in a new immutable revision.");
     expect(document.body.querySelector('[role="dialog"]')).toBeNull();
   });
 
@@ -1205,19 +1207,43 @@ describe("SystemBuilderWorkspace UI preview", () => {
         id: "builtin.system.system",
         version: "3.0.0",
       },
-      selectedConfiguration: { themeColorPrimary: "#2563eb" },
+      selectedConfiguration: {
+        themeColorPrimary: "#2563eb",
+        previewValue: "Legacy preview",
+      },
     } as AssetInstance;
     const shellInstance = {
       ...instance(
         "system-1.shell",
         "builtin.layout.application.standard",
         "Standard shell",
-        { title: "Portal" },
+        {
+          title: "Portal",
+          sampleUserMessage: "Legacy question",
+          sampleAssistantMessage: "Legacy response",
+        },
       ),
       definitionRef: {
         kind: "asset-definition-version",
         id: "builtin.layout.application.standard",
         version: "3.0.0",
+      },
+    } as AssetInstance;
+    const inactiveHistoryInstance = {
+      ...instance(
+        "system-1.history",
+        "conversation.chat-history",
+        "Conversation history",
+        {
+          title: "Conversation",
+          sampleUserMessage: "Legacy question",
+          sampleAssistantMessage: "Legacy response",
+        },
+      ),
+      definitionRef: {
+        kind: "asset-definition-version",
+        id: "conversation.chat-history",
+        version: "1.0.0",
       },
     } as AssetInstance;
     const structure = {
@@ -1258,11 +1284,12 @@ describe("SystemBuilderWorkspace UI preview", () => {
         instanceRefs: [
           { kind: "asset-instance", id: rootInstance.instanceId },
           { kind: "asset-instance", id: shellInstance.instanceId },
+          { kind: "asset-instance", id: inactiveHistoryInstance.instanceId },
         ],
         bindingRefs: [],
         provenance: { sourceKind: "human-authored" },
       },
-      instances: [rootInstance, shellInstance],
+      instances: [rootInstance, shellInstance, inactiveHistoryInstance],
       bindings: [],
       structure,
       placements,
@@ -1296,7 +1323,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
         placements: input.placements,
       } as SystemBuilderRevision,
     }));
-    const rootDetail = composerDefinition(
+    const rootDetailBase = composerDefinition(
       "builtin.system.system",
       "System root",
       ["application-shell"],
@@ -1304,20 +1331,46 @@ describe("SystemBuilderWorkspace UI preview", () => {
       "3.0.0",
       true,
     );
+    const rootDetail = {
+      ...rootDetailBase,
+      configurationSchema: {
+        ...rootDetailBase.configurationSchema!,
+        strict: true,
+      },
+    };
+    const shellDetailBase = composerDefinition(
+      "builtin.layout.application.standard",
+      "Standard shell",
+      ["content"],
+      true,
+      "3.0.0",
+    );
     const shellDetail = {
-      ...composerDefinition(
-        "builtin.layout.application.standard",
-        "Standard shell",
-        ["content"],
-        true,
-        "3.0.0",
-      ),
+      ...shellDetailBase,
+      configurationSchema: {
+        ...shellDetailBase.configurationSchema!,
+        strict: true,
+      },
       layoutRole: "application-shell" as const,
       layoutGeometry: {
         columnPattern: "single" as const,
         areas: [["content"]],
         sourceOrder: ["content"],
         dimensionsLocked: true as const,
+      },
+    };
+    const historyDetailBase = composerDefinition(
+      "conversation.chat-history",
+      "Conversation history",
+      [],
+      true,
+      "1.0.0",
+    );
+    const historyDetail = {
+      ...historyDetailBase,
+      configurationSchema: {
+        ...historyDetailBase.configurationSchema!,
+        strict: true,
       },
     };
     const listComposerAssets = vi.fn(
@@ -1327,6 +1380,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
           items: [
             withoutComposerDetail(rootDetail),
             withoutComposerDetail(shellDetail),
+            withoutComposerDetail(historyDetail),
           ],
         },
       }),
@@ -1334,10 +1388,11 @@ describe("SystemBuilderWorkspace UI preview", () => {
     const readComposerAsset = vi.fn(
       async (input: ReadSystemBuilderComposerAssetQuery) => ({
         ok: true as const,
-        value:
-          String(input.definitionRef.id) === shellDetail.definitionId
-            ? shellDetail
-            : rootDetail,
+        value: new Map([
+          [rootDetail.definitionId, rootDetail],
+          [shellDetail.definitionId, shellDetail],
+          [historyDetail.definitionId, historyDetail],
+        ]).get(String(input.definitionRef.id))!,
       }),
     );
     const client = {
@@ -1416,6 +1471,10 @@ describe("SystemBuilderWorkspace UI preview", () => {
       title.dispatchEvent(new Event("input", { bubbles: true }));
     });
     await act(async () => Promise.resolve());
+    expect(container.textContent).toContain("Unsaved changes");
+    expect(container.textContent).not.toContain(
+      "Configuration updated locally. Save the revision to persist it.",
+    );
     const detailReadsAfterTitleChange = readComposerAsset.mock.calls.length;
     await act(async () => button(container, "Styling").click());
     const primaryColor = await vi.waitFor(() => {
@@ -1448,17 +1507,26 @@ describe("SystemBuilderWorkspace UI preview", () => {
         container!.querySelector<HTMLInputElement>("#themeColorPrimary")?.value,
       ).toBe("#123456"),
     );
+    expect(container.textContent).not.toContain(
+      "System styling updated locally. Save the revision to persist it.",
+    );
     await act(async () => button(container, "Undo").click());
     await vi.waitFor(() =>
       expect(
         container!.querySelector<HTMLInputElement>("#themeColorPrimary")?.value,
       ).toBe("#2563eb"),
     );
+    expect(container.textContent).not.toContain(
+      "Last composition change undone.",
+    );
     await act(async () => button(container, "Redo").click());
     await vi.waitFor(() =>
       expect(
         container!.querySelector<HTMLInputElement>("#themeColorPrimary")?.value,
       ).toBe("#123456"),
+    );
+    expect(container.textContent).not.toContain(
+      "Composition change restored.",
     );
     const saveButton = Array.from(container.querySelectorAll("button")).find(
       (button) => button.textContent === "Save and validate revision",
@@ -1467,6 +1535,10 @@ describe("SystemBuilderWorkspace UI preview", () => {
     await act(async () => saveButton!.click());
 
     await vi.waitFor(() => expect(saveRevision).toHaveBeenCalledOnce());
+    expect(readComposerAsset).toHaveBeenCalledWith({
+      workspaceId: "workspace-a",
+      definitionRef: inactiveHistoryInstance.definitionRef,
+    });
     expect(saveRevision.mock.calls[0]?.[0]).toMatchObject({
       structure,
       placements,
@@ -1490,6 +1562,9 @@ describe("SystemBuilderWorkspace UI preview", () => {
         }),
       ]),
     );
+    expect(
+      JSON.stringify(saveRevision.mock.calls[0]?.[0].instances),
+    ).not.toMatch(/sampleUserMessage|sampleAssistantMessage|previewValue/);
   });
 });
 

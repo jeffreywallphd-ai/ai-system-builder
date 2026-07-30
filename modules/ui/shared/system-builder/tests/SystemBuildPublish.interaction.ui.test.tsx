@@ -14,6 +14,7 @@ import type {
 } from "../../../../contracts/system-builder";
 import { SystemBuildTestModal } from "../SystemBuildTestModal";
 import { SystemPublishWorkspace } from "../SystemPublishWorkspace";
+import { NotificationTestHarness, readNotificationMessages } from "../../notifications/tests/NotificationTestHarness";
 import type { SystemBuildClient } from "../SystemBuildReleaseWorkflow";
 import type { SystemPublishedLifecycleClient } from "../SystemPublishedLifecycleClient";
 
@@ -139,7 +140,8 @@ describe("guided System build and publication interactions", () => {
       expectedLockDigest: digest("2"),
     }));
     expect(publicationWorkspace).toHaveBeenCalledTimes(2);
-    expect(document.body.textContent).toContain("Support assistant, build 2, was published.");
+    expect(readNotificationMessages(document.body)).toContain("Support assistant, build 2, was published.");
+    expect(container?.textContent).not.toContain("Support assistant, build 2, was published.");
     expect(document.body.textContent).toContain("Published builds");
     expect(document.body.textContent).toContain("Install");
     expect(document.body.textContent).not.toContain("Deployment identifier");
@@ -151,7 +153,7 @@ async function mount(element: React.ReactElement): Promise<void> {
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
-  await act(async () => root?.render(element));
+  await act(async () => root?.render(<NotificationTestHarness>{element}</NotificationTestHarness>));
 }
 
 function button(scope: ParentNode, label: string): HTMLButtonElement {

@@ -11,6 +11,7 @@ import {
 } from "../../../../../../modules/ui/shared/asset-authoring";
 import { PanelHeading } from "../../../../../../modules/ui/shared/components/PanelHeading";
 import { TermWithHint } from "../../../../../../modules/ui/shared/glossary/GlossaryHint";
+import { TransientNotificationPublisher } from "../../../../../../modules/ui/shared/notifications/TransientNotificationPublisher";
 import { createThinClientAssetAuthoringClient } from "../api/thinClientAssetAuthoringClient";
 
 type RowVm = {
@@ -98,6 +99,8 @@ export function AssetAuthoringFeature({
   const [summaries, setSummaries] = useState<RowVm[]>([]);
   const [summariesUnavailable, setSummariesUnavailable] = useState(false);
   const [message, setMessage] = useState("");
+  const contextualMessage = message === "Some asset records are unavailable." || message === "Display name is required.";
+  const successfulMessage = ["Draft created.", "Draft published.", "Draft saved."].includes(message);
   const [displayName, setDisplayName] = useState("");
   const [summary, setSummary] = useState("");
   const [description, setDescription] = useState("");
@@ -322,7 +325,8 @@ export function AssetAuthoringFeature({
         )}
       </section>
 
-      {message ? <p role="status">{message}</p> : null}
+      {contextualMessage ? <p role="alert">{message}</p> : null}
+      <TransientNotificationPublisher message={!contextualMessage ? message : undefined} title={successfulMessage ? "Asset authoring updated" : "Asset authoring needs attention"} tone={successfulMessage ? "success" : "error"} source="Asset Authoring" workspaceId={workspaceId} />
     </section>
   );
 }

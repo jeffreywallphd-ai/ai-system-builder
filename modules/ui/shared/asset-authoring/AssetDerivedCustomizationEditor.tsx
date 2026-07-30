@@ -13,6 +13,7 @@ import { ApplicationIcon } from "../components/ApplicationIcon";
 import { EmptyState } from "../components/EmptyState";
 import { ModalDialog } from "../components/ModalDialog";
 import { WorkflowSequence, WorkflowStep } from "../components/WorkflowSequence";
+import { TransientNotificationPublisher } from "../notifications/TransientNotificationPublisher";
 import {
   buildAssetCustomizationSubmission,
   buildAssetCustomizationSourceUpdate,
@@ -147,6 +148,7 @@ export function AssetDerivedCustomizationEditor({
   const [loadingTargets, setLoadingTargets] = useState(true);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
+  const contextualNotice = Boolean(notice?.includes("ready to customize"));
   const [newPath, setNewPath] = useState("");
   const [newRole, setNewRole] =
     useState<AssetImplementationBackingResourceRole>("other");
@@ -405,9 +407,7 @@ export function AssetDerivedCustomizationEditor({
     ]);
     setNewPath("");
     setNewContent("");
-    setNotice(
-      "The new backing resource will be added when the customization is saved.",
-    );
+    setNotice(undefined);
   }
 
   const selectedLabel = target?.displayName ?? "No asset selected";
@@ -434,16 +434,9 @@ export function AssetDerivedCustomizationEditor({
         </div>
       </header>
       <div className="ui-panel__section-body ui-stack">
-        {error ? (
-          <p className="ui-status ui-status--error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        {notice ? (
-          <p className="ui-status ui-status--success" role="status">
-            {notice}
-          </p>
-        ) : null}
+        <TransientNotificationPublisher message={error} title="Asset customization needs attention" tone="error" source="Asset Customization" workspaceId={workspaceId} />
+        {contextualNotice ? <p className="ui-status" role="status">{notice}</p> : null}
+        <TransientNotificationPublisher message={!contextualNotice ? notice : undefined} title="Asset customization updated" tone="success" source="Asset Customization" workspaceId={workspaceId} />
         <WorkflowSequence ariaLabel="Asset customization sections">
           <WorkflowStep
             title="Choose the asset"

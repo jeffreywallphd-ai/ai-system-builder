@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { TransientNotificationPublisher } from "../notifications/TransientNotificationPublisher";
 import type {
   InvokeSystemRunWorkflowCommand,
   ListSystemRunWorkflowProfilesQuery,
@@ -71,6 +72,8 @@ export function SystemRunWorkflow({
   const [busy, setBusy] = useState<BusyOperation>();
   const [error, setError] = useState<WorkflowError>();
   const [notice, setNotice] = useState("");
+  const contextualNotice = notice.includes("No system change or runtime action has occurred")
+    || notice.includes("Review the exact source, action, and values before confirming");
 
   useEffect(() => {
     const generation = ++requestGeneration.current;
@@ -277,11 +280,8 @@ export function SystemRunWorkflow({
             <span>{error.message}</span>
           </div>
         ) : null}
-        {notice ? (
-          <p className="ui-status ui-status--success" role="status">
-            {notice}
-          </p>
-        ) : null}
+        {contextualNotice ? <p className="ui-status" role="status">{notice}</p> : null}
+        <TransientNotificationPublisher message={!contextualNotice ? notice : undefined} title="System run updated" tone="success" source="System Run" workspaceId={workspaceId} />
 
         <div className="ui-workflow">
           <section

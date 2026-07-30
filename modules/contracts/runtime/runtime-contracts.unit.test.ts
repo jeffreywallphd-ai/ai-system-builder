@@ -917,6 +917,7 @@ describe("runtime task registry contracts", () => {
     const taskTypes = Object.values(TaskType);
     expect(taskTypes).toEqual([
       "dataset-preparation",
+      "model-download",
       "model-training",
       "model-validation",
       "model-publishing",

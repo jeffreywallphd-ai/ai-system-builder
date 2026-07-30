@@ -11,6 +11,7 @@ import {
   SystemRunWorkflow,
   type SystemRunWorkflowClient,
 } from "../SystemRunWorkflow";
+import { NotificationTestHarness, readNotificationMessages } from "../../notifications/tests/NotificationTestHarness";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
   true;
@@ -113,7 +114,8 @@ describe("SystemRunWorkflow", () => {
         },
       }),
     );
-    expect(container?.textContent).toContain("Create a record completed.");
+    expect(readNotificationMessages(container!)).toContain("Create a record completed.");
+    expect(container?.textContent).not.toContain("Create a record completed.");
     expect(container?.textContent).toContain("Created record");
     expect(container?.textContent).toContain("allowed");
   });
@@ -597,7 +599,7 @@ async function render(element: ReactNode, waitForReady = true) {
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
-  await act(async () => root?.render(element));
+  await act(async () => root?.render(<NotificationTestHarness>{element}</NotificationTestHarness>));
   if (waitForReady) {
     await vi.waitFor(() =>
       expect(container?.querySelector(".ui-loading-spinner")).toBeNull(),

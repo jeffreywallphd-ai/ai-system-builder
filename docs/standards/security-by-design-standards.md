@@ -54,6 +54,12 @@ Do not create a parallel threat model when a current one already owns the bounda
 - Keep security enforcement in the owning layers. Transports authenticate and validate coarse requests; application services authorize use cases and resources; adapters enforce containment and harden I/O; hosts select secure composition; UI preserves safe contracts without becoming the policy authority.
 - Make rollback, migration, recovery, and compatibility paths at least as secure as the forward path. A rollback must not restore a vulnerable mode, bypass a new authorization rule, lose audit integrity, or expose data written under stronger policy.
 - Separate security audit evidence from ordinary diagnostics. Both must be bounded and redacted; denial paths must not expose secrets, private content, provider-native payloads, paths, stack traces, commands, or raw logs.
+- Treat notification history and toast copy as public diagnostic sinks. Publish
+  only bounded user-safe messages with authoritative source and workspace scope;
+  never retain raw exceptions, paths, secrets, prompts, logs, provider/runtime
+  payloads, or protected identifiers. Filter workspace-owned records before
+  presentation, and keep security, authorization, readiness, and other
+  fail-closed blockers inline when the user must act on them.
 
 ## Verification and Evidence
 

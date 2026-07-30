@@ -1,11 +1,13 @@
 import { describe, expect, it } from "../../../../testing/node-test";
 import {
   normalizeAssetId,
+  type AssetBinding,
   type AssetDefinition,
   type AssetInstance,
 } from "../../../../contracts/asset";
 import type { ModelInventoryRecord } from "../../../../contracts/model";
 import {
+  createSystemBuilderConversationInteractionMetadata,
   createSystemBuilderModelBinding,
   SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID,
   type SystemBuilderRevision,
@@ -40,6 +42,17 @@ const definition: AssetDefinition = {
     requiredFieldIds: [SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID],
   },
 };
+const historyDefinition: AssetDefinition = {
+  ...definition,
+  definitionId: normalizeAssetId("conversation.message-history-display"),
+  displayName: "Message history",
+  description: "Persisted message history",
+  configurationSchema: {
+    schemaVersion: "1.0",
+    strict: true,
+    fields: [],
+  },
+};
 
 function model(
   overrides: Partial<ModelInventoryRecord> = {},
@@ -62,6 +75,7 @@ function model(
 
 function revision(
   selectedConfiguration: AssetInstance["selectedConfiguration"],
+  includeInteraction = true,
 ): Pick<
   SystemBuilderRevision,
   | "targetWorkspaceId"
@@ -83,6 +97,27 @@ function revision(
     parentCompositionRef: { kind: "asset-composition", id: compositionId },
     provenance: { sourceKind: "human-authored" },
   };
+  const historyInstance: AssetInstance = {
+    instanceId: normalizeAssetId("instance.chat-history"),
+    definitionRef: {
+      kind: "asset-definition-version",
+      id: normalizeAssetId(String(historyDefinition.definitionId)),
+      version: historyDefinition.version,
+    },
+    lifecycleStatus: "draft",
+    selectedConfiguration: {},
+    parentCompositionRef: { kind: "asset-composition", id: compositionId },
+    provenance: { sourceKind: "human-authored" },
+  };
+  const interaction: AssetBinding = {
+    bindingId: normalizeAssetId("binding.chat-history"),
+    bindingKind: "control",
+    sourceRef: { kind: "asset-instance", id: instance.instanceId },
+    targetRef: { kind: "asset-instance", id: historyInstance.instanceId },
+    lifecycleStatus: "draft",
+    provenance: { sourceKind: "system-generated" },
+    metadata: createSystemBuilderConversationInteractionMetadata(),
+  };
   return {
     targetWorkspaceId: workspaceId,
     composition: {
@@ -92,16 +127,32 @@ function revision(
       version: "0.1.0",
       lifecycleStatus: "draft",
       rootInstanceRefs: [
-        { kind: "asset-instance", id: normalizeAssetId(String(instance.instanceId)) },
+        {
+          kind: "asset-instance",
+          id: normalizeAssetId(String(instance.instanceId)),
+        },
+        {
+          kind: "asset-instance",
+          id: normalizeAssetId(String(historyInstance.instanceId)),
+        },
       ],
       instanceRefs: [
-        { kind: "asset-instance", id: normalizeAssetId(String(instance.instanceId)) },
+        {
+          kind: "asset-instance",
+          id: normalizeAssetId(String(instance.instanceId)),
+        },
+        {
+          kind: "asset-instance",
+          id: normalizeAssetId(String(historyInstance.instanceId)),
+        },
       ],
-      bindingRefs: [],
+      bindingRefs: includeInteraction
+        ? [{ kind: "asset-binding", id: interaction.bindingId }]
+        : [],
       provenance: { sourceKind: "human-authored" },
     },
-    instances: [instance],
-    bindings: [],
+    instances: [instance, historyInstance],
+    bindings: includeInteraction ? [interaction] : [],
   };
 }
 
@@ -119,7 +170,12 @@ function validator(records: readonly ModelInventoryRecord[]) {
     },
   });
   return new ValidateSystemBuilderRevisionService(
-    { readExactDefinition: async () => definition },
+    {
+      readExactDefinition: async (reference) =>
+        String(reference.id) === String(historyDefinition.definitionId)
+          ? historyDefinition
+          : definition,
+    },
     () => "2026-07-29T00:00:00.000Z",
     authority,
   );
@@ -137,12 +193,34 @@ describe("System Builder model-binding validation", () => {
     expect(result.issues).toEqual([]);
   });
 
+  it("denies a model-bound composer without exactly one persisted-history interaction", async () => {
+    const result = await validator([model()]).execute(
+      revision(
+        {
+          [SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID]:
+            createSystemBuilderModelBinding("model.chat.local"),
+        },
+        false,
+      ),
+    );
+    expect(result.status).toBe("invalid");
+    expect(
+      result.issues.some(
+        (issue) =>
+          issue.category === "binding" &&
+          issue.message ===
+            "Each conversation model binding requires one persisted-history interaction.",
+      ),
+    ).toBe(true);
+  });
+
   it("denies missing and stale model bindings with bounded diagnostics", async () => {
     const missing = await validator([model()]).execute(revision({}));
     expect(missing.status).toBe("invalid");
     expect(
       missing.issues.find(
-        (issue) => issue.message === "Select an available text-generation model.",
+        (issue) =>
+          issue.message === "Select an available text-generation model.",
       ),
     ).toMatchObject({ category: "configuration" });
 
@@ -156,8 +234,6 @@ describe("System Builder model-binding validation", () => {
     expect(stale.issues[0]?.message).toBe(
       "The selected model is unavailable in this workspace.",
     );
-    expect(
-      JSON.stringify(stale.issues).includes("local/chat"),
-    ).toBe(false);
+    expect(JSON.stringify(stale.issues).includes("local/chat")).toBe(false);
   });
 });

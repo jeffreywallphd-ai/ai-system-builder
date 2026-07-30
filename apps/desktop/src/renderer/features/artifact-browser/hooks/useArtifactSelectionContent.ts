@@ -238,7 +238,7 @@ export function useArtifactSelectionContent(
           setArtifactPreview(createUnavailableArtifactPreview({ storageKey }));
         }
 
-        setViewState({ status: "success", message: `Loaded ${storageKey}.` });
+        setViewState({ status: "success" });
       } catch (error) {
         clearSelectedArtifact();
         setViewState({

@@ -6,6 +6,7 @@ import type {
 import { ApplicationIcon } from "../components/ApplicationIcon";
 import { EmptyState } from "../components/EmptyState";
 import { ModalDialog } from "../components/ModalDialog";
+import { TransientNotificationPublisher } from "../notifications/TransientNotificationPublisher";
 import type { SystemBuildClient } from "./SystemBuildReleaseWorkflow";
 import { SystemPublishedLifecycleCard } from "./SystemPublishedLifecycleCard";
 import type { SystemPublishedLifecycleClient } from "./SystemPublishedLifecycleClient";
@@ -123,16 +124,8 @@ export function SystemPublishWorkspace({
         </div>
       </header>
       <div className="ui-panel__section-body ui-stack ui-stack--md">
-        {error ? (
-          <p className="ui-status ui-status--error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        {notice ? (
-          <p className="ui-status ui-status--success" role="status">
-            {notice}
-          </p>
-        ) : null}
+        <TransientNotificationPublisher message={error} title="Publishing needs attention" tone="error" source="System Publishing" workspaceId={workspaceId} />
+        <TransientNotificationPublisher message={notice} title="Publishing updated" tone="success" source="System Publishing" workspaceId={workspaceId} />
         {loading ? <p role="status">Loading systems and builds...</p> : null}
         {!loading && !workspace?.systems.length ? (
           <EmptyState

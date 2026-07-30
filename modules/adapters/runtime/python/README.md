@@ -21,3 +21,9 @@ Foundation for the managed Python sidecar runtime adapter:
   not attach to an ambient localhost service that lacks its launch token.
 - Runtime tokens are not caller configuration, persistence, logs, readiness
   metadata, or renderer/API/IPC data.
+- The generic task adapter maps `model-download` to the worker's
+  `ensure-model-download` task, retains a bounded current-process task index for
+  list reads, and projects only allowlisted progress fields. Worker cache
+  handles are resolved to host-local paths only through the private
+  `ModelDownloadCompletionPort`; public task/API/IPC records never contain the
+  handle or resolved path.

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { TermWithHint } from "../../../../modules/ui/shared";
+import { TermWithHint, TransientNotificationPublisher } from "../../../../modules/ui/shared";
 import type {
   ApplicationSettingDefinition,
   ApplicationSettingPrimitiveValue,
@@ -97,8 +97,8 @@ export function SettingsPage() {
         <h1>Settings</h1>
       </header>
       {loading ? <p className="ui-text-muted">Loading settings...</p> : null}
-      {statusMessage ? <p className="ui-status">{statusMessage}</p> : null}
-      {errorMessage ? <p className="ui-status ui-status--error" role="alert">{errorMessage}</p> : null}
+      <TransientNotificationPublisher message={statusMessage} title="Settings updated" tone="success" source="Settings" />
+      <TransientNotificationPublisher message={errorMessage} title="Settings need attention" tone="error" source="Settings" />
       <div className="ui-stack ui-stack--md">
         <section className="settings-field ui-stack ui-stack--sm">
           <header className="ui-stack ui-stack--sm">

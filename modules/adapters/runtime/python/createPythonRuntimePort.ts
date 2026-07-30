@@ -201,6 +201,8 @@ export function createPythonRuntimeAdapterFoundation(
         throw error;
       }
     },
+    resolveModelDownloadTaskResult: (payload) =>
+      client.resolveModelDownloadTaskResult(payload),
     getModelStatus: () => client.getModelStatus(),
     unloadModels: () => client.unloadModels(),
   };

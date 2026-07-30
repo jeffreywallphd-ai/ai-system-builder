@@ -11,6 +11,7 @@ import type {
   SystemBuilderValidationResult,
 } from "../../../contracts/system-builder";
 import {
+  readSystemBuilderConversationInteraction,
   readSystemBuilderModelBinding,
   SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID,
 } from "../../../contracts/system-builder";
@@ -46,11 +47,7 @@ export class ValidateSystemBuilderRevisionService {
   public async execute(
     revision: Pick<
       SystemBuilderRevision,
-      | "composition"
-      | "instances"
-      | "bindings"
-      | "structure"
-      | "placements"
+      "composition" | "instances" | "bindings" | "structure" | "placements"
     > &
       Partial<Pick<SystemBuilderRevision, "targetWorkspaceId">>,
   ): Promise<SystemBuilderValidationResult> {
@@ -131,6 +128,7 @@ export class ValidateSystemBuilderRevisionService {
       instancesById,
       issues,
     );
+    validateConversationInteractions(revision, instancesById, issues);
     await this.validateModelBindings(revision, issues);
 
     const boundedIssues = issues.slice(0, MAX_ISSUES);
@@ -193,20 +191,24 @@ export class ValidateSystemBuilderRevisionService {
     issues: AssetValidationIssue[],
   ): Promise<void> {
     for (const [index, instance] of revision.instances.entries()) {
-      if (String(instance.definitionRef.id) !== "conversation.message-composer") {
+      if (
+        String(instance.definitionRef.id) !== "conversation.message-composer"
+      ) {
         continue;
       }
       const binding = readSystemBuilderModelBinding(
-        instance.selectedConfiguration?.[
-          SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID
-        ],
+        instance.selectedConfiguration?.[SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID],
       );
-      const resolution = this.modelAuthority && revision.targetWorkspaceId
-        ? await this.modelAuthority.resolve(revision.targetWorkspaceId, binding)
-        : {
-            status: "denied" as const,
-            message: "Model selection authority is unavailable.",
-          };
+      const resolution =
+        this.modelAuthority && revision.targetWorkspaceId
+          ? await this.modelAuthority.resolve(
+              revision.targetWorkspaceId,
+              binding,
+            )
+          : {
+              status: "denied" as const,
+              message: "Model selection authority is unavailable.",
+            };
       if (resolution.status === "denied") {
         issues.push({
           severity: "error",
@@ -223,6 +225,63 @@ export class ValidateSystemBuilderRevisionService {
       }
     }
   }
+}
+
+function validateConversationInteractions(
+  revision: Pick<SystemBuilderRevision, "instances" | "bindings">,
+  instancesById: ReadonlyMap<string, AssetInstance>,
+  issues: AssetValidationIssue[],
+): void {
+  const interactions = revision.bindings.flatMap((binding, index) => {
+    const interaction = readSystemBuilderConversationInteraction(binding);
+    if (!interaction) return [];
+    const composer = instancesById.get(interaction.composerInstanceId);
+    const history = instancesById.get(interaction.historyInstanceId);
+    if (
+      String(composer?.definitionRef.id) !== "conversation.message-composer" ||
+      String(history?.definitionRef.id) !==
+        "conversation.message-history-display"
+    ) {
+      issues.push({
+        severity: "error",
+        category: "binding",
+        message:
+          "The conversation interaction must connect a message composer to a message history display.",
+        path: [
+          "bindings",
+          String(index),
+          "metadata",
+          "systemBuilderInteraction",
+        ],
+      });
+    }
+    return [interaction];
+  });
+
+  revision.instances.forEach((instance, index) => {
+    if (
+      String(instance.definitionRef.id) !== "conversation.message-composer" ||
+      !readSystemBuilderModelBinding(
+        instance.selectedConfiguration?.[SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID],
+      )
+    ) {
+      return;
+    }
+    const matching = interactions.filter(
+      (interaction) =>
+        interaction.composerInstanceId === String(instance.instanceId),
+    );
+    if (matching.length !== 1) {
+      issues.push({
+        severity: "error",
+        category: "binding",
+        message:
+          "Each conversation model binding requires one persisted-history interaction.",
+        assetRef: instanceReference(instance),
+        path: ["instances", String(index), "bindings"],
+      });
+    }
+  });
 }
 
 function validateInstanceParents(

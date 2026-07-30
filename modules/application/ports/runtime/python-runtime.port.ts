@@ -8,6 +8,7 @@ import {
   StartPythonRuntimeTaskResult,
   PythonRuntimeUnloadModelsResult
 } from "../../../contracts/runtime";
+import type { CompletedModelDownload } from "../model";
 
 export interface PythonRuntimePort {
   startTask(request: StartPythonRuntimeTaskRequest): Promise<StartPythonRuntimeTaskResult>;
@@ -28,6 +29,7 @@ export interface PythonRuntimePort {
     fromCache: boolean;
     localPath?: string;
   }>;
+  resolveModelDownloadTaskResult(payload: unknown): Promise<CompletedModelDownload>;
   getModelStatus(): Promise<PythonRuntimeModelStatusResult>;
   unloadModels(): Promise<PythonRuntimeUnloadModelsResult>;
 }

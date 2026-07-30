@@ -90,6 +90,7 @@ export function ArtifactIngestionFeature({ client, ingestionClient, onUploadComp
             onFileChange={onFileChange}
             onSubmit={(event) => void onUploadSubmit(event)}
             onCancelUpload={onCancelUpload}
+            workspaceId={workspaceId}
           />
         </CollapsiblePanel>
 
@@ -113,6 +114,7 @@ export function ArtifactIngestionFeature({ client, ingestionClient, onUploadComp
               setWebsiteBatchMode={setWebsiteBatchMode}
               ingestWebsiteSingle={ingestWebsiteSingle}
               ingestWebsiteBatch={ingestWebsiteBatch}
+              workspaceId={workspaceId}
             />
           ) : <p>Open this section to configure website scraping.</p>}
         </CollapsiblePanel>
@@ -124,7 +126,7 @@ export function ArtifactIngestionFeature({ client, ingestionClient, onUploadComp
           onToggle={() => togglePanel("importFromHuggingFace")}
         >
           {expandedPanels.importFromHuggingFace ? (
-            <ArtifactHuggingFaceForm client={ingestionClient} onRegistered={() => onUploadComplete?.()} />
+            <ArtifactHuggingFaceForm client={ingestionClient} onRegistered={() => onUploadComplete?.()} workspaceId={workspaceId} />
           ) : <p>Open this section to register or import Hugging Face artifacts.</p>}
         </CollapsiblePanel>
       </div>

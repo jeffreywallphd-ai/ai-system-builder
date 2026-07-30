@@ -3,6 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { NotificationTestHarness, readNotificationMessages } from "../../../../../../modules/ui/shared/notifications/tests/NotificationTestHarness";
 import { ArtifactBrowserFeature } from "../components/ArtifactBrowserFeature";
 
 function setInputValue(input: HTMLInputElement, value: string): void {
@@ -105,7 +106,11 @@ describe("ArtifactBrowserFeature", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
+      root.render(
+        <NotificationTestHarness>
+          <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />
+        </NotificationTestHarness>,
+      );
     });
 
     const artifactButton = Array.from(container.querySelectorAll("button"))
@@ -181,7 +186,7 @@ describe("ArtifactBrowserFeature", () => {
     });
 
     expect(client.deleteRegisteredArtifact).toHaveBeenCalledWith({ storageKey: "uploads/cat.png" }, { workspaceId: "workspace-a" });
-    expect(container.textContent).toContain("Deleted uploads/cat.png.");
+    expect(container.textContent).not.toContain("Deleted uploads/cat.png.");
   });
 
   it("deletes selected artifacts in bulk after Delete All confirmation", async () => {
@@ -579,7 +584,7 @@ describe("ArtifactBrowserFeature", () => {
       revision: "main",
       mediaType: undefined,
     });
-    expect(container.textContent).toContain("Registered imports/huggingface/openai/demo/main/images/cat.png from Hugging Face.");
+    expect(container.textContent).not.toContain("Registered imports/huggingface/openai/demo/main/images/cat.png from Hugging Face.");
   });
 
   it("renders dataset cards with per-card file viewer and register actions", async () => {
@@ -802,7 +807,11 @@ describe("ArtifactBrowserFeature", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
+      root.render(
+        <NotificationTestHarness>
+          <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />
+        </NotificationTestHarness>,
+      );
     });
 
     const artifactButton = Array.from(container.querySelectorAll("button"))
@@ -820,7 +829,12 @@ describe("ArtifactBrowserFeature", () => {
     expect(client.localizeArtifactFromRepo).toHaveBeenCalledWith({
       artifactId: "artifacts/20260418000000-local01",
     });
-    expect(container.textContent).toContain("Localized artifacts/20260418000000-local01 to local object storage.");
+    expect(readNotificationMessages(container)).toContain(
+      "Localized artifacts/20260418000000-local01 to local object storage.",
+    );
+    expect(container.textContent).not.toContain(
+      "Localized artifacts/20260418000000-local01 to local object storage.",
+    );
   });
 
   it("shows source verification and remote-only/localized state cues based on backing state", async () => {

@@ -8,6 +8,7 @@ import type {
   StartPythonRuntimeTaskResult,
   PythonRuntimeUnloadModelsResult,
 } from "../../../../contracts/runtime";
+import type { CompletedModelDownload } from "../../../../application/ports/model";
 import { randomUUID } from "node:crypto";
 import { lstat, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -41,6 +42,7 @@ export interface PythonRuntimeHttpClient {
     fromCache: boolean;
     localPath?: string;
   }>;
+  resolveModelDownloadTaskResult(payload: unknown): Promise<CompletedModelDownload>;
   getModelStatus(): Promise<PythonRuntimeModelStatusResult>;
   unloadModels(): Promise<PythonRuntimeUnloadModelsResult>;
   startTask(
@@ -413,6 +415,10 @@ export function createPythonRuntimeHttpClient(
             : ""
         }.`,
       );
+    },
+
+    async resolveModelDownloadTaskResult(payload) {
+      return mapModelDownloadPayload("/tasks/:requestId", payload, modelCacheRoot);
     },
 
     async getModelStatus() {

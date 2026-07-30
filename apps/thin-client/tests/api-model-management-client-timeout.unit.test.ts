@@ -130,4 +130,21 @@ describe("api model management client request timeouts", () => {
     expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 15000);
     await result;
   });
+
+  it("uses short requests and strips private fields from model-download activities", async () => {
+    const setTimeoutSpy = testDouble.fn(() => 1);
+    defineGlobal("window", { setTimeout: setTimeoutSpy, clearTimeout: testDouble.fn() });
+    defineGlobal("localStorage", { getItem: () => null });
+    defineGlobal("fetch", testDouble.fn(() => Promise.resolve({
+      headers: { get: () => "application/json" },
+      status: 200,
+      json: async () => ({ ok: true, value: { activities: [{ requestId: "download-1", workspaceId: "workspace-a", modelId: "org/model", displayName: "Model", status: "running", progress: { percent: 25, details: { token: "secret" } }, model: { modelRecordId: "m1", localPath: "/private/model" } }] } }),
+    } as unknown as Response)) as typeof fetch);
+
+    const result = await createApiModelManagementClient().listModelDownloads!({ workspaceId: "workspace-a" as never, includeCompleted: true });
+
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 15000);
+    expect(JSON.stringify(result)).not.toContain("secret");
+    expect(JSON.stringify(result)).not.toContain("/private/model");
+  });
 });

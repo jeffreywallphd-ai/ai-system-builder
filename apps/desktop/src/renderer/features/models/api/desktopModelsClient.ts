@@ -2,6 +2,10 @@ import {
   getDesktopApi,
   type DesktopDeleteModelRecordResult,
   type DesktopDownloadModelResult,
+  type DesktopStartModelDownloadResult,
+  type DesktopReadModelDownloadResult,
+  type DesktopListModelDownloadsResult,
+  type DesktopCancelModelDownloadResult,
   type DesktopModelBrowseItem,
   type DesktopModelDetailsResult,
   type DesktopModelInventoryRecord,
@@ -49,6 +53,10 @@ export interface DesktopModelsClient {
   listModels: (input?: ListModelsRequest) => Promise<DesktopModelInventoryRecord[]>;
   saveModelReference: (input: { modelId: string; displayName?: string; inferenceMode?: "text2text" | "causal" | "chat" | "text-to-image"; taskTags?: ModelTaskTag[]; artifactForm?: "full-model" | "adapter" | "merged-model" | "checkpoint"; metadata?: Record<string, unknown>; workspaceId: string }) => Promise<DesktopModelInventoryRecord>;
   downloadModel: (input: { modelId: string; displayName?: string; inferenceMode?: "text2text" | "causal" | "chat" | "text-to-image"; taskTags?: ModelTaskTag[]; artifactForm?: "full-model" | "adapter" | "merged-model" | "checkpoint"; metadata?: Record<string, unknown>; workspaceId: string }) => Promise<DesktopDownloadModelResult>;
+  startModelDownload: (input: { modelId: string; displayName?: string; inferenceMode?: "text2text" | "causal" | "chat" | "text-to-image"; taskTags?: ModelTaskTag[]; artifactForm?: "full-model" | "adapter" | "merged-model" | "checkpoint"; metadata?: Record<string, unknown>; workspaceId: string }) => Promise<DesktopStartModelDownloadResult>;
+  readModelDownload: (input: { requestId: string; workspaceId: string }) => Promise<DesktopReadModelDownloadResult>;
+  listModelDownloads: (input: { workspaceId: string; includeCompleted?: boolean; limit?: number }) => Promise<DesktopListModelDownloadsResult>;
+  cancelModelDownload: (input: { requestId: string; workspaceId: string }) => Promise<DesktopCancelModelDownloadResult>;
   updateModelRecord: (input: { modelRecordId: string; patch: Record<string, unknown> }) => Promise<DesktopModelInventoryRecord>;
   deleteModelRecord: (input: { modelRecordId: string; deleteLocalFiles?: boolean; deleteBackingArtifacts?: boolean; workspaceId: string }) => Promise<DesktopDeleteModelRecordResult>;
   trainModel: (input: DesktopModelTrainingRequest) => Promise<DesktopModelTrainingResult>;
@@ -117,6 +125,29 @@ export function createDesktopModelsClient(): DesktopModelsClient {
       );
     },
     async downloadModel(input) {
+      if (desktopApi.startModelDownload && desktopApi.readModelDownload) {
+        const started = ensureSuccess(
+          await desktopApi.startModelDownload({ ...input, provider: "huggingface", workspaceId: createWorkspaceId(input.workspaceId) }),
+          (value) => value as DesktopStartModelDownloadResult,
+          "Failed to start model download.",
+        );
+        let activity = started.activity;
+        while (activity.status === "queued" || activity.status === "running" || activity.status === "unknown") {
+          await new Promise((resolve) => window.setTimeout(resolve, 1_000));
+          activity = ensureSuccess(
+            await desktopApi.readModelDownload({ workspaceId: createWorkspaceId(input.workspaceId), requestId: activity.requestId }),
+            (value) => (value as DesktopReadModelDownloadResult).activity,
+            "Failed to read model download.",
+          );
+        }
+        if (activity.status !== "succeeded" || !activity.model) {
+          throw new Error(activity.error?.message ?? `Model download ended with status ${activity.status}.`);
+        }
+        return {
+          model: sanitizeModelRecord(activity.model),
+          download: { provider: "transformers", modelId: activity.modelId, downloaded: true, fromCache: false },
+        } as DesktopDownloadModelResult;
+      }
       if (!desktopApi.downloadModel) {
         throw new Error("Desktop preload model download bridge is unavailable.");
       }
@@ -133,6 +164,38 @@ export function createDesktopModelsClient(): DesktopModelsClient {
         }),
         (value) => sanitizeDownloadResult(value as DesktopDownloadModelResult),
         "Failed to download model.",
+      );
+    },
+    async startModelDownload(input) {
+      if (!desktopApi.startModelDownload) throw new Error("Desktop preload model download-start bridge is unavailable.");
+      return ensureSuccess(
+        await desktopApi.startModelDownload({ ...input, provider: "huggingface", workspaceId: createWorkspaceId(input.workspaceId) }),
+        (value) => value as DesktopStartModelDownloadResult,
+        "Failed to start model download.",
+      );
+    },
+    async readModelDownload(input) {
+      if (!desktopApi.readModelDownload) throw new Error("Desktop preload model download-read bridge is unavailable.");
+      return ensureSuccess(
+        await desktopApi.readModelDownload({ ...input, workspaceId: createWorkspaceId(input.workspaceId) }),
+        (value) => value as DesktopReadModelDownloadResult,
+        "Failed to read model download.",
+      );
+    },
+    async listModelDownloads(input) {
+      if (!desktopApi.listModelDownloads) throw new Error("Desktop preload model download-list bridge is unavailable.");
+      return ensureSuccess(
+        await desktopApi.listModelDownloads({ ...input, workspaceId: createWorkspaceId(input.workspaceId) }),
+        (value) => value as DesktopListModelDownloadsResult,
+        "Failed to list model downloads.",
+      );
+    },
+    async cancelModelDownload(input) {
+      if (!desktopApi.cancelModelDownload) throw new Error("Desktop preload model download-cancel bridge is unavailable.");
+      return ensureSuccess(
+        await desktopApi.cancelModelDownload({ ...input, workspaceId: createWorkspaceId(input.workspaceId) }),
+        (value) => value as DesktopCancelModelDownloadResult,
+        "Failed to cancel model download.",
       );
     },
     async updateModelRecord(input) {

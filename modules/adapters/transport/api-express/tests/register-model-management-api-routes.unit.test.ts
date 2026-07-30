@@ -43,6 +43,18 @@ describe("registerModelManagementApiRoutes",()=>{
     expect(deps.publishModelUseCase.execute).toHaveBeenCalledWith({workspaceId:'workspace-a',modelRecordId:'m1',repository:'owner/repo',owner:undefined,revision:undefined,private:undefined,pathPrefix:undefined,token:undefined,allowWarningValidation:undefined,allowInvalidValidation:undefined,allowInvalid:undefined,forceRevalidate:undefined});
   });
 
+  it("registers short model-download lifecycle routes and normalizes workspace task reads", async()=>{
+    const handlers=new Map<string,any>(); const app:ModelManagementExpressRoutePort={post:testDouble.fn((p,h)=>handlers.set(p,h))};
+    const tasks={start:testDouble.fn(async(x)=>({activity:{requestId:'download-1',...x,status:'queued'}})),read:testDouble.fn(async(x)=>({activity:{...x,status:'running'}})),list:testDouble.fn(async()=>({activities:[]})),cancel:testDouble.fn(async(x)=>({activity:{...x,status:'cancelled'},cancelled:true}))};
+    registerModelManagementApiRoutes({app,browseModelsUseCase:{execute:testDouble.fn()},getModelDetailsUseCase:{execute:testDouble.fn()},listModelsUseCase:{execute:testDouble.fn()},saveModelReferenceUseCase:{execute:testDouble.fn()},downloadModelUseCase:{execute:testDouble.fn()},modelDownloadTasksUseCase:tasks,updateModelRecordUseCase:{execute:testDouble.fn()},deleteModelRecordUseCase:{execute:testDouble.fn()}});
+    expect([...handlers.keys()]).toContain('/api/model/download/start');
+    expect([...handlers.keys()]).toContain('/api/model/download/read');
+    expect([...handlers.keys()]).toContain('/api/model/download/list');
+    expect([...handlers.keys()]).toContain('/api/model/download/cancel');
+    await handlers.get('/api/model/download/read')({body:{workspaceId:'workspace-a',requestId:'download-1'},headers:{}},response().res);
+    expect(tasks.read).toHaveBeenCalledWith({workspaceId:'workspace-a',requestId:'download-1'});
+  });
+
   it("logs browse request lifecycle", async()=>{
     const handlers=new Map<string,any>(); const app:ModelManagementExpressRoutePort={post:testDouble.fn((p,h)=>handlers.set(p,h))};
     const logger={info:testDouble.fn(),warn:testDouble.fn()};

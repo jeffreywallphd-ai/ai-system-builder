@@ -59,9 +59,9 @@ export function useArtifactBrowserArtifacts({
       setUnregisteredItems(unregistered);
       setViewState({
         status: "success",
-        message: (filteredByStorage.length + unregistered.length) > 0
-          ? "Loaded artifacts."
-          : "No artifacts found yet.",
+        ...((filteredByStorage.length + unregistered.length) > 0
+          ? {}
+          : { message: "No artifacts found yet." }),
       });
     } catch (error) {
       setViewState({

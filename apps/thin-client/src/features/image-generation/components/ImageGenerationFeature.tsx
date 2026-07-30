@@ -6,6 +6,7 @@ import {
   formatImageGenerationModelDropdownLabel,
   PanelHeading,
   TermWithHint,
+  TransientNotificationPublisher,
   WorkflowSequence,
   WorkflowStep,
 } from "../../../../../../modules/ui/shared";
@@ -613,17 +614,7 @@ export function ImageGenerationFeature({
                 <p>Request ID: {feature.requestId}</p>
               ) : null}
               {feature.error ? <p role="alert">{feature.error}</p> : null}
-              {feature.unloadModelState.message ? (
-                <p
-                  role={
-                    feature.unloadModelState.status === "error"
-                      ? "alert"
-                      : "status"
-                  }
-                >
-                  {feature.unloadModelState.message}
-                </p>
-              ) : null}
+              <TransientNotificationPublisher message={feature.unloadModelState.status !== "loading" ? feature.unloadModelState.message : undefined} title={feature.unloadModelState.status === "error" ? "Model unload needs attention" : "Model unloaded"} tone={feature.unloadModelState.status === "error" ? "error" : "success"} source="Image Generation" workspaceId={workspaceId} />
             </div>
           </WorkflowStep>
 

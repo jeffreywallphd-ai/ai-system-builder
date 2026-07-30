@@ -3,6 +3,7 @@ export * from "./get-model-details.use-case";
 export * from "./list-models.use-case";
 export * from "./save-model-reference.use-case";
 export * from "./download-model.use-case";
+export * from "./model-download-tasks.use-case";
 export * from "./register-downloaded-model.use-case";
 export * from "./register-generated-model.use-case";
 export * from "./update-model-record.use-case";
