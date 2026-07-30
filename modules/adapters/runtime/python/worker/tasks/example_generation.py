@@ -141,26 +141,18 @@ def _log_chunk_generation_failure(
     _log_generation_diagnostic(
         "runtime.dataset_preparation.generation.chunk_failed",
         raw_data={
-            "chunk": {
-                "artifactId": chunk.artifact_id,
-                "chunkIndex": chunk.chunk_index,
-                "text": chunk.text,
-            },
-            "questionOutput": raw_question_output,
-            "answerOutput": raw_answer_output,
+            "chunkIndex": chunk.chunk_index,
+            "chunkCharacterCount": len(chunk.text),
+            "questionOutputCharacterCount": len(raw_question_output),
+            "answerOutputCharacterCount": len(raw_answer_output),
         },
         prepared_data={
-            "model": config.model.model_dump(mode="json"),
-            "generationParams": (
-                config.generationParams.model_dump(mode="json")
-                if config.generationParams is not None
-                else None
-            ),
+            "modelProvider": config.model.provider,
             "failurePolicy": config.failurePolicy,
-            "questionPrompt": question_prompt,
-            "answerPrompt": answer_prompt or None,
+            "questionPromptCharacterCount": len(question_prompt),
+            "answerPromptCharacterCount": len(answer_prompt),
         },
-        errors=[_format_generation_error(error)],
+        errors=[error.__class__.__name__],
     )
 
 

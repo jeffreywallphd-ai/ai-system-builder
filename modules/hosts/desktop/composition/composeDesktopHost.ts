@@ -903,6 +903,9 @@ export function composeDesktopHost(
                 artifacts: await getArtifactFeatures(),
                 runtime: await getRuntimeTaskFeatures(),
                 getArtifactRemoteFeatures,
+                documents: organizationDocuments,
+                workspaceRepository: startupWorkspaceShell.workspaceRepository,
+                workspaceAuthorization,
                 now: options.now,
               });
           },

@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 from dataclasses import dataclass
 from pathlib import Path
+from zipfile import BadZipFile, ZipFile
 
 from ..models import (
     DatasetPreparationSourceInput,
@@ -26,9 +27,25 @@ class DocumentNormalizationResult:
     warnings: list[DatasetPreparationWarning]
 
 
-_SUPPORTED_SUFFIXES = {".txt", ".md", ".html", ".htm", ".pdf", ".docx", ".csv", ".json", ".jsonl"}
+_SUPPORTED_SUFFIXES = {
+    ".txt",
+    ".md",
+    ".markdown",
+    ".html",
+    ".htm",
+    ".pdf",
+    ".docx",
+    ".csv",
+    ".json",
+    ".jsonl",
+}
 
 _UNSUPPORTED_BUT_COMMON_SUFFIXES = {".doc"}
+MAX_DOCUMENT_SOURCE_BYTES = 256 * 1024 * 1024
+MAX_EXTRACTED_DOCUMENT_CHARACTERS = 20_000_000
+MAX_PDF_PAGE_COUNT = 5_000
+MAX_DOCX_ARCHIVE_ENTRY_COUNT = 10_000
+MAX_DOCX_UNCOMPRESSED_BYTES = 512 * 1024 * 1024
 
 
 def _extension_for_source(source: DatasetPreparationSourceInput) -> str:
@@ -41,7 +58,14 @@ def _extension_for_source(source: DatasetPreparationSourceInput) -> str:
 
 
 def _read_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8")
+    _assert_extracted_text_bound(text)
+    return text
+
+
+def _assert_extracted_text_bound(text: str) -> None:
+    if len(text) > MAX_EXTRACTED_DOCUMENT_CHARACTERS:
+        raise ValueError("The document contains more extracted text than can be prepared safely.")
 
 
 def _normalize_html(path: Path) -> str:
@@ -60,11 +84,18 @@ def _normalize_pdf(path: Path) -> str:
         raise RuntimeError("pypdf is required for PDF normalization") from error
 
     reader = PdfReader(str(path))
+    if len(reader.pages) > MAX_PDF_PAGE_COUNT:
+        raise ValueError("The PDF contains too many pages to prepare safely.")
     page_text: list[str] = []
+    extracted_character_count = 0
     for page in reader.pages:
         extracted = page.extract_text() or ""
         if extracted.strip():
-            page_text.append(extracted.strip())
+            normalized = extracted.strip()
+            extracted_character_count += len(normalized)
+            if extracted_character_count > MAX_EXTRACTED_DOCUMENT_CHARACTERS:
+                raise ValueError("The PDF contains more extracted text than can be prepared safely.")
+            page_text.append(normalized)
 
     return "\n\n".join(page_text)
 
@@ -75,15 +106,31 @@ def _normalize_docx(path: Path) -> str:
     except ImportError as error:  # pragma: no cover - covered through policy behavior
         raise RuntimeError("python-docx is required for DOCX normalization") from error
 
+    try:
+        with ZipFile(path) as archive:
+            entries = archive.infolist()
+            if len(entries) > MAX_DOCX_ARCHIVE_ENTRY_COUNT:
+                raise ValueError("The Word document contains too many embedded files.")
+            if sum(entry.file_size for entry in entries) > MAX_DOCX_UNCOMPRESSED_BYTES:
+                raise ValueError("The Word document expands beyond the safe preparation limit.")
+    except BadZipFile as error:
+        raise ValueError("The Word document is not a valid DOCX file.") from error
+
     document = Document(str(path))
     lines = [paragraph.text.strip() for paragraph in document.paragraphs if paragraph.text.strip()]
-    return "\n\n".join(lines)
+    normalized = "\n\n".join(lines)
+    _assert_extracted_text_bound(normalized)
+    return normalized
 
 
 def _normalize_source_to_markdown(source: DatasetPreparationSourceInput) -> str:
     path = Path(source.localPath)
     if not path.exists():
-        raise ValueError(f"Input path does not exist: {source.localPath}")
+        raise ValueError("The staged input file is not available.")
+    if not path.is_file():
+        raise ValueError("The staged input is not a file.")
+    if path.stat().st_size > MAX_DOCUMENT_SOURCE_BYTES:
+        raise ValueError("The document exceeds the safe preparation size limit.")
 
     extension = _extension_for_source(source)
     if extension in _UNSUPPORTED_BUT_COMMON_SUFFIXES:
@@ -94,7 +141,7 @@ def _normalize_source_to_markdown(source: DatasetPreparationSourceInput) -> str:
     if extension not in _SUPPORTED_SUFFIXES:
         raise ValueError(f"Unsupported document type: {extension or 'unknown'}")
 
-    if extension == ".md":
+    if extension in {".md", ".markdown"}:
         return _read_text(path)
 
     if extension in {".txt", ".csv", ".json", ".jsonl"}:
@@ -145,7 +192,8 @@ def normalize_sources_to_markdown(
                     DatasetPreparationWarning(
                         code=warning_code,
                         message=(
-                            f"Skipped source '{source.artifactId}' during normalization: {error}"
+                            f"Skipped source '{source.artifactId}' because it could not be read "
+                            "with the selected document settings."
                         ),
                         sourceArtifactId=source.artifactId,
                     )

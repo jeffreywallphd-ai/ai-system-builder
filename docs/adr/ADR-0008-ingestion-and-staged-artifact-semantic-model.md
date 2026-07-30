@@ -62,6 +62,21 @@ This ADR sets semantic direction compatible with future ELT-style progression:
 This ADR does **not** commit the repository to implementing a full ELT platform immediately.
 The image-backed artifact browser/viewer direction should be read as early staged-artifact exploration capability, not a claim that full ingestion/catalog/ELT platform maturity is complete.
 
+### Current dataset-preparation implementation
+
+- Supported staged artifacts can enter the asynchronous dataset-preparation
+  path through one shared capability registry; unsupported format/task
+  combinations are rejected before runtime execution.
+- Remote-only Hugging Face artifacts are localized through the explicit
+  repository-to-object-storage boundary with their revision metadata preserved.
+- Preparation resolves a host-owned quality policy, profiles and curates rows,
+  and places rejected rows in reversible quarantine. Review exposes bounded
+  sanitized evidence while aggregate and split artifacts remain contained until
+  an exact-fingerprint, workspace-scoped approval succeeds.
+- Preparation produces an aggregate artifact plus physical train, validation,
+  and test artifacts after approval. Immutable dataset versions remain a
+  separate stage rather than being folded into ingestion.
+
 ## Consequences
 
 ### Positive

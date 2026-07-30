@@ -5,6 +5,12 @@ import {
   type DesktopArtifactBrowseItem,
 } from "../../../lib/desktopApi";
 import { normalizeDatasetPreparationTransportError } from "../hooks/datasetPreparationTransport";
+import type {
+  DatasetVersionComparison,
+  DatasetVersionPublicationRecord,
+  DatasetVersionRecord,
+  DatasetVersionReproduction,
+} from "../../../../../../../modules/contracts/dataset";
 
 interface PreloadResponseEnvelope {
   ok: boolean;
@@ -37,14 +43,26 @@ export interface DesktopDatasetPreparationClient {
   ) => Promise<{ requestId: string } | { error: { code: string; message: string; details?: Record<string, unknown> } }>;
   readPrepareTrainingDatasetTask: (
     requestId: string,
+    workspaceId?: string,
   ) => Promise<DesktopDatasetPreparationTaskReadResult>;
   cancelPrepareTrainingDatasetTask: (
     requestId: string,
+    workspaceId?: string,
   ) => Promise<{ ok: true } | { ok: false; error: { code: string; message: string; details?: Record<string, unknown> } }>;
+  approvePreparedTrainingDataset: (
+    requestId: string,
+    reportFingerprint: string,
+    workspaceId?: string,
+  ) => Promise<DesktopDatasetPreparationResult>;
+  listVersions?: (workspaceId: string, datasetId?: string) => Promise<readonly DatasetVersionRecord[]>;
+  compareVersions?: (workspaceId: string, fromVersionId: string, toVersionId: string) => Promise<DatasetVersionComparison>;
+  readReproduction?: (workspaceId: string, versionId: string) => Promise<DatasetVersionReproduction>;
+  publishVersion?: (input: { workspaceId: string; versionId: string; repositoryId: string; visibility: "private" | "public"; createRepository?: boolean; publicAccessConfirmed?: true }) => Promise<DatasetVersionPublicationRecord>;
 }
 export type DesktopDatasetPreparationTaskReadResult =
   | { ok: true; status: "pending" | "running"; progress?: { message?: string; processed?: number; total?: number } }
   | { ok: true; status: "succeeded"; value: DesktopPreparedTrainingDatasetResult }
+  | { ok: true; status: "review-required"; value: DesktopPreparedTrainingDatasetResult }
   | { ok: true; status: "cancelled" }
   | { ok: true; status: "unknown"; message?: string }
   | { ok: false; error: { code: string; message: string; details?: Record<string, unknown> } };
@@ -154,13 +172,13 @@ export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparati
       }
     },
 
-    async readPrepareTrainingDatasetTask(requestId: string) {
+    async readPrepareTrainingDatasetTask(requestId: string, workspaceId?: string) {
       if (!desktopApi.readPrepareTrainingDatasetTask) {
         return { ok: false, error: { code: "unavailable", message: "Dataset preparation is unavailable." } };
       }
 
       try {
-        const response = await desktopApi.readPrepareTrainingDatasetTask({ requestId });
+        const response = await desktopApi.readPrepareTrainingDatasetTask({ requestId, workspaceId });
         if (!isPreloadResponseEnvelope(response)) {
           return { ok: false, error: { code: "internal", message: "Dataset preparation task read failed." } };
         }
@@ -168,8 +186,12 @@ export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparati
           return { ok: false, error: { code: response.error?.code ?? "internal", message: response.error?.message ?? "Dataset preparation failed.", details: response.error?.details } };
         }
         const value = response.value as { status?: string; progress?: { message?: string; processed?: number; total?: number; details?: Record<string, unknown> }; result?: DesktopPreparedTrainingDatasetResult; error?: { message?: string } } | undefined;
-        if (value?.status === "succeeded" && value.result) {
-          return { ok: true, status: "succeeded", value: value.result };
+        if (
+          (value?.status === "succeeded" ||
+            value?.status === "review-required") &&
+          value.result
+        ) {
+          return { ok: true, status: value.status, value: value.result };
         }
         if (value?.status === "failed") {
           return { ok: false, error: { code: "failed", message: value.error?.message ?? "Dataset preparation failed." } };
@@ -185,12 +207,12 @@ export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparati
         throw normalizeDatasetPreparationTransportError(error);
       }
     },
-    async cancelPrepareTrainingDatasetTask(requestId: string) {
+    async cancelPrepareTrainingDatasetTask(requestId: string, workspaceId?: string) {
       if (!desktopApi.cancelPrepareTrainingDatasetTask) {
         return { ok: false, error: { code: "unavailable", message: "Dataset preparation cancellation is unavailable." } };
       }
       try {
-        const response = await desktopApi.cancelPrepareTrainingDatasetTask({ requestId });
+        const response = await desktopApi.cancelPrepareTrainingDatasetTask({ requestId, workspaceId });
         if (!isPreloadResponseEnvelope(response)) {
           return { ok: false, error: { code: "internal", message: "Dataset preparation task cancel failed." } };
         }
@@ -201,6 +223,89 @@ export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparati
       } catch (error) {
         throw normalizeDatasetPreparationTransportError(error);
       }
+    },
+    async approvePreparedTrainingDataset(
+      requestId: string,
+      reportFingerprint: string,
+      workspaceId?: string,
+    ) {
+      if (!desktopApi.approvePreparedTrainingDataset) {
+        return {
+          ok: false,
+          error: {
+            code: "unavailable",
+            message: "Dataset approval is unavailable.",
+          },
+        };
+      }
+      try {
+        const response = await desktopApi.approvePreparedTrainingDataset({
+          requestId,
+          reportFingerprint,
+          workspaceId,
+        });
+        if (!isPreloadResponseEnvelope(response)) {
+          return {
+            ok: false,
+            error: {
+              code: "internal",
+              message: "Dataset approval failed.",
+            },
+          };
+        }
+        if (!response.ok) {
+          return {
+            ok: false,
+            error: {
+              code: response.error?.code ?? "internal",
+              message: response.error?.message ?? "Dataset approval failed.",
+              details: response.error?.details,
+            },
+          };
+        }
+        const value = response.value as
+          | { result?: DesktopPreparedTrainingDatasetResult }
+          | undefined;
+        if (!value?.result) {
+          return {
+            ok: false,
+            error: {
+              code: "internal",
+              message: "Dataset approval response is incomplete.",
+            },
+          };
+        }
+        return { ok: true, value: value.result };
+      } catch (error) {
+        throw normalizeDatasetPreparationTransportError(error);
+      }
+    },
+    async listVersions(workspaceId, datasetId) {
+      if (!desktopApi.listDatasetVersions) throw new Error("Dataset version history is unavailable.");
+      const response = await desktopApi.listDatasetVersions({ workspaceId, datasetId });
+      const value = ensureSuccessEnvelope(response, "Dataset version history could not be loaded.").value as { versions?: readonly DatasetVersionRecord[] } | undefined;
+      return Array.isArray(value?.versions) ? value.versions : [];
+    },
+    async compareVersions(workspaceId, fromVersionId, toVersionId) {
+      if (!desktopApi.compareDatasetVersions) throw new Error("Dataset version comparison is unavailable.");
+      const response = await desktopApi.compareDatasetVersions({ workspaceId, fromVersionId, toVersionId });
+      const value = ensureSuccessEnvelope(response, "Dataset versions could not be compared.").value as { comparison?: DatasetVersionComparison } | undefined;
+      if (!value?.comparison) throw new Error("Dataset version comparison is incomplete.");
+      return value.comparison;
+    },
+    async readReproduction(workspaceId, versionId) {
+      if (!desktopApi.readDatasetVersionReproduction) throw new Error("Saved dataset setup is unavailable.");
+      const response = await desktopApi.readDatasetVersionReproduction({ workspaceId, versionId });
+      const value = ensureSuccessEnvelope(response, "Saved dataset setup could not be loaded.").value as { reproduction?: DatasetVersionReproduction } | undefined;
+      if (!value?.reproduction) throw new Error("Saved dataset setup is incomplete.");
+      return value.reproduction;
+    },
+    async publishVersion(input) {
+      if (!desktopApi.publishDatasetVersion) throw new Error("Dataset publishing is unavailable.");
+      const response = await desktopApi.publishDatasetVersion(input);
+      const value = ensureSuccessEnvelope(response, "Dataset version could not be published.").value as { publication?: DatasetVersionPublicationRecord } | undefined;
+      if (!value?.publication) throw new Error("Dataset publication response is incomplete.");
+      return value.publication;
     },
   };
 }

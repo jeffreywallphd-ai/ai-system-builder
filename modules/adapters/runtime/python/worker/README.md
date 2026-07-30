@@ -30,16 +30,19 @@ Dependency files:
 Implemented task:
 
 - `prepare-training-dataset`
-  - validates split consistency (`trainRatio > 0`, `testRatio > 0`, and ratios sum to `1.0`)
-  - normalizes supported source docs to markdown (`.txt`, `.md`, `.html`, `.pdf`, `.docx`, `.csv`, `.json`, `.jsonl`)
+  - validates three-way split consistency (`trainRatio > 0`, non-negative validation/test shares, at least one holdout share, and ratios sum to `1.0`)
+  - normalizes bounded supported source docs to markdown (`.txt`, `.md`, `.markdown`, `.html`, `.pdf`, `.docx`, `.csv`, `.json`, `.jsonl`) with file, extracted-text, PDF-page, and DOCX-expansion ceilings
   - explicitly rejects legacy `.doc` files (convert to `.docx` or configure skip policy)
   - chunks markdown using recipe chunking config (`character` strategy)
-  - uses structured CSV/JSON/JSONL rows directly when they already match the selected LLM, diffusion, or vision task schema
+  - uses bounded structured CSV/JSON/JSONL/Parquet rows directly when they already match the selected LLM, diffusion, or vision task schema
   - generates QA-derived task rows for LLM instruction, classification, extraction, embedding-pair, and reranker profiles through local `transformers` model configuration when source documents need generated examples
   - uses `task.textInputMode` and `generation.promptTemplate` to either keep provided text fields or generate labels/captions/questions/answers with the configured local text model
   - emits diffusion LoRA, vision classification, object detection, and segmentation manifest rows from image metadata or structured manifest files; generated image labels/captions use metadata and annotations as text context rather than pixel-level visual understanding
   - supports generation failure handling policy (`generation.failurePolicy`), defaulting to strict fail-fast unless normalization mode is best-effort
-  - emits one aggregate dataset artifact in JSONL/JSON/CSV/Parquet using the selected task schema
+  - emits aggregate plus physical train/validation/test artifacts in JSONL/JSON/CSV/Parquet, keeps source groups and exact duplicates together, and derives summary counts from emitted partitions
+  - resolves task-schema mappings and applies deterministic field/source/class/language profiling, exact and bounded SimHash duplicate detection, text/language bounds, personal-data and credential screening, explicit unsafe/benchmark gates, and optional license/consent/source-row rules
+  - sends rejected provided or generated rows to reversible quarantine with source-row lineage and emits a stable-fingerprint quality report containing only aggregate profiles, reason counts, and bounded sanitized examples
+  - emits only bounded aggregate diagnostic fields; source text, prompts, model output, provider payloads, and runtime-local paths are excluded
 - `train-model`
   - supports causal language model training over text-like datasets
   - accepts the LLM instruction, classification, extraction, embedding-pair, and reranker training tasks

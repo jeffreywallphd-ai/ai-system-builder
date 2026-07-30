@@ -15,6 +15,9 @@ function createHubClientDouble() {
   return {
     fileExists: testDouble.fn(async () => true),
     uploadFile: testDouble.fn(async () => undefined),
+    commit: testDouble.fn(async () => ({
+      commit: { oid: "a".repeat(40), url: "https://huggingface.co/datasets/example/repo/commit/fixture" },
+    })),
     downloadFile: testDouble.fn(async () => new Response(new Uint8Array([1, 2, 3]), {
       status: 200,
       headers: {
@@ -43,6 +46,66 @@ function createEgressBrokerDouble(
 }
 
 describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
+  it("publishes a dataset version as one bounded multi-file commit and returns its immutable revision", async () => {
+    const hubClient = createHubClientDouble();
+    const adapter = createHuggingFaceArtifactRepoStorageAdapter({
+      hubClient,
+      accessToken: "hf_test",
+    });
+    const result = await adapter.publishDatasetVersion({
+      provider: "hugging-face",
+      repositoryId: "example/support-data",
+      branch: "main",
+      visibility: "private",
+      repositoryCreationApproved: false,
+      versionDigest: `sha256:${"b".repeat(64)}`,
+      files: [
+        { path: "README.md", content: new TextEncoder().encode("# Dataset"), mediaType: "text/markdown", digest: `sha256:${"c".repeat(64)}` },
+        { path: "data/dataset.jsonl", content: new TextEncoder().encode("{}\n"), mediaType: "application/jsonl", digest: `sha256:${"d".repeat(64)}` },
+      ],
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        provider: "hugging-face",
+        repositoryId: "example/support-data",
+        revision: "a".repeat(40),
+      },
+    });
+    expect(hubClient.commit).toHaveBeenCalledTimes(1);
+    const request = hubClient.commit.mock.calls[0]?.[0] as any;
+    expect(request.repo).toEqual({ type: "dataset", name: "example/support-data" });
+    expect(request.branch).toBe("main");
+    expect(request.operations.map((operation: any) => operation.path)).toEqual([
+      "README.md",
+      "data/dataset.jsonl",
+    ]);
+  });
+
+  it("requires explicit creation approval and applies public visibility when a dataset repository is missing", async () => {
+    const hubClient = createHubClientDouble();
+    let attempts = 0;
+    hubClient.commit = testDouble.fn(async () => {
+      attempts += 1;
+      if (attempts === 1) throw { statusCode: 404, message: "missing" };
+      return { commit: { oid: "e".repeat(40), url: "https://huggingface.co/commit/fixture" } };
+    });
+    const fetchImplementation = testDouble.fn(async () => new Response(null, { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+    const authorizeRepositoryCreate = testDouble.fn(async () => true);
+    const adapter = createHuggingFaceArtifactRepoStorageAdapter({ hubClient, accessToken: "hf_test", fetchImplementation, authorizeRepositoryCreate });
+    const result = await adapter.publishDatasetVersion({
+      provider: "hugging-face", repositoryId: "example/new-data", branch: "main", visibility: "public",
+      repositoryCreationApproved: true, versionDigest: `sha256:${"f".repeat(64)}`,
+      files: [{ path: "README.md", content: new Uint8Array([1]), mediaType: "text/markdown", digest: `sha256:${"1".repeat(64)}` }],
+    });
+    expect(result.ok).toBe(true);
+    expect(authorizeRepositoryCreate).toHaveBeenCalledWith({ provider: "huggingface", repository: "example/new-data", visibility: "public" });
+    expect(fetchImplementation).toHaveBeenCalledWith(
+      "https://huggingface.co/api/repos/create",
+      expect.objectContaining({ body: JSON.stringify({ name: "new-data", organization: "example", type: "dataset", private: false }) }),
+    );
+    expect(hubClient.commit).toHaveBeenCalledTimes(2);
+  });
   it("requires official hub client availability when no hub client is provided", async () => {
     const adapter = createHuggingFaceArtifactRepoStorageAdapter({
       officialHubClientLoader: testDouble.fn(async () => {

@@ -200,6 +200,28 @@
       "acceptanceSignals": ["The safety gate is observable and execution remains deferred."]
     },
     {
+      "id": "dataset-split-integrity",
+      "task": "Correct training dataset split integrity and surface bounded preparation warnings without exposing source content.",
+      "affectedPaths": [
+        "modules/adapters/runtime/python/worker/tasks/prepare_training_dataset.py",
+        "apps/desktop/src/renderer/features/dataset-preparation/"
+      ],
+      "expectedPacks": ["data-management", "runtime"],
+      "forbiddenPacks": ["image-generation", "user-library"],
+      "requiredSources": [
+        "docs/architecture/data-management.md",
+        "docs/security/data-management-threat-model.md"
+      ],
+      "requiredChecks": [
+        "npm run architecture:check",
+        "npm test"
+      ],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": [
+        "Physical split counts are deterministic, related or duplicate rows cannot cross splits, and public diagnostics contain no protected source or model content."
+      ]
+    },
+    {
       "id": "task-progress-diagnostics",
       "task": "Fix runtime task registry progress logging so long-running task diagnostics stay structured and safe.",
       "affectedPaths": ["modules/application/services/runtime/runtime-task-registry.service.ts", "modules/adapters/observability/logging/"],

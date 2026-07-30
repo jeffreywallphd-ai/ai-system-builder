@@ -26,7 +26,9 @@ function createValidInput() {
 
 describe("datasetPreparationRequestValidation", () => {
   it("returns parsed values for valid input", () => {
-    expect(validateAndParseDatasetPreparationInputs(createValidInput())).toEqual({
+    expect(
+      validateAndParseDatasetPreparationInputs(createValidInput()),
+    ).toEqual({
       ok: true,
       parsed: {
         chunkSize: 1000,
@@ -38,6 +40,7 @@ describe("datasetPreparationRequestValidation", () => {
         generationTopP: undefined,
         generationMaxNewTokens: undefined,
         trainRatio: 0.8,
+        validationRatio: 0,
         testRatio: 0.2,
         seed: undefined,
       },
@@ -45,39 +48,52 @@ describe("datasetPreparationRequestValidation", () => {
   });
 
   it("returns error for invalid input", () => {
-    expect(validateAndParseDatasetPreparationInputs({ ...createValidInput(), chunkSize: "0" })).toEqual({
+    expect(
+      validateAndParseDatasetPreparationInputs({
+        ...createValidInput(),
+        chunkSize: "0",
+      }),
+    ).toEqual({
       ok: false,
       error: "Chunk size must be a positive integer.",
     });
   });
 
   it("returns a friendly repository-name message when default namespace is configured", () => {
-    expect(validateAndParseDatasetPreparationInputs({
-      ...createValidInput(),
-      huggingFaceDestinationEnabled: true,
-      defaultHuggingFaceNamespace: "OpenFinAL",
-    })).toEqual({
+    expect(
+      validateAndParseDatasetPreparationInputs({
+        ...createValidInput(),
+        huggingFaceDestinationEnabled: true,
+        defaultHuggingFaceNamespace: "OpenFinAL",
+      }),
+    ).toEqual({
       ok: false,
-      error: "Dataset repository name is required when Hugging Face publishing is enabled.",
+      error:
+        "Dataset repository name is required when Hugging Face publishing is enabled.",
     });
   });
 
   it("rejects backslash repository separators", () => {
-    expect(validateAndParseDatasetPreparationInputs({
-      ...createValidInput(),
-      huggingFaceDestinationEnabled: true,
-      defaultHuggingFaceNamespace: "OpenFinAL",
-      huggingFaceRepository: "OpenFinAL\\AISysBuilderTest",
-    })).toEqual({
+    expect(
+      validateAndParseDatasetPreparationInputs({
+        ...createValidInput(),
+        huggingFaceDestinationEnabled: true,
+        defaultHuggingFaceNamespace: "OpenFinAL",
+        huggingFaceRepository: "OpenFinAL\\AISysBuilderTest",
+      }),
+    ).toEqual({
       ok: false,
-      error: "Dataset repository name cannot include backslashes. Use only the repository name (for example: my-dataset).",
+      error:
+        "Dataset repository name cannot include backslashes. Use only the repository name (for example: my-dataset).",
     });
   });
 
   it("allows first-tier task profiles that are executable in dataset preparation", () => {
-    expect(validateAndParseDatasetPreparationInputs({
-      ...createValidInput(),
-      taskType: "vision-detection",
-    }).ok).toBe(true);
+    expect(
+      validateAndParseDatasetPreparationInputs({
+        ...createValidInput(),
+        taskType: "vision-detection",
+      }).ok,
+    ).toBe(true);
   });
 });

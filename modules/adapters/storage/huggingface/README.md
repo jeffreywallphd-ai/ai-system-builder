@@ -13,6 +13,8 @@ This module contains the first concrete artifact-repo storage provider adapter.
   - `storeArtifactInRepo` via official Hub client `uploadFile`,
   - `retrieveArtifactFromRepo` through the shared secure-egress broker and the
     provider's canonical resolve URL.
+  - `publishDatasetVersion` through the official Hub client's one-commit,
+    multi-file operation, returning the immutable commit identifier.
 
 ## Configuration
 
@@ -35,6 +37,13 @@ This module contains the first concrete artifact-repo storage provider adapter.
   repository before the create API is called.
 - New repositories preserve the explicit visibility choice. Product UI defaults
   to `private`; public creation is a separate explicit selection.
+- Dataset-version publication accepts only Private or Public, requires the
+  application command's explicit confirmation, limits file count and aggregate
+  bytes, rejects unsafe or duplicate repository paths, and never creates a
+  missing repository without separate approval and managed authorization.
+- A failed or ambiguous commit returns failure and does not create local success
+  evidence. Credentials, provider response payloads, and commit URLs are not
+  copied into dataset-version records or public diagnostics.
 - Model publication also defaults missing repository creation to private when a
   caller omits visibility. Creating a public model repository requires an
   explicit `private: false` request.

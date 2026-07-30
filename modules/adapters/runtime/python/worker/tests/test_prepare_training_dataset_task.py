@@ -7,11 +7,16 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from modules.adapters.runtime.python.worker.models import PrepareTrainingDatasetRequest
 from modules.adapters.runtime.python.worker.tasks.example_generation import GeneratedQaExample
-from modules.adapters.runtime.python.worker.tasks.prepare_training_dataset import prepare_training_dataset
+from modules.adapters.runtime.python.worker.tasks.prepare_training_dataset import (
+    _partition_rows,
+    _read_structured_source_rows,
+    prepare_training_dataset,
+)
 
 
 class PrepareTrainingDatasetTaskTests(unittest.TestCase):
@@ -122,7 +127,7 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
             payload = self._build_payload(output_format)
             result = prepare_training_dataset(payload, example_generator=generator)
 
-            self.assertEqual(len(result.outputs), 1)
+            self.assertGreaterEqual(len(result.outputs), 2)
             train_output = next(output for output in result.outputs if output.role == "dataset")
             if output_format == "parquet":
                 self.assertEqual(train_output.mediaType, "application/x-parquet")
@@ -146,6 +151,7 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
                         "question",
                         "answer",
                         "generationMode",
+                        "split",
                     },
                 )
             elif output_format == "json":
@@ -163,6 +169,7 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
                         "question",
                         "answer",
                         "generationMode",
+                        "split",
                     },
                 )
             else:
@@ -180,6 +187,7 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
                         "question",
                         "answer",
                         "generationMode",
+                        "split",
                     ],
                 )
 
@@ -253,7 +261,7 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         def failing_generator(_chunks, _config):
             raise RuntimeError("cannot generate")
 
-        with self.assertRaisesRegex(ValueError, "cannot generate") as context:
+        with self.assertRaisesRegex(ValueError, "Generation failed") as context:
             prepare_training_dataset(payload, example_generator=failing_generator)
 
         self.assertEqual(getattr(context.exception, "stage", None), "generation")
@@ -286,6 +294,33 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         result = prepare_training_dataset(payload, example_generator=generator)
         self.assertEqual(result.summary.generatedExampleCount, 3)
         self.assertEqual(batch_sizes, [2, 1])
+
+    def test_partition_is_deterministic_and_keeps_sources_and_duplicates_together(self) -> None:
+        rows = [
+            {"text": "same", "label": "a", "sourceArtifactId": "source-a", "sourceRowIndex": 0},
+            {"text": "same", "label": "a", "sourceArtifactId": "source-b", "sourceRowIndex": 0},
+            {"text": "alpha", "label": "a", "sourceArtifactId": "source-a", "sourceRowIndex": 1},
+            {"text": "charlie", "label": "c", "sourceArtifactId": "source-c", "sourceRowIndex": 0},
+            {"text": "delta", "label": "d", "sourceArtifactId": "source-d", "sourceRowIndex": 0},
+            {"text": "echo", "label": "e", "sourceArtifactId": "source-e", "sourceRowIndex": 0},
+        ]
+
+        first, group_count = _partition_rows(rows, 0.5, 0.25, 0.25, 17, True)
+        second, _ = _partition_rows(rows, 0.5, 0.25, 0.25, 17, True)
+
+        self.assertEqual(first, second)
+        self.assertEqual(group_count, 4)
+        self.assertEqual(sum(len(split) for split in first.values()), len(rows))
+        self.assertTrue(all(first[role] for role in ["train", "validation", "test"]))
+
+        role_by_source: dict[str, set[str]] = {}
+        role_by_content: dict[tuple[str, str], set[str]] = {}
+        for role, split_rows in first.items():
+            for row in split_rows:
+                role_by_source.setdefault(str(row["sourceArtifactId"]), set()).add(role)
+                role_by_content.setdefault((str(row["text"]), str(row["label"])), set()).add(role)
+        self.assertTrue(all(len(roles) == 1 for roles in role_by_source.values()))
+        self.assertTrue(all(len(roles) == 1 for roles in role_by_content.values()))
 
     def test_split_clamps_to_keep_train_and_test_non_empty(self) -> None:
         payload = self._build_payload("jsonl")
@@ -334,9 +369,11 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         self.assertEqual(getattr(error, "details", {}).get("skippedGenerationChunkCount"), 3)
         diagnostic = json.loads(output.getvalue().strip())
         self.assertEqual(diagnostic["event"], "runtime.dataset_preparation.generation.failed")
-        self.assertEqual(diagnostic["rawData"]["sourceInputs"][0]["artifactId"], "doc-1")
-        self.assertEqual(diagnostic["preparedData"]["chunks"][0]["text"], "abcd")
+        self.assertEqual(diagnostic["rawData"]["sourceInputCount"], 2)
+        self.assertEqual(diagnostic["preparedData"]["chunkCount"], 3)
         self.assertTrue(diagnostic["errors"])
+        self.assertNotIn("abcd", output.getvalue())
+        self.assertNotIn(self.first_path, output.getvalue())
 
     def test_skip_policy_counts_generator_omitted_chunks(self) -> None:
         payload = self._build_payload("jsonl")
@@ -386,7 +423,7 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         self.assertEqual(getattr(error, "details", {}).get("modelId"), "test-model")
         self.assertIn("not available in the local Hugging Face cache", str(error))
 
-    def test_single_generated_row_can_be_written_to_one_dataset_file(self) -> None:
+    def test_single_generated_row_writes_aggregate_and_train_outputs(self) -> None:
         payload = self._build_payload("jsonl")
         payload.recipe.generation.failurePolicy = "skip"
 
@@ -405,7 +442,10 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         result = prepare_training_dataset(payload, example_generator=one_row_generator)
 
         self.assertEqual(result.summary.datasetRowCount, 1)
-        self.assertEqual(len(result.outputs), 1)
+        self.assertEqual(
+            [output.role for output in result.outputs],
+            ["dataset", "train"],
+        )
 
     def test_records_dataset_preparation_task_metadata_on_outputs(self) -> None:
         payload = self._build_payload("jsonl")
@@ -431,6 +471,69 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
             dataset_output.metadata["datasetPreparationTask"]["recipe"]["promptStyle"],
             "instruction-response",
         )
+
+    def test_reads_parquet_as_a_structured_training_source(self) -> None:
+        try:
+            import pyarrow as pa
+            import pyarrow.parquet as pq
+        except ImportError:
+            self.skipTest("pyarrow is not installed in this test environment")
+
+        parquet_path = Path(self.temp_dir.name) / "classification.parquet"
+        pq.write_table(
+            pa.Table.from_pylist(
+                [
+                    {"text": "A billing question", "label": "billing"},
+                    {"text": "A bug report", "label": "bug"},
+                ]
+            ),
+            parquet_path,
+        )
+        payload_dict = self._build_payload("jsonl").model_dump(mode="json")
+        payload_dict["sourceInputs"] = [
+            {
+                "artifactId": "classification-source",
+                "localPath": str(parquet_path),
+                "mediaType": "application/vnd.apache.parquet",
+                "originalName": "classification.parquet",
+            }
+        ]
+        payload_dict["recipe"]["task"] = {
+            "taskType": "llm-classification",
+            "textField": "text",
+            "labelField": "label",
+        }
+        payload = PrepareTrainingDatasetRequest.model_validate(payload_dict)
+
+        result = prepare_training_dataset(
+            payload,
+            example_generator=lambda _chunks, _config: (_ for _ in ()).throw(
+                AssertionError("generation should not run")
+            ),
+        )
+
+        output = next(item for item in result.outputs if item.role == "dataset")
+        rows = [
+            json.loads(line)
+            for line in Path(output.tempPath).read_text(encoding="utf-8").splitlines()
+        ]
+        self.assertEqual([row["label"] for row in rows], ["billing", "bug"])
+
+    def test_rejects_structured_sources_over_the_row_limit(self) -> None:
+        csv_path = Path(self.temp_dir.name) / "bounded.csv"
+        csv_path.write_text("text,label\none,a\ntwo,b\n", encoding="utf-8")
+        source = SimpleNamespace(
+            localPath=str(csv_path),
+            originalName="bounded.csv",
+            mediaType="text/csv",
+        )
+
+        with patch(
+            "modules.adapters.runtime.python.worker.tasks.prepare_training_dataset.MAX_STRUCTURED_SOURCE_ROWS",
+            1,
+        ):
+            with self.assertRaisesRegex(ValueError, "row limit"):
+                _read_structured_source_rows(source)
 
     def test_prepares_structured_classification_rows_without_generation(self) -> None:
         payload = self._build_payload("jsonl")

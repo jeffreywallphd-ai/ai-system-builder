@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { describe, expect, it, testDouble } from "../../../testing/node-test";
+import { createOrganizationId } from "../../../contracts/organization";
 import type { TaskPowerLifecyclePort } from "../../services/runtime";
 import { PrepareTrainingDatasetFromArtifactsUseCase } from "../prepare-training-dataset-from-artifacts.use-case";
 
@@ -104,7 +105,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
             descriptor: { key: "a1", mediaType: "text/markdown", metadata: {} },
             content: new TextEncoder().encode("hi"),
           },
-        })),
+        })) as any,
         storeArtifact: testDouble.fn(async (request: any) => {
           storedDatasetRequest = request;
           return { ok: true, value: request.descriptor };
@@ -132,6 +133,113 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
       outputSchema: "instruction-response",
       runtimeSupport: "supported",
     });
+  });
+
+  it("materializes aggregate, train, validation, and test outputs with truthful counts", async () => {
+    const outputFiles = [
+      ["dataset", "d.jsonl", 4],
+      ["train", "d-train.jsonl", 2],
+      ["validation", "d-validation.jsonl", 1],
+      ["test", "d-test.jsonl", 1],
+    ] as const;
+    const startTask = testDouble.fn(async (request: any) => {
+      for (const [, fileName, rowCount] of outputFiles) {
+        await writeFile(
+          join(request.payload.runtime.runtimeWorkingDirectory, fileName),
+          Array.from({ length: rowCount }, (_, index) =>
+            JSON.stringify({ value: index }),
+          ).join("\n"),
+        );
+      }
+      return {
+        requestId: "split-task",
+        taskType: "prepare-training-dataset",
+        accepted: true,
+        status: "queued",
+      };
+    });
+    const getTaskStatus = testDouble.fn(async () => ({
+      requestId: "split-task",
+      taskType: "dataset-preparation",
+      status: "succeeded",
+      concurrencyClass: "unknown",
+      data: {
+        outputs: outputFiles.map(([role, outputHandle, rowCount]) => ({
+          name: role === "dataset" ? "d" : "d-" + role,
+          role,
+          outputHandle,
+          mediaType: "application/x-ndjson",
+          metadata: role === "dataset" ? {} : { rowCount },
+        })),
+        summary: {
+          sourceDocumentCount: 4,
+          normalizedDocumentCount: 4,
+          skippedDocumentCount: 0,
+          chunkCount: 4,
+          generatedExampleCount: 4,
+          datasetRowCount: 4,
+          trainRowCount: 2,
+          validationRowCount: 1,
+          testRowCount: 1,
+        },
+      },
+    }));
+    const storeArtifact = testDouble.fn(async (request: any) => ({
+      ok: true,
+      value: request.descriptor,
+    })) as any;
+    const useCase = new PrepareTrainingDatasetFromArtifactsUseCase({
+      runtimeTaskRegistry: createRegistry({ startTask, getTaskStatus }),
+      storageBindings: {
+        readArtifactStorageBindings: testDouble.fn(async () => ({
+          ok: true,
+          value: { bindings: [] },
+        })),
+        upsertArtifactStorageBinding: testDouble.fn(),
+        deleteArtifactStorageBindings: testDouble.fn(),
+      },
+      storage: {
+        retrieveArtifact: testDouble.fn(async () => ({
+          ok: true,
+          value: {
+            descriptor: { key: "a1", mediaType: "text/markdown", metadata: {} },
+            content: new TextEncoder().encode("hi"),
+          },
+        })) as any,
+        storeArtifact,
+        hasArtifact: testDouble.fn(),
+        deleteArtifact: testDouble.fn(),
+      },
+      taskPowerLifecycle: createLifecycleFake(),
+    });
+
+    await useCase.startPrepareTrainingDataset(command, {
+      workspaceId: "workspace-a",
+    });
+    const result = await useCase.readPrepareTrainingDataset("split-task", {
+      workspaceId: "workspace-a",
+    });
+
+    expect(result.ok).toBe(true);
+    if (
+      result.ok &&
+      result.value.status === "succeeded" &&
+      "result" in result.value
+    ) {
+      expect(result.value.result.outputs.local).toMatchObject({
+        dataset: { storage: { mediaType: "application/x-ndjson" } },
+        train: { storage: { mediaType: "application/x-ndjson" } },
+        validation: { storage: { mediaType: "application/x-ndjson" } },
+        test: { storage: { mediaType: "application/x-ndjson" } },
+      });
+      expect(result.value.result.summary).toMatchObject({
+        datasetRowCount: 4,
+        trainRowCount: 2,
+        validationRowCount: 1,
+        testRowCount: 1,
+      });
+    }
+    expect(storeArtifact).toHaveBeenCalledTimes(4);
   });
 
   it("completes lifecycle on materialization failure", async () => {
@@ -175,7 +283,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
               testRowCount: 0,
             },
           },
-        })),
+        })) as any,
       }),
       storageBindings: {
         readArtifactStorageBindings: testDouble.fn(async () => ({
@@ -242,7 +350,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
           taskType: "prepare-training-dataset",
           accepted: true,
           status: "queued",
-        })),
+        })) as any,
         getTaskStatus: testDouble.fn(async () => ({
           requestId: "r-unsafe",
           taskType: "dataset-preparation",
@@ -305,7 +413,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
           status: "failed",
           concurrencyClass: "unknown",
           error: { code: "failed", message: "boom" },
-        })),
+        })) as any,
       }),
       storageBindings: {
         readArtifactStorageBindings: testDouble.fn(async () => ({
@@ -353,7 +461,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
         readArtifactStorageBindings: testDouble.fn(async () => ({
           ok: true,
           value: { bindings: [] },
-        })),
+        })) as any,
         upsertArtifactStorageBinding: testDouble.fn(),
         deleteArtifactStorageBindings: testDouble.fn(),
       },
@@ -406,13 +514,20 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
             status: "queued",
           };
         }),
+        getTaskStatus: testDouble.fn(async () => ({
+          requestId: "r-cancel",
+          workspaceId: "workspace-a",
+          taskType: "dataset-preparation",
+          status: "running",
+          concurrencyClass: "unknown",
+        })),
         cancelTask,
       }),
       storageBindings: {
         readArtifactStorageBindings: testDouble.fn(async () => ({
           ok: true,
           value: { bindings: [] },
-        })),
+        })) as any,
         upsertArtifactStorageBinding: testDouble.fn(),
         deleteArtifactStorageBindings: testDouble.fn(),
       },
@@ -449,6 +564,303 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
       "cancelled",
     );
     expect(await exists(runtimeDir)).toBe(false);
+  });
+
+  it("does not reveal or cancel a dataset task from another workspace or organization", async () => {
+    const cancelTask = testDouble.fn(async () => ({
+      requestId: "r-owned",
+      cancelled: true,
+      status: "cancelled" as const,
+    }));
+    const useCase = new PrepareTrainingDatasetFromArtifactsUseCase({
+      runtimeTaskRegistry: createRegistry({
+        startTask: testDouble.fn(async () => ({
+          requestId: "r-owned",
+          taskType: "prepare-training-dataset",
+          accepted: true,
+          status: "queued",
+        })),
+        getTaskStatus: testDouble.fn(async () => ({
+          requestId: "r-owned",
+          workspaceId: "workspace-a",
+          taskType: "dataset-preparation",
+          status: "running",
+          concurrencyClass: "unknown",
+        })),
+        cancelTask,
+      }),
+      storageBindings: {
+        readArtifactStorageBindings: testDouble.fn(async () => ({
+          ok: true,
+          value: { bindings: [] },
+        })),
+        upsertArtifactStorageBinding: testDouble.fn(),
+        deleteArtifactStorageBindings: testDouble.fn(),
+      },
+      storage: {
+        retrieveArtifact: testDouble.fn(async () => ({
+          ok: true,
+          value: {
+            descriptor: { key: "a1", mediaType: "text/markdown", metadata: {} },
+            content: new TextEncoder().encode("hi"),
+          },
+        })) as any,
+        storeArtifact: testDouble.fn(),
+        hasArtifact: testDouble.fn(),
+        deleteArtifact: testDouble.fn(),
+      },
+      taskPowerLifecycle: createLifecycleFake(),
+    });
+
+    const started = await useCase.startPrepareTrainingDataset(command, {
+      workspaceId: "workspace-a",
+      organizationId: createOrganizationId("org-a"),
+    });
+    expect(started.ok).toBe(true);
+
+    const read = await useCase.readPrepareTrainingDataset("r-owned", {
+      workspaceId: "workspace-b",
+    });
+    expect(read).toMatchObject({
+      ok: false,
+      error: { code: "not-found" },
+    });
+
+    const otherOrganizationRead =
+      await useCase.readPrepareTrainingDataset("r-owned", {
+        workspaceId: "workspace-a",
+        organizationId: createOrganizationId("org-b"),
+      });
+    expect(otherOrganizationRead).toMatchObject({
+      ok: false,
+      error: { code: "not-found" },
+    });
+
+    const cancelled = await useCase.cancelPrepareTrainingDataset("r-owned", {
+      workspaceId: "workspace-a",
+      organizationId: createOrganizationId("org-b"),
+    });
+    expect(cancelled).toMatchObject({
+      ok: false,
+      error: { code: "not-found" },
+    });
+    expect(cancelTask).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unsupported source format before runtime work starts", async () => {
+    const startTask = testDouble.fn();
+    const useCase = new PrepareTrainingDatasetFromArtifactsUseCase({
+      runtimeTaskRegistry: createRegistry({ startTask }),
+      storageBindings: {
+        readArtifactStorageBindings: testDouble.fn(async () => ({
+          ok: true,
+          value: { bindings: [] },
+        })),
+        upsertArtifactStorageBinding: testDouble.fn(),
+        deleteArtifactStorageBindings: testDouble.fn(),
+      },
+      storage: {
+        retrieveArtifact: testDouble.fn(async () => ({
+          ok: true,
+          value: {
+            descriptor: {
+              key: "a1",
+              mediaType: "application/vnd.ms-excel",
+              metadata: { originalName: "legacy.xls" },
+            },
+            content: new Uint8Array([1, 2, 3]),
+          },
+        })) as any,
+        storeArtifact: testDouble.fn(),
+        hasArtifact: testDouble.fn(),
+        deleteArtifact: testDouble.fn(),
+      },
+      taskPowerLifecycle: createLifecycleFake(),
+    });
+
+    const result = await useCase.startPrepareTrainingDataset(command, {
+      workspaceId: "workspace-a",
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        code: "validation",
+        details: { code: "source-format-unsupported" },
+      },
+    });
+    expect(startTask).not.toHaveBeenCalled();
+  });
+
+  it("rejects unsupported goals and oversized source batches before staging", async () => {
+    const startTask = testDouble.fn();
+    const readArtifactStorageBindings = testDouble.fn();
+    const useCase = new PrepareTrainingDatasetFromArtifactsUseCase({
+      runtimeTaskRegistry: createRegistry({ startTask }),
+      storageBindings: {
+        readArtifactStorageBindings,
+        upsertArtifactStorageBinding: testDouble.fn(),
+        deleteArtifactStorageBindings: testDouble.fn(),
+      },
+      storage: {
+        retrieveArtifact: testDouble.fn(),
+        storeArtifact: testDouble.fn(),
+        hasArtifact: testDouble.fn(),
+        deleteArtifact: testDouble.fn(),
+      },
+      taskPowerLifecycle: createLifecycleFake(),
+    });
+
+    const unsupportedGoal = await useCase.startPrepareTrainingDataset(
+      {
+        ...command,
+        recipe: {
+          ...command.recipe,
+          task: { taskType: "unknown-goal" as never },
+        },
+      },
+      { workspaceId: "workspace-a" },
+    );
+    expect(unsupportedGoal).toMatchObject({
+      ok: false,
+      error: { code: "validation" },
+    });
+
+    const oversizedBatch = await useCase.startPrepareTrainingDataset(
+      {
+        ...command,
+        sourceArtifactIds: Array.from(
+          { length: 257 },
+          (_, index) => "artifact-" + index,
+        ),
+      },
+      { workspaceId: "workspace-a" },
+    );
+    expect(oversizedBatch).toMatchObject({
+      ok: false,
+      error: { code: "validation" },
+    });
+    expect(readArtifactStorageBindings).not.toHaveBeenCalled();
+    expect(startTask).not.toHaveBeenCalled();
+  });
+
+  it("localizes a registered repository source before starting the task", async () => {
+    const startTask = testDouble.fn(async () => ({
+      requestId: "remote-task",
+      taskType: "prepare-training-dataset",
+      accepted: true,
+      status: "queued",
+    }));
+    const retrieveArtifact = testDouble
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { code: "not-found", message: "not local" },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        value: {
+          descriptor: {
+            key: "a1",
+            mediaType: "application/vnd.apache.parquet",
+            metadata: {
+              originalName: "0.parquet",
+              sourceRevision: "refs/convert/parquet",
+            },
+          },
+          content: new Uint8Array([80, 65, 82, 49]),
+        },
+      }) as any;
+    const storeArtifact = testDouble.fn(async (request: any) => ({
+      ok: true,
+      value: request.descriptor,
+    })) as any;
+    const upsertArtifactStorageBinding = testDouble.fn(
+      async (request: any) => ({
+        ok: true,
+        value: request,
+      }),
+    ) as any;
+    const retrieveArtifactFromRepo = testDouble.fn(async () => ({
+      ok: true,
+      value: {
+        descriptor: {
+          target: {
+            provider: "huggingface",
+            repository: "owner/data",
+            revision: "refs/convert/parquet",
+            path: "default/train/0.parquet",
+          },
+          mediaType: "application/vnd.apache.parquet",
+          sizeBytes: 4,
+        },
+        content: new Uint8Array([80, 65, 82, 49]),
+      },
+    })) as any;
+    const useCase = new PrepareTrainingDatasetFromArtifactsUseCase({
+      runtimeTaskRegistry: createRegistry({ startTask }),
+      storageBindings: {
+        readArtifactStorageBindings: testDouble.fn(async () => ({
+          ok: true,
+          value: {
+            bindings: [
+              {
+                artifactId: "a1",
+                role: "imported-source",
+                backing: {
+                  kind: "artifact-repo",
+                  provider: "huggingface",
+                  locator: "owner/data/default/train/0.parquet",
+                  target: {
+                    provider: "huggingface",
+                    repository: "owner/data",
+                    revision: "refs/convert/parquet",
+                    path: "default/train/0.parquet",
+                  },
+                },
+              },
+            ],
+          },
+        })),
+        upsertArtifactStorageBinding,
+        deleteArtifactStorageBindings: testDouble.fn(),
+      },
+      storage: {
+        retrieveArtifact,
+        storeArtifact,
+        hasArtifact: testDouble.fn(),
+        deleteArtifact: testDouble.fn(),
+      },
+      artifactRepoStorage: {
+        retrieveArtifactFromRepo,
+        storeArtifactInRepo: testDouble.fn(),
+        hasArtifactInRepo: testDouble.fn(),
+      },
+      taskPowerLifecycle: createLifecycleFake(),
+    });
+
+    const result = await useCase.startPrepareTrainingDataset(
+      {
+        ...command,
+        recipe: {
+          ...command.recipe,
+          task: {
+            taskType: "llm-classification",
+            textField: "text",
+            labelField: "label",
+          },
+        },
+      },
+      {
+        workspaceId: "workspace-a",
+      },
+    );
+
+    expect(result.ok).toBe(true);
+    expect(retrieveArtifactFromRepo).toHaveBeenCalledTimes(1);
+    expect(storeArtifact).toHaveBeenCalledTimes(1);
+    expect(upsertArtifactStorageBinding).toHaveBeenCalledTimes(1);
+    expect(startTask).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -192,6 +192,7 @@ class DatasetPreparationRecipe(BaseModel):
 
 class DatasetSplitConfig(BaseModel):
     trainRatio: float
+    validationRatio: float | None = None
     testRatio: float
     seed: int | None = None
     shuffle: bool | None = None
@@ -207,17 +208,63 @@ class DatasetOutputConfig(BaseModel):
     destinations: dict[str, Any] | None = None
 
 
+class DatasetQualityRequestedPolicy(BaseModel):
+    preset: Literal["recommended", "strict"]
+    allowedLanguages: list[str] | None = None
+    requireLicenseMetadata: bool | None = None
+    requireConsentMetadata: bool | None = None
+    excludedBenchmarkIds: list[str] | None = None
+    maxRowsPerSource: int | None = Field(default=None, ge=1, le=1_000_000)
+
+
+class DatasetQualityMandatoryChecks(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    schemaCheck: Literal[True] = Field(alias="schema")
+    exactDuplicates: Literal[True]
+    fuzzyDuplicates: Literal[True]
+    sensitivePersonalData: Literal[True]
+    secretLikeContent: Literal[True]
+    splitLeakage: Literal[True]
+
+
+class DatasetQualityEffectivePolicy(BaseModel):
+    policyId: str
+    revision: str
+    scope: Literal["workspace", "organization"]
+    preset: Literal["recommended", "strict"]
+    allowedLanguages: list[str]
+    requireLicenseMetadata: bool
+    requireConsentMetadata: bool
+    excludedBenchmarkIds: list[str]
+    maxRowsPerSource: int = Field(ge=1, le=1_000_000)
+    minimumTextCharacters: int = Field(ge=0, le=1_000_000)
+    maximumTextCharacters: int = Field(ge=1, le=1_000_000)
+    fuzzyDuplicateSimilarity: float = Field(ge=0.0, le=1.0)
+    maxFuzzyCandidatesPerRow: int = Field(ge=1, le=1024)
+    maxReportSamplesPerReason: int = Field(ge=0, le=100)
+    mandatoryChecks: DatasetQualityMandatoryChecks
+
+
+class DatasetQualityRuntimeConfig(BaseModel):
+    requestedPolicy: DatasetQualityRequestedPolicy
+    effectivePolicy: DatasetQualityEffectivePolicy
+    reviewRequired: bool
+
+
 class PrepareTrainingDatasetRequest(BaseModel):
+    workspaceId: str | None = None
     sourceInputs: list[DatasetPreparationSourceInput]
     recipe: DatasetPreparationRecipe
     split: DatasetSplitConfig
     output: DatasetOutputConfig
+    quality: DatasetQualityRuntimeConfig | None = None
     runtime: dict[str, Any] | None = None
 
 
 class PythonRuntimeOutputDescriptor(BaseModel):
     name: str
-    role: Literal["dataset", "train", "test", "metrics", "report", "artifact"] | None = None
+    role: Literal["dataset", "train", "validation", "test", "metrics", "report", "quarantine", "artifact"] | None = None
     outputHandle: str
     tempPath: str = Field(exclude=True)
     mediaType: str
@@ -233,7 +280,10 @@ class DatasetPreparationSummary(BaseModel):
     generatedExampleCount: int
     datasetRowCount: int
     trainRowCount: int
+    validationRowCount: int
     testRowCount: int
+    acceptedRowCount: int | None = None
+    quarantinedRowCount: int | None = None
 
 
 class DatasetPreparationWarning(BaseModel):
@@ -245,6 +295,7 @@ class DatasetPreparationWarning(BaseModel):
 class PrepareTrainingDatasetResult(BaseModel):
     outputs: list[PythonRuntimeOutputDescriptor]
     summary: DatasetPreparationSummary
+    qualityReport: dict[str, Any] | None = None
     warnings: list[DatasetPreparationWarning] | None = None
 
 

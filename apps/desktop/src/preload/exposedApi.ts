@@ -132,6 +132,38 @@ import {
   DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_OPERATION,
   DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL,
   DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_RESPONSE_CHANNEL,
+  DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_OPERATION,
+  DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL,
+  DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_RESPONSE_CHANNEL,
+  DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_OPERATION,
+  DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_REQUEST_CHANNEL,
+  DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_RESPONSE_CHANNEL,
+  createDesktopPrepareTrainingDatasetTaskCancelRequest,
+  createDesktopPrepareTrainingDatasetApproveRequest,
+  type DesktopPrepareTrainingDatasetTaskCancelRequest,
+  type DesktopPrepareTrainingDatasetTaskCancelResponse,
+  type DesktopPrepareTrainingDatasetApproveRequest,
+  type DesktopPrepareTrainingDatasetApproveResponse,
+  DESKTOP_DATASET_VERSION_LIST_OPERATION,
+  DESKTOP_DATASET_VERSION_LIST_REQUEST_CHANNEL,
+  DESKTOP_DATASET_VERSION_LIST_RESPONSE_CHANNEL,
+  DESKTOP_DATASET_VERSION_COMPARE_OPERATION,
+  DESKTOP_DATASET_VERSION_COMPARE_REQUEST_CHANNEL,
+  DESKTOP_DATASET_VERSION_COMPARE_RESPONSE_CHANNEL,
+  DESKTOP_DATASET_VERSION_REPRODUCE_OPERATION,
+  DESKTOP_DATASET_VERSION_REPRODUCE_REQUEST_CHANNEL,
+  DESKTOP_DATASET_VERSION_REPRODUCE_RESPONSE_CHANNEL,
+  DESKTOP_DATASET_VERSION_PUBLISH_OPERATION,
+  DESKTOP_DATASET_VERSION_PUBLISH_REQUEST_CHANNEL,
+  DESKTOP_DATASET_VERSION_PUBLISH_RESPONSE_CHANNEL,
+  createDesktopDatasetVersionListRequest,
+  createDesktopDatasetVersionCompareRequest,
+  createDesktopDatasetVersionReproduceRequest,
+  createDesktopDatasetVersionPublishRequest,
+  type DesktopDatasetVersionListResponse,
+  type DesktopDatasetVersionCompareResponse,
+  type DesktopDatasetVersionReproduceResponse,
+  type DesktopDatasetVersionPublishResponse,
   DESKTOP_PYTHON_RUNTIME_CONTROL_OPERATION,
   DESKTOP_PYTHON_RUNTIME_CONTROL_REQUEST_CHANNEL,
   DESKTOP_PYTHON_RUNTIME_CONTROL_RESPONSE_CHANNEL,
@@ -698,17 +730,31 @@ export interface DesktopPreloadApi {
   ) => Promise<DesktopIngestWebsitePagesBatchResponse>;
   startPrepareTrainingDataset: (
     input: {
+      workspaceId?: string;
       sourceArtifactIds: string[];
       recipe: DesktopPrepareTrainingDatasetStartRequest["payload"]["command"]["recipe"];
       split: DesktopPrepareTrainingDatasetStartRequest["payload"]["command"]["split"];
       output: DesktopPrepareTrainingDatasetStartRequest["payload"]["command"]["output"];
+      quality?: DesktopPrepareTrainingDatasetStartRequest["payload"]["command"]["quality"];
     },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopPrepareTrainingDatasetStartResponse>;
   readPrepareTrainingDatasetTask: (
-    input: { requestId: string },
+    input: { requestId: string; workspaceId?: string },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopPrepareTrainingDatasetTaskReadResponse>;
+  cancelPrepareTrainingDatasetTask: (
+    input: { requestId: string; workspaceId?: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopPrepareTrainingDatasetTaskCancelResponse>;
+  approvePreparedTrainingDataset: (
+    input: { requestId: string; reportFingerprint: string; workspaceId?: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopPrepareTrainingDatasetApproveResponse>;
+  listDatasetVersions: (input: { workspaceId: string; datasetId?: string }, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopDatasetVersionListResponse>;
+  compareDatasetVersions: (input: { workspaceId: string; fromVersionId: string; toVersionId: string }, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopDatasetVersionCompareResponse>;
+  readDatasetVersionReproduction: (input: { workspaceId: string; versionId: string }, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopDatasetVersionReproduceResponse>;
+  publishDatasetVersion: (input: { workspaceId: string; versionId: string; repositoryId: string; visibility: "private" | "public"; createRepository?: boolean; publicAccessConfirmed?: true }, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopDatasetVersionPublishResponse>;
   readRuntimeReadiness: (
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopRuntimeReadinessReadResponse>;
@@ -2157,10 +2203,12 @@ export function createDesktopPreloadApi(
               recipe: input.recipe,
               split: input.split,
               output: input.output,
+              quality: input.quality,
             },
             boundary: {
               host: "desktop",
               source: "desktop.renderer.dataset-preparation",
+              workspaceId: input.workspaceId,
             },
           },
           context,
@@ -2190,6 +2238,7 @@ export function createDesktopPreloadApi(
             boundary: {
               host: "desktop",
               source: "desktop.renderer.dataset-preparation",
+              workspaceId: input.workspaceId,
             },
           },
           context,
@@ -2209,6 +2258,89 @@ export function createDesktopPreloadApi(
             "Received invalid desktop dataset preparation task-read IPC response envelope.",
         },
       );
+    },
+
+    async cancelPrepareTrainingDatasetTask(input, context = {}) {
+      const request: DesktopPrepareTrainingDatasetTaskCancelRequest =
+        createDesktopPrepareTrainingDatasetTaskCancelRequest(
+          {
+            requestId: input.requestId,
+            boundary: {
+              host: "desktop",
+              source: "desktop.renderer.dataset-preparation",
+              workspaceId: input.workspaceId,
+            },
+          },
+          context,
+        );
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopPrepareTrainingDatasetTaskCancelResponse>(
+        response,
+        {
+          operation: DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_OPERATION,
+          channel:
+            DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop dataset preparation task-cancel IPC response envelope.",
+        },
+      );
+    },
+
+    async approvePreparedTrainingDataset(input, context = {}) {
+      const request: DesktopPrepareTrainingDatasetApproveRequest =
+        createDesktopPrepareTrainingDatasetApproveRequest(
+          {
+            requestId: input.requestId,
+            reportFingerprint: input.reportFingerprint,
+            boundary: {
+              host: "desktop",
+              source: "desktop.renderer.dataset-preparation",
+              workspaceId: input.workspaceId,
+            },
+          },
+          context,
+        );
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopPrepareTrainingDatasetApproveResponse>(
+        response,
+        {
+          operation: DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_OPERATION,
+          channel:
+            DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop dataset preparation approval IPC response envelope.",
+        },
+      );
+    },
+
+    async listDatasetVersions(input, context = {}) {
+      const request = createDesktopDatasetVersionListRequest({ datasetId: input.datasetId, boundary: { host: "desktop", source: "desktop.renderer.dataset-preparation", workspaceId: input.workspaceId } }, context);
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_DATASET_VERSION_LIST_REQUEST_CHANNEL.value, request);
+      return assertDesktopEnvelopeResponse<DesktopDatasetVersionListResponse>(response, { operation: DESKTOP_DATASET_VERSION_LIST_OPERATION, channel: DESKTOP_DATASET_VERSION_LIST_RESPONSE_CHANNEL.value, message: "Received invalid desktop dataset version history IPC response envelope." });
+    },
+
+    async compareDatasetVersions(input, context = {}) {
+      const request = createDesktopDatasetVersionCompareRequest({ fromVersionId: input.fromVersionId, toVersionId: input.toVersionId, boundary: { host: "desktop", source: "desktop.renderer.dataset-preparation", workspaceId: input.workspaceId } }, context);
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_DATASET_VERSION_COMPARE_REQUEST_CHANNEL.value, request);
+      return assertDesktopEnvelopeResponse<DesktopDatasetVersionCompareResponse>(response, { operation: DESKTOP_DATASET_VERSION_COMPARE_OPERATION, channel: DESKTOP_DATASET_VERSION_COMPARE_RESPONSE_CHANNEL.value, message: "Received invalid desktop dataset version comparison IPC response envelope." });
+    },
+
+    async readDatasetVersionReproduction(input, context = {}) {
+      const request = createDesktopDatasetVersionReproduceRequest({ versionId: input.versionId, boundary: { host: "desktop", source: "desktop.renderer.dataset-preparation", workspaceId: input.workspaceId } }, context);
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_DATASET_VERSION_REPRODUCE_REQUEST_CHANNEL.value, request);
+      return assertDesktopEnvelopeResponse<DesktopDatasetVersionReproduceResponse>(response, { operation: DESKTOP_DATASET_VERSION_REPRODUCE_OPERATION, channel: DESKTOP_DATASET_VERSION_REPRODUCE_RESPONSE_CHANNEL.value, message: "Received invalid desktop dataset version reproduction IPC response envelope." });
+    },
+
+    async publishDatasetVersion(input, context = {}) {
+      const request = createDesktopDatasetVersionPublishRequest({ versionId: input.versionId, repositoryId: input.repositoryId, visibility: input.visibility, createRepository: input.createRepository, publicAccessConfirmed: input.publicAccessConfirmed, boundary: { host: "desktop", source: "desktop.renderer.dataset-preparation", workspaceId: input.workspaceId } }, context);
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_DATASET_VERSION_PUBLISH_REQUEST_CHANNEL.value, request);
+      return assertDesktopEnvelopeResponse<DesktopDatasetVersionPublishResponse>(response, { operation: DESKTOP_DATASET_VERSION_PUBLISH_OPERATION, channel: DESKTOP_DATASET_VERSION_PUBLISH_RESPONSE_CHANNEL.value, message: "Received invalid desktop dataset version publication IPC response envelope." });
     },
 
     async readRuntimeReadiness(context = {}) {

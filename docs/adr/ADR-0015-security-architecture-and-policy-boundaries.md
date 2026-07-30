@@ -90,6 +90,15 @@ This ADR remains the canonical architecture decision. Current implementation is 
   - `security.forbidden`
   - `security.https-required`
   - `security.route-policy-missing`
+- Dataset-preparation start, task-read, and cancellation routes are admitted
+  explicitly by the deny-by-default route policy. Authenticated principal and
+  organization context flows into the application request context, while task
+  reads and cancellation require the recorded workspace and, when present,
+  organization.
+- Dataset parsing and generation use bounded source counts, file/row/document
+  limits, contained runtime output handles, and aggregate-only diagnostics.
+  The canonical boundary review is
+  `docs/security/data-management-threat-model.md`.
 
 Current limitations / required follow-up:
 

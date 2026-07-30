@@ -105,6 +105,7 @@ If context guidance conflicts with an ADR, architecture document, or standard, t
 
 ## Current Architecture Pointers
 
+- Data ingestion and training-dataset preparation: docs/architecture/data-management.md, docs/architecture/runtime-model.md, and docs/security/data-management-threat-model.md.
 - Workspace model: `docs/architecture/workspace-model.md`, including reference-only `system.foundation@1.0.0` activation and the no-hidden-workspace/no-auto-migration rule.
 - Organization tenancy and identity: `docs/architecture/organization-tenancy-and-identity.md`; pooled placement is the managed default and dedicated one-organization placement is the premium profile.
 - User Library reuse: `docs/architecture/user-library-and-cross-workspace-reuse.md` and ADR-0017.

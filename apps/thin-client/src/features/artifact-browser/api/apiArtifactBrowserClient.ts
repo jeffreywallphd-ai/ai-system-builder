@@ -13,6 +13,7 @@ export interface ArtifactBrowserLocator {
 type ThinClientArtifactFamily = ArtifactBrowseContractItem["artifactFamily"];
 
 export interface ThinClientArtifactBrowseItem {
+  artifactId: string;
   storageKey: string;
   artifactFamily: ThinClientArtifactFamily;
   mediaType?: string;

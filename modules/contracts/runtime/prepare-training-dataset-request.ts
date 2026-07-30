@@ -5,6 +5,7 @@ import type {
   DatasetPreparationSourceInput,
   DatasetSplitConfig,
 } from "./dataset-preparation";
+import type { DatasetQualityRuntimeConfig } from "./dataset-quality";
 
 export interface DatasetPreparationRuntimeOptions {
   runtimeWorkingDirectory?: string;
@@ -16,5 +17,6 @@ export interface PrepareTrainingDatasetRequest {
   recipe: DatasetPreparationRecipe;
   split: DatasetSplitConfig;
   output: DatasetOutputConfig;
+  quality?: DatasetQualityRuntimeConfig;
   runtime?: DatasetPreparationRuntimeOptions;
 }

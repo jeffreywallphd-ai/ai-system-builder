@@ -208,7 +208,7 @@ class ExampleGenerationTests(unittest.TestCase):
 
         self.assertEqual(examples, [])
 
-    def test_generation_skip_logs_raw_prepared_data_and_errors(self) -> None:
+    def test_generation_skip_logs_only_bounded_aggregate_diagnostics(self) -> None:
         config = ExampleGenerationConfig.model_validate(
             {
                 "mode": "qa",
@@ -231,9 +231,12 @@ class ExampleGenerationTests(unittest.TestCase):
         self.assertEqual(examples, [])
         diagnostic = json.loads(output.getvalue().strip())
         self.assertEqual(diagnostic["event"], "runtime.dataset_preparation.generation.chunk_failed")
-        self.assertEqual(diagnostic["rawData"]["chunk"]["text"], "Some context")
-        self.assertIn("questionPrompt", diagnostic["preparedData"])
-        self.assertTrue(any("echoed" in error for error in diagnostic["errors"]))
+        self.assertEqual(diagnostic["rawData"]["chunkCharacterCount"], 12)
+        self.assertGreater(diagnostic["preparedData"]["questionPromptCharacterCount"], 0)
+        self.assertEqual(diagnostic["errors"], ["ValueError"])
+        self.assertNotIn("Some context", output.getvalue())
+        self.assertNotIn("questionPrompt", diagnostic["preparedData"])
+        self.assertNotIn("questionOutput", diagnostic["rawData"])
 
     def test_generation_skip_logs_error_type_when_exception_message_is_empty(self) -> None:
         config = ExampleGenerationConfig.model_validate(

@@ -30,6 +30,8 @@
 - Runtime Task Registry is the lifecycle authority for accepted long-running tasks.
 - Feature starts should guard required readiness before task creation and should not return pollable task ids when rejected as unavailable.
 - Dataset preparation is the dataset-producing boundary; model training is the model-producing boundary.
+- Dataset preparation source options must come from the shared capability registry. The worker creates physical aggregate, train, validation, and test outputs, keeps source/group and exact-content duplicates in one deterministic split component, and reports counts derived from those outputs.
+- Desktop IPC and authenticated server HTTP expose the same asynchronous start/read/cancel lifecycle. Workspace ownership is recorded at start and every status read or cancellation must fail closed for another workspace.
 - Dataset preparation task profiles are shared contract metadata and executable dataset-output profiles in the Python worker. Text-bearing profiles choose provided source text or local-model-generated text through `task.textInputMode` and `generation.promptTemplate`; built-in generation presets are quality 7B (`Qwen/Qwen2.5-7B-Instruct`) and compact 3B (`Qwen/Qwen2.5-3B-Instruct`). Task-scoped generation parameter defaults live in runtime contracts; UI may expose them in an automated formatting section but must not hardcode QA-generation settings keys or duplicate model parameter fields. LLM profiles can emit structured/generated text rows; diffusion and vision profiles emit image manifest rows from metadata or structured manifests. Model training requests carry the selected training task. Executable Python training supports causal-LM text training for LLM instruction/classification/extraction/embedding/reranker tasks, diffusion LoRA adapter training for image-caption manifests, and vision LoRA or full-finetune training for classification, detection, and segmentation manifests. Image-manifest text generation uses metadata/annotations rather than pixel understanding; image-manifest model training must receive runtime-local source file paths through dataset metadata instead of making the Python worker read artifact storage directly.
 
 ## Runtime Readiness Rules
@@ -77,6 +79,8 @@
 - `docs/adr/ADR-0002-typescript-first-runtime-model.md` - core runtime decision.
 - `docs/adr/ADR-0013-host-owned-runtime-execution-and-feature-placement.md` - desktop/server runtime ownership.
 - `docs/architecture/runtime-model.md` - runtime responsibilities and boundaries.
+- `docs/architecture/data-management.md` - ingestion-to-dataset preparation flow, split integrity, UI, and diagnostic boundaries.
+- `docs/security/data-management-threat-model.md` - source, provider, runtime, split, task ownership, and non-disclosure controls.
 - `docs/architecture/runtime-readiness-binding.md` - readiness/capability output.
 - `docs/architecture/module-dependency-rules.md` - adapter dependency constraints.
 - `docs/standards/logging-standards.md` - runtime diagnostics and redaction.

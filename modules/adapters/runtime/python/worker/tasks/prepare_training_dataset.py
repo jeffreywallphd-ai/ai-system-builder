@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import os
 import random
@@ -23,6 +24,7 @@ from .example_generation import (
     generate_text_value,
 )
 from .markdown_chunking import chunk_markdown_documents
+from .dataset_quality import curate_dataset_rows
 
 DEFAULT_MAX_CHUNK_COUNT = 10000
 SUPPORTED_RUNTIME_TASK_TYPES = {
@@ -50,8 +52,18 @@ IMAGE_MANIFEST_TASK_TYPES = {
     "vision-segmentation",
 }
 DEFAULT_RUNTIME_TASK_TYPE = "llm-instruction"
-STRUCTURED_SOURCE_SUFFIXES = {".csv", ".json", ".jsonl"}
+STRUCTURED_SOURCE_SUFFIXES = {".csv", ".json", ".jsonl", ".parquet"}
 IMAGE_SOURCE_SUFFIXES = {".bmp", ".gif", ".jpeg", ".jpg", ".png", ".tif", ".tiff", ".webp"}
+IMAGE_SOURCE_MEDIA_TYPES = {
+    "image/bmp",
+    "image/gif",
+    "image/jpeg",
+    "image/png",
+    "image/tiff",
+    "image/webp",
+}
+MAX_STRUCTURED_SOURCE_BYTES = 256 * 1024 * 1024
+MAX_STRUCTURED_SOURCE_ROWS = 1_000_000
 
 
 class DatasetPreparationStageError(ValueError):
@@ -68,13 +80,129 @@ class DatasetPreparationStageError(ValueError):
         self.details = details
 
 
-def _validate_split_config(train_ratio: float, test_ratio: float) -> None:
+def _validate_split_config(
+    train_ratio: float,
+    validation_ratio: float,
+    test_ratio: float,
+) -> None:
     if train_ratio <= 0:
         raise ValueError("split.trainRatio must be greater than 0")
-    if test_ratio <= 0:
-        raise ValueError("split.testRatio must be greater than 0")
-    if abs((train_ratio + test_ratio) - 1.0) > 1e-6:
-        raise ValueError("split.trainRatio + split.testRatio must equal 1.0")
+    if validation_ratio < 0:
+        raise ValueError("split.validationRatio must be greater than or equal to 0")
+    if test_ratio < 0:
+        raise ValueError("split.testRatio must be greater than or equal to 0")
+    if validation_ratio == 0 and test_ratio == 0:
+        raise ValueError(
+            "split.testRatio or split.validationRatio must be greater than 0"
+        )
+    if abs((train_ratio + validation_ratio + test_ratio) - 1.0) > 1e-6:
+        raise ValueError(
+            "split.trainRatio + split.validationRatio + split.testRatio must equal 1.0"
+        )
+
+
+_SPLIT_PROVENANCE_FIELDS = {
+    "artifactId",
+    "sourceArtifactId",
+    "sourceRowIndex",
+    "chunkIndex",
+    "split",
+}
+
+
+def _split_content_fingerprint(row: dict[str, object]) -> str:
+    task_content = {
+        key: value
+        for key, value in row.items()
+        if key not in _SPLIT_PROVENANCE_FIELDS
+    }
+    canonical = json.dumps(
+        task_content,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _split_source_group(row: dict[str, object], row_index: int) -> str:
+    source_id = row.get("sourceArtifactId") or row.get("artifactId")
+    return str(source_id) if source_id not in (None, "") else f"row-{row_index}"
+
+
+def _partition_rows(
+    rows: list[dict[str, object]],
+    train_ratio: float,
+    validation_ratio: float,
+    test_ratio: float,
+    seed: int,
+    shuffle: bool,
+) -> tuple[dict[str, list[dict[str, object]]], int]:
+    parents = list(range(len(rows)))
+
+    def find(index: int) -> int:
+        while parents[index] != index:
+            parents[index] = parents[parents[index]]
+            index = parents[index]
+        return index
+
+    def union(left: int, right: int) -> None:
+        left_root = find(left)
+        right_root = find(right)
+        if left_root != right_root:
+            parents[right_root] = left_root
+
+    group_owner: dict[str, int] = {}
+    fingerprint_owner: dict[str, int] = {}
+    for index, row in enumerate(rows):
+        group = _split_source_group(row, index)
+        fingerprint = _split_content_fingerprint(row)
+        if group in group_owner:
+            union(index, group_owner[group])
+        else:
+            group_owner[group] = index
+        if fingerprint in fingerprint_owner:
+            union(index, fingerprint_owner[fingerprint])
+        else:
+            fingerprint_owner[fingerprint] = index
+
+    components_by_root: dict[int, list[dict[str, object]]] = {}
+    for index, row in enumerate(rows):
+        components_by_root.setdefault(find(index), []).append(row)
+    components = list(components_by_root.values())
+    if shuffle:
+        random.Random(seed).shuffle(components)
+
+    ratios = {
+        "train": train_ratio,
+        "validation": validation_ratio,
+        "test": test_ratio,
+    }
+    active_roles = [role for role, ratio in ratios.items() if ratio > 0]
+    targets = {role: ratios[role] * len(rows) for role in active_roles}
+    split_rows = {role: [] for role in ["train", "validation", "test"]}
+
+    for component_index, component in enumerate(components):
+        empty_roles = [role for role in active_roles if not split_rows[role]]
+        remaining_components = len(components) - component_index
+        if empty_roles and remaining_components <= len(empty_roles):
+            role = empty_roles[0]
+        else:
+            role = max(
+                active_roles,
+                key=lambda candidate: (
+                    targets[candidate] - len(split_rows[candidate]),
+                    ratios[candidate],
+                    -active_roles.index(candidate),
+                ),
+            )
+        split_rows[role].extend(
+            {**row, "split": role}
+            for row in component
+        )
+
+    return split_rows, len(components)
 
 def _validate_generated_rows(total_rows: int, chunk_count: int) -> None:
     if total_rows > 0:
@@ -131,21 +259,65 @@ def _is_structured_source(source: Any) -> bool:
     media_type = (source.mediaType or "").lower()
     return (
         _source_extension(source) in STRUCTURED_SOURCE_SUFFIXES
-        or media_type in {"application/json", "text/json", "application/x-ndjson", "application/jsonl", "text/csv", "application/csv"}
+        or media_type in {
+            "application/json",
+            "text/json",
+            "application/x-ndjson",
+            "application/jsonl",
+            "text/csv",
+            "application/csv",
+            "application/x-parquet",
+            "application/vnd.apache.parquet",
+        }
     )
 
 
 def _is_image_source(source: Any) -> bool:
     media_type = (source.mediaType or "").lower()
-    return media_type.startswith("image/") or _source_extension(source) in IMAGE_SOURCE_SUFFIXES
+    return media_type in IMAGE_SOURCE_MEDIA_TYPES or _source_extension(source) in IMAGE_SOURCE_SUFFIXES
 
 
 def _read_structured_source_rows(source: Any) -> list[dict[str, Any]]:
     path = Path(source.localPath)
     suffix = _source_extension(source)
+    source_size = path.stat().st_size
+    if source_size > MAX_STRUCTURED_SOURCE_BYTES:
+        raise ValueError(
+            f"Structured source exceeds the {MAX_STRUCTURED_SOURCE_BYTES}-byte limit."
+        )
+
     if suffix == ".csv" or (source.mediaType or "").lower() in {"text/csv", "application/csv"}:
         with path.open("r", encoding="utf-8", newline="") as handle:
-            return [dict(row) for row in csv.DictReader(handle)]
+            rows: list[dict[str, Any]] = []
+            for row in csv.DictReader(handle):
+                if len(rows) >= MAX_STRUCTURED_SOURCE_ROWS:
+                    raise ValueError(
+                        f"Structured source exceeds the {MAX_STRUCTURED_SOURCE_ROWS}-row limit."
+                    )
+                rows.append(dict(row))
+            return rows
+
+    if suffix == ".parquet" or (source.mediaType or "").lower() in {
+        "application/x-parquet",
+        "application/vnd.apache.parquet",
+    }:
+        try:
+            import pyarrow.parquet as pq
+        except ImportError as error:
+            raise RuntimeError(
+                "The pyarrow package is required to prepare Parquet sources."
+            ) from error
+        parquet_file = pq.ParquetFile(path)
+        row_count = parquet_file.metadata.num_rows
+        if row_count > MAX_STRUCTURED_SOURCE_ROWS:
+            raise ValueError(
+                f"Structured source exceeds the {MAX_STRUCTURED_SOURCE_ROWS}-row limit."
+            )
+        return [
+            row
+            for row in parquet_file.read().to_pylist()
+            if isinstance(row, dict)
+        ]
 
     text = path.read_text(encoding="utf-8")
     if suffix == ".jsonl" or (source.mediaType or "").lower() in {"application/x-ndjson", "application/jsonl"}:
@@ -156,16 +328,28 @@ def _read_structured_source_rows(source: Any) -> list[dict[str, Any]]:
                 continue
             parsed = json.loads(stripped)
             if isinstance(parsed, dict):
+                if len(rows) >= MAX_STRUCTURED_SOURCE_ROWS:
+                    raise ValueError(
+                        f"Structured source exceeds the {MAX_STRUCTURED_SOURCE_ROWS}-row limit."
+                    )
                 rows.append(parsed)
         return rows
 
     parsed = json.loads(text)
     if isinstance(parsed, list):
+        if len(parsed) > MAX_STRUCTURED_SOURCE_ROWS:
+            raise ValueError(
+                f"Structured source exceeds the {MAX_STRUCTURED_SOURCE_ROWS}-row limit."
+            )
         return [row for row in parsed if isinstance(row, dict)]
     if isinstance(parsed, dict):
         for key in ["rows", "data", "items", "examples", "annotations"]:
             candidate = parsed.get(key)
             if isinstance(candidate, list):
+                if len(candidate) > MAX_STRUCTURED_SOURCE_ROWS:
+                    raise ValueError(
+                        f"Structured source exceeds the {MAX_STRUCTURED_SOURCE_ROWS}-row limit."
+                    )
                 return [row for row in candidate if isinstance(row, dict)]
         return [parsed]
     return []
@@ -495,10 +679,11 @@ def _map_structured_row(task_type: str, task_recipe: dict[str, Any], row: dict[s
     return None
 
 
-def _load_structured_task_rows(payload: PrepareTrainingDatasetRequest, task_type: str, task_recipe: dict[str, Any]) -> tuple[list[dict[str, Any]], set[str], list[DatasetPreparationWarning]]:
+def _load_structured_task_rows(payload: PrepareTrainingDatasetRequest, task_type: str, task_recipe: dict[str, Any]) -> tuple[list[dict[str, Any]], set[str], list[DatasetPreparationWarning], list[dict[str, object]]]:
     rows: list[dict[str, Any]] = []
     consumed_artifact_ids: set[str] = set()
     warnings: list[DatasetPreparationWarning] = []
+    mapping_quarantine: list[dict[str, object]] = []
     for source in payload.sourceInputs:
         if not _is_structured_source(source):
             continue
@@ -508,20 +693,35 @@ def _load_structured_task_rows(payload: PrepareTrainingDatasetRequest, task_type
             warnings.append(
                 DatasetPreparationWarning(
                     code="structured_source_read_failed",
-                    message=f"Could not read structured source '{source.artifactId}': {error}",
+                    message=(
+                        f"Could not read structured source '{source.artifactId}'. "
+                        "Check that the file is valid, within the size limits, and uses a supported format."
+                    ),
                     sourceArtifactId=source.artifactId,
                 )
             )
             continue
-        mapped_rows = [
-            mapped
-            for index, row in enumerate(source_rows)
-            if (mapped := _map_structured_row(task_type, task_recipe, row, source, index)) is not None
-        ]
+        mapped_rows: list[dict[str, Any]] = []
+        for index, row in enumerate(source_rows):
+            mapped = _map_structured_row(
+                task_type, task_recipe, row, source, index
+            )
+            if mapped is not None:
+                mapped_rows.append(mapped)
+            elif payload.quality is not None:
+                mapping_quarantine.append(
+                    {
+                        "sourceArtifactId": source.artifactId,
+                        "sourceRowIndex": index,
+                        "row": row,
+                    }
+                )
         if mapped_rows:
             rows.extend(mapped_rows)
             consumed_artifact_ids.add(source.artifactId)
         else:
+            if payload.quality is not None and source_rows:
+                consumed_artifact_ids.add(source.artifactId)
             warnings.append(
                 DatasetPreparationWarning(
                     code="structured_source_missing_task_fields",
@@ -529,7 +729,7 @@ def _load_structured_task_rows(payload: PrepareTrainingDatasetRequest, task_type
                     sourceArtifactId=source.artifactId,
                 )
             )
-    return rows, consumed_artifact_ids, warnings
+    return rows, consumed_artifact_ids, warnings, mapping_quarantine
 
 
 def _build_direct_image_rows(
@@ -738,10 +938,7 @@ def _log_generation_failure_diagnostics(
 
 
 def _format_generation_error(error: Exception) -> str:
-    message = str(error).strip()
-    if message:
-        return message
-    return error.__class__.__name__
+    return f"Generation failed ({error.__class__.__name__})."
 
 
 def _emit_rows(
@@ -806,6 +1003,37 @@ def _emit_rows(
         outputHandle=path.name,
         tempPath=temp_path,
         mediaType=media_type,
+        sizeBytes=path.stat().st_size,
+        metadata=metadata,
+    )
+
+
+def _emit_json_document(
+    value: dict[str, object],
+    role: str,
+    base_name: str,
+    metadata: dict[str, object],
+    output_directory: Path | None = None,
+) -> PythonRuntimeOutputDescriptor:
+    fd, temp_path = tempfile.mkstemp(
+        prefix=f"{base_name}-{role}-",
+        suffix=".json",
+        dir=str(output_directory) if output_directory is not None else None,
+    )
+    path = Path(temp_path)
+    try:
+        path.write_text(
+            json.dumps(value, ensure_ascii=False, sort_keys=True),
+            encoding="utf-8",
+        )
+    finally:
+        os.close(fd)
+    return PythonRuntimeOutputDescriptor(
+        name=f"{base_name}-{role}",
+        role=role,
+        outputHandle=path.name,
+        tempPath=temp_path,
+        mediaType="application/json",
         sizeBytes=path.stat().st_size,
         metadata=metadata,
     )
@@ -911,8 +1139,8 @@ def _build_generated_rows(
     generator: Callable[[list, object], list[GeneratedQaExample]],
     text_value_generator: Callable[[str, object], str],
     on_generation_progress: Callable[[dict[str, int]], None] | None = None,
-) -> tuple[list[dict[str, object]], list[DatasetPreparationWarning], int, int, int]:
-    structured_rows, consumed_structured_artifact_ids, structured_warnings = _load_structured_task_rows(
+) -> tuple[list[dict[str, object]], list[DatasetPreparationWarning], int, int, int, list[dict[str, object]]]:
+    structured_rows, consumed_structured_artifact_ids, structured_warnings, mapping_quarantine = _load_structured_task_rows(
         payload,
         task_type,
         task_recipe,
@@ -941,7 +1169,7 @@ def _build_generated_rows(
         )
         rows = structured_rows + image_rows
         warnings = structured_warnings + image_warnings
-        if not rows:
+        if not rows and not mapping_quarantine:
             raise DatasetPreparationStageError(
                 "generation",
                 (
@@ -955,13 +1183,13 @@ def _build_generated_rows(
                     "warningCodes": [warning.code for warning in warnings],
                 },
             )
-        return rows, warnings, len(rows), 0, len(rows)
+        return rows, warnings, len(rows), 0, len(rows), mapping_quarantine
 
     source_inputs_for_generation = [
         source for source in payload.sourceInputs if source.artifactId not in consumed_structured_artifact_ids
     ]
-    if structured_rows and not source_inputs_for_generation:
-        return structured_rows, structured_warnings, len(structured_rows), 0, len(structured_rows)
+    if (structured_rows or mapping_quarantine) and not source_inputs_for_generation:
+        return structured_rows, structured_warnings, len(structured_rows), 0, len(structured_rows), mapping_quarantine
 
     try:
         ensure_generation_model_is_available(payload.recipe.generation)
@@ -1120,35 +1348,26 @@ def _build_generated_rows(
     if not rows:
         model = payload.recipe.generation.model
         raw_data = {
-            "sourceInputs": [source.model_dump(mode="json") for source in payload.sourceInputs],
-            "normalizedDocuments": [
-                {
-                    "artifactId": document.artifact_id,
-                    "mediaType": document.media_type,
-                    "sourcePath": document.source_path,
-                    "markdown": document.markdown,
-                }
-                for document in normalization.documents
-            ],
+            "sourceInputCount": len(payload.sourceInputs),
+            "normalizedDocumentCount": len(normalization.documents),
+            "normalizedCharacterCount": sum(
+                len(document.markdown) for document in normalization.documents
+            ),
         }
         prepared_data = {
-            "chunking": payload.recipe.chunking.model_dump(mode="json"),
-            "generation": payload.recipe.generation.model_dump(mode="json"),
-            "chunks": [
-                {
-                    "artifactId": chunk.artifact_id,
-                    "chunkIndex": chunk.chunk_index,
-                    "text": chunk.text,
-                }
-                for chunk in chunks
-            ],
+            "chunkCount": len(chunks),
+            "chunkCharacterCount": sum(len(chunk.text) for chunk in chunks),
+            "modelProvider": model.provider,
             "failurePolicy": failure_policy,
             "generationBatchSize": batch_size,
             "skippedGenerationChunkCount": skipped_generation_chunk_count,
         }
-        diagnostic_errors = list(generation_error_samples)
+        diagnostic_errors = [
+            "generation_failed"
+            for _error in generation_error_samples[:3]
+        ]
         if not diagnostic_errors:
-            diagnostic_errors.append("Generation completed without producing any usable examples.")
+            diagnostic_errors.append("generation_produced_no_examples")
         _log_generation_failure_diagnostics(raw_data, prepared_data, diagnostic_errors)
         details = {
             "chunkCount": len(chunks),
@@ -1156,7 +1375,7 @@ def _build_generated_rows(
             "failurePolicy": failure_policy,
             "generationBatchSize": batch_size,
             "skippedGenerationChunkCount": skipped_generation_chunk_count,
-            "generationErrorSamples": generation_error_samples,
+            "generationFailureCount": len(generation_error_samples),
             "modelProvider": model.provider,
             "modelId": model.modelId,
         }
@@ -1167,8 +1386,6 @@ def _build_generated_rows(
             f"Skipped generation chunk(s): {skipped_generation_chunk_count}. "
             "Check source content, chunking settings, and generation model configuration."
         )
-        if generation_error_samples:
-            error_message = f"{error_message} Example generation error(s): {' | '.join(generation_error_samples)}"
         raise DatasetPreparationStageError(
             "generation",
             error_message,
@@ -1182,6 +1399,7 @@ def _build_generated_rows(
         len(normalization.documents),
         normalization.skipped_document_count,
         len(chunks),
+        mapping_quarantine,
     )
 
 
@@ -1193,8 +1411,13 @@ def prepare_training_dataset(
     output_directory: Path | None = None,
 ) -> PrepareTrainingDatasetResult:
     task_type, task_recipe = _resolve_task_recipe(payload)
+    validation_ratio = float(payload.split.validationRatio or 0)
     try:
-        _validate_split_config(float(payload.split.trainRatio), float(payload.split.testRatio))
+        _validate_split_config(
+            float(payload.split.trainRatio),
+            validation_ratio,
+            float(payload.split.testRatio),
+        )
     except Exception as error:
         raise DatasetPreparationStageError(
             "split",
@@ -1202,11 +1425,12 @@ def prepare_training_dataset(
             "split_validation_failed",
             details={
                 "trainRatio": payload.split.trainRatio,
+                "validationRatio": validation_ratio,
                 "testRatio": payload.split.testRatio,
             },
         ) from error
 
-    rows, warnings, normalized_count, skipped_count, chunk_count = _build_generated_rows(
+    rows, warnings, normalized_count, skipped_count, chunk_count, mapping_quarantine = _build_generated_rows(
         payload,
         task_type,
         task_recipe,
@@ -1214,11 +1438,64 @@ def prepare_training_dataset(
         text_value_generator,
         on_generation_progress,
     )
-    _validate_generated_rows(len(rows), chunk_count)
+    if rows or not mapping_quarantine:
+        _validate_generated_rows(len(rows), chunk_count)
+    generated_row_count = len(rows) + len(mapping_quarantine)
+    quality_report: dict[str, object] | None = None
+    quarantine_records: list[dict[str, object]] = []
+    if payload.quality is not None:
+        quality_result = curate_dataset_rows(
+            rows,
+            mapping_quarantine,
+            payload.sourceInputs,
+            task_type,
+            task_recipe,
+            payload.quality,
+        )
+        rows = quality_result.accepted_rows
+        quarantine_records = quality_result.quarantine_records
+        quality_report = quality_result.report
 
-    if payload.split.shuffle:
-        seed = int(payload.split.seed or 0)
-        random.Random(seed).shuffle(rows)
+    if rows:
+        split_rows, split_group_count = _partition_rows(
+            rows,
+            float(payload.split.trainRatio),
+            validation_ratio,
+            float(payload.split.testRatio),
+            int(payload.split.seed or 0),
+            bool(payload.split.shuffle),
+        )
+    else:
+        split_rows = {"train": [], "validation": [], "test": []}
+        split_group_count = 0
+    active_split_roles = [
+        role
+        for role, ratio in (
+            ("train", float(payload.split.trainRatio)),
+            ("validation", validation_ratio),
+            ("test", float(payload.split.testRatio)),
+        )
+        if ratio > 0
+    ]
+    unavailable_split_roles = [
+        role for role in active_split_roles if not split_rows[role]
+    ]
+    if unavailable_split_roles:
+        warnings.append(
+            DatasetPreparationWarning(
+                code="split_group_count_insufficient",
+                message=(
+                    "Some requested dataset splits are empty because rows from the same "
+                    "source or with identical content must stay together. Add independent "
+                    "sources or adjust the split settings."
+                ),
+            )
+        )
+    partitioned_rows = [
+        row
+        for role in ("train", "validation", "test")
+        for row in split_rows[role]
+    ]
 
     base_name = payload.output.naming.baseName if payload.output.naming and payload.output.naming.baseName else "training-dataset"
     output_metadata = {
@@ -1237,34 +1514,91 @@ def prepare_training_dataset(
         "summary": {
             "chunkCount": chunk_count,
             "generatedExampleCount": len(rows),
+            "splitGroupCount": split_group_count,
         },
         "split": payload.split.model_dump(mode="json"),
         "outputConfig": payload.output.model_dump(mode="json"),
     }
 
-    dataset_output = _emit_rows(
-        rows,
-        payload.output.format,
-        "dataset",
-        base_name,
-        {**output_metadata, "partition": "dataset"},
-        task_type,
-        output_directory,
-    )
+    outputs: list[PythonRuntimeOutputDescriptor] = []
+    if partitioned_rows:
+        outputs.append(_emit_rows(
+            partitioned_rows,
+            payload.output.format,
+            "dataset",
+            base_name,
+            {**output_metadata, "partition": "dataset"},
+            task_type,
+            output_directory,
+        ))
+    for role in ("train", "validation", "test"):
+        role_rows = split_rows[role]
+        if not role_rows:
+            continue
+        outputs.append(
+            _emit_rows(
+                role_rows,
+                payload.output.format,
+                role,
+                base_name,
+                {
+                    **output_metadata,
+                    "partition": role,
+                    "rowCount": len(role_rows),
+                },
+                task_type,
+                output_directory,
+            )
+        )
+    if quality_report is not None:
+        outputs.append(
+            _emit_json_document(
+                quality_report,
+                "report",
+                base_name,
+                {
+                    "status": quality_report["status"],
+                    "reportFingerprint": quality_report["reportFingerprint"],
+                    "counts": quality_report["counts"],
+                },
+                output_directory,
+            )
+        )
+        if quarantine_records:
+            outputs.append(
+                _emit_rows(
+                    quarantine_records,
+                    "jsonl",
+                    "quarantine",
+                    base_name,
+                    {
+                        "rowCount": len(quarantine_records),
+                        "reportFingerprint": quality_report[
+                            "reportFingerprint"
+                        ],
+                    },
+                    task_type,
+                    output_directory,
+                )
+            )
 
     summary = DatasetPreparationSummary(
         sourceDocumentCount=len(payload.sourceInputs),
         normalizedDocumentCount=normalized_count,
         skippedDocumentCount=skipped_count,
         chunkCount=chunk_count,
-        generatedExampleCount=len(rows),
+        generatedExampleCount=generated_row_count,
         datasetRowCount=len(rows),
-        trainRowCount=len(rows),
-        testRowCount=0,
+        trainRowCount=len(split_rows["train"]),
+        validationRowCount=len(split_rows["validation"]),
+        testRowCount=len(split_rows["test"]),
+        acceptedRowCount=len(rows),
+        quarantinedRowCount=len(quarantine_records),
     )
 
     return PrepareTrainingDatasetResult(
-        outputs=[dataset_output],
+        outputs=outputs,
         summary=summary,
+        qualityReport=quality_report,
         warnings=warnings or None,
     )

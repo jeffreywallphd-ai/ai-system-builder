@@ -26,6 +26,18 @@ artifact outputs: LLM profiles can emit generated or structured text rows, diffu
 manifest rows from source metadata or structured manifest files. Model-training execution remains a separate runtime
 task boundary and must not be inferred from dataset-preparation profile support.
 
+`dataset-preparation-capabilities.ts` is the shared authority for source format
+and task compatibility. Consumers must use it for advertised choices and early
+denial rather than maintaining host-specific extension lists. The result
+contract carries role-tagged aggregate, train, validation, and test outputs;
+their physical row counts must match the summary.
+
+`dataset-quality.ts` defines requested and effective quality policy, mandatory
+checks, field/mapping/distribution profiles, sanitized review samples, stable
+report fingerprints, quarantine lineage, and review state. Hosts own policy
+resolution; runtime adapters receive the effective policy and must not weaken its
+mandatory controls. Reports never carry raw rejected row values.
+
 Text-bearing dataset-preparation recipes use `task.textInputMode` to choose provided source text versus generated text,
 and `generation.promptTemplate` carries the editable system prompt for generated labels, captions, questions, answers,
 or extracted fields. Built-in model presets stay within the 7B limit: quality uses `Qwen/Qwen2.5-7B-Instruct`, while

@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from docx import Document
 from pypdf import PdfWriter
@@ -17,12 +18,14 @@ class DocumentNormalizationTests(unittest.TestCase):
             root = Path(temp_dir)
             txt_path = root / "sample.txt"
             md_path = root / "sample.md"
+            markdown_path = root / "sample.markdown"
             html_path = root / "sample.html"
             pdf_path = root / "sample.pdf"
             docx_path = root / "sample.docx"
 
             txt_path.write_text("plain text", encoding="utf-8")
             md_path.write_text("# heading\n\nmarkdown", encoding="utf-8")
+            markdown_path.write_text("# long extension", encoding="utf-8")
             html_path.write_text("<h1>Title</h1><p>body</p>", encoding="utf-8")
 
             writer = PdfWriter()
@@ -38,6 +41,7 @@ class DocumentNormalizationTests(unittest.TestCase):
                 [
                     DatasetPreparationSourceInput(artifactId="txt", localPath=str(txt_path)),
                     DatasetPreparationSourceInput(artifactId="md", localPath=str(md_path)),
+                    DatasetPreparationSourceInput(artifactId="markdown", localPath=str(markdown_path)),
                     DatasetPreparationSourceInput(artifactId="html", localPath=str(html_path)),
                     DatasetPreparationSourceInput(artifactId="pdf", localPath=str(pdf_path)),
                     DatasetPreparationSourceInput(artifactId="docx", localPath=str(docx_path)),
@@ -45,11 +49,12 @@ class DocumentNormalizationTests(unittest.TestCase):
                 DocumentNormalizationConfig(targetFormat="markdown", unsupportedDocumentPolicy="fail"),
             )
 
-            self.assertEqual(len(result.documents), 5)
+            self.assertEqual(len(result.documents), 6)
             self.assertEqual(result.skipped_document_count, 0)
             by_id = {doc.artifact_id: doc.markdown for doc in result.documents}
             self.assertIn("plain text", by_id["txt"])
             self.assertIn("# heading", by_id["md"])
+            self.assertIn("# long extension", by_id["markdown"])
             self.assertIn("Title", by_id["html"])
             self.assertIn("docx body", by_id["docx"])
 
@@ -95,6 +100,38 @@ class DocumentNormalizationTests(unittest.TestCase):
             )
             self.assertEqual(result.skipped_document_count, 1)
             self.assertEqual(result.warnings[0].code, "document_normalization_unsupported_doc")
+
+    def test_rejects_document_larger_than_runtime_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "oversized.txt"
+            source.write_text("bounded content", encoding="utf-8")
+            with (
+                patch(
+                    "modules.adapters.runtime.python.worker.tasks.document_normalization.MAX_DOCUMENT_SOURCE_BYTES",
+                    3,
+                ),
+                self.assertRaisesRegex(ValueError, "safe preparation size limit"),
+            ):
+                normalize_sources_to_markdown(
+                    [DatasetPreparationSourceInput(artifactId="large", localPath=str(source))],
+                    DocumentNormalizationConfig(targetFormat="markdown", unsupportedDocumentPolicy="fail"),
+                )
+
+    def test_rejects_extracted_text_larger_than_runtime_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "long.txt"
+            source.write_text("too long", encoding="utf-8")
+            with (
+                patch(
+                    "modules.adapters.runtime.python.worker.tasks.document_normalization.MAX_EXTRACTED_DOCUMENT_CHARACTERS",
+                    3,
+                ),
+                self.assertRaisesRegex(ValueError, "more extracted text"),
+            ):
+                normalize_sources_to_markdown(
+                    [DatasetPreparationSourceInput(artifactId="long", localPath=str(source))],
+                    DocumentNormalizationConfig(targetFormat="markdown", unsupportedDocumentPolicy="fail"),
+                )
 
 
 if __name__ == "__main__":

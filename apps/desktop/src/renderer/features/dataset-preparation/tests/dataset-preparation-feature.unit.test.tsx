@@ -1,9 +1,21 @@
-import { act } from "react";
+import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { DatasetPreparationFeature } from "../components/DatasetPreparationFeature";
+import { DatasetPreparationFeature as DatasetPreparationFeatureComponent } from "../components/DatasetPreparationFeature";
 import { resetDatasetPreparationPageStateForTests } from "../hooks/useDatasetPreparationFeature";
+
+(
+  globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
+
+function DatasetPreparationFeature(
+  props: ComponentProps<typeof DatasetPreparationFeatureComponent>,
+) {
+  return (
+    <DatasetPreparationFeatureComponent workspaceId="workspace-a" {...props} />
+  );
+}
 
 const settingsClient = {
   listDefinitions: vi.fn(),
@@ -46,15 +58,32 @@ describe("DatasetPreparationFeature", () => {
         value: {
           outputs: {
             local: {
-              dataset: { sourceKind: "runtime", storage: { key: "stored-dataset", mediaType: "application/x-ndjson", sizeBytes: 10 } },
+              dataset: {
+                sourceKind: "runtime",
+                storage: {
+                  key: "stored-dataset",
+                  mediaType: "application/x-ndjson",
+                  sizeBytes: 10,
+                },
+              },
             },
           },
           provenance: {
             sourceArtifactIds: ["artifact-1"],
             recipe: {
               normalization: { targetFormat: "markdown" },
-              chunking: { strategy: "character", chunkSize: 1_000, chunkOverlap: 200 },
-              generation: { mode: "qa", model: { provider: "transformers", modelId: "Qwen/Qwen2.5-1.5B-Instruct" } },
+              chunking: {
+                strategy: "character",
+                chunkSize: 1_000,
+                chunkOverlap: 200,
+              },
+              generation: {
+                mode: "qa",
+                model: {
+                  provider: "transformers",
+                  modelId: "Qwen/Qwen2.5-1.5B-Instruct",
+                },
+              },
             },
             split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true },
             output: { format: "parquet" },
@@ -93,13 +122,72 @@ describe("DatasetPreparationFeature", () => {
         <DatasetPreparationFeature
           settingsClient={settingsClient}
           client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "artifact-1.jsonl",
+                storageKey: "uploads/artifact-1.jsonl",
+              },
+            ],
             startPrepareTrainingDataset,
-            readPrepareTrainingDatasetTask: async () => ({ ok: true, value: {
-              outputs: { local: { dataset: { sourceKind: "runtime", storage: { key: "stored-dataset", mediaType: "application/x-ndjson", sizeBytes: 10 } } } },
-              provenance: { sourceArtifactIds: ["artifact-1"], recipe: { normalization: { targetFormat: "markdown" }, chunking: { strategy: "character", chunkSize: 1000, chunkOverlap: 200 }, generation: { mode: "qa", model: { provider: "transformers", modelId: "google/flan-t5-base" } } }, split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true }, output: { format: "parquet" }, generationModelId: "google/flan-t5-base", summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 } },
-              summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 },
-            } }),
+            readPrepareTrainingDatasetTask: async () => ({
+              ok: true,
+              value: {
+                outputs: {
+                  local: {
+                    dataset: {
+                      sourceKind: "runtime",
+                      storage: {
+                        key: "stored-dataset",
+                        mediaType: "application/x-ndjson",
+                        sizeBytes: 10,
+                      },
+                    },
+                  },
+                },
+                provenance: {
+                  sourceArtifactIds: ["artifact-1"],
+                  recipe: {
+                    normalization: { targetFormat: "markdown" },
+                    chunking: {
+                      strategy: "character",
+                      chunkSize: 1000,
+                      chunkOverlap: 200,
+                    },
+                    generation: {
+                      mode: "qa",
+                      model: {
+                        provider: "transformers",
+                        modelId: "google/flan-t5-base",
+                      },
+                    },
+                  },
+                  split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true },
+                  output: { format: "parquet" },
+                  generationModelId: "google/flan-t5-base",
+                  summary: {
+                    sourceDocumentCount: 1,
+                    normalizedDocumentCount: 1,
+                    skippedDocumentCount: 0,
+                    chunkCount: 1,
+                    generatedExampleCount: 1,
+                    datasetRowCount: 1,
+                    trainRowCount: 1,
+                    testRowCount: 0,
+                  },
+                },
+                summary: {
+                  sourceDocumentCount: 1,
+                  normalizedDocumentCount: 1,
+                  skippedDocumentCount: 0,
+                  chunkCount: 1,
+                  generatedExampleCount: 1,
+                  datasetRowCount: 1,
+                  trainRowCount: 1,
+                  testRowCount: 0,
+                },
+              },
+            }),
           }}
         />,
       );
@@ -107,49 +195,61 @@ describe("DatasetPreparationFeature", () => {
 
     expect(container.textContent).toContain("Instruction tuning");
     expect(container.textContent).not.toContain("Available now");
-    expect(container.textContent).not.toContain("models.tasks.qaGeneration.default");
-    const formattingToggle = Array.from(container.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Automated Data Formatting"));
+    expect(container.textContent).not.toContain(
+      "models.tasks.qaGeneration.default",
+    );
+    const formattingToggle = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) =>
+      button.textContent?.includes("Automated Data Formatting"),
+    );
     await act(async () => {
-      formattingToggle?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      formattingToggle?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true }),
+      );
     });
     expect(container.textContent).toContain("Inference mode");
 
-    const checkbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
+    const checkbox = container.querySelector(
+      "input[type='checkbox']",
+    ) as HTMLInputElement;
     await act(async () => {
       checkbox.click();
     });
     const form = container.querySelector("form") as HTMLFormElement;
     await act(async () => {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      form.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
     });
 
-    expect(startPrepareTrainingDataset).toHaveBeenCalledWith(expect.objectContaining({
-      sourceArtifactIds: ["artifact-1"],
-      recipe: {
-        task: {
-          taskType: "llm-instruction",
-          textInputMode: "generate",
-          promptStyle: "instruction-response",
-          inputField: "input",
-          outputField: "output",
-          sourceContextPolicy: "include",
-        },
-        normalization: {
-          targetFormat: "markdown",
-          normalizationMode: undefined,
-          unsupportedDocumentPolicy: undefined,
-        },
-        chunking: {
-          strategy: "character",
-          chunkSize: 1000,
-          chunkOverlap: 200,
-          preserveDocumentBoundaries: true,
-          maxChunkCount: undefined,
-        },
-        generation: {
-          mode: "qa",
-          promptTemplate: expect.stringContaining("instruction-tuning"),
+    expect(startPrepareTrainingDataset).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceArtifactIds: ["artifact-1"],
+        recipe: {
+          task: {
+            taskType: "llm-instruction",
+            textInputMode: "generate",
+            promptStyle: "instruction-response",
+            inputField: "input",
+            outputField: "output",
+            sourceContextPolicy: "include",
+          },
+          normalization: {
+            targetFormat: "markdown",
+            normalizationMode: undefined,
+            unsupportedDocumentPolicy: undefined,
+          },
+          chunking: {
+            strategy: "character",
+            chunkSize: 1000,
+            chunkOverlap: 200,
+            preserveDocumentBoundaries: true,
+            maxChunkCount: undefined,
+          },
+          generation: {
+            mode: "qa",
+            promptTemplate: expect.stringContaining("instruction-tuning"),
             model: {
               provider: "transformers",
               modelId: "Qwen/Qwen2.5-7B-Instruct",
@@ -157,27 +257,29 @@ describe("DatasetPreparationFeature", () => {
               device: "auto",
               torchDtype: "auto",
             },
-          maxExamplesPerChunk: 4,
-          batchSize: 4,
-          failurePolicy: "skip",
-          generationParams: {
-            temperature: 0.7,
-            topP: 0.8,
-            maxNewTokens: 512,
+            maxExamplesPerChunk: 4,
+            batchSize: 4,
+            failurePolicy: "skip",
+            generationParams: {
+              temperature: 0.7,
+              topP: 0.8,
+              maxNewTokens: 512,
+            },
           },
         },
-      },
-      output: {
-        format: "parquet",
-        naming: { baseName: undefined },
-        destinations: {
-          local: { enabled: true },
-          huggingFace: undefined,
+        output: {
+          format: "parquet",
+          naming: { baseName: undefined },
+          destinations: {
+            local: { enabled: true },
+            huggingFace: undefined,
+          },
         },
-      },
-    }), expect.objectContaining({
-      requestId: expect.stringMatching(/^dataset-preparation-/),
-    }));
+      }),
+      expect.objectContaining({
+        requestId: expect.stringMatching(/^dataset-preparation-/),
+      }),
+    );
     expect(container.textContent).toContain("stored-dataset");
   });
 
@@ -190,28 +292,47 @@ describe("DatasetPreparationFeature", () => {
       root?.render(
         <DatasetPreparationFeature
           client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl", mediaType: "application/x-ndjson" }],
-            startPrepareTrainingDataset: async () => ({ ok: false, error: { code: "internal", message: "failed" } }),
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "artifact-1.jsonl",
+                storageKey: "uploads/artifact-1.jsonl",
+                mediaType: "application/x-ndjson",
+              },
+            ],
+            startPrepareTrainingDataset: async () => ({
+              ok: false,
+              error: { code: "internal", message: "failed" },
+            }),
           }}
         />,
       );
     });
 
-    const formattingToggle = Array.from(container.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Automated Data Formatting")) as HTMLButtonElement;
+    const formattingToggle = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) =>
+      button.textContent?.includes("Automated Data Formatting"),
+    ) as HTMLButtonElement;
     await act(async () => {
       formattingToggle.click();
     });
 
-    const modelPresetSelect = Array.from(container.querySelectorAll("select")).find((select) =>
-      Array.from(select.options).some((option) => option.value === "compact-3b")) as HTMLSelectElement;
+    const modelPresetSelect = Array.from(
+      container.querySelectorAll("select"),
+    ).find((select) =>
+      Array.from(select.options).some(
+        (option) => option.value === "compact-3b",
+      ),
+    ) as HTMLSelectElement;
     await act(async () => {
       modelPresetSelect.value = "compact-3b";
       modelPresetSelect.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
-    const saveButton = Array.from(container.querySelectorAll("button")).find((button) =>
-      button.textContent === "Save training settings") as HTMLButtonElement;
+    const saveButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Save training settings",
+    ) as HTMLButtonElement;
     expect(saveButton).toBeTruthy();
     await act(async () => {
       saveButton.click();
@@ -224,23 +345,32 @@ describe("DatasetPreparationFeature", () => {
       modelPresetSelect.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
-    const savedSettingsSelect = Array.from(container.querySelectorAll("select")).find((select) =>
-      Array.from(select.options).some((option) => option.textContent?.includes("llm instruction settings"))) as HTMLSelectElement;
-    const savedOption = Array.from(savedSettingsSelect.options).find((option) => option.value.length > 0);
+    const savedSettingsSelect = Array.from(
+      container.querySelectorAll("select"),
+    ).find((select) =>
+      Array.from(select.options).some((option) =>
+        option.textContent?.includes("llm instruction settings"),
+      ),
+    ) as HTMLSelectElement;
+    const savedOption = Array.from(savedSettingsSelect.options).find(
+      (option) => option.value.length > 0,
+    );
     expect(savedOption).toBeTruthy();
     await act(async () => {
       savedSettingsSelect.value = savedOption?.value ?? "";
       savedSettingsSelect.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
-    const loadButton = Array.from(container.querySelectorAll("button")).find((button) =>
-      button.textContent === "Load settings") as HTMLButtonElement;
+    const loadButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Load settings",
+    ) as HTMLButtonElement;
     await act(async () => {
       loadButton.click();
     });
 
-    const modelIdInput = Array.from(container.querySelectorAll("input")).find((input) =>
-      input.value === "Qwen/Qwen2.5-3B-Instruct") as HTMLInputElement | undefined;
+    const modelIdInput = Array.from(container.querySelectorAll("input")).find(
+      (input) => input.value === "Qwen/Qwen2.5-3B-Instruct",
+    ) as HTMLInputElement | undefined;
     expect(modelIdInput).toBeTruthy();
     expect(container.textContent).not.toContain("Training settings loaded.");
   });
@@ -254,26 +384,39 @@ describe("DatasetPreparationFeature", () => {
       root?.render(
         <DatasetPreparationFeature
           client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
-            startPrepareTrainingDataset: async () => ({ ok: false, error: { code: "internal", message: "failed" } }),
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "artifact-1.jsonl",
+                storageKey: "uploads/artifact-1.jsonl",
+              },
+            ],
+            startPrepareTrainingDataset: async () => ({
+              ok: false,
+              error: { code: "internal", message: "failed" },
+            }),
           }}
         />,
       );
     });
 
-    const checkbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
+    const checkbox = container.querySelector(
+      "input[type='checkbox']",
+    ) as HTMLInputElement;
     await act(async () => {
       checkbox.click();
     });
     const form = container.querySelector("form") as HTMLFormElement;
     await act(async () => {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      form.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
     });
 
     expect(container.textContent).toContain("failed");
   });
 
-  it("uses default Hugging Face namespace when only dataset repository name is provided", async () => {
+  it("saves locally first and defers provider publishing until after version creation", async () => {
     settingsClient.readSettings.mockResolvedValueOnce({
       values: [{ key: "huggingface.defaultNamespace", value: "OpenFinAL" }],
     });
@@ -285,8 +428,18 @@ describe("DatasetPreparationFeature", () => {
           sourceArtifactIds: ["artifact-1"],
           recipe: {
             normalization: { targetFormat: "markdown" },
-            chunking: { strategy: "character", chunkSize: 1_000, chunkOverlap: 200 },
-            generation: { mode: "qa", model: { provider: "transformers", modelId: "google/flan-t5-base" } },
+            chunking: {
+              strategy: "character",
+              chunkSize: 1_000,
+              chunkOverlap: 200,
+            },
+            generation: {
+              mode: "qa",
+              model: {
+                provider: "transformers",
+                modelId: "google/flan-t5-base",
+              },
+            },
           },
           split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true },
           output: { format: "parquet" },
@@ -324,48 +477,110 @@ describe("DatasetPreparationFeature", () => {
         <DatasetPreparationFeature
           settingsClient={settingsClient}
           client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "artifact-1.jsonl",
+                storageKey: "uploads/artifact-1.jsonl",
+              },
+            ],
             startPrepareTrainingDataset,
-            readPrepareTrainingDatasetTask: async () => ({ ok: true, value: {
-              outputs: { local: { dataset: { sourceKind: "runtime", storage: { key: "stored-dataset", mediaType: "application/x-ndjson", sizeBytes: 10 } } } },
-              provenance: { sourceArtifactIds: ["artifact-1"], recipe: { normalization: { targetFormat: "markdown" }, chunking: { strategy: "character", chunkSize: 1000, chunkOverlap: 200 }, generation: { mode: "qa", model: { provider: "transformers", modelId: "google/flan-t5-base" } } }, split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true }, output: { format: "parquet" }, generationModelId: "google/flan-t5-base", summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 } },
-              summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 },
-            } }),
+            readPrepareTrainingDatasetTask: async () => ({
+              ok: true,
+              value: {
+                outputs: {
+                  local: {
+                    dataset: {
+                      sourceKind: "runtime",
+                      storage: {
+                        key: "stored-dataset",
+                        mediaType: "application/x-ndjson",
+                        sizeBytes: 10,
+                      },
+                    },
+                  },
+                },
+                provenance: {
+                  sourceArtifactIds: ["artifact-1"],
+                  recipe: {
+                    normalization: { targetFormat: "markdown" },
+                    chunking: {
+                      strategy: "character",
+                      chunkSize: 1000,
+                      chunkOverlap: 200,
+                    },
+                    generation: {
+                      mode: "qa",
+                      model: {
+                        provider: "transformers",
+                        modelId: "google/flan-t5-base",
+                      },
+                    },
+                  },
+                  split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true },
+                  output: { format: "parquet" },
+                  generationModelId: "google/flan-t5-base",
+                  summary: {
+                    sourceDocumentCount: 1,
+                    normalizedDocumentCount: 1,
+                    skippedDocumentCount: 0,
+                    chunkCount: 1,
+                    generatedExampleCount: 1,
+                    datasetRowCount: 1,
+                    trainRowCount: 1,
+                    testRowCount: 0,
+                  },
+                },
+                summary: {
+                  sourceDocumentCount: 1,
+                  normalizedDocumentCount: 1,
+                  skippedDocumentCount: 0,
+                  chunkCount: 1,
+                  generatedExampleCount: 1,
+                  datasetRowCount: 1,
+                  trainRowCount: 1,
+                  testRowCount: 0,
+                },
+              },
+            }),
           }}
         />,
       );
     });
 
-    const sourceCheckbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
+    const sourceCheckbox = container.querySelector(
+      "input[type='checkbox']",
+    ) as HTMLInputElement;
     await act(async () => {
       sourceCheckbox.click();
     });
 
-    const publishCheckbox = Array.from(container.querySelectorAll("input[type='checkbox']"))
-      .find((input) => (input.parentElement?.textContent ?? "").includes("Publish to Hugging Face")) as HTMLInputElement;
-    await act(async () => {
-      publishCheckbox.click();
-    });
-
-    const repositoryInput = container.querySelector("input[placeholder='your-dataset-repo']") as HTMLInputElement;
-    await act(async () => {
-      repositoryInput.value = "AISysBuilderTest";
-      repositoryInput.dispatchEvent(new Event("input", { bubbles: true }));
-    });
+    expect(container.textContent).not.toContain("Publish to Hugging Face");
+    expect(container.textContent).toContain("saved locally as a reusable version first");
 
     const form = container.querySelector("form") as HTMLFormElement;
     await act(async () => {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      form.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
     });
 
-    expect(container.textContent).toContain("Namespace: OpenFinAL");
+    await vi.waitFor(() => expect(startPrepareTrainingDataset).toHaveBeenCalledOnce());
+    expect(startPrepareTrainingDataset.mock.calls[0]?.[0]).toMatchObject({
+      output: { destinations: { local: { enabled: true } } },
+    });
+    expect(startPrepareTrainingDataset.mock.calls[0]?.[0].output.destinations.huggingFace).toBeUndefined();
   });
 
   it("shows model download progress from Python runtime logs while preparation is running", async () => {
-    let resolvePreparation: ((value: { ok: true; value: any }) => void) | undefined;
-    const startPrepareTrainingDataset = vi.fn(() => new Promise<{ ok: true; value: any }>((resolve) => {
-      resolvePreparation = resolve;
-    }));
+    let resolvePreparation:
+      ((value: { ok: true; value: any }) => void) | undefined;
+    const startPrepareTrainingDataset = vi.fn(
+      () =>
+        new Promise<{ ok: true; value: any }>((resolve) => {
+          resolvePreparation = resolve;
+        }),
+    );
     const runtimeStatusClient = {
       readStatus: vi.fn().mockResolvedValue({
         supervisorStatus: "ready",
@@ -374,11 +589,14 @@ describe("DatasetPreparationFeature", () => {
         capabilities: ["prepare-training-dataset"],
         loadedModels: [],
         activeTaskCount: 1,
-        logs: [{
-          timestamp: new Date(Date.now() + 1_000).toISOString(),
-          level: "warn",
-          message: "Python runtime stderr: Fetching 14 files: 43%|####2 | 6/14 [00:00<00:00, 11.15it/s]",
-        }],
+        logs: [
+          {
+            timestamp: new Date(Date.now() + 1_000).toISOString(),
+            level: "warn",
+            message:
+              "Python runtime stderr: Fetching 14 files: 43%|####2 | 6/14 [00:00<00:00, 11.15it/s]",
+          },
+        ],
       }),
       controlRuntime: vi.fn(),
     };
@@ -393,30 +611,95 @@ describe("DatasetPreparationFeature", () => {
           settingsClient={settingsClient}
           runtimeStatusClient={runtimeStatusClient}
           client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "artifact-1.jsonl",
+                storageKey: "uploads/artifact-1.jsonl",
+              },
+            ],
             startPrepareTrainingDataset,
-            readPrepareTrainingDatasetTask: async () => ({ ok: true, value: {
-              outputs: { local: { dataset: { sourceKind: "runtime", storage: { key: "stored-dataset", mediaType: "application/x-ndjson", sizeBytes: 10 } } } },
-              provenance: { sourceArtifactIds: ["artifact-1"], recipe: { normalization: { targetFormat: "markdown" }, chunking: { strategy: "character", chunkSize: 1000, chunkOverlap: 200 }, generation: { mode: "qa", model: { provider: "transformers", modelId: "google/flan-t5-base" } } }, split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true }, output: { format: "parquet" }, generationModelId: "google/flan-t5-base", summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 } },
-              summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 },
-            } }),
+            readPrepareTrainingDatasetTask: async () => ({
+              ok: true,
+              value: {
+                outputs: {
+                  local: {
+                    dataset: {
+                      sourceKind: "runtime",
+                      storage: {
+                        key: "stored-dataset",
+                        mediaType: "application/x-ndjson",
+                        sizeBytes: 10,
+                      },
+                    },
+                  },
+                },
+                provenance: {
+                  sourceArtifactIds: ["artifact-1"],
+                  recipe: {
+                    normalization: { targetFormat: "markdown" },
+                    chunking: {
+                      strategy: "character",
+                      chunkSize: 1000,
+                      chunkOverlap: 200,
+                    },
+                    generation: {
+                      mode: "qa",
+                      model: {
+                        provider: "transformers",
+                        modelId: "google/flan-t5-base",
+                      },
+                    },
+                  },
+                  split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true },
+                  output: { format: "parquet" },
+                  generationModelId: "google/flan-t5-base",
+                  summary: {
+                    sourceDocumentCount: 1,
+                    normalizedDocumentCount: 1,
+                    skippedDocumentCount: 0,
+                    chunkCount: 1,
+                    generatedExampleCount: 1,
+                    datasetRowCount: 1,
+                    trainRowCount: 1,
+                    testRowCount: 0,
+                  },
+                },
+                summary: {
+                  sourceDocumentCount: 1,
+                  normalizedDocumentCount: 1,
+                  skippedDocumentCount: 0,
+                  chunkCount: 1,
+                  generatedExampleCount: 1,
+                  datasetRowCount: 1,
+                  trainRowCount: 1,
+                  testRowCount: 0,
+                },
+              },
+            }),
           }}
         />,
       );
     });
 
-    const checkbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
+    const checkbox = container.querySelector(
+      "input[type='checkbox']",
+    ) as HTMLInputElement;
     await act(async () => {
       checkbox.click();
     });
     const form = container.querySelector("form") as HTMLFormElement;
     await act(async () => {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      form.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
       await Promise.resolve();
       await Promise.resolve();
     });
 
-    expect(container.textContent).toContain("Downloading model google/flan-t5-base: 43% (6/14 files).");
+    expect(container.textContent).toContain(
+      "Downloading model google/flan-t5-base: 43% (6/14 files).",
+    );
 
     await act(async () => {
       resolvePreparation?.({
@@ -424,15 +707,32 @@ describe("DatasetPreparationFeature", () => {
         value: {
           outputs: {
             local: {
-              dataset: { sourceKind: "runtime", storage: { key: "stored-dataset", mediaType: "application/x-ndjson", sizeBytes: 10 } },
+              dataset: {
+                sourceKind: "runtime",
+                storage: {
+                  key: "stored-dataset",
+                  mediaType: "application/x-ndjson",
+                  sizeBytes: 10,
+                },
+              },
             },
           },
           provenance: {
             sourceArtifactIds: ["artifact-1"],
             recipe: {
               normalization: { targetFormat: "markdown" },
-              chunking: { strategy: "character", chunkSize: 1_000, chunkOverlap: 200 },
-              generation: { mode: "qa", model: { provider: "transformers", modelId: "google/flan-t5-base" } },
+              chunking: {
+                strategy: "character",
+                chunkSize: 1_000,
+                chunkOverlap: 200,
+              },
+              generation: {
+                mode: "qa",
+                model: {
+                  provider: "transformers",
+                  modelId: "google/flan-t5-base",
+                },
+              },
             },
             split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true },
             output: { format: "parquet" },
@@ -466,9 +766,12 @@ describe("DatasetPreparationFeature", () => {
 
   it("shows stop training while preparation is active and stops the Python runtime", async () => {
     let rejectPreparation: ((error: Error) => void) | undefined;
-    const startPrepareTrainingDataset = vi.fn(() => new Promise<any>((_resolve, reject) => {
-      rejectPreparation = reject;
-    }));
+    const startPrepareTrainingDataset = vi.fn(
+      () =>
+        new Promise<any>((_resolve, reject) => {
+          rejectPreparation = reject;
+        }),
+    );
     const runtimeStatusClient = {
       readStatus: vi.fn().mockResolvedValue({
         supervisorStatus: "ready",
@@ -500,33 +803,97 @@ describe("DatasetPreparationFeature", () => {
           settingsClient={settingsClient}
           runtimeStatusClient={runtimeStatusClient}
           client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "artifact-1.jsonl",
+                storageKey: "uploads/artifact-1.jsonl",
+              },
+            ],
             startPrepareTrainingDataset,
-            readPrepareTrainingDatasetTask: async () => ({ ok: true, value: {
-              outputs: { local: { dataset: { sourceKind: "runtime", storage: { key: "stored-dataset", mediaType: "application/x-ndjson", sizeBytes: 10 } } } },
-              provenance: { sourceArtifactIds: ["artifact-1"], recipe: { normalization: { targetFormat: "markdown" }, chunking: { strategy: "character", chunkSize: 1000, chunkOverlap: 200 }, generation: { mode: "qa", model: { provider: "transformers", modelId: "google/flan-t5-base" } } }, split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true }, output: { format: "parquet" }, generationModelId: "google/flan-t5-base", summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 } },
-              summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 },
-            } }),
+            readPrepareTrainingDatasetTask: async () => ({
+              ok: true,
+              value: {
+                outputs: {
+                  local: {
+                    dataset: {
+                      sourceKind: "runtime",
+                      storage: {
+                        key: "stored-dataset",
+                        mediaType: "application/x-ndjson",
+                        sizeBytes: 10,
+                      },
+                    },
+                  },
+                },
+                provenance: {
+                  sourceArtifactIds: ["artifact-1"],
+                  recipe: {
+                    normalization: { targetFormat: "markdown" },
+                    chunking: {
+                      strategy: "character",
+                      chunkSize: 1000,
+                      chunkOverlap: 200,
+                    },
+                    generation: {
+                      mode: "qa",
+                      model: {
+                        provider: "transformers",
+                        modelId: "google/flan-t5-base",
+                      },
+                    },
+                  },
+                  split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true },
+                  output: { format: "parquet" },
+                  generationModelId: "google/flan-t5-base",
+                  summary: {
+                    sourceDocumentCount: 1,
+                    normalizedDocumentCount: 1,
+                    skippedDocumentCount: 0,
+                    chunkCount: 1,
+                    generatedExampleCount: 1,
+                    datasetRowCount: 1,
+                    trainRowCount: 1,
+                    testRowCount: 0,
+                  },
+                },
+                summary: {
+                  sourceDocumentCount: 1,
+                  normalizedDocumentCount: 1,
+                  skippedDocumentCount: 0,
+                  chunkCount: 1,
+                  generatedExampleCount: 1,
+                  datasetRowCount: 1,
+                  trainRowCount: 1,
+                  testRowCount: 0,
+                },
+              },
+            }),
           }}
         />,
       );
     });
 
-    const checkbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
+    const checkbox = container.querySelector(
+      "input[type='checkbox']",
+    ) as HTMLInputElement;
     await act(async () => {
       checkbox.click();
     });
     const form = container.querySelector("form") as HTMLFormElement;
     await act(async () => {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      form.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
       await Promise.resolve();
       await Promise.resolve();
     });
 
     expect(container.textContent).toContain("Stop training");
 
-    const stopButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Stop training") as HTMLButtonElement;
+    const stopButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Stop training",
+    ) as HTMLButtonElement;
     await act(async () => {
       stopButton.click();
       await Promise.resolve();
@@ -559,77 +926,107 @@ describe("DatasetPreparationFeature", () => {
             capabilities: ["prepare-training-dataset"],
             loadedModels: [],
             activeTaskCount,
-            logs: activeTaskCount > 0 ? [{
-              timestamp: new Date(Date.now() + readCount * 1000).toISOString(),
-              level: "info" as const,
-              message: JSON.stringify({
-                event: "runtime.dataset_preparation.generation.progress",
-                requestId,
-                processedChunkCount,
-                totalChunkCount: 162,
-              }),
-            }, {
-              timestamp: new Date(Date.now() + readCount * 1000 + 10).toISOString(),
-              level: "info" as const,
-              message: JSON.stringify({
-                event: activeTaskCount > 0
-                  ? "runtime.dataset_preparation.task.started"
-                  : "runtime.dataset_preparation.task.succeeded",
-                requestId,
-              }),
-            }] : [{
-              timestamp: new Date(Date.now() + readCount * 1000).toISOString(),
-              level: "info" as const,
-              message: JSON.stringify({
-                event: "runtime.dataset_preparation.task.succeeded",
-                requestId,
-              }),
-            }],
+            logs:
+              activeTaskCount > 0
+                ? [
+                    {
+                      timestamp: new Date(
+                        Date.now() + readCount * 1000,
+                      ).toISOString(),
+                      level: "info" as const,
+                      message: JSON.stringify({
+                        event:
+                          "runtime.dataset_preparation.generation.progress",
+                        requestId,
+                        processedChunkCount,
+                        totalChunkCount: 162,
+                      }),
+                    },
+                    {
+                      timestamp: new Date(
+                        Date.now() + readCount * 1000 + 10,
+                      ).toISOString(),
+                      level: "info" as const,
+                      message: JSON.stringify({
+                        event:
+                          activeTaskCount > 0
+                            ? "runtime.dataset_preparation.task.started"
+                            : "runtime.dataset_preparation.task.succeeded",
+                        requestId,
+                      }),
+                    },
+                  ]
+                : [
+                    {
+                      timestamp: new Date(
+                        Date.now() + readCount * 1000,
+                      ).toISOString(),
+                      level: "info" as const,
+                      message: JSON.stringify({
+                        event: "runtime.dataset_preparation.task.succeeded",
+                        requestId,
+                      }),
+                    },
+                  ],
           };
         }),
         controlRuntime: vi.fn(),
       };
 
-    container = document.createElement("div");
-    document.body.appendChild(container);
-    root = createRoot(container);
+      container = document.createElement("div");
+      document.body.appendChild(container);
+      root = createRoot(container);
 
       await act(async () => {
         root?.render(
           <DatasetPreparationFeature
             runtimeStatusClient={runtimeStatusClient}
             client={{
-              browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
-            startPrepareTrainingDataset: async (_input, context) => {
-              requestId = context?.requestId;
-              throw new Error("fetch failed");
-            },
-          }}
+              browseSourceArtifacts: async () => [
+                {
+                  artifactId: "artifact-1",
+                  label: "artifact-1.jsonl",
+                  storageKey: "uploads/artifact-1.jsonl",
+                },
+              ],
+              startPrepareTrainingDataset: async (_input, context) => {
+                requestId = context?.requestId;
+                throw new Error("fetch failed");
+              },
+            }}
           />,
         );
         await Promise.resolve();
       });
 
-    const checkbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
-    await act(async () => {
-      checkbox.click();
-    });
+      const checkbox = container.querySelector(
+        "input[type='checkbox']",
+      ) as HTMLInputElement;
+      await act(async () => {
+        checkbox.click();
+      });
 
-    const form = container.querySelector("form") as HTMLFormElement;
-    await act(async () => {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-      await Promise.resolve();
-    });
+      const form = container.querySelector("form") as HTMLFormElement;
+      await act(async () => {
+        form.dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        );
+        await Promise.resolve();
+      });
 
-    expect(container.textContent).not.toContain("fetch failed");
+      expect(container.textContent).not.toContain("fetch failed");
 
-    await act(async () => {
-      vi.advanceTimersByTime(1_000);
-      await Promise.resolve();
-    });
+      await act(async () => {
+        vi.advanceTimersByTime(1_000);
+        await Promise.resolve();
+      });
 
-      expect(container.textContent).toContain("Dataset preparation completed in Python runtime after reconnecting");
-      expect(runtimeStatusClient.readStatus.mock.calls.length).toBeGreaterThan(2);
+      expect(container.textContent).toContain(
+        "Dataset preparation completed in Python runtime after reconnecting",
+      );
+      expect(runtimeStatusClient.readStatus.mock.calls.length).toBeGreaterThan(
+        2,
+      );
     } finally {
       vi.useRealTimers();
     }
@@ -662,16 +1059,20 @@ describe("DatasetPreparationFeature", () => {
             capabilities: ["prepare-training-dataset"],
             loadedModels: [],
             activeTaskCount: 1,
-            logs: [{
-              timestamp: new Date(Date.now() + readCount * 1000).toISOString(),
-              level: "info" as const,
-              message: JSON.stringify({
-                event: "runtime.dataset_preparation.generation.progress",
-                requestId,
-                processedChunkCount: 4,
-                totalChunkCount: 100,
-              }),
-            }],
+            logs: [
+              {
+                timestamp: new Date(
+                  Date.now() + readCount * 1000,
+                ).toISOString(),
+                level: "info" as const,
+                message: JSON.stringify({
+                  event: "runtime.dataset_preparation.generation.progress",
+                  requestId,
+                  processedChunkCount: 4,
+                  totalChunkCount: 100,
+                }),
+              },
+            ],
           };
         }),
         controlRuntime: vi.fn(),
@@ -686,7 +1087,13 @@ describe("DatasetPreparationFeature", () => {
           <DatasetPreparationFeature
             runtimeStatusClient={runtimeStatusClient}
             client={{
-              browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
+              browseSourceArtifacts: async () => [
+                {
+                  artifactId: "artifact-1",
+                  label: "artifact-1.jsonl",
+                  storageKey: "uploads/artifact-1.jsonl",
+                },
+              ],
               startPrepareTrainingDataset: async (_input, context) => {
                 requestId = context?.requestId;
                 throw new Error("fetch failed");
@@ -697,13 +1104,17 @@ describe("DatasetPreparationFeature", () => {
         await Promise.resolve();
       });
 
-      const checkbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
+      const checkbox = container.querySelector(
+        "input[type='checkbox']",
+      ) as HTMLInputElement;
       await act(async () => {
         checkbox.click();
       });
       const form = container.querySelector("form") as HTMLFormElement;
       await act(async () => {
-        form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        form.dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        );
         await Promise.resolve();
       });
 
@@ -723,65 +1134,81 @@ describe("DatasetPreparationFeature", () => {
   it("does not treat unrelated active runtime tasks as matching dataset preparation during recovery", async () => {
     vi.useFakeTimers();
     try {
-    const runtimeStatusClient = {
-      readStatus: vi.fn().mockImplementation(async () => ({
-        supervisorStatus: "ready",
-        healthy: true,
-        runtimeStatus: "ready",
-        capabilities: ["prepare-training-dataset"],
-        loadedModels: [],
-        activeTaskCount: 1,
-        logs: [{
-          timestamp: new Date().toISOString(),
-          level: "info" as const,
-          message: JSON.stringify({
-            event: "runtime.dataset_preparation.task.started",
-            requestId: "different-request",
-          }),
-        }],
-      })),
-      controlRuntime: vi.fn(),
-    };
-
-    container = document.createElement("div");
-    document.body.appendChild(container);
-    root = createRoot(container);
-
-    await act(async () => {
-      root?.render(
-        <DatasetPreparationFeature
-          runtimeStatusClient={runtimeStatusClient}
-          client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
-            startPrepareTrainingDataset: async () => {
-              throw new Error("fetch failed");
+      const runtimeStatusClient = {
+        readStatus: vi.fn().mockImplementation(async () => ({
+          supervisorStatus: "ready",
+          healthy: true,
+          runtimeStatus: "ready",
+          capabilities: ["prepare-training-dataset"],
+          loadedModels: [],
+          activeTaskCount: 1,
+          logs: [
+            {
+              timestamp: new Date().toISOString(),
+              level: "info" as const,
+              message: JSON.stringify({
+                event: "runtime.dataset_preparation.task.started",
+                requestId: "different-request",
+              }),
             },
-          }}
-        />,
+          ],
+        })),
+        controlRuntime: vi.fn(),
+      };
+
+      container = document.createElement("div");
+      document.body.appendChild(container);
+      root = createRoot(container);
+
+      await act(async () => {
+        root?.render(
+          <DatasetPreparationFeature
+            runtimeStatusClient={runtimeStatusClient}
+            client={{
+              browseSourceArtifacts: async () => [
+                {
+                  artifactId: "artifact-1",
+                  label: "artifact-1.jsonl",
+                  storageKey: "uploads/artifact-1.jsonl",
+                },
+              ],
+              startPrepareTrainingDataset: async () => {
+                throw new Error("fetch failed");
+              },
+            }}
+          />,
+        );
+        await Promise.resolve();
+      });
+
+      const checkbox = container.querySelector(
+        "input[type='checkbox']",
+      ) as HTMLInputElement;
+      await act(async () => {
+        checkbox.click();
+      });
+      const form = container.querySelector("form") as HTMLFormElement;
+      await act(async () => {
+        form.dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        );
+        await Promise.resolve();
+      });
+
+      expect(container.textContent).toContain(
+        "Reconnecting to runtime progress",
       );
-      await Promise.resolve();
-    });
+      expect(container.textContent).not.toContain(
+        "still running in the background",
+      );
+      expect(container.textContent).not.toContain("fetch failed");
 
-    const checkbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
-    await act(async () => {
-      checkbox.click();
-    });
-    const form = container.querySelector("form") as HTMLFormElement;
-    await act(async () => {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-      await Promise.resolve();
-    });
+      await act(async () => {
+        vi.advanceTimersByTime(121_000);
+        await Promise.resolve();
+      });
 
-    expect(container.textContent).toContain("Reconnecting to runtime progress");
-    expect(container.textContent).not.toContain("still running in the background");
-    expect(container.textContent).not.toContain("fetch failed");
-
-    await act(async () => {
-      vi.advanceTimersByTime(121_000);
-      await Promise.resolve();
-    });
-
-    expect(container.textContent).toContain("could not be recovered");
+      expect(container.textContent).toContain("could not be recovered");
     } finally {
       vi.useRealTimers();
     }
@@ -790,65 +1217,77 @@ describe("DatasetPreparationFeature", () => {
   it("shows recovery failure when matching dataset preparation task fails", async () => {
     vi.useFakeTimers();
     try {
-    let capturedRequestId: string | undefined;
-    const runtimeStatusClient = {
-      readStatus: vi.fn().mockImplementation(async () => ({
-        supervisorStatus: "ready",
-        healthy: true,
-        runtimeStatus: "ready",
-        capabilities: ["prepare-training-dataset"],
-        loadedModels: [],
-        activeTaskCount: 0,
-        logs: [{
-          timestamp: new Date().toISOString(),
-          level: "error" as const,
-          message: JSON.stringify({
-            event: "runtime.dataset_preparation.task.failed",
-            requestId: capturedRequestId,
-            status: "failed",
-            error: { message: "runtime generation exploded" },
-          }),
-        }],
-      })),
-      controlRuntime: vi.fn(),
-    };
-
-    container = document.createElement("div");
-    document.body.appendChild(container);
-    root = createRoot(container);
-
-    await act(async () => {
-      root?.render(
-        <DatasetPreparationFeature
-          runtimeStatusClient={runtimeStatusClient}
-          client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
-            startPrepareTrainingDataset: async (_input, context) => {
-              capturedRequestId = context?.requestId;
-              throw new Error("fetch failed");
+      let capturedRequestId: string | undefined;
+      const runtimeStatusClient = {
+        readStatus: vi.fn().mockImplementation(async () => ({
+          supervisorStatus: "ready",
+          healthy: true,
+          runtimeStatus: "ready",
+          capabilities: ["prepare-training-dataset"],
+          loadedModels: [],
+          activeTaskCount: 0,
+          logs: [
+            {
+              timestamp: new Date().toISOString(),
+              level: "error" as const,
+              message: JSON.stringify({
+                event: "runtime.dataset_preparation.task.failed",
+                requestId: capturedRequestId,
+                status: "failed",
+                error: { message: "runtime generation exploded" },
+              }),
             },
-          }}
-        />,
-      );
-      await Promise.resolve();
-    });
+          ],
+        })),
+        controlRuntime: vi.fn(),
+      };
 
-    const checkbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
-    await act(async () => {
-      checkbox.click();
-    });
-    const form = container.querySelector("form") as HTMLFormElement;
-    await act(async () => {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-      await Promise.resolve();
-    });
-    await act(async () => {
-      vi.advanceTimersByTime(1_000);
-      await Promise.resolve();
-    });
+      container = document.createElement("div");
+      document.body.appendChild(container);
+      root = createRoot(container);
 
-    expect(container.textContent).toContain("runtime generation exploded");
-    expect(container.textContent).not.toContain("fetch failed");
+      await act(async () => {
+        root?.render(
+          <DatasetPreparationFeature
+            runtimeStatusClient={runtimeStatusClient}
+            client={{
+              browseSourceArtifacts: async () => [
+                {
+                  artifactId: "artifact-1",
+                  label: "artifact-1.jsonl",
+                  storageKey: "uploads/artifact-1.jsonl",
+                },
+              ],
+              startPrepareTrainingDataset: async (_input, context) => {
+                capturedRequestId = context?.requestId;
+                throw new Error("fetch failed");
+              },
+            }}
+          />,
+        );
+        await Promise.resolve();
+      });
+
+      const checkbox = container.querySelector(
+        "input[type='checkbox']",
+      ) as HTMLInputElement;
+      await act(async () => {
+        checkbox.click();
+      });
+      const form = container.querySelector("form") as HTMLFormElement;
+      await act(async () => {
+        form.dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        );
+        await Promise.resolve();
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(1_000);
+        await Promise.resolve();
+      });
+
+      expect(container.textContent).toContain("runtime generation exploded");
+      expect(container.textContent).not.toContain("fetch failed");
     } finally {
       vi.useRealTimers();
     }
@@ -864,15 +1303,17 @@ describe("DatasetPreparationFeature", () => {
         capabilities: ["prepare-training-dataset"],
         loadedModels: [],
         activeTaskCount: 0,
-        logs: [{
-          timestamp: new Date().toISOString(),
-          level: "warn" as const,
-          message: JSON.stringify({
-            event: "runtime.dataset_preparation.task.cancelled",
-            requestId: capturedRequestId,
-            status: "cancelled",
-          }),
-        }],
+        logs: [
+          {
+            timestamp: new Date().toISOString(),
+            level: "warn" as const,
+            message: JSON.stringify({
+              event: "runtime.dataset_preparation.task.cancelled",
+              requestId: capturedRequestId,
+              status: "cancelled",
+            }),
+          },
+        ],
       })),
       controlRuntime: vi.fn(),
     };
@@ -886,7 +1327,13 @@ describe("DatasetPreparationFeature", () => {
         <DatasetPreparationFeature
           runtimeStatusClient={runtimeStatusClient}
           client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "artifact-1.jsonl",
+                storageKey: "uploads/artifact-1.jsonl",
+              },
+            ],
             startPrepareTrainingDataset: async (_input, context) => {
               capturedRequestId = context?.requestId;
               throw new Error("fetch failed");
@@ -897,13 +1344,17 @@ describe("DatasetPreparationFeature", () => {
       await Promise.resolve();
     });
 
-    const checkbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
+    const checkbox = container.querySelector(
+      "input[type='checkbox']",
+    ) as HTMLInputElement;
     await act(async () => {
       checkbox.click();
     });
     const form = container.querySelector("form") as HTMLFormElement;
     await act(async () => {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      form.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
       await Promise.resolve();
     });
 
@@ -933,7 +1384,13 @@ describe("DatasetPreparationFeature", () => {
         <DatasetPreparationFeature
           runtimeStatusClient={runtimeStatusClient}
           client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "artifact-1.jsonl",
+                storageKey: "uploads/artifact-1.jsonl",
+              },
+            ],
             startPrepareTrainingDataset: async () => {
               throw new Error("permission denied");
             },
@@ -943,14 +1400,18 @@ describe("DatasetPreparationFeature", () => {
       await Promise.resolve();
     });
 
-    const checkbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
+    const checkbox = container.querySelector(
+      "input[type='checkbox']",
+    ) as HTMLInputElement;
     await act(async () => {
       checkbox.click();
     });
 
     const form = container.querySelector("form") as HTMLFormElement;
     await act(async () => {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      form.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
       await Promise.resolve();
     });
 
@@ -983,7 +1444,13 @@ describe("DatasetPreparationFeature", () => {
           <DatasetPreparationFeature
             runtimeStatusClient={runtimeStatusClient}
             client={{
-              browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
+              browseSourceArtifacts: async () => [
+                {
+                  artifactId: "artifact-1",
+                  label: "artifact-1.jsonl",
+                  storageKey: "uploads/artifact-1.jsonl",
+                },
+              ],
               startPrepareTrainingDataset: async () => {
                 throw new Error("fetch failed");
               },
@@ -992,13 +1459,17 @@ describe("DatasetPreparationFeature", () => {
         );
       });
 
-      const checkbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
+      const checkbox = container.querySelector(
+        "input[type='checkbox']",
+      ) as HTMLInputElement;
       await act(async () => {
         checkbox.click();
       });
       const form = container.querySelector("form") as HTMLFormElement;
       await act(async () => {
-        form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        form.dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        );
         await Promise.resolve();
       });
 
@@ -1007,17 +1478,23 @@ describe("DatasetPreparationFeature", () => {
         await Promise.resolve();
       });
 
-      expect(runtimeStatusClient.readStatus.mock.calls.length).toBeLessThanOrEqual(6);
+      expect(
+        runtimeStatusClient.readStatus.mock.calls.length,
+      ).toBeLessThanOrEqual(6);
     } finally {
       vi.useRealTimers();
     }
   });
 
   it("retains in-progress status and locks form controls across remounts", async () => {
-    let resolvePreparation: ((value: { ok: true; value: any }) => void) | undefined;
-    const startPrepareTrainingDataset = vi.fn(() => new Promise<{ ok: true; value: any }>((resolve) => {
-      resolvePreparation = resolve;
-    }));
+    let resolvePreparation:
+      ((value: { ok: true; value: any }) => void) | undefined;
+    const startPrepareTrainingDataset = vi.fn(
+      () =>
+        new Promise<{ ok: true; value: any }>((resolve) => {
+          resolvePreparation = resolve;
+        }),
+    );
 
     container = document.createElement("div");
     document.body.appendChild(container);
@@ -1028,37 +1505,105 @@ describe("DatasetPreparationFeature", () => {
         <DatasetPreparationFeature
           settingsClient={settingsClient}
           client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "artifact-1.jsonl",
+                storageKey: "uploads/artifact-1.jsonl",
+              },
+            ],
             startPrepareTrainingDataset,
-            readPrepareTrainingDatasetTask: async () => ({ ok: true, value: {
-              outputs: { local: { dataset: { sourceKind: "runtime", storage: { key: "stored-dataset", mediaType: "application/x-ndjson", sizeBytes: 10 } } } },
-              provenance: { sourceArtifactIds: ["artifact-1"], recipe: { normalization: { targetFormat: "markdown" }, chunking: { strategy: "character", chunkSize: 1000, chunkOverlap: 200 }, generation: { mode: "qa", model: { provider: "transformers", modelId: "google/flan-t5-base" } } }, split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true }, output: { format: "parquet" }, generationModelId: "google/flan-t5-base", summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 } },
-              summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 },
-            } }),
+            readPrepareTrainingDatasetTask: async () => ({
+              ok: true,
+              value: {
+                outputs: {
+                  local: {
+                    dataset: {
+                      sourceKind: "runtime",
+                      storage: {
+                        key: "stored-dataset",
+                        mediaType: "application/x-ndjson",
+                        sizeBytes: 10,
+                      },
+                    },
+                  },
+                },
+                provenance: {
+                  sourceArtifactIds: ["artifact-1"],
+                  recipe: {
+                    normalization: { targetFormat: "markdown" },
+                    chunking: {
+                      strategy: "character",
+                      chunkSize: 1000,
+                      chunkOverlap: 200,
+                    },
+                    generation: {
+                      mode: "qa",
+                      model: {
+                        provider: "transformers",
+                        modelId: "google/flan-t5-base",
+                      },
+                    },
+                  },
+                  split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true },
+                  output: { format: "parquet" },
+                  generationModelId: "google/flan-t5-base",
+                  summary: {
+                    sourceDocumentCount: 1,
+                    normalizedDocumentCount: 1,
+                    skippedDocumentCount: 0,
+                    chunkCount: 1,
+                    generatedExampleCount: 1,
+                    datasetRowCount: 1,
+                    trainRowCount: 1,
+                    testRowCount: 0,
+                  },
+                },
+                summary: {
+                  sourceDocumentCount: 1,
+                  normalizedDocumentCount: 1,
+                  skippedDocumentCount: 0,
+                  chunkCount: 1,
+                  generatedExampleCount: 1,
+                  datasetRowCount: 1,
+                  trainRowCount: 1,
+                  testRowCount: 0,
+                },
+              },
+            }),
           }}
         />,
       );
     });
 
-    const formattingToggle = Array.from(container.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Automated Data Formatting")) as HTMLButtonElement;
+    const formattingToggle = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) =>
+      button.textContent?.includes("Automated Data Formatting"),
+    ) as HTMLButtonElement;
     await act(async () => {
       formattingToggle.click();
     });
     expect(container.textContent).toContain("Inference mode");
 
-    const checkbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
+    const checkbox = container.querySelector(
+      "input[type='checkbox']",
+    ) as HTMLInputElement;
     await act(async () => {
       checkbox.click();
     });
     const form = container.querySelector("form") as HTMLFormElement;
     await act(async () => {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      form.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
       await Promise.resolve();
     });
 
     expect(container.textContent).toContain("Stop training");
-    expect(container.querySelector("fieldset")?.hasAttribute("disabled")).toBe(true);
+    expect(container.querySelector("fieldset")?.hasAttribute("disabled")).toBe(
+      true,
+    );
 
     await act(async () => {
       root?.unmount();
@@ -1070,13 +1615,72 @@ describe("DatasetPreparationFeature", () => {
         <DatasetPreparationFeature
           settingsClient={settingsClient}
           client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "artifact-1.jsonl",
+                storageKey: "uploads/artifact-1.jsonl",
+              },
+            ],
             startPrepareTrainingDataset,
-            readPrepareTrainingDatasetTask: async () => ({ ok: true, value: {
-              outputs: { local: { dataset: { sourceKind: "runtime", storage: { key: "stored-dataset", mediaType: "application/x-ndjson", sizeBytes: 10 } } } },
-              provenance: { sourceArtifactIds: ["artifact-1"], recipe: { normalization: { targetFormat: "markdown" }, chunking: { strategy: "character", chunkSize: 1000, chunkOverlap: 200 }, generation: { mode: "qa", model: { provider: "transformers", modelId: "google/flan-t5-base" } } }, split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true }, output: { format: "parquet" }, generationModelId: "google/flan-t5-base", summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 } },
-              summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 },
-            } }),
+            readPrepareTrainingDatasetTask: async () => ({
+              ok: true,
+              value: {
+                outputs: {
+                  local: {
+                    dataset: {
+                      sourceKind: "runtime",
+                      storage: {
+                        key: "stored-dataset",
+                        mediaType: "application/x-ndjson",
+                        sizeBytes: 10,
+                      },
+                    },
+                  },
+                },
+                provenance: {
+                  sourceArtifactIds: ["artifact-1"],
+                  recipe: {
+                    normalization: { targetFormat: "markdown" },
+                    chunking: {
+                      strategy: "character",
+                      chunkSize: 1000,
+                      chunkOverlap: 200,
+                    },
+                    generation: {
+                      mode: "qa",
+                      model: {
+                        provider: "transformers",
+                        modelId: "google/flan-t5-base",
+                      },
+                    },
+                  },
+                  split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true },
+                  output: { format: "parquet" },
+                  generationModelId: "google/flan-t5-base",
+                  summary: {
+                    sourceDocumentCount: 1,
+                    normalizedDocumentCount: 1,
+                    skippedDocumentCount: 0,
+                    chunkCount: 1,
+                    generatedExampleCount: 1,
+                    datasetRowCount: 1,
+                    trainRowCount: 1,
+                    testRowCount: 0,
+                  },
+                },
+                summary: {
+                  sourceDocumentCount: 1,
+                  normalizedDocumentCount: 1,
+                  skippedDocumentCount: 0,
+                  chunkCount: 1,
+                  generatedExampleCount: 1,
+                  datasetRowCount: 1,
+                  trainRowCount: 1,
+                  testRowCount: 0,
+                },
+              },
+            }),
           }}
         />,
       );
@@ -1085,7 +1689,9 @@ describe("DatasetPreparationFeature", () => {
 
     expect(container.textContent).toContain("Checking model");
     expect(container.textContent).toContain("Stop training");
-    expect(container.querySelector("fieldset")?.hasAttribute("disabled")).toBe(true);
+    expect(container.querySelector("fieldset")?.hasAttribute("disabled")).toBe(
+      true,
+    );
 
     await act(async () => {
       resolvePreparation?.({
@@ -1093,15 +1699,32 @@ describe("DatasetPreparationFeature", () => {
         value: {
           outputs: {
             local: {
-              dataset: { sourceKind: "runtime", storage: { key: "stored-dataset", mediaType: "application/x-ndjson", sizeBytes: 10 } },
+              dataset: {
+                sourceKind: "runtime",
+                storage: {
+                  key: "stored-dataset",
+                  mediaType: "application/x-ndjson",
+                  sizeBytes: 10,
+                },
+              },
             },
           },
           provenance: {
             sourceArtifactIds: ["artifact-1"],
             recipe: {
               normalization: { targetFormat: "markdown" },
-              chunking: { strategy: "character", chunkSize: 1_000, chunkOverlap: 200 },
-              generation: { mode: "qa", model: { provider: "transformers", modelId: "google/flan-t5-base" } },
+              chunking: {
+                strategy: "character",
+                chunkSize: 1_000,
+                chunkOverlap: 200,
+              },
+              generation: {
+                mode: "qa",
+                model: {
+                  provider: "transformers",
+                  modelId: "google/flan-t5-base",
+                },
+              },
             },
             split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true },
             output: { format: "parquet" },
@@ -1135,13 +1758,18 @@ describe("DatasetPreparationFeature", () => {
 
   it("shows reconnecting status after progress poll failure and recovers chunk progress updates", async () => {
     vi.useFakeTimers();
-    let resolvePreparation: ((value: { ok: true; value: any }) => void) | undefined;
+    let resolvePreparation:
+      ((value: { ok: true; value: any }) => void) | undefined;
     let requestId: string | undefined;
-    const startPrepareTrainingDataset = vi.fn(() => new Promise<{ ok: true; value: any }>((resolve) => {
-      resolvePreparation = resolve;
-    }));
+    const startPrepareTrainingDataset = vi.fn(
+      () =>
+        new Promise<{ ok: true; value: any }>((resolve) => {
+          resolvePreparation = resolve;
+        }),
+    );
     const runtimeStatusClient = {
-      readStatus: vi.fn()
+      readStatus: vi
+        .fn()
         .mockResolvedValueOnce({
           supervisorStatus: "ready",
           healthy: true,
@@ -1159,16 +1787,18 @@ describe("DatasetPreparationFeature", () => {
           capabilities: ["prepare-training-dataset"],
           loadedModels: [],
           activeTaskCount: 1,
-          logs: [{
-            timestamp: new Date().toISOString(),
-            level: "info" as const,
-            message: JSON.stringify({
-              event: "runtime.dataset_preparation.generation.progress",
-              requestId,
-              processedChunkCount: 1,
-              totalChunkCount: 4,
-            }),
-          }],
+          logs: [
+            {
+              timestamp: new Date().toISOString(),
+              level: "info" as const,
+              message: JSON.stringify({
+                event: "runtime.dataset_preparation.generation.progress",
+                requestId,
+                processedChunkCount: 1,
+                totalChunkCount: 4,
+              }),
+            },
+          ],
         }),
       controlRuntime: vi.fn(),
     };
@@ -1183,7 +1813,13 @@ describe("DatasetPreparationFeature", () => {
           <DatasetPreparationFeature
             runtimeStatusClient={runtimeStatusClient}
             client={{
-              browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
+              browseSourceArtifacts: async () => [
+                {
+                  artifactId: "artifact-1",
+                  label: "artifact-1.jsonl",
+                  storageKey: "uploads/artifact-1.jsonl",
+                },
+              ],
               startPrepareTrainingDataset: async (input, context) => {
                 requestId = context?.requestId;
                 return startPrepareTrainingDataset(input, context);
@@ -1194,23 +1830,31 @@ describe("DatasetPreparationFeature", () => {
         await Promise.resolve();
       });
 
-      const checkbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
+      const checkbox = container.querySelector(
+        "input[type='checkbox']",
+      ) as HTMLInputElement;
       await act(async () => {
         checkbox.click();
       });
       const form = container.querySelector("form") as HTMLFormElement;
       await act(async () => {
-        form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        form.dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        );
         await Promise.resolve();
       });
 
-      expect(container.textContent).toContain("Reconnecting to progress monitor...");
+      expect(container.textContent).toContain(
+        "Reconnecting to progress monitor...",
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(800);
         await Promise.resolve();
       });
-      expect(container.textContent).toContain("Reconnecting to progress monitor...");
+      expect(container.textContent).toContain(
+        "Reconnecting to progress monitor...",
+      );
 
       await act(async () => {
         resolvePreparation?.({
@@ -1221,8 +1865,18 @@ describe("DatasetPreparationFeature", () => {
               sourceArtifactIds: ["artifact-1"],
               recipe: {
                 normalization: { targetFormat: "markdown" },
-                chunking: { strategy: "character", chunkSize: 1_000, chunkOverlap: 200 },
-                generation: { mode: "qa", model: { provider: "transformers", modelId: "google/flan-t5-base" } },
+                chunking: {
+                  strategy: "character",
+                  chunkSize: 1_000,
+                  chunkOverlap: 200,
+                },
+                generation: {
+                  mode: "qa",
+                  model: {
+                    provider: "transformers",
+                    modelId: "google/flan-t5-base",
+                  },
+                },
               },
               split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true },
               output: { format: "parquet" },
@@ -1269,16 +1923,18 @@ describe("DatasetPreparationFeature", () => {
           capabilities: ["prepare-training-dataset"],
           loadedModels: [],
           activeTaskCount: 1,
-          logs: [{
-            timestamp: new Date().toISOString(),
-            level: "info" as const,
-            message: JSON.stringify({
-              event: "runtime.dataset_preparation.generation.progress",
-              requestId: capturedRequestId,
-              processedChunkCount: 1,
-              totalChunkCount: 10,
-            }),
-          }],
+          logs: [
+            {
+              timestamp: new Date().toISOString(),
+              level: "info" as const,
+              message: JSON.stringify({
+                event: "runtime.dataset_preparation.generation.progress",
+                requestId: capturedRequestId,
+                processedChunkCount: 1,
+                totalChunkCount: 10,
+              }),
+            },
+          ],
         })),
         controlRuntime: vi.fn(),
       };
@@ -1292,7 +1948,13 @@ describe("DatasetPreparationFeature", () => {
           <DatasetPreparationFeature
             runtimeStatusClient={runtimeStatusClient}
             client={{
-              browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
+              browseSourceArtifacts: async () => [
+                {
+                  artifactId: "artifact-1",
+                  label: "artifact-1.jsonl",
+                  storageKey: "uploads/artifact-1.jsonl",
+                },
+              ],
               startPrepareTrainingDataset: async (_input, context) => {
                 capturedRequestId = context?.requestId;
                 throw new Error("fetch failed");
@@ -1303,14 +1965,18 @@ describe("DatasetPreparationFeature", () => {
         await Promise.resolve();
       });
 
-      const checkbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
+      const checkbox = container.querySelector(
+        "input[type='checkbox']",
+      ) as HTMLInputElement;
       await act(async () => {
         checkbox.click();
       });
 
       const form = container.querySelector("form") as HTMLFormElement;
       await act(async () => {
-        form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        form.dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        );
         await Promise.resolve();
       });
 
@@ -1319,7 +1985,9 @@ describe("DatasetPreparationFeature", () => {
         await Promise.resolve();
       });
 
-      expect(runtimeStatusClient.readStatus.mock.calls.length).toBeLessThanOrEqual(6);
+      expect(
+        runtimeStatusClient.readStatus.mock.calls.length,
+      ).toBeLessThanOrEqual(6);
     } finally {
       vi.useRealTimers();
     }
@@ -1332,12 +2000,14 @@ describe("DatasetPreparationFeature", () => {
         healthy: true,
         runtimeStatus: "ready",
         capabilities: ["prepare-training-dataset", "unload-model"],
-        loadedModels: [{
-          provider: "transformers" as const,
-          modelId: "google/flan-t5-base",
-          inferenceMode: "text2text" as const,
-          localPath: "/models/google/flan-t5-base",
-        }],
+        loadedModels: [
+          {
+            provider: "transformers" as const,
+            modelId: "google/flan-t5-base",
+            inferenceMode: "text2text" as const,
+            localPath: "/models/google/flan-t5-base",
+          },
+        ],
         activeTaskCount: 0,
         logs: [],
       }),
@@ -1361,8 +2031,17 @@ describe("DatasetPreparationFeature", () => {
         <DatasetPreparationFeature
           runtimeStatusClient={runtimeStatusClient}
           client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
-            startPrepareTrainingDataset: async () => ({ ok: false, error: { code: "internal", message: "failed" } }),
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "artifact-1.jsonl",
+                storageKey: "uploads/artifact-1.jsonl",
+              },
+            ],
+            startPrepareTrainingDataset: async () => ({
+              ok: false,
+              error: { code: "internal", message: "failed" },
+            }),
           }}
         />,
       );
@@ -1371,14 +2050,17 @@ describe("DatasetPreparationFeature", () => {
 
     expect(container.textContent).toContain("Unload model");
 
-    const unloadButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Unload model") as HTMLButtonElement;
+    const unloadButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Unload model",
+    ) as HTMLButtonElement;
     await act(async () => {
       unloadButton.click();
       await Promise.resolve();
     });
 
-    expect(runtimeStatusClient.controlRuntime).toHaveBeenCalledWith("unload-model");
+    expect(runtimeStatusClient.controlRuntime).toHaveBeenCalledWith(
+      "unload-model",
+    );
     expect(container.textContent).not.toContain("Model unloaded from memory.");
   });
 
@@ -1392,18 +2074,33 @@ describe("DatasetPreparationFeature", () => {
         <DatasetPreparationFeature
           settingsClient={{
             ...settingsClient,
-            resolveModelDefault: vi.fn().mockRejectedValue(new Error("settings failed")),
+            resolveModelDefault: vi
+              .fn()
+              .mockRejectedValue(new Error("settings failed")),
           }}
           client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
-            startPrepareTrainingDataset: async () => ({ ok: false, error: { code: "internal", message: "failed" } }),
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "artifact-1.jsonl",
+                storageKey: "uploads/artifact-1.jsonl",
+              },
+            ],
+            startPrepareTrainingDataset: async () => ({
+              ok: false,
+              error: { code: "internal", message: "failed" },
+            }),
           }}
         />,
       );
     });
 
-    expect(container.textContent).not.toContain("features.datasetPreparation.qaGeneration.default");
-    expect(container.textContent).not.toContain("models.tasks.qaGeneration.default");
+    expect(container.textContent).not.toContain(
+      "features.datasetPreparation.qaGeneration.default",
+    );
+    expect(container.textContent).not.toContain(
+      "models.tasks.qaGeneration.default",
+    );
   });
 
   it("surfaces warning when Hugging Face namespace settings cannot be read", async () => {
@@ -1419,31 +2116,59 @@ describe("DatasetPreparationFeature", () => {
             readSettings: vi.fn().mockRejectedValue(new Error("read failed")),
           }}
           client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
-            startPrepareTrainingDataset: async () => ({ ok: false, error: { code: "internal", message: "failed" } }),
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "artifact-1.jsonl",
+                storageKey: "uploads/artifact-1.jsonl",
+              },
+            ],
+            startPrepareTrainingDataset: async () => ({
+              ok: false,
+              error: { code: "internal", message: "failed" },
+            }),
           }}
         />,
       );
     });
 
-    expect(container.textContent).toContain("Hugging Face namespace default could not be loaded.");
+    expect(container.textContent).toContain(
+      "Hugging Face namespace default could not be loaded.",
+    );
   });
 
   it("keeps submit behavior stable when rerendered with a new options object shape", async () => {
     const startPrepareTrainingDataset = vi.fn().mockResolvedValue({
       ok: true,
       value: {
-          outputs: {
-            local: {
-              dataset: { sourceKind: "runtime", storage: { key: "stored-dataset", mediaType: "application/x-ndjson", sizeBytes: 10 } },
+        outputs: {
+          local: {
+            dataset: {
+              sourceKind: "runtime",
+              storage: {
+                key: "stored-dataset",
+                mediaType: "application/x-ndjson",
+                sizeBytes: 10,
+              },
             },
           },
+        },
         provenance: {
           sourceArtifactIds: ["artifact-1"],
           recipe: {
             normalization: { targetFormat: "markdown" },
-            chunking: { strategy: "character", chunkSize: 1_000, chunkOverlap: 200 },
-            generation: { mode: "qa", model: { provider: "transformers", modelId: "Qwen/Qwen2.5-1.5B-Instruct" } },
+            chunking: {
+              strategy: "character",
+              chunkSize: 1_000,
+              chunkOverlap: 200,
+            },
+            generation: {
+              mode: "qa",
+              model: {
+                provider: "transformers",
+                modelId: "Qwen/Qwen2.5-1.5B-Instruct",
+              },
+            },
           },
           split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true },
           output: { format: "parquet" },
@@ -1451,23 +2176,23 @@ describe("DatasetPreparationFeature", () => {
           summary: {
             sourceDocumentCount: 1,
             normalizedDocumentCount: 1,
-              skippedDocumentCount: 0,
-              chunkCount: 2,
-              generatedExampleCount: 10,
-              datasetRowCount: 10,
-              trainRowCount: 10,
-              testRowCount: 0,
-          },
-        },
-        summary: {
-          sourceDocumentCount: 1,
-          normalizedDocumentCount: 1,
             skippedDocumentCount: 0,
             chunkCount: 2,
             generatedExampleCount: 10,
             datasetRowCount: 10,
             trainRowCount: 10,
             testRowCount: 0,
+          },
+        },
+        summary: {
+          sourceDocumentCount: 1,
+          normalizedDocumentCount: 1,
+          skippedDocumentCount: 0,
+          chunkCount: 2,
+          generatedExampleCount: 10,
+          datasetRowCount: 10,
+          trainRowCount: 10,
+          testRowCount: 0,
         },
       },
     });
@@ -1483,13 +2208,72 @@ describe("DatasetPreparationFeature", () => {
           onPrepared={onPrepared}
           settingsClient={settingsClient}
           client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "artifact-1.jsonl",
+                storageKey: "uploads/artifact-1.jsonl",
+              },
+            ],
             startPrepareTrainingDataset,
-            readPrepareTrainingDatasetTask: async () => ({ ok: true, value: {
-              outputs: { local: { dataset: { sourceKind: "runtime", storage: { key: "stored-dataset", mediaType: "application/x-ndjson", sizeBytes: 10 } } } },
-              provenance: { sourceArtifactIds: ["artifact-1"], recipe: { normalization: { targetFormat: "markdown" }, chunking: { strategy: "character", chunkSize: 1000, chunkOverlap: 200 }, generation: { mode: "qa", model: { provider: "transformers", modelId: "google/flan-t5-base" } } }, split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true }, output: { format: "parquet" }, generationModelId: "google/flan-t5-base", summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 } },
-              summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 },
-            } }),
+            readPrepareTrainingDatasetTask: async () => ({
+              ok: true,
+              value: {
+                outputs: {
+                  local: {
+                    dataset: {
+                      sourceKind: "runtime",
+                      storage: {
+                        key: "stored-dataset",
+                        mediaType: "application/x-ndjson",
+                        sizeBytes: 10,
+                      },
+                    },
+                  },
+                },
+                provenance: {
+                  sourceArtifactIds: ["artifact-1"],
+                  recipe: {
+                    normalization: { targetFormat: "markdown" },
+                    chunking: {
+                      strategy: "character",
+                      chunkSize: 1000,
+                      chunkOverlap: 200,
+                    },
+                    generation: {
+                      mode: "qa",
+                      model: {
+                        provider: "transformers",
+                        modelId: "google/flan-t5-base",
+                      },
+                    },
+                  },
+                  split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true },
+                  output: { format: "parquet" },
+                  generationModelId: "google/flan-t5-base",
+                  summary: {
+                    sourceDocumentCount: 1,
+                    normalizedDocumentCount: 1,
+                    skippedDocumentCount: 0,
+                    chunkCount: 1,
+                    generatedExampleCount: 1,
+                    datasetRowCount: 1,
+                    trainRowCount: 1,
+                    testRowCount: 0,
+                  },
+                },
+                summary: {
+                  sourceDocumentCount: 1,
+                  normalizedDocumentCount: 1,
+                  skippedDocumentCount: 0,
+                  chunkCount: 1,
+                  generatedExampleCount: 1,
+                  datasetRowCount: 1,
+                  trainRowCount: 1,
+                  testRowCount: 0,
+                },
+              },
+            }),
           }}
         />,
       );
@@ -1501,25 +2285,88 @@ describe("DatasetPreparationFeature", () => {
           onPrepared={onPrepared}
           settingsClient={settingsClient}
           client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "artifact-1.jsonl",
+                storageKey: "uploads/artifact-1.jsonl",
+              },
+            ],
             startPrepareTrainingDataset,
-            readPrepareTrainingDatasetTask: async () => ({ ok: true, value: {
-              outputs: { local: { dataset: { sourceKind: "runtime", storage: { key: "stored-dataset", mediaType: "application/x-ndjson", sizeBytes: 10 } } } },
-              provenance: { sourceArtifactIds: ["artifact-1"], recipe: { normalization: { targetFormat: "markdown" }, chunking: { strategy: "character", chunkSize: 1000, chunkOverlap: 200 }, generation: { mode: "qa", model: { provider: "transformers", modelId: "google/flan-t5-base" } } }, split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true }, output: { format: "parquet" }, generationModelId: "google/flan-t5-base", summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 } },
-              summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 },
-            } }),
+            readPrepareTrainingDatasetTask: async () => ({
+              ok: true,
+              value: {
+                outputs: {
+                  local: {
+                    dataset: {
+                      sourceKind: "runtime",
+                      storage: {
+                        key: "stored-dataset",
+                        mediaType: "application/x-ndjson",
+                        sizeBytes: 10,
+                      },
+                    },
+                  },
+                },
+                provenance: {
+                  sourceArtifactIds: ["artifact-1"],
+                  recipe: {
+                    normalization: { targetFormat: "markdown" },
+                    chunking: {
+                      strategy: "character",
+                      chunkSize: 1000,
+                      chunkOverlap: 200,
+                    },
+                    generation: {
+                      mode: "qa",
+                      model: {
+                        provider: "transformers",
+                        modelId: "google/flan-t5-base",
+                      },
+                    },
+                  },
+                  split: { trainRatio: 0.8, testRatio: 0.2, shuffle: true },
+                  output: { format: "parquet" },
+                  generationModelId: "google/flan-t5-base",
+                  summary: {
+                    sourceDocumentCount: 1,
+                    normalizedDocumentCount: 1,
+                    skippedDocumentCount: 0,
+                    chunkCount: 1,
+                    generatedExampleCount: 1,
+                    datasetRowCount: 1,
+                    trainRowCount: 1,
+                    testRowCount: 0,
+                  },
+                },
+                summary: {
+                  sourceDocumentCount: 1,
+                  normalizedDocumentCount: 1,
+                  skippedDocumentCount: 0,
+                  chunkCount: 1,
+                  generatedExampleCount: 1,
+                  datasetRowCount: 1,
+                  trainRowCount: 1,
+                  testRowCount: 0,
+                },
+              },
+            }),
           }}
         />,
       );
     });
 
-    const checkbox = container.querySelector("input[type='checkbox']") as HTMLInputElement;
+    const checkbox = container.querySelector(
+      "input[type='checkbox']",
+    ) as HTMLInputElement;
     await act(async () => {
       checkbox.click();
     });
     const form = container.querySelector("form") as HTMLFormElement;
     await act(async () => {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      form.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
     });
 
     expect(startPrepareTrainingDataset).toHaveBeenCalledTimes(1);
@@ -1528,9 +2375,12 @@ describe("DatasetPreparationFeature", () => {
 
   it("does not continue polling updates after unmount during in-flight task read", async () => {
     let resolveRead: ((value: unknown) => void) | undefined;
-    const readPrepareTrainingDatasetTask = vi.fn(() => new Promise((resolve) => {
-      resolveRead = resolve;
-    }));
+    const readPrepareTrainingDatasetTask = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveRead = resolve;
+        }),
+    );
 
     container = document.createElement("div");
     document.body.appendChild(container);
@@ -1540,19 +2390,46 @@ describe("DatasetPreparationFeature", () => {
       root?.render(
         <DatasetPreparationFeature
           client={{
-            browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
-            startPrepareTrainingDataset: async (_input, context) => ({ ok: true, value: { requestId: context?.requestId ?? "req-1", acceptedAt: new Date().toISOString() } }),
-            readPrepareTrainingDatasetTask: readPrepareTrainingDatasetTask as never,
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "artifact-1.jsonl",
+                storageKey: "uploads/artifact-1.jsonl",
+              },
+            ],
+            startPrepareTrainingDataset: async (_input, context) => ({
+              ok: true,
+              value: {
+                requestId: context?.requestId ?? "req-1",
+                acceptedAt: new Date().toISOString(),
+              },
+            }),
+            readPrepareTrainingDatasetTask:
+              readPrepareTrainingDatasetTask as never,
           }}
         />,
       );
     });
-    await act(async () => { (container?.querySelector("input[type='checkbox']") as HTMLInputElement).click(); });
-    await act(async () => { (container?.querySelector("form") as HTMLFormElement).dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
-    expect(readPrepareTrainingDatasetTask).toHaveBeenCalledTimes(1);
-    await act(async () => { root?.unmount(); });
     await act(async () => {
-      resolveRead?.({ ok: true, status: "running", progress: { message: "still running", processed: 1, total: 4 } });
+      (
+        container?.querySelector("input[type='checkbox']") as HTMLInputElement
+      ).click();
+    });
+    await act(async () => {
+      (container?.querySelector("form") as HTMLFormElement).dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
+    });
+    expect(readPrepareTrainingDatasetTask).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      root?.unmount();
+    });
+    await act(async () => {
+      resolveRead?.({
+        ok: true,
+        status: "running",
+        progress: { message: "still running", processed: 1, total: 4 },
+      });
       await Promise.resolve();
     });
   });
@@ -1560,28 +2437,75 @@ describe("DatasetPreparationFeature", () => {
   it("does not clear cached active request id when unmounting during reconnect sleep", async () => {
     vi.useFakeTimers();
     try {
-      const readPrepareTrainingDatasetTask = vi.fn().mockResolvedValue({ ok: false, error: { message: "fetch failed" } });
+      const readPrepareTrainingDatasetTask = vi
+        .fn()
+        .mockResolvedValue({ ok: false, error: { message: "fetch failed" } });
       container = document.createElement("div");
       document.body.appendChild(container);
       root = createRoot(container);
       await act(async () => {
-        root?.render(<DatasetPreparationFeature client={{
-          browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
-          startPrepareTrainingDataset: async (_input, context) => ({ ok: true, value: { requestId: context?.requestId ?? "req-1", acceptedAt: new Date().toISOString() } }),
-          readPrepareTrainingDatasetTask,
-        }} />);
+        root?.render(
+          <DatasetPreparationFeature
+            client={{
+              browseSourceArtifacts: async () => [
+                {
+                  artifactId: "artifact-1",
+                  label: "artifact-1.jsonl",
+                  storageKey: "uploads/artifact-1.jsonl",
+                },
+              ],
+              startPrepareTrainingDataset: async (_input, context) => ({
+                ok: true,
+                value: {
+                  requestId: context?.requestId ?? "req-1",
+                  acceptedAt: new Date().toISOString(),
+                },
+              }),
+              readPrepareTrainingDatasetTask,
+            }}
+          />,
+        );
       });
-      await act(async () => { (container?.querySelector("input[type='checkbox']") as HTMLInputElement).click(); });
-      await act(async () => { (container?.querySelector("form") as HTMLFormElement).dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
-      expect(container?.textContent).toContain("Reconnecting to dataset preparation task...");
-      await act(async () => { root?.unmount(); });
+      await act(async () => {
+        (
+          container?.querySelector("input[type='checkbox']") as HTMLInputElement
+        ).click();
+      });
+      await act(async () => {
+        (container?.querySelector("form") as HTMLFormElement).dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        );
+      });
+      expect(container?.textContent).toContain(
+        "Reconnecting to dataset preparation task...",
+      );
+      await act(async () => {
+        root?.unmount();
+      });
       root = createRoot(container as HTMLDivElement);
       await act(async () => {
-        root?.render(<DatasetPreparationFeature client={{
-          browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
-          startPrepareTrainingDataset: async () => ({ ok: false, error: { code: "internal", message: "unused" } }),
-          readPrepareTrainingDatasetTask: async () => ({ ok: true, status: "running", progress: { message: "running" } }),
-        }} />);
+        root?.render(
+          <DatasetPreparationFeature
+            client={{
+              browseSourceArtifacts: async () => [
+                {
+                  artifactId: "artifact-1",
+                  label: "artifact-1.jsonl",
+                  storageKey: "uploads/artifact-1.jsonl",
+                },
+              ],
+              startPrepareTrainingDataset: async () => ({
+                ok: false,
+                error: { code: "internal", message: "unused" },
+              }),
+              readPrepareTrainingDatasetTask: async () => ({
+                ok: true,
+                status: "running",
+                progress: { message: "running" },
+              }),
+            }}
+          />,
+        );
       });
       expect(container?.textContent).toContain("Stop training");
     } finally {
@@ -1592,7 +2516,8 @@ describe("DatasetPreparationFeature", () => {
   it("resumes active dataset preparation progress after page remount", async () => {
     vi.useFakeTimers();
     try {
-      const readPrepareTrainingDatasetTask = vi.fn()
+      const readPrepareTrainingDatasetTask = vi
+        .fn()
         .mockResolvedValueOnce({
           ok: true,
           status: "running",
@@ -1609,31 +2534,63 @@ describe("DatasetPreparationFeature", () => {
       root = createRoot(container);
 
       await act(async () => {
-        root?.render(<DatasetPreparationFeature client={{
-          browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
-          startPrepareTrainingDataset: async (_input, context) => ({ requestId: context?.requestId ?? "req-1" }),
-          readPrepareTrainingDatasetTask,
-          cancelPrepareTrainingDatasetTask: async () => ({ ok: true }),
-        }} />);
+        root?.render(
+          <DatasetPreparationFeature
+            client={{
+              browseSourceArtifacts: async () => [
+                {
+                  artifactId: "artifact-1",
+                  label: "artifact-1.jsonl",
+                  storageKey: "uploads/artifact-1.jsonl",
+                },
+              ],
+              startPrepareTrainingDataset: async (_input, context) => ({
+                requestId: context?.requestId ?? "req-1",
+              }),
+              readPrepareTrainingDatasetTask,
+              cancelPrepareTrainingDatasetTask: async () => ({ ok: true }),
+            }}
+          />,
+        );
       });
 
-      await act(async () => { (container?.querySelector("input[type='checkbox']") as HTMLInputElement).click(); });
       await act(async () => {
-        (container?.querySelector("form") as HTMLFormElement).dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        (
+          container?.querySelector("input[type='checkbox']") as HTMLInputElement
+        ).click();
+      });
+      await act(async () => {
+        (container?.querySelector("form") as HTMLFormElement).dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        );
         await Promise.resolve();
       });
 
       expect(container?.textContent).toContain("Processing chunk (1/4)");
 
-      await act(async () => { root?.unmount(); });
+      await act(async () => {
+        root?.unmount();
+      });
       root = createRoot(container as HTMLDivElement);
       await act(async () => {
-        root?.render(<DatasetPreparationFeature client={{
-          browseSourceArtifacts: async () => [{ artifactId: "artifact-1", label: "artifact-1.jsonl", storageKey: "uploads/artifact-1.jsonl" }],
-          startPrepareTrainingDataset: async () => ({ error: { code: "unused", message: "unused" } }),
-          readPrepareTrainingDatasetTask,
-          cancelPrepareTrainingDatasetTask: async () => ({ ok: true }),
-        }} />);
+        root?.render(
+          <DatasetPreparationFeature
+            client={{
+              browseSourceArtifacts: async () => [
+                {
+                  artifactId: "artifact-1",
+                  label: "artifact-1.jsonl",
+                  storageKey: "uploads/artifact-1.jsonl",
+                },
+              ],
+              startPrepareTrainingDataset: async () => ({
+                error: { code: "unused", message: "unused" },
+              }),
+              readPrepareTrainingDatasetTask,
+              cancelPrepareTrainingDatasetTask: async () => ({ ok: true }),
+            }}
+          />,
+        );
         await Promise.resolve();
       });
 

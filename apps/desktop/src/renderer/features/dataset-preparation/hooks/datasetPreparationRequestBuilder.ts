@@ -21,7 +21,12 @@ const DEFAULT_DATASET_PREPARATION_RECIPE_BASE = {
   },
 };
 
-const VALID_MODEL_INFERENCE_MODES: readonly ModelDefaultInferenceMode[] = ["auto", "text2text", "causal", "chat"];
+const VALID_MODEL_INFERENCE_MODES: readonly ModelDefaultInferenceMode[] = [
+  "auto",
+  "text2text",
+  "causal",
+  "chat",
+];
 
 export interface BuildDatasetPreparationRequestInput {
   selectedArtifactIds: string[];
@@ -65,65 +70,119 @@ function splitLabelSet(value: string): string[] | undefined {
   return labels.length > 0 ? labels : undefined;
 }
 
-function resolveInputTextInputMode(input: BuildDatasetPreparationRequestInput): DatasetPreparationTextInputMode {
-  return input.textInputMode ?? createDefaultDatasetPreparationTaskRecipe(input.taskType).textInputMode ?? "provided";
+function resolveInputTextInputMode(
+  input: BuildDatasetPreparationRequestInput,
+): DatasetPreparationTextInputMode {
+  return (
+    input.textInputMode ??
+    createDefaultDatasetPreparationTaskRecipe(input.taskType).textInputMode ??
+    "provided"
+  );
 }
 
-function buildTaskRecipe(input: BuildDatasetPreparationRequestInput): DatasetPreparationTaskRecipe {
+function buildTaskRecipe(
+  input: BuildDatasetPreparationRequestInput,
+): DatasetPreparationTaskRecipe {
   const textInputMode = resolveInputTextInputMode(input);
   switch (input.taskType) {
     case "llm-instruction":
       return {
-        ...createDefaultDatasetPreparationTaskRecipe("llm-instruction") as Extract<DatasetPreparationTaskRecipe, { taskType: "llm-instruction" }>,
+        ...(createDefaultDatasetPreparationTaskRecipe(
+          "llm-instruction",
+        ) as Extract<
+          DatasetPreparationTaskRecipe,
+          { taskType: "llm-instruction" }
+        >),
         textInputMode,
       };
     case "llm-classification":
       return {
-        ...createDefaultDatasetPreparationTaskRecipe("llm-classification") as Extract<DatasetPreparationTaskRecipe, { taskType: "llm-classification" }>,
+        ...(createDefaultDatasetPreparationTaskRecipe(
+          "llm-classification",
+        ) as Extract<
+          DatasetPreparationTaskRecipe,
+          { taskType: "llm-classification" }
+        >),
         textInputMode,
         labelSet: splitLabelSet(input.labelSet ?? ""),
         multiLabel: input.multiLabel ?? false,
       };
     case "llm-extraction":
       return {
-        ...createDefaultDatasetPreparationTaskRecipe("llm-extraction") as Extract<DatasetPreparationTaskRecipe, { taskType: "llm-extraction" }>,
+        ...(createDefaultDatasetPreparationTaskRecipe(
+          "llm-extraction",
+        ) as Extract<
+          DatasetPreparationTaskRecipe,
+          { taskType: "llm-extraction" }
+        >),
         textInputMode,
         strictSchema: input.extractionStrictSchema ?? true,
       };
     case "llm-embedding":
       return {
-        ...createDefaultDatasetPreparationTaskRecipe("llm-embedding") as Extract<DatasetPreparationTaskRecipe, { taskType: "llm-embedding" }>,
+        ...(createDefaultDatasetPreparationTaskRecipe(
+          "llm-embedding",
+        ) as Extract<
+          DatasetPreparationTaskRecipe,
+          { taskType: "llm-embedding" }
+        >),
         textInputMode,
       };
     case "llm-reranker":
       return {
-        ...createDefaultDatasetPreparationTaskRecipe("llm-reranker") as Extract<DatasetPreparationTaskRecipe, { taskType: "llm-reranker" }>,
+        ...(createDefaultDatasetPreparationTaskRecipe(
+          "llm-reranker",
+        ) as Extract<
+          DatasetPreparationTaskRecipe,
+          { taskType: "llm-reranker" }
+        >),
         textInputMode,
       };
     case "diffusion-lora":
       return {
-        ...createDefaultDatasetPreparationTaskRecipe("diffusion-lora") as Extract<DatasetPreparationTaskRecipe, { taskType: "diffusion-lora" }>,
+        ...(createDefaultDatasetPreparationTaskRecipe(
+          "diffusion-lora",
+        ) as Extract<
+          DatasetPreparationTaskRecipe,
+          { taskType: "diffusion-lora" }
+        >),
         textInputMode,
         conceptKind: input.diffusionConceptKind ?? "subject",
         triggerToken: input.diffusionTriggerToken?.trim() || undefined,
-        regularizationClass: input.diffusionRegularizationClass?.trim() || undefined,
+        regularizationClass:
+          input.diffusionRegularizationClass?.trim() || undefined,
       };
     case "vision-classification":
       return {
-        ...createDefaultDatasetPreparationTaskRecipe("vision-classification") as Extract<DatasetPreparationTaskRecipe, { taskType: "vision-classification" }>,
+        ...(createDefaultDatasetPreparationTaskRecipe(
+          "vision-classification",
+        ) as Extract<
+          DatasetPreparationTaskRecipe,
+          { taskType: "vision-classification" }
+        >),
         textInputMode,
         labelSet: splitLabelSet(input.labelSet ?? ""),
       };
     case "vision-detection":
       return {
-        ...createDefaultDatasetPreparationTaskRecipe("vision-detection") as Extract<DatasetPreparationTaskRecipe, { taskType: "vision-detection" }>,
+        ...(createDefaultDatasetPreparationTaskRecipe(
+          "vision-detection",
+        ) as Extract<
+          DatasetPreparationTaskRecipe,
+          { taskType: "vision-detection" }
+        >),
         textInputMode,
         labelSet: splitLabelSet(input.labelSet ?? ""),
         boxFormat: input.detectionBoxFormat ?? "coco",
       };
     case "vision-segmentation":
       return {
-        ...createDefaultDatasetPreparationTaskRecipe("vision-segmentation") as Extract<DatasetPreparationTaskRecipe, { taskType: "vision-segmentation" }>,
+        ...(createDefaultDatasetPreparationTaskRecipe(
+          "vision-segmentation",
+        ) as Extract<
+          DatasetPreparationTaskRecipe,
+          { taskType: "vision-segmentation" }
+        >),
         textInputMode,
         labelSet: splitLabelSet(input.labelSet ?? ""),
         maskFormat: input.segmentationMaskFormat ?? "png",
@@ -133,8 +192,14 @@ function buildTaskRecipe(input: BuildDatasetPreparationRequestInput): DatasetPre
   }
 }
 
-function resolveHuggingFaceRepository(repository: string, defaultNamespace?: string): string {
-  const normalized = repository.trim().replace(/^datasets\//i, "").replaceAll("\\", "/");
+function resolveHuggingFaceRepository(
+  repository: string,
+  defaultNamespace?: string,
+): string {
+  const normalized = repository
+    .trim()
+    .replace(/^datasets\//i, "")
+    .replaceAll("\\", "/");
   if (normalized.length === 0) {
     return normalized;
   }
@@ -147,25 +212,36 @@ function resolveHuggingFaceRepository(repository: string, defaultNamespace?: str
   return namespace ? `${namespace}/${normalized}` : normalized;
 }
 
-export function buildDatasetPreparationRequest(input: BuildDatasetPreparationRequestInput) {
-  const taskModelDefault = resolveDefaultDatasetPreparationTextGenerationModel(input.taskType);
+export function buildDatasetPreparationRequest(
+  input: BuildDatasetPreparationRequestInput,
+) {
+  const taskModelDefault = resolveDefaultDatasetPreparationTextGenerationModel(
+    input.taskType,
+  );
   const explicitModelId = input.modelId.trim();
-  const effectiveModelId = explicitModelId || taskModelDefault?.modelId || input.resolvedDefault.modelId;
+  const effectiveModelId =
+    explicitModelId ||
+    taskModelDefault?.modelId ||
+    input.resolvedDefault.modelId;
   const effectiveInferenceMode = explicitModelId
-    ? (VALID_MODEL_INFERENCE_MODES.includes(input.modelInferenceMode)
+    ? VALID_MODEL_INFERENCE_MODES.includes(input.modelInferenceMode)
       ? input.modelInferenceMode
-      : input.resolvedDefault.inferenceMode)
-    : taskModelDefault?.inferenceMode ?? input.resolvedDefault.inferenceMode;
+      : input.resolvedDefault.inferenceMode
+    : (taskModelDefault?.inferenceMode ?? input.resolvedDefault.inferenceMode);
   const effectiveDevice = explicitModelId
     ? input.modelDevice || input.resolvedDefault.device
-    : taskModelDefault?.device ?? (input.modelDevice || input.resolvedDefault.device);
+    : (taskModelDefault?.device ??
+      (input.modelDevice || input.resolvedDefault.device));
   const effectiveTorchDtype = explicitModelId
     ? input.modelTorchDtype || input.resolvedDefault.torchDtype
-    : taskModelDefault?.torchDtype ?? (input.modelTorchDtype || input.resolvedDefault.torchDtype);
+    : (taskModelDefault?.torchDtype ??
+      (input.modelTorchDtype || input.resolvedDefault.torchDtype));
   const textInputMode = resolveInputTextInputMode(input);
-  const effectivePromptTemplate = textInputMode === "generate"
-    ? input.textGenerationPrompt?.trim() || resolveDefaultDatasetPreparationPromptTemplate(input.taskType)
-    : undefined;
+  const effectivePromptTemplate =
+    textInputMode === "generate"
+      ? input.textGenerationPrompt?.trim() ||
+        resolveDefaultDatasetPreparationPromptTemplate(input.taskType)
+      : undefined;
 
   return {
     sourceArtifactIds: input.selectedArtifactIds,
@@ -206,6 +282,7 @@ export function buildDatasetPreparationRequest(input: BuildDatasetPreparationReq
     },
     split: {
       trainRatio: input.parsed.trainRatio,
+      validationRatio: input.parsed.validationRatio ?? 0,
       testRatio: input.parsed.testRatio,
       seed: input.parsed.seed,
       shuffle: input.shuffle,
@@ -221,15 +298,15 @@ export function buildDatasetPreparationRequest(input: BuildDatasetPreparationReq
         },
         huggingFace: input.huggingFaceDestinationEnabled
           ? {
-            enabled: true,
-            provider: "huggingface" as const,
-            repository: resolveHuggingFaceRepository(
-              input.huggingFaceRepository,
-              input.defaultHuggingFaceNamespace,
-            ),
-            revision: input.huggingFaceRevision.trim() || undefined,
-            pathPrefix: input.huggingFacePathPrefix.trim() || undefined,
-          }
+              enabled: true,
+              provider: "huggingface" as const,
+              repository: resolveHuggingFaceRepository(
+                input.huggingFaceRepository,
+                input.defaultHuggingFaceNamespace,
+              ),
+              revision: input.huggingFaceRevision.trim() || undefined,
+              pathPrefix: input.huggingFacePathPrefix.trim() || undefined,
+            }
           : undefined,
       },
     },

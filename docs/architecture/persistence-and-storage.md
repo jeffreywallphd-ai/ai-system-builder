@@ -1,7 +1,7 @@
 # Persistence and Storage
 
 - Status: current
-- Related decisions: `docs/adr/ADR-0004-persistence-and-storage-separation.md`, `docs/adr/ADR-0025-deployment-shaped-structured-persistence.md`, `docs/adr/ADR-0026-local-sqlite-runtime.md`, `docs/adr/ADR-0027-managed-postgresql-runtime.md`, `docs/adr/ADR-0028-atomic-structured-document-mutations.md`, `docs/adr/ADR-0029-organization-tenancy-identity-and-authorization.md`, `docs/adr/ADR-0039-dedicated-system-runtime-data-plane.md`
+- Related decisions: `docs/adr/ADR-0004-persistence-and-storage-separation.md`, `docs/adr/ADR-0025-deployment-shaped-structured-persistence.md`, `docs/adr/ADR-0026-local-sqlite-runtime.md`, `docs/adr/ADR-0027-managed-postgresql-runtime.md`, `docs/adr/ADR-0028-atomic-structured-document-mutations.md`, `docs/adr/ADR-0029-organization-tenancy-identity-and-authorization.md`, `docs/adr/ADR-0039-dedicated-system-runtime-data-plane.md`, `docs/adr/ADR-0040-immutable-dataset-versions-lineage-and-publication.md`
 - Verification: `docs/architecture/architecture-verification.md`
 
 ## Asset Kernel relationship
@@ -175,6 +175,15 @@ deadlock detected (`40P01`). JSON compatibility mode serializes same-file
 mutations only within one Node process and is not valid shared-server
 persistence. These mechanics prevent collection-wide lost updates; they do not
 invent domain merge rules for two writers replacing the same logical record.
+
+Dataset-version repositories specialize this rule with insert-only immutable
+records. Dataset bytes and generated documentation remain in artifact storage;
+the structured record contains bounded metadata and exact digests. Finalization
+writes and validates artifacts first and inserts the version record last, so a
+reader cannot observe a partial version. Publication evidence is a separate
+append-only namespace and requires an existing version. These semantics do not
+claim a distributed transaction across structured persistence, artifact storage,
+and external providers.
 
 ### Operational boundary
 

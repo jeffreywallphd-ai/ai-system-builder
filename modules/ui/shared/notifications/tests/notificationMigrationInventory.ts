@@ -29,6 +29,7 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
     "apps/thin-client/src/features/artifact-upload/components/ArtifactUploadForm.tsx",
     "apps/thin-client/src/features/asset-authoring/components/AssetAuthoringFeature.tsx",
     "apps/thin-client/src/features/asset-library/components/AssetLibraryFeature.tsx",
+    "apps/thin-client/src/features/dataset-preparation/components/DatasetPreparationFeature.tsx",
     "apps/thin-client/src/features/image-generation/components/ImageGenerationFeature.tsx",
     "apps/thin-client/src/features/user-library/components/UserLibraryFeature.tsx",
     "modules/ui/shared/asset-authoring/AssetDerivedCustomizationEditor.tsx",

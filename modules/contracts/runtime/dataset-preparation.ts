@@ -6,8 +6,13 @@ export interface DatasetPreparationSourceInput {
   metadata?: Record<string, unknown>;
 }
 
-export const DATASET_PREPARATION_MODEL_FAMILIES = ["llm", "diffusion", "vision"] as const;
-export type DatasetPreparationModelFamily = (typeof DATASET_PREPARATION_MODEL_FAMILIES)[number];
+export const DATASET_PREPARATION_MODEL_FAMILIES = [
+  "llm",
+  "diffusion",
+  "vision",
+] as const;
+export type DatasetPreparationModelFamily =
+  (typeof DATASET_PREPARATION_MODEL_FAMILIES)[number];
 
 export const DATASET_PREPARATION_TASK_TYPES = [
   "llm-instruction",
@@ -20,9 +25,11 @@ export const DATASET_PREPARATION_TASK_TYPES = [
   "vision-detection",
   "vision-segmentation",
 ] as const;
-export type DatasetPreparationTaskType = (typeof DATASET_PREPARATION_TASK_TYPES)[number];
+export type DatasetPreparationTaskType =
+  (typeof DATASET_PREPARATION_TASK_TYPES)[number];
 
-export const DEFAULT_DATASET_PREPARATION_TASK_TYPE: DatasetPreparationTaskType = "llm-instruction";
+export const DEFAULT_DATASET_PREPARATION_TASK_TYPE: DatasetPreparationTaskType =
+  "llm-instruction";
 
 export const DATASET_PREPARATION_TEXT_GENERATION_TASK_TYPES = [
   "llm-instruction",
@@ -40,7 +47,8 @@ export type DatasetPreparationTextGenerationTaskType =
 
 export type DatasetPreparationTextInputMode = "provided" | "generate";
 
-export type DatasetPreparationTextGenerationModelPresetId = "quality-7b" | "compact-3b";
+export type DatasetPreparationTextGenerationModelPresetId =
+  "quality-7b" | "compact-3b";
 
 export interface DatasetPreparationTextGenerationModelPreset {
   id: DatasetPreparationTextGenerationModelPresetId;
@@ -58,37 +66,42 @@ export interface DatasetPreparationTextGenerationParameterDefaults {
   maxNewTokens: number;
 }
 
-export const DATASET_PREPARATION_TEXT_GENERATION_MODEL_PRESETS: readonly DatasetPreparationTextGenerationModelPreset[] = [
-  {
-    id: "quality-7b",
-    label: "Quality (7B)",
-    description: "Best built-in quality option within the 7B parameter limit.",
-    model: {
-      provider: "transformers",
-      modelId: "Qwen/Qwen2.5-7B-Instruct",
-      inferenceMode: "chat",
-      device: "auto",
-      torchDtype: "auto",
+export const DATASET_PREPARATION_TEXT_GENERATION_MODEL_PRESETS: readonly DatasetPreparationTextGenerationModelPreset[] =
+  [
+    {
+      id: "quality-7b",
+      label: "Quality (7B)",
+      description:
+        "Best built-in quality option within the 7B parameter limit.",
+      model: {
+        provider: "transformers",
+        modelId: "Qwen/Qwen2.5-7B-Instruct",
+        inferenceMode: "chat",
+        device: "auto",
+        torchDtype: "auto",
+      },
     },
-  },
-  {
-    id: "compact-3b",
-    label: "Compact (3B)",
-    description: "Smaller built-in option for lower memory use.",
-    model: {
-      provider: "transformers",
-      modelId: "Qwen/Qwen2.5-3B-Instruct",
-      inferenceMode: "chat",
-      device: "auto",
-      torchDtype: "auto",
+    {
+      id: "compact-3b",
+      label: "Compact (3B)",
+      description: "Smaller built-in option for lower memory use.",
+      model: {
+        provider: "transformers",
+        modelId: "Qwen/Qwen2.5-3B-Instruct",
+        inferenceMode: "chat",
+        device: "auto",
+        torchDtype: "auto",
+      },
     },
-  },
-];
+  ];
 
 const DATASET_PREPARATION_QUALITY_TEXT_GENERATION_MODEL =
   DATASET_PREPARATION_TEXT_GENERATION_MODEL_PRESETS[0].model;
 
-export const DEFAULT_DATASET_PREPARATION_PROMPT_TEMPLATES: Record<DatasetPreparationTextGenerationTaskType, string> = {
+export const DEFAULT_DATASET_PREPARATION_PROMPT_TEMPLATES: Record<
+  DatasetPreparationTextGenerationTaskType,
+  string
+> = {
   "llm-instruction": [
     "You are preparing instruction-tuning examples from source documents.",
     "Create one natural user request and one helpful answer for each source text chunk.",
@@ -247,7 +260,9 @@ export const DEFAULT_DATASET_PREPARATION_TEXT_GENERATION_PARAMETER_DEFAULTS: Rec
   },
 };
 
-const DATASET_PREPARATION_TEXT_GENERATION_TASK_TYPE_SET = new Set<string>(DATASET_PREPARATION_TEXT_GENERATION_TASK_TYPES);
+const DATASET_PREPARATION_TEXT_GENERATION_TASK_TYPE_SET = new Set<string>(
+  DATASET_PREPARATION_TEXT_GENERATION_TASK_TYPES,
+);
 
 export function canDatasetPreparationTaskGenerateText(
   taskType: DatasetPreparationTaskType,
@@ -275,7 +290,11 @@ export function resolveDefaultDatasetPreparationTextGenerationParameterDefaults(
   taskType: DatasetPreparationTaskType,
 ): DatasetPreparationTextGenerationParameterDefaults | undefined {
   return canDatasetPreparationTaskGenerateText(taskType)
-    ? { ...DEFAULT_DATASET_PREPARATION_TEXT_GENERATION_PARAMETER_DEFAULTS[taskType] }
+    ? {
+        ...DEFAULT_DATASET_PREPARATION_TEXT_GENERATION_PARAMETER_DEFAULTS[
+          taskType
+        ],
+      }
     : undefined;
 }
 
@@ -396,115 +415,122 @@ export type DatasetPreparationTaskRecipe =
   | VisionDetectionDatasetPreparationTask
   | VisionSegmentationDatasetPreparationTask;
 
-export const DATASET_PREPARATION_TASK_PROFILE_DEFINITIONS: readonly DatasetPreparationTaskProfileDefinition[] = [
-  {
-    taskType: "llm-instruction",
-    modelFamily: "llm",
-    outputSchema: "instruction-response",
-    supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
-    preferredOutputFormat: "parquet",
-    requiredFields: ["instruction", "input", "output"],
-    optionalFields: ["system", "prompt", "completion", "sourceArtifactId"],
-    runtimeSupport: "supported",
-    compatibleTrainingMethods: ["lora", "qlora", "full-finetune"],
-  },
-  {
-    taskType: "llm-classification",
-    modelFamily: "llm",
-    outputSchema: "classification",
-    supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
-    preferredOutputFormat: "parquet",
-    requiredFields: ["text", "label"],
-    optionalFields: ["labelSet", "sourceArtifactId"],
-    runtimeSupport: "supported",
-    compatibleTrainingMethods: ["lora", "qlora", "full-finetune"],
-  },
-  {
-    taskType: "llm-extraction",
-    modelFamily: "llm",
-    outputSchema: "extraction",
-    supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
-    preferredOutputFormat: "jsonl",
-    requiredFields: ["text", "expectedOutput"],
-    optionalFields: ["schema", "sourceArtifactId"],
-    runtimeSupport: "supported",
-    compatibleTrainingMethods: ["lora", "qlora", "full-finetune"],
-  },
-  {
-    taskType: "llm-embedding",
-    modelFamily: "llm",
-    outputSchema: "embedding-pairs",
-    supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
-    preferredOutputFormat: "parquet",
-    requiredFields: ["anchorText", "positiveText"],
-    optionalFields: ["negativeText", "sourceArtifactId"],
-    runtimeSupport: "supported",
-    compatibleTrainingMethods: ["lora", "qlora", "full-finetune"],
-  },
-  {
-    taskType: "llm-reranker",
-    modelFamily: "llm",
-    outputSchema: "ranking-pairs",
-    supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
-    preferredOutputFormat: "parquet",
-    requiredFields: ["query", "passage", "relevance"],
-    optionalFields: ["negativePassage", "sourceArtifactId"],
-    runtimeSupport: "supported",
-    compatibleTrainingMethods: ["lora", "qlora", "full-finetune"],
-  },
-  {
-    taskType: "diffusion-lora",
-    modelFamily: "diffusion",
-    outputSchema: "image-caption-manifest",
-    supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
-    preferredOutputFormat: "jsonl",
-    requiredFields: ["image", "caption"],
-    optionalFields: ["triggerToken", "conceptKind", "regularizationClass"],
-    runtimeSupport: "supported",
-    compatibleTrainingMethods: ["lora"],
-  },
-  {
-    taskType: "vision-classification",
-    modelFamily: "vision",
-    outputSchema: "image-classification-manifest",
-    supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
-    preferredOutputFormat: "parquet",
-    requiredFields: ["image", "label"],
-    optionalFields: ["labelSet"],
-    runtimeSupport: "supported",
-    compatibleTrainingMethods: ["lora", "full-finetune"],
-  },
-  {
-    taskType: "vision-detection",
-    modelFamily: "vision",
-    outputSchema: "object-detection-manifest",
-    supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
-    preferredOutputFormat: "jsonl",
-    requiredFields: ["image", "boundingBoxes", "labels"],
-    optionalFields: ["boxFormat"],
-    runtimeSupport: "supported",
-    compatibleTrainingMethods: ["lora", "full-finetune"],
-  },
-  {
-    taskType: "vision-segmentation",
-    modelFamily: "vision",
-    outputSchema: "segmentation-manifest",
-    supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
-    preferredOutputFormat: "jsonl",
-    requiredFields: ["image", "mask"],
-    optionalFields: ["maskFormat", "label"],
-    runtimeSupport: "supported",
-    compatibleTrainingMethods: ["lora", "full-finetune"],
-  },
-];
+export const DATASET_PREPARATION_TASK_PROFILE_DEFINITIONS: readonly DatasetPreparationTaskProfileDefinition[] =
+  [
+    {
+      taskType: "llm-instruction",
+      modelFamily: "llm",
+      outputSchema: "instruction-response",
+      supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
+      preferredOutputFormat: "parquet",
+      requiredFields: ["instruction", "input", "output"],
+      optionalFields: ["system", "prompt", "completion", "sourceArtifactId"],
+      runtimeSupport: "supported",
+      compatibleTrainingMethods: ["lora", "qlora", "full-finetune"],
+    },
+    {
+      taskType: "llm-classification",
+      modelFamily: "llm",
+      outputSchema: "classification",
+      supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
+      preferredOutputFormat: "parquet",
+      requiredFields: ["text", "label"],
+      optionalFields: ["labelSet", "sourceArtifactId"],
+      runtimeSupport: "supported",
+      compatibleTrainingMethods: ["lora", "qlora", "full-finetune"],
+    },
+    {
+      taskType: "llm-extraction",
+      modelFamily: "llm",
+      outputSchema: "extraction",
+      supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
+      preferredOutputFormat: "jsonl",
+      requiredFields: ["text", "expectedOutput"],
+      optionalFields: ["schema", "sourceArtifactId"],
+      runtimeSupport: "supported",
+      compatibleTrainingMethods: ["lora", "qlora", "full-finetune"],
+    },
+    {
+      taskType: "llm-embedding",
+      modelFamily: "llm",
+      outputSchema: "embedding-pairs",
+      supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
+      preferredOutputFormat: "parquet",
+      requiredFields: ["anchorText", "positiveText"],
+      optionalFields: ["negativeText", "sourceArtifactId"],
+      runtimeSupport: "supported",
+      compatibleTrainingMethods: ["lora", "qlora", "full-finetune"],
+    },
+    {
+      taskType: "llm-reranker",
+      modelFamily: "llm",
+      outputSchema: "ranking-pairs",
+      supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
+      preferredOutputFormat: "parquet",
+      requiredFields: ["query", "passage", "relevance"],
+      optionalFields: ["negativePassage", "sourceArtifactId"],
+      runtimeSupport: "supported",
+      compatibleTrainingMethods: ["lora", "qlora", "full-finetune"],
+    },
+    {
+      taskType: "diffusion-lora",
+      modelFamily: "diffusion",
+      outputSchema: "image-caption-manifest",
+      supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
+      preferredOutputFormat: "jsonl",
+      requiredFields: ["image", "caption"],
+      optionalFields: ["triggerToken", "conceptKind", "regularizationClass"],
+      runtimeSupport: "supported",
+      compatibleTrainingMethods: ["lora"],
+    },
+    {
+      taskType: "vision-classification",
+      modelFamily: "vision",
+      outputSchema: "image-classification-manifest",
+      supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
+      preferredOutputFormat: "parquet",
+      requiredFields: ["image", "label"],
+      optionalFields: ["labelSet"],
+      runtimeSupport: "supported",
+      compatibleTrainingMethods: ["lora", "full-finetune"],
+    },
+    {
+      taskType: "vision-detection",
+      modelFamily: "vision",
+      outputSchema: "object-detection-manifest",
+      supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
+      preferredOutputFormat: "jsonl",
+      requiredFields: ["image", "boundingBoxes", "labels"],
+      optionalFields: ["boxFormat"],
+      runtimeSupport: "supported",
+      compatibleTrainingMethods: ["lora", "full-finetune"],
+    },
+    {
+      taskType: "vision-segmentation",
+      modelFamily: "vision",
+      outputSchema: "segmentation-manifest",
+      supportedOutputFormats: ["jsonl", "json", "csv", "parquet"],
+      preferredOutputFormat: "jsonl",
+      requiredFields: ["image", "mask"],
+      optionalFields: ["maskFormat", "label"],
+      runtimeSupport: "supported",
+      compatibleTrainingMethods: ["lora", "full-finetune"],
+    },
+  ];
 
-const DATASET_PREPARATION_TASK_TYPE_SET = new Set<string>(DATASET_PREPARATION_TASK_TYPES);
+const DATASET_PREPARATION_TASK_TYPE_SET = new Set<string>(
+  DATASET_PREPARATION_TASK_TYPES,
+);
 
-export function isDatasetPreparationTaskType(value: string): value is DatasetPreparationTaskType {
+export function isDatasetPreparationTaskType(
+  value: string,
+): value is DatasetPreparationTaskType {
   return DATASET_PREPARATION_TASK_TYPE_SET.has(value);
 }
 
-export function normalizeDatasetPreparationTaskType(value: string | undefined): DatasetPreparationTaskType {
+export function normalizeDatasetPreparationTaskType(
+  value: string | undefined,
+): DatasetPreparationTaskType {
   if (typeof value !== "string" || value.trim().length === 0) {
     return DEFAULT_DATASET_PREPARATION_TASK_TYPE;
   }
@@ -521,9 +547,13 @@ export function resolveDatasetPreparationTaskProfileDefinition(
   taskType: string | undefined,
 ): DatasetPreparationTaskProfileDefinition {
   const normalized = normalizeDatasetPreparationTaskType(taskType);
-  const profile = DATASET_PREPARATION_TASK_PROFILE_DEFINITIONS.find((candidate) => candidate.taskType === normalized);
+  const profile = DATASET_PREPARATION_TASK_PROFILE_DEFINITIONS.find(
+    (candidate) => candidate.taskType === normalized,
+  );
   if (!profile) {
-    throw new Error(`Dataset preparation task profile is not registered: ${normalized}`);
+    throw new Error(
+      `Dataset preparation task profile is not registered: ${normalized}`,
+    );
   }
   return profile;
 }
@@ -542,21 +572,70 @@ export function createDefaultDatasetPreparationTaskRecipe(
         sourceContextPolicy: "include",
       };
     case "llm-classification":
-      return { taskType, textInputMode: "generate", textField: "text", labelField: "label", multiLabel: false };
+      return {
+        taskType,
+        textInputMode: "generate",
+        textField: "text",
+        labelField: "label",
+        multiLabel: false,
+      };
     case "llm-extraction":
-      return { taskType, textInputMode: "generate", textField: "text", outputField: "expectedOutput", strictSchema: true };
+      return {
+        taskType,
+        textInputMode: "generate",
+        textField: "text",
+        outputField: "expectedOutput",
+        strictSchema: true,
+      };
     case "llm-embedding":
-      return { taskType, textInputMode: "generate", anchorTextField: "anchorText", positiveTextField: "positiveText", negativeTextField: "negativeText" };
+      return {
+        taskType,
+        textInputMode: "generate",
+        anchorTextField: "anchorText",
+        positiveTextField: "positiveText",
+        negativeTextField: "negativeText",
+      };
     case "llm-reranker":
-      return { taskType, textInputMode: "generate", queryField: "query", passageField: "passage", relevanceField: "relevance" };
+      return {
+        taskType,
+        textInputMode: "generate",
+        queryField: "query",
+        passageField: "passage",
+        relevanceField: "relevance",
+      };
     case "diffusion-lora":
-      return { taskType, textInputMode: "provided", conceptKind: "subject", imageField: "image", captionField: "caption" };
+      return {
+        taskType,
+        textInputMode: "provided",
+        conceptKind: "subject",
+        imageField: "image",
+        captionField: "caption",
+      };
     case "vision-classification":
-      return { taskType, textInputMode: "provided", imageField: "image", labelField: "label" };
+      return {
+        taskType,
+        textInputMode: "provided",
+        imageField: "image",
+        labelField: "label",
+      };
     case "vision-detection":
-      return { taskType, textInputMode: "provided", imageField: "image", boundingBoxField: "boundingBoxes", labelField: "labels", boxFormat: "coco" };
+      return {
+        taskType,
+        textInputMode: "provided",
+        imageField: "image",
+        boundingBoxField: "boundingBoxes",
+        labelField: "labels",
+        boxFormat: "coco",
+      };
     case "vision-segmentation":
-      return { taskType, textInputMode: "provided", imageField: "image", maskField: "mask", labelField: "label", maskFormat: "png" };
+      return {
+        taskType,
+        textInputMode: "provided",
+        imageField: "image",
+        maskField: "mask",
+        labelField: "label",
+        maskFormat: "png",
+      };
   }
 
   const unreachable: never = taskType;
@@ -586,7 +665,13 @@ export interface GenerationParams {
 export interface LocalModelConfig {
   provider: "transformers";
   modelId: string;
-  inferenceMode?: "auto" | "text2text" | "causal" | "chat" | "text-to-image" | "text-to-image";
+  inferenceMode?:
+    | "auto"
+    | "text2text"
+    | "causal"
+    | "chat"
+    | "text-to-image"
+    | "text-to-image";
   device?: "cpu" | "cuda" | "auto";
   torchDtype?: "auto" | "float16" | "bfloat16" | "float32";
 }
@@ -610,6 +695,7 @@ export interface DatasetPreparationRecipe {
 
 export interface DatasetSplitConfig {
   trainRatio: number;
+  validationRatio?: number;
   testRatio: number;
   seed?: number;
   shuffle?: boolean;
@@ -642,7 +728,10 @@ export interface DatasetPreparationSummary {
   generatedExampleCount: number;
   datasetRowCount: number;
   trainRowCount: number;
+  validationRowCount?: number;
   testRowCount: number;
+  acceptedRowCount?: number;
+  quarantinedRowCount?: number;
 }
 
 export interface DatasetPreparationWarning {

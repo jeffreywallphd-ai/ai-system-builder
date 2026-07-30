@@ -52,6 +52,10 @@ import {
   AuthorizeWorkspaceOperationService,
   type AuthorizeOperationService,
 } from "../../../application/services/security";
+import { createDefaultDatasetQualityPolicyProvider } from "../../../application/services/dataset-preparation";
+import { DatasetVersionFinalizationService } from "../../../application/services/dataset-version";
+import { createStructuredDatasetVersionRepository } from "../../../adapters/persistence/dataset-version";
+import { createSha256DatasetVersionHasher } from "../../../adapters/storage/dataset-version";
 import { SystemArtifactIdFactory } from "../../../domain/artifact";
 import {
   BrowseArtifactsUseCase,
@@ -104,6 +108,11 @@ import {
   RemoveProjectionFromCompositionPlanUseCase,
   UpdateAssetCompositionPlanUseCase,
   ValidateAssetCompositionPlanUseCase,
+  CompareDatasetVersionsUseCase,
+  ListDatasetVersionsUseCase,
+  PrepareTrainingDatasetFromArtifactsUseCase,
+  PublishDatasetVersionUseCase,
+  ReadDatasetVersionReproductionUseCase,
 } from "../../../application/use-cases";
 import { createRuntimeTaskRegistryRouter } from "../../../adapters/runtime/createRuntimeTaskRegistryRouter";
 import {
@@ -695,16 +704,18 @@ export function composeServerHost(
         env.DEPLOYMENT_SHAPE?.trim() &&
         env.DATABASE_URL?.trim()
       ) {
-        systemRuntimeDatabases = createManagedPostgresSystemRuntimeDatabaseAdapter({
-          provisioningConfig: resolvePostgresPoolConfig(env),
-          credentials: createFilesystemSystemRuntimePostgresCredentialStore(
-            joinHostPath(
-              registerOptions.runtimeRootDirectory ?? defaultRuntimeRootDirectory,
-              "secrets",
+        systemRuntimeDatabases =
+          createManagedPostgresSystemRuntimeDatabaseAdapter({
+            provisioningConfig: resolvePostgresPoolConfig(env),
+            credentials: createFilesystemSystemRuntimePostgresCredentialStore(
+              joinHostPath(
+                registerOptions.runtimeRootDirectory ??
+                  defaultRuntimeRootDirectory,
+                "secrets",
+              ),
             ),
-          ),
-          now: options.now,
-        });
+            now: options.now,
+          });
       }
       const applicationSettings = createLocalApplicationSettingsAdapter({
         filePath:
@@ -1595,10 +1606,8 @@ export function composeServerHost(
                 hostApiVersion: "1.0.0",
                 hostCapabilities: [],
                 sandboxQualified: false,
-                generateDeploymentId: () =>
-                  `system-deployment.${randomUUID()}`,
-                generateRunId: () =>
-                  `system-deployment-run.${randomUUID()}`,
+                generateDeploymentId: () => `system-deployment.${randomUUID()}`,
+                generateRunId: () => `system-deployment-run.${randomUUID()}`,
                 resolveReleaseBindings: (deployment) =>
                   systemDeploymentReleaseBindings!.resolve(deployment),
               },
@@ -1753,7 +1762,9 @@ export function composeServerHost(
       });
       const pythonRuntimeTaskRegistry = createPythonRuntimeTaskRegistryAdapter(
         pythonRuntimeFoundation.runtimePort,
-        { ensureRuntimeReady: () => pythonRuntimeFoundation.supervisor.start() },
+        {
+          ensureRuntimeReady: () => pythonRuntimeFoundation.supervisor.start(),
+        },
       );
       const runtimeTaskRegistry = createRuntimeTaskRegistryRouter({
         image: imageRuntimeTaskRegistry,
@@ -1846,6 +1857,50 @@ export function composeServerHost(
       const runtimeCapabilityGuard = new RuntimeCapabilityGuardService(
         runtimeReadiness,
       );
+      const datasetVersionRepository = organizationDocuments
+        ? createStructuredDatasetVersionRepository(organizationDocuments)
+        : undefined;
+      const datasetVersionHasher = createSha256DatasetVersionHasher();
+      const datasetVersionUseCases = datasetVersionRepository
+        ? {
+            listDatasetVersionsUseCase: new ListDatasetVersionsUseCase({ repository: datasetVersionRepository, workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository, workspaceAuthorization }),
+            compareDatasetVersionsUseCase: new CompareDatasetVersionsUseCase({ repository: datasetVersionRepository, workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository, workspaceAuthorization }),
+            readDatasetVersionReproductionUseCase: new ReadDatasetVersionReproductionUseCase({ repository: datasetVersionRepository, artifacts: storage, hasher: datasetVersionHasher, workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository, workspaceAuthorization }),
+            publishDatasetVersionUseCase: new PublishDatasetVersionUseCase({
+              repository: datasetVersionRepository,
+              artifacts: storage,
+              publisher: huggingFaceArtifactRepoStorage,
+              hasher: datasetVersionHasher,
+              workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository,
+              workspaceAuthorization,
+              now: options.now,
+            }),
+          }
+        : undefined;
+      const prepareTrainingDatasetUseCase =
+        new PrepareTrainingDatasetFromArtifactsUseCase({
+          runtimeTaskRegistry,
+          storageBindings: artifactBindings,
+          storage,
+          artifactRepoStorage,
+          artifactCatalog,
+          taskPowerLifecycle: {
+            async startTask() {},
+            async completeTask() {},
+          },
+          runtimeCapabilityGuard,
+          datasetQualityPolicyProvider:
+            createDefaultDatasetQualityPolicyProvider(),
+          ...(datasetVersionRepository
+            ? {
+                datasetVersioning: {
+                  hasher: datasetVersionHasher,
+                  finalizer: new DatasetVersionFinalizationService({ repository: datasetVersionRepository, artifacts: storage, hasher: datasetVersionHasher }),
+                },
+              }
+            : {}),
+          now: options.now,
+        });
       const localModelCheckpointResolver =
         createLocalModelCheckpointResolverAdapter({
           modelRegistry,
@@ -2000,8 +2055,7 @@ export function composeServerHost(
                   installationPolicy: createDefaultSystemDeploymentPolicy(),
                   generateDeploymentId: () =>
                     `system-deployment.${randomUUID()}`,
-                  generateRunId: () =>
-                    `system-deployment-run.${randomUUID()}`,
+                  generateRunId: () => `system-deployment-run.${randomUUID()}`,
                   now: options.now,
                 }),
               ]
@@ -2057,6 +2111,8 @@ export function composeServerHost(
         modelManagementLogger,
         restartServer: options.restartServer,
         runtimeReadiness,
+        prepareTrainingDatasetUseCase,
+        datasetVersionUseCases,
         assetRegistryRead: internalAssetRegistry.workspaceReadFacade,
         workspaceServices: {
           workspaceRepository:
@@ -2322,7 +2378,8 @@ export function composeServerHost(
                 ...(systemDeployment.publishedLifecycle
                   ? {
                       lifecycleRead: systemDeployment.publishedLifecycle.read,
-                      lifecycleInvoke: systemDeployment.publishedLifecycle.invoke,
+                      lifecycleInvoke:
+                        systemDeployment.publishedLifecycle.invoke,
                     }
                   : {}),
               },

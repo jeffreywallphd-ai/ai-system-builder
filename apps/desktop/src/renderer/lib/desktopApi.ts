@@ -3,9 +3,12 @@ import type {
   ArtifactDetailReadModel as ArtifactDetailContractModel,
 } from "../../../../../modules/contracts/artifact-browser";
 import type { StagedArtifactDescriptor } from "../../../../../modules/contracts/ingestion";
+import type { DatasetPublicationVisibility } from "../../../../../modules/contracts/dataset";
 import type {
   DatasetPreparationSummary,
   DatasetPreparationWarning,
+  DatasetQualityReport,
+  DatasetQualityRequestedConfig,
   PrepareTrainingDatasetRequest,
 } from "../../../../../modules/contracts/runtime";
 import type {
@@ -270,26 +273,38 @@ export interface DesktopWebsitePagesBatchItem {
 }
 
 export interface DesktopPrepareTrainingDatasetInput {
+  workspaceId?: string;
   sourceArtifactIds: string[];
   recipe: PrepareTrainingDatasetRequest["recipe"];
   split: PrepareTrainingDatasetRequest["split"];
   output: PrepareTrainingDatasetRequest["output"];
+  quality?: DatasetQualityRequestedConfig;
+}
+
+export interface DesktopPreparedDatasetRemoteOutput {
+  provider: "huggingface";
+  repository: string;
+  path: string;
+  revision?: string;
+  exists: boolean;
+  verifiedAt: string;
 }
 
 export interface DesktopPreparedTrainingDatasetResult {
   outputs: {
     local?: {
-      dataset: StagedArtifactDescriptor;
+      dataset?: StagedArtifactDescriptor;
+      train?: StagedArtifactDescriptor;
+      validation?: StagedArtifactDescriptor;
+      test?: StagedArtifactDescriptor;
+      report?: StagedArtifactDescriptor;
+      quarantine?: StagedArtifactDescriptor;
     };
     huggingFace?: {
-      dataset: {
-        provider: "huggingface";
-        repository: string;
-        path: string;
-        revision?: string;
-        exists: boolean;
-        verifiedAt: string;
-      };
+      dataset?: DesktopPreparedDatasetRemoteOutput;
+      train?: DesktopPreparedDatasetRemoteOutput;
+      validation?: DesktopPreparedDatasetRemoteOutput;
+      test?: DesktopPreparedDatasetRemoteOutput;
     };
   };
   provenance: {
@@ -301,7 +316,19 @@ export interface DesktopPreparedTrainingDatasetResult {
     summary: DatasetPreparationSummary;
   };
   summary: DatasetPreparationSummary;
+  qualityReport?: DatasetQualityReport;
+  review?: {
+    state: "review-required" | "approved";
+    reportFingerprint: string;
+    approvalAllowed: boolean;
+  };
   warnings?: DatasetPreparationWarning[];
+  datasetVersion?: {
+    versionId: string;
+    datasetId: string;
+    versionDigest: string;
+    createdAt: string;
+  };
 }
 
 export interface DesktopPythonRuntimeLogEntry {
@@ -420,13 +447,21 @@ export interface DesktopDatasetPreparationApi {
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   readPrepareTrainingDatasetTask?: (
-    input: { requestId: string },
+    input: { requestId: string; workspaceId?: string },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   cancelPrepareTrainingDatasetTask?: (
-    input: { requestId: string },
+    input: { requestId: string; workspaceId?: string },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
+  approvePreparedTrainingDataset?: (
+    input: { requestId: string; reportFingerprint: string; workspaceId?: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  listDatasetVersions?: (input: { workspaceId: string; datasetId?: string }, context?: DesktopBridgeRequestContext) => Promise<unknown>;
+  compareDatasetVersions?: (input: { workspaceId: string; fromVersionId: string; toVersionId: string }, context?: DesktopBridgeRequestContext) => Promise<unknown>;
+  readDatasetVersionReproduction?: (input: { workspaceId: string; versionId: string }, context?: DesktopBridgeRequestContext) => Promise<unknown>;
+  publishDatasetVersion?: (input: { workspaceId: string; versionId: string; repositoryId: string; visibility: Exclude<DatasetPublicationVisibility, "protected">; createRepository?: boolean; publicAccessConfirmed?: true }, context?: DesktopBridgeRequestContext) => Promise<unknown>;
 }
 
 export interface DesktopImageGenerationApi {
@@ -509,13 +544,21 @@ interface DesktopApiBridge {
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   readPrepareTrainingDatasetTask?: (
-    input: { requestId: string },
+    input: { requestId: string; workspaceId?: string },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   cancelPrepareTrainingDatasetTask?: (
-    input: { requestId: string },
+    input: { requestId: string; workspaceId?: string },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
+  approvePreparedTrainingDataset?: (
+    input: { requestId: string; reportFingerprint: string; workspaceId?: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  listDatasetVersions?: (input: { workspaceId: string; datasetId?: string }, context?: DesktopBridgeRequestContext) => Promise<unknown>;
+  compareDatasetVersions?: (input: { workspaceId: string; fromVersionId: string; toVersionId: string }, context?: DesktopBridgeRequestContext) => Promise<unknown>;
+  readDatasetVersionReproduction?: (input: { workspaceId: string; versionId: string }, context?: DesktopBridgeRequestContext) => Promise<unknown>;
+  publishDatasetVersion?: (input: { workspaceId: string; versionId: string; repositoryId: string; visibility: "private" | "public"; createRepository?: boolean; publicAccessConfirmed?: true }, context?: DesktopBridgeRequestContext) => Promise<unknown>;
   readRuntimeReadiness?: (
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
@@ -795,7 +838,8 @@ interface DesktopApiBridge {
     input: {
       workspaceId: string;
       releaseId: string;
-      action: "install" | "activate" | "deactivate" | "start" | "stop" | "uninstall";
+      action:
+        "install" | "activate" | "deactivate" | "start" | "stop" | "uninstall";
       expectedRevision: string;
     },
     context?: DesktopBridgeRequestContext,
@@ -1107,10 +1151,22 @@ interface DesktopApiBridge {
     input: DesktopDownloadModelRequest,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
-  startModelDownload?: (input: DesktopDownloadModelRequest, context?: DesktopBridgeRequestContext) => Promise<unknown>;
-  readModelDownload?: (input: DesktopReadModelDownloadRequest, context?: DesktopBridgeRequestContext) => Promise<unknown>;
-  listModelDownloads?: (input: DesktopListModelDownloadsRequest, context?: DesktopBridgeRequestContext) => Promise<unknown>;
-  cancelModelDownload?: (input: DesktopCancelModelDownloadRequest, context?: DesktopBridgeRequestContext) => Promise<unknown>;
+  startModelDownload?: (
+    input: DesktopDownloadModelRequest,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  readModelDownload?: (
+    input: DesktopReadModelDownloadRequest,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  listModelDownloads?: (
+    input: DesktopListModelDownloadsRequest,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  cancelModelDownload?: (
+    input: DesktopCancelModelDownloadRequest,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
   updateModelRecord?: (
     input: DesktopUpdateModelRecordRequest,
     context?: DesktopBridgeRequestContext,

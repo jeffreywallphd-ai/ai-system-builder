@@ -35,6 +35,14 @@ import {
   type RegisterRuntimeReadinessApiRoutesDependencies,
 } from "./runtime-readiness/registerRuntimeReadinessApiRoutes";
 import {
+  registerDatasetPreparationApiRoutes,
+  type RegisterDatasetPreparationApiRoutesDependencies,
+} from "./dataset-preparation/registerDatasetPreparationApiRoutes";
+import {
+  registerDatasetVersionApiRoutes,
+  type RegisterDatasetVersionApiRoutesDependencies,
+} from "./dataset-version/registerDatasetVersionApiRoutes";
+import {
   registerAssetRegistryApiRoutes,
   type RegisterAssetRegistryApiRoutesDependencies,
 } from "./asset-registry/registerAssetRegistryApiRoutes";
@@ -117,6 +125,8 @@ export interface RegisterExpressApiDependencies {
     RegisterApplicationSettingsApiRoutesDependencies["app"] &
     RegisterServerControlApiRoutesDependencies["app"] &
     RegisterRuntimeReadinessApiRoutesDependencies["app"] &
+    RegisterDatasetPreparationApiRoutesDependencies["app"] &
+    RegisterDatasetVersionApiRoutesDependencies["app"] &
     RegisterAssetRegistryApiRoutesDependencies["app"] &
     RegisterAssetMutationApiRoutesDependencies["app"] &
     RegisterWorkspaceApiRoutesDependencies["app"] &
@@ -172,6 +182,8 @@ export interface RegisterExpressApiDependencies {
   clearSettingUseCase?: RegisterApplicationSettingsApiRoutesDependencies["clearSettingUseCase"];
   restartServer?: RegisterServerControlApiRoutesDependencies["restartServer"];
   runtimeReadiness?: RegisterRuntimeReadinessApiRoutesDependencies["runtimeReadiness"];
+  prepareTrainingDatasetUseCase?: RegisterDatasetPreparationApiRoutesDependencies["prepareTrainingDatasetUseCase"];
+  datasetVersionUseCases?: Omit<RegisterDatasetVersionApiRoutesDependencies, "app">;
   assetRegistryRead?: RegisterAssetRegistryApiRoutesDependencies["assetRegistryRead"];
   assetMutationUseCases?: Omit<
     RegisterAssetMutationApiRoutesDependencies,
@@ -433,6 +445,20 @@ export function registerExpressApi(
     registerRuntimeReadinessApiRoutes({
       app: dependencies.app,
       runtimeReadiness: dependencies.runtimeReadiness,
+    });
+  }
+
+  if (dependencies.prepareTrainingDatasetUseCase) {
+    registerDatasetPreparationApiRoutes({
+      app: dependencies.app,
+      prepareTrainingDatasetUseCase: dependencies.prepareTrainingDatasetUseCase,
+    });
+  }
+
+  if (dependencies.datasetVersionUseCases) {
+    registerDatasetVersionApiRoutes({
+      app: dependencies.app,
+      ...dependencies.datasetVersionUseCases,
     });
   }
 

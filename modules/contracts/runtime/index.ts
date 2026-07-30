@@ -34,6 +34,8 @@ export * from "./start-runtime-task-request";
 export * from "./start-runtime-task-result";
 export * from "./cancel-runtime-task-result";
 export * from "./dataset-preparation";
+export * from "./dataset-quality";
+export * from "./dataset-preparation-capabilities";
 export * from "./prepare-training-dataset-request";
 export * from "./prepare-training-dataset-result";
 export * from "./train-model-task-request";

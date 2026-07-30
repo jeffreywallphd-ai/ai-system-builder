@@ -1,6 +1,13 @@
 import type { WorkspaceId } from "../workspace";
 export type PythonRuntimeOutputRole =
-  "dataset" | "train" | "test" | "metrics" | "report" | "artifact";
+  | "dataset"
+  | "train"
+  | "validation"
+  | "test"
+  | "metrics"
+  | "report"
+  | "quarantine"
+  | "artifact";
 
 export interface PythonRuntimeOutputDescriptor {
   workspaceId?: WorkspaceId;

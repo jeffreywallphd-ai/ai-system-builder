@@ -27,6 +27,7 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
 | runtime readiness, capability matching, runtime resources, execution-output readiness                                      | `docs/context/packs/runtime-readiness-binding.pack.md`                                                               |
 | execution plans, dry-run/preflight, planned steps/inputs/outputs, safety gates                                             | `docs/context/packs/execution-plan-preparation.pack.md`                                                              |
 | conversational runnable systems, sessions, turns, runs, text-generation adapters                                           | `docs/context/packs/controlled-conversational-system-execution.pack.md`                                              |
+| ingestion, staged sources, dataset preparation, split integrity, curation, versioning, or dataset publication             | `docs/context/packs/data-management.pack.md`                                                                         |
 | runtime adapters, runtime contracts, runtime execution flow                                                                | `docs/context/packs/runtime.pack.md`                                                                                 |
 | runtime task registry lifecycle, progress, cancellation, retention                                                         | `docs/context/packs/runtime-task-registry.pack.md`                                                                   |
 | runtime installers, auto-install, install state, ComfyUI/Git installs                                                      | `docs/context/packs/runtime-installer.pack.md`                                                                       |
@@ -57,6 +58,9 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
 - Projection/composition/readiness/planning: select the one owning layer plus one immediate neighbor; move forward through the chain in separate reasoning stages.
 - System Builder: `index` + `system-builder`; add `asset-kernel` or `asset-composition-planning` for data semantics, or `desktop-implementation` for Systems/Settings UI placement.
 - Controlled conversational execution: `index` + `controlled-conversational-system-execution`; add the execution-plan or runtime pack only when that exact boundary changes.
+- Data Management: `index` + `data-management`; add only the one owning
+  storage, runtime, UI, server, or security pack proven relevant to the current
+  boundary.
 - Security: `index` + `security` + the one public host/client/feature boundary being changed.
 - Implicit security boundary: when an otherwise ordinary feature changes authority, isolation, public payloads, untrusted input, storage, runtime/provider I/O, diagnostics, dependencies, migration, or rollback, route it as `index` + `security` + the owning boundary pack even if the request never says “security.”
 - Desktop renderer styling: `index` + `desktop-styling` + `desktop-implementation`.
