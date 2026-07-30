@@ -2,7 +2,7 @@ import type { ArtifactFamily } from "../../domain/artifact";
 
 const DOCUMENT_EXTENSIONS = new Set(["pdf", "doc", "docx", "rtf"]);
 const TEXT_EXTENSIONS = new Set(["txt", "md"]);
-const STRUCTURED_TEXT_EXTENSIONS = new Set(["json", "yaml", "yml"]);
+const STRUCTURED_TEXT_EXTENSIONS = new Set(["json", "jsonl", "ndjson", "yaml", "yml"]);
 const TABULAR_EXTENSIONS = new Set(["csv", "tsv", "xls", "xlsx", "parquet"]);
 
 const DOCUMENT_MEDIA_TYPES = new Set([
@@ -15,6 +15,9 @@ const DOCUMENT_MEDIA_TYPES = new Set([
 
 const STRUCTURED_TEXT_MEDIA_TYPES = new Set([
   "application/json",
+  "application/jsonl",
+  "application/ndjson",
+  "application/x-ndjson",
   "application/yaml",
   "application/x-yaml",
   "text/yaml",
@@ -58,7 +61,7 @@ export function resolveArtifactFamily(input: {
   extension?: string;
   fileName?: string;
 }): ArtifactFamily {
-  const mediaType = input.mediaType?.trim().toLowerCase();
+  const mediaType = input.mediaType?.split(";", 1)[0]?.trim().toLowerCase();
   const extension = normalizeExtension(input.extension ?? input.fileName);
 
   if (mediaType?.startsWith("image/")) {
@@ -73,7 +76,7 @@ export function resolveArtifactFamily(input: {
     return "text";
   }
 
-  if (mediaType && STRUCTURED_TEXT_MEDIA_TYPES.has(mediaType)) {
+  if (mediaType && (STRUCTURED_TEXT_MEDIA_TYPES.has(mediaType) || mediaType.endsWith("+json"))) {
     return "structured-text";
   }
 

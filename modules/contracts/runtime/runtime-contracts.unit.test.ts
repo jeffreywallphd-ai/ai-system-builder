@@ -20,6 +20,7 @@ import {
   type PrepareTrainingDatasetResult,
   type PythonRuntimeCapabilitiesResult,
   PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_AUTO_INFERENCE_MODE,
+  PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
   PYTHON_RUNTIME_DATASET_PREPARATION_REQUIRED_CAPABILITIES,
   type PythonRuntimeHealthCheckResult,
   type PythonRuntimeHealthStatus,
@@ -481,12 +482,16 @@ describe("python sidecar runtime contracts", () => {
       capabilities: [
         "prepare-training-dataset",
         PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_AUTO_INFERENCE_MODE,
+        PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
         "future-task-type",
       ],
     };
 
     expect(capabilities.runtimeId).toBe("python-sidecar-1");
     expect(capabilities.capabilities).toContain("prepare-training-dataset");
+    expect(capabilities.capabilities).toContain(
+      "dataset-preparation.constrained-json",
+    );
     expect(PYTHON_RUNTIME_DATASET_PREPARATION_REQUIRED_CAPABILITIES).toEqual([
       "prepare-training-dataset",
       "dataset-preparation.auto-inference-mode",
@@ -753,7 +758,24 @@ describe("python sidecar runtime contracts", () => {
     });
     expect(
       resolveDefaultDatasetPreparationPromptTemplate("diffusion-lora"),
-    ).toContain("captions");
+    ).toContain("caption");
+    for (const taskType of DATASET_PREPARATION_TASK_TYPES) {
+      expect(
+        resolveDefaultDatasetPreparationPromptTemplate(taskType),
+      ).toContain("structured output schema");
+    }
+    expect(
+      resolveDefaultDatasetPreparationPromptTemplate("llm-embedding"),
+    ).toContain("exact source passage");
+    expect(
+      resolveDefaultDatasetPreparationPromptTemplate("llm-reranker"),
+    ).toContain("Negative passages are selected separately");
+    expect(
+      resolveDefaultDatasetPreparationPromptTemplate("vision-detection"),
+    ).toContain("Never create, move, resize, or infer boxes");
+    expect(
+      resolveDefaultDatasetPreparationPromptTemplate("vision-segmentation"),
+    ).toContain("Never create, alter, or infer masks");
     expect(
       resolveDefaultDatasetPreparationTextGenerationModel("llm-instruction"),
     ).toMatchObject({

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 import unicodedata
 from collections import Counter, defaultdict
@@ -16,6 +17,10 @@ _PROVENANCE_FIELDS = {
     "sourceRowIndex",
     "chunkIndex",
     "generationMode",
+    "sourceLineage",
+    "sourceCitation",
+    "hardNegativeRecommendation",
+    "syntheticVerification",
     "split",
 }
 _EMAIL_PATTERN = re.compile(r"(?<![\w.+-])[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}")
@@ -30,8 +35,19 @@ _SECRET_PATTERNS = (
 _REASON_ORDER = (
     "mapping-required-fields-missing",
     "schema-invalid",
+    "task-relationship-invalid",
+    "label-invalid",
+    "image-annotation-invalid",
     "exact-duplicate",
     "fuzzy-duplicate",
+    "semantic-duplicate",
+    "synthetic-schema-invalid",
+    "synthetic-grounding-low",
+    "synthetic-citation-missing",
+    "synthetic-critic-rejected",
+    "synthetic-duplicate",
+    "synthetic-diversity-low",
+    "synthetic-safety-rejected",
     "text-too-short",
     "text-too-long",
     "language-not-allowed",
@@ -48,8 +64,19 @@ _REASON_ORDER = (
 _REASON_SUMMARIES = {
     "mapping-required-fields-missing": "required task fields were not found",
     "schema-invalid": "required task values were missing or invalid",
+    "task-relationship-invalid": "task values did not form a valid training example",
+    "label-invalid": "a label did not match the selected task settings",
+    "image-annotation-invalid": "image annotations did not match the selected format",
     "exact-duplicate": "the same training content was already accepted",
     "fuzzy-duplicate": "very similar training content was already accepted",
+    "semantic-duplicate": "a semantically similar training example was already accepted",
+    "synthetic-schema-invalid": "the generated example did not match the selected training goal",
+    "synthetic-grounding-low": "the generated answer was not sufficiently supported by the source",
+    "synthetic-citation-missing": "the generated example did not have exact source lineage",
+    "synthetic-critic-rejected": "the independent generated-example check did not pass",
+    "synthetic-duplicate": "the generated example duplicated another candidate",
+    "synthetic-diversity-low": "the generated example was too similar to another candidate",
+    "synthetic-safety-rejected": "the generated example contained content requiring manual review",
     "text-too-short": "the training text was too short",
     "text-too-long": "the training text was too long",
     "language-not-allowed": "the source language is not allowed",
@@ -79,27 +106,40 @@ def curate_dataset_rows(
     task_type: str,
     task_recipe: dict[str, Any],
     quality: DatasetQualityRuntimeConfig,
+    purpose_paths: dict[str, tuple[str, ...]] | None = None,
 ) -> DatasetQualityCurationResult:
     policy = quality.effectivePolicy
     source_metadata = {
         source.artifactId: dict(source.metadata or {}) for source in source_inputs
     }
-    required_fields = _required_fields(task_type, task_recipe)
-    accepted: list[dict[str, object]] = []
-    quarantine: list[dict[str, object]] = [
-        {
-            "sourceArtifactId": str(record["sourceArtifactId"]),
-            "sourceRowIndex": int(record["sourceRowIndex"]),
-            "reasonCodes": ["mapping-required-fields-missing"],
-            "row": _json_safe_record(record.get("row")),
-        }
-        for record in mapping_quarantine
-    ]
-    reason_counts: Counter[str] = Counter(
-        {"mapping-required-fields-missing": len(mapping_quarantine)}
-        if mapping_quarantine
-        else {}
+    required_field_paths = _required_field_paths(
+        task_type, task_recipe, purpose_paths
     )
+    accepted: list[dict[str, object]] = []
+    quarantine: list[dict[str, object]] = []
+    reason_counts: Counter[str] = Counter()
+    for record in mapping_quarantine:
+        requested_reasons = record.get("reasonCodes")
+        reasons = (
+            [
+                str(reason)
+                for reason in requested_reasons
+                if str(reason) in _REASON_ORDER
+            ]
+            if isinstance(requested_reasons, list)
+            else ["mapping-required-fields-missing"]
+        )
+        if not reasons:
+            reasons = ["mapping-required-fields-missing"]
+        reason_counts.update(reasons)
+        quarantine.append(
+            {
+                "sourceArtifactId": str(record["sourceArtifactId"]),
+                "sourceRowIndex": int(record["sourceRowIndex"]),
+                "reasonCodes": reasons,
+                "row": _json_safe_record(record.get("row")),
+            }
+        )
     source_counts: Counter[str] = Counter(
         str(record["sourceArtifactId"]) for record in mapping_quarantine
     )
@@ -118,8 +158,16 @@ def curate_dataset_rows(
         reasons: list[str] = []
         metadata = source_metadata.get(source_id, {})
 
-        if any(_is_missing(row.get(field)) for field in required_fields):
+        if any(
+            _is_missing(_row_path_value(row, path))
+            for _label, path in required_field_paths
+        ):
             reasons.append("schema-invalid")
+        reasons.extend(
+            _task_validation_reasons(
+                row, task_type, task_recipe, purpose_paths
+            )
+        )
         if rows_seen_per_source[source_id] > policy.maxRowsPerSource:
             reasons.append("source-row-limit")
         if policy.requireLicenseMetadata and not _has_metadata_value(
@@ -195,7 +243,9 @@ def curate_dataset_rows(
                 bucket = fuzzy_buckets[band_key]
                 if len(bucket) < policy.maxFuzzyCandidatesPerRow:
                     bucket.append(accepted_index)
-        class_label = _class_label(row, task_type, task_recipe)
+        class_label = _class_label(
+            row, task_type, task_recipe, purpose_paths
+        )
         if class_label is not None:
             class_counts[_sanitize_distribution_label(class_label)] += 1
 
@@ -205,9 +255,9 @@ def curate_dataset_rows(
         if isinstance(record.get("row"), dict)
     ]
     missing_required_fields = [
-        field
-        for field in required_fields
-        if not any(not _is_missing(row.get(field)) for row in rows)
+        label
+        for label, path in required_field_paths
+        if not any(not _is_missing(_row_path_value(row, path)) for row in rows)
     ]
     status = (
         "blocked"
@@ -234,6 +284,7 @@ def curate_dataset_rows(
             )[:128],
             "missingRequiredFields": missing_required_fields,
         },
+        "inspection": _inspection_profile(task_type),
         "fields": _field_profiles(profile_rows),
         "distributions": {
             "sources": _counter_distribution(source_counts),
@@ -275,9 +326,81 @@ def curate_dataset_rows(
     return DatasetQualityCurationResult(accepted, quarantine, report)
 
 
+def _purpose_path(
+    purpose_paths: dict[str, tuple[str, ...]] | None,
+    purpose: str,
+    fallback: str,
+) -> tuple[str, ...]:
+    path = purpose_paths.get(purpose) if purpose_paths else None
+    return path if path else (fallback,)
+
+
+def _row_path_value(row: dict[str, object], path: tuple[str, ...]) -> object:
+    value: object = row
+    for segment in path:
+        if not isinstance(value, dict) or segment not in value:
+            return None
+        value = value[segment]
+    return value
+
+
+def _required_field_paths(
+    task_type: str,
+    recipe: dict[str, Any],
+    purpose_paths: dict[str, tuple[str, ...]] | None,
+) -> list[tuple[str, tuple[str, ...]]]:
+    def mapped(purpose: str, fallback: str) -> tuple[str, tuple[str, ...]]:
+        path = _purpose_path(purpose_paths, purpose, fallback)
+        return (".".join(path), path)
+
+    return {
+        "llm-instruction": [
+            mapped("instruction", str(recipe.get("inputField") or "instruction")),
+            mapped("output", str(recipe.get("outputField") or "output")),
+        ],
+        "llm-classification": [
+            (str(recipe.get("textField") or "text"), (str(recipe.get("textField") or "text"),)),
+            mapped("label", str(recipe.get("labelField") or "label")),
+        ],
+        "llm-extraction": [
+            (str(recipe.get("textField") or "text"), (str(recipe.get("textField") or "text"),)),
+            mapped("expected-output", str(recipe.get("outputField") or "expectedOutput")),
+        ],
+        "llm-embedding": [
+            mapped("anchor-text", str(recipe.get("anchorTextField") or "anchorText")),
+            mapped("positive-text", str(recipe.get("positiveTextField") or "positiveText")),
+        ],
+        "llm-reranker": [
+            mapped("query", str(recipe.get("queryField") or "query")),
+            mapped("passage", str(recipe.get("passageField") or "passage")),
+            (str(recipe.get("relevanceField") or "relevance"), (str(recipe.get("relevanceField") or "relevance"),)),
+        ],
+        "diffusion-lora": [
+            (str(recipe.get("imageField") or "image"), (str(recipe.get("imageField") or "image"),)),
+            mapped("caption", str(recipe.get("captionField") or "caption")),
+        ],
+        "vision-classification": [
+            (str(recipe.get("imageField") or "image"), (str(recipe.get("imageField") or "image"),)),
+            mapped("label", str(recipe.get("labelField") or "label")),
+        ],
+        "vision-detection": [
+            (str(recipe.get("imageField") or "image"), (str(recipe.get("imageField") or "image"),)),
+            (str(recipe.get("boundingBoxField") or "boundingBoxes"), (str(recipe.get("boundingBoxField") or "boundingBoxes"),)),
+            mapped("label", str(recipe.get("labelField") or "labels")),
+        ],
+        "vision-segmentation": [
+            (str(recipe.get("imageField") or "image"), (str(recipe.get("imageField") or "image"),)),
+            (str(recipe.get("maskField") or "mask"), (str(recipe.get("maskField") or "mask"),)),
+        ],
+    }.get(task_type, [])
+
+
 def _required_fields(task_type: str, recipe: dict[str, Any]) -> list[str]:
     return {
-        "llm-instruction": ["instruction", "output"],
+        "llm-instruction": [
+            str(recipe.get("inputField") or "instruction"),
+            str(recipe.get("outputField") or "output"),
+        ],
         "llm-classification": [
             str(recipe.get("textField") or "text"),
             str(recipe.get("labelField") or "label"),
@@ -313,6 +436,443 @@ def _required_fields(task_type: str, recipe: dict[str, Any]) -> list[str]:
             str(recipe.get("maskField") or "mask"),
         ],
     }.get(task_type, [])
+
+
+def _task_validation_reasons(
+    row: dict[str, object],
+    task_type: str,
+    recipe: dict[str, Any],
+    purpose_paths: dict[str, tuple[str, ...]] | None = None,
+) -> list[str]:
+    required_fields = _required_field_paths(task_type, recipe, purpose_paths)
+    if any(
+        _is_missing(_row_path_value(row, path))
+        for _label, path in required_fields
+    ):
+        return []
+
+    if task_type == "llm-instruction":
+        input_value = _row_path_value(
+            row,
+            _purpose_path(
+                purpose_paths,
+                "instruction",
+                str(recipe.get("inputField") or "instruction"),
+            ),
+        )
+        output_value = _row_path_value(
+            row,
+            _purpose_path(
+                purpose_paths,
+                "output",
+                str(recipe.get("outputField") or "output"),
+            ),
+        )
+        return (
+            []
+            if _is_nonempty_string(input_value)
+            and _is_nonempty_string(output_value)
+            else ["task-relationship-invalid"]
+        )
+
+    if task_type == "llm-classification":
+        text_field = str(recipe.get("textField") or "text")
+        label_value = _row_path_value(
+            row,
+            _purpose_path(
+                purpose_paths,
+                "label",
+                str(recipe.get("labelField") or "label"),
+            ),
+        )
+        if not _is_nonempty_string(row.get(text_field)):
+            return ["task-relationship-invalid"]
+        return (
+            []
+            if _labels_are_valid(
+                label_value,
+                recipe.get("labelSet"),
+                allow_multiple=bool(recipe.get("multiLabel")),
+            )
+            else ["label-invalid"]
+        )
+
+    if task_type == "llm-extraction":
+        text_field = str(recipe.get("textField") or "text")
+        if not _is_nonempty_string(row.get(text_field)):
+            return ["task-relationship-invalid"]
+        if not bool(recipe.get("strictSchema", True)):
+            return []
+        expected_output = _parse_jsonish(
+            _row_path_value(
+                row,
+                _purpose_path(
+                    purpose_paths,
+                    "expected-output",
+                    str(recipe.get("outputField") or "expectedOutput"),
+                ),
+            )
+        )
+        if not isinstance(expected_output, dict):
+            return ["task-relationship-invalid"]
+        schema_field = str(recipe.get("schemaField") or "schema")
+        raw_schema = row.get(schema_field)
+        if _is_missing(raw_schema):
+            return []
+        schema = _parse_jsonish(raw_schema)
+        if not isinstance(schema, dict):
+            return ["task-relationship-invalid"]
+        required_keys = schema.get("required")
+        if isinstance(required_keys, list) and any(
+            not isinstance(key, str) or key not in expected_output
+            for key in required_keys[:256]
+        ):
+            return ["task-relationship-invalid"]
+        return []
+
+    if task_type == "llm-embedding":
+        anchor_field = str(recipe.get("anchorTextField") or "anchorText")
+        positive_field = str(recipe.get("positiveTextField") or "positiveText")
+        negative_field = str(recipe.get("negativeTextField") or "negativeText")
+        anchor = _row_path_value(
+            row, _purpose_path(purpose_paths, "anchor-text", anchor_field)
+        )
+        positive = _row_path_value(
+            row, _purpose_path(purpose_paths, "positive-text", positive_field)
+        )
+        negative = row.get(negative_field)
+        if (
+            not _is_nonempty_string(anchor)
+            or not _is_nonempty_string(positive)
+            or _normalized_text(anchor) == _normalized_text(positive)
+        ):
+            return ["task-relationship-invalid"]
+        if not _is_missing(negative) and (
+            not _is_nonempty_string(negative)
+            or _normalized_text(negative)
+            in {_normalized_text(anchor), _normalized_text(positive)}
+        ):
+            return ["task-relationship-invalid"]
+        return []
+
+    if task_type == "llm-reranker":
+        query_field = str(recipe.get("queryField") or "query")
+        passage_field = str(recipe.get("passageField") or "passage")
+        relevance_field = str(recipe.get("relevanceField") or "relevance")
+        negative_field = str(
+            recipe.get("negativePassageField") or "negativePassage"
+        )
+        query = _row_path_value(
+            row, _purpose_path(purpose_paths, "query", query_field)
+        )
+        passage = _row_path_value(
+            row, _purpose_path(purpose_paths, "passage", passage_field)
+        )
+        negative = row.get(negative_field)
+        if (
+            not _is_nonempty_string(query)
+            or not _is_nonempty_string(passage)
+            or not _is_valid_relevance(row.get(relevance_field))
+        ):
+            return ["task-relationship-invalid"]
+        if not _is_missing(negative) and (
+            not _is_nonempty_string(negative)
+            or _normalized_text(negative) == _normalized_text(passage)
+        ):
+            return ["task-relationship-invalid"]
+        return []
+
+    if task_type == "diffusion-lora":
+        image_field = str(recipe.get("imageField") or "image")
+        caption_value = _row_path_value(
+            row,
+            _purpose_path(
+                purpose_paths,
+                "caption",
+                str(recipe.get("captionField") or "caption"),
+            ),
+        )
+        return (
+            []
+            if _is_nonempty_string(row.get(image_field))
+            and _is_nonempty_string(caption_value)
+            else ["task-relationship-invalid"]
+        )
+
+    if task_type == "vision-classification":
+        image_field = str(recipe.get("imageField") or "image")
+        label_value = _row_path_value(
+            row,
+            _purpose_path(
+                purpose_paths,
+                "label",
+                str(recipe.get("labelField") or "label"),
+            ),
+        )
+        if not _is_nonempty_string(row.get(image_field)):
+            return ["task-relationship-invalid"]
+        return (
+            []
+            if _labels_are_valid(label_value, recipe.get("labelSet"))
+            else ["label-invalid"]
+        )
+
+    if task_type == "vision-detection":
+        return _validate_detection_row(row, recipe, purpose_paths)
+
+    if task_type == "vision-segmentation":
+        return _validate_segmentation_row(row, recipe, purpose_paths)
+
+    return []
+
+
+def _validate_detection_row(
+    row: dict[str, object],
+    recipe: dict[str, Any],
+    purpose_paths: dict[str, tuple[str, ...]] | None = None,
+) -> list[str]:
+    image_field = str(recipe.get("imageField") or "image")
+    box_field = str(recipe.get("boundingBoxField") or "boundingBoxes")
+    label_field = str(recipe.get("labelField") or "labels")
+    if not _is_nonempty_string(row.get(image_field)):
+        return ["task-relationship-invalid"]
+    boxes = _annotation_items(_parse_jsonish(row.get(box_field)))
+    if not boxes or len(boxes) > 10_000:
+        return ["image-annotation-invalid"]
+    box_format = str(recipe.get("boxFormat") or row.get("boxFormat") or "coco")
+    if box_format not in {"xyxy", "xywh", "coco"} or any(
+        not _box_is_valid(box, box_format) for box in boxes
+    ):
+        return ["image-annotation-invalid"]
+    labels = _label_values(
+        _parse_jsonish(
+            _row_path_value(
+                row, _purpose_path(purpose_paths, "label", label_field)
+            )
+        )
+    )
+    if len(labels) != len(boxes) or not _labels_are_valid(
+        labels, recipe.get("labelSet"), allow_multiple=True
+    ):
+        return ["label-invalid"]
+    return []
+
+
+def _validate_segmentation_row(
+    row: dict[str, object],
+    recipe: dict[str, Any],
+    purpose_paths: dict[str, tuple[str, ...]] | None = None,
+) -> list[str]:
+    image_field = str(recipe.get("imageField") or "image")
+    mask_field = str(recipe.get("maskField") or "mask")
+    label_field = str(recipe.get("labelField") or "label")
+    if not _is_nonempty_string(row.get(image_field)):
+        return ["task-relationship-invalid"]
+    mask_format = str(recipe.get("maskFormat") or row.get("maskFormat") or "png")
+    mask = _parse_jsonish(row.get(mask_field))
+    if not _mask_is_valid(mask, mask_format):
+        return ["image-annotation-invalid"]
+    label = _row_path_value(
+        row, _purpose_path(purpose_paths, "label", label_field)
+    )
+    if not _is_missing(label) and not _labels_are_valid(
+        label, recipe.get("labelSet")
+    ):
+        return ["label-invalid"]
+    return []
+
+
+def _annotation_items(value: object) -> list[object]:
+    if isinstance(value, dict):
+        annotations = value.get("annotations")
+        if isinstance(annotations, list):
+            return annotations
+        return [value]
+    if isinstance(value, list):
+        if len(value) == 4 and all(_is_finite_number(item) for item in value):
+            return [value]
+        return value
+    return []
+
+
+def _box_is_valid(value: object, box_format: str) -> bool:
+    coordinates: object = value
+    if isinstance(value, dict):
+        coordinates = value.get("bbox") or value.get("box")
+        if coordinates is None:
+            if all(key in value for key in ("x", "y", "width", "height")):
+                coordinates = [
+                    value["x"],
+                    value["y"],
+                    value["width"],
+                    value["height"],
+                ]
+            elif all(key in value for key in ("x1", "y1", "x2", "y2")):
+                coordinates = [
+                    value["x1"],
+                    value["y1"],
+                    value["x2"],
+                    value["y2"],
+                ]
+    if (
+        not isinstance(coordinates, list)
+        or len(coordinates) != 4
+        or not all(_is_finite_number(item) for item in coordinates)
+    ):
+        return False
+    first, second, third, fourth = (float(item) for item in coordinates)
+    if min(first, second, third, fourth) < 0:
+        return False
+    if box_format == "xyxy":
+        return third > first and fourth > second
+    return third > 0 and fourth > 0
+
+
+def _mask_is_valid(value: object, mask_format: str) -> bool:
+    if mask_format == "png":
+        return _is_nonempty_string(value)
+    if mask_format == "coco-rle":
+        if not isinstance(value, dict):
+            return False
+        size = value.get("size")
+        counts = value.get("counts")
+        return (
+            isinstance(size, list)
+            and len(size) == 2
+            and all(isinstance(item, int) and item > 0 for item in size)
+            and (
+                _is_nonempty_string(counts)
+                or (
+                    isinstance(counts, list)
+                    and 0 < len(counts) <= 1_000_000
+                    and all(isinstance(item, int) and item >= 0 for item in counts)
+                )
+            )
+        )
+    if mask_format == "polygon":
+        return _polygon_is_valid(value)
+    return False
+
+
+def _polygon_is_valid(value: object) -> bool:
+    polygons = value
+    if isinstance(value, dict):
+        polygons = value.get("segmentation") or value.get("polygon")
+    if not isinstance(polygons, list) or not polygons:
+        return False
+    if all(_is_finite_number(item) for item in polygons):
+        polygons = [polygons]
+    if len(polygons) > 10_000:
+        return False
+    coordinate_count = 0
+    for polygon in polygons:
+        if (
+            not isinstance(polygon, list)
+            or len(polygon) < 6
+            or len(polygon) % 2 != 0
+            or not all(_is_finite_number(item) and float(item) >= 0 for item in polygon)
+        ):
+            return False
+        coordinate_count += len(polygon)
+        if coordinate_count > 1_000_000:
+            return False
+    return True
+
+
+def _labels_are_valid(
+    value: object, allowed: object, allow_multiple: bool = False
+) -> bool:
+    labels = _label_values(value)
+    if not labels or (not allow_multiple and len(labels) != 1):
+        return False
+    allowed_labels = (
+        {str(label).strip() for label in allowed if str(label).strip()}
+        if isinstance(allowed, list)
+        else set()
+    )
+    return not allowed_labels or all(label in allowed_labels for label in labels)
+
+
+def _label_values(value: object) -> list[str]:
+    values = value if isinstance(value, list) else [value]
+    if not values or any(not isinstance(item, str) or not item.strip() for item in values):
+        return []
+    return [str(item).strip() for item in values]
+
+
+def _is_valid_relevance(value: object) -> bool:
+    if isinstance(value, bool):
+        return True
+    if _is_finite_number(value):
+        numeric = float(value)
+        return 0 <= numeric <= 100
+    if isinstance(value, str):
+        normalized = value.strip().casefold()
+        if normalized in {"relevant", "irrelevant", "positive", "negative"}:
+            return True
+        try:
+            numeric = float(normalized)
+            return math.isfinite(numeric) and 0 <= numeric <= 100
+        except ValueError:
+            return False
+    return False
+
+
+def _is_finite_number(value: object) -> bool:
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+    )
+
+
+def _is_nonempty_string(value: object) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _normalized_text(value: object) -> str:
+    return " ".join(str(value).casefold().split())
+
+
+def _parse_jsonish(value: object) -> object:
+    if not isinstance(value, str):
+        return value
+    stripped = value.strip()
+    if not stripped or stripped[0] not in "[{":
+        return value
+    try:
+        return json.loads(stripped)
+    except (json.JSONDecodeError, TypeError):
+        return value
+
+
+def _inspection_profile(task_type: str) -> dict[str, object]:
+    image_task = task_type in {
+        "diffusion-lora",
+        "vision-classification",
+        "vision-detection",
+        "vision-segmentation",
+    }
+    text_content_checked = task_type.startswith("llm-") or task_type == "diffusion-lora"
+    return {
+        "taskType": task_type,
+        "textContent": "checked" if text_content_checked else "not-applicable",
+        "imagePixels": "not-inspected",
+        "checkedSurfaces": (
+            ["source references", "labels or captions", "annotation structure"]
+            if image_task
+            else ["mapped text values", "task field relationships", "source metadata"]
+        ),
+        "limitations": (
+            [
+                "Image checks cover references, labels, captions, and annotation structure; image pixels are not inspected."
+            ]
+            if image_task
+            else [
+                "Pattern checks can miss personal, secret, or unsafe content that depends on context."
+            ]
+        ),
+    }
 
 
 def _row_text(row: dict[str, object]) -> str:
@@ -557,16 +1117,24 @@ def _is_explicitly_unsafe(
 
 
 def _class_label(
-    row: dict[str, object], task_type: str, recipe: dict[str, Any]
+    row: dict[str, object],
+    task_type: str,
+    recipe: dict[str, Any],
+    purpose_paths: dict[str, tuple[str, ...]] | None = None,
 ) -> str | None:
     field = None
     if task_type in {"llm-classification", "vision-classification"}:
         field = str(recipe.get("labelField") or "label")
     elif task_type == "llm-reranker":
         field = str(recipe.get("relevanceField") or "relevance")
-    if field is None or _is_missing(row.get(field)):
+    value = (
+        _row_path_value(row, _purpose_path(purpose_paths, "label", field))
+        if field is not None and task_type in {"llm-classification", "vision-classification"}
+        else row.get(field) if field is not None else None
+    )
+    if field is None or _is_missing(value):
         return None
-    return str(row[field])
+    return str(value)
 
 
 def _sanitize_distribution_label(value: str) -> str:

@@ -196,6 +196,38 @@ from mutable design state.
 
 ## Upgrade and rollback
 
+### Ingestion task and source recovery
+
+Acquisition task records live in `ingestion/acquisition-tasks`; immutable source
+snapshots and refresh history live in `ingestion/source-snapshots` and
+`ingestion/source-refreshes`. Back up those namespaces with the matching
+artifact tree. Checkpoint chunks are temporary transfer state, not a substitute
+for an artifact backup.
+
+Unfinished local-file tasks carry a 24-hour checkpoint deadline. Normal host
+maintenance invokes the bounded `cleanup-expired` command, which marks the task
+cancelled and removes contained chunks before clearing cleanup intent. If a task
+remains `cleanupPending`, retry that command under the same workspace and
+organization scope; do not remove guessed directories manually. Keep immutable
+completed artifacts, source snapshots, and refresh records.
+
+After restore, verify representative task reads in the owning workspace, denial
+from another workspace, exact provider revisions, source snapshot/artifact
+availability, and append-only refresh history. A snapshot that references a
+missing raw artifact is an integrity incident. Stop the affected acquisition,
+preserve bounded diagnostics, restore the matching artifact snapshot, and do
+not silently recapture mutable source content as a replacement.
+
+### Advanced dataset recipe recovery
+
+Immutable dataset-version recipe artifacts include the optional advanced
+preparation style and its bounded content, semantic, and synthetic settings.
+Back up and restore those recipe artifacts with the matching source, report,
+quarantine, aggregate, and split artifacts. Recipe reproduction verifies the
+exact digest before returning settings. If the restored host reports a required
+capability as unavailable, deny rerun with a corrective action; do not silently
+fall back to Standard or claim equivalent output.
+
 The application owns monotonic migrations and serializes startup migration work.
 Current schema version is 2 for both engines.
 

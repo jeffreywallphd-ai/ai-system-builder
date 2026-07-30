@@ -381,11 +381,377 @@
         "desktop and thin dataset-preparation client tests"
       ],
       "title": "Version history and publish experience"
+    },
+    {
+      "areas": [
+        "ingestion task and source snapshot contracts",
+        "ingestion acquisition repository port",
+        "structured ingestion task and source persistence",
+        "ingestion contract and port documentation"
+      ],
+      "chunkId": "acquisition-task-contracts-and-checkpoints",
+      "completedAt": "2026-07-30T04:11:38Z",
+      "criteriaIds": [
+        "large-supported-inputs-stream-within-bounds",
+        "source-refresh-is-incremental-and-honest",
+        "security-ingestion-bounds-and-egress-reviewed"
+      ],
+      "documentation": [
+        "modules/contracts/ingestion/README.md",
+        "modules/application/ports/ingestion/README.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "governed-scalable-ingestion-acquisition-task-contracts-and-checkpoints",
+      "incrementId": "governed-scalable-ingestion",
+      "summary": "Defined bounded acquisition task, file checkpoint, authoritative progress, immutable source snapshot, and append-only refresh contracts, then added an organization/workspace-scoped structured repository with idempotent creates, exact optimistic revisions, monotonic progress, immutable terminal state, malformed-record denial, and bounded list reads.",
+      "tests": [
+        "acquisition task normalization and security boundary tests",
+        "ingestion family export invariant tests",
+        "structured acquisition repository idempotency, concurrency, immutability, malformed-record, workspace, and organization isolation tests",
+        "focused production TypeScript diagnostic screen"
+      ],
+      "title": "Acquisition task contracts and checkpoints"
+    },
+    {
+      "areas": [
+        "Application acquisition use cases",
+        "Filesystem checkpoint and streaming storage",
+        "Hugging Face exact-revision storage",
+        "Desktop IPC and preload",
+        "Express API and thin-client client"
+      ],
+      "chunkId": "bounded-streaming-file-and-provider-acquisition",
+      "completedAt": "2026-07-30T05:25:22Z",
+      "criteriaIds": [
+        "large-supported-inputs-stream-within-bounds",
+        "source-refresh-is-incremental-and-honest",
+        "security-ingestion-bounds-and-egress-reviewed",
+        "controlled-ingestion-scale-is-qualified"
+      ],
+      "documentation": [
+        "Data Management architecture and threat model",
+        "Persistence operations",
+        "Ingestion contract, port, use-case, storage, API, and IPC READMEs"
+      ],
+      "feedbackAddressed": [],
+      "id": "governed-scalable-ingestion-bounded-streaming-file-and-provider-acquisition",
+      "incrementId": "governed-scalable-ingestion",
+      "summary": "Implemented bounded local-file and exact-revision Hugging Face acquisition across desktop IPC and authenticated HTTP, including renderer-side 1 MiB slicing, digest-verified ordered checkpoints, streaming finalization, authoritative progress, idempotent retry, cancellation, resume, 24-hour cleanup, immutable source snapshots, and atomic task/lineage commits.",
+      "tests": [
+        "Governed file/provider task tests passed",
+        "Checkpoint and streaming storage tests passed",
+        "IPC, API, preload, desktop-client, and thin-client focused tests passed",
+        "Workspace/organization isolation and stale-revision denial tests passed"
+      ],
+      "title": "Bounded streaming file and provider acquisition"
+    },
+    {
+      "areas": [
+        "Governed website capture port and adapter",
+        "Secure egress",
+        "Website acquisition and refresh use cases",
+        "Source snapshot persistence",
+        "Artifact compensation"
+      ],
+      "chunkId": "governed-website-capture-and-refresh",
+      "completedAt": "2026-07-30T05:25:28Z",
+      "criteriaIds": [
+        "website-capture-is-governed-and-reproducible",
+        "source-refresh-is-incremental-and-honest",
+        "security-ingestion-bounds-and-egress-reviewed",
+        "controlled-ingestion-scale-is-qualified"
+      ],
+      "documentation": [
+        "Data Management architecture, threat model, and context pack",
+        "Ingestion adapter and application port READMEs",
+        "Persistence operations"
+      ],
+      "feedbackAddressed": [],
+      "id": "governed-scalable-ingestion-governed-website-capture-and-refresh",
+      "incrementId": "governed-scalable-ingestion",
+      "summary": "Added robots-first bounded page and same-origin sitemap capture through the secure-egress broker, with canonical URL and validator evidence, separate immutable raw HTML and derived text artifacts, content digests, honest unchanged/changed/unavailable/removed refresh outcomes, atomic snapshot visibility, and cancellation-race compensation.",
+      "tests": [
+        "Secure-egress URL, DNS, redirect, credential, media, byte, timeout, concurrency, and 304 tests passed",
+        "Robots allow/deny, sitemap same-origin, removal, validator, raw/derived, and refresh tests passed",
+        "Atomic task/snapshot and refresh/snapshot repository tests passed",
+        "Cancellation-race raw/derived cleanup test passed"
+      ],
+      "title": "Governed website capture and refresh"
+    },
+    {
+      "areas": [
+        "Shared Data Management UI",
+        "Desktop artifact ingestion",
+        "Thin-client artifact ingestion",
+        "Notification-center activity",
+        "Transport clients"
+      ],
+      "chunkId": "simple-source-scope-and-progress-experience",
+      "completedAt": "2026-07-30T05:25:32Z",
+      "criteriaIds": [
+        "large-supported-inputs-stream-within-bounds",
+        "website-capture-is-governed-and-reproducible",
+        "source-scope-ui-remains-simple",
+        "security-ingestion-bounds-and-egress-reviewed",
+        "controlled-ingestion-scale-is-qualified"
+      ],
+      "documentation": [
+        "Shared Data Management UI README",
+        "Data Management architecture and context pack",
+        "Desktop IPC and Express API READMEs"
+      ],
+      "feedbackAddressed": [],
+      "id": "governed-scalable-ingestion-simple-source-scope-and-progress-experience",
+      "incrementId": "governed-scalable-ingestion",
+      "summary": "Delivered the shared ordered Add data experience for Files, Website pages, and Hugging Face datasets in desktop and thin client, with safe defaults, technical limits under Advanced settings, bounded file transfer, authoritative inline and notification progress, locked inputs while running, cancel, retry, resume, and plain-language errors.",
+      "tests": [
+        "Five shared ordered-workflow interaction tests passed",
+        "File streaming and server-computed integrity UI test passed",
+        "Website create/run, cancellation, retry, and input-lock tests passed",
+        "Desktop and thin-client ingestion client tests passed"
+      ],
+      "title": "Simple source scope and progress experience"
+    },
+    {
+      "areas": [
+        "Runtime, API, IPC, and application preparation contracts",
+        "Managed Python normalization and structure-aware chunking",
+        "Dataset result provenance and advanced evidence"
+      ],
+      "chunkId": "advanced-capability-contracts-and-structured-processing",
+      "completedAt": "2026-07-30T05:48:23Z",
+      "criteriaIds": [
+        "advanced-content-processing-preserves-structure-and-lineage",
+        "security-model-assisted-boundaries-reviewed"
+      ],
+      "documentation": [
+        "Capability/provider/version evidence is encoded in the portable contract; canonical README and architecture updates are reserved for the documentation chunk"
+      ],
+      "feedbackAddressed": [],
+      "id": "advanced-preparation-and-synthetic-quality-advanced-capability-contracts-and-structured-processing",
+      "incrementId": "advanced-preparation-and-synthetic-quality",
+      "summary": "Added additive advanced-profile and readiness contracts, bounded token/sentence/section/table/semantic/layout processing, exact normalized source-span and page-region lineage, extraction quality evidence, aggregate-only capability reporting, and fail-closed OCR/resource denial through the existing managed worker and application boundaries.",
+      "tests": [
+        "15 focused Python normalization, chunking, lineage, aggregate-report, OCR-denial, and resource-bound tests passed",
+        "3 focused advanced runtime contract tests passed",
+        "Repository TypeScript compilation was filtered after known unrelated test-fixture failures; no Increment 5 source or contract errors were reported"
+      ],
+      "title": "Capability contracts and structure-aware processing"
+    },
+    {
+      "areas": [
+        "Managed Python semantic curation and quality quarantine",
+        "Advanced report and quality reason contracts",
+        "Application fail-closed review validation"
+      ],
+      "chunkId": "semantic-curation-and-mixing",
+      "completedAt": "2026-07-30T05:53:27Z",
+      "criteriaIds": [
+        "semantic-curation-improves-measured-quality",
+        "security-model-assisted-boundaries-reviewed"
+      ],
+      "documentation": [
+        "Semantic algorithm, version, thresholds, coverage, and review-example shapes are encoded in the portable contract; canonical narrative updates remain in the documentation chunk"
+      ],
+      "feedbackAddressed": [],
+      "id": "advanced-preparation-and-synthetic-quality-semantic-curation-and-mixing",
+      "incrementId": "advanced-preparation-and-synthetic-quality",
+      "summary": "Added deterministic bounded hashed-token semantic curation before split creation, including near-duplicate quarantine, per-source caps, round-robin source mixing, class-balance and coverage metrics, reviewable lineage-only hard-negative recommendations, and sanitized algorithm/threshold evidence.",
+      "tests": [
+        "32 focused semantic, quarantine, group-safe split, and preparation worker tests passed with one pre-existing optional Parquet skip",
+        "3 focused advanced runtime contract tests passed",
+        "Synthetic reference data proves semantic duplicates are removed before train/test assignment and comparison work stays bounded"
+      ],
+      "title": "Semantic curation and mixing"
+    },
+    {
+      "areas": [
+        "Managed Python generation and independent candidate verification",
+        "Quality reason contracts and reversible quarantine",
+        "Application pre-staging review enforcement"
+      ],
+      "chunkId": "verified-synthetic-generation-and-review",
+      "completedAt": "2026-07-30T05:57:35Z",
+      "criteriaIds": [
+        "synthetic-examples-are-validated-before-admission",
+        "security-model-assisted-boundaries-reviewed"
+      ],
+      "documentation": [
+        "Verifier provider, aggregate scores, citations, and bounded rejection reasons are encoded in runtime contracts; canonical narrative updates remain in the documentation chunk"
+      ],
+      "feedbackAddressed": [],
+      "id": "advanced-preparation-and-synthetic-quality-verified-synthetic-generation-and-review",
+      "incrementId": "advanced-preparation-and-synthetic-quality",
+      "summary": "Added bounded multi-candidate local generation with exact normalized source citations and an independent deterministic verifier for task schema, grounding, critic score, duplication, diversity, and safety. Rejected candidates enter reversible quarantine before splitting, and both the worker and application deny synthetic generation when quality review is absent or disabled.",
+      "tests": [
+        "31 focused synthetic, quality, and preparation worker tests passed with one pre-existing optional Parquet skip",
+        "5 focused local-generation regression tests passed",
+        "13 focused application use-case tests passed, including pre-staging synthetic review denial",
+        "End-to-end synthetic fixture admitted two cited grounded candidates and quarantined one unsupported candidate before splits"
+      ],
+      "title": "Verified synthetic generation and review"
+    },
+    {
+      "areas": [
+        "Desktop Dataset Preparation ordered workflow",
+        "Thin-client Dataset Preparation ordered workflow",
+        "Saved recipe and version reproduction settings",
+        "Plain-language advanced review evidence",
+        "Data Management architecture, security, context, runtime, application, and operations guidance"
+      ],
+      "chunkId": "plain-language-advanced-presets",
+      "completedAt": "2026-07-30T06:09:28Z",
+      "criteriaIds": [
+        "advanced-options-do-not-complicate-the-default-path",
+        "security-model-assisted-boundaries-reviewed",
+        "controlled-advanced-capabilities-are-qualified"
+      ],
+      "documentation": [
+        "Data Management architecture and threat model",
+        "Data Management context pack",
+        "Runtime contract, Python adapter, worker, and application use-case READMEs",
+        "Persistence operations recovery guidance"
+      ],
+      "feedbackAddressed": [],
+      "id": "advanced-preparation-and-synthetic-quality-plain-language-advanced-presets",
+      "incrementId": "advanced-preparation-and-synthetic-quality",
+      "summary": "Added Standard, Better document understanding, and Generate examples to the existing ordered desktop and thin-client workflows. Standard preserves the prior request shape; opt-in styles show honest readiness, effort, model guidance, cancellation and retry behavior, lock mutable controls while work starts, and present aggregate structure, semantic, and synthetic evidence in plain language before approval.",
+      "tests": [
+        "13 focused advanced contract, desktop request, desktop workflow, and thin-client interaction tests passed",
+        "Standard request compatibility, opt-in document visibility, synthetic configuration, review evidence, and in-flight control locking passed",
+        "Repository TypeScript diagnostics contained no errors from the Increment 5 source files"
+      ],
+      "title": "Plain-language advanced presets"
+    },
+    {
+      "areas": [
+        "Runtime contracts",
+        "API and IPC contracts",
+        "Legacy recipe migration"
+      ],
+      "chunkId": "adaptive-contract-and-migration",
+      "completedAt": "2026-07-30T12:00:50Z",
+      "criteriaIds": [
+        "input-intent-precedes-preparation",
+        "adaptive-settings-are-compatible",
+        "runtime-rejects-contradictory-recipes",
+        "security-adaptive-data-boundaries-reviewed"
+      ],
+      "documentation": [
+        "modules/contracts/runtime/README.md",
+        "docs/architecture/data-management.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "exact-task-adaptive-quality-and-preparation-adaptive-contract-and-migration",
+      "incrementId": "exact-task-adaptive-quality-and-preparation",
+      "summary": "Added the shared exact-task intent and method authority, active-control matrix, normalized execution plan, and fail-closed legacy migration.",
+      "tests": [
+        "25 focused contract and application tests passed"
+      ],
+      "title": "Adaptive intent and method contract"
+    },
+    {
+      "areas": [
+        "Dataset preparation use case",
+        "Managed Python worker",
+        "Python task registry",
+        "Model download lifecycle"
+      ],
+      "chunkId": "runtime-task-quality-boundary",
+      "completedAt": "2026-07-30T12:00:52Z",
+      "criteriaIds": [
+        "input-intent-precedes-preparation",
+        "exact-task-checks-are-honest",
+        "task-quality-rules-protect-examples",
+        "runtime-rejects-contradictory-recipes",
+        "security-adaptive-data-boundaries-reviewed"
+      ],
+      "documentation": [
+        "docs/security/data-management-threat-model.md",
+        "modules/adapters/runtime/python/README.md",
+        "modules/adapters/runtime/python/worker/README.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "exact-task-adaptive-quality-and-preparation-runtime-task-quality-boundary",
+      "incrementId": "exact-task-adaptive-quality-and-preparation",
+      "summary": "Reconciled plans with staged sources in application and worker boundaries, added task-specific quality and lineage checks, rejected contradictory controls, and introduced bounded task-class runtime deadlines.",
+      "tests": [
+        "25 focused contract and application tests passed",
+        "59 focused Python worker tests passed with one declared capability skip",
+        "29 focused Python runtime and model-download policy tests passed"
+      ],
+      "title": "Runtime and task-quality boundary"
+    },
+    {
+      "areas": [
+        "Desktop Dataset Preparation",
+        "Thin-client Dataset Preparation",
+        "Shared data-management presenter",
+        "Notification center"
+      ],
+      "chunkId": "adaptive-ordered-workflows",
+      "completedAt": "2026-07-30T12:00:55Z",
+      "criteriaIds": [
+        "input-intent-precedes-preparation",
+        "exact-task-checks-are-honest",
+        "adaptive-settings-are-compatible",
+        "exact-task-usability-is-qualified"
+      ],
+      "documentation": [
+        "modules/ui/shared/data-management/README.md",
+        "docs/context/packs/data-management.pack.md"
+      ],
+      "feedbackAddressed": [
+        "step-3-input-intent-and-methods"
+      ],
+      "id": "exact-task-adaptive-quality-and-preparation-adaptive-ordered-workflows",
+      "incrementId": "exact-task-adaptive-quality-and-preparation",
+      "summary": "Made desktop and thin-client preparation derive input intent, exact-task checks, meaningful methods, honest inspection limits, and adaptive Advanced settings from one shared authority; model downloads now open authoritative notification progress.",
+      "tests": [
+        "45 focused desktop and thin-client builder, validation, lifecycle, notification, and UI tests passed"
+      ],
+      "title": "Adaptive ordered desktop and thin-client workflows"
+    },
+    {
+      "areas": [
+        "Architecture guidance",
+        "Security threat model",
+        "Context routing",
+        "Runtime and UI READMEs"
+      ],
+      "chunkId": "documentation-and-qualification",
+      "completedAt": "2026-07-30T12:00:57Z",
+      "criteriaIds": [
+        "input-intent-precedes-preparation",
+        "exact-task-checks-are-honest",
+        "adaptive-settings-are-compatible",
+        "task-quality-rules-protect-examples",
+        "runtime-rejects-contradictory-recipes",
+        "security-adaptive-data-boundaries-reviewed",
+        "exact-task-usability-is-qualified"
+      ],
+      "documentation": [
+        "docs/architecture/data-management.md",
+        "docs/security/data-management-threat-model.md",
+        "docs/context/packs/data-management.pack.md",
+        "modules/contracts/runtime/README.md",
+        "modules/adapters/runtime/python/README.md",
+        "modules/adapters/runtime/python/worker/README.md",
+        "modules/ui/shared/data-management/README.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "exact-task-adaptive-quality-and-preparation-documentation-and-qualification",
+      "incrementId": "exact-task-adaptive-quality-and-preparation",
+      "summary": "Updated canonical architecture, context, security, runtime, worker, and shared UI guidance; added exact image-task coverage and recorded the remaining controlled usability qualification boundary.",
+      "tests": [
+        "All planned focused Increment 6 suites passed"
+      ],
+      "title": "Documentation, security evidence, and qualification"
     }
   ],
   "completion": null,
   "createdAt": "2026-07-30T00:51:53Z",
-  "currentIncrementId": "governed-scalable-ingestion",
+  "currentIncrementId": null,
   "decisions": [
     {
       "approvalNote": "User approved Option A and clarified that the guided experience should reuse the established ordered-steps visual pattern from Dataset Preparation and Model Training, with plain-language primary steps and progressive disclosure for advanced controls.",
@@ -449,6 +815,63 @@
       "selectedOptionId": "guided-curation-workflow",
       "status": "approved",
       "title": "Data Management workflow shape"
+    },
+    {
+      "approvalNote": "User selected the adaptive direction and clarified that both primary choices and Advanced settings must respond to the exact training task, selected source kind, and preparation option without exposing ignored or contradictory controls.",
+      "approvedAt": "2026-07-30T10:48:31Z",
+      "approvedFingerprint": "631df3eb7f072e61c99509af58ba0775d4fa7f326d62a7dc1cc84ec78b2e884e",
+      "context": "Broad text-versus-image adaptation remains misleading because instruction tuning, classification, extraction, embedding, reranking, diffusion, image classification, detection, and segmentation require different fields, quality rules, example-creation actions, and review evidence. Document sectioning or topic-aware chunking is a source-processing method that should appear only when an unstructured textual source must be converted into examples.",
+      "id": "task-aware-dataset-preparation-experience",
+      "options": [
+        {
+          "consequences": [
+            "Instruction tuning distinguishes existing instruction-answer examples from grounded example generation and verified alternatives.",
+            "Classification validates labels and balance; extraction validates expected outputs against a schema; embedding and reranking validate positive and negative relationships.",
+            "Diffusion, classification, detection, and segmentation show only the caption, label, box, or mask actions actually supported.",
+            "Document splitting is automatic by default and becomes a task-relevant advanced control only when source documents need conversion.",
+            "Common source association, license, consent, privacy, credential, duplicate, and split controls remain shared but report only the content surfaces they actually inspected."
+          ],
+          "id": "adaptive-ordered-workflow",
+          "label": "Option A \u2014 Exact-task adaptive workflow",
+          "recommended": true,
+          "summary": "Keep one four-step experience, but derive both data checks and example-creation choices from the exact selected training task and selected source capabilities.",
+          "tradeoffs": [
+            "Gives users task-relevant language without splitting Data Management into separate products.",
+            "Requires task-specific capability and quality contracts, state normalization, task-specific review evidence, and focused runtime validation for currently shallow task paths."
+          ]
+        },
+        {
+          "consequences": [
+            "Users must choose and learn separate Data Management workflows even though source selection, review, versioning, and publication are shared."
+          ],
+          "id": "separate-task-workflows",
+          "label": "Option B \u2014 Separate task workflows",
+          "recommended": false,
+          "summary": "Create a distinct checking and preparation workflow for every training task.",
+          "tradeoffs": [
+            "Maximizes tailoring for each task.",
+            "Duplicates navigation, lifecycle, review, documentation, and testing across nine workflows."
+          ]
+        },
+        {
+          "consequences": [
+            "The current confusion around rows, chunks, labels, boxes, masks, and generated examples would persist."
+          ],
+          "id": "generic-common-controls",
+          "label": "Option C \u2014 Generic common controls",
+          "recommended": false,
+          "summary": "Keep universal check and preparation selectors with broad terminology.",
+          "tradeoffs": [
+            "Smallest implementation change.",
+            "Cannot clearly express task-specific requirements or distinguish unsupported behavior."
+          ]
+        }
+      ],
+      "proposalFingerprint": "631df3eb7f072e61c99509af58ba0775d4fa7f326d62a7dc1cc84ec78b2e884e",
+      "question": "How should Check data and Prepare dataset respond to each supported training task?",
+      "selectedOptionId": "adaptive-ordered-workflow",
+      "status": "approved",
+      "title": "Exact-task adaptive data checks and preparation"
     }
   ],
   "discovery": {
@@ -788,9 +1211,433 @@
       "outcome": "pending",
       "recordedAt": "2026-07-30T04:03:07Z",
       "summary": "Controlled publication to a real private Hugging Face repository remains pending because this environment has no approved test credential or external repository authority. Synthetic-data adapter and boundary tests pass, but they do not replace live commit, rendering, retry, denial, and cleanup qualification."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test <focused Increment 4 contract/storage/use-case suite>",
+      "criterionId": "large-supported-inputs-stream-within-bounds",
+      "id": "evidence-19",
+      "incrementId": "governed-scalable-ingestion",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T05:37:01Z",
+      "summary": "Synthetic file and provider tests verified 1 MiB renderer slicing, bounded digest-verified checkpoints, streaming finalization, authoritative progress, idempotent retry, resume, cancellation, 24-hour cleanup, and exact provider revisions without whole-file renderer allocation."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/adapters/ingestion/tests/governed-website-capture-adapter.unit.test.ts modules/application/use-cases/ingestion-acquisition/tests/governed-website-ingestion.unit.test.ts",
+      "criterionId": "website-capture-is-governed-and-reproducible",
+      "id": "evidence-20",
+      "incrementId": "governed-scalable-ingestion",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T05:37:01Z",
+      "summary": "Robots allow/deny, same-origin sitemap scope, secure-egress mediation, canonical URLs, raw/derived separation, content digests, validators, removals, and immutable snapshot lineage passed focused tests."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/adapters/persistence/ingestion/tests/structured-ingestion-acquisition-repository.unit.test.ts modules/application/use-cases/ingestion-acquisition/tests/governed-website-ingestion.unit.test.ts",
+      "criterionId": "source-refresh-is-incremental-and-honest",
+      "id": "evidence-21",
+      "incrementId": "governed-scalable-ingestion",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T05:37:01Z",
+      "summary": "Conditional 304 validators and content digests produced honest unchanged, changed, unavailable, and removed outcomes; changed refreshes and new snapshots commit atomically while unchanged refreshes retain the prior snapshot."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx",
+      "criterionId": "source-scope-ui-remains-simple",
+      "id": "evidence-22",
+      "incrementId": "governed-scalable-ingestion",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T05:37:01Z",
+      "summary": "The shared desktop/thin ordered UI exposes Files, Website pages, and Hugging Face dataset with safe defaults, technical page limits under Advanced settings, locked inputs, authoritative progress, notification activity, cancel, retry, and resume controls."
+    },
+    {
+      "artifact": null,
+      "command": "npm run docs:check; npm run architecture:check; npm run agent-support:check; npm run build:server; npm run build:thin-client; npm run package",
+      "criterionId": "security-ingestion-bounds-and-egress-reviewed",
+      "id": "evidence-23",
+      "incrementId": "governed-scalable-ingestion",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T05:37:01Z",
+      "summary": "Security-relevant review and tests covered malformed/oversized commands, credential URLs, private/reserved DNS, redirect revalidation, content and session bounds, robots denial, wrong workspace/organization, stale revisions, checkpoint cleanup, atomic lineage, cancellation-race compensation, sender trust, and sanitized errors. Docs, architecture, agent-support, server, thin-client, and Electron package gates passed; the full-suite guard findings were corrected and their nine focused guard tests passed."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "controlled-ingestion-scale-is-qualified",
+      "id": "evidence-24",
+      "incrementId": "governed-scalable-ingestion",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-07-30T05:37:01Z",
+      "summary": "Controlled qualification with representative multi-gigabyte files, an approved private provider repository, and an approved test website remains pending; no production credentials, private data, or unapproved external service was used in local evidence."
+    },
+    {
+      "artifact": null,
+      "command": "python -m unittest modules.adapters.runtime.python.worker.tests.test_document_normalization modules.adapters.runtime.python.worker.tests.test_markdown_chunking modules.adapters.runtime.python.worker.tests.test_advanced_dataset_preparation modules.adapters.runtime.python.worker.tests.test_prepare_training_dataset_task",
+      "criterionId": "advanced-content-processing-preserves-structure-and-lineage",
+      "id": "evidence-25",
+      "incrementId": "advanced-preparation-and-synthetic-quality",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T06:29:25Z",
+      "summary": "Bounded token, sentence, section, table, semantic, and layout-region processing preserved exact normalized artifact/span/region/page lineage and extraction quality. Unsupported OCR failed closed without fabricated text; malformed and resource-bound paths passed synthetic fixtures."
+    },
+    {
+      "artifact": null,
+      "command": "python -m unittest modules.adapters.runtime.python.worker.tests.test_semantic_curation modules.adapters.runtime.python.worker.tests.test_dataset_quality modules.adapters.runtime.python.worker.tests.test_prepare_training_dataset_task",
+      "criterionId": "semantic-curation-improves-measured-quality",
+      "id": "evidence-26",
+      "incrementId": "advanced-preparation-and-synthetic-quality",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T06:29:30Z",
+      "summary": "Deterministic hashed-token semantic curation set reference near-duplicates aside before splitting, enforced source caps and group-safe splits, interleaved sources, measured coverage, and produced bounded task-aware contrast recommendations without persisting embeddings or source text."
+    },
+    {
+      "artifact": null,
+      "command": "python -m unittest modules.adapters.runtime.python.worker.tests.test_synthetic_verification modules.adapters.runtime.python.worker.tests.test_advanced_dataset_preparation modules.adapters.runtime.python.worker.tests.test_prepare_training_dataset_task",
+      "criterionId": "synthetic-examples-are-validated-before-admission",
+      "id": "evidence-27",
+      "incrementId": "advanced-preparation-and-synthetic-quality",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T06:29:33Z",
+      "summary": "Bounded generated candidates were independently checked for task schema, exact source citation, grounding, critic score, safety, duplication, and diversity. Rejected candidates entered reversible quarantine before split creation, and application and worker denial tests proved that no generated row is admitted without mandatory review."
+    },
+    {
+      "artifact": null,
+      "command": "npx vitest run focused dataset preparation UI tests; npm run build:thin-client; npm run package",
+      "criterionId": "advanced-options-do-not-complicate-the-default-path",
+      "id": "evidence-28",
+      "incrementId": "advanced-preparation-and-synthetic-quality",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T06:29:35Z",
+      "summary": "Desktop and thin-client workflows kept Standard as the default with no advanced request block, exposed Better document understanding and Generate examples as opt-in plain-language styles, preserved Advanced settings disclosure, showed readiness and review evidence, locked mutable controls during work, and passed production thin-client and Electron packaging builds."
+    },
+    {
+      "artifact": null,
+      "command": "npm run docs:check; npm run architecture:check; npm run agent-support:check; npm test",
+      "criterionId": "security-model-assisted-boundaries-reviewed",
+      "id": "evidence-29",
+      "incrementId": "advanced-preparation-and-synthetic-quality",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T06:29:38Z",
+      "summary": "Security-relevant review confirmed bounded local-only processing, explicit unavailable capability denial, exact source citations, independent candidate verification, mandatory quarantine and approval, workspace-scoped artifacts, aggregate-only advanced evidence, sanitized diagnostics, and safe rollback to the unchanged Standard request path. Residual automated false positives and false negatives remain documented."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "controlled-advanced-capabilities-are-qualified",
+      "id": "evidence-30",
+      "incrementId": "advanced-preparation-and-synthetic-quality",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-07-30T06:29:40Z",
+      "summary": "Representative GPU and constrained-memory hardware, screen-reader, reduced-motion, and non-technical usability qualification is not available in this local environment. OCR remains explicitly unavailable. Local synthetic fixtures, production builds, packaging, and automated interaction tests passed, but they do not substitute for controlled human and hardware evidence."
+    },
+    {
+      "artifact": null,
+      "command": "Focused contract/application/UI suites; npm test",
+      "criterionId": "input-intent-precedes-preparation",
+      "id": "evidence-31",
+      "incrementId": "exact-task-adaptive-quality-and-preparation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T12:14:38Z",
+      "summary": "Shared contract, application, desktop, and thin-client tests prove one structured dataset is validated and split, multiple compatible datasets are combined, source material is converted, and mixed roles fail before preparation."
+    },
+    {
+      "artifact": null,
+      "command": "45 focused desktop/thin UI tests; 59 focused Python worker tests; npm test",
+      "criterionId": "exact-task-checks-are-honest",
+      "id": "evidence-32",
+      "incrementId": "exact-task-adaptive-quality-and-preparation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T12:14:41Z",
+      "summary": "Exact text and image task checks are rendered from shared copy and worker inspection evidence; image tests explicitly report uninspected pixels and unavailable OCR, face, credential, personal-data, and annotation-accuracy capabilities."
+    },
+    {
+      "artifact": null,
+      "command": "Focused contract/UI/style tests; npm run build:thin-client; npm run package; npm test",
+      "criterionId": "adaptive-settings-are-compatible",
+      "id": "evidence-33",
+      "incrementId": "exact-task-adaptive-quality-and-preparation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T12:14:44Z",
+      "summary": "Contract and client tests cover variable method counts, topic-aware defaults, fixed-only overlap, semantic and structure controls, generation separation, inactive-field omission, method switching, and the non-clipping collapsible hint regression."
+    },
+    {
+      "artifact": null,
+      "command": "59 focused Python worker tests; npm test",
+      "criterionId": "task-quality-rules-protect-examples",
+      "id": "evidence-34",
+      "incrementId": "exact-task-adaptive-quality-and-preparation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T12:14:46Z",
+      "summary": "Worker tests cover required task schemas and relationships, labels, bounded boxes and masks, duplicate and split checks, source association, reversible quarantine, and honest image inspection limits."
+    },
+    {
+      "artifact": null,
+      "command": "25 focused contract/application tests; 59 focused Python worker tests; npm test",
+      "criterionId": "runtime-rejects-contradictory-recipes",
+      "id": "evidence-35",
+      "incrementId": "exact-task-adaptive-quality-and-preparation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T12:14:49Z",
+      "summary": "Contract, application, and worker boundaries reject stale intent, mixed source roles, incompatible methods, inactive controls, unsafe legacy migration, malformed lineage, and unsupported capabilities while preserving sanitized corrective failures."
+    },
+    {
+      "artifact": null,
+      "command": "Focused denial suites; npm run docs:check; npm run architecture:check; npm run agent-support:check; npm run build:server; npm run build:thin-client; npm run package; npm test; git diff --check",
+      "criterionId": "security-adaptive-data-boundaries-reviewed",
+      "id": "evidence-36",
+      "incrementId": "exact-task-adaptive-quality-and-preparation",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T12:14:51Z",
+      "summary": "Security-relevant review confirmed contract-owned task/source authority, application and worker reconciliation, bounded annotations and semantic work, exact source association, sanitized evidence, hard task-class deadlines, and task-scoped cancellation. Synthetic denial tests passed. Residual risk remains for false positives/negatives, unavailable pixel inspection, bounded long-worker occupancy, and controlled hardware/accessibility qualification."
+    },
+    {
+      "artifact": null,
+      "command": "45 focused desktop/thin UI tests; focused collapsible-panel style test; npm run build:thin-client; npm run package; npm test",
+      "criterionId": "exact-task-usability-is-qualified",
+      "id": "evidence-37",
+      "incrementId": "exact-task-adaptive-quality-and-preparation",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-07-30T12:14:54Z",
+      "summary": "Automated desktop/thin interaction, semantic, adaptive-control, image-limit, notification, and non-clipping hint checks pass. Representative non-technical user, physical screen-reader, zoom, reduced-motion, and controlled hardware qualification remains external and is not claimed."
+    },
+    {
+      "artifact": null,
+      "command": "32 focused Dataset Preparation tests; npm run docs:check; npm run architecture:check; npm run agent-support:check; npm run build:server; npm run build:thin-client; npm run package; npm test; git diff --check",
+      "criterionId": "adaptive-settings-are-compatible",
+      "id": "evidence-38",
+      "incrementId": "exact-task-adaptive-quality-and-preparation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T13:00:25Z",
+      "summary": "Final desktop regressions prove saved workflow settings live above Step 1 and round-trip across the workflow, empty task settings and action containers are omitted, save and publication guidance is inline, and JSON is recognized by filename or media type. The source guidance lists accepted extensions and directs users to convert DOC to DOCX and Excel files to CSV."
+    },
+    {
+      "artifact": null,
+      "command": "32 focused Dataset Preparation tests; production host builds and package; npm test",
+      "criterionId": "exact-task-usability-is-qualified",
+      "id": "evidence-39",
+      "incrementId": "exact-task-adaptive-quality-and-preparation",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-07-30T13:00:28Z",
+      "summary": "Automated layout, conditional disclosure, saved-settings interaction, source-format guidance, JSON visibility, notification, adaptive-control, and non-clipping hint checks pass. Representative non-technical user, physical screen-reader, zoom, reduced-motion, and controlled hardware qualification remains external and is not claimed."
+    },
+    {
+      "artifact": null,
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test modules/ui/shared/data-management/tests/GuidedIngestionTaskPanel.interaction.ui.test.tsx modules/ui/shared/styles/tests/shared-form-controls-primary-style.unit.test.ts; npx vitest run --environment jsdom apps/desktop/src/renderer/tests/app-upload.e2e.test.tsx apps/desktop/src/renderer/features/artifact-upload/tests/artifact-upload-feature.unit.test.tsx apps/thin-client/src/features/artifact-upload/tests/use-artifact-upload-feature.unit.test.tsx",
+      "criterionId": "source-scope-ui-remains-simple",
+      "id": "evidence-40",
+      "incrementId": "governed-scalable-ingestion",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T14:00:17Z",
+      "summary": "The guided UI now uses the primary control language, confirms multi-file selections, browses and checks exact Hugging Face files with an optional persisted token, removes the legacy tools, explains responsible website use, and passes three full-renderer journeys from source selection through Artifact Browser detail."
+    },
+    {
+      "artifact": null,
+      "command": "npm run docs:check; npm run architecture:check; npm run agent-support:check; npm run build:thin-client; npm run package",
+      "criterionId": "security-ingestion-bounds-and-egress-reviewed",
+      "id": "evidence-41",
+      "incrementId": "governed-scalable-ingestion",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T14:00:21Z",
+      "summary": "The provider selector reuses host-owned credential storage and bounded browse APIs, retains adapter-returned immutable revisions, redacts provider errors, keeps live network boundaries out of deterministic E2E tests, and preserves the existing controlled-environment qualification requirement. Documentation, architecture, agent-support, thin-client build, and desktop package gates passed."
     }
   ],
-  "feedback": [],
+  "feedback": [
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "feedback-check-data-labels-and-source-rules",
+      "impact": "within-increment",
+      "nextAction": "After user wording approval, rename Recommended to Standard, quantify the stricter thresholds, and replace row language with source-level license and consent explanations in both hosts with focused UI tests.",
+      "recordedAt": "2026-07-30T10:12:51Z",
+      "summary": "The Check data choices do not explain how Strict differs from Recommended, Recommended is not a useful label, and the license/consent rules incorrectly say every row even though the implemented policy reads source-level metadata and applies it to all derived training examples.",
+      "targetIncrementId": "quality-curation-and-review"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "feedback-preparation-style-clarity",
+      "impact": "within-increment",
+      "nextAction": "Present exact implemented behavior and recommended plain-language labels and descriptions, then wait for the user's wording decision before editing both hosts.",
+      "recordedAt": "2026-07-30T10:12:53Z",
+      "summary": "The three preparation-style labels and descriptions do not clearly distinguish basic character-based preparation, structure-aware semantic curation, and verified local-model example generation or their source, model, review, and OCR consequences.",
+      "targetIncrementId": "advanced-preparation-and-synthetic-quality"
+    },
+    {
+      "category": "scope",
+      "disposition": "needs-decision",
+      "id": "feedback-source-attribution-readiness",
+      "impact": "high-level",
+      "nextAction": "Ask the user to choose between attribution-ready source metadata and the materially broader inference-time retrieval and citation capability; if the bounded option is approved, add conditional source checks, immutable lineage and dataset-card preservation, plain-language UI copy, and denial-path tests.",
+      "recordedAt": "2026-07-30T10:25:20Z",
+      "summary": "Add an optional attribution rule that preserves the creator or named attribution party, source location, license identity and link, supplied notices, and change information when a source license requires credit, while distinguishing attribution-ready dataset lineage from automatic attribution of future model output.",
+      "targetIncrementId": "versioned-dataset-lineage-and-publishing"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "feedback-source-traceability-clarification",
+      "impact": "within-increment",
+      "nextAction": "Enforce source association as a mandatory quality invariant, preserve source and row or passage lineage in emitted examples, use source-level license and consent wording, and add focused denial and UI tests.",
+      "recordedAt": "2026-07-30T10:28:18Z",
+      "summary": "The requested attribution behavior is limited to durable source traceability: every accepted training example must identify the staged source from which it was derived. No inference-time output attribution or citation capability is requested.",
+      "targetIncrementId": "quality-curation-and-review"
+    },
+    {
+      "category": "defect",
+      "disposition": "needs-decision",
+      "id": "feedback-task-aware-preparation-options",
+      "impact": "high-level",
+      "nextAction": "Choose whether the existing ordered workflow should adapt its preparation controls to the selected task family, split text and image preparation into separate workflows, or retain one generic selector with reduced capability.",
+      "recordedAt": "2026-07-30T10:34:11Z",
+      "summary": "The shared preparation-style selector is document-centric and remains unchanged for diffusion and vision tasks. Better document understanding produces empty document evidence for direct image inputs, while Generate examples does not run its document candidate verifier for direct image rows, so the current labels can describe work that did not occur.",
+      "targetIncrementId": "advanced-preparation-and-synthetic-quality"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "feedback-task-aware-check-data",
+      "impact": "high-level",
+      "nextAction": "Expand the pending task-aware decision so both Check data and Prepare dataset adapt to text, diffusion, classification, detection, and segmentation capabilities with honest coverage and explicit unavailable checks.",
+      "recordedAt": "2026-07-30T10:39:27Z",
+      "summary": "Check data is also text-centric. For image tasks the current personal-data and credential checks inspect string fields such as captions, labels, and annotations; they do not decode pixels, inspect visual text or people, inspect EXIF/GPS metadata, validate image geometry, or detect perceptual duplicates. The UI must not imply those checks occurred.",
+      "targetIncrementId": "quality-curation-and-review"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "feedback-exact-task-adaptation",
+      "impact": "high-level",
+      "nextAction": "Revise the pending recommended option so Check data and Prepare dataset adapt to each exact training task, with common controls shared underneath and document splitting shown only when unstructured textual sources require it.",
+      "recordedAt": "2026-07-30T10:41:46Z",
+      "summary": "Adapting only by broad text and image families is still too coarse. Instruction tuning, classification, extraction, embedding, reranking, diffusion, image classification, detection, and segmentation have different required fields, quality risks, generation choices, and review evidence. Document chunking is a source-processing method, not a training-task outcome.",
+      "targetIncrementId": "advanced-preparation-and-synthetic-quality"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "step-3-input-intent-and-methods",
+      "impact": "later-increment",
+      "nextAction": "Revise Increment 6 so input intent is established before Step 3, dataset combination is preselected only for multiple existing datasets, generation is distinct from chunking, and task-specific choices are not padded to three options.",
+      "recordedAt": "2026-07-30T10:54:49Z",
+      "summary": "Step 3 must not present using existing examples as a preparation method. The workflow should derive or confirm whether selected inputs are existing datasets to combine or source material from which to create a dataset, avoid recreating a single ready dataset, offer only the number of preparation methods that are meaningful for the selected task and source, and use a simple-to-sophisticated progression with a capable middle default where chunking methods apply.",
+      "targetIncrementId": "exact-task-adaptive-quality-and-preparation"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "collapsible-card-hints-clip",
+      "impact": "within-increment",
+      "nextAction": "Keep collapsible-card overflow visible, retain rounded interactive edges, run the focused style regression, and repeat the completion gates.",
+      "recordedAt": "2026-07-30T12:04:20Z",
+      "summary": "Information hint bubbles inside expanded collapsible cards were clipped at the card boundary.",
+      "targetIncrementId": "exact-task-adaptive-quality-and-preparation"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "dataset-preparation-final-layout-cleanup",
+      "impact": "within-increment",
+      "nextAction": "Inspect both clients and existing persisted-settings behavior, implement the smallest shared layout correction, and add focused interaction regressions.",
+      "recordedAt": "2026-07-30T12:25:24Z",
+      "summary": "Dataset Preparation should hide an empty Task settings card, flatten Save and publish into Review and create, move save/load training settings into an unnumbered section above Step 1, and remove the blank section after Step 4.",
+      "targetIncrementId": "exact-task-adaptive-quality-and-preparation"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "dataset-preparation-supported-text-sources",
+      "impact": "within-increment",
+      "nextAction": "Verify the shared capability registry and artifact metadata filters, then document the exact accepted formats and corrective action.",
+      "recordedAt": "2026-07-30T12:25:27Z",
+      "summary": "Clarify which document and structured file types are accepted for textual training tasks and why a JSON artifact might not appear.",
+      "targetIncrementId": "exact-task-adaptive-quality-and-preparation"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "feedback-ingestion-primary-controls-provider-browser",
+      "impact": "within-increment",
+      "nextAction": "Replace native form chrome with shared primary controls, connect the guided path to the existing bounded Hugging Face browser, and verify desktop/thin-client parity plus immutable-revision ingestion and safe failure behavior.",
+      "recordedAt": "2026-07-30T13:17:29Z",
+      "summary": "Artifact Ingestion still relies on native fieldset, radio, and file-input rendering, and its guided Hugging Face path requires manually entered repository paths instead of bounded dataset and file selection.",
+      "targetIncrementId": "governed-scalable-ingestion"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "feedback-ingestion-token-setup-remove-legacy-tools",
+      "impact": "within-increment",
+      "nextAction": "Resolve the default host browser, add bounded token setup to Hugging Face Step 2 when access is not configured, remove the legacy import-tools UI, and update parity tests and guidance.",
+      "recordedAt": "2026-07-30T13:28:19Z",
+      "summary": "The normal Artifact Ingestion host did not provide its default Hugging Face browser to the guided selector, token setup was not available in Step 2, and the legacy Other import tools remained visible after the guided replacement.",
+      "targetIncrementId": "governed-scalable-ingestion"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "feedback-ingestion-multiselect-responsible-use-copy",
+      "impact": "within-increment",
+      "nextAction": "Retain explicit multi-file selection, selected-name confirmation, responsible-use copy, and focused regression assertions.",
+      "recordedAt": "2026-07-30T13:51:19Z",
+      "summary": "The guided local-file source must make multi-selection explicit and show the selected set, and the website page limit must explain abuse prevention plus the user's responsibility to follow site policies.",
+      "targetIncrementId": "governed-scalable-ingestion"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "feedback-ingestion-functional-ui-journeys",
+      "impact": "within-increment",
+      "nextAction": "Keep all three full-renderer journeys in the browser-test harness and preserve deterministic website and provider boundaries.",
+      "recordedAt": "2026-07-30T13:51:23Z",
+      "summary": "Data Management needs deterministic end-to-end functional UI coverage for two local files, two website pages, and a selected file from a public Hugging Face dataset, with each journey ending in Artifact Browser detail.",
+      "targetIncrementId": "governed-scalable-ingestion"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "feedback-separate-short-and-long-test-runs",
+      "impact": "within-increment",
+      "nextAction": "Profile the current runner, add explicit short, long, and aggregate npm commands without dropping coverage, document the split, and verify exit behavior and timing reports.",
+      "recordedAt": "2026-07-30T14:13:35Z",
+      "summary": "Repository verification needs separate short-duration unit and interaction tests plus an explicit long-duration end-to-end and controlled-integration command, with timing evidence identifying the slowest tests.",
+      "targetIncrementId": "exact-task-adaptive-quality-and-preparation"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "feedback-roadmap-focused-increment-tests",
+      "impact": "within-increment",
+      "nextAction": "Update the roadmap skill, workflow reference, regression tests, routing documentation, and installation guidance so per-increment verification stays focused and overall completion runs both complete suites.",
+      "recordedAt": "2026-07-30T14:14:33Z",
+      "summary": "Roadmap execution guidance must run only tests relevant to each increment and reserve the complete short and long suites for the overall roadmap completion gate after every increment is implemented.",
+      "targetIncrementId": "exact-task-adaptive-quality-and-preparation"
+    }
+  ],
   "finalApproval": null,
   "history": [
     {
@@ -1092,6 +1939,420 @@
       "recordedAt": "2026-07-30T04:05:43Z",
       "sequence": 50,
       "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "b9cbf53be188a93d0311259f7383f426b756dddfca37159bddb355c3067de14b",
+      "recordedAt": "2026-07-30T04:11:38Z",
+      "sequence": 51,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "35da0b9f3508ff1e415517e3d4d656b2bcb55162823038deb0e7c1a40a2e1a2f",
+      "recordedAt": "2026-07-30T05:25:22Z",
+      "sequence": 52,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "e4d106cb1afe060f723198b491b351565eb3c0a78303aefc737c152c10745b9b",
+      "recordedAt": "2026-07-30T05:25:28Z",
+      "sequence": 53,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "7b91d01cc397b75be46671a1c34ca6c9e7424ce8ae1b68ac8242a07e94a4b4ca",
+      "recordedAt": "2026-07-30T05:25:32Z",
+      "sequence": 54,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "7702a7c403090a4a4254f4a2a2dc5d73e9f75b5bd776757472c488cc129ae6a3",
+      "recordedAt": "2026-07-30T05:37:01Z",
+      "sequence": 55,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ccfceff60318c33754047db220b1084fa38b2008d84b5cd5cd87629e8cd5fb5b",
+      "recordedAt": "2026-07-30T05:37:01Z",
+      "sequence": 56,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "25beddfa3186988006db6e74d71f800337d14e0cbf85b04dbeed4704885b9a17",
+      "recordedAt": "2026-07-30T05:37:01Z",
+      "sequence": 57,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f8ca2b539d3e855a30a703996926862c86eff2edc42e3ed37a6be38c61e5ca62",
+      "recordedAt": "2026-07-30T05:37:01Z",
+      "sequence": 58,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3087ce265761756e6b563126e6e5cbe753917131810d54b38cbec12b00ed4fb6",
+      "recordedAt": "2026-07-30T05:37:01Z",
+      "sequence": 59,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d2ed8f9093a5d61ef3e598f59de837b056312386673bf5d1030c7a76b2ebfefa",
+      "recordedAt": "2026-07-30T05:37:01Z",
+      "sequence": 60,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "66aa077387c7c8acffd007df99ec145a11d029f286760f50a4fd32846bd50fcb",
+      "recordedAt": "2026-07-30T05:37:12Z",
+      "sequence": 61,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "b7aa724ede29cc16acf58b35ebe48f5b8f6d59958aa4b06e8e96c0769e04ade3",
+      "recordedAt": "2026-07-30T05:37:37Z",
+      "sequence": 62,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "ad269fa666a44997487fa867a6805e310b33285620a5623ab1b4d7dd133da7b6",
+      "recordedAt": "2026-07-30T05:40:25Z",
+      "sequence": 63,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "85124c99fe32459531e50b3ae0f7b54a069088ab98521002b3c0f6e4df4ee088",
+      "recordedAt": "2026-07-30T05:41:17Z",
+      "sequence": 64,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "1c211262e4f3c5b7c496077745d03072cfbbf5b0370418b6746dc24fbd524ac6",
+      "recordedAt": "2026-07-30T05:48:23Z",
+      "sequence": 65,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "5d239d9599a915a9cc8c85a972d301ea31247f5109b102c23204fa91775b751e",
+      "recordedAt": "2026-07-30T05:53:27Z",
+      "sequence": 66,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "55e99bad3ef4faba92a70c75bec16d1c541c066419c8714d16a301a0badde0b4",
+      "recordedAt": "2026-07-30T05:57:35Z",
+      "sequence": 67,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "c7bcbde07fc3b2d375708575a744cf605a721efcb04e92c3234aa52e1e63c43b",
+      "recordedAt": "2026-07-30T06:09:28Z",
+      "sequence": 68,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "4dfcb6aab7f94f32e2fdcdef71f4c8d01bbc7c3ac01ddf0ff09c788eafd712d8",
+      "recordedAt": "2026-07-30T06:29:25Z",
+      "sequence": 69,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1bdef4017d2736ba44851ac91b7d20bffdb9dc2acfc3930f2d5274f99e0841c0",
+      "recordedAt": "2026-07-30T06:29:30Z",
+      "sequence": 70,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a74fac0529e0640bc61da009c049d27f1070e8d1c2701e322c1497281a9b1742",
+      "recordedAt": "2026-07-30T06:29:33Z",
+      "sequence": 71,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "8de7d540e03a39068078fb9c7b834f2756818c53b6b8ba03c838dc431fefeb51",
+      "recordedAt": "2026-07-30T06:29:35Z",
+      "sequence": 72,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e292e15b93d9afbf7a2c263eb34116963aa73999bff7c3b6eed6dc5cf9c84795",
+      "recordedAt": "2026-07-30T06:29:38Z",
+      "sequence": 73,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "03f1279a53d1ea1851df93261c7df820c84f5de9c3a0c27b012453d089da8a25",
+      "recordedAt": "2026-07-30T06:29:40Z",
+      "sequence": 74,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "77187e6b6d4cc55843aa3d13d77e8375d84724fbff57875a2eb197cf4f15664a",
+      "recordedAt": "2026-07-30T06:29:42Z",
+      "sequence": 75,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "de224d89ab2a76146879de995c7c8f3de3ab5b82b338a919d063009ec295b162",
+      "recordedAt": "2026-07-30T10:12:51Z",
+      "sequence": 76,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "0a45dc4f0b712117b3be414d8a157182118eb9d2a105d681dad69db40350a738",
+      "recordedAt": "2026-07-30T10:12:53Z",
+      "sequence": 77,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "828b07dbf03bbdf15eb79c1b6c9ce83b62aacef668ff92134a99678847d3a026",
+      "recordedAt": "2026-07-30T10:25:20Z",
+      "sequence": 78,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "ebebcc14e14cbc3abcf24e84ada931c65408c10cfce9c0aeb20f8a6354280a3a",
+      "recordedAt": "2026-07-30T10:28:18Z",
+      "sequence": 79,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "dd227569746e9b46ccbb90c85dc59537b3170206c88d39339f146de8d5b28415",
+      "recordedAt": "2026-07-30T10:28:29Z",
+      "sequence": 80,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "f2d1ce10db4f9a1104694e2356d069063cba2df806748d880be9e4422524f5b5",
+      "recordedAt": "2026-07-30T10:34:11Z",
+      "sequence": 81,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "964ee4d1521b413b5c97ad504f7d5872641eac9bda592a8cd39f9c279c4f00b9",
+      "recordedAt": "2026-07-30T10:34:21Z",
+      "sequence": 82,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "b0115cc77a8340e20e4a65628f1c5bf4f5f226361316fa04907fd1f31f00bcb8",
+      "recordedAt": "2026-07-30T10:39:27Z",
+      "sequence": 83,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "03980009faf0f94ff4a3db35aaba3ac3ee6c381ecb4ceeaa75d4835490f52041",
+      "recordedAt": "2026-07-30T10:39:37Z",
+      "sequence": 84,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "ff7f9c528eeef84dd4cc779ea95c0ad78a0a626d5751fb135b3fdec00cb328f7",
+      "recordedAt": "2026-07-30T10:41:46Z",
+      "sequence": 85,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "cdc80e9022e25c36fd03d0db7efbd6ac49138d9a0743f11cf176ac8291911596",
+      "recordedAt": "2026-07-30T10:41:56Z",
+      "sequence": 86,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "3596f411d514f7af25ddd92117016283804e6055bfdc563532119159e717a11b",
+      "recordedAt": "2026-07-30T10:48:31Z",
+      "sequence": 87,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "97dadccb23adab2888eafb6f848858351c6b9e53fc2be4950da9257ae3125e0c",
+      "recordedAt": "2026-07-30T10:48:41Z",
+      "sequence": 88,
+      "type": "roadmap-revised"
+    },
+    {
+      "eventFingerprint": "8b3cf4120ede373dd3ca057fd7a0f094b1b8c6ff4298d34546707d485b80e15a",
+      "recordedAt": "2026-07-30T10:54:49Z",
+      "sequence": 89,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "240c5aca55a837caa81c75e1ebc6c930b698eeec57db7f0ca3a8862bf3f9cdfd",
+      "recordedAt": "2026-07-30T10:55:53Z",
+      "sequence": 90,
+      "type": "roadmap-revised"
+    },
+    {
+      "eventFingerprint": "bbeffcc577859a1ee7a16656ba6528e705ac3d4a5c7fc61a13c76e417e19c50c",
+      "recordedAt": "2026-07-30T10:58:25Z",
+      "sequence": 91,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "ab8ed51306cda2c6725e79fa6c265e54be760d997aebb6ceed22330ed6ccea63",
+      "recordedAt": "2026-07-30T11:00:28Z",
+      "sequence": 92,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "3c91f06ec09f7ee45533fb90a35af5d872a4f0be37d82c1256c1c8fce749a0a0",
+      "recordedAt": "2026-07-30T11:01:03Z",
+      "sequence": 93,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "908fb5158b52a452e89a3d9d59b3df39ce8a1b3870f73a8db8bccb7943229ddd",
+      "recordedAt": "2026-07-30T11:02:46Z",
+      "sequence": 94,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "20be1ca50475011e72e9efd863ecee9601cfbe552c4dcc5dd4fa15f8a3206260",
+      "recordedAt": "2026-07-30T12:00:50Z",
+      "sequence": 95,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "fbb06ca5f6ac5f591066fd2d5f8fe5f0e068102146317a37a886c4f6c1ce283b",
+      "recordedAt": "2026-07-30T12:00:52Z",
+      "sequence": 96,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "91fe110c6284e6ca958c3ee9428c7ae1181998c4e0f8851166ada7875993d246",
+      "recordedAt": "2026-07-30T12:00:55Z",
+      "sequence": 97,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "dc41c05b491ac8f39897ccce4cea0bf8b5cb86d84618413d8053b1575f4847c2",
+      "recordedAt": "2026-07-30T12:00:57Z",
+      "sequence": 98,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "ea0b8319f57728f403c8c5c75d6fdd6cc8a150015521569ed783afa78fdcbbb0",
+      "recordedAt": "2026-07-30T12:04:20Z",
+      "sequence": 99,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "545051f32f1a1031e7ab1256c02fd328096b460a36e874cf7509ec501246afa8",
+      "recordedAt": "2026-07-30T12:14:38Z",
+      "sequence": 100,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f0bb787296f58f525f889d27cfad4f5b96aff90d0d2d893efc3a77f18d08ee8b",
+      "recordedAt": "2026-07-30T12:14:41Z",
+      "sequence": 101,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "590bc4370ecf13d73fadac320483ca17c0921f14a54b9310caf3418f0e696bd2",
+      "recordedAt": "2026-07-30T12:14:44Z",
+      "sequence": 102,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f709f663069900fa9ff3736275a08b8327e91d4e0940bb93844df5b0c82c49b9",
+      "recordedAt": "2026-07-30T12:14:46Z",
+      "sequence": 103,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "6820e235d7de3299d73beedd72a94d08217a49fe2983f981af8b5fbc487208dd",
+      "recordedAt": "2026-07-30T12:14:49Z",
+      "sequence": 104,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5ba953570f27858759d6c5f4a9547a59cc3be4cfd265a418f8b53167377595d0",
+      "recordedAt": "2026-07-30T12:14:51Z",
+      "sequence": 105,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c441ba89525c2f69d531f66dce6487616122b6f271c29c717a5dbfc0da8cd4a4",
+      "recordedAt": "2026-07-30T12:14:54Z",
+      "sequence": 106,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "4f587451b6c92f64d4b6db6d845052d3488d92157d50f453dbe1f4fbcb762296",
+      "recordedAt": "2026-07-30T12:15:11Z",
+      "sequence": 107,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "e370bdd12efbc800fe1a19d333043b72eea2dc7aba12442f8101b1456cc7de00",
+      "recordedAt": "2026-07-30T12:25:24Z",
+      "sequence": 108,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "435ba99aa1da11d5176b781ce1c1ef1690b18c6bd89c22d8e559ceca5c7cf122",
+      "recordedAt": "2026-07-30T12:25:27Z",
+      "sequence": 109,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "0c9f3dce98048f51a0f5ef516dc6cfb5dcedbdbbb54a122e69e0e0c9d2dcfdf7",
+      "recordedAt": "2026-07-30T13:00:25Z",
+      "sequence": 110,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a580408f5e6170bec9030c47201c7c6f1cd486322ddd3c96f1ad028dc4a5675c",
+      "recordedAt": "2026-07-30T13:00:28Z",
+      "sequence": 111,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "41bcec92af947afee67a92f7a7e5c0eb32c125dac2e25ace565366bf5b4b27ef",
+      "recordedAt": "2026-07-30T13:17:29Z",
+      "sequence": 112,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "c8347860c70509cf4e7169315b29a4cef7551691f1623085aeb81b4cbe858e39",
+      "recordedAt": "2026-07-30T13:28:19Z",
+      "sequence": 113,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "1d38dea38ac15e52a5d05278b036b553746fedaa4cb6e63140b9993b3b17619d",
+      "recordedAt": "2026-07-30T13:51:19Z",
+      "sequence": 114,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "a9b37c464df0a768f3301c5fc80b98df04ff9c8c0226ea20ca7e98f93f3546a7",
+      "recordedAt": "2026-07-30T13:51:23Z",
+      "sequence": 115,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "7189f3fca0701327ef02f9b44112c170e994ed3366bd92e0516578be3113b3a6",
+      "recordedAt": "2026-07-30T14:00:17Z",
+      "sequence": 116,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c9d0ead5ac224487e2c243e2f07530c24a2569501880967dfd61dd86ebd314a4",
+      "recordedAt": "2026-07-30T14:00:21Z",
+      "sequence": 117,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1295d9ab190c0e7f6ed3a6ddc75446d3bf299846f4c2ec88ae8a703243d7f656",
+      "recordedAt": "2026-07-30T14:13:35Z",
+      "sequence": 118,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "4dcef564cf9b74b1cba578ee8947b4191eca78a5987046c0fe4395b67f735b6b",
+      "recordedAt": "2026-07-30T14:14:33Z",
+      "sequence": 119,
+      "type": "feedback-recorded"
     }
   ],
   "increments": [
@@ -1838,8 +3099,14 @@
         }
       ],
       "allowPendingQualification": true,
-      "completedAt": null,
-      "completedChunks": [],
+      "completedAt": "2026-07-30T05:37:12Z",
+      "completedChunks": [
+        "acquisition-task-contracts-and-checkpoints",
+        "bounded-streaming-file-and-provider-acquisition",
+        "governed-website-capture-and-refresh",
+        "simple-source-scope-and-progress-experience"
+      ],
+      "completionSummary": "Governed and scalable ingestion is implemented, documented, and locally verified across bounded file/provider streaming, secure robots-aware website capture, immutable source refresh, desktop/thin transports, ordered source UX, and cancellation-race cleanup. Controlled representative-scale/private-provider/test-website qualification remains explicitly pending.",
       "deliverables": [
         "Bounded streaming readers and staging adapters for supported structured formats and provider objects",
         "Resumable, idempotent workspace-scoped acquisition tasks with authoritative progress, retry, cancellation, checkpoint retention, and cleanup",
@@ -1863,6 +3130,9 @@
       "id": "governed-scalable-ingestion",
       "number": 4,
       "objective": "Scale supported local, repository, and website acquisition through bounded streaming, resumable tasks, reproducible capture, and conservative crawl governance without exposing infrastructure concepts in the primary UI.",
+      "pendingCriteria": [
+        "controlled-ingestion-scale-is-qualified"
+      ],
       "plan": {
         "assumptions": [
           "No new runtime topology or external dependency is required; existing structured-document, artifact-storage, secure-egress, and host composition seams remain authoritative.",
@@ -1990,7 +3260,7 @@
       ],
       "rollback": "Disable sitemap discovery, resumable multi-source tasks, and new streaming optimizations independently while retaining the existing secure single-page, bounded batch, upload, and explicit localization paths. Preserve captured immutable artifacts and task audit state, clean unfinished checkpoints, and never fall back to ambient fetch, unrestricted browser networking, unbounded memory, ignored robots policy, or unscoped storage.",
       "startedAt": "2026-07-30T04:03:35Z",
-      "status": "implementing",
+      "status": "implemented-pending-qualification",
       "title": "Governed and scalable ingestion",
       "verification": [
         "Run focused streaming reader, checkpoint, idempotency, aggregate-limit, progress, cancellation, resume, and cleanup tests with synthetic bounded inputs.",
@@ -2057,8 +3327,14 @@
         }
       ],
       "allowPendingQualification": true,
-      "completedAt": null,
-      "completedChunks": [],
+      "completedAt": "2026-07-30T06:29:42Z",
+      "completedChunks": [
+        "advanced-capability-contracts-and-structured-processing",
+        "semantic-curation-and-mixing",
+        "verified-synthetic-generation-and-review",
+        "plain-language-advanced-presets"
+      ],
+      "completionSummary": "Advanced preparation and synthetic-data quality is implemented, documented, packaged, and locally verified end to end. All local criteria passed; the approved representative hardware and accessibility qualification remains explicitly pending.",
       "deliverables": [
         "Explicit runtime capability contracts and readiness checks for OCR, layout extraction, semantic embeddings, critic models, and hard-negative mining",
         "Token, sentence, section, table, semantic, OCR, and layout-aware processing with source-span lineage and document quality metrics",
@@ -2083,11 +3359,130 @@
       "id": "advanced-preparation-and-synthetic-quality",
       "number": 5,
       "objective": "Add optional structure-aware document processing, semantic curation, and verified synthetic-data generation through explicit runtime capabilities while keeping the ordinary workflow simple and preserving human approval.",
-      "plan": null,
-      "research": [],
+      "pendingCriteria": [
+        "controlled-advanced-capabilities-are-qualified"
+      ],
+      "plan": {
+        "assumptions": [
+          "The existing managed Python worker remains the only runtime topology and all advanced processing stays local.",
+          "No new package is needed: deterministic local algorithms cover structure and semantic evidence, while OCR remains explicitly unavailable until a separately governed provider is qualified.",
+          "Standard remains the default and produces the existing request semantics when advanced configuration is absent.",
+          "Controlled representative-hardware, screen-reader, reduced-motion, and non-technical usability evidence may remain pending under the increment's approved qualification allowance."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "advanced-content-processing-preserves-structure-and-lineage",
+              "security-model-assisted-boundaries-reviewed"
+            ],
+            "id": "advanced-capability-contracts-and-structured-processing",
+            "outcome": "Opt-in token, sentence, section, table, semantic, and layout-aware processing records bounded source-span lineage and extraction quality, while unavailable OCR reports an explicit disabled readiness state without fabricated text.",
+            "title": "Capability contracts and structure-aware processing"
+          },
+          {
+            "criteriaIds": [
+              "semantic-curation-improves-measured-quality",
+              "security-model-assisted-boundaries-reviewed"
+            ],
+            "id": "semantic-curation-and-mixing",
+            "outcome": "Deterministic recorded embeddings, thresholds, source caps, balancing, coverage, and hard-negative recommendations improve synthetic reference data without cross-split leakage.",
+            "title": "Semantic curation and mixing"
+          },
+          {
+            "criteriaIds": [
+              "synthetic-examples-are-validated-before-admission",
+              "security-model-assisted-boundaries-reviewed"
+            ],
+            "id": "verified-synthetic-generation-and-review",
+            "outcome": "Bounded multi-candidate generation records citations and sends schema, grounding, critic, duplicate, safety, or diversity failures to the existing quarantine and human-review boundary before splitting.",
+            "title": "Verified synthetic generation and review"
+          },
+          {
+            "criteriaIds": [
+              "advanced-options-do-not-complicate-the-default-path",
+              "security-model-assisted-boundaries-reviewed",
+              "controlled-advanced-capabilities-are-qualified"
+            ],
+            "id": "plain-language-advanced-presets",
+            "outcome": "Desktop and thin-client users retain the concise Standard path and can opt into Better document understanding or Generate examples with readiness, effort, review, cancel, retry, and advanced details kept clear.",
+            "title": "Plain-language advanced presets"
+          }
+        ],
+        "completionTests": [
+          "Run the focused complete preparation worker and UI suites after all chunks are implemented.",
+          "Run npm run security:dependencies only if dependency manifests, lockfiles, or runtime dependency inputs change.",
+          "Run npm run docs:check, npm run architecture:check, npm run agent-support:check, npm run build:server, npm run build:thin-client, npm run package, and npm test once for final increment qualification.",
+          "Validate the roadmap state and record controlled hardware/accessibility qualification as pending unless representative evidence is available."
+        ],
+        "documentation": [
+          "Runtime worker and dataset-preparation READMEs",
+          "Data management architecture and context pack",
+          "Data management threat model and persistence/operations guidance",
+          "Approved roadmap and concise generated implementation report"
+        ],
+        "fingerprint": "f0a04606361d1135ba508a22668f868912b8fb9fd16024d76675399362d15ff8",
+        "focusedTests": [
+          "Worker contract and structure tests for every enabled strategy, exact bounded span or region lineage, quality metrics, unsupported OCR, malformed files, and resource ceilings.",
+          "Worker semantic tests for deterministic hashed embeddings, near duplicates, coverage, balancing, source caps, hard-negative recommendations, and group-safe split leakage prevention.",
+          "Worker generation tests for multiple candidates, strict task schemas, grounding, citations, independent critic decisions, duplication, diversity, quarantine, review-required denial, cancellation-safe progress, and sanitized diagnostics.",
+          "Desktop and thin-client request/UI tests for all three presets, Standard backward compatibility, readiness and effort copy, Advanced settings disclosure, disabled controls during progress, cancel/retry, keyboard semantics, and no obsolete page-level notifications."
+        ],
+        "recordedAt": "2026-07-30T05:41:17Z",
+        "rollback": "Disable or remove the additive advanced profiles and presets while retaining the unchanged Standard request shape, baseline bounded parser, quality policy, deterministic group-safe splits, review flow, and immutable advanced-derived lineage. Never reuse an unverified generated row or silently substitute an unavailable capability.",
+        "steps": [
+          "Define portable advanced-profile, capability-readiness, lineage, and aggregate-evidence contracts, then add bounded structure-aware processing in the managed worker.",
+          "Add deterministic semantic duplicate, coverage, balancing, source-cap, and hard-negative evidence before split creation.",
+          "Add bounded multi-candidate generation with source citations and independent deterministic admission checks that route rejected candidates to quarantine.",
+          "Expose Standard, Better document understanding, and Generate examples in both ordered workflows, document the behavior and security boundary, then run completion qualification once."
+        ],
+        "summary": "Deliver advanced dataset preparation as four additive, reviewable chunks inside the existing worker and ordered workflows, preserving Standard defaults and failing closed whenever an opted-in capability cannot prove readiness or candidate quality."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-30T05:40:25Z",
+          "risks": [
+            "Security impact remains relevant: untrusted documents, model outputs, prompts, OCR text, embeddings, citations, and quarantine rows cross the local worker and persisted-artifact boundary.",
+            "Unbounded structure extraction or semantic comparison could exhaust CPU or memory; every advanced mode needs hard input, span, candidate, comparison, and report limits.",
+            "Generated text can be unsupported, duplicated, malformed, or unsafe; candidate admission must fail closed and precede split creation.",
+            "Unavailable optional capabilities must produce explicit readiness and review evidence without silent fallback, fabricated text, or raw content in diagnostics.",
+            "The default workflow must remain unchanged unless a user explicitly selects an advanced preset, and advanced lineage must remain reproducible from recorded algorithms, versions, and thresholds."
+          ],
+          "sources": [
+            {
+              "title": "Dataset preparation runtime contracts",
+              "url": "modules/contracts/runtime/dataset-preparation.ts"
+            },
+            {
+              "title": "Managed Python worker preparation pipeline",
+              "url": "modules/adapters/runtime/python/worker/tasks/prepare_training_dataset.py"
+            },
+            {
+              "title": "Managed Python worker dependencies and behavior",
+              "url": "modules/adapters/runtime/python/worker/README.md"
+            },
+            {
+              "title": "Data management architecture",
+              "url": "docs/architecture/data-management.md"
+            },
+            {
+              "title": "Data management threat model",
+              "url": "docs/security/data-management-threat-model.md"
+            },
+            {
+              "title": "Desktop ordered preparation workflow",
+              "url": "apps/desktop/src/renderer/features/dataset-preparation/components/DatasetPreparationFeature.tsx"
+            },
+            {
+              "title": "Thin-client ordered preparation workflow",
+              "url": "apps/thin-client/src/features/dataset-preparation/components/DatasetPreparationFeature.tsx"
+            }
+          ],
+          "summary": "The current preparation contract and managed Python worker already provide bounded document normalization, deterministic splitting, local model generation, reversible quarantine, and ordered desktop/thin-client workflows. Increment 5 can remain within that topology by adding additive advanced-profile contracts, lineage-aware local processing, deterministic semantic quality evidence, fail-closed candidate verification, and simple opt-in presets. No new dependency is required; OCR and richer layout/model capabilities must report explicit readiness and never fabricate output when their declared provider is unavailable."
+        }
+      ],
       "rollback": "Disable each optional capability profile and its UI preset while retaining the baseline parsers, deterministic splits, curation policies, versioning, and review flow. Preserve already approved immutable versions and mark advanced-derived versions with their exact capability lineage; never silently reinterpret them, reuse unverified generated rows, expose protected model data, or install an unqualified dependency as a fallback.",
-      "startedAt": null,
-      "status": "pending",
+      "startedAt": "2026-07-30T05:37:37Z",
+      "status": "implemented-pending-qualification",
       "title": "Advanced preparation and synthetic-data quality",
       "verification": [
         "Run focused parser, OCR, layout, table, chunking, span-lineage, quality-score, and malformed or oversized document tests with synthetic fixtures.",
@@ -2120,6 +3515,268 @@
           "title": "Advanced capability experience"
         }
       ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "The workflow classifies or asks the user to confirm whether selected inputs are one ready dataset, multiple existing datasets to combine, source material from which to create examples, or an unsupported ambiguous mixture before Step 3; combining is preselected for multiple compatible datasets, a single ready dataset is not rewritten or copied merely to pass through preparation, and any lineage or version record created without transformation is clearly distinguished from duplicated dataset content.",
+          "id": "input-intent-precedes-preparation",
+          "qualification": "local"
+        },
+        {
+          "description": "Check data derives its labels, checks, explanations, counts, unavailable states, and corrective actions from the exact selected training task and source kinds; it never claims pixel, OCR, face, personal-data, credential, geometry, schema, relationship, or model-assisted inspection that did not run.",
+          "id": "exact-task-checks-are-honest",
+          "qualification": "local"
+        },
+        {
+          "description": "Step 3 offers only meaningful methods and does not pad every task to three choices. Where textual source division is needed, a simple fixed-size method may expose size and overlap, a topic-aware semantic method is the default when its declared capability is ready, and a more sophisticated structure-aware method appears only for compatible documents; chunking and example generation remain separate actions. Advanced settings expose only controls consumed by the selected method, advanced lineage cannot disable required boundaries, generation-only controls are absent when generation is inactive, and switching methods clears or restores scoped compatible state without stale request fields.",
+          "id": "adaptive-settings-are-compatible",
+          "qualification": "local"
+        },
+        {
+          "description": "Instruction, classification, extraction, embedding, reranking, diffusion, image classification, detection, and segmentation examples receive their required bounded schema, relationship, label, balance, image, caption, box, mask, duplicate, source-association, and split checks before admission, with unsupported visual inspection reported honestly.",
+          "id": "task-quality-rules-protect-examples",
+          "qualification": "local"
+        },
+        {
+          "description": "Contract, application, and runtime validation fail closed on incompatible or stale input-intent, task, source, method, generation, and Advanced-setting combinations; inactive values are omitted rather than ignored, legacy saved recipes migrate deterministically or stop with a corrective action, and source lineage remains exact.",
+          "id": "runtime-rejects-contradictory-recipes",
+          "qualification": "local"
+        },
+        {
+          "description": "Synthetic denial tests prove malformed annotations, forged source associations, unsafe metadata, incompatible dataset combinations, unavailable visual or semantic inspection, oversized work, and contradictory recipes cannot bypass review, silently duplicate or reinterpret data, or expose source content, prompts, model output, identifiers, local paths, or raw errors through diagnostics or notifications.",
+          "id": "security-adaptive-data-boundaries-reviewed",
+          "qualification": "local"
+        },
+        {
+          "description": "Representative non-technical users can distinguish combining existing datasets from creating a dataset from source material, understand when no preparation copy is needed, select each supported task, understand what is checked, choose from only meaningful methods, and identify unavailable capabilities without opening irrelevant settings or needing unexplained technical terminology; keyboard, screen-reader, zoom, and reduced-motion behavior also pass.",
+          "id": "exact-task-usability-is-qualified",
+          "qualification": "controlled-environment"
+        }
+      ],
+      "allowPendingQualification": true,
+      "completedAt": "2026-07-30T12:15:11Z",
+      "completedChunks": [
+        "adaptive-contract-and-migration",
+        "runtime-task-quality-boundary",
+        "adaptive-ordered-workflows",
+        "documentation-and-qualification"
+      ],
+      "completionSummary": "Exact-task adaptive dataset preparation is implemented end to end across contracts, application and worker validation, desktop and thin-client workflows, notification-backed long-running model downloads, documentation, security controls, and production gates. Local evidence passed; only the explicitly external usability and assistive-technology qualification remains pending.",
+      "deliverables": [
+        "Input-intent, exact-task preparation, and quality capability contracts",
+        "Task-specific bounded validators and review evidence",
+        "Compatibility-safe request builder and runtime denial",
+        "Adaptive desktop and supported thin-client ordered workflow",
+        "No-unnecessary-copy dataset registration and multi-dataset combination behavior",
+        "Saved-recipe migration and reproduction coverage",
+        "Canonical architecture, security, context, and UI documentation",
+        "Focused, integration, build, package, and usability evidence"
+      ],
+      "dependsOn": [
+        "quality-curation-and-review",
+        "advanced-preparation-and-synthetic-quality"
+      ],
+      "excluded": [
+        "Pixel-level face, personal-data, credential, unsafe-content, OCR, or general vision understanding without a separately reviewed local capability",
+        "Automatic bounding-box or segmentation-mask generation",
+        "New training task types or model-training algorithm changes",
+        "A free-form expert Custom mode that permits unsupported cross-product combinations",
+        "Artificially providing three Step 3 methods when a task and source combination supports fewer"
+      ],
+      "id": "exact-task-adaptive-quality-and-preparation",
+      "number": 6,
+      "objective": "Make the ordered Data Management workflow truthful and simple for every supported training task by establishing input intent before preparation, then adapting checks, source transformations, example creation, Advanced settings, runtime validation, and review evidence to the exact task, source kind, and selected method.",
+      "pendingCriteria": [
+        "exact-task-usability-is-qualified"
+      ],
+      "plan": {
+        "assumptions": [
+          "A structured source represents an existing example dataset; one selected structured source uses validate-and-split, while multiple compatible structured sources use combine-validate-and-split.",
+          "Document inputs are source material for supported text tasks; direct image inputs are source material for supported image tasks, while structured image manifests are existing datasets.",
+          "Mixed structured and source-material selections are ambiguous and fail with a corrective action in this increment rather than silently merging unlike roles.",
+          "Topic-aware division is the default only when its declared local capability is ready; otherwise the best ready compatible method is selected.",
+          "A ready dataset is not presented as a Step 3 style. Validation, curation, splitting, and immutable version materialization remain explicit derived work rather than an unexplained near-copy.",
+          "Pixel-level image inspection, OCR, automatic box generation, and automatic mask generation remain outside the approved capability boundary."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "input-intent-precedes-preparation",
+              "adaptive-settings-are-compatible",
+              "runtime-rejects-contradictory-recipes",
+              "security-adaptive-data-boundaries-reviewed"
+            ],
+            "id": "adaptive-contract-and-migration",
+            "outcome": "One portable contract classifies ready datasets, dataset combinations, source material, and ambiguous mixtures; returns only meaningful methods and compatible controls; creates a normalized execution plan; and migrates known legacy presets without retaining inactive fields.",
+            "title": "Adaptive intent and method contract"
+          },
+          {
+            "criteriaIds": [
+              "input-intent-precedes-preparation",
+              "exact-task-checks-are-honest",
+              "task-quality-rules-protect-examples",
+              "runtime-rejects-contradictory-recipes",
+              "security-adaptive-data-boundaries-reviewed"
+            ],
+            "id": "runtime-task-quality-boundary",
+            "outcome": "Application and worker boundaries validate actual staged source kinds against the plan, require only method-active recipe sections, reject contradictory recipes and malformed task rows, preserve exact source association, and report inspection limits without exposing protected data.",
+            "title": "Runtime and task-quality boundary"
+          },
+          {
+            "criteriaIds": [
+              "input-intent-precedes-preparation",
+              "exact-task-checks-are-honest",
+              "adaptive-settings-are-compatible",
+              "exact-task-usability-is-qualified"
+            ],
+            "id": "adaptive-ordered-workflows",
+            "outcome": "Both supported clients explain inferred input intent, skip a preparation-style choice for a single ready dataset, preselect combination for multiple datasets, show zero to three task/source methods, default to topic-aware preparation when ready, and expose only compatible Advanced settings with accessible state transitions.",
+            "title": "Adaptive ordered desktop and thin-client workflows"
+          },
+          {
+            "criteriaIds": [
+              "input-intent-precedes-preparation",
+              "exact-task-checks-are-honest",
+              "adaptive-settings-are-compatible",
+              "task-quality-rules-protect-examples",
+              "runtime-rejects-contradictory-recipes",
+              "security-adaptive-data-boundaries-reviewed",
+              "exact-task-usability-is-qualified"
+            ],
+            "id": "documentation-and-qualification",
+            "outcome": "Canonical guidance and tests describe the adaptive behavior, explicit visual-inspection limits, migration and rollback; all focused checks and applicable repository completion gates are recorded, with controlled usability evidence left pending only when it cannot be performed locally.",
+            "title": "Documentation, security evidence, and qualification"
+          }
+        ],
+        "completionTests": [
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check",
+          "npm run build:server",
+          "npm run build:thin-client",
+          "npm run package",
+          "npm test",
+          "git diff --check"
+        ],
+        "documentation": [
+          "docs/architecture/data-management.md",
+          "docs/security/data-management-threat-model.md",
+          "docs/context/packs/data-management.pack.md",
+          "modules/contracts/runtime/README.md",
+          "modules/adapters/runtime/python/worker/README.md",
+          "modules/ui/shared/data-management/README.md"
+        ],
+        "fingerprint": "a69f1be99bc1543d71c80bcd2177134009c40edeecb111a60e45a5ebb6b7f2b5",
+        "focusedTests": [
+          "Runtime contract tests covering every task, source-kind combination, input intent, method count/default, active control set, unavailable state, and legacy normalization denial.",
+          "Application use-case tests for staged-source plan mismatch, inactive-field rejection, no-op intent explanation, multiple-dataset combination, missing capability, malformed request, and sanitized failure.",
+          "Managed Python worker tests for fixed, semantic, and structure-aware compatibility; inactive field denial; task schemas and relationships; labels; bounded boxes and masks; forged lineage; unsupported visual inspection; resource bounds; and diagnostic non-disclosure.",
+          "Desktop request-builder, state migration, and component tests plus thin-client interaction tests for exact-task selection, inferred intent, variable method counts, semantic default, adaptive Advanced settings, switching, and accessibility semantics."
+        ],
+        "recordedAt": "2026-07-30T11:02:46Z",
+        "rollback": "Remove the adaptive plan and clients together, preserve approved dataset versions and source artifacts, accept only losslessly normalizable saved recipes, and disable uncertain methods rather than returning to ignored settings, permissive inference, or weaker validation.",
+        "steps": [
+          "Add shared input-intent, task/source method, active-control, readiness, and legacy-normalization contracts with a focused compatibility matrix.",
+          "Validate the adaptive plan against staged sources in the application use case and managed worker; add bounded task-specific row, relationship, label, box, mask, lineage, and diagnostic denial checks.",
+          "Drive desktop and thin-client Step 2, Step 3, request serialization, Advanced settings, saved setup restoration, and unavailable states from the same adaptive authority.",
+          "Update canonical architecture, threat model, runtime/UI READMEs, and context guidance; run all focused checks, then the completion gates once."
+        ],
+        "summary": "Implement Increment 6 as four coherent chunks: a contract-owned adaptive intent/method plan with legacy normalization; fail-closed application and worker validation with task-specific quality checks; desktop and thin-client adaptive workflows driven by the shared plan; and documentation plus completion qualification. New requests omit inactive controls, while known legacy presets migrate deterministically and unsupported combinations stop with a corrective action."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-30T11:01:03Z",
+          "risks": [
+            "Security impact is relevant: source rows, documents, images, annotations, task recipes, source associations, quality evidence, and immutable version lineage cross UI, application, runtime, storage, and review boundaries.",
+            "A stale or contradictory recipe could silently ignore visible settings, reinterpret an existing dataset as source material, weaken mandatory review, or create output that cannot be reproduced.",
+            "Malformed labels, relationships, boxes, masks, or forged source associations could enter training outputs unless task-specific validators fail closed before split creation.",
+            "Capability inference must not claim pixel, OCR, face, credential, or personal-data inspection of images; deterministic semantic comparison is not equivalent to learned visual or language understanding.",
+            "Input intent cannot be inferred from extension alone in every structured file, so ambiguous or mixed selections need an explicit corrective state rather than a permissive fallback.",
+            "Saved recipe migration must normalize known legacy presets deterministically and reject unsupported combinations without restoring ignored controls.",
+            "Public errors and review evidence must remain aggregate and sanitized; source content, prompts, model output, identifiers, paths, and raw exceptions stay excluded.",
+            "Rollback must preserve approved immutable versions and source artifacts, disable unproven adaptive methods, and never re-enable contradictory legacy recipes."
+          ],
+          "sources": [
+            {
+              "title": "Data Management architecture",
+              "url": "docs/architecture/data-management.md"
+            },
+            {
+              "title": "Data Management threat model",
+              "url": "docs/security/data-management-threat-model.md"
+            },
+            {
+              "title": "Runtime dataset preparation contracts",
+              "url": "modules/contracts/runtime/dataset-preparation.ts"
+            },
+            {
+              "title": "Advanced preparation contracts",
+              "url": "modules/contracts/runtime/dataset-preparation-advanced.ts"
+            },
+            {
+              "title": "Preparation application boundary",
+              "url": "modules/application/use-cases/prepare-training-dataset-from-artifacts.use-case.ts"
+            },
+            {
+              "title": "Managed preparation worker",
+              "url": "modules/adapters/runtime/python/worker/tasks/prepare_training_dataset.py"
+            },
+            {
+              "title": "Managed chunking worker",
+              "url": "modules/adapters/runtime/python/worker/tasks/markdown_chunking.py"
+            },
+            {
+              "title": "Desktop ordered workflow",
+              "url": "apps/desktop/src/renderer/features/dataset-preparation/components/DatasetPreparationFeature.tsx"
+            },
+            {
+              "title": "Thin-client ordered workflow",
+              "url": "apps/thin-client/src/features/dataset-preparation/components/DatasetPreparationFeature.tsx"
+            }
+          ],
+          "summary": "The approved architecture can support Increment 6 without a new host or persistence topology. The current shared source capability registry knows structured, document, and image formats, but it does not model input intent or method compatibility. Desktop and thin-client selectors still use three global presets; the desktop request builder always serializes character chunking and generation parameters, the thin client is hard-coded to instruction tuning, and the worker accepts combinations whose controls are ignored or change meaning. Advanced document processing ignores character overlap, requires preserved document boundaries, and uses character size only as an internal ceiling. Structured and image inputs bypass document chunking but can still carry document-centric advanced settings. The implementation should therefore add one contract-owned adaptive plan, serialize only active method fields, validate the same plan in application and worker boundaries, preserve exact source association, and render task/source-specific choices from that authority."
+        }
+      ],
+      "rollback": "Remove the additive intent and adaptive capability mapping plus task-specific validators together, migrate saved recipes back only when lossless, preserve unchanged source datasets and approved immutable versions, and disable methods whose compatibility cannot be proven rather than restoring misleading choices, ignored settings, or unnecessary content copies.",
+      "startedAt": "2026-07-30T11:00:28Z",
+      "status": "implemented-pending-qualification",
+      "title": "Exact-task adaptive quality and preparation",
+      "verification": [
+        "Run focused contract and compatibility-matrix tests for a single ready dataset, multiple compatible datasets, source material, ambiguous or mixed inputs, every supported task, every available method count, and every Advanced-setting visibility or denial path.",
+        "Run focused persistence and lineage tests proving an unchanged single dataset is referenced or registered without an unnecessary content copy and that combined datasets retain exact per-example source associations.",
+        "Run focused Python quality, image annotation, mask, relationship, source-lineage, resource-bound, contradiction, and diagnostic non-disclosure tests.",
+        "Run desktop and supported thin-client interaction tests for inferred intent, confirmation when ambiguous, zero-, one-, two-, and three-method Step 3 states, semantic-capability defaulting, task and method switching, scoped state restoration, saved-recipe migration, review evidence, accessibility semantics, and unavailable capability messaging.",
+        "Run npm run docs:check, npm run architecture:check, applicable host builds and packaging, and npm test once after the full increment is implemented.",
+        "Qualify representative non-technical, keyboard, screen-reader, zoom/reflow, reduced-motion, and supported-hardware scenarios in a controlled environment."
+      ],
+      "workPackages": [
+        {
+          "id": "input-intent-and-capability-authority",
+          "outcome": "One shared contract distinguishes a ready dataset, multiple datasets to combine, source material from which examples must be created, and ambiguous or mixed inputs; it defines only the checks, preparation methods, compatible refinements, defaults, unavailable capabilities, and review evidence valid for each exact task and source combination.",
+          "title": "Input intent, task, source, and method authority"
+        },
+        {
+          "id": "task-specific-quality-enforcement",
+          "outcome": "Text relationships, labels, schemas, ranking pairs, images, captions, boxes, and masks receive bounded task-relevant checks while common source association, policy, duplication, and split controls remain mandatory.",
+          "title": "Task-specific quality enforcement"
+        },
+        {
+          "id": "compatible-recipe-and-runtime-boundary",
+          "outcome": "Requests serialize only the inferred or confirmed input intent and active transformation settings, keep chunking separate from example generation, reject impossible combinations, preserve exact source lineage, migrate saved recipes safely, and never silently ignore, override, or duplicate selected data.",
+          "title": "Compatible recipe and runtime boundary"
+        },
+        {
+          "id": "adaptive-ordered-user-experience",
+          "outcome": "Desktop and supported thin-client paths preselect and explain whether data will be combined or created from source material, skip unnecessary transformation for a single ready dataset, and show exact-task Step 2, Step 3, and Advanced content with one, two, or three methods only when those methods are meaningful.",
+          "title": "Adaptive ordered user experience"
+        },
+        {
+          "id": "documentation-security-and-qualification",
+          "outcome": "Canonical guidance, the threat model, context packs, focused denial evidence, full repository gates, and representative non-technical usability evidence describe input intent, adaptive methods, the no-unnecessary-copy behavior, and explicit capability limits.",
+          "title": "Documentation, security, and qualification"
+        }
+      ]
     }
   ],
   "name": "Data Management Quality and Usability",
@@ -2131,12 +3788,12 @@
   },
   "resumeAudits": [],
   "roadmapApproval": {
-    "approvedAt": "2026-07-30T01:03:06Z",
-    "fingerprint": "21f132d4c8d0ca85f5e8d31d4e11c6696b657a4be4b98a0359205c0f3f52d65e",
-    "note": "User explicitly approved the five-increment Option A roadmap and authorized ordered implementation through a production-ready end-to-end solution."
+    "approvedAt": "2026-07-30T10:58:25Z",
+    "fingerprint": "9dc97811e7da01bd0002c8c587a03d30be5f9918433e7619b66b92c40a726358",
+    "note": "User explicitly approved the revised roadmap and requested production-ready end-to-end implementation of Increment 6."
   },
   "schemaVersion": 1,
   "slug": "data-management-quality-and-usability",
-  "status": "executing",
-  "updatedAt": "2026-07-30T04:05:43Z"
+  "status": "implementation-complete-qualification-pending",
+  "updatedAt": "2026-07-30T14:14:33Z"
 }

@@ -13,7 +13,6 @@ export interface NotificationMessageInventoryEntry {
 export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInventoryEntry[] = [
   ...[
     "apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
-    "apps/desktop/src/renderer/features/artifact-upload/components/ArtifactHuggingFaceForm.tsx",
     "apps/desktop/src/renderer/features/artifact-upload/components/ArtifactScrapeForm.tsx",
     "apps/desktop/src/renderer/features/artifact-upload/components/ArtifactUploadForm.tsx",
     "apps/desktop/src/renderer/features/asset-authoring/components/AssetAuthoringFeature.tsx",
@@ -24,7 +23,6 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
     "apps/desktop/src/renderer/features/settings/components/SettingsStatusMessage.tsx",
     "apps/desktop/src/renderer/features/user-library/components/UserLibraryFeature.tsx",
     "apps/thin-client/src/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
-    "apps/thin-client/src/features/artifact-upload/components/ArtifactHuggingFaceForm.tsx",
     "apps/thin-client/src/features/artifact-upload/components/ArtifactScrapeForm.tsx",
     "apps/thin-client/src/features/artifact-upload/components/ArtifactUploadForm.tsx",
     "apps/thin-client/src/features/asset-authoring/components/AssetAuthoringFeature.tsx",
@@ -72,6 +70,7 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
     "modules/ui/shared/asset-library/AssetMutationConfirmationDialog.tsx",
     "modules/ui/shared/foundation-assets/FoundationAssetPreview.tsx",
     "modules/ui/shared/foundation-assets/FoundationAssetSurface.tsx",
+    "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx",
     "modules/ui/shared/system-builder/SystemBuildTestModal.tsx",
     "modules/ui/shared/system-builder/SystemComposerClickEditor.tsx",
     "modules/ui/shared/system-builder/SystemComposerInspector.tsx",

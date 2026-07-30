@@ -12,18 +12,34 @@ import type { DatasetVersionReproduction } from "../../../../../../../modules/co
 import { createWorkspaceId } from "../../../../../../../modules/contracts/workspace";
 import type {
   DatasetPreparationTaskType,
+  DatasetPreparationAdvancedReport,
+  DatasetPreparationAdvancedPreset,
+  DatasetPreparationAdaptiveResolution,
+  DatasetPreparationExecutionPlan,
+  DatasetPreparationConstrainedJsonResolution,
+  DatasetPreparationGenerationCapacitySnapshot,
+  DatasetPreparationMethodId,
   DatasetPreparationTextInputMode,
   DatasetQualityPreset,
   DatasetQualityReport,
+  DatasetPreparationVisualOutputShape,
 } from "../../../../../../../modules/contracts/runtime";
 import {
   DATASET_PREPARATION_TEXT_GENERATION_MODEL_PRESETS,
+  createDatasetPreparationExecutionPlan,
   createDefaultDatasetPreparationTaskRecipe,
+  createDefaultDatasetPreparationVisualOutputShape,
+  compileDatasetPreparationVisualOutputShape,
   isDatasetPreparationTaskType,
   resolveDatasetPreparationTaskProfileDefinition,
+  resolveDatasetPreparationAdaptivePlan,
+  resolveDatasetPreparationMethodOption,
+  resolveDatasetPreparationSourceCapability,
   resolveDefaultDatasetPreparationPromptTemplate,
   resolveDefaultDatasetPreparationTextGenerationParameterDefaults,
   resolveDefaultDatasetPreparationTextGenerationModel,
+  resolveDatasetPreparationConstrainedJson,
+  resolveDatasetPreparationGenerationModelEstimatedBytes,
 } from "../../../../../../../modules/contracts/runtime";
 import {
   createDesktopApplicationSettingsClient,
@@ -37,7 +53,10 @@ import type { DesktopDatasetPreparationClient } from "../api/desktopDatasetPrepa
 import { buildDatasetPreparationRequest } from "./datasetPreparationRequestBuilder";
 import { validateAndParseDatasetPreparationInputs } from "./datasetPreparationRequestValidation";
 import { useDatasetPreparationClient } from "./useDatasetPreparationClient";
-import { resolveUserFacingDatasetPreparationErrorMessage } from "./datasetPreparationTransport";
+import {
+  isTransientDatasetPreparationTransportError,
+  resolveUserFacingDatasetPreparationErrorMessage,
+} from "./datasetPreparationTransport";
 import {
   createDesktopModelsClient,
   type DesktopModelsClient,
@@ -62,12 +81,19 @@ interface DatasetPreparationResultSummary {
   validationRows: number;
   testRows: number;
   warnings: string[];
-  datasetVersion?: { versionId: string; datasetId: string; versionDigest: string; createdAt: string };
+  datasetVersion?: {
+    versionId: string;
+    datasetId: string;
+    versionDigest: string;
+    createdAt: string;
+  };
 }
 
 interface DatasetPreparationPageState {
   selectedArtifactStorageFilter: DatasetPreparationArtifactStorageFilter;
   selectedArtifactIds: string[];
+  advancedPreset: DatasetPreparationAdvancedPreset;
+  preparationMethodId?: DatasetPreparationMethodId;
   taskType: DatasetPreparationTaskType;
   labelSet: string;
   multiLabel: boolean;
@@ -79,12 +105,18 @@ interface DatasetPreparationPageState {
   segmentationMaskFormat: "png" | "coco-rle" | "polygon";
   textInputMode: DatasetPreparationTextInputMode;
   textGenerationPrompt: string;
+  visualOutputShape: DatasetPreparationVisualOutputShape;
+  constrainedDecodingPreference?: boolean;
   unsupportedDocumentPolicy: "" | "fail" | "skip";
   normalizationMode: "" | "best-effort" | "strict";
   chunkSize: string;
   chunkOverlap: string;
   preserveDocumentBoundaries: boolean;
   maxChunkCount: string;
+  maxTokensPerChunk: string;
+  topicBoundarySensitivity: string;
+  maxSourceSpans: string;
+  similarityThreshold: string;
   modelId: string;
   modelInferenceMode: ModelDefaultInferenceMode;
   modelDevice: "" | "auto" | "cpu" | "cuda";
@@ -110,11 +142,13 @@ interface DatasetPreparationPageState {
   qualityPreset: DatasetQualityPreset;
   requireLicenseMetadata: boolean;
   requireConsentMetadata: boolean;
+  includeSourceAttribution: boolean;
   status: DatasetPreparationStatus;
   resultSummary?: DatasetPreparationResultSummary;
   qualityReview?: {
     requestId: string;
     report: DatasetQualityReport;
+    advancedReport?: DatasetPreparationAdvancedReport;
   };
   activeTaskRequestId?: string;
   activeTaskType?: "dataset-preparation";
@@ -151,6 +185,10 @@ export interface UseDatasetPreparationFeatureResult {
   generatedArtifacts: DatasetPreparationSourceArtifact[];
   selectedArtifactStorageFilter: DatasetPreparationArtifactStorageFilter;
   selectedArtifactIds: string[];
+  advancedPreset: DatasetPreparationAdvancedPreset;
+  preparationResolution: DatasetPreparationAdaptiveResolution;
+  preparationPlan?: DatasetPreparationExecutionPlan;
+  preparationMethodId?: DatasetPreparationMethodId;
   taskType: DatasetPreparationTaskType;
   labelSet: string;
   multiLabel: boolean;
@@ -162,12 +200,20 @@ export interface UseDatasetPreparationFeatureResult {
   segmentationMaskFormat: "png" | "coco-rle" | "polygon";
   textInputMode: DatasetPreparationTextInputMode;
   textGenerationPrompt: string;
+  visualOutputShape: DatasetPreparationVisualOutputShape;
+  constrainedJsonResolution: DatasetPreparationConstrainedJsonResolution;
+  constrainedDecodingEnabled: boolean;
+  constrainedDecodingAvailable: boolean;
   unsupportedDocumentPolicy: "" | "fail" | "skip";
   normalizationMode: "" | "best-effort" | "strict";
   chunkSize: string;
   chunkOverlap: string;
   preserveDocumentBoundaries: boolean;
   maxChunkCount: string;
+  maxTokensPerChunk: string;
+  topicBoundarySensitivity: string;
+  maxSourceSpans: string;
+  similarityThreshold: string;
   modelId: string;
   modelInferenceMode: ModelDefaultInferenceMode;
   modelDevice: "" | "auto" | "cpu" | "cuda";
@@ -193,12 +239,14 @@ export interface UseDatasetPreparationFeatureResult {
   qualityPreset: DatasetQualityPreset;
   requireLicenseMetadata: boolean;
   requireConsentMetadata: boolean;
+  includeSourceAttribution: boolean;
   defaultHuggingFaceNamespace?: string;
   status: DatasetPreparationStatus;
   resultSummary?: DatasetPreparationResultSummary;
   qualityReview?: {
     requestId: string;
     report: DatasetQualityReport;
+    advancedReport?: DatasetPreparationAdvancedReport;
   };
   reviewActionInFlight: boolean;
   loadedModelCount: number;
@@ -213,6 +261,8 @@ export interface UseDatasetPreparationFeatureResult {
   selectedSavedTrainingSettingsId: string;
   hasTrainingSettingsChanges: boolean;
   onToggleArtifact: (artifactId: string) => void;
+  setAdvancedPreset: (value: DatasetPreparationAdvancedPreset) => void;
+  setPreparationMethodId: (value: DatasetPreparationMethodId) => void;
   setSelectedArtifactStorageFilter: (
     value: DatasetPreparationArtifactStorageFilter,
   ) => void;
@@ -227,12 +277,18 @@ export interface UseDatasetPreparationFeatureResult {
   setSegmentationMaskFormat: (value: "png" | "coco-rle" | "polygon") => void;
   setTextInputMode: (value: DatasetPreparationTextInputMode) => void;
   setTextGenerationPrompt: (value: string) => void;
+  setVisualOutputShape: (value: DatasetPreparationVisualOutputShape) => void;
+  setConstrainedDecodingPreference: (value: boolean) => void;
   setUnsupportedDocumentPolicy: (value: "" | "fail" | "skip") => void;
   setNormalizationMode: (value: "" | "best-effort" | "strict") => void;
   setChunkSize: (value: string) => void;
   setChunkOverlap: (value: string) => void;
   setPreserveDocumentBoundaries: (value: boolean) => void;
   setMaxChunkCount: (value: string) => void;
+  setMaxTokensPerChunk: (value: string) => void;
+  setTopicBoundarySensitivity: (value: string) => void;
+  setMaxSourceSpans: (value: string) => void;
+  setSimilarityThreshold: (value: string) => void;
   setModelId: (value: string) => void;
   setModelInferenceMode: (value: ModelDefaultInferenceMode) => void;
   setModelDevice: (value: "" | "auto" | "cpu" | "cuda") => void;
@@ -260,6 +316,7 @@ export interface UseDatasetPreparationFeatureResult {
   setQualityPreset: (value: DatasetQualityPreset) => void;
   setRequireLicenseMetadata: (value: boolean) => void;
   setRequireConsentMetadata: (value: boolean) => void;
+  setIncludeSourceAttribution: (value: boolean) => void;
   setSelectedSavedTrainingSettingsId: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   onStopTraining: () => Promise<void>;
@@ -314,6 +371,8 @@ const defaultTaskGenerationModel =
 const defaultDatasetPreparationPageState: DatasetPreparationPageState = {
   selectedArtifactStorageFilter: "all",
   selectedArtifactIds: [],
+  advancedPreset: "standard",
+  preparationMethodId: undefined,
   taskType: "llm-instruction",
   labelSet: "",
   multiLabel: false,
@@ -326,12 +385,19 @@ const defaultDatasetPreparationPageState: DatasetPreparationPageState = {
   textInputMode: "generate",
   textGenerationPrompt:
     resolveDefaultDatasetPreparationPromptTemplate("llm-instruction") ?? "",
+  visualOutputShape:
+    createDefaultDatasetPreparationVisualOutputShape("llm-instruction"),
+  constrainedDecodingPreference: undefined,
   unsupportedDocumentPolicy: "",
   normalizationMode: "",
   chunkSize: "1000",
   chunkOverlap: "200",
   preserveDocumentBoundaries: true,
   maxChunkCount: "",
+  maxTokensPerChunk: "320",
+  topicBoundarySensitivity: "0.22",
+  maxSourceSpans: "10000",
+  similarityThreshold: "0.9",
   modelId: defaultTaskGenerationModel?.modelId ?? "",
   modelInferenceMode: defaultTaskGenerationModel?.inferenceMode ?? "auto",
   modelDevice: defaultTaskGenerationModel?.device ?? "auto",
@@ -358,6 +424,7 @@ const defaultDatasetPreparationPageState: DatasetPreparationPageState = {
   qualityPreset: "recommended",
   requireLicenseMetadata: false,
   requireConsentMetadata: false,
+  includeSourceAttribution: false,
   status: { kind: "idle" },
   resultSummary: undefined,
   qualityReview: undefined,
@@ -475,6 +542,8 @@ function createDefaultTrainingSettingsSnapshot(
     resolveDefaultDatasetPreparationTextGenerationModel(taskType);
   const generationParameters = resolveDefaultGenerationParameterState(taskType);
   return {
+    advancedPreset: "standard",
+    preparationMethodId: undefined,
     taskType,
     labelSet: "",
     multiLabel: false,
@@ -487,6 +556,10 @@ function createDefaultTrainingSettingsSnapshot(
     textInputMode: resolveDefaultTextInputMode(taskType),
     textGenerationPrompt:
       resolveDefaultDatasetPreparationPromptTemplate(taskType) ?? "",
+    visualOutputShape: createDefaultDatasetPreparationVisualOutputShape(
+      taskType,
+    ),
+    constrainedDecodingPreference: undefined,
     unsupportedDocumentPolicy: "",
     normalizationMode: "",
     chunkSize: defaultDatasetPreparationPageState.chunkSize,
@@ -494,6 +567,10 @@ function createDefaultTrainingSettingsSnapshot(
     preserveDocumentBoundaries:
       defaultDatasetPreparationPageState.preserveDocumentBoundaries,
     maxChunkCount: "",
+    maxTokensPerChunk: "320",
+    topicBoundarySensitivity: "0.22",
+    maxSourceSpans: "10000",
+    similarityThreshold: "0.9",
     modelId: taskModelDefault?.modelId ?? "",
     modelInferenceMode: taskModelDefault?.inferenceMode ?? "auto",
     modelDevice: taskModelDefault?.device ?? "auto",
@@ -519,6 +596,7 @@ function createDefaultTrainingSettingsSnapshot(
     qualityPreset: "recommended",
     requireLicenseMetadata: false,
     requireConsentMetadata: false,
+    includeSourceAttribution: false,
   };
 }
 
@@ -526,6 +604,14 @@ function serializeTrainingSettingsSnapshot(
   snapshot: DatasetPreparationTrainingSettingsSnapshot,
 ): string {
   return JSON.stringify(snapshot);
+}
+
+function splitConfiguredLabels(value: string): string[] | undefined {
+  const labels = value
+    .split(",")
+    .map((label) => label.trim())
+    .filter(Boolean);
+  return labels.length > 0 ? labels : undefined;
 }
 
 function resolveDefaultTextInputMode(
@@ -652,6 +738,13 @@ export function useDatasetPreparationFeature(
   const [taskType, setTaskType] = useState<DatasetPreparationTaskType>(
     cachedDatasetPreparationPageState.taskType,
   );
+  const [advancedPreset, setAdvancedPreset] =
+    useState<DatasetPreparationAdvancedPreset>(
+      cachedDatasetPreparationPageState.advancedPreset,
+    );
+  const [requestedPreparationMethodId, setPreparationMethodId] = useState<
+    DatasetPreparationMethodId | undefined
+  >(cachedDatasetPreparationPageState.preparationMethodId);
   const [labelSet, setLabelSet] = useState(
     cachedDatasetPreparationPageState.labelSet,
   );
@@ -682,6 +775,17 @@ export function useDatasetPreparationFeature(
   const [textGenerationPrompt, setTextGenerationPrompt] = useState(
     cachedDatasetPreparationPageState.textGenerationPrompt,
   );
+  const [visualOutputShape, setVisualOutputShape] =
+    useState<DatasetPreparationVisualOutputShape>(
+      cachedDatasetPreparationPageState.visualOutputShape,
+    );
+  const [constrainedDecodingPreference, setConstrainedDecodingPreference] =
+    useState<boolean | undefined>(
+      cachedDatasetPreparationPageState.constrainedDecodingPreference,
+    );
+  const [generationCapacity, setGenerationCapacity] = useState<
+    DatasetPreparationGenerationCapacitySnapshot | undefined
+  >();
   const [unsupportedDocumentPolicy, setUnsupportedDocumentPolicy] = useState<
     "" | "fail" | "skip"
   >(cachedDatasetPreparationPageState.unsupportedDocumentPolicy);
@@ -699,6 +803,18 @@ export function useDatasetPreparationFeature(
   );
   const [maxChunkCount, setMaxChunkCount] = useState(
     cachedDatasetPreparationPageState.maxChunkCount,
+  );
+  const [maxTokensPerChunk, setMaxTokensPerChunk] = useState(
+    cachedDatasetPreparationPageState.maxTokensPerChunk,
+  );
+  const [topicBoundarySensitivity, setTopicBoundarySensitivity] = useState(
+    cachedDatasetPreparationPageState.topicBoundarySensitivity,
+  );
+  const [maxSourceSpans, setMaxSourceSpans] = useState(
+    cachedDatasetPreparationPageState.maxSourceSpans,
+  );
+  const [similarityThreshold, setSimilarityThreshold] = useState(
+    cachedDatasetPreparationPageState.similarityThreshold,
   );
   const [modelId, setModelId] = useState(
     cachedDatasetPreparationPageState.modelId,
@@ -773,6 +889,9 @@ export function useDatasetPreparationFeature(
   const [requireConsentMetadata, setRequireConsentMetadata] = useState(
     cachedDatasetPreparationPageState.requireConsentMetadata,
   );
+  const [includeSourceAttribution, setIncludeSourceAttribution] = useState(
+    cachedDatasetPreparationPageState.includeSourceAttribution,
+  );
   const [status, setStatus] = useState<DatasetPreparationStatus>(
     cachedDatasetPreparationPageState.status,
   );
@@ -780,7 +899,12 @@ export function useDatasetPreparationFeature(
     DatasetPreparationResultSummary | undefined
   >(cachedDatasetPreparationPageState.resultSummary);
   const [qualityReview, setQualityReview] = useState<
-    { requestId: string; report: DatasetQualityReport } | undefined
+    | {
+        requestId: string;
+        report: DatasetQualityReport;
+        advancedReport?: DatasetPreparationAdvancedReport;
+      }
+    | undefined
   >(cachedDatasetPreparationPageState.qualityReview);
   const [defaultHuggingFaceNamespace, setDefaultHuggingFaceNamespace] =
     useState<string | undefined>(undefined);
@@ -828,6 +952,8 @@ export function useDatasetPreparationFeature(
     cachedDatasetPreparationPageState = {
       selectedArtifactStorageFilter,
       selectedArtifactIds,
+      advancedPreset,
+      preparationMethodId: requestedPreparationMethodId,
       taskType,
       labelSet,
       multiLabel,
@@ -839,12 +965,18 @@ export function useDatasetPreparationFeature(
       segmentationMaskFormat,
       textInputMode,
       textGenerationPrompt,
+      visualOutputShape,
+      constrainedDecodingPreference,
       unsupportedDocumentPolicy,
       normalizationMode,
       chunkSize,
       chunkOverlap,
       preserveDocumentBoundaries,
       maxChunkCount,
+      maxTokensPerChunk,
+      topicBoundarySensitivity,
+      maxSourceSpans,
+      similarityThreshold,
       modelId,
       modelInferenceMode,
       modelDevice,
@@ -870,6 +1002,7 @@ export function useDatasetPreparationFeature(
       qualityPreset,
       requireLicenseMetadata,
       requireConsentMetadata,
+      includeSourceAttribution,
       status,
       resultSummary,
       qualityReview,
@@ -880,6 +1013,8 @@ export function useDatasetPreparationFeature(
   }, [
     selectedArtifactStorageFilter,
     selectedArtifactIds,
+    advancedPreset,
+    requestedPreparationMethodId,
     taskType,
     labelSet,
     multiLabel,
@@ -891,12 +1026,18 @@ export function useDatasetPreparationFeature(
     segmentationMaskFormat,
     textInputMode,
     textGenerationPrompt,
+    visualOutputShape,
+    constrainedDecodingPreference,
     unsupportedDocumentPolicy,
     normalizationMode,
     chunkSize,
     chunkOverlap,
     preserveDocumentBoundaries,
     maxChunkCount,
+    maxTokensPerChunk,
+    topicBoundarySensitivity,
+    maxSourceSpans,
+    similarityThreshold,
     modelId,
     modelInferenceMode,
     modelDevice,
@@ -922,6 +1063,7 @@ export function useDatasetPreparationFeature(
     qualityPreset,
     requireLicenseMetadata,
     requireConsentMetadata,
+    includeSourceAttribution,
     status,
     resultSummary,
     qualityReview,
@@ -945,6 +1087,11 @@ export function useDatasetPreparationFeature(
     setTextGenerationPrompt(
       resolveDefaultDatasetPreparationPromptTemplate(taskType) ?? "",
     );
+    setVisualOutputShape(
+      createDefaultDatasetPreparationVisualOutputShape(taskType, {
+        multiLabel,
+      }),
+    );
     setModelId(taskModelDefault?.modelId ?? "");
     setModelInferenceMode(taskModelDefault?.inferenceMode ?? "auto");
     setModelDevice(taskModelDefault?.device ?? "auto");
@@ -955,7 +1102,23 @@ export function useDatasetPreparationFeature(
     setGenerationTemperature(generationParameters.generationTemperature);
     setGenerationTopP(generationParameters.generationTopP);
     setGenerationMaxNewTokens(generationParameters.generationMaxNewTokens);
+    setPreparationMethodId(undefined);
   }, [taskType]);
+
+  useEffect(() => {
+    if (taskType !== "llm-classification") return;
+    setVisualOutputShape((current) => {
+      const priorDefault = createDefaultDatasetPreparationVisualOutputShape(
+        taskType,
+        { multiLabel: !multiLabel },
+      );
+      return JSON.stringify(current) === JSON.stringify(priorDefault)
+        ? createDefaultDatasetPreparationVisualOutputShape(taskType, {
+            multiLabel,
+          })
+        : current;
+    });
+  }, [multiLabel, taskType]);
 
   const setStatusWarningMessage = useCallback((warningMessage: string) => {
     setStatus((current) => {
@@ -1007,8 +1170,10 @@ export function useDatasetPreparationFeature(
       const snapshot = await runtimeStatusClient.readStatus();
       setLoadedModelCount(snapshot.loadedModels.length);
       setRuntimeActiveTaskCount(snapshot.activeTaskCount);
+      setGenerationCapacity(snapshot.generationCapacity);
     } catch {
       // Runtime status is best-effort for model lifecycle controls.
+      setGenerationCapacity(undefined);
     }
   }, [runtimeStatusClient]);
 
@@ -1148,7 +1313,11 @@ export function useDatasetPreparationFeature(
               return;
             }
             clearActiveTask();
-            setQualityReview({ requestId, report });
+            setQualityReview({
+              requestId,
+              report,
+              advancedReport: pollResponse.value.advancedReport,
+            });
             setStatus({ kind: "idle" });
             await refreshRuntimeModelStatus();
             return;
@@ -1176,9 +1345,19 @@ export function useDatasetPreparationFeature(
               datasetVersion: pollResponse.value.datasetVersion,
             });
             await refreshArtifacts();
-            if (!isPollingStillActive(requestId, pollingSessionId)) return;
+            if (
+              !isMountedRef.current ||
+              pollingSessionIdRef.current !== pollingSessionId
+            ) {
+              return;
+            }
             await refreshRuntimeModelStatus();
-            if (!isPollingStillActive(requestId, pollingSessionId)) return;
+            if (
+              !isMountedRef.current ||
+              pollingSessionIdRef.current !== pollingSessionId
+            ) {
+              return;
+            }
             onPrepared?.();
             return;
           }
@@ -1327,9 +1506,114 @@ export function useDatasetPreparationFeature(
     });
   }, [taskRelevantArtifacts]);
 
+  const selectedSourceCapabilities = useMemo(
+    () =>
+      taskRelevantArtifacts
+        .filter((artifact) => selectedArtifactIds.includes(artifact.artifactId))
+        .map((artifact) =>
+          resolveDatasetPreparationSourceCapability({
+            fileName: artifact.label || artifact.storageKey,
+            mediaType: artifact.mediaType,
+          }),
+        )
+        .filter((capability) => capability !== undefined),
+    [selectedArtifactIds, taskRelevantArtifacts],
+  );
+  const preparationResolution = useMemo(
+    () =>
+      resolveDatasetPreparationAdaptivePlan({
+        taskType,
+        sources: selectedSourceCapabilities,
+      }),
+    [selectedSourceCapabilities, taskType],
+  );
+  const preparationMethodId = useMemo(() => {
+    if (preparationResolution.status !== "ready") {
+      return undefined;
+    }
+    return requestedPreparationMethodId &&
+      resolveDatasetPreparationMethodOption(
+        preparationResolution,
+        requestedPreparationMethodId,
+      )
+      ? requestedPreparationMethodId
+      : preparationResolution.defaultMethodId;
+  }, [preparationResolution, requestedPreparationMethodId]);
+  const preparationPlan = useMemo(() => {
+    if (preparationResolution.status !== "ready" || !preparationMethodId) {
+      return undefined;
+    }
+    return createDatasetPreparationExecutionPlan(
+      preparationResolution,
+      preparationMethodId,
+    );
+  }, [preparationMethodId, preparationResolution]);
+
+  useEffect(() => {
+    if (preparationPlan) {
+      setTextInputMode(
+        preparationPlan.generationMode === "none" ? "provided" : "generate",
+      );
+    }
+  }, [preparationPlan]);
+
+  const outputShapeCompilation = useMemo(
+    () =>
+      compileDatasetPreparationVisualOutputShape(visualOutputShape, {
+        taskType,
+        outputFormat,
+        multiLabel,
+        allowedLabels: splitConfiguredLabels(labelSet),
+      }),
+    [labelSet, multiLabel, outputFormat, taskType, visualOutputShape],
+  );
+  const constrainedDecodingAvailable =
+    preparationPlan?.generationMode !== undefined &&
+    preparationPlan.generationMode !== "none" &&
+    modelInferenceMode !== "text2text" &&
+    outputShapeCompilation.ok &&
+    outputShapeCompilation.value.decoderCompatible;
+  const recommendationCapacity = generationCapacity
+    ? {
+        ...generationCapacity,
+        schemaSupported:
+          generationCapacity.schemaSupported &&
+          constrainedDecodingAvailable,
+      }
+    : undefined;
+  const constrainedJsonResolution = useMemo(
+    () =>
+      resolveDatasetPreparationConstrainedJson({
+        preference: constrainedDecodingPreference,
+        selectedDevice:
+          modelDevice ||
+          resolveDefaultDatasetPreparationTextGenerationModel(taskType)
+            ?.device ||
+          "auto",
+        estimatedModelBytes:
+          resolveDatasetPreparationGenerationModelEstimatedBytes(
+            modelId ||
+              resolveDefaultDatasetPreparationTextGenerationModel(taskType)
+                ?.modelId,
+          ),
+        capacity: recommendationCapacity,
+      }),
+    [
+      constrainedDecodingPreference,
+      modelDevice,
+      modelId,
+      recommendationCapacity,
+      taskType,
+    ],
+  );
+  const constrainedDecodingEnabled =
+    constrainedDecodingAvailable && constrainedJsonResolution.enabled;
+
   const currentTrainingSettingsSnapshot =
     useMemo<DatasetPreparationTrainingSettingsSnapshot>(
       () => ({
+        advancedPreset,
+        preparationMethodId,
         taskType,
         labelSet,
         multiLabel,
@@ -1341,12 +1625,18 @@ export function useDatasetPreparationFeature(
         segmentationMaskFormat,
         textInputMode,
         textGenerationPrompt,
+        visualOutputShape,
+        constrainedDecodingPreference,
         unsupportedDocumentPolicy,
         normalizationMode,
         chunkSize,
         chunkOverlap,
         preserveDocumentBoundaries,
         maxChunkCount,
+        maxTokensPerChunk,
+        topicBoundarySensitivity,
+        maxSourceSpans,
+        similarityThreshold,
         modelId,
         modelInferenceMode,
         modelDevice,
@@ -1372,8 +1662,11 @@ export function useDatasetPreparationFeature(
         qualityPreset,
         requireLicenseMetadata,
         requireConsentMetadata,
+        includeSourceAttribution,
       }),
       [
+        advancedPreset,
+        preparationMethodId,
         taskType,
         labelSet,
         multiLabel,
@@ -1385,12 +1678,18 @@ export function useDatasetPreparationFeature(
         segmentationMaskFormat,
         textInputMode,
         textGenerationPrompt,
+        visualOutputShape,
+        constrainedDecodingPreference,
         unsupportedDocumentPolicy,
         normalizationMode,
         chunkSize,
         chunkOverlap,
         preserveDocumentBoundaries,
         maxChunkCount,
+        maxTokensPerChunk,
+        topicBoundarySensitivity,
+        maxSourceSpans,
+        similarityThreshold,
         modelId,
         modelInferenceMode,
         modelDevice,
@@ -1416,6 +1715,7 @@ export function useDatasetPreparationFeature(
         qualityPreset,
         requireLicenseMetadata,
         requireConsentMetadata,
+        includeSourceAttribution,
       ],
     );
 
@@ -1432,6 +1732,8 @@ export function useDatasetPreparationFeature(
     (settings: DatasetPreparationTrainingSettingsSnapshot) => {
       suppressNextTaskDefaultResetRef.current = settings.taskType !== taskType;
       setTaskType(settings.taskType);
+      setAdvancedPreset(settings.advancedPreset);
+      setPreparationMethodId(settings.preparationMethodId);
       setLabelSet(settings.labelSet);
       setMultiLabel(settings.multiLabel);
       setExtractionStrictSchema(settings.extractionStrictSchema);
@@ -1442,12 +1744,20 @@ export function useDatasetPreparationFeature(
       setSegmentationMaskFormat(settings.segmentationMaskFormat);
       setTextInputMode(settings.textInputMode);
       setTextGenerationPrompt(settings.textGenerationPrompt);
+      setVisualOutputShape(settings.visualOutputShape);
+      setConstrainedDecodingPreference(
+        settings.constrainedDecodingPreference,
+      );
       setUnsupportedDocumentPolicy(settings.unsupportedDocumentPolicy);
       setNormalizationMode(settings.normalizationMode);
       setChunkSize(settings.chunkSize);
       setChunkOverlap(settings.chunkOverlap);
       setPreserveDocumentBoundaries(settings.preserveDocumentBoundaries);
       setMaxChunkCount(settings.maxChunkCount);
+      setMaxTokensPerChunk(settings.maxTokensPerChunk);
+      setTopicBoundarySensitivity(settings.topicBoundarySensitivity);
+      setMaxSourceSpans(settings.maxSourceSpans);
+      setSimilarityThreshold(settings.similarityThreshold);
       setModelId(settings.modelId);
       setModelInferenceMode(settings.modelInferenceMode);
       setModelDevice(settings.modelDevice);
@@ -1473,6 +1783,7 @@ export function useDatasetPreparationFeature(
       setQualityPreset(settings.qualityPreset);
       setRequireLicenseMetadata(settings.requireLicenseMetadata);
       setRequireConsentMetadata(settings.requireConsentMetadata);
+      setIncludeSourceAttribution(settings.includeSourceAttribution ?? false);
     },
     [taskType],
   );
@@ -1513,69 +1824,182 @@ export function useDatasetPreparationFeature(
     selectedSavedTrainingSettingsId,
   ]);
 
-  const onReuseDatasetVersion = useCallback((reproduction: DatasetVersionReproduction) => {
-    const snapshot = reproduction.recipeSnapshot as any;
-    const recipe = snapshot.recipe ?? {};
-    const task = recipe.task ?? {};
-    const normalization = recipe.normalization ?? {};
-    const chunking = recipe.chunking ?? {};
-    const generation = recipe.generation ?? {};
-    const model = generation.model ?? {};
-    const generationParams = generation.generationParams ?? {};
-    const split = snapshot.split ?? {};
-    const output = snapshot.output ?? {};
-    const policy = snapshot.effectiveQualityPolicy ?? {};
-    setSelectedArtifactIds([...reproduction.sourceArtifactIds]);
-    if (isDatasetPreparationTaskType(task.taskType)) setTaskType(task.taskType);
-    if (Array.isArray(task.labelSet)) setLabelSet(task.labelSet.join(", "));
-    if (typeof task.multiLabel === "boolean") setMultiLabel(task.multiLabel);
-    if (typeof task.strictSchema === "boolean") setExtractionStrictSchema(task.strictSchema);
-    if (["subject", "style", "concept"].includes(task.conceptKind)) setDiffusionConceptKind(task.conceptKind);
-    if (typeof task.triggerToken === "string") setDiffusionTriggerToken(task.triggerToken);
-    if (typeof task.regularizationClass === "string") setDiffusionRegularizationClass(task.regularizationClass);
-    if (["coco", "xyxy", "xywh"].includes(task.boxFormat)) setDetectionBoxFormat(task.boxFormat);
-    if (["png", "coco-rle", "polygon"].includes(task.maskFormat)) setSegmentationMaskFormat(task.maskFormat);
-    if (["provided", "generate"].includes(task.textInputMode)) setTextInputMode(task.textInputMode);
-    if (typeof generation.promptTemplate === "string") setTextGenerationPrompt(generation.promptTemplate);
-    if (["fail", "skip"].includes(normalization.unsupportedDocumentPolicy)) setUnsupportedDocumentPolicy(normalization.unsupportedDocumentPolicy);
-    if (["best-effort", "strict"].includes(normalization.normalizationMode)) setNormalizationMode(normalization.normalizationMode);
-    if (typeof chunking.chunkSize === "number") setChunkSize(String(chunking.chunkSize));
-    if (typeof chunking.chunkOverlap === "number") setChunkOverlap(String(chunking.chunkOverlap));
-    if (typeof chunking.preserveDocumentBoundaries === "boolean") setPreserveDocumentBoundaries(chunking.preserveDocumentBoundaries);
-    if (typeof chunking.maxChunkCount === "number") setMaxChunkCount(String(chunking.maxChunkCount));
-    if (typeof model.modelId === "string") setModelId(model.modelId);
-    if (["auto", "text2text", "causal", "chat"].includes(model.inferenceMode)) setModelInferenceMode(model.inferenceMode);
-    if (["auto", "cpu", "cuda"].includes(model.device)) setModelDevice(model.device);
-    if (["auto", "float16", "bfloat16", "float32"].includes(model.torchDtype)) setModelTorchDtype(model.torchDtype);
-    if (typeof generation.maxExamplesPerChunk === "number") setMaxExamplesPerChunk(String(generation.maxExamplesPerChunk));
-    if (typeof generation.batchSize === "number") setBatchSize(String(generation.batchSize));
-    if (["fail", "skip"].includes(generation.failurePolicy)) setFailurePolicy(generation.failurePolicy);
-    if (typeof generationParams.temperature === "number") setGenerationTemperature(String(generationParams.temperature));
-    if (typeof generationParams.topP === "number") setGenerationTopP(String(generationParams.topP));
-    if (typeof generationParams.maxNewTokens === "number") setGenerationMaxNewTokens(String(generationParams.maxNewTokens));
-    if (typeof split.trainRatio === "number") setTrainRatio(String(split.trainRatio));
-    if (typeof split.validationRatio === "number") setValidationRatio(String(split.validationRatio));
-    if (typeof split.testRatio === "number") setTestRatio(String(split.testRatio));
-    if (typeof split.seed === "number") setSeed(String(split.seed));
-    if (typeof split.shuffle === "boolean") setShuffle(split.shuffle);
-    if (["jsonl", "json", "csv", "parquet"].includes(output.format)) setOutputFormat(output.format);
-    if (typeof output.naming?.baseName === "string") setOutputBaseName(output.naming.baseName);
-    if (["recommended", "strict", "minimal"].includes(policy.preset)) setQualityPreset(policy.preset);
-    if (typeof policy.requireLicenseMetadata === "boolean") setRequireLicenseMetadata(policy.requireLicenseMetadata);
-    if (typeof policy.requireConsentMetadata === "boolean") setRequireConsentMetadata(policy.requireConsentMetadata);
-    setStatus({ kind: "idle" });
-  }, []);
+  const onReuseDatasetVersion = useCallback(
+    (reproduction: DatasetVersionReproduction) => {
+      const snapshot = reproduction.recipeSnapshot as any;
+      const recipe = snapshot.recipe ?? {};
+      const task = recipe.task ?? {};
+      const normalization = recipe.normalization ?? {};
+      const chunking = recipe.chunking ?? {};
+      const generation = recipe.generation ?? {};
+      const structuredOutput = generation.structuredOutput ?? {};
+      const model = generation.model ?? {};
+      const generationParams = generation.generationParams ?? {};
+      const split = snapshot.split ?? {};
+      const output = snapshot.output ?? {};
+      const policy = snapshot.effectiveQualityPolicy ?? {};
+      const advanced = snapshot.advanced ?? {};
+      const reusedTaskType = isDatasetPreparationTaskType(task.taskType)
+        ? task.taskType
+        : taskType;
+      const reusedOutputFormat = ["jsonl", "json", "csv", "parquet"].includes(
+        output.format,
+      )
+        ? output.format
+        : outputFormat;
+      const reusedVisualShapeCompilation =
+        structuredOutput.visualShape &&
+        typeof structuredOutput.visualShape === "object"
+          ? compileDatasetPreparationVisualOutputShape(
+              structuredOutput.visualShape,
+              {
+                taskType: reusedTaskType,
+                outputFormat: reusedOutputFormat,
+                multiLabel:
+                  typeof task.multiLabel === "boolean"
+                    ? task.multiLabel
+                    : multiLabel,
+                allowedLabels: Array.isArray(task.labelSet)
+                  ? (() => {
+                      const labels = task.labelSet.filter(
+                        (label: unknown): label is string =>
+                          typeof label === "string" && label.trim().length > 0,
+                      );
+                      return labels.length > 0 ? labels : undefined;
+                    })()
+                  : undefined,
+              },
+            )
+          : undefined;
+      setSelectedArtifactIds([...reproduction.sourceArtifactIds]);
+      if (
+        [
+          "standard",
+          "better-document-understanding",
+          "generate-examples",
+        ].includes(advanced.preset)
+      ) {
+        setAdvancedPreset(advanced.preset);
+      } else {
+        setAdvancedPreset("standard");
+      }
+      suppressNextTaskDefaultResetRef.current = reusedTaskType !== taskType;
+      if (isDatasetPreparationTaskType(task.taskType))
+        setTaskType(task.taskType);
+      if (Array.isArray(task.labelSet)) setLabelSet(task.labelSet.join(", "));
+      if (typeof task.multiLabel === "boolean") setMultiLabel(task.multiLabel);
+      if (typeof task.strictSchema === "boolean")
+        setExtractionStrictSchema(task.strictSchema);
+      if (["subject", "style", "concept"].includes(task.conceptKind))
+        setDiffusionConceptKind(task.conceptKind);
+      if (typeof task.triggerToken === "string")
+        setDiffusionTriggerToken(task.triggerToken);
+      if (typeof task.regularizationClass === "string")
+        setDiffusionRegularizationClass(task.regularizationClass);
+      if (["coco", "xyxy", "xywh"].includes(task.boxFormat))
+        setDetectionBoxFormat(task.boxFormat);
+      if (["png", "coco-rle", "polygon"].includes(task.maskFormat))
+        setSegmentationMaskFormat(task.maskFormat);
+      if (["provided", "generate"].includes(task.textInputMode))
+        setTextInputMode(task.textInputMode);
+      if (typeof generation.promptTemplate === "string")
+        setTextGenerationPrompt(generation.promptTemplate);
+      if (reusedVisualShapeCompilation?.ok)
+        setVisualOutputShape(reusedVisualShapeCompilation.value.shape);
+      if (typeof structuredOutput.constrainedDecoding === "boolean")
+        setConstrainedDecodingPreference(
+          structuredOutput.constrainedDecoding,
+        );
+      if (["fail", "skip"].includes(normalization.unsupportedDocumentPolicy))
+        setUnsupportedDocumentPolicy(normalization.unsupportedDocumentPolicy);
+      if (["best-effort", "strict"].includes(normalization.normalizationMode))
+        setNormalizationMode(normalization.normalizationMode);
+      if (typeof chunking.chunkSize === "number")
+        setChunkSize(String(chunking.chunkSize));
+      if (typeof chunking.chunkOverlap === "number")
+        setChunkOverlap(String(chunking.chunkOverlap));
+      if (typeof chunking.preserveDocumentBoundaries === "boolean")
+        setPreserveDocumentBoundaries(chunking.preserveDocumentBoundaries);
+      if (typeof chunking.maxChunkCount === "number")
+        setMaxChunkCount(String(chunking.maxChunkCount));
+      if (typeof model.modelId === "string") setModelId(model.modelId);
+      if (["auto", "text2text", "causal", "chat"].includes(model.inferenceMode))
+        setModelInferenceMode(model.inferenceMode);
+      if (["auto", "cpu", "cuda"].includes(model.device))
+        setModelDevice(model.device);
+      if (["auto", "float16", "bfloat16", "float32"].includes(model.torchDtype))
+        setModelTorchDtype(model.torchDtype);
+      if (typeof generation.maxExamplesPerChunk === "number")
+        setMaxExamplesPerChunk(String(generation.maxExamplesPerChunk));
+      if (typeof generation.batchSize === "number")
+        setBatchSize(String(generation.batchSize));
+      if (["fail", "skip"].includes(generation.failurePolicy))
+        setFailurePolicy(generation.failurePolicy);
+      if (typeof generationParams.temperature === "number")
+        setGenerationTemperature(String(generationParams.temperature));
+      if (typeof generationParams.topP === "number")
+        setGenerationTopP(String(generationParams.topP));
+      if (typeof generationParams.maxNewTokens === "number")
+        setGenerationMaxNewTokens(String(generationParams.maxNewTokens));
+      if (typeof split.trainRatio === "number")
+        setTrainRatio(String(split.trainRatio));
+      if (typeof split.validationRatio === "number")
+        setValidationRatio(String(split.validationRatio));
+      if (typeof split.testRatio === "number")
+        setTestRatio(String(split.testRatio));
+      if (typeof split.seed === "number") setSeed(String(split.seed));
+      if (typeof split.shuffle === "boolean") setShuffle(split.shuffle);
+      if (["jsonl", "json", "csv", "parquet"].includes(output.format))
+        setOutputFormat(output.format);
+      if (typeof output.naming?.baseName === "string")
+        setOutputBaseName(output.naming.baseName);
+      if (["recommended", "strict", "minimal"].includes(policy.preset))
+        setQualityPreset(policy.preset);
+      if (typeof policy.requireLicenseMetadata === "boolean")
+        setRequireLicenseMetadata(policy.requireLicenseMetadata);
+      if (typeof policy.requireConsentMetadata === "boolean")
+        setRequireConsentMetadata(policy.requireConsentMetadata);
+      if (typeof policy.includeSourceAttribution === "boolean")
+        setIncludeSourceAttribution(policy.includeSourceAttribution);
+      setStatus({ kind: "idle" });
+    },
+    [multiLabel, outputFormat, taskType],
+  );
 
   const onSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
 
+      if (!preparationPlan) {
+        setStatus({
+          kind: "error",
+          message: preparationResolution.action
+            ? `${preparationResolution.message} ${preparationResolution.action}`
+            : preparationResolution.message,
+        });
+        return;
+      }
+      if (!outputShapeCompilation.ok) {
+        setStatus({
+          kind: "error",
+          message:
+            outputShapeCompilation.diagnostics[0]?.message ??
+            "Review the generated output fields before continuing.",
+        });
+        return;
+      }
+
       const validationResult = validateAndParseDatasetPreparationInputs({
         selectedArtifactIds,
         taskType,
+        preparation: preparationPlan,
         chunkSize,
         chunkOverlap,
         maxChunkCount,
+        maxTokensPerChunk,
+        topicBoundarySensitivity,
+        maxSourceSpans,
+        similarityThreshold,
         modelId,
         maxExamplesPerChunk,
         batchSize,
@@ -1622,6 +2046,8 @@ export function useDatasetPreparationFeature(
       };
       const request = buildDatasetPreparationRequest({
         selectedArtifactIds,
+        preparation: preparationPlan,
+        advancedPreset,
         taskType,
         labelSet,
         multiLabel,
@@ -1633,6 +2059,8 @@ export function useDatasetPreparationFeature(
         segmentationMaskFormat,
         textInputMode,
         textGenerationPrompt,
+        visualOutputShape,
+        constrainedDecoding: constrainedDecodingEnabled,
         unsupportedDocumentPolicy,
         normalizationMode,
         preserveDocumentBoundaries,
@@ -1653,7 +2081,7 @@ export function useDatasetPreparationFeature(
         parsed: validationResult.parsed,
         resolvedDefault,
       });
-      const generationModelId = request.recipe.generation.model.modelId;
+      const generationModelId = request.recipe.generation?.model.modelId;
       const requestId = createDatasetPreparationRequestId();
 
       window.dispatchEvent(
@@ -1661,7 +2089,9 @@ export function useDatasetPreparationFeature(
       );
       setStatus({
         kind: "loading",
-        message: `Checking model ${generationModelId} before dataset preparation...`,
+        message: generationModelId
+          ? `Checking model ${generationModelId} before dataset preparation...`
+          : "Starting dataset checks...",
       });
 
       if (!workspaceId) {
@@ -1688,6 +2118,7 @@ export function useDatasetPreparationFeature(
                 allowedLanguages: ["en"],
                 requireLicenseMetadata,
                 requireConsentMetadata,
+                includeSourceAttribution,
               },
               reviewRequired: true,
             },
@@ -1696,7 +2127,10 @@ export function useDatasetPreparationFeature(
         );
       } catch (error) {
         const message = resolveUserFacingDatasetPreparationErrorMessage(error);
-        if (isTransientPollReadFailure(message)) {
+        if (
+          isTransientDatasetPreparationTransportError(error) ||
+          isTransientPollReadFailure(message)
+        ) {
           setActiveDatasetPreparationTask(requestId);
           setStatus({
             kind: "loading",
@@ -1724,6 +2158,9 @@ export function useDatasetPreparationFeature(
     },
     [
       selectedArtifactIds,
+      preparationPlan,
+      preparationResolution,
+      advancedPreset,
       taskType,
       labelSet,
       multiLabel,
@@ -1735,12 +2172,19 @@ export function useDatasetPreparationFeature(
       segmentationMaskFormat,
       textInputMode,
       textGenerationPrompt,
+      visualOutputShape,
+      outputShapeCompilation,
+      constrainedDecodingEnabled,
       unsupportedDocumentPolicy,
       normalizationMode,
       chunkSize,
       chunkOverlap,
       preserveDocumentBoundaries,
       maxChunkCount,
+      maxTokensPerChunk,
+      topicBoundarySensitivity,
+      maxSourceSpans,
+      similarityThreshold,
       modelId,
       modelInferenceMode,
       modelDevice,
@@ -1767,6 +2211,7 @@ export function useDatasetPreparationFeature(
       qualityPreset,
       requireLicenseMetadata,
       requireConsentMetadata,
+      includeSourceAttribution,
       datasetClient,
       workspaceId,
       pollDatasetPreparationTask,
@@ -1795,6 +2240,9 @@ export function useDatasetPreparationFeature(
             response.error.details,
           ),
         });
+      } else {
+        clearActiveTask();
+        setStatus({ kind: "idle", message: "Training stopped." });
       }
     } catch (error) {
       setStatus({
@@ -1808,6 +2256,7 @@ export function useDatasetPreparationFeature(
     }
   }, [
     activeTaskRequestId,
+    clearActiveTask,
     datasetClient,
     refreshRuntimeModelStatus,
     status.kind,
@@ -2021,6 +2470,10 @@ export function useDatasetPreparationFeature(
     generatedArtifacts,
     selectedArtifactStorageFilter,
     selectedArtifactIds,
+    advancedPreset,
+    preparationResolution,
+    preparationPlan,
+    preparationMethodId,
     taskType,
     labelSet,
     multiLabel,
@@ -2032,12 +2485,20 @@ export function useDatasetPreparationFeature(
     segmentationMaskFormat,
     textInputMode,
     textGenerationPrompt,
+    visualOutputShape,
+    constrainedJsonResolution,
+    constrainedDecodingEnabled,
+    constrainedDecodingAvailable,
     unsupportedDocumentPolicy,
     normalizationMode,
     chunkSize,
     chunkOverlap,
     preserveDocumentBoundaries,
     maxChunkCount,
+    maxTokensPerChunk,
+    topicBoundarySensitivity,
+    maxSourceSpans,
+    similarityThreshold,
     modelId,
     modelInferenceMode,
     modelDevice,
@@ -2063,6 +2524,7 @@ export function useDatasetPreparationFeature(
     qualityPreset,
     requireLicenseMetadata,
     requireConsentMetadata,
+    includeSourceAttribution,
     defaultHuggingFaceNamespace,
     status,
     resultSummary,
@@ -2080,6 +2542,8 @@ export function useDatasetPreparationFeature(
     selectedSavedTrainingSettingsId,
     hasTrainingSettingsChanges,
     onToggleArtifact,
+    setAdvancedPreset,
+    setPreparationMethodId,
     setSelectedArtifactStorageFilter,
     setTaskType,
     setLabelSet,
@@ -2092,12 +2556,18 @@ export function useDatasetPreparationFeature(
     setSegmentationMaskFormat,
     setTextInputMode,
     setTextGenerationPrompt,
+    setVisualOutputShape,
+    setConstrainedDecodingPreference,
     setUnsupportedDocumentPolicy,
     setNormalizationMode,
     setChunkSize,
     setChunkOverlap,
     setPreserveDocumentBoundaries,
     setMaxChunkCount,
+    setMaxTokensPerChunk,
+    setTopicBoundarySensitivity,
+    setMaxSourceSpans,
+    setSimilarityThreshold,
     setModelId,
     setModelInferenceMode,
     setModelDevice,
@@ -2123,6 +2593,7 @@ export function useDatasetPreparationFeature(
     setQualityPreset,
     setRequireLicenseMetadata,
     setRequireConsentMetadata,
+    setIncludeSourceAttribution,
     setSelectedSavedTrainingSettingsId,
     onSubmit,
     onStopTraining,

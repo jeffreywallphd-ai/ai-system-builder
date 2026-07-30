@@ -10,12 +10,19 @@ import type {
   ApiDatasetVersionReproduceValue,
 } from "../../../../../../modules/contracts/api";
 import {
+  normalizeDatasetPreparationGenerationCapacitySnapshot,
+  type DatasetPreparationGenerationCapacitySnapshot,
+} from "../../../../../../modules/contracts/runtime";
+import {
   parseApiEnvelope,
   toThinClientApiError,
 } from "../../../security/apiErrorEnvelope";
 import { secureFetch } from "../../../security/secureFetch";
 
 export interface ApiDatasetPreparationClient {
+  readGenerationCapacity?(input: {
+    workspaceId: string;
+  }): Promise<DatasetPreparationGenerationCapacitySnapshot>;
   start(input: {
     workspaceId: string;
     command: ApiDatasetPreparationCommand;
@@ -54,6 +61,19 @@ export function createApiDatasetPreparationClient(
 ): ApiDatasetPreparationClient {
   const root = baseUrl.replace(/\/+$/, "");
   return {
+    readGenerationCapacity: async (input) => {
+      const value = await request<unknown>(
+        root +
+          "/dataset-preparation/generation-capacity?workspaceId=" +
+          encodeURIComponent(input.workspaceId),
+      );
+      const normalized =
+        normalizeDatasetPreparationGenerationCapacitySnapshot(value);
+      if (!normalized) {
+        throw new Error("Generation capacity response payload is invalid.");
+      }
+      return normalized;
+    },
     start: (input) =>
       request<ApiDatasetPreparationStartValue>(
         root + "/dataset-preparation/start",

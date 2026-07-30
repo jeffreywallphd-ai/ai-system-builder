@@ -16,7 +16,7 @@ import {
   relative,
   resolve,
 } from "node:path";
-import { randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
 import {
@@ -43,6 +43,7 @@ import {
 } from "../../contracts/storage";
 import type {
   DatasetPreparationSummary,
+  DatasetPreparationAdvancedReport,
   DatasetPreparationWarning,
   DatasetQualityApprovalRequest,
   DatasetQualityReport,
@@ -55,8 +56,15 @@ import {
   DEFAULT_DATASET_PREPARATION_TASK_TYPE,
   DATASET_QUALITY_REASON_CODES,
   createDefaultDatasetPreparationTaskRecipe,
+  compileDatasetPreparationVisualOutputShape,
+  resolveDatasetPreparationVisualOutputShape,
+  createDatasetPreparationAdvancedConfigForMethod,
+  createDatasetPreparationExecutionPlan,
   evaluateDatasetPreparationSourceReadiness,
   isDatasetPreparationTaskType,
+  normalizeLegacyDatasetPreparationMethod,
+  resolveDatasetPreparationAdaptivePlan,
+  resolveDatasetPreparationSourceCapability,
   resolveDatasetPreparationTaskProfileDefinition,
   resolveDefaultDatasetPreparationPromptTemplate,
   resolveDefaultDatasetPreparationTextGenerationModel,
@@ -87,10 +95,12 @@ import type { DatasetVersionFinalizationService } from "../services/dataset-vers
 
 export interface PrepareTrainingDatasetFromArtifactsCommand {
   sourceArtifactIds: string[];
+  preparation?: PrepareTrainingDatasetRequest["preparation"];
   recipe: PrepareTrainingDatasetRequest["recipe"];
   split: PrepareTrainingDatasetRequest["split"];
   output: PrepareTrainingDatasetRequest["output"];
   quality?: DatasetQualityRequestedConfig;
+  advanced?: PrepareTrainingDatasetRequest["advanced"];
 }
 
 export interface PrepareTrainingDatasetFromArtifactsValue {
@@ -144,11 +154,12 @@ export interface PrepareTrainingDatasetFromArtifactsValue {
     split: PrepareTrainingDatasetRequest["split"];
     output: PrepareTrainingDatasetRequest["output"];
     datasetPreparationTask: Record<string, unknown>;
-    generationModelId: string;
+    generationModelId?: string;
     summary: DatasetPreparationSummary;
   };
   summary: DatasetPreparationSummary;
   qualityReport?: DatasetQualityReport;
+  advancedReport?: DatasetPreparationAdvancedReport;
   review?: {
     state: "review-required" | "approved";
     reportFingerprint: string;
@@ -201,14 +212,28 @@ function validateDatasetPreparationCommand(
   ) {
     return "Every selected source must have one valid, unique artifact id.";
   }
-  if (
-    !isRecord(command.recipe) ||
-    !isRecord(command.recipe.normalization) ||
-    !isRecord(command.recipe.chunking) ||
-    !isRecord(command.recipe.generation) ||
-    !isRecord(command.recipe.generation.model)
-  ) {
+  if (!isRecord(command.recipe)) {
     return "Dataset preparation settings are incomplete.";
+  }
+  if (
+    (command.recipe.normalization !== undefined &&
+      !isRecord(command.recipe.normalization)) ||
+    (command.recipe.chunking !== undefined &&
+      !isRecord(command.recipe.chunking)) ||
+    (command.recipe.generation !== undefined &&
+      (!isRecord(command.recipe.generation) ||
+        !isRecord(command.recipe.generation.model)))
+  ) {
+    return "Dataset preparation settings contain an invalid active section.";
+  }
+  const structuredOutput = command.recipe.generation?.structuredOutput;
+  if (
+    structuredOutput !== undefined &&
+    (!isRecord(structuredOutput) ||
+      (structuredOutput.constrainedDecoding !== undefined &&
+        typeof structuredOutput.constrainedDecoding !== "boolean"))
+  ) {
+    return "The generated output settings are invalid.";
   }
   if (
     isRecord(command.recipe.task) &&
@@ -219,6 +244,38 @@ function validateDatasetPreparationCommand(
   }
   if (!isRecord(command.split)) {
     return "Dataset split settings are required.";
+  }
+  if (command.preparation !== undefined) {
+    const plan = command.preparation;
+    if (
+      !isRecord(plan) ||
+      plan.schemaVersion !== "1" ||
+      ![
+        "use-existing-dataset",
+        "combine-existing-datasets",
+        "create-from-source-material",
+      ].includes(String(plan.inputIntent)) ||
+      ![
+        "validate-and-split",
+        "combine-and-split",
+        "fixed-length",
+        "topic-aware",
+        "structure-aware",
+        "use-source-metadata",
+        "model-assisted-metadata",
+        "use-existing-annotations",
+      ].includes(String(plan.method)) ||
+      !Array.isArray(plan.sourceKinds) ||
+      plan.sourceKinds.length !== 1 ||
+      !["structured", "document", "image"].includes(
+        String(plan.sourceKinds[0]),
+      ) ||
+      !["none", "task-examples", "metadata-text"].includes(
+        String(plan.generationMode),
+      )
+    ) {
+      return "The selected preparation method is invalid.";
+    }
   }
   const trainRatio = command.split.trainRatio;
   const validationRatio = command.split.validationRatio ?? 0;
@@ -269,6 +326,8 @@ function validateDatasetPreparationCommand(
         typeof command.quality.policy.requireLicenseMetadata !== "boolean") ||
       (command.quality.policy.requireConsentMetadata !== undefined &&
         typeof command.quality.policy.requireConsentMetadata !== "boolean") ||
+      (command.quality.policy.includeSourceAttribution !== undefined &&
+        typeof command.quality.policy.includeSourceAttribution !== "boolean") ||
       (command.quality.policy.maxRowsPerSource !== undefined &&
         (!Number.isInteger(command.quality.policy.maxRowsPerSource) ||
           command.quality.policy.maxRowsPerSource < 1 ||
@@ -278,6 +337,76 @@ function validateDatasetPreparationCommand(
     }
     if (command.output.destinations?.huggingFace?.enabled) {
       return "Publish reviewed datasets after creating an approved dataset version.";
+    }
+  }
+  if (command.advanced !== undefined) {
+    const advanced = command.advanced;
+    const content = advanced.content;
+    const semantic = advanced.semantic;
+    const synthetic = advanced.synthetic;
+    if (
+      !isRecord(advanced) ||
+      ![
+        "standard",
+        "better-document-understanding",
+        "generate-examples",
+        "topic-aware",
+        "structure-aware",
+      ].includes(String(advanced.preset)) ||
+      (content !== undefined &&
+        (!isRecord(content) ||
+          ![
+            "token",
+            "sentence",
+            "section",
+            "table",
+            "semantic",
+            "layout",
+          ].includes(String(content.strategy)) ||
+          (content.maxTokensPerChunk !== undefined &&
+            (!Number.isInteger(content.maxTokensPerChunk) ||
+              content.maxTokensPerChunk < 32 ||
+              content.maxTokensPerChunk > 4096)) ||
+          (content.maxSourceSpans !== undefined &&
+            (!Number.isInteger(content.maxSourceSpans) ||
+              content.maxSourceSpans < 1 ||
+              content.maxSourceSpans > 100_000)) ||
+          (content.semanticBoundaryThreshold !== undefined &&
+            (!Number.isFinite(content.semanticBoundaryThreshold) ||
+              content.semanticBoundaryThreshold < 0 ||
+              content.semanticBoundaryThreshold > 1)))) ||
+      (semantic !== undefined &&
+        (!isRecord(semantic) ||
+          typeof semantic.enabled !== "boolean" ||
+          (semantic.embeddingAlgorithm !== undefined &&
+            semantic.embeddingAlgorithm !== "hashed-token-v1") ||
+          (semantic.maxComparisonsPerRow !== undefined &&
+            (!Number.isInteger(semantic.maxComparisonsPerRow) ||
+              semantic.maxComparisonsPerRow < 1 ||
+              semantic.maxComparisonsPerRow > 1024)))) ||
+      (synthetic !== undefined &&
+        (!isRecord(synthetic) ||
+          typeof synthetic.enabled !== "boolean" ||
+          (synthetic.candidatesPerChunk !== undefined &&
+            (!Number.isInteger(synthetic.candidatesPerChunk) ||
+              synthetic.candidatesPerChunk < 1 ||
+              synthetic.candidatesPerChunk > 4))))
+    ) {
+      return "Advanced preparation settings are invalid.";
+    }
+    if (content?.ocrEnabled) {
+      return "Text recognition for scanned images is not available. Use a text-based source or add reviewed text.";
+    }
+    if (
+      synthetic?.enabled &&
+      (!command.quality ||
+        command.quality.reviewRequired === false ||
+        synthetic.requireReview === false)
+    ) {
+      return "Generated examples require data checks and review before they can be saved.";
+    }
+    if (semantic?.enabled && !command.quality) {
+      return "Advanced similarity checks require data checks so set-aside rows can be reviewed.";
     }
   }
   return undefined;
@@ -514,6 +643,7 @@ function buildDatasetMetadata(
   );
   return {
     sourceArtifactIds: command.sourceArtifactIds,
+    ...(command.preparation ? { preparation: command.preparation } : {}),
     recipe: command.recipe,
     split: command.split,
     datasetPreparationTask: {
@@ -524,10 +654,14 @@ function buildDatasetMetadata(
       compatibleTrainingMethods: [...taskProfile.compatibleTrainingMethods],
       recipe: taskRecipe,
     },
-    generationModel: {
-      provider: command.recipe.generation.model.provider,
-      modelId: command.recipe.generation.model.modelId,
-    },
+    ...(command.recipe.generation
+      ? {
+          generationModel: {
+            provider: command.recipe.generation.model.provider,
+            modelId: command.recipe.generation.model.modelId,
+          },
+        }
+      : {}),
     summary,
     destination,
     runtime: runtimeMetadata,
@@ -622,6 +756,27 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
+function canonicalRuntimeJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalRuntimeJson).join(",")}]`;
+  }
+  if (isRecord(value)) {
+    return `{${Object.entries(value)
+      .filter(([, item]) => item !== undefined)
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+      .map(
+        ([key, item]) =>
+          `${JSON.stringify(key)}:${canonicalRuntimeJson(item)}`,
+      )
+      .join(",")}}`;
+  }
+  const serialized = JSON.stringify(value);
+  if (serialized === undefined) {
+    throw new Error("Structured output settings must be JSON compatible.");
+  }
+  return serialized;
+}
+
 function isDatasetPreparationSummary(
   value: unknown,
 ): value is DatasetPreparationSummary {
@@ -674,6 +829,28 @@ function isDatasetQualityReport(value: unknown): value is DatasetQualityReport {
     value.samples.length > DATASET_QUALITY_REASON_CODES.length * 100 ||
     typeof value.reviewRequired !== "boolean" ||
     typeof value.approvalAllowed !== "boolean"
+  ) {
+    return false;
+  }
+  if (
+    value.inspection !== undefined &&
+    (!isRecord(value.inspection) ||
+      typeof value.inspection.taskType !== "string" ||
+      !["checked", "not-applicable"].includes(
+        String(value.inspection.textContent),
+      ) ||
+      value.inspection.imagePixels !== "not-inspected" ||
+      !Array.isArray(value.inspection.checkedSurfaces) ||
+      value.inspection.checkedSurfaces.length > 16 ||
+      value.inspection.checkedSurfaces.some(
+        (surface) => typeof surface !== "string" || surface.length > 256,
+      ) ||
+      !Array.isArray(value.inspection.limitations) ||
+      value.inspection.limitations.length > 16 ||
+      value.inspection.limitations.some(
+        (limitation) =>
+          typeof limitation !== "string" || limitation.length > 1024,
+      ))
   ) {
     return false;
   }
@@ -858,23 +1035,54 @@ function normalizeDatasetPreparationCommand(
   const taskRecipe = isRecord(command.recipe.task)
     ? { ...defaultTaskRecipe, ...command.recipe.task }
     : defaultTaskRecipe;
-  const textInputMode =
-    taskRecipe.textInputMode === "generate" ||
-    taskRecipe.textInputMode === "provided"
+  const textInputMode = command.preparation
+    ? command.preparation.generationMode === "none"
+      ? "provided"
+      : "generate"
+    : taskRecipe.textInputMode === "generate" ||
+        taskRecipe.textInputMode === "provided"
       ? taskRecipe.textInputMode
       : defaultTaskRecipe.textInputMode;
   const defaultGenerationModel =
     resolveDefaultDatasetPreparationTextGenerationModel(taskType);
   const shouldGenerateText = textInputMode === "generate";
+  const generation = command.recipe.generation;
   const promptTemplate = shouldGenerateText
-    ? command.recipe.generation.promptTemplate?.trim() ||
+    ? generation?.promptTemplate?.trim() ||
       resolveDefaultDatasetPreparationPromptTemplate(taskType)
-    : command.recipe.generation.promptTemplate;
-  const model = command.recipe.generation.model;
+    : generation?.promptTemplate;
+  const model = generation?.model ?? defaultGenerationModel;
   const modelId =
-    model.modelId?.trim() ||
+    model?.modelId?.trim() ||
     (shouldGenerateText ? defaultGenerationModel?.modelId : undefined) ||
-    model.modelId;
+    model?.modelId;
+
+  const normalizedGeneration =
+    shouldGenerateText && model && modelId
+      ? {
+          ...generation,
+          mode: generation?.mode ?? ("qa" as const),
+          promptTemplate,
+          model: {
+            ...model,
+            modelId,
+            inferenceMode:
+              model.inferenceMode === "auto" && shouldGenerateText
+                ? (defaultGenerationModel?.inferenceMode ?? model.inferenceMode)
+                : model.inferenceMode,
+            device:
+              model.device ??
+              (shouldGenerateText ? defaultGenerationModel?.device : undefined),
+            torchDtype:
+              model.torchDtype ??
+              (shouldGenerateText
+                ? defaultGenerationModel?.torchDtype
+                : undefined),
+          },
+        }
+      : command.preparation
+        ? undefined
+        : generation;
 
   return {
     ...command,
@@ -884,28 +1092,278 @@ function normalizeDatasetPreparationCommand(
         ...taskRecipe,
         textInputMode,
       },
-      generation: {
-        ...command.recipe.generation,
-        promptTemplate,
-        model: {
-          ...model,
-          modelId,
-          inferenceMode:
-            model.inferenceMode === "auto" && shouldGenerateText
-              ? (defaultGenerationModel?.inferenceMode ?? model.inferenceMode)
-              : model.inferenceMode,
-          device:
-            model.device ??
-            (shouldGenerateText ? defaultGenerationModel?.device : undefined),
-          torchDtype:
-            model.torchDtype ??
-            (shouldGenerateText
-              ? defaultGenerationModel?.torchDtype
-              : undefined),
-        },
-      },
+      ...(normalizedGeneration
+        ? { generation: normalizedGeneration }
+        : { generation: undefined }),
     },
   };
+}
+
+function compileRuntimeStructuredOutput(
+  command: PrepareTrainingDatasetFromArtifactsCommand,
+):
+  | {
+      ok: true;
+      value: NonNullable<
+        NonNullable<PrepareTrainingDatasetRequest["runtime"]>["structuredOutput"]
+      >;
+    }
+  | { ok: false; message: string } {
+  const taskType =
+    command.recipe.task?.taskType ??
+    DEFAULT_DATASET_PREPARATION_TASK_TYPE;
+  const taskRecipe = command.recipe.task;
+  const multiLabel =
+    taskRecipe?.taskType === "llm-classification" &&
+    taskRecipe.multiLabel === true;
+  const allowedLabels =
+    "labelSet" in (taskRecipe ?? {}) &&
+    Array.isArray((taskRecipe as { labelSet?: unknown }).labelSet)
+      ? ((taskRecipe as { labelSet: string[] }).labelSet)
+      : undefined;
+  const requested = command.recipe.generation?.structuredOutput;
+  const resolved = resolveDatasetPreparationVisualOutputShape(
+    taskType,
+    requested?.visualShape,
+    { multiLabel },
+  );
+  const compiled = compileDatasetPreparationVisualOutputShape(
+    resolved.shape,
+    {
+      taskType,
+      outputFormat: command.output.format,
+      multiLabel,
+      allowedLabels,
+    },
+  );
+  if (!compiled.ok) {
+    return {
+      ok: false,
+      message:
+        compiled.diagnostics[0]?.message ??
+        "The generated output layout is invalid.",
+    };
+  }
+  const constrainedDecoding =
+    requested?.constrainedDecoding === true;
+  if (constrainedDecoding && !compiled.value.decoderCompatible) {
+    return {
+      ok: false,
+      message:
+        "Token-level JSON constraints require a fixed set of output fields.",
+    };
+  }
+  if (
+    constrainedDecoding &&
+    command.recipe.generation?.model.inferenceMode === "text2text"
+  ) {
+    return {
+      ok: false,
+      message:
+        "Token-level JSON constraints require a causal or chat generation model.",
+    };
+  }
+  const fingerprintInput = {
+    schema: compiled.value.envelopeSchema,
+    payloadKey: compiled.value.payloadKey,
+    purposePaths: compiled.value.purposePaths,
+    constrainedDecoding,
+  };
+  return {
+    ok: true,
+    value: {
+      ...fingerprintInput,
+      schemaFingerprint: createHash("sha256")
+        .update(canonicalRuntimeJson(fingerprintInput), "utf8")
+        .digest("hex"),
+    },
+  };
+}
+
+function resolveAdaptiveCommandForStagedSources(
+  command: PrepareTrainingDatasetFromArtifactsCommand,
+  sourceInputs: PrepareTrainingDatasetRequest["sourceInputs"],
+): PrepareTrainingDatasetFromArtifactsCommand {
+  const taskType =
+    command.recipe.task?.taskType ??
+    DEFAULT_DATASET_PREPARATION_TASK_TYPE;
+  const capabilities = sourceInputs.map((source) => {
+    const capability = resolveDatasetPreparationSourceCapability({
+      fileName: source.originalName ?? source.localPath,
+      mediaType: source.mediaType,
+    });
+    if (!capability) {
+      throw new Error(
+        "A selected source no longer has a supported preparation format.",
+      );
+    }
+    return capability;
+  });
+  const resolution = resolveDatasetPreparationAdaptivePlan({
+    taskType,
+    sources: capabilities,
+  });
+  if (resolution.status !== "ready") {
+    throw new Error(
+      resolution.action
+        ? `${resolution.message} ${resolution.action}`
+        : resolution.message,
+    );
+  }
+
+  const isLegacy = command.preparation === undefined;
+  const method = isLegacy
+    ? normalizeLegacyDatasetPreparationMethod({
+        taskType,
+        sourceKinds: resolution.sourceKinds,
+        sourceCount: sourceInputs.length,
+        preset:
+          command.advanced?.preset === "standard" ||
+          command.advanced?.preset === "better-document-understanding" ||
+          command.advanced?.preset === "generate-examples"
+            ? command.advanced.preset
+            : undefined,
+        textInputMode: command.recipe.task?.textInputMode,
+      })
+    : command.preparation!.method;
+  const preparation = createDatasetPreparationExecutionPlan(
+    resolution,
+    method,
+  );
+
+  if (
+    command.preparation &&
+    !isDeepStrictEqual(command.preparation, preparation)
+  ) {
+    throw new Error(
+      "The selected preparation method no longer matches the selected sources and training goal. Choose the method again.",
+    );
+  }
+
+  const needsDocuments = [
+    "fixed-length",
+    "topic-aware",
+    "structure-aware",
+  ].includes(preparation.method);
+  const needsFixedChunking = preparation.method === "fixed-length";
+  const needsGeneration = preparation.generationMode !== "none";
+  const expectedAdvanced =
+    createDatasetPreparationAdvancedConfigForMethod(preparation.method);
+
+  if (
+    (expectedAdvanced?.semantic?.enabled || expectedAdvanced?.synthetic?.enabled) &&
+    !command.quality
+  ) {
+    throw new Error(
+      "Topic-aware and structure-aware preparation require data checks and review.",
+    );
+  }
+
+  if (needsDocuments && !isRecord(command.recipe.normalization)) {
+    throw new Error(
+      "Document preparation settings are required for the selected method.",
+    );
+  }
+  if (needsFixedChunking && !isRecord(command.recipe.chunking)) {
+    throw new Error(
+      "Fixed-length section settings are required for the selected method.",
+    );
+  }
+  if (needsGeneration && !isRecord(command.recipe.generation)) {
+    throw new Error(
+      "Local example-creation settings are required for the selected method.",
+    );
+  }
+
+  if (!isLegacy) {
+    if (!needsDocuments && command.recipe.normalization !== undefined) {
+      throw new Error(
+        "Document cleaning settings are not used by the selected preparation method.",
+      );
+    }
+    if (!needsFixedChunking && command.recipe.chunking !== undefined) {
+      throw new Error(
+        "Section size and overlap are not used by the selected preparation method.",
+      );
+    }
+    if (!needsGeneration && command.recipe.generation !== undefined) {
+      throw new Error(
+        "Model and prompt settings are not used by the selected preparation method.",
+      );
+    }
+    validateAdaptiveAdvancedSettings(
+      preparation.method,
+      command.advanced,
+      expectedAdvanced,
+    );
+  }
+
+  return {
+    ...command,
+    preparation,
+    recipe: {
+      task: {
+        ...command.recipe.task,
+        taskType,
+        textInputMode: needsGeneration ? "generate" : "provided",
+      },
+      ...(needsDocuments
+        ? { normalization: command.recipe.normalization }
+        : {}),
+      ...(needsFixedChunking ? { chunking: command.recipe.chunking } : {}),
+      ...(needsGeneration ? { generation: command.recipe.generation } : {}),
+    },
+    ...(expectedAdvanced
+      ? { advanced: isLegacy ? expectedAdvanced : command.advanced }
+      : { advanced: undefined }),
+  };
+}
+
+function validateAdaptiveAdvancedSettings(
+  method: NonNullable<PrepareTrainingDatasetRequest["preparation"]>["method"],
+  actual: PrepareTrainingDatasetRequest["advanced"],
+  expected: PrepareTrainingDatasetRequest["advanced"],
+): void {
+  if (!expected) {
+    if (actual !== undefined) {
+      throw new Error(
+        "Advanced document settings are not used by the selected preparation method.",
+      );
+    }
+    return;
+  }
+  if (!actual) {
+    throw new Error(
+      "Compatible Advanced settings are required for the selected preparation method.",
+    );
+  }
+  if (method === "topic-aware") {
+    if (
+      actual.preset !== "topic-aware" ||
+      actual.content?.strategy !== "semantic" ||
+      actual.content.layoutEnabled !== undefined ||
+      actual.semantic?.enabled !== true ||
+      actual.synthetic?.enabled !== true
+    ) {
+      throw new Error(
+        "Topic-aware preparation contains an incompatible Advanced setting.",
+      );
+    }
+    return;
+  }
+  if (
+    method !== "structure-aware" ||
+    actual.preset !== "structure-aware" ||
+    actual.content?.strategy !== "layout" ||
+    actual.content.layoutEnabled !== true ||
+    actual.content.semanticBoundaryThreshold !== undefined ||
+    actual.semantic?.enabled !== true ||
+    actual.synthetic?.enabled !== true
+  ) {
+    throw new Error(
+      "Structure-aware preparation contains an incompatible Advanced setting.",
+    );
+  }
 }
 
 export class PrepareTrainingDatasetFromArtifactsUseCase {
@@ -1018,7 +1476,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       throw error;
     }
 
-    const normalizedCommand = normalizeDatasetPreparationCommand(command);
+    let normalizedCommand = normalizeDatasetPreparationCommand(command);
     let quality: PrepareTrainingDatasetRequest["quality"];
     if (normalizedCommand.quality) {
       if (!this.datasetQualityPolicyProvider) {
@@ -1061,15 +1519,54 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       return staged;
     }
 
+    try {
+      normalizedCommand = resolveAdaptiveCommandForStagedSources(
+        normalizedCommand,
+        staged.value.sourceInputs,
+      );
+    } catch (error) {
+      await rm(staged.value.runtimeWorkingDir, {
+        recursive: true,
+        force: true,
+      });
+      return createFailureResult(
+        createContractError(
+          "validation",
+          error instanceof Error
+            ? error.message
+            : "The selected preparation method is not compatible with these sources.",
+        ),
+        context,
+      );
+    }
+
+    const runtimeStructuredOutput =
+      compileRuntimeStructuredOutput(normalizedCommand);
+    if (!runtimeStructuredOutput.ok) {
+      await rm(staged.value.runtimeWorkingDir, {
+        recursive: true,
+        force: true,
+      });
+      return createFailureResult(
+        createContractError("validation", runtimeStructuredOutput.message),
+        context,
+      );
+    }
+
     const runtimeRequest: PrepareTrainingDatasetRequest = {
       workspaceId: context.workspaceId,
       sourceInputs: staged.value.sourceInputs,
+      preparation: normalizedCommand.preparation,
       recipe: normalizedCommand.recipe,
       split: normalizedCommand.split,
       output: normalizedCommand.output,
       ...(quality ? { quality } : {}),
+      ...(normalizedCommand.advanced
+        ? { advanced: normalizedCommand.advanced }
+        : {}),
       runtime: {
         runtimeWorkingDirectory: staged.value.runtimeWorkingDir,
+        structuredOutput: runtimeStructuredOutput.value,
       },
     };
 
@@ -2028,6 +2525,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       outputs,
       provenance: {
         sourceArtifactIds: command.sourceArtifactIds,
+        ...(command.preparation ? { preparation: command.preparation } : {}),
         recipe: command.recipe,
         split: command.split,
         output: command.output,
@@ -2039,12 +2537,17 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
           compatibleTrainingMethods: [...taskProfile.compatibleTrainingMethods],
           recipe: taskRecipe,
         },
-        generationModelId: command.recipe.generation.model.modelId,
+        ...(command.recipe.generation
+          ? { generationModelId: command.recipe.generation.model.modelId }
+          : {}),
         summary: runtimeResult.summary,
       },
       summary: runtimeResult.summary,
       ...(runtimeResult.qualityReport
         ? { qualityReport: runtimeResult.qualityReport }
+        : {}),
+      ...(runtimeResult.advancedReport
+        ? { advancedReport: runtimeResult.advancedReport }
         : {}),
       ...(review ? { review } : {}),
       warnings: runtimeResult.warnings,
@@ -2102,6 +2605,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         datasetName,
         recipeSnapshot: {
           recipe: command.recipe,
+          ...(command.advanced ? { advanced: command.advanced } : {}),
           split: command.split,
           output: { format: command.output.format, naming: command.output.naming },
           ...(effectivePolicy ? { effectiveQualityPolicy: effectivePolicy } : {}),

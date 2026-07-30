@@ -15,6 +15,8 @@ from modules.adapters.runtime.python.worker.tasks.dataset_quality import (
     curate_dataset_rows,
 )
 from modules.adapters.runtime.python.worker.tasks.prepare_training_dataset import (
+    DatasetPreparationStageError,
+    _validate_source_associations,
     prepare_training_dataset,
 )
 
@@ -36,6 +38,7 @@ def _quality_config(**overrides: object) -> DatasetQualityRuntimeConfig:
         "maxFuzzyCandidatesPerRow": 64,
         "maxReportSamplesPerReason": 2,
         "mandatoryChecks": {
+            "sourceAssociation": True,
             "schema": True,
             "exactDuplicates": True,
             "fuzzyDuplicates": True,
@@ -58,6 +61,161 @@ def _quality_config(**overrides: object) -> DatasetQualityRuntimeConfig:
 
 
 class DatasetQualityTests(unittest.TestCase):
+    def test_accepts_renamed_nested_generated_fields_through_purpose_paths(self) -> None:
+        result = curate_dataset_rows(
+            [
+                {
+                    "sourceArtifactId": "source-a",
+                    "text": "A complete customer billing classification example.",
+                    "result": {"category": "billing"},
+                }
+            ],
+            [],
+            [
+                SimpleNamespace(
+                    artifactId="source-a", metadata={"language": "en"}
+                )
+            ],
+            "llm-classification",
+            {
+                "taskType": "llm-classification",
+                "textField": "text",
+                "labelField": "label",
+                "labelSet": ["billing", "support"],
+            },
+            _quality_config(),
+            {"label": ("result", "category")},
+        )
+
+        self.assertEqual(len(result.accepted_rows), 1)
+        self.assertEqual(result.quarantine_records, [])
+        self.assertEqual(result.report["mapping"]["missingRequiredFields"], [])
+        self.assertEqual(
+            result.report["distributions"]["classes"],
+            [{"label": "billing", "count": 1}],
+        )
+
+    def test_rejects_missing_or_unselected_source_associations(self) -> None:
+        selected_sources = [SimpleNamespace(artifactId="source-a")]
+
+        for row in (
+            {"text": "A complete synthetic training example.", "label": "sample"},
+            {
+                "sourceArtifactId": "source-b",
+                "text": "A complete synthetic training example.",
+                "label": "sample",
+            },
+        ):
+            with self.subTest(row=row):
+                with self.assertRaisesRegex(
+                    DatasetPreparationStageError,
+                    "could not be linked to a selected source",
+                ) as raised:
+                    _validate_source_associations([row], [], selected_sources)
+                self.assertEqual(raised.exception.stage, "quality")
+                self.assertEqual(
+                    raised.exception.error_code,
+                    "source_association_invalid",
+                )
+
+    def test_semantic_curation_runs_before_group_safe_splits(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source_rows = [
+                (
+                    "source-a",
+                    "How can a customer review an account invoice total?",
+                    "billing",
+                ),
+                (
+                    "source-b",
+                    "How can a customer review the total on an account invoice?",
+                    "billing",
+                ),
+                (
+                    "source-c",
+                    "Where can a user change a profile photograph?",
+                    "profile",
+                ),
+            ]
+            source_inputs = []
+            for source_id, text, label in source_rows:
+                path = root / f"{source_id}.jsonl"
+                path.write_text(
+                    json.dumps({"text": text, "label": label}) + "\n",
+                    encoding="utf-8",
+                )
+                source_inputs.append(
+                    {
+                        "artifactId": source_id,
+                        "localPath": str(path),
+                        "mediaType": "application/x-ndjson",
+                        "originalName": path.name,
+                        "metadata": {"language": "en"},
+                    }
+                )
+            payload = PrepareTrainingDatasetRequest.model_validate(
+                {
+                    "workspaceId": "workspace-a",
+                    "sourceInputs": source_inputs,
+                    "recipe": {
+                        "normalization": {"targetFormat": "markdown"},
+                        "chunking": {
+                            "strategy": "character",
+                            "chunkSize": 1000,
+                            "chunkOverlap": 0,
+                        },
+                        "generation": {
+                            "mode": "qa",
+                            "model": {
+                                "provider": "transformers",
+                                "modelId": "unused-local-model",
+                            },
+                        },
+                        "task": {
+                            "taskType": "llm-classification",
+                            "textInputMode": "provided",
+                            "textField": "text",
+                            "labelField": "label",
+                        },
+                    },
+                    "split": {
+                        "trainRatio": 0.5,
+                        "testRatio": 0.5,
+                        "seed": 7,
+                        "shuffle": True,
+                    },
+                    "output": {"format": "jsonl"},
+                    "quality": _quality_config(
+                        fuzzyDuplicateSimilarity=1.0
+                    ).model_dump(mode="json"),
+                    "advanced": {
+                        "preset": "better-document-understanding",
+                        "semantic": {
+                            "enabled": True,
+                            "embeddingAlgorithm": "hashed-token-v1",
+                            "similarityThreshold": 0.75,
+                            "maxComparisonsPerRow": 16,
+                            "hardNegativeMining": True,
+                        },
+                    },
+                }
+            )
+
+            result = prepare_training_dataset(payload, output_directory=root)
+
+            self.assertEqual(result.advancedReport["semantic"]["duplicateRowCount"], 1)
+            self.assertEqual(result.qualityReport["reasonCounts"]["semantic-duplicate"], 1)
+            self.assertEqual(result.summary.acceptedRowCount, 2)
+            accepted_sources = {
+                json.loads(line)["sourceArtifactId"]
+                for output in result.outputs
+                if output.role in {"train", "test"}
+                for line in Path(output.tempPath).read_text(encoding="utf-8").splitlines()
+            }
+            self.assertEqual(len(accepted_sources), 2)
+            self.assertFalse({"source-a", "source-b"}.issubset(accepted_sources))
+
     def test_blocks_approval_when_only_unmapped_rows_remain(self) -> None:
         result = curate_dataset_rows(
             [],
@@ -328,6 +486,137 @@ class DatasetQualityTests(unittest.TestCase):
                     for row in quarantine_rows
                 )
             )
+
+    def test_enforces_task_relationships_and_allowed_labels(self) -> None:
+        rows = [
+            {
+                "sourceArtifactId": "source-a",
+                "sourceRowIndex": 0,
+                "text": "A sufficiently complete account question.",
+                "label": "billing",
+            },
+            {
+                "sourceArtifactId": "source-a",
+                "sourceRowIndex": 1,
+                "text": "A sufficiently complete profile question.",
+                "label": "unknown",
+            },
+        ]
+
+        result = curate_dataset_rows(
+            rows,
+            [],
+            [SimpleNamespace(artifactId="source-a", metadata={"language": "en"})],
+            "llm-classification",
+            {
+                "textField": "text",
+                "labelField": "label",
+                "labelSet": ["billing", "profile"],
+            },
+            _quality_config(),
+        )
+
+        self.assertEqual(len(result.accepted_rows), 1)
+        self.assertEqual(result.report["reasonCounts"]["label-invalid"], 1)
+        self.assertEqual(result.report["inspection"]["textContent"], "checked")
+
+    def test_rejects_equal_embedding_pairs(self) -> None:
+        result = curate_dataset_rows(
+            [
+                {
+                    "sourceArtifactId": "source-a",
+                    "sourceRowIndex": 0,
+                    "anchorText": "The same normalized sentence.",
+                    "positiveText": " the SAME normalized sentence. ",
+                }
+            ],
+            [],
+            [SimpleNamespace(artifactId="source-a", metadata={"language": "en"})],
+            "llm-embedding",
+            {},
+            _quality_config(),
+        )
+
+        self.assertEqual(result.report["status"], "blocked")
+        self.assertEqual(
+            result.report["reasonCounts"]["task-relationship-invalid"], 1
+        )
+
+    def test_validates_bounded_detection_boxes_and_label_alignment(self) -> None:
+        result = curate_dataset_rows(
+            [
+                {
+                    "sourceArtifactId": "source-a",
+                    "sourceRowIndex": 0,
+                    "image": "image-a",
+                    "boundingBoxes": [[0, 0, 20, 10]],
+                    "labels": ["car"],
+                    "boxFormat": "xywh",
+                },
+                {
+                    "sourceArtifactId": "source-a",
+                    "sourceRowIndex": 1,
+                    "image": "image-b",
+                    "boundingBoxes": [[0, 0, 0, 10]],
+                    "labels": ["car"],
+                    "boxFormat": "xywh",
+                },
+                {
+                    "sourceArtifactId": "source-a",
+                    "sourceRowIndex": 2,
+                    "image": "image-c",
+                    "boundingBoxes": [[0, 0, 20, 10], [5, 5, 4, 4]],
+                    "labels": ["car"],
+                    "boxFormat": "xywh",
+                },
+            ],
+            [],
+            [SimpleNamespace(artifactId="source-a", metadata={})],
+            "vision-detection",
+            {"boxFormat": "xywh", "labelSet": ["car"]},
+            _quality_config(),
+        )
+
+        self.assertEqual(len(result.accepted_rows), 1)
+        self.assertEqual(
+            result.report["reasonCounts"]["image-annotation-invalid"], 1
+        )
+        self.assertEqual(result.report["reasonCounts"]["label-invalid"], 1)
+        self.assertEqual(
+            result.report["inspection"]["imagePixels"], "not-inspected"
+        )
+
+    def test_validates_selected_segmentation_mask_format(self) -> None:
+        result = curate_dataset_rows(
+            [
+                {
+                    "sourceArtifactId": "source-a",
+                    "sourceRowIndex": 0,
+                    "image": "image-a",
+                    "mask": [0, 0, 10, 0, 10, 10],
+                    "label": "foreground",
+                    "maskFormat": "polygon",
+                },
+                {
+                    "sourceArtifactId": "source-a",
+                    "sourceRowIndex": 1,
+                    "image": "image-b",
+                    "mask": [0, 0, 10, 0, 5],
+                    "label": "foreground",
+                    "maskFormat": "polygon",
+                },
+            ],
+            [],
+            [SimpleNamespace(artifactId="source-a", metadata={})],
+            "vision-segmentation",
+            {"maskFormat": "polygon", "labelSet": ["foreground"]},
+            _quality_config(),
+        )
+
+        self.assertEqual(len(result.accepted_rows), 1)
+        self.assertEqual(
+            result.report["reasonCounts"]["image-annotation-invalid"], 1
+        )
 
 
 if __name__ == "__main__":

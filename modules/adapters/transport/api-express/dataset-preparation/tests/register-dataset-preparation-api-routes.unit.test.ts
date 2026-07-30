@@ -44,6 +44,51 @@ function responseRecorder() {
 }
 
 describe("registerDatasetPreparationApiRoutes", () => {
+  it("returns bounded generation capacity only to authenticated callers", async () => {
+    const get = new Map<string, any>();
+    const readGenerationCapacity = testDouble.fn(async () => ({
+      schemaVersion: "1" as const,
+      capturedAt: "2026-07-30T12:00:00.000Z",
+      decoderAvailable: true,
+      schemaSupported: true,
+      logicalProcessorCount: 12,
+      totalSystemMemoryBytes: 32 * 1024 ** 3,
+    }));
+    registerDatasetPreparationApiRoutes({
+      app: {
+        get: (path, handler) => get.set(path, handler),
+        post: testDouble.fn(),
+      },
+      prepareTrainingDatasetUseCase: {} as any,
+      readGenerationCapacity,
+    });
+    const handler = get.get(
+      "/api/dataset-preparation/generation-capacity",
+    );
+
+    const unauthorized = responseRecorder();
+    await handler(
+      { query: { workspaceId: "workspace-a" } },
+      unauthorized.response,
+    );
+    expect(unauthorized.record.status).toBe(401);
+    expect(readGenerationCapacity).not.toHaveBeenCalled();
+
+    const authorized = responseRecorder();
+    await handler(
+      authenticatedRequest({ query: { workspaceId: "workspace-a" } }),
+      authorized.response,
+    );
+    expect(authorized.record.status).toBe(200);
+    expect(authorized.record.body).toMatchObject({
+      ok: true,
+      value: {
+        decoderAvailable: true,
+        logicalProcessorCount: 12,
+      },
+    });
+  });
+
   it("registers start, read, approve, and cancel routes", () => {
     const get = new Map<string, unknown>();
     const post = new Map<string, unknown>();

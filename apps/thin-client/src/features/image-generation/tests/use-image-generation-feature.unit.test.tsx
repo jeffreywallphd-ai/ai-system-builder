@@ -1,7 +1,21 @@
 import React, { act } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot as createReactRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isServerInventoryImageGenerationModel, useImageGenerationFeature } from "../hooks/useImageGenerationFeature";
+import {
+  isServerInventoryImageGenerationModel,
+  resetImageGenerationPersistedStateForTests,
+  useImageGenerationFeature,
+} from "../hooks/useImageGenerationFeature";
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
+  true;
+
+const mountedRoots = new Set<Root>();
+function createRoot(container: Element | DocumentFragment): Root {
+  const root = createReactRoot(container);
+  mountedRoots.add(root);
+  return root;
+}
 
 function model(modelRecordId: string, lifecycleStatus: string, inferenceMode = "text-to-image", artifactForm = "checkpoint") {
   return { modelRecordId, displayName: modelRecordId, modelId: `id/${modelRecordId}`, provider: "hf", source: "huggingface", artifactForm, lifecycleStatus, inferenceMode, taskTags: inferenceMode === "text-to-image" ? ["text-to-image"] : ["chat"] };
@@ -15,7 +29,12 @@ function Harness({ client, modelClient }: { client: any; modelClient: any }) {
 }
 
 describe("useImageGenerationFeature", () => {
-  afterEach(() => {
+  afterEach(async () => {
+    await act(async () => {
+      for (const root of mountedRoots) root.unmount();
+    });
+    mountedRoots.clear();
+    resetImageGenerationPersistedStateForTests();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -38,7 +57,8 @@ describe("useImageGenerationFeature", () => {
     function H() { const f = useImageGenerationFeature(client, undefined, modelClient, undefined, "workspace-a"); return <div><button id="start" onClick={()=>void f.start()}>s</button><button id="manual" onClick={()=>f.setForm((x)=>({...x,prompt:"cat",model:"manual.ckpt"}))}>m</button></div>; }
     const c = document.createElement("div"); const root = createRoot(c);
     await act(async()=>{root.render(<H/>);});
-    await act(async()=>{(c.querySelector("#manual") as HTMLButtonElement).click(); (c.querySelector("#start") as HTMLButtonElement).click();});
+    await act(async()=>{(c.querySelector("#manual") as HTMLButtonElement).click();});
+    await act(async()=>{(c.querySelector("#start") as HTMLButtonElement).click();});
     expect(client.startImageGeneration).toHaveBeenCalledWith(expect.objectContaining({ model: "manual.ckpt" }));
   });
 
@@ -83,7 +103,8 @@ describe("useImageGenerationFeature", () => {
     }
     const c = document.createElement("div"); const root = createRoot(c);
     await act(async()=>{root.render(<H />);});
-    await act(async()=>{(c.querySelector("#select") as HTMLButtonElement).click(); (c.querySelector("#prompt") as HTMLButtonElement).click(); (c.querySelector("#start") as HTMLButtonElement).click();});
+    await act(async()=>{(c.querySelector("#select") as HTMLButtonElement).click(); (c.querySelector("#prompt") as HTMLButtonElement).click();});
+    await act(async()=>{(c.querySelector("#start") as HTMLButtonElement).click();});
     expect(client.startImageGeneration).not.toHaveBeenCalled();
     expect((c.querySelector("#error") as HTMLElement).textContent).toContain("saved reference only");
   });
@@ -101,9 +122,13 @@ describe("useImageGenerationFeature", () => {
     }
     const c = document.createElement("div"); const root = createRoot(c);
     await act(async()=>{root.render(<H />); await flush(); await flush();});
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(
+      fetchMock.mock.calls.filter(([url]) => String(url).includes("/model/list")),
+    ).toHaveLength(1);
     await act(async()=>{(c.querySelector("#prompt") as HTMLButtonElement).click(); await flush();});
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(
+      fetchMock.mock.calls.filter(([url]) => String(url).includes("/model/list")),
+    ).toHaveLength(1);
   });
 
   it("does not show prompt validation until generate attempt", async () => {
@@ -142,7 +167,7 @@ describe("useImageGenerationFeature", () => {
   it("auto-finalizes on success and assigns random seed when omitted", async () => {
     const client = { createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1" }), readImageGeneration: vi.fn().mockResolvedValue({ requestId: "r1", status: "succeeded" }), finalizeImageGenerationIfCompleted: vi.fn().mockResolvedValue({ finalized: true, assets: [{ assetId: "a1", artifactId: "artifact-1", storageKey: "generated/images/a.png", mediaType: "image/png" }] }), cancelImageGeneration: vi.fn() };
     const modelClient = { listModels: vi.fn().mockResolvedValue({ models: [] }) };
-    function H() { const f = useImageGenerationFeature(client, undefined, modelClient, undefined, "workspace-a"); return <div><button id="start" onClick={()=>void f.start()}>s</button><button id="prompt" onClick={()=>f.setForm((x)=>({...x,prompt:"cat",seed:""}))}>p</button></div>; }
+    function H() { const f = useImageGenerationFeature(client, undefined, modelClient, undefined, "workspace-a"); return <div><button id="start" onClick={()=>void f.start()}>s</button><button id="prompt" onClick={()=>f.setForm((x)=>({...x,prompt:"cat",seed:""}))}>p</button><span id="result">{f.results[0]?.storageKey ?? ""}</span></div>; }
     const c = document.createElement("div"); const root = createRoot(c);
     await act(async()=>{root.render(<H/>);});
     await act(async()=>{(c.querySelector("#prompt") as HTMLButtonElement).click(); (c.querySelector("#start") as HTMLButtonElement).click(); await flush();});
@@ -207,7 +232,8 @@ describe("useImageGenerationFeature", () => {
     function H() { const f = useImageGenerationFeature(client, undefined, modelClient, undefined, "workspace-a"); return <div><button id="start" onClick={() => void f.start()}>s</button><button id="prompt" onClick={() => f.setForm((x) => ({ ...x, prompt: "cat" }))}>p</button><span id="status">{f.status}</span><span id="error">{f.error ?? ""}</span></div>; }
     const c = document.createElement("div"); const root = createRoot(c);
     await act(async()=>{root.render(<H />);});
-    await act(async()=>{(c.querySelector("#prompt") as HTMLButtonElement).click(); (c.querySelector("#start") as HTMLButtonElement).click(); await flush();});
+    await act(async()=>{(c.querySelector("#prompt") as HTMLButtonElement).click();});
+    await act(async()=>{(c.querySelector("#start") as HTMLButtonElement).click(); await flush();});
     expect((c.querySelector("#status") as HTMLElement).textContent).toBe("failed");
     expect((c.querySelector("#error") as HTMLElement).textContent).toContain("did not register");
   });

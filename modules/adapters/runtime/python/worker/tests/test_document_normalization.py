@@ -133,6 +133,31 @@ class DocumentNormalizationTests(unittest.TestCase):
                     DocumentNormalizationConfig(targetFormat="markdown", unsupportedDocumentPolicy="fail"),
                 )
 
+    def test_records_document_regions_tables_and_extraction_quality(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "structured.docx"
+            document = Document()
+            document.add_heading("Account guide", level=1)
+            document.add_paragraph("Review synthetic billing information.")
+            table = document.add_table(rows=2, cols=2)
+            table.cell(0, 0).text = "Plan"
+            table.cell(0, 1).text = "Limit"
+            table.cell(1, 0).text = "Basic"
+            table.cell(1, 1).text = "10"
+            document.save(str(source))
+
+            result = normalize_sources_to_markdown(
+                [DatasetPreparationSourceInput(artifactId="docx", localPath=str(source))],
+                DocumentNormalizationConfig(targetFormat="markdown", unsupportedDocumentPolicy="fail"),
+            )
+
+            normalized = result.documents[0]
+            self.assertGreater(normalized.extraction_quality, 0.9)
+            self.assertTrue(any(region.kind == "table" for region in normalized.regions or []))
+            for region in normalized.regions or []:
+                self.assertGreater(region.end, region.start)
+                self.assertLessEqual(region.end, len(normalized.markdown))
+
 
 if __name__ == "__main__":
     unittest.main()

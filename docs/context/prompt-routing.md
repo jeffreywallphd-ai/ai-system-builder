@@ -84,6 +84,16 @@ Before architecture-sensitive implementation, consult `docs/adr/decision-readine
 - Do not include runtime/provider/storage packs for read-only UI tasks unless those boundaries are directly touched.
 - Do not include all phase packs for asset work; include the narrow chain that matches the task.
 
+## Implementation Roadmap Routing
+
+Requests to prepare, implement, continue, resume, or review an implementation
+roadmap route to `skills/manage-implementation-roadmaps/SKILL.md`. Drafting or
+review alone does not authorize code changes. Once implementation is explicitly
+requested and the roadmap is approved, continue through every approved increment
+by default; do not insert routine per-increment approval pauses. Stop only when the
+skill's scope, authority, security, blocker, controlled-environment, or final
+approval gates apply.
+
 ## Stop Condition
 
 - If required canonical guidance is missing, unclear, or conflicting, update or request clarification for the canonical docs rather than inventing policy silently.

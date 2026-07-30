@@ -1,7 +1,7 @@
 # Testing Standards
 
 - Status: accepted
-- Verification: `npm test`
+- Verification: `npm run test:all`
 
 ## Purpose
 
@@ -16,10 +16,21 @@ They are not written to satisfy vanity coverage metrics or performative CI check
 - The canonical runner supplies its transpiled test files to Node's programmatic
   `run()` API with `isolation: "none"`; do not pre-import the same files and then
   invoke `run()`, which can double-register execution under Node 24.
-- Browser/renderer-focused test tooling is handled separately and is not the non-browser default path.
+- Vitest-owned renderer tests are selected by their explicit Vitest import and run
+  separately from Node-owned tests.
 - Canonical repo commands:
-  - `npm test` (root default alias for non-browser coverage)
-  - `npm run test:non-browser` (explicit non-browser command)
+  - `npm test` / `npm run test:short` (short unit and interaction coverage)
+  - `npm run test:long` (long integration and end-to-end coverage)
+  - `npm run test:all` (complete short and long automated coverage)
+  - `npm run test:non-browser` / `npm run test:vitest` (runner-specific coverage)
+
+The short suite is the standard feedback loop. The long suite contains every
+`*.integration.test.*` and `*.e2e.test.*` file plus unusually slow files marked
+with `// @test-duration long`. UI interaction tests remain short unless their
+measured duration or environment makes the explicit long marker appropriate.
+Each runner writes a JSON report under `artifacts/test-reports/` with the slowest
+files and tests. Packaged desktop and other controlled-environment qualifications
+remain named commands outside `test:all` and cannot be inferred from automated runs.
 
 ## Testing strategy by layer
 
@@ -154,6 +165,11 @@ If no regression test is added, include explicit rationale in the PR.
   - `*.unit.test.ts`
   - `*.integration.test.ts`
   - `*.ui.test.tsx`
+  - `*.e2e.test.tsx`
+
+Use suffixes to describe test scope, not merely duration. Add
+`// @test-duration long` only when measured runtime shows a unit or interaction
+file does not belong in the fast feedback loop.
 
 Describe expected behavior and context in test titles; avoid vague names.
 

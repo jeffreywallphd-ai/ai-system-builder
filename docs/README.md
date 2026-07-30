@@ -136,10 +136,13 @@ If context guidance conflicts with an ADR, architecture document, or standard, t
 
 ## Verification
 
-- During roadmap execution, run focused tests for each internal chunk and defer
-  the full suite until every planned chunk in the increment is implemented.
+- During roadmap execution, run focused tests for each internal chunk and only
+  change-relevant tests after an increment. Run the complete short and long suites
+  once after every roadmap increment is implemented.
 - Run `npm run docs:check` after documentation or context changes.
 - Run `npm run agent-support:check` after agent guidance, context routing, skill, or evaluation changes.
 - Run `npm run security:dependencies` when dependency, lockfile, workflow, container, SBOM, or release dependency inputs change.
-- Run `npm test` after implementation changes and before handoff when practical.
+- Run `npm test` for the short unit and interaction suite.
+- Run `npm run test:long` for long integration and end-to-end coverage.
+- Run `npm run test:all` once after all roadmap increments are implemented.
 - Continuous integration enforces both gates for pull requests and changes to the default branch.

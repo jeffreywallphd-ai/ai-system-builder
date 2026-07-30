@@ -33,6 +33,7 @@ describe("createDefaultDatasetQualityPolicyProvider", () => {
     assert.equal(policy.maxRowsPerSource, 500);
     assert.equal(policy.requireLicenseMetadata, true);
     assert.deepEqual(policy.mandatoryChecks, {
+      sourceAssociation: true,
       schema: true,
       exactDuplicates: true,
       fuzzyDuplicates: true,

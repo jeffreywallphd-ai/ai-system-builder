@@ -1,5 +1,6 @@
 import {
   resolveDatasetPreparationTaskProfileDefinition,
+  type DatasetPreparationExecutionPlan,
   type DatasetPreparationTaskType,
 } from "../../../../../../../modules/contracts/runtime";
 
@@ -27,9 +28,14 @@ export function parseOptionalInteger(value: string): number | undefined {
 export interface DatasetPreparationValidationInput {
   selectedArtifactIds: string[];
   taskType: DatasetPreparationTaskType;
+  preparation?: DatasetPreparationExecutionPlan;
   chunkSize: string;
   chunkOverlap: string;
   maxChunkCount: string;
+  maxTokensPerChunk?: string;
+  topicBoundarySensitivity?: string;
+  maxSourceSpans?: string;
+  similarityThreshold?: string;
   modelId: string;
   maxExamplesPerChunk: string;
   batchSize: string;
@@ -47,9 +53,13 @@ export interface DatasetPreparationValidationInput {
 }
 
 export interface ParsedDatasetPreparationInputs {
-  chunkSize: number;
-  chunkOverlap: number;
+  chunkSize?: number;
+  chunkOverlap?: number;
   maxChunkCount: number | undefined;
+  maxTokensPerChunk?: number;
+  topicBoundarySensitivity?: number;
+  maxSourceSpans?: number;
+  similarityThreshold?: number;
   maxExamplesPerChunk: number | undefined;
   batchSize: number | undefined;
   generationTemperature: number | undefined;
@@ -83,35 +93,114 @@ export function validateAndParseDatasetPreparationInputs(
     return { ok: false, error: "Select at least one source artifact." };
   }
 
-  const chunkSize = parseOptionalInteger(input.chunkSize);
+  const usesFixedSections =
+    input.preparation === undefined ||
+    input.preparation.method === "fixed-length";
+  const usesTopicSections = input.preparation?.method === "topic-aware";
+  const usesAdaptiveSections =
+    usesTopicSections || input.preparation?.method === "structure-aware";
+  const chunkSize = usesFixedSections
+    ? parseOptionalInteger(input.chunkSize)
+    : undefined;
   if (
-    typeof chunkSize !== "number" ||
-    Number.isNaN(chunkSize) ||
-    chunkSize <= 0
-  ) {
-    return { ok: false, error: "Chunk size must be a positive integer." };
-  }
-
-  const chunkOverlap = parseOptionalInteger(input.chunkOverlap);
-  if (
-    typeof chunkOverlap !== "number" ||
-    Number.isNaN(chunkOverlap) ||
-    chunkOverlap < 0
+    usesFixedSections &&
+    (typeof chunkSize !== "number" || Number.isNaN(chunkSize) || chunkSize <= 0)
   ) {
     return {
       ok: false,
-      error: "Chunk overlap must be an integer greater than or equal to 0.",
+      error: input.preparation
+        ? "Section length must be a positive whole number."
+        : "Chunk size must be a positive integer.",
     };
   }
 
-  const maxChunkCount = parseOptionalInteger(input.maxChunkCount);
+  const chunkOverlap = usesFixedSections
+    ? parseOptionalInteger(input.chunkOverlap)
+    : undefined;
+  if (
+    usesFixedSections &&
+    (typeof chunkOverlap !== "number" ||
+      Number.isNaN(chunkOverlap) ||
+      chunkOverlap < 0)
+  ) {
+    return {
+      ok: false,
+      error: input.preparation
+        ? "Section overlap must be a whole number greater than or equal to 0."
+        : "Chunk overlap must be an integer greater than or equal to 0.",
+    };
+  }
+
+  const maxChunkCount = usesFixedSections
+    ? parseOptionalInteger(input.maxChunkCount)
+    : undefined;
   if (
     typeof maxChunkCount === "number" &&
     (Number.isNaN(maxChunkCount) || maxChunkCount <= 0)
   ) {
     return {
       ok: false,
-      error: "Max chunk count must be a positive integer when provided.",
+      error:
+        "Maximum section count must be a positive whole number when provided.",
+    };
+  }
+
+  const maxTokensPerChunk = usesAdaptiveSections
+    ? parseOptionalInteger(input.maxTokensPerChunk ?? "")
+    : undefined;
+  if (
+    usesAdaptiveSections &&
+    (typeof maxTokensPerChunk !== "number" ||
+      Number.isNaN(maxTokensPerChunk) ||
+      maxTokensPerChunk <= 0)
+  ) {
+    return {
+      ok: false,
+      error: "Maximum section length must be a positive whole number.",
+    };
+  }
+  const maxSourceSpans = usesAdaptiveSections
+    ? parseOptionalInteger(input.maxSourceSpans ?? "")
+    : undefined;
+  if (
+    usesAdaptiveSections &&
+    (typeof maxSourceSpans !== "number" ||
+      Number.isNaN(maxSourceSpans) ||
+      maxSourceSpans <= 0)
+  ) {
+    return {
+      ok: false,
+      error: "Maximum source sections must be a positive whole number.",
+    };
+  }
+  const topicBoundarySensitivity = usesTopicSections
+    ? parseOptionalNumber(input.topicBoundarySensitivity ?? "")
+    : undefined;
+  if (
+    usesTopicSections &&
+    (typeof topicBoundarySensitivity !== "number" ||
+      Number.isNaN(topicBoundarySensitivity) ||
+      topicBoundarySensitivity < 0 ||
+      topicBoundarySensitivity > 1)
+  ) {
+    return {
+      ok: false,
+      error: "Topic change sensitivity must be between 0 and 1.",
+    };
+  }
+  const similarityThreshold = usesAdaptiveSections
+    ? parseOptionalNumber(input.similarityThreshold ?? "")
+    : undefined;
+  if (
+    usesAdaptiveSections &&
+    (typeof similarityThreshold !== "number" ||
+      Number.isNaN(similarityThreshold) ||
+      similarityThreshold < 0 ||
+      similarityThreshold > 1)
+  ) {
+    return {
+      ok: false,
+      error: "Similar-example threshold must be between 0 and 1.",
     };
   }
 
@@ -248,6 +337,10 @@ export function validateAndParseDatasetPreparationInputs(
       chunkSize,
       chunkOverlap,
       maxChunkCount,
+      maxTokensPerChunk,
+      topicBoundarySensitivity,
+      maxSourceSpans,
+      similarityThreshold,
       maxExamplesPerChunk,
       batchSize,
       generationTemperature,

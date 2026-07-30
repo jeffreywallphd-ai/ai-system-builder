@@ -4,6 +4,7 @@ import { PYTHON_RUNTIME_DATASET_PREPARATION_REQUIRED_CAPABILITIES } from "../../
 import {
   resolvePythonRuntimeBaseUrl,
   resolvePythonRuntimeHostAndPort,
+  resolveDesktopPythonRuntimeWorkerDirectory,
   classifyPythonRuntimeStdioLogLevel,
   shouldPreparePythonRuntimeWorkerDependencies,
   type DesktopPythonRuntimeFeature,
@@ -60,9 +61,11 @@ export async function composeDesktopPythonRuntimeFeature(
       args: process.env.PYTHON_RUNTIME_ARGS?.split(" ").filter(Boolean) ?? [
         "main.py",
       ],
-      cwd:
-        process.env.PYTHON_RUNTIME_WORKER_DIR ??
-        "modules/adapters/runtime/python/worker",
+      cwd: resolveDesktopPythonRuntimeWorkerDirectory({
+        configuredWorkerDirectory: process.env.PYTHON_RUNTIME_WORKER_DIR,
+        resourcesPath: (process as NodeJS.Process & { resourcesPath?: string })
+          .resourcesPath,
+      }),
       env: pythonRuntimeEnvironment,
       startupTimeoutMs: pythonRuntimeStartupTimeoutMs,
       requiredCapabilities:

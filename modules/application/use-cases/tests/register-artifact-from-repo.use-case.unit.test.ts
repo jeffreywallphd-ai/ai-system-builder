@@ -16,7 +16,9 @@ describe("RegisterArtifactFromRepoUseCase", () => {
     const log = testDouble.fn();
     const logging: LoggingPort = { log };
     const artifactRepoStorage: ArtifactRepoStoragePort = {
-      hasArtifactInRepo: testDouble.fn(async () => createHasArtifactInRepoSuccessResult(true)),
+      hasArtifactInRepo: testDouble.fn(async () =>
+        createHasArtifactInRepoSuccessResult(true),
+      ),
       storeArtifactInRepo: testDouble.fn(),
       retrieveArtifactFromRepo: testDouble.fn(),
     } as unknown as ArtifactRepoStoragePort;
@@ -42,18 +44,22 @@ describe("RegisterArtifactFromRepoUseCase", () => {
       artifactCatalogAppend,
       logging,
       now: () => "2026-04-17T00:00:00.000Z",
-      createArtifactId: () => ArtifactId.from("artifacts/20260417000000-import001"),
+      createArtifactId: () =>
+        ArtifactId.from("artifacts/20260417000000-import001"),
     });
 
-    const result = await useCase.execute({
-      target: {
-        provider: "huggingface",
-        repository: "openai/demo",
-        path: "images/a.png",
+    const result = await useCase.execute(
+      {
+        target: {
+          provider: "huggingface",
+          repository: "openai/demo",
+          path: "images/a.png",
+        },
+        artifactFamily: "image",
+        mediaType: "image/png",
       },
-      artifactFamily: "image",
-      mediaType: "image/png",
-    });
+      { workspaceId: "workspace-a" },
+    );
 
     expect(result.ok).toBe(true);
     if (!result.ok) {
@@ -61,29 +67,74 @@ describe("RegisterArtifactFromRepoUseCase", () => {
     }
 
     expect(result.value.artifactId).toBe("artifacts/20260417000000-import001");
-    const upsertCall = (artifactBindingStorage.upsertArtifactStorageBinding as ReturnType<typeof testDouble.fn>).mock.calls[0]?.[0];
-    const appendCall = (artifactCatalogAppend.appendArtifactCatalogRecord as ReturnType<typeof testDouble.fn>).mock.calls[0]?.[0];
+    const upsertCall = (
+      artifactBindingStorage.upsertArtifactStorageBinding as ReturnType<
+        typeof testDouble.fn
+      >
+    ).mock.calls[0]?.[0];
+    const appendCall = (
+      artifactCatalogAppend.appendArtifactCatalogRecord as ReturnType<
+        typeof testDouble.fn
+      >
+    ).mock.calls[0]?.[0];
     expect(upsertCall).toMatchObject({
       binding: {
+        workspaceId: "workspace-a",
         artifactId: "artifacts/20260417000000-import001",
         role: "imported-source",
       },
     });
     expect(appendCall).toMatchObject({
       record: {
+        workspaceId: "workspace-a",
         storageKey: "artifacts/20260417000000-import001",
         artifactFamily: "image",
+        mediaType: "image/png",
+        sourceKind: "upload",
       },
     });
-    const logCalls = (log as ReturnType<typeof testDouble.fn>).mock.calls.map((call) => call[0]);
-    expect(logCalls.some((entry) => entry?.event === "application.huggingface.file-registration.started")).toBe(true);
-    expect(logCalls.some((entry) => entry?.event === "application.huggingface.file-registration.succeeded")).toBe(true);
+    expect(
+      (
+        artifactCatalogAppend.appendArtifactCatalogRecord as ReturnType<
+          typeof testDouble.fn
+        >
+      ).mock.calls[0]?.[1],
+    ).toMatchObject({
+      workspaceId: "workspace-a",
+    });
+    expect(
+      (
+        artifactBindingStorage.upsertArtifactStorageBinding as ReturnType<
+          typeof testDouble.fn
+        >
+      ).mock.calls[0]?.[1],
+    ).toMatchObject({
+      workspaceId: "workspace-a",
+    });
+    const logCalls = (log as ReturnType<typeof testDouble.fn>).mock.calls.map(
+      (call) => call[0],
+    );
+    expect(
+      logCalls.some(
+        (entry) =>
+          entry?.event === "application.huggingface.file-registration.started",
+      ),
+    ).toBe(true);
+    expect(
+      logCalls.some(
+        (entry) =>
+          entry?.event ===
+          "application.huggingface.file-registration.succeeded",
+      ),
+    ).toBe(true);
   });
 
   it("uses artifactIdFactory seam for system-owned id generation", async () => {
     const logging: LoggingPort = { log: testDouble.fn() };
     const artifactRepoStorage: ArtifactRepoStoragePort = {
-      hasArtifactInRepo: testDouble.fn(async () => createHasArtifactInRepoSuccessResult(true)),
+      hasArtifactInRepo: testDouble.fn(async () =>
+        createHasArtifactInRepoSuccessResult(true),
+      ),
       storeArtifactInRepo: testDouble.fn(),
       retrieveArtifactFromRepo: testDouble.fn(),
     } as unknown as ArtifactRepoStoragePort;
@@ -103,7 +154,9 @@ describe("RegisterArtifactFromRepoUseCase", () => {
       })),
     };
     const artifactIdFactory: ArtifactIdFactory = {
-      createArtifactId: testDouble.fn(() => ArtifactId.from("artifacts/20260418000000-factory001")),
+      createArtifactId: testDouble.fn(() =>
+        ArtifactId.from("artifacts/20260418000000-factory001"),
+      ),
     };
 
     const useCase = new RegisterArtifactFromRepoUseCase({
@@ -115,13 +168,16 @@ describe("RegisterArtifactFromRepoUseCase", () => {
       artifactIdFactory,
     });
 
-    const result = await useCase.execute({
-      target: {
-        provider: "huggingface",
-        repository: "openai/demo",
-        path: "images/a.png",
+    const result = await useCase.execute(
+      {
+        target: {
+          provider: "huggingface",
+          repository: "openai/demo",
+          path: "images/a.png",
+        },
       },
-    });
+      { workspaceId: "workspace-a" },
+    );
 
     expect(result.ok).toBe(true);
     if (!result.ok) {
@@ -129,7 +185,11 @@ describe("RegisterArtifactFromRepoUseCase", () => {
     }
     expect(artifactIdFactory.createArtifactId).toHaveBeenCalledTimes(1);
     expect(result.value.artifactId).toBe("artifacts/20260418000000-factory001");
-    const appendCall = (artifactCatalogAppend.appendArtifactCatalogRecord as ReturnType<typeof testDouble.fn>).mock.calls[0]?.[0];
+    const appendCall = (
+      artifactCatalogAppend.appendArtifactCatalogRecord as ReturnType<
+        typeof testDouble.fn
+      >
+    ).mock.calls[0]?.[0];
     expect(appendCall).toMatchObject({
       record: {
         artifactFamily: "binary",
@@ -137,10 +197,44 @@ describe("RegisterArtifactFromRepoUseCase", () => {
     });
   });
 
+  it("fails closed before provider access when workspace context is missing", async () => {
+    const hasArtifactInRepo = testDouble.fn(async () =>
+      createHasArtifactInRepoSuccessResult(true),
+    );
+    const useCase = new RegisterArtifactFromRepoUseCase({
+      artifactRepoStorage: {
+        hasArtifactInRepo,
+      } as unknown as ArtifactRepoStoragePort,
+      artifactBindingStorage: {
+        upsertArtifactStorageBinding: testDouble.fn(),
+      } as unknown as ArtifactStorageBindingPort,
+      artifactCatalogAppend: {
+        appendArtifactCatalogRecord: testDouble.fn(),
+      },
+      logging: { log: testDouble.fn() },
+    });
+
+    const result = await useCase.execute({
+      target: {
+        provider: "huggingface",
+        repository: "openai/demo",
+        path: "data/train.parquet",
+      },
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "validation" },
+    });
+    expect(hasArtifactInRepo).toHaveBeenCalledTimes(0);
+  });
+
   it("derives catalog artifactFamily from media type family when artifactFamily is omitted", async () => {
     const logging: LoggingPort = { log: testDouble.fn() };
     const artifactRepoStorage: ArtifactRepoStoragePort = {
-      hasArtifactInRepo: testDouble.fn(async () => createHasArtifactInRepoSuccessResult(true)),
+      hasArtifactInRepo: testDouble.fn(async () =>
+        createHasArtifactInRepoSuccessResult(true),
+      ),
       storeArtifactInRepo: testDouble.fn(),
       retrieveArtifactFromRepo: testDouble.fn(),
     } as unknown as ArtifactRepoStoragePort;
@@ -163,23 +257,34 @@ describe("RegisterArtifactFromRepoUseCase", () => {
       artifactBindingStorage,
       artifactCatalogAppend,
       logging,
-      createArtifactId: () => ArtifactId.from("artifacts/20260418000000-factory002"),
+      createArtifactId: () =>
+        ArtifactId.from("artifacts/20260418000000-factory002"),
     });
 
-    const result = await useCase.execute({
-      target: {
-        provider: "huggingface",
-        repository: "openai/demo",
-        path: "data/train.parquet",
+    const result = await useCase.execute(
+      {
+        target: {
+          provider: "huggingface",
+          repository: "openai/demo",
+          path: "data/train.parquet",
+        },
+        mediaType: "application/x-parquet",
       },
-      mediaType: "application/x-parquet",
-    });
+      { workspaceId: "workspace-a" },
+    );
 
     expect(result.ok).toBe(true);
-    const appendCall = (artifactCatalogAppend.appendArtifactCatalogRecord as ReturnType<typeof testDouble.fn>).mock.calls[0]?.[0];
+    const appendCall = (
+      artifactCatalogAppend.appendArtifactCatalogRecord as ReturnType<
+        typeof testDouble.fn
+      >
+    ).mock.calls[0]?.[0];
     expect(appendCall).toMatchObject({
       record: {
+        workspaceId: "workspace-a",
         artifactFamily: "tabular",
+        mediaType: "application/x-parquet",
+        sourceKind: "upload",
       },
     });
   });
@@ -190,7 +295,10 @@ describe("RegisterArtifactFromRepoUseCase", () => {
     const artifactRepoStorage: ArtifactRepoStoragePort = {
       hasArtifactInRepo: testDouble.fn(async () => ({
         ok: false as const,
-        error: createContractError("unavailable", "Hugging Face hasArtifactInRepo requires an access token for this repository. No token is configured."),
+        error: createContractError(
+          "unavailable",
+          "Hugging Face hasArtifactInRepo requires an access token for this repository. No token is configured.",
+        ),
       })),
       storeArtifactInRepo: testDouble.fn(),
       retrieveArtifactFromRepo: testDouble.fn(),
@@ -211,13 +319,16 @@ describe("RegisterArtifactFromRepoUseCase", () => {
       logging,
     });
 
-    const result = await useCase.execute({
-      target: {
-        provider: "huggingface",
-        repository: "openai/private-demo",
-        path: "images/a.png",
+    const result = await useCase.execute(
+      {
+        target: {
+          provider: "huggingface",
+          repository: "openai/private-demo",
+          path: "images/a.png",
+        },
       },
-    });
+      { workspaceId: "workspace-a" },
+    );
 
     expect(result.ok).toBe(false);
     if (result.ok) {
@@ -225,7 +336,14 @@ describe("RegisterArtifactFromRepoUseCase", () => {
     }
     expect(result.error.code).toBe("unavailable");
     expect(result.error.message).toContain("register/import");
-    const logCalls = (log as ReturnType<typeof testDouble.fn>).mock.calls.map((call) => call[0]);
-    expect(logCalls.some((entry) => entry?.event === "application.huggingface.file-registration.failed")).toBe(true);
+    const logCalls = (log as ReturnType<typeof testDouble.fn>).mock.calls.map(
+      (call) => call[0],
+    );
+    expect(
+      logCalls.some(
+        (entry) =>
+          entry?.event === "application.huggingface.file-registration.failed",
+      ),
+    ).toBe(true);
   });
 });

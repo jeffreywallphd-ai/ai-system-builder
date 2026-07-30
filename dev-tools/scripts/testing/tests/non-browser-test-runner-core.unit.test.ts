@@ -5,8 +5,13 @@ import {
   applyIgnoredFailureAdjustments,
   applyDiagnosticSummaryMetric,
   buildNonBrowserNodeTestRunOptions,
+  classifyTestFileDuration,
+  createTestTimingTracker,
   formatNonBrowserFailureSummary,
+  isVitestOwnedTestSource,
   isIgnorableRunnerSpawnFailure,
+  parseTestSuiteArgument,
+  shouldIncludeTestFileForSuite,
 } from "../non-browser-test-runner-core.mjs";
 
 describe("non-browser test runner core helpers", () => {
@@ -22,6 +27,84 @@ describe("non-browser test runner core helpers", () => {
     assert.notEqual(runOptions.files, files);
     assert.equal(runOptions.isolation, "none");
     assert.equal("concurrency" in runOptions, false);
+  });
+
+  it("classifies unit and interaction tests as short and integration or e2e tests as long", () => {
+    assert.equal(classifyTestFileDuration("feature.unit.test.ts"), "short");
+    assert.equal(classifyTestFileDuration("feature.ui.test.tsx"), "short");
+    assert.equal(
+      classifyTestFileDuration("feature.integration.test.ts"),
+      "long",
+    );
+    assert.equal(classifyTestFileDuration("feature.e2e.test.tsx"), "long");
+    assert.equal(
+      classifyTestFileDuration("legacy.unit.test.ts", "// @test-duration long"),
+      "long",
+    );
+    assert.equal(
+      shouldIncludeTestFileForSuite({
+        sourcePath: "feature.e2e.test.ts",
+        suite: "short",
+      }),
+      false,
+    );
+    assert.equal(
+      shouldIncludeTestFileForSuite({
+        sourcePath: "feature.e2e.test.ts",
+        suite: "long",
+      }),
+      true,
+    );
+  });
+
+  it("parses supported suite arguments and keeps Vitest-owned files out of the Node runner", () => {
+    assert.equal(parseTestSuiteArgument(["--suite=short"]), "short");
+    assert.equal(parseTestSuiteArgument([], "long"), "long");
+    assert.equal(parseTestSuiteArgument(["--suite=all"]), "all");
+    assert.throws(
+      () => parseTestSuiteArgument(["--suite=unknown"]),
+      /Unsupported test suite/,
+    );
+    assert.equal(isVitestOwnedTestSource('import { it } from "vitest";'), true);
+    assert.equal(isVitestOwnedTestSource("import { it } from 'vitest';"), true);
+    assert.equal(
+      isVitestOwnedTestSource('import { it } from "node:test";'),
+      false,
+    );
+  });
+
+  it("reports the slowest top-level files and test events", () => {
+    const tracker = createTestTimingTracker({ limit: 2 });
+    tracker.record({
+      file: "a.test.ts",
+      name: "suite a",
+      nesting: 0,
+      durationMs: 40,
+      status: "passed",
+    });
+    tracker.record({
+      file: "a.test.ts",
+      name: "case a",
+      nesting: 1,
+      durationMs: 35,
+      status: "passed",
+    });
+    tracker.record({
+      file: "b.test.ts",
+      name: "case b",
+      nesting: 0,
+      durationMs: 80,
+      status: "passed",
+    });
+    const snapshot = tracker.snapshot();
+    assert.deepEqual(
+      snapshot.slowestFiles.map((entry) => entry.file),
+      ["b.test.ts", "a.test.ts"],
+    );
+    assert.deepEqual(
+      snapshot.slowestTests.map((entry) => entry.name),
+      ["case b", "suite a"],
+    );
   });
 
   it("applies diagnostic metrics to summary counts and duration", () => {

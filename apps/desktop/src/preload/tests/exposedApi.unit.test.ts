@@ -154,7 +154,10 @@ describe("desktop preload exposedApi bridge", () => {
       ),
       createIpcSuccessResponse(
         DESKTOP_SYSTEM_DEPLOYMENT_CHANNELS.lifecycleInvoke.response,
-        { state: "active-stopped", eligibleActions: ["start", "deactivate", "uninstall"] },
+        {
+          state: "active-stopped",
+          eligibleActions: ["start", "deactivate", "uninstall"],
+        },
       ),
     ];
     const invoke = testDouble
@@ -177,9 +180,11 @@ describe("desktop preload exposedApi bridge", () => {
       DESKTOP_SYSTEM_DEPLOYMENT_CHANNELS.lifecycleRead.request.value,
       DESKTOP_SYSTEM_DEPLOYMENT_CHANNELS.lifecycleInvoke.request.value,
     ]);
-    const payload = (invoke.mock.calls[1]?.[1] as {
-      payload: Record<string, unknown>;
-    }).payload;
+    const payload = (
+      invoke.mock.calls[1]?.[1] as {
+        payload: Record<string, unknown>;
+      }
+    ).payload;
     expect(payload).toEqual({
       workspaceId: "workspace-a",
       releaseId: "release-a",
@@ -193,8 +198,14 @@ describe("desktop preload exposedApi bridge", () => {
 
   it("maps guided build preparation, request, and publication reads to dedicated IPC channels", async () => {
     const responses = [
-      createIpcSuccessResponse(DESKTOP_SYSTEM_BUILD_CHANNELS.prepare.response, {}),
-      createIpcSuccessResponse(DESKTOP_SYSTEM_BUILD_CHANNELS.request.response, {}),
+      createIpcSuccessResponse(
+        DESKTOP_SYSTEM_BUILD_CHANNELS.prepare.response,
+        {},
+      ),
+      createIpcSuccessResponse(
+        DESKTOP_SYSTEM_BUILD_CHANNELS.request.response,
+        {},
+      ),
       createIpcSuccessResponse(
         DESKTOP_SYSTEM_BUILD_CHANNELS.publicationWorkspace.response,
         { systems: [] },
@@ -222,9 +233,11 @@ describe("desktop preload exposedApi bridge", () => {
     expect(invoke.mock.calls[1]?.[1]).toMatchObject({
       payload: { ...target, buildId: "build-2" },
     });
-    const requestPayload = (invoke.mock.calls[1]?.[1] as {
-      payload: Record<string, unknown>;
-    }).payload;
+    const requestPayload = (
+      invoke.mock.calls[1]?.[1] as {
+        payload: Record<string, unknown>;
+      }
+    ).payload;
     expect("deploymentProfile" in requestPayload).toBe(false);
     expect("toolchainProfile" in requestPayload).toBe(false);
   });
@@ -1078,7 +1091,9 @@ describe("desktop preload exposedApi bridge", () => {
 
   it("rejects concurrent artifact uploads before invoking IPC twice", async () => {
     let resolveUpload:
-      | ((value: ReturnType<typeof createDesktopArtifactUploadSuccessResponse>) => void)
+      | ((
+          value: ReturnType<typeof createDesktopArtifactUploadSuccessResponse>,
+        ) => void)
       | undefined;
     const firstUpload = new Promise<
       ReturnType<typeof createDesktopArtifactUploadSuccessResponse>
@@ -1215,7 +1230,10 @@ describe("desktop preload exposedApi bridge", () => {
     expect(invoke.mock.calls[0]?.[0]).toBe(
       DESKTOP_ARTIFACT_PUBLISH_REQUEST_CHANNEL.value,
     );
-    expect((invoke.mock.calls[0]?.[1] as DesktopArtifactPublishRequest).payload.repositoryCreation).toEqual({
+    expect(
+      (invoke.mock.calls[0]?.[1] as DesktopArtifactPublishRequest).payload
+        .repositoryCreation,
+    ).toEqual({
       approved: true,
       visibility: "private",
     });
@@ -1346,6 +1364,7 @@ it("maps localize-from-repo bridge calls to artifact localize-from-repo request 
   const api = createDesktopPreloadApi({ ipcRenderer: { invoke } });
 
   await api.localizeArtifactFromRepo({
+    workspaceId: "workspace-a",
     artifactId: "artifacts/20260418000000-local01",
   });
 

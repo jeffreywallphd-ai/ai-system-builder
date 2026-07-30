@@ -1,5 +1,7 @@
 import type {
   DatasetPreparationSummary,
+  DatasetPreparationGenerationCapacitySnapshot,
+  DatasetPreparationAdvancedReport,
   DatasetPreparationWarning,
   DatasetQualityApprovalRequest,
   DatasetQualityReport,
@@ -21,13 +23,17 @@ export const API_DATASET_PREPARATION_CANCEL_OPERATION =
   createTransportOperation("dataset-preparation", "cancel");
 export const API_DATASET_PREPARATION_APPROVE_OPERATION =
   createTransportOperation("dataset-preparation", "approve");
+export const API_DATASET_PREPARATION_CAPACITY_READ_OPERATION =
+  createTransportOperation("dataset-preparation", "generation-capacity-read");
 
 export interface ApiDatasetPreparationCommand {
   sourceArtifactIds: string[];
+  preparation?: PrepareTrainingDatasetRequest["preparation"];
   recipe: PrepareTrainingDatasetRequest["recipe"];
   split: PrepareTrainingDatasetRequest["split"];
   output: PrepareTrainingDatasetRequest["output"];
   quality?: DatasetQualityRequestedConfig;
+  advanced?: PrepareTrainingDatasetRequest["advanced"];
 }
 
 export interface ApiDatasetPreparationStartValue {
@@ -76,6 +82,7 @@ export interface ApiPreparedTrainingDatasetResult {
   provenance: Record<string, unknown>;
   summary: DatasetPreparationSummary;
   qualityReport?: DatasetQualityReport;
+  advancedReport?: DatasetPreparationAdvancedReport;
   review?: {
     state: "review-required" | "approved";
     reportFingerprint: string;
@@ -132,8 +139,7 @@ export interface ApiDatasetPreparationApproveValue {
   result: ApiPreparedTrainingDatasetResult;
 }
 
-export interface ApiDatasetPreparationApproveCommand
-  extends DatasetQualityApprovalRequest {
+export interface ApiDatasetPreparationApproveCommand extends DatasetQualityApprovalRequest {
   workspaceId: string;
 }
 
@@ -159,4 +165,10 @@ export type ApiDatasetPreparationApproveResponse = ApiResponse<
   ApiDatasetPreparationApproveValue,
   Record<string, unknown>,
   typeof API_DATASET_PREPARATION_APPROVE_OPERATION
+>;
+
+export type ApiDatasetPreparationCapacityReadResponse = ApiResponse<
+  DatasetPreparationGenerationCapacitySnapshot,
+  Record<string, unknown>,
+  typeof API_DATASET_PREPARATION_CAPACITY_READ_OPERATION
 >;

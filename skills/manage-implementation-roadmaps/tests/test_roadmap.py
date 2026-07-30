@@ -95,7 +95,7 @@ def implementation_plan(number: int) -> dict:
             }
         ],
         "focusedTests": [f"Focused test {number}"],
-        "completionTests": ["Repository gates after every chunk is implemented"],
+        "completionTests": ["Increment-relevant checks after every chunk is implemented"],
         "documentation": [f"Documentation {number}"],
         "rollback": f"Remove the increment {number} slice.",
         "assumptions": ["The approved scope remains unchanged."],
@@ -368,17 +368,67 @@ class RoadmapEngineTest(unittest.TestCase):
         self.assertIn("Size increments economically", skill_text)
         self.assertIn("fewest increments", skill_text)
         self.assertIn("shared UI primitive", skill_text)
-        self.assertIn("repository-wide gates once", skill_text)
-        self.assertIn("Never run a full suite", skill_text)
+        self.assertRegex(skill_text, r"complete\s+short and long suites")
+        self.assertIn("while roadmap increments remain", skill_text)
         self.assertIn("adjacent-increment cohesion audit", skill_text)
         self.assertIn("Define economically cohesive increments", workflow_text)
         self.assertIn("roadmap-revised", workflow_text)
         self.assertIn("docs/tmp", skill_text)
         self.assertIn("summary", skill_text.lower())
         self.assertIn("final-approval-recorded", workflow_text)
-        self.assertIn("Only after every planned chunk is implemented", workflow_text)
+        self.assertIn("increment-relevant completion tests", workflow_text)
+        self.assertRegex(
+            workflow_text, r"complete short suite\s+and complete long suite"
+        )
         self.assertIn("temporary", diagnostics_text.lower())
         self.assertIn("docs/tmp/", gitignore_text)
+
+    def test_skill_defaults_to_continuous_approved_execution(self) -> None:
+        skill_root = MODULE_PATH.parent.parent
+        repository_root = skill_root.parents[1]
+        sources = {
+            "skill": (skill_root / "SKILL.md").read_text(encoding="utf-8"),
+            "workflow": (skill_root / "references" / "workflow.md").read_text(
+                encoding="utf-8"
+            ),
+            "installation": (
+                skill_root / "references" / "installation.md"
+            ).read_text(encoding="utf-8"),
+            "agent": (skill_root / "agents" / "openai.yaml").read_text(
+                encoding="utf-8"
+            ),
+            "diagnostics": (
+                repository_root
+                / "docs"
+                / "diagnostics"
+                / "implementation-roadmap-skill.md"
+            ).read_text(encoding="utf-8"),
+            "routing": (
+                repository_root / "docs" / "context" / "prompt-routing.md"
+            ).read_text(encoding="utf-8"),
+            "agents": (repository_root / "AGENTS.md").read_text(encoding="utf-8"),
+        }
+
+        self.assertIn("continuous end-to-end execution", sources["skill"])
+        self.assertRegex(
+            sources["workflow"],
+            r"Routine\s+increment boundaries are not approval gates",
+        )
+        self.assertIn("through every increment", sources["agent"])
+        self.assertIn("continuous execution", sources["installation"])
+        self.assertIn("continuous execution", sources["diagnostics"])
+        self.assertIn("do not insert routine per-increment approval pauses", sources["routing"])
+        self.assertRegex(
+            sources["agents"],
+            r"without routine\s+per-increment approval pauses",
+        )
+
+        for source in sources.values():
+            self.assertRegex(source, r"(?i)(?:scope|authority)")
+            self.assertRegex(
+                source,
+                r"(?i)final(?:[-\s]+overall)?[-\s]+approval",
+            )
 
     def test_skill_requires_security_by_design_evidence(self) -> None:
         skill_root = MODULE_PATH.parent.parent
@@ -457,7 +507,7 @@ class RoadmapEngineTest(unittest.TestCase):
         )
         self.assertEqual(
             self.state["increments"][0]["plan"]["completionTests"],
-            ["Repository gates after every chunk is implemented"],
+            ["Increment-relevant checks after every chunk is implemented"],
         )
 
     def test_decision_requires_two_to_three_options_and_one_recommendation(self) -> None:

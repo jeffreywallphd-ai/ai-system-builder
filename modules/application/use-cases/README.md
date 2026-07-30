@@ -4,21 +4,51 @@
 
 Use cases in this folder own application orchestration and remain adapter-agnostic.
 
+- Governed ingestion task use cases
+  - persist workspace-scoped progress before reporting it to clients;
+  - accept idempotent bounded file chunks and finalize through an async stream;
+  - retain retryable checkpoints for 24 hours, then expose bounded stale-task cleanup;
+  - register Hugging Face files only at immutable commit revisions and retain
+    completed items when a later provider item must be retried;
+  - carry the authoritative task workspace into both the imported artifact
+    catalog record and its source backing before reporting provider success,
+    and infer the Parquet media type from a selected `.parquet` path when the
+    provider listing omits it.
+  - resolve bounded page or sitemap scope through secure egress, preserve raw
+    website captures separately from derived readable text, and append honest
+    source refresh outcomes from validators and content digests;
+  - commit task/source lineage atomically and compensate uncommitted artifacts
+    when cancellation or another optimistic update wins.
+
 - `StoreArtifactUploadUseCase`
   - validates upload input at a basic, honest level,
   - delegates artifact persistence to `ArtifactStoragePort`,
   - emits structured start/success/failure events through `LoggingPort`,
   - returns a narrow descriptor-based result aligned to upload contracts.
 
+- `LocalizeArtifactFromRepoUseCase`
+  - requires authoritative workspace context and carries it through binding
+    reads, provider retrieval, local object/catalog storage, and binding
+    updates;
+  - retains the provider path as original-file metadata so localized Parquet
+    and other typed files keep their correct name and artifact family;
+  - fails closed before provider or storage work when workspace scope is
+    missing.
+
 - `PrepareTrainingDatasetFromArtifactsUseCase`
   - validates bounded source selection, task, split, and output settings before
     staging;
+  - validates optional advanced content, semantic, and synthetic settings,
+    denies unavailable capabilities, and requires quality review for generated
+    candidates;
   - resolves workspace-scoped local bindings and explicitly localizes supported
     remote repository sources;
   - owns asynchronous task start/read/cancel orchestration and enforces recorded
     workspace plus optional organization ownership;
   - validates and materializes role-tagged aggregate/train/validation/test
     outputs through storage/provider ports without exposing runtime paths.
+  - returns bounded advanced readiness and aggregate review evidence without
+    exposing source text, embeddings, prompts, or generated candidate text;
   - resolves requested quality presets through a host-owned policy provider and
     fails closed when policy authority is unavailable;
   - validates bounded quality reports and reversible quarantine evidence,
@@ -30,6 +60,9 @@ Use cases in this folder own application orchestration and remain adapter-agnost
     digests, writes and verifies complete local outputs plus an immutable recipe
     snapshot, inserts the version record last, returns its stable identity, and
     compensates dataset/split artifacts if finalization fails.
+  - stores the exact optional advanced recipe in that immutable snapshot so
+    reproduction can restore the selected preparation style without silently
+    substituting a currently unavailable capability.
 
 - Dataset-version read use cases
   - authorize the exact workspace before listing, comparing, or reproducing;

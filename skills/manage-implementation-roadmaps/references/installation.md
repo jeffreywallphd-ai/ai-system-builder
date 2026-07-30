@@ -82,6 +82,13 @@ Before publishing or changing the skill:
    carries security review acceptance evidence, and sanitized evidence cannot copy
    secrets, protected prompts, private payloads, personal data, or exploitable
    production details.
+10. Confirm increment execution runs only tests relevant to each change and that
+    overall roadmap completion runs the repository-defined complete short and long
+    suites once after every increment is implemented.
+11. Confirm that continuous execution carries an implementation-authorized approved
+    roadmap through every increment without routine approval pauses, while changed scope, new
+    authority, destructive or production actions, credentials, unresolved security
+    choices, blockers, and final overall approval remain explicit gates.
 
 ## Primary references
 

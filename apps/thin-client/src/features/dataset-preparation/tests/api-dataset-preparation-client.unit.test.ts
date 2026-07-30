@@ -10,6 +10,40 @@ const response = (status: number, body: unknown) => ({
 });
 
 describe("api dataset preparation client", () => {
+  it("reads and normalizes the authenticated generation capacity snapshot", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      response(200, {
+        ok: true,
+        value: {
+          schemaVersion: "1",
+          capturedAt: "2026-07-30T12:00:00.000Z",
+          decoderAvailable: true,
+          schemaSupported: true,
+          logicalProcessorCount: 12,
+          totalSystemMemoryBytes: 32 * 1024 ** 3,
+          ignoredHardwareIdentity: "not-retained",
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      createApiDatasetPreparationClient("/api/").readGenerationCapacity({
+        workspaceId: "workspace a",
+      }),
+    ).resolves.toEqual({
+      schemaVersion: "1",
+      capturedAt: "2026-07-30T12:00:00.000Z",
+      decoderAvailable: true,
+      schemaSupported: true,
+      logicalProcessorCount: 12,
+      totalSystemMemoryBytes: 32 * 1024 ** 3,
+    });
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/dataset-preparation/generation-capacity?workspaceId=workspace%20a",
+    );
+  });
+
   it("keeps start, read, approve, and cancel routes aligned with workspace context", async () => {
     const fetchMock = vi
       .fn()

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "../../../../testing/node-test";
 
 import {
+  resolveDesktopPythonRuntimeWorkerDirectory,
   resolvePythonRuntimeBaseUrl,
   resolvePythonRuntimeHostAndPort,
   shouldPreparePythonRuntimeWorkerDependencies,
@@ -44,5 +45,29 @@ describe("desktop Python runtime endpoint ownership", () => {
         "C:\\Program Files\\nodejs\\node.exe",
       ),
     ).toBe(false);
+  });
+
+  it("uses the packaged worker when its entry point exists", () => {
+    expect(
+      resolveDesktopPythonRuntimeWorkerDirectory({
+        resourcesPath: "C:\\Program Files\\AI System Builder\\resources",
+        exists: (candidate) => candidate.endsWith("worker\\main.py"),
+      }),
+    ).toBe("C:\\Program Files\\AI System Builder\\resources\\worker");
+  });
+
+  it("preserves explicit worker configuration and development fallback", () => {
+    expect(
+      resolveDesktopPythonRuntimeWorkerDirectory({
+        configuredWorkerDirectory: "custom/worker",
+        cwd: "C:\\workspace",
+      }),
+    ).toBe("C:\\workspace\\custom\\worker");
+    expect(
+      resolveDesktopPythonRuntimeWorkerDirectory({
+        resourcesPath: "C:\\missing",
+        exists: () => false,
+      }),
+    ).toBe("modules/adapters/runtime/python/worker");
   });
 });

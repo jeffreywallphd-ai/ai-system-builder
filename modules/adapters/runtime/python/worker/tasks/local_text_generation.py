@@ -17,6 +17,10 @@ import time
 from typing import Any, Callable
 
 from ..models import ExampleGenerationConfig, LocalModelConfig
+from .constrained_json_decoder import (
+    ConstrainedJsonDecoder,
+    ConstrainedJsonDecoderError,
+)
 
 DEFAULT_MAX_NEW_TOKENS = 256
 DEFAULT_HUGGINGFACE_DOWNLOAD_TIMEOUT_SECONDS = "60"
@@ -693,8 +697,26 @@ def _validate_snapshot_profile_result(
 
 
 class LocalTextGenerator:
-    def generate_text(self, prompt: str) -> str:
+    def generate_text(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        *,
+        constrained_json_schema: Mapping[str, Any] | None = None,
+    ) -> str:
         raise NotImplementedError
+
+
+def _compose_non_chat_prompt(prompt: str, system_prompt: str | None) -> str:
+    normalized_system_prompt = (system_prompt or "").strip()
+    if not normalized_system_prompt:
+        return prompt
+    return (
+        "System instructions (higher priority):\n"
+        f"{normalized_system_prompt}\n\n"
+        "User request:\n"
+        f"{prompt}"
+    )
 
 
 class TransformersText2TextGenerator(LocalTextGenerator):
@@ -720,8 +742,22 @@ class TransformersText2TextGenerator(LocalTextGenerator):
             model_kwargs=_resolve_model_kwargs(model_config) or None,
         )
 
-    def generate_text(self, prompt: str) -> str:
-        generation = self._pipeline(prompt, **dict(self._generation_params))
+    def generate_text(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        *,
+        constrained_json_schema: Mapping[str, Any] | None = None,
+    ) -> str:
+        if constrained_json_schema is not None:
+            raise ConstrainedJsonDecoderError(
+                "decoder-inference-mode-unsupported",
+                "Token constraints are available only for causal and chat models.",
+            )
+        generation = self._pipeline(
+            _compose_non_chat_prompt(prompt, system_prompt),
+            **dict(self._generation_params),
+        )
         text = _extract_pipeline_text(generation)
         if not text:
             raise RuntimeError("Text2text generation returned no text.")
@@ -732,6 +768,7 @@ class TransformersCausalGenerator(LocalTextGenerator):
     def __init__(self, model_config: LocalModelConfig, generation_params: dict[str, Any]):
         self._generation_params = generation_params
         self._tokenizer, self._model = self._load_model(model_config)
+        self._constrained_json_decoder: ConstrainedJsonDecoder | None = None
 
     @staticmethod
     def _load_model(model_config: LocalModelConfig):
@@ -756,12 +793,29 @@ class TransformersCausalGenerator(LocalTextGenerator):
 
         return tokenizer, model
 
-    def _generate_new_tokens_text(self, input_ids: Any, generation_inputs: dict[str, Any]) -> str:
+    def _generate_new_tokens_text(
+        self,
+        input_ids: Any,
+        generation_inputs: dict[str, Any],
+        constrained_json_schema: Mapping[str, Any] | None = None,
+    ) -> str:
         generation_params = _resolve_runtime_generation_params(
             self._generation_params,
             self._tokenizer,
         )
         generation_params = _filter_supported_generation_params(generation_params, self._model.generate)
+        if constrained_json_schema is not None:
+            if self._constrained_json_decoder is None:
+                self._constrained_json_decoder = ConstrainedJsonDecoder(
+                    self._model,
+                    self._tokenizer,
+                )
+            return self._constrained_json_decoder.generate(
+                generation_inputs=generation_inputs,
+                generation_params=generation_params,
+                input_ids=input_ids,
+                schema=constrained_json_schema,
+            )
         generation_output = self._model.generate(**generation_inputs, **generation_params)
 
         first_output = generation_output[0]
@@ -773,16 +827,38 @@ class TransformersCausalGenerator(LocalTextGenerator):
             raise RuntimeError("Causal generation returned no new tokens.")
         return text
 
-    def generate_text(self, prompt: str) -> str:
-        tokenized = self._tokenizer(prompt, return_tensors="pt")
+    def generate_text(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        *,
+        constrained_json_schema: Mapping[str, Any] | None = None,
+    ) -> str:
+        tokenized = self._tokenizer(
+            _compose_non_chat_prompt(prompt, system_prompt),
+            return_tensors="pt",
+        )
         input_ids = tokenized["input_ids"]
         generation_inputs = _move_tokenized_inputs_to_model_device(tokenized, self._model)
-        return self._generate_new_tokens_text(input_ids, generation_inputs)
+        return self._generate_new_tokens_text(
+            input_ids,
+            generation_inputs,
+            constrained_json_schema,
+        )
 
 
 class TransformersChatGenerator(TransformersCausalGenerator):
-    def generate_text(self, prompt: str) -> str:
-        messages = [{"role": "user", "content": prompt}]
+    def generate_text(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        *,
+        constrained_json_schema: Mapping[str, Any] | None = None,
+    ) -> str:
+        messages = []
+        if system_prompt and system_prompt.strip():
+            messages.append({"role": "system", "content": system_prompt.strip()})
+        messages.append({"role": "user", "content": prompt})
         templated = _apply_chat_template_for_generation(self._tokenizer, messages)
 
         if isinstance(templated, Mapping):
@@ -793,7 +869,11 @@ class TransformersChatGenerator(TransformersCausalGenerator):
             generation_inputs = {"input_ids": templated}
             generation_inputs = _move_tokenized_inputs_to_model_device(generation_inputs, self._model)
 
-        return self._generate_new_tokens_text(input_ids, generation_inputs)
+        return self._generate_new_tokens_text(
+            input_ids,
+            generation_inputs,
+            constrained_json_schema,
+        )
 
 
 def ensure_generation_model_downloaded(

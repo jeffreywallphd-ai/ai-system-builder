@@ -661,6 +661,13 @@ describe("composeDesktopHost", () => {
 
     expect(healthTransitionLogsFirstRead.length).toBe(1);
     expect(healthTransitionLogsSecondRead.length).toBe(1);
+    expect(secondRead.generationCapacity).toMatchObject({
+      schemaVersion: "1",
+      decoderAvailable: false,
+      schemaSupported: true,
+    });
+    expect(secondRead.generationCapacity?.logicalProcessorCount).toBeGreaterThan(0);
+    expect(secondRead.generationCapacity?.totalSystemMemoryBytes).toBeGreaterThan(0);
   });
 });
 

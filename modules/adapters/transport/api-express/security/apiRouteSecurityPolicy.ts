@@ -198,6 +198,10 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     { public: false, scopes: ["artifact:write"] },
   ],
   [
+    "GET /api/dataset-preparation/generation-capacity",
+    { public: false, scopes: ["artifact:read"] },
+  ],
+  [
     "POST /api/dataset-preparation/start",
     { public: false, scopes: ["artifact:write"] },
   ],

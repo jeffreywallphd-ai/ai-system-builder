@@ -11,8 +11,19 @@ export type DatasetQualityStatus = (typeof DATASET_QUALITY_STATUSES)[number];
 export const DATASET_QUALITY_REASON_CODES = [
   "mapping-required-fields-missing",
   "schema-invalid",
+  "task-relationship-invalid",
+  "label-invalid",
+  "image-annotation-invalid",
   "exact-duplicate",
   "fuzzy-duplicate",
+  "semantic-duplicate",
+  "synthetic-schema-invalid",
+  "synthetic-grounding-low",
+  "synthetic-citation-missing",
+  "synthetic-critic-rejected",
+  "synthetic-duplicate",
+  "synthetic-diversity-low",
+  "synthetic-safety-rejected",
   "text-too-short",
   "text-too-long",
   "language-not-allowed",
@@ -34,6 +45,7 @@ export interface DatasetQualityRequestedPolicy {
   allowedLanguages?: string[];
   requireLicenseMetadata?: boolean;
   requireConsentMetadata?: boolean;
+  includeSourceAttribution?: boolean;
   excludedBenchmarkIds?: string[];
   maxRowsPerSource?: number;
 }
@@ -44,6 +56,7 @@ export interface DatasetQualityRequestedConfig {
 }
 
 export interface DatasetQualityMandatoryChecks {
+  sourceAssociation: true;
   schema: true;
   exactDuplicates: true;
   fuzzyDuplicates: true;
@@ -60,6 +73,7 @@ export interface DatasetQualityEffectivePolicy {
   allowedLanguages: string[];
   requireLicenseMetadata: boolean;
   requireConsentMetadata: boolean;
+  includeSourceAttribution?: boolean;
   excludedBenchmarkIds: string[];
   maxRowsPerSource: number;
   minimumTextCharacters: number;
@@ -110,12 +124,22 @@ export interface DatasetQualitySanitizedSample {
   summary: string;
 }
 
+export interface DatasetQualityInspectionProfile {
+  taskType: string;
+  textContent: "checked" | "not-applicable";
+  imagePixels: "not-inspected";
+  checkedSurfaces: string[];
+  limitations: string[];
+}
+
 export interface DatasetQualityReport {
   schemaVersion: "1";
   status: DatasetQualityStatus;
   reportFingerprint: string;
   policy: DatasetQualityEffectivePolicy;
   mapping: DatasetQualityMappingProfile;
+  /** Present on reports produced by adaptive preparation; omitted on legacy reports. */
+  inspection?: DatasetQualityInspectionProfile;
   fields: DatasetQualityFieldProfile[];
   distributions: {
     sources: DatasetQualityDistributionEntry[];

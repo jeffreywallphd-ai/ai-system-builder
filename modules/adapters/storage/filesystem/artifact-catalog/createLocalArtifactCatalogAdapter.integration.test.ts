@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -40,6 +40,23 @@ describe("createLocalArtifactCatalogPersistenceAdapter", () => {
 
     expect(browse.value.records.length).toBe(1);
     expect(read.value.record.storageKey).toBe("uploads/cat.png");
+  });
+
+  it("moves legacy binary JSON records into the structured-text family", async () => {
+    const rootDirectory = await createTempRoot();
+    await mkdir(path.join(rootDirectory, ".catalog"), { recursive: true });
+    await writeFile(path.join(rootDirectory, ".catalog", "artifact-catalog.ndjson"), `${JSON.stringify({ workspaceId: "workspace-a", storageKey: "uploads/records.jsonl", artifactFamily: "binary", mediaType: "application/x-ndjson", originalName: "records.jsonl" })}\n`, "utf8");
+    const adapter = createLocalArtifactCatalogPersistenceAdapter({ rootDirectory });
+    const structured = await adapter.browseArtifactCatalogRecords({ workspaceId: "workspace-a", artifactFamily: "structured-text" });
+    const binary = await adapter.browseArtifactCatalogRecords({ workspaceId: "workspace-a", artifactFamily: "binary" });
+    const read = await adapter.readArtifactCatalogRecord({ workspaceId: "workspace-a", storageKey: "uploads/records.jsonl" });
+    expect(structured.ok).toBe(true);
+    expect(binary.ok).toBe(true);
+    expect(read.ok).toBe(true);
+    if (!structured.ok || !binary.ok || !read.ok) throw new Error("Expected legacy JSON catalog reads to succeed.");
+    expect(structured.value.records.length).toBe(1);
+    expect(binary.value.records.length).toBe(0);
+    expect(read.value.record.artifactFamily).toBe("structured-text");
   });
 
   it("isolates catalog browse and exact reads by workspace id without exposing legacy records", async () => {

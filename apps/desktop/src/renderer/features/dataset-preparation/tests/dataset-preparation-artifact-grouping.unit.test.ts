@@ -66,6 +66,30 @@ describe("dataset preparation artifact grouping", () => {
     ).toEqual(["uploaded-md"]);
   });
 
+  it("recognizes JSON text-task sources by filename or media type", () => {
+    const artifacts: DatasetPreparationSourceArtifact[] = [
+      {
+        artifactId: "json-by-name",
+        label: "examples.json",
+        storageKey: "uploads/examples",
+        mediaType: "application/octet-stream",
+      },
+      {
+        artifactId: "json-by-media-type",
+        label: "imported-examples",
+        storageKey: "uploads/imported-examples",
+        mediaType: "application/json",
+      },
+    ];
+
+    expect(
+      filterTaskRelevantDatasetPreparationArtifacts(
+        artifacts,
+        "llm-instruction",
+      ).map((artifact) => artifact.artifactId),
+    ).toEqual(["json-by-name", "json-by-media-type"]);
+  });
+
   it("keeps text documents out of vision source lists while allowing image manifests", () => {
     const artifacts: DatasetPreparationSourceArtifact[] = [
       {

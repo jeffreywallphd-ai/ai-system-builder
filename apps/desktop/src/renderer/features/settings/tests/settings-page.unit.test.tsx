@@ -76,7 +76,6 @@ describe("SettingsPage", () => {
     expect(container.textContent).toContain("Hugging Face");
     expect(container.textContent).toContain("Models");
     expect(container.textContent).toContain("Runtime");
-    expect(container.textContent).toContain("Dataset Preparation");
     expect(container.textContent).toContain("Publishing");
     expect(container.textContent).toContain("Software status");
   });

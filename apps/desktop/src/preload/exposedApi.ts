@@ -126,6 +126,12 @@ import {
   type DesktopIngestWebsitePageResponse,
   type DesktopIngestWebsitePagesBatchRequest,
   type DesktopIngestWebsitePagesBatchResponse,
+  DESKTOP_INGESTION_TASK_EXECUTE_OPERATION,
+  DESKTOP_INGESTION_TASK_EXECUTE_REQUEST_CHANNEL,
+  DESKTOP_INGESTION_TASK_EXECUTE_RESPONSE_CHANNEL,
+  createDesktopIngestionTaskExecuteRequest,
+  type DesktopIngestionTaskExecuteRequest,
+  type DesktopIngestionTaskExecuteResponse,
   DESKTOP_DATASET_PREPARE_TRAINING_START_OPERATION,
   DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL,
   DESKTOP_DATASET_PREPARE_TRAINING_START_RESPONSE_CHANNEL,
@@ -503,6 +509,7 @@ import {
   DESKTOP_SYSTEM_RUN_WORKFLOW_CHANNELS,
   createDesktopSystemRunWorkflowRequest,
 } from "../../../../modules/contracts/ipc";
+import type { IngestionTaskTransportCommand } from "../../../../modules/contracts/ingestion";
 import { ARTIFACT_UPLOAD_MAXIMUM_BYTES } from "../../../../modules/contracts/artifact-upload";
 import type {
   SystemDeploymentCapabilityPolicy,
@@ -580,6 +587,7 @@ import type {
 const DEFAULT_UPLOAD_SOURCE = "desktop.renderer.artifact-upload.form";
 const DEFAULT_ARTIFACT_SOURCE = "desktop.renderer.artifact-browser";
 const DEFAULT_ASSET_REGISTRY_SOURCE = "desktop.renderer.asset-registry";
+const DEFAULT_INGESTION_SOURCE = "desktop.renderer.data-management";
 
 export interface IpcRendererInvokePort {
   invoke: (channel: string, request: unknown) => Promise<unknown>;
@@ -728,6 +736,10 @@ export interface DesktopPreloadApi {
     },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopIngestWebsitePagesBatchResponse>;
+  executeIngestionTask: (
+    input: { workspaceId: string; command: IngestionTaskTransportCommand },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopIngestionTaskExecuteResponse>;
   startPrepareTrainingDataset: (
     input: {
       workspaceId?: string;
@@ -748,13 +760,36 @@ export interface DesktopPreloadApi {
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopPrepareTrainingDatasetTaskCancelResponse>;
   approvePreparedTrainingDataset: (
-    input: { requestId: string; reportFingerprint: string; workspaceId?: string },
+    input: {
+      requestId: string;
+      reportFingerprint: string;
+      workspaceId?: string;
+    },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopPrepareTrainingDatasetApproveResponse>;
-  listDatasetVersions: (input: { workspaceId: string; datasetId?: string }, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopDatasetVersionListResponse>;
-  compareDatasetVersions: (input: { workspaceId: string; fromVersionId: string; toVersionId: string }, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopDatasetVersionCompareResponse>;
-  readDatasetVersionReproduction: (input: { workspaceId: string; versionId: string }, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopDatasetVersionReproduceResponse>;
-  publishDatasetVersion: (input: { workspaceId: string; versionId: string; repositoryId: string; visibility: "private" | "public"; createRepository?: boolean; publicAccessConfirmed?: true }, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopDatasetVersionPublishResponse>;
+  listDatasetVersions: (
+    input: { workspaceId: string; datasetId?: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopDatasetVersionListResponse>;
+  compareDatasetVersions: (
+    input: { workspaceId: string; fromVersionId: string; toVersionId: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopDatasetVersionCompareResponse>;
+  readDatasetVersionReproduction: (
+    input: { workspaceId: string; versionId: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopDatasetVersionReproduceResponse>;
+  publishDatasetVersion: (
+    input: {
+      workspaceId: string;
+      versionId: string;
+      repositoryId: string;
+      visibility: "private" | "public";
+      createRepository?: boolean;
+      publicAccessConfirmed?: true;
+    },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopDatasetVersionPublishResponse>;
   readRuntimeReadiness: (
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopRuntimeReadinessReadResponse>;
@@ -1755,6 +1790,7 @@ export interface DesktopPreloadApi {
   ) => Promise<DesktopArtifactRegisterFromRepoResponse>;
   localizeArtifactFromRepo: (
     input: {
+      workspaceId: string;
       artifactId: string;
     },
     context?: DesktopArtifactUploadBridgeContext,
@@ -1807,10 +1843,22 @@ export interface DesktopPreloadApi {
     input: Parameters<typeof createDesktopModelDownloadRequest>[0],
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopModelDownloadResponse>;
-  startModelDownload: (input: Parameters<typeof createDesktopModelDownloadStartRequest>[0], context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopModelDownloadStartResponse>;
-  readModelDownload: (input: Parameters<typeof createDesktopModelDownloadReadRequest>[0], context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopModelDownloadReadResponse>;
-  listModelDownloads: (input: Parameters<typeof createDesktopModelDownloadListRequest>[0], context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopModelDownloadListResponse>;
-  cancelModelDownload: (input: Parameters<typeof createDesktopModelDownloadCancelRequest>[0], context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopModelDownloadCancelResponse>;
+  startModelDownload: (
+    input: Parameters<typeof createDesktopModelDownloadStartRequest>[0],
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopModelDownloadStartResponse>;
+  readModelDownload: (
+    input: Parameters<typeof createDesktopModelDownloadReadRequest>[0],
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopModelDownloadReadResponse>;
+  listModelDownloads: (
+    input: Parameters<typeof createDesktopModelDownloadListRequest>[0],
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopModelDownloadListResponse>;
+  cancelModelDownload: (
+    input: Parameters<typeof createDesktopModelDownloadCancelRequest>[0],
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopModelDownloadCancelResponse>;
   updateModelRecord: (
     input: Parameters<typeof createDesktopModelRecordUpdateRequest>[0],
     context?: DesktopArtifactUploadBridgeContext,
@@ -2194,6 +2242,34 @@ export function createDesktopPreloadApi(
       );
     },
 
+    async executeIngestionTask(input, context = {}) {
+      const request: DesktopIngestionTaskExecuteRequest =
+        createDesktopIngestionTaskExecuteRequest(
+          {
+            command: input.command,
+            boundary: {
+              host: "desktop",
+              source: DEFAULT_INGESTION_SOURCE,
+              workspaceId: input.workspaceId,
+            },
+          },
+          context,
+        );
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_INGESTION_TASK_EXECUTE_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopIngestionTaskExecuteResponse>(
+        response,
+        {
+          operation: DESKTOP_INGESTION_TASK_EXECUTE_OPERATION,
+          channel: DESKTOP_INGESTION_TASK_EXECUTE_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop ingestion task IPC response envelope.",
+        },
+      );
+    },
+
     async startPrepareTrainingDataset(input, context = {}) {
       const request: DesktopPrepareTrainingDatasetStartRequest =
         createDesktopPrepareTrainingDatasetStartRequest(
@@ -2320,27 +2396,116 @@ export function createDesktopPreloadApi(
     },
 
     async listDatasetVersions(input, context = {}) {
-      const request = createDesktopDatasetVersionListRequest({ datasetId: input.datasetId, boundary: { host: "desktop", source: "desktop.renderer.dataset-preparation", workspaceId: input.workspaceId } }, context);
-      const response = await dependencies.ipcRenderer.invoke(DESKTOP_DATASET_VERSION_LIST_REQUEST_CHANNEL.value, request);
-      return assertDesktopEnvelopeResponse<DesktopDatasetVersionListResponse>(response, { operation: DESKTOP_DATASET_VERSION_LIST_OPERATION, channel: DESKTOP_DATASET_VERSION_LIST_RESPONSE_CHANNEL.value, message: "Received invalid desktop dataset version history IPC response envelope." });
+      const request = createDesktopDatasetVersionListRequest(
+        {
+          datasetId: input.datasetId,
+          boundary: {
+            host: "desktop",
+            source: "desktop.renderer.dataset-preparation",
+            workspaceId: input.workspaceId,
+          },
+        },
+        context,
+      );
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_DATASET_VERSION_LIST_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopDatasetVersionListResponse>(
+        response,
+        {
+          operation: DESKTOP_DATASET_VERSION_LIST_OPERATION,
+          channel: DESKTOP_DATASET_VERSION_LIST_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop dataset version history IPC response envelope.",
+        },
+      );
     },
 
     async compareDatasetVersions(input, context = {}) {
-      const request = createDesktopDatasetVersionCompareRequest({ fromVersionId: input.fromVersionId, toVersionId: input.toVersionId, boundary: { host: "desktop", source: "desktop.renderer.dataset-preparation", workspaceId: input.workspaceId } }, context);
-      const response = await dependencies.ipcRenderer.invoke(DESKTOP_DATASET_VERSION_COMPARE_REQUEST_CHANNEL.value, request);
-      return assertDesktopEnvelopeResponse<DesktopDatasetVersionCompareResponse>(response, { operation: DESKTOP_DATASET_VERSION_COMPARE_OPERATION, channel: DESKTOP_DATASET_VERSION_COMPARE_RESPONSE_CHANNEL.value, message: "Received invalid desktop dataset version comparison IPC response envelope." });
+      const request = createDesktopDatasetVersionCompareRequest(
+        {
+          fromVersionId: input.fromVersionId,
+          toVersionId: input.toVersionId,
+          boundary: {
+            host: "desktop",
+            source: "desktop.renderer.dataset-preparation",
+            workspaceId: input.workspaceId,
+          },
+        },
+        context,
+      );
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_DATASET_VERSION_COMPARE_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopDatasetVersionCompareResponse>(
+        response,
+        {
+          operation: DESKTOP_DATASET_VERSION_COMPARE_OPERATION,
+          channel: DESKTOP_DATASET_VERSION_COMPARE_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop dataset version comparison IPC response envelope.",
+        },
+      );
     },
 
     async readDatasetVersionReproduction(input, context = {}) {
-      const request = createDesktopDatasetVersionReproduceRequest({ versionId: input.versionId, boundary: { host: "desktop", source: "desktop.renderer.dataset-preparation", workspaceId: input.workspaceId } }, context);
-      const response = await dependencies.ipcRenderer.invoke(DESKTOP_DATASET_VERSION_REPRODUCE_REQUEST_CHANNEL.value, request);
-      return assertDesktopEnvelopeResponse<DesktopDatasetVersionReproduceResponse>(response, { operation: DESKTOP_DATASET_VERSION_REPRODUCE_OPERATION, channel: DESKTOP_DATASET_VERSION_REPRODUCE_RESPONSE_CHANNEL.value, message: "Received invalid desktop dataset version reproduction IPC response envelope." });
+      const request = createDesktopDatasetVersionReproduceRequest(
+        {
+          versionId: input.versionId,
+          boundary: {
+            host: "desktop",
+            source: "desktop.renderer.dataset-preparation",
+            workspaceId: input.workspaceId,
+          },
+        },
+        context,
+      );
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_DATASET_VERSION_REPRODUCE_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopDatasetVersionReproduceResponse>(
+        response,
+        {
+          operation: DESKTOP_DATASET_VERSION_REPRODUCE_OPERATION,
+          channel: DESKTOP_DATASET_VERSION_REPRODUCE_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop dataset version reproduction IPC response envelope.",
+        },
+      );
     },
 
     async publishDatasetVersion(input, context = {}) {
-      const request = createDesktopDatasetVersionPublishRequest({ versionId: input.versionId, repositoryId: input.repositoryId, visibility: input.visibility, createRepository: input.createRepository, publicAccessConfirmed: input.publicAccessConfirmed, boundary: { host: "desktop", source: "desktop.renderer.dataset-preparation", workspaceId: input.workspaceId } }, context);
-      const response = await dependencies.ipcRenderer.invoke(DESKTOP_DATASET_VERSION_PUBLISH_REQUEST_CHANNEL.value, request);
-      return assertDesktopEnvelopeResponse<DesktopDatasetVersionPublishResponse>(response, { operation: DESKTOP_DATASET_VERSION_PUBLISH_OPERATION, channel: DESKTOP_DATASET_VERSION_PUBLISH_RESPONSE_CHANNEL.value, message: "Received invalid desktop dataset version publication IPC response envelope." });
+      const request = createDesktopDatasetVersionPublishRequest(
+        {
+          versionId: input.versionId,
+          repositoryId: input.repositoryId,
+          visibility: input.visibility,
+          createRepository: input.createRepository,
+          publicAccessConfirmed: input.publicAccessConfirmed,
+          boundary: {
+            host: "desktop",
+            source: "desktop.renderer.dataset-preparation",
+            workspaceId: input.workspaceId,
+          },
+        },
+        context,
+      );
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_DATASET_VERSION_PUBLISH_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopDatasetVersionPublishResponse>(
+        response,
+        {
+          operation: DESKTOP_DATASET_VERSION_PUBLISH_OPERATION,
+          channel: DESKTOP_DATASET_VERSION_PUBLISH_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop dataset version publication IPC response envelope.",
+        },
+      );
     },
 
     async readRuntimeReadiness(context = {}) {
@@ -4271,6 +4436,7 @@ export function createDesktopPreloadApi(
       const request: DesktopArtifactLocalizeFromRepoRequest =
         createDesktopArtifactLocalizeFromRepoRequest(
           {
+            workspaceId: input.workspaceId,
             artifactId: input.artifactId,
             boundary: {
               host: "desktop",
@@ -4500,23 +4666,67 @@ export function createDesktopPreloadApi(
     },
     async startModelDownload(input, context = {}) {
       const request = createDesktopModelDownloadStartRequest(input, context);
-      const response = await dependencies.ipcRenderer.invoke(DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL.value, request);
-      return assertDesktopEnvelopeResponse<DesktopModelDownloadStartResponse>(response, { operation: DESKTOP_MODEL_DOWNLOAD_START_OPERATION, channel: DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL.value, message: "Received invalid desktop model download-start IPC response envelope." });
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopModelDownloadStartResponse>(
+        response,
+        {
+          operation: DESKTOP_MODEL_DOWNLOAD_START_OPERATION,
+          channel: DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop model download-start IPC response envelope.",
+        },
+      );
     },
     async readModelDownload(input, context = {}) {
       const request = createDesktopModelDownloadReadRequest(input, context);
-      const response = await dependencies.ipcRenderer.invoke(DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL.value, request);
-      return assertDesktopEnvelopeResponse<DesktopModelDownloadReadResponse>(response, { operation: DESKTOP_MODEL_DOWNLOAD_READ_OPERATION, channel: DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL.value, message: "Received invalid desktop model download-read IPC response envelope." });
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopModelDownloadReadResponse>(
+        response,
+        {
+          operation: DESKTOP_MODEL_DOWNLOAD_READ_OPERATION,
+          channel: DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop model download-read IPC response envelope.",
+        },
+      );
     },
     async listModelDownloads(input, context = {}) {
       const request = createDesktopModelDownloadListRequest(input, context);
-      const response = await dependencies.ipcRenderer.invoke(DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL.value, request);
-      return assertDesktopEnvelopeResponse<DesktopModelDownloadListResponse>(response, { operation: DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION, channel: DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL.value, message: "Received invalid desktop model download-list IPC response envelope." });
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopModelDownloadListResponse>(
+        response,
+        {
+          operation: DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION,
+          channel: DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop model download-list IPC response envelope.",
+        },
+      );
     },
     async cancelModelDownload(input, context = {}) {
       const request = createDesktopModelDownloadCancelRequest(input, context);
-      const response = await dependencies.ipcRenderer.invoke(DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL.value, request);
-      return assertDesktopEnvelopeResponse<DesktopModelDownloadCancelResponse>(response, { operation: DESKTOP_MODEL_DOWNLOAD_CANCEL_OPERATION, channel: DESKTOP_MODEL_DOWNLOAD_CANCEL_RESPONSE_CHANNEL.value, message: "Received invalid desktop model download-cancel IPC response envelope." });
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopModelDownloadCancelResponse>(
+        response,
+        {
+          operation: DESKTOP_MODEL_DOWNLOAD_CANCEL_OPERATION,
+          channel: DESKTOP_MODEL_DOWNLOAD_CANCEL_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop model download-cancel IPC response envelope.",
+        },
+      );
     },
     async updateModelRecord(input, context = {}) {
       const request = createDesktopModelRecordUpdateRequest(input, context);
@@ -5018,10 +5228,20 @@ export function createDesktopPreloadApi(
       return invokeSystemReview(dependencies, "listAudit", input, context);
     },
     async readPublishedSystemLifecycle(input, context = {}) {
-      return invokeSystemDeployment(dependencies, "lifecycleRead", input, context);
+      return invokeSystemDeployment(
+        dependencies,
+        "lifecycleRead",
+        input,
+        context,
+      );
     },
     async invokePublishedSystemLifecycle(input, context = {}) {
-      return invokeSystemDeployment(dependencies, "lifecycleInvoke", input, context);
+      return invokeSystemDeployment(
+        dependencies,
+        "lifecycleInvoke",
+        input,
+        context,
+      );
     },
     async installSystemDeployment(input, context = {}) {
       return invokeSystemDeployment(dependencies, "install", input, context);

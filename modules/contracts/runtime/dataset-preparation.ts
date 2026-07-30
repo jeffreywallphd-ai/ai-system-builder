@@ -1,3 +1,5 @@
+import type { DatasetPreparationVisualOutputShape } from "./dataset-preparation-output-shape";
+
 export interface DatasetPreparationSourceInput {
   artifactId: string;
   localPath: string;
@@ -103,49 +105,54 @@ export const DEFAULT_DATASET_PREPARATION_PROMPT_TEMPLATES: Record<
   string
 > = {
   "llm-instruction": [
-    "You are preparing instruction-tuning examples from source documents.",
-    "Create one natural user request and one helpful answer for each source text chunk.",
-    "Use only facts in the source text, keep the answer concise, and do not mention that a dataset is being created.",
+    "Prepare one high-quality instruction-tuning candidate from the supplied source.",
+    "Write a natural, specific user instruction; preserve an exact supporting source span as the input when context is needed; and provide a complete answer supported by that span.",
+    "Prefer a focused task over a broad summary. If the source cannot support a faithful example, skip it.",
+    "Follow the runtime-provided structured output schema exactly.",
   ].join("\n"),
   "llm-classification": [
-    "You are preparing text-classification examples from source documents.",
-    "Create one natural question that asks which category best describes the source text.",
-    "Answer with only the category label. Use the allowed labels when they are provided, and do not add explanation.",
+    "Prepare one text-classification candidate from the supplied source.",
+    "Use only configured labels and match their spelling exactly. For a single-label task choose exactly one; for a multi-label task include every supported label and no others. Without a label set, use short, reusable category names rather than sentences.",
+    "Do not turn the task into question answering or add an explanation. Skip ambiguous sources instead of guessing.",
+    "Follow the runtime-provided structured output schema exactly.",
   ].join("\n"),
   "llm-extraction": [
-    "You are preparing information-extraction examples from source documents.",
-    "Create one natural question that asks for specific facts present in the source text.",
-    "Answer only with the extracted facts, keeping names, dates, numbers, and field values faithful to the source.",
+    "Prepare one information-extraction candidate from the supplied source.",
+    "Return a compact expected-output object containing only facts explicitly present in the source. Preserve names, dates, identifiers, numbers, units, and nullability exactly; do not fill missing values or normalize away meaning.",
+    "Use stable, descriptive field names and skip the source when no meaningful structured facts are present.",
+    "Follow the runtime-provided structured output schema exactly.",
   ].join("\n"),
   "llm-embedding": [
-    "You are preparing matching text pairs for embedding tuning.",
-    "Create one search-style query and one matching answer or passage from the source text.",
-    "Keep both pieces grounded in the same source chunk so they represent a meaningful positive pair.",
+    "Prepare one positive pair for embedding training from the supplied source.",
+    "Write a natural search query that expresses a real information need, then copy the shortest exact source passage that fully satisfies it.",
+    "Make the pair semantically meaningful without relying on shared boilerplate, filenames, or outside knowledge. Skip sources that do not support a clear positive pair.",
+    "Follow the runtime-provided structured output schema exactly.",
   ].join("\n"),
   "llm-reranker": [
-    "You are preparing query-and-passage examples for reranking.",
-    "Create one search-style query and identify the passage from the source text that should be ranked as relevant.",
-    "Keep the query natural and make the passage answerable from the source text only.",
+    "Prepare one relevant query-passage candidate for reranker training from the supplied source.",
+    "Write a natural search query and copy an exact source passage that directly satisfies it. Relevance must come from the passage content, not filenames, position, or shared wording alone.",
+    "Skip sources that do not support an unambiguous relevant passage. Negative passages are selected separately by the runtime.",
+    "Follow the runtime-provided structured output schema exactly.",
   ].join("\n"),
   "diffusion-lora": [
-    "You are preparing captions for image LoRA training.",
-    "Write one concise visual caption using the file name, existing metadata, trigger token, and concept details provided.",
-    "Do not invent private details. Return only the caption text.",
+    "Prepare one concise caption for image LoRA training using only the supplied filename, metadata, trigger token, and concept settings.",
+    "The image pixels are not available. Include the trigger token exactly when provided, describe only supported attributes, and omit filenames, camera claims, identities, or visual details that the metadata does not establish.",
+    "Follow the runtime-provided structured output schema exactly.",
   ].join("\n"),
   "vision-classification": [
-    "You are preparing labels for image classification training.",
-    "Choose one short category label using the file name, existing metadata, and allowed labels when provided.",
-    "Return only the label.",
+    "Prepare one image-classification label using only the supplied filename and metadata; the image pixels are not available.",
+    "Choose exactly one allowed label when provided and match its spelling exactly. Otherwise use one short, reusable category name.",
+    "Skip ambiguous records instead of inferring unseen visual content. Follow the runtime-provided structured output schema exactly.",
   ].join("\n"),
   "vision-detection": [
-    "You are preparing object labels for detection training.",
-    "Choose concise object label text using the file name, existing metadata, annotations, and allowed labels when provided.",
-    "Return only the label text.",
+    "Prepare object label text only for the supplied, reviewed bounding-box annotations.",
+    "The image pixels are not available. Never create, move, resize, or infer boxes. Choose an allowed label exactly when provided, and skip annotations whose existing evidence does not support a label.",
+    "Follow the runtime-provided structured output schema exactly.",
   ].join("\n"),
   "vision-segmentation": [
-    "You are preparing region labels for segmentation training.",
-    "Choose concise label text using the file name, existing metadata, mask details, and allowed labels when provided.",
-    "Return only the label text.",
+    "Prepare region label text only for the supplied, reviewed mask annotation.",
+    "The image pixels are not available. Never create, alter, or infer masks. Choose an allowed label exactly when provided, and skip annotations whose existing evidence does not support a label.",
+    "Follow the runtime-provided structured output schema exactly.",
   ].join("\n"),
 };
 
@@ -684,13 +691,19 @@ export interface ExampleGenerationConfig {
   batchSize?: number;
   generationParams?: GenerationParams;
   failurePolicy?: "fail" | "skip";
+  structuredOutput?: {
+    /** Omitted values are initialized from the host's stable capacity recommendation. */
+    constrainedDecoding?: boolean;
+    /** Omitted values resolve to the selected task's backward-compatible default. */
+    visualShape?: DatasetPreparationVisualOutputShape;
+  };
 }
 
 export interface DatasetPreparationRecipe {
   task?: DatasetPreparationTaskRecipe;
-  normalization: DocumentNormalizationConfig;
-  chunking: MarkdownChunkingConfig;
-  generation: ExampleGenerationConfig;
+  normalization?: DocumentNormalizationConfig;
+  chunking?: MarkdownChunkingConfig;
+  generation?: ExampleGenerationConfig;
 }
 
 export interface DatasetSplitConfig {

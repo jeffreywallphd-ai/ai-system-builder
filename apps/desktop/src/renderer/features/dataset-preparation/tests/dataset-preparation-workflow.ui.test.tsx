@@ -31,19 +31,44 @@ describe("desktop dataset preparation workflow", () => {
     );
 
     expect(markup).toContain('role="list"');
-    expect(markup).toContain(
-      'aria-label="Dataset preparation workflow"',
+    expect(markup).toContain('aria-label="Dataset preparation workflow"');
+    expect(markup.match(/role="listitem"/g) ?? []).toHaveLength(4);
+    expect(markup).toContain("Training settings");
+    expect(markup).toContain("Save training settings");
+    expect(markup).toContain("No saved settings yet");
+    expect(markup.indexOf("Training settings")).toBeLessThan(
+      markup.indexOf("Add data"),
     );
-    expect((markup.match(/role="listitem"/g) ?? [])).toHaveLength(4);
     expect(markup).toContain("Add data");
     expect(markup).toContain("Check data");
     expect(markup).toContain("Prepare dataset");
+    expect(markup).toContain("Choose compatible sources first");
+    expect(markup).toContain("Standard");
+    expect(markup).toContain("Strict");
+    expect(markup).not.toContain("Preparation style");
     expect(markup).toContain("Review and create");
+    expect(markup).not.toContain("Task settings");
+    expect(markup).not.toContain("Save and publish");
+    expect(markup).toContain(
+      "The prepared dataset is saved locally as a reusable version",
+    );
+    expect(markup).toContain(
+      "Accepted text sources: .csv, .json, .jsonl/.ndjson",
+    );
+    expect(markup).toContain(
+      "Convert legacy .doc files to .docx and Excel .xls/.xlsx files to .csv",
+    );
     expect(markup).toContain("Advanced settings");
     expect(markup).toContain("Data checks");
-    expect(markup).toContain("Recommended");
+    expect(markup).toContain("What these checks cover");
     expect(markup).toContain("Advanced data rules");
     expect(markup).toContain("Run checks and prepare");
-    expect(markup).toContain("80/10/10");
+    expect(markup).toContain("Every accepted training example");
+    expect(markup).not.toContain(
+      "Scanned-image text recognition is not included",
+    );
+    expect(markup).not.toContain(
+      '<div class="dataset-preparation__actions ui-workflow__actions"></div>',
+    );
   });
 });

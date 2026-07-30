@@ -24,6 +24,7 @@ import {
   type DesktopLazyPageRegistry,
 } from "../routes/lazyDesktopPages";
 import type { DesktopPageKey } from "../routes/desktopPages";
+import { NotificationProvider } from "../../../../../modules/ui/shared";
 
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
   url: "http://localhost/",
@@ -143,7 +144,9 @@ async function mountWithRegistry(
   await act(async () => {
     root.render(
       <ActiveWorkspaceProvider client={client}>
-        <WorkspaceAwareDesktopApp lazyPages={lazyPages} />
+        <NotificationProvider>
+          <WorkspaceAwareDesktopApp lazyPages={lazyPages} />
+        </NotificationProvider>
       </ActiveWorkspaceProvider>,
     );
   });

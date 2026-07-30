@@ -1,6 +1,6 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   isSelectableImageGenerationModel,
   toImageGenerationModelDropdownValue,
@@ -8,19 +8,36 @@ import {
   useImageGenerationFeature,
 } from "../hooks/useImageGenerationFeature";
 
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
+  true;
 
 const listModelsMock = vi.fn().mockResolvedValue([]);
 vi.mock("../../models/api/desktopModelsClient", () => ({
   createDesktopModelsClient: () => ({ listModels: listModelsMock }),
 }));
 
-function Harness({ client, artifactClient, onReady }: { client: ReturnType<typeof makeClient>; artifactClient?: { createArtifactMediaViewUrl: (locator: { storageKey: string }) => Promise<string> }; onReady: (h: ReturnType<typeof useImageGenerationFeature>) => void }) { onReady(useImageGenerationFeature(client as never, undefined, artifactClient as never, "workspace-a")); return null; }
+const defaultArtifactClient = {
+  browseArtifacts: vi.fn(async () => []),
+  createArtifactMediaViewUrl: vi.fn(async () => ""),
+};
+
+function Harness({ client, artifactClient, onReady }: { client: ReturnType<typeof makeClient>; artifactClient?: { browseArtifacts?: () => Promise<unknown[]>; createArtifactMediaViewUrl: (locator: { storageKey: string }) => Promise<string> }; onReady: (h: ReturnType<typeof useImageGenerationFeature>) => void }) { onReady(useImageGenerationFeature(client as never, undefined, (artifactClient ?? defaultArtifactClient) as never, "workspace-a")); return null; }
 const makeClient = () => ({ startImageGeneration: vi.fn(), readImageGeneration: vi.fn(), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn(), readComfyUiInstallStatus: vi.fn().mockResolvedValue({ ok: true, value: { status: "installed" } }), repairComfyUiInstall: vi.fn().mockResolvedValue({ ok: true, value: { status: "installed" } }) });
+
+async function settleAsyncWork(): Promise<void> {
+  await act(async () => {
+    for (let index = 0; index < 8; index += 1) await Promise.resolve();
+  });
+}
 
 describe("useImageGenerationFeature", () => {
   beforeEach(() => {
     listModelsMock.mockReset();
     listModelsMock.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("omits empty seed and includes explicit seed", async () => {
@@ -63,12 +80,24 @@ describe("useImageGenerationFeature", () => {
   it("updates repair status correctly for success and failure", async () => {
     const client = makeClient();
     let hook!: ReturnType<typeof useImageGenerationFeature>; const c = document.createElement("div"); const root = createRoot(c);
-    client.repairComfyUiInstall.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve({ ok: true, value: { status: "installed" } }), 0)));
+    let resolveRepair!: (value: { ok: true; value: { status: "installed" } }) => void;
+    client.repairComfyUiInstall.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveRepair = resolve;
+        }),
+    );
     await act(async () => root.render(<Harness client={client} onReady={(h) => { hook = h; }} />));
-    const repairPromise = act(async () => { void hook.repairInstall(); });
+    let repairPromise!: Promise<void>;
+    await act(async () => {
+      repairPromise = hook.repairInstall();
+      await Promise.resolve();
+    });
     expect(hook.installStatus).toBe("installing");
-    await repairPromise;
-    await act(async () => Promise.resolve());
+    await act(async () => {
+      resolveRepair({ ok: true, value: { status: "installed" } });
+      await repairPromise;
+    });
     expect(hook.installStatus).toBe("installed");
 
     client.repairComfyUiInstall.mockResolvedValueOnce({ ok: false, error: { code: "boom", message: "repair failed" } });
@@ -104,9 +133,13 @@ describe("useImageGenerationFeature", () => {
     let hook!: ReturnType<typeof useImageGenerationFeature>; const c = document.createElement("div"); const root = createRoot(c);
     await act(async () => root.render(<Harness client={client} onReady={(h) => { hook = h; }} />));
     await act(async () => Promise.resolve());
-    expect(listModelsMock).toHaveBeenCalledWith({});
+    expect(listModelsMock).toHaveBeenCalledWith({
+      workspaceId: "workspace-a",
+    });
     expect(hook.availableModels.map((model) => model.value)).toEqual(["stabilityai/stable-diffusion", "foo/bar"]);
-    expect(hook.availableModels[0]?.label).toContain("sd - stabilityai/stable-diffusion - huggingface - downloaded");
+    expect(hook.availableModels[0]?.label).toContain(
+      "sd - stabilityai/stable-diffusion - workspace - huggingface - downloaded",
+    );
     expect(hook.modelLoadStatus).toBe("success");
     await act(async () => root.unmount());
   });
@@ -239,8 +272,13 @@ describe("useImageGenerationFeature", () => {
     const c = document.createElement("div");
     const root = createRoot(c);
     await act(async () => root.render(<Harness client={client} artifactClient={artifactClient} onReady={(h) => { hook = h; }} />));
-    await act(async () => { hook.setForm({ ...hook.form, prompt: "cat" }); await hook.start(); });
-    await act(async () => Promise.resolve());
+    await act(async () => {
+      hook.setForm({ ...hook.form, prompt: "cat" });
+    });
+    await act(async () => {
+      await hook.start();
+    });
+    await settleAsyncWork();
     expect(hook.finalizedAssets[0]?.artifactId).toBe("artifact-1");
     expect(hook.finalizedAssets[0]?.storageKey).toBe("generated/images/asset-1/out.png");
     expect(hook.finalizedAssets[0]?.previewUrl).toBe("blob:preview-1");
@@ -263,10 +301,17 @@ describe("useImageGenerationFeature", () => {
     const root = createRoot(c);
 
     await act(async () => root.render(<Harness client={client} artifactClient={artifactClient} onReady={(h) => { hook = h; }} />));
-    await act(async () => { hook.setForm({ ...hook.form, prompt: "cat" }); await hook.start(); });
+    await act(async () => {
+      hook.setForm({ ...hook.form, prompt: "cat" });
+    });
+    await act(async () => {
+      await hook.start();
+    });
+    await settleAsyncWork();
     expect(hook.finalizedAssets[0]?.assetId).toBe("asset-old");
 
     await act(async () => { await hook.start(); });
+    await settleAsyncWork();
     expect(hook.finalizedAssets[0]?.assetId).toBe("asset-new");
     expect(hook.sessionGallery[0]?.assets[0]?.assetId).toBe("asset-old");
     await act(async () => root.unmount());

@@ -195,6 +195,23 @@ def _row_value(row: dict[str, Any], *keys: str) -> Any:
     return None
 
 
+def _purpose_row_value(
+    row: dict[str, Any],
+    purpose_paths: dict[str, tuple[str, ...]] | None,
+    purpose: str,
+    *fallback_keys: str,
+) -> Any:
+    path = purpose_paths.get(purpose) if purpose_paths else None
+    if path:
+        value: Any = row
+        for segment in path:
+            if not isinstance(value, dict):
+                return None
+            value = value.get(segment)
+        return value
+    return _row_value(row, *fallback_keys)
+
+
 def _coerce_jsonish(value: Any) -> Any:
     if not isinstance(value, str):
         return value
@@ -351,11 +368,12 @@ def _make_failed_result(
 
 
 class _ClassificationImageDataset:
-    def __init__(self, rows: list[dict[str, Any]], processor: Any, label_to_id: dict[str, int], source_paths: dict[str, Path]) -> None:
+    def __init__(self, rows: list[dict[str, Any]], processor: Any, label_to_id: dict[str, int], source_paths: dict[str, Path], purpose_paths: dict[str, tuple[str, ...]] | None = None) -> None:
         self.rows = rows
         self.processor = processor
         self.label_to_id = label_to_id
         self.source_paths = source_paths
+        self.purpose_paths = purpose_paths
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -367,7 +385,7 @@ class _ClassificationImageDataset:
         row = self.rows[index]
         dataset_path = Path(str(row["_datasetPath"]))
         image_path = resolve_manifest_asset_path(_row_value(row, "image", "imagePath", "imageArtifactId", "file", "path"), dataset_path, self.source_paths)
-        label = str(_row_value(row, "label", "class", "category")).strip()
+        label = str(_purpose_row_value(row, self.purpose_paths, "label", "label", "class", "category") or "").strip()
         if not label:
             raise ValueError("Vision classification rows must include a label.")
         image = Image.open(image_path).convert("RGB")
@@ -378,11 +396,12 @@ class _ClassificationImageDataset:
 
 
 class _DetectionImageDataset:
-    def __init__(self, rows: list[dict[str, Any]], processor: Any, label_to_id: dict[str, int], source_paths: dict[str, Path]) -> None:
+    def __init__(self, rows: list[dict[str, Any]], processor: Any, label_to_id: dict[str, int], source_paths: dict[str, Path], purpose_paths: dict[str, tuple[str, ...]] | None = None) -> None:
         self.rows = rows
         self.processor = processor
         self.label_to_id = label_to_id
         self.source_paths = source_paths
+        self.purpose_paths = purpose_paths
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -394,7 +413,7 @@ class _DetectionImageDataset:
         dataset_path = Path(str(row["_datasetPath"]))
         image_path = resolve_manifest_asset_path(_row_value(row, "image", "imagePath", "imageArtifactId", "file", "path"), dataset_path, self.source_paths)
         image = Image.open(image_path).convert("RGB")
-        boxes = _normalize_detection_boxes(row)
+        boxes = _normalize_detection_boxes(row, self.purpose_paths)
         annotations = {
             "image_id": index,
             "annotations": [
@@ -434,10 +453,10 @@ class _SegmentationImageDataset:
         return {key: value.squeeze(0) for key, value in encoded.items()}
 
 
-def _collect_classification_labels(rows: list[dict[str, Any]]) -> list[str]:
+def _collect_classification_labels(rows: list[dict[str, Any]], purpose_paths: dict[str, tuple[str, ...]] | None = None) -> list[str]:
     labels = []
     for row in rows:
-        label = _row_value(row, "label", "class", "category")
+        label = _purpose_row_value(row, purpose_paths, "label", "label", "class", "category")
         if label is None:
             label_set = row.get("labelSet")
             if isinstance(label_set, list):
@@ -450,14 +469,16 @@ def _collect_classification_labels(rows: list[dict[str, Any]]) -> list[str]:
     return unique
 
 
-def _normalize_detection_boxes(row: dict[str, Any]) -> list[dict[str, Any]]:
+def _normalize_detection_boxes(row: dict[str, Any], purpose_paths: dict[str, tuple[str, ...]] | None = None) -> list[dict[str, Any]]:
     raw_boxes = _coerce_jsonish(_row_value(row, "boundingBoxes", "boxes", "bbox", "annotations"))
     if isinstance(raw_boxes, dict):
         raw_boxes = [raw_boxes]
     if not isinstance(raw_boxes, list) or not raw_boxes:
         raise ValueError("Vision detection rows must include bounding boxes.")
 
-    labels_value = _coerce_jsonish(row.get("labels"))
+    labels_value = _coerce_jsonish(
+        _purpose_row_value(row, purpose_paths, "label", "labels")
+    )
     box_format = str(row.get("boxFormat") or "xywh").strip().lower()
     boxes: list[dict[str, Any]] = []
     for index, raw_box in enumerate(raw_boxes):
@@ -497,20 +518,20 @@ def _normalize_bbox(value: Any, box_format: str) -> list[float]:
     raise ValueError("Bounding boxes must be arrays or objects with four coordinates.")
 
 
-def _collect_detection_labels(rows: list[dict[str, Any]]) -> list[str]:
+def _collect_detection_labels(rows: list[dict[str, Any]], purpose_paths: dict[str, tuple[str, ...]] | None = None) -> list[str]:
     labels = []
     for row in rows:
-        labels.extend(box["label"] for box in _normalize_detection_boxes(row))
+        labels.extend(box["label"] for box in _normalize_detection_boxes(row, purpose_paths))
     unique = sorted(set(label for label in labels if label))
     if not unique:
         raise ValueError("Vision detection rows must include class labels.")
     return unique
 
 
-def _collect_segmentation_labels(rows: list[dict[str, Any]]) -> list[str]:
+def _collect_segmentation_labels(rows: list[dict[str, Any]], purpose_paths: dict[str, tuple[str, ...]] | None = None) -> list[str]:
     labels = []
     for row in rows:
-        label = _row_value(row, "label", "class", "category")
+        label = _purpose_row_value(row, purpose_paths, "label", "label", "class", "category")
         if label is not None:
             labels.append(str(label).strip())
     unique = sorted(set(label for label in labels if label))
@@ -732,6 +753,7 @@ def train_vision_model(
     run_id: str,
     output_path: Path,
     output_model_name: str,
+    purpose_paths: dict[str, tuple[str, ...]] | None = None,
     on_progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> TrainModelTaskResult:
     logs: list[str] = []
@@ -761,7 +783,7 @@ def train_vision_model(
         rows_for_labels = bundle.train_rows + bundle.validation_rows
 
         if training_task == "vision-classification":
-            labels = _collect_classification_labels(rows_for_labels)
+            labels = _collect_classification_labels(rows_for_labels, purpose_paths)
             label_to_id = {label: index for index, label in enumerate(labels)}
             id_to_label = {index: label for label, index in label_to_id.items()}
             model = AutoModelForImageClassification.from_pretrained(
@@ -771,11 +793,11 @@ def train_vision_model(
                 label2id=label_to_id,
                 ignore_mismatched_sizes=True,
             )
-            train_dataset = _ClassificationImageDataset(bundle.train_rows, processor, label_to_id, source_paths)
-            eval_dataset = _ClassificationImageDataset(bundle.validation_rows, processor, label_to_id, source_paths) if bundle.validation_rows else None
+            train_dataset = _ClassificationImageDataset(bundle.train_rows, processor, label_to_id, source_paths, purpose_paths)
+            eval_dataset = _ClassificationImageDataset(bundle.validation_rows, processor, label_to_id, source_paths, purpose_paths) if bundle.validation_rows else None
             data_collator = None
         elif training_task == "vision-detection":
-            labels = _collect_detection_labels(rows_for_labels)
+            labels = _collect_detection_labels(rows_for_labels, purpose_paths)
             label_to_id = {label: index for index, label in enumerate(labels)}
             id_to_label = {index: label for label, index in label_to_id.items()}
             model = AutoModelForObjectDetection.from_pretrained(
@@ -785,11 +807,11 @@ def train_vision_model(
                 label2id=label_to_id,
                 ignore_mismatched_sizes=True,
             )
-            train_dataset = _DetectionImageDataset(bundle.train_rows, processor, label_to_id, source_paths)
-            eval_dataset = _DetectionImageDataset(bundle.validation_rows, processor, label_to_id, source_paths) if bundle.validation_rows else None
+            train_dataset = _DetectionImageDataset(bundle.train_rows, processor, label_to_id, source_paths, purpose_paths)
+            eval_dataset = _DetectionImageDataset(bundle.validation_rows, processor, label_to_id, source_paths, purpose_paths) if bundle.validation_rows else None
             data_collator = _detection_collator
         else:
-            labels = _collect_segmentation_labels(rows_for_labels)
+            labels = _collect_segmentation_labels(rows_for_labels, purpose_paths)
             label_to_id = {label: index for index, label in enumerate(labels)}
             id_to_label = {index: label for label, index in label_to_id.items()}
             model = AutoModelForSemanticSegmentation.from_pretrained(
@@ -912,11 +934,12 @@ def train_vision_model(
 
 
 class _DiffusionLoraDataset:
-    def __init__(self, rows: list[dict[str, Any]], tokenizer: Any, resolution: int, source_paths: dict[str, Path]) -> None:
+    def __init__(self, rows: list[dict[str, Any]], tokenizer: Any, resolution: int, source_paths: dict[str, Path], purpose_paths: dict[str, tuple[str, ...]] | None = None) -> None:
         self.rows = rows
         self.tokenizer = tokenizer
         self.resolution = resolution
         self.source_paths = source_paths
+        self.purpose_paths = purpose_paths
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -929,7 +952,7 @@ class _DiffusionLoraDataset:
         row = self.rows[index]
         dataset_path = Path(str(row["_datasetPath"]))
         image_path = resolve_manifest_asset_path(_row_value(row, "image", "imagePath", "imageArtifactId", "file", "path"), dataset_path, self.source_paths)
-        caption = str(_row_value(row, "caption", "prompt", "description", "text") or "").strip()
+        caption = str(_purpose_row_value(row, self.purpose_paths, "caption", "caption", "prompt", "description", "text") or "").strip()
         if not caption:
             raise ValueError("Diffusion LoRA rows must include a caption or prompt.")
         image = Image.open(image_path).convert("RGB").resize((self.resolution, self.resolution))
@@ -978,6 +1001,7 @@ def train_diffusion_lora_model(
     run_id: str,
     output_path: Path,
     output_model_name: str,
+    purpose_paths: dict[str, tuple[str, ...]] | None = None,
     on_progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> TrainModelTaskResult:
     logs: list[str] = []
@@ -1048,7 +1072,7 @@ def train_diffusion_lora_model(
             raise RuntimeError("No trainable LoRA parameters were created for the diffusion UNet.")
         optimizer = torch.optim.AdamW(trainable_parameters, lr=learning_rate)
 
-        dataset = _DiffusionLoraDataset(bundle.train_rows, tokenizer, resolution, source_paths)
+        dataset = _DiffusionLoraDataset(bundle.train_rows, tokenizer, resolution, source_paths, purpose_paths)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         total_batches = max(len(dataloader) * epochs, 1)
         if max_steps > 0:

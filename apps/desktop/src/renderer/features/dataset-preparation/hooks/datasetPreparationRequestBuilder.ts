@@ -4,11 +4,17 @@ import type {
 } from "../../../../../../../modules/contracts/settings";
 import {
   createDefaultDatasetPreparationTaskRecipe,
+  createDefaultDatasetPreparationVisualOutputShape,
+  createDatasetPreparationAdvancedConfig,
+  createDatasetPreparationAdvancedConfigForMethod,
   resolveDefaultDatasetPreparationPromptTemplate,
   resolveDefaultDatasetPreparationTextGenerationModel,
   type DatasetPreparationTaskRecipe,
+  type DatasetPreparationAdvancedPreset,
+  type DatasetPreparationExecutionPlan,
   type DatasetPreparationTaskType,
   type DatasetPreparationTextInputMode,
+  type DatasetPreparationVisualOutputShape,
 } from "../../../../../../../modules/contracts/runtime";
 import type { ParsedDatasetPreparationInputs } from "./datasetPreparationRequestValidation";
 
@@ -30,6 +36,8 @@ const VALID_MODEL_INFERENCE_MODES: readonly ModelDefaultInferenceMode[] = [
 
 export interface BuildDatasetPreparationRequestInput {
   selectedArtifactIds: string[];
+  preparation?: DatasetPreparationExecutionPlan;
+  advancedPreset?: DatasetPreparationAdvancedPreset;
   taskType: DatasetPreparationTaskType;
   labelSet?: string;
   multiLabel?: boolean;
@@ -41,6 +49,8 @@ export interface BuildDatasetPreparationRequestInput {
   segmentationMaskFormat?: "png" | "coco-rle" | "polygon";
   textInputMode?: DatasetPreparationTextInputMode;
   textGenerationPrompt?: string;
+  visualOutputShape?: DatasetPreparationVisualOutputShape;
+  constrainedDecoding?: boolean;
   unsupportedDocumentPolicy: "" | "fail" | "skip";
   normalizationMode: "" | "best-effort" | "strict";
   preserveDocumentBoundaries: boolean;
@@ -73,6 +83,11 @@ function splitLabelSet(value: string): string[] | undefined {
 function resolveInputTextInputMode(
   input: BuildDatasetPreparationRequestInput,
 ): DatasetPreparationTextInputMode {
+  if (input.preparation) {
+    return input.preparation.generationMode === "none"
+      ? "provided"
+      : "generate";
+  }
   return (
     input.textInputMode ??
     createDefaultDatasetPreparationTaskRecipe(input.taskType).textInputMode ??
@@ -215,6 +230,55 @@ function resolveHuggingFaceRepository(
 export function buildDatasetPreparationRequest(
   input: BuildDatasetPreparationRequestInput,
 ) {
+  const defaultAdvanced = input.preparation
+    ? createDatasetPreparationAdvancedConfigForMethod(input.preparation.method)
+    : createDatasetPreparationAdvancedConfig(
+        input.advancedPreset ?? "standard",
+      );
+  const advanced = defaultAdvanced
+    ? {
+        ...defaultAdvanced,
+        ...(defaultAdvanced.content
+          ? {
+              content: {
+                ...defaultAdvanced.content,
+                ...(input.parsed.maxTokensPerChunk
+                  ? { maxTokensPerChunk: input.parsed.maxTokensPerChunk }
+                  : {}),
+                ...(input.parsed.maxSourceSpans
+                  ? { maxSourceSpans: input.parsed.maxSourceSpans }
+                  : {}),
+                ...(input.parsed.topicBoundarySensitivity !== undefined
+                  ? {
+                      semanticBoundaryThreshold:
+                        input.parsed.topicBoundarySensitivity,
+                    }
+                  : {}),
+              },
+            }
+          : {}),
+        ...(defaultAdvanced.semantic
+          ? {
+              semantic: {
+                ...defaultAdvanced.semantic,
+                ...(input.parsed.similarityThreshold !== undefined
+                  ? { similarityThreshold: input.parsed.similarityThreshold }
+                  : {}),
+              },
+            }
+          : {}),
+        ...(defaultAdvanced.synthetic
+          ? {
+              synthetic: {
+                ...defaultAdvanced.synthetic,
+                ...(input.preparation && input.parsed.maxExamplesPerChunk
+                  ? { candidatesPerChunk: input.parsed.maxExamplesPerChunk }
+                  : {}),
+              },
+            }
+          : {}),
+      }
+    : undefined;
   const taskModelDefault = resolveDefaultDatasetPreparationTextGenerationModel(
     input.taskType,
   );
@@ -242,43 +306,79 @@ export function buildDatasetPreparationRequest(
       ? input.textGenerationPrompt?.trim() ||
         resolveDefaultDatasetPreparationPromptTemplate(input.taskType)
       : undefined;
+  const usesDocuments =
+    !input.preparation ||
+    ["fixed-length", "topic-aware", "structure-aware"].includes(
+      input.preparation.method,
+    );
+  const usesFixedSections =
+    !input.preparation || input.preparation.method === "fixed-length";
+  const usesGeneration =
+    !input.preparation || input.preparation.generationMode !== "none";
 
   return {
     sourceArtifactIds: input.selectedArtifactIds,
+    ...(input.preparation ? { preparation: input.preparation } : {}),
+    ...(advanced ? { advanced } : {}),
     recipe: {
-      ...DEFAULT_DATASET_PREPARATION_RECIPE_BASE,
       task: buildTaskRecipe(input),
-      normalization: {
-        ...DEFAULT_DATASET_PREPARATION_RECIPE_BASE.normalization,
-        unsupportedDocumentPolicy: input.unsupportedDocumentPolicy || undefined,
-        normalizationMode: input.normalizationMode || undefined,
-      },
-      chunking: {
-        ...DEFAULT_DATASET_PREPARATION_RECIPE_BASE.chunking,
-        chunkSize: input.parsed.chunkSize,
-        chunkOverlap: input.parsed.chunkOverlap,
-        preserveDocumentBoundaries: input.preserveDocumentBoundaries,
-        maxChunkCount: input.parsed.maxChunkCount,
-      },
-      generation: {
-        ...DEFAULT_DATASET_PREPARATION_RECIPE_BASE.generation,
-        promptTemplate: effectivePromptTemplate,
-        model: {
-          ...DEFAULT_DATASET_PREPARATION_RECIPE_BASE.generation.model,
-          modelId: effectiveModelId,
-          inferenceMode: effectiveInferenceMode,
-          device: effectiveDevice || undefined,
-          torchDtype: effectiveTorchDtype || undefined,
-        },
-        maxExamplesPerChunk: input.parsed.maxExamplesPerChunk,
-        batchSize: input.parsed.batchSize,
-        failurePolicy: input.failurePolicy || undefined,
-        generationParams: {
-          temperature: input.parsed.generationTemperature,
-          topP: input.parsed.generationTopP,
-          maxNewTokens: input.parsed.generationMaxNewTokens,
-        },
-      },
+      ...(usesDocuments
+        ? {
+            normalization: {
+              ...DEFAULT_DATASET_PREPARATION_RECIPE_BASE.normalization,
+              unsupportedDocumentPolicy:
+                input.unsupportedDocumentPolicy || undefined,
+              normalizationMode: input.normalizationMode || undefined,
+            },
+          }
+        : {}),
+      ...(usesFixedSections
+        ? {
+            chunking: {
+              ...DEFAULT_DATASET_PREPARATION_RECIPE_BASE.chunking,
+              chunkSize: input.parsed.chunkSize!,
+              chunkOverlap: input.parsed.chunkOverlap!,
+              preserveDocumentBoundaries: input.preserveDocumentBoundaries,
+              maxChunkCount: input.parsed.maxChunkCount,
+            },
+          }
+        : {}),
+      ...(usesGeneration
+        ? {
+            generation: {
+              ...DEFAULT_DATASET_PREPARATION_RECIPE_BASE.generation,
+              promptTemplate: effectivePromptTemplate,
+              model: {
+                ...DEFAULT_DATASET_PREPARATION_RECIPE_BASE.generation.model,
+                modelId: effectiveModelId,
+                inferenceMode: effectiveInferenceMode,
+                device: effectiveDevice || undefined,
+                torchDtype: effectiveTorchDtype || undefined,
+              },
+              ...(!input.preparation && input.parsed.maxExamplesPerChunk
+                ? {
+                    maxExamplesPerChunk: input.parsed.maxExamplesPerChunk,
+                  }
+                : {}),
+              batchSize: input.parsed.batchSize,
+              failurePolicy: input.failurePolicy || undefined,
+              generationParams: {
+                temperature: input.parsed.generationTemperature,
+                topP: input.parsed.generationTopP,
+                maxNewTokens: input.parsed.generationMaxNewTokens,
+              },
+              structuredOutput: {
+                constrainedDecoding: input.constrainedDecoding ?? false,
+                visualShape:
+                  input.visualOutputShape ??
+                  createDefaultDatasetPreparationVisualOutputShape(
+                    input.taskType,
+                    { multiLabel: input.multiLabel },
+                  ),
+              },
+            },
+          }
+        : {}),
     },
     split: {
       trainRatio: input.parsed.trainRatio,

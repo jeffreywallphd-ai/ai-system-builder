@@ -2,8 +2,8 @@
 
 # Data Management Quality and Usability Implementation Roadmap
 
-- Status: `executing`
-- Updated: `2026-07-30T04:05:43Z`
+- Status: `implementation-complete-qualification-pending`
+- Updated: `2026-07-30T14:14:33Z`
 
 ## Objective
 
@@ -109,6 +109,21 @@ The choice determines whether the roadmap primarily reorganizes the user experie
 | Option B — Harden the existing tabs (incremental-tab-hardening) | Keep the current Ingestion and Dataset Preparation forms and navigation, correct the split and format defects, add missing validation and quality controls, and improve labels/tooltips without materially changing the workflow structure. | no | Smaller initial UI disruption and easier visual regression review.; Retains a long configuration form and makes users understand normalization, chunking, generation, split, format, and model controls before they can produce a dataset.; Quality review and publishing remain separate collections of controls rather than a guided outcome. | Correctness and security improve, but the product remains oriented toward technically experienced users.; Future features are likely to add more controls to already dense tabs.; A later UX restructuring would revisit many of the same components and tests. |
 | Option C — Visual pipeline builder (expert-pipeline-builder) | Expose ingestion, normalization, profiling, filtering, generation, validation, splitting, and publication as user-configurable pipeline stages with reusable recipes and a graph or stage editor. | no | Maximum flexibility, inspection, and extensibility for data engineers and research teams.; Highest implementation, migration, documentation, support, and accessibility cost.; Introduces substantial concepts and terminology that conflict with the requested non-technical default experience unless paired with a separate simplified mode. | The Data Management area becomes a general data-orchestration product rather than a focused training-dataset workflow.; New persisted recipe, compatibility, execution-planning, versioning, and possibly distributed scheduling decisions would be required.; Delivery would take more increments and broaden beyond the current accepted runtime lifecycle constraints. |
 
+### Exact-task adaptive data checks and preparation
+
+How should Check data and Prepare dataset respond to each supported training task?
+
+Broad text-versus-image adaptation remains misleading because instruction tuning, classification, extraction, embedding, reranking, diffusion, image classification, detection, and segmentation require different fields, quality rules, example-creation actions, and review evidence. Document sectioning or topic-aware chunking is a source-processing method that should appear only when an unstructured textual source must be converted into examples.
+
+- Status: `approved`
+- Selected option: `adaptive-ordered-workflow`
+
+| Option | Summary | Recommended | Tradeoffs | Consequences |
+| --- | --- | --- | --- | --- |
+| Option A — Exact-task adaptive workflow (adaptive-ordered-workflow) | Keep one four-step experience, but derive both data checks and example-creation choices from the exact selected training task and selected source capabilities. | yes | Gives users task-relevant language without splitting Data Management into separate products.; Requires task-specific capability and quality contracts, state normalization, task-specific review evidence, and focused runtime validation for currently shallow task paths. | Instruction tuning distinguishes existing instruction-answer examples from grounded example generation and verified alternatives.; Classification validates labels and balance; extraction validates expected outputs against a schema; embedding and reranking validate positive and negative relationships.; Diffusion, classification, detection, and segmentation show only the caption, label, box, or mask actions actually supported.; Document splitting is automatic by default and becomes a task-relevant advanced control only when source documents need conversion.; Common source association, license, consent, privacy, credential, duplicate, and split controls remain shared but report only the content surfaces they actually inspected. |
+| Option B — Separate task workflows (separate-task-workflows) | Create a distinct checking and preparation workflow for every training task. | no | Maximizes tailoring for each task.; Duplicates navigation, lifecycle, review, documentation, and testing across nine workflows. | Users must choose and learn separate Data Management workflows even though source selection, review, versioning, and publication are shared. |
+| Option C — Generic common controls (generic-common-controls) | Keep universal check and preparation selectors with broad terminology. | no | Smallest implementation change.; Cannot clearly express task-specific requirements or distinguish unsupported behavior. | The current confusion around rows, chunks, labels, boxes, masks, and generated examples would persist. |
+
 ## Increment map
 
 | Increment | Outcome | Dependencies | Status |
@@ -116,8 +131,9 @@ The choice determines whether the roadmap primarily reorganizes the user experie
 | 1: Guided and trustworthy Data Management foundation | Deliver one truthful end-to-end path from supported local or Hugging Face source data to a correctly split training dataset, presented through the established ordered-steps UX with plain-language defaults and safe diagnostics. | None | `implemented-pending-qualification` |
 | 2: Data quality, curation, and human review | Turn the Check data and Review steps into a measurable curation workflow that profiles data, quarantines problems, applies configurable quality and governance policies, and lets users approve a dataset using understandable evidence. | guided-trustworthy-foundation | `implemented-pending-qualification` |
 | 3: Immutable dataset versions, lineage, and publishing | Make every approved dataset a reproducible versioned data product with split manifests, quality evidence, lineage, comparison, documentation, and safe local or Hugging Face publication. | quality-curation-and-review | `implemented-pending-qualification` |
-| 4: Governed and scalable ingestion | Scale supported local, repository, and website acquisition through bounded streaming, resumable tasks, reproducible capture, and conservative crawl governance without exposing infrastructure concepts in the primary UI. | guided-trustworthy-foundation | `implementing` |
-| 5: Advanced preparation and synthetic-data quality | Add optional structure-aware document processing, semantic curation, and verified synthetic-data generation through explicit runtime capabilities while keeping the ordinary workflow simple and preserving human approval. | quality-curation-and-review, versioned-dataset-lineage-and-publishing | `pending` |
+| 4: Governed and scalable ingestion | Scale supported local, repository, and website acquisition through bounded streaming, resumable tasks, reproducible capture, and conservative crawl governance without exposing infrastructure concepts in the primary UI. | guided-trustworthy-foundation | `implemented-pending-qualification` |
+| 5: Advanced preparation and synthetic-data quality | Add optional structure-aware document processing, semantic curation, and verified synthetic-data generation through explicit runtime capabilities while keeping the ordinary workflow simple and preserving human approval. | quality-curation-and-review, versioned-dataset-lineage-and-publishing | `implemented-pending-qualification` |
+| 6: Exact-task adaptive quality and preparation | Make the ordered Data Management workflow truthful and simple for every supported training task by establishing input intent before preparation, then adapting checks, source transformations, example creation, Advanced settings, runtime validation, and review evidence to the exact task, source kind, and selected method. | quality-curation-and-review, advanced-preparation-and-synthetic-quality | `implemented-pending-qualification` |
 
 ## Increment 1: Guided and trustworthy Data Management foundation
 
@@ -297,7 +313,7 @@ Stop new version creation and external publication while retaining immutable loc
 ## Increment 4: Governed and scalable ingestion
 
 - Id: `governed-scalable-ingestion`
-- Status: `implementing`
+- Status: `implemented-pending-qualification`
 - Dependencies: `guided-trustworthy-foundation`
 
 Scale supported local, repository, and website acquisition through bounded streaming, resumable tasks, reproducible capture, and conservative crawl governance without exposing infrastructure concepts in the primary UI.
@@ -324,12 +340,12 @@ Scale supported local, repository, and website acquisition through bounded strea
 
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
-| `large-supported-inputs-stream-within-bounds`: Supported large local and provider inputs are processed incrementally without whole-dataset renderer allocation, obey explicit aggregate limits, expose authoritative progress, and can be cancelled or resumed without duplicates, partial final artifacts, or unbounded checkpoint growth. | local | not recorded |
-| `website-capture-is-governed-and-reproducible`: Website acquisition remains secure-egress mediated, respects robots policy by default, accepts only user-bounded page or sitemap scope, records requested and canonical URLs plus capture time and content digest, and separates immutable raw capture from derived extraction. | local | not recorded |
-| `source-refresh-is-incremental-and-honest`: Refresh detects unchanged, changed, unavailable, and removed inputs using provider revisions, HTTP validators when available, and content hashes; it creates a new immutable source snapshot only when required and never mutates an existing dataset version. | local | not recorded |
-| `source-scope-ui-remains-simple`: Non-technical users can add files, a bounded website source, or a Hugging Face dataset through concise source-specific steps and progress, while crawl, parser, concurrency, caching, and transfer settings remain hidden under Advanced settings with safe maximums. | local | not recorded |
-| `security-ingestion-bounds-and-egress-reviewed`: Malformed and oversized data, decompression or nesting abuse, private and reserved network targets, unsafe redirects, cross-origin credentials, guessed tasks, wrong workspace or organization, stale checkpoints, cancellation races, and adapter failures fail closed with bounded sanitized evidence and complete cleanup. | local | not recorded |
-| `controlled-ingestion-scale-is-qualified`: Controlled tests with synthetic large files, a private provider repository, and a test website prove streaming memory bounds, truthful progress, retry and resume, robots behavior, source refresh, cancellation, and cleanup without production credentials or private data in evidence. | controlled-environment | not recorded |
+| `large-supported-inputs-stream-within-bounds`: Supported large local and provider inputs are processed incrementally without whole-dataset renderer allocation, obey explicit aggregate limits, expose authoritative progress, and can be cancelled or resumed without duplicates, partial final artifacts, or unbounded checkpoint growth. | local | passed (test) |
+| `website-capture-is-governed-and-reproducible`: Website acquisition remains secure-egress mediated, respects robots policy by default, accepts only user-bounded page or sitemap scope, records requested and canonical URLs plus capture time and content digest, and separates immutable raw capture from derived extraction. | local | passed (test) |
+| `source-refresh-is-incremental-and-honest`: Refresh detects unchanged, changed, unavailable, and removed inputs using provider revisions, HTTP validators when available, and content hashes; it creates a new immutable source snapshot only when required and never mutates an existing dataset version. | local | passed (test) |
+| `source-scope-ui-remains-simple`: Non-technical users can add files, a bounded website source, or a Hugging Face dataset through concise source-specific steps and progress, while crawl, parser, concurrency, caching, and transfer settings remain hidden under Advanced settings with safe maximums. | local | passed (test) |
+| `security-ingestion-bounds-and-egress-reviewed`: Malformed and oversized data, decompression or nesting abuse, private and reserved network targets, unsafe redirects, cross-origin credentials, guessed tasks, wrong workspace or organization, stale checkpoints, cancellation races, and adapter failures fail closed with bounded sanitized evidence and complete cleanup. | local | passed (review) |
+| `controlled-ingestion-scale-is-qualified`: Controlled tests with synthetic large files, a private provider repository, and a test website prove streaming memory bounds, truthful progress, retry and resume, robots behavior, source refresh, cancellation, and cleanup without production credentials or private data in evidence. | controlled-environment | pending (external) |
 
 ### Verification
 
@@ -355,7 +371,7 @@ Disable sitemap discovery, resumable multi-source tasks, and new streaming optim
 ## Increment 5: Advanced preparation and synthetic-data quality
 
 - Id: `advanced-preparation-and-synthetic-quality`
-- Status: `pending`
+- Status: `implemented-pending-qualification`
 - Dependencies: `quality-curation-and-review`, `versioned-dataset-lineage-and-publishing`
 
 Add optional structure-aware document processing, semantic curation, and verified synthetic-data generation through explicit runtime capabilities while keeping the ordinary workflow simple and preserving human approval.
@@ -382,12 +398,12 @@ Add optional structure-aware document processing, semantic curation, and verifie
 
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
-| `advanced-content-processing-preserves-structure-and-lineage`: Enabled token, sentence, section, table, semantic, OCR, or layout processing preserves source artifact and bounded span or region lineage, emits measurable extraction quality, respects page, pixel, token, memory, and duration limits, and reports unsupported or low-confidence content without fabricating text. | local | not recorded |
-| `semantic-curation-improves-measured-quality`: Semantic duplicate detection, data mixing, balancing, coverage, and hard-negative recommendations are reproducible from recorded models and thresholds, preserve reviewable examples and metrics, prevent known cross-split leakage, and demonstrate improvement on approved synthetic reference datasets. | local | not recorded |
-| `synthetic-examples-are-validated-before-admission`: Generated candidates must pass task schema, grounding or source-support, duplication, quality, safety, and diversity checks; uncertain or rejected candidates enter quarantine with bounded reasons, and no model-generated row reaches an approved split without the configured review policy. | local | not recorded |
-| `advanced-options-do-not-complicate-the-default-path`: Users who do not enable advanced capabilities see the same concise ordered workflow and recommended defaults; users who opt in receive simple presets, readiness and time guidance, cancel and retry controls, and plain explanations while model, device, precision, threshold, and algorithm settings remain under Advanced settings. | local | not recorded |
-| `security-model-assisted-boundaries-reviewed`: Model outputs, OCR text, embeddings, prompts, citations, critic evidence, and rejected candidates remain workspace scoped, bounded, sanitized, and absent from diagnostics; unavailable capabilities, dependency failure, model failure, cancellation, and cleanup fail closed without admitting unverified rows or weakening baseline controls. | local | not recorded |
-| `controlled-advanced-capabilities-are-qualified`: Controlled representative hardware and accessibility qualification proves OCR and layout extraction, semantic deduplication, hard-negative mining, model generation and criticism, progress, cancellation, memory and time bounds, quality evidence, and non-technical preset usability with synthetic data. | controlled-environment | not recorded |
+| `advanced-content-processing-preserves-structure-and-lineage`: Enabled token, sentence, section, table, semantic, OCR, or layout processing preserves source artifact and bounded span or region lineage, emits measurable extraction quality, respects page, pixel, token, memory, and duration limits, and reports unsupported or low-confidence content without fabricating text. | local | passed (test) |
+| `semantic-curation-improves-measured-quality`: Semantic duplicate detection, data mixing, balancing, coverage, and hard-negative recommendations are reproducible from recorded models and thresholds, preserve reviewable examples and metrics, prevent known cross-split leakage, and demonstrate improvement on approved synthetic reference datasets. | local | passed (test) |
+| `synthetic-examples-are-validated-before-admission`: Generated candidates must pass task schema, grounding or source-support, duplication, quality, safety, and diversity checks; uncertain or rejected candidates enter quarantine with bounded reasons, and no model-generated row reaches an approved split without the configured review policy. | local | passed (test) |
+| `advanced-options-do-not-complicate-the-default-path`: Users who do not enable advanced capabilities see the same concise ordered workflow and recommended defaults; users who opt in receive simple presets, readiness and time guidance, cancel and retry controls, and plain explanations while model, device, precision, threshold, and algorithm settings remain under Advanced settings. | local | passed (test) |
+| `security-model-assisted-boundaries-reviewed`: Model outputs, OCR text, embeddings, prompts, citations, critic evidence, and rejected candidates remain workspace scoped, bounded, sanitized, and absent from diagnostics; unavailable capabilities, dependency failure, model failure, cancellation, and cleanup fail closed without admitting unverified rows or weakening baseline controls. | local | passed (review) |
+| `controlled-advanced-capabilities-are-qualified`: Controlled representative hardware and accessibility qualification proves OCR and layout extraction, semantic deduplication, hard-negative mining, model generation and criticism, progress, cancellation, memory and time bounds, quality evidence, and non-technical preset usability with synthetic data. | controlled-environment | pending (external) |
 
 ### Verification
 
@@ -410,3 +426,63 @@ Disable each optional capability profile and its UI preset while retaining the b
 - External paid model or annotation services, remote prompt submission, or new provider credentials
 - Changes to model-training algorithms, evaluation benchmarks, or deployment workflows beyond consuming approved versioned datasets
 - Guarantees that automated quality, PII, safety, contamination, OCR, or grounding classifiers have no false positives or false negatives
+
+## Increment 6: Exact-task adaptive quality and preparation
+
+- Id: `exact-task-adaptive-quality-and-preparation`
+- Status: `implemented-pending-qualification`
+- Dependencies: `quality-curation-and-review`, `advanced-preparation-and-synthetic-quality`
+
+Make the ordered Data Management workflow truthful and simple for every supported training task by establishing input intent before preparation, then adapting checks, source transformations, example creation, Advanced settings, runtime validation, and review evidence to the exact task, source kind, and selected method.
+
+### Work packages
+
+- **Input intent, task, source, and method authority** (`input-intent-and-capability-authority`): One shared contract distinguishes a ready dataset, multiple datasets to combine, source material from which examples must be created, and ambiguous or mixed inputs; it defines only the checks, preparation methods, compatible refinements, defaults, unavailable capabilities, and review evidence valid for each exact task and source combination.
+- **Task-specific quality enforcement** (`task-specific-quality-enforcement`): Text relationships, labels, schemas, ranking pairs, images, captions, boxes, and masks receive bounded task-relevant checks while common source association, policy, duplication, and split controls remain mandatory.
+- **Compatible recipe and runtime boundary** (`compatible-recipe-and-runtime-boundary`): Requests serialize only the inferred or confirmed input intent and active transformation settings, keep chunking separate from example generation, reject impossible combinations, preserve exact source lineage, migrate saved recipes safely, and never silently ignore, override, or duplicate selected data.
+- **Adaptive ordered user experience** (`adaptive-ordered-user-experience`): Desktop and supported thin-client paths preselect and explain whether data will be combined or created from source material, skip unnecessary transformation for a single ready dataset, and show exact-task Step 2, Step 3, and Advanced content with one, two, or three methods only when those methods are meaningful.
+- **Documentation, security, and qualification** (`documentation-security-and-qualification`): Canonical guidance, the threat model, context packs, focused denial evidence, full repository gates, and representative non-technical usability evidence describe input intent, adaptive methods, the no-unnecessary-copy behavior, and explicit capability limits.
+
+### Deliverables
+
+- Input-intent, exact-task preparation, and quality capability contracts
+- Task-specific bounded validators and review evidence
+- Compatibility-safe request builder and runtime denial
+- Adaptive desktop and supported thin-client ordered workflow
+- No-unnecessary-copy dataset registration and multi-dataset combination behavior
+- Saved-recipe migration and reproduction coverage
+- Canonical architecture, security, context, and UI documentation
+- Focused, integration, build, package, and usability evidence
+
+### Acceptance criteria
+
+| Criterion | Qualification | Latest evidence |
+| --- | --- | --- |
+| `input-intent-precedes-preparation`: The workflow classifies or asks the user to confirm whether selected inputs are one ready dataset, multiple existing datasets to combine, source material from which to create examples, or an unsupported ambiguous mixture before Step 3; combining is preselected for multiple compatible datasets, a single ready dataset is not rewritten or copied merely to pass through preparation, and any lineage or version record created without transformation is clearly distinguished from duplicated dataset content. | local | passed (test) |
+| `exact-task-checks-are-honest`: Check data derives its labels, checks, explanations, counts, unavailable states, and corrective actions from the exact selected training task and source kinds; it never claims pixel, OCR, face, personal-data, credential, geometry, schema, relationship, or model-assisted inspection that did not run. | local | passed (test) |
+| `adaptive-settings-are-compatible`: Step 3 offers only meaningful methods and does not pad every task to three choices. Where textual source division is needed, a simple fixed-size method may expose size and overlap, a topic-aware semantic method is the default when its declared capability is ready, and a more sophisticated structure-aware method appears only for compatible documents; chunking and example generation remain separate actions. Advanced settings expose only controls consumed by the selected method, advanced lineage cannot disable required boundaries, generation-only controls are absent when generation is inactive, and switching methods clears or restores scoped compatible state without stale request fields. | local | passed (test) |
+| `task-quality-rules-protect-examples`: Instruction, classification, extraction, embedding, reranking, diffusion, image classification, detection, and segmentation examples receive their required bounded schema, relationship, label, balance, image, caption, box, mask, duplicate, source-association, and split checks before admission, with unsupported visual inspection reported honestly. | local | passed (test) |
+| `runtime-rejects-contradictory-recipes`: Contract, application, and runtime validation fail closed on incompatible or stale input-intent, task, source, method, generation, and Advanced-setting combinations; inactive values are omitted rather than ignored, legacy saved recipes migrate deterministically or stop with a corrective action, and source lineage remains exact. | local | passed (test) |
+| `security-adaptive-data-boundaries-reviewed`: Synthetic denial tests prove malformed annotations, forged source associations, unsafe metadata, incompatible dataset combinations, unavailable visual or semantic inspection, oversized work, and contradictory recipes cannot bypass review, silently duplicate or reinterpret data, or expose source content, prompts, model output, identifiers, local paths, or raw errors through diagnostics or notifications. | local | passed (review) |
+| `exact-task-usability-is-qualified`: Representative non-technical users can distinguish combining existing datasets from creating a dataset from source material, understand when no preparation copy is needed, select each supported task, understand what is checked, choose from only meaningful methods, and identify unavailable capabilities without opening irrelevant settings or needing unexplained technical terminology; keyboard, screen-reader, zoom, and reduced-motion behavior also pass. | controlled-environment | pending (external) |
+
+### Verification
+
+- Run focused contract and compatibility-matrix tests for a single ready dataset, multiple compatible datasets, source material, ambiguous or mixed inputs, every supported task, every available method count, and every Advanced-setting visibility or denial path.
+- Run focused persistence and lineage tests proving an unchanged single dataset is referenced or registered without an unnecessary content copy and that combined datasets retain exact per-example source associations.
+- Run focused Python quality, image annotation, mask, relationship, source-lineage, resource-bound, contradiction, and diagnostic non-disclosure tests.
+- Run desktop and supported thin-client interaction tests for inferred intent, confirmation when ambiguous, zero-, one-, two-, and three-method Step 3 states, semantic-capability defaulting, task and method switching, scoped state restoration, saved-recipe migration, review evidence, accessibility semantics, and unavailable capability messaging.
+- Run npm run docs:check, npm run architecture:check, applicable host builds and packaging, and npm test once after the full increment is implemented.
+- Qualify representative non-technical, keyboard, screen-reader, zoom/reflow, reduced-motion, and supported-hardware scenarios in a controlled environment.
+
+### Rollback
+
+Remove the additive intent and adaptive capability mapping plus task-specific validators together, migrate saved recipes back only when lossless, preserve unchanged source datasets and approved immutable versions, and disable methods whose compatibility cannot be proven rather than restoring misleading choices, ignored settings, or unnecessary content copies.
+
+### Excluded
+
+- Pixel-level face, personal-data, credential, unsafe-content, OCR, or general vision understanding without a separately reviewed local capability
+- Automatic bounding-box or segmentation-mask generation
+- New training task types or model-training algorithm changes
+- A free-form expert Custom mode that permits unsupported cross-product combinations
+- Artificially providing three Step 3 methods when a task and source combination supports fewer

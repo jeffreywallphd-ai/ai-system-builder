@@ -78,6 +78,14 @@ type HuggingFaceOperation =
   | "listDatasetParquetFiles";
 
 interface HuggingFaceHubClient {
+  listFiles?: (params: {
+    repo: HuggingFaceRepoDesignation;
+    recursive?: boolean;
+    revision?: string;
+    accessToken?: string;
+    hubUrl?: string;
+    fetch?: HuggingFaceFetchImplementation;
+  }) => AsyncIterable<{ type: "file" | "directory" | "unknown"; path: string; size: number }>;
   fileExists: (params: {
     repo: HuggingFaceRepoDesignation;
     path: string;
@@ -437,6 +445,17 @@ async function loadOfficialHubClient(
   const hubClient = assertHubClient(loaded);
 
   return {
+    ...(hubClient.listFiles
+      ? {
+          listFiles(params) {
+            return hubClient.listFiles!({
+              ...params,
+              fetch: params.fetch ?? fetchImplementation,
+              hubUrl: params.hubUrl ?? hubBaseUrl,
+            });
+          },
+        }
+      : {}),
     fileExists(params) {
       return hubClient.fileExists({
         ...params,
@@ -645,53 +664,11 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
     return normalized;
   }
 
-  function toDatasetParquetBrowsePath(repository: string): string {
+  function toDatasetRevisionPath(repository: string, revision: string): string {
     const [namespace, ...datasetNameSegments] = repository.split("/");
     const datasetName = datasetNameSegments.join("/");
-    if (!namespace?.trim() || !datasetName.trim()) {
-      throw new HuggingFaceAdapterValidationError(
-        "repository must include namespace and dataset name (for example: owner/repo).",
-      );
-    }
-
-    const encodedNamespace = encodeURIComponent(namespace.trim());
-    const encodedDatasetName = encodeURIComponent(datasetName.trim());
-    return `/api/datasets/${encodedNamespace}/${encodedDatasetName}/parquet`;
-  }
-
-  function parseLogicalParquetPath(repository: string, value: string): string {
-    const url = new URL(value);
-    const hub = new URL(hubBaseUrl);
-    if (
-      url.origin !== hub.origin
-      || url.username.length > 0
-      || url.password.length > 0
-      || url.search.length > 0
-      || url.hash.length > 0
-    ) {
-      throw new HuggingFaceAdapterValidationError(
-        "Dataset parquet listing returned a URL outside the configured Hugging Face hub.",
-      );
-    }
-    const expectedPrefix = `/api/datasets/${encodeHubPath(repository)}/parquet/`;
-    if (!url.pathname.startsWith(expectedPrefix)) {
-      throw new HuggingFaceAdapterValidationError(
-        "Dataset parquet listing returned an unexpected logical file URL.",
-      );
-    }
-    const path = url.pathname.slice(expectedPrefix.length)
-      .split("/")
-      .map((segment) => decodeURIComponent(segment));
-    if (
-      path.length < 3
-      || path.some((segment) => !segment || segment === "." || segment === "..")
-      || !path[path.length - 1]?.toLowerCase().endsWith(".parquet")
-    ) {
-      throw new HuggingFaceAdapterValidationError(
-        "Dataset parquet listing returned an invalid logical file path.",
-      );
-    }
-    return path.join("/");
+    if (!namespace?.trim() || !datasetName.trim()) throw new HuggingFaceAdapterValidationError("repository must include namespace and dataset name (for example: owner/repo).");
+    return `/api/datasets/${encodeURIComponent(namespace.trim())}/${encodeURIComponent(datasetName.trim())}/revision/${encodeURIComponent(revision)}`;
   }
 
   async function fetchJsonFromHub<T>(
@@ -1132,57 +1109,36 @@ export function createHuggingFaceArtifactRepoStorageAdapter(
           "Logical parquet browsing currently supports only the default dataset revision.",
         );
       }
-      const payload = await fetchJsonFromHub<Record<string, Record<string, unknown>>>(
-        toDatasetParquetBrowsePath(repository),
-        "listDatasetParquetFiles",
-        requestContext,
+      const revisionPayload = await fetchJsonFromHub<{ sha?: unknown }>(toDatasetRevisionPath(repository, CONVERTED_PARQUET_REVISION), "listDatasetParquetFiles", requestContext, accessToken);
+      const immutableRevision = typeof revisionPayload.sha === "string" ? revisionPayload.sha.trim().toLowerCase() : "";
+      if (!/^[a-f0-9]{7,64}$/.test(immutableRevision)) throw new HuggingFaceAdapterValidationError("Hugging Face did not return an immutable dataset revision.");
+      const hubClient = await resolveHubClient();
+      if (!hubClient.listFiles) throw new HuggingFaceHubClientUnavailableError("The @huggingface/hub client does not support exact-revision file listing.");
+      const versionedFiles: Array<{ repository: string; path: string; revision: string }> = [];
+      let inspectedEntries = 0;
+      const maximumInspectedEntries = maximumDatasetParquetFiles * 8 + 64;
+      for await (const entry of hubClient.listFiles({
+        repo: { type: "dataset", name: repository },
+        recursive: true,
+        revision: immutableRevision,
         accessToken,
-      );
-      if (!isObjectRecord(payload) || Array.isArray(payload)) {
-        return {
-          ok: false as const,
-          error: toRepoBrowserError(
-            createContractError("internal", "Unexpected Hugging Face dataset parquet response shape."),
-          ),
-          ...requestContext,
-        };
+      })) {
+        inspectedEntries += 1;
+        if (inspectedEntries > maximumInspectedEntries) throw new HuggingFaceAdapterValidationError("Dataset file listing exceeds its bounded inspection limit.");
+        if (entry.type !== "file" || !entry.path.toLowerCase().endsWith(".parquet")) continue;
+        const path = normalizePathInRepo({ provider: HUGGING_FACE_PROVIDER, repository, path: entry.path, revision: immutableRevision });
+        if (versionedFiles.some((file) => file.path === path)) continue;
+        if (versionedFiles.length >= maximumDatasetParquetFiles) throw new HuggingFaceAdapterValidationError(`Dataset parquet listing exceeds the ${maximumDatasetParquetFiles}-file limit.`);
+        versionedFiles.push({ repository, path, revision: immutableRevision });
       }
-
-      const logicalUrls: string[] = [];
-      for (const splits of Object.values(payload)) {
-        if (!isObjectRecord(splits) || Array.isArray(splits)) {
-          throw new HuggingFaceAdapterValidationError(
-            "Dataset parquet listing returned an invalid configuration entry.",
-          );
-        }
-        for (const urls of Object.values(splits)) {
-          if (!Array.isArray(urls) || urls.some((url) => typeof url !== "string")) {
-            throw new HuggingFaceAdapterValidationError(
-              "Dataset parquet listing returned an invalid split entry.",
-            );
-          }
-          if (logicalUrls.length + urls.length > maximumDatasetParquetFiles) {
-            throw new HuggingFaceAdapterValidationError(
-              `Dataset parquet listing exceeds the ${maximumDatasetParquetFiles}-file limit.`,
-            );
-          }
-          logicalUrls.push(...urls as string[]);
-        }
-      }
-
-      const files = [...new Set(logicalUrls.map((url) => parseLogicalParquetPath(repository, url)))]
-        .map((path) => ({
-          repository,
-          path,
-          revision: CONVERTED_PARQUET_REVISION,
-        }));
+      if (versionedFiles.length === 0) throw new HuggingFaceAdapterValidationError("The selected dataset has no parquet files at its immutable converted revision.");
 
       return {
         ok: true as const,
         value: {
           repository,
-          revision: CONVERTED_PARQUET_REVISION,
-          files,
+          revision: immutableRevision,
+          files: versionedFiles,
         },
         ...requestContext,
       };

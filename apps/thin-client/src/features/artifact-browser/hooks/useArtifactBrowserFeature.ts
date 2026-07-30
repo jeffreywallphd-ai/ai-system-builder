@@ -757,6 +757,13 @@ export function useArtifactBrowserFeature(
       });
       return;
     }
+    if (!workspaceId) {
+      setLocalizeState({
+        status: "error",
+        message: "Choose a workspace before localizing.",
+      });
+      return;
+    }
 
     setLocalizeState({
       status: "loading",
@@ -764,6 +771,7 @@ export function useArtifactBrowserFeature(
     });
     try {
       const localized = await artifactClient.localizeArtifactFromRepo({
+        workspaceId,
         artifactId: selectedStorageKey,
       });
       setLocalizedArtifact(localized);

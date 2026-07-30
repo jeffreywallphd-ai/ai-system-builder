@@ -367,7 +367,7 @@ export class SecureEgressBroker {
                 continue;
               }
 
-              if (!mediaTypeAllowed(response.headers["content-type"], options.allowedMediaTypes)) {
+              if (response.status !== 304 && !mediaTypeAllowed(response.headers["content-type"], options.allowedMediaTypes)) {
                 response.cancel?.();
                 throw new SecureEgressError("Secure egress response media type is not allowed.", "media-type-denied");
               }

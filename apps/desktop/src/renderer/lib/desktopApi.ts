@@ -2,9 +2,15 @@ import type {
   ArtifactBrowseItem as ArtifactBrowseContractItem,
   ArtifactDetailReadModel as ArtifactDetailContractModel,
 } from "../../../../../modules/contracts/artifact-browser";
-import type { StagedArtifactDescriptor } from "../../../../../modules/contracts/ingestion";
+import type {
+  IngestionTaskTransportCommand,
+  IngestionTaskTransportValue,
+  StagedArtifactDescriptor,
+} from "../../../../../modules/contracts/ingestion";
 import type { DatasetPublicationVisibility } from "../../../../../modules/contracts/dataset";
 import type {
+  DatasetPreparationAdvancedReport,
+  DatasetPreparationGenerationCapacitySnapshot,
   DatasetPreparationSummary,
   DatasetPreparationWarning,
   DatasetQualityReport,
@@ -275,10 +281,12 @@ export interface DesktopWebsitePagesBatchItem {
 export interface DesktopPrepareTrainingDatasetInput {
   workspaceId?: string;
   sourceArtifactIds: string[];
+  preparation?: PrepareTrainingDatasetRequest["preparation"];
   recipe: PrepareTrainingDatasetRequest["recipe"];
   split: PrepareTrainingDatasetRequest["split"];
   output: PrepareTrainingDatasetRequest["output"];
   quality?: DatasetQualityRequestedConfig;
+  advanced?: PrepareTrainingDatasetRequest["advanced"];
 }
 
 export interface DesktopPreparedDatasetRemoteOutput {
@@ -312,11 +320,12 @@ export interface DesktopPreparedTrainingDatasetResult {
     recipe: PrepareTrainingDatasetRequest["recipe"];
     split: PrepareTrainingDatasetRequest["split"];
     output: PrepareTrainingDatasetRequest["output"];
-    generationModelId: string;
+    generationModelId?: string;
     summary: DatasetPreparationSummary;
   };
   summary: DatasetPreparationSummary;
   qualityReport?: DatasetQualityReport;
+  advancedReport?: DatasetPreparationAdvancedReport;
   review?: {
     state: "review-required" | "approved";
     reportFingerprint: string;
@@ -359,6 +368,7 @@ export interface DesktopPythonRuntimeStatusSnapshot {
     cpuUsagePercent: number;
     gpuUsagePercent: number;
   };
+  generationCapacity?: DatasetPreparationGenerationCapacitySnapshot;
 }
 
 export interface DesktopArtifactUploadApi {
@@ -455,13 +465,36 @@ export interface DesktopDatasetPreparationApi {
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   approvePreparedTrainingDataset?: (
-    input: { requestId: string; reportFingerprint: string; workspaceId?: string },
+    input: {
+      requestId: string;
+      reportFingerprint: string;
+      workspaceId?: string;
+    },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
-  listDatasetVersions?: (input: { workspaceId: string; datasetId?: string }, context?: DesktopBridgeRequestContext) => Promise<unknown>;
-  compareDatasetVersions?: (input: { workspaceId: string; fromVersionId: string; toVersionId: string }, context?: DesktopBridgeRequestContext) => Promise<unknown>;
-  readDatasetVersionReproduction?: (input: { workspaceId: string; versionId: string }, context?: DesktopBridgeRequestContext) => Promise<unknown>;
-  publishDatasetVersion?: (input: { workspaceId: string; versionId: string; repositoryId: string; visibility: Exclude<DatasetPublicationVisibility, "protected">; createRepository?: boolean; publicAccessConfirmed?: true }, context?: DesktopBridgeRequestContext) => Promise<unknown>;
+  listDatasetVersions?: (
+    input: { workspaceId: string; datasetId?: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  compareDatasetVersions?: (
+    input: { workspaceId: string; fromVersionId: string; toVersionId: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  readDatasetVersionReproduction?: (
+    input: { workspaceId: string; versionId: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  publishDatasetVersion?: (
+    input: {
+      workspaceId: string;
+      versionId: string;
+      repositoryId: string;
+      visibility: Exclude<DatasetPublicationVisibility, "protected">;
+      createRepository?: boolean;
+      publicAccessConfirmed?: true;
+    },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
 }
 
 export interface DesktopImageGenerationApi {
@@ -539,6 +572,13 @@ interface DesktopApiBridge {
     },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
+  executeIngestionTask?: (
+    input: { workspaceId: string; command: IngestionTaskTransportCommand },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<
+    | { ok: true; value: IngestionTaskTransportValue }
+    | { ok: false; error: { message: string } }
+  >;
   startPrepareTrainingDataset?: (
     input: DesktopPrepareTrainingDatasetInput,
     context?: DesktopBridgeRequestContext,
@@ -552,13 +592,36 @@ interface DesktopApiBridge {
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   approvePreparedTrainingDataset?: (
-    input: { requestId: string; reportFingerprint: string; workspaceId?: string },
+    input: {
+      requestId: string;
+      reportFingerprint: string;
+      workspaceId?: string;
+    },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
-  listDatasetVersions?: (input: { workspaceId: string; datasetId?: string }, context?: DesktopBridgeRequestContext) => Promise<unknown>;
-  compareDatasetVersions?: (input: { workspaceId: string; fromVersionId: string; toVersionId: string }, context?: DesktopBridgeRequestContext) => Promise<unknown>;
-  readDatasetVersionReproduction?: (input: { workspaceId: string; versionId: string }, context?: DesktopBridgeRequestContext) => Promise<unknown>;
-  publishDatasetVersion?: (input: { workspaceId: string; versionId: string; repositoryId: string; visibility: "private" | "public"; createRepository?: boolean; publicAccessConfirmed?: true }, context?: DesktopBridgeRequestContext) => Promise<unknown>;
+  listDatasetVersions?: (
+    input: { workspaceId: string; datasetId?: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  compareDatasetVersions?: (
+    input: { workspaceId: string; fromVersionId: string; toVersionId: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  readDatasetVersionReproduction?: (
+    input: { workspaceId: string; versionId: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  publishDatasetVersion?: (
+    input: {
+      workspaceId: string;
+      versionId: string;
+      repositoryId: string;
+      visibility: "private" | "public";
+      createRepository?: boolean;
+      publicAccessConfirmed?: true;
+    },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
   readRuntimeReadiness?: (
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
@@ -1111,7 +1174,10 @@ interface DesktopApiBridge {
     artifactFamily?: DesktopArtifactFamily;
     mediaType?: string;
   }) => Promise<unknown>;
-  localizeArtifactFromRepo: (input: { artifactId: string }) => Promise<unknown>;
+  localizeArtifactFromRepo: (input: {
+    workspaceId: string;
+    artifactId: string;
+  }) => Promise<unknown>;
 
   listApplicationSettingDefinitions?: (
     input?: ListApplicationSettingDefinitionsRequest,

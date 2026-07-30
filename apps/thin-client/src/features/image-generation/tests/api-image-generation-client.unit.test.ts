@@ -29,9 +29,9 @@ describe("api image generation client", () => {
     expect(fetchMock.mock.calls[4][0]).toBe("/api/image-generation/unload-model");
     expect(c.createArtifactMediaViewUrl("foo/bar")).toBe("/api/artifact/media/view?storageKey=foo%2Fbar");
     expect(c.createArtifactMediaViewUrl("foo/bar", { workspaceId: "workspace-a" })).toBe("/api/artifact/media/view?storageKey=foo%2Fbar&workspaceId=workspace-a");
-    expect(fetchMock.mock.calls[0][1]).toMatchObject({
-      headers: expect.objectContaining({ "x-client-source": "thin-client.image-generation" }),
-    });
+    expect(
+      new Headers(fetchMock.mock.calls[0][1].headers).get("x-client-source"),
+    ).toBe("thin-client.image-generation");
     expect(JSON.parse(String(fetchMock.mock.calls[0][1].body))).not.toHaveProperty("source");
   });
 

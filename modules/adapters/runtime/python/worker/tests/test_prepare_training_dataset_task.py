@@ -8,6 +8,7 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
+from types import ModuleType
 from unittest.mock import patch
 
 from modules.adapters.runtime.python.worker.models import PrepareTrainingDatasetRequest
@@ -16,6 +17,9 @@ from modules.adapters.runtime.python.worker.tasks.prepare_training_dataset impor
     _partition_rows,
     _read_structured_source_rows,
     prepare_training_dataset,
+)
+from modules.adapters.runtime.python.worker.tests.structured_output_test_fixtures import (
+    runtime_structured_output_fixture,
 )
 
 
@@ -54,6 +58,7 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
                 },
                 "split": {"trainRatio": 0.5, "testRatio": 0.5, "shuffle": False},
                 "output": {"format": output_format, "destinations": {"local": {"enabled": True}}},
+                "runtime": runtime_structured_output_fixture(),
             }
         )
 
@@ -103,6 +108,411 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         self.assertRegex(serialized_output["outputHandle"], r"^[A-Za-z0-9._-]+$")
         self.assertNotIn("tempPath", serialized_output)
 
+    def test_selected_source_attribution_is_added_from_trusted_metadata(self) -> None:
+        payload = self._build_payload("jsonl")
+        payload.sourceInputs = payload.sourceInputs[:1]
+        payload.sourceInputs[0].metadata = {
+            "sourceUrl": "https://Example.com/public/item?tracking=removed#part",
+            "authors": [{"name": "Ada Example"}, "Ben Example"],
+            "licenseName": "CC BY 4.0",
+        }
+        payload.recipe.chunking.chunkSize = 100
+        payload.recipe.chunking.chunkOverlap = 0
+        payload.quality = {
+            "requestedPolicy": {
+                "preset": "recommended",
+                "includeSourceAttribution": True,
+            },
+            "effectivePolicy": {
+                "policyId": "policy",
+                "revision": "1",
+                "scope": "workspace",
+                "preset": "recommended",
+                "allowedLanguages": ["en"],
+                "requireLicenseMetadata": False,
+                "requireConsentMetadata": False,
+                "includeSourceAttribution": True,
+                "excludedBenchmarkIds": [],
+                "maxRowsPerSource": 100,
+                "minimumTextCharacters": 1,
+                "maximumTextCharacters": 10000,
+                "fuzzyDuplicateSimilarity": 0.95,
+                "maxFuzzyCandidatesPerRow": 16,
+                "maxReportSamplesPerReason": 3,
+                "mandatoryChecks": {
+                    "sourceAssociation": True,
+                    "schema": True,
+                    "exactDuplicates": True,
+                    "fuzzyDuplicates": True,
+                    "sensitivePersonalData": True,
+                    "secretLikeContent": True,
+                    "splitLeakage": True,
+                },
+            },
+            "reviewRequired": True,
+        }
+        payload = PrepareTrainingDatasetRequest.model_validate(
+            payload.model_dump(mode="json")
+        )
+
+        result = prepare_training_dataset(
+            payload,
+            example_generator=lambda chunks, _config: [
+                GeneratedQaExample(
+                    artifact_id=chunk.artifact_id,
+                    chunk_index=chunk.chunk_index,
+                    question="What sequence is present?",
+                    answer=chunk.text,
+                )
+                for chunk in chunks
+            ],
+        )
+
+        output = next(item for item in result.outputs if item.role == "dataset")
+        row = json.loads(Path(output.tempPath).read_text(encoding="utf-8").splitlines()[0])
+        self.assertEqual(
+            row["sourceAttribution"],
+            {
+                "sourceArtifactId": "doc-1",
+                "sourceName": "original-doc-1.txt",
+                "sourceUri": "https://example.com/public/item",
+                "sourceAuthor": "Ada Example, Ben Example",
+                "sourceLicense": "CC BY 4.0",
+            },
+        )
+        self.assertNotIn("tracking", json.dumps(row["sourceAttribution"]))
+
+        payload.quality.requestedPolicy.includeSourceAttribution = False
+        payload.quality.effectivePolicy.includeSourceAttribution = False
+        without_attribution = prepare_training_dataset(
+            PrepareTrainingDatasetRequest.model_validate(
+                payload.model_dump(mode="json")
+            ),
+            example_generator=lambda chunks, _config: [
+                GeneratedQaExample(
+                    artifact_id=chunk.artifact_id,
+                    chunk_index=chunk.chunk_index,
+                    question="What sequence is present?",
+                    answer=chunk.text,
+                )
+                for chunk in chunks
+            ],
+        )
+        output = next(
+            item for item in without_attribution.outputs if item.role == "dataset"
+        )
+        row = json.loads(
+            Path(output.tempPath).read_text(encoding="utf-8").splitlines()[0]
+        )
+        self.assertNotIn("sourceAttribution", row)
+
+    def test_task_structured_fields_materialize_to_parquet_row_contracts(self) -> None:
+        cases = [
+            (
+                "llm-instruction",
+                {"taskType": "llm-instruction"},
+                {
+                    "instruction": "Describe the sequence.",
+                    "input": "abcdefghij",
+                    "output": "The sequence runs from a through j.",
+                },
+                {"instruction", "input", "output"},
+            ),
+            (
+                "llm-classification",
+                {"taskType": "llm-classification", "textField": "text", "labelField": "label"},
+                {"label": "sequence"},
+                {"text", "label"},
+            ),
+            (
+                "llm-extraction",
+                {"taskType": "llm-extraction", "textField": "text", "outputField": "expectedOutput"},
+                {"expectedOutput": '{"first": "a", "last": "j"}'},
+                {"text", "expectedOutput"},
+            ),
+            (
+                "llm-embedding",
+                {"taskType": "llm-embedding"},
+                {"anchorText": "alphabet sequence", "positiveText": "abcdefghij"},
+                {"anchorText", "positiveText"},
+            ),
+            (
+                "llm-reranker",
+                {"taskType": "llm-reranker"},
+                {"query": "Which sequence is shown?", "passage": "abcdefghij"},
+                {"query", "passage", "relevance"},
+            ),
+        ]
+
+        for task_type, task_recipe, structured_fields, required_columns in cases:
+            with self.subTest(task_type=task_type):
+                captured_rows: list[dict[str, object]] = []
+                fake_pyarrow = ModuleType("pyarrow")
+                fake_parquet = ModuleType("pyarrow.parquet")
+
+                class _FakeTable:
+                    @staticmethod
+                    def from_pylist(rows):
+                        return list(rows)
+
+                def write_table(table, path):
+                    captured_rows.extend(table)
+                    Path(path).write_bytes(b"PAR1")
+
+                fake_pyarrow.Table = _FakeTable
+                fake_parquet.write_table = write_table
+                fake_pyarrow.parquet = fake_parquet
+                payload = self._build_payload("parquet")
+                payload.sourceInputs = payload.sourceInputs[:1]
+                payload.recipe.task = task_recipe
+                payload.recipe.chunking.chunkSize = 100
+                payload.recipe.chunking.chunkOverlap = 0
+
+                def generator(chunks, _config):
+                    return [
+                        GeneratedQaExample(
+                            artifact_id=chunk.artifact_id,
+                            chunk_index=chunk.chunk_index,
+                            question="Generated task input?",
+                            answer="Generated task output.",
+                            generation_mode="structured-json-v1",
+                            structured_fields=structured_fields,
+                        )
+                        for chunk in chunks
+                    ]
+
+                with patch.dict(
+                    "sys.modules",
+                    {"pyarrow": fake_pyarrow, "pyarrow.parquet": fake_parquet},
+                ):
+                    prepare_training_dataset(payload, example_generator=generator)
+                self.assertTrue(required_columns.issubset(set(captured_rows[0])))
+                self.assertEqual(len(captured_rows), 2)
+
+    def test_default_generation_path_passes_exact_task_context_to_structured_generator(self) -> None:
+        payload = self._build_payload("jsonl")
+        payload.sourceInputs = payload.sourceInputs[:1]
+        payload.recipe.chunking.chunkSize = 100
+        payload.recipe.chunking.chunkOverlap = 0
+
+        def structured_generator(
+            chunks,
+            _config,
+            task_type,
+            task_recipe,
+            structured_output,
+        ):
+            self.assertEqual(task_type, "llm-instruction")
+            self.assertEqual(task_recipe["promptStyle"], "instruction-response")
+            self.assertEqual(
+                structured_output.purpose_paths["output"],
+                ("output",),
+            )
+            return [
+                GeneratedQaExample(
+                    artifact_id=chunk.artifact_id,
+                    chunk_index=chunk.chunk_index,
+                    question="Describe the sequence.",
+                    answer="The sequence runs from a through j.",
+                    generation_mode="structured-json-v1",
+                    structured_fields={
+                        "instruction": "Describe the sequence.",
+                        "input": chunk.text,
+                        "output": "The sequence runs from a through j.",
+                    },
+                )
+                for chunk in chunks
+            ]
+
+        with patch(
+            "modules.adapters.runtime.python.worker.tasks.prepare_training_dataset.generate_task_examples_for_chunks",
+            side_effect=structured_generator,
+        ) as generator:
+            result = prepare_training_dataset(payload)
+
+        self.assertEqual(generator.call_count, 1)
+        aggregate = next(output for output in result.outputs if output.role == "dataset")
+        row = json.loads(Path(aggregate.tempPath).read_text(encoding="utf-8").splitlines()[0])
+        self.assertEqual(row["instruction"], "Describe the sequence.")
+        self.assertEqual(row["input"], "abcdefghij")
+
+    def test_explicit_topic_aware_plan_omits_fixed_size_and_overlap(self) -> None:
+        payload = self._build_payload("jsonl")
+        payload.sourceInputs = payload.sourceInputs[:1]
+        payload.recipe.task["textInputMode"] = "generate"
+        payload.recipe.chunking = None
+        payload.preparation = {
+            "schemaVersion": "1",
+            "inputIntent": "create-from-source-material",
+            "method": "topic-aware",
+            "sourceKinds": ["document"],
+            "generationMode": "task-examples",
+        }
+        payload.advanced = {
+            "preset": "topic-aware",
+            "content": {
+                "strategy": "semantic",
+                "maxTokensPerChunk": 32,
+                "maxSourceSpans": 100,
+                "semanticBoundaryThreshold": 0.22,
+                "ocrEnabled": False,
+            },
+            "semantic": {
+                "enabled": True,
+                "embeddingAlgorithm": "hashed-token-v1",
+            },
+            "synthetic": {
+                "enabled": True,
+                "candidatesPerChunk": 1,
+                "requireReview": True,
+            },
+        }
+        payload.quality = {
+            "requestedPolicy": {"preset": "recommended"},
+            "effectivePolicy": {
+                "policyId": "policy",
+                "revision": "1",
+                "scope": "workspace",
+                "preset": "recommended",
+                "allowedLanguages": ["en"],
+                "requireLicenseMetadata": False,
+                "requireConsentMetadata": False,
+                "excludedBenchmarkIds": [],
+                "maxRowsPerSource": 100,
+                "minimumTextCharacters": 1,
+                "maximumTextCharacters": 10000,
+                "fuzzyDuplicateSimilarity": 0.95,
+                "maxFuzzyCandidatesPerRow": 16,
+                "maxReportSamplesPerReason": 3,
+                "mandatoryChecks": {
+                    "sourceAssociation": True,
+                    "schema": True,
+                    "exactDuplicates": True,
+                    "fuzzyDuplicates": True,
+                    "sensitivePersonalData": True,
+                    "secretLikeContent": True,
+                    "splitLeakage": True,
+                },
+            },
+            "reviewRequired": True,
+        }
+        payload = PrepareTrainingDatasetRequest.model_validate(
+            payload.model_dump(mode="json")
+        )
+
+        result = prepare_training_dataset(
+            payload,
+            example_generator=lambda chunks, _config: [
+                GeneratedQaExample(
+                    artifact_id=chunk.artifact_id,
+                    chunk_index=chunk.chunk_index,
+                    question="What is included?",
+                    answer=chunk.text,
+                )
+                for chunk in chunks
+            ],
+        )
+
+        self.assertGreater(result.summary.chunkCount, 0)
+        self.assertEqual(result.advancedReport["content"]["strategy"], "semantic")
+
+    def test_explicit_topic_aware_plan_rejects_stale_overlap_settings(self) -> None:
+        payload = self._build_payload("jsonl")
+        payload.sourceInputs = payload.sourceInputs[:1]
+        payload.recipe.task["textInputMode"] = "generate"
+        payload.preparation = {
+            "schemaVersion": "1",
+            "inputIntent": "create-from-source-material",
+            "method": "topic-aware",
+            "sourceKinds": ["document"],
+            "generationMode": "task-examples",
+        }
+        payload.advanced = {
+            "preset": "topic-aware",
+            "content": {"strategy": "semantic", "ocrEnabled": False},
+            "semantic": {"enabled": True},
+            "synthetic": {"enabled": True, "requireReview": True},
+        }
+        payload = PrepareTrainingDatasetRequest.model_validate(
+            payload.model_dump(mode="json")
+        )
+
+        with self.assertRaisesRegex(ValueError, "Section size and overlap"):
+            prepare_training_dataset(payload)
+
+    def test_explicit_existing_dataset_plan_uses_no_document_or_model_settings(self) -> None:
+        source_path = Path(self.temp_dir.name) / "ready.jsonl"
+        source_path.write_text(
+            json.dumps({"text": "A useful example", "label": "help"}) + "\n",
+            encoding="utf-8",
+        )
+        payload = PrepareTrainingDatasetRequest.model_validate(
+            {
+                "sourceInputs": [
+                    {
+                        "artifactId": "ready-1",
+                        "localPath": str(source_path),
+                        "mediaType": "application/x-ndjson",
+                        "originalName": "ready.jsonl",
+                    }
+                ],
+                "preparation": {
+                    "schemaVersion": "1",
+                    "inputIntent": "use-existing-dataset",
+                    "method": "validate-and-split",
+                    "sourceKinds": ["structured"],
+                    "generationMode": "none",
+                },
+                "recipe": {
+                    "task": {
+                        "taskType": "llm-classification",
+                        "textInputMode": "provided",
+                        "textField": "text",
+                        "labelField": "label",
+                    }
+                },
+                "split": {"trainRatio": 0.8, "validationRatio": 0.1, "testRatio": 0.1},
+                "output": {"format": "jsonl"},
+            }
+        )
+
+        result = prepare_training_dataset(payload)
+
+        self.assertEqual(result.summary.datasetRowCount, 1)
+        metadata = next(output for output in result.outputs if output.role == "dataset").metadata
+        self.assertEqual(metadata["preparation"]["method"], "validate-and-split")
+        self.assertNotIn("generationModel", metadata)
+
+    def test_explicit_plan_rejects_mixed_existing_and_source_material(self) -> None:
+        source_path = Path(self.temp_dir.name) / "ready.jsonl"
+        source_path.write_text(
+            json.dumps({"instruction": "Ask", "output": "Answer"}) + "\n",
+            encoding="utf-8",
+        )
+        payload = self._build_payload("jsonl")
+        payload.sourceInputs = [
+            payload.sourceInputs[0],
+            {
+                "artifactId": "ready-1",
+                "localPath": str(source_path),
+                "mediaType": "application/x-ndjson",
+                "originalName": "ready.jsonl",
+            },
+        ]
+        payload.preparation = {
+            "schemaVersion": "1",
+            "inputIntent": "create-from-source-material",
+            "method": "fixed-length",
+            "sourceKinds": ["document"],
+            "generationMode": "task-examples",
+        }
+        payload = PrepareTrainingDatasetRequest.model_validate(
+            payload.model_dump(mode="json")
+        )
+
+        with self.assertRaisesRegex(ValueError, "cannot be mixed"):
+            prepare_training_dataset(payload)
+
     def test_writes_generated_schema_as_jsonl_json_and_csv(self) -> None:
         def generator(chunks, _config):
             return [
@@ -151,6 +561,8 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
                         "question",
                         "answer",
                         "generationMode",
+                        "sourceArtifactId",
+                        "sourceLineage",
                         "split",
                     },
                 )
@@ -169,6 +581,8 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
                         "question",
                         "answer",
                         "generationMode",
+                        "sourceArtifactId",
+                        "sourceLineage",
                         "split",
                     },
                 )
@@ -187,6 +601,8 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
                         "question",
                         "answer",
                         "generationMode",
+                        "sourceArtifactId",
+                        "sourceLineage",
                         "split",
                     ],
                 )
@@ -587,6 +1003,10 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
             "captionField": "caption",
             "triggerToken": "asbwidget",
         }
+        payload_dict["runtime"] = runtime_structured_output_fixture(
+            "diffusion-lora",
+            payload_dict["recipe"]["task"],
+        )
         payload = PrepareTrainingDatasetRequest.model_validate(payload_dict)
 
         result = prepare_training_dataset(
@@ -624,12 +1044,26 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
             "captionField": "caption",
             "triggerToken": "asbwidget",
         }
+        payload_dict["runtime"] = runtime_structured_output_fixture(
+            "diffusion-lora",
+            payload_dict["recipe"]["task"],
+        )
         payload = PrepareTrainingDatasetRequest.model_validate(payload_dict)
         prompts: list[str] = []
 
         def text_generator(prompt, _config):
             prompts.append(prompt)
-            return "a blue product widget on a clean background"
+            return json.dumps(
+                {
+                    "schemaVersion": "1",
+                    "taskType": "diffusion-lora",
+                    "fieldKind": "caption",
+                    "status": "ok",
+                    "value": {
+                        "caption": "a blue product widget on a clean background"
+                    },
+                }
+            )
 
         result = prepare_training_dataset(
             payload,
@@ -666,12 +1100,24 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
             "labelField": "label",
             "labelSet": ["billing", "support"],
         }
+        payload_dict["runtime"] = runtime_structured_output_fixture(
+            "vision-classification",
+            payload_dict["recipe"]["task"],
+        )
         payload = PrepareTrainingDatasetRequest.model_validate(payload_dict)
         prompts: list[str] = []
 
         def text_generator(prompt, _config):
             prompts.append(prompt)
-            return "billing workflow"
+            return json.dumps(
+                {
+                    "schemaVersion": "1",
+                    "taskType": "vision-classification",
+                    "fieldKind": "label",
+                    "status": "ok",
+                    "value": {"label": "billing"},
+                }
+            )
 
         result = prepare_training_dataset(
             payload,
@@ -683,7 +1129,7 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         row = json.loads(Path(output.tempPath).read_text(encoding="utf-8").splitlines()[0])
         self.assertEqual(row["label"], "billing")
         self.assertEqual(row["labelSet"], ["billing", "support"])
-        self.assertIn("Allowed labels: billing, support", prompts[0])
+        self.assertIn('"allowedLabels": ["billing", "support"]', prompts[0])
 
     def test_detection_manifest_requires_annotations(self) -> None:
         payload = self._build_payload("jsonl")

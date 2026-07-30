@@ -56,10 +56,14 @@ This module contains the first concrete artifact-repo storage provider adapter.
   and concurrency are controlled before localization.
 - The brokered retrieval path is the only download path; there is no unbounded
   `arrayBuffer` fallback.
-- Dataset browsing reads the Hub's logical Parquet inventory rather than a raw
-  recursive repository tree. Returned URLs must remain on the configured Hub
-  origin, match the requested dataset, use the converted Parquet revision, and
-  stay within the configured file-count limit before any entry is exposed.
+- Dataset browsing resolves the provider's converted Parquet ref to a commit
+  SHA, then uses the official Hub client's recursive file listing at that exact
+  revision. Only contained Parquet paths within the configured file and
+  inspection limits are exposed, and later retrieval remains pinned to the SHA.
+- Mutable branch names and malformed revision responses are not accepted as
+  provider-ingestion evidence. The legacy converted-Parquet logical URL remains
+  readable only for older callers; new browse results use exact repository paths
+  and commit revisions.
 - This is intentionally a small provider slice, not full provider lifecycle management.
 - Tests are mock-driven and deterministic (no live network dependency).
 - Fail-closed tests cover absent approval, managed denial, private creation, and

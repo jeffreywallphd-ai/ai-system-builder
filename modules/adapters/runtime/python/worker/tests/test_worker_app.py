@@ -18,6 +18,21 @@ class WorkerAppTests(unittest.TestCase):
         with worker_app.TASK_REGISTRY_LOCK:
             worker_app.TASK_REGISTRY.clear()
 
+    def test_capabilities_advertise_constrained_json_only_when_ready(self) -> None:
+        with patch(
+            "modules.adapters.runtime.python.worker.app.get_constrained_json_decoder_runtime_status",
+            return_value=SimpleNamespace(available=True),
+        ):
+            ready = worker_app.capabilities()
+        with patch(
+            "modules.adapters.runtime.python.worker.app.get_constrained_json_decoder_runtime_status",
+            return_value=SimpleNamespace(available=False),
+        ):
+            unavailable = worker_app.capabilities()
+
+        self.assertIn("dataset-preparation.constrained-json", ready.capabilities)
+        self.assertNotIn("dataset-preparation.constrained-json", unavailable.capabilities)
+
     def test_model_download_success_emits_lifecycle_logs(self) -> None:
         request = EnsureModelDownloadRequest(
             provider="transformers",

@@ -16,6 +16,7 @@ export interface DefaultDatasetQualityPolicyOptions {
   allowedLanguages?: readonly string[];
   requireLicenseMetadata?: boolean;
   requireConsentMetadata?: boolean;
+  includeSourceAttribution?: boolean;
   excludedBenchmarkIds?: readonly string[];
   maxRowsPerSource?: number;
 }
@@ -98,6 +99,9 @@ export function createDefaultDatasetQualityPolicyProvider(
         requireConsentMetadata:
           options.requireConsentMetadata === true ||
           requested.requireConsentMetadata === true,
+        includeSourceAttribution:
+          options.includeSourceAttribution === true ||
+          requested.includeSourceAttribution === true,
         excludedBenchmarkIds: effectiveExcludedBenchmarks,
         maxRowsPerSource: Math.min(hostMaxRowsPerSource, requestedMaxRows),
         minimumTextCharacters: requested.preset === "strict" ? 20 : 8,
@@ -106,6 +110,7 @@ export function createDefaultDatasetQualityPolicyProvider(
         maxFuzzyCandidatesPerRow: requested.preset === "strict" ? 96 : 64,
         maxReportSamplesPerReason: 10,
         mandatoryChecks: {
+          sourceAssociation: true,
           schema: true,
           exactDuplicates: true,
           fuzzyDuplicates: true,

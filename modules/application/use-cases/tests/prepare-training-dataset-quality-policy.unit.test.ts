@@ -68,7 +68,178 @@ function createDependencies(overrides: Record<string, unknown> = {}): any {
   };
 }
 
+const managedQualityPolicyProvider = {
+  resolveDatasetQualityPolicy: testDouble.fn(async () => ({
+    policyId: "managed-quality",
+    revision: "2",
+    scope: "workspace" as const,
+    preset: "recommended" as const,
+    allowedLanguages: ["en"],
+    requireLicenseMetadata: false,
+    requireConsentMetadata: false,
+    excludedBenchmarkIds: [],
+    maxRowsPerSource: 500,
+    minimumTextCharacters: 8,
+    maximumTextCharacters: 100_000,
+    fuzzyDuplicateSimilarity: 0.92,
+    maxFuzzyCandidatesPerRow: 64,
+    maxReportSamplesPerReason: 10,
+    mandatoryChecks: {
+      sourceAssociation: true as const,
+      schema: true as const,
+      exactDuplicates: true as const,
+      fuzzyDuplicates: true as const,
+      sensitivePersonalData: true as const,
+      secretLikeContent: true as const,
+      splitLeakage: true as const,
+    },
+  })),
+};
+
 describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
+  it("preserves compatible topic-aware refinements and omits fixed chunk settings", async () => {
+    let runtimePayload: any;
+    const useCase = new PrepareTrainingDatasetFromArtifactsUseCase(
+      createDependencies({
+        runtimeTaskRegistry: {
+          startTask: testDouble.fn(async (request: any) => {
+            runtimePayload = request.payload;
+            return {
+              requestId: "topic-aware-task",
+              taskType: "dataset-preparation",
+              accepted: true,
+              status: "queued",
+            };
+          }),
+          getTaskStatus: testDouble.fn(),
+          cancelTask: testDouble.fn(),
+          listTasks: testDouble.fn(async () => ({ tasks: [] })),
+        },
+        datasetQualityPolicyProvider: managedQualityPolicyProvider,
+      }),
+    );
+    const adaptiveCommand = {
+      ...qualityCommand,
+      preparation: {
+        schemaVersion: "1" as const,
+        inputIntent: "create-from-source-material" as const,
+        method: "topic-aware" as const,
+        sourceKinds: ["document" as const],
+        generationMode: "task-examples" as const,
+      },
+      recipe: {
+        normalization: { targetFormat: "markdown" as const },
+        generation: qualityCommand.recipe.generation,
+        task: {
+          taskType: "llm-instruction" as const,
+          textInputMode: "generate" as const,
+        },
+      },
+      advanced: {
+        preset: "topic-aware" as const,
+        content: {
+          strategy: "semantic" as const,
+          maxTokensPerChunk: 512,
+          maxSourceSpans: 8_000,
+          semanticBoundaryThreshold: 0.3,
+          ocrEnabled: false,
+        },
+        semantic: {
+          enabled: true,
+          embeddingAlgorithm: "hashed-token-v1" as const,
+          similarityThreshold: 0.86,
+          maxComparisonsPerRow: 96,
+          hardNegativeMining: true,
+        },
+        synthetic: {
+          enabled: true,
+          candidatesPerChunk: 3,
+          minimumGroundingScore: 0.5,
+          minimumCriticScore: 0.65,
+          minimumDiversityScore: 0.25,
+          requireReview: true,
+        },
+      },
+    };
+
+    const result = await useCase.startPrepareTrainingDataset(adaptiveCommand, {
+      workspaceId: "workspace-a",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(runtimePayload.preparation).toEqual(adaptiveCommand.preparation);
+    expect(runtimePayload.recipe.chunking).toBeUndefined();
+    expect(runtimePayload.advanced.content.maxTokensPerChunk).toBe(512);
+    expect(runtimePayload.advanced.semantic.similarityThreshold).toBe(0.86);
+  });
+
+  it("rejects fixed size or overlap settings for topic-aware preparation", async () => {
+    const startTask = testDouble.fn();
+    const useCase = new PrepareTrainingDatasetFromArtifactsUseCase(
+      createDependencies({
+        runtimeTaskRegistry: {
+          startTask,
+          getTaskStatus: testDouble.fn(),
+          cancelTask: testDouble.fn(),
+          listTasks: testDouble.fn(async () => ({ tasks: [] })),
+        },
+        datasetQualityPolicyProvider: managedQualityPolicyProvider,
+      }),
+    );
+
+    const result = await useCase.startPrepareTrainingDataset(
+      {
+        ...qualityCommand,
+        preparation: {
+          schemaVersion: "1",
+          inputIntent: "create-from-source-material",
+          method: "topic-aware",
+          sourceKinds: ["document"],
+          generationMode: "task-examples",
+        },
+        recipe: {
+          ...qualityCommand.recipe,
+          task: {
+            taskType: "llm-instruction",
+            textInputMode: "generate",
+          },
+        },
+        advanced: {
+          preset: "topic-aware",
+          content: {
+            strategy: "semantic",
+            maxTokensPerChunk: 320,
+            maxSourceSpans: 10_000,
+            semanticBoundaryThreshold: 0.22,
+          },
+          semantic: {
+            enabled: true,
+            embeddingAlgorithm: "hashed-token-v1",
+            similarityThreshold: 0.9,
+            maxComparisonsPerRow: 128,
+            hardNegativeMining: true,
+          },
+          synthetic: {
+            enabled: true,
+            candidatesPerChunk: 2,
+            requireReview: true,
+          },
+        },
+      },
+      { workspaceId: "workspace-a" },
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        code: "validation",
+        message:
+          "Section size and overlap are not used by the selected preparation method.",
+      },
+    });
+    expect(startTask).not.toHaveBeenCalled();
+  });
+
   it("fails closed before staging when quality policy authority is missing", async () => {
     const retrieveArtifact = testDouble.fn();
     const useCase = new PrepareTrainingDatasetFromArtifactsUseCase(
@@ -129,6 +300,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
             maxFuzzyCandidatesPerRow: 64,
             maxReportSamplesPerReason: 10,
             mandatoryChecks: {
+              sourceAssociation: true,
               schema: true,
               exactDuplicates: true,
               fuzzyDuplicates: true,
@@ -175,6 +347,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
       maxFuzzyCandidatesPerRow: 64,
       maxReportSamplesPerReason: 10,
       mandatoryChecks: {
+        sourceAssociation: true as const,
         schema: true as const,
         exactDuplicates: true as const,
         fuzzyDuplicates: true as const,

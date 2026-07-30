@@ -13,6 +13,10 @@ import { SecureEgressBroker } from "../../../security/egress";
 
 function createHubClientDouble() {
   return {
+    listFiles: testDouble.fn(() => (async function* () {
+      yield { type: "file" as const, size: 3, path: "default/train/0000.parquet" };
+      yield { type: "file" as const, size: 2, path: "default/test/0000.parquet" };
+    })()),
     fileExists: testDouble.fn(async () => true),
     uploadFile: testDouble.fn(async () => undefined),
     commit: testDouble.fn(async () => ({
@@ -664,15 +668,12 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
     expect(fetchImplementation).toHaveBeenCalled();
   });
 
-  it("lists only bounded logical dataset parquet files", async () => {
-    const fetchImplementation = testDouble.fn(async () => new Response(JSON.stringify({
-      default: {
-        train: ["https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet/default/train/0.parquet"],
-        test: ["https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet/default/test/0.parquet"],
-      },
-    }), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+  it("lists only bounded dataset parquet files at an immutable converted revision", async () => {
+    const immutableRevision = "a".repeat(40);
+    const fetchImplementation = testDouble.fn(async () => new Response(JSON.stringify({ sha: immutableRevision }), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+    const hubClient = createHubClientDouble();
     const adapter = createHuggingFaceArtifactRepoStorageAdapter({
-      hubClient: createHubClientDouble(),
+      hubClient,
       fetchImplementation,
     });
 
@@ -688,23 +689,29 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
     expect(result.value.files).toEqual([
       {
         repository: "OpenFinAL/financial-news",
-        path: "default/train/0.parquet",
-        revision: "refs/convert/parquet",
+        path: "default/train/0000.parquet",
+        revision: immutableRevision,
       },
       {
         repository: "OpenFinAL/financial-news",
-        path: "default/test/0.parquet",
-        revision: "refs/convert/parquet",
+        path: "default/test/0000.parquet",
+        revision: immutableRevision,
       },
     ]);
-    expect(result.value.revision).toBe("refs/convert/parquet");
+    expect(result.value.revision).toBe(immutableRevision);
     expect(fetchImplementation).toHaveBeenCalledWith(
-      "https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet",
+      "https://huggingface.co/api/datasets/OpenFinAL/financial-news/revision/refs%2Fconvert%2Fparquet",
       { headers: {} },
     );
+    expect(hubClient.listFiles).toHaveBeenCalledWith({
+      repo: { type: "dataset", name: "OpenFinAL/financial-news" },
+      recursive: true,
+      revision: immutableRevision,
+      accessToken: undefined,
+    });
   });
 
-  it("retrieves a listed converted parquet file through its logical API URL", async () => {
+  it("retrieves a listed converted parquet file through its immutable revision", async () => {
     const egress = createEgressBrokerDouble();
     const adapter = createHuggingFaceArtifactRepoStorageAdapter({
       hubClient: createHubClientDouble(),
@@ -715,24 +722,24 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
       createRetrieveArtifactFromRepoRequest({
         provider: "huggingface",
         repository: "OpenFinAL/financial-news",
-        path: "default/train/0.parquet",
-        revision: "refs/convert/parquet",
+        path: "default/train/0000.parquet",
+        revision: "a".repeat(40),
       }),
     );
 
     expect(result.ok).toBe(true);
     expect(egress.fetch.mock.calls[0]?.[0]).toBe(
-      "https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet/default/train/0.parquet",
+      `https://huggingface.co/datasets/OpenFinAL/financial-news/resolve/${"a".repeat(40)}/default/train/0000.parquet`,
     );
   });
 
-  it("rejects external logical file URLs and oversized parquet listings", async () => {
-    const externalFetch = testDouble.fn(async () => new Response(JSON.stringify({
-      default: { train: ["https://attacker.example/private.parquet"] },
-    }), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+  it("rejects unsafe file paths, oversized listings, and mutable revision responses", async () => {
+    const revisionFetch = testDouble.fn(async () => new Response(JSON.stringify({ sha: "a".repeat(40) }), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+    const unsafeHubClient = createHubClientDouble();
+    unsafeHubClient.listFiles = testDouble.fn(() => (async function* () { yield { type: "file" as const, size: 1, path: "../private.parquet" }; })());
     const externalAdapter = createHuggingFaceArtifactRepoStorageAdapter({
-      hubClient: createHubClientDouble(),
-      fetchImplementation: externalFetch,
+      hubClient: unsafeHubClient,
+      fetchImplementation: revisionFetch,
     });
     const external = await externalAdapter.listDatasetParquetFiles({
       repository: "OpenFinAL/financial-news",
@@ -741,17 +748,14 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
     if (external.ok) throw new Error("Expected external URL rejection.");
     expect(external.error.code).toBe("validation");
 
-    const oversizedFetch = testDouble.fn(async () => new Response(JSON.stringify({
-      default: {
-        train: [
-          "https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet/default/train/0.parquet",
-          "https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet/default/train/1.parquet",
-        ],
-      },
-    }), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+    const oversizedHubClient = createHubClientDouble();
+    oversizedHubClient.listFiles = testDouble.fn(() => (async function* () {
+      yield { type: "file" as const, size: 1, path: "default/train/0000.parquet" };
+      yield { type: "file" as const, size: 1, path: "default/train/0001.parquet" };
+    })());
     const oversizedAdapter = createHuggingFaceArtifactRepoStorageAdapter({
-      hubClient: createHubClientDouble(),
-      fetchImplementation: oversizedFetch,
+      hubClient: oversizedHubClient,
+      fetchImplementation: revisionFetch,
       maximumDatasetParquetFiles: 1,
     });
     const oversized = await oversizedAdapter.listDatasetParquetFiles({
@@ -760,6 +764,15 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
     expect(oversized.ok).toBe(false);
     if (oversized.ok) throw new Error("Expected bounded listing rejection.");
     expect(oversized.error.code).toBe("validation");
+
+    const mutableAdapter = createHuggingFaceArtifactRepoStorageAdapter({
+      hubClient: createHubClientDouble(),
+      fetchImplementation: testDouble.fn(async () => new Response(JSON.stringify({ sha: "main" }), { status: 200 })) as unknown as HuggingFaceFetchImplementation,
+    });
+    const mutable = await mutableAdapter.listDatasetParquetFiles({ repository: "OpenFinAL/financial-news" });
+    expect(mutable.ok).toBe(false);
+    if (mutable.ok) throw new Error("Expected mutable revision rejection.");
+    expect(mutable.error.code).toBe("validation");
   });
 
   it("maps non-browser contract error codes to internal for repo-browser responses", async () => {

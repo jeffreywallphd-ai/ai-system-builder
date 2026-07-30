@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 from dataclasses import dataclass
 from pathlib import Path
+import re
 from zipfile import BadZipFile, ZipFile
 
 from ..models import (
@@ -13,11 +14,29 @@ from ..models import (
 
 
 @dataclass
+class NormalizedRegion:
+    kind: str
+    start: int
+    end: int
+    page_number: int | None = None
+    confidence: float = 1.0
+
+
+@dataclass
 class NormalizedDocument:
     artifact_id: str
     markdown: str
     media_type: str | None
     source_path: str
+    regions: list[NormalizedRegion] | None = None
+    extraction_quality: float = 1.0
+
+
+@dataclass
+class _NormalizedContent:
+    markdown: str
+    regions: list[NormalizedRegion]
+    extraction_quality: float
 
 
 @dataclass
@@ -68,16 +87,62 @@ def _assert_extracted_text_bound(text: str) -> None:
         raise ValueError("The document contains more extracted text than can be prepared safely.")
 
 
-def _normalize_html(path: Path) -> str:
+def _extraction_quality(text: str) -> float:
+    if not text.strip():
+        return 0.0
+    replacement_ratio = text.count("\ufffd") / max(1, len(text))
+    control_count = sum(1 for character in text if ord(character) < 32 and character not in "\n\r\t")
+    control_ratio = control_count / max(1, len(text))
+    return round(max(0.0, 1.0 - min(1.0, replacement_ratio * 10 + control_ratio * 10)), 4)
+
+
+def _regions_for_text(text: str, *, page_number: int | None = None) -> list[NormalizedRegion]:
+    regions: list[NormalizedRegion] = []
+    for match in re.finditer(r"[^\n]+", text):
+        value = match.group(0)
+        stripped = value.strip()
+        if not stripped:
+            continue
+        leading = len(value) - len(value.lstrip())
+        start = match.start() + leading
+        end = start + len(stripped)
+        kind = "paragraph"
+        if stripped.startswith("#"):
+            kind = "heading"
+        elif stripped.count("|") >= 2:
+            kind = "table"
+        regions.append(
+            NormalizedRegion(
+                kind=kind,
+                start=start,
+                end=end,
+                page_number=page_number,
+            )
+        )
+    if not regions and text:
+        regions.append(NormalizedRegion(kind="text", start=0, end=len(text), page_number=page_number))
+    return regions
+
+
+def _content_from_text(text: str) -> _NormalizedContent:
+    _assert_extracted_text_bound(text)
+    return _NormalizedContent(
+        markdown=text,
+        regions=_regions_for_text(text),
+        extraction_quality=_extraction_quality(text),
+    )
+
+
+def _normalize_html(path: Path) -> _NormalizedContent:
     try:
         from markdownify import markdownify as html_to_markdown
     except ImportError as error:  # pragma: no cover - covered through policy behavior
         raise RuntimeError("markdownify is required for HTML normalization") from error
 
-    return html_to_markdown(_read_text(path), heading_style="ATX")
+    return _content_from_text(html_to_markdown(_read_text(path), heading_style="ATX"))
 
 
-def _normalize_pdf(path: Path) -> str:
+def _normalize_pdf(path: Path) -> _NormalizedContent:
     try:
         from pypdf import PdfReader
     except ImportError as error:  # pragma: no cover - covered through policy behavior
@@ -87,20 +152,37 @@ def _normalize_pdf(path: Path) -> str:
     if len(reader.pages) > MAX_PDF_PAGE_COUNT:
         raise ValueError("The PDF contains too many pages to prepare safely.")
     page_text: list[str] = []
+    regions: list[NormalizedRegion] = []
     extracted_character_count = 0
-    for page in reader.pages:
+    for page_index, page in enumerate(reader.pages):
         extracted = page.extract_text() or ""
         if extracted.strip():
             normalized = extracted.strip()
             extracted_character_count += len(normalized)
             if extracted_character_count > MAX_EXTRACTED_DOCUMENT_CHARACTERS:
                 raise ValueError("The PDF contains more extracted text than can be prepared safely.")
+            start = sum(len(value) + 2 for value in page_text)
             page_text.append(normalized)
+            end = start + len(normalized)
+            regions.append(
+                NormalizedRegion(
+                    kind="page",
+                    start=start,
+                    end=end,
+                    page_number=page_index + 1,
+                    confidence=0.9,
+                )
+            )
 
-    return "\n\n".join(page_text)
+    text = "\n\n".join(page_text)
+    return _NormalizedContent(
+        markdown=text,
+        regions=regions,
+        extraction_quality=_extraction_quality(text),
+    )
 
 
-def _normalize_docx(path: Path) -> str:
+def _normalize_docx(path: Path) -> _NormalizedContent:
     try:
         from docx import Document
     except ImportError as error:  # pragma: no cover - covered through policy behavior
@@ -118,12 +200,18 @@ def _normalize_docx(path: Path) -> str:
 
     document = Document(str(path))
     lines = [paragraph.text.strip() for paragraph in document.paragraphs if paragraph.text.strip()]
+    for table in document.tables:
+        table_rows = [
+            "| " + " | ".join(cell.text.strip() for cell in row.cells) + " |"
+            for row in table.rows
+        ]
+        if table_rows:
+            lines.extend(table_rows)
     normalized = "\n\n".join(lines)
-    _assert_extracted_text_bound(normalized)
-    return normalized
+    return _content_from_text(normalized)
 
 
-def _normalize_source_to_markdown(source: DatasetPreparationSourceInput) -> str:
+def _normalize_source_to_markdown(source: DatasetPreparationSourceInput) -> _NormalizedContent:
     path = Path(source.localPath)
     if not path.exists():
         raise ValueError("The staged input file is not available.")
@@ -142,10 +230,10 @@ def _normalize_source_to_markdown(source: DatasetPreparationSourceInput) -> str:
         raise ValueError(f"Unsupported document type: {extension or 'unknown'}")
 
     if extension in {".md", ".markdown"}:
-        return _read_text(path)
+        return _content_from_text(_read_text(path))
 
     if extension in {".txt", ".csv", ".json", ".jsonl"}:
-        return _read_text(path)
+        return _content_from_text(_read_text(path))
 
     if extension in {".html", ".htm"}:
         return _normalize_html(path)
@@ -173,13 +261,15 @@ def normalize_sources_to_markdown(
 
     for source in source_inputs:
         try:
-            markdown = _normalize_source_to_markdown(source)
+            content = _normalize_source_to_markdown(source)
             normalized.append(
                 NormalizedDocument(
                     artifact_id=source.artifactId,
-                    markdown=markdown,
+                    markdown=content.markdown,
                     media_type=source.mediaType,
                     source_path=source.localPath,
+                    regions=content.regions,
+                    extraction_quality=content.extraction_quality,
                 )
             )
         except Exception as error:

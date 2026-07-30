@@ -7,6 +7,7 @@ import type {
 } from "../../../../application/use-cases";
 import {
   API_DATASET_PREPARATION_CANCEL_OPERATION,
+  API_DATASET_PREPARATION_CAPACITY_READ_OPERATION,
   API_DATASET_PREPARATION_APPROVE_OPERATION,
   API_DATASET_PREPARATION_READ_OPERATION,
   API_DATASET_PREPARATION_START_OPERATION,
@@ -16,6 +17,7 @@ import {
   type ApiDatasetPreparationTaskReadValue,
 } from "../../../../contracts/api";
 import type {
+  DatasetPreparationGenerationCapacitySnapshot,
   RuntimeTaskProgress,
   RuntimeTaskStatusRecord,
 } from "../../../../contracts/runtime";
@@ -55,6 +57,7 @@ export interface RegisterDatasetPreparationApiRoutesDependencies {
     | "cancelPrepareTrainingDataset"
     | "approvePreparedTrainingDataset"
   >;
+  readGenerationCapacity?: () => Promise<DatasetPreparationGenerationCapacitySnapshot>;
 }
 
 const requiredString = (value: unknown, field: string): string => {
@@ -188,6 +191,42 @@ const failureStatus = (code: string): number => {
 export function registerDatasetPreparationApiRoutes(
   dependencies: RegisterDatasetPreparationApiRoutesDependencies,
 ): void {
+  if (dependencies.readGenerationCapacity) {
+    dependencies.app.get(
+      "/api/dataset-preparation/generation-capacity",
+      async (request, response) => {
+        try {
+          requireAuthenticated(request);
+          requiredString(request.query?.workspaceId, "workspaceId");
+          const capacity = await dependencies.readGenerationCapacity!();
+          response
+            .status(200)
+            .json(
+              createApiSuccessResponse(
+                API_DATASET_PREPARATION_CAPACITY_READ_OPERATION,
+                capacity,
+              ),
+            );
+        } catch (error) {
+          const authenticated = !(error instanceof AuthenticationRequiredError);
+          response
+            .status(authenticated ? 400 : 401)
+            .json(
+              createApiFailureResponse(
+                createApiError(
+                  API_DATASET_PREPARATION_CAPACITY_READ_OPERATION,
+                  authenticated ? "validation" : "unauthorized",
+                  authenticated
+                    ? "The generation capacity request is invalid."
+                    : "Authentication is required.",
+                ),
+              ),
+            );
+        }
+      },
+    );
+  }
+
   dependencies.app.post(
     "/api/dataset-preparation/start",
     async (request, response) => {

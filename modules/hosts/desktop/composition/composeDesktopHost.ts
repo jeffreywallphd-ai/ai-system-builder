@@ -128,6 +128,10 @@ import type {
   DesktopPythonRuntimeLogEntry,
   DesktopPythonRuntimeStatusPayload,
 } from "../../../contracts/ipc";
+import {
+  PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
+  type DatasetPreparationGenerationCapacitySnapshot,
+} from "../../../contracts/runtime";
 import type { HuggingFaceFetchImplementation } from "../../../adapters/storage/huggingface";
 import {
   createHuggingFaceTokenConfigStore,
@@ -505,11 +509,22 @@ export function composeDesktopHost(
 
   const readPythonRuntimeStatus =
     async (): Promise<DesktopPythonRuntimeStatusPayload> => {
+      const createGenerationCapacity = (
+        decoderAvailable: boolean,
+      ): DatasetPreparationGenerationCapacitySnapshot => ({
+        schemaVersion: "1",
+        capturedAt: (now ?? (() => new Date().toISOString()))(),
+        decoderAvailable,
+        schemaSupported: true,
+        logicalProcessorCount: cpus().length,
+        totalSystemMemoryBytes: totalmem(),
+      });
       if (!pythonRuntimeFoundationPromise) {
         const status = createUnavailablePythonRuntimeStatus({
           runtimeLogs,
           memoryUsagePercent: readMemoryUsagePercent(),
           cpuUsagePercent: readCpuUsagePercent(),
+          generationCapacity: createGenerationCapacity(false),
         });
         if (!lastObservedRuntimeHealthSnapshot) {
           lastObservedRuntimeHealthSnapshot = {
@@ -583,6 +598,11 @@ export function composeDesktopHost(
         capabilities,
         loadedModels,
         activeTaskCount,
+        generationCapacity: createGenerationCapacity(
+          capabilities.includes(
+            PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
+          ),
+        ),
         systemResources: {
           memoryUsagePercent: readMemoryUsagePercent(),
           cpuUsagePercent: readCpuUsagePercent(),
@@ -886,6 +906,19 @@ export function composeDesktopHost(
           return async () =>
             module.composeDesktopIngestionFeature({
               artifacts: await getArtifactFeatures(),
+              remoteArtifacts: await getArtifactRemoteFeatures(),
+              storageRootDirectory: registerOptions.storageRootDirectory,
+              documents: organizationDocuments,
+              workspaceRepository: startupWorkspaceShell.workspaceRepository,
+              workspaceAuthorization,
+              organizationContextProvider: options.localIdentity
+                ? {
+                    getCurrentOrganizationContext: () => ({
+                      organizationId: options.localIdentity!.organizationId,
+                      principalId: options.localIdentity!.principalId,
+                    }),
+                  }
+                : undefined,
               now: options.now,
             });
         },
@@ -1510,6 +1543,7 @@ export function composeDesktopHost(
         },
         ingestion: {
           ipcMain: registerOptions.ipcMain,
+          senderTrust: registerOptions.senderTrust,
           getIngestionFeature: getIngestionFeatures,
           lifecycle: markDisposableFeatureReleased("website-ingestion"),
         },

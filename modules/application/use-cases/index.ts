@@ -29,6 +29,7 @@ export * from "./ingest-website-page.use-case";
 export * from "./ingest-website-pages-batch.use-case";
 export * from "./prepare-training-dataset-from-artifacts.use-case";
 export * from "./dataset-version";
+export * from "./ingestion-acquisition";
 export * from "./settings";
 
 export * from "./model";

@@ -46,7 +46,9 @@ Install dependencies with Node 24 from the tracked lockfile using `npm ci`, then
 - `npm run docs:check` — documentation and context drift checks.
 - `npm run architecture:check` — enforced module dependency direction.
 - `npm run agent-support:check` — context catalog and agent-evaluation integrity.
-- `npm test` — non-browser unit and integration suite.
+- `npm test` — short unit and interaction suite for fast feedback.
+- `npm run test:long` — long-running integration and end-to-end suite.
+- `npm run test:all` — complete short and long suites.
 - `npm run test:visual-composer` — one-worker packaged Windows desktop and
   local Chrome System Composer qualification; run `npm run package` first.
 - `npm run build:server` — server build.

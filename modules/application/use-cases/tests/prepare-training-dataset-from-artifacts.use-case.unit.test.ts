@@ -46,7 +46,9 @@ const createRegistry = (overrides?: {
 describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
   it("uses runtime task registry for start/read and materializes", async () => {
     const lifecycle = createLifecycleFake();
+    let runtimeStartRequest: any;
     const runtimeStart = testDouble.fn(async (request: any) => {
+      runtimeStartRequest = request;
       await writeFile(
         join(request.payload.runtime.runtimeWorkingDirectory, "d.jsonl"),
         `{"x":1}\n`,
@@ -124,6 +126,27 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
     });
     expect(status.ok).toBe(true);
     expect(runtimeStart).toHaveBeenCalledTimes(1);
+    expect(runtimeStartRequest.payload.runtime.structuredOutput).toMatchObject({
+      payloadKey: "example",
+      constrainedDecoding: false,
+      purposePaths: {
+        instruction: ["instruction"],
+        input: ["input"],
+        output: ["output"],
+      },
+    });
+    expect(runtimeStartRequest.payload.runtime.structuredOutput.schema).toMatchObject({
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        example: {
+          anyOf: expect.any(Array),
+        },
+      },
+    });
+    expect(
+      runtimeStartRequest.payload.runtime.structuredOutput.schemaFingerprint,
+    ).toMatch(/^[a-f0-9]{64}$/);
     expect(runtimeStatus).toHaveBeenCalledWith("r1");
     expect(
       storedDatasetRequest.descriptor.metadata.datasetPreparationTask,
@@ -739,6 +762,52 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
     expect(oversizedBatch).toMatchObject({
       ok: false,
       error: { code: "validation" },
+    });
+    expect(readArtifactStorageBindings).not.toHaveBeenCalled();
+    expect(startTask).not.toHaveBeenCalled();
+  });
+
+  it("rejects synthetic generation without mandatory quality review before staging", async () => {
+    const startTask = testDouble.fn();
+    const readArtifactStorageBindings = testDouble.fn();
+    const useCase = new PrepareTrainingDatasetFromArtifactsUseCase({
+      runtimeTaskRegistry: createRegistry({ startTask }),
+      storageBindings: {
+        readArtifactStorageBindings,
+        upsertArtifactStorageBinding: testDouble.fn(),
+        deleteArtifactStorageBindings: testDouble.fn(),
+      },
+      storage: {
+        retrieveArtifact: testDouble.fn(),
+        storeArtifact: testDouble.fn(),
+        hasArtifact: testDouble.fn(),
+        deleteArtifact: testDouble.fn(),
+      },
+      taskPowerLifecycle: createLifecycleFake(),
+    });
+
+    const result = await useCase.startPrepareTrainingDataset(
+      {
+        ...command,
+        advanced: {
+          preset: "generate-examples",
+          synthetic: {
+            enabled: true,
+            candidatesPerChunk: 2,
+            requireReview: true,
+          },
+        },
+      },
+      { workspaceId: "workspace-a" },
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        code: "validation",
+        message:
+          "Generated examples require data checks and review before they can be saved.",
+      },
     });
     expect(readArtifactStorageBindings).not.toHaveBeenCalled();
     expect(startTask).not.toHaveBeenCalled();

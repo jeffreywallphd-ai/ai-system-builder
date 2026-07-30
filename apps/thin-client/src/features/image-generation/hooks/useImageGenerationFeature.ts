@@ -29,6 +29,10 @@ export interface ThinClientImageGenerationSessionGeneration { id: string; reques
 interface PersistedImageGenerationState { form: ImageGenerationFormState; runtimeMode: ImageGenerationRuntimeMode; status: UiStatus; requestId?: string; error?: string; results: FinalizedImageAsset[]; sessionGallery: ThinClientImageGenerationSessionGeneration[]; }
 let persistedState: PersistedImageGenerationState | undefined;
 
+export function resetImageGenerationPersistedStateForTests(): void {
+  persistedState = undefined;
+}
+
 export function isServerInventoryImageGenerationModel(model: ModelInventoryRecord): boolean {
   return isImageGenerationModelCandidate(model);
 }
@@ -156,9 +160,12 @@ export function useImageGenerationFeature(
     let cancelled = false;
     let timer: number | undefined;
     const pollResources = async () => {
+      if (typeof client.readRuntimeResources !== "function") return;
       try {
         const snapshot = await client.readRuntimeResources();
         if (!cancelled) setRuntimeResources(snapshot);
+      } catch {
+        // Resource telemetry is supplementary and must not interrupt generation.
       } finally {
         if (!cancelled) timer = window.setTimeout(() => { void pollResources(); }, RESOURCE_POLL_INTERVAL_MS);
       }

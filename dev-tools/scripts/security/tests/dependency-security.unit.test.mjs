@@ -7,6 +7,7 @@ import test from "node:test";
 
 import {
   evaluateAuditReport,
+  validatePythonDecoderDependencyInventory,
   validateRuntimeSbom,
 } from "../check-dependency-security.mjs";
 
@@ -24,14 +25,26 @@ const report = (counts) => ({
 });
 
 test("dependency security policy blocks every runtime advisory", () => {
-  assert.equal(evaluateAuditReport(report({ moderate: 1 }), "runtime").blocking, true);
+  assert.equal(
+    evaluateAuditReport(report({ moderate: 1 }), "runtime").blocking,
+    true,
+  );
   assert.equal(evaluateAuditReport(report({}), "runtime").blocking, false);
 });
 
 test("dependency security policy blocks every toolchain advisory", () => {
-  assert.equal(evaluateAuditReport(report({ low: 1 }), "toolchain").blocking, true);
-  assert.equal(evaluateAuditReport(report({ high: 4 }), "toolchain").blocking, true);
-  assert.equal(evaluateAuditReport(report({ critical: 1 }), "toolchain").blocking, true);
+  assert.equal(
+    evaluateAuditReport(report({ low: 1 }), "toolchain").blocking,
+    true,
+  );
+  assert.equal(
+    evaluateAuditReport(report({ high: 4 }), "toolchain").blocking,
+    true,
+  );
+  assert.equal(
+    evaluateAuditReport(report({ critical: 1 }), "toolchain").blocking,
+    true,
+  );
   assert.equal(evaluateAuditReport(report({}), "toolchain").blocking, false);
 });
 
@@ -56,15 +69,24 @@ test("root manifest and lock retain the reviewed patched toolchain boundary", as
   assert.equal(lockfile.packages["node_modules/selfsigned"].version, "5.5.0");
 
   const lockedPackages = Object.entries(lockfile.packages);
-  const versionsFor = (packageName) => lockedPackages
-    .filter(([packagePath]) => packagePath.endsWith(`node_modules/${packageName}`))
-    .map(([, entry]) => entry.version);
+  const versionsFor = (packageName) =>
+    lockedPackages
+      .filter(([packagePath]) =>
+        packagePath.endsWith(`node_modules/${packageName}`),
+      )
+      .map(([, entry]) => entry.version);
   assert.deepEqual(lockfile.packages["node_modules/brace-expansion"], {
     resolved: "dev-tools/vendor/brace-expansion-compat",
     link: true,
   });
-  assert.equal(lockfile.packages["dev-tools/vendor/brace-expansion-compat"].version, "5.0.8");
-  assert.equal(lockfile.packages["node_modules/brace-expansion-upstream"].version, "5.0.8");
+  assert.equal(
+    lockfile.packages["dev-tools/vendor/brace-expansion-compat"].version,
+    "5.0.8",
+  );
+  assert.equal(
+    lockfile.packages["node_modules/brace-expansion-upstream"].version,
+    "5.0.8",
+  );
   assert.deepEqual([...new Set(versionsFor("fast-uri"))], ["3.1.4"]);
   assert.deepEqual([...new Set(versionsFor("tar"))], ["7.5.22"]);
   assert.deepEqual([...new Set(versionsFor("tmp"))], ["0.2.7"]);
@@ -84,14 +106,26 @@ test("reviewed overrides retain the APIs used by the Electron Forge toolchain", 
 
   assert.equal(typeof braceExpansion, "function");
   assert.equal(braceExpansion.expand, braceExpansion);
-  assert.deepEqual(braceExpansion("file-{a,b}.txt"), ["file-a.txt", "file-b.txt"]);
-  const bounded = braceExpansion("{a,b}".repeat(30), { max: 100, maxLength: 1_000 });
+  assert.deepEqual(braceExpansion("file-{a,b}.txt"), [
+    "file-a.txt",
+    "file-b.txt",
+  ]);
+  const bounded = braceExpansion("{a,b}".repeat(30), {
+    max: 100,
+    maxLength: 1_000,
+  });
   assert.ok(bounded.reduce((total, item) => total + item.length, 0) <= 1_000);
-  assert.deepEqual(glob.sync("package.json", { cwd: process.cwd(), nodir: true }), ["package.json"]);
+  assert.deepEqual(
+    glob.sync("package.json", { cwd: process.cwd(), nodir: true }),
+    ["package.json"],
+  );
   assert.equal(fastUri.parse("https://example.com/path").host, "example.com");
   assert.equal(typeof tar.extract, "function");
   assert.match(tmp.tmpNameSync({ postfix: ".txt" }), /\.txt$/);
-  assert.match(uuid.v4(), /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.match(
+    uuid.v4(),
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+  );
   assert.equal(typeof WebpackDevServer, "function");
   assert.equal(typeof WebpackDevServer.prototype.start, "function");
 });
@@ -103,29 +137,43 @@ test("patched webpack dev server supports the Forge lifecycle and same-origin re
   const compiler = webpack({
     mode: "development",
     entry: {},
-    output: { path: path.resolve("artifacts", "test-runtime", "webpack-dev-server-compatibility") },
+    output: {
+      path: path.resolve(
+        "artifacts",
+        "test-runtime",
+        "webpack-dev-server-compatibility",
+      ),
+    },
   });
-  const server = new WebpackDevServer({
-    host: "127.0.0.1",
-    port: 0,
-    static: false,
-    hot: false,
-    client: false,
-    setupExitSignals: false,
-  }, compiler);
+  const server = new WebpackDevServer(
+    {
+      host: "127.0.0.1",
+      port: 0,
+      static: false,
+      hot: false,
+      client: false,
+      setupExitSignals: false,
+    },
+    compiler,
+  );
   t.after(async () => {
     await server.stop();
-    await new Promise((resolve, reject) => compiler.close((error) => error ? reject(error) : resolve()));
+    await new Promise((resolve, reject) =>
+      compiler.close((error) => (error ? reject(error) : resolve())),
+    );
   });
 
   await server.start();
   const address = server.server?.address();
   assert.ok(address && typeof address === "object");
   const response = await new Promise((resolve, reject) => {
-    const request = http.get({ host: "127.0.0.1", port: address.port, path: "/" }, (result) => {
-      result.resume();
-      result.once("end", () => resolve(result));
-    });
+    const request = http.get(
+      { host: "127.0.0.1", port: address.port, path: "/" },
+      (result) => {
+        result.resume();
+        result.once("end", () => resolve(result));
+      },
+    );
     request.once("error", reject);
   });
   assert.equal(response.headers["cross-origin-resource-policy"], "same-origin");
@@ -133,10 +181,59 @@ test("patched webpack dev server supports the Forge lifecycle and same-origin re
 
 test("runtime SBOM validation requires SPDX packages and relationships", () => {
   assert.deepEqual(
-    validateRuntimeSbom({ spdxVersion: "SPDX-2.3", packages: [{}], relationships: [{}] }),
+    validateRuntimeSbom({
+      spdxVersion: "SPDX-2.3",
+      packages: [{}],
+      relationships: [{}],
+    }),
     { packageCount: 1, relationshipCount: 1 },
   );
-  assert.throws(() => validateRuntimeSbom({ spdxVersion: "SPDX-2.2" }), /SPDX 2.3/);
+  assert.throws(
+    () => validateRuntimeSbom({ spdxVersion: "SPDX-2.2" }),
+    /SPDX 2.3/,
+  );
+});
+
+test("conditional Python decoder dependencies retain exact reviewed inventory", async () => {
+  const requirements = await readFile(
+    "modules/adapters/runtime/python/worker/requirements.txt",
+    "utf8",
+  );
+  const inventory = validatePythonDecoderDependencyInventory(requirements);
+  assert.equal(inventory.supportedPython, ">=3.10 <3.14");
+  assert.deepEqual(
+    inventory.packages.map(({ name, version, license }) => ({
+      name,
+      version,
+      license,
+    })),
+    [
+      { name: "outlines", version: "1.3.2", license: "Apache-2.0" },
+      {
+        name: "outlines-core",
+        version: "0.2.14",
+        license: "Apache-2.0",
+      },
+      { name: "jsonschema", version: "4.26.0", license: "MIT" },
+    ],
+  );
+  assert.throws(
+    () =>
+      validatePythonDecoderDependencyInventory(
+        requirements.replace("outlines==1.3.2", "outlines==1.3.3"),
+      ),
+    /reviewed exact version/,
+  );
+  assert.throws(
+    () =>
+      validatePythonDecoderDependencyInventory(
+        requirements.replace(
+          'python_version < "3.14"',
+          'python_version < "3.15"',
+        ),
+      ),
+    /reviewed exact version|incomplete/,
+  );
 });
 
 test("CI and image builds use the tracked lockfile and immutable action references", async () => {

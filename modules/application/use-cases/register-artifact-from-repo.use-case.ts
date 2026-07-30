@@ -1,7 +1,10 @@
 import type { ArtifactCatalogAppendPort } from "../ports/artifact-catalog";
 import type { ApplicationRequestContext } from "../ports";
 import type { LoggingPort } from "../ports/logging";
-import type { ArtifactRepoStoragePort, ArtifactStorageBindingPort } from "../ports/storage";
+import type {
+  ArtifactRepoStoragePort,
+  ArtifactStorageBindingPort,
+} from "../ports/storage";
 import { resolveArtifactFamily } from "../shared/artifact-family-classifier";
 import { createContractError } from "../../contracts/shared";
 import {
@@ -16,6 +19,7 @@ import {
   type ArtifactIdFactory,
 } from "../../domain/artifact";
 import type { ArtifactFamily } from "../../domain/artifact";
+import { createWorkspaceId } from "../../contracts/workspace";
 
 export interface RegisterArtifactFromRepoCommand {
   target: {
@@ -64,24 +68,39 @@ export class RegisterArtifactFromRepoUseCase {
   private readonly now: () => string;
   private readonly createArtifactId: () => ArtifactId;
 
-  public constructor(dependencies: RegisterArtifactFromRepoUseCaseDependencies) {
+  public constructor(
+    dependencies: RegisterArtifactFromRepoUseCaseDependencies,
+  ) {
     this.artifactRepoStorage = dependencies.artifactRepoStorage;
     this.artifactBindingStorage = dependencies.artifactBindingStorage;
     this.artifactCatalogAppend = dependencies.artifactCatalogAppend;
     this.logging = dependencies.logging;
     this.now = dependencies.now ?? (() => new Date().toISOString());
-    const artifactIdFactory = dependencies.artifactIdFactory ?? new SystemArtifactIdFactory();
-    this.createArtifactId = dependencies.createArtifactId ?? (() => artifactIdFactory.createArtifactId());
+    const artifactIdFactory =
+      dependencies.artifactIdFactory ?? new SystemArtifactIdFactory();
+    this.createArtifactId =
+      dependencies.createArtifactId ??
+      (() => artifactIdFactory.createArtifactId());
   }
 
-  public async execute(command: RegisterArtifactFromRepoCommand, context: ApplicationRequestContext = {}) {
+  public async execute(
+    command: RegisterArtifactFromRepoCommand,
+    context: ApplicationRequestContext = {},
+  ) {
     const startedAt = Date.now();
     const provider = command.target.provider?.trim();
     const repository = command.target.repository?.trim();
     const path = command.target.path?.trim();
     const revision = command.target.revision?.trim() || "main";
-    const resolvedArtifactFamily: ArtifactFamily = command.artifactFamily
-      ?? resolveArtifactFamily({ mediaType: command.mediaType, fileName: command.target.path });
+    const workspaceId = context.workspaceId?.trim()
+      ? createWorkspaceId(context.workspaceId)
+      : undefined;
+    const resolvedArtifactFamily: ArtifactFamily =
+      command.artifactFamily ??
+      resolveArtifactFamily({
+        mediaType: command.mediaType,
+        fileName: command.target.path,
+      });
     await this.logging.log({
       timestamp: this.now(),
       level: "info",
@@ -96,12 +115,12 @@ export class RegisterArtifactFromRepoUseCase {
       data: { provider, repository, path, revision },
     });
 
-    if (!provider || !repository || !path) {
+    if (!provider || !repository || !path || !workspaceId) {
       const result = {
         ok: false as const,
         error: createContractError(
           "validation",
-          "target.provider, target.repository, and target.path must be non-empty strings.",
+          "workspaceId, target.provider, target.repository, and target.path must be non-empty strings.",
         ),
       };
       await this.logging.log({
@@ -118,7 +137,11 @@ export class RegisterArtifactFromRepoUseCase {
         outcome: "failure",
         durationMs: Date.now() - startedAt,
         data: { provider, repository, path, revision },
-        error: { errorType: "validation", errorCode: result.error.code, errorMessage: result.error.message },
+        error: {
+          errorType: "validation",
+          errorCode: result.error.code,
+          errorMessage: result.error.message,
+        },
       });
       return result;
     }
@@ -144,7 +167,8 @@ export class RegisterArtifactFromRepoUseCase {
           level: "error",
           verbosity: "normal",
           event: "application.huggingface.file-registration.failed",
-          message: "Hugging Face file registration failed while verifying remote target.",
+          message:
+            "Hugging Face file registration failed while verifying remote target.",
           component: "application.use-cases",
           operation: "artifact.register.from-repo",
           useCase: "RegisterArtifactFromRepoUseCase",
@@ -167,7 +191,8 @@ export class RegisterArtifactFromRepoUseCase {
         level: "error",
         verbosity: "normal",
         event: "application.huggingface.file-registration.failed",
-        message: "Hugging Face file registration failed while verifying remote target.",
+        message:
+          "Hugging Face file registration failed while verifying remote target.",
         component: "application.use-cases",
         operation: "artifact.register.from-repo",
         useCase: "RegisterArtifactFromRepoUseCase",
@@ -208,7 +233,11 @@ export class RegisterArtifactFromRepoUseCase {
         outcome: "failure",
         durationMs: Date.now() - startedAt,
         data: { provider, repository, path, revision },
-        error: { errorType: "not-found", errorCode: notFoundResult.error.code, errorMessage: notFoundResult.error.message },
+        error: {
+          errorType: "not-found",
+          errorCode: notFoundResult.error.code,
+          errorMessage: notFoundResult.error.message,
+        },
       });
       return notFoundResult;
     }
@@ -218,22 +247,29 @@ export class RegisterArtifactFromRepoUseCase {
     const verifiedAt = this.now();
     const locator = encodeArtifactRepoBackingLocator({ repository, path });
 
-    const appendResult = await this.artifactCatalogAppend.appendArtifactCatalogRecord({
-      record: {
-        storageKey: artifactId.toString(),
-        artifactFamily: resolvedArtifactFamily,
-        mediaType: command.mediaType?.trim() || undefined,
-        originalName: path,
-        createdAt: verifiedAt,
-      },
-    });
+    const appendResult =
+      await this.artifactCatalogAppend.appendArtifactCatalogRecord(
+        {
+          record: {
+            workspaceId,
+            storageKey: artifactId.toString(),
+            artifactFamily: resolvedArtifactFamily,
+            mediaType: command.mediaType?.trim() || undefined,
+            sourceKind: "upload",
+            originalName: path,
+            createdAt: verifiedAt,
+          },
+        },
+        context,
+      );
     if (!appendResult.ok) {
       await this.logging.log({
         timestamp: this.now(),
         level: "error",
         verbosity: "normal",
         event: "application.huggingface.file-registration.failed",
-        message: "Hugging Face file registration failed while appending artifact catalog record.",
+        message:
+          "Hugging Face file registration failed while appending artifact catalog record.",
         component: "application.use-cases",
         operation: "artifact.register.from-repo",
         useCase: "RegisterArtifactFromRepoUseCase",
@@ -280,14 +316,18 @@ export class RegisterArtifactFromRepoUseCase {
     if (!importedSource) {
       const internalResult = {
         ok: false as const,
-        error: createContractError("internal", "Imported-source backing could not be constructed."),
+        error: createContractError(
+          "internal",
+          "Imported-source backing could not be constructed.",
+        ),
       };
       await this.logging.log({
         timestamp: this.now(),
         level: "error",
         verbosity: "normal",
         event: "application.huggingface.file-registration.failed",
-        message: "Hugging Face file registration failed while constructing imported-source backing.",
+        message:
+          "Hugging Face file registration failed while constructing imported-source backing.",
         component: "application.use-cases",
         operation: "artifact.register.from-repo",
         useCase: "RegisterArtifactFromRepoUseCase",
@@ -296,14 +336,28 @@ export class RegisterArtifactFromRepoUseCase {
         outcome: "failure",
         durationMs: Date.now() - startedAt,
         data: { provider, repository, path, revision },
-        error: { errorType: "internal", errorCode: internalResult.error.code, errorMessage: internalResult.error.message },
+        error: {
+          errorType: "internal",
+          errorCode: internalResult.error.code,
+          errorMessage: internalResult.error.message,
+        },
       });
       return internalResult;
     }
 
-    const bindingResult = await this.artifactBindingStorage.upsertArtifactStorageBinding({
-      binding: importedSource.toStorageBinding(artifact.id.toString()),
-    });
+    const importedSourceBinding = importedSource.toStorageBinding(
+      artifact.id.toString(),
+    );
+    const bindingResult =
+      await this.artifactBindingStorage.upsertArtifactStorageBinding(
+        {
+          binding: {
+            ...importedSourceBinding,
+            workspaceId,
+          },
+        },
+        context,
+      );
 
     if (!bindingResult.ok) {
       await this.logging.log({
@@ -311,7 +365,8 @@ export class RegisterArtifactFromRepoUseCase {
         level: "error",
         verbosity: "normal",
         event: "application.huggingface.file-registration.failed",
-        message: "Hugging Face file registration failed while writing backing binding.",
+        message:
+          "Hugging Face file registration failed while writing backing binding.",
         component: "application.use-cases",
         operation: "artifact.register.from-repo",
         useCase: "RegisterArtifactFromRepoUseCase",
@@ -363,7 +418,13 @@ export class RegisterArtifactFromRepoUseCase {
       correlationId: context.correlationId,
       outcome: "success",
       durationMs: Date.now() - startedAt,
-      data: { artifactId: result.value.artifactId, provider, repository, path, revision },
+      data: {
+        artifactId: result.value.artifactId,
+        provider,
+        repository,
+        path,
+        revision,
+      },
     });
     return result;
   }

@@ -8,6 +8,7 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createPythonRuntimeHttpClient } from "../client/createPythonRuntimeHttpClient";
+import { PYTHON_RUNTIME_TASK_TIMEOUTS } from "../pythonRuntimeTaskTimeoutPolicy";
 
 const RUNTIME_TOKEN = "runtime-test-token-0123456789abcdef";
 
@@ -18,18 +19,16 @@ function fetchCalls(fetcher: unknown): Array<[string, RequestInit]> {
 
 describe("createPythonRuntimeHttpClient", () => {
   it("calls POST /tasks/start", async () => {
-    const fetcher = testDouble
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          requestId: "r1",
-          taskType: "train-model",
-          accepted: true,
-          status: "queued",
-        }),
-      });
+    const fetcher = testDouble.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        requestId: "r1",
+        taskType: "train-model",
+        accepted: true,
+        status: "queued",
+      }),
+    });
     const client = createPythonRuntimeHttpClient({
       baseUrl: "http://localhost:8000",
       authorizationToken: RUNTIME_TOKEN,
@@ -51,17 +50,15 @@ describe("createPythonRuntimeHttpClient", () => {
   });
 
   it("calls GET /tasks/{requestId}", async () => {
-    const fetcher = testDouble
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          requestId: "r2",
-          taskType: "train-model",
-          status: "running",
-        }),
-      });
+    const fetcher = testDouble.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        requestId: "r2",
+        taskType: "train-model",
+        status: "running",
+      }),
+    });
     const client = createPythonRuntimeHttpClient({
       baseUrl: "http://localhost:8000",
       authorizationToken: RUNTIME_TOKEN,
@@ -76,17 +73,15 @@ describe("createPythonRuntimeHttpClient", () => {
   });
 
   it("calls POST /tasks/{requestId}/cancel", async () => {
-    const fetcher = testDouble
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          requestId: "r3",
-          status: "cancelled",
-          cancelled: true,
-        }),
-      });
+    const fetcher = testDouble.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        requestId: "r3",
+        status: "cancelled",
+        cancelled: true,
+      }),
+    });
     const client = createPythonRuntimeHttpClient({
       baseUrl: "http://localhost:8000",
       authorizationToken: RUNTIME_TOKEN,
@@ -175,6 +170,7 @@ describe("createPythonRuntimeHttpClient", () => {
     );
     expect(JSON.parse(String(fetchCalls(fetcher)[0]?.[1].body))).toMatchObject({
       taskType: "ensure-model-download",
+      timeoutMs: PYTHON_RUNTIME_TASK_TIMEOUTS.modelDownload,
       payload: {
         provider: "transformers",
         modelId: "stabilityai/stable-diffusion-xl-base-1.0",

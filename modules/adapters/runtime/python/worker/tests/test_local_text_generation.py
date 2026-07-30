@@ -27,6 +27,9 @@ from modules.adapters.runtime.python.worker.tasks.local_text_generation import (
     ensure_generation_model_downloaded,
     get_or_create_local_text_generator,
 )
+from modules.adapters.runtime.python.worker.tasks.constrained_json_decoder import (
+    ConstrainedJsonDecoderError,
+)
 
 
 class _FakeTensor:
@@ -48,6 +51,9 @@ class _FakeTokenizer:
     pad_token_id = 0
     eos_token_id = 99
 
+    def __init__(self):
+        self.message_calls: list[list[dict[str, str]]] = []
+
     def __call__(self, prompt: str, return_tensors: str = "pt"):
         del return_tensors
         if prompt == "prompt":
@@ -60,13 +66,14 @@ class _FakeTokenizer:
 
     def apply_chat_template(
         self,
-        _messages,
+        messages,
         tokenize=True,
         add_generation_prompt=True,
         return_tensors="pt",
         return_dict=False,
     ):
         del tokenize, add_generation_prompt, return_tensors
+        self.message_calls.append(messages)
         if not self.supports_chat:
             raise AttributeError("missing")
         if return_dict:
@@ -149,6 +156,15 @@ class _FakeModel:
 class _FakePipeline:
     def __call__(self, _prompt, **_kwargs):
         return [{"generated_text": "text2text output"}]
+
+
+class _FakeConstrainedJsonDecoder:
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    def generate(self, **kwargs) -> str:
+        self.calls.append(kwargs)
+        return '{"answer":"ok"}'
 
 
 class _NoChatTokenizer:
@@ -582,6 +598,53 @@ class LocalTextGenerationTests(unittest.TestCase):
         self.assertEqual(generator.generate_text("prompt"), "44 55")
         self.assertEqual(fake_model.generate_calls[0]["pad_token_id"], 0)
 
+    def test_causal_mode_routes_an_explicit_schema_through_the_decoder(self) -> None:
+        config = ExampleGenerationConfig.model_validate(
+            {"mode": "qa", "model": {"provider": "transformers", "modelId": "m", "inferenceMode": "causal"}}
+        )
+        fake_model = _FakeModel()
+        fake_decoder = _FakeConstrainedJsonDecoder()
+        schema = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["answer"],
+            "properties": {"answer": {"type": "string", "maxLength": 100}},
+        }
+        with (
+            patch(
+                "modules.adapters.runtime.python.worker.tasks.local_text_generation.TransformersCausalGenerator._load_model",
+                return_value=(_FakeTokenizer(), fake_model),
+            ),
+            patch(
+                "modules.adapters.runtime.python.worker.tasks.local_text_generation.ConstrainedJsonDecoder",
+                return_value=fake_decoder,
+            ),
+        ):
+            generator = get_or_create_local_text_generator(config)
+            result = generator.generate_text("prompt", constrained_json_schema=schema)
+
+        self.assertEqual(result, '{"answer":"ok"}')
+        self.assertEqual(len(fake_decoder.calls), 1)
+        self.assertEqual(fake_decoder.calls[0]["schema"], schema)
+        self.assertEqual(fake_decoder.calls[0]["generation_params"]["max_new_tokens"], DEFAULT_MAX_NEW_TOKENS)
+        self.assertEqual(fake_model.generate_calls, [])
+
+    def test_text2text_mode_rejects_token_constraints_without_fallback(self) -> None:
+        config = ExampleGenerationConfig.model_validate(
+            {"mode": "qa", "model": {"provider": "transformers", "modelId": "m", "inferenceMode": "text2text"}}
+        )
+        with patch(
+            "modules.adapters.runtime.python.worker.tasks.local_text_generation.TransformersText2TextGenerator._build_pipeline",
+            return_value=_FakePipeline(),
+        ):
+            generator = get_or_create_local_text_generator(config)
+
+        with self.assertRaises(ConstrainedJsonDecoderError) as raised:
+            generator.generate_text("prompt", constrained_json_schema={})
+
+        self.assertEqual(raised.exception.code, "decoder-inference-mode-unsupported")
+
     def test_chat_mode_uses_chat_template_when_available(self) -> None:
         config = ExampleGenerationConfig.model_validate(
             {"mode": "qa", "model": {"provider": "transformers", "modelId": "m", "inferenceMode": "chat"}}
@@ -596,6 +659,30 @@ class LocalTextGenerationTests(unittest.TestCase):
 
         self.assertEqual(generator.generate_text("prompt"), "44 55")
         self.assertIn("attention_mask", fake_model.generate_calls[0])
+
+    def test_chat_mode_preserves_system_and_user_roles(self) -> None:
+        config = ExampleGenerationConfig.model_validate(
+            {"mode": "qa", "model": {"provider": "transformers", "modelId": "m", "inferenceMode": "chat"}}
+        )
+        fake_model = _FakeModel()
+        tokenizer = _FakeTokenizer()
+        with patch(
+            "modules.adapters.runtime.python.worker.tasks.local_text_generation.TransformersCausalGenerator._load_model",
+            return_value=(tokenizer, fake_model),
+        ):
+            generator = get_or_create_local_text_generator(config)
+
+        self.assertEqual(
+            generator.generate_text("source and schema", system_prompt="trusted task policy"),
+            "44 55",
+        )
+        self.assertEqual(
+            tokenizer.message_calls[0],
+            [
+                {"role": "system", "content": "trusted task policy"},
+                {"role": "user", "content": "source and schema"},
+            ],
+        )
 
     def test_chat_mode_disables_template_thinking_when_supported(self) -> None:
         config = ExampleGenerationConfig.model_validate(

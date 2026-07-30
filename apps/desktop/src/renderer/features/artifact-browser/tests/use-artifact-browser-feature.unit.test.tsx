@@ -5,21 +5,36 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ArtifactBrowserFeature } from "../components/ArtifactBrowserFeature";
 
 function setInputValue(input: HTMLInputElement, value: string): void {
-  const descriptor = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value");
+  const descriptor = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype,
+    "value",
+  );
   descriptor?.set?.call(input, value);
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 function setSelectValue(select: HTMLSelectElement, value: string): void {
-  const descriptor = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value");
+  const descriptor = Object.getOwnPropertyDescriptor(
+    window.HTMLSelectElement.prototype,
+    "value",
+  );
   descriptor?.set?.call(select, value);
   select.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
-function findArtifactDetailsButton(container: HTMLElement, storageKey: string): HTMLButtonElement {
-  const button = Array.from(container.querySelectorAll("button"))
-    .find((candidate) => candidate.textContent === "View Details"
-      && Boolean(candidate.closest("article, section, li")?.textContent?.includes(storageKey)));
+function findArtifactDetailsButton(
+  container: HTMLElement,
+  storageKey: string,
+): HTMLButtonElement {
+  const button = Array.from(container.querySelectorAll("button")).find(
+    (candidate) =>
+      candidate.textContent === "View Details" &&
+      Boolean(
+        candidate
+          .closest("article, section, li")
+          ?.textContent?.includes(storageKey),
+      ),
+  );
 
   if (!(button instanceof HTMLButtonElement)) {
     throw new Error(`Unable to find View Details button for ${storageKey}.`);
@@ -81,10 +96,21 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
         availability: "available" as const,
         retrieval: "deferred" as const,
       }),
-      createArtifactMediaViewUrl: vi.fn().mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi.fn().mockResolvedValue({ mediaType: "text/plain", bytes: new Uint8Array([97]) }),
-      getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
-      setHuggingFaceToken: vi.fn().mockResolvedValue({ configured: true, maskedToken: "••••1234" }),
+      createArtifactMediaViewUrl: vi
+        .fn()
+        .mockResolvedValue("blob:desktop-preview"),
+      readArtifactMedia: vi
+        .fn()
+        .mockResolvedValue({
+          mediaType: "text/plain",
+          bytes: new Uint8Array([97]),
+        }),
+      getHuggingFaceTokenStatus: vi
+        .fn()
+        .mockResolvedValue({ configured: false }),
+      setHuggingFaceToken: vi
+        .fn()
+        .mockResolvedValue({ configured: true, maskedToken: "••••1234" }),
       clearHuggingFaceToken: vi.fn().mockResolvedValue({ configured: false }),
       publishArtifactToHuggingFace: vi.fn().mockResolvedValue({
         target: {
@@ -128,13 +154,19 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       );
     });
 
-    const artifactButton = findArtifactDetailsButton(container, "uploads/cat.png");
+    const artifactButton = findArtifactDetailsButton(
+      container,
+      "uploads/cat.png",
+    );
     await act(async () => {
       artifactButton.click();
     });
 
-    const publishToggleButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Publish to Hugging Face") as HTMLButtonElement;
+    const publishToggleButton = Array.from(
+      container.querySelectorAll("button"),
+    ).find(
+      (button) => button.textContent === "Publish to Hugging Face",
+    ) as HTMLButtonElement;
     await act(async () => {
       publishToggleButton.click();
     });
@@ -142,14 +174,17 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     const inputs = Array.from(container.querySelectorAll("input"));
     setInputValue(inputs[0] as HTMLInputElement, "openai/demo");
     setInputValue(inputs[2] as HTMLInputElement, "images");
-    const creationCheckbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    const creationCheckbox = container.querySelector(
+      'input[type="checkbox"]',
+    ) as HTMLInputElement;
     await act(async () => {
       creationCheckbox.click();
     });
     expect(container.textContent).toContain("Private (recommended)");
 
-    const publishButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Publish") as HTMLButtonElement;
+    const publishButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Publish",
+    ) as HTMLButtonElement;
     await act(async () => {
       publishButton.click();
     });
@@ -185,12 +220,25 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
         availability: "available" as const,
         retrieval: "deferred" as const,
       }),
-      createArtifactMediaViewUrl: vi.fn().mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi.fn().mockResolvedValue({ mediaType: "text/plain", bytes: new Uint8Array([97]) }),
-      getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
-      setHuggingFaceToken: vi.fn().mockResolvedValue({ configured: true, maskedToken: "••••1234" }),
+      createArtifactMediaViewUrl: vi
+        .fn()
+        .mockResolvedValue("blob:desktop-preview"),
+      readArtifactMedia: vi
+        .fn()
+        .mockResolvedValue({
+          mediaType: "text/plain",
+          bytes: new Uint8Array([97]),
+        }),
+      getHuggingFaceTokenStatus: vi
+        .fn()
+        .mockResolvedValue({ configured: false }),
+      setHuggingFaceToken: vi
+        .fn()
+        .mockResolvedValue({ configured: true, maskedToken: "••••1234" }),
       clearHuggingFaceToken: vi.fn().mockResolvedValue({ configured: false }),
-      publishArtifactToHuggingFace: vi.fn().mockRejectedValue(new Error("Missing Hugging Face token.")),
+      publishArtifactToHuggingFace: vi
+        .fn()
+        .mockRejectedValue(new Error("Missing Hugging Face token.")),
       verifyPublishedArtifactBacking: vi.fn(),
       registerArtifactFromRepo: vi.fn(),
       localizeArtifactFromRepo: vi.fn(),
@@ -203,15 +251,23 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
+      root.render(
+        <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+      );
     });
 
-    const artifactButton = findArtifactDetailsButton(container, "uploads/cat.png");
+    const artifactButton = findArtifactDetailsButton(
+      container,
+      "uploads/cat.png",
+    );
     await act(async () => {
       artifactButton.click();
     });
-    const publishToggleButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Publish to Hugging Face") as HTMLButtonElement;
+    const publishToggleButton = Array.from(
+      container.querySelectorAll("button"),
+    ).find(
+      (button) => button.textContent === "Publish to Hugging Face",
+    ) as HTMLButtonElement;
     await act(async () => {
       publishToggleButton.click();
     });
@@ -220,16 +276,18 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     setInputValue(inputs[0] as HTMLInputElement, "openai/demo");
     setInputValue(inputs[2] as HTMLInputElement, "images");
 
-    const publishButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Publish") as HTMLButtonElement;
+    const publishButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Publish",
+    ) as HTMLButtonElement;
     await act(async () => {
       publishButton.click();
     });
 
     expect(container.textContent).toContain("Missing Hugging Face token.");
-    expect(container.textContent).toContain("This Hugging Face repository may require an access token.");
+    expect(container.textContent).toContain(
+      "This Hugging Face repository may require an access token.",
+    );
   });
-
 
   it("renders Hugging Face defaults collapsed by default", async () => {
     const client = {
@@ -248,9 +306,18 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
         availability: "available" as const,
         retrieval: "deferred" as const,
       }),
-      createArtifactMediaViewUrl: vi.fn().mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi.fn().mockResolvedValue({ mediaType: "text/plain", bytes: new Uint8Array([97]) }),
-      getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
+      createArtifactMediaViewUrl: vi
+        .fn()
+        .mockResolvedValue("blob:desktop-preview"),
+      readArtifactMedia: vi
+        .fn()
+        .mockResolvedValue({
+          mediaType: "text/plain",
+          bytes: new Uint8Array([97]),
+        }),
+      getHuggingFaceTokenStatus: vi
+        .fn()
+        .mockResolvedValue({ configured: false }),
       setHuggingFaceToken: vi.fn(),
       clearHuggingFaceToken: vi.fn(),
       publishArtifactToHuggingFace: vi.fn(),
@@ -266,16 +333,24 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
+      root.render(
+        <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+      );
     });
 
-    const artifactButton = findArtifactDetailsButton(container, "uploads/cat.png");
+    const artifactButton = findArtifactDetailsButton(
+      container,
+      "uploads/cat.png",
+    );
     await act(async () => {
       artifactButton.click();
     });
 
-    const defaultsPanelToggle = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent?.includes("Hugging Face defaults")) as HTMLButtonElement;
+    const defaultsPanelToggle = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) =>
+      button.textContent?.includes("Hugging Face defaults"),
+    ) as HTMLButtonElement;
 
     expect(defaultsPanelToggle.getAttribute("aria-expanded")).toBe("false");
   });
@@ -285,9 +360,18 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       browseArtifacts: vi.fn().mockResolvedValue([]),
       readArtifactDetail: vi.fn(),
       readArtifactContent: vi.fn(),
-      createArtifactMediaViewUrl: vi.fn().mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi.fn().mockResolvedValue({ mediaType: "text/plain", bytes: new Uint8Array([97]) }),
-      getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
+      createArtifactMediaViewUrl: vi
+        .fn()
+        .mockResolvedValue("blob:desktop-preview"),
+      readArtifactMedia: vi
+        .fn()
+        .mockResolvedValue({
+          mediaType: "text/plain",
+          bytes: new Uint8Array([97]),
+        }),
+      getHuggingFaceTokenStatus: vi
+        .fn()
+        .mockResolvedValue({ configured: false }),
       setHuggingFaceToken: vi.fn(),
       clearHuggingFaceToken: vi.fn(),
       publishArtifactToHuggingFace: vi.fn(),
@@ -303,21 +387,35 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
+      root.render(
+        <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+      );
     });
 
     expect(container.textContent).toContain("Artifact Browser");
     expect(container.textContent).toContain("Artifact family");
-    expect(container.textContent).toContain("There are currently no uploaded artifacts in the workspace.");
-    expect(container.textContent).toContain("There are currently no generated artifacts in the workspace.");
+    expect(container.textContent).toContain(
+      "There are currently no uploaded artifacts in the workspace.",
+    );
+    expect(container.textContent).toContain(
+      "There are currently no generated artifacts in the workspace.",
+    );
     expect(container.textContent).not.toContain("Register from Hugging Face");
   });
 
   it("lists non-image artifacts and only renders image preview for image media types", async () => {
     const client = {
       browseArtifacts: vi.fn().mockResolvedValue([
-        { storageKey: "uploads/cat.png", artifactFamily: "image" as const, mediaType: "image/png" },
-        { storageKey: "uploads/train.parquet", artifactFamily: "tabular" as const, mediaType: "application/x-parquet" },
+        {
+          storageKey: "uploads/cat.png",
+          artifactFamily: "image" as const,
+          mediaType: "image/png",
+        },
+        {
+          storageKey: "uploads/train.parquet",
+          artifactFamily: "tabular" as const,
+          mediaType: "application/x-parquet",
+        },
       ]),
       readArtifactDetail: vi.fn().mockResolvedValue({
         locator: { storageKey: "uploads/train.parquet" },
@@ -331,9 +429,18 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
         availability: "available" as const,
         retrieval: "deferred" as const,
       }),
-      createArtifactMediaViewUrl: vi.fn().mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi.fn().mockResolvedValue({ mediaType: "text/plain", bytes: new Uint8Array([97]) }),
-      getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
+      createArtifactMediaViewUrl: vi
+        .fn()
+        .mockResolvedValue("blob:desktop-preview"),
+      readArtifactMedia: vi
+        .fn()
+        .mockResolvedValue({
+          mediaType: "text/plain",
+          bytes: new Uint8Array([97]),
+        }),
+      getHuggingFaceTokenStatus: vi
+        .fn()
+        .mockResolvedValue({ configured: false }),
       setHuggingFaceToken: vi.fn(),
       clearHuggingFaceToken: vi.fn(),
       publishArtifactToHuggingFace: vi.fn(),
@@ -349,11 +456,16 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
+      root.render(
+        <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+      );
     });
 
     expect(container.textContent).toContain("uploads/train.parquet");
-    const parquetButton = findArtifactDetailsButton(container, "uploads/train.parquet");
+    const parquetButton = findArtifactDetailsButton(
+      container,
+      "uploads/train.parquet",
+    );
 
     await act(async () => {
       parquetButton.click();
@@ -377,13 +489,19 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
           mediaType: "application/pdf",
         },
       ]),
-      registerUnregisteredArtifact: vi.fn().mockResolvedValue({ storageKey: "uploads/orphan/report.pdf" }),
-      deleteUnregisteredArtifact: vi.fn().mockResolvedValue({ storageKey: "uploads/orphan/report.pdf" }),
+      registerUnregisteredArtifact: vi
+        .fn()
+        .mockResolvedValue({ storageKey: "uploads/orphan/report.pdf" }),
+      deleteUnregisteredArtifact: vi
+        .fn()
+        .mockResolvedValue({ storageKey: "uploads/orphan/report.pdf" }),
       readArtifactDetail: vi.fn(),
       readArtifactContent: vi.fn(),
       createArtifactMediaViewUrl: vi.fn(),
       readArtifactMedia: vi.fn(),
-      getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
+      getHuggingFaceTokenStatus: vi
+        .fn()
+        .mockResolvedValue({ configured: false }),
       setHuggingFaceToken: vi.fn(),
       clearHuggingFaceToken: vi.fn(),
       publishArtifactToHuggingFace: vi.fn(),
@@ -399,16 +517,20 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
+      root.render(
+        <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+      );
     });
 
     expect(container.textContent).toContain("Unregistered Artifacts");
     expect(container.textContent).toContain("orphan/report.pdf");
 
-    const registerButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Register") as HTMLButtonElement;
-    const deleteButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Delete") as HTMLButtonElement;
+    const registerButton = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) => button.textContent === "Register") as HTMLButtonElement;
+    const deleteButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Delete",
+    ) as HTMLButtonElement;
 
     await act(async () => {
       registerButton.click();
@@ -416,20 +538,34 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     await act(async () => {
       deleteButton.click();
     });
-    expect(container.textContent).toContain("Type Delete to confirm this destructive action.");
+    expect(container.textContent).toContain(
+      "Type Delete to confirm this destructive action.",
+    );
 
-    const confirmationInput = Array.from(container.querySelectorAll("input"))
-      .find((input) => input.getAttribute("placeholder") === "Delete") as HTMLInputElement;
+    const confirmationInput = Array.from(
+      container.querySelectorAll("input"),
+    ).find(
+      (input) => input.getAttribute("placeholder") === "Delete",
+    ) as HTMLInputElement;
     setInputValue(confirmationInput, "Delete");
 
-    const confirmDeleteButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Confirm delete") as HTMLButtonElement;
+    const confirmDeleteButton = Array.from(
+      container.querySelectorAll("button"),
+    ).find(
+      (button) => button.textContent === "Confirm delete",
+    ) as HTMLButtonElement;
     await act(async () => {
       confirmDeleteButton.click();
     });
 
-    expect(client.registerUnregisteredArtifact).toHaveBeenCalledWith({ storageKey: "uploads/orphan/report.pdf", workspaceId: "workspace-a" });
-    expect(client.deleteUnregisteredArtifact).toHaveBeenCalledWith({ storageKey: "uploads/orphan/report.pdf", workspaceId: "workspace-a" });
+    expect(client.registerUnregisteredArtifact).toHaveBeenCalledWith({
+      storageKey: "uploads/orphan/report.pdf",
+      workspaceId: "workspace-a",
+    });
+    expect(client.deleteUnregisteredArtifact).toHaveBeenCalledWith({
+      storageKey: "uploads/orphan/report.pdf",
+      workspaceId: "workspace-a",
+    });
   });
 
   it("blocks unregistered delete when typed confirmation is not exact and supports cancel", async () => {
@@ -443,13 +579,19 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
           mediaType: "application/pdf",
         },
       ]),
-      registerUnregisteredArtifact: vi.fn().mockResolvedValue({ storageKey: "uploads/orphan/report.pdf" }),
-      deleteUnregisteredArtifact: vi.fn().mockResolvedValue({ storageKey: "uploads/orphan/report.pdf" }),
+      registerUnregisteredArtifact: vi
+        .fn()
+        .mockResolvedValue({ storageKey: "uploads/orphan/report.pdf" }),
+      deleteUnregisteredArtifact: vi
+        .fn()
+        .mockResolvedValue({ storageKey: "uploads/orphan/report.pdf" }),
       readArtifactDetail: vi.fn(),
       readArtifactContent: vi.fn(),
       createArtifactMediaViewUrl: vi.fn(),
       readArtifactMedia: vi.fn(),
-      getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
+      getHuggingFaceTokenStatus: vi
+        .fn()
+        .mockResolvedValue({ configured: false }),
       setHuggingFaceToken: vi.fn(),
       clearHuggingFaceToken: vi.fn(),
       publishArtifactToHuggingFace: vi.fn(),
@@ -465,31 +607,43 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
+      root.render(
+        <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+      );
     });
 
-    const deleteButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Delete") as HTMLButtonElement;
+    const deleteButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Delete",
+    ) as HTMLButtonElement;
 
     await act(async () => {
       deleteButton.click();
     });
 
-    const confirmationInput = Array.from(container.querySelectorAll("input"))
-      .find((input) => input.getAttribute("placeholder") === "Delete") as HTMLInputElement;
+    const confirmationInput = Array.from(
+      container.querySelectorAll("input"),
+    ).find(
+      (input) => input.getAttribute("placeholder") === "Delete",
+    ) as HTMLInputElement;
     setInputValue(confirmationInput, "delete");
 
-    const confirmDeleteButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Confirm delete") as HTMLButtonElement;
+    const confirmDeleteButton = Array.from(
+      container.querySelectorAll("button"),
+    ).find(
+      (button) => button.textContent === "Confirm delete",
+    ) as HTMLButtonElement;
     await act(async () => {
       confirmDeleteButton.click();
     });
 
     expect(client.deleteUnregisteredArtifact).not.toHaveBeenCalled();
-    expect(container.textContent).toContain("Type Delete to confirm this destructive action.");
+    expect(container.textContent).toContain(
+      "Type Delete to confirm this destructive action.",
+    );
 
-    const cancelButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Cancel") as HTMLButtonElement;
+    const cancelButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Cancel",
+    ) as HTMLButtonElement;
     await act(async () => {
       cancelButton.click();
     });
@@ -501,16 +655,37 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     const promptSpy = vi.fn(() => "Delete");
     vi.stubGlobal("prompt", promptSpy);
     const client = {
-      browseArtifacts: vi.fn().mockResolvedValue([{ storageKey: "uploads/cat.png", artifactFamily: "image" as const }]),
-      deleteRegisteredArtifact: vi.fn().mockResolvedValue({ storageKey: "uploads/cat.png" }),
+      browseArtifacts: vi
+        .fn()
+        .mockResolvedValue([
+          { storageKey: "uploads/cat.png", artifactFamily: "image" as const },
+        ]),
+      deleteRegisteredArtifact: vi
+        .fn()
+        .mockResolvedValue({ storageKey: "uploads/cat.png" }),
       readArtifactDetail: vi.fn().mockResolvedValue({
         locator: { storageKey: "uploads/cat.png" },
         artifactFamily: "image" as const,
       }),
-      readArtifactContent: vi.fn().mockResolvedValue({ locator: { storageKey: "uploads/cat.png" }, availability: "available" as const, retrieval: "deferred" as const }),
-      createArtifactMediaViewUrl: vi.fn().mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi.fn().mockResolvedValue({ mediaType: "text/plain", bytes: new Uint8Array([97]) }),
-      getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
+      readArtifactContent: vi
+        .fn()
+        .mockResolvedValue({
+          locator: { storageKey: "uploads/cat.png" },
+          availability: "available" as const,
+          retrieval: "deferred" as const,
+        }),
+      createArtifactMediaViewUrl: vi
+        .fn()
+        .mockResolvedValue("blob:desktop-preview"),
+      readArtifactMedia: vi
+        .fn()
+        .mockResolvedValue({
+          mediaType: "text/plain",
+          bytes: new Uint8Array([97]),
+        }),
+      getHuggingFaceTokenStatus: vi
+        .fn()
+        .mockResolvedValue({ configured: false }),
       setHuggingFaceToken: vi.fn(),
       clearHuggingFaceToken: vi.fn(),
       publishArtifactToHuggingFace: vi.fn(),
@@ -526,48 +701,83 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
+      root.render(
+        <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+      );
     });
 
-    const artifactButton = findArtifactDetailsButton(container, "uploads/cat.png");
+    const artifactButton = findArtifactDetailsButton(
+      container,
+      "uploads/cat.png",
+    );
     await act(async () => {
       artifactButton.click();
     });
 
-    const deleteButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Delete registered artifact") as HTMLButtonElement;
+    const deleteButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Delete registered artifact",
+    ) as HTMLButtonElement;
 
     await act(async () => {
       deleteButton.click();
     });
 
-    const confirmationInput = Array.from(container.querySelectorAll("input"))
-      .find((input) => input.getAttribute("placeholder") === "Delete") as HTMLInputElement;
+    const confirmationInput = Array.from(
+      container.querySelectorAll("input"),
+    ).find(
+      (input) => input.getAttribute("placeholder") === "Delete",
+    ) as HTMLInputElement;
     setInputValue(confirmationInput, "DELETE");
 
-    const confirmDeleteButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Confirm delete") as HTMLButtonElement;
+    const confirmDeleteButton = Array.from(
+      container.querySelectorAll("button"),
+    ).find(
+      (button) => button.textContent === "Confirm delete",
+    ) as HTMLButtonElement;
     await act(async () => {
       confirmDeleteButton.click();
     });
 
     expect(promptSpy).not.toHaveBeenCalled();
     expect(client.deleteRegisteredArtifact).not.toHaveBeenCalled();
-    expect(container.textContent).toContain("Type Delete to confirm this destructive action.");
+    expect(container.textContent).toContain(
+      "Type Delete to confirm this destructive action.",
+    );
   });
 
   it("deletes registered artifact only after exact typed confirmation", async () => {
     const client = {
-      browseArtifacts: vi.fn().mockResolvedValue([{ storageKey: "uploads/cat.png", artifactFamily: "image" as const }]),
-      deleteRegisteredArtifact: vi.fn().mockResolvedValue({ storageKey: "uploads/cat.png" }),
+      browseArtifacts: vi
+        .fn()
+        .mockResolvedValue([
+          { storageKey: "uploads/cat.png", artifactFamily: "image" as const },
+        ]),
+      deleteRegisteredArtifact: vi
+        .fn()
+        .mockResolvedValue({ storageKey: "uploads/cat.png" }),
       readArtifactDetail: vi.fn().mockResolvedValue({
         locator: { storageKey: "uploads/cat.png" },
         artifactFamily: "image" as const,
       }),
-      readArtifactContent: vi.fn().mockResolvedValue({ locator: { storageKey: "uploads/cat.png" }, availability: "available" as const, retrieval: "deferred" as const }),
-      createArtifactMediaViewUrl: vi.fn().mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi.fn().mockResolvedValue({ mediaType: "text/plain", bytes: new Uint8Array([97]) }),
-      getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
+      readArtifactContent: vi
+        .fn()
+        .mockResolvedValue({
+          locator: { storageKey: "uploads/cat.png" },
+          availability: "available" as const,
+          retrieval: "deferred" as const,
+        }),
+      createArtifactMediaViewUrl: vi
+        .fn()
+        .mockResolvedValue("blob:desktop-preview"),
+      readArtifactMedia: vi
+        .fn()
+        .mockResolvedValue({
+          mediaType: "text/plain",
+          bytes: new Uint8Array([97]),
+        }),
+      getHuggingFaceTokenStatus: vi
+        .fn()
+        .mockResolvedValue({ configured: false }),
       setHuggingFaceToken: vi.fn(),
       clearHuggingFaceToken: vi.fn(),
       publishArtifactToHuggingFace: vi.fn(),
@@ -583,33 +793,47 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
+      root.render(
+        <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+      );
     });
 
-    const artifactButton = findArtifactDetailsButton(container, "uploads/cat.png");
+    const artifactButton = findArtifactDetailsButton(
+      container,
+      "uploads/cat.png",
+    );
     await act(async () => {
       artifactButton.click();
     });
 
-    const deleteButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Delete registered artifact") as HTMLButtonElement;
+    const deleteButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Delete registered artifact",
+    ) as HTMLButtonElement;
     await act(async () => {
       deleteButton.click();
     });
 
-    const confirmationInput = Array.from(container.querySelectorAll("input"))
-      .find((input) => input.getAttribute("placeholder") === "Delete") as HTMLInputElement;
+    const confirmationInput = Array.from(
+      container.querySelectorAll("input"),
+    ).find(
+      (input) => input.getAttribute("placeholder") === "Delete",
+    ) as HTMLInputElement;
     setInputValue(confirmationInput, "Delete");
 
-    const confirmDeleteButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Confirm delete") as HTMLButtonElement;
+    const confirmDeleteButton = Array.from(
+      container.querySelectorAll("button"),
+    ).find(
+      (button) => button.textContent === "Confirm delete",
+    ) as HTMLButtonElement;
     await act(async () => {
       confirmDeleteButton.click();
     });
 
-    expect(client.deleteRegisteredArtifact).toHaveBeenCalledWith({ storageKey: "uploads/cat.png", workspaceId: "workspace-a" });
+    expect(client.deleteRegisteredArtifact).toHaveBeenCalledWith({
+      storageKey: "uploads/cat.png",
+      workspaceId: "workspace-a",
+    });
   });
-
 
   it("renders family filter select and requests filtered browse", async () => {
     const client = {
@@ -618,7 +842,9 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       readArtifactContent: vi.fn(),
       createArtifactMediaViewUrl: vi.fn(),
       readArtifactMedia: vi.fn(),
-      getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
+      getHuggingFaceTokenStatus: vi
+        .fn()
+        .mockResolvedValue({ configured: false }),
       setHuggingFaceToken: vi.fn(),
       clearHuggingFaceToken: vi.fn(),
       publishArtifactToHuggingFace: vi.fn(),
@@ -634,27 +860,38 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
+      root.render(
+        <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+      );
     });
 
     expect(container.textContent).toContain("Artifact family");
     const familySelect = container.querySelector("select") as HTMLSelectElement;
     expect(familySelect).toBeTruthy();
-    expect(Array.from(familySelect.options).map((option) => option.value)).toContain("all");
-    expect(Array.from(familySelect.options).map((option) => option.value)).toContain("structured-text");
+    expect(
+      Array.from(familySelect.options).map((option) => option.value),
+    ).toContain("all");
+    expect(
+      Array.from(familySelect.options).map((option) => option.value),
+    ).toContain("structured-text");
 
     await act(async () => {
       setSelectValue(familySelect, "tabular");
     });
 
-    expect(client.browseArtifacts).toHaveBeenCalledWith({ artifactFamily: "tabular", workspaceId: "workspace-a" });
+    expect(client.browseArtifacts).toHaveBeenCalledWith({
+      artifactFamily: "tabular",
+      workspaceId: "workspace-a",
+    });
   });
 
   it("re-checks published backing existence from the artifact detail panel", async () => {
     const client = {
-      browseArtifacts: vi.fn().mockResolvedValue([
-        { storageKey: "uploads/cat.png", artifactFamily: "image" as const },
-      ]),
+      browseArtifacts: vi
+        .fn()
+        .mockResolvedValue([
+          { storageKey: "uploads/cat.png", artifactFamily: "image" as const },
+        ]),
       readArtifactDetail: vi.fn().mockResolvedValue({
         locator: { storageKey: "uploads/cat.png" },
         artifactFamily: "image" as const,
@@ -675,10 +912,21 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
         availability: "available" as const,
         retrieval: "deferred" as const,
       }),
-      createArtifactMediaViewUrl: vi.fn().mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi.fn().mockResolvedValue({ mediaType: "text/plain", bytes: new Uint8Array([97]) }),
-      getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
-      setHuggingFaceToken: vi.fn().mockResolvedValue({ configured: true, maskedToken: "••••1234" }),
+      createArtifactMediaViewUrl: vi
+        .fn()
+        .mockResolvedValue("blob:desktop-preview"),
+      readArtifactMedia: vi
+        .fn()
+        .mockResolvedValue({
+          mediaType: "text/plain",
+          bytes: new Uint8Array([97]),
+        }),
+      getHuggingFaceTokenStatus: vi
+        .fn()
+        .mockResolvedValue({ configured: false }),
+      setHuggingFaceToken: vi
+        .fn()
+        .mockResolvedValue({ configured: true, maskedToken: "••••1234" }),
       clearHuggingFaceToken: vi.fn().mockResolvedValue({ configured: false }),
       publishArtifactToHuggingFace: vi.fn(),
       verifyPublishedArtifactBacking: vi.fn().mockResolvedValue({
@@ -704,30 +952,42 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
+      root.render(
+        <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+      );
     });
 
-    const artifactButton = findArtifactDetailsButton(container, "uploads/cat.png");
+    const artifactButton = findArtifactDetailsButton(
+      container,
+      "uploads/cat.png",
+    );
     await act(async () => {
       artifactButton.click();
     });
 
-    const recheckButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Re-check published backing") as HTMLButtonElement;
+    const recheckButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Re-check published backing",
+    ) as HTMLButtonElement;
     await act(async () => {
       recheckButton.click();
     });
 
-    expect(client.verifyPublishedArtifactBacking).toHaveBeenCalledWith({ artifactId: "uploads/cat.png" });
+    expect(client.verifyPublishedArtifactBacking).toHaveBeenCalledWith({
+      artifactId: "uploads/cat.png",
+    });
     expect(container.textContent).toContain("Last checked:");
   });
 
-
   it("localizes imported artifact bytes from the artifact panel", async () => {
     const client = {
-      browseArtifacts: vi.fn().mockResolvedValue([
-        { storageKey: "artifacts/20260418000000-local01", artifactFamily: "image" as const },
-      ]),
+      browseArtifacts: vi
+        .fn()
+        .mockResolvedValue([
+          {
+            storageKey: "artifacts/20260418000000-local01",
+            artifactFamily: "image" as const,
+          },
+        ]),
       readArtifactDetail: vi.fn().mockResolvedValue({
         locator: { storageKey: "artifacts/20260418000000-local01" },
         artifactFamily: "image" as const,
@@ -743,7 +1003,8 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
           },
         },
       }),
-      readArtifactContent: vi.fn()
+      readArtifactContent: vi
+        .fn()
         .mockResolvedValueOnce({
           locator: { storageKey: "artifacts/20260418000000-local01" },
           availability: "unavailable" as const,
@@ -754,10 +1015,21 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
           availability: "available" as const,
           retrieval: "deferred" as const,
         }),
-      createArtifactMediaViewUrl: vi.fn().mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi.fn().mockResolvedValue({ mediaType: "text/plain", bytes: new Uint8Array([97]) }),
-      getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
-      setHuggingFaceToken: vi.fn().mockResolvedValue({ configured: true, maskedToken: "••••1234" }),
+      createArtifactMediaViewUrl: vi
+        .fn()
+        .mockResolvedValue("blob:desktop-preview"),
+      readArtifactMedia: vi
+        .fn()
+        .mockResolvedValue({
+          mediaType: "text/plain",
+          bytes: new Uint8Array([97]),
+        }),
+      getHuggingFaceTokenStatus: vi
+        .fn()
+        .mockResolvedValue({ configured: false }),
+      setHuggingFaceToken: vi
+        .fn()
+        .mockResolvedValue({ configured: true, maskedToken: "••••1234" }),
       clearHuggingFaceToken: vi.fn().mockResolvedValue({ configured: false }),
       publishArtifactToHuggingFace: vi.fn(),
       verifyPublishedArtifactBacking: vi.fn(),
@@ -786,24 +1058,35 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
+      root.render(
+        <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+      );
     });
 
-    const artifactButton = findArtifactDetailsButton(container, "artifacts/20260418000000-local01");
+    const artifactButton = findArtifactDetailsButton(
+      container,
+      "artifacts/20260418000000-local01",
+    );
     await act(async () => {
       artifactButton.click();
     });
 
-    const localizeButton = Array.from(container.querySelectorAll("button"))
-      .find((button) => button.textContent === "Localize artifact") as HTMLButtonElement;
+    const localizeButton = Array.from(
+      container.querySelectorAll("button"),
+    ).find(
+      (button) => button.textContent === "Localize artifact",
+    ) as HTMLButtonElement;
     await act(async () => {
       localizeButton.click();
     });
 
     expect(client.localizeArtifactFromRepo).toHaveBeenCalledWith({
+      workspaceId: "workspace-a",
       artifactId: "artifacts/20260418000000-local01",
     });
-    expect(container.textContent).toContain("Localized artifacts/20260418000000-local01 to local object storage.");
+    expect(container.textContent).toContain(
+      "Localized bytes key: artifacts/20260418000000-local01",
+    );
   });
 
   it("shows source verification and remote-only/localized state cues based on backing state", async () => {
@@ -834,7 +1117,10 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
               path: "images/cat.png",
               revision: "main",
             },
-            verification: { exists: true, verifiedAt: "2026-04-18T00:00:00.000Z" },
+            verification: {
+              exists: true,
+              verifiedAt: "2026-04-18T00:00:00.000Z",
+            },
           },
           publishedBacking: {
             target: {
@@ -843,7 +1129,10 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
               path: "images/cat.png",
               revision: "main",
             },
-            verification: { exists: true, verifiedAt: "2026-04-18T00:00:00.000Z" },
+            verification: {
+              exists: true,
+              verifiedAt: "2026-04-18T00:00:00.000Z",
+            },
           },
         },
       }),
@@ -853,9 +1142,18 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
         retrieval: "deferred" as const,
       }),
       createArtifactMediaViewUrl: vi.fn().mockResolvedValue(""),
-      readArtifactMedia: vi.fn().mockResolvedValue({ mediaType: "text/plain", bytes: new Uint8Array([97]) }),
-      getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
-      setHuggingFaceToken: vi.fn().mockResolvedValue({ configured: true, maskedToken: "••••1234" }),
+      readArtifactMedia: vi
+        .fn()
+        .mockResolvedValue({
+          mediaType: "text/plain",
+          bytes: new Uint8Array([97]),
+        }),
+      getHuggingFaceTokenStatus: vi
+        .fn()
+        .mockResolvedValue({ configured: false }),
+      setHuggingFaceToken: vi
+        .fn()
+        .mockResolvedValue({ configured: true, maskedToken: "••••1234" }),
       clearHuggingFaceToken: vi.fn().mockResolvedValue({ configured: false }),
       publishArtifactToHuggingFace: vi.fn(),
       verifyPublishedArtifactBacking: vi.fn(),
@@ -879,18 +1177,25 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     mountedContainer = container;
 
     await act(async () => {
-      root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
+      root.render(
+        <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+      );
     });
 
     expect(container.textContent).toContain("Remote only");
     expect(container.textContent).toContain("Published");
 
-    const artifactButton = findArtifactDetailsButton(container, "artifacts/20260418000000-local01");
+    const artifactButton = findArtifactDetailsButton(
+      container,
+      "artifacts/20260418000000-local01",
+    );
     await act(async () => {
       artifactButton.click();
     });
 
-    expect(container.textContent).toContain("Remote-only artifact. Local preview is unavailable until localization.");
+    expect(container.textContent).toContain(
+      "Remote-only artifact. Local preview is unavailable until localization.",
+    );
     expect(container.textContent).toContain("Re-check source backing");
     expect(container.textContent).toContain("Localize artifact");
   });
@@ -898,9 +1203,15 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
 
 it("renders website capture metadata and HTML source preview for website-ingested artifacts", async () => {
   const client = {
-    browseArtifacts: vi.fn().mockResolvedValue([
-      { storageKey: "staged/website/example.com/index.html", artifactFamily: "structured-text" as const, mediaType: "text/html" },
-    ]),
+    browseArtifacts: vi
+      .fn()
+      .mockResolvedValue([
+        {
+          storageKey: "staged/website/example.com/index.html",
+          artifactFamily: "structured-text" as const,
+          mediaType: "text/html",
+        },
+      ]),
     readArtifactDetail: vi.fn().mockResolvedValue({
       locator: { storageKey: "staged/website/example.com/index.html" },
       artifactFamily: "structured-text" as const,
@@ -924,10 +1235,14 @@ it("renders website capture metadata and HTML source preview for website-ingeste
       availability: "available" as const,
       retrieval: "deferred" as const,
     }),
-    createArtifactMediaViewUrl: vi.fn().mockResolvedValue("blob:desktop-preview"),
+    createArtifactMediaViewUrl: vi
+      .fn()
+      .mockResolvedValue("blob:desktop-preview"),
     readArtifactMedia: vi.fn().mockResolvedValue({
       mediaType: "text/html",
-      bytes: new TextEncoder().encode("<html><body><h1>Hello</h1></body></html>"),
+      bytes: new TextEncoder().encode(
+        "<html><body><h1>Hello</h1></body></html>",
+      ),
     }),
     getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
     setHuggingFaceToken: vi.fn(),
@@ -943,10 +1258,15 @@ it("renders website capture metadata and HTML source preview for website-ingeste
   const root = createRoot(container);
 
   await act(async () => {
-    root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
+    root.render(
+      <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+    );
   });
 
-  const artifactButton = findArtifactDetailsButton(container, "staged/website/example.com/index.html");
+  const artifactButton = findArtifactDetailsButton(
+    container,
+    "staged/website/example.com/index.html",
+  );
 
   await act(async () => {
     artifactButton.click();
@@ -956,7 +1276,9 @@ it("renders website capture metadata and HTML source preview for website-ingeste
   expect(container.textContent).toContain("https://example.com/");
   expect(container.textContent).toContain("simple-http");
   expect(container.textContent).toContain("HTML source preview");
-  expect(container.textContent).toContain("<html><body><h1>Hello</h1></body></html>");
+  expect(container.textContent).toContain(
+    "<html><body><h1>Hello</h1></body></html>",
+  );
   expect(client.createArtifactMediaViewUrl).not.toHaveBeenCalled();
   expect(client.readArtifactMedia).toHaveBeenCalledWith(
     { storageKey: "staged/website/example.com/index.html" },
@@ -979,21 +1301,32 @@ it("revokes prior object URLs when image preview selection changes and on unmoun
 
   const client = {
     browseArtifacts: vi.fn().mockResolvedValue([
-      { storageKey: "uploads/cat-1.png", artifactFamily: "image" as const, mediaType: "image/png" },
-      { storageKey: "uploads/cat-2.png", artifactFamily: "image" as const, mediaType: "image/png" },
+      {
+        storageKey: "uploads/cat-1.png",
+        artifactFamily: "image" as const,
+        mediaType: "image/png",
+      },
+      {
+        storageKey: "uploads/cat-2.png",
+        artifactFamily: "image" as const,
+        mediaType: "image/png",
+      },
     ]),
-    readArtifactDetail: vi.fn().mockImplementation(async ({ storageKey }: { storageKey: string }) => ({
-      locator: { storageKey },
-      artifactFamily: "image" as const,
-      mediaType: "image/png",
-    })),
+    readArtifactDetail: vi
+      .fn()
+      .mockImplementation(async ({ storageKey }: { storageKey: string }) => ({
+        locator: { storageKey },
+        artifactFamily: "image" as const,
+        mediaType: "image/png",
+      })),
     readArtifactContent: vi.fn().mockResolvedValue({
       locator: { storageKey: "uploads/cat-1.png" },
       mediaType: "image/png",
       availability: "available" as const,
       retrieval: "deferred" as const,
     }),
-    createArtifactMediaViewUrl: vi.fn()
+    createArtifactMediaViewUrl: vi
+      .fn()
       .mockResolvedValueOnce("blob:desktop-preview-1")
       .mockResolvedValueOnce("blob:desktop-preview-2"),
     readArtifactMedia: vi.fn(),
@@ -1011,7 +1344,9 @@ it("revokes prior object URLs when image preview selection changes and on unmoun
   const root = createRoot(container);
 
   await act(async () => {
-    root.render(<ArtifactBrowserFeature client={client} workspaceId="workspace-a" />);
+    root.render(
+      <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+    );
   });
 
   const first = findArtifactDetailsButton(container, "uploads/cat-1.png");

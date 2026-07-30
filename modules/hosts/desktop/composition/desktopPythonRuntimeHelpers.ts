@@ -1,11 +1,18 @@
+import { existsSync } from "node:fs";
+import { isAbsolute, join, resolve } from "node:path";
+
 import type {
   DesktopPythonRuntimeLogEntry,
   DesktopPythonRuntimeStatusPayload,
 } from "../../../contracts/ipc";
 import { resolvePythonRuntimeLoopbackEndpoint } from "../../../adapters/runtime/python";
+import type { DatasetPreparationGenerationCapacitySnapshot } from "../../../contracts/runtime";
 
 const PYTHON_RUNTIME_MANAGED_BASE_PORT = 43111;
 const PYTHON_RUNTIME_MANAGED_PORT_SPAN = 10_000;
+const PYTHON_RUNTIME_WORKER_RELATIVE_PATH =
+  "modules/adapters/runtime/python/worker";
+const PYTHON_RUNTIME_PACKAGED_RESOURCE_DIRECTORY = "worker";
 
 export interface DesktopPythonRuntimeFeature {
   supervisor: {
@@ -72,10 +79,39 @@ export function shouldPreparePythonRuntimeWorkerDependencies(
   return /^python(?:3(?:\.\d+)?)?(?:\.exe)?$/i.test(executableName ?? "");
 }
 
+export function resolveDesktopPythonRuntimeWorkerDirectory(
+  input: {
+    configuredWorkerDirectory?: string;
+    resourcesPath?: string;
+    cwd?: string;
+    exists?: (path: string) => boolean;
+  } = {},
+): string {
+  const configured = input.configuredWorkerDirectory?.trim();
+  if (configured) {
+    return isAbsolute(configured)
+      ? configured
+      : resolve(input.cwd ?? process.cwd(), configured);
+  }
+
+  const resourcesPath = input.resourcesPath?.trim();
+  if (resourcesPath) {
+    const packagedWorkerDirectory = join(
+      resourcesPath,
+      PYTHON_RUNTIME_PACKAGED_RESOURCE_DIRECTORY,
+    );
+    if ((input.exists ?? existsSync)(join(packagedWorkerDirectory, "main.py")))
+      return packagedWorkerDirectory;
+  }
+
+  return PYTHON_RUNTIME_WORKER_RELATIVE_PATH;
+}
+
 export function createUnavailablePythonRuntimeStatus(input: {
   runtimeLogs: DesktopPythonRuntimeLogEntry[];
   memoryUsagePercent: number;
   cpuUsagePercent: number;
+  generationCapacity: DatasetPreparationGenerationCapacitySnapshot;
 }): DesktopPythonRuntimeStatusPayload {
   return {
     supervisorStatus: "stopped",
@@ -89,6 +125,7 @@ export function createUnavailablePythonRuntimeStatus(input: {
       cpuUsagePercent: input.cpuUsagePercent,
       gpuUsagePercent: 0,
     },
+    generationCapacity: input.generationCapacity,
     logs: [...input.runtimeLogs],
   };
 }

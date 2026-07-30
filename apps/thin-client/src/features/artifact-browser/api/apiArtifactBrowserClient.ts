@@ -230,6 +230,7 @@ export interface ArtifactBrowserApiClient {
     mediaType?: string;
   }) => Promise<ThinClientRegisteredArtifactFromRepo>;
   localizeArtifactFromRepo: (input: {
+    workspaceId: string;
     artifactId: string;
   }) => Promise<ThinClientLocalizedArtifactFromRepo>;
 }
@@ -767,6 +768,7 @@ export function createApiArtifactBrowserClient(
             "content-type": "application/json",
           },
           body: JSON.stringify({
+            workspaceId: input.workspaceId,
             artifactId: input.artifactId,
             source,
           }),

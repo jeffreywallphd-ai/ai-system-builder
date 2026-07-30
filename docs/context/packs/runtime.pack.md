@@ -33,6 +33,13 @@
 - Dataset preparation source options must come from the shared capability registry. The worker creates physical aggregate, train, validation, and test outputs, keeps source/group and exact-content duplicates in one deterministic split component, and reports counts derived from those outputs.
 - Desktop IPC and authenticated server HTTP expose the same asynchronous start/read/cancel lifecycle. Workspace ownership is recorded at start and every status read or cancellation must fail closed for another workspace.
 - Dataset preparation task profiles are shared contract metadata and executable dataset-output profiles in the Python worker. Text-bearing profiles choose provided source text or local-model-generated text through `task.textInputMode` and `generation.promptTemplate`; built-in generation presets are quality 7B (`Qwen/Qwen2.5-7B-Instruct`) and compact 3B (`Qwen/Qwen2.5-3B-Instruct`). Task-scoped generation parameter defaults live in runtime contracts; UI may expose them in an automated formatting section but must not hardcode QA-generation settings keys or duplicate model parameter fields. LLM profiles can emit structured/generated text rows; diffusion and vision profiles emit image manifest rows from metadata or structured manifests. Model training requests carry the selected training task. Executable Python training supports causal-LM text training for LLM instruction/classification/extraction/embedding/reranker tasks, diffusion LoRA adapter training for image-caption manifests, and vision LoRA or full-finetune training for classification, detection, and segmentation manifests. Image-manifest text generation uses metadata/annotations rather than pixel understanding; image-manifest model training must receive runtime-local source file paths through dataset metadata instead of making the Python worker read artifact storage directly.
+- Optional local token-constrained JSON generation is Python-adapter behavior,
+  not a new core runtime. The worker advertises
+  `dataset-preparation.constrained-json` only when the exact reviewed decoder
+  pins are available on Python 3.10 through 3.13. Checked mode uses the one
+  compiler-owned exact schema for token masks, parsing, and validation and
+  fails closed without an unconstrained retry. Unchecked mode remains explicit
+  and keeps strict structural and semantic validation.
 
 ## Runtime Readiness Rules
 
@@ -55,6 +62,9 @@
 - Avoid ad hoc per-feature protocols and speculative runtime plugin frameworks.
 - Keep filesystem paths, temp paths, env values, secrets, tokens, raw exception messages, command lines, HTTP internals, process internals, and raw adapter payloads out of public readiness/task payloads.
 - Runtime/model/plugin downloads are supply-chain concerns and should route through installer/security/storage guidance when touched.
+- Decoder schemas, compiled processors, caches, outputs, and diagnostics must be
+  bounded; prompts, source content, generated output, local paths, and stack
+  details must not enter capability or public task evidence.
 - Runtime roots are not Asset Kernel record roots or resource-backed view discovery roots.
 - ComfyUI reference images must be retrieved through workspace/catalog-owned,
   byte-bounded artifact media reads, signature-checked, staged with contained

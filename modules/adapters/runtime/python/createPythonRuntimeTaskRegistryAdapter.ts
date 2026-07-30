@@ -17,6 +17,7 @@ import type {
 } from "../../../contracts/runtime";
 import { isWorkspaceId } from "../../../contracts/workspace";
 import { TaskType } from "../../../contracts/runtime";
+import { resolvePythonRuntimeTaskTimeoutMs } from "./pythonRuntimeTaskTimeoutPolicy";
 
 const genericToPythonTaskTypeMap: Partial<Record<TaskType, string>> = {
   [TaskType.DATASET_PREPARATION]: "prepare-training-dataset",
@@ -34,7 +35,9 @@ function toPythonTaskType(taskType: TaskType): string {
   return mapped;
 }
 
-function toGenericTaskType(taskType: string | undefined): RuntimeTaskRecord["taskType"] {
+function toGenericTaskType(
+  taskType: string | undefined,
+): RuntimeTaskRecord["taskType"] {
   if (taskType === "prepare-training-dataset") {
     return TaskType.DATASET_PREPARATION;
   }
@@ -50,11 +53,20 @@ function toGenericTaskType(taskType: string | undefined): RuntimeTaskRecord["tas
   if (taskType === "publish-model") {
     return TaskType.MODEL_PUBLISHING;
   }
-  throw new Error(`Unknown python runtime task type '${taskType ?? "undefined"}'.`);
+  throw new Error(
+    `Unknown python runtime task type '${taskType ?? "undefined"}'.`,
+  );
 }
 
 function toRuntimeTaskStatus(status: string | undefined): RuntimeTaskStatus {
-  if (status === "queued" || status === "running" || status === "succeeded" || status === "failed" || status === "cancelled" || status === "unknown") {
+  if (
+    status === "queued" ||
+    status === "running" ||
+    status === "succeeded" ||
+    status === "failed" ||
+    status === "cancelled" ||
+    status === "unknown"
+  ) {
     return status;
   }
   return "unknown";
@@ -64,7 +76,10 @@ function sanitizePublicText(value: unknown, limit = 240): string | undefined {
   if (typeof value !== "string") return undefined;
   const sanitized = value
     .replace(/\bBearer\s+[^\s]+/gi, "Bearer [redacted]")
-    .replace(/\b(token|secret|password|api[-_ ]?key|authorization)\s*[:=]\s*[^\s,;]+/gi, "$1=[redacted]")
+    .replace(
+      /\b(token|secret|password|api[-_ ]?key|authorization)\s*[:=]\s*[^\s,;]+/gi,
+      "$1=[redacted]",
+    )
     .replace(/[A-Za-z]:\\(?:[^\\\s]+\\)*[^\\\s]*/g, "[local path]")
     .replace(/\/(?:Users|home|tmp|var|etc|opt)\/[^\s,;]*/g, "[local path]")
     .replace(/[\u0000-\u001f\u007f]+/g, " ")
@@ -79,14 +94,32 @@ function finiteNonNegative(value: unknown): number | undefined {
     : undefined;
 }
 
-function mapProgress(progress: Record<string, unknown> | undefined, taskType: TaskType): RuntimeTaskRecord["progress"] {
+function mapProgress(
+  progress: Record<string, unknown> | undefined,
+  taskType: TaskType,
+): RuntimeTaskRecord["progress"] {
   if (!progress) {
     return undefined;
   }
   if (taskType === TaskType.MODEL_DOWNLOAD) {
-    const unit = progress.progressUnit === "bytes" ? "bytes" : progress.progressUnit === "files" ? "files" : undefined;
-    const current = unit === "bytes" ? finiteNonNegative(progress.downloadedBytes) : unit === "files" ? finiteNonNegative(progress.completedFileCount) : undefined;
-    const total = unit === "bytes" ? finiteNonNegative(progress.totalBytes) : unit === "files" ? finiteNonNegative(progress.totalFileCount) : undefined;
+    const unit =
+      progress.progressUnit === "bytes"
+        ? "bytes"
+        : progress.progressUnit === "files"
+          ? "files"
+          : undefined;
+    const current =
+      unit === "bytes"
+        ? finiteNonNegative(progress.downloadedBytes)
+        : unit === "files"
+          ? finiteNonNegative(progress.completedFileCount)
+          : undefined;
+    const total =
+      unit === "bytes"
+        ? finiteNonNegative(progress.totalBytes)
+        : unit === "files"
+          ? finiteNonNegative(progress.totalFileCount)
+          : undefined;
     const percent = finiteNonNegative(progress.downloadPercent);
     return {
       message: sanitizePublicText(progress.message),
@@ -96,13 +129,23 @@ function mapProgress(progress: Record<string, unknown> | undefined, taskType: Ta
       percent: percent === undefined ? undefined : Math.min(percent, 100),
     };
   }
-  const processedChunkCount = typeof progress.processedChunkCount === "number" ? progress.processedChunkCount : undefined;
-  const totalChunkCount = typeof progress.totalChunkCount === "number" ? progress.totalChunkCount : undefined;
+  const processedChunkCount =
+    typeof progress.processedChunkCount === "number"
+      ? progress.processedChunkCount
+      : undefined;
+  const totalChunkCount =
+    typeof progress.totalChunkCount === "number"
+      ? progress.totalChunkCount
+      : undefined;
   return {
     message: sanitizePublicText(progress.message),
     current: processedChunkCount,
     total: totalChunkCount,
-    unit: typeof processedChunkCount === "number" || typeof totalChunkCount === "number" ? "chunk" : undefined,
+    unit:
+      typeof processedChunkCount === "number" ||
+      typeof totalChunkCount === "number"
+        ? "chunk"
+        : undefined,
     details: progress,
   };
 }
@@ -111,7 +154,8 @@ export interface CreatePythonRuntimeTaskRegistryAdapterOptions {
   ensureRuntimeReady?: () => Promise<void>;
 }
 
-export type PythonRuntimeTaskRegistryAdapter = RuntimeTaskRegistryPort & ModelDownloadCompletionPort;
+export type PythonRuntimeTaskRegistryAdapter = RuntimeTaskRegistryPort &
+  ModelDownloadCompletionPort;
 
 export function createPythonRuntimeTaskRegistryAdapter(
   runtimePort: PythonRuntimePort,
@@ -133,7 +177,9 @@ export function createPythonRuntimeTaskRegistryAdapter(
   };
 
   const adapter: PythonRuntimeTaskRegistryAdapter = {
-    async startTask(request: StartRuntimeTaskRequest): Promise<StartRuntimeTaskResult> {
+    async startTask(
+      request: StartRuntimeTaskRequest,
+    ): Promise<StartRuntimeTaskResult> {
       if (!isWorkspaceId(request.workspaceId)) {
         throw new Error("Workspace id is required for python runtime tasks.");
       }
@@ -144,21 +190,30 @@ export function createPythonRuntimeTaskRegistryAdapter(
         await options.ensureRuntimeReady?.();
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
-        throw new Error(`Python runtime failed to start or become ready before starting task: ${reason}`);
+        throw new Error(
+          `Python runtime failed to start or become ready before starting task: ${reason}`,
+        );
       }
       const requestId = request.requestId ?? randomUUID();
+      const pythonTaskType = toPythonTaskType(request.taskType);
       const result = await runtimePort.startTask({
         requestId,
-        taskType: toPythonTaskType(request.taskType),
+        taskType: pythonTaskType,
         payload: request.payload,
-        metadata: { ...(request.metadata ?? {}), workspaceId: request.workspaceId },
+        metadata: {
+          ...(request.metadata ?? {}),
+          workspaceId: request.workspaceId,
+        },
+        timeoutMs: resolvePythonRuntimeTaskTimeoutMs(pythonTaskType),
       });
       rememberTask({
         requestId: result.requestId,
         workspaceId: request.workspaceId,
         taskType: request.taskType,
         status: result.status ?? "queued",
-        concurrencyClass: request.concurrencyClass ?? (request.taskType === TaskType.MODEL_DOWNLOAD ? "io" : "unknown"),
+        concurrencyClass:
+          request.concurrencyClass ??
+          (request.taskType === TaskType.MODEL_DOWNLOAD ? "io" : "unknown"),
         metadata: result.metadata,
         queuedAt: new Date().toISOString(),
       });
@@ -184,8 +239,13 @@ export function createPythonRuntimeTaskRegistryAdapter(
       }
       const taskType = toGenericTaskType(status.taskType);
       let data = status.data;
-      if (taskType === TaskType.MODEL_DOWNLOAD && status.status === "succeeded") {
-        const completion = await runtimePort.resolveModelDownloadTaskResult(status.data);
+      if (
+        taskType === TaskType.MODEL_DOWNLOAD &&
+        status.status === "succeeded"
+      ) {
+        const completion = await runtimePort.resolveModelDownloadTaskResult(
+          status.data,
+        );
         completedDownloads.set(status.requestId, completion);
         data = {
           provider: completion.provider,
@@ -197,19 +257,28 @@ export function createPythonRuntimeTaskRegistryAdapter(
       const previous = trackedTasks.get(status.requestId);
       return rememberTask({
         requestId: status.requestId,
-        workspaceId: isWorkspaceId(status.metadata?.workspaceId) ? status.metadata.workspaceId : previous?.workspaceId,
+        workspaceId: isWorkspaceId(status.metadata?.workspaceId)
+          ? status.metadata.workspaceId
+          : previous?.workspaceId,
         taskType,
         status: status.status,
-        concurrencyClass: previous?.concurrencyClass ?? (taskType === TaskType.MODEL_DOWNLOAD ? "io" : "unknown"),
+        concurrencyClass:
+          previous?.concurrencyClass ??
+          (taskType === TaskType.MODEL_DOWNLOAD ? "io" : "unknown"),
         progress: mapProgress(status.progress, taskType),
         data,
-        error: taskType === TaskType.MODEL_DOWNLOAD && status.error
-          ? {
-              code: sanitizePublicText(status.error.code, 80) ?? "model_download_failed",
-              message: sanitizePublicText(status.error.message) ?? "Model download failed.",
-              retryable: status.error.retryable === true,
-            }
-          : status.error,
+        error:
+          taskType === TaskType.MODEL_DOWNLOAD && status.error
+            ? {
+                code:
+                  sanitizePublicText(status.error.code, 80) ??
+                  "model_download_failed",
+                message:
+                  sanitizePublicText(status.error.message) ??
+                  "Model download failed.",
+                retryable: status.error.retryable === true,
+              }
+            : status.error,
         metadata: status.metadata,
         queuedAt: previous?.queuedAt,
         startedAt: status.startedAt,
@@ -221,7 +290,14 @@ export function createPythonRuntimeTaskRegistryAdapter(
       const result = await runtimePort.cancelTask(requestId);
       const previous = trackedTasks.get(requestId);
       if (previous) {
-        rememberTask({ ...previous, status: toRuntimeTaskStatus(result.status), updatedAt: new Date().toISOString(), ...(result.status === "cancelled" ? { completedAt: new Date().toISOString() } : {}) });
+        rememberTask({
+          ...previous,
+          status: toRuntimeTaskStatus(result.status),
+          updatedAt: new Date().toISOString(),
+          ...(result.status === "cancelled"
+            ? { completedAt: new Date().toISOString() }
+            : {}),
+        });
       }
       return {
         requestId: result.requestId,
@@ -230,39 +306,87 @@ export function createPythonRuntimeTaskRegistryAdapter(
         message: result.message,
       };
     },
-    async listTasks(request: RuntimeTaskListRequest): Promise<RuntimeTaskListResult> {
-      if (!isWorkspaceId(request.workspaceId)) return { tasks: [], warnings: [{ code: "python_runtime_task_workspace_required", message: "Workspace id is required to list python runtime task outputs." }] };
-      const supported = new Set([TaskType.DATASET_PREPARATION, TaskType.MODEL_DOWNLOAD, TaskType.MODEL_TRAINING, TaskType.MODEL_VALIDATION]);
+    async listTasks(
+      request: RuntimeTaskListRequest,
+    ): Promise<RuntimeTaskListResult> {
+      if (!isWorkspaceId(request.workspaceId))
+        return {
+          tasks: [],
+          warnings: [
+            {
+              code: "python_runtime_task_workspace_required",
+              message:
+                "Workspace id is required to list python runtime task outputs.",
+            },
+          ],
+        };
+      const supported = new Set([
+        TaskType.DATASET_PREPARATION,
+        TaskType.MODEL_DOWNLOAD,
+        TaskType.MODEL_TRAINING,
+        TaskType.MODEL_VALIDATION,
+      ]);
       const requestedTypes = request.taskTypes ?? [...supported];
-      const unsupportedTaskTypes = requestedTypes.filter((taskType) => !supported.has(taskType));
+      const unsupportedTaskTypes = requestedTypes.filter(
+        (taskType) => !supported.has(taskType),
+      );
       const refreshes = [...trackedTasks.values()]
-        .filter((task) => task.workspaceId === request.workspaceId && requestedTypes.includes(task.taskType) && (task.status === "queued" || task.status === "running" || task.status === "unknown"))
-        .map((task) => adapter.getTaskStatus(task.requestId).catch(() => undefined));
+        .filter(
+          (task) =>
+            task.workspaceId === request.workspaceId &&
+            requestedTypes.includes(task.taskType) &&
+            (task.status === "queued" ||
+              task.status === "running" ||
+              task.status === "unknown"),
+        )
+        .map((task) =>
+          adapter.getTaskStatus(task.requestId).catch(() => undefined),
+        );
       await Promise.all(refreshes);
       const tasks = [...trackedTasks.values()]
         .filter((task) => task.workspaceId === request.workspaceId)
         .filter((task) => requestedTypes.includes(task.taskType))
-        .filter((task) => !request.statuses || request.statuses.includes(task.status))
-        .filter((task) => request.includeCompleted === true || task.status === "queued" || task.status === "running" || task.status === "unknown")
+        .filter(
+          (task) => !request.statuses || request.statuses.includes(task.status),
+        )
+        .filter(
+          (task) =>
+            request.includeCompleted === true ||
+            task.status === "queued" ||
+            task.status === "running" ||
+            task.status === "unknown",
+        )
         .reverse()
         .slice(0, Math.min(Math.max(request.limit ?? 50, 1), 100));
       return {
         tasks,
-        ...(unsupportedTaskTypes.length > 0 ? {
-          unsupportedTaskTypes,
-          warnings: [{
-            code: "python_runtime_task_listing_unsupported",
-            message: "Some requested task families are not provided by the Python runtime task registry.",
-            taskTypes: unsupportedTaskTypes,
-          }],
-        } : {}),
+        ...(unsupportedTaskTypes.length > 0
+          ? {
+              unsupportedTaskTypes,
+              warnings: [
+                {
+                  code: "python_runtime_task_listing_unsupported",
+                  message:
+                    "Some requested task families are not provided by the Python runtime task registry.",
+                  taskTypes: unsupportedTaskTypes,
+                },
+              ],
+            }
+          : {}),
       };
     },
-    async readCompletedModelDownload(requestId: string): Promise<CompletedModelDownload | undefined> {
+    async readCompletedModelDownload(
+      requestId: string,
+    ): Promise<CompletedModelDownload | undefined> {
       const existing = completedDownloads.get(requestId);
       if (existing) return existing;
       const record = await adapter.getTaskStatus(requestId);
-      if ("recordType" in record || record.taskType !== TaskType.MODEL_DOWNLOAD || record.status !== "succeeded") return undefined;
+      if (
+        "recordType" in record ||
+        record.taskType !== TaskType.MODEL_DOWNLOAD ||
+        record.status !== "succeeded"
+      )
+        return undefined;
       return completedDownloads.get(requestId);
     },
   };

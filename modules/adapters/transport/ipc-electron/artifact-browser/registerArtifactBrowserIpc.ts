@@ -905,13 +905,10 @@ export function createDesktopArtifactPublishIpcHandler(
     }
     let normalizedRequest: DesktopArtifactPublishRequest;
     try {
-      normalizedRequest = createDesktopArtifactPublishRequest(
-        request.payload,
-        {
-          requestId: request.requestId,
-          correlationId: request.correlationId,
-        },
-      );
+      normalizedRequest = createDesktopArtifactPublishRequest(request.payload, {
+        requestId: request.requestId,
+        correlationId: request.correlationId,
+      });
     } catch (error) {
       return mapPublishFailure(request, {
         code: "validation",
@@ -1162,6 +1159,7 @@ export function createDesktopArtifactLocalizeFromRepoIpcHandler(
   ): Promise<DesktopArtifactLocalizeFromRepoResponse> => {
     const result = await localizeArtifactFromRepoUseCase.execute(
       mapDesktopArtifactLocalizeFromRepoRequestToCommand(request),
+      mapDesktopArtifactRequestContext(request),
     );
 
     if (!result.ok) {

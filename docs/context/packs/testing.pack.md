@@ -22,7 +22,13 @@
 
 - Test observable behavior and boundary contracts, not implementation trivia.
 - Use Node's built-in test runner (`node:test`) as the default for non-browser tests.
-- Use root `npm test` / `npm run test:non-browser` as canonical non-browser execution paths.
+- Use `npm test` for short unit and interaction feedback, `npm run test:long`
+  for integration and end-to-end coverage, and `npm run test:all` for the
+  complete automated suite.
+- Classify `*.integration.test.*` and `*.e2e.test.*` as long. Keep UI interaction
+  tests short unless measured runtime justifies `// @test-duration long`.
+- During roadmap work, run focused chunk tests and increment-relevant checks;
+  reserve the complete short and long suites until every increment is implemented.
 - Test domain logic directly and application use cases through controlled ports/test doubles.
 - Give adapters focused integration coverage for real translation and boundary behavior.
 - Add host/transport integration tests for wiring, composition, delegation, and safe error mapping.
@@ -54,6 +60,8 @@
 ## Key Constraints
 
 - Do not use broad end-to-end suites as substitutes for layered testing.
+- Do not infer controlled-environment usability, accessibility, provider,
+  ingestion-scale, or representative-hardware qualification from automated suites.
 - Avoid over-mocking internals; mock explicit boundaries deliberately.
 - Do not add production behavior solely to make a test easier.
 - Stabilization tests should not introduce deferred features such as mutation, provider browse/download, workflow execution, marketplace behavior, collaboration, or automatic migration.

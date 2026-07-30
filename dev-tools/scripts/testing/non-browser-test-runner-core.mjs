@@ -1,6 +1,79 @@
 const metricPattern =
   /^(?:\W+)?\s*(tests|suites|pass|fail|cancelled|skipped|todo|duration_ms)\s+(.+)$/;
 
+const supportedTestSuites = new Set(["all", "short", "long"]);
+const longRunningTestFilePattern =
+  /\.(?:e2e|integration)\.test\.[cm]?[jt]sx?$/i;
+const longRunningTestMarkerPattern = /^\s*\/\/\s*@test-duration\s+long\s*$/m;
+const vitestImportPattern = /\bfrom\s+["']vitest["']/m;
+
+export const isVitestOwnedTestSource = (sourceText) =>
+  vitestImportPattern.test(sourceText);
+
+export const classifyTestFileDuration = (sourcePath, sourceText = "") =>
+  longRunningTestFilePattern.test(sourcePath) ||
+  longRunningTestMarkerPattern.test(sourceText)
+    ? "long"
+    : "short";
+
+export const shouldIncludeTestFileForSuite = ({
+  sourcePath,
+  sourceText,
+  suite,
+}) =>
+  suite === "all" || classifyTestFileDuration(sourcePath, sourceText) === suite;
+
+export const parseTestSuiteArgument = (args, fallback = "all") => {
+  const explicitArgument = args.find((argument) =>
+    argument.startsWith("--suite="),
+  );
+  const suite = explicitArgument
+    ? explicitArgument.slice("--suite=".length)
+    : fallback;
+  if (supportedTestSuites.has(suite) === false) {
+    throw new Error("Unsupported test suite. Expected short, long, or all.");
+  }
+  return suite;
+};
+
+export const createTestTimingTracker = ({ limit = 20 } = {}) => {
+  const fileDurations = new Map();
+  const testDurations = [];
+
+  return {
+    record({ file, name, nesting, durationMs, status }) {
+      if (
+        typeof file !== "string" ||
+        !Number.isFinite(durationMs) ||
+        durationMs < 0
+      ) {
+        return;
+      }
+      const normalizedNesting = Number.isFinite(nesting) ? nesting : 0;
+      testDurations.push({
+        file,
+        name,
+        durationMs,
+        nesting: normalizedNesting,
+        status,
+      });
+      if (normalizedNesting === 0) {
+        fileDurations.set(file, (fileDurations.get(file) ?? 0) + durationMs);
+      }
+    },
+    snapshot() {
+      const slowestFiles = [...fileDurations.entries()]
+        .map(([file, durationMs]) => ({ file, durationMs }))
+        .sort((left, right) => right.durationMs - left.durationMs)
+        .slice(0, limit);
+      const slowestTests = [...testDurations]
+        .sort((left, right) => right.durationMs - left.durationMs)
+        .slice(0, limit);
+      return { slowestFiles, slowestTests };
+    },
+  };
+};
+
 export const buildNonBrowserNodeTestRunOptions = ({ files, cwd }) => ({
   cwd,
   files: [...files],

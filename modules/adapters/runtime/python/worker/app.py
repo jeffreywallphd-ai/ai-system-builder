@@ -40,6 +40,7 @@ from .models import (
     ValidateModelTaskResult,
 )
 from .tasks.example_generation import ensure_generation_model_downloaded
+from .tasks.constrained_json_decoder import get_constrained_json_decoder_runtime_status
 from .tasks.local_text_generation import describe_loaded_generation_models, get_or_create_local_text_generator, unload_generation_models
 from .tasks.model_validation import validate_model_output
 from .tasks.prepare_training_dataset import prepare_training_dataset
@@ -429,7 +430,19 @@ def health() -> PythonRuntimeHealthCheckResult:
 
 @app.get("/capabilities", response_model=PythonRuntimeCapabilitiesResult)
 def capabilities() -> PythonRuntimeCapabilitiesResult:
-    return PythonRuntimeCapabilitiesResult(runtimeId=RUNTIME_ID, capabilities=["prepare-training-dataset", "ensure-model-download", "model-status", "unload-model", "dataset-preparation.auto-inference-mode", "train-model", "validate-model", "conversation-text-generation"])
+    supported = [
+        "prepare-training-dataset",
+        "ensure-model-download",
+        "model-status",
+        "unload-model",
+        "dataset-preparation.auto-inference-mode",
+        "train-model",
+        "validate-model",
+        "conversation-text-generation",
+    ]
+    if get_constrained_json_decoder_runtime_status().available:
+        supported.append("dataset-preparation.constrained-json")
+    return PythonRuntimeCapabilitiesResult(runtimeId=RUNTIME_ID, capabilities=supported)
 
 
 @app.post("/tasks/start", response_model=StartPythonRuntimeTaskResult)

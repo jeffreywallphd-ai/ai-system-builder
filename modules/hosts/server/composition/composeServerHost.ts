@@ -20,6 +20,7 @@ import {
   ensurePythonRuntimeWorkerDependencies,
   resolvePythonRuntimeLoopbackEndpoint,
 } from "../../../adapters/runtime/python";
+import { PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON } from "../../../contracts/runtime";
 import { createGitRuntimeInstallerAdapter } from "../../../adapters/runtime/installer/git/createGitRuntimeInstallerAdapter";
 import { createLocalApplicationSettingsAdapter } from "../../../adapters/persistence/settings";
 import { createLocalModelRegistryAdapter } from "../../../adapters/persistence/model";
@@ -55,7 +56,13 @@ import {
 import { createDefaultDatasetQualityPolicyProvider } from "../../../application/services/dataset-preparation";
 import { DatasetVersionFinalizationService } from "../../../application/services/dataset-version";
 import { createStructuredDatasetVersionRepository } from "../../../adapters/persistence/dataset-version";
+import { createStructuredIngestionAcquisitionRepository } from "../../../adapters/persistence/ingestion";
 import { createSha256DatasetVersionHasher } from "../../../adapters/storage/dataset-version";
+import { createFilesystemIngestionCheckpointStorage } from "../../../adapters/storage/ingestion-checkpoint";
+import { GovernedIngestionTaskUseCases, GovernedWebsiteIngestionUseCases } from "../../../application/use-cases/ingestion-acquisition";
+import type { ApplicationRequestContext } from "../../../application/ports";
+import type { IngestionTaskTransportCommand } from "../../../contracts/ingestion";
+import { createContractError, createFailureResult } from "../../../contracts/shared";
 import { SystemArtifactIdFactory } from "../../../domain/artifact";
 import {
   BrowseArtifactsUseCase,
@@ -140,7 +147,7 @@ import {
 import type { ProviderCredentialStatus } from "../../../contracts/security";
 import { composeServerProviderCredentials } from "./composeServerProviderCredentials";
 import { createRuntimePreparedModelCheckpointResolver } from "../../shared/createRuntimePreparedModelCheckpointResolver";
-import { createWebsiteHtmlAcquisitionPort } from "../../../adapters/ingestion";
+import { createWebsiteHtmlAcquisitionPort, GovernedWebsiteCaptureAdapter } from "../../../adapters/ingestion";
 import {
   registerExpressApi,
   type RegisterExpressApiDependencies,
@@ -1031,6 +1038,42 @@ export function composeServerHost(
         now: options.now,
         artifactIdFactory: new SystemArtifactIdFactory(),
       });
+      const ingestionTasks = organizationDocuments
+        ? (() => {
+            const repository = createStructuredIngestionAcquisitionRepository(organizationDocuments);
+            const website = new GovernedWebsiteIngestionUseCases({
+              repository,
+              capture: new GovernedWebsiteCaptureAdapter({ now: options.now }),
+              streamStorage: storage,
+              artifactCleanup: storage,
+              workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository,
+              workspaceAuthorization,
+              now: options.now,
+            });
+            return new GovernedIngestionTaskUseCases({
+            repository,
+            checkpoints: createFilesystemIngestionCheckpointStorage({
+              rootDirectory: registerOptions.storageRootDirectory,
+              organizationContextProvider: options.organizationContextProvider,
+            }),
+            streamStorage: storage,
+            artifactCleanup: storage,
+            registerArtifactFromRepo,
+            workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository,
+            workspaceAuthorization,
+            organizationContextProvider: options.organizationContextProvider,
+            website,
+            now: options.now,
+          });
+          })()
+        : {
+            async executeCommand(_command: IngestionTaskTransportCommand, context: ApplicationRequestContext = {}) {
+              return createFailureResult(
+                createContractError("unavailable", "Ingestion task persistence is unavailable."),
+                context,
+              );
+            },
+          };
       const importHuggingFaceFiles = new ImportHuggingFaceFilesUseCase({
         browseFiles: browseHuggingFaceDatasetParquetFiles,
         registerArtifact: registerArtifactFromRepo,
@@ -2074,6 +2117,7 @@ export function composeServerHost(
         storeArtifactUploadUseCase,
         ingestWebsitePageUseCase,
         ingestWebsitePagesBatchUseCase,
+        ingestionTasks,
         browseArtifactsUseCase: browseArtifacts,
         readArtifactDetailUseCase: readArtifactDetail,
         readArtifactContentUseCase: readArtifactContent,
@@ -2112,6 +2156,29 @@ export function composeServerHost(
         restartServer: options.restartServer,
         runtimeReadiness,
         prepareTrainingDatasetUseCase,
+        readDatasetPreparationGenerationCapacity: async () => {
+          let decoderAvailable = false;
+          if (pythonRuntimeFoundation.supervisor.getStatus() === "ready") {
+            try {
+              const capabilities =
+                await pythonRuntimeFoundation.runtimePort.getCapabilities();
+              decoderAvailable = capabilities.capabilities.includes(
+                PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
+              );
+            } catch {
+              decoderAvailable = false;
+            }
+          }
+          return {
+            schemaVersion: "1" as const,
+            capturedAt:
+              options.now?.() ?? new Date().toISOString(),
+            decoderAvailable,
+            schemaSupported: true,
+            logicalProcessorCount: cpus().length,
+            totalSystemMemoryBytes: totalmem(),
+          };
+        },
         datasetVersionUseCases,
         assetRegistryRead: internalAssetRegistry.workspaceReadFacade,
         workspaceServices: {

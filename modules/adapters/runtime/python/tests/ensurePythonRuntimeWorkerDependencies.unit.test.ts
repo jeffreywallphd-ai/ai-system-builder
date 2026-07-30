@@ -39,11 +39,21 @@ function createEnvironmentInspectionJson(version = "3.11.9"): string {
 
 const workerDependencyProbeScript = `
 # asb:worker-dependency-probe
+import importlib.metadata
 import importlib.util
+import sys
 required = ["docx", "fastapi", "hf_xet", "huggingface_hub", "markdownify", "pypdf", "safetensors", "transformers", "uvicorn"]
+decoder_supported = (3, 10) <= sys.version_info[:2] < (3, 14)
+if decoder_supported:
+  required.extend(["jsonschema", "outlines", "outlines_core"])
 missing = [name for name in required if importlib.util.find_spec(name) is None]
 if missing:
   raise ModuleNotFoundError(f"No module named '{missing[0]}'")
+if decoder_supported:
+  expected_versions = {"jsonschema": "4.26.0", "outlines": "1.3.2", "outlines-core": "0.2.14"}
+  mismatched = [name for name, expected in expected_versions.items() if importlib.metadata.version(name) != expected]
+  if mismatched:
+    raise RuntimeError("Decoder dependency version mismatch")
 `.trim();
 
 describe("ensurePythonRuntimeWorkerDependencies", () => {
@@ -283,6 +293,55 @@ describe("ensurePythonRuntimeWorkerDependencies", () => {
     ).toBe(true);
   });
 
+  it("repairs missing or mismatched decoder packages on supported Python versions", () => {
+    for (const probeFailure of [
+      "ModuleNotFoundError: No module named 'outlines'",
+      "RuntimeError: Decoder dependency version mismatch",
+    ]) {
+      const spawnSyncImplementation = createSpawnSyncImplementation((command, args) => {
+        if (command === "python" && args[0] === "-c" && args[1]?.includes("asb:python-env-inspect")) {
+          return createSpawnSyncResult({ stdout: createEnvironmentInspectionJson("3.12.9") });
+        }
+        if (command === "python" && args.join(" ") === "-m pip --version") {
+          return createSpawnSyncResult({ stdout: "pip 25.0 from /venv/lib/python3.12/site-packages/pip (python 3.12)" });
+        }
+        if (command === "python" && args[0] === "-c" && args[1]?.includes("os.access")) {
+          return createSpawnSyncResult({ stdout: "1\n" });
+        }
+        if (command === "python" && args[0] === "-c" && args[1] === workerDependencyProbeScript) {
+          return createSpawnSyncResult({ status: 1, stderr: probeFailure });
+        }
+        if (command === "python" && args.join(" ") === "-m pip install -r requirements.txt") {
+          return createSpawnSyncResult({ status: 0, stdout: "Installed pinned decoder requirements" });
+        }
+        if (command === "nvidia-smi" || command === "rocminfo") {
+          return createSpawnSyncResult({ status: 1, stderr: "not found" });
+        }
+        if (command === "python" && args[0] === "-c" && args[1]?.includes("asb:torch-install-probe")) {
+          return createSpawnSyncResult({
+            stdout: JSON.stringify({ installed: true, version: "2.6.0+cpu", cudaVersion: null, hipVersion: null }),
+          });
+        }
+        if (command === "python" && args[0] === "-c" && args[1]?.includes("asb:torch-verification")) {
+          return createSpawnSyncResult({ stdout: JSON.stringify({ ok: true, backend: "cpu" }) });
+        }
+        throw new Error(`Unexpected command: ${command} ${args.join(" ")}`);
+      });
+
+      ensurePythonRuntimeWorkerDependencies({
+        command: "python",
+        cwd: "/tmp/runtime-worker",
+        spawnSyncImplementation: spawnSyncImplementation as any,
+        diagnosticsFile: "/tmp/diag.json",
+      });
+
+      expect(
+        spawnSyncImplementation.mock.calls.some((call) =>
+          Array.isArray(call[1]) && call[1].join(" ") === "-m pip install -r requirements.txt"),
+      ).toBe(true);
+    }
+  });
+
   it("does not install startup requirements when training-only dependencies are missing", () => {
     const spawnSyncImplementation = createSpawnSyncImplementation((command, args) => {
       if (command === "python" && args[0] === "-c" && args[1]?.includes("asb:python-env-inspect")) {
@@ -346,6 +405,50 @@ describe("ensurePythonRuntimeWorkerDependencies", () => {
     expect(requirementsText).not.toContain("accelerate>=");
     expect(requirementsText).not.toContain("peft>=");
     expect(requirementsText).not.toContain("torch>=");
+    expect(requirementsText).toContain('outlines==1.3.2; python_version >= "3.10" and python_version < "3.14"');
+    expect(requirementsText).toContain('outlines-core==0.2.14; python_version >= "3.10" and python_version < "3.14"');
+    expect(requirementsText).toContain('jsonschema==4.26.0; python_version >= "3.10" and python_version < "3.14"');
+  });
+
+  it("keeps the worker available on Python 3.14 while the optional decoder is unsupported", () => {
+    const spawnSyncImplementation = createSpawnSyncImplementation((command, args) => {
+      if (command === "python" && args[0] === "-c" && args[1]?.includes("asb:python-env-inspect")) {
+        return createSpawnSyncResult({ stdout: createEnvironmentInspectionJson("3.14.1") });
+      }
+      if (command === "python" && args.join(" ") === "-m pip --version") {
+        return createSpawnSyncResult({ stdout: "pip 25.0 from /venv/lib/python3.14/site-packages/pip (python 3.14)" });
+      }
+      if (command === "python" && args[0] === "-c" && args[1]?.includes("os.access")) {
+        return createSpawnSyncResult({ stdout: "1\n" });
+      }
+      if (command === "python" && args[0] === "-c" && args[1] === workerDependencyProbeScript) {
+        return createSpawnSyncResult({ status: 0 });
+      }
+      if (command === "nvidia-smi" || command === "rocminfo") {
+        return createSpawnSyncResult({ status: 1, stderr: "not found" });
+      }
+      if (command === "python" && args[0] === "-c" && args[1]?.includes("asb:torch-install-probe")) {
+        return createSpawnSyncResult({
+          stdout: JSON.stringify({ installed: true, version: "2.6.0+cpu", cudaVersion: null, hipVersion: null }),
+        });
+      }
+      if (command === "python" && args[0] === "-c" && args[1]?.includes("asb:torch-verification")) {
+        return createSpawnSyncResult({ stdout: JSON.stringify({ ok: true, backend: "cpu" }) });
+      }
+      throw new Error(`Unexpected command: ${command} ${args.join(" ")}`);
+    });
+
+    expect(() =>
+      ensurePythonRuntimeWorkerDependencies({
+        command: "python",
+        cwd: "/tmp/runtime-worker",
+        spawnSyncImplementation: spawnSyncImplementation as any,
+        diagnosticsFile: "/tmp/diag.json",
+      })).not.toThrow();
+    expect(
+      spawnSyncImplementation.mock.calls.every((call) =>
+        !Array.isArray(call[1]) || call[1].join(" ") !== "-m pip install -r requirements.txt"),
+    ).toBe(true);
   });
 
   it("fails early when Python version is unsupported", () => {
