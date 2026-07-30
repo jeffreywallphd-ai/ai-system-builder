@@ -184,6 +184,39 @@ function createDesktopApiMock(): DesktopApiMock {
         }),
       ),
     disposeIdleFeatures: vi.fn().mockResolvedValue(envelope({ results: [] })),
+    listSystemRunWorkflowProfiles: vi
+      .fn()
+      .mockResolvedValue(envelope([])),
+    listSystemPublicationWorkspace: vi.fn().mockResolvedValue(envelope({
+      systems: [{
+        systemId: "system-1",
+        name: "Published assistant",
+        builds: [{
+          buildId: "build-1",
+          systemRevisionId: "revision-1",
+          versionNumber: 1,
+          status: "succeeded",
+          publicationStatus: "published",
+          statusMessage: "Published",
+          releaseId: "release-1",
+          createdAt: "2026-07-29T00:00:00.000Z",
+          publishedAt: "2026-07-29T00:01:00.000Z",
+          outputCount: 1,
+          evidenceCount: 1,
+          diagnosticCount: 0,
+        }],
+      }],
+    })),
+    readPublishedSystemLifecycle: vi.fn().mockResolvedValue(envelope({
+      schemaVersion: "1.0",
+      releaseId: "release-1",
+      state: "not-installed",
+      revision: "lifecycle-1",
+      eligibleActions: ["install"],
+      health: "unknown",
+      diagnostics: [],
+    })),
+    invokePublishedSystemLifecycle: vi.fn(),
   };
 }
 
@@ -351,8 +384,10 @@ describe("desktop page section loading", () => {
       <SystemBuilderPage workspaceId="w1" workspaceName="Workspace" />,
     );
     expect(c.textContent).toContain("System Builder");
-    expect(c.textContent).toContain("Plans");
-    expect(c.textContent).toContain("Run & Test");
+    expect(c.textContent).not.toContain("Plans");
+    expect(c.textContent).toContain("Publish");
+    expect(c.textContent).not.toContain("Build & Release");
+    expect(c.textContent).not.toContain("Run & Test");
     expect(
       c
         .querySelector("[role='tablist']")
@@ -366,6 +401,41 @@ describe("desktop page section loading", () => {
     expect(api.readFeatureLifecycleState).not.toHaveBeenCalled();
     expect(api.readPythonRuntimeStatus).not.toHaveBeenCalled();
     expect(api.readComfyUiInstallStatus).not.toHaveBeenCalled();
+  });
+
+  it("does not expose or load the retired standalone Run & Test workflow", async () => {
+    const { container: c, api } = await mount(
+      <SystemBuilderPage workspaceId="w1" workspaceName="Workspace" />,
+    );
+    expect(api.listSystemRunWorkflowProfiles).not.toHaveBeenCalled();
+    expect(c.textContent).not.toContain("Run & Test");
+    expect(c.textContent).not.toContain("Configure an action");
+    expect(c.textContent).toContain("Publish");
+  });
+
+  it("loads published lifecycle cards only after Publish is opened", async () => {
+    const { container: c, api } = await mount(
+      <SystemBuilderPage workspaceId="w1" workspaceName="Workspace" />,
+    );
+    expect(api.listSystemPublicationWorkspace).not.toHaveBeenCalled();
+    expect(api.readPublishedSystemLifecycle).not.toHaveBeenCalled();
+    const publishTab = Array.from(c.querySelectorAll("button")).find(
+      (candidate) => candidate.textContent === "Publish",
+    );
+    await act(async () => {
+      publishTab?.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(api.listSystemPublicationWorkspace).toHaveBeenCalledWith({
+      workspaceId: "w1",
+    });
+    expect(api.readPublishedSystemLifecycle).toHaveBeenCalledWith({
+      workspaceId: "w1",
+      releaseId: "release-1",
+    });
+    expect(c.textContent).toContain("Published assistant");
+    expect(c.textContent).toContain("Install");
   });
 
   it("loads Settings software lifecycle diagnostics only when diagnostics are enabled and expanded", async () => {

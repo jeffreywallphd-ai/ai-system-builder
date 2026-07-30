@@ -39,15 +39,24 @@ interface PublishInput {
   path: string;
   revision?: string;
   mediaType?: string;
+  repositoryCreation?: {
+    approved: true;
+    visibility: "private" | "public";
+  };
 }
 
 export interface ArtifactBrowserPublishClient {
   publishArtifactToHuggingFace: (input: {
+    workspaceId?: string;
     artifactId: string;
     repository: string;
     path: string;
     revision?: string;
     mediaType?: string;
+    repositoryCreation?: {
+      approved: true;
+      visibility: "private" | "public";
+    };
   }) => Promise<PublishedBackingView>;
   verifyPublishedArtifactBacking: (input: {
     artifactId: string;
@@ -55,6 +64,7 @@ export interface ArtifactBrowserPublishClient {
 }
 
 export interface UseArtifactBrowserPublishLogicDependencies<TDetail extends ArtifactDetailWithPublishedBacking> {
+  workspaceId?: string;
   selectedStorageKey?: string;
   readSelectedArtifactDetail: () => Promise<TDetail | undefined>;
   client: ArtifactBrowserPublishClient;
@@ -70,12 +80,16 @@ export interface UseArtifactBrowserPublishLogicResult<
     pathInRepo: string;
     revision: string;
     mediaType: string;
+    createRepositoryIfMissing: boolean;
+    repositoryVisibility: "private" | "public";
     showPublishForm: boolean;
   };
   setRepository: (value: string) => void;
   setPathInRepo: (value: string) => void;
   setRevision: (value: string) => void;
   setMediaType: (value: string) => void;
+  setCreateRepositoryIfMissing: (value: boolean) => void;
+  setRepositoryVisibility: (value: "private" | "public") => void;
   togglePublishForm: () => void;
   publishArtifactToHuggingFace: (input?: PublishInput) => Promise<void>;
   recheckPublishedBacking: () => Promise<void>;
@@ -110,6 +124,8 @@ export function useArtifactBrowserPublishLogic<TDetail extends ArtifactDetailWit
   const [pathInRepo, setPathInRepo] = useState("");
   const [revision, setRevision] = useState("main");
   const [mediaType, setMediaType] = useState("");
+  const [createRepositoryIfMissing, setCreateRepositoryIfMissing] = useState(false);
+  const [repositoryVisibility, setRepositoryVisibility] = useState<"private" | "public">("private");
   const [showPublishForm, setShowPublishForm] = useState(false);
 
   async function publishArtifactToHuggingFace(input?: PublishInput): Promise<void> {
@@ -123,16 +139,23 @@ export function useArtifactBrowserPublishLogic<TDetail extends ArtifactDetailWit
       path: pathInRepo,
       revision,
       mediaType,
+      repositoryCreation: createRepositoryIfMissing
+        ? { approved: true, visibility: repositoryVisibility }
+        : undefined,
     };
 
     setPublishState({ status: "loading", message: "Publishing to Hugging Face..." });
     try {
       const backing = await dependencies.client.publishArtifactToHuggingFace({
+        workspaceId: dependencies.workspaceId,
         artifactId: dependencies.selectedStorageKey,
         repository: nextInput.repository,
         path: nextInput.path,
         revision: nextInput.revision,
         mediaType: nextInput.mediaType,
+        ...(nextInput.repositoryCreation
+          ? { repositoryCreation: nextInput.repositoryCreation }
+          : {}),
       });
       setPublishedBacking(backing);
       setPublishState({
@@ -191,12 +214,16 @@ export function useArtifactBrowserPublishLogic<TDetail extends ArtifactDetailWit
       pathInRepo,
       revision,
       mediaType,
+      createRepositoryIfMissing,
+      repositoryVisibility,
       showPublishForm,
     },
     setRepository,
     setPathInRepo,
     setRevision,
     setMediaType,
+    setCreateRepositoryIfMissing,
+    setRepositoryVisibility,
     togglePublishForm: () => setShowPublishForm((current) => !current),
     publishArtifactToHuggingFace,
     recheckPublishedBacking,

@@ -2,7 +2,6 @@ import type { ArtifactRepoStoragePort } from "../../../application/ports/storage
 import { execFile as nodeExecFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { cpus, freemem, totalmem } from "node:os";
 import { spawnSync } from "node:child_process";
@@ -17,13 +16,12 @@ import {
 import { createComfyUiRuntimeInstaller } from "../../../adapters/runtime/installer/comfyui/createComfyUiRuntimeInstaller";
 import {
   createPythonRuntimeAdapterFoundation,
+  createPythonRuntimeTaskRegistryAdapter,
   ensurePythonRuntimeWorkerDependencies,
+  resolvePythonRuntimeLoopbackEndpoint,
 } from "../../../adapters/runtime/python";
 import { createGitRuntimeInstallerAdapter } from "../../../adapters/runtime/installer/git/createGitRuntimeInstallerAdapter";
-import {
-  createInMemorySecretsAdapter,
-  createLocalApplicationSettingsAdapter,
-} from "../../../adapters/persistence/settings";
+import { createLocalApplicationSettingsAdapter } from "../../../adapters/persistence/settings";
 import { createLocalModelRegistryAdapter } from "../../../adapters/persistence/model";
 import { createHuggingFaceModelBrowseDetailsAdapter } from "../../../adapters/model/huggingface";
 import { createLocalImageAssetRegistryAdapter } from "../../../adapters/persistence/image";
@@ -46,7 +44,14 @@ import { createLocalConversationRepositoryAdapters } from "../../../adapters/per
 import { createLocalExecutionRunRepositoryAdapters } from "../../../adapters/persistence/execution-runs";
 import { LinkUserLibraryAssetToWorkspaceUseCase } from "../../../application/use-cases/user-library";
 import type { LoggingPort } from "../../../application/ports/logging";
+import type { SystemRuntimeDatabaseLifecyclePort } from "../../../application/ports/system-deployment";
 import type { OrganizationRequestContextProviderPort } from "../../../application/ports/organization";
+import {
+  AuthorizeApplicationSettingMutationService,
+  AuthorizeProviderRepositoryCreationService,
+  AuthorizeWorkspaceOperationService,
+  type AuthorizeOperationService,
+} from "../../../application/services/security";
 import { SystemArtifactIdFactory } from "../../../domain/artifact";
 import {
   BrowseArtifactsUseCase,
@@ -74,6 +79,7 @@ import {
   ListModelsUseCase,
   SaveModelReferenceUseCase,
   DownloadModelUseCase,
+  ModelDownloadTasksUseCase,
   UpdateModelRecordUseCase,
   DeleteModelRecordUseCase,
   ListSettingsDefinitionsUseCase,
@@ -99,6 +105,7 @@ import {
   UpdateAssetCompositionPlanUseCase,
   ValidateAssetCompositionPlanUseCase,
 } from "../../../application/use-cases";
+import { createRuntimeTaskRegistryRouter } from "../../../adapters/runtime/createRuntimeTaskRegistryRouter";
 import {
   createLogger,
   type StructuredLogSink,
@@ -118,9 +125,11 @@ import {
   type HuggingFaceFetchImplementation,
 } from "../../../adapters/storage/huggingface";
 import {
-  createHuggingFaceTokenConfigStore,
-  type HuggingFaceTokenStatus,
-} from "../../shared/huggingFaceTokenConfigStore";
+  deleteContainedFile,
+  writeContainedFile,
+} from "../../../adapters/filesystem-security";
+import type { ProviderCredentialStatus } from "../../../contracts/security";
+import { composeServerProviderCredentials } from "./composeServerProviderCredentials";
 import { createRuntimePreparedModelCheckpointResolver } from "../../shared/createRuntimePreparedModelCheckpointResolver";
 import { createWebsiteHtmlAcquisitionPort } from "../../../adapters/ingestion";
 import {
@@ -137,10 +146,7 @@ import {
   type ComfyUiPythonEnvironmentMode,
 } from "../../../adapters/runtime/comfyui/comfyUiPythonEnvironment";
 import type { ComfyUiRuntimeDeviceMode } from "../../../adapters/runtime/comfyui/createComfyUiRuntimeSupervisor";
-import {
-  RUNTIME_TORCH_CUDA_WHEEL_INDEX_URL_SETTING_KEY,
-  SHARED_MODEL_STORAGE_DIRECTORY_SETTING_KEY,
-} from "../../../contracts/settings";
+import { RUNTIME_TORCH_CUDA_WHEEL_INDEX_URL_SETTING_KEY } from "../../../contracts/settings";
 import { RuntimeCapabilityGuardService } from "../../../application/services/runtime/runtime-capability-guard.service";
 import { createServerRuntimeReadinessService } from "./composeServerRuntimeReadiness";
 import { createServerImageGenerationRuntimeTaskRegistry } from "./composeServerImageGenerationRuntimeTaskRegistry";
@@ -155,11 +161,25 @@ import { WorkspaceAssetCompositionReadModelService } from "../../../application/
 import { composeExecutionPlanServices } from "../../shared/composition/composeExecutionPlanServices";
 import { composeConversationExecutionServices } from "../../shared/composition/composeConversationExecutionServices";
 import {
+  createConversationWorkflowHandler,
+  createSystemDataWorkflowHandler,
+  createSystemDeploymentWorkflowHandler,
+  createSystemReviewWorkflowHandler,
+} from "../../../application/services/system-run-workflow";
+import { composeSystemRunWorkflow } from "../../shared/composition/composeSystemRunWorkflow";
+import {
   createPythonConversationalRuntimeAdapterCatalog,
   createPythonConversationalRuntimeGuard,
   createPythonConversationalTextGenerationInvocationAdapter,
 } from "../../../adapters/runtime/conversational-text-generation";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
+import {
+  createFilesystemSystemRuntimePostgresCredentialStore,
+  createManagedPostgresSystemRuntimeDatabaseAdapter,
+  type SystemRuntimeStructuredDataSessionProvider,
+} from "../../../adapters/persistence/system-runtime";
+import { resolvePostgresPoolConfig } from "../../../adapters/persistence/postgres";
+import { createStructuredAssetPackageRepository } from "../../../adapters/persistence/asset-package";
 import { createAssetImplementationArtifactAdapter } from "../../../adapters/storage/asset-implementation";
 import {
   createSha256SystemBuildHasher,
@@ -178,7 +198,14 @@ import {
   createDefaultSystemDeploymentPolicy,
 } from "../../shared/composition/composeSystemDeployment";
 import { createTrustedSystemDeploymentRuntimeAdapter } from "../../../adapters/runtime/system-deployment";
+import { SystemDeploymentReleaseBindingService } from "../../../application/services/system-deployment";
+import { normalizeSystemRuntimeInstanceId } from "../../../contracts/system-deployment";
 import type { AssetImplementationDeploymentProfile } from "../../../contracts/asset-implementation";
+import type {
+  AssetMutationCommandBase,
+  AssetMutationResult,
+} from "../../../contracts/asset";
+import { AssetMutationWorkspaceGuardService } from "../../../application/services/asset";
 
 const PYTHON_RUNTIME_WORKER_RELATIVE_PATH = join(
   "modules",
@@ -272,6 +299,8 @@ export interface ComposeServerHostLoggingOptions {
 export interface ComposeServerHostArtifactRepoOptions {
   huggingFaceAccessToken?: string;
   huggingFaceTokenConfigFilePath?: string;
+  providerCredentialRootDirectory?: string;
+  huggingFaceCredentialMigrationOrganizationId?: string;
   huggingFaceFetchImplementation?: HuggingFaceFetchImplementation;
   huggingFaceHubClient?: CreateHuggingFaceArtifactRepoStorageAdapterOptions["hubClient"];
 }
@@ -284,6 +313,7 @@ export interface ComposeServerHostOptions {
     organizationDocuments?: StructuredDocumentStore;
   };
   organizationContextProvider?: OrganizationRequestContextProviderPort;
+  organizationAuthorizer?: Pick<AuthorizeOperationService, "execute">;
   env?: NodeJS.ProcessEnv;
   logging?: ComposeServerHostLoggingOptions;
   logSink?: StructuredLogSink;
@@ -293,7 +323,14 @@ export interface ComposeServerHostOptions {
   settings?: {
     localSettingsFilePath?: string;
   };
+  runtimeDatabases?: ServerSystemRuntimeDatabaseAdapter;
 }
+
+export type ServerSystemRuntimeDatabaseAdapter =
+  SystemRuntimeDatabaseLifecyclePort &
+    SystemRuntimeStructuredDataSessionProvider & {
+      closeAll(): Promise<void>;
+    };
 
 export function resolveServerSystemDeploymentProfile(
   env: NodeJS.ProcessEnv = process.env,
@@ -354,16 +391,41 @@ function parseBooleanEnvFlag(value: string | undefined): boolean {
   return normalized === "1" || normalized === "true" || normalized === "yes";
 }
 
-function extensionForImageReference(
-  mediaType: string | undefined,
-  artifactId: string,
-): string {
+function extensionForImageReference(mediaType: string | undefined): string {
   const media = mediaType?.trim().toLowerCase();
-  if (media === "image/jpeg" || media === "image/jpg") return ".jpg";
+  if (media === "image/jpeg") return ".jpg";
   if (media === "image/webp") return ".webp";
   if (media === "image/png") return ".png";
-  const match = artifactId.match(/\.(png|jpe?g|webp)$/i);
-  return match ? `.${match[1].toLowerCase().replace("jpeg", "jpg")}` : ".png";
+  throw new Error("Reference image media type must be PNG, JPEG, or WebP.");
+}
+
+function hasReferenceImageSignature(
+  mediaType: string,
+  bytes: Uint8Array,
+): boolean {
+  if (mediaType === "image/png") {
+    const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+    return (
+      bytes.byteLength >= signature.length &&
+      signature.every((value, index) => bytes[index] === value)
+    );
+  }
+  if (mediaType === "image/jpeg") {
+    return (
+      bytes.byteLength >= 3 &&
+      bytes[0] === 0xff &&
+      bytes[1] === 0xd8 &&
+      bytes[2] === 0xff
+    );
+  }
+  if (mediaType === "image/webp") {
+    return (
+      bytes.byteLength >= 12 &&
+      new TextDecoder().decode(bytes.subarray(0, 4)) === "RIFF" &&
+      new TextDecoder().decode(bytes.subarray(8, 12)) === "WEBP"
+    );
+  }
+  return false;
 }
 
 function parseServerComfyUiPort(env: NodeJS.ProcessEnv): number {
@@ -502,11 +564,12 @@ export interface ServerHostComposition {
   loggingPort: LoggingPort;
   loggingConfig: LoggingConfig;
   artifactRepoStorage: ArtifactRepoStoragePort;
-  getHuggingFaceTokenStatus: () => HuggingFaceTokenStatus;
-  setHuggingFaceToken: (token: string) => HuggingFaceTokenStatus;
-  clearHuggingFaceToken: () => HuggingFaceTokenStatus;
+  getHuggingFaceTokenStatus: () => Promise<ProviderCredentialStatus>;
+  setHuggingFaceToken: (token: string) => Promise<ProviderCredentialStatus>;
+  clearHuggingFaceToken: () => Promise<ProviderCredentialStatus>;
   registerApi: (options: RegisterServerApiOptions) => void;
   waitForAssetFoundation: () => Promise<void>;
+  closeRuntimeDatabases: () => Promise<void>;
   getInternalAssetRegistry: () => InternalAssetRegistryComposition | undefined;
 }
 
@@ -532,18 +595,55 @@ export function composeServerHost(
     sink: options.logSink,
     now: options.now,
   });
-  const tokenConfigStore = createHuggingFaceTokenConfigStore({
-    filePath:
-      options.artifactRepo?.huggingFaceTokenConfigFilePath ??
-      "/tmp/ai-system-builder/server/hugging-face-token.json",
-    fallbackToken: options.artifactRepo?.huggingFaceAccessToken,
+  const legacyTokenFilePath =
+    options.artifactRepo?.huggingFaceTokenConfigFilePath ??
+    "/tmp/ai-system-builder/server/hugging-face-token.json";
+  const providerCredentials = composeServerProviderCredentials({
+    organizationContext: options.organizationContextProvider,
+    organizationAuthorizer: options.organizationAuthorizer,
+    credentialRootDirectory:
+      options.artifactRepo?.providerCredentialRootDirectory,
+    legacyTokenFilePath,
+    legacyFallbackToken: options.artifactRepo?.huggingFaceAccessToken,
+    migrationOrganizationId:
+      options.artifactRepo?.huggingFaceCredentialMigrationOrganizationId,
+    now: options.now,
+    onMigration: ({ provider, organizationId }) =>
+      void loggingPort.log({
+        timestamp: options.now?.() ?? new Date().toISOString(),
+        level: "info",
+        verbosity: "normal",
+        event: "security.provider-credential.migrated",
+        host: "server",
+        component: "server-host",
+        message: "Migrated an explicitly assigned legacy provider credential.",
+        data: { provider, organizationId },
+      }),
   });
+  const providerRepositoryCreationAuthorization =
+    options.organizationContextProvider && options.organizationAuthorizer
+      ? new AuthorizeProviderRepositoryCreationService({
+          organizationContext: options.organizationContextProvider,
+          authorizer: options.organizationAuthorizer,
+        })
+      : undefined;
 
   const huggingFaceArtifactRepoStorage =
     createHuggingFaceArtifactRepoStorageAdapter({
-      accessTokenProvider: () => tokenConfigStore.getToken(),
+      accessTokenProvider: () =>
+        providerCredentials.resolveHuggingFaceTokenForUse(),
       fetchImplementation: options.artifactRepo?.huggingFaceFetchImplementation,
       hubClient: options.artifactRepo?.huggingFaceHubClient,
+      authorizeRepositoryCreate: providerRepositoryCreationAuthorization
+        ? async (request) => {
+            try {
+              await providerRepositoryCreationAuthorization.authorize(request);
+              return true;
+            } catch {
+              return false;
+            }
+          }
+        : undefined,
     });
 
   const artifactRepoStorage = createArtifactRepoStorageAdapter({
@@ -557,25 +657,29 @@ export function composeServerHost(
 
   let internalAssetRegistry: InternalAssetRegistryComposition | undefined;
   let assetFoundationReady: Promise<void> = Promise.resolve();
+  let systemRuntimeDatabases = options.runtimeDatabases;
 
   return {
     loggingPort,
     loggingConfig,
     artifactRepoStorage,
     getHuggingFaceTokenStatus() {
-      return tokenConfigStore.getStatus();
+      return providerCredentials.getHuggingFaceTokenStatus();
     },
     setHuggingFaceToken(token: string) {
-      return tokenConfigStore.setToken(token);
+      return providerCredentials.setHuggingFaceToken(token);
     },
     clearHuggingFaceToken() {
-      return tokenConfigStore.clearToken();
+      return providerCredentials.clearHuggingFaceToken();
     },
     getInternalAssetRegistry() {
       return internalAssetRegistry;
     },
     waitForAssetFoundation() {
       return assetFoundationReady;
+    },
+    async closeRuntimeDatabases() {
+      await systemRuntimeDatabases?.closeAll();
     },
     registerApi(registerOptions) {
       const env = options.env ?? process.env;
@@ -586,6 +690,22 @@ export function composeServerHost(
         dirname(registerOptions.storageRootDirectory),
         "server-runtime",
       );
+      if (
+        !systemRuntimeDatabases &&
+        env.DEPLOYMENT_SHAPE?.trim() &&
+        env.DATABASE_URL?.trim()
+      ) {
+        systemRuntimeDatabases = createManagedPostgresSystemRuntimeDatabaseAdapter({
+          provisioningConfig: resolvePostgresPoolConfig(env),
+          credentials: createFilesystemSystemRuntimePostgresCredentialStore(
+            joinHostPath(
+              registerOptions.runtimeRootDirectory ?? defaultRuntimeRootDirectory,
+              "secrets",
+            ),
+          ),
+          now: options.now,
+        });
+      }
       const applicationSettings = createLocalApplicationSettingsAdapter({
         filePath:
           options.settings?.localSettingsFilePath ??
@@ -598,7 +718,7 @@ export function composeServerHost(
         documents: options.persistence?.documents,
         now: options.now,
       });
-      const applicationSecrets = createInMemorySecretsAdapter();
+      const applicationSecrets = providerCredentials.applicationSecrets;
       const readRuntimeSettingString = async (
         key: string,
       ): Promise<string | undefined> => {
@@ -668,9 +788,11 @@ export function composeServerHost(
       const transformersCache =
         env.TRANSFORMERS_CACHE?.trim() ||
         joinHostPath(pythonRuntimeRoot, "hub");
-      const pythonRuntimeBaseUrl =
-        env.PYTHON_RUNTIME_BASE_URL?.trim() || "http://127.0.0.1:43111";
-      const pythonRuntimeEndpoint = new URL(pythonRuntimeBaseUrl);
+      const pythonRuntimeEndpoint = resolvePythonRuntimeLoopbackEndpoint({
+        env,
+        defaultPort: "43111",
+      });
+      const pythonRuntimeBaseUrl = pythonRuntimeEndpoint.baseUrl;
       const pythonRuntimeWorkerDirectory =
         resolveServerPythonRuntimeWorkerDirectory({
           configuredWorkerDirectory: env.PYTHON_RUNTIME_WORKER_DIR,
@@ -714,10 +836,9 @@ export function composeServerHost(
           pythonRuntimeMode: "worker-sidecar" satisfies ServerPythonRuntimeMode,
           pythonRuntimeRootDirectory: pythonRuntimeRoot,
           pythonRuntimeRootSource,
-          pythonRuntimeWorkerDirectory,
-          pythonRuntimeBaseUrl,
-          pythonRuntimeCommand,
-          pythonRuntimeArgs,
+          pythonRuntimeEndpointScope: "loopback",
+          pythonRuntimeCommandConfigured: Boolean(env.PYTHON_RUNTIME_COMMAND),
+          pythonRuntimeArgsConfigured: Boolean(env.PYTHON_RUNTIME_ARGS),
           taskRegistryOwnership: "server",
         },
       });
@@ -808,12 +929,20 @@ export function composeServerHost(
           documents: organizationDocuments,
         });
       internalAssetRegistry = workspaceFoundation;
+      const workspaceAuthorization =
+        options.organizationAuthorizer && options.organizationContextProvider
+          ? new AuthorizeWorkspaceOperationService({
+              organizationContext: options.organizationContextProvider,
+              authorizer: options.organizationAuthorizer,
+            })
+          : undefined;
       const storeArtifactUploadUseCase = new StoreArtifactUploadUseCase({
         storage,
         logging: loggingPort,
         now: options.now,
         workspaceRepository:
           workspaceFoundation.workspaceRepositories.workspaceRepository,
+        workspaceAuthorization,
       });
       const websiteHtmlAcquisition = createWebsiteHtmlAcquisitionPort();
       const ingestWebsitePageUseCase = new IngestWebsitePageUseCase({
@@ -831,16 +960,19 @@ export function composeServerHost(
         artifactBrowserMetadataRead: artifactBrowserRead,
         workspaceRepository:
           workspaceFoundation.workspaceRepositories.workspaceRepository,
+        workspaceAuthorization,
       });
       const readArtifactDetail = new ReadArtifactDetailUseCase({
         artifactBrowserMetadataRead: artifactBrowserRead,
         workspaceRepository:
           workspaceFoundation.workspaceRepositories.workspaceRepository,
+        workspaceAuthorization,
       });
       const readArtifactContent = new ReadArtifactContentUseCase({
         artifactBrowserContentRead: artifactBrowserRead,
         workspaceRepository:
           workspaceFoundation.workspaceRepositories.workspaceRepository,
+        workspaceAuthorization,
       });
 
       const hasArtifactInRepo = new HasArtifactInRepoUseCase({
@@ -863,6 +995,7 @@ export function composeServerHost(
       });
       const publishArtifactToRepo = new PublishArtifactToRepoUseCase({
         artifactStorage: storage,
+        artifactCatalogRead: artifactCatalog,
         artifactRepoStorage,
         artifactBindingStorage: artifactBindings,
         now: options.now,
@@ -906,6 +1039,7 @@ export function composeServerHost(
         artifactBindingStorage: artifactBindings,
         workspaceRepository:
           workspaceFoundation.workspaceRepositories.workspaceRepository,
+        workspaceAuthorization,
       });
 
       const resolvedRuntimeDeviceMode = runtimeDeviceMode;
@@ -965,32 +1099,17 @@ export function composeServerHost(
           directMlPackageName: env.COMFYUI_DIRECTML_PACKAGE,
           logging: loggingPort,
         });
-      const startComfyUiWithRuntimeDeviceMode = async (request: {
-        runtimeDeviceMode?: ComfyUiRuntimeDeviceMode;
-      }) => {
+      const startComfyUi = async () => {
         const cudaTorchWheelIndexUrl = await readRuntimeSettingString(
           RUNTIME_TORCH_CUDA_WHEEL_INDEX_URL_SETTING_KEY,
         );
         const envOverride = normalizeComfyUiRuntimeDeviceMode(
           env.COMFYUI_RUNTIME_DEVICE_MODE ?? env.COMFYUI_ACCELERATOR,
         );
-        const requestedMode = normalizeServerImageGenerationRuntimeMode(
-          request.runtimeDeviceMode,
-        );
         const autoSelectedCuda =
-          !envOverride &&
-          (requestedMode === undefined || requestedMode === "auto") &&
-          Boolean(cudaTorchWheelIndexUrl);
+          !envOverride && Boolean(cudaTorchWheelIndexUrl);
         const resolvedRequestMode =
-          envOverride ??
-          (requestedMode === undefined || requestedMode === "auto"
-            ? cudaTorchWheelIndexUrl
-              ? "cuda"
-              : "cpu"
-            : resolveServerComfyUiRuntimeDeviceMode(
-                env,
-                request.runtimeDeviceMode,
-              ));
+          envOverride ?? (cudaTorchWheelIndexUrl ? "cuda" : "cpu");
         const startMode = async (
           mode: ComfyUiRuntimeDeviceMode,
           fallbackReason?: string,
@@ -1026,7 +1145,9 @@ export function composeServerHost(
             component: "server-host",
             subsystem: "runtime",
             data: {
-              requestedRuntimeDeviceMode: request.runtimeDeviceMode,
+              runtimeModeSource: envOverride
+                ? "host-environment"
+                : "host-settings",
               cudaTorchWheelIndexConfigured: Boolean(cudaTorchWheelIndexUrl),
               envOverrideWon: Boolean(envOverride),
               runtimeDeviceMode: mode,
@@ -1058,7 +1179,9 @@ export function composeServerHost(
             component: "server-host",
             subsystem: "runtime",
             data: {
-              requestedRuntimeDeviceMode: request.runtimeDeviceMode,
+              runtimeModeSource: envOverride
+                ? "host-environment"
+                : "host-settings",
               failedRuntimeDeviceMode: "cuda",
               fallbackRuntimeDeviceMode: "cpu",
               cudaTorchWheelIndexConfigured: true,
@@ -1075,12 +1198,7 @@ export function composeServerHost(
       };
       const comfyUiSupervisorPort = {
         async start() {
-          await startComfyUiWithRuntimeDeviceMode({});
-        },
-        async startWithRuntimeDeviceMode(request: {
-          runtimeDeviceMode?: ComfyUiRuntimeDeviceMode;
-        }) {
-          await startComfyUiWithRuntimeDeviceMode(request);
+          await startComfyUi();
         },
         getRecentRuntimeOutput() {
           return comfyUiSupervisor?.getRecentRuntimeOutput() ?? [];
@@ -1162,28 +1280,47 @@ export function composeServerHost(
           return { memoryUsagePercent, cpuUsagePercent, gpuUsagePercent };
         },
       };
-      const runtimeTaskRegistry =
+      const imageRuntimeTaskRegistry =
         createServerImageGenerationRuntimeTaskRegistry({
           client: comfyUiClient,
           supervisor: comfyUiSupervisorPort,
-          prepareLatentReferenceImage: async ({ artifactId }) => {
-            const result = await storage.retrieveArtifact({ key: artifactId });
+          prepareLatentReferenceImage: async ({ artifactId, workspaceId }) => {
+            const result =
+              await artifactMediaViewRetrieval.retrieveArtifactViewerMediaByStorageKey(
+                { storageKey: artifactId, maximumBytes: 16 * 1024 * 1024 },
+                { workspaceId },
+              );
             if (!result.ok) {
               throw new Error(
-                `Unable to read latent reference image artifact '${artifactId}': ${result.error.message}`,
+                "Unable to read the selected reference image safely.",
               );
             }
-            const content =
-              result.value.content instanceof Uint8Array
-                ? result.value.content
-                : new Uint8Array(result.value.content as ArrayBufferLike);
-            const mediaType = result.value.descriptor.mediaType;
-            const extension = extensionForImageReference(mediaType, artifactId);
-            const imageName = `ai-system-builder-latent-${Date.now()}-${Math.random().toString(36).slice(2)}${extension}`;
+            const content = result.value.bytes;
+            const mediaType =
+              result.value.mediaType?.trim().toLowerCase() ?? "";
+            const extension = extensionForImageReference(mediaType);
+            if (!hasReferenceImageSignature(mediaType, content)) {
+              throw new Error(
+                "Reference image content does not match its cataloged media type.",
+              );
+            }
+            const imageName = `ai-system-builder-reference-${randomUUID()}${extension}`;
             const inputDirectory = joinHostPath(comfyUiInstallRoot, "input");
-            await mkdir(inputDirectory, { recursive: true });
-            await writeFile(joinHostPath(inputDirectory, imageName), content);
-            return { imageName };
+            await writeContainedFile({
+              rootDirectory: inputDirectory,
+              key: imageName,
+              content,
+              overwrite: false,
+            });
+            return {
+              imageName,
+              cleanup: async () => {
+                await deleteContainedFile({
+                  rootDirectory: inputDirectory,
+                  key: imageName,
+                });
+              },
+            };
           },
           mapperOptions: { defaultCheckpoint: env.COMFYUI_DEFAULT_CHECKPOINT },
         });
@@ -1248,9 +1385,7 @@ export function composeServerHost(
         now: options.now,
         discovery: {
           searchRoots: async () => {
-            const root = await readRuntimeSettingString(
-              SHARED_MODEL_STORAGE_DIRECTORY_SETTING_KEY,
-            );
+            const root = env.MODEL_SHARED_STORAGE_DIRECTORY?.trim();
             return root ? [root] : [];
           },
         },
@@ -1287,6 +1422,9 @@ export function composeServerHost(
           }
         });
       assetFoundationReady = foundationReady;
+      const assetPackageRepository = organizationDocuments
+        ? createStructuredAssetPackageRepository(organizationDocuments)
+        : undefined;
       const assetImplementation = organizationDocuments
         ? composeAssetImplementationKernel({
             documents: organizationDocuments,
@@ -1294,6 +1432,7 @@ export function composeServerHost(
               internalAssetRegistry.assetKernel.repositories
                 .definitionRepository,
             artifacts: createAssetImplementationArtifactAdapter(storage),
+            packageRepository: assetPackageRepository,
             now: options.now ?? (() => new Date().toISOString()),
           })
         : undefined;
@@ -1311,6 +1450,7 @@ export function composeServerHost(
               implementations: assetImplementation.repository,
               backingResources: assetImplementation.backingResources,
               artifacts: createAssetImplementationArtifactAdapter(storage),
+              repository: assetPackageRepository,
               nextInspectionId: () => `package-inspection.${randomUUID()}`,
               now: options.now ?? (() => new Date().toISOString()),
             })
@@ -1337,11 +1477,13 @@ export function composeServerHost(
                 ),
             },
             assetRegistryRead: internalAssetRegistry.workspaceReadFacade,
+            modelRegistry,
             generateSystemId: () => `system.${randomUUID()}`,
             now: options.now,
           })
         : undefined;
       const systemBuildArtifacts = createSystemBuildArtifactAdapter(storage);
+      const systemDeploymentProfile = resolveServerSystemDeploymentProfile(env);
       const systemBuild =
         organizationDocuments && systemBuilder && assetImplementation
           ? composeSystemBuild({
@@ -1355,6 +1497,22 @@ export function composeServerHost(
               },
               artifacts: systemBuildArtifacts,
               hasher: createSha256SystemBuildHasher(),
+              guidedProfile: {
+                id: systemDeploymentProfile,
+                label:
+                  systemDeploymentProfile === "cloud-server"
+                    ? "Cloud workspace"
+                    : "Organization server",
+                deploymentProfile: systemDeploymentProfile,
+                availableCapabilities: [],
+                permittedTrustLevels: [
+                  "system-trusted",
+                  "organization-approved",
+                  "workspace-approved",
+                ],
+                hostApiVersion: "1.0.0",
+                toolchainProfile: "ai-system-builder/1.0.0",
+              },
               now: options.now,
             })
           : undefined;
@@ -1380,9 +1538,16 @@ export function composeServerHost(
               now: options.now,
             })
           : undefined;
-      const systemDeploymentProfile = resolveServerSystemDeploymentProfile(env);
+      const systemDeploymentReleaseBindings =
+        systemBuild && systemBuilder
+          ? new SystemDeploymentReleaseBindingService({
+              builds: systemBuild.repository,
+              modelAuthority: systemBuilder.modelAuthority,
+              hasher: createSha256SystemBuildHasher(),
+            })
+          : undefined;
       const systemDeployment =
-        organizationDocuments && systemBuild
+        organizationDocuments && systemBuild && systemRuntimeDatabases
           ? composeSystemDeployment({
               documents: organizationDocuments,
               builds: systemBuild.repository,
@@ -1390,7 +1555,21 @@ export function composeServerHost(
               runtime: createTrustedSystemDeploymentRuntimeAdapter({
                 deploymentProfiles: [systemDeploymentProfile],
                 now: options.now,
+                verifyReferenceRelease: async (deployment) => {
+                  const release = await systemBuild.repository.readRelease(
+                    deployment.workspaceId,
+                    deployment.releaseId,
+                  );
+                  return (
+                    !!release &&
+                    release.releaseDigest === deployment.releaseDigest &&
+                    release.systemId !== undefined
+                  );
+                },
+                resolveReleaseBindings: (deployment) =>
+                  systemDeploymentReleaseBindings!.resolve(deployment),
               }),
+              runtimeDatabases: systemRuntimeDatabases,
               revocations: {
                 async listRevokedImplementationReleaseIds(
                   _workspaceId,
@@ -1405,12 +1584,54 @@ export function composeServerHost(
               },
               platformPolicy: createDefaultSystemDeploymentPolicy(),
               generateAuditId: () => `system-deployment-audit.${randomUUID()}`,
+              generateRuntimeInstanceId: () =>
+                normalizeSystemRuntimeInstanceId(
+                  `system-runtime-instance.${randomUUID()}`,
+                ),
+              publishedLifecycle: {
+                systems: systemBuilder!.repository,
+                hostTargetId: systemDeploymentProfile,
+                deploymentProfile: systemDeploymentProfile,
+                hostApiVersion: "1.0.0",
+                hostCapabilities: [],
+                sandboxQualified: false,
+                generateDeploymentId: () =>
+                  `system-deployment.${randomUUID()}`,
+                generateRunId: () =>
+                  `system-deployment-run.${randomUUID()}`,
+                resolveReleaseBindings: (deployment) =>
+                  systemDeploymentReleaseBindings!.resolve(deployment),
+              },
               now: options.now,
             })
           : undefined;
       const generateAssetInstanceId = () => `asset-instance.${randomUUID()}`;
+      const assetMutationWorkspaceGuard =
+        new AssetMutationWorkspaceGuardService({
+          workspaceRepository:
+            internalAssetRegistry.workspaceRepositories.workspaceRepository,
+          workspaceAuthorization,
+        });
+      const withWorkspaceAuthorization = <
+        TCommand extends AssetMutationCommandBase,
+      >(useCase: {
+        execute(command: TCommand): Promise<AssetMutationResult>;
+      }) => ({
+        execute: async (command: TCommand): Promise<AssetMutationResult> => {
+          const guardFailure =
+            await assetMutationWorkspaceGuard.authorize(command);
+          return guardFailure
+            ? {
+                ok: false,
+                operation: command.operation,
+                failure: guardFailure,
+                diagnostics: guardFailure.diagnostics,
+              }
+            : useCase.execute(command);
+        },
+      });
       const assetMutationUseCases = {
-        registerResourceBackedViewAsAsset:
+        registerResourceBackedViewAsAsset: withWorkspaceAuthorization(
           new RegisterResourceBackedViewAsAssetInstanceUseCase({
             assetRegistryRead: internalAssetRegistry.readFacade,
             definitionRepository:
@@ -1421,7 +1642,8 @@ export function composeServerHost(
             now: options.now,
             generateInstanceId: generateAssetInstanceId,
           }),
-        finalizeGeneratedOutputAsAsset:
+        ),
+        finalizeGeneratedOutputAsAsset: withWorkspaceAuthorization(
           new FinalizeGeneratedOutputAsAssetUseCase({
             assetRegistryRead: internalAssetRegistry.readFacade,
             definitionRepository:
@@ -1432,7 +1654,8 @@ export function composeServerHost(
             now: options.now,
             generateInstanceId: generateAssetInstanceId,
           }),
-        importExternalRepositoryObjectAsAsset:
+        ),
+        importExternalRepositoryObjectAsAsset: withWorkspaceAuthorization(
           new ImportExternalRepositoryObjectAsAssetUseCase({
             assetRegistryRead: internalAssetRegistry.readFacade,
             definitionRepository:
@@ -1443,7 +1666,8 @@ export function composeServerHost(
             now: options.now,
             generateInstanceId: generateAssetInstanceId,
           }),
-        localizeExternalRepositoryObjectAsAsset:
+        ),
+        localizeExternalRepositoryObjectAsAsset: withWorkspaceAuthorization(
           new LocalizeExternalRepositoryObjectAsAssetUseCase({
             assetRegistryRead: internalAssetRegistry.readFacade,
             definitionRepository:
@@ -1454,10 +1678,12 @@ export function composeServerHost(
             now: options.now,
             generateInstanceId: generateAssetInstanceId,
           }),
+        ),
       };
       const huggingFaceModelBrowseDetails =
         createHuggingFaceModelBrowseDetailsAdapter({
-          accessTokenProvider: () => tokenConfigStore.getToken(),
+          accessTokenProvider: () =>
+            providerCredentials.resolveHuggingFaceTokenForUse(),
           logger: modelManagementLogger,
         });
       const browseModelsUseCase = new BrowseModelsUseCase({
@@ -1472,8 +1698,8 @@ export function composeServerHost(
       });
       const pythonRuntimeEnvironment = {
         ...env,
-        PYTHON_RUNTIME_HOST: pythonRuntimeEndpoint.hostname,
-        PYTHON_RUNTIME_PORT: pythonRuntimeEndpoint.port || "43111",
+        PYTHON_RUNTIME_HOST: pythonRuntimeEndpoint.host,
+        PYTHON_RUNTIME_PORT: pythonRuntimeEndpoint.port,
         HF_HOME: hfHome,
         TRANSFORMERS_CACHE: transformersCache,
         ...(env.HF_HUB_DISABLE_XET
@@ -1524,6 +1750,20 @@ export function composeServerHost(
             });
           },
         },
+      });
+      const pythonRuntimeTaskRegistry = createPythonRuntimeTaskRegistryAdapter(
+        pythonRuntimeFoundation.runtimePort,
+        { ensureRuntimeReady: () => pythonRuntimeFoundation.supervisor.start() },
+      );
+      const runtimeTaskRegistry = createRuntimeTaskRegistryRouter({
+        image: imageRuntimeTaskRegistry,
+        python: pythonRuntimeTaskRegistry,
+      });
+      const modelDownloadTasksUseCase = new ModelDownloadTasksUseCase({
+        runtimeTaskRegistry,
+        modelDownloadCompletion: pythonRuntimeTaskRegistry,
+        modelRegistry,
+        now: options.now,
       });
       const downloadModelUseCase = new DownloadModelUseCase({
         modelRegistry,
@@ -1632,13 +1872,22 @@ export function composeServerHost(
         settings: applicationSettings,
         secrets: applicationSecrets,
       });
+      const settingAuthorization =
+        options.organizationContextProvider && options.organizationAuthorizer
+          ? new AuthorizeApplicationSettingMutationService({
+              organizationContext: options.organizationContextProvider,
+              authorizer: options.organizationAuthorizer,
+            })
+          : undefined;
       const updateSettingUseCase = new UpdateSettingUseCase({
         settings: applicationSettings,
         secrets: applicationSecrets,
+        authorization: settingAuthorization,
       });
       const clearSettingUseCase = new ClearSettingUseCase({
         settings: applicationSettings,
         secrets: applicationSecrets,
+        authorization: settingAuthorization,
       });
 
       const imageGenerationFinalizationOrchestrator =
@@ -1702,6 +1951,7 @@ export function composeServerHost(
           invocationPort:
             createPythonConversationalTextGenerationInvocationAdapter(
               pythonRuntimeFoundation.runtimePort,
+              modelRegistry,
             ),
           hostCapabilities: {
             submitTurn: "supported",
@@ -1711,12 +1961,62 @@ export function composeServerHost(
           },
           now: options.now,
         });
+      const systemRunWorkflow = composeSystemRunWorkflow({
+        handlers: [
+          createConversationWorkflowHandler({
+            executionPlans: executionPlanRepository,
+            conversations: conversationExecutionServices,
+            now: options.now,
+          }),
+          ...(systemBuild && systemData
+            ? [
+                createSystemDataWorkflowHandler({
+                  builds: systemBuild.repository,
+                  definitions: systemData.definitions,
+                  runtime: systemData.runtime,
+                  now: options.now,
+                }),
+              ]
+            : []),
+          ...(systemBuild && systemReview
+            ? [
+                createSystemReviewWorkflowHandler({
+                  builds: systemBuild.repository,
+                  definitions: systemReview.definitions,
+                  runtime: systemReview.runtime,
+                  now: options.now,
+                }),
+              ]
+            : []),
+          ...(systemBuild && systemDeployment
+            ? [
+                createSystemDeploymentWorkflowHandler({
+                  builds: systemBuild.repository,
+                  useCases: systemDeployment.useCases,
+                  deploymentProfiles: [systemDeploymentProfile],
+                  hostApiVersion: "1.0.0",
+                  hostCapabilities: [],
+                  sandboxQualified: false,
+                  installationPolicy: createDefaultSystemDeploymentPolicy(),
+                  generateDeploymentId: () =>
+                    `system-deployment.${randomUUID()}`,
+                  generateRunId: () =>
+                    `system-deployment-run.${randomUUID()}`,
+                  now: options.now,
+                }),
+              ]
+            : []),
+        ],
+      });
 
       registerExpressApi({
         app: registerOptions.app,
-        getHuggingFaceTokenStatus: () => tokenConfigStore.getStatus(),
-        setHuggingFaceToken: (token) => tokenConfigStore.setToken(token),
-        clearHuggingFaceToken: () => tokenConfigStore.clearToken(),
+        getHuggingFaceTokenStatus: () =>
+          providerCredentials.getHuggingFaceTokenStatus(),
+        setHuggingFaceToken: (token) =>
+          providerCredentials.setHuggingFaceToken(token),
+        clearHuggingFaceToken: () =>
+          providerCredentials.clearHuggingFaceToken(),
         storeArtifactUploadUseCase,
         ingestWebsitePageUseCase,
         ingestWebsitePagesBatchUseCase,
@@ -1743,6 +2043,7 @@ export function composeServerHost(
         listModelsUseCase,
         saveModelReferenceUseCase,
         downloadModelUseCase,
+        modelDownloadTasksUseCase,
         updateModelRecordUseCase,
         deleteModelRecordUseCase,
         generateImageUseCase,
@@ -2018,9 +2319,18 @@ export function composeServerHost(
                   sandboxQualified: false,
                 },
                 ...systemDeployment.useCases,
+                ...(systemDeployment.publishedLifecycle
+                  ? {
+                      lifecycleRead: systemDeployment.publishedLifecycle.read,
+                      lifecycleInvoke: systemDeployment.publishedLifecycle.invoke,
+                    }
+                  : {}),
               },
             }
           : {}),
+        systemRunWorkflowServices: {
+          workflows: systemRunWorkflow.useCases,
+        },
         ...(systemBuild ? { systemBuildServices: systemBuild.useCases } : {}),
       });
     },

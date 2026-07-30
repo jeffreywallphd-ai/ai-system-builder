@@ -33,6 +33,19 @@ Asset/system profiles and evidence truth rules are defined in
 Repository gates do not satisfy its controlled recovery, performance, security,
 accessibility, or cross-platform checks by themselves.
 
+For Windows desktop releases, also run the packaged Visual Composer project in
+[Asset and System Support Qualification](asset-system-support-qualification.md).
+It exercises the dedicated published-system window, controlled conversation
+turns, restart persistence, and physical runtime/control-plane data separation
+against a package rebuilt from the current worktree.
+
+The companion thin-client Visual Composer project uses an explicit
+qualification-only, per-runtime in-memory data plane because the supported
+Node 20 browser-test host does not expose Electron's SQLite runtime. Production
+server startup rejects this seam. Treat the thin project as HTTP lifecycle and
+isolation evidence only; PostgreSQL live/recovery evidence remains mandatory
+for managed-server durability and physical database isolation claims.
+
 CI additionally builds and scans the image, boots the isolated Compose stack,
 smokes both probes, and renders the checked-in Kubernetes Kustomize composition
 without contacting a cluster. The equivalent local container gate is:
@@ -69,7 +82,10 @@ npm run test:postgres-live
 
 Repository CI runs this command against a health-checked PostgreSQL 18 service
 on a private runner network. It proves adapter conformance and concurrent
-migration startup on every change; it does not replace TLS, capacity, backup, or
+migration startup on every change. It also provisions two isolated system
+runtime databases and roles, proves their data remains distinct through
+migration, and denies foreign database access plus database, role, and schema
+DDL from runtime credentials. It does not replace TLS, capacity, backup, or
 platform qualification against the target managed service.
 
 The same CI job then runs `npm run test:postgres-recovery`. It takes a

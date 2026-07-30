@@ -9,6 +9,8 @@ import type {
 import type { WorkspaceId } from "../../../../contracts/workspace";
 import type { AssetImplementationDeploymentProfile } from "../../../../contracts/asset-implementation";
 import type { SystemDeploymentRuntimePort } from "../../../ports/system-deployment";
+import { normalizeSystemRuntimeInstanceId } from "../../../../contracts/system-deployment";
+import { createRuntimeDatabaseTestAdapter } from "./runtimeDatabaseTestAdapter";
 
 const workspaceId = "workspace-a" as any;
 const organizationId = "org-a" as any;
@@ -130,6 +132,7 @@ function fixture(
     options.runtime ??
     createTrustedSystemDeploymentRuntimeAdapter({
       deploymentProfiles: options.profiles ?? ["local-desktop"],
+      resolveReleaseBindings: async () => readyConversationBindings(),
       now,
     });
   const root = composeSystemDeployment({
@@ -168,6 +171,7 @@ function fixture(
       },
     } as any,
     runtime,
+    runtimeDatabases: createRuntimeDatabaseTestAdapter(),
     revocations: {
       async listRevokedImplementationReleaseIds(_workspace, releaseIds) {
         if (options.revocationsUnavailable)
@@ -179,9 +183,34 @@ function fixture(
     },
     platformPolicy: policy,
     generateAuditId: () => `audit-${++auditSequence}`,
+    generateRuntimeInstanceId: () =>
+      normalizeSystemRuntimeInstanceId(`runtime-instance-${++auditSequence}`),
     now,
   });
   return root;
+}
+
+function readyConversationBindings() {
+  return {
+    status: "ready" as const,
+    resourceBindings: [
+      {
+        instanceId: "controlled-chatbot.composer",
+        bindingKind: "model-record" as const,
+        capabilityKind: "text-generation" as const,
+        modelRecordId: "model.chat.local",
+        modelRevisionDigest: `sha256:${"d".repeat(64)}`,
+      },
+    ],
+    interactionBindings: [
+      {
+        interactionKind: "conversation-turn" as const,
+        composerInstanceId: "controlled-chatbot.composer",
+        historyInstanceId: "controlled-chatbot.history-display",
+        transcriptMode: "persisted-only" as const,
+      },
+    ],
+  };
 }
 
 const install = (deploymentId: string, releaseId: string) => ({
@@ -225,11 +254,9 @@ describe("system deployment lifecycle", () => {
       requestedEgressOrigins: ["https://api.example.invalid"],
       actorId: "person-1",
     });
-    expect(run.ok && run.value.status).toBe("succeeded");
-    expect(run.ok && run.value.usage).toEqual({
-      durationMilliseconds: 0,
-      outputBytes: 0,
-    });
+    expect(run.ok && run.value.status).toBe("running");
+    expect(run.ok && run.value.runtimeKind).toBe("visual");
+    expect(run.ok && run.value.launchDescriptor?.releaseId).toBe("release-1");
 
     await root.useCases.install.execute(install("deployment-2", "release-2"));
     const secondActive = await root.useCases.activate.execute({
@@ -405,7 +432,7 @@ describe("system deployment lifecycle", () => {
           requestedEgressOrigins: [],
           actorId: "person-1",
         });
-        expect(run.ok && run.value.status).toBe("succeeded");
+        expect(run.ok && run.value.status).toBe("running");
       }
     }
   });
@@ -620,6 +647,7 @@ describe("system deployment lifecycle", () => {
           organizationId,
           workspaceId,
           deploymentId: "deployment-1" as any,
+          actorId: "person-1",
         })
       ).some((entry) => entry.reasonCode === "deployment.release.revoked"),
     ).toBe(true);

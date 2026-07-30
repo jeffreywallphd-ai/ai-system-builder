@@ -15,6 +15,7 @@ import type {
   StoreArtifactUploadCommandContext,
   StoreArtifactUploadUseCaseResult,
 } from "../../../../application/use-cases";
+import { ARTIFACT_UPLOAD_MAXIMUM_BYTES } from "../../../../application/use-cases";
 import { parseMultipartArtifactUploadRequest } from "./parseMultipartArtifactUploadRequest";
 
 export interface StoreArtifactUploadUseCasePort {
@@ -29,21 +30,16 @@ export interface StoreArtifactUploadUseCasePort {
   getAcceptedUploadPolicy: () => ArtifactUploadAcceptedTypePolicy;
 }
 
-interface ApiArtifactUploadMultipartRequestBody {
-  source?: string;
-  workspaceId?: string;
-}
-
 export interface ApiArtifactUploadJsonRequestBody {
-  fileName: string;
-  mediaType: string;
-  bytes: number[];
-  source: string;
-  workspaceId: string;
+  fileName?: unknown;
+  mediaType?: unknown;
+  bytes?: unknown;
+  source?: unknown;
+  workspaceId?: unknown;
 }
 
 export interface ExpressRequestLike {
-  body?: ApiArtifactUploadJsonRequestBody | ApiArtifactUploadMultipartRequestBody;
+  body?: unknown;
   headers?: Record<string, string | string[] | undefined>;
   on?: (event: string, listener: (chunk?: Buffer | string) => void) => void;
 }
@@ -90,21 +86,69 @@ function normalizeSource(value: string | undefined): string {
   return normalized;
 }
 
+function resolveMaximumBytes(maximumBytes: number | undefined): number {
+  return Number.isSafeInteger(maximumBytes) && (maximumBytes ?? 0) > 0
+    ? maximumBytes as number
+    : ARTIFACT_UPLOAD_MAXIMUM_BYTES;
+}
+
+function requireUploadRequestRecord(requestBody: unknown): Record<string, unknown> {
+  if (!requestBody || typeof requestBody !== "object" || Array.isArray(requestBody)) {
+    throw new Error("Artifact upload request body must be an object.");
+  }
+  return requestBody as Record<string, unknown>;
+}
+
+function requireUploadTextField(
+  requestBody: Record<string, unknown>,
+  fieldName: "fileName" | "mediaType",
+): string {
+  const value = requestBody[fieldName];
+  if (typeof value !== "string") {
+    throw new Error(`Artifact upload ${fieldName} must be a string.`);
+  }
+  return value;
+}
+
+function parseUploadBytes(value: unknown, maximumBytes: number): Uint8Array {
+  if (!Array.isArray(value)) {
+    throw new Error("Artifact upload bytes must be an array of byte values.");
+  }
+  if (value.length > maximumBytes) {
+    throw new Error(`Artifact upload exceeds the ${maximumBytes}-byte limit.`);
+  }
+  if (value.some((entry) => !Number.isInteger(entry) || entry < 0 || entry > 255)) {
+    throw new Error("Artifact upload bytes must contain only integers from 0 through 255.");
+  }
+  return new Uint8Array(value as number[]);
+}
+
 export function mapApiArtifactUploadRequestBody(
-  requestBody: ApiArtifactUploadJsonRequestBody,
+  requestBody: unknown,
+  maximumBytes = ARTIFACT_UPLOAD_MAXIMUM_BYTES,
 ): {
   command: StoreArtifactUploadCommand;
   commandContext: StoreArtifactUploadCommandContext;
 } {
+  const normalizedMaximumBytes = resolveMaximumBytes(maximumBytes);
+  const body = requireUploadRequestRecord(requestBody);
+  const source = body.source;
+  const workspaceId = body.workspaceId;
+  if (source !== undefined && typeof source !== "string") {
+    throw new Error("Artifact upload source must be a string.");
+  }
+  if (workspaceId !== undefined && typeof workspaceId !== "string") {
+    throw new Error("Artifact upload workspaceId must be a string.");
+  }
   return {
     command: {
-      fileName: requestBody.fileName,
-      mediaType: requestBody.mediaType,
-      bytes: new Uint8Array(requestBody.bytes),
+      fileName: requireUploadTextField(body, "fileName"),
+      mediaType: requireUploadTextField(body, "mediaType"),
+      bytes: parseUploadBytes(body.bytes, normalizedMaximumBytes),
     },
     commandContext: {
-      source: requestBody.source,
-      ...(requestBody.workspaceId ? { workspaceId: requestBody.workspaceId } : {}),
+      source: normalizeSource(source as string | undefined),
+      ...(workspaceId ? { workspaceId } : {}),
     },
   };
 }
@@ -130,17 +174,21 @@ function mapMultipartArtifactUploadRequest(
 
 export async function mapApiArtifactUploadRequest(
   request: ExpressRequestLike,
+  maximumBytes = ARTIFACT_UPLOAD_MAXIMUM_BYTES,
 ): Promise<{
   command: StoreArtifactUploadCommand;
   commandContext: StoreArtifactUploadCommandContext;
 }> {
   const contentType = getRequestHeader(request.headers, "content-type")?.toLowerCase() ?? "";
   if (contentType.includes("multipart/form-data")) {
-    const multipartUpload = await parseMultipartArtifactUploadRequest(request);
+    const multipartUpload = await parseMultipartArtifactUploadRequest(
+      request,
+      resolveMaximumBytes(maximumBytes),
+    );
     return mapMultipartArtifactUploadRequest(multipartUpload);
   }
 
-  return mapApiArtifactUploadRequestBody(request.body as ApiArtifactUploadJsonRequestBody);
+  return mapApiArtifactUploadRequestBody(request.body, maximumBytes);
 }
 
 export function mapStoreArtifactUploadResultToApiResponse(
@@ -214,7 +262,10 @@ export function registerArtifactUploadApiRoute(
     let mapping;
 
     try {
-      mapping = await mapApiArtifactUploadRequest(request);
+      const maximumBytes = resolveMaximumBytes(
+        dependencies.storeArtifactUploadUseCase.getAcceptedUploadPolicy().maximumBytes,
+      );
+      mapping = await mapApiArtifactUploadRequest(request, maximumBytes);
     } catch (error) {
       const apiResponse = createApiArtifactUploadFailureResponse(
         "validation",

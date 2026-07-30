@@ -227,7 +227,7 @@ describe("TrainModelUseCase", () => {
       revision: undefined,
       pathPrefix: "adapters",
       private: false,
-      modelPath: "/tmp/demo-adapter",
+      modelPath: "/models/generated/demo-adapter",
     });
     expect(registerGeneratedModel.mock.calls[0]?.[0].modelId).toBe("org/demo-adapter");
     expect(result.outputModel?.published?.repository).toBe("org/demo-adapter");

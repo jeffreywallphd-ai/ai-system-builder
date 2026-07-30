@@ -18,6 +18,11 @@ Execution plan preparation established a non-executing preview layer. The next r
 7. The first supported adapter path is text-generation oriented through the Python conversational runtime adapter; ComfyUI/image-generation is deferred to a later slice.
 8. Tools, retrieval, memory, multimodal behavior, and arbitrary workflow execution are deferred.
 9. Transport exposure should be split across API/server-host, IPC/preload/desktop-host, and desktop/thin-client wrapper parity work.
+10. A published visual release may use explicit lifecycle **Start** as its
+    session-scoped interaction approval only after the application revalidates
+    the exact immutable release, model revision, runtime instance, deployment,
+    readiness, and host capability. Renderer or preload input is association
+    context only and cannot grant that authority.
 
 ## Decision summary
 
@@ -44,6 +49,23 @@ The accepted first adapter implementation is the Python conversational text-gene
 
 The adapter records no progress or cancellation support in its catalog entry. Cancel, retry, and streaming behavior remain unsupported unless a later application/runtime path can actually perform them.
 
+The controlled chatbot uses an application-authorized, release-bound model
+record rather than a default or caller-supplied model string. The exact model
+revision digest and typed persisted-history interaction are immutable build-lock
+evidence. Activation, start, and invocation re-resolve the workspace model and
+fail closed on missing, stale, incompatible, or cross-workspace state. Only the
+adapter-owned runtime model identifier crosses to the Python worker; provider
+details, credentials, and paths do not enter renderer or diagnostic contracts.
+
+## Published desktop interaction
+
+Desktop published interaction runs in a dedicated sandboxed Electron window,
+not the builder preview or an in-page modal. Its preload is limited to bounded
+transcript reads and message submission; main binds the exact live main frame to
+one application-owned lifecycle session. Stop ends that session and closes the
+window while retaining the transcript in the runtime instance's isolated data
+plane. Restart must revalidate authority and reopen the retained conversation.
+
 ## Later runnable-system slice implications
 
 The controlled conversational orchestration model must later support additional system types such as image generation, data transformation, document QA, retrieval-augmented systems, tool-using assistants, API-connected systems, multimodal interaction, and potential scheduled/distributed execution.
@@ -66,3 +88,9 @@ The controlled conversational orchestration model must later support additional 
 - The starter conversational system must be importable/customizable through existing asset authoring/override/effective-projection behavior.
 - Runtime records are operational and are not reusable asset definitions.
 - Later execution use cases must originate from execution plans derived from composed conversational assets.
+
+## Protected invocation boundary
+
+The application orchestration boundary requires an approved asset-derived source association that binds workspace, session, reviewed execution plan, composition plan, readiness binding, execution approval, and runtime reference. Conversation-session approval validity runs before adapter selection; runtime guard checks run before protected context preparation; exact-shape and source/runtime association validation runs before invocation.
+
+Materialized instruction, message/history, and supported generation-setting content is transient application memory. It is not an execution-run metadata format, an approval/provenance/diagnostic payload, or a provider request/response persistence contract. Adapter discovery and guard failures are reduced to safe application statuses, and provider-specific configuration remains adapter-owned.

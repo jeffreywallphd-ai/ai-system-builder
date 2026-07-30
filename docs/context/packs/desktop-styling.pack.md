@@ -31,6 +31,23 @@
 - Keep namespaced and consistent class names (`ui-*` for shared renderer styles; feature-specific naming inside owned scopes).
 - Keep app-local route and feature availability unchanged when refactoring the shared shell; matching presentation does not imply matching capabilities.
 - Keep wide-screen sidebar collapse behavior and its local visual preference aligned across desktop and thin-client shells; narrow viewports continue to use the compact menu.
+- Keep the shared notification bell immediately before Settings. Its dropdown
+  and five-second toast viewport remain fixed below the sticky top bar, use
+  shared `ui-notification-*` styles, preserve focus/Escape/outside-click
+  behavior, and honor reduced motion.
+- Route terminal page and tab outcomes through the shared notification center
+  with a safe source and workspace scope. Do not duplicate those outcomes in
+  feature content. Keep field validation, loading/empty state, blocking or
+  retryable diagnostics, and active progress controls inline and classify every
+  new alert/status surface in the notification migration inventory.
+- Keep ordinary draft editing quiet. Use a compact dirty-state affordance
+  instead of edit-by-edit notices or automatic reminders to save; show save
+  guidance only after a save attempt or when the user's next requested action
+  is genuinely blocked by unsaved work.
+- Keep routine successful reads quiet when visible content already confirms
+  success, including initial loads, refreshes, searches, and detail selection.
+  Keep empty results contextual and inline, and do not duplicate durable task
+  activity with a separate queued message.
 - Keep wide-screen navigation sections as semantic, independently collapsible disclosure groups. Global collapse must let the page content consume the reclaimed width without changing route availability.
 - Reuse shared action icons, feature-panel headings, bordered tab states, and colored artifact type badges. Keep visible text and source metadata alongside visual designators.
 - Reuse `WorkflowSequence` and `WorkflowStep` for ordered, multi-stage task surfaces. Keep each feature's behavior and state local while sharing numbered cards, connecting rails, field grids, and review/action presentation.

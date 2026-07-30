@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { TermWithHint } from "../../../../../../../modules/ui/shared";
+import { TermWithHint, TransientNotificationPublisher } from "../../../../../../../modules/ui/shared";
 import type { DesktopArtifactBrowserClient } from "../../artifact-browser/api/desktopArtifactBrowserClient";
 import { useArtifactBrowserClient } from "../../artifact-browser/hooks/useArtifactBrowserClient";
 import { SettingsPanel, useApplicationSettings } from "../../settings";
@@ -13,6 +13,7 @@ import type {
 interface ArtifactHuggingFaceFormProps {
   client?: DesktopArtifactBrowserClient;
   onRegistered?: (storageKey: string) => void;
+  workspaceId?: string;
 }
 
 interface ViewState {
@@ -22,7 +23,7 @@ interface ViewState {
 
 type FilesByRepository = Record<string, { files: DesktopHuggingFaceDatasetParquetFile[]; state: ViewState }>;
 
-export function ArtifactHuggingFaceForm({ client, onRegistered }: ArtifactHuggingFaceFormProps) {
+export function ArtifactHuggingFaceForm({ client, onRegistered, workspaceId }: ArtifactHuggingFaceFormProps) {
   const artifactClient = useArtifactBrowserClient(client);
   const settings = useApplicationSettings({ keys: ["huggingface.defaultNamespace"] });
   const [viewState, setViewState] = useState<ViewState>({ status: "idle" });
@@ -33,6 +34,8 @@ export function ArtifactHuggingFaceForm({ client, onRegistered }: ArtifactHuggin
   const [filesByRepository, setFilesByRepository] = useState<FilesByRepository>({});
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(() => new Set());
   const [importResult, setImportResult] = useState<DesktopHuggingFaceFilesImportResult | undefined>();
+  const readOnlyEmptyMessage = viewState.status === "success" && !importResult && Boolean(viewState.message);
+  const notificationMessage = viewState.status === "error" || importResult ? viewState.message : undefined;
 
   useEffect(() => {
     const configuredNamespace = settings.valuesByKey.get("huggingface.defaultNamespace")?.value;
@@ -76,12 +79,9 @@ export function ArtifactHuggingFaceForm({ client, onRegistered }: ArtifactHuggin
       setSelectedRepositories(new Set());
       setFilesByRepository({});
       setSelectedFiles(new Set());
-      setViewState({
-        status: "success",
-        message: loadedDatasets.length > 0
-          ? `Found ${loadedDatasets.length} dataset(s).`
-          : "No datasets were found for that namespace.",
-      });
+      setViewState(loadedDatasets.length > 0
+        ? { status: "success" }
+        : { status: "success", message: "No datasets were found for that namespace." });
     } catch (error) {
       setViewState({ status: "error", message: error instanceof Error ? error.message : "Failed to load Hugging Face datasets." });
     }
@@ -100,11 +100,16 @@ export function ArtifactHuggingFaceForm({ client, onRegistered }: ArtifactHuggin
           repository: dataset.repository,
           revision,
         });
-        return [dataset.repository, { files, state: { status: "success" as const, message: `Loaded ${files.length} file(s).` } }] as const;
+        return [dataset.repository, {
+          files,
+          state: files.length > 0
+            ? { status: "success" as const }
+            : { status: "success" as const, message: "No files found for this dataset." },
+        }] as const;
       }));
       setFilesByRepository((current) => ({ ...current, ...Object.fromEntries(loadedEntries) }));
       setSelectedFiles(new Set());
-      setViewState({ status: "success", message: `Loaded files for ${loadedEntries.length} dataset(s).` });
+      setViewState({ status: "success" });
     } catch (error) {
       setViewState({ status: "error", message: error instanceof Error ? error.message : "Failed to load selected dataset files." });
     }
@@ -241,7 +246,8 @@ export function ArtifactHuggingFaceForm({ client, onRegistered }: ArtifactHuggin
         </section>
       ) : null}
 
-      {viewState.message ? <p role={viewState.status === "error" ? "alert" : "status"}>{viewState.message}</p> : null}
+      {(viewState.status === "loading" || readOnlyEmptyMessage) && viewState.message ? <p className={readOnlyEmptyMessage ? "ui-text-muted" : undefined} role="status">{viewState.message}</p> : null}
+      <TransientNotificationPublisher message={notificationMessage} title={viewState.status === "error" ? "Dataset import needs attention" : "Dataset import completed"} tone={viewState.status === "error" ? "error" : "success"} source="Hugging Face Import" workspaceId={workspaceId} />
       {importResult ? <ImportResultSummary result={importResult} /> : null}
     </section>
   );

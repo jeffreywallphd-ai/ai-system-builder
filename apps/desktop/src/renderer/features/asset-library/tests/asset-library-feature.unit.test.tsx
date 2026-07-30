@@ -17,6 +17,10 @@ import type {
   AssetLibraryResourceBackedViewCard,
   AssetLibraryResourceBackedViewDetail,
 } from "../../../../../../../modules/ui/shared/asset-library";
+import {
+  NotificationTestHarness,
+  readNotificationMessages,
+} from "../../../../../../../modules/ui/shared/notifications/tests/NotificationTestHarness";
 import { AssetLibraryFeature } from "../components/AssetLibraryFeature";
 
 const dom = new JSDOM("<!doctype html><html><body></body></html>");
@@ -276,11 +280,13 @@ describe("AssetLibraryFeature", () => {
 
     await act(async () => {
       root.render(
-        <AssetLibraryFeature
-          client={client}
-          workspaceId={TEST_WORKSPACE_ID}
-          onCustomizeDefinition={onCustomizeDefinition}
-        />,
+        <NotificationTestHarness>
+          <AssetLibraryFeature
+            client={client}
+            workspaceId={TEST_WORKSPACE_ID}
+            onCustomizeDefinition={onCustomizeDefinition}
+          />
+        </NotificationTestHarness>,
       );
     });
     await flush();
@@ -433,7 +439,7 @@ describe("AssetLibraryFeature", () => {
       ),
       /metadata|C:\\|Bearer|base64|workflow|prompt/i,
     );
-    expect(container.textContent).toContain("Asset registered.");
+    expect(container.textContent).not.toContain("Asset registered.");
     expect(client.listAssetResourceBackedViews).toHaveBeenCalled();
     expect(client.readAssetResourceBackedView).toHaveBeenCalledTimes(2);
   });
@@ -718,7 +724,10 @@ describe("AssetLibraryFeature", () => {
     await act(async () => confirmButton.click());
     await flush();
 
-    expect(container.textContent).toContain(
+    expect(readNotificationMessages(container)).toContain(
+      "Something went wrong while completing this action.",
+    );
+    expect(container.textContent).not.toContain(
       "Something went wrong while completing this action.",
     );
     const diagnosticStatusText = Array.from(

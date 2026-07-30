@@ -2,22 +2,17 @@ import { useMemo, useState } from "react";
 import {
   SystemBuilderWorkspace,
   SystemManagementWorkspace,
-  SystemBuildReleaseWorkflow,
-  SystemDataRunTest,
-  SystemReviewRunTest,
-  SystemDeploymentWorkflow,
+  SystemBuildTestModal,
+  SystemPublishWorkspace,
 } from "../../../../modules/ui/shared/system-builder";
+import type {
+  SystemBuilderRecord,
+  SystemBuilderRevision,
+} from "../../../../modules/contracts/system-builder";
 import { TabbedPanel } from "../components/ui/TabbedPanel";
-import { AssetPlansTab } from "../features/asset-composition/components/AssetPlansTab";
-import { createThinClientAssetCompositionClient } from "../features/asset-composition/api/thinClientAssetCompositionClient";
-import { createThinClientEffectiveAssetProjectionsClient } from "../features/effective-asset-projections/api/thinClientEffectiveAssetProjectionsClient";
-import { ConversationRunTestTab } from "../features/conversations/components/ConversationRunTestTab";
 import { createThinClientSystemBuilderClient } from "../features/system-builder/api/thinClientSystemBuilderClient";
 import { createThinClientSystemBuildClient } from "../features/system-builder/api/thinClientSystemBuildClient";
-
-import { createThinClientSystemDataClient } from "../features/system-builder/api/thinClientSystemDataClient";
-import { createThinClientSystemReviewClient } from "../features/system-builder/api/thinClientSystemReviewClient";
-import { createThinClientSystemDeploymentClient } from "../features/system-builder/api/thinClientSystemDeploymentClient";
+import { createThinClientSystemPublishedLifecycleClient } from "../features/system-builder/api/thinClientSystemPublishedLifecycleClient";
 export interface SystemBuilderPageProps {
   readonly workspaceId: string;
   readonly workspaceName: string;
@@ -28,23 +23,17 @@ export function SystemBuilderPage({
 }: SystemBuilderPageProps) {
   const client = useMemo(() => createThinClientSystemBuilderClient(), []);
   const buildClient = useMemo(() => createThinClientSystemBuildClient(), []);
-  const compositionClient = useMemo(
-    () => createThinClientAssetCompositionClient(),
-    [],
-  );
-  const projectionClient = useMemo(
-    () => createThinClientEffectiveAssetProjectionsClient(),
-    [],
-  );
-  const dataClient = useMemo(() => createThinClientSystemDataClient(), []);
-  const reviewClient = useMemo(() => createThinClientSystemReviewClient(), []);
-  const deploymentClient = useMemo(
-    () => createThinClientSystemDeploymentClient(),
+  const lifecycleClient = useMemo(
+    () => createThinClientSystemPublishedLifecycleClient(),
     [],
   );
   const [activeTabId, setActiveTabId] = useState("compose");
   const [composeSystemId, setComposeSystemId] = useState<string>();
   const [activeSystemsRevision, setActiveSystemsRevision] = useState(0);
+  const [buildTarget, setBuildTarget] = useState<{
+    readonly system: SystemBuilderRecord;
+    readonly revision: SystemBuilderRevision;
+  }>();
   return (
     <section className="ui-stack ui-stack--sm" aria-labelledby="systems-title">
       <header className="ui-stack ui-stack--sm">
@@ -86,63 +75,30 @@ export function SystemBuilderPage({
                 client={client}
                 initialSystemId={composeSystemId}
                 activeSystemsRevision={activeSystemsRevision}
-                onBuildAndTest={(systemId) => {
-                  setComposeSystemId(systemId);
-                  setActiveTabId("build-release");
-                }}
+                onBuildAndTest={setBuildTarget}
               />
             ),
           },
           {
-            id: "plans",
-            label: "Plans",
+            id: "publish",
+            label: "Publish",
             content: (
-              <AssetPlansTab
+              <SystemPublishWorkspace
                 workspaceId={workspaceId}
-                client={compositionClient}
-                projectionClient={projectionClient}
-              />
-            ),
-          },
-          {
-            id: "build-release",
-            label: "Build & Release",
-            content: (
-              <SystemBuildReleaseWorkflow
-                workspaceId={workspaceId}
-                systemBuilderClient={client}
                 buildClient={buildClient}
-                defaultDeploymentProfile="thin-client"
+                lifecycleClient={lifecycleClient}
               />
-            ),
-          },
-          {
-            id: "run-test",
-            label: "Run & Test",
-            content: (
-              <div className="ui-stack ui-stack--md">
-                <ConversationRunTestTab workspaceId={workspaceId} />
-                <SystemDataRunTest
-                  workspaceId={workspaceId}
-                  client={dataClient}
-                  buildClient={buildClient}
-                />
-                <SystemReviewRunTest
-                  workspaceId={workspaceId}
-                  client={reviewClient}
-                  buildClient={buildClient}
-                />
-                <SystemDeploymentWorkflow
-                  workspaceId={workspaceId}
-                  buildClient={buildClient}
-                  deploymentClient={deploymentClient}
-                  deploymentProfiles={["campus-server", "cloud-server"]}
-                  controlSurfaceOnly
-                />
-              </div>
             ),
           },
         ]}
+      />
+      <SystemBuildTestModal
+        open={Boolean(buildTarget)}
+        workspaceId={workspaceId}
+        system={buildTarget?.system}
+        revision={buildTarget?.revision}
+        buildClient={buildClient}
+        onClose={() => setBuildTarget(undefined)}
       />
     </section>
   );

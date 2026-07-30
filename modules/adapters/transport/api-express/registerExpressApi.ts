@@ -102,6 +102,10 @@ import {
   registerSystemDeploymentApiRoutes,
   type RegisterSystemDeploymentApiRoutesDependencies,
 } from "./system-deployment/registerSystemDeploymentApiRoutes";
+import {
+  registerSystemRunWorkflowApiRoutes,
+  type RegisterSystemRunWorkflowApiRoutesDependencies,
+} from "./system-run-workflow/registerSystemRunWorkflowApiRoutes";
 
 export interface RegisterExpressApiDependencies {
   app: RegisterArtifactUploadApiRouteDependencies["app"] &
@@ -124,7 +128,8 @@ export interface RegisterExpressApiDependencies {
     RegisterConversationExecutionApiRoutesDependencies["app"] &
     RegisterSystemDataApiRoutesDependencies["app"] &
     RegisterSystemReviewApiRoutesDependencies["app"] &
-    RegisterSystemDeploymentApiRoutesDependencies["app"];
+    RegisterSystemDeploymentApiRoutesDependencies["app"] &
+    RegisterSystemRunWorkflowApiRoutesDependencies["app"];
   getHuggingFaceTokenStatus: RegisterArtifactRepoApiRoutesDependencies["getHuggingFaceTokenStatus"];
   setHuggingFaceToken: RegisterArtifactRepoApiRoutesDependencies["setHuggingFaceToken"];
   clearHuggingFaceToken: RegisterArtifactRepoApiRoutesDependencies["clearHuggingFaceToken"];
@@ -155,6 +160,7 @@ export interface RegisterExpressApiDependencies {
   listModelsUseCase: RegisterModelManagementApiRoutesDependencies["listModelsUseCase"];
   saveModelReferenceUseCase: RegisterModelManagementApiRoutesDependencies["saveModelReferenceUseCase"];
   downloadModelUseCase: RegisterModelManagementApiRoutesDependencies["downloadModelUseCase"];
+  modelDownloadTasksUseCase?: RegisterModelManagementApiRoutesDependencies["modelDownloadTasksUseCase"];
   updateModelRecordUseCase: RegisterModelManagementApiRoutesDependencies["updateModelRecordUseCase"];
   deleteModelRecordUseCase: RegisterModelManagementApiRoutesDependencies["deleteModelRecordUseCase"];
   validateModelUseCase?: RegisterModelManagementApiRoutesDependencies["validateModelUseCase"];
@@ -208,6 +214,10 @@ export interface RegisterExpressApiDependencies {
   systemReviewServices?: Omit<RegisterSystemReviewApiRoutesDependencies, "app">;
   systemDeploymentServices?: Omit<
     RegisterSystemDeploymentApiRoutesDependencies,
+    "app"
+  >;
+  systemRunWorkflowServices?: Omit<
+    RegisterSystemRunWorkflowApiRoutesDependencies,
     "app"
   >;
 }
@@ -272,6 +282,7 @@ export function registerExpressApi(
     listModelsUseCase: dependencies.listModelsUseCase,
     saveModelReferenceUseCase: dependencies.saveModelReferenceUseCase,
     downloadModelUseCase: dependencies.downloadModelUseCase,
+    modelDownloadTasksUseCase: dependencies.modelDownloadTasksUseCase,
     updateModelRecordUseCase: dependencies.updateModelRecordUseCase,
     deleteModelRecordUseCase: dependencies.deleteModelRecordUseCase,
     validateModelUseCase: dependencies.validateModelUseCase,
@@ -395,6 +406,12 @@ export function registerExpressApi(
     registerSystemDeploymentApiRoutes({
       app: dependencies.app,
       ...dependencies.systemDeploymentServices,
+    });
+  }
+  if (dependencies.systemRunWorkflowServices) {
+    registerSystemRunWorkflowApiRoutes({
+      app: dependencies.app,
+      ...dependencies.systemRunWorkflowServices,
     });
   }
 

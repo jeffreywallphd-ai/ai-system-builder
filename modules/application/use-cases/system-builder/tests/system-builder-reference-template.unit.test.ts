@@ -2,7 +2,10 @@ import { describe, expect, it } from "../../../../testing/node-test";
 import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import { createStructuredSystemBuilderRepository } from "../../../../adapters/persistence/system-builder";
 import { createWorkspaceId } from "../../../../contracts/workspace";
-import type { SystemBuilderRevision } from "../../../../contracts/system-builder";
+import {
+  readSystemBuilderConversationInteraction,
+  type SystemBuilderRevision,
+} from "../../../../contracts/system-builder";
 import { SYSTEM_FOUNDATION_PACK_V3_MANIFEST } from "../../../services/asset-packs/system-packs";
 import {
   SystemBuilderReferenceTemplateRegistry,
@@ -97,7 +100,7 @@ describe("secured data-entry system template", () => {
 });
 
 describe("controlled chatbot system template", () => {
-  it("materializes a closed, fail-closed assistant composition that passes real validation", async () => {
+  it("materializes a sample-free assistant composition that requires an authority-selected model", async () => {
     const registry = new SystemBuilderReferenceTemplateRegistry();
     const value = registry.materialize("reference.controlled-chatbot@1.0.0", {
       systemId: "controlled-chatbot",
@@ -137,15 +140,37 @@ describe("controlled chatbot system template", () => {
           item.definitionRef.version === "3.0.0",
       ),
     ).toBe(true);
+    expect(
+      value.bindings
+        .map(readSystemBuilderConversationInteraction)
+        .filter(Boolean),
+    ).toEqual([
+      {
+        schemaVersion: "1.0",
+        kind: "conversation-turn",
+        composerInstanceId: "controlled-chatbot.composer",
+        historyInstanceId: "controlled-chatbot.history-display",
+        transcriptMode: "persisted-only",
+      },
+    ]);
+    expect(JSON.stringify(value)).not.toContain("model.default");
+    expect(JSON.stringify(value)).not.toContain("sampleUserMessage");
+    expect(JSON.stringify(value)).not.toContain("sampleAssistantMessage");
     const validation = await validator.execute(value);
-    expect(validation.issues).toEqual([]);
-    expect(validation.status).toBe("valid");
+    expect(validation.status).toBe("invalid");
+    expect(
+      validation.issues.some(
+        (issue) =>
+          issue.severity === "error" &&
+          issue.message === "Model selection authority is unavailable.",
+      ),
+    ).toBe(true);
     expect(JSON.stringify(validation)).not.toContain(
       "Answer clearly, use only approved context",
     );
   });
 
-  it("creates a validated record with template-specific product copy", async () => {
+  it("creates a blocked draft until its required model is selected", async () => {
     const repository = createStructuredSystemBuilderRepository(
       createInMemoryStructuredDocumentStore(),
     );
@@ -166,7 +191,7 @@ describe("controlled chatbot system template", () => {
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.status).toBe("validated");
+    expect(result.value.status).toBe("blocked");
     expect(result.value.name).toBe("Reference system");
     expect(result.value.description).toContain("release-bound text assistant");
     const revisions = await repository.listRevisions(
@@ -174,6 +199,11 @@ describe("controlled chatbot system template", () => {
       result.value.systemId,
     );
     expectCurrentReferenceRevision(revisions[0]);
+    expect(
+      revisions[0].validationIssues.some(
+        (issue) => issue.message === "Model selection authority is unavailable.",
+      ),
+    ).toBe(true);
     const chatShell = revisions[0].instances.find(
       (instance) =>
         String(instance.definitionRef.id) === "conversation.chat-shell",

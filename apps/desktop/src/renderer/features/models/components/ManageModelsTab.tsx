@@ -1,10 +1,12 @@
 import type { useModelsFeature } from "../hooks/useModelsFeature";
-import { TermWithHint } from "../../../../../../../modules/ui/shared";
+import { TermWithHint, TransientNotificationPublisher } from "../../../../../../../modules/ui/shared";
 
 type ModelsState = ReturnType<typeof useModelsFeature>;
 
 export function ManageModelsTab(props: { state: ModelsState }) {
   const s = props.state;
+  const emptyInventoryMessage = s.manageState.status === "success"
+    && s.manageState.message === "No model records found.";
 
   return (
     <section className="ui-stack ui-stack--sm">
@@ -46,7 +48,9 @@ export function ManageModelsTab(props: { state: ModelsState }) {
         </label>
       </div>
       <button className="ui-button" type="button" onClick={() => void s.refreshModels()}>Refresh Models</button>
-      {s.manageState.message ? <p role={s.manageState.status === "error" ? "alert" : "status"}>{s.manageState.message}</p> : null}
+      {s.manageState.status === "loading" && s.manageState.message ? <p role="status">{s.manageState.message}</p> : null}
+      {emptyInventoryMessage ? <p className="ui-text-muted" role="status">{s.manageState.message}</p> : null}
+      <TransientNotificationPublisher message={s.manageState.status !== "loading" && !emptyInventoryMessage ? s.manageState.message : undefined} title={s.manageState.status === "error" ? "Model management needs attention" : "Models updated"} tone={s.manageState.status === "error" ? "error" : "success"} source="Models" workspaceId={s.workspaceId} />
 
       {s.pendingDeleteModelRecordId ? (
         <section className="ui-panel ui-stack ui-stack--sm" role="dialog" aria-label="Model delete confirmation">

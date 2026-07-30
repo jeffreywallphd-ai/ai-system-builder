@@ -87,6 +87,7 @@ export class RegisterResourceBackedViewAsAssetInstanceUseCase {
         includeMetadata: true,
         includeResourceBackings: true,
         includeValidation: true,
+        workspaceId: command.workspaceId,
       });
       if (!detail) {
         return failureResult(failure("not-found", "Resource-backed view was not found.", [
@@ -109,7 +110,7 @@ export class RegisterResourceBackedViewAsAssetInstanceUseCase {
       if (targetResult.ok === false) return failureResult(targetResult.failure);
       const { definition, definitionRef } = targetResult;
 
-      const duplicateResult = await this.findDuplicate(identityResult.sourceIdentity, definitionRef);
+      const duplicateResult = await this.findDuplicate(command.workspaceId!, identityResult.sourceIdentity, definitionRef);
       if (duplicateResult.result) return duplicateResult.result;
 
       const createdAt = this.now();
@@ -226,6 +227,7 @@ export class RegisterResourceBackedViewAsAssetInstanceUseCase {
   }
 
   private async findDuplicate(
+    workspaceId: string,
     sourceIdentity: AssetSourceIdentity,
     definitionRef: AssetReference,
   ): Promise<{ readonly result?: AssetMutationResult; readonly diagnostics: readonly AssetMutationDiagnostic[] }> {
@@ -234,7 +236,7 @@ export class RegisterResourceBackedViewAsAssetInstanceUseCase {
         limit: this.duplicateSearchLimit,
       }),
     ];
-    const list = await this.dependencies.instanceRepository.listInstances({ limit: this.duplicateSearchLimit });
+    const list = await this.dependencies.instanceRepository.listInstances({ limit: this.duplicateSearchLimit, workspaceId });
     const matching = list.instances.filter((instance) => storedDeduplicationKey(instance) === sourceIdentity.deduplicationKey);
     const exact = matching.find((instance) => sameDefinitionRef(instance.definitionRef, definitionRef));
     if (exact) {
@@ -298,6 +300,7 @@ export class RegisterResourceBackedViewAsAssetInstanceUseCase {
       metadata: sanitizeAssetMetadata({
         resourceBackedRegistration: true,
         assetRegistration: {
+          workspaceId: input.command.workspaceId,
           operation: REGISTER_OPERATION,
           createdAt: input.createdAt,
           sourceIdentity: input.sourceIdentity,

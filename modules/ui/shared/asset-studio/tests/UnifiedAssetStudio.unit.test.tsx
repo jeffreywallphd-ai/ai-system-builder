@@ -15,6 +15,7 @@ import {
   SavedAssetDrafts,
   createAssetStudioEditorState,
 } from "../UnifiedAssetStudio";
+import { NotificationTestHarness, readNotificationMessages } from "../../notifications/tests/NotificationTestHarness";
 
 const dom = new JSDOM("<!doctype html><html><body></body></html>");
 (globalThis as any).window = dom.window;
@@ -123,11 +124,13 @@ describe("Unified Asset Studio", () => {
 
     await act(async () => {
       root.render(
-        <AssetStudioWorkspace
-          workspaceId="workspace-a"
-          client={createClient({ readAssetDraft })}
-          initialDraftId="studio-draft-1"
-        />,
+        <NotificationTestHarness>
+          <AssetStudioWorkspace
+            workspaceId="workspace-a"
+            client={createClient({ readAssetDraft })}
+            initialDraftId="studio-draft-1"
+          />
+        </NotificationTestHarness>,
       );
       await Promise.resolve();
     });
@@ -161,6 +164,9 @@ describe("Unified Asset Studio", () => {
       savedView.resources[1].content,
       savedView.resources[2].content,
     ]);
+    expect(readNotificationMessages(container)).not.toContain(
+      "Saved draft reopened with its semantic data and backing resources.",
+    );
   });
 
   it("lists only unpublished saved assets and opens the selected draft", async () => {
@@ -299,18 +305,20 @@ describe("Unified Asset Studio", () => {
 
     await act(async () => {
       root.render(
-        <SavedAssetDrafts
-          workspaceId="workspace-a"
-          client={createClient({ listAssetDrafts: listAssetDrafts as any })}
-          onOpenDraft={() => undefined}
-        />,
+        <NotificationTestHarness>
+          <SavedAssetDrafts
+            workspaceId="workspace-a"
+            client={createClient({ listAssetDrafts: listAssetDrafts as any })}
+            onOpenDraft={() => undefined}
+          />
+        </NotificationTestHarness>,
       );
       await Promise.resolve();
     });
 
-    const alert = container.querySelector("[role='alert']");
-    expect(alert?.textContent).toBe("Saved assets are unavailable.");
-    expect(alert?.textContent).not.toContain("stack");
+    expect(readNotificationMessages(container)).toContain("Saved assets are unavailable.");
+    expect(container.textContent).not.toContain("Saved assets are unavailable.");
+    expect(readNotificationMessages(container).join(" ")).not.toContain("stack");
     expect(
       container
         .querySelector(".asset-studio--saved")

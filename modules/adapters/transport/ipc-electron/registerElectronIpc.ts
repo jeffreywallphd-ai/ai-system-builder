@@ -82,6 +82,10 @@ import {
   registerSystemDeploymentIpc,
   type RegisterSystemDeploymentIpcDependencies,
 } from "./system-deployment/registerSystemDeploymentIpc";
+import {
+  registerSystemRunWorkflowIpc,
+  type RegisterSystemRunWorkflowIpcDependencies,
+} from "./system-run-workflow/registerSystemRunWorkflowIpc";
 export type {
   AsyncFeatureProvider,
   LazyProvidedObjectOptions,
@@ -113,6 +117,7 @@ export interface RegisterElectronIpcDependencies {
   systemData?: RegisterSystemDataIpcDependencies;
   systemReview?: RegisterSystemReviewIpcDependencies;
   systemDeployment?: RegisterSystemDeploymentIpcDependencies;
+  systemRunWorkflow?: RegisterSystemRunWorkflowIpcDependencies;
   recordMilestone?: DesktopIpcRegistrationMilestoneRecorder;
 }
 
@@ -225,6 +230,11 @@ export function registerElectronIpc(
       registerSystemDeploymentIpc(dependencies.systemDeployment!),
     );
   }
+  if (dependencies.systemRunWorkflow) {
+    registerGroup(dependencies.recordMilestone, "system-run-workflow-group", () =>
+      registerSystemRunWorkflowIpc(dependencies.systemRunWorkflow!),
+    );
+  }
 }
 
 export type {
@@ -247,4 +257,5 @@ export type {
   RegisterSystemBuilderIpcDependencies,
   RegisterSystemReviewIpcDependencies,
   RegisterSystemDeploymentIpcDependencies,
+  RegisterSystemRunWorkflowIpcDependencies,
 };

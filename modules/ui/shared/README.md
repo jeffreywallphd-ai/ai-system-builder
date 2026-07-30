@@ -1,6 +1,33 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
 - User-facing glossary hints live in `modules/ui/shared/glossary`; add or update entries when introducing novel form-field or detail-label terms.
+- Global renderer notifications live in `modules/ui/shared/notifications`. Desktop
+  and thin-client shells mount one provider, place the bell immediately before
+  Settings, and render the fixed dropdown/toast viewport below the top bar.
+  Transient messages remain visible for five seconds before a short fade;
+  activity records use bounded structured progress and persist in the dropdown.
+  Keep records workspace-filtered, bounded, sanitized, and free of paths,
+  secrets, stacks, prompts, logs, and raw provider/runtime payloads. Contextual
+  validation, blocking diagnostics, empty state, loading state, and form help
+  remain inline rather than being converted into transient notifications.
+  Draft edits must stay quiet: do not publish or render automatic messages that
+  merely announce a local change or remind the user to save. Use a compact dirty
+  state affordance instead, and show save guidance only after a save attempt or
+  when another requested action is genuinely blocked by unsaved work.
+  Routine successful reads must also stay quiet when the resulting content
+  already confirms success, including initial loads, refreshes, searches, and
+  detail selection. Keep empty results contextual and inline. Do not publish a
+  separate queued message when durable task activity already represents the
+  same background work.
+  Existing feature state should publish terminal outcomes through
+  `TransientNotificationPublisher`; authoritative long-running work should use
+  the typed notification-center task API. Every producer supplies a stable,
+  user-facing `source`, the owning `workspaceId` when applicable, and bounded
+  safe copy. Do not render the same transient outcome locally. Add every new or
+  changed alert/status surface to the classified inventory in
+  `notifications/tests/notificationMigrationInventory.ts`; its guard permits
+  necessary contextual feedback while preventing removed page-level patterns
+  from returning.
 - Keep glossary hint buttons off broad page headings and descriptive home-area cards. Use them beside form labels, filters, and compact detail rows where users need help understanding what to enter or read.
 - Shared buttons use the centralized controls stylesheet. Keep primary and
   outline buttons flat and rounded. Outline actions must include both `ui-button`
@@ -117,38 +144,59 @@
   and must not request the Composer layout catalog. Request it only when Edit
   system, Create system, successful template creation, or an active Open in
   Compose handoff needs it.
-- The shared System Builder Build & Release workflow lives beside the editor in
-  `modules/ui/shared/system-builder`. Keep exact revision selection, deployment
-  profile, build diagnostics/evidence, approval, immutable release history, and
-  comparison semantics in this shared presenter. Host clients may translate
-  transport envelopes only; they must not generate releases or bypass artifact
-  verification in the renderer.
-- The shared `SystemDataRunTest` presenter consumes only an approved release
-  descriptor and narrow CRUD/audit client. It renders native labeled controls,
-  summary plus field errors, bounded lists, explicit masked values, optimistic
-  conflicts, and safe audit evidence identically in desktop and thin client.
-  Authorization, schema validation, masking, and audit decisions remain in the
-  trusted application layer.
-- The shared `ConversationRunTest` presenter consumes actual execution-plan
-  summaries plus the controlled conversation client. Keep execution-plan
-  identity intact, use application-projected actions/availability, bound
-  message and transcript rendering, preserve the accessible live log, and show
-  unsupported capabilities truthfully. It must not accept composition-plan ids,
-  expose protected instruction/provider payloads, or call a provider directly.
-- The shared `SystemReviewRunTest` presenter consumes one approved release and
-  the narrow release-bound review client. Keep release selection, bounded native
-  name filtering, masked detail, shared artifact previews, safe audit evidence,
-  empty/loading/failure states, and object-URL cleanup identical in desktop and
-  thin client. It must not accept caller-selected principals, expose paths or
-  provider payloads, parse content in host surfaces, or turn unsupported types
-  into embedded active content.
-- The shared `SystemDeploymentWorkflow` consumes approved-release summaries and
-  the narrow deployment lifecycle client. Keep install, compatibility,
-  activation/readiness, rollback, revocation, bounded run history, and safe
-  audit states identical in desktop and thin client. The thin surface must say
-  that execution remains server-owned; renderers must never supply principal,
-  organization, host capabilities, runtime ABI, sandbox qualification, paths,
-  credentials, or raw runtime output.
+- The shared System Builder lifecycle uses a focused Build & test modal from
+  Compose and a separate Publish workspace in
+  `modules/ui/shared/system-builder`. The modal receives one exact saved system
+  revision and never accepts renderer-selected deployment, capability, trust,
+  ABI, or toolchain policy. Publish consumes the application-owned systems/build
+  projection and requires explicit confirmation before calling release approval.
+  Host clients may translate transport envelopes only; they must not generate
+  releases or bypass lock and artifact verification in the renderer.
+- Published-build lifecycle clients expose only read and invoke operations over
+  exact release identity, a projected action, and an opaque expected revision.
+  Shared UI must render only the application-projected next actions: Install;
+  then Start, Deactivate, or Uninstall while stopped; Stop while running; and
+  Activate or Uninstall while inactive. Visual starts consume only a bounded
+  host launch descriptor and open the system automatically; service starts have
+  no Open System control. Deployment/run IDs and host policy never belong in
+  renderer state or form fields.
+- Build & test preparation is authoritative only after the application re-reads
+  the exact revision, validates it, and resolves every part against the same
+  host-owned target profile used by the build command. Keep resolver diagnostics
+  and technical policy out of routine UI results. The automated packaged
+  lifecycle qualifies Windows Electron and local Chrome keyboard, semantic,
+  reflow, and axe checks; physical screen-reader and other-platform evidence is
+  separate controlled qualification and must not be inferred from that run.
+- Message-composer properties use the shared sanitized compatible-model query
+  and require one workspace model resource before a controlled chatbot can
+  validate. Keep the picker lazy, accessible, and bounded. Do not expose the
+  model binding through Advanced JSON, accept arbitrary provider/model/path
+  text, seed reference transcript messages, or infer a default model.
+- The shared `SystemRunWorkflow` remains the reusable advanced workflow
+  presenter, but desktop and thin client do not mount it as a standalone
+  Systems tab. It discovers bounded application-owned profiles,
+  prepares only the explicitly opened exact source, renders finite field and
+  result primitives, validates local input shape, masks sensitive review
+  values, and requires explicit confirmation for change or execution actions.
+  Renderers must not choose authority, policy, host capabilities, runtime ABI,
+  sandbox qualification, paths, credentials, or raw provider/runtime output.
+  Artifact previews stay inert and bounded, and image object URLs are revoked
+  when results or workspace context change.
+- Publish mounts the shared lifecycle cards in both hosts. Each card reads one
+  exact published release, renders only application-projected eligible actions,
+  disables duplicate submissions, and uses the opaque revision as a freshness
+  guard. On desktop, a visual Start prepares the host runtime and opens or
+  focuses the exact immutable revision in a dedicated sandboxed Electron window;
+  Stop closes its conversation session and window without erasing the transcript.
+  A release mismatch, unavailable source, repeated catalog cursor, or catalog
+  bound fails closed. The runtime renderer can read its bounded transcript and
+  submit messages, but it cannot choose workspace, release, instance, model,
+  storage, approval, or runtime authority.
+- Add a future workflow by registering an application handler that projects the
+  existing authoritative use cases into the shared contract. Do not add a new
+  reference-specific presenter, host page section, or renderer-owned policy.
+  The generic host clients only translate trusted transport envelopes and
+  sanitized failures.
 - Automated semantic tests for these shared asset/system presenters are
   regression evidence, not a WCAG conformance claim. Each supported desktop and
   thin-client profile still requires the keyboard, focus, zoom/reflow,
@@ -156,7 +204,10 @@
   `docs/operations/asset-system-support-qualification.md`.
 - `npm run test:visual-composer` runs the shared one-worker Composer workflow
   against a freshly packaged Windows Electron application and local Chrome with
-  isolated state and sanitized ignored evidence. Its pointer, keyboard-cancel,
-  undo/redo, axe, 320-pixel reflow, forced-colors, and reduced-motion checks are
-  automated regression evidence; they do not replace physical touch,
-  assistive-technology, manual security, or other-platform qualification.
+  isolated state and sanitized ignored evidence. The packaged workflow also
+  starts the controlled chatbot in a separate window, submits button and keyboard
+  turns, verifies restart persistence, and checks physical runtime-database
+  isolation. Its pointer, keyboard-cancel, undo/redo, axe, 320-pixel reflow,
+  forced-colors, reduced-motion, and runtime checks are automated regression
+  evidence; they do not replace physical touch, assistive-technology, manual
+  security, real-model quality, or other-platform qualification.

@@ -312,11 +312,19 @@ export class TrainModelUseCase {
     const generated = trainingResult.generatedModelCandidate;
     const registration = normalizedRequest.output.registration;
     const destination = normalizedRequest.output.destination;
-    const localStorageResult = destination.local.enabled
+    const stagedStorageResult = destination.local.enabled || destination.huggingFace?.enabled
       ? await this.storeGeneratedModelLocally(normalizedRequest, trainingResult, generated)
       : undefined;
+    const localStorageResult = destination.local.enabled ? stagedStorageResult : undefined;
     const publishedResult = destination.huggingFace?.enabled
-      ? await this.publishGeneratedModel(normalizedRequest, statusRecord.requestId, generated)
+      ? await this.publishGeneratedModel(
+        normalizedRequest,
+        statusRecord.requestId,
+        {
+          ...generated,
+          localPath: stagedStorageResult?.localPath,
+        },
+      )
       : undefined;
     const trainingValidation = generated.metadata && typeof generated.metadata["validation"] === "object"
       ? generated.metadata["validation"] as Record<string, unknown>

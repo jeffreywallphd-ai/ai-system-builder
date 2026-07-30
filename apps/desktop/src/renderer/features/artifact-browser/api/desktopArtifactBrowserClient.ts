@@ -74,11 +74,16 @@ export interface DesktopArtifactBrowserClient {
     input?: { workspaceId?: string; maximumBytes?: number },
   ) => Promise<{ mediaType?: string; bytes: Uint8Array }>;
   publishArtifactToHuggingFace: (input: {
+    workspaceId?: string;
     artifactId: string;
     repository: string;
     path: string;
     revision?: string;
     mediaType?: string;
+    repositoryCreation?: {
+      approved: true;
+      visibility: "private" | "public";
+    };
   }) => Promise<DesktopPublishedBacking>;
   verifyPublishedArtifactBacking: (input: {
     artifactId: string;
@@ -158,16 +163,6 @@ function ensureSuccess<T>(
   }
 
   return pick(envelope.value);
-}
-
-function toArtifactMediaDataUrl(bytes: Uint8Array, mediaType?: string): string {
-  let binary = "";
-  const chunkSize = 0x8000;
-  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
-    const chunk = bytes.subarray(offset, offset + chunkSize);
-    binary += String.fromCharCode(...chunk);
-  }
-  return `data:${mediaType ?? "application/octet-stream"};base64,${btoa(binary)}`;
 }
 
 export function createDesktopArtifactBrowserClient(): DesktopArtifactBrowserClient {
@@ -395,13 +390,24 @@ export function createDesktopArtifactBrowserClient(): DesktopArtifactBrowserClie
         "Failed to read artifact media.",
       );
       const normalizedBytes = normalizeArtifactMediaBytes(media.bytes);
-
-      return toArtifactMediaDataUrl(normalizedBytes, media.mediaType);
+      if (typeof URL.createObjectURL !== "function") {
+        throw new Error("Artifact media preview URLs are unavailable.");
+      }
+      const buffer = normalizedBytes.slice().buffer;
+      return URL.createObjectURL(
+        new Blob([buffer], {
+          type: media.mediaType ?? "application/octet-stream",
+        }),
+      );
     },
 
     async publishArtifactToHuggingFace(input) {
+      if (!input.workspaceId) {
+        throw new Error("Workspace id is required to publish an artifact.");
+      }
       return ensureSuccess(
         await desktopApi.publishArtifactToRepo({
+          workspaceId: input.workspaceId,
           artifactId: input.artifactId,
           target: {
             provider: "huggingface",
@@ -410,7 +416,8 @@ export function createDesktopArtifactBrowserClient(): DesktopArtifactBrowserClie
             revision: input.revision,
           },
           mediaType: input.mediaType,
-        }),
+          repositoryCreation: input.repositoryCreation,
+        }, { workspaceId: input.workspaceId }),
         (value) => value as DesktopPublishedBacking,
         "Failed to publish artifact.",
       );

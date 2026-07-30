@@ -8,6 +8,8 @@ import type {
   SystemBuilderRevision,
   SystemBuilderComposerCatalog,
   SystemBuilderComposerAssetDetail,
+  ListSystemBuilderModelOptionsQuery,
+  SystemBuilderModelOptionCatalog,
   ListSystemBuilderManagementQuery,
   ReadSystemBuilderComposerAssetQuery,
   SystemBuilderManagementPage,
@@ -46,6 +48,10 @@ export const DESKTOP_SYSTEM_BUILDER_OPERATIONS = {
   readComposerAsset: createTransportOperation(
     "system-builder",
     "read-composer-asset",
+  ),
+  listModelOptions: createTransportOperation(
+    "system-builder",
+    "list-model-options",
   ),
   previewLayoutChange: createTransportOperation(
     "system-builder",
@@ -133,6 +139,12 @@ export type DesktopReadSystemBuilderComposerAssetRequest = IpcRequest<
 >;
 export type DesktopSystemBuilderComposerAssetDetailResponse =
   IpcResponse<SystemBuilderComposerAssetDetail>;
+export type DesktopListSystemBuilderModelOptionsRequest = IpcRequest<
+  ListSystemBuilderModelOptionsQuery,
+  (typeof DESKTOP_SYSTEM_BUILDER_OPERATIONS)["listModelOptions"]
+>;
+export type DesktopSystemBuilderModelOptionCatalogResponse =
+  IpcResponse<SystemBuilderModelOptionCatalog>;
 export type DesktopSystemBuilderLayoutChangePreviewResponse =
   IpcResponse<SystemBuilderLayoutChangePreview>;
 export type DesktopSystemBuilderFoundationUpgradePreviewResponse =

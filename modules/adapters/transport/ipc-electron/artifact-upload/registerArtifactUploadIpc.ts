@@ -8,6 +8,7 @@ import {
   DESKTOP_ARTIFACT_UPLOAD_REQUEST_CHANNEL,
   DESKTOP_ARTIFACT_UPLOAD_RESPONSE_CHANNEL,
   createDesktopArtifactUploadPolicyReadSuccessResponse,
+  createDesktopArtifactUploadRequest,
   createDesktopArtifactUploadSuccessResponse,
   createIpcError,
   createIpcFailureResponse,
@@ -18,7 +19,10 @@ import type {
   StoreArtifactUploadUseCaseResult,
 } from "../../../../application/use-cases";
 import type { ArtifactUploadAcceptedTypePolicy } from "../../../../contracts/artifact-upload";
-import type { IpcMainHandlePort } from "../ipcMainHandlePort";
+import type {
+  IpcMainHandlePort,
+  IpcSenderTrustPolicy,
+} from "../ipcMainHandlePort";
 export type { IpcMainHandlePort } from "../ipcMainHandlePort";
 
 export interface StoreArtifactUploadUseCasePort {
@@ -36,6 +40,7 @@ export interface StoreArtifactUploadUseCasePort {
 
 export interface RegisterArtifactUploadIpcDependencies {
   ipcMain: IpcMainHandlePort;
+  senderTrust: IpcSenderTrustPolicy;
   storeArtifactUploadUseCase: StoreArtifactUploadUseCasePort;
 }
 
@@ -85,24 +90,68 @@ export function mapStoreArtifactUploadResultToIpcResponse(
 
 export function createDesktopArtifactUploadIpcHandler(
   storeArtifactUploadUseCase: StoreArtifactUploadUseCasePort,
+  senderTrust: IpcSenderTrustPolicy,
 ) {
   return async (
-    _event: unknown,
+    event: unknown,
     request: DesktopArtifactUploadRequest,
   ): Promise<DesktopArtifactUploadResponse> => {
-    const mapping = mapIpcRequestPayload(request.payload);
+    if (!senderTrust.isTrustedSender(event)) {
+      return createIpcFailureResponse(
+        createIpcError(
+          DESKTOP_ARTIFACT_UPLOAD_RESPONSE_CHANNEL,
+          "forbidden",
+          "The desktop IPC sender is not trusted.",
+          {
+            requestId: readOptionalRequestText(request, "requestId"),
+            correlationId: readOptionalRequestText(request, "correlationId"),
+          },
+        ),
+      );
+    }
+
+    let normalizedRequest: DesktopArtifactUploadRequest;
+    try {
+      normalizedRequest = createDesktopArtifactUploadRequest(request.payload, {
+        requestId: readOptionalRequestText(request, "requestId"),
+        correlationId: readOptionalRequestText(request, "correlationId"),
+      });
+    } catch (error) {
+      return createIpcFailureResponse(
+        createIpcError(
+          DESKTOP_ARTIFACT_UPLOAD_RESPONSE_CHANNEL,
+          "validation",
+          error instanceof Error ? error.message : "Invalid upload request.",
+          {
+            requestId: readOptionalRequestText(request, "requestId"),
+            correlationId: readOptionalRequestText(request, "correlationId"),
+          },
+        ),
+      );
+    }
+
+    const mapping = mapIpcRequestPayload(normalizedRequest.payload);
     const result = await storeArtifactUploadUseCase.execute(
       mapping.command,
       mapping.commandContext,
       {
-        requestId: request.requestId,
-        correlationId: request.correlationId,
-        workspaceId: request.payload.workspaceId,
+        requestId: normalizedRequest.requestId,
+        correlationId: normalizedRequest.correlationId,
+        workspaceId: normalizedRequest.payload.workspaceId,
       },
     );
 
-    return mapStoreArtifactUploadResultToIpcResponse(result, request);
+    return mapStoreArtifactUploadResultToIpcResponse(result, normalizedRequest);
   };
+}
+
+function readOptionalRequestText(
+  request: unknown,
+  field: "requestId" | "correlationId",
+): string | undefined {
+  if (!request || typeof request !== "object") return undefined;
+  const value = (request as Record<string, unknown>)[field];
+  return typeof value === "string" ? value : undefined;
 }
 
 export function registerArtifactUploadIpc(
@@ -110,7 +159,10 @@ export function registerArtifactUploadIpc(
 ): void {
   dependencies.ipcMain.handle(
     DESKTOP_ARTIFACT_UPLOAD_REQUEST_CHANNEL.value,
-    createDesktopArtifactUploadIpcHandler(dependencies.storeArtifactUploadUseCase),
+    createDesktopArtifactUploadIpcHandler(
+      dependencies.storeArtifactUploadUseCase,
+      dependencies.senderTrust,
+    ),
   );
 
   dependencies.ipcMain.handle(

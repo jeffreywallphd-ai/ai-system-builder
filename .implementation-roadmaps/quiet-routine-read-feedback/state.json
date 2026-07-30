@@ -1,0 +1,413 @@
+{
+  "blockers": [],
+  "chunks": [
+    {
+      "areas": [
+        "Desktop model, artifact browser, Hugging Face import, image generation, dataset preparation, and Asset Studio feedback",
+        "Thin-client model management, artifact browser, and Hugging Face import feedback",
+        "Shared notification feedback guidance"
+      ],
+      "chunkId": "quiet-read-surfaces",
+      "completedAt": "2026-07-30T00:24:13Z",
+      "criteriaIds": [
+        "approved-routine-messages-removed",
+        "actionable-feedback-preserved"
+      ],
+      "documentation": [
+        "Shared UI README quiet-read and durable-activity guidance",
+        "Desktop styling context pack quiet-read guidance"
+      ],
+      "feedbackAddressed": [],
+      "id": "remove-routine-read-feedback-quiet-read-surfaces",
+      "incrementId": "remove-routine-read-feedback",
+      "summary": "Removed the twelve approved routine read, reopen, training-settings-load, and duplicate queue messages while retaining contextual empty states and actionable outcomes.",
+      "tests": [
+        "Focused desktop and thin-client notification scenarios passed",
+        "Notification migration guard passed",
+        "Desktop and thin-client renderer typechecks passed",
+        "Production-source prohibited-copy scan returned no matches"
+      ],
+      "title": "Quiet read surfaces"
+    },
+    {
+      "areas": [
+        "Notification migration production-source guard",
+        "Desktop and thin-client notification regression tests",
+        "Repository documentation, architecture, build, package, and full-suite gates"
+      ],
+      "chunkId": "feedback-guard-and-qualification",
+      "completedAt": "2026-07-30T00:32:33Z",
+      "criteriaIds": [
+        "approved-routine-messages-removed",
+        "actionable-feedback-preserved",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Shared UI README",
+        "Desktop styling context pack"
+      ],
+      "feedbackAddressed": [],
+      "id": "remove-routine-read-feedback-feedback-guard-and-qualification",
+      "incrementId": "remove-routine-read-feedback",
+      "summary": "Added production-source anti-drift coverage, documented the quiet-read boundary, and completed focused and repository-wide qualification.",
+      "tests": [
+        "Focused notification scenarios and migration guard passed",
+        "npm run docs:check passed",
+        "npm run architecture:check passed",
+        "npm test passed with 2753 passed, 3 skipped, and 0 failed",
+        "npm run build:thin-client passed",
+        "npm run package passed",
+        "git diff --check passed"
+      ],
+      "title": "Feedback guard and qualification"
+    }
+  ],
+  "completion": {
+    "completedAt": "2026-07-30T00:32:45Z",
+    "summary": "The approved unnecessary-message cleanup is implemented, documented, protected by regression coverage, and qualified by focused tests, the full repository suite, production builds, and roadmap validation."
+  },
+  "createdAt": "2026-07-30T00:15:33Z",
+  "currentIncrementId": null,
+  "decisions": [],
+  "discovery": {
+    "constraints": [
+      "Implement all twelve user-approved recommendations from the message audit.",
+      "Retain empty-result guidance inline where a blank result could be ambiguous.",
+      "Retain errors, validation, security confirmations, blockers, mutation outcomes, and long-running task completion.",
+      "Retain the System Run preparation safety message that distinguishes preparation from execution.",
+      "Do not change retrieval, persistence, authorization, runtime, or background-task semantics.",
+      "Preserve unrelated uncommitted work."
+    ],
+    "decisionRequired": false,
+    "recordedAt": "2026-07-30T00:15:33Z",
+    "securityImpact": {
+      "abuseCases": [],
+      "assets": [],
+      "controls": [],
+      "disposition": "not-security-relevant",
+      "residualRisks": [],
+      "summary": "This renderer-only presentation refinement suppresses routine success copy and reroutes empty states inline; it does not alter trust boundaries, authority, data access, persistence, transport, executable input, dependencies, or fail-closed behavior.",
+      "trustBoundaries": [],
+      "verification": []
+    },
+    "sources": [
+      {
+        "note": "Enumerates global publishers and contextual message surfaces across desktop, thin client, and shared UI.",
+        "title": "Notification migration inventory",
+        "url": "modules/ui/shared/notifications/tests/notificationMigrationInventory.ts"
+      },
+      {
+        "note": "Provides the production-source anti-drift boundary.",
+        "title": "Notification migration guard",
+        "url": "modules/ui/shared/notifications/tests/notificationMigrationGuard.unit.test.ts"
+      },
+      {
+        "note": "Defines the quiet-state and actionable-feedback policy.",
+        "title": "Shared UI feedback guidance",
+        "url": "modules/ui/shared/README.md"
+      }
+    ],
+    "summary": "The approved audit identified twelve groups of low-value messages caused by automatic initialization, read-only browse/load/selection actions, automatic draft reopening, and a queue notification duplicated by durable download activity."
+  },
+  "evidence": [
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "approved-routine-messages-removed",
+      "id": "evidence-1",
+      "incrementId": "remove-routine-read-feedback",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T00:32:36Z",
+      "summary": "Focused UI regressions, the TS/TSX production-source guard, and an explicit prohibited-copy scan confirm that all twelve approved routine message groups no longer surface."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "actionable-feedback-preserved",
+      "id": "evidence-2",
+      "incrementId": "remove-routine-read-feedback",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T00:32:38Z",
+      "summary": "Focused tests confirm empty model and dataset results remain contextual and inline, while the full 2756-test repository run confirms errors, blockers, mutations, safety guidance, and durable activity remain intact."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-3",
+      "incrementId": "remove-routine-read-feedback",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T00:32:39Z",
+      "summary": "The final scope remains not security relevant: only renderer presentation copy and routing changed; authorization, trust boundaries, data access, persistence, transport, runtime behavior, failures, blockers, and security confirmations are unchanged."
+    }
+  ],
+  "feedback": [],
+  "finalApproval": {
+    "approvedAt": "2026-07-30T00:34:33Z",
+    "note": "The user explicitly approved the completed overall unnecessary-message cleanup."
+  },
+  "history": [
+    {
+      "eventFingerprint": "36e21d01925bce5d60f036ae324af4a20f4714e318f253613b56551bf860b288",
+      "recordedAt": "2026-07-30T00:15:33Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "3720be19e6600dc4727dd5c469ef583f832cfd3eb9c4606acb357bc5720a2c0e",
+      "recordedAt": "2026-07-30T00:15:33Z",
+      "sequence": 2,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "4f74b34f0ea049a481a042ddde28014970d8bcd24761e4c1daba1d808fc0f942",
+      "recordedAt": "2026-07-30T00:15:34Z",
+      "sequence": 3,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "332a762182dcb4feb87a43789b53a228222d395ffd26879ab9a3492781615baf",
+      "recordedAt": "2026-07-30T00:15:34Z",
+      "sequence": 4,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "f9f40d4bc8be840add980c739c7f4c2a2146cb4a29e76abc3a00587105203009",
+      "recordedAt": "2026-07-30T00:15:34Z",
+      "sequence": 5,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "b02177e90f9bc72db23b63c32fef5207e6acfbee14d6c72133274c0d22a73a1a",
+      "recordedAt": "2026-07-30T00:15:34Z",
+      "sequence": 6,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "6ea69962056ca0b62be3c2f54206b090fef4e8750194656cf804f94241bbb154",
+      "recordedAt": "2026-07-30T00:24:13Z",
+      "sequence": 7,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "3f3e662686ef5c60d3955972f47bfef49fff48ce411644b0213e6cae1735b882",
+      "recordedAt": "2026-07-30T00:32:33Z",
+      "sequence": 8,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "cb4e9d32ea1e84f1b794817a5f568a3c4e0b404b7b1c06ec5ea730db6a9b88c3",
+      "recordedAt": "2026-07-30T00:32:36Z",
+      "sequence": 9,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "19823ae682167775d297a986e2bc01ede3172e40082eb71c1ec060ec5804005c",
+      "recordedAt": "2026-07-30T00:32:38Z",
+      "sequence": 10,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3224954bc001b947dcfe2d9a7e6940b6439e9f9d47bc6d5d6367a015e47ce227",
+      "recordedAt": "2026-07-30T00:32:39Z",
+      "sequence": 11,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "fdc8193c5751f7c626658ca3f07d6e21d493d3d91ec7a26c37fedb7ea051eb71",
+      "recordedAt": "2026-07-30T00:32:42Z",
+      "sequence": 12,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "282855882d186d9f6f76566cfc88039a7208aee95d500af7e9403fad193d7d88",
+      "recordedAt": "2026-07-30T00:32:45Z",
+      "sequence": 13,
+      "type": "roadmap-completed"
+    },
+    {
+      "eventFingerprint": "b6860e5656246793eac6299af4b0218f74775e8b74a0ceeaff815324209a271f",
+      "recordedAt": "2026-07-30T00:34:33Z",
+      "sequence": 14,
+      "type": "final-approval-recorded"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "All twelve approved routine load, browse, selection, reopen, training-settings-load, and duplicate queue message groups no longer create transient or inline success feedback.",
+          "id": "approved-routine-messages-removed",
+          "qualification": "local"
+        },
+        {
+          "description": "Empty results remain clear inline and errors, validation, blockers, mutation outcomes, safety guidance, and durable task activity remain available.",
+          "id": "actionable-feedback-preserved",
+          "qualification": "local"
+        },
+        {
+          "description": "The not-security-relevant disposition is confirmed and no security, authorization, or failure-path feedback is removed.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-30T00:32:42Z",
+      "completedChunks": [
+        "quiet-read-surfaces",
+        "feedback-guard-and-qualification"
+      ],
+      "completionSummary": "Routine successful reads and duplicate queued-download feedback are quiet across desktop and thin client, contextual and actionable feedback is preserved, anti-drift coverage is active, and all completion gates passed.",
+      "deliverables": [
+        "Removal of the twelve approved routine-message groups",
+        "Inline empty-result states for model inventory, model browse, and namespace searches",
+        "Removal of the thin-client queue notification duplicated by durable download activity",
+        "Cross-TS/TSX regression coverage for prohibited routine-success copy",
+        "Focused and repository completion evidence"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "Removing save, import, delete, publish, validation, or lifecycle outcomes",
+        "Removing errors, blockers, security confirmations, or preparation-versus-execution guidance",
+        "Changing model downloads, artifact retrieval, inventory refresh, or persistence behavior"
+      ],
+      "id": "remove-routine-read-feedback",
+      "number": 1,
+      "objective": "Remove the approved routine success messages across supported renderer surfaces without hiding empty states, failures, mutations, safety guidance, or durable activity.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "A visible result list or detail panel is sufficient confirmation of a successful read.",
+          "Empty-result guidance remains useful inline but should not enter the global notification history.",
+          "Durable model-download activity is the authoritative queued/progress/completion surface."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "approved-routine-messages-removed",
+              "actionable-feedback-preserved"
+            ],
+            "id": "quiet-read-surfaces",
+            "outcome": "All approved routine read and duplicate queue messages are removed with empty states and actionable feedback preserved.",
+            "title": "Quiet read surfaces"
+          },
+          {
+            "criteriaIds": [
+              "approved-routine-messages-removed",
+              "actionable-feedback-preserved",
+              "security-impact-reviewed"
+            ],
+            "id": "feedback-guard-and-qualification",
+            "outcome": "Focused tests, source guards, and completion gates qualify the quiet-feedback boundary and security disposition.",
+            "title": "Feedback guard and qualification"
+          }
+        ],
+        "completionTests": [
+          "Documentation and architecture checks",
+          "Full repository non-browser suite",
+          "Desktop Electron Forge package"
+        ],
+        "documentation": [
+          "Successor roadmap and temporary implementation report"
+        ],
+        "fingerprint": "94a611ff47e6dfd5a855363394bec46b390862a2f1fbc11f4ac6aa4a34741cac",
+        "focusedTests": [
+          "Desktop and thin-client model feature tests",
+          "Desktop and thin-client artifact browser and Hugging Face import tests",
+          "Desktop image generation, Asset Studio, and dataset preparation tests",
+          "Notification migration guard",
+          "Desktop and thin-client renderer typechecks"
+        ],
+        "recordedAt": "2026-07-30T00:15:34Z",
+        "rollback": "Restore only removed copy and message-routing predicates while leaving data and task behavior unchanged.",
+        "steps": [
+          "Silence populated model inventory, model browse/detail, artifact list/selection, image-model inventory, dataset-file browse, draft reopen, and training-settings-load success states.",
+          "Keep empty inventory, search, and namespace/file results inline without publishing them globally.",
+          "Remove the thin-client queued-download success message while retaining durable download activity.",
+          "Add focused UI and production-source guard coverage, then run completion gates."
+        ],
+        "summary": "Make successful read-only transitions message-free, route empty results inline, remove the duplicate queue notice, and enforce the approved feedback policy across TypeScript and TSX producers."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-30T00:15:34Z",
+          "risks": [
+            "A broad publisher suppression could hide meaningful model validation or publish outcomes.",
+            "Removing empty-result copy entirely could make a successful empty query look broken.",
+            "The existing source guard scans TSX status sites, so a separate TS/TSX copy scan is required for hook-produced messages.",
+            "The change remains not security relevant because all failures, blockers, and safety guidance stay intact."
+          ],
+          "sources": [
+            {
+              "title": "Desktop model feature",
+              "url": "apps/desktop/src/renderer/features/models/hooks/useModelsFeature.ts"
+            },
+            {
+              "title": "Thin-client model feature",
+              "url": "apps/thin-client/src/features/model-management/hooks/useModelManagementFeature.ts"
+            },
+            {
+              "title": "Artifact browser and Hugging Face import flows",
+              "url": "apps/desktop/src/renderer/features/artifact-browser"
+            },
+            {
+              "title": "Image generation inventory",
+              "url": "apps/desktop/src/renderer/features/image-generation/hooks/useImageGenerationFeature.ts"
+            },
+            {
+              "title": "Shared Asset Studio",
+              "url": "modules/ui/shared/asset-studio/UnifiedAssetStudio.tsx"
+            },
+            {
+              "title": "Dataset preparation settings",
+              "url": "apps/desktop/src/renderer/features/dataset-preparation/hooks/useDatasetPreparationFeature.ts"
+            }
+          ],
+          "summary": "Routine messages are produced by a bounded set of desktop, thin-client, and shared hooks/components. Most can be removed by leaving successful read state message-free; empty states need explicit inline routing, and queued model downloads need only the existing durable activity record."
+        }
+      ],
+      "rollback": "Restore only the removed presentation messages and publisher predicates without changing underlying data or task behavior.",
+      "startedAt": "2026-07-30T00:15:34Z",
+      "status": "completed",
+      "title": "Quiet routine read and queue feedback",
+      "verification": [
+        "Run focused model, artifact browser/import, image generation, Asset Studio, dataset preparation, and notification guard tests.",
+        "Run desktop and thin-client renderer typechecks.",
+        "Run applicable documentation and architecture gates, the full test suite, and desktop packaging.",
+        "Review production source to confirm prohibited routine-success copy is absent while required empty and actionable copy remains."
+      ],
+      "workPackages": [
+        {
+          "id": "quiet-read-surfaces",
+          "outcome": "Model, artifact, dataset-file, draft-reopen, and training-settings reads update visible content without redundant success messages.",
+          "title": "Quiet read surfaces"
+        },
+        {
+          "id": "feedback-guard-and-qualification",
+          "outcome": "Tests enforce the approved removals while preserving inline empty states and actionable feedback.",
+          "title": "Feedback guard and qualification"
+        }
+      ]
+    }
+  ],
+  "name": "Quiet Routine Read Feedback",
+  "objective": "Remove approved routine load, browse, selection, reopen, and duplicate queue messages while preserving actionable feedback and inline empty states.",
+  "paths": {
+    "report": "docs/tmp/quiet-routine-read-feedback-implementation-report.md",
+    "roadmap": "docs/quiet-routine-read-feedback-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/quiet-routine-read-feedback/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": {
+    "approvedAt": "2026-07-30T00:15:34Z",
+    "fingerprint": "72d54bc25781e000b8e670efb6e6029892d69a50b93757bed289c0b9aba4713a",
+    "note": "The user explicitly approved proceeding with every recommendation in the reviewed unnecessary-message table."
+  },
+  "schemaVersion": 1,
+  "slug": "quiet-routine-read-feedback",
+  "status": "final-approved",
+  "updatedAt": "2026-07-30T00:34:33Z"
+}

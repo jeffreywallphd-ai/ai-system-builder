@@ -35,6 +35,17 @@
       "acceptanceSignals": ["Unauthorized and unknown operations fail closed without exposing internal detail."]
     },
     {
+      "id": "implicit-upload-security-boundary",
+      "task": "Add a bounded file upload to an existing Express feature route without changing identity policy.",
+      "affectedPaths": ["modules/adapters/transport/api-express/example/registerExampleUploadRoutes.ts"],
+      "expectedPacks": ["security", "server-host"],
+      "forbiddenPacks": ["desktop-styling", "image-generation"],
+      "requiredSources": ["docs/standards/security-by-design-standards.md", "docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md"],
+      "requiredChecks": ["npm test", "npm run build:server"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["The design identifies the upload trust boundary and proves authorization, type and size bounds, sanitized failures, and fail-closed storage behavior."]
+    },
+    {
       "id": "enterprise-oauth-decision",
       "task": "Implement OAuth organization authentication for a corporate deployment.",
       "affectedPaths": ["modules/adapters/transport/api-express/security/"],

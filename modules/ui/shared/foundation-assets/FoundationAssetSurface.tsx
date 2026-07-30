@@ -16,6 +16,12 @@ export interface FoundationAssetSurfaceProps {
   readonly regions?: Readonly<Record<string, ReactNode>>;
 }
 
+export const MAX_FOUNDATION_PREVIEW_TEXT_LENGTH = 2_000;
+export const MAX_FOUNDATION_PREVIEW_REGIONS = 32;
+export const MAX_FOUNDATION_PREVIEW_OPTIONS = 50;
+export const MAX_FOUNDATION_PREVIEW_TABLE_COLUMNS = 20;
+export const MAX_FOUNDATION_PREVIEW_TABLE_ROWS = 25;
+
 export function FoundationAssetSurface({
   definitionId,
   displayName,
@@ -35,11 +41,13 @@ export function FoundationAssetSurface({
   const description = stringValue(configuration?.description);
   const region = (id: string) => regions[id] ?? null;
   const hasRegion = (id: string) => Children.count(region(id)) > 0;
-  const allRegions = program.regions.map((item) => (
-    <div key={item.slotId} data-slot={item.slotId}>
-      {region(item.slotId)}
-    </div>
-  ));
+  const allRegions = program.regions
+    .slice(0, MAX_FOUNDATION_PREVIEW_REGIONS)
+    .map((item) => (
+      <div key={item.slotId} data-slot={item.slotId}>
+        {region(item.slotId)}
+      </div>
+    ));
   const common = {
     className:
       "foundation-surface foundation-surface--" +
@@ -291,11 +299,21 @@ export function FoundationAssetSurface({
     );
   }
   if (definitionId === "builtin.display.table") {
-    const configuredColumns = stringArray(configuration?.columns);
+    const configuredColumns = stringArray(
+      configuration?.columns,
+      MAX_FOUNDATION_PREVIEW_TABLE_COLUMNS,
+    );
     const columns = configuredColumns.length
       ? configuredColumns
-      : stringArray(program.previewFixture.columns);
-    const rows = arrayArray(values.rows);
+      : stringArray(
+          program.previewFixture.columns,
+          MAX_FOUNDATION_PREVIEW_TABLE_COLUMNS,
+        );
+    const rows = arrayArray(
+      values.rows,
+      MAX_FOUNDATION_PREVIEW_TABLE_ROWS,
+      MAX_FOUNDATION_PREVIEW_TABLE_COLUMNS,
+    );
     return (
       <section {...common} aria-label={title}>
         <h2>{title}</h2>
@@ -453,26 +471,10 @@ export function FoundationAssetSurface({
         }
       >
         <h3>{historyTitle}</h3>
-        <ol>
-          <li>
-            <strong>
-              {stringValue(configuration?.userRoleLabel) || "You"}
-            </strong>
-            <p>
-              {stringValue(configuration?.sampleUserMessage) ||
-                "How can this system help?"}
-            </p>
-          </li>
-          <li>
-            <strong>
-              {stringValue(configuration?.assistantRoleLabel) || "Assistant"}
-            </strong>
-            <p>
-              {stringValue(configuration?.sampleAssistantMessage) ||
-                "This is a safe preview response."}
-            </p>
-          </li>
-        </ol>
+        <ol />
+        <p role="status">
+          {stringValue(configuration?.emptyMessage) || "No messages yet."}
+        </p>
         {hasRegion("messages") ? (
           <div data-slot="messages">{region("messages")}</div>
         ) : null}
@@ -522,7 +524,7 @@ export function FoundationAssetSurface({
             "Message"
           }
           placeholder={stringValue(configuration?.placeholder) || undefined}
-          value={stringValue(configuration?.previewValue) || "Preview message"}
+          value=""
           readOnly
         />
       </label>
@@ -793,7 +795,9 @@ function renderFormControl(
 }
 
 function stringValue(value: unknown): string | undefined {
-  return typeof value === "string" ? value : undefined;
+  return typeof value === "string"
+    ? value.slice(0, MAX_FOUNDATION_PREVIEW_TEXT_LENGTH)
+    : undefined;
 }
 
 function numberValue(value: unknown): number | undefined {
@@ -802,27 +806,47 @@ function numberValue(value: unknown): number | undefined {
     : undefined;
 }
 
-function stringArray(value: unknown): readonly string[] {
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === "string")
-    : [];
+function stringArray(
+  value: unknown,
+  maximumItems = MAX_FOUNDATION_PREVIEW_OPTIONS,
+): readonly string[] {
+  if (!Array.isArray(value)) return [];
+  const result: string[] = [];
+  for (const item of value) {
+    if (typeof item === "string") {
+      result.push(item.slice(0, MAX_FOUNDATION_PREVIEW_TEXT_LENGTH));
+      if (result.length >= maximumItems) break;
+    }
+  }
+  return result;
 }
 
 function objectArray(
   value: unknown,
 ): readonly Readonly<Record<string, AssetJsonValue>>[] {
-  return Array.isArray(value)
-    ? value.filter(
-        (item): item is Readonly<Record<string, AssetJsonValue>> =>
-          Boolean(item) && typeof item === "object" && !Array.isArray(item),
-      )
-    : [];
+  if (!Array.isArray(value)) return [];
+  const result: Readonly<Record<string, AssetJsonValue>>[] = [];
+  for (const item of value) {
+    if (Boolean(item) && typeof item === "object" && !Array.isArray(item)) {
+      result.push(item as Readonly<Record<string, AssetJsonValue>>);
+      if (result.length >= MAX_FOUNDATION_PREVIEW_OPTIONS) break;
+    }
+  }
+  return result;
 }
 
-function arrayArray(value: unknown): readonly (readonly AssetJsonValue[])[] {
-  return Array.isArray(value)
-    ? value.filter((item): item is readonly AssetJsonValue[] =>
-        Array.isArray(item),
-      )
-    : [];
+function arrayArray(
+  value: unknown,
+  maximumRows = MAX_FOUNDATION_PREVIEW_OPTIONS,
+  maximumColumns = MAX_FOUNDATION_PREVIEW_TABLE_COLUMNS,
+): readonly (readonly AssetJsonValue[])[] {
+  if (!Array.isArray(value)) return [];
+  const result: AssetJsonValue[][] = [];
+  for (const item of value) {
+    if (Array.isArray(item)) {
+      result.push(item.slice(0, maximumColumns) as AssetJsonValue[]);
+      if (result.length >= maximumRows) break;
+    }
+  }
+  return result;
 }

@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { TermWithHint } from "../../../../../../modules/ui/shared";
+import { TermWithHint, TransientNotificationPublisher } from "../../../../../../modules/ui/shared";
 import type { ModelBrowseItem, ModelInventoryRecord } from "../../../../../../modules/contracts/model";
 import type { ModelManagementApiClient } from "../api/apiModelManagementClient";
 import { useModelManagementFeature } from "../hooks/useModelManagementFeature";
@@ -13,9 +13,10 @@ function downloadStateLabel(record: ModelInventoryRecord): string {
 
 export function ModelManagementFeature({ client, workspaceId }: { client?: ModelManagementApiClient; workspaceId?: string; workspaceName?: string }) {
   const vm = useModelManagementFeature(client, workspaceId);
+  const emptyBrowseMessage = vm.status === "No model results found.";
   return <section className="ui-panel ui-panel--elevated ui-stack ui-stack--sm"><header className="ui-grid ui-grid--two"><h2>Models</h2><button className="ui-button" onClick={() => void vm.refreshInventory()} disabled={vm.inventoryLoading}>{vm.inventoryLoading ? "Refreshing..." : "Refresh"}</button></header>
-    {vm.error ? <p className="ui-feedback ui-feedback--error" role="alert">{vm.error}</p> : null}
-    {vm.status ? <p role="status" className="ui-status">{vm.status}</p> : null}
+    <TransientNotificationPublisher message={vm.error} title="Models need attention" tone="error" source="Models" workspaceId={workspaceId} />
+    <TransientNotificationPublisher message={!emptyBrowseMessage ? vm.status : undefined} title="Models updated" tone="success" source="Models" workspaceId={workspaceId} />
 
     <section className="ui-stack ui-stack--sm"><h3>Browse models</h3>
       <label className="ui-stack ui-stack--xs"><span className="ui-label"><TermWithHint termId="modelSearch">Search</TermWithHint></span><input className="ui-input" value={vm.query} placeholder="Search models" onChange={(e) => vm.setQuery(e.target.value)} /></label>
@@ -24,7 +25,7 @@ export function ModelManagementFeature({ client, workspaceId }: { client?: Model
       {vm.query.trim().length === 0 ? <p className="ui-text-muted">Enter a search term to browse models.</p> : null}
     </section>
 
-    <section className="ui-stack ui-stack--sm"><h3>Browse results</h3><ul className="ui-stack ui-stack--sm">{vm.browseResults.map((m: ModelBrowseItem) => <li key={m.modelId} className="ui-panel ui-stack ui-stack--sm">
+    <section className="ui-stack ui-stack--sm"><h3>Browse results</h3>{emptyBrowseMessage ? <p className="ui-text-muted" role="status">{vm.status}</p> : null}<ul className="ui-stack ui-stack--sm">{vm.browseResults.map((m: ModelBrowseItem) => <li key={m.modelId} className="ui-panel ui-stack ui-stack--sm">
       <header className="ui-grid ui-grid--two"><strong>{m.displayName}</strong><span>{m.modelId}</span></header>
       <dl className="ui-grid ui-grid--two"><dt><TermWithHint termId="provider">Provider</TermWithHint></dt><dd>{m.provider}</dd><dt><TermWithHint termId="taskTags">Tasks</TermWithHint></dt><dd>{m.taskTags?.join(", ") || "n/a"}</dd><dt><TermWithHint termId="inference">Inference</TermWithHint></dt><dd>{m.inferenceMode || "n/a"}</dd></dl>
       <div className="ui-grid ui-grid--two"><button className="ui-button" onClick={() => void vm.viewDetails(m.modelId)} disabled={vm.loading}>Details</button><button className="ui-button" onClick={() => void vm.saveReference(m)} disabled={vm.loading}>Save reference</button><button className="ui-button" onClick={() => void vm.download(m)} disabled={vm.downloadingModelId === m.modelId}>{vm.downloadingModelId === m.modelId ? "Downloading..." : "Download"}</button></div>

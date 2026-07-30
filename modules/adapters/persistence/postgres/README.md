@@ -30,3 +30,12 @@ database role must not own the organization table, be a superuser, or have
 `BYPASSRLS`; deployment qualification must use separately controlled migration,
 runtime, and backup roles. Existing platform/legacy records are never assigned
 by startup.
+
+Published-system data uses the sibling `system-runtime` provisioner. It derives
+non-semantic database and role names from an opaque instance id, creates one
+physical database and login role per instance, revokes public connect, and gives
+the runtime role only the schema/data privileges needed by runtime repositories.
+Runtime roles never migrate schema and have no superuser, database, role,
+replication, bypass-RLS, ownership, or foreign-database authority. The live
+PostgreSQL 18 command qualifies physical separation, migration persistence, and
+the denial of foreign connect plus database/role/schema DDL.

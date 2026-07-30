@@ -32,6 +32,14 @@ test("visual composer qualification paths remain inside the ignored artifact roo
     paths.evidencePath.replaceAll("\\", "/"),
     /artifacts\/qualification\/visual-composer\/runs\/2026-07-19-run\/evidence\.json$/,
   );
+  assert.match(
+    paths.desktopDataRoot.replaceAll("\\", "/"),
+    /artifacts\/qualification\/visual-composer\/d\/[a-f0-9]{16}\/desktop$/,
+  );
+  assert.match(
+    paths.thinRuntimeRoot.replaceAll("\\", "/"),
+    /artifacts\/qualification\/visual-composer\/d\/[a-f0-9]{16}\/thin-runtime$/,
+  );
   assert.throws(
     () =>
       resolveVisualComposerQualificationPaths("C:\\work\\repo", "../escape"),

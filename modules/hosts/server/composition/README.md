@@ -25,10 +25,29 @@ Current artifact-repo provider registration is Hugging Face only.
 
 ## Hugging Face token configuration
 
-- `composeServerHost` passes `options.artifactRepo.huggingFaceAccessToken` into the Hugging Face adapter.
-- If that option is omitted, the adapter falls back to `HF_TOKEN`, then `HUGGING_FACE_TOKEN`.
+- Managed server composition resolves Hugging Face credentials through the
+  active authenticated organization and the centralized authorization service.
+  The generic Settings API uses the same credential service and cannot create a
+  second process-global secret slot.
+- Managed legacy/environment credentials are ignored unless
+  `huggingFaceCredentialMigrationOrganizationId` explicitly assigns them to one
+  organization. Migration writes the organization record atomically before
+  retiring the legacy file.
+- Deployment-local modes retain the single host-owned compatibility store.
 - Thin-client artifact-repo operations run through this server host path, so thin-client access to private/gated Hugging Face repos depends on server-side token configuration.
 - Public Hugging Face repos may work without a token; private/gated repos may return explicit auth-required (`unavailable`) errors for register/localize/publish/verify flows.
+
+## Privileged policy composition
+
+- Managed update/clear setting use cases authorize below transport. Ordinary
+  members cannot mutate shared settings; PyTorch/CUDA source and shared model
+  folder changes require an owner or administrator.
+- Missing provider repositories remain missing unless the publish request
+  carries explicit creation approval and visibility. Managed host composition
+  then authorizes `provider-repository:create` for the active organization
+  before the adapter performs any provider create request.
+- Local/desktop hosts keep the same explicit approval contract without
+  requiring a managed organization authorizer.
 
 ## Image generation FaceID behavior (thin-client/server)
 
@@ -38,6 +57,9 @@ Current artifact-repo provider registration is Hugging Face only.
   - latent reference + prompts,
   - FaceID + prompts,
   - latent reference + FaceID + prompts.
-- FaceID requests are prepared as host-owned artifact image references before ComfyUI execution.
+- FaceID requests are prepared from workspace-owned catalog artifacts through
+  the bounded viewer-media seam. Only signature-verified PNG, JPEG, or WebP
+  inputs are staged under contained randomized ComfyUI input names, and staged
+  files are cleaned after terminal or failed execution.
 - The default server workflow avoids custom InstantID/InsightFace nodes so the feature remains usable with the managed ComfyUI install.
 - When no explicit latent reference is provided, the first FaceID reference is used as the image-to-image latent source for facial retention.

@@ -2,6 +2,8 @@ import { useEffect, useRef, type ReactNode } from "react";
 
 import {
   ApplicationIcon,
+  NotificationBell,
+  NotificationViewport,
   SidebarNavigationGroup,
   type ApplicationIconName,
   useNavigationGroupCollapseState,
@@ -168,6 +170,7 @@ export function AppShell({
                 </div>
               </details>
             </nav>
+            <NotificationBell />
             <button
               className="ui-shell__settings-button"
               type="button"
@@ -233,6 +236,7 @@ export function AppShell({
           </div>
         </aside>
         <div className="ui-shell__main">
+          <NotificationViewport />
           {pageArtwork ? (
             <div
               className={`ui-shell__page-art ui-shell__page-art--${pageArtwork.tone}`}

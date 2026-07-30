@@ -40,6 +40,16 @@ Builder-application diagnostics, host feature lifecycle state, Python runtime co
 - **Software status**, **builder application**, **desktop host**, and **runtime status** describe operational state of this software.
 - **System-owned** and **System Foundation** retain their established ownership/trust meanings; they do not denote software status or a user-built system.
 
+### Systems uses one guided lifecycle
+
+Systems presents **Manage**, **Compose**, **Publish**, and **Run & Test**.
+Compose Connections owns the user-facing system relationship workflow; a
+separate Systems / Plans page would duplicate that workflow and is removed.
+Build & test opens a modal scoped to the exact selected saved revision. Publish
+lists application-projected build versions and is the explicit immutable-release
+boundary. These placement choices do not merge design, planning, build,
+publication, deployment, or runtime authority.
+
 ## Consequences
 
 ### Positive

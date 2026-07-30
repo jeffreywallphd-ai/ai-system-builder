@@ -28,6 +28,7 @@ function createUseCaseStub(
       .mockImplementation(() => ({
         acceptedMediaTypes: ["image/png"],
         acceptedExtensions: [".png"],
+        maximumBytes: 64,
       })),
   };
 }
@@ -92,6 +93,27 @@ describe("registerArtifactUploadApiRoute", () => {
     });
   });
 
+  it("rejects scalar and malformed legacy JSON byte payloads before allocation", () => {
+    const baseRequest = {
+      fileName: "cat.png",
+      mediaType: "image/png",
+      source: "web.upload.form",
+    };
+
+    expect(() => mapApiArtifactUploadRequestBody({
+      ...baseRequest,
+      bytes: 1_073_741_824,
+    })).toThrow("Artifact upload bytes must be an array of byte values.");
+    expect(() => mapApiArtifactUploadRequestBody({
+      ...baseRequest,
+      bytes: [0, 256],
+    })).toThrow("Artifact upload bytes must contain only integers from 0 through 255.");
+    expect(() => mapApiArtifactUploadRequestBody({
+      ...baseRequest,
+      bytes: [0, 1, 2, 3],
+    }, 3)).toThrow("Artifact upload exceeds the 3-byte limit.");
+  });
+
   it("maps multipart request payload into application command and command context", async () => {
     const mapping = await mapApiArtifactUploadRequest(
       createMultipartRequest("unit-test-boundary", [137, 80, 78, 71]),
@@ -107,6 +129,13 @@ describe("registerArtifactUploadApiRoute", () => {
         source: "web.upload.multipart",
       },
     });
+  });
+
+  it("rejects multipart files above the configured byte limit", async () => {
+    await expect(mapApiArtifactUploadRequest(
+      createMultipartRequest("limited-boundary", [1, 2, 3, 4]),
+      3,
+    )).rejects.toThrow("multipart artifact upload exceeds the 3-byte limit.");
   });
 
   it("maps store-artifact-upload use-case success into an api success envelope", () => {

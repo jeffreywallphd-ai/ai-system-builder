@@ -2,8 +2,8 @@
 
 # System Builder Slot Composer Implementation Roadmap
 
-- Status: `ready`
-- Updated: `2026-07-19T17:01:30Z`
+- Status: `completed`
+- Updated: `2026-07-29T01:11:42Z`
 
 ## Objective
 
@@ -55,6 +55,21 @@ The choice changes Asset Kernel contracts, validation, immutable revision compat
 | Containment bindings (containment-bindings-configurable-shell) | Add a containment binding kind and use one Application Shell definition whose configuration enum selects a layout preset. | no | Fewer new top-level records; Overloads bindings with ordering and visual ownership semantics; Makes slot rules conditional on configuration and harder to validate statically | Connection editing and cycle/cardinality logic must distinguish structural bindings throughout the stack; Layout compatibility becomes runtime interpretation rather than exact-definition behavior |
 | UI-only hierarchy (ui-metadata-hierarchy) | Keep persisted revisions flat and store canvas parents, slots, and layout choices only in renderer metadata or selectedConfiguration. | no | Fastest initial UI delivery; No portable canonical hierarchy; Weak validation, migration, build reproducibility, and host parity | Builds, previews, adapters, and other clients could disagree about structure; Contradicts the accepted rule against renderer-owned system truth and a parallel composition model |
 
+### Simplified build and publish lifecycle
+
+How much lifecycle automation should the simplified Systems experience perform?
+
+All options remove the Plans tab, make Compose connections the visible relationship editor, open Build & test in a modal for the selected saved system, and replace Build & Release with Publish. The decision is whether build, test, and publication remain explicit stages or are combined. Publication must continue to use authoritative workspace policy, deterministic build evidence, integrity re-verification, immutable releases, and sanitized failures; UI labels or selections never grant authority.
+
+- Status: `approved`
+- Selected option: `guided-two-stage`
+
+| Option | Summary | Recommended | Tradeoffs | Consequences |
+| --- | --- | --- | --- | --- |
+| Guided two-stage (guided-two-stage) | Compose opens a one-action Build & test modal for the selected saved revision using host-owned defaults; Publish separately lists systems and eligible build versions and requires an explicit publish confirmation. | yes | Fewest routine choices while keeping build/test and publication conceptually distinct; Required selections use friendly dropdowns; infrastructure versions, capabilities, digests, and evidence move to read-only progressive disclosure; Users perform two intentional actions when they want to publish | The modal cannot build unsaved or archived systems and cannot accept arbitrary capability or toolchain text; Publish defaults to the newest eligible build but exposes other versions through a labeled selector; The existing Run & Test surface remains a separate post-release/runtime concern unless a later approved roadmap changes it |
+| Build on publish (automatic-build-on-publish) | The Compose modal performs readiness checks only; Publish automatically builds and tests the selected saved version before asking for final publication confirmation. | no | One less lifecycle action for users who always intend to publish; Publish becomes slower and combines preparation with an externally consequential action; Build failures appear later and are harder to distinguish from publish failures | The Publish workspace owns both build orchestration and release approval; Cancellation, retry, and partial-failure states become more prominent in the publication flow; The design has greater risk of users misunderstanding what has already been published |
+| Lifecycle wizard (single-lifecycle-wizard) | Build, test, evidence review, and optional publication run as a guided multi-step modal from Compose, while Publish is primarily a version history and secondary publication surface. | no | Provides the most in-context guidance; Adds modal steps, branching, and more focus/state management; Duplicates publication entry points between Compose and Publish | The Compose modal becomes a substantial workflow rather than a focused build/test action; Users face more choice points despite friendlier wording; Security and accessibility verification must cover two publication entry points |
+
 ## Increment map
 
 | Increment | Outcome | Dependencies | Status |
@@ -62,7 +77,8 @@ The choice changes Asset Kernel contracts, validation, immutable revision compat
 | 1: Canonical slot-composition kernel and Foundation layouts | Add a migration-safe canonical model for named slots and ordered nested placements, require a Foundation-derived root for interactive systems, and publish a versioned set of fully backed application-shell and page-layout presets through every persistence and transport boundary. | None | `completed` |
 | 2: Complete shared slot-based Compose experience | Replace the flat Compose list and uncontrolled JSON editor with one shared desktop/thin-client workspace that creates interactive systems from predefined layouts, embeds assets through named slots, configures instances through generated controls, edits typed connections separately, and recursively previews the current draft. | slot-composition-kernel | `completed` |
 | 3: Unified system lifecycle management | Add a shared Manage tab where a workspace user can find every drafted and published system in one responsive list, understand its state, preview or reopen it, and perform supported lifecycle actions including guarded deletion through canonical host boundaries. | shared-slot-composer-experience | `completed` |
-| 4: Migration, build adoption, and production qualification | Adopt canonical placements across historical systems, closed reference templates, deterministic builds and releases, then qualify the complete composer and system management experience across persistence shapes, packaged desktop, thin-client browser, accessibility, responsive layouts, security, performance, and recovery without rewriting immutable history. | system-lifecycle-management | `pending` |
+| 4: Guided Build & test and Publish experience | Deliver one shared, non-technical Systems lifecycle in which Compose opens a guided Build & test modal for the selected saved revision and Publish lists systems plus eligible build versions for explicit integrity-verified publication, while removing the redundant Plans surface and preserving canonical design, build, release, and runtime boundaries. | system-lifecycle-management | `completed` |
+| 5: Controlled Build/Test/Publish qualification | Qualify the approved guided lifecycle across real persistence and host boundaries, representative non-technical use, accessibility, responsive layouts, security denials, interruption/recovery, and bounded scale before claiming production readiness. | guided-build-publish-experience | `completed` |
 
 ## Increment 1: Canonical slot-composition kernel and Foundation layouts
 
@@ -241,67 +257,123 @@ Hide the Manage tab and disable its new lifecycle endpoints while preserving eve
 - A new publication workflow, deployment workflow, or revision-history editor
 - Executing unqualified imported or authored code inside Manage previews
 
-## Increment 4: Migration, build adoption, and production qualification
+## Increment 4: Guided Build & test and Publish experience
 
-- Id: `migration-build-qualification`
-- Status: `pending`
+- Id: `guided-build-publish-experience`
+- Status: `completed`
 - Dependencies: `system-lifecycle-management`
 
-Adopt canonical placements across historical systems, closed reference templates, deterministic builds and releases, then qualify the complete composer and system management experience across persistence shapes, packaged desktop, thin-client browser, accessibility, responsive layouts, security, performance, and recovery without rewriting immutable history.
+Deliver one shared, non-technical Systems lifecycle in which Compose opens a guided Build & test modal for the selected saved revision and Publish lists systems plus eligible build versions for explicit integrity-verified publication, while removing the redundant Plans surface and preserving canonical design, build, release, and runtime boundaries.
 
 ### Work packages
 
-- **Explicit legacy upgrade and safe layout switching** (`legacy-upgrade-layout-switch`): A reviewable mapping workflow converts a selected flat historical revision into a new slot-aware revision, maps stable semantic slots during preset changes, preserves unmatched content in an Unassigned assets tray, and never mutates or deletes its source revision.
-- **Reference systems and deterministic build adoption** (`reference-build-adoption`): Secured data-entry, controlled chatbot, and secured data-review templates use compatible roots, layout presets, pages and placements, while build/release manifests freeze and digest the exact hierarchy, presets, configuration, resources, and typed bindings.
-- **Hardening and recovery** (`security-limits-recovery`): Bounds, malformed/tampered revision handling, cancellation/conflicts, unsupported implementation states, source-order preservation, and rollback/recovery behavior fail closed with bounded redacted diagnostics.
-- **Controlled production qualification** (`cross-shape-qualification`): Automated and controlled evidence covers SQLite/PostgreSQL conformance, packaged desktop, thin-client browser, keyboard and assistive technology, WCAG reflow, preset screenshots, representative scale, builds/releases, and documentation/support procedures.
+- **Simplified Systems navigation** (`simplified-systems-navigation`): Desktop and thin client remove the Plans tab and its unreferenced page wiring, retain Manage, Compose, Publish, and Run & Test, and do not delete or reinterpret the underlying optional asset-composition plan contracts or records.
+- **Guided Build & test modal** (`guided-build-test-modal`): Compose opens an accessible modal pinned to the selected clean saved revision, derives approved host/build defaults through an application-owned preparation seam, presents one primary Build & test action, and shows plain-language checks and results with technical evidence available only as bounded read-only detail.
+- **Publication workspace** (`publication-workspace`): A shared Publish workspace uses application-owned eligibility summaries and friendly system/build-version selectors, defaults to the newest eligible build without hiding alternatives, and performs explicit authorized publication with stale-state and integrity re-verification.
+- **Boundary parity, regression coverage, and guidance** (`boundary-parity-documentation`): Contracts, application behavior, API/IPC/preload clients where required, shared UI, tests, architecture guidance, and context packs describe the simplified lifecycle consistently without changing Run & Test or creating renderer-owned authority.
 
 ### Deliverables
 
-- Explicit legacy-revision upgrade command, preview, mapping review, unassigned-content handling, and immutable new-revision save
-- Safe layout-switch mapping using stable semantic slot identities
-- Slot-aware versions of all three closed reference-system templates
-- Deterministic build/release materialization and integrity verification for placements and preset definitions
-- Compatibility behavior for historical builds/releases and truthful unsupported states
-- Payload/depth/count/performance bounds, tamper and recovery coverage, and redacted diagnostics
-- SQLite and live PostgreSQL semantic conformance evidence
-- Packaged Windows desktop and supported thin-client browser end-to-end qualification
-- Keyboard, assistive-technology, WCAG 2.2 reflow, responsive preset, and visual-regression evidence
-- Operations/support documentation and reconciled architecture/context/roadmap evidence
+- Systems navigation with Plans removed and Build & Release renamed Publish in desktop and thin client
+- Removal of unreferenced host-specific Plans page/component wiring while retaining underlying planning contracts and services
+- Shared accessible Build & test modal opened from the Compose toolbar for the exact selected saved revision
+- Application-owned build preparation and eligibility projection with host-approved presets and safe default selection
+- Plain-language build readiness, progress, success, blocked, failed, cancelled, and stale states
+- Shared Publish workspace listing systems, successful build versions, publication eligibility, and existing published versions
+- Friendly system, build version, and approved target dropdowns only where a real choice exists
+- Explicit publish confirmation and existing integrity-verifying immutable release command
+- Read-only progressive disclosure for exact revision identity, evidence, diagnostics, digests, compatibility, and provenance
+- Focused application, transport, shared UI, accessibility, denial, non-disclosure, and cross-host tests
+- Reconciled System Builder and build/release architecture, context, terminology, and contributor guidance
 
 ### Acceptance criteria
 
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
-| `immutable-upgrade`: Every supported historical flat revision remains byte-for-byte immutable and readable; upgrading creates a reviewed new slot-aware revision, preserves every compatible instance/configuration/binding, places unmatched content in an explicit unassigned state, and supports cancel/retry/conflict without data loss. | local | not recorded |
-| `reference-template-adoption`: Secured data-entry, controlled chatbot, and secured data-review templates materialize exact Foundation-derived roots, appropriate application/page presets, valid placements and typed bindings, recursively preview their UI, and preserve their existing security and Run and Test behavior. | local | not recorded |
-| `deterministic-build-hierarchy`: Build and release inputs freeze exact slot, placement, layout-definition, instance-configuration, backing-resource, and binding data; equivalent revisions reproduce identical content digests, meaningful hierarchy changes alter them, and tampering or missing exact definitions fails closed before approval or deployment. | local | not recorded |
-| `bounded-secure-operation`: Maximum instance, placement, depth, slot-child, configuration, binding, diagnostic, and rendered-node limits prevent excessive work; malformed, cyclic, cross-workspace, unsafe, stale, revoked, or unsupported inputs return bounded redacted errors and never widen code, secret, filesystem, network, build, release, or runtime authority. | local | not recorded |
-| `postgres-conformance`: Live PostgreSQL qualification proves the same slot-aware revision, conflict, workspace-isolation, legacy-read, upgrade, and immutable-history semantics as SQLite/structured local persistence. | controlled-environment | not recorded |
-| `packaged-cross-client-e2e`: A packaged Windows desktop application and supported thin-client browser each complete create, choose layout, nest, configure, connect, preview, save, reopen, switch layout, upgrade legacy, build, manage, and inspect revision history against their real IPC/API paths. | controlled-environment | not recorded |
-| `accessibility-responsive-visual`: Controlled keyboard and assistive-technology review confirms understandable tree/canvas/inspector/manage navigation and focus behavior; every approved preset satisfies WCAG 2.2 reflow expectations at 320 CSS pixels or equivalent zoom, preserves semantic reading order, and passes reviewed desktop/tablet/mobile visual baselines in light and dark themes. | controlled-environment | not recorded |
-| `scale-recovery-support`: Representative bounded-scale compositions and system lists remain responsive within documented targets, interrupted/conflicting saves, failed upgrades, and guarded lifecycle actions recover without revision loss, rollback disables new activation without flattening slot-aware data, and operator/contributor documentation states supported and unsupported behavior truthfully. | controlled-environment | not recorded |
+| `simplified-navigation`: Systems presents Manage, Compose, Publish, and Run & Test with no Plans tab or Build & Release label in either host; opening Systems or Compose performs no asset-plan read, and removing the page does not delete, migrate, or reinterpret optional source composition plan contracts, records, or references. | local | passed (test) |
+| `guided-build-test-modal`: Build & test opens one accessible modal for the exact selected saved system revision, is unavailable for dirty, archived, missing, stale, or validation-blocked inputs, derives approved host/build settings from authoritative application/host state, exposes no free-form API, ABI, toolchain, capability, trust-level, path, command, environment, or secret inputs, and completes through one clear primary action. | local | passed (test) |
+| `plain-language-build-results`: The modal explains readiness, progress, checks, completion, cancellation, and safe failure in non-technical language; technical identifiers, compatibility facts, evidence counts, bounded diagnostics, and digests are read-only progressive detail and never expose raw logs, paths, commands, stack traces, credentials, protected content, or provider/runtime payloads. | local | passed (test) |
+| `publish-systems-and-versions`: Publish lists workspace-visible systems and their build versions with understandable labels and statuses, supports friendly system and build-version selection, defaults to but does not silently publish the newest eligible build, distinguishes built from published state, and displays why an unavailable version cannot be published. | local | passed (test) |
+| `explicit-immutable-publication`: Publishing requires an explicit confirmation naming the system and build version, reuses the canonical authorized approval command, re-reads eligibility, re-verifies expected lock and artifact integrity, creates or returns only the immutable content-addressed release, refreshes publication state, and never implies deployment, activation, or runtime execution. | local | passed (test) |
+| `shared-accessible-parity`: Desktop and thin client use the same shared modal, Publish presenter, terminology, focus behavior, keyboard path, loading/empty/error states, and application truth through their established API or IPC/preload clients, with responsive behavior and no renderer-local build, release, authorization, or eligibility policy. | local | passed (test) |
+| `security-publish-boundary`: Security impact is reviewed and evidenced: workspace and actor authority remain application-owned; UI selection is never authorization; unauthorized, cross-workspace, stale, tampered, revoked, ineligible, missing-policy, and adapter-failure paths fail closed before publication; diagnostics are bounded and redacted; rollback preserves immutable revisions/releases and does not restore a weaker publication path; residual controlled-environment risks remain explicit. | local | passed (test) |
+| `lifecycle-documentation`: Canonical architecture, relevant ADR consequences where necessary, context packs, tests, and user-facing terminology consistently describe Plans as no longer a Systems surface, Build & test as preparation of an exact saved revision, Publish as explicit immutable release approval, and Run & Test as a separate post-release/runtime concern. | local | passed (documentation) |
 
 ### Verification
 
-- Run focused legacy fixture, upgrade mapping, cancellation, retry, stale conflict, layout-switch mapping, unassigned-content, and immutable-history tests.
-- Run focused reference-template validation, recursive preview, security-policy, Run and Test regression, and exact-version tests for all three closed systems.
-- Run deterministic build/release digest, manifest, tamper, missing-definition, backing-resource, binding, and historical-release compatibility tests.
-- Run adversarial limit, depth, cycle, oversized configuration, malformed envelope, cross-workspace, revocation, unsupported implementation, and diagnostic-redaction tests.
-- Run live PostgreSQL recovery/conformance qualification and retain sanitized evidence.
-- Run packaged desktop and thin-client browser end-to-end qualification on the supported platform/browser matrix.
-- Perform and record keyboard, assistive-technology, WCAG reflow, source-order, light/dark, and responsive visual review for every preset and the Manage experience.
-- Run representative bounded-scale interaction, list, preview, save/reopen, and lifecycle-action measurements plus interruption/recovery drills.
-- After every Increment 4 work package and all controlled evidence pass, run npm run docs:check, npm run architecture:check, npm run agent-support:check, affected builds/packages, security/dependency checks, deployment fitness checks where applicable, and npm test once as final completion gates.
+- Run focused application tests for build preparation defaults, eligible version projection, exact-revision association, authorization, stale state, tamper/integrity failure, cancellation mapping, immutable approval, workspace isolation, and sanitized errors.
+- Run focused API and IPC/preload/client parity tests for any additive preparation or publication projection operations, including malformed, oversized, unauthorized, wrong-workspace, and unavailable-adapter paths.
+- Run shared UI interaction tests for tab removal, Compose modal open/close/focus restoration, dirty and blocked states, single-action build, plain-language results, progressive detail, system/build dropdowns, publish confirmation/cancel/success/failure, refresh, keyboard operation, and narrow layouts.
+- Run regression tests proving asset composition plan records and source references remain intact while the Systems Plans UI and eager reads are absent.
+- Run focused Run & Test, deterministic build/release, legacy upgrade/layout switching, reference-template, and Manage regressions to prove the simplification does not collapse design, publication, deployment, or runtime boundaries.
+- Run documentation, architecture, agent-support, desktop/thin-client build or typecheck, and repository-wide completion gates once every Increment 4 chunk and focused test passes.
 
 ### Rollback
 
-Disable activation of the new composer, Manage experience, and Foundation layout release; preserve all slot-aware and legacy revisions as immutable readable history; and keep prior approved releases runnable under their frozen manifests. A failed upgrade, layout switch, or lifecycle action never replaces its source revision. Rollback must not remove placement data, weaken validation, or make unqualified implementation executable.
+Hide the new modal and Publish workspace and disable their new preparation/projection entry points while preserving every system revision, build attempt, release, plan record, and audit record. If a prior UI is temporarily restored, it must continue to use authoritative host defaults, authorization, integrity re-verification, bounded diagnostics, and explicit publication; otherwise publication remains disabled rather than reopening a weaker path.
 
 ### Excluded
 
-- Automatic destructive migration or rewriting of historical revisions/releases
-- User-authored layouts, arbitrary slot creation, freeform dimensions, CSS editing, or public preset marketplace
-- Qualified execution of arbitrary imported/authored frontend or backend code beyond existing sandbox decisions
-- New deployment topology, identity, tenancy, collaboration, synchronization, billing, or marketplace policy
-- Claiming WCAG, performance, PostgreSQL, packaging, browser, or production qualification without recorded controlled evidence
+- Deleting asset composition planning contracts, persistence, source-plan references, or non-Systems consumers
+- Automatic build-on-publish, automatic publication, bulk publication, or publication from unsaved renderer state
+- Redesigning, renaming, or merging the separate Run & Test, deployment, activation, cancellation, or retry workflows
+- User-entered host API, runtime ABI, toolchain, capability, trust, path, command, environment, credential, or secret values
+- New authorization roles, tenancy policy, deployment topology, runtime/provider adapters, arbitrary imported/authored execution, or public marketplace behavior
+- User-authored layouts, CSS, arbitrary slots, or unrelated Compose/Manage redesign
+
+## Increment 5: Controlled Build/Test/Publish qualification
+
+- Id: `controlled-build-publish-qualification`
+- Status: `completed`
+- Dependencies: `guided-build-publish-experience`
+
+Qualify the approved guided lifecycle across real persistence and host boundaries, representative non-technical use, accessibility, responsive layouts, security denials, interruption/recovery, and bounded scale before claiming production readiness.
+
+### Work packages
+
+- **Real host and persistence qualification** (`real-boundary-qualification`): Packaged Windows desktop, supported thin-client browser, SQLite, and live PostgreSQL prove the same exact-revision build, version listing, publication, immutable history, and recovery semantics.
+- **Accessible non-technical usability review** (`accessible-nontechnical-review`): Keyboard, assistive-technology, reflow, focus, terminology, and representative task review demonstrate that routine Build/Test/Publish work is understandable without infrastructure knowledge.
+- **Security, recovery, and bounded-scale qualification** (`security-recovery-scale`): Controlled denial, tamper, isolation, non-disclosure, interruption, conflict, adapter-failure, and representative-scale checks prove safe behavior and documented limits.
+
+### Deliverables
+
+- Packaged Windows desktop Build & test modal and Publish workflow evidence through real IPC/preload
+- Supported thin-client browser workflow evidence through authenticated API paths
+- Live PostgreSQL and SQLite semantic conformance evidence for builds, releases, workspace isolation, and immutable history
+- Keyboard, screen-reader or equivalent assistive-technology, focus restoration, WCAG reflow, and narrow/wide responsive evidence
+- Representative non-technical terminology and task-completion review
+- Controlled authorization, cross-workspace, stale, tampered, revoked, missing-policy, redaction, and adapter-failure evidence
+- Interruption, cancellation, conflict, refresh, recovery, rollback, and representative-scale evidence
+- Final support guidance with truthful supported, deferred, and residual-risk statements
+
+### Acceptance criteria
+
+| Criterion | Qualification | Latest evidence |
+| --- | --- | --- |
+| `packaged-cross-host-lifecycle`: A freshly packaged supported Windows desktop and supported thin-client browser each complete select/edit/save, Build & test modal, build-result review, Publish system/build selection, confirmation, immutable publication, refresh, and published-version inspection through their real IPC/preload or authenticated API paths without host-specific behavior drift. | controlled-environment | passed (test) |
+| `postgres-sqlite-conformance`: Live PostgreSQL and SQLite qualification prove equivalent workspace isolation, exact revision/build association, eligible version ordering, optimistic/stale handling, approval integrity re-verification, immutable release history, cancellation/failure retention, and rollback-safe reads. | controlled-environment | passed (test) |
+| `accessible-nontechnical-lifecycle`: Controlled keyboard and assistive-technology review proves understandable tab order, modal naming and focus containment/restoration, dropdown labeling, progress/status announcements, confirmation, error recovery, and 320 CSS-pixel reflow; representative users can identify what is built versus published without interpreting API, ABI, toolchain, capability, digest, or assurance jargon. | controlled-environment | passed (test) |
+| `security-controlled-publication`: Controlled security review proves unauthenticated/unauthorized, wrong-workspace, stale, tampered, revoked, ineligible, missing-policy, unavailable-adapter, and interrupted publication attempts fail closed before release creation; public UI/API/IPC evidence contains no secrets, protected content, raw payloads, host paths, commands, stack traces, or raw logs; rollback and recovery remain at least as restrictive as the forward path. | controlled-environment | passed (test) |
+| `scale-recovery-support`: Representative bounded system/build histories remain responsive; interrupted builds, cancellation, stale confirmation, refresh races, failed publication, and host restart recover without duplicate or mutable releases; documentation records supported limits, residual risks, deferred Run & Test redesign, and operator recovery steps truthfully. | controlled-environment | passed (test) |
+
+### Verification
+
+- Run the packaged Windows Electron qualification through real IPC/preload and isolated storage with sanitized evidence.
+- Run the supported local thin-client browser qualification through authenticated API paths and isolated server storage.
+- Run live PostgreSQL/SQLite conformance and recovery scenarios for the application-owned preparation/publication projections and canonical build/release commands.
+- Perform keyboard, assistive-technology, focus, status-announcement, terminology, and WCAG reflow review using representative non-technical Build/Test/Publish tasks.
+- Run controlled authorization, cross-workspace, tamper, stale, revocation, missing-policy, adapter-failure, diagnostic non-disclosure, interruption, cancellation, conflict, and rollback scenarios.
+- Run representative bounded-scale system/build history measurements and refresh/recovery drills.
+- After every controlled criterion passes, run the final documentation, architecture, agent-support, security/dependency where applicable, supported builds/packages, and repository-wide completion gates once.
+
+### Rollback
+
+Disable the new Systems lifecycle surfaces and their entry points while preserving all immutable revisions, attempts, releases, plans, and audit evidence. Do not restore automatic publication, client-owned authority, unbounded diagnostics, or editable infrastructure inputs; keep publication unavailable if the authoritative preparation, authorization, or integrity dependencies cannot be qualified.
+
+### Excluded
+
+- Claiming qualification for unsupported operating systems, browsers, screen readers, deployment shapes, or production environments
+- Automatic or bulk publication and build-on-publish
+- Redesigning the separate Run & Test, deployment, activation, cancellation, or retry product workflows
+- New identity, role, tenancy, synchronization, sandbox, runtime/provider, marketplace, billing, or public-internet policy
+- Destructive migration or rewriting historical revisions, build attempts, releases, plans, or audit evidence

@@ -1,3 +1,4 @@
+import type { Request } from "express";
 import {
   describe,
   expect,
@@ -6,7 +7,22 @@ import {
 } from "../../../../../testing/node-test";
 import { DESKTOP_ASSET_STUDIO_CHANNELS } from "../../../../../contracts/ipc";
 import { registerAssetStudioIpc } from "../../../ipc-electron/asset-studio/registerAssetStudioIpc";
+import { setExpressAuthContext } from "../../security/expressAuthContext";
 import { registerAssetStudioApiRoutes } from "../registerAssetStudioApiRoutes";
+
+function authenticatedRequest<T extends object>(request: T): T {
+  setExpressAuthContext(request as Request, {
+    authenticated: true,
+    authMethod: "oidc-bearer",
+    principal: {
+      principalId: "person-1",
+      kind: "user",
+      roles: ["organization-member"],
+      scopes: ["asset:write"],
+    },
+  });
+  return request;
+}
 
 const services = () =>
   ({
@@ -70,14 +86,13 @@ describe("Asset Studio transport parity", () => {
     const json = testDouble.fn();
     const response: any = { status: testDouble.fn(() => response), json };
     await routes.post.get("/api/asset-studio/start")(
-      {
+      authenticatedRequest({
         body: {
           workspaceId: "workspace-a",
           displayName: "View",
           definitionRef: { id: "view", version: "1" },
         },
-        securityContext: { principal: { id: "person-1" } },
-      },
+      }),
       response,
     );
     expect(api.start.execute.mock.calls[0][0]).toMatchObject({
@@ -85,15 +100,14 @@ describe("Asset Studio transport parity", () => {
       actorId: "person-1",
     });
     await routes.post.get("/api/asset-studio/asset-drafts")(
-      {
+      authenticatedRequest({
         body: {
           workspaceId: "workspace-a",
           definitionRef: { id: "view", version: "1" },
           semanticDefinition: {},
           resources: [],
         },
-        securityContext: { principal: { id: "person-1" } },
-      },
+      }),
       response,
     );
     expect(api.assetDrafts.create.mock.calls[0][0]).toMatchObject({

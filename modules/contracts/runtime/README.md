@@ -14,6 +14,11 @@ The contract family is intentionally thin and adapter-oriented:
 
 These contracts support the TypeScript-first model while leaving runtime protocol details evolvable for adapter implementations.
 
+`TaskType.MODEL_DOWNLOAD` participates in the shared start/read/list/cancel
+lifecycle. Its public progress uses message/current/total/percent/unit only;
+worker-specific progress details and completion cache handles stay behind the
+runtime adapter boundary.
+
 Dataset preparation contracts include a shared task-profile vocabulary for first-tier training dataset shapes:
 LLM instruction tuning, classification, extraction, embedding tuning, reranking, diffusion LoRA, vision classification,
 vision detection, and vision segmentation. The Python dataset-preparation worker supports these profiles as dataset

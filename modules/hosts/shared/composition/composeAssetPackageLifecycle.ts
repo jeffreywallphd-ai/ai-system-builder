@@ -29,11 +29,18 @@ export function composeAssetPackageLifecycle(options: {
   readonly signatureVerifier?: AssetPackageSignatureVerifier;
   readonly nextInspectionId: () => string;
   readonly now: () => string;
+  readonly repository?: ReturnType<typeof createStructuredAssetPackageRepository>;
 }) {
-  const repository = createStructuredAssetPackageRepository(options.documents);
+  const repository =
+    options.repository ??
+    createStructuredAssetPackageRepository(options.documents);
   const inspector = createAisbPackageInspector();
   const trust = createAssetPackageTrustVerifier({ signatures: options.signatureVerifier });
-  const activate = new ActivateAssetPackageUseCase(repository, options.now);
+  const activate = new ActivateAssetPackageUseCase(
+    repository,
+    options.implementations,
+    options.now,
+  );
   return {
     repository,
     useCases: {
@@ -56,7 +63,11 @@ export function composeAssetPackageLifecycle(options: {
       }),
       list: new ListAssetPackagesUseCase(repository),
       activate,
-      disable: new DisableAssetPackageUseCase(repository, options.now),
+      disable: new DisableAssetPackageUseCase(
+        repository,
+        options.implementations,
+        options.now,
+      ),
       rollback: new RollbackAssetPackageUseCase(repository, activate),
     },
   };

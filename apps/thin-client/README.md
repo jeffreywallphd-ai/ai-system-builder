@@ -10,6 +10,15 @@ Current scope:
 - shared application branding for the browser favicon
 - page-first composition (`src/pages/HomePage.tsx`)
 - header shell with a centered compact **Current Workspace** selector between the brand area and the right-side hamburger/settings actions
+- global Notifications bell/dropdown before Settings, with five-second fading
+  page messages and workspace-scoped model-download progress that continues
+  across page navigation
+- terminal feature outcomes publish to the shared notification center rather
+  than scroll-bound page banners; local validation, loading/empty states,
+  diagnostics, blockers, retry guidance, and active progress controls remain
+  beside the feature that the user must inspect or act on
+- short secured model-download API calls at `/api/model/download/start`,
+  `/read`, `/list`, and `/cancel`; the browser never receives host-local paths
 - Home page workspace card with a compact responsive equal-width two-column layout: change-workspace controls on the left and create-workspace controls on the right
 - feature-local artifact upload workflow under `src/features/artifact-upload/`, including multi-file selection, independent per-file results, and cancelation for selected or queued uploads
 - feature-local artifact browser workflow under `src/features/artifact-browser/`

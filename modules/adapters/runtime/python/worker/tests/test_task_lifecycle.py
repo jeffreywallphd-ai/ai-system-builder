@@ -19,6 +19,7 @@ class TaskLifecycleTests(unittest.TestCase):
             started = time.monotonic()
             result = worker_app.start_task(StartPythonRuntimeTaskRequest(requestId="r1", taskType="train-model", payload={"baseModel": {}, "datasets": [], "method": "lora", "output": {}}))
             elapsed = time.monotonic() - started
+            time.sleep(0.1)
         self.assertTrue(result.accepted)
         self.assertLess(elapsed, 0.5)
 
@@ -27,7 +28,8 @@ class TaskLifecycleTests(unittest.TestCase):
         self.assertEqual(result.status, "unknown")
 
     def test_running_then_succeeded_status(self) -> None:
-        def slow_train(_payload):
+        def slow_train(_payload, on_progress=None):
+            del on_progress
             time.sleep(0.2)
             return type("R", (), {"model_dump": lambda self, mode: {"runId": "r2"}})()
 
@@ -41,12 +43,14 @@ class TaskLifecycleTests(unittest.TestCase):
             self.assertEqual(done.data["runId"], "r2")
 
     def test_failed_task_returns_structured_error(self) -> None:
-        with patch("modules.adapters.runtime.python.worker.app.train_model", side_effect=RuntimeError("boom")):
+        with patch("modules.adapters.runtime.python.worker.app.train_model", side_effect=RuntimeError("secret=/private/model boom")):
             worker_app.start_task(StartPythonRuntimeTaskRequest(requestId="r3", taskType="train-model", payload={"baseModel": {}, "datasets": [], "method": "lora", "output": {}}))
             time.sleep(0.2)
             status = worker_app.read_task_status("r3")
             self.assertEqual(status.status, "failed")
             self.assertEqual(status.error.code, "task_failed")
+            self.assertNotIn("secret", status.error.message)
+            self.assertNotIn("/private/model", str(status.error.model_dump()))
 
     def test_dataset_progress_updates_registry(self) -> None:
         def fake_prepare(_payload, on_generation_progress):
@@ -63,7 +67,8 @@ class TaskLifecycleTests(unittest.TestCase):
             self.assertEqual(status.progress["message"], "Processing chunk 2/2...")
 
     def test_duplicate_request_id_is_rejected(self) -> None:
-        def slow_train(_payload):
+        def slow_train(_payload, on_progress=None):
+            del on_progress
             time.sleep(0.2)
             return type("R", (), {"model_dump": lambda self, mode: {"runId": "dup"}})()
 
@@ -71,9 +76,11 @@ class TaskLifecycleTests(unittest.TestCase):
             worker_app.start_task(StartPythonRuntimeTaskRequest(requestId="dup", taskType="train-model", payload={"baseModel": {}, "datasets": [], "method": "lora", "output": {}}))
             with self.assertRaises(RuntimeError):
                 worker_app.start_task(StartPythonRuntimeTaskRequest(requestId="dup", taskType="train-model", payload={"baseModel": {}, "datasets": [], "method": "lora", "output": {}}))
+            time.sleep(0.3)
 
     def test_cancel_running_does_not_claim_killed(self) -> None:
-        def slow_train(_payload):
+        def slow_train(_payload, on_progress=None):
+            del on_progress
             time.sleep(0.4)
             return type("R", (), {"model_dump": lambda self, mode: {"runId": "r5"}})()
 
@@ -83,9 +90,11 @@ class TaskLifecycleTests(unittest.TestCase):
             cancel = worker_app.cancel_task("r5")
             self.assertFalse(cancel.cancelled)
             self.assertEqual(cancel.status, "running")
+            time.sleep(0.5)
 
     def test_active_task_count_tracks_running_only(self) -> None:
-        def slow_train(_payload):
+        def slow_train(_payload, on_progress=None):
+            del on_progress
             time.sleep(0.2)
             return type("R", (), {"model_dump": lambda self, mode: {"runId": "r6"}})()
 
@@ -94,6 +103,46 @@ class TaskLifecycleTests(unittest.TestCase):
             self.assertGreaterEqual(worker_app.model_status().activeTaskCount, 0)
             time.sleep(0.4)
             self.assertEqual(worker_app.model_status().activeTaskCount, 0)
+
+    def test_task_registry_rejects_overload_and_evicts_old_terminal_records(self) -> None:
+        terminal = worker_app._create_task_record("old", "train-model")
+        terminal["status"] = "succeeded"
+        active = worker_app._create_task_record("active", "train-model")
+        active["status"] = "running"
+        with worker_app.TASK_REGISTRY_LOCK:
+            worker_app.TASK_REGISTRY.update({"old": terminal, "active": active})
+        with (
+            patch.object(worker_app, "TASK_MAX_ACTIVE", 1),
+            self.assertRaisesRegex(RuntimeError, "at capacity"),
+        ):
+            worker_app.start_task(StartPythonRuntimeTaskRequest(requestId="blocked", taskType="train-model", payload={}))
+
+        with worker_app.TASK_REGISTRY_LOCK:
+            worker_app.TASK_REGISTRY.pop("active")
+            worker_app.TASK_REGISTRY["newer"] = {
+                **worker_app._create_task_record("newer", "train-model"),
+                "status": "failed",
+            }
+            with patch.object(worker_app, "TASK_MAX_RETAINED", 1):
+                worker_app._prune_terminal_tasks_locked()
+        self.assertNotIn("old", worker_app.TASK_REGISTRY)
+        self.assertIn("newer", worker_app.TASK_REGISTRY)
+
+    def test_task_metadata_is_allowlisted(self) -> None:
+        record = worker_app._create_task_record(
+            "safe",
+            "train-model",
+            {
+                "workspaceId": "workspace.test",
+                "prompt": "do not retain",
+                "localPath": "C:/private/model",
+                "token": "secret",
+            },
+        )
+        self.assertEqual(
+            record["metadata"],
+            {"runtimeId": worker_app.RUNTIME_ID, "workspaceId": "workspace.test"},
+        )
 
 
 if __name__ == "__main__":

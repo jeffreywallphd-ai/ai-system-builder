@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { LoggingPort } from "../../../../application/ports/logging";
@@ -35,6 +35,14 @@ import {
 } from "../../../../contracts/workspace";
 import type { OrganizationRequestContextProviderPort } from "../../../../application/ports/organization";
 import { resolveOrganizationStorageKey } from "../organizationStorageScope";
+import {
+  deleteContainedFile,
+  FilesystemContainmentError,
+  readContainedFile,
+  removeEmptyContainedParent,
+  statContainedFile,
+  writeContainedFile,
+} from "../../../filesystem-security";
 
 const STORAGE_COMPONENT = "adapters.storage.filesystem";
 const DEFAULT_STORAGE_HOST = "desktop";
@@ -70,6 +78,10 @@ function toErrorCode(
     return "unavailable";
   }
 
+  if (error instanceof FilesystemContainmentError) {
+    return error.message.includes("exceeds the permitted") ? "unavailable" : "validation";
+  }
+
   if (!isFsError(error)) {
     return fallback;
   }
@@ -95,38 +107,6 @@ function toErrorCode(
 
 function toFilesystemCode(error: unknown): string | undefined {
   return isFsError(error) ? error.code : undefined;
-}
-
-function resolvePathInsideRoot(rootDirectory: string, key: string): string {
-  const segments = key
-    .split(/[\\/]/)
-    .map((segment) => segment.trim())
-    .filter((segment) => segment.length > 0);
-
-  if (segments.length === 0) {
-    throw new StorageAdapterValidationError(
-      "Storage key must include at least one segment.",
-    );
-  }
-
-  for (const segment of segments) {
-    if (segment === "." || segment === "..") {
-      throw new StorageAdapterValidationError(
-        "Storage key segments must not contain path traversal tokens.",
-      );
-    }
-  }
-
-  const absolutePath = path.resolve(rootDirectory, ...segments);
-  const relativePath = path.relative(rootDirectory, absolutePath);
-
-  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
-    throw new StorageAdapterValidationError(
-      "Storage key must resolve to a path inside the configured storage root.",
-    );
-  }
-
-  return absolutePath;
 }
 
 function toBytes(content: unknown): Uint8Array {
@@ -342,18 +322,18 @@ export function createFilesystemArtifactObjectStorageAdapter(
         attemptedKey = key;
         const bytes = toBytes(request.content);
         const checksum = createContentChecksum(bytes);
-        const absolutePath = resolvePathInsideRoot(
-          rootDirectory,
-          resolveOrganizationStorageKey(
-            key,
-            options.organizationContextProvider,
-          ),
+        const scopedKey = resolveOrganizationStorageKey(
+          key,
+          options.organizationContextProvider,
         );
+        const writeResult = await writeContainedFile({
+          rootDirectory,
+          key: scopedKey,
+          content: bytes,
+          overwrite: request.overwrite === true,
+        });
+        const absolutePath = writeResult.absolutePath;
         attemptedAbsolutePath = absolutePath;
-        const writeFlag = request.overwrite === true ? "w" : "wx";
-
-        await mkdir(path.dirname(absolutePath), { recursive: true });
-        await writeFile(absolutePath, bytes, { flag: writeFlag });
         const writtenStats = await statPath(absolutePath);
 
         if (!writtenStats.isFile()) {
@@ -483,14 +463,11 @@ export function createFilesystemArtifactObjectStorageAdapter(
       const requestContext = resolveRequestContext(request, context);
       try {
         const key = normalizeStorageArtifactKey(request.key);
-        const absolutePath = resolvePathInsideRoot(
-          rootDirectory,
-          resolveOrganizationStorageKey(
-            key,
-            options.organizationContextProvider,
-          ),
+        const scopedKey = resolveOrganizationStorageKey(
+          key,
+          options.organizationContextProvider,
         );
-        const fileStats = await stat(absolutePath);
+        const fileStats = await statContainedFile({ rootDirectory, key: scopedKey });
         if (
           request.maximumBytes !== undefined &&
           fileStats.size > request.maximumBytes
@@ -512,14 +489,18 @@ export function createFilesystemArtifactObjectStorageAdapter(
             requestContext,
           );
         }
-        const fileContent = await readFile(absolutePath);
+        const fileContent = await readContainedFile({
+          rootDirectory,
+          key: scopedKey,
+          maximumBytes: request.maximumBytes,
+        });
 
         return createRetrieveArtifactSuccessResult(
           {
             key,
-            sizeBytes: fileStats.size,
+            sizeBytes: fileContent.size,
           },
-          new Uint8Array(fileContent) as TContent,
+          fileContent.content as TContent,
           {
             requestId: requestContext.requestId,
             correlationId: requestContext.correlationId,
@@ -548,14 +529,13 @@ export function createFilesystemArtifactObjectStorageAdapter(
       const requestContext = resolveRequestContext(request, context);
       try {
         const key = normalizeStorageArtifactKey(request.key);
-        const absolutePath = resolvePathInsideRoot(
+        const fileStats = await statContainedFile({
           rootDirectory,
-          resolveOrganizationStorageKey(
+          key: resolveOrganizationStorageKey(
             key,
             options.organizationContextProvider,
           ),
-        );
-        const fileStats = await stat(absolutePath);
+        });
 
         return createHasArtifactSuccessResult(true, {
           descriptor: {
@@ -595,22 +575,17 @@ export function createFilesystemArtifactObjectStorageAdapter(
       const requestContext = resolveRequestContext(request, context);
       try {
         const key = normalizeStorageArtifactKey(request.key);
-        const absolutePath = resolvePathInsideRoot(
-          rootDirectory,
-          resolveOrganizationStorageKey(
-            key,
-            options.organizationContextProvider,
-          ),
+        const scopedKey = resolveOrganizationStorageKey(
+          key,
+          options.organizationContextProvider,
         );
-        await unlink(absolutePath);
+        const deletion = await deleteContainedFile({ rootDirectory, key: scopedKey });
+        if (!deletion.deleted) {
+          return createDeleteArtifactSuccessResult(false, requestContext);
+        }
 
         // Best-effort cleanup of empty parent directories under the root.
-        const parentDirectory = path.dirname(absolutePath);
-        if (path.relative(rootDirectory, parentDirectory) !== "") {
-          await rm(parentDirectory, { recursive: false, force: false }).catch(
-            () => {},
-          );
-        }
+        await removeEmptyContainedParent({ rootDirectory, key: scopedKey });
 
         return createDeleteArtifactSuccessResult(true, requestContext);
       } catch (error) {

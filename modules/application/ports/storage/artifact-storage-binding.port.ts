@@ -12,6 +12,11 @@ export interface ReadArtifactStorageBindingsRequest {
   artifactId: string;
 }
 
+export interface ReadArtifactStorageBindingsBatchRequest {
+  workspaceId?: WorkspaceId;
+  artifactIds: readonly string[];
+}
+
 export interface DeleteArtifactStorageBindingsRequest {
   workspaceId?: WorkspaceId;
   artifactId: string;
@@ -32,4 +37,11 @@ export interface ArtifactStorageBindingPort {
     request: DeleteArtifactStorageBindingsRequest,
     context?: ApplicationRequestContext,
   ): Promise<ContractResult<{ deleted: boolean }>>;
+}
+
+export interface ArtifactStorageBindingBatchReadPort {
+  readArtifactStorageBindingsBatch(
+    request: ReadArtifactStorageBindingsBatchRequest,
+    context?: ApplicationRequestContext,
+  ): Promise<ContractResult<{ bindings: ArtifactStorageBinding[] }>>;
 }

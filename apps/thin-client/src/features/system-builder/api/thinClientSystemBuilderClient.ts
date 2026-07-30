@@ -62,6 +62,10 @@ export function createThinClientSystemBuilderClient(
       request(`${root}/systems/composer/assets?${composerQuery(input)}`),
     readComposerAsset: (input) =>
       request(`${root}/systems/composer/asset?${composerAssetQuery(input)}`),
+    listModelOptions: (input) =>
+      request(
+        `${root}/systems/composer/model-options?workspaceId=${encodeURIComponent(input.workspaceId)}`,
+      ),
     previewLayoutChange: (input) =>
       post(`${root}/systems/layout-change/preview`, input),
     previewFoundationUpgrade: (input) =>

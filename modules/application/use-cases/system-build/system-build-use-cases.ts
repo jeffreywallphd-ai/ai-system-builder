@@ -6,13 +6,22 @@ import type {
   SystemBuildMaterializerPort,
   SystemBuildRepositoryPort,
 } from "../../ports/system-build";
-import type { ValidateSystemBuilderRevisionService } from "../../services/system-builder";
+import {
+  createSystemBuilderModelRevisionValue,
+  type SystemBuilderModelAuthorityService,
+  type ValidateSystemBuilderRevisionService,
+} from "../../services/system-builder";
 import { canonicalizeSystemBuildValue } from "../../services/system-build";
 import type {
   AssetImplementationFacetKind,
   AssetImplementationResolutionResult,
 } from "../../../contracts/asset-implementation";
 import type { AssetReference } from "../../../contracts/asset";
+import {
+  readSystemBuilderConversationInteraction,
+  readSystemBuilderModelBinding,
+  SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID,
+} from "../../../contracts/system-builder";
 import {
   normalizeSystemReleaseId,
   systemBuildFailure,
@@ -28,6 +37,8 @@ import {
   type SystemBuildDiagnostic,
   type SystemBuildLockManifest,
   type SystemBuildRecord,
+  type SystemBuildRuntimeResourceBinding,
+  type SystemBuildRuntimeInteractionBinding,
   type SystemBuildResolvedImplementation,
   type SystemBuildResult,
   type SystemRelease,
@@ -55,6 +66,7 @@ export interface SystemBuildUseCaseDependencies {
   readonly artifacts: SystemBuildArtifactPort;
   readonly hasher: SystemBuildHasherPort;
   readonly materializer: SystemBuildMaterializerPort;
+  readonly modelAuthority?: SystemBuilderModelAuthorityService;
   readonly now?: () => string;
 }
 
@@ -136,10 +148,121 @@ export class RequestSystemBuildUseCase {
       if (validation.status === "invalid")
         return await this.fail(running, validationDiagnostics);
 
+      const runtimeResourceBindings: SystemBuildRuntimeResourceBinding[] = [];
+      for (const instance of systemRevision.instances) {
+        if (
+          String(instance.definitionRef.id) !==
+          "conversation.message-composer"
+        ) {
+          continue;
+        }
+        const binding = readSystemBuilderModelBinding(
+          instance.selectedConfiguration?.[
+            SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID
+          ],
+        );
+        const resolution = this.dependencies.modelAuthority
+          ? await this.dependencies.modelAuthority.resolve(
+              command.workspaceId,
+              binding,
+            )
+          : undefined;
+        if (!resolution || resolution.status === "denied") {
+          return await this.fail(running, [
+            ...validationDiagnostics,
+            {
+              severity: "error",
+              code: "system.build.model-binding-unavailable",
+              message:
+                resolution?.status === "denied"
+                  ? resolution.message
+                  : "Model selection authority is unavailable.",
+              path: [
+                "instances",
+                String(instance.instanceId),
+                "selectedConfiguration",
+                SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID,
+              ],
+            },
+          ]);
+        }
+        runtimeResourceBindings.push({
+          instanceId: String(instance.instanceId),
+          bindingKind: "model-record",
+          capabilityKind: "text-generation",
+          modelRecordId: resolution.binding.modelRecordId,
+          modelRevisionDigest: this.dependencies.hasher.digest(
+            canonicalizeSystemBuildValue(
+              createSystemBuilderModelRevisionValue(resolution.record),
+            ),
+          ),
+        });
+      }
+
+      const runtimeInteractionBindings: SystemBuildRuntimeInteractionBinding[] =
+        [];
+      const instancesById = new Map(
+        systemRevision.instances.map((instance) => [
+          String(instance.instanceId),
+          instance,
+        ]),
+      );
+      for (const binding of systemRevision.bindings) {
+        const interaction = readSystemBuilderConversationInteraction(binding);
+        if (!interaction) continue;
+        const composer = instancesById.get(interaction.composerInstanceId);
+        const history = instancesById.get(interaction.historyInstanceId);
+        if (
+          String(composer?.definitionRef.id) !==
+            "conversation.message-composer" ||
+          String(history?.definitionRef.id) !==
+            "conversation.message-history-display"
+        ) {
+          return await this.fail(running, [
+            ...validationDiagnostics,
+            {
+              severity: "error",
+              code: "system.build.conversation-interaction-invalid",
+              message:
+                "The conversation interaction does not connect the required composer and history assets.",
+              path: ["bindings", String(binding.bindingId)],
+            },
+          ]);
+        }
+        runtimeInteractionBindings.push({
+          interactionKind: interaction.kind,
+          composerInstanceId: interaction.composerInstanceId,
+          historyInstanceId: interaction.historyInstanceId,
+          transcriptMode: interaction.transcriptMode,
+        });
+      }
+      if (
+        runtimeResourceBindings.length > 0 &&
+        (runtimeInteractionBindings.length !== runtimeResourceBindings.length ||
+          runtimeResourceBindings.some(
+            (resource) =>
+              !runtimeInteractionBindings.some(
+                (interaction) =>
+                  interaction.composerInstanceId === resource.instanceId,
+              ),
+          ))
+      ) {
+        return await this.fail(running, [
+          ...validationDiagnostics,
+          {
+            severity: "error",
+            code: "system.build.conversation-interaction-missing",
+            message:
+              "Each conversation model binding requires one persisted-history interaction.",
+            path: ["bindings"],
+          },
+        ]);
+      }
+
       const resolved: SystemBuildResolvedImplementation[] = [];
       const resolutionDiagnostics: SystemBuildDiagnostic[] = [];
       for (const instance of systemRevision.instances) {
-        const result = await resolveFirstFacet(
+        const result = await resolveFirstSystemBuildFacet(
           this.dependencies.resolver,
           command,
           instance.definitionRef,
@@ -206,6 +329,13 @@ export class RequestSystemBuildUseCase {
         schemaCompilerVersion: "schema-compiler/1.0.0",
         resolvedImplementations: resolved.sort((left, right) =>
           left.instanceId.localeCompare(right.instanceId),
+        ),
+        runtimeResourceBindings: runtimeResourceBindings.sort((left, right) =>
+          left.instanceId.localeCompare(right.instanceId),
+        ),
+        runtimeInteractionBindings: runtimeInteractionBindings.sort(
+          (left, right) =>
+            left.composerInstanceId.localeCompare(right.composerInstanceId),
         ),
       };
       const lockDigest = this.dependencies.hasher.digest(
@@ -317,9 +447,17 @@ export class RequestSystemBuildUseCase {
   }
 }
 
-async function resolveFirstFacet(
+export async function resolveFirstSystemBuildFacet(
   resolver: SystemBuildImplementationResolverPort,
-  command: RequestSystemBuildCommand,
+  command: Pick<
+    RequestSystemBuildCommand,
+    | "workspaceId"
+    | "deploymentProfile"
+    | "availableCapabilities"
+    | "permittedTrustLevels"
+    | "hostApiVersion"
+    | "runtimeAbiVersion"
+  >,
   definitionRef: AssetReference,
 ): Promise<AssetImplementationResolutionResult> {
   let mostActionable: AssetImplementationResolutionResult | undefined;

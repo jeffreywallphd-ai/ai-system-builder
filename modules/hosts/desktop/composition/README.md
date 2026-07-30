@@ -11,6 +11,23 @@ Current composition includes:
 - artifact-browser read + media retrieval use cases,
 - artifact-repo storage composition with Hugging Face provider registration.
 
+## Desktop artifact authorization and sender trust
+
+When the production desktop host has its persisted local identity, it composes
+workspace authorization from the canonical organization and membership
+repositories. Artifact reads, mutations, uploads, and publication resolve the
+local principal and workspace before protected storage/provider work. Artifact
+publication requires `artifact:write` and `provider-credential:use`; creating a
+missing provider repository additionally requires
+`provider-repository:create` and explicit creation approval. Authorization
+decisions are written to the dedicated host-owned security audit log, separate
+from normal diagnostics.
+
+Electron transport trust is supplied by the app main process, not inferred by
+feature code. Artifact handlers accept only invocations from the main frame of
+a live desktop window owned by that process. Tests may inject a bounded trust
+double, but production registration must use the owned-window policy.
+
 ## Hugging Face token configuration
 
 - `composeDesktopHost` passes `options.artifactRepo.huggingFaceAccessToken` into the Hugging Face adapter.
@@ -29,3 +46,9 @@ The managed ComfyUI workflow prepares selected image artifacts into the runtime 
 Desktop host composition keeps core startup services resident and treats feature disposal as an explicit lifecycle concern of host-owned lazy providers. Local foundations such as artifact storage, model registries, asset definitions, settings, workspace shell, logging, diagnostics, and runtime readiness remain resident or warm after first use. Clearly transient features such as artifact remote/Hugging Face adapters, website ingestion, dataset preparation without active tasks, and image generation without active tasks may be disposed by explicit developer action or scoped idle timeout.
 
 Generic disposal must not delete persisted records or files, must not stop Python or ComfyUI, and must not cancel active runtime work. Python process stop, Python model unload, and ComfyUI process/runtime unload remain explicit user/runtime-control paths.
+
+Desktop Python composition canonicalizes both the worker bind and client base
+URL to host-owned loopback HTTP, then delegates per-launch bearer generation and
+rotation to the shared Python runtime foundation. Runtime launch credentials are
+child-only state and must not be included in desktop logs, diagnostics, preload,
+IPC, or renderer data.

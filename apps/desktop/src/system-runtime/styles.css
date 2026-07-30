@@ -1,0 +1,45 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #071426;
+  color: #e8f0fb;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: #071426; }
+button, textarea { font: inherit; }
+button { border: 1px solid #2d7eea; border-radius: 8px; background: #1769d3; color: #fff; padding: 0.7rem 1.1rem; cursor: pointer; }
+button:hover:not(:disabled) { background: #2379e6; }
+button:focus-visible, textarea:focus-visible { outline: 3px solid rgba(83, 159, 255, 0.45); outline-offset: 2px; }
+button:disabled { cursor: not-allowed; opacity: 0.55; }
+
+.system-runtime-app { min-height: 100vh; display: grid; grid-template-rows: auto 1fr; }
+.system-runtime-header { display: flex; gap: 0.9rem; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid #1f3854; background: #091a2e; }
+.system-runtime-header h1 { margin: 0.1rem 0 0; font-size: 1.15rem; }
+.system-runtime-mark { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 8px; background: #1769d3; font-weight: 750; }
+.system-runtime-eyebrow { margin: 0; color: #8eabc9; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.system-runtime-chat { width: min(860px, 100%); min-height: 0; margin: 0 auto; padding: 1.25rem; display: grid; grid-template-rows: auto minmax(8rem, 1fr) auto auto; gap: 1rem; }
+.system-runtime-transcript { min-height: 0; overflow-y: auto; list-style: none; margin: 0; padding: 0.25rem; display: flex; flex-direction: column; gap: 0.85rem; }
+.system-runtime-message { max-width: min(78%, 42rem); border: 1px solid #233f5e; border-radius: 12px; padding: 0.75rem 0.9rem; background: #0c2037; }
+.system-runtime-message--user { align-self: flex-end; background: #123762; border-color: #2869ad; }
+.system-runtime-message span { display: block; color: #8eb3db; font-size: 0.78rem; font-weight: 700; margin-bottom: 0.3rem; }
+.system-runtime-message p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
+.system-runtime-empty, .system-runtime-loading { align-self: center; justify-self: center; display: grid; justify-items: center; gap: 0.4rem; color: #8eabc9; text-align: center; }
+.system-runtime-empty strong { color: #d9e7f7; font-size: 1.05rem; }
+.system-runtime-spinner { width: 1.5rem; height: 1.5rem; border: 2px solid #274765; border-top-color: #58a0ff; border-radius: 50%; animation: system-runtime-spin 0.8s linear infinite; }
+.system-runtime-error { margin: 0; padding: 0.65rem 0.8rem; border: 1px solid #9d3f55; border-radius: 8px; background: #351924; color: #ffd8df; }
+.system-runtime-composer { border: 1px solid #274765; border-radius: 12px; padding: 0.9rem; background: #0a1c31; }
+.system-runtime-composer label { display: block; margin-bottom: 0.45rem; font-weight: 650; }
+.system-runtime-composer textarea { width: 100%; resize: vertical; min-height: 5.5rem; max-height: 14rem; border: 1px solid #345473; border-radius: 8px; padding: 0.75rem; background: #061426; color: #f2f7fc; }
+.system-runtime-composer__actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 0.7rem; color: #8eabc9; font-size: 0.8rem; }
+.system-runtime-help { margin: 0.55rem 0 0; color: #7896b5; font-size: 0.78rem; }
+.system-runtime-count--error { color: #ff9caf; }
+.system-runtime-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+@keyframes system-runtime-spin { to { transform: rotate(360deg); } }
+@media (max-width: 600px) {
+  .system-runtime-chat { padding: 0.85rem; }
+  .system-runtime-message { max-width: 92%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .system-runtime-spinner { animation: none; }
+}

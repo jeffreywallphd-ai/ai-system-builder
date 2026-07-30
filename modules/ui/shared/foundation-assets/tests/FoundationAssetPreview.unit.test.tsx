@@ -143,8 +143,7 @@ describe("FoundationAssetPreview", () => {
           title: "Recent messages",
           userRoleLabel: "Customer",
           assistantRoleLabel: "Helper",
-          sampleUserMessage: "Where is my order?",
-          sampleAssistantMessage: "I can help locate it.",
+          emptyMessage: "No support messages yet.",
           accessibilityLabel: "Recent support messages",
         }}
         presentation="composed"
@@ -152,14 +151,12 @@ describe("FoundationAssetPreview", () => {
     );
     for (const value of [
       "Recent messages",
-      "Customer",
-      "Helper",
-      "Where is my order?",
-      "I can help locate it.",
+      "No support messages yet.",
       'aria-label="Recent support messages"',
     ]) {
       expect(history).toContain(value);
     }
+    expect(history).not.toContain("<li>");
 
     const root = renderToStaticMarkup(
       <FoundationAssetPreview

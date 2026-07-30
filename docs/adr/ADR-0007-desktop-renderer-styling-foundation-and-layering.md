@@ -51,6 +51,12 @@ Desktop and thin-client renderer styling is token-first, layered, and shared by 
 - Wide-sidebar navigation sections are independent semantic disclosure controls. Their persisted visual state does not remove routes, and a collapsed global sidebar gives the reclaimed width to the active page.
 - Navigation changes presentation only; page availability, routing, data access, and feature behavior remain owned by each application.
 - Reusable application iconography is code-native, accessible, and exported by `modules/ui/shared`; do not add duplicated inline navigation SVGs to app-local shells.
+- The shared shell owns cross-page transient feedback. It places one notification
+  control before Settings and presents bounded five-second toasts plus a fixed
+  history dropdown below the sticky top bar. Feature surfaces publish terminal
+  outcomes once through the shared notification API; they retain inline
+  validation, loading/empty states, blocking and retry diagnostics, and active
+  progress controls that require local context.
 - Common actions, feature-panel headings, and artifact type designators reuse shared components. Icons and colored badges supplement visible text and metadata; they do not replace accessible labels or domain data.
 - Decorative workspace and feature-header art is shared, text-free SVG or optimized raster artwork under `modules/ui/shared/assets/illustrations/`. It remains hidden from assistive technology and cannot communicate application state or replace semantic content. Semantic page-level routing may select distinct artwork for major feature areas, but both React hosts must consume the same shared assets and placement rules.
 

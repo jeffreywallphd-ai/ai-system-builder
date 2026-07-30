@@ -1,4 +1,5 @@
 import type {
+  AssetBinding,
   AssetBindingKind,
   AssetConfigurationField,
   AssetConfigurationSchema,
@@ -7,7 +8,14 @@ import type {
   AssetInstance,
   AssetPort,
 } from "../../../contracts/asset";
-import type { SystemBuilderComposerAsset } from "../../../contracts/system-builder";
+import {
+  readSystemBuilderConversationInteraction,
+  type SystemBuilderComposerAsset,
+} from "../../../contracts/system-builder";
+
+const CONTROLLED_CHATBOT_REFERENCE_KIND = "controlled-chatbot";
+const MESSAGE_COMPOSER_DEFINITION_ID = "conversation.message-composer";
+const MESSAGE_HISTORY_DEFINITION_ID = "conversation.message-history-display";
 
 export interface SystemComposerConfigurationSection {
   readonly id: string;
@@ -35,6 +43,31 @@ export interface SystemComposerPortEndpoint {
   readonly instanceLabel: string;
   readonly definitionId: string;
   readonly port: AssetPort;
+}
+
+export function canRepairSystemComposerConversationInteraction(
+  instances: readonly AssetInstance[],
+  bindings: readonly AssetBinding[],
+): boolean {
+  const referenceInstances = instances.filter(
+    (instance) =>
+      instance.metadata?.referenceSystemKind ===
+      CONTROLLED_CHATBOT_REFERENCE_KIND,
+  );
+  return (
+    referenceInstances.filter(
+      (instance) =>
+        String(instance.definitionRef.id) === MESSAGE_COMPOSER_DEFINITION_ID,
+    ).length === 1 &&
+    referenceInstances.filter(
+      (instance) =>
+        String(instance.definitionRef.id) === MESSAGE_HISTORY_DEFINITION_ID,
+    ).length === 1 &&
+    bindings.every(
+      (binding) =>
+        readSystemBuilderConversationInteraction(binding) === undefined,
+    )
+  );
 }
 
 export function buildSystemComposerConfigurationSections(
@@ -170,7 +203,43 @@ export function materializeSystemComposerConfiguration(
       values[field.fieldId] = field.defaultValue;
   }
   Object.assign(values, definition.defaultConfiguration ?? {}, selected ?? {});
-  return values;
+  return projectConfigurationToSchema(definition.configurationSchema, values);
+}
+
+export function sanitizeSystemComposerInstanceConfigurations(
+  instances: readonly AssetInstance[],
+  catalog: readonly SystemBuilderComposerAsset[],
+): readonly AssetInstance[] {
+  const definitions = new Map(
+    catalog.map((definition) => [
+      `${definition.definitionId}@${definition.version}`,
+      definition,
+    ]),
+  );
+  return instances.map((instance) => {
+    const definition = definitions.get(
+      `${String(instance.definitionRef.id)}@${instance.definitionRef.version ?? ""}`,
+    );
+    if (!definition?.configurationSchema?.strict) return instance;
+    const selectedConfiguration = projectConfigurationToSchema(
+      definition.configurationSchema,
+      instance.selectedConfiguration ?? {},
+    );
+    return sameJson(selectedConfiguration, instance.selectedConfiguration ?? {})
+      ? instance
+      : { ...instance, selectedConfiguration };
+  });
+}
+
+function projectConfigurationToSchema(
+  schema: AssetConfigurationSchema | undefined,
+  values: AssetConfigurationValues,
+): AssetConfigurationValues {
+  if (!schema?.strict) return values;
+  const declared = new Set(schema.fields.map((field) => field.fieldId));
+  return Object.fromEntries(
+    Object.entries(values).filter(([fieldId]) => declared.has(fieldId)),
+  );
 }
 
 export function validateSystemComposerConfiguration(

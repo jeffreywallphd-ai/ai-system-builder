@@ -1,6 +1,9 @@
 import { registerArtifactUploadIpc, type StoreArtifactUploadUseCasePort } from "./artifact-upload/registerArtifactUploadIpc";
 import { registerArtifactBrowserIpc, type RegisterArtifactBrowserIpcDependencies } from "./artifact-browser/registerArtifactBrowserIpc";
-import type { IpcMainHandlePort } from "./ipcMainHandlePort";
+import type {
+  IpcMainHandlePort,
+  IpcSenderTrustPolicy,
+} from "./ipcMainHandlePort";
 import { lazyProvidedObject, type AsyncFeatureProvider, type LazyProvidedObjectOptions } from "./lazyFeatureProvider";
 
 type HuggingFaceTokenStatus = { configured: boolean; maskedToken?: string };
@@ -29,6 +32,7 @@ export interface DesktopArtifactRemoteIpcFeature {
 
 export interface RegisterDesktopArtifactIpcDependencies {
   ipcMain: IpcMainHandlePort;
+  senderTrust: IpcSenderTrustPolicy;
   getArtifactFeature: AsyncFeatureProvider<DesktopArtifactIpcFeature>;
   getArtifactRemoteFeature: AsyncFeatureProvider<DesktopArtifactRemoteIpcFeature>;
   remoteLifecycle?: LazyProvidedObjectOptions;
@@ -40,9 +44,10 @@ export interface RegisterDesktopArtifactIpcDependencies {
 }
 
 export function registerDesktopArtifactIpc(dependencies: RegisterDesktopArtifactIpcDependencies): void {
-  registerArtifactUploadIpc({ ipcMain: dependencies.ipcMain, storeArtifactUploadUseCase: lazyProvidedObject(dependencies.getArtifactFeature, (feature) => feature.storeArtifactUploadUseCase) });
+  registerArtifactUploadIpc({ ipcMain: dependencies.ipcMain, senderTrust: dependencies.senderTrust, storeArtifactUploadUseCase: lazyProvidedObject(dependencies.getArtifactFeature, (feature) => feature.storeArtifactUploadUseCase) });
   registerArtifactBrowserIpc({
     ipcMain: dependencies.ipcMain,
+    senderTrust: dependencies.senderTrust,
     getHuggingFaceTokenStatus: dependencies.tokens.getHuggingFaceTokenStatus,
     setHuggingFaceToken: dependencies.tokens.setHuggingFaceToken,
     clearHuggingFaceToken: dependencies.tokens.clearHuggingFaceToken,

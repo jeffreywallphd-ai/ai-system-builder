@@ -44,16 +44,31 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
   );
 }
 
+function isFocusableElement(element: HTMLElement | null): element is HTMLElement {
+  return Boolean(
+    element &&
+      element.matches(focusableSelector) &&
+      !element.hidden &&
+      element.getAttribute("aria-hidden") !== "true" &&
+      element.tabIndex >= 0,
+  );
+}
+
 function focusInitialElement(
   dialog: HTMLElement,
   initialFocusRef?: RefObject<HTMLElement | null>,
-): void {
-  const target =
-    initialFocusRef?.current ??
-    dialog.querySelector<HTMLElement>("[data-modal-initial-focus]") ??
-    getFocusableElements(dialog)[0] ??
-    dialog;
+): HTMLElement {
+  const referencedTarget = initialFocusRef?.current ?? null;
+  const markedTarget = dialog.querySelector<HTMLElement>(
+    "[data-modal-initial-focus]",
+  );
+  const target = isFocusableElement(referencedTarget)
+    ? referencedTarget
+    : isFocusableElement(markedTarget)
+      ? markedTarget
+      : (getFocusableElements(dialog)[0] ?? dialog);
   target.focus();
+  return target;
 }
 
 export interface ModalDialogProps {
@@ -110,7 +125,41 @@ export function ModalDialog({
     const previouslyFocused = document.activeElement as HTMLElement | null;
     unregisterModal(instanceId);
     modalStack.push(instanceId);
-    focusInitialElement(dialog, initialFocusRefValue.current);
+    const initialTarget = focusInitialElement(
+      dialog,
+      initialFocusRefValue.current,
+    );
+    const MutationObserverConstructor =
+      dialog.ownerDocument.defaultView?.MutationObserver;
+    const preferredFocusObserver = MutationObserverConstructor
+      ? new MutationObserverConstructor(() => {
+          const referencedTarget = initialFocusRefValue.current?.current ?? null;
+          const markedTarget = dialog.querySelector<HTMLElement>(
+            "[data-modal-initial-focus]",
+          );
+          const preferredTarget = isFocusableElement(referencedTarget)
+            ? referencedTarget
+            : isFocusableElement(markedTarget)
+              ? markedTarget
+              : null;
+          const activeElement = dialog.ownerDocument.activeElement;
+          if (
+            preferredTarget &&
+            preferredTarget !== activeElement &&
+            (activeElement === initialTarget ||
+              activeElement === dialog ||
+              !dialog.contains(activeElement))
+          ) {
+            preferredTarget.focus();
+          }
+        })
+      : undefined;
+    preferredFocusObserver?.observe(dialog, {
+      attributes: true,
+      attributeFilter: ["disabled", "hidden", "aria-hidden", "tabindex"],
+      childList: true,
+      subtree: true,
+    });
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!isTopmostModal(instanceId)) {
@@ -170,6 +219,7 @@ export function ModalDialog({
     return () => {
       document.removeEventListener("keydown", handleKeyDown, true);
       document.removeEventListener("focusin", handleFocusIn, true);
+      preferredFocusObserver?.disconnect();
       unregisterModal(instanceId);
       if (
         previouslyFocused?.isConnected &&

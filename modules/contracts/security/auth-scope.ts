@@ -13,6 +13,10 @@ export const SECURITY_SCOPES = [
   "runtime:admin",
   "settings:read",
   "settings:write",
+  "provider-credential:read",
+  "provider-credential:use",
+  "provider-credential:write",
+  "provider-repository:create",
   "security:admin",
 ] as const;
 

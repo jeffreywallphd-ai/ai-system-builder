@@ -39,5 +39,5 @@ export async function composeDesktopRuntimeTaskFeature(options: ComposeDesktopRu
     imageRuntimeTaskRegistry: options.imageRuntimeTaskRegistry,
   });
   const runtimeCapabilityGuard = new RuntimeCapabilityGuardService(options.runtimeReadiness);
-  return { runtimeTaskRegistry, runtimeCapabilityGuard, taskPowerLifecycle, powerSuspensionBlocker };
+  return { runtimeTaskRegistry, modelDownloadCompletionPort: pythonRuntimeTaskRegistry, runtimeCapabilityGuard, taskPowerLifecycle, powerSuspensionBlocker };
 }

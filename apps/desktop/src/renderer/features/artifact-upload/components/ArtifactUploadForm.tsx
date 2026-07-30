@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 
-import { ApplicationIcon, TermWithHint, TypeBadge } from "../../../../../../../modules/ui/shared";
+import { ApplicationIcon, TermWithHint, TransientNotificationPublisher, TypeBadge } from "../../../../../../../modules/ui/shared";
 import { formatUploadedFileSize } from "../hooks/formatUploadedFileSize";
 
 export type UploadStatus = "idle" | "uploading" | "success" | "partial" | "error" | "canceled";
@@ -30,6 +30,7 @@ export interface ArtifactUploadFormProps {
   onFileChange: (event: FormEvent<HTMLInputElement>) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onCancelUpload: () => void;
+  workspaceId?: string;
 }
 
 export function ArtifactUploadForm({
@@ -39,6 +40,7 @@ export function ArtifactUploadForm({
   onFileChange,
   onSubmit,
   onCancelUpload,
+  workspaceId,
 }: ArtifactUploadFormProps) {
   const uploadResults = viewState.results ?? (
     viewState.status === "success" && viewState.key
@@ -52,8 +54,6 @@ export function ArtifactUploadForm({
       }]
       : []
   );
-  const statusRole = viewState.status === "error" || viewState.status === "partial" ? "alert" : "status";
-
   return (
     <section className="ui-stack ui-stack--sm">
       <form className="ui-stack ui-stack--sm" onSubmit={onSubmit}>
@@ -84,14 +84,14 @@ export function ArtifactUploadForm({
           <span className="ui-button__label">Cancel upload</span>
         </button>
 
-        {viewState.message ? (
-          <p
-            className={viewState.status === "success" ? "ui-status ui-status--success" : "ui-status"}
-            role={statusRole}
-          >
-            {viewState.message}
-          </p>
-        ) : null}
+        {viewState.status === "uploading" && viewState.message ? <p role="status">{viewState.message}</p> : null}
+        <TransientNotificationPublisher
+          message={viewState.status !== "idle" && viewState.status !== "uploading" ? viewState.message : undefined}
+          title={viewState.status === "error" || viewState.status === "partial" ? "Artifact upload needs attention" : "Artifact upload completed"}
+          tone={viewState.status === "error" ? "error" : viewState.status === "partial" ? "warning" : "success"}
+          source="Artifact Upload"
+          workspaceId={workspaceId}
+        />
 
         {uploadResults.length > 0 ? (
           <section className="ui-stack ui-stack--sm" aria-label="Upload results">

@@ -30,6 +30,7 @@ import type {
 import {
   createCanonicalSystemBuilderStructure,
   materializeReferenceSystemTemplateStructure,
+  reconcileSystemBuilderConversationInteractions,
 } from "../../services/system-builder";
 
 export interface SystemBuilderUseCaseDependencies {
@@ -444,14 +445,23 @@ export class SaveSystemBuilderRevisionUseCase {
     const revisionId = normalizeSystemBuilderRevisionId(
       `${command.systemId}.r${nextRevisionNumber}`,
     );
+    const reconciledInteractions =
+      reconcileSystemBuilderConversationInteractions({
+        systemId: String(command.systemId),
+        composition: clone(command.composition),
+        instances: command.instances,
+        bindings: clone(command.bindings),
+        actorId: safeActor(command.actorId),
+        timestamp,
+      });
     const candidate = {
       revisionId,
       systemId: command.systemId,
       targetWorkspaceId: command.workspaceId,
       revisionNumber: nextRevisionNumber,
-      composition: clone(command.composition),
+      composition: reconciledInteractions.composition,
       instances: clone(command.instances),
-      bindings: clone(command.bindings),
+      bindings: reconciledInteractions.bindings,
       ...(command.structure ? { structure: clone(command.structure) } : {}),
       ...(command.placements ? { placements: clone(command.placements) } : {}),
       validationIssues: [],

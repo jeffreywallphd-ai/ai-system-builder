@@ -11,6 +11,9 @@
   conversation state; they do not replace user communication.
 - Evidence describes what actually ran. Pending, skipped, and controlled-environment
   checks remain visibly distinct from passes.
+- Every roadmap and increment records a security impact disposition. Security is a
+  universal, proportional design constraint, not an optional final gate or a concern
+  limited to security-named work.
 - The state engine records workflow facts but never runs implementation or test
   commands.
 
@@ -33,6 +36,10 @@ Markdown files. Do not edit them directly. Use an event to change state. Use
 to repair drift or finish an interrupted multi-file write after reviewing the
 difference.
 
+Never store secrets, credentials, protected prompts, private payloads, exploitable
+production details, personal data, or raw retrieved content in any roadmap artifact,
+event, evidence summary, report, or test fixture.
+
 ## Preparation loop
 
 ### 1. Discover
@@ -49,6 +56,21 @@ Inspect:
 
 Record summaries and source links, not raw retrieved content. Make code/documentation
 conflicts visible under repository policy.
+
+Apply `docs/standards/security-by-design-standards.md` during discovery and record one
+of these dispositions in the structured `securityImpact` field:
+
+- `not-security-relevant` with a concrete reason the work changes no trust,
+  authority, sensitive-data, execution, dependency, side-effect, or public
+  diagnostic boundary;
+- `security-relevant` with protected assets/data, actors and authority, entry
+  points/trust boundaries, abuse/failure cases, controls, verification, rollback,
+  and residual risk.
+
+Load the security pack and applicable canonical threat models for
+`security-relevant` work. Uncertainty or a material identity, tenancy, secret,
+sandbox, public exposure, encryption, retention, audit, or trust choice is a
+decision gate, not permission to assume a permissive default.
 
 ### 2. Decide
 
@@ -78,12 +100,18 @@ contains:
 - objective and dependencies;
 - work packages and deliverables;
 - acceptance criteria with local or controlled-environment qualification;
+- `security-impact-reviewed` or a more specific security acceptance criterion;
 - verification methods;
 - rollback strategy;
 - explicit exclusions.
 
 Dependencies may point only to earlier increments. Make deferred work and external
 qualification visible.
+
+Security cannot be excluded as a whole. A specific deferred threat or hardening
+item names the boundary, rationale, residual risk, and successor decision/work.
+Rollback, migration, recovery, compatibility, and legacy paths must remain at
+least as secure as the forward path.
 
 Audit every boundary between adjacent increments before requesting approval:
 
@@ -158,6 +186,11 @@ nearest implementation, tests, documentation, contracts, boundaries, and current
 primary sources. Record conclusions, risks, and links. Research must precede the
 increment plan.
 
+Refresh the security impact screen against current code and scope. For
+`security-relevant` work, record the abuse/failure cases and control owners that the
+increment must prove. If the disposition changes, reconcile scope and approval
+before editing.
+
 ### 3. Plan
 
 Write an implementation plan with:
@@ -170,6 +203,11 @@ Write an implementation plan with:
 - documentation updates;
 - assumptions;
 - rollback.
+
+Map the security criterion to at least one chunk, focused denial/failure-path
+checks, applicable completion gates, documentation or threat-model updates, and a
+safe rollback. Positive-only testing is insufficient for a changed security
+boundary.
 
 Every criterion belongs to at least one chunk. A chunk should be reviewable and
 produce an observable outcome, commonly a contract/use-case slice, adapter/host
@@ -206,6 +244,12 @@ authoritative. A controlled-environment criterion may remain pending only when t
 increment explicitly permits it; the increment then becomes
 `implemented-pending-qualification`, not complete. Later passing evidence promotes
 it to complete.
+
+Security evidence states the disposition and uses sanitized summaries. A
+`not-security-relevant` criterion records review evidence and rationale. A
+`security-relevant` criterion identifies controls, denial/failure-path results,
+residual risk, and any controlled-environment evidence without copying secrets,
+private content, provider-native payloads, paths, or exploitable production detail.
 
 An increment closes only when every planned chunk is recorded and every criterion
 has passing or explicitly permitted pending evidence. A roadmap closes only when all

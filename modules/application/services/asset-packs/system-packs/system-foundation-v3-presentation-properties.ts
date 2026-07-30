@@ -77,7 +77,14 @@ export function withSystemFoundationV3PresentationProperties(
       }),
       schemaVersion: definition.version,
       fields,
-      requiredFieldIds: definition.configurationSchema?.requiredFieldIds ?? [],
+      requiredFieldIds: [
+        ...new Set([
+          ...(definition.configurationSchema?.requiredFieldIds ?? []),
+          ...additions
+            .filter((field) => field.required)
+            .map((field) => field.fieldId),
+        ]),
+      ],
       strict: true,
       description:
         definition.configurationSchema?.description ??
@@ -289,8 +296,7 @@ function conversationFields(definitionId: string): readonly AssetConfigurationFi
       return [
         textField("label", "Label", "Message", "Content", 1),
         textField("placeholder", "Placeholder", "Enter a message", "Content", 2),
-        textField("previewValue", "Preview value", "Preview message", "Preview", 3),
-        textField("accessibilityLabel", "Accessibility label", "Message", "Accessibility", 4),
+        textField("accessibilityLabel", "Accessibility label", "Message", "Accessibility", 3),
       ];
     case "conversation.assistant-text-response-output":
       return [
@@ -305,16 +311,16 @@ function conversationFields(definitionId: string): readonly AssetConfigurationFi
       ];
     case "conversation.message-composer":
       return [
-        textField("accessibilityLabel", "Accessibility label", "Message composer", "Accessibility", 1),
+        modelResourceField(),
+        textField("accessibilityLabel", "Accessibility label", "Message composer", "Accessibility", 2),
       ];
     case "conversation.message-history-display":
       return [
         textField("title", "Title", "Conversation", "Content", 1),
         textField("userRoleLabel", "User role label", "You", "Content", 2),
         textField("assistantRoleLabel", "Assistant role label", "Assistant", "Content", 3),
-        textAreaField("sampleUserMessage", "Sample user message", "How can this system help?", "Preview", 4),
-        textAreaField("sampleAssistantMessage", "Sample assistant message", "This is a safe preview response.", "Preview", 5),
-        textField("accessibilityLabel", "Accessibility label", "Conversation history", "Accessibility", 6),
+        textField("emptyMessage", "Empty message", "No messages yet.", "States", 4),
+        textField("accessibilityLabel", "Accessibility label", "Conversation history", "Accessibility", 5),
       ];
     case "conversation.assistant-response-panel":
       return [
@@ -435,6 +441,32 @@ function textField(
     label,
     defaultValue,
     uiHint: { hintKind: "text", section, order },
+  };
+}
+
+function modelResourceField(): AssetConfigurationField {
+  return {
+    fieldId: "modelBinding",
+    valueKind: "resource-reference",
+    label: "Text generation model",
+    description:
+      "Choose a runnable text model authorized for the current workspace.",
+    required: true,
+    uiHint: {
+      hintKind: "resource-picker",
+      section: "Model",
+      order: 1,
+      metadata: {
+        editorScope: "properties",
+        resourceKind: "model",
+        capabilityKind: "text-generation",
+      },
+    },
+    metadata: {
+      resourceKind: "model",
+      capabilityKind: "text-generation",
+      resourceScope: "workspace-model-registry",
+    },
   };
 }
 

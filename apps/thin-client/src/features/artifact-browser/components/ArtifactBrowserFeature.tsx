@@ -9,6 +9,7 @@ import {
   ArtifactPreviewPanel,
   PanelHeading,
   TermWithHint,
+  TransientNotificationPublisher,
   TypeBadge,
   type PublishedBackingView,
 } from "../../../../../../modules/ui/shared";
@@ -106,6 +107,10 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
     setRegisterMediaType,
     toggleRegisterForm,
   } = useArtifactBrowserFeature(client, workspaceId);
+  const transientViewState = Boolean(viewState.message && (
+    /^Deleted\b/.test(viewState.message)
+    || (viewState.status === "error" && !/^(Failed to load|Unable to load|Select a workspace|Type Delete)/i.test(viewState.message))
+  ));
 
   const backingState = deriveArtifactBackingState(detail, content);
 
@@ -118,7 +123,8 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
       <div className="artifact-browser__toolbar">
         <button className="ui-button" type="button" onClick={() => void refreshArtifacts()}><ApplicationIcon name="refresh" /><span className="ui-button__label">Refresh</span></button>
       </div>
-      {viewState.message ? <p role={viewState.status === "error" ? "alert" : "status"}>{viewState.message}</p> : null}
+      {viewState.message && !transientViewState ? <p role={viewState.status === "error" ? "alert" : "status"}>{viewState.message}</p> : null}
+      <TransientNotificationPublisher message={transientViewState ? viewState.message : undefined} title={viewState.status === "error" ? "Artifact action needs attention" : "Artifacts updated"} tone={viewState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
       {pendingDeleteStorageKey ? (
         <div className="ui-modal-overlay" role="presentation">
           <section className="ui-panel ui-modal-dialog ui-stack ui-stack--sm" role="dialog" aria-label="Delete artifact confirmation" aria-modal="true">
@@ -224,7 +230,7 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
           <button className="ui-button" type="button" disabled={registerState.status === "loading" || registerForm.repository.trim().length === 0 || registerForm.pathInRepo.trim().length === 0} onClick={() => void registerArtifactFromHuggingFace()}>
             {registerState.status === "loading" ? "Registering..." : "Register"}
           </button>
-          {registerState.message ? <p role={registerState.status === "error" ? "alert" : "status"}>{registerState.message}</p> : null}
+          <TransientNotificationPublisher message={registerState.status !== "loading" ? registerState.message : undefined} title={registerState.status === "error" ? "Artifact registration needs attention" : "Artifact registered"} tone={registerState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
         </section>
       ) : null}
 
@@ -365,12 +371,8 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
               {localizeState.status === "loading" ? "Localizing..." : "Localize artifact"}
             </button>
           ) : null}
-          {sourceVerifyState.message ? (
-            <p role={sourceVerifyState.status === "error" ? "alert" : "status"}>{sourceVerifyState.message}</p>
-          ) : null}
-          {localizeState.message ? (
-            <p role={localizeState.status === "error" ? "alert" : "status"}>{localizeState.message}</p>
-          ) : null}
+          <TransientNotificationPublisher message={sourceVerifyState.status !== "loading" ? sourceVerifyState.message : undefined} title={sourceVerifyState.status === "error" ? "Source verification needs attention" : "Source verification completed"} tone={sourceVerifyState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
+          <TransientNotificationPublisher message={localizeState.status !== "loading" ? localizeState.message : undefined} title={localizeState.status === "error" ? "Artifact localization needs attention" : "Artifact localized"} tone={localizeState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
           {localizedArtifact ? (
             <p role="status">Localized bytes key: {localizedArtifact.localObject.key}</p>
           ) : null}

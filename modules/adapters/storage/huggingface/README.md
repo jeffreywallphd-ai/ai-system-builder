@@ -11,7 +11,8 @@ This module contains the first concrete artifact-repo storage provider adapter.
 - Supports:
   - `hasArtifactInRepo` via official Hub client `fileExists`,
   - `storeArtifactInRepo` via official Hub client `uploadFile`,
-  - `retrieveArtifactFromRepo` via official Hub client `downloadFile`.
+  - `retrieveArtifactFromRepo` through the shared secure-egress broker and the
+    provider's canonical resolve URL.
 
 ## Configuration
 
@@ -28,16 +29,39 @@ This module contains the first concrete artifact-repo storage provider adapter.
   - `datasets/<namespace>/<repo>` => dataset repo type,
   - `models/<namespace>/<repo>` => model repo type,
   - no prefix => adapter default repo type (`dataset`).
+- A `404` from upload never triggers implicit repository creation. Callers must
+  supply `repositoryCreation: { approved: true, visibility }`; when a managed
+  authorization callback is configured it must also allow the exact provider
+  repository before the create API is called.
+- New repositories preserve the explicit visibility choice. Product UI defaults
+  to `private`; public creation is a separate explicit selection.
+- Model publication also defaults missing repository creation to private when a
+  caller omits visibility. Creating a public model repository requires an
+  explicit `private: false` request.
 
 ## Notes
 
-- The adapter uses only the official `@huggingface/hub` client path.
-- No handcrafted HTTP fallback path exists in this adapter.
+- Provider existence checks and writes use the official `@huggingface/hub`
+  client. Retrieval deliberately uses the shared secure-egress broker so DNS,
+  redirects, authorization forwarding, content type, streamed bytes, deadline,
+  and concurrency are controlled before localization.
+- The brokered retrieval path is the only download path; there is no unbounded
+  `arrayBuffer` fallback.
+- Dataset browsing reads the Hub's logical Parquet inventory rather than a raw
+  recursive repository tree. Returned URLs must remain on the configured Hub
+  origin, match the requested dataset, use the converted Parquet revision, and
+  stay within the configured file-count limit before any entry is exposed.
 - This is intentionally a small provider slice, not full provider lifecycle management.
 - Tests are mock-driven and deterministic (no live network dependency).
+- Fail-closed tests cover absent approval, managed denial, private creation, and
+  the provider already-exists retry path, plus oversized and disallowed-type
+  localization responses.
 
 
 ## Runtime token source
 
-- Adapter now supports `accessTokenProvider` for host-managed token config, allowing token updates without rebuilding adapter wiring.
+- Adapter supports synchronous or asynchronous `accessTokenProvider` functions
+  for host-managed token config, resolving the value once per operation so a
+  managed host can enforce organization context and authorization without
+  rebuilding adapter wiring.
 - Fallback precedence remains: explicit `accessToken` option, then `HF_TOKEN`, then `HUGGING_FACE_TOKEN` when no provider is supplied.

@@ -150,6 +150,23 @@ describe("ModalDialog", () => {
     expect(document.activeElement).toBe(opener);
   });
 
+  it("keeps focus inside the dialog when the preferred action is disabled", async () => {
+    await render(
+      <ModalDialog open title="Preparing build" onClose={() => undefined}>
+        <button type="button" disabled data-modal-initial-focus>
+          Build
+        </button>
+      </ModalDialog>,
+    );
+
+    const dialog = document.body.querySelector<HTMLElement>("[role='dialog']");
+    const closeButton = document.body.querySelector<HTMLButtonElement>(
+      "button[aria-label='Close dialog']",
+    );
+    expect(dialog?.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).toBe(closeButton);
+  });
+
   it("keeps base and nested modal layers above application chrome", () => {
     const tokens = readFileSync(
       join(process.cwd(), "modules/ui/shared/styles/tokens.css"),

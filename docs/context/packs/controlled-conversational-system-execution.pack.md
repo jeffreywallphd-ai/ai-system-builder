@@ -54,6 +54,10 @@ Define and protect controlled execution orchestration for the first runnable com
 
 Use explicit user action (`Test this system` / `Start chat`) before runtime invocation; approval stales/invalidates when source plan/readiness changes.
 
+For a published visual release, explicit lifecycle **Start** is a distinct
+session-scoped approval after exact release, model, deployment, runtime-instance,
+readiness, and host-capability revalidation. It is not renderer authority.
+
 ## Runtime adapter boundary
 
 Use narrow invocation/cancellation/progress/result ports. The first supported adapter path is the Python conversational text-generation runtime adapter, selected through the conversational adapter catalog and guarded by runtime health/capability checks.
@@ -63,6 +67,9 @@ Use narrow invocation/cancellation/progress/result ports. The first supported ad
 - No raw provider payloads in general execution records.
 - No raw runtime request/response exposure in diagnostics.
 - Conversation message/assistant-response contract records are defined; persistence adapter availability must be verified against the host composition in scope.
+- Published conversation and system-owned records use only the exact active
+  runtime-instance database session; the platform control plane retains opaque
+  placement/lifecycle references rather than transcript data.
 
 ## Anti-drift rules
 
@@ -86,6 +93,19 @@ Tools/function-calling, retrieval/RAG, memory, multimodal IO, image generation/C
 - Conversational source/read summaries must rely on verified source evidence, not composition-plan ids, labels, summaries, runtime capability strings, or caller-provided display claims.
 - Session creation across API, IPC/preload, and clients carries only workspace scope and reviewed execution-plan identity. `systemLabel`, `systemSummary`, raw source claims, prompt materialization, runtime/model/provider overrides, and protected context are not accepted at the external boundary.
 - Current action availability comes from application eligibility/approval/readiness/runtime/host state. Provenance text alone must not enable submission.
+- A conversation runtime reference must carry the normalized exact model-record
+  identity frozen by the approved release. Activation/start revalidate the
+  current workspace record and revision digest; the Python adapter resolves it
+  again and submits only the authority-owned runtime model id. Missing, stale,
+  cross-workspace, or incompatible records block before turn persistence or
+  worker submission.
+- Stop preserves and closes the isolated data plane. Compatible migration is
+  explicit and stopped-state only; clones allocate a new database and uninstall
+  retains data pending a separately confirmed deletion.
+- Desktop published interaction uses a dedicated sandboxed window and minimal
+  read/submit preload. Main derives authority from the exact registered main
+  frame; Stop closes the session/window, and restart reopens the retained
+  conversation from the same runtime-instance database.
 - Transcript is the intentional full visible-content read surface. Operational read models, activity, capability summaries, cancel/retry results, diagnostics, and errors stay content-safe.
 - Desktop and server hosts may expose only capabilities they actually compose. Cancel, retry, and streaming remain unsupported/deferred unless an application/runtime path genuinely supports them.
 - Systems Run & Test uses the shared desktop/thin presenter, real execution-plan
@@ -102,10 +122,13 @@ Tools/function-calling, retrieval/RAG, memory, multimodal IO, image generation/C
 
 Application-facing conversational invocation seams exist for protected context preparation, adapter catalog selection, runtime guard checks, single-turn orchestration, and the supported Python text-generation runtime adapter path. Approval/session eligibility, reviewed execution-plan identity, runtime readiness, and asset-derived source boundaries remain mandatory prerequisites.
 
+The protected context request carries the approved execution-plan, composition-plan, readiness-binding, approval, session, workspace, and runtime-reference associations. Conversation-session approval validity is checked before catalog selection; runtime guard evaluation precedes context materialization; exact-shape and association validation precedes invocation. Materialized instructions, turn text, history, generation settings, and adapter request/response details remain transient and must not be copied into ordinary operational records or diagnostics.
+
 - The first user-facing Systems **Run & Test** surface for composed
   conversational systems uses the same safe desktop/thin-client conversation
   clients and preserves approval/readiness/execution-plan boundaries.
 - `reference.controlled-chatbot@1.0.0` is a closed Asset Kernel composition;
   release approval does not activate it or bypass reviewed plan, readiness, and
-  session approval requirements.
+  session approval requirements. It contains one typed persisted-only
+  composer/history interaction, no example transcript, and no default model.
 - No fake response generator is allowed in production host composition. Hosts may expose only capabilities they actually compose; cancel, retry, and streaming stay unsupported unless implemented end to end.

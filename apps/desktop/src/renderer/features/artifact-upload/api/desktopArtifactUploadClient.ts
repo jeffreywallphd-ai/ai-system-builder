@@ -8,10 +8,12 @@ import {
   type DesktopWebsitePagesBatchSummary,
   type DesktopWebsiteIngestionTarget,
 } from "../../../lib/desktopApi";
+import { ARTIFACT_UPLOAD_MAXIMUM_BYTES } from "../../../../../../../modules/contracts/artifact-upload";
 
 export interface ArtifactUploadAcceptedTypePolicy {
   acceptedMediaTypes: readonly string[];
   acceptedExtensions: readonly string[];
+  maximumBytes?: number;
 }
 
 export type WebsiteIngestionMode = "automatic" | "rendered";
@@ -207,6 +209,18 @@ export function createDesktopArtifactUploadClient(): ArtifactUploadClient {
     async uploadArtifact(input: DesktopArtifactUploadInput): Promise<DesktopArtifactUploadResult> {
       if (!input.workspaceId?.trim()) {
         return { ok: false, error: { code: "validation", message: "Workspace id is required for artifact upload." } };
+      }
+      if (!(input.bytes instanceof Uint8Array) || input.bytes.byteLength === 0) {
+        return { ok: false, error: { code: "validation", message: "Artifact upload bytes are required." } };
+      }
+      if (input.bytes.byteLength > ARTIFACT_UPLOAD_MAXIMUM_BYTES) {
+        return {
+          ok: false,
+          error: {
+            code: "validation",
+            message: `Artifact uploads must not exceed ${ARTIFACT_UPLOAD_MAXIMUM_BYTES} bytes.`,
+          },
+        };
       }
 
       const response = await desktopApi.uploadArtifact(input);

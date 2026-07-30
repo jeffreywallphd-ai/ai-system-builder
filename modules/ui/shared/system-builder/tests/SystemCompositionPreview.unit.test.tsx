@@ -8,7 +8,10 @@ import type { SystemBuilderComposerAsset } from "../../../../contracts/system-bu
 import { describe, expect, it } from "../../../../testing/node-test";
 import {
   buildSystemCompositionPreviewModel,
+  MAX_SYSTEM_COMPOSITION_PREVIEW_DEPTH,
+  MAX_SYSTEM_COMPOSITION_PREVIEW_INPUT_INSTANCES,
   MAX_SYSTEM_COMPOSITION_PREVIEW_SURFACES,
+  MAX_SYSTEM_COMPOSITION_PREVIEW_TEXT_LENGTH,
   SystemCompositionPreview,
 } from "../SystemCompositionPreview";
 
@@ -56,11 +59,10 @@ describe("SystemCompositionPreview", () => {
       <SystemCompositionPreview
         systemName="Requests"
         instances={instances}
-        includesUnsavedChanges
       />,
     );
     expect(html).toContain('aria-label="Requests current UI preview"');
-    expect(html).toContain(
+    expect(html).not.toContain(
       "This preview includes unsaved composition changes.",
     );
     expect(html).toContain("2 frontend surfaces");
@@ -86,11 +88,76 @@ describe("SystemCompositionPreview", () => {
         instances={[
           instance("policy", "builtin.security.authorization-policy"),
         ]}
-        includesUnsavedChanges={false}
       />,
     );
     expect(html).toContain("Visual preview unavailable");
     expect(html).toContain("implementation is not executed");
+  });
+
+  it("bounds hostile width, depth, configuration text, options, and tables before rendering", () => {
+    const wide = Array.from(
+      { length: MAX_SYSTEM_COMPOSITION_PREVIEW_INPUT_INSTANCES + 50 },
+      (_, index) =>
+        instance(
+          `table-${index}`,
+          "builtin.display.table",
+          `Table ${index}`,
+          {
+            title: "x".repeat(MAX_SYSTEM_COMPOSITION_PREVIEW_TEXT_LENGTH + 50),
+            columns: Array.from({ length: 30 }, (_, column) => `Column ${column}`),
+            rows: Array.from({ length: 40 }, (_, row) =>
+              Array.from({ length: 30 }, (_, column) => `${row}:${column}`),
+            ),
+          },
+        ),
+    );
+    const model = buildSystemCompositionPreviewModel(wide);
+    expect(model.items.length).toBe(MAX_SYSTEM_COMPOSITION_PREVIEW_SURFACES);
+    expect(model.truncatedCount).toBe(
+      wide.length - MAX_SYSTEM_COMPOSITION_PREVIEW_SURFACES,
+    );
+
+    const chain = Array.from(
+      { length: MAX_SYSTEM_COMPOSITION_PREVIEW_DEPTH + 10 },
+      (_, index) => instance(`page-${index}`, "builtin.shell.page"),
+    );
+    const chainPlacements = chain.slice(1).map((child, index) =>
+      placement(
+        `chain-${index}`,
+        String(chain[index]!.instanceId),
+        "content",
+        String(child.instanceId),
+        0,
+      ),
+    );
+    const bounded = buildSystemCompositionPreviewModel(
+      chain,
+      chainPlacements,
+      [{ kind: "asset-instance", id: chain[0]!.instanceId } as never],
+      [composerDefinition("builtin.shell.page", ["content"])],
+    );
+    const boundedRoots = JSON.stringify(bounded.roots);
+    expect(boundedRoots).toContain(
+      `page-${MAX_SYSTEM_COMPOSITION_PREVIEW_DEPTH - 1}`,
+    );
+    expect(boundedRoots).not.toContain(
+      `page-${MAX_SYSTEM_COMPOSITION_PREVIEW_DEPTH}`,
+    );
+
+    const html = renderToStaticMarkup(
+      <SystemCompositionPreview
+        systemName="Bounded"
+        instances={[wide[0]!]}
+        catalog={[composerDefinition("builtin.display.table", [])]}
+      />,
+    );
+    expect(html).not.toContain(
+      "x".repeat(MAX_SYSTEM_COMPOSITION_PREVIEW_TEXT_LENGTH + 1),
+    );
+    expect((html.match(/<th(?:\s|>)/g) ?? []).length).toBe(20);
+    const renderedRows = (html.match(/<tr(?:\s|>)/g) ?? []).length;
+    expect(renderedRows > 0 && renderedRows <= 26).toBe(true);
+    expect(html).not.toContain("39:29");
   });
 
   it("renders canonical region order, unassigned assets, and responsive viewport controls", () => {
@@ -172,7 +239,6 @@ describe("SystemCompositionPreview", () => {
           { kind: "asset-instance", id: root.instanceId } as never,
         ]}
         catalog={catalog}
-        includesUnsavedChanges={false}
       />,
     );
     expect(html).toContain(

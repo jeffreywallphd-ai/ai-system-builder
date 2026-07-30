@@ -2,8 +2,10 @@ import type {
   SystemDeployment,
   SystemDeploymentDiagnostic,
   SystemDeploymentHealth,
+  SystemDeploymentLaunchDescriptor,
   SystemDeploymentRun,
-  SystemReferenceRuntimeKind,
+  SystemDeploymentRuntimeKind,
+  SystemRuntimeProfileId,
 } from "../../../contracts/system-deployment";
 
 export interface SystemDeploymentRuntimeReadiness {
@@ -14,6 +16,8 @@ export interface SystemDeploymentRuntimeReadiness {
 export interface SystemDeploymentRuntimeRunResult {
   readonly status: "running" | "succeeded" | "failed";
   readonly diagnostics: readonly SystemDeploymentDiagnostic[];
+  readonly runtimeKind?: SystemDeploymentRuntimeKind;
+  readonly launchDescriptor?: SystemDeploymentLaunchDescriptor;
   readonly durationMilliseconds?: number;
   readonly outputBytes?: number;
 }
@@ -22,7 +26,11 @@ export interface SystemDeploymentRuntimePort {
   inspect(
     deployment: Pick<
       SystemDeployment,
-      "referenceRuntimeKind" | "deploymentProfile" | "compatibility" | "policy"
+      | "runtimeProfileId"
+      | "referenceRuntimeKind"
+      | "deploymentProfile"
+      | "compatibility"
+      | "policy"
     >,
   ): Promise<SystemDeploymentRuntimeReadiness>;
   activate(deployment: SystemDeployment): Promise<SystemDeploymentHealth>;
@@ -33,5 +41,5 @@ export interface SystemDeploymentRuntimePort {
     run: SystemDeploymentRun,
   ): Promise<SystemDeploymentRuntimeRunResult>;
   cancel(deployment: SystemDeployment, run: SystemDeploymentRun): Promise<void>;
-  supportsReferenceRuntime(kind: SystemReferenceRuntimeKind): boolean;
+  supportsRuntimeProfile(profileId: SystemRuntimeProfileId): boolean;
 }

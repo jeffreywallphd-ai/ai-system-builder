@@ -9,6 +9,7 @@ import {
   EmptyState,
   PanelHeading,
   TermWithHint,
+  TransientNotificationPublisher,
   TypeBadge,
 } from "../../../../../../../modules/ui/shared";
 import { CollapsiblePanel } from "../../../components/ui/CollapsiblePanel";
@@ -157,6 +158,10 @@ export function DatasetPreparationFeature({
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>(
     {},
   );
+  const transientStatusMessage = [
+    "Training settings saved.",
+    "Model unloaded from memory.",
+  ].includes(status.message ?? "");
   const formLocked = status.kind === "loading";
   const showUploadedArtifacts = selectedArtifactStorageFilter !== "generated";
   const showGeneratedArtifacts = selectedArtifactStorageFilter !== "uploaded";
@@ -1260,7 +1265,7 @@ export function DatasetPreparationFeature({
           </div>
         </form>
 
-        {status.message ? (
+        {status.message && !transientStatusMessage ? (
           <p
             className="dataset-preparation__status"
             role={status.kind === "error" ? "alert" : "status"}
@@ -1268,6 +1273,7 @@ export function DatasetPreparationFeature({
             {status.message}
           </p>
         ) : null}
+        <TransientNotificationPublisher message={transientStatusMessage ? status.message : undefined} title="Dataset preparation updated" tone="success" source="Dataset Preparation" workspaceId={workspaceId} />
         {resultSummary ? (
           <dl className="dataset-preparation__summary ui-grid ui-grid--two">
             <dt>

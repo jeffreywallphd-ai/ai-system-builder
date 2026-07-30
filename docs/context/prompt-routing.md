@@ -10,6 +10,7 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
 - Default to no more than two additional packs: one primary concern and one adjacent boundary.
 - Add another pack only after repository search proves that boundary is materially affected; for broad work, stage context and implementation by boundary instead of preloading everything.
 - Packs are routing aids and compact summaries; canonical ADRs, architecture docs, and standards win on conflict.
+- Before editing, apply `docs/standards/security-by-design-standards.md` and record `not-security-relevant` with a concrete rationale or `security-relevant` with the affected assets, trust boundaries, abuse/failure cases, controls, and evidence. This screen does not count against the additional-pack limit.
 
 ## Pack Selection Table
 
@@ -36,7 +37,7 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
 | renderer CSS/style architecture, shared style layers, tokens                                                               | `docs/context/packs/desktop-styling.pack.md`                                                                         |
 | server lifecycle, Express APIs, thin-client coupling, API route handlers                                                   | `docs/context/packs/server-host.pack.md`                                                                             |
 | persistence/storage, artifacts/uploads, storage keys, AppData/server roots, model/artifact storage                         | `docs/context/packs/persistence-storage.pack.md`                                                                     |
-| authn/authz, OIDC, organization tenancy/placement, route policy, HTTPS/TLS, tokens, credentials, audit, sanitization       | `docs/context/packs/security.pack.md` + `docs/context/packs/persistence-storage.pack.md` when data isolation changes |
+| authn/authz, OIDC, organization tenancy/placement, route policy, HTTPS/TLS, tokens, credentials, audit, sanitization, public API/IPC, uploads, untrusted parsing, outbound network, executable inputs, sensitive data, AI context, or supply-chain boundaries | `docs/context/packs/security.pack.md` + the single owning host/runtime/storage/feature pack; add persistence-storage when data isolation changes |
 | structured logging, diagnostic events, verbosity, safe failure reporting                                                   | `docs/context/packs/logging.pack.md`                                                                                 |
 | documentation governance, agent change planning, decision readiness, change impact, canonical-vs-context updates           | `docs/context/packs/docs-standards.pack.md`                                                                          |
 | test strategy, regression coverage, test placement                                                                         | `docs/context/packs/testing.pack.md`                                                                                 |
@@ -57,6 +58,7 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
 - System Builder: `index` + `system-builder`; add `asset-kernel` or `asset-composition-planning` for data semantics, or `desktop-implementation` for Systems/Settings UI placement.
 - Controlled conversational execution: `index` + `controlled-conversational-system-execution`; add the execution-plan or runtime pack only when that exact boundary changes.
 - Security: `index` + `security` + the one public host/client/feature boundary being changed.
+- Implicit security boundary: when an otherwise ordinary feature changes authority, isolation, public payloads, untrusted input, storage, runtime/provider I/O, diagnostics, dependencies, migration, or rollback, route it as `index` + `security` + the owning boundary pack even if the request never says “security.”
 - Desktop renderer styling: `index` + `desktop-styling` + `desktop-implementation`.
 
 ## Canonical Escalation Rules
@@ -66,6 +68,7 @@ Read and update canonical docs when the task:
 - changes architecture, repository structure, standards, or documented behavior,
 - changes dependency direction, host/transport/runtime responsibility, persistence/storage responsibility, security policy, or workspace scope,
 - changes Asset Kernel semantics, pack/source semantics, mutation behavior, resolver behavior, or public transport/UI exposure,
+- changes a trust boundary, authority decision, sensitive data flow, executable input, dependency/release input, safe diagnostic, migration, recovery, or rollback posture,
 - exposes a context-pack summary that is incomplete, stale, or ambiguous.
 
 Before architecture-sensitive implementation, consult `docs/adr/decision-readiness.md`. Proposed or decision-required areas must return to decision work instead of being implemented from inference.
@@ -80,3 +83,4 @@ Before architecture-sensitive implementation, consult `docs/adr/decision-readine
 ## Stop Condition
 
 - If required canonical guidance is missing, unclear, or conflicting, update or request clarification for the canonical docs rather than inventing policy silently.
+- If the security impact cannot be dispositioned, or a material identity, tenancy, secret, sandbox, public exposure, encryption, retention, audit, or residual-risk choice is unresolved, stop at the decision gate rather than assuming a permissive policy.

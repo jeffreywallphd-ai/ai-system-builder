@@ -9,7 +9,7 @@
 
 ## Use When
 
-- Dataset preparation, model training, model validation, model publishing, image/runtime handlers, or future runtime-backed long-running tasks are in scope.
+- Dataset preparation, model download, model training, model validation, model publishing, image/runtime handlers, or future runtime-backed long-running tasks are in scope.
 - Start/read/cancel/list task behavior, polling, progress, retention, cancellation, or task aggregation changes.
 
 ## Do Not Use When
@@ -24,6 +24,9 @@
 - Readiness-guard-rejected starts must not create pollable task ids.
 - Do not use long-held HTTP/IPC requests to wait for completion.
 - Do not solve timeout/disconnect issues by stretching fetch/IPC timeouts.
+- Model downloads use `TaskType.MODEL_DOWNLOAD`; completion cache handles and
+  resolved local paths stay behind the host-internal completion port while the
+  application finalizes the model registry exactly once.
 
 ## Shared Vs Feature-Specific Responsibilities
 

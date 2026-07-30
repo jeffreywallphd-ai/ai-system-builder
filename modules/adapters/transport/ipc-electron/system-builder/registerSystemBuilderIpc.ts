@@ -136,6 +136,11 @@ export function registerSystemBuilderIpc(
       },
     });
   });
+  handle(d, "listModelOptions", (p) =>
+    d.listModelOptions.execute({
+      workspaceId: createWorkspaceId(required(p.workspaceId)),
+    }),
+  );
   handle(d, "previewLayoutChange", (p) =>
     d.previewLayoutChange.execute({
       ...p,

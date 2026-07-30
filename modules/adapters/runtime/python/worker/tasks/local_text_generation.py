@@ -11,6 +11,7 @@ import json
 from os import environ
 from pathlib import Path
 import re
+import shutil
 from threading import Event, Lock, Thread
 import time
 from typing import Any, Callable
@@ -22,6 +23,11 @@ DEFAULT_HUGGINGFACE_DOWNLOAD_TIMEOUT_SECONDS = "60"
 DEFAULT_HUGGINGFACE_ETAG_TIMEOUT_SECONDS = "30"
 DEFAULT_HUGGINGFACE_CACHE_PROGRESS_INTERVAL_SECONDS = 5.0
 DEFAULT_HUGGINGFACE_CHECKPOINT_MIN_BYTES = 100 * 1024 * 1024
+DEFAULT_HUGGINGFACE_MAX_MODEL_BYTES = 20 * 1024 * 1024 * 1024
+DEFAULT_HUGGINGFACE_MAX_CACHE_FILES = 100_000
+HUGGINGFACE_MODEL_ID_PATTERN = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9._-]{0,95}/[A-Za-z0-9][A-Za-z0-9._-]{0,95}$"
+)
 
 
 def configure_huggingface_download_environment() -> None:
@@ -42,6 +48,7 @@ class GenerationModelAvailability:
     downloaded: bool
     from_cache: bool
     local_path: str | None = None
+    cache_handle: str | None = None
 
 
 @dataclass(frozen=True)
@@ -88,8 +95,12 @@ def _snapshot_file_stats(path: str | Path | None) -> dict[str, int]:
         if not child.is_file():
             continue
         file_count += 1
+        if file_count > DEFAULT_HUGGINGFACE_MAX_CACHE_FILES:
+            raise RuntimeError("Hugging Face snapshot exceeded the configured file-count limit.")
         try:
             total_bytes += child.stat().st_size
+            if total_bytes > _parse_huggingface_max_model_bytes():
+                raise RuntimeError("Hugging Face snapshot exceeded the configured byte limit.")
         except OSError:
             continue
     return {"fileCount": file_count, "totalBytes": total_bytes}
@@ -111,25 +122,34 @@ def _is_module_available(module_name: str) -> bool:
 def _resolve_huggingface_cache_root() -> Path | None:
     configured_cache = environ.get("HF_HUB_CACHE") or environ.get("TRANSFORMERS_CACHE")
     if configured_cache:
-        return Path(configured_cache)
+        configured_path = Path(configured_cache).expanduser()
+        return configured_path.resolve(strict=False) if configured_path.is_absolute() else None
 
     hf_home = environ.get("HF_HOME")
     if hf_home:
-        return Path(hf_home) / "hub"
+        home_path = Path(hf_home).expanduser()
+        return (home_path / "hub").resolve(strict=False) if home_path.is_absolute() else None
 
     try:
         from huggingface_hub import constants
 
-        return Path(constants.HF_HUB_CACHE)
+        cache_path = Path(constants.HF_HUB_CACHE).expanduser()
+        return cache_path.resolve(strict=False) if cache_path.is_absolute() else None
     except Exception:
         return None
 
 
 def _resolve_huggingface_repo_cache_directory(model_id: str) -> Path | None:
+    _assert_huggingface_model_id(model_id)
     cache_root = _resolve_huggingface_cache_root()
     if cache_root is None:
         return None
-    return cache_root / f"models--{model_id.replace('/', '--')}"
+    candidate = (cache_root / f"models--{model_id.replace('/', '--')}").resolve(strict=False)
+    try:
+        candidate.relative_to(cache_root)
+    except ValueError as error:
+        raise RuntimeError("Hugging Face cache path is outside the host-owned cache root.") from error
+    return candidate
 
 
 def _resolve_huggingface_xet_cache_root() -> Path | None:
@@ -147,10 +167,10 @@ def _resolve_huggingface_xet_cache_root() -> Path | None:
 def _resolve_huggingface_environment_diagnostics() -> dict[str, Any]:
     hf_xet_available = _is_module_available("hf_xet")
     diagnostics: dict[str, Any] = {
-        "hfHome": environ.get("HF_HOME"),
-        "hfHubCache": str(_resolve_huggingface_cache_root()) if _resolve_huggingface_cache_root() else None,
-        "hfXetCache": environ.get("HF_XET_CACHE"),
-        "transformersCache": environ.get("TRANSFORMERS_CACHE"),
+        "hfHomeConfigured": bool(environ.get("HF_HOME")),
+        "hfHubCacheConfigured": _resolve_huggingface_cache_root() is not None,
+        "hfXetCacheConfigured": bool(environ.get("HF_XET_CACHE")),
+        "transformersCacheConfigured": bool(environ.get("TRANSFORMERS_CACHE")),
         "hfHubDisableXet": environ.get("HF_HUB_DISABLE_XET"),
         "hfHubDownloadTimeoutSeconds": environ.get("HF_HUB_DOWNLOAD_TIMEOUT"),
         "hfHubEtagTimeoutSeconds": environ.get("HF_HUB_ETAG_TIMEOUT"),
@@ -162,15 +182,13 @@ def _resolve_huggingface_environment_diagnostics() -> dict[str, Any]:
 
 
 def _error_chain_summary(error: BaseException, max_depth: int = 4, max_message_length: int = 500) -> list[dict[str, str]]:
+    del max_message_length
     entries: list[dict[str, str]] = []
     seen: set[int] = set()
     current: BaseException | None = error
     while current is not None and len(entries) < max_depth and id(current) not in seen:
         seen.add(id(current))
-        message = str(current) or type(current).__name__
-        if len(message) > max_message_length:
-            message = f"{message[:max_message_length]}..."
-        entries.append({"errorType": type(current).__name__, "message": message})
+        entries.append({"errorType": type(current).__name__})
         current = current.__cause__ or current.__context__
     return entries
 
@@ -180,17 +198,32 @@ def _format_error_summary(error: BaseException) -> str:
     if not chain:
         return type(error).__name__
     entry = chain[0]
-    return f"{entry['errorType']}: {entry['message']}"
+    return entry["errorType"]
+
+
+def _safe_download_diagnostic_data(data: Mapping[str, Any]) -> dict[str, Any]:
+    allowed_keys = {
+        "profile", "stage", "errorType", "elapsedMs", "fileCount", "totalBytes",
+        "cachedFileCount", "cachedTotalBytes", "observedFileCount", "observedTotalBytes",
+        "observedHubFileCount", "observedHubTotalBytes", "observedXetFileCount",
+        "observedXetTotalBytes", "downloadedBytes", "downloadPercent", "progressUnit",
+        "completedFileCount", "totalFileCount", "downloadBackend", "downloadedMissingFiles",
+        "cacheDirectoryObserved", "xetCacheDirectoryObserved", "allowPatterns", "ignorePatterns",
+        "hfHomeConfigured", "hfHubCacheConfigured", "hfXetCacheConfigured",
+        "transformersCacheConfigured", "hfHubDisableXet", "hfHubDownloadTimeoutSeconds",
+        "hfHubEtagTimeoutSeconds", "huggingfaceHubVersion", "hfXetAvailable", "hfXetVersion",
+    }
+    return {key: value for key, value in data.items() if key in allowed_keys}
 
 
 def _emit_model_download_event(event: str, model_id: str, **data: Any) -> None:
+    del model_id
     print(
         json.dumps(
             {
                 "event": event,
                 "provider": "transformers",
-                "modelId": model_id,
-                **data,
+                **_safe_download_diagnostic_data(data),
             },
             ensure_ascii=False,
         ),
@@ -246,7 +279,7 @@ def _start_snapshot_cache_progress_monitor(
             model_id,
             on_progress,
             "snapshot-cache-progress",
-            f"Observed Hugging Face cache growth for {model_id}.",
+            "Observed Hugging Face cache growth.",
             profile=profile_name,
             observedFileCount=observed_file_count,
             observedTotalBytes=observed_total_bytes,
@@ -263,7 +296,7 @@ def _start_snapshot_cache_progress_monitor(
         while not stop_event.wait(interval_seconds):
             emit_if_changed()
 
-    thread = Thread(target=monitor, name=f"hf-cache-progress-{model_id.replace('/', '-')}", daemon=True)
+    thread = Thread(target=monitor, name="hf-cache-progress", daemon=True)
     thread.start()
 
     def stop() -> None:
@@ -285,15 +318,14 @@ def _report_model_download_progress(
         "stage": stage,
         "message": message,
         "provider": "transformers",
-        "modelId": model_id,
-        **data,
+        **_safe_download_diagnostic_data(data),
     }
     if on_progress is not None:
         on_progress(progress)
     _emit_model_download_event(
         "runtime.model_download.progress",
         model_id,
-        **{key: value for key, value in progress.items() if key not in {"provider", "modelId"}},
+        **{key: value for key, value in progress.items() if key not in {"provider"}},
     )
 
 
@@ -373,6 +405,9 @@ class _StructuredSnapshotTqdm:
         if self._download_backend:
             data["downloadBackend"] = self._download_backend
         if self._progress_unit == "B":
+            maximum_bytes = _parse_huggingface_max_model_bytes()
+            if completed > maximum_bytes or (total is not None and total > maximum_bytes):
+                raise RuntimeError("Hugging Face snapshot exceeded the configured byte limit.")
             data["progressUnit"] = "bytes"
             data["downloadedBytes"] = completed
             if total is not None:
@@ -388,7 +423,7 @@ class _StructuredSnapshotTqdm:
             self._model_id,
             self._on_progress,
             "snapshot-progress",
-            f"Downloading Hugging Face snapshot files for {self._model_id}.",
+            "Downloading Hugging Face snapshot files.",
             **data,
         )
 
@@ -561,6 +596,69 @@ def _parse_checkpoint_min_bytes() -> int:
     return parsed if parsed >= 0 else DEFAULT_HUGGINGFACE_CHECKPOINT_MIN_BYTES
 
 
+def _parse_huggingface_max_model_bytes() -> int:
+    configured = environ.get("AI_SYSTEM_BUILDER_HF_MAX_MODEL_BYTES")
+    if not configured:
+        return DEFAULT_HUGGINGFACE_MAX_MODEL_BYTES
+    try:
+        parsed = int(configured)
+    except ValueError:
+        return DEFAULT_HUGGINGFACE_MAX_MODEL_BYTES
+    return min(max(parsed, 1024), 100 * 1024 * 1024 * 1024)
+
+
+def _assert_huggingface_model_id(model_id: str) -> None:
+    if len(model_id) > 193 or not HUGGINGFACE_MODEL_ID_PATTERN.fullmatch(model_id):
+        raise ValueError("Hugging Face model identifier must use canonical owner/model syntax.")
+
+
+def _validate_huggingface_snapshot_path(local_path: str) -> None:
+    cache_root = _resolve_huggingface_cache_root()
+    if cache_root is None:
+        raise RuntimeError("Hugging Face host-owned cache root is unavailable.")
+    snapshot_path = Path(local_path).resolve(strict=True)
+    try:
+        snapshot_path.relative_to(cache_root)
+    except ValueError as error:
+        raise RuntimeError("Hugging Face snapshot is outside the host-owned cache root.") from error
+    if not snapshot_path.is_dir():
+        raise RuntimeError("Hugging Face snapshot is not a directory.")
+
+
+def _to_huggingface_snapshot_handle(local_path: str) -> str:
+    cache_root = _resolve_huggingface_cache_root()
+    if cache_root is None:
+        raise RuntimeError("Hugging Face host-owned cache root is unavailable.")
+    canonical_root = cache_root.resolve(strict=True)
+    snapshot_path = Path(local_path).resolve(strict=True)
+    try:
+        relative_path = snapshot_path.relative_to(canonical_root)
+    except ValueError as error:
+        raise RuntimeError(
+            "Hugging Face snapshot is outside the host-owned cache root."
+        ) from error
+    parts = relative_path.parts
+    if (
+        not parts
+        or any(
+            not part
+            or part in {".", ".."}
+            or len(part) > 255
+            or not re.fullmatch(r"[A-Za-z0-9._-]+", part)
+            for part in parts
+        )
+    ):
+        raise RuntimeError("Hugging Face snapshot handle is invalid.")
+    return "/".join(parts)
+
+
+def _cleanup_failed_huggingface_cache(model_id: str) -> None:
+    cache_directory = _resolve_huggingface_repo_cache_directory(model_id)
+    if cache_directory is None:
+        return
+    shutil.rmtree(cache_directory, ignore_errors=True)
+
+
 def _is_auxiliary_checkpoint_file(file_name: str) -> bool:
     normalized = file_name.lower()
     return "lora" in normalized or "adapter" in normalized
@@ -586,7 +684,7 @@ def _validate_snapshot_profile_result(
 
     raise RuntimeError(
         (
-            f"Hugging Face model '{model_config.modelId}' did not expose a top-level primary .safetensors or .ckpt "
+            "Hugging Face model did not expose a top-level primary .safetensors or .ckpt "
             f"checkpoint of at least {minimum_size_bytes} bytes after applying the checkpoint download profile. "
             "Auxiliary LoRA/adapter files do not satisfy full checkpoint downloads. Choose a checkpoint-format model "
             "artifact or save it as a reference."
@@ -705,6 +803,7 @@ def ensure_generation_model_downloaded(
 ) -> GenerationModelAvailability:
     if model_config.provider != "transformers":
         raise ValueError(f"Unsupported generation model provider: {model_config.provider}")
+    _assert_huggingface_model_id(model_config.modelId)
 
     configure_huggingface_download_environment()
     download_profile = _resolve_snapshot_download_profile(model_config, download_context)
@@ -729,7 +828,7 @@ def ensure_generation_model_downloaded(
             model_config.modelId,
             on_progress,
             "cache-check",
-            f"Checking local Hugging Face cache for {model_config.modelId}.",
+            "Checking the local Hugging Face cache.",
             profile=download_profile.name,
             allowPatterns=list(download_profile.allow_patterns or ()),
             ignorePatterns=list(download_profile.ignore_patterns),
@@ -740,13 +839,13 @@ def ensure_generation_model_downloaded(
             local_files_only=True,
             **snapshot_kwargs,
         )
+        _validate_huggingface_snapshot_path(local_path)
         _validate_snapshot_profile_result(model_config, download_profile, local_path)
         cache_candidate_path = local_path
         cache_stats = _snapshot_file_stats(local_path)
         _emit_model_download_event(
             "runtime.model_download.cache_check.succeeded",
             model_config.modelId,
-            localPath=local_path,
             profile=download_profile.name,
             **cache_stats,
         )
@@ -754,8 +853,7 @@ def ensure_generation_model_downloaded(
             model_config.modelId,
             on_progress,
             "cache-hit",
-            f"Found cached Hugging Face snapshot for {model_config.modelId}.",
-            localPath=local_path,
+            "Found a cached Hugging Face snapshot.",
             profile=download_profile.name,
             fileCount=cache_stats["fileCount"],
             totalBytes=cache_stats["totalBytes"],
@@ -767,22 +865,21 @@ def ensure_generation_model_downloaded(
             downloaded=False,
             from_cache=True,
             local_path=local_path,
+            cache_handle=_to_huggingface_snapshot_handle(local_path),
         )
     except Exception as error:
         _emit_model_download_event(
             "runtime.model_download.cache_check.missed",
             model_config.modelId,
             errorType=type(error).__name__,
-            message=str(error) or type(error).__name__,
             profile=download_profile.name,
         )
         _report_model_download_progress(
             model_config.modelId,
             on_progress,
             "cache-miss",
-            f"No complete cached Hugging Face snapshot found for {model_config.modelId}.",
+            "No complete cached Hugging Face snapshot was found.",
             errorType=type(error).__name__,
-            errorMessage=str(error) or type(error).__name__,
             profile=download_profile.name,
         )
 
@@ -792,7 +889,7 @@ def ensure_generation_model_downloaded(
             model_config.modelId,
             on_progress,
             "snapshot-download",
-            f"Downloading Hugging Face snapshot for {model_config.modelId}.",
+            "Downloading a Hugging Face snapshot.",
             profile=download_profile.name,
             cachedFileCount=before_stats["fileCount"],
             cachedTotalBytes=before_stats["totalBytes"],
@@ -823,13 +920,13 @@ def ensure_generation_model_downloaded(
                 )
         finally:
             stop_cache_monitor()
+        _validate_huggingface_snapshot_path(local_path)
         _validate_snapshot_profile_result(model_config, download_profile, local_path)
         after_stats = _snapshot_file_stats(local_path)
         downloaded_missing_files = after_stats["fileCount"] > before_stats["fileCount"] or after_stats["totalBytes"] > before_stats["totalBytes"]
         _emit_model_download_event(
             "runtime.model_download.snapshot.succeeded",
             model_config.modelId,
-            localPath=local_path,
             profile=download_profile.name,
             fileCount=after_stats["fileCount"],
             totalBytes=after_stats["totalBytes"],
@@ -839,8 +936,7 @@ def ensure_generation_model_downloaded(
             model_config.modelId,
             on_progress,
             "snapshot-complete",
-            f"Hugging Face snapshot is complete for {model_config.modelId}.",
-            localPath=local_path,
+            "Hugging Face snapshot download is complete.",
             profile=download_profile.name,
             fileCount=after_stats["fileCount"],
             totalBytes=after_stats["totalBytes"],
@@ -853,6 +949,7 @@ def ensure_generation_model_downloaded(
             downloaded=downloaded_missing_files or cache_candidate_path is None,
             from_cache=cache_candidate_path is not None and not downloaded_missing_files,
             local_path=local_path,
+            cache_handle=_to_huggingface_snapshot_handle(local_path),
         )
     except Exception as error:
         cache_directory = _resolve_huggingface_repo_cache_directory(model_config.modelId)
@@ -862,10 +959,8 @@ def ensure_generation_model_downloaded(
             "runtime.model_download.snapshot.failed",
             model_config.modelId,
             errorType=type(error).__name__,
-            message=str(error) or type(error).__name__,
             errorChain=error_chain,
             profile=download_profile.name,
-            cacheDirectory=str(cache_directory) if cache_directory else None,
             observedFileCount=failure_cache_stats["fileCount"],
             observedTotalBytes=failure_cache_stats["totalBytes"],
         )
@@ -873,21 +968,23 @@ def ensure_generation_model_downloaded(
             model_config.modelId,
             on_progress,
             "snapshot-failed",
-            f"Hugging Face snapshot download failed for {model_config.modelId}.",
+            "Hugging Face snapshot download failed.",
             errorType=type(error).__name__,
-            errorMessage=str(error) or type(error).__name__,
-            errorSummary=_format_error_summary(error),
             errorChain=error_chain,
             profile=download_profile.name,
             observedFileCount=failure_cache_stats["fileCount"],
             observedTotalBytes=failure_cache_stats["totalBytes"],
         )
         if isinstance(error, RuntimeError) and str(error).startswith("Hugging Face model "):
+            if cache_candidate_path is None:
+                _cleanup_failed_huggingface_cache(model_config.modelId)
             raise
+        if cache_candidate_path is None:
+            _cleanup_failed_huggingface_cache(model_config.modelId)
         raise RuntimeError(
             (
-                f"Generation model '{model_config.modelId}' is not available in the local Hugging Face cache. "
-                f"Automatic download failed. Last error: {_format_error_summary(error)}. "
+                "Generation model is not available in the local Hugging Face cache. "
+                "Automatic download failed. "
                 "Verify network access and Hugging Face authentication/token configuration."
             )
         ) from error
@@ -1139,11 +1236,13 @@ def get_or_create_local_text_generator(config: ExampleGenerationConfig) -> Local
         if existing_after_resolution:
             return existing_after_resolution
 
-        resolved_model_reference = _resolved_model_reference_for(resolved_model_config.modelId)
         print(
-            (
-                f"Loading generation model {resolved_model_config.modelId} from {resolved_model_reference} "
-                f"with inference mode {resolved_inference_mode}."
+            json.dumps(
+                {
+                    "event": "runtime.generation_model.loading",
+                    "provider": "transformers",
+                    "inferenceMode": resolved_inference_mode,
+                }
             ),
             flush=True,
         )
@@ -1168,7 +1267,6 @@ def _describe_loaded_generation_models_unlocked() -> list[dict[str, str | None]]
             "inferenceMode": inference_mode,
             "device": device,
             "torchDtype": torch_dtype,
-            "localPath": _RESOLVED_MODEL_REFERENCES.get(model_id),
         }
         for provider, model_id, inference_mode, device, torch_dtype in _GENERATOR_CACHE.keys()
     ]

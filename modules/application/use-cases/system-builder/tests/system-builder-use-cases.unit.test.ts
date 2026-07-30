@@ -1,8 +1,17 @@
 import { describe, expect, it } from "../../../../testing/node-test";
 import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import { createStructuredSystemBuilderRepository } from "../../../../adapters/persistence/system-builder";
+import {
+  normalizeAssetId,
+  type AssetInstance,
+} from "../../../../contracts/asset";
 import { createWorkspaceId } from "../../../../contracts/workspace";
-import type { SystemBuilderValidationResult } from "../../../../contracts/system-builder";
+import {
+  createSystemBuilderModelBinding,
+  readSystemBuilderConversationInteraction,
+  SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID,
+  type SystemBuilderValidationResult,
+} from "../../../../contracts/system-builder";
 import {
   ArchiveSystemBuilderSystemUseCase,
   CloneSystemBuilderSystemUseCase,
@@ -101,6 +110,90 @@ describe("System Builder use cases", () => {
       (await repository.listRevisions(workspaceId, created.value.systemId))
         .length,
     ).toBe(2);
+  });
+
+  it("restores the canonical persisted-history interaction when saving an unambiguous chatbot reference", async () => {
+    const repository = createStructuredSystemBuilderRepository(
+      createInMemoryStructuredDocumentStore(),
+    );
+    const dependencies = {
+      repository,
+      validator: { execute: async () => valid },
+      generateSystemId: () => "system-chat-repair",
+      now: () => "2026-07-29T00:00:00.000Z",
+    };
+    const created = await new CreateSystemBuilderSystemUseCase(
+      dependencies,
+    ).execute({ workspaceId, name: "Chat repair", actorId: "user-1" });
+    if (!created.ok) throw new Error(created.error.message);
+    const conversationInstance = (
+      suffix: string,
+      definitionId: string,
+      selectedConfiguration: AssetInstance["selectedConfiguration"] = {},
+    ): AssetInstance => ({
+      instanceId: normalizeAssetId(`system-chat-repair.${suffix}`),
+      definitionRef: {
+        kind: "asset-definition-version",
+        id: normalizeAssetId(definitionId),
+        version: "3.0.0",
+      },
+      lifecycleStatus: "draft",
+      selectedConfiguration,
+      parentCompositionRef: {
+        kind: "asset-composition",
+        id: created.value.composition.compositionId,
+      },
+      provenance: { sourceKind: "system-generated" },
+      metadata: { referenceSystemKind: "controlled-chatbot" },
+    });
+    const composer = conversationInstance(
+      "composer",
+      "conversation.message-composer",
+      {
+        [SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID]:
+          createSystemBuilderModelBinding("model.chat.local"),
+      },
+    );
+    const history = conversationInstance(
+      "history-display",
+      "conversation.message-history-display",
+    );
+    const instances = [composer, history];
+    const instanceRefs = instances.map((instance) => ({
+      kind: "asset-instance" as const,
+      id: instance.instanceId,
+    }));
+
+    const saved = await new SaveSystemBuilderRevisionUseCase(
+      dependencies,
+    ).execute({
+      workspaceId,
+      systemId: created.value.systemId,
+      expectedRecordRevision: 1,
+      actorId: "user-1",
+      composition: {
+        ...created.value.composition,
+        rootInstanceRefs: instanceRefs,
+        instanceRefs,
+        bindingRefs: [],
+      },
+      instances,
+      bindings: [],
+    });
+
+    expect(saved.ok).toBe(true);
+    if (!saved.ok) return;
+    expect(saved.value.bindings.length).toBe(1);
+    expect(saved.value.composition.bindingRefs.length).toBe(1);
+    expect(
+      readSystemBuilderConversationInteraction(saved.value.bindings[0]!),
+    ).toEqual({
+      schemaVersion: "1.0",
+      kind: "conversation-turn",
+      composerInstanceId: "system-chat-repair.composer",
+      historyInstanceId: "system-chat-repair.history-display",
+      transcriptMode: "persisted-only",
+    });
   });
 
   it("archives, restores, clones, and preserves canonical structure without mutating its source", async () => {

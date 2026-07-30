@@ -1,0 +1,1744 @@
+{
+  "blockers": [],
+  "chunks": [
+    {
+      "areas": [
+        "System Builder and System Build contracts",
+        "Model authority service and revision validator",
+        "Build and release materialization",
+        "Desktop, server, and shared host composition"
+      ],
+      "chunkId": "model-contract-and-authority",
+      "completedAt": "2026-07-29T12:48:24Z",
+      "criteriaIds": [
+        "authorized-model-picker",
+        "model-binding-fails-closed",
+        "release-binding-is-deterministic",
+        "security-release-authority-reviewed"
+      ],
+      "documentation": [
+        "Temporary implementation report refreshed; canonical documentation is scheduled after all Increment 1 chunks"
+      ],
+      "feedbackAddressed": [],
+      "id": "release-bound-conversation-runtime-model-contract-and-authority",
+      "incrementId": "release-bound-conversation-runtime",
+      "summary": "Added an exact JSON-safe model-record binding, a sanitized workspace model catalog projection, fail-closed application authority checks, revision validation, deterministic build-lock model revision evidence, and desktop/server host wiring.",
+      "tests": [
+        "14 focused contract, authority, denial, validator, build-lock, release, and composition tests passed",
+        "Changed-file TypeScript diagnostics are clear; the repository-wide compiler still reports unrelated pre-existing test-fixture errors"
+      ],
+      "title": "Model contract, authority, and release evidence"
+    },
+    {
+      "areas": [
+        "System Builder model-options use case",
+        "API, IPC, preload, desktop, and thin-client transport parity",
+        "System Foundation message-composer schema",
+        "Shared Composer workspace and properties inspector"
+      ],
+      "chunkId": "composer-picker-and-transport",
+      "completedAt": "2026-07-29T13:01:06Z",
+      "criteriaIds": [
+        "authorized-model-picker",
+        "model-binding-fails-closed",
+        "security-release-authority-reviewed"
+      ],
+      "documentation": [
+        "Temporary implementation report refreshed; canonical documentation remains scheduled after the runtime-binding chunk"
+      ],
+      "feedbackAddressed": [],
+      "id": "release-bound-conversation-runtime-composer-picker-and-transport",
+      "incrementId": "release-bound-conversation-runtime",
+      "summary": "Added a sanitized workspace model-options query across shared application, API, IPC, preload, desktop, and thin-client layers, plus a required accessible message-composer picker that loads only when needed and cannot be replaced through Advanced JSON.",
+      "tests": [
+        "50 focused use-case, Foundation schema, API/IPC parity, and desktop preload assertions passed",
+        "6 focused shared Composer picker interaction tests passed",
+        "Changed-file TypeScript diagnostics are clear"
+      ],
+      "title": "Authorized Composer picker and transport parity"
+    },
+    {
+      "areas": [
+        "Controlled chatbot reference composition and Foundation presentation",
+        "System Build interaction lock and deployment release binding",
+        "Trusted deployment and Python conversational runtime adapters",
+        "Protected context, runtime reference, and persisted turn orchestration"
+      ],
+      "chunkId": "reference-chat-and-runtime-binding",
+      "completedAt": "2026-07-29T13:27:25Z",
+      "criteriaIds": [
+        "model-binding-fails-closed",
+        "release-binding-is-deterministic",
+        "reference-chat-is-sample-free",
+        "security-release-authority-reviewed"
+      ],
+      "documentation": [
+        "Updated System Builder, build/release, and controlled conversational architecture",
+        "Updated ADR-0023, relevant context packs, and the shared UI README",
+        "Temporary implementation report will be refreshed before Increment 1 completion gates"
+      ],
+      "feedbackAddressed": [],
+      "id": "release-bound-conversation-runtime-reference-chat-and-runtime-binding",
+      "incrementId": "release-bound-conversation-runtime",
+      "summary": "Made the controlled chatbot sample-free, added one typed persisted-only composer/history interaction, froze exact model and interaction evidence into releases, revalidated the selected model at activation/start/invocation, and blocked malformed or stale bindings before persistence or worker submission.",
+      "tests": [
+        "62 focused reference HTML, template, build-lock, deployment, adapter, protected-context, and persisted-turn assertions passed",
+        "Focused denial coverage passed for missing authority, stale release/model binding, unavailable records, malformed runtime references, and pre-persistence rejection",
+        "Increment 1 source-file TypeScript diagnostics are clear; the repository-wide compiler still reports unrelated worktree fixture errors"
+      ],
+      "title": "Sample-free reference chat and controlled invocation binding"
+    },
+    {
+      "areas": [
+        "System deployment contracts and application ports",
+        "Runtime-instance lifecycle service",
+        "Structured control-plane repository",
+        "Published deployment lifecycle"
+      ],
+      "chunkId": "runtime-instance-control-plane",
+      "completedAt": "2026-07-29T14:39:22Z",
+      "criteriaIds": [
+        "physical-database-isolation",
+        "desktop-runtime-data-survives-lifecycle",
+        "runtime-data-recovery",
+        "security-runtime-data-plane-reviewed"
+      ],
+      "documentation": [
+        "ADR-0039 and runtime data-plane threat model added",
+        "Persistence, host, conversation, operations, context-pack, and nearest README guidance aligned"
+      ],
+      "feedbackAddressed": [],
+      "id": "dedicated-system-runtime-data-plane-runtime-instance-control-plane",
+      "incrementId": "dedicated-system-runtime-data-plane",
+      "summary": "Added opaque runtime-instance and binding contracts, optimistic control-plane persistence, deployment allocation/lifecycle integration, explicit stopped-state compatible migration, retained uninstall, and exact confirmed deletion.",
+      "tests": [
+        "Focused runtime-instance lifecycle, migration, revision, isolation, retention, deletion-confirmation, and sanitized-failure tests passed",
+        "Focused published deployment lifecycle and failure-path tests passed"
+      ],
+      "title": "Opaque runtime-instance control plane"
+    },
+    {
+      "areas": [
+        "Local SQLite runtime database adapter",
+        "Managed PostgreSQL runtime database provisioner",
+        "Host-owned PostgreSQL credential store",
+        "Runtime migration and recovery ports"
+      ],
+      "chunkId": "isolated-runtime-database-adapters",
+      "completedAt": "2026-07-29T14:39:23Z",
+      "criteriaIds": [
+        "physical-database-isolation",
+        "desktop-runtime-data-survives-lifecycle",
+        "managed-postgres-database-isolation",
+        "runtime-data-recovery",
+        "security-runtime-data-plane-reviewed"
+      ],
+      "documentation": [
+        "SQLite and PostgreSQL adapter READMEs updated",
+        "Persistence operations and deployment qualification updated"
+      ],
+      "feedbackAddressed": [],
+      "id": "dedicated-system-runtime-data-plane-isolated-runtime-database-adapters",
+      "incrementId": "dedicated-system-runtime-data-plane",
+      "summary": "Implemented contained per-instance SQLite databases and provisioner-created PostgreSQL databases with distinct least-privilege runtime roles, bounded connection lifecycles, migration, recovery boundaries, retention, and exact deletion.",
+      "tests": [
+        "Four Electron-Node SQLite isolation, missing-database, quota, migration, backup/restore, and deletion tests passed",
+        "Managed PostgreSQL unit denial tests passed",
+        "Live PostgreSQL 18 conformance and physical database/role isolation tests passed with synthetic disposable data"
+      ],
+      "title": "Physically isolated database adapters"
+    },
+    {
+      "areas": [
+        "Runtime-scoped conversation and system-data repositories",
+        "Desktop and managed-server host composition",
+        "Deployment activation, rollback, revocation, and shutdown cleanup",
+        "Cross-host runtime data-plane qualification"
+      ],
+      "chunkId": "runtime-repository-cutover-and-qualification",
+      "completedAt": "2026-07-29T14:39:23Z",
+      "criteriaIds": [
+        "physical-database-isolation",
+        "desktop-runtime-data-survives-lifecycle",
+        "managed-postgres-database-isolation",
+        "runtime-data-recovery",
+        "security-runtime-data-plane-reviewed"
+      ],
+      "documentation": [
+        "Canonical architecture, security, operations, decision-readiness, and context guidance updated"
+      ],
+      "feedbackAddressed": [],
+      "id": "dedicated-system-runtime-data-plane-runtime-repository-cutover-and-qualification",
+      "incrementId": "dedicated-system-runtime-data-plane",
+      "summary": "Composed conversation and system-data repositories only from an exact runtime database session, exposed the factory through deployment composition, wired desktop/server lifecycle ownership, and closed activation, rollback, revocation, and shutdown cleanup paths.",
+      "tests": [
+        "Runtime repository identity, cross-instance isolation, and reopen persistence tests passed",
+        "Twelve deployment/published lifecycle tests passed",
+        "Seventy-two focused desktop/server host composition tests passed",
+        "Changed-surface TypeScript diagnostics are clear"
+      ],
+      "title": "Runtime-scoped repositories and host qualification"
+    },
+    {
+      "areas": [
+        "Published system conversation authority service",
+        "Host-neutral controlled conversation runtime controller",
+        "Runtime-instance conversation and execution repositories",
+        "Conversation turn persistence"
+      ],
+      "chunkId": "release-bound-runtime-controller",
+      "completedAt": "2026-07-29T15:18:52Z",
+      "criteriaIds": [
+        "chat-is-usable-and-persistent",
+        "conversation-controls-fail-safely",
+        "security-runtime-window-reviewed"
+      ],
+      "documentation": [
+        "Temporary implementation report refreshed; canonical desktop, security, lifecycle, and end-user documentation remains planned with the completed window slice"
+      ],
+      "feedbackAddressed": [],
+      "id": "isolated-interactive-system-window-release-bound-runtime-controller",
+      "incrementId": "isolated-interactive-system-window",
+      "summary": "Added a host-neutral published-conversation controller that derives authority from the exact active deployment, runtime instance, immutable release, model revision, interaction binding, and running launch descriptor; resumes a sample-free approved conversation; revalidates authority before protected-context materialization and model invocation; and stores conversation plus execution records only in the physical runtime-instance database.",
+      "tests": [
+        "Eleven focused authority, stale/foreign/missing denial, runtime database isolation, persisted history/reopen, malformed input, and controlled invocation tests passed",
+        "Execution approval records are isolated between physical runtime instances and survive close/reopen",
+        "No full-suite or increment completion gates were run while later Increment 3 chunks remain pending"
+      ],
+      "title": "Release-bound runtime controller and data ownership"
+    },
+    {
+      "areas": [
+        "Electron Forge runtime renderer and preload entries",
+        "Main-process runtime window manager and published lifecycle ownership",
+        "Runtime-only IPC contract, adapter, and preload API",
+        "Accessible published chatbot renderer",
+        "Publish lifecycle UI modal cutover"
+      ],
+      "chunkId": "hardened-runtime-window-and-surface",
+      "completedAt": "2026-07-29T15:36:32Z",
+      "criteriaIds": [
+        "system-opens-in-separate-window",
+        "chat-is-usable-and-persistent",
+        "conversation-controls-fail-safely",
+        "runtime-window-is-hardened",
+        "security-runtime-window-reviewed"
+      ],
+      "documentation": [
+        "Temporary implementation report refreshed; canonical architecture, security, operations, and end-user guidance is scheduled in the final Increment 3 chunk"
+      ],
+      "feedbackAddressed": [],
+      "id": "isolated-interactive-system-window-hardened-runtime-window-and-surface",
+      "incrementId": "isolated-interactive-system-window",
+      "summary": "Added a separately bundled Electron runtime renderer and minimal preload, main-process lifecycle-owned windows, exact live-main-frame IPC session binding, non-persistent sandbox partitions, denied navigation/new windows/permissions/downloads, strict production CSP, safe startup compensation, and an accessible sample-free chatbot surface with keyboard submission and synchronous duplicate suppression. The obsolete builder modal launch path was removed.",
+      "tests": [
+        "Focused contract, exact-sender IPC, preload, window hardening/resource-bound, lifecycle compensation, Forge packaging, Publish UI, and runtime chat interaction tests passed",
+        "Desktop webpack TypeScript dependency closure passed with no diagnostics",
+        "Focused denial coverage passed for foreign/subframe senders, malformed envelopes/input, invalid IPC responses, window limits, load failures, and duplicate submission"
+      ],
+      "title": "Hardened separate Electron window and usable surface"
+    },
+    {
+      "areas": [
+        "Desktop published lifecycle and shutdown",
+        "Controlled qualification worker and launch plan",
+        "Packaged desktop and thin-client lifecycle qualification",
+        "Runtime database verification",
+        "Architecture, security, operations, and context documentation"
+      ],
+      "chunkId": "lifecycle-recovery-and-production-qualification",
+      "completedAt": "2026-07-29T16:18:19Z",
+      "criteriaIds": [
+        "system-opens-in-separate-window",
+        "chat-is-usable-and-persistent",
+        "conversation-controls-fail-safely",
+        "runtime-window-is-hardened",
+        "reference-runtime-production-qualified",
+        "security-runtime-window-reviewed"
+      ],
+      "documentation": [
+        "Controlled conversational execution architecture and ADR-0023",
+        "Dedicated runtime data-plane ADR-0039 and threat model",
+        "Desktop host and Electron IPC boundary guidance",
+        "Asset/system and deployment qualification procedures",
+        "Shared UI and repository context packs"
+      ],
+      "feedbackAddressed": [],
+      "id": "isolated-interactive-system-window-lifecycle-recovery-and-production-qualification",
+      "incrementId": "isolated-interactive-system-window",
+      "summary": "Connected published Start/Stop to sidecar preparation, the dedicated runtime window, retained conversation recovery, ordered shutdown, and a controlled packaged qualification that proves real interaction and physical data isolation.",
+      "tests": [
+        "16 focused lifecycle, shutdown, worker, launch-plan, and Python-worker-selection assertions passed",
+        "Desktop webpack TypeScript dependency closure passed",
+        "Packaged Electron and thin-client Visual Composer qualification passed, including separate-window chat, button/keyboard turns, restart persistence, and physical database isolation",
+        "Repository completion gates passed with 2718 tests passed, 0 failed, and 3 skipped",
+        "Dependency security/SBOM, server build, thin-client build, documentation, architecture, agent-support, and deployment gates passed"
+      ],
+      "title": "Lifecycle, recovery, and packaged production qualification"
+    }
+  ],
+  "completion": {
+    "completedAt": "2026-07-29T16:19:05Z",
+    "summary": "All three controlled-chatbot interactive runtime increments and every local or controlled-environment acceptance criterion passed."
+  },
+  "createdAt": "2026-07-29T11:57:00Z",
+  "currentIncrementId": null,
+  "decisions": [
+    {
+      "approvalNote": "The user approved the typed composition/runtime binding and added a separate host-window and database-isolation requirement.",
+      "approvedAt": "2026-07-29T12:18:55Z",
+      "approvedFingerprint": "dc21811f5603309a008b8eda580ec9f48160eda028c967ee2237b187350cb1de",
+      "context": "The choice determines whether the asset-driven system remains authoritative, whether existing approval and runtime controls are preserved, and how reusable the solution will be for future conversational systems.",
+      "id": "interactive-runtime-binding",
+      "options": [
+        {
+          "consequences": [
+            "History begins empty and shows only persisted bounded transcript entries.",
+            "The composer is editable and Send invokes the configured approved model through the existing controlled path.",
+            "Future supported conversational templates can reuse the same typed runtime binding without bespoke screens.",
+            "Arbitrary asset code remains non-executable and unsupported features remain explicit."
+          ],
+          "id": "typed-composition-runtime-binding",
+          "label": "Typed composition runtime binding",
+          "recommended": true,
+          "summary": "Add an authorized text-model picker to the message-composer properties, carry the exact model record through validated composition/build/runtime evidence, and mount an interactive shared conversation controller over the published visual hierarchy while reusing existing session, approval, transcript, turn, guard, and Python adapter services.",
+          "tradeoffs": [
+            "Largest coherent cross-layer change, but it closes the real composition-to-runtime gap instead of adding a second chatbot architecture.",
+            "Requires typed model-choice projection and release-to-reviewed-plan/session resolution across shared contracts and both hosts.",
+            "Keeps the asset hierarchy responsible for presentation while application services remain responsible for state and execution."
+          ]
+        },
+        {
+          "consequences": [
+            "The reference chatbot could work sooner, but composer property changes would not fully define the running interface.",
+            "Preview and runtime behavior could diverge.",
+            "Template-specific branches would accumulate in shared Systems UI."
+          ],
+          "id": "bespoke-reference-chatbot-surface",
+          "label": "Bespoke reference chatbot surface",
+          "recommended": false,
+          "summary": "Detect the controlled-chatbot template at launch and replace its asset-rendered runtime with a purpose-built chat component wired to the existing conversation APIs and a separate model selector.",
+          "tradeoffs": [
+            "Smaller initial UI change and simpler local state.",
+            "Duplicates the visual composition and weakens the meaning of the built asset hierarchy.",
+            "Every future conversational template risks another template-specific runtime screen."
+          ]
+        },
+        {
+          "consequences": [
+            "The current trusted declarative runtime and controlled invocation boundary would no longer be sufficient.",
+            "A separate sandbox qualification roadmap and architecture decision would be required before production use.",
+            "This option cannot safely deliver the requested production-ready successor within the current constraints."
+          ],
+          "id": "executable-asset-backing-resources",
+          "label": "Executable asset backing resources",
+          "recommended": false,
+          "summary": "Allow frontend and backend backing resources attached to assets to execute directly and implement conversation state, model calls, and rendering from those resources.",
+          "tradeoffs": [
+            "Offers maximum asset flexibility.",
+            "Introduces an unqualified arbitrary-code sandbox, capability, supply-chain, packaging, and host-isolation problem.",
+            "Would substantially broaden the accepted architecture and security scope."
+          ]
+        }
+      ],
+      "proposalFingerprint": "dc21811f5603309a008b8eda580ec9f48160eda028c967ee2237b187350cb1de",
+      "question": "How should an exact published chatbot composition, its selected model, and the existing controlled conversation runtime be connected?",
+      "selectedOptionId": "typed-composition-runtime-binding",
+      "status": "approved",
+      "title": "Published chatbot interaction boundary"
+    },
+    {
+      "approvalNote": "The user approved Option 1: a dedicated runtime data plane with a separate sandboxed Electron window and a system-specific physical database for each installed runtime instance.",
+      "approvedAt": "2026-07-29T12:25:09Z",
+      "approvedFingerprint": "d8d240fd538949d2e418acecf01c10681fab3f3971cc4cf2d3b9b91636c004d0",
+      "context": "The desktop must launch a separate Electron window, and system-owned runtime data must not share a database with another installed system. The topology must keep privileged window, database, model, and execution authority in the host while preserving one shared application architecture.",
+      "id": "system-runtime-isolation",
+      "options": [
+        {
+          "consequences": [
+            "Start opens or focuses the exact system window automatically; no system runtime modal remains in the builder.",
+            "Stop closes the system window and active data resources without deleting durable data.",
+            "Compatible release upgrades can retain the same runtime instance and database through explicit migration; clones and separate installations receive new databases.",
+            "Uninstall retains the database until a separate explicit, confirmed data-deletion operation applies retention and backup policy.",
+            "A system renderer cannot choose paths, connection strings, runtime identities, model identities, or another system's IPC channels.",
+            "Desktop and managed hosts reuse the same runtime controller and application services while host adapters own Electron and database-specific mechanics."
+          ],
+          "id": "dedicated-runtime-data-plane",
+          "label": "Dedicated runtime data plane",
+          "recommended": true,
+          "summary": "Give every installed system runtime an opaque durable runtime-instance identity, a dedicated physical database, and\u2014on desktop\u2014a dedicated sandboxed BrowserWindow with a runtime-only preload and unique non-persistent browser session. Keep lifecycle, release, placement, and audit metadata in the platform control-plane database. Desktop uses one contained SQLite file per runtime instance; managed hosts use provisioner-created PostgreSQL databases with separate least-privilege runtime bindings.",
+          "tradeoffs": [
+            "Strongest consistent cross-system data separation and cleanest runtime authority boundary.",
+            "Requires database placement/provisioning, per-instance migrations, connection lifecycle, backup/restore, quotas, and recovery.",
+            "Requires a second packaged Electron renderer/preload entry and exact sender-to-runtime-instance IPC binding.",
+            "Separates data-plane persistence from current shared control-plane repositories, so conversation and system-data composition must become runtime-instance scoped."
+          ]
+        },
+        {
+          "consequences": [
+            "Desktop systems cannot share a runtime database file.",
+            "Managed systems still depend on logical predicates and row-level security inside one database.",
+            "Cross-host conformance must describe two different data-isolation guarantees."
+          ],
+          "id": "hybrid-desktop-dedicated-server-pooled",
+          "label": "Hybrid isolation",
+          "recommended": false,
+          "summary": "Use a dedicated SQLite file and sandboxed BrowserWindow for each desktop runtime instance, but keep managed-server runtime data in the existing shared PostgreSQL database with organization, workspace, and system partition keys plus row-level security.",
+          "tradeoffs": [
+            "Delivers physical isolation on desktop with substantially less managed-database provisioning work.",
+            "Preserves existing pooled PostgreSQL operations and backup tooling.",
+            "Provides different isolation guarantees by deployment shape and does not satisfy physical database separation for managed systems."
+          ]
+        },
+        {
+          "consequences": [
+            "The window requirement is met but the requested physical data boundary is not.",
+            "A persistence-scoping defect could still expose records across systems.",
+            "This option is not recommended for the stated protection goal."
+          ],
+          "id": "shared-database-logical-isolation",
+          "label": "Logical isolation only",
+          "recommended": false,
+          "summary": "Open each desktop system in a dedicated sandboxed BrowserWindow but continue storing all runtime data in the shared platform database under stricter organization, workspace, release, and system keys.",
+          "tradeoffs": [
+            "Smallest persistence change and lowest operational cost.",
+            "Relies on every repository query and policy layer to preserve cross-system isolation.",
+            "Does not create a system-specific database instance."
+          ]
+        }
+      ],
+      "proposalFingerprint": "d8d240fd538949d2e418acecf01c10681fab3f3971cc4cf2d3b9b91636c004d0",
+      "question": "What physical window and database isolation topology should the approved interactive runtime use?",
+      "selectedOptionId": "dedicated-runtime-data-plane",
+      "status": "approved",
+      "title": "Published system runtime isolation"
+    }
+  ],
+  "discovery": {
+    "constraints": [
+      "Keep reusable asset definitions and backing resources declarative; do not execute arbitrary asset-authored code in a trusted renderer.",
+      "Use the existing controlled conversation application services and Python text-generation adapter as the only model invocation path.",
+      "Store an exact authorized model-record reference selected from workspace-visible text-capable inventory; do not accept a free-form provider or model identifier.",
+      "Open a visual published system in a dedicated Electron BrowserWindow rather than a modal in the builder window.",
+      "Use a dedicated renderer entry and least-authority preload for system windows; keep context isolation, process sandboxing, Node integration disabled, web security enabled, navigation constrained, new-window creation denied, and IPC bound to the exact owned webContents.",
+      "Assign an opaque host-owned runtime-instance identity to each installed system instance; renderer input, display names, release ids, and filesystem paths must not select a database.",
+      "Keep platform control-plane records in the existing organization-aware database while placing system-owned runtime records in a physical database dedicated to the runtime instance.",
+      "Preserve a runtime instance and its data intentionally across compatible release upgrades; stop closes active resources, and uninstall must not erase data without a separate explicit destructive action and retention policy.",
+      "Show an empty history before the first real message and render only bounded persisted transcript entries.",
+      "Keep tools, retrieval, memory, multimodal input, streaming, cancel, and retry outside this successor roadmap unless an existing supported path proves them end to end.",
+      "Maintain shared application/controller behavior across desktop and managed hosts while keeping Electron windows, preloads, database provisioning, pools, and paths in host/adapters.",
+      "Use focused tests within increments and run repository-wide gates once after each complete increment."
+    ],
+    "decisionRequired": true,
+    "recordedAt": "2026-07-29T12:19:10Z",
+    "securityImpact": {
+      "abuseCases": [
+        "A system renderer forges another runtime-instance, workspace, release, model, or database identity.",
+        "A broad preload or unvalidated IPC sender reaches builder, filesystem, credential, or another system's capabilities.",
+        "Navigation, window creation, browser storage, or remote content escapes the intended local system surface.",
+        "A database selector accepts a renderer path, display name, traversal segment, connection string, or cross-system identifier.",
+        "The ordinary managed runtime role provisions, owns, drops, or connects to another system database.",
+        "A stale release or model reference bypasses reviewed-plan, readiness, approval, or migration checks.",
+        "Protected prompts, provider payloads, credentials, local paths, or private transcript content leak into diagnostics or roadmap evidence.",
+        "Repeated sends, oversized content, unbounded transcript rendering, database pools, or open windows exhaust resources."
+      ],
+      "assets": [
+        "Exact published system, runtime instance, release, and model identity",
+        "Protected instructions and invocation context",
+        "User messages, assistant transcript, and system-owned runtime records",
+        "Execution approval and runtime-readiness authority",
+        "Per-system database placement metadata, credentials, migrations, backups, and audit evidence",
+        "Bounded host resources and safe diagnostics"
+      ],
+      "controls": [
+        "Create and track system windows only in the main process from a verified running launch descriptor and host-owned runtime-instance record.",
+        "Use a dedicated packaged renderer/preload, unique non-persistent session partition, restrictive content policy, sandbox and context isolation, no Node integration, denied navigation/new windows, and exact sender-to-instance IPC binding.",
+        "Derive local database locations from normalized opaque runtime-instance ids under a contained host root; never expose paths or handles to renderers.",
+        "Use one physical SQLite database per desktop runtime instance and a provisioner-owned dedicated PostgreSQL database plus least-privilege connection binding for managed runtime instances.",
+        "Keep lifecycle/build/deployment mappings in the control plane and open only the selected instance data plane after exact association, schema, health, and compatibility checks.",
+        "Resolve only typed workspace-authorized text-capable model records and bind their exact identity into immutable build/runtime evidence.",
+        "Invoke only through existing application-owned session, approval, readiness, runtime guard, protected-context, and adapter boundaries.",
+        "Normalize and bound input, disable duplicate submission while busy, bound transcript reads, cap active windows/connections, and sanitize failures.",
+        "Separate stop, uninstall, retained-data deletion, migration, backup, restore, and recovery so ordinary lifecycle actions cannot silently destroy or cross-load data."
+      ],
+      "disposition": "security-relevant",
+      "residualRisks": [
+        "A BrowserWindow and separate database do not protect against a compromised Electron main process or operating-system account.",
+        "Model quality and prompt-injection resistance still require deployment-specific evaluation and cannot be guaranteed by UI or storage isolation.",
+        "Managed database provisioning, backup, recovery, and resource ceilings require controlled-environment qualification.",
+        "Encryption at rest and tenant-managed keys remain separate controls unless explicitly added by an approved successor decision.",
+        "Streaming, tools, retrieval, memory, multimodal input, cancellation, and retry remain intentionally unsupported."
+      ],
+      "summary": "The change adds a renderer-process boundary, a new IPC surface, a selected-model invocation path, and a physical per-system persistence boundary for sensitive runtime data.",
+      "trustBoundaries": [
+        "Builder renderer to desktop main-process runtime-instance manager",
+        "Sandboxed system renderer and least-authority preload to sender-bound IPC",
+        "Runtime instance to its host-selected physical database",
+        "Composer UI to authorized workspace model inventory",
+        "Published runtime controller to application conversation services",
+        "Application orchestration to the Python text-generation adapter",
+        "Persisted transcript to bounded user-visible rendering",
+        "Managed database provisioner to least-privilege runtime database role"
+      ],
+      "verification": [
+        "Electron tests for sandboxed webPreferences, dedicated preload surface, partition isolation, denied navigation/window creation, and forged/destroyed/subframe sender rejection.",
+        "Focused database tests proving two runtime instances cannot read, write, enumerate, migrate, back up, or restore each other's records.",
+        "Path and connection denial tests for traversal, display-name selection, cross-workspace/runtime identifiers, stale bindings, and renderer-supplied infrastructure details.",
+        "Managed PostgreSQL qualification with a provisioner role separated from runtime roles and cross-database connection denial.",
+        "Focused denial tests for forged, stale, cross-workspace, incompatible, and unavailable model selections and source associations.",
+        "UI tests for editable bounded input, keyboard and button submission, busy-state duplicate suppression, empty history, accessible live transcript, and sanitized errors.",
+        "End-to-end packaged-desktop test proving Start opens a separate system window, a real user turn reaches the controlled adapter, and only that system database receives the persisted exchange.",
+        "Restart, stop, upgrade, uninstall-retention, backup/restore, and explicit-delete recovery tests with synthetic fixtures.",
+        "Desktop/thin transport parity and non-disclosure assertions using synthetic fixtures."
+      ]
+    },
+    "sources": [
+      {
+        "note": "Requires verified composition, reviewed execution plan, current runtime readiness, explicit session approval, bounded transcript exposure, and application-owned invocation.",
+        "title": "Controlled conversational execution architecture",
+        "url": "docs/architecture/controlled-conversational-system-execution.md"
+      },
+      {
+        "note": "Makes the desktop or server host the execution authority and keeps lifecycle, runtime roots, and launch descriptors host-owned.",
+        "title": "Host model",
+        "url": "docs/architecture/host-model.md"
+      },
+      {
+        "note": "Requires deployment-shaped adapters, adapter-owned physical locations, monotonic migrations, bounded recovery, and no infrastructure details in application contracts.",
+        "title": "Persistence and storage architecture",
+        "url": "docs/architecture/persistence-and-storage.md"
+      },
+      {
+        "note": "Creates one main BrowserWindow and one shared SQLite database before composing all desktop services and IPC.",
+        "title": "Current Electron bootstrap",
+        "url": "apps/desktop/src/main/index.ts"
+      },
+      {
+        "note": "Stores all system records and audit entries in shared namespaces with workspace and release keys rather than a separate physical database.",
+        "title": "Current system-data repository",
+        "url": "modules/adapters/persistence/system-data/createStructuredSystemDataRepository.ts"
+      },
+      {
+        "note": "Renders the exact started release in the dedicated runtime window and exposes only bounded transcript read and message submission behavior.",
+        "title": "Published runtime application",
+        "url": "apps/desktop/src/system-runtime/SystemRuntimeApp.tsx"
+      },
+      {
+        "note": "Each BrowserWindow owns a renderer process while the main process owns privileged lifecycle and window management.",
+        "title": "Electron process model",
+        "url": "https://www.electronjs.org/docs/latest/tutorial/process-model"
+      },
+      {
+        "note": "Requires context isolation, process sandboxing, no Node integration, limited navigation/window creation, restrictive content policy, and IPC sender validation.",
+        "title": "Electron security checklist",
+        "url": "https://www.electronjs.org/docs/latest/tutorial/security"
+      },
+      {
+        "note": "A sandboxed renderer delegates privileged work through narrowly exposed IPC and must not receive broad Node authority.",
+        "title": "Electron process sandboxing",
+        "url": "https://www.electronjs.org/docs/latest/tutorial/sandbox"
+      },
+      {
+        "note": "Separate databases provide connection-level isolation for projects that should be unaware of each other, with explicit operational tradeoffs.",
+        "title": "PostgreSQL database overview",
+        "url": "https://www.postgresql.org/docs/current/manage-ag-overview.html"
+      },
+      {
+        "note": "Database creation is a privileged provisioning operation and must not be granted to the ordinary runtime application role.",
+        "title": "PostgreSQL CREATE DATABASE",
+        "url": "https://www.postgresql.org/docs/current/sql-createdatabase.html"
+      },
+      {
+        "note": "SQLite provides transactional isolation within a database file; separate host-derived files provide a physical placement boundary for local runtime instances.",
+        "title": "SQLite isolation",
+        "url": "https://sqlite.org/isolation.html"
+      },
+      {
+        "note": "Supports an initially empty, sequentially updated chat history exposed with role=log.",
+        "title": "W3C ARIA23 chat log technique",
+        "url": "https://www.w3.org/WAI/WCAG21/Techniques/aria/ARIA23"
+      },
+      {
+        "note": "Supports explicit pre-deployment evaluation of capabilities, limits, risks, and deployment-context behavior.",
+        "title": "NIST AI 600-1",
+        "url": "https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence"
+      },
+      {
+        "note": "Supports keeping authorization and privileged actions in application code instead of granting them to the model.",
+        "title": "OWASP LLM01 Prompt Injection",
+        "url": "https://genai.owasp.org/llmrisk/llm01-prompt-injection/"
+      }
+    ],
+    "summary": "The approved typed composition/runtime bridge remains valid. The desktop currently has one BrowserWindow, one broad preload surface, and one shared SQLite database; launched visual systems are rendered in a modal. System data is only logically keyed by workspace and release inside the shared store. The requested successor therefore also needs a host-owned runtime-instance manager that opens a dedicated sandboxed system window and routes runtime data through a physical database selected for that exact installed system instance."
+  },
+  "evidence": [
+    {
+      "artifact": null,
+      "command": "Focused model authority, transport parity, preload, and shared Composer interaction tests",
+      "criterionId": "authorized-model-picker",
+      "id": "evidence-1",
+      "incrementId": "release-bound-conversation-runtime",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T13:49:37Z",
+      "summary": "The shared required model picker uses the sanitized workspace catalog across application, API, IPC, preload, desktop, and thin-client boundaries; focused transport and interaction tests passed."
+    },
+    {
+      "artifact": null,
+      "command": "Focused deployment binding, trusted runtime, Python adapter, protected context, session read-model, and submit-turn tests",
+      "criterionId": "model-binding-fails-closed",
+      "id": "evidence-2",
+      "incrementId": "release-bound-conversation-runtime",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T13:49:37Z",
+      "summary": "Missing, malformed, unavailable, stale, and cross-workspace model associations deny activation, start, turn persistence, or worker submission with bounded diagnostics."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/application/use-cases/system-build/tests/system-build-use-cases.unit.test.ts",
+      "criterionId": "release-binding-is-deterministic",
+      "id": "evidence-3",
+      "incrementId": "release-bound-conversation-runtime",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T13:49:37Z",
+      "summary": "Repeated builds preserve identical model and interaction evidence, while a model revision change changes the lock digest."
+    },
+    {
+      "artifact": null,
+      "command": "Focused Foundation properties, reference-template, Foundation preview, and reference semantic HTML tests",
+      "criterionId": "reference-chat-is-sample-free",
+      "id": "evidence-4",
+      "incrementId": "release-bound-conversation-runtime",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T13:49:38Z",
+      "summary": "The controlled reference contains one typed persisted-only composer/history interaction, no default model, no sample transcript configuration, and matching sample-free semantic HTML."
+    },
+    {
+      "artifact": null,
+      "command": "npm run architecture:check; focused API security, release-binding, deployment, Python adapter, and denial-path tests",
+      "criterionId": "security-release-authority-reviewed",
+      "id": "evidence-5",
+      "incrementId": "release-bound-conversation-runtime",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T13:49:38Z",
+      "summary": "Application and host services retain model authority; renderer-facing projections exclude provider, path, credential, and raw runtime detail, and the new route has explicit authenticated read policy."
+    },
+    {
+      "artifact": null,
+      "command": "Electron SQLite runtime integration plus npm run test:postgres-live",
+      "criterionId": "physical-database-isolation",
+      "id": "evidence-6",
+      "incrementId": "dedicated-system-runtime-data-plane",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T14:55:39Z",
+      "summary": "Two opaque runtime instances used different physical SQLite and PostgreSQL databases; identical logical keys remained distinct and foreign binding/database access failed closed."
+    },
+    {
+      "artifact": null,
+      "command": "Electron SQLite runtime integration and runtime-instance lifecycle unit tests",
+      "criterionId": "desktop-runtime-data-survives-lifecycle",
+      "id": "evidence-7",
+      "incrementId": "dedicated-system-runtime-data-plane",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T14:55:39Z",
+      "summary": "SQLite runtime data survived close/reopen and explicit compatible migration; separate instances received separate bindings, uninstall retained data, and only a separately confirmed retained deletion removed it."
+    },
+    {
+      "artifact": null,
+      "command": "npm run test:postgres-live",
+      "criterionId": "managed-postgres-database-isolation",
+      "id": "evidence-8",
+      "incrementId": "dedicated-system-runtime-data-plane",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T14:55:39Z",
+      "summary": "Disposable PostgreSQL 18 qualification created distinct databases and least-privilege roles, preserved data through migration, and denied foreign database connect plus database, role, and schema DDL."
+    },
+    {
+      "artifact": null,
+      "command": "Focused runtime lifecycle, repository, SQLite recovery, and managed PostgreSQL denial tests",
+      "criterionId": "runtime-data-recovery",
+      "id": "evidence-9",
+      "incrementId": "dedicated-system-runtime-data-plane",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T14:55:39Z",
+      "summary": "Missing storage, migration failure, connection exhaustion, active restore, foreign bindings, stale revisions, and invalid deletion confirmation failed safely; SQLite online backup/verified restore recovered the selected instance without substitution."
+    },
+    {
+      "artifact": null,
+      "command": "npm run docs:check; npm run architecture:check; npm run agent-support:check; npm run security:dependencies; npm run build:server; npm run build:thin-client; npm run package; npm test",
+      "criterionId": "security-runtime-data-plane-reviewed",
+      "id": "evidence-10",
+      "incrementId": "dedicated-system-runtime-data-plane",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T14:55:39Z",
+      "summary": "ADR-0039 and the threat model document opaque identity, contained paths, provisioner/runtime separation, retention, explicit destruction, quotas, redaction, denial tests, and residual host/administrator risk. All completion gates and 2,697 repository tests passed."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-07-29t05-29-38-141z-02970835/evidence.json",
+      "command": "npm run test:visual-composer -- --project packaged-desktop",
+      "criterionId": "system-opens-in-separate-window",
+      "id": "evidence-11",
+      "incrementId": "isolated-interactive-system-window",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T16:18:49Z",
+      "summary": "Packaged Windows Electron qualification opened and reused a separate release-bound runtime window while the builder remained active."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-07-29t05-29-38-141z-02970835/evidence.json",
+      "command": "npm run test:visual-composer -- --project packaged-desktop",
+      "criterionId": "chat-is-usable-and-persistent",
+      "id": "evidence-12",
+      "incrementId": "isolated-interactive-system-window",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T16:18:49Z",
+      "summary": "The packaged runtime started empty, completed button and keyboard turns through the controlled worker, and restored the persisted transcript after Stop and Start."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "node --import tsx --test <focused Increment 3 tests>",
+      "criterionId": "conversation-controls-fail-safely",
+      "id": "evidence-13",
+      "incrementId": "isolated-interactive-system-window",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T16:18:49Z",
+      "summary": "Focused controller, IPC, lifecycle, preload, UI, and shutdown denial tests cover stale authority, malformed input, foreign senders, duplicate submission, startup failure compensation, and sanitized errors."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "npm test",
+      "criterionId": "runtime-window-is-hardened",
+      "id": "evidence-14",
+      "incrementId": "isolated-interactive-system-window",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T16:18:49Z",
+      "summary": "Window-manager, preload, IPC, Forge, and full-suite tests passed for sandboxing, context isolation, strict CSP, nonpersistent partitioning, denied navigation/windows/permissions, exact main-frame binding, and window bounds."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-07-29t05-29-38-141z-02970835/evidence.json",
+      "command": "npm run test:visual-composer -- --project packaged-desktop",
+      "criterionId": "reference-runtime-production-qualified",
+      "id": "evidence-15",
+      "incrementId": "isolated-interactive-system-window",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T16:18:50Z",
+      "summary": "Fresh packaged Electron and thin-client qualification passed with controlled generation, accessibility checks, bounded windows, restart recovery, and a physical runtime/control-plane database isolation verifier."
+    },
+    {
+      "artifact": "docs/security/system-runtime-data-plane-threat-model.md",
+      "command": "npm run security:dependencies",
+      "criterionId": "security-runtime-window-reviewed",
+      "id": "evidence-16",
+      "incrementId": "isolated-interactive-system-window",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T16:18:50Z",
+      "summary": "The window, IPC, immutable release/model authority, transcript, database, denial-of-service, redaction, rollback, and residual host-compromise risks were reviewed and documented with focused denial and controlled qualification evidence."
+    }
+  ],
+  "feedback": [
+    {
+      "category": "scope",
+      "disposition": "needs-decision",
+      "id": "feedback-system-runtime-isolation",
+      "impact": "scope-change",
+      "nextAction": "Choose the host-owned runtime window and database placement topology before defining roadmap increments.",
+      "recordedAt": "2026-07-29T12:19:31Z",
+      "summary": "The approved interactive chatbot must open in a separate isolated Electron window and each installed system runtime must use a system-specific physical database so one system cannot access another system's data.",
+      "targetIncrementId": null
+    }
+  ],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "35754b6625ceddbbe97a9e6110a81e71291084928928060b60c19b95e9bd608a",
+      "recordedAt": "2026-07-29T11:57:13Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "bf237e68c8f9fb89f66915809f7623b48fbdaea6cb80d6c6ac4cbbd0ccc03215",
+      "recordedAt": "2026-07-29T11:57:28Z",
+      "sequence": 2,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "9a69b38467fdf584039d07451b3d4e2c6f2f4123bc5e0eedfe5ed2125f1e7492",
+      "recordedAt": "2026-07-29T12:18:55Z",
+      "sequence": 3,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "c2f947dc72066b83de7220bd1c301184ea8e9f90ca1a3d8aa52f3b43f1ed542f",
+      "recordedAt": "2026-07-29T12:19:10Z",
+      "sequence": 4,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "0d31ec25ac0baa619e590d1e1cafc591129d31510ec61f504631340ea46dbcbf",
+      "recordedAt": "2026-07-29T12:19:31Z",
+      "sequence": 5,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "9726ae28ff80968725c8e8fb677169cb8240da3daea920cb5018a9a7dd7ca147",
+      "recordedAt": "2026-07-29T12:19:45Z",
+      "sequence": 6,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "ddaeb1af9ff7ee34de3e5984eddd60d3bddbdbfba76b69a47703556abd2ec6e3",
+      "recordedAt": "2026-07-29T12:25:09Z",
+      "sequence": 7,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "4f33b34b7e0ff1625609c93ee2b133d23020371b778f4dfbed59d65e30352473",
+      "recordedAt": "2026-07-29T12:27:24Z",
+      "sequence": 8,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "8e3f4ab763453b5d7f7d38b8302406019eb8500c9ff3478976255a47d1de67d2",
+      "recordedAt": "2026-07-29T12:30:41Z",
+      "sequence": 9,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "4dfb5f04f2ccb13d0b13a01f9183dfd452bfe82af17a2ef7d83f644675f7f464",
+      "recordedAt": "2026-07-29T12:30:55Z",
+      "sequence": 10,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "6cbdecf648375cf47d7972ccce3563ac23dd47e3df1b37a934314f9de287d508",
+      "recordedAt": "2026-07-29T12:36:29Z",
+      "sequence": 11,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "a6426475a48e8a89d0cc8427a557262c1b8d86f65dbac3e96da4e1ce5d4f206c",
+      "recordedAt": "2026-07-29T12:37:12Z",
+      "sequence": 12,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "2220621cd3f72de23713b5695253147b5c9efe50970ebe484b62ca490973f4d7",
+      "recordedAt": "2026-07-29T12:48:24Z",
+      "sequence": 13,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "0ce19fda04dda7e1797ef5dfe29487e13ad04049af744d1f39a696e30abbefa6",
+      "recordedAt": "2026-07-29T13:01:06Z",
+      "sequence": 14,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "74d7489ed24718d09017afbd44f2b468fe76501810f1fd15dbfbb072765c644a",
+      "recordedAt": "2026-07-29T13:27:25Z",
+      "sequence": 15,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "1bee9f4dafa6ac02da880861892825074c509af82e199fc27c50bef0d3b3e500",
+      "recordedAt": "2026-07-29T13:49:37Z",
+      "sequence": 16,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "44977e90ee3e14d6fe1d9601f3a42cf63553706ed8079423f3a114ecb49f815e",
+      "recordedAt": "2026-07-29T13:49:37Z",
+      "sequence": 17,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "0dcb828eb158388b4b35999df2435da74d79ff72bdccda0b776e7c45dddcf982",
+      "recordedAt": "2026-07-29T13:49:37Z",
+      "sequence": 18,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5ebd85830b2aa61698279ef456ed9aa8db74e99ed0663b406ae7d00329095ca9",
+      "recordedAt": "2026-07-29T13:49:38Z",
+      "sequence": 19,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d48fe220af057bdb3b7a13f149c06df0a0ecda605be229088718b79b41e5e887",
+      "recordedAt": "2026-07-29T13:49:38Z",
+      "sequence": 20,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "60cdc6a6bef412c218c75d7d0f3ddcbef390581dc9ea4a1a1fd9e36072510795",
+      "recordedAt": "2026-07-29T13:49:38Z",
+      "sequence": 21,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "879735473292dd080a510ca6cdef168a861501d7e4a4fcbfc5fddb6e8d78bdea",
+      "recordedAt": "2026-07-29T13:55:52Z",
+      "sequence": 22,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "9585546c71c87b7cda50bc0fe2f86036a4aed97961157a4d751929ab4299d5a2",
+      "recordedAt": "2026-07-29T13:56:02Z",
+      "sequence": 23,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "aed413969968ff3a36a571c1a11833f493ffb6b575cfa2c7e59b081b18a8a98a",
+      "recordedAt": "2026-07-29T13:56:20Z",
+      "sequence": 24,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "4b1b58d20d11740c8e194a987ceb8054c8b471c78144a42b82b6c8bb19bb374b",
+      "recordedAt": "2026-07-29T14:39:22Z",
+      "sequence": 25,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "52ac4266a1934dfc1dd0e7e9cbad57fda5cb11a24041b7475f5f44d4f8a3b1fe",
+      "recordedAt": "2026-07-29T14:39:23Z",
+      "sequence": 26,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "8029175ada545ddae2db7ad2ed8a2aec7d3202f08a10cc856c33d8e38e07db6c",
+      "recordedAt": "2026-07-29T14:39:23Z",
+      "sequence": 27,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "9c4c9537f16108e8cc1575b7ace44429fc72bf15bc9b77549c825be5147529af",
+      "recordedAt": "2026-07-29T14:55:39Z",
+      "sequence": 28,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ffe052e0df76041dbc6baff97846acd34b25600993b72931d6a6d958ce33527a",
+      "recordedAt": "2026-07-29T14:55:39Z",
+      "sequence": 29,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3e66a16af525e9993ef9c91b5442d0b7d0d4d749f39b3da7d75c094dc6f07104",
+      "recordedAt": "2026-07-29T14:55:39Z",
+      "sequence": 30,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "46444c2257129b393fd052d89f26d54368581868b81e0be45cd2f9bd14291e84",
+      "recordedAt": "2026-07-29T14:55:39Z",
+      "sequence": 31,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "139e8011502fb536363a38c11af21bcc05ae909b55b218b66384e01885294d4c",
+      "recordedAt": "2026-07-29T14:55:39Z",
+      "sequence": 32,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3e7470b8d6196a34f51e9005029ba241158a518bc5bc8c4492de73a2abfb851c",
+      "recordedAt": "2026-07-29T14:55:40Z",
+      "sequence": 33,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "e40c5eccdf25e5fe38bc9032eb1e1892bf750766b20b648321839ac23831626c",
+      "recordedAt": "2026-07-29T14:55:52Z",
+      "sequence": 34,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "4e5fd95f7e299425583545286afd24a6c4807b46adf799c6728b2b49fe4958e7",
+      "recordedAt": "2026-07-29T15:00:15Z",
+      "sequence": 35,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "2ef17eea5bcfff76ff57770a5fe8913defb88e0297b2ea4545a4c34cc36e6795",
+      "recordedAt": "2026-07-29T15:01:17Z",
+      "sequence": 36,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "0534f0b6ea90f1ecd7c7a8193b5dd7d119e92d192a7311ab291d032878dabb2f",
+      "recordedAt": "2026-07-29T15:18:52Z",
+      "sequence": 37,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "f74bfbe00ba7b3183a33691222eb3a3e9a4dbaf31da41cab4ab49c8d3bf40c91",
+      "recordedAt": "2026-07-29T15:36:32Z",
+      "sequence": 38,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "f7d8a4227de54574869d431ca5ddb6ae3ec21761b7ac152c5632790cce4e1d6c",
+      "recordedAt": "2026-07-29T16:18:19Z",
+      "sequence": 39,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "4d98c445b3c1688b278f524f35dd8e71cb02a3bc56e1fe59b37233364482fbb0",
+      "recordedAt": "2026-07-29T16:18:49Z",
+      "sequence": 40,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "491b16b622e222ad48abb331f66cd1ec34cce6ea2cdedad744b3a1324c05f387",
+      "recordedAt": "2026-07-29T16:18:49Z",
+      "sequence": 41,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "81895be0890f84d501adb5e1fa742f3fdf0b498c20ce1ca00284763daa64ce57",
+      "recordedAt": "2026-07-29T16:18:49Z",
+      "sequence": 42,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "752b273476f888b3a940ea8ec92a82ae684eb4e0a8b87fd889c4f492eb828839",
+      "recordedAt": "2026-07-29T16:18:49Z",
+      "sequence": 43,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b472d88b9a6003b98d5bb14d78f6b212539dae5cab5526c7508a98bba837328c",
+      "recordedAt": "2026-07-29T16:18:50Z",
+      "sequence": 44,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "0a9824f5a6110cc0a2d833bcbd0e319564eb51870a3259a0d6d3f920de4ae0a0",
+      "recordedAt": "2026-07-29T16:18:50Z",
+      "sequence": 45,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d0809a84e83621184727c39a6d66c03aeb8ce0870c9ffb242dad0229aa0ac5fb",
+      "recordedAt": "2026-07-29T16:19:05Z",
+      "sequence": 46,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "7f0b2869f17476ce20931889db036935e386d1c8307872c110e4618c59ff515f",
+      "recordedAt": "2026-07-29T16:19:05Z",
+      "sequence": 47,
+      "type": "roadmap-completed"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "The message-composer properties require selection from the current workspace's compatible, authorized text-generation models and never accept an arbitrary provider, path, or model identifier.",
+          "id": "authorized-model-picker",
+          "qualification": "local"
+        },
+        {
+          "description": "Missing, stale, cross-workspace, incompatible, or unavailable model bindings block revision validation, build, release activation, or runtime start at the appropriate boundary with sanitized diagnostics.",
+          "id": "model-binding-fails-closed",
+          "qualification": "local"
+        },
+        {
+          "description": "Repeated builds of the same valid revision resolve the same interaction and model binding in the lock and release, while a changed binding changes the relevant digest.",
+          "id": "release-binding-is-deterministic",
+          "qualification": "local"
+        },
+        {
+          "description": "The controlled chatbot reference composition contains one connected history/composer interaction and its runtime contract does not seed example user or assistant messages.",
+          "id": "reference-chat-is-sample-free",
+          "qualification": "local"
+        },
+        {
+          "description": "Model authority remains owned by application and host services; forged renderer values, unauthorized resources, and diagnostic disclosure paths are denied and evidenced.",
+          "id": "security-release-authority-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-29T13:49:38Z",
+      "completedChunks": [
+        "model-contract-and-authority",
+        "composer-picker-and-transport",
+        "reference-chat-and-runtime-binding"
+      ],
+      "completionSummary": "Increment 1 is implemented, documented, and verified: exact authorized model and interaction bindings now travel deterministically from composition through release and fail-closed controlled invocation. All repository completion gates passed after focused regression repairs.",
+      "deliverables": [
+        "Typed interaction, model-binding, and runtime-instance contracts",
+        "Dynamic authorized model-resource picker in shared Composer UI and both clients",
+        "Revision validator and deterministic build/release propagation",
+        "Updated controlled-chatbot foundation definitions and reference template",
+        "Focused contract, validation, materialization, UI, and denial-path tests",
+        "Affected architecture, ADR, context-pack, and nearest README updates"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "Dedicated database provisioning and migration",
+        "Electron runtime-window creation",
+        "Arbitrary imported executable asset code",
+        "New model-provider installation or credential-management flows"
+      ],
+      "id": "release-bound-conversation-runtime",
+      "number": 1,
+      "objective": "Turn the controlled chatbot composition into a deterministic, release-bound interaction contract with an authorized model selected from the message-composer properties.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "Existing persisted revisions and releases remain readable when the additive model-binding evidence is absent, but controlled-chatbot validation and start deny the missing binding.",
+          "Only workspace model records with a supported text-generation task, usable lifecycle state, and runtime-resolvable model identifier are selectable.",
+          "Dedicated runtime databases and Electron system windows remain Increment 2 and Increment 3 responsibilities."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "authorized-model-picker",
+              "model-binding-fails-closed",
+              "release-binding-is-deterministic",
+              "security-release-authority-reviewed"
+            ],
+            "id": "model-contract-and-authority",
+            "outcome": "A normalized exact model-record binding is resolved through the workspace Model Registry, denied when forged or unusable, and preserved deterministically in validated revision and build/runtime evidence without exposing provider or path details.",
+            "title": "Model contract, authority, and release evidence"
+          },
+          {
+            "criteriaIds": [
+              "authorized-model-picker",
+              "model-binding-fails-closed",
+              "security-release-authority-reviewed"
+            ],
+            "id": "composer-picker-and-transport",
+            "outcome": "Desktop and thin clients obtain the same sanitized compatible-model catalog and the shared message-composer properties require an accessible bounded picker rather than arbitrary text.",
+            "title": "Authorized Composer picker and transport parity"
+          },
+          {
+            "criteriaIds": [
+              "model-binding-fails-closed",
+              "release-binding-is-deterministic",
+              "reference-chat-is-sample-free",
+              "security-release-authority-reviewed"
+            ],
+            "id": "reference-chat-and-runtime-binding",
+            "outcome": "The reference chatbot contains one linked history/composer interaction with no seeded messages, and the controlled runtime adapter resolves the exact approved model binding before invoking the Python worker.",
+            "title": "Sample-free reference chat and controlled invocation binding"
+          }
+        ],
+        "completionTests": [
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check when routed context or agent guidance changes",
+          "npm run build:server",
+          "npm run build:thin-client",
+          "npm test"
+        ],
+        "documentation": [
+          "System Builder architecture",
+          "System build and release architecture",
+          "Controlled conversational execution architecture and ADR",
+          "Affected context packs and nearest module README",
+          "Concise temporary implementation report"
+        ],
+        "fingerprint": "d290dbafd0ee8055d89f1edd0a7b592dbedf781b19e0e393ba12449633340bb8",
+        "focusedTests": [
+          "Model-binding normalization, eligibility, sanitized projection, forged/stale/cross-workspace/unavailable denial, and deterministic build-lock tests",
+          "System Builder API, IPC, preload, desktop/thin client, and shared Composer picker tests",
+          "Reference-template, semantic HTML, runtime-reference normalization, Python adapter, and worker selected-model denial tests"
+        ],
+        "recordedAt": "2026-07-29T12:37:12Z",
+        "rollback": "Remove the additive picker and model-binding materialization while keeping any release that requires the interaction contract stopped and fail-closed; never substitute a default or renderer-supplied model.",
+        "steps": [
+          "Define the normalized model-resource binding, compatible model projection, authoritative eligibility checks, revision validation, and deterministic build/release evidence.",
+          "Expose the sanitized workspace model catalog through System Builder API and IPC parity, and render the required message-composer picker in the shared inspector with bounded loading and error states.",
+          "Update the controlled-chatbot reference composition and runtime reference path so history is empty, composer/history are linked, and the Python adapter resolves and sends only the release-approved model runtime identifier.",
+          "After all three chunks pass focused tests, update canonical documentation and run the increment-wide repository completion gates once."
+        ],
+        "summary": "Implement the release-bound chatbot interaction as three coherent vertical chunks: establish application-owned model authority and immutable evidence, expose the authorized choice through shared Composer transports and UI, then connect the reference composition to the controlled adapter with sample-free semantics."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-29T12:36:29Z",
+          "risks": [
+            "A forged, stale, cross-workspace, incompatible, or unavailable model record could bypass renderer-side filtering unless every authoritative transition re-resolves it.",
+            "Adding model data to shared read models or diagnostics could disclose provider details, local paths, or credentials unless the projection remains deliberately narrow.",
+            "Old persisted revisions and releases may omit the additive binding, so reads must remain compatible while controlled-chatbot validation and runtime start fail closed.",
+            "Preview, reference-template, build-lock, launch, and invocation behavior can drift unless they share one normalized binding contract.",
+            "The current Python adapter omits the worker's required selectedModelId, so invocation remains nonfunctional until the adapter resolves the approved model record and passes only its runtime identifier."
+          ],
+          "sources": [
+            {
+              "title": "System Builder architecture",
+              "url": "docs/architecture/system-builder.md"
+            },
+            {
+              "title": "System build and release architecture",
+              "url": "docs/architecture/system-build-and-release.md"
+            },
+            {
+              "title": "Controlled conversational execution architecture",
+              "url": "docs/architecture/controlled-conversational-system-execution.md"
+            },
+            {
+              "title": "Controlled conversational execution decision",
+              "url": "docs/adr/ADR-0023-controlled-conversational-system-execution.md"
+            },
+            {
+              "title": "System revision validator",
+              "url": "modules/application/services/system-builder/validate-system-builder-revision.service.ts"
+            },
+            {
+              "title": "System foundation presentation properties",
+              "url": "modules/application/services/asset-packs/system-packs/system-foundation-v3-presentation-properties.ts"
+            },
+            {
+              "title": "Conversational text generation adapter",
+              "url": "modules/adapters/runtime/conversational-text-generation/python-conversational-text-generation.adapter.ts"
+            },
+            {
+              "title": "Python inference worker",
+              "url": "modules/adapters/runtime/python/worker/app.py"
+            }
+          ],
+          "summary": "The existing Composer schema, System Builder transports, revision validator, build lock, deployment launch descriptor, controlled conversation services, and Python worker can be extended without creating a second chatbot runtime. The safe seam is a sanitized System Builder model-options query backed by the workspace Model Registry, an exact typed model-record binding stored on the message-composer instance, application-owned revalidation during revision/build/runtime transitions, and adapter-side resolution of the approved runtime model identifier."
+        }
+      ],
+      "rollback": "Remove the additive interaction/model-binding contract and picker before dependent releases are approved; releases that require the new contract remain fail-closed rather than silently falling back to an unbound model.",
+      "startedAt": "2026-07-29T12:30:55Z",
+      "status": "completed",
+      "title": "Release-bound conversation runtime and model selection",
+      "verification": [
+        "Run focused contract, Composer-property, revision-validation, build-materialization, release-compatibility, and reference-template tests while implementing each work package.",
+        "Run focused forged-reference, stale-resource, cross-workspace, unavailable-runtime, and sanitized-diagnostic denial tests.",
+        "After all work packages are complete, run the applicable documentation, architecture, agent-support, desktop/thin-client build, and repository test gates once for the increment."
+      ],
+      "workPackages": [
+        {
+          "id": "runtime-contract",
+          "outcome": "Implementation-neutral contracts describe the interactive conversation surface, exact model resource binding, runtime-instance identity, lifecycle ownership, and sanitized failure semantics without allowing authored code or renderer-selected authority.",
+          "title": "Typed interaction and model-binding contracts"
+        },
+        {
+          "id": "composer-model-selection",
+          "outcome": "The message-composer properties expose a required dynamic picker containing only compatible, workspace-authorized text-generation models; stale, cross-workspace, unavailable, and incompatible references fail closed.",
+          "title": "Authorized model selection in the Composer"
+        },
+        {
+          "id": "deterministic-runtime-materialization",
+          "outcome": "Revision validation, build locks, releases, and trusted launch descriptors preserve the exact model and interaction binding needed at runtime, with digests and non-sensitive diagnostics.",
+          "title": "Deterministic build and release materialization"
+        },
+        {
+          "id": "reference-chat-semantics",
+          "outcome": "The controlled chatbot reference template defines one linked history/composer interaction, starts with an empty runtime transcript, and retains inert sample-free behavior in design previews.",
+          "title": "Connected reference-chat semantics"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Two installed systems receive different physical databases and cannot enumerate, read, write, migrate, restore, or delete one another's data through public or adapter-level paths.",
+          "id": "physical-database-isolation",
+          "qualification": "local"
+        },
+        {
+          "description": "Desktop conversation and system data survive stop, process restart, and compatible release upgrade; clone or separate installation receives a new database; uninstall retains data until a separate explicit confirmed deletion.",
+          "id": "desktop-runtime-data-survives-lifecycle",
+          "qualification": "local"
+        },
+        {
+          "description": "Live PostgreSQL qualification proves that each runtime role is restricted to its provisioner-created database and cannot connect to or mutate another runtime database or perform provisioning operations.",
+          "id": "managed-postgres-database-isolation",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Migration failure, interrupted startup, connection exhaustion, backup, and restore paths fail safely and recover without substituting another system's database or corrupting control-plane state.",
+          "id": "runtime-data-recovery",
+          "qualification": "local"
+        },
+        {
+          "description": "Opaque identity resolution, contained desktop paths, provisioner/runtime role separation, retention, deletion confirmation, redaction, quotas, and residual host-compromise risk are reviewed and evidenced.",
+          "id": "security-runtime-data-plane-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-29T14:55:40Z",
+      "completedChunks": [
+        "runtime-instance-control-plane",
+        "isolated-runtime-database-adapters",
+        "runtime-repository-cutover-and-qualification"
+      ],
+      "completionSummary": "Every installed system now has an opaque, physically isolated, recoverable runtime data plane with exact repository composition, desktop SQLite and managed PostgreSQL host wiring, least privilege, retained uninstall, compatible migration, and passing local and controlled-environment qualification.",
+      "deliverables": [
+        "Runtime-instance, placement, retention, migration, and deletion contracts and use cases",
+        "Control-plane runtime-instance repository",
+        "Per-instance SQLite database factory and runtime repository composition",
+        "PostgreSQL database provisioner and least-privilege runtime binding adapters",
+        "Migration, recovery, backup/restore, quota, and connection-lifecycle controls",
+        "Cross-instance isolation, lifecycle, failure-injection, SQLite, and live PostgreSQL qualification tests",
+        "Persistence, host-model, security, deployment, and operations documentation"
+      ],
+      "dependsOn": [
+        "release-bound-conversation-runtime"
+      ],
+      "excluded": [
+        "Multi-region database replication",
+        "Automatic destructive data deletion on uninstall",
+        "Cross-system shared transcript storage",
+        "Renderer-visible database paths or connection credentials"
+      ],
+      "id": "dedicated-system-runtime-data-plane",
+      "number": 2,
+      "objective": "Give every installed system runtime an opaque durable identity and a physically separate database while keeping lifecycle, placement, release, and audit metadata in the platform control plane.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "The approved dedicated-runtime-data-plane option authorizes a successor ADR for database-per-runtime placement while preserving existing platform control-plane storage.",
+          "Desktop uses the Electron/Node node:sqlite runtime already selected by ADR-0026.",
+          "A disposable local PostgreSQL 18 container is available for required controlled-environment qualification; no production database or credentials will be used.",
+          "Increment 3 will consume the runtime-scoped repository session for the isolated Electron window, but Increment 2 owns the complete data-plane lifecycle and repository factory."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "physical-database-isolation",
+              "desktop-runtime-data-survives-lifecycle",
+              "runtime-data-recovery",
+              "security-runtime-data-plane-reviewed"
+            ],
+            "id": "runtime-instance-control-plane",
+            "outcome": "Install allocates one recoverable opaque runtime instance and binding; activate, stop, upgrade, uninstall retention, and explicit confirmed deletion have distinct fail-closed application semantics without public physical database details.",
+            "title": "Opaque runtime-instance control plane"
+          },
+          {
+            "criteriaIds": [
+              "physical-database-isolation",
+              "desktop-runtime-data-survives-lifecycle",
+              "managed-postgres-database-isolation",
+              "runtime-data-recovery",
+              "security-runtime-data-plane-reviewed"
+            ],
+            "id": "isolated-runtime-database-adapters",
+            "outcome": "Desktop derives one contained SQLite database per instance with bounded lifecycle and verified backup/restore, while managed provisioning creates one PostgreSQL database and least-privilege runtime role per instance with no cross-database or provisioning authority.",
+            "title": "Physically isolated database adapters"
+          },
+          {
+            "criteriaIds": [
+              "physical-database-isolation",
+              "desktop-runtime-data-survives-lifecycle",
+              "managed-postgres-database-isolation",
+              "runtime-data-recovery",
+              "security-runtime-data-plane-reviewed"
+            ],
+            "id": "runtime-repository-cutover-and-qualification",
+            "outcome": "Conversation and system-owned data use only the exact runtime session; desktop and managed host composition preserve data across stop/restart/compatible upgrade, allocate distinct storage for clones, retain on uninstall, and expose bounded recovery operations.",
+            "title": "Runtime-scoped repositories and host qualification"
+          }
+        ],
+        "completionTests": [
+          "Run the live PostgreSQL runtime-database isolation qualification against a disposable local PostgreSQL 18 container",
+          "Run SQLite runtime integration and persistence conformance",
+          "Run documentation, architecture, agent-support, server build, thin-client build, desktop package/typecheck where applicable, and full repository tests once after all Increment 2 chunks pass"
+        ],
+        "documentation": [
+          "Accepted successor ADR for per-runtime physical databases",
+          "Persistence and storage architecture",
+          "Host model",
+          "Controlled conversational execution architecture",
+          "Security threat model and security context pack",
+          "Persistence operations and deployment qualification",
+          "Nearest persistence and host README files"
+        ],
+        "fingerprint": "4e941bd47d65d2c1844c41f478b7bb20085c3bc2a781b405b90b1819cf353a3c",
+        "focusedTests": [
+          "Runtime-instance normalization, ownership, optimistic revision, allocation idempotency, retained-uninstall, confirmation, and sanitized failure tests",
+          "SQLite containment, cross-instance denial, session quota, migration failure, stop/reopen, compatible-upgrade, clone, backup, restore, and confirmed-delete tests under the Electron Node runtime",
+          "PostgreSQL provisioner SQL/identifier tests plus live disposable database tests proving runtime-role database isolation and denial of CREATE DATABASE, CREATE ROLE, and foreign database access",
+          "Runtime repository factory tests proving conversation and system-data records are visible only through the exact instance session and survive lifecycle reopen"
+        ],
+        "recordedAt": "2026-07-29T13:56:20Z",
+        "rollback": "Disable new allocation and runtime start, close active instance sessions, and preserve each isolated database plus its control-plane record. Do not merge data into the platform database, reuse another instance binding, or delete retained data during rollback.",
+        "steps": [
+          "Define normalized runtime-instance and binding contracts, repository and database ports, lifecycle use cases, structured control-plane persistence, and deployment install/activate/stop/uninstall integration.",
+          "Implement contained per-instance SQLite databases with bounded sessions, migration, online backup, verified restore, retention, and confirmed deletion; implement managed PostgreSQL provisioning with separate provisioner/runtime authority and exact database binding.",
+          "Compose runtime-scoped conversation and system-data repositories from the exact active database session, wire desktop and managed hosts, update canonical architecture/security/operations guidance, and complete local plus live PostgreSQL qualification."
+        ],
+        "summary": "Implement the dedicated runtime data plane in three cohesive chunks: establish opaque runtime-instance control-plane lifecycle and deployment binding, provide physically isolated SQLite/PostgreSQL adapters with recovery and least privilege, then cut conversation/system-data composition to exact runtime sessions and qualify lifecycle behavior across hosts."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-29T13:56:02Z",
+          "risks": [
+            "A renderer-supplied path, connection string, display name, or foreign runtime identity could select another system database unless the host derives every physical binding from a normalized opaque instance id.",
+            "Allocation and deployment persistence can partially fail, so control-plane state must retain a recoverable failed or allocated record rather than substitute shared persistence.",
+            "Stop, uninstall, upgrade, backup, restore, and explicit deletion have different data-retention semantics and must not be collapsed into one destructive lifecycle action.",
+            "A managed runtime credential could provision databases, connect across runtime databases, or leak into control-plane records unless provisioning and runtime roles are separated and secrets remain host-owned.",
+            "Connection and backup operations can exhaust resources unless open handles, pool sizes, backup identity, and restore concurrency are bounded.",
+            "Existing conversation repositories accept a StructuredDocumentStore, but host composition currently supplies the shared control-plane store; runtime sessions must instead compose those repositories from the exact runtime database session."
+          ],
+          "sources": [
+            {
+              "title": "Persistence and storage architecture",
+              "url": "docs/architecture/persistence-and-storage.md"
+            },
+            {
+              "title": "Host model",
+              "url": "docs/architecture/host-model.md"
+            },
+            {
+              "title": "Deployment-shaped structured persistence",
+              "url": "docs/adr/ADR-0025-deployment-shaped-structured-persistence.md"
+            },
+            {
+              "title": "Local SQLite runtime",
+              "url": "docs/adr/ADR-0026-local-sqlite-runtime.md"
+            },
+            {
+              "title": "Managed PostgreSQL runtime",
+              "url": "docs/adr/ADR-0027-managed-postgresql-runtime.md"
+            },
+            {
+              "title": "SQLite online backup API",
+              "url": "https://www.sqlite.org/backup.html"
+            },
+            {
+              "title": "PostgreSQL database overview",
+              "url": "https://www.postgresql.org/docs/current/manage-ag-overview.html"
+            },
+            {
+              "title": "PostgreSQL CREATE DATABASE",
+              "url": "https://www.postgresql.org/docs/current/sql-createdatabase.html"
+            },
+            {
+              "title": "PostgreSQL CREATE ROLE",
+              "url": "https://www.postgresql.org/docs/current/sql-createrole.html"
+            },
+            {
+              "title": "System deployment lifecycle use cases",
+              "url": "modules/application/use-cases/system-deployment/system-deployment-use-cases.ts"
+            },
+            {
+              "title": "SQLite database adapter",
+              "url": "modules/adapters/persistence/sqlite/sqlite-database.ts"
+            },
+            {
+              "title": "PostgreSQL database adapter",
+              "url": "modules/adapters/persistence/postgres/postgres-database.ts"
+            }
+          ],
+          "summary": "The existing database-neutral StructuredDocumentStore, SQLite online-backup runtime, PostgreSQL pool/migration runtime, deployment lifecycle, and conversation/system-data repository factories provide reusable seams. Increment 2 can add an application-owned opaque runtime-instance lifecycle plus host-owned database adapters without exposing paths or credentials or moving database policy into deployment transports. The approved physical-isolation decision supersedes the earlier undecided database-per-runtime boundary and therefore requires an accepted successor ADR and controlled PostgreSQL qualification."
+        }
+      ],
+      "rollback": "Disable new runtime-instance allocation and window start, preserve already-created databases and control-plane placement records, and require an explicit migration or deletion decision; never merge isolated runtime data back into the shared database automatically.",
+      "startedAt": "2026-07-29T13:55:52Z",
+      "status": "completed",
+      "title": "Dedicated system runtime data plane",
+      "verification": [
+        "Run focused runtime-instance, repository, SQLite path-containment, lifecycle, migration, retention, backup/restore, and cross-instance denial tests while implementing each work package.",
+        "Run the live PostgreSQL database-and-role isolation qualification against an explicitly configured disposable environment using synthetic data.",
+        "After all work packages are complete, run the applicable documentation, architecture, security, server/desktop build, persistence conformance, and repository test gates once for the increment."
+      ],
+      "workPackages": [
+        {
+          "id": "runtime-instance-lifecycle",
+          "outcome": "Application ports and use cases allocate, resolve, migrate, stop, retain, and explicitly delete runtime instances without accepting renderer-supplied paths, connection strings, or identities.",
+          "title": "Runtime-instance lifecycle and placement"
+        },
+        {
+          "id": "desktop-runtime-database",
+          "outcome": "Each desktop runtime instance owns a contained host-derived SQLite file, runtime-scoped repositories, migrations, bounded connection lifetime, health checks, backup/restore metadata, and restart recovery.",
+          "title": "Per-system desktop SQLite databases"
+        },
+        {
+          "id": "managed-runtime-database",
+          "outcome": "A provisioner-owned adapter creates a dedicated PostgreSQL database and least-privilege runtime role per instance, while runtime code receives only the opaque binding it needs and cannot create databases or cross instance boundaries.",
+          "title": "Per-system managed PostgreSQL databases"
+        },
+        {
+          "id": "conversation-data-cutover",
+          "outcome": "Conversation sessions, turns, messages, responses, execution records, and system-owned data are composed against the selected runtime database; shared control-plane storage retains only bounded placement and lifecycle references.",
+          "title": "Runtime-scoped conversation and system data"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Starting a valid published visual system opens or focuses a separate Electron window bound to the exact runtime instance and release while the builder remains usable; the former runtime modal is not used.",
+          "id": "system-opens-in-separate-window",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "The controlled chatbot opens with no sample messages, accepts bounded text, submits by button and keyboard exactly once, invokes the configured authorized model, shows the persisted response, and reloads the same transcript after stop and restart.",
+          "id": "chat-is-usable-and-persistent",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Missing readiness, revoked approval, stale release/model binding, unavailable runtime, cancellation, timeout, and invocation failure produce recoverable sanitized UI states without duplicate turns, leaked protected context, or cross-system data access.",
+          "id": "conversation-controls-fail-safely",
+          "qualification": "local"
+        },
+        {
+          "description": "The runtime renderer has sandboxing and context isolation enabled, no Node integration, a minimal preload, strict CSP and permission/navigation denial, unique session isolation, exact sender-to-instance authorization, and bounded window/session creation.",
+          "id": "runtime-window-is-hardened",
+          "qualification": "local"
+        },
+        {
+          "description": "Packaged desktop, controlled Python text-generation, isolated database, accessibility, restart/recovery, and representative latency/resource tests pass for the reference controlled chatbot with synthetic non-sensitive fixtures.",
+          "id": "reference-runtime-production-qualified",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Window, IPC, model, transcript, database, denial-of-service, redaction, rollback, and residual main-process/host-compromise risks are reviewed and evidenced before handoff.",
+          "id": "security-runtime-window-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-29T16:19:05Z",
+      "completedChunks": [
+        "release-bound-runtime-controller",
+        "hardened-runtime-window-and-surface",
+        "lifecycle-recovery-and-production-qualification"
+      ],
+      "completionSummary": "Increment 3 delivers the hardened dedicated Electron runtime window, exact release/model/runtime authority, usable controlled chat, retained per-system transcript, ordered lifecycle cleanup, and passing packaged production qualification.",
+      "deliverables": [
+        "Second Electron Forge renderer/preload entry and runtime-window manager",
+        "Runtime-only IPC contracts, authorization, sender binding, and lifecycle bridge",
+        "Shared controlled-conversation runtime controller and interactive surface",
+        "System Published lifecycle integration with no runtime modal",
+        "Packaged desktop end-to-end and host-contract qualification fixtures",
+        "Interaction, accessibility, navigation, IPC-forgery, resource-limit, persistence, restart, and failure-path tests",
+        "End-user, architecture, security, packaging, troubleshooting, and operations documentation"
+      ],
+      "dependsOn": [
+        "dedicated-system-runtime-data-plane"
+      ],
+      "excluded": [
+        "General execution of arbitrary authored or imported UI code",
+        "A new unrestricted browser shell",
+        "Provider credential entry inside the runtime window",
+        "Cross-device realtime conversation synchronization",
+        "Non-conversational reference-system interaction redesign"
+      ],
+      "id": "isolated-interactive-system-window",
+      "number": 3,
+      "objective": "Launch the published controlled chatbot in a separate hardened Electron window whose usable composer invokes the selected model through the existing controlled conversation architecture and persists its real transcript in the system's dedicated database.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "The approved typed-composition-runtime-binding and dedicated-runtime-data-plane decisions authorize this implementation topology without another high-level choice.",
+          "The existing Python conversational invocation adapter remains the only production text-generation path; test doubles are limited to focused unit tests and the controlled packaged qualification uses a synthetic non-sensitive worker fixture through the same boundary.",
+          "Published lifecycle Start remains the only builder authority to open a system window and Stop remains the authority to close it; closing the system window alone does not mutate deployment state.",
+          "Tools, retrieval, memory, multimodal input, streaming, cancel, and retry remain unsupported and will not be simulated in the runtime surface."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "chat-is-usable-and-persistent",
+              "conversation-controls-fail-safely",
+              "security-runtime-window-reviewed"
+            ],
+            "id": "release-bound-runtime-controller",
+            "outcome": "An application-owned controller opens only the exact active runtime instance, revalidates its immutable release and authorized model, creates or resumes a bounded approved conversation, invokes through existing controlled execution seams, and persists transcript plus execution records exclusively in that instance database.",
+            "title": "Release-bound runtime controller and data ownership"
+          },
+          {
+            "criteriaIds": [
+              "system-opens-in-separate-window",
+              "chat-is-usable-and-persistent",
+              "conversation-controls-fail-safely",
+              "runtime-window-is-hardened",
+              "security-runtime-window-reviewed"
+            ],
+            "id": "hardened-runtime-window-and-surface",
+            "outcome": "Starting a visual release creates or focuses one separately bundled sandboxed window with a unique in-memory session, minimal preload, exact sender binding, denied navigation/windows/permissions, and an accessible empty-history chat surface that accepts one bounded submission at a time.",
+            "title": "Hardened separate Electron window and usable surface"
+          },
+          {
+            "criteriaIds": [
+              "system-opens-in-separate-window",
+              "chat-is-usable-and-persistent",
+              "conversation-controls-fail-safely",
+              "runtime-window-is-hardened",
+              "reference-runtime-production-qualified",
+              "security-runtime-window-reviewed"
+            ],
+            "id": "lifecycle-recovery-and-production-qualification",
+            "outcome": "Published Start/Stop controls own the system window and runtime session end to end; packaged desktop qualification demonstrates controlled generation, exact-database persistence, restart recovery, accessibility, bounded latency/resources, and sanitized denial behavior with synthetic non-sensitive fixtures.",
+            "title": "Lifecycle, recovery, and packaged production qualification"
+          }
+        ],
+        "completionTests": [
+          "Run a packaged Electron controlled-environment qualification that starts the published controlled chatbot, opens a separate window, submits a synthetic turn through the controlled Python text-generation boundary, verifies only the exact runtime database, stops, restarts, and verifies transcript recovery",
+          "Run representative runtime-window startup/turn latency and active-window/database-session resource-bound checks using synthetic fixtures",
+          "Run documentation, architecture, agent-support, security dependency/SBOM, server build, thin-client build, desktop package/typecheck, and the full repository test suite once after every Increment 3 chunk passes"
+        ],
+        "documentation": [
+          "Controlled conversational execution architecture and ADR-0023",
+          "Dedicated runtime data-plane ADR-0039 and host model",
+          "Desktop Electron/IPC/preload boundary README and packaging guidance",
+          "Runtime-window/data-plane security threat model and security context pack",
+          "Published-system end-user lifecycle and troubleshooting guidance",
+          "Nearest shared UI, application controller, persistence, and desktop host README files"
+        ],
+        "fingerprint": "01e5df324cd68f40cd3ea47507c3c412b8619802828a5b182d45d3c135e1d9fc",
+        "focusedTests": [
+          "Controller tests for exact deployment/runtime/release/model association, approved session resume, empty and bounded transcript, one-turn persistence, idempotent operation ids, stale/revoked/unavailable denial, timeout/failure sanitization, and cross-instance rejection",
+          "Runtime repository tests proving conversation and execution records share only the exact instance database and survive close/reopen",
+          "Window-manager tests for sandbox/context isolation/no Node/web security, unique non-persistent partition, CSP, window count, focus reuse, strict navigation/new-window/permission denial, destroyed/subframe/foreign sender rejection, and cleanup",
+          "Runtime preload/IPC/UI tests for the minimal allowlist, malformed messages, bounded input, button and Enter submission, Shift+Enter behavior, busy duplicate suppression, empty initial history, accessible live log, recoverable errors, and non-disclosure"
+        ],
+        "recordedAt": "2026-07-29T15:01:17Z",
+        "rollback": "Disable visual runtime-window launch, close every owned runtime window and repository session, and leave affected deployments stopped while preserving their isolated databases, immutable releases, and control-plane audit records. Do not restore the non-interactive modal, expose builder IPC, substitute shared persistence, or bypass release/model/readiness/approval checks.",
+        "steps": [
+          "Define bounded runtime-surface contracts and implement a host-neutral published-conversation controller that resolves the exact running deployment/runtime instance/release/model binding, resumes or creates one approved runtime session, uses existing guard/protected-context/Python invocation seams, and stores transcript plus execution records only in the instance database.",
+          "Add a second Electron Forge renderer/preload entry, a main-process runtime-window manager, exact live-main-frame authorization, runtime-only IPC operations, strict session/navigation/permission policy, and a sample-free accessible chatbot surface with bounded input and duplicate-submit suppression.",
+          "Replace the builder modal launch callback with a main-process lifecycle bridge, close/release runtime resources on Stop, prove focus/restart/persistence and safe recovery, complete packaged controlled-environment qualification, and update canonical architecture, security, operations, packaging, troubleshooting, and end-user documentation."
+        ],
+        "summary": "Deliver Increment 3 in three cohesive chunks: first establish an exact release/runtime-instance conversation controller and complete runtime-database ownership of execution records; then add the hardened second Electron renderer, minimal preload, sender-bound IPC, and accessible interactive surface; finally connect Start/Stop lifecycle behavior and qualify packaged launch, controlled generation, transcript recovery, resource bounds, and failure paths."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-29T15:00:15Z",
+          "risks": [
+            "Adding a runtime window to the builder window trust set would expose the broad desktop preload and IPC surface to a system renderer; runtime windows need a separate sender registry and runtime-only channels.",
+            "A renderer-supplied workspace, release, runtime-instance, model, database, session, or filesystem identity could cross system boundaries; all authority must be captured in the main-process window binding and omitted from renderer commands.",
+            "Persisting only transcript records while execution approvals, runtime references, runs, attempts, events, and results remain in the shared control plane would weaken the approved system-owned data boundary; the runtime session must own those repositories too.",
+            "A release or model can become stale after the window opens; every load and submit must revalidate the exact running deployment, runtime instance, release digest, interaction binding, and authorized model revision before invocation.",
+            "The current builder conversation flow derives approval from a reviewed execution plan, while a published immutable release carries a different typed authority chain; the controller must preserve explicit release/runtime approval and existing guard/protected-context/adapter controls without manufacturing renderer-trusted plan claims.",
+            "Unbounded windows, database sessions, transcript reads, message size, duplicate submissions, navigation, permissions, or provider latency could exhaust resources; limits and fail-closed cleanup are required.",
+            "Raw worker failures, protected invocation context, model identifiers, database details, paths, or transcript content could leak through runtime diagnostics; public DTOs and errors must remain bounded and sanitized."
+          ],
+          "sources": [
+            {
+              "title": "Controlled conversational system execution",
+              "url": "docs/architecture/controlled-conversational-system-execution.md"
+            },
+            {
+              "title": "Host model",
+              "url": "docs/architecture/host-model.md"
+            },
+            {
+              "title": "Dedicated system runtime data plane ADR",
+              "url": "docs/adr/ADR-0039-dedicated-system-runtime-data-plane.md"
+            },
+            {
+              "title": "Desktop Electron bootstrap",
+              "url": "apps/desktop/src/main/index.ts"
+            },
+            {
+              "title": "Desktop Forge webpack configuration",
+              "url": "apps/desktop/forge.config.js"
+            },
+            {
+              "title": "Published lifecycle surface",
+              "url": "modules/ui/shared/system-builder/SystemPublishedLifecycleCard.tsx"
+            },
+            {
+              "title": "Published runtime application",
+              "url": "apps/desktop/src/system-runtime/SystemRuntimeApp.tsx"
+            },
+            {
+              "title": "Runtime repository session factory",
+              "url": "modules/adapters/persistence/system-runtime/createSystemRuntimeRepositorySession.ts"
+            },
+            {
+              "title": "Conversation execution composition",
+              "url": "modules/hosts/shared/composition/composeConversationExecutionServices.ts"
+            },
+            {
+              "title": "Published release binding authority",
+              "url": "modules/application/services/system-deployment/system-deployment-release-binding.service.ts"
+            },
+            {
+              "title": "Electron security checklist",
+              "url": "https://www.electronjs.org/docs/latest/tutorial/security"
+            },
+            {
+              "title": "Electron BrowserWindow security preferences",
+              "url": "https://www.electronjs.org/docs/latest/api/browser-window"
+            },
+            {
+              "title": "Electron process sandboxing",
+              "url": "https://www.electronjs.org/docs/latest/tutorial/sandbox"
+            },
+            {
+              "title": "Electron Forge webpack renderer entries",
+              "url": "https://www.electronforge.io/config/plugins/webpack"
+            }
+          ],
+          "summary": "Electron Forge already supports a second renderer/preload entry, the published release already carries exact model and composer/history interaction bindings, and Increment 2 supplies an exact runtime-instance database session. Increment 3 can therefore add a main-process-owned runtime window and a host-neutral published-conversation controller without exposing the builder preload or allowing the renderer to choose release, model, runtime, or database identity. The controller must extend the runtime repository session to include execution records and revalidate the release-bound model authority before every controlled turn; the runtime-only preload should expose only bounded state/read/submit operations tied to the live main frame of the owned system window."
+        }
+      ],
+      "rollback": "Disable runtime-window start and keep affected deployments stopped while preserving their isolated databases and audit state; do not restore the non-interactive modal or bypass controlled conversation execution.",
+      "startedAt": "2026-07-29T14:55:52Z",
+      "status": "completed",
+      "title": "Isolated interactive system window and production qualification",
+      "verification": [
+        "Run focused controller, renderer, accessibility, lifecycle, IPC authorization, navigation denial, duplicate-submit, cancellation, timeout, transcript, and resource-bound tests while implementing each work package.",
+        "Compare the reference runtime's semantic rendered structure and interaction behavior with the approved sample-free chatbot fixture rather than brittle presentation-only snapshots.",
+        "Run packaged Electron qualification with the controlled text-generation worker and isolated runtime database, then stop, restart, and verify transcript recovery.",
+        "After all work packages are complete, run documentation, architecture, agent-support, security, server build, thin-client build, desktop package/build, and the full repository test suite once for the increment."
+      ],
+      "workPackages": [
+        {
+          "id": "electron-runtime-window",
+          "outcome": "A main-process window manager creates or focuses one exact release/runtime-instance window using a dedicated renderer and minimal preload, unique non-persistent browser session, strict navigation and permission policy, exact sender binding, CSP, sandboxing, and bounded window resources.",
+          "title": "Dedicated hardened Electron runtime window"
+        },
+        {
+          "id": "interactive-chat-controller",
+          "outcome": "A host-neutral controller creates or resumes the release-bound approved conversation session, reads the real transcript, owns bounded draft and submit state, invokes the selected model through the controlled orchestration path, and persists one user/assistant result per successful turn.",
+          "title": "Shared interactive conversation controller"
+        },
+        {
+          "id": "usable-chat-surface",
+          "outcome": "The runtime window starts with empty history, permits typing, supports click and keyboard submission, disables duplicate sends, exposes progress and recoverable errors, renders only persisted messages, and keeps the builder window independent.",
+          "title": "Usable and accessible chatbot surface"
+        },
+        {
+          "id": "lifecycle-and-production-qualification",
+          "outcome": "Start opens or focuses the system window, Stop closes it and releases handles without deleting data, and packaged-desktop, Python text-generation, database, accessibility, performance, recovery, and reference-system end-to-end checks establish production readiness.",
+          "title": "Lifecycle integration and production qualification"
+        }
+      ]
+    }
+  ],
+  "name": "Controlled Chatbot Interactive Runtime",
+  "objective": "Deliver a usable published controlled-chatbot interface whose configured model, message composer, transcript, and controlled execution path work together end to end.",
+  "paths": {
+    "report": "docs/tmp/controlled-chatbot-interactive-runtime-implementation-report.md",
+    "roadmap": "docs/controlled-chatbot-interactive-runtime-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/controlled-chatbot-interactive-runtime/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": {
+    "approvedAt": "2026-07-29T12:30:41Z",
+    "fingerprint": "8b965b42351fbc3c7a62e4be65942235bcb157090075c83e2e52a2559a95a2db",
+    "note": "The user explicitly approved the three-increment roadmap and requested implementation through a production-ready end-to-end solution."
+  },
+  "schemaVersion": 1,
+  "slug": "controlled-chatbot-interactive-runtime",
+  "status": "completed",
+  "updatedAt": "2026-07-29T16:19:05Z"
+}

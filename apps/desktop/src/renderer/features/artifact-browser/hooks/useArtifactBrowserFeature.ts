@@ -33,6 +33,7 @@ export interface UseArtifactBrowserFeatureResult {
   items: DesktopArtifactBrowseItem[];
   uploadedItems: DesktopArtifactBrowseItem[];
   generatedItems: DesktopArtifactBrowseItem[];
+  otherItems: DesktopArtifactBrowseItem[];
   unregisteredItems: DesktopUnregisteredArtifactBrowseItem[];
   selectedStorageKey?: string;
   detail?: DesktopArtifactDetail;
@@ -75,6 +76,10 @@ export interface UseArtifactBrowserFeatureResult {
     path: string;
     revision?: string;
     mediaType?: string;
+    repositoryCreation?: {
+      approved: true;
+      visibility: "private" | "public";
+    };
   }) => Promise<void>;
   registerArtifactFromHuggingFace: (input?: {
     repository?: string;
@@ -96,6 +101,8 @@ export interface UseArtifactBrowserFeatureResult {
   setPathInRepo: (value: string) => void;
   setRevision: (value: string) => void;
   setMediaType: (value: string) => void;
+  setCreateRepositoryIfMissing: (value: boolean) => void;
+  setRepositoryVisibility: (value: "private" | "public") => void;
   togglePublishForm: () => void;
   readArtifactMedia: (storageKey: string) => Promise<{ mediaType?: string; bytes: Uint8Array }>;
   setRegisterRepository: (value: string) => void;
@@ -128,6 +135,7 @@ export function useArtifactBrowserFeature(
   );
 
   const publishLogic = useArtifactBrowserPublishLogic<DesktopArtifactDetail>({
+    workspaceId,
     selectedStorageKey: selection.selectedStorageKey,
     client: artifactClient,
     async readSelectedArtifactDetail() {
@@ -176,6 +184,10 @@ export function useArtifactBrowserFeature(
     path: string;
     revision?: string;
     mediaType?: string;
+    repositoryCreation?: {
+      approved: true;
+      visibility: "private" | "public";
+    };
   }): Promise<void> {
     await publishLogic.publishArtifactToHuggingFace(input);
     await artifacts.refreshArtifacts();
@@ -193,6 +205,7 @@ export function useArtifactBrowserFeature(
     items: artifacts.items,
     uploadedItems: artifacts.uploadedItems,
     generatedItems: artifacts.generatedItems,
+    otherItems: artifacts.otherItems,
     unregisteredItems: artifacts.unregisteredItems,
     selectedStorageKey: selection.selectedStorageKey,
     detail: selection.detail,
@@ -239,6 +252,8 @@ export function useArtifactBrowserFeature(
     setPathInRepo: publishLogic.setPathInRepo,
     setRevision: publishLogic.setRevision,
     setMediaType: publishLogic.setMediaType,
+    setCreateRepositoryIfMissing: publishLogic.setCreateRepositoryIfMissing,
+    setRepositoryVisibility: publishLogic.setRepositoryVisibility,
     togglePublishForm: publishLogic.togglePublishForm,
     readArtifactMedia: (storageKey: string) => artifactClient.readArtifactMedia({ storageKey }),
     setRegisterRepository: huggingFace.setRegisterRepository,

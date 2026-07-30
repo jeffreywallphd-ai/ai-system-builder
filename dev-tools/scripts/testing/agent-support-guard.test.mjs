@@ -146,6 +146,51 @@ test("roadmap skill supports exact and natural-language routing", async () => {
   }
 });
 
+test("security-by-design guidance and roadmap evidence stay synchronized", async () => {
+  const [
+    standard,
+    agents,
+    docs,
+    baseline,
+    routing,
+    securityPack,
+    securityDecision,
+    skill,
+    workflow,
+    events,
+    diagnostics,
+  ] = await Promise.all([
+    readFile("docs/standards/security-by-design-standards.md", "utf8"),
+    readFile("AGENTS.md", "utf8"),
+    readFile("docs/README.md", "utf8"),
+    readFile("docs/context/packs/index.pack.md", "utf8"),
+    readFile("docs/context/prompt-routing.md", "utf8"),
+    readFile("docs/context/packs/security.pack.md", "utf8"),
+    readFile(
+      "docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md",
+      "utf8",
+    ),
+    readFile(path.join(roadmapSkillRoot, "SKILL.md"), "utf8"),
+    readFile(path.join(roadmapSkillRoot, "references", "workflow.md"), "utf8"),
+    readFile(path.join(roadmapSkillRoot, "references", "events.md"), "utf8"),
+    readFile("docs/diagnostics/implementation-roadmap-skill.md", "utf8"),
+  ]);
+
+  assert.match(standard, /Mandatory Security Impact Screen/);
+  assert.match(standard, /Proportional Threat Review/);
+  assert.match(standard, /not-security-relevant/);
+  assert.match(standard, /security-relevant/);
+  assert.match(standard, /npm run security:dependencies/);
+  for (const source of [agents, docs, baseline, routing, securityDecision, skill]) {
+    assert.match(source, /docs\/standards\/security-by-design-standards\.md/);
+  }
+  assert.match(securityPack, /security impact screen/i);
+  assert.match(skill, /security-impact-reviewed/);
+  assert.match(workflow, /Security cannot be excluded as a whole/);
+  assert.match(events, /Security evidence convention/);
+  assert.match(diagnostics, /per-increment security/i);
+});
+
 test("roadmap skill is portable and does not provide a command executor", async () => {
   const forbiddenLocalFragments = [
     ["C:", "\\Users\\"].join(""),

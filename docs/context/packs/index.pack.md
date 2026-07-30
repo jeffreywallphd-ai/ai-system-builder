@@ -21,6 +21,7 @@
 
 - Preserve clean architecture boundaries: domain/application stay free of host, transport, UI, runtime, filesystem, and infrastructure leakage.
 - Prefer the smallest useful context set. Do not include packs or canonical docs "just in case."
+- Apply the mandatory security impact screen in `docs/standards/security-by-design-standards.md` to every task. Record `not-security-relevant` with a concrete rationale or route `security-relevant` work to the security pack and applicable canonical threat-model sources.
 - Keep contracts and transports aligned through shared operation identity helpers and family barrels.
 - Keep application orchestration behind explicit ports in `modules/application/ports/**`.
 - Use role-revealing names and avoid vague catch-all files, packages, or symbols.
@@ -39,7 +40,7 @@
 - Executable implementations, package bytes, build evidence, and system releases are separate from Asset Kernel semantic records; route implementation/package work through ADR-0030 through ADR-0034.
 - Imported/authored code never runs in product, Electron main/preload, API server, or database processes; require the accepted sandbox and capability-broker boundary.
 - Runtime readiness is host-owned capability availability; it does not start/install/repair runtimes during read operations.
-- Security is layered and adapter-based; use ADR-0015 and `security.pack.md` for auth, route policy, TLS, token, audit, and sanitization work.
+- Security is a universal design constraint and layered, adapter-based implementation concern. Use ADR-0015 and `security.pack.md` whenever the impact screen identifies a changed trust, authority, data, execution, diagnostic, or supply-chain boundary, even if the task was not labeled security work.
 - Historical implementation details belong in issues, PRs, or release notes, not in this reusable baseline.
 
 ## Key Constraints
@@ -47,6 +48,7 @@
 - This pack is a routing baseline, not a second source of truth.
 - Canonical docs win if this pack conflicts with ADRs, architecture docs, or standards.
 - This pack is never sufficient by itself for architecture-, standards-, structure-, or boundary-changing work.
+- The security impact screen is baseline context; loading the full security pack is proportional and required only for `security-relevant` work.
 - Context packs should stay under 200 lines; split or summarize packs before they become implementation-history logs.
 
 ## Canonical Source Docs
@@ -70,6 +72,8 @@ Use only the docs needed for the current task:
 - `docs/standards/documentation-standards.md` - canonical documentation update rules.
 - `docs/standards/logging-standards.md` - structured logging and safe diagnostics.
 - `docs/standards/testing-standards.md` - testing expectations and regression policy.
+- `docs/standards/security-by-design-standards.md` - universal impact screen, proportional threat review, secure rollback, and evidence requirements.
+- `docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md` - accepted layered security architecture and policy boundaries.
 
 ## Common Over-Inclusions to Avoid
 
@@ -81,6 +85,7 @@ Use only the docs needed for the current task:
 ## Prompt Assembly Notes
 
 - Always include this pack first.
+- Record the security impact disposition before editing and revisit it when scope reveals another boundary.
 - Use `docs/context/pack-catalog.json` and `docs/context/prompt-routing.md` to choose companion packs.
 - Typical order: `index` -> one primary pack -> at most one evidenced adjacent pack -> targeted canonical docs.
 - For debugging, add `debugging-error-handling` first, then the affected host/runtime/storage/UI pack.

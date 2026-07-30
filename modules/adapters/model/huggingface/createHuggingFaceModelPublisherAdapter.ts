@@ -1,8 +1,10 @@
-import { readdir, stat } from "node:fs/promises";
-import { join, relative } from "node:path";
-
 import type { ModelPublisherPort } from "../../../application/ports/model";
 import type { PublishModelRequest, PublishModelResult } from "../../../contracts/model";
+import {
+  listContainedFiles,
+  readContainedFile,
+  resolveApprovedDirectory,
+} from "../../filesystem-security";
 
 interface HuggingFaceUploadClient {
   uploadFile(params: {
@@ -35,19 +37,20 @@ export interface CreateHuggingFaceModelPublisherAdapterOptions {
   tokenProvider?: () => string | undefined;
   fetchImplementation?: HuggingFaceFetchImplementation;
   hubBaseUrl?: string;
+  approvedModelRoots: readonly string[];
+  maximumFileCount?: number;
+  maximumTotalBytes?: number;
 }
 
-async function collectFiles(root: string, current: string, output: string[] = []): Promise<string[]> {
-  const entries = await readdir(current, { withFileTypes: true });
-  for (const entry of entries) {
-    const full = join(current, entry.name);
-    if (entry.isDirectory()) {
-      await collectFiles(root, full, output);
-      continue;
-    }
-    output.push(relative(root, full));
-  }
-  return output;
+function isAllowlistedModelFile(file: string): boolean {
+  const normalized = file.toLowerCase();
+  return normalized === ".gitattributes"
+    || normalized === "readme.md"
+    || normalized.endsWith(".json")
+    || normalized.endsWith(".safetensors")
+    || normalized.endsWith(".model")
+    || normalized.endsWith(".tiktoken")
+    || normalized.endsWith(".txt");
 }
 
 function validatePublishLayout(files: string[], fileContentByPath: ReadonlyMap<string, string>): void {
@@ -143,6 +146,7 @@ function resolveRepositoryIdentity(repository: string): { namespace: string; nam
 async function createModelRepositoryIfMissing(
   repository: string,
   token: string,
+  privateRepository: boolean,
   fetchImplementation: HuggingFaceFetchImplementation,
   hubBaseUrl: string,
 ): Promise<void> {
@@ -157,6 +161,7 @@ async function createModelRepositoryIfMissing(
       name: identity.name,
       organization: identity.namespace,
       type: "model",
+      private: privateRepository,
     }),
   });
 
@@ -171,28 +176,61 @@ export function createHuggingFaceModelPublisherAdapter(
   options: CreateHuggingFaceModelPublisherAdapterOptions,
 ): ModelPublisherPort {
   const hubBaseUrl = options.hubBaseUrl?.replace(/\/$/, "") ?? "https://huggingface.co";
+  const maximumFileCount = options.maximumFileCount ?? 512;
+  const maximumTotalBytes = options.maximumTotalBytes ?? 20 * 1024 * 1024 * 1024;
   const maybeFetchImplementation = options.fetchImplementation
     ?? (globalThis as { fetch?: HuggingFaceFetchImplementation }).fetch;
 
   return {
     async publishModel(request: PublishModelRequest & { modelPath: string }): Promise<PublishModelResult> {
       const token = request.token ?? options.tokenProvider?.();
-      const fileStats = await stat(request.modelPath);
-      if (!fileStats.isDirectory()) {
-        throw new Error("publishModel requires a model directory path.");
+      if (options.approvedModelRoots.length === 0) {
+        throw new Error("Hugging Face publish failed: no approved model storage root is configured.");
+      }
+      const approvedDirectory = await resolveApprovedDirectory({
+        allowedRoots: options.approvedModelRoots,
+        candidateDirectory: request.modelPath,
+      });
+      const files = await listContainedFiles({
+        rootDirectory: approvedDirectory.rootDirectory,
+        prefix: approvedDirectory.relativeKey || undefined,
+        rejectUnsafeEntries: true,
+      });
+      if (files.length === 0 || files.length > maximumFileCount) {
+        throw new Error(`Hugging Face publish failed: model file count must be between 1 and ${maximumFileCount}.`);
+      }
+      const disallowedFile = files.find((file) => !isAllowlistedModelFile(file));
+      if (disallowedFile) {
+        throw new Error(`Hugging Face publish failed: model file is not allowlisted: ${disallowedFile}`);
       }
 
-      const files = await collectFiles(request.modelPath, request.modelPath);
-      const readFile = (await import("node:fs/promises")).readFile;
+      const storageKeyFor = (file: string) => approvedDirectory.relativeKey
+        ? `${approvedDirectory.relativeKey}/${file}`
+        : file;
       const textFiles = new Map<string, string>();
+      const retainedContent = new Map<string, Uint8Array>();
       if (files.includes("model.safetensors.index.json")) {
-        textFiles.set("model.safetensors.index.json", await readFile(join(request.modelPath, "model.safetensors.index.json"), "utf8"));
+        const indexFile = await readContainedFile({
+          rootDirectory: approvedDirectory.rootDirectory,
+          key: storageKeyFor("model.safetensors.index.json"),
+          maximumBytes: 4 * 1024 * 1024,
+        });
+        retainedContent.set("model.safetensors.index.json", indexFile.content);
+        textFiles.set("model.safetensors.index.json", new TextDecoder().decode(indexFile.content));
       }
       validatePublishLayout(files, textFiles);
 
+      let totalBytes = 0;
       for (const file of files) {
-        const fullPath = join(request.modelPath, file);
-        const content = new Uint8Array(await readFile(fullPath));
+        const content = retainedContent.get(file) ?? (await readContainedFile({
+          rootDirectory: approvedDirectory.rootDirectory,
+          key: storageKeyFor(file),
+          maximumBytes: maximumTotalBytes,
+        })).content;
+        totalBytes += content.byteLength;
+        if (totalBytes > maximumTotalBytes) {
+          throw new Error(`Hugging Face publish failed: model exceeds the ${maximumTotalBytes}-byte publication limit.`);
+        }
         const remotePath = `${request.pathPrefix ? `${request.pathPrefix.replace(/\/$/, "")}/` : ""}${file}`;
         try {
           await options.client.uploadFile({
@@ -211,7 +249,13 @@ export function createHuggingFaceModelPublisherAdapter(
             if (!maybeFetchImplementation) {
               throw new Error("Hugging Face publish failed: repository not found and fetch implementation is unavailable.");
             }
-            await createModelRepositoryIfMissing(request.repository, token.trim(), maybeFetchImplementation, hubBaseUrl);
+            await createModelRepositoryIfMissing(
+              request.repository,
+              token.trim(),
+              request.private ?? true,
+              maybeFetchImplementation,
+              hubBaseUrl,
+            );
             await options.client.uploadFile({
               repo: request.repository,
               path: remotePath,

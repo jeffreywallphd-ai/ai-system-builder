@@ -9,6 +9,7 @@ import {
 import { createLocalImageAssetRegistryAdapter } from "../../../adapters/persistence/image";
 import { createLocalModelRegistryAdapter } from "../../../adapters/persistence/model";
 import { createLocalAuthoredAssetRepositoryAdapter } from "../../../adapters/persistence/asset-authoring";
+import { createStructuredAssetPackageRepository } from "../../../adapters/persistence/asset-package";
 import {
   composeInternalAssetRegistry,
   type InternalAssetRegistryComposition,
@@ -79,12 +80,16 @@ export async function composeDesktopAssetFeature(
   const implementationArtifacts = createAssetImplementationArtifactAdapter(
     options.artifacts.storage,
   );
+  const assetPackageRepository = options.documents
+    ? createStructuredAssetPackageRepository(options.documents)
+    : undefined;
   const assetImplementation = options.documents
     ? composeAssetImplementationKernel({
         documents: options.documents,
         definitions:
           internalAssetRegistry.assetKernel.repositories.definitionRepository,
         artifacts: implementationArtifacts,
+        packageRepository: assetPackageRepository,
         now: options.now,
       })
     : undefined;
@@ -98,6 +103,7 @@ export async function composeDesktopAssetFeature(
           implementations: assetImplementation.repository,
           backingResources: assetImplementation.backingResources,
           artifacts: implementationArtifacts,
+          repository: assetPackageRepository,
           nextInspectionId: () => `package-inspection.${randomUUID()}`,
           now: options.now,
         })

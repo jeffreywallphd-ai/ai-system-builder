@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { readSystemFoundationBackingResourceProgram } from "../../../application/services/asset-packs/system-foundation-backing-resource-catalog";
 import type {
   AssetInstance,
+  AssetJsonValue,
   AssetPlacement,
   AssetReference,
 } from "../../../contracts/asset";
@@ -17,6 +18,16 @@ import {
 } from "./systemComposerDraft";
 
 export const MAX_SYSTEM_COMPOSITION_PREVIEW_SURFACES = 24;
+export const MAX_SYSTEM_COMPOSITION_PREVIEW_INPUT_INSTANCES = 256;
+export const MAX_SYSTEM_COMPOSITION_PREVIEW_INPUT_PLACEMENTS = 1_024;
+export const MAX_SYSTEM_COMPOSITION_PREVIEW_ROOTS = 64;
+export const MAX_SYSTEM_COMPOSITION_PREVIEW_TREE_NODES = 96;
+export const MAX_SYSTEM_COMPOSITION_PREVIEW_DEPTH = 16;
+export const MAX_SYSTEM_COMPOSITION_PREVIEW_CONFIGURATION_NODES = 256;
+export const MAX_SYSTEM_COMPOSITION_PREVIEW_CONFIGURATION_DEPTH = 4;
+export const MAX_SYSTEM_COMPOSITION_PREVIEW_CONFIGURATION_ARRAY_ITEMS = 50;
+export const MAX_SYSTEM_COMPOSITION_PREVIEW_CONFIGURATION_KEYS = 64;
+export const MAX_SYSTEM_COMPOSITION_PREVIEW_TEXT_LENGTH = 2_000;
 
 export interface SystemCompositionPreviewItem {
   readonly instanceId: string;
@@ -53,32 +64,66 @@ export function buildSystemCompositionPreviewModel(
   rootInstanceRefs: readonly AssetReference[] = [],
   catalog: readonly SystemBuilderComposerAsset[] = [],
 ): SystemCompositionPreviewModel {
-  const roots = rootInstanceRefs.length
-    ? rootInstanceRefs
-    : deriveRootInstanceRefs(instances, placements);
-  const draft = { instances, placements, bindings: [] };
-  const canonicalTree = buildSystemComposerTree(draft, roots);
+  const boundedInstances = instances.slice(
+    0,
+    MAX_SYSTEM_COMPOSITION_PREVIEW_INPUT_INSTANCES,
+  );
+  const boundedInstanceIds = new Set(
+    boundedInstances.map((instance) => String(instance.instanceId)),
+  );
+  const boundedPlacements = placements
+    .slice(0, MAX_SYSTEM_COMPOSITION_PREVIEW_INPUT_PLACEMENTS)
+    .filter(
+      (placement) =>
+        boundedInstanceIds.has(String(placement.parentInstanceRef.id)) &&
+        boundedInstanceIds.has(String(placement.childInstanceRef.id)),
+    );
+  const explicitRoots = rootInstanceRefs
+    .slice(0, MAX_SYSTEM_COMPOSITION_PREVIEW_ROOTS)
+    .filter((reference) => boundedInstanceIds.has(String(reference.id)));
+  const roots = explicitRoots.length
+    ? explicitRoots
+    : deriveRootInstanceRefs(boundedInstances, boundedPlacements).slice(
+        0,
+        MAX_SYSTEM_COMPOSITION_PREVIEW_ROOTS,
+      );
+  const draft = {
+    instances: boundedInstances,
+    placements: boundedPlacements,
+    bindings: [],
+  };
+  const treeOptions = {
+    maximumDepth: MAX_SYSTEM_COMPOSITION_PREVIEW_DEPTH,
+    maximumNodes: MAX_SYSTEM_COMPOSITION_PREVIEW_TREE_NODES,
+  };
+  const canonicalTree = buildSystemComposerTree(draft, roots, treeOptions);
   const reachableIds = new Set(
     flattenSystemComposerTree(canonicalTree).map((node) =>
       String(node.instance.instanceId),
     ),
   );
   const unassignedRefs = deriveRootInstanceRefs(
-    instances.filter(
+    boundedInstances.filter(
       (instance) => !reachableIds.has(String(instance.instanceId)),
     ),
-    placements.filter(
+    boundedPlacements.filter(
       (placement) =>
         !reachableIds.has(String(placement.childInstanceRef.id)) &&
         !reachableIds.has(String(placement.parentInstanceRef.id)),
     ),
   );
-  const unassignedTree = buildSystemComposerTree(draft, unassignedRefs);
+  const unassignedTree = buildSystemComposerTree(
+    draft,
+    unassignedRefs.slice(0, MAX_SYSTEM_COMPOSITION_PREVIEW_ROOTS),
+    treeOptions,
+  );
   const definitions = new Map(
-    catalog.map((definition) => [
-      definition.definitionId + "@" + definition.version,
-      definition,
-    ]),
+    catalog
+      .slice(0, MAX_SYSTEM_COMPOSITION_PREVIEW_INPUT_INSTANCES)
+      .map((definition) => [
+        definition.definitionId + "@" + definition.version,
+        definition,
+      ]),
   );
   const state: PreviewBuildState = {
     renderedCount: 0,
@@ -91,7 +136,7 @@ export function buildSystemCompositionPreviewModel(
   const unassignedRoots = unassignedTree
     .map((node) => buildPreviewNode(node, state))
     .filter(isPreviewNode);
-  const unavailableCount = instances.filter((instance) => {
+  const unavailableCount = boundedInstances.filter((instance) => {
     const program = readSystemFoundationBackingResourceProgram(
       String(instance.definitionRef.id),
       instance.definitionRef.version as never,
@@ -115,14 +160,12 @@ export function SystemCompositionPreview({
   placements = [],
   rootInstanceRefs = [],
   catalog = [],
-  includesUnsavedChanges,
 }: {
   readonly systemName: string;
   readonly instances: readonly AssetInstance[];
   readonly placements?: readonly AssetPlacement[];
   readonly rootInstanceRefs?: readonly AssetReference[];
   readonly catalog?: readonly SystemBuilderComposerAsset[];
-  readonly includesUnsavedChanges: boolean;
 }) {
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">(
     "desktop",
@@ -170,12 +213,6 @@ export function SystemCompositionPreview({
           ) : null}
         </div>
       </div>
-
-      {includesUnsavedChanges ? (
-        <p className="ui-status ui-status--warning" role="status">
-          This preview includes unsaved composition changes.
-        </p>
-      ) : null}
 
       <div
         className="system-composition-preview__viewports"
@@ -406,7 +443,9 @@ function buildPreviewNode(
     displayName:
       node.instance.displayName ?? program?.displayName ?? definitionId,
     version: node.instance.definitionRef.version,
-    configuration: node.instance.selectedConfiguration,
+    configuration: boundPreviewConfiguration(
+      node.instance.selectedConfiguration,
+    ),
   };
   const previewAvailable = Boolean(program?.styleClassName);
   if (previewAvailable) state.items.push(item);
@@ -466,4 +505,58 @@ function isPreviewNode(
   value: SystemCompositionPreviewNode | undefined,
 ): value is SystemCompositionPreviewNode {
   return Boolean(value);
+}
+
+function boundPreviewConfiguration(
+  configuration: AssetInstance["selectedConfiguration"],
+): AssetInstance["selectedConfiguration"] {
+  const state = { visited: 0 };
+  const bounded = boundPreviewJsonValue(configuration, 0, state);
+  if (!bounded || typeof bounded !== "object" || Array.isArray(bounded)) {
+    return {};
+  }
+  return bounded as AssetInstance["selectedConfiguration"];
+}
+
+function boundPreviewJsonValue(
+  value: unknown,
+  depth: number,
+  state: { visited: number },
+): AssetJsonValue | undefined {
+  if (
+    state.visited >= MAX_SYSTEM_COMPOSITION_PREVIEW_CONFIGURATION_NODES ||
+    depth > MAX_SYSTEM_COMPOSITION_PREVIEW_CONFIGURATION_DEPTH
+  ) return undefined;
+  state.visited += 1;
+  if (typeof value === "string") {
+    return value.slice(0, MAX_SYSTEM_COMPOSITION_PREVIEW_TEXT_LENGTH);
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : undefined;
+  }
+  if (typeof value === "boolean" || value === null) return value;
+  if (Array.isArray(value)) {
+    const result: AssetJsonValue[] = [];
+    for (const item of value.slice(
+      0,
+      MAX_SYSTEM_COMPOSITION_PREVIEW_CONFIGURATION_ARRAY_ITEMS,
+    )) {
+      const bounded = boundPreviewJsonValue(item, depth + 1, state);
+      if (bounded !== undefined) result.push(bounded);
+    }
+    return result;
+  }
+  if (value && typeof value === "object") {
+    const result: Record<string, AssetJsonValue> = {};
+    for (const [key, item] of Object.entries(value).slice(
+      0,
+      MAX_SYSTEM_COMPOSITION_PREVIEW_CONFIGURATION_KEYS,
+    )) {
+      if (!key || key.length > 128) continue;
+      const bounded = boundPreviewJsonValue(item, depth + 1, state);
+      if (bounded !== undefined) result[key] = bounded;
+    }
+    return result;
+  }
+  return undefined;
 }

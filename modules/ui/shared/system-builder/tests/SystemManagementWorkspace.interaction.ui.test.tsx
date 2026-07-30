@@ -10,6 +10,7 @@ import type {
 } from "../../../../contracts/system-builder";
 import { SystemManagementWorkspace } from "../SystemManagementWorkspace";
 import type { SystemBuilderClient } from "../SystemBuilderWorkspace";
+import { NotificationTestHarness, readNotificationMessages } from "../../notifications/tests/NotificationTestHarness";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -89,11 +90,8 @@ describe("SystemManagementWorkspace", () => {
     );
     expect(onActiveSystemsChanged).toHaveBeenCalledTimes(1);
 
-    await vi.waitFor(() =>
-      expect(container?.textContent).toContain(
-        "Customer portal copy was created",
-      ),
-    );
+    await vi.waitFor(() => expect(readNotificationMessages(container!)).toContain("Customer portal copy was created as an unpublished system."));
+    expect(container?.textContent).not.toContain("Customer portal copy was created");
     await act(async () => button(container!, "Delete").click());
     const deleteDialog = await dialogContaining("Delete Customer portal?");
     expect(deleteDialog.textContent).toContain(
@@ -110,9 +108,8 @@ describe("SystemManagementWorkspace", () => {
       }),
     );
     expect(onActiveSystemsChanged).toHaveBeenCalledTimes(2);
-    expect(container?.textContent).toContain(
-      "can be restored from the Archived view",
-    );
+    expect(readNotificationMessages(container!).some((message) => message.includes("can be restored from the Archived view"))).toBe(true);
+    expect(container?.textContent).not.toContain("can be restored from the Archived view");
   });
 
   it("restores an archived system from the same management list", async () => {
@@ -134,9 +131,8 @@ describe("SystemManagementWorkspace", () => {
       }),
     );
     expect(onActiveSystemsChanged).toHaveBeenCalledOnce();
-    expect(container?.textContent).toContain(
-      "Customer portal was restored to active systems",
-    );
+    expect(readNotificationMessages(container!)).toContain("Customer portal was restored to active systems.");
+    expect(container?.textContent).not.toContain("Customer portal was restored to active systems");
   });
 });
 
@@ -150,12 +146,14 @@ async function renderWorkspace(
   root = createRoot(container);
   await act(async () => {
     root?.render(
-      <SystemManagementWorkspace
-        workspaceId="workspace-a"
-        client={client}
-        onOpenInCompose={onOpenInCompose}
-        onActiveSystemsChanged={onActiveSystemsChanged}
-      />,
+      <NotificationTestHarness>
+        <SystemManagementWorkspace
+          workspaceId="workspace-a"
+          client={client}
+          onOpenInCompose={onOpenInCompose}
+          onActiveSystemsChanged={onActiveSystemsChanged}
+        />
+      </NotificationTestHarness>,
     );
   });
 }

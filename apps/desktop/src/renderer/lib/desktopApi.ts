@@ -29,6 +29,13 @@ import type {
   DeleteModelRecordResult,
   DownloadModelRequest,
   DownloadModelResult,
+  StartModelDownloadTaskResult,
+  ReadModelDownloadTaskRequest,
+  ReadModelDownloadTaskResult,
+  ListModelDownloadTasksRequest,
+  ListModelDownloadTasksResult,
+  CancelModelDownloadTaskRequest,
+  CancelModelDownloadTaskResult,
   ListModelsRequest,
   ModelTrainingRequest,
   ModelTrainingResult,
@@ -75,12 +82,18 @@ import type {
   SystemBuilderTemplateId,
   ListSystemBuilderComposerAssetsQuery,
   ReadSystemBuilderComposerAssetQuery,
+  ListSystemBuilderModelOptionsQuery,
   ListSystemBuilderManagementQuery,
   PreviewSystemBuilderLayoutChangeCommand,
   PreviewSystemBuilderFoundationUpgradeCommand,
   UpgradeSystemBuilderFoundationCommand,
 } from "../../../../../modules/contracts/system-builder";
 import type { SystemDeploymentCapabilityPolicy } from "../../../../../modules/contracts/system-deployment";
+import type {
+  InvokeSystemRunWorkflowCommand,
+  ListSystemRunWorkflowProfilesQuery,
+  PrepareSystemRunWorkflowQuery,
+} from "../../../../../modules/contracts/system-run-workflow";
 
 export interface DesktopArtifactUploadInput {
   workspaceId: string;
@@ -434,15 +447,11 @@ export interface DesktopImageGenerationApi {
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   readComfyUiInstallStatus?: (
-    input?: { installRoot?: string },
+    input?: Record<string, never>,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   repairComfyUiInstall?: (
-    input?: {
-      installRoot?: string;
-      allowUpdate?: boolean;
-      forceRepair?: boolean;
-    },
+    input?: Record<string, never>,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
 }
@@ -617,6 +626,10 @@ interface DesktopApiBridge {
     input: ReadSystemBuilderComposerAssetQuery,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
+  listSystemBuilderModelOptions?: (
+    input: ListSystemBuilderModelOptionsQuery,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
   previewSystemBuilderLayoutChange?: (
     input: Omit<
       PreviewSystemBuilderLayoutChangeCommand,
@@ -638,8 +651,21 @@ interface DesktopApiBridge {
     > & { readonly workspaceId: string; readonly systemId: string },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
+  prepareSystemBuild?: (
+    input: {
+      workspaceId: string;
+      systemId: string;
+      systemRevisionId: string;
+    },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
   requestSystemBuild?: (
-    input: Record<string, unknown>,
+    input: {
+      workspaceId: string;
+      buildId: string;
+      systemId: string;
+      systemRevisionId: string;
+    },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   cancelSystemBuild?: (
@@ -669,6 +695,10 @@ interface DesktopApiBridge {
   ) => Promise<unknown>;
   listSystemReleases?: (
     input: { workspaceId: string; systemId?: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  listSystemPublicationWorkspace?: (
+    input: { workspaceId: string },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   compareSystemReleases?: (
@@ -757,6 +787,19 @@ interface DesktopApiBridge {
     input: { workspaceId: string; releaseId: string; limit?: number },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
+  readPublishedSystemLifecycle?: (
+    input: { workspaceId: string; releaseId: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  invokePublishedSystemLifecycle?: (
+    input: {
+      workspaceId: string;
+      releaseId: string;
+      action: "install" | "activate" | "deactivate" | "start" | "stop" | "uninstall";
+      expectedRevision: string;
+    },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
   installSystemDeployment?: (
     input: {
       workspaceId: string;
@@ -812,6 +855,18 @@ interface DesktopApiBridge {
   ) => Promise<unknown>;
   listSystemDeploymentAudit?: (
     input: { workspaceId: string; deploymentId: string; limit?: number },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  listSystemRunWorkflowProfiles?: (
+    input: ListSystemRunWorkflowProfilesQuery,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  prepareSystemRunWorkflow?: (
+    input: PrepareSystemRunWorkflowQuery,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  invokeSystemRunWorkflow?: (
+    input: InvokeSystemRunWorkflowCommand,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   inspectAssetPackage?: (
@@ -939,15 +994,11 @@ interface DesktopApiBridge {
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   readComfyUiInstallStatus?: (
-    input?: { installRoot?: string },
+    input?: Record<string, never>,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   repairComfyUiInstall?: (
-    input?: {
-      installRoot?: string;
-      allowUpdate?: boolean;
-      forceRepair?: boolean;
-    },
+    input?: Record<string, never>,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   browseArtifacts: (
@@ -982,16 +1033,24 @@ interface DesktopApiBridge {
     locator: DesktopArtifactBrowserLocator,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
-  publishArtifactToRepo: (input: {
-    artifactId: string;
-    target: {
-      provider: string;
-      repository: string;
-      path: string;
-      revision?: string;
-    };
-    mediaType?: string;
-  }) => Promise<unknown>;
+  publishArtifactToRepo: (
+    input: {
+      workspaceId: string;
+      artifactId: string;
+      target: {
+        provider: string;
+        repository: string;
+        path: string;
+        revision?: string;
+      };
+      mediaType?: string;
+      repositoryCreation?: {
+        approved: true;
+        visibility: "private" | "public";
+      };
+    },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
   verifyPublishedArtifactBacking: (input: {
     artifactId: string;
   }) => Promise<unknown>;
@@ -1048,6 +1107,10 @@ interface DesktopApiBridge {
     input: DesktopDownloadModelRequest,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
+  startModelDownload?: (input: DesktopDownloadModelRequest, context?: DesktopBridgeRequestContext) => Promise<unknown>;
+  readModelDownload?: (input: DesktopReadModelDownloadRequest, context?: DesktopBridgeRequestContext) => Promise<unknown>;
+  listModelDownloads?: (input: DesktopListModelDownloadsRequest, context?: DesktopBridgeRequestContext) => Promise<unknown>;
+  cancelModelDownload?: (input: DesktopCancelModelDownloadRequest, context?: DesktopBridgeRequestContext) => Promise<unknown>;
   updateModelRecord?: (
     input: DesktopUpdateModelRecordRequest,
     context?: DesktopBridgeRequestContext,
@@ -1199,6 +1262,13 @@ export interface DesktopSaveModelReferenceResult {
 }
 export type DesktopDownloadModelRequest = DownloadModelRequest;
 export type DesktopDownloadModelResult = DownloadModelResult;
+export type DesktopStartModelDownloadResult = StartModelDownloadTaskResult;
+export type DesktopReadModelDownloadRequest = ReadModelDownloadTaskRequest;
+export type DesktopReadModelDownloadResult = ReadModelDownloadTaskResult;
+export type DesktopListModelDownloadsRequest = ListModelDownloadTasksRequest;
+export type DesktopListModelDownloadsResult = ListModelDownloadTasksResult;
+export type DesktopCancelModelDownloadRequest = CancelModelDownloadTaskRequest;
+export type DesktopCancelModelDownloadResult = CancelModelDownloadTaskResult;
 export type DesktopUpdateModelRecordRequest = UpdateModelRecordRequest;
 export interface DesktopUpdateModelRecordResult {
   model: ModelInventoryRecord;

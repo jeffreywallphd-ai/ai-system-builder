@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import hmac
 import platform
-import traceback
+import secrets
 from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from datetime import datetime, timezone
 from os import getenv
@@ -10,8 +12,9 @@ from pathlib import Path
 from threading import Lock
 import time
 from typing import Any, Callable, Literal
+import re
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from .models import (
@@ -46,12 +49,81 @@ RUNTIME_ID = getenv("PYTHON_RUNTIME_ID", "python-sidecar")
 WORKER_VERSION = getenv("PYTHON_RUNTIME_WORKER_VERSION", "0.1.0")
 WORKER_STARTED_AT = datetime.now(timezone.utc).isoformat()
 PYTHON_VERSION = platform.python_version()
+RUNTIME_AUTH_TOKEN = getenv("PYTHON_RUNTIME_AUTH_TOKEN", "").strip()
 
 app = FastAPI(title="ai-system-builder python runtime worker", version=WORKER_VERSION)
 TASK_EXECUTOR = ThreadPoolExecutor(max_workers=1)
 TASK_REGISTRY_LOCK = Lock()
 TASK_REGISTRY: dict[str, dict[str, Any]] = {}
 TASK_WAIT_POLL_SECONDS = 1.0
+TASK_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
+
+
+def _bounded_env_int(name: str, default: int, minimum: int, maximum: int) -> int:
+    try:
+        value = int(getenv(name, str(default)))
+    except ValueError:
+        return default
+    return min(max(value, minimum), maximum)
+
+
+TASK_MAX_ACTIVE = _bounded_env_int("PYTHON_RUNTIME_MAX_ACTIVE_TASKS", 8, 1, 32)
+TASK_MAX_RETAINED = _bounded_env_int("PYTHON_RUNTIME_MAX_RETAINED_TASKS", 256, 1, 1024)
+
+
+def _opaque_task_resource_ref(request_id: str, role: str) -> str:
+    digest = hmac.new(
+        RUNTIME_AUTH_TOKEN.encode("utf-8"),
+        f"{request_id}:{role}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"{role}:{digest}"
+
+
+def _runtime_output_directory(payload: PrepareTrainingDatasetRequest) -> Path:
+    runtime = payload.runtime
+    configured = (
+        runtime.get("runtimeWorkingDirectory")
+        if isinstance(runtime, dict)
+        else None
+    )
+    if not isinstance(configured, str) or not configured.strip():
+        raise ValueError("Runtime output root is required.")
+    candidate = Path(configured)
+    if not candidate.is_absolute() or candidate.is_symlink():
+        raise ValueError("Runtime output root is invalid.")
+    canonical = candidate.resolve(strict=True)
+    if not canonical.is_dir():
+        raise ValueError("Runtime output root is invalid.")
+    return canonical
+
+
+def _request_has_valid_launch_token(authorization_header: str | None) -> bool:
+    if not RUNTIME_AUTH_TOKEN or not authorization_header:
+        return False
+    scheme, separator, supplied_token = authorization_header.partition(" ")
+    if not separator or scheme.lower() != "bearer" or not supplied_token:
+        return False
+    try:
+        return secrets.compare_digest(supplied_token, RUNTIME_AUTH_TOKEN)
+    except (TypeError, ValueError):
+        return False
+
+
+@app.middleware("http")
+async def require_launch_authentication(request: Request, call_next):
+    if not RUNTIME_AUTH_TOKEN:
+        return JSONResponse(
+            status_code=503,
+            content={"error": {"code": "runtime_auth_unconfigured", "message": "Runtime authentication is unavailable."}},
+        )
+    if not _request_has_valid_launch_token(request.headers.get("authorization")):
+        return JSONResponse(
+            status_code=401,
+            headers={"www-authenticate": "Bearer"},
+            content={"error": {"code": "runtime_auth_required", "message": "Runtime authentication is required."}},
+        )
+    return await call_next(request)
 
 
 def _now_iso() -> str:
@@ -60,7 +132,25 @@ def _now_iso() -> str:
 
 def _active_task_count() -> int:
     with TASK_REGISTRY_LOCK:
-        return sum(1 for task in TASK_REGISTRY.values() if task["status"] == "running")
+        return sum(1 for task in TASK_REGISTRY.values() if task["status"] in {"queued", "running"})
+
+
+def _prune_terminal_tasks_locked() -> None:
+    terminal_ids = [
+        request_id
+        for request_id, task in TASK_REGISTRY.items()
+        if task.get("status") in {"succeeded", "failed", "cancelled"}
+    ]
+    while len(terminal_ids) > TASK_MAX_RETAINED:
+        TASK_REGISTRY.pop(terminal_ids.pop(0), None)
+
+
+def _safe_task_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
+    safe: dict[str, Any] = {"runtimeId": RUNTIME_ID}
+    workspace_id = metadata.get("workspaceId") if isinstance(metadata, dict) else None
+    if isinstance(workspace_id, str) and 0 < len(workspace_id) <= 128:
+        safe["workspaceId"] = workspace_id
+    return safe
 
 
 def _resolve_dataset_preparation_inactivity_timeout_ms(request: StartPythonRuntimeTaskRequest) -> int | None:
@@ -85,14 +175,16 @@ def _create_task_record(request_id: str, task_type: str, metadata: dict[str, Any
         "startedAt": now,
         "updatedAt": now,
         "completedAt": None,
-        "metadata": {"runtimeId": RUNTIME_ID, **(metadata or {})},
+        "metadata": _safe_task_metadata(metadata),
         "future": None,
     }
 
 
 def _update_task(request_id: str, **updates: Any) -> None:
     with TASK_REGISTRY_LOCK:
-        task = TASK_REGISTRY[request_id]
+        task = TASK_REGISTRY.get(request_id)
+        if task is None:
+            return
         task.update(updates)
         task["updatedAt"] = _now_iso()
 
@@ -124,19 +216,13 @@ def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
         payload = TrainModelTaskRequest.model_validate(request.payload)
         def on_training_progress(progress: dict[str, Any]) -> None:
             _update_task(request.requestId, progress=progress)
-            print(
-                json.dumps(
-                    {"event": "runtime.train_model.progress", "requestId": request.requestId, **progress},
-                    ensure_ascii=False,
-                ),
-                flush=True,
-            )
+            print(json.dumps({"event": "runtime.train_model.progress"}), flush=True)
 
-        print(json.dumps({"event": "runtime.train_model.started", "requestId": request.requestId}, ensure_ascii=False), flush=True)
+        print(json.dumps({"event": "runtime.train_model.started"}), flush=True)
         result = train_model(payload, on_progress=on_training_progress).model_dump(mode="json")
         print(
             json.dumps(
-                {"event": "runtime.train_model.completed", "requestId": request.requestId, "status": result.get("status")},
+                {"event": "runtime.train_model.completed", "status": result.get("status")},
                 ensure_ascii=False,
             ),
             flush=True,
@@ -158,9 +244,13 @@ def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
                     "message": f"Processing chunk {min(processed + 1, total)}/{total}...",
                 },
             )
-            print(json.dumps({"event": "runtime.dataset_preparation.generation.progress", "requestId": request.requestId, **progress}, ensure_ascii=False), flush=True)
+            print(json.dumps({"event": "runtime.dataset_preparation.generation.progress"}), flush=True)
 
-        return prepare_training_dataset(payload, on_generation_progress=on_generation_progress).model_dump(mode="json")
+        return prepare_training_dataset(
+            payload,
+            on_generation_progress=on_generation_progress,
+            output_directory=_runtime_output_directory(payload),
+        ).model_dump(mode="json")
 
 
     if request.taskType == "conversation-text-generation":
@@ -198,7 +288,6 @@ def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
         payload = ValidateModelTaskRequest.model_validate(request.payload)
         result = validate_model_output(
             Path(payload.modelPath),
-            report_output_dir=Path(payload.reportOutputDirectory) if payload.reportOutputDirectory else None,
             expected_lora=bool(payload.expectedLoRA),
             expected_recurrent_additions=bool(payload.expectedRecurrentAdditions),
             validation_strictness=payload.validationStrictness or "normal",
@@ -206,13 +295,20 @@ def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
         return ValidateModelTaskResult(
             modelRecordId=payload.modelRecordId,
             status=result["status"],
-            validationReportPath=result.get("validationReportPath"),
-            validationDiffPath=result.get("validationDiffPath"),
+            validationReportPath=(
+                _opaque_task_resource_ref(request.requestId, "validation-report")
+                if result.get("validationReportPath")
+                else None
+            ),
+            validationDiffPath=(
+                _opaque_task_resource_ref(request.requestId, "validation-diff")
+                if result.get("validationDiffPath")
+                else None
+            ),
             serializationFormat=result.get("serializationFormat"),
             shardCount=result.get("shardCount"),
             detectedLoRA=result.get("detectedLoRA"),
             detectedRecurrentAdditions=result.get("detectedRecurrentAdditions"),
-            validatedModelPath=result.get("validatedModelPath"),
             validatedAt=result.get("validatedAt"),
             validationStrictness=result.get("validationStrictness"),
             tensorChecksCompleted=result.get("tensorChecksCompleted"),
@@ -260,17 +356,30 @@ def _ensure_model_download_data(
         modelId=request.modelId,
         downloaded=availability.downloaded,
         fromCache=availability.from_cache,
-        localPath=availability.local_path,
+        modelHandle=availability.cache_handle,
     ).model_dump(mode="json")
 
 
 def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRuntimeTaskResult:
     with TASK_REGISTRY_LOCK:
+        if not TASK_REQUEST_ID_PATTERN.fullmatch(request.requestId):
+            raise RuntimeError("Runtime task request identifier is invalid.")
+        _prune_terminal_tasks_locked()
         existing = TASK_REGISTRY.get(request.requestId)
         if existing and existing.get("status") in {"queued", "running"}:
-            raise RuntimeError(f"Task requestId '{request.requestId}' is already active.")
-        if not existing:
-            TASK_REGISTRY[request.requestId] = _create_task_record(request.requestId, request.taskType, request.metadata)
+            raise RuntimeError("Runtime task request identifier is already active.")
+        active_count = sum(
+            1
+            for task in TASK_REGISTRY.values()
+            if task.get("status") in {"queued", "running"}
+        )
+        if active_count >= TASK_MAX_ACTIVE:
+            raise RuntimeError("Python runtime task queue is at capacity.")
+        TASK_REGISTRY[request.requestId] = _create_task_record(
+            request.requestId,
+            request.taskType,
+            request.metadata,
+        )
 
     def task_wrapper() -> None:
         _update_task(request.requestId, status="running")
@@ -282,10 +391,8 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
                 json.dumps(
                     {
                         "event": "runtime.task.failed",
-                        "requestId": request.requestId,
                         "taskType": request.taskType,
-                        "message": str(error),
-                        "traceback": traceback.format_exc(),
+                        "diagnosticClass": type(error).__name__,
                     },
                     ensure_ascii=False,
                 ),
@@ -294,9 +401,19 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
             _update_task(
                 request.requestId,
                 status="failed",
-                error=PythonRuntimeError(code="task_failed", errorCode=getattr(error, "error_code", "task_failed"), stage=getattr(error, "stage", None), message=str(error), details=getattr(error, "details", None), retryable=False),
+                error=PythonRuntimeError(
+                    code="task_failed",
+                    errorCode=getattr(error, "error_code", "task_failed"),
+                    stage=getattr(error, "stage", None),
+                    message="Runtime task failed. Review host diagnostics and retry.",
+                    details={"diagnosticClass": type(error).__name__},
+                    retryable=False,
+                ),
                 completedAt=_now_iso(),
             )
+        finally:
+            with TASK_REGISTRY_LOCK:
+                _prune_terminal_tasks_locked()
 
     future = TASK_EXECUTOR.submit(task_wrapper)
     _update_task(request.requestId, future=future)
@@ -339,6 +456,8 @@ def cancel_task(request_id: str) -> CancelPythonRuntimeTaskResult:
     if record["status"] == "queued" and isinstance(future, Future) and future.cancel():
         _update_task(request_id, status="cancelled", completedAt=_now_iso())
         return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status="cancelled", cancelled=True, message="Cancelled queued task.", metadata=record.get("metadata"))
+    if record["status"] == "cancelled":
+        return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status="cancelled", cancelled=True, message="Task is already cancelled.", metadata=record.get("metadata"))
     if record["status"] == "running":
         return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status="running", cancelled=False, message="Task is already running and cannot be force-cancelled.", metadata=record.get("metadata"))
     return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status=record["status"], cancelled=False, message="Task is no longer cancellable.", metadata=record.get("metadata"))
@@ -352,7 +471,6 @@ def ensure_model_download(request: EnsureModelDownloadRequest) -> EnsureModelDow
             {
                 "event": "runtime.model_download.started",
                 "provider": request.provider,
-                "modelId": request.modelId,
             },
             ensure_ascii=False,
         ),
@@ -366,24 +484,22 @@ def ensure_model_download(request: EnsureModelDownloadRequest) -> EnsureModelDow
                 {
                     "event": "runtime.model_download.failed",
                     "provider": request.provider,
-                    "modelId": request.modelId,
                     "elapsedMs": round((time.monotonic() - started_at) * 1000),
-                    "message": str(error),
+                    "diagnosticClass": type(error).__name__,
                 },
                 ensure_ascii=False,
             ),
             flush=True,
         )
-        return JSONResponse(status_code=502, content={"error": PythonRuntimeError(code="model_download_failed", errorCode="generation_model_not_available", stage="generation", message=str(error), details={"provider": request.provider, "modelId": request.modelId}, retryable=True).model_dump(mode="json")})
+        return JSONResponse(status_code=502, content={"error": PythonRuntimeError(code="model_download_failed", errorCode="generation_model_not_available", stage="generation", message="Model download failed. Review host diagnostics and retry.", details={"provider": request.provider}, retryable=True).model_dump(mode="json")})
     print(
         json.dumps(
             {
                 "event": "runtime.model_download.succeeded",
                 "provider": request.provider,
-                "modelId": request.modelId,
                 "downloaded": result.get("downloaded") is True,
                 "fromCache": result.get("fromCache") is True,
-                "hasLocalPath": bool(result.get("localPath")),
+                "hasModelHandle": bool(result.get("modelHandle")),
                 "elapsedMs": round((time.monotonic() - started_at) * 1000),
             },
             ensure_ascii=False,

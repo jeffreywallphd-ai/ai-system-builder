@@ -225,6 +225,31 @@ describe("System composer draft operations", () => {
     expect([...protectedIds]).toEqual(["instance.root", "instance.shell"]);
   });
 
+  it("stops tree construction at explicit node and depth budgets", () => {
+    const instances = Array.from({ length: 20 }, (_, index) =>
+      instance(`instance.${index}`, "builtin.container.card"),
+    );
+    const placements = instances.slice(1).map((child, index) =>
+      placement(
+        `placement.${index}`,
+        `instance.${index}`,
+        "body",
+        String(child.instanceId),
+        0,
+      ),
+    );
+    const draft = { instances, placements, bindings: [] };
+    const tree = buildSystemComposerTree(
+      draft,
+      [{ kind: "asset-instance", id: normalizeAssetId("instance.0") }],
+      { maximumDepth: 8, maximumNodes: 5 },
+    );
+    expect(flattenSystemComposerTree(tree).length).toBe(5);
+    expect(() =>
+      buildSystemComposerTree(draft, [], { maximumDepth: 0 }),
+    ).toThrow("maximumDepth must be a positive safe integer.");
+  });
+
   it("reattaches preserved unassigned assets without changing identity", () => {
     const card = instance("instance.card", "builtin.container.card");
     const draft = {

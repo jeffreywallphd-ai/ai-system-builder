@@ -12,7 +12,10 @@ import type {
 } from "../../../../contracts/system-review";
 import { normalizeSystemReleaseId } from "../../../../contracts/system-build";
 import { createWorkspaceId } from "../../../../contracts/workspace";
-import { getExpressAuthContext } from "../security/expressAuthContext";
+import {
+  getExpressAuthContext,
+  requireExpressAuthenticatedPrincipalId,
+} from "../security/expressAuthContext";
 
 interface RequestLike {
   query?: Record<string, unknown>;
@@ -154,9 +157,9 @@ function context(request: RequestLike) {
 function principal(request: RequestLike): SystemReviewPrincipal {
   const auth = getExpressAuthContext(request as Request);
   return {
-    actorId: auth?.principal.principalId ?? "anonymous",
+    actorId: requireExpressAuthenticatedPrincipalId(request as Request),
     roles: auth?.principal.roles ?? [],
-    authenticated: auth?.authenticated === true,
+    authenticated: true,
   };
 }
 

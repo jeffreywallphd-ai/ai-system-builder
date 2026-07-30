@@ -1,6 +1,10 @@
+import type { OrganizationRole } from "../../../../contracts/organization";
+import type { SecurityScope } from "../../../../contracts/security";
+
 export interface ApiRoutePolicy {
   public: boolean;
-  scopes?: string[];
+  scopes?: SecurityScope[];
+  organizationRoles?: OrganizationRole[];
   deny?: boolean;
   securityCode?: string;
 }
@@ -42,6 +46,10 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     { public: false, scopes: ["model:write"] },
   ],
   ["POST /api/model/download", { public: false, scopes: ["model:write"] }],
+  ["POST /api/model/download/start", { public: false, scopes: ["model:write"] }],
+  ["POST /api/model/download/read", { public: false, scopes: ["model:read"] }],
+  ["POST /api/model/download/list", { public: false, scopes: ["model:read"] }],
+  ["POST /api/model/download/cancel", { public: false, scopes: ["model:write"] }],
   ["POST /api/model/record/update", { public: false, scopes: ["model:write"] }],
   ["POST /api/model/record/delete", { public: false, scopes: ["model:write"] }],
 
@@ -63,7 +71,11 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   ],
   [
     "POST /api/image-generation/unload-model",
-    { public: false, scopes: ["image-generation:write"] },
+    {
+      public: false,
+      scopes: ["runtime:admin"],
+      organizationRoles: ["owner", "admin", "operator"],
+    },
   ],
   [
     "POST /api/image-generation/runtime-resources",
@@ -72,33 +84,60 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
 
   [
     "GET /api/config/huggingface-token",
-    { public: false, scopes: ["artifact:read"] },
+    {
+      public: false,
+      scopes: ["provider-credential:read"],
+      organizationRoles: ["owner", "admin", "operator"],
+    },
   ],
   [
     "POST /api/config/huggingface-token",
-    { public: false, scopes: ["artifact:write"] },
+    {
+      public: false,
+      scopes: ["provider-credential:write"],
+      organizationRoles: ["owner", "admin", "operator"],
+    },
   ],
   [
     "DELETE /api/config/huggingface-token",
-    { public: false, scopes: ["artifact:write"] },
+    {
+      public: false,
+      scopes: ["provider-credential:write"],
+      organizationRoles: ["owner", "admin", "operator"],
+    },
   ],
   [
     "POST /api/application-settings/list-definitions",
-    { public: false, scopes: ["artifact:read"] },
+    { public: false, scopes: ["settings:read"] },
   ],
   [
     "POST /api/application-settings/read",
-    { public: false, scopes: ["artifact:read"] },
+    { public: false, scopes: ["settings:read"] },
   ],
   [
     "POST /api/application-settings/update",
-    { public: false, scopes: ["artifact:write"] },
+    {
+      public: false,
+      scopes: ["settings:write"],
+      organizationRoles: ["owner", "admin", "operator"],
+    },
   ],
   [
     "POST /api/application-settings/clear",
-    { public: false, scopes: ["artifact:write"] },
+    {
+      public: false,
+      scopes: ["settings:write"],
+      organizationRoles: ["owner", "admin", "operator"],
+    },
   ],
-  ["POST /api/server/restart", { public: false, scopes: ["settings:write"] }],
+  [
+    "POST /api/server/restart",
+    {
+      public: false,
+      scopes: ["runtime:admin"],
+      organizationRoles: ["owner", "admin", "operator"],
+    },
+  ],
   ["POST /api/artifact-repo/has", { public: false, scopes: ["artifact:read"] }],
   [
     "POST /api/huggingface/namespace/datasets",
@@ -275,6 +314,10 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     { public: false, scopes: ["asset:read"] },
   ],
   [
+    "GET /api/systems/composer/model-options",
+    { public: false, scopes: ["asset:read"] },
+  ],
+  [
     "GET /api/systems/composer/asset",
     { public: false, scopes: ["asset:read"] },
   ],
@@ -300,6 +343,10 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     { public: false, scopes: ["asset:write"] },
   ],
   [
+    "GET /api/systems/builds/preparation",
+    { public: false, scopes: ["asset:read"] },
+  ],
+  [
     "POST /api/systems/builds/request",
     { public: false, scopes: ["asset:write"] },
   ],
@@ -315,6 +362,15 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   ],
   ["GET /api/systems/release", { public: false, scopes: ["asset:read"] }],
   ["GET /api/systems/releases", { public: false, scopes: ["asset:read"] }],
+  ["GET /api/systems/publication", { public: false, scopes: ["asset:read"] }],
+  [
+    "GET /api/systems/published-lifecycle",
+    { public: false, scopes: ["asset:read"] },
+  ],
+  [
+    "POST /api/systems/published-lifecycle/invoke",
+    { public: false, scopes: ["asset:write"] },
+  ],
   [
     "GET /api/systems/releases/compare",
     { public: false, scopes: ["asset:read"] },
@@ -360,11 +416,11 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   ["GET /api/systems/review", { public: false, scopes: ["asset:read"] }],
   [
     "GET /api/systems/review/artifacts",
-    { public: false, scopes: ["asset:read"] },
+    { public: false, scopes: ["artifact:read"] },
   ],
   [
     "GET /api/systems/review/artifact",
-    { public: false, scopes: ["asset:read"] },
+    { public: false, scopes: ["artifact:read"] },
   ],
   [
     "GET /api/systems/review/preview",
@@ -383,6 +439,18 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   ],
   ["GET /api/systems/data/records", { public: false, scopes: ["asset:read"] }],
   ["GET /api/systems/data/audit", { public: false, scopes: ["asset:read"] }],
+  [
+    "GET /api/systems/run-workflows",
+    { public: false, scopes: ["asset:read"] },
+  ],
+  [
+    "POST /api/systems/run-workflows/prepare",
+    { public: false, scopes: ["asset:read"] },
+  ],
+  [
+    "POST /api/systems/run-workflows/invoke",
+    { public: false, scopes: ["asset:write"] },
+  ],
 
   [
     "GET /api/asset-authoring/workspaces/:workspaceId/authored-assets",
@@ -505,13 +573,28 @@ export function resolveApiRoutePolicy(
     }
   }
 
-  return path.startsWith("/api/")
+  return isApiNamespacePath(path)
     ? {
         public: false,
         deny: true,
         securityCode: "security.route-policy-missing",
       }
     : { public: true };
+}
+
+const API_NAMESPACE_PATTERN = /^\/api(?:\/|\\|$)/i;
+
+function isApiNamespacePath(path: string): boolean {
+  if (API_NAMESPACE_PATTERN.test(path)) {
+    return true;
+  }
+
+  try {
+    const decodedPath = decodeURIComponent(path);
+    return decodedPath !== path && API_NAMESPACE_PATTERN.test(decodedPath);
+  } catch {
+    return false;
+  }
 }
 
 function splitRouteKey(route: string): readonly [string, string] {

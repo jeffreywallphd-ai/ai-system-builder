@@ -35,6 +35,7 @@
 - Classify decision readiness before implementation; proposed or explicitly open architecture is not authorization to choose silently.
 - Use the change-impact matrix to inspect callers, consumers, host wiring, tests, and downstream docs before editing.
 - Follow the tool-neutral agent work cycle: discover, classify, analyze impact, plan, implement, verify, and reconcile knowledge.
+- Apply the universal security impact screen before editing docs or governance. A standards, context, ADR, roadmap-skill, dependency, workflow, or agent-evaluation change can be security-relevant even when it does not change product code.
 - Run `npm run docs:check` after documentation-heavy work.
 - Every README must keep the AI documentation reminder that points updates toward related ADRs, architecture docs, context packs, and README files.
 
@@ -50,6 +51,7 @@
 - `docs/standards/documentation-standards.md` - canonical documentation hierarchy and update rules.
 - `docs/standards/ai-agent-development-standards.md` - required development cycle, scope controls, safety rules, and completion evidence.
 - `docs/standards/change-impact-matrix.md` - boundary-specific inspection, update, and verification requirements.
+- `docs/standards/security-by-design-standards.md` - mandatory security impact disposition, proportional threat/control review, secure rollback, and evidence rules.
 - `docs/standards/documentation-metadata-standards.md` - minimal canonical metadata and evidence rules.
 - `docs/standards/agent-support-evaluation-standards.md` - deterministic harness checks and reproducible model-in-loop evaluation rules.
 - `docs/adr/decision-readiness.md` - current decision gates for architecture-sensitive work.
@@ -69,4 +71,4 @@
 ## Prompt Assembly Notes
 
 - Typical set: `index` + `docs-standards`.
-- Add one scope-specific pack (`architecture`, `runtime`, `desktop-host`, `server-host`, `persistence-storage`) based on the change surface.
+- Add one scope-specific pack (`architecture`, `security`, `runtime`, `desktop-host`, `server-host`, `persistence-storage`) based on the change surface and security impact disposition.

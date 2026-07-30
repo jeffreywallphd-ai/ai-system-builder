@@ -2,22 +2,17 @@ import { useMemo, useState } from "react";
 import {
   SystemBuilderWorkspace,
   SystemManagementWorkspace,
-  SystemBuildReleaseWorkflow,
-  SystemDataRunTest,
-  SystemReviewRunTest,
-  SystemDeploymentWorkflow,
+  SystemBuildTestModal,
+  SystemPublishWorkspace,
 } from "../../../../../modules/ui/shared/system-builder";
+import type {
+  SystemBuilderRecord,
+  SystemBuilderRevision,
+} from "../../../../../modules/contracts/system-builder";
 import { TabbedPanel } from "../components/ui/TabbedPanel";
-import { AssetPlansTab } from "../features/asset-composition/components/AssetPlansTab";
-import { createDesktopAssetCompositionClient } from "../features/asset-composition/api/desktopAssetCompositionClient";
-import { createDesktopEffectiveAssetProjectionsClient } from "../features/effective-asset-projections/api/desktopEffectiveAssetProjectionsClient";
-import { ConversationRunTestTab } from "../features/conversations/components/ConversationRunTestTab";
 import { createDesktopSystemBuilderClient } from "../features/system-builder/api/desktopSystemBuilderClient";
 import { createDesktopSystemBuildClient } from "../features/system-builder/api/desktopSystemBuildClient";
-
-import { createDesktopSystemDataClient } from "../features/system-builder/api/desktopSystemDataClient";
-import { createDesktopSystemReviewClient } from "../features/system-builder/api/desktopSystemReviewClient";
-import { createDesktopSystemDeploymentClient } from "../features/system-builder/api/desktopSystemDeploymentClient";
+import { createDesktopSystemPublishedLifecycleClient } from "../features/system-builder/api/desktopSystemPublishedLifecycleClient";
 export interface SystemBuilderPageProps {
   readonly workspaceId: string;
   readonly workspaceName: string;
@@ -28,23 +23,17 @@ export function SystemBuilderPage({
 }: SystemBuilderPageProps) {
   const client = useMemo(() => createDesktopSystemBuilderClient(), []);
   const buildClient = useMemo(() => createDesktopSystemBuildClient(), []);
-  const compositionClient = useMemo(
-    () => createDesktopAssetCompositionClient(),
-    [],
-  );
-  const projectionClient = useMemo(
-    () => createDesktopEffectiveAssetProjectionsClient(),
-    [],
-  );
-  const dataClient = useMemo(() => createDesktopSystemDataClient(), []);
-  const reviewClient = useMemo(() => createDesktopSystemReviewClient(), []);
-  const deploymentClient = useMemo(
-    () => createDesktopSystemDeploymentClient(),
+  const lifecycleClient = useMemo(
+    () => createDesktopSystemPublishedLifecycleClient(),
     [],
   );
   const [activeTabId, setActiveTabId] = useState("compose");
   const [composeSystemId, setComposeSystemId] = useState<string>();
   const [activeSystemsRevision, setActiveSystemsRevision] = useState(0);
+  const [buildTarget, setBuildTarget] = useState<{
+    readonly system: SystemBuilderRecord;
+    readonly revision: SystemBuilderRevision;
+  }>();
   return (
     <section className="ui-stack ui-stack--sm" aria-labelledby="systems-title">
       <header className="ui-stack ui-stack--sm">
@@ -86,62 +75,31 @@ export function SystemBuilderPage({
                 client={client}
                 initialSystemId={composeSystemId}
                 activeSystemsRevision={activeSystemsRevision}
-                onBuildAndTest={(systemId) => {
-                  setComposeSystemId(systemId);
-                  setActiveTabId("build-release");
-                }}
+                onBuildAndTest={setBuildTarget}
               />
             ),
           },
           {
-            id: "plans",
-            label: "Plans",
+            id: "publish",
+            label: "Publish",
             content: (
-              <AssetPlansTab
+              <SystemPublishWorkspace
                 workspaceId={workspaceId}
-                client={compositionClient}
-                projectionClient={projectionClient}
-              />
-            ),
-          },
-          {
-            id: "build-release",
-            label: "Build & Release",
-            content: (
-              <SystemBuildReleaseWorkflow
-                workspaceId={workspaceId}
-                systemBuilderClient={client}
                 buildClient={buildClient}
-                defaultDeploymentProfile="local-desktop"
+                lifecycleClient={lifecycleClient}
+                visualStartNotice="The system opened in its own window."
               />
-            ),
-          },
-          {
-            id: "run-test",
-            label: "Run & Test",
-            content: (
-              <div className="ui-stack ui-stack--md">
-                <ConversationRunTestTab workspaceId={workspaceId} />
-                <SystemDataRunTest
-                  workspaceId={workspaceId}
-                  client={dataClient}
-                  buildClient={buildClient}
-                />
-                <SystemReviewRunTest
-                  workspaceId={workspaceId}
-                  client={reviewClient}
-                  buildClient={buildClient}
-                />
-                <SystemDeploymentWorkflow
-                  workspaceId={workspaceId}
-                  buildClient={buildClient}
-                  deploymentClient={deploymentClient}
-                  deploymentProfiles={["local-desktop"]}
-                />
-              </div>
             ),
           },
         ]}
+      />
+      <SystemBuildTestModal
+        open={Boolean(buildTarget)}
+        workspaceId={workspaceId}
+        system={buildTarget?.system}
+        revision={buildTarget?.revision}
+        buildClient={buildClient}
+        onClose={() => setBuildTarget(undefined)}
       />
     </section>
   );

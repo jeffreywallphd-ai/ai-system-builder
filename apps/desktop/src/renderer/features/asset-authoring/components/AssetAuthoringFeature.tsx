@@ -9,6 +9,7 @@ import {
   AssetDerivedCustomizationEditor,
   PanelHeading,
   TermWithHint,
+  TransientNotificationPublisher,
   type AssetCustomizationTargetSelection,
 } from "../../../../../../../modules/ui/shared";
 import { createDesktopAssetAuthoringClient } from "../api/desktopAssetAuthoringClient";
@@ -126,6 +127,8 @@ export function AssetAuthoringFeature({
   const [summaries, setSummaries] = useState<RowVm[]>([]);
   const [summariesUnavailable, setSummariesUnavailable] = useState(false);
   const [message, setMessage] = useState("");
+  const contextualMessage = message === "Some data is not available yet." || message === "Name is required.";
+  const successfulMessage = ["Draft published.", "Draft changes saved.", "Saved as draft."].includes(message);
   const [name, setName] = useState("");
   const [summary, setSummary] = useState("");
   const [description, setDescription] = useState("");
@@ -355,7 +358,8 @@ export function AssetAuthoringFeature({
           )}
         </ul>
       )}
-      {message ? <p>{message}</p> : null}
+      {contextualMessage ? <p role="alert">{message}</p> : null}
+      <TransientNotificationPublisher message={!contextualMessage ? message : undefined} title={successfulMessage ? "Asset authoring updated" : "Asset authoring needs attention"} tone={successfulMessage ? "success" : "error"} source="Asset Authoring" workspaceId={workspaceId} />
     </section>
   );
 }

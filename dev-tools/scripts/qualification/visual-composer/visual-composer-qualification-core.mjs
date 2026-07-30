@@ -29,14 +29,20 @@ export function resolveVisualComposerQualificationPaths(repoRoot, runId) {
     "visual-composer",
   );
   const runRoot = resolve(qualificationRoot, "runs", runId);
+  const isolatedDataId = createHash("sha256")
+    .update(runId)
+    .digest("hex")
+    .slice(0, 16);
+  const isolatedDataRoot = resolve(qualificationRoot, "d", isolatedDataId);
   assertContainedPath(qualificationRoot, runRoot);
+  assertContainedPath(qualificationRoot, isolatedDataRoot);
   return {
     qualificationRoot,
     runRoot,
     evidencePath: resolve(runRoot, "evidence.json"),
-    desktopDataRoot: resolve(runRoot, "desktop-user-data"),
+    desktopDataRoot: resolve(isolatedDataRoot, "desktop"),
     thinStorageRoot: resolve(runRoot, "thin-storage"),
-    thinRuntimeRoot: resolve(runRoot, "thin-runtime"),
+    thinRuntimeRoot: resolve(isolatedDataRoot, "thin-runtime"),
   };
 }
 

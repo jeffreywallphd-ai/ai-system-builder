@@ -31,7 +31,7 @@ function service(overrides: {
     { getExecutionRunById: async () => undefined } as never,
     {
       approvalRepository: { getExecutionApprovalById: async () => ({ id: 'a.1', approvalStatus: 'approved' }) },
-      runtimeReferenceRepository: { getExecutionRuntimeReferenceById: async () => overrides.runtimeReference === null ? undefined : overrides.runtimeReference ?? { id: 'rr.1', status: 'supported', capabilityKind: 'text-generation', runtimeKind: 'python-sidecar' } },
+      runtimeReferenceRepository: { getExecutionRuntimeReferenceById: async () => overrides.runtimeReference === null ? undefined : overrides.runtimeReference ?? { id: 'rr.1', status: 'supported', capabilityKind: 'text-generation', runtimeKind: 'python-sidecar', selectedModelRecordId: 'model.chat.local' } },
       approvalValidityService: { isValidForInvocation: async () => overrides.validity ?? { valid: true } },
       hostCapabilities: { submitTurn: overrides.hostSubmit ?? 'supported', cancelTurn: 'unsupported', retryTurn: 'unsupported', streaming: false },
     } as never,

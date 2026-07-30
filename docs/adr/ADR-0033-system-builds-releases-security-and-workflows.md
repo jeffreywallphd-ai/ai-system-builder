@@ -20,6 +20,15 @@ System Builder needs CRUD, revision-safe composition editing, deterministic vali
 - Initial workflow assets form a finite, typed, acyclic orchestration language over approved actions, conditions, mappings, validation, and bounded error branches. Arbitrary shell commands, dynamic code loading, recursion, unbounded loops, self-modifying graphs, and implicit network/filesystem access are prohibited.
 - Preview/run/deploy consumes an approved immutable release through existing readiness and controlled-execution boundaries. Runtime sessions, runs, deployments, health, and logs remain operational records.
 - Local and managed builders share contracts. Desktop uses SQLite/artifact storage and qualified local builders; managed shapes use PostgreSQL/object storage and isolated workers. Thin clients never build or execute privileged logic locally.
+- The non-technical Build & test surface is a narrow guided command: application
+  code re-reads the exact saved revision and injects host-owned deployment,
+  capability, trust, ABI, and toolchain policy. Renderer, API, and IPC callers
+  cannot override those fields.
+- Publish uses an application-owned systems/build-version projection and requires
+  explicit confirmation. Release approval still requires the expected lock
+  digest, re-verifies every referenced artifact, and creates an immutable,
+  content-addressed release. Publishing does not install, activate, deploy, or
+  execute the system.
 
 ## Consequences
 

@@ -23,3 +23,10 @@ IPC channel semantics are intentionally narrow:
 - channel bindings pair `operation` with derived channel value and explicit kind
 - request/error/response factories take that binding so operation identity is not passed independently
 - success/failure result semantics are composed from `modules/contracts/transport`
+
+Operation contracts also own boundary validation that must be repeated by the
+receiving process. Desktop artifact uploads require an explicit workspace id,
+an actual non-empty `Uint8Array`, and the shared 64 MiB upload maximum. Artifact
+publication requires an explicit workspace id and preserves explicit repository
+creation approval/visibility. These constraints prevent preload or renderer
+callers from bypassing application context through structurally similar objects.

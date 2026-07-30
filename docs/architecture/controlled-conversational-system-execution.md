@@ -1,7 +1,7 @@
 # Controlled Conversational System Execution
 
 - Status: current
-- Related decisions: `docs/adr/ADR-0023-controlled-conversational-system-execution.md`
+- Related decisions: `docs/adr/ADR-0023-controlled-conversational-system-execution.md`, `docs/adr/ADR-0039-dedicated-system-runtime-data-plane.md`
 - Verification: `docs/architecture/architecture-verification.md`
 
 ## Purpose
@@ -124,6 +124,48 @@ All controlled conversational execution records avoid credentials, secrets, raw 
 
 Default model: one conversation session has many turns; each assistant-generating turn creates one execution run with one or more attempts.
 
+## Runtime data placement
+
+An installed published system has one opaque runtime-instance identity and a
+dedicated physical database. Conversation sessions, turns, messages, assistant
+responses, operation records, and release-bound system data use repositories
+composed from that exact runtime session. Platform deployment/release/audit
+records remain in the control plane. Neither renderer nor conversation input can
+select a file, database, role, connection string, or another runtime instance.
+
+Stop closes the data session without erasing the transcript. Compatible release
+migration is explicit and stopped-state only; clone installation allocates a new
+database. Uninstall retains data until a separate confirmed deletion operation.
+
+## Published desktop runtime session
+
+For a published visual system, the user's explicit lifecycle **Start** action is
+the session-scoped approval to interact with the exact approved release. Start
+revalidates the immutable release, release-bound model revision, active runtime
+instance, deployment state, and host capability before it prepares the sidecar
+and opens or focuses a dedicated Electron window. The renderer cannot supply or
+replace any of those identities.
+
+The lifecycle read model performs the same fail-closed readiness screen before
+offering Start or Activate. A legacy immutable release with no exact model and
+interaction binding is explained as requiring a corrected, newly published
+build; a missing legacy runtime allocation requires explicit reinstall only
+when the release itself is otherwise valid. Neither case is repaired by
+silently mutating release evidence or inventing model authority.
+
+The runtime window uses its own sandboxed, nonpersistent partition and a minimal
+preload that exposes only bounded transcript reads and message submission. Main
+accepts only the exact live main frame registered to that runtime session, then
+uses application conversation services composed over the instance database.
+Navigation, popup creation, permission requests, Node integration, arbitrary
+IPC, and renderer-selected launch targets are denied. A preparation or window
+failure is sanitized and compensates by stopping the runtime.
+
+Stop closes the window and its application conversation session before closing
+runtime database handles. Restart reopens the same retained conversation. The
+builder's preview remains inert, and the published runtime never falls back to
+the former in-page modal.
+
 ## Approval and eligibility boundary
 
 Execution plan preparation remains preview-only and non-executing.
@@ -138,6 +180,10 @@ Initial approval flow:
 
 Initial policy: approval is valid for the active conversation session only while source execution plan and runtime readiness binding remain unchanged and valid. Any stale/changed inputs invalidate approval and block new invocations pending re-review.
 
+This reviewed-plan flow applies to builder testing. Published lifecycle execution
+uses the separate exact-release Start session above; it does not convert a
+published release into ambient or renderer-controlled authority.
+
 ## Initial statuses
 
 - Conversation session: `draft`, `awaiting-approval`, `approved`, `active`, `blocked`, `stale`, `invalid`, `closed`, `archived`.
@@ -149,7 +195,7 @@ Initial policy: approval is valid for the active conversation session only while
 
 ## First supported runnable slice
 
-The first supported slice is a conversational text-generation system with a valid execution plan, valid runtime readiness binding, safe configuration references, user text input, assistant text response result, and conversation association.
+The first supported slice is a conversational text-generation system with a valid execution plan, valid runtime readiness binding, an exact release-bound workspace model record, safe configuration references, user text input, assistant text response result, and conversation association.
 
 Not in the initial slice: tools, retrieval, external actions, image/audio IO, arbitrary workflow graph execution.
 
@@ -166,6 +212,15 @@ Use narrow invocation/cancellation/progress/result ports behind application-faci
 - `ExecutionResultSinkPort`
 
 The implemented first adapter path is the Python conversational text-generation runtime adapter. Server and desktop host composition wire a conversational adapter catalog, runtime guard, and invocation port into the shared conversation execution services. The adapter supports runtime references for the Python sidecar with `text-generation` capability, invokes the Python worker `conversation-text-generation` task, and returns a bounded assistant text result through the controlled turn orchestration path.
+
+The selected model originates on the composed message-composer instance, is
+resolved by the workspace model authority during validation and build, and is
+frozen into the approved release with a model-revision digest. Activation and
+start revalidate that exact record. The invocation runtime reference carries
+only its normalized model-record identity; the Python adapter resolves it again
+and sends only the authority-owned runtime `modelId` to the worker. A missing,
+malformed, stale, incompatible, or cross-workspace record blocks before worker
+submission and does not persist an accepted turn.
 
 This adapter path is a supported implementation of the first conversational slice, not a general runtime execution permission. It still requires reviewed execution-plan identity, source verification, approval validity, runtime readiness/runtime guard success, and host submit support before a turn may run. The adapter does not currently advertise progress or cancellation capability; cancel, retry, and streaming remain unsupported unless an application/runtime path genuinely supports them.
 
@@ -196,6 +251,9 @@ The conversational run workspace provides conversation history, composer,
 assistant response area, safe diagnostics, approval state, and explicit
 association to the selected execution plan. Its visible transcript is bounded
 and exposed as an ordered live `role="log"`; message input is length-bounded.
+The controlled reference composition starts with an empty history and one typed
+`persisted-only` composer-to-history interaction, so only stored user and
+assistant messages appear in the transcript.
 Cancel and retry controls appear only when both the application read model and
 host client advertise the operation.
 
@@ -262,3 +320,9 @@ Runtime records are operational records only and are never reusable asset substi
   uses real execution-plan identity, bounded accessible transcript rendering,
   safe nested transport-envelope normalization, and truthful unsupported
   capability copy; the former UI correctness gap is closed.
+
+## Protected invocation context
+
+The application invocation seam carries an explicit approved source chain: workspace, conversation session, reviewed execution plan, composition plan, runtime-readiness binding, execution approval, and runtime-reference identities. Conversation-session approval validity re-verifies those records before adapter selection; the identity bundle is association context, not independent proof or a persisted replacement for source records.
+
+Materialized system instructions, visible turn content, bounded history, and supported generation settings may cross only the protected context port and remain transient in memory. The context validator requires exact provider-neutral structure and matching source/runtime associations, rejects unexpected payload fields and high-confidence raw secret/executable dumps, and runs before the invocation adapter. Operational run, event, approval, provenance, diagnostic, and session-summary records must not receive this protected context or raw adapter request/response data.

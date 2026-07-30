@@ -48,10 +48,12 @@ import {
 
 function createUseCases() {
   return {
+    senderTrust: { isTrustedSender: () => true },
     browseArtifactsUseCase: { execute: testDouble.fn() },
     browseUnregisteredArtifactsUseCase: { execute: testDouble.fn() },
     registerUnregisteredArtifactUseCase: { execute: testDouble.fn() },
     deleteUnregisteredArtifactUseCase: { execute: testDouble.fn() },
+    deleteRegisteredArtifactUseCase: { execute: testDouble.fn() },
     readArtifactDetailUseCase: { execute: testDouble.fn() },
     readArtifactContentUseCase: { execute: testDouble.fn() },
     artifactMediaViewRetrieval: { retrieveArtifactViewerMediaByStorageKey: testDouble.fn() },
@@ -241,6 +243,7 @@ describe("registerArtifactBrowserIpc", () => {
     await handlers.get(DESKTOP_ARTIFACT_PUBLISH_REQUEST_CHANNEL.value)?.(
       {},
       createDesktopArtifactPublishRequest({
+        workspaceId: "workspace-a",
         artifactId: "uploads/a.png",
         target: {
           provider: "huggingface",
@@ -299,16 +302,23 @@ describe("registerArtifactBrowserIpc", () => {
       { storageKey: "uploads/a.png" },
       { requestId: undefined, correlationId: undefined, workspaceId: "workspace-a" },
     );
-    expect(dependencies.publishArtifactToRepoUseCase.execute).toHaveBeenCalledWith({
-      artifactId: "uploads/a.png",
-      target: {
-        provider: "huggingface",
-        repository: "openai/demo",
-        path: "images/a.png",
-        revision: undefined,
+    expect(dependencies.publishArtifactToRepoUseCase.execute).toHaveBeenCalledWith(
+      {
+        artifactId: "uploads/a.png",
+        target: {
+          provider: "huggingface",
+          repository: "openai/demo",
+          path: "images/a.png",
+          revision: undefined,
+        },
+        mediaType: undefined,
       },
-      mediaType: undefined,
-    });
+      {
+        requestId: undefined,
+        correlationId: undefined,
+        workspaceId: "workspace-a",
+      },
+    );
     expect(dependencies.verifyPublishedArtifactBackingUseCase.execute).toHaveBeenCalledWith({
       artifactId: "uploads/a.png",
     });
@@ -412,6 +422,7 @@ describe("registerArtifactBrowserIpc", () => {
 
   it("maps publish and publish-verify failures to operation-specific IPC response channels", async () => {
     const publishRequest = createDesktopArtifactPublishRequest({
+      workspaceId: "workspace-a",
       artifactId: "uploads/a.png",
       target: {
         provider: "huggingface",
@@ -431,16 +442,19 @@ describe("registerArtifactBrowserIpc", () => {
       correlationId: "corr-verify",
     });
 
-    const publishHandler = createDesktopArtifactPublishIpcHandler({
-      execute: testDouble.fn().mockResolvedValue({
-        ok: false,
-        error: {
-          code: "validation",
-          message: "target.path must be set",
-          details: { field: "target.path" },
-        },
-      }),
-    });
+    const publishHandler = createDesktopArtifactPublishIpcHandler(
+      {
+        execute: testDouble.fn().mockResolvedValue({
+          ok: false,
+          error: {
+            code: "validation",
+            message: "target.path must be set",
+            details: { field: "target.path" },
+          },
+        }),
+      },
+      { isTrustedSender: () => true },
+    );
     const publishVerifyHandler = createDesktopArtifactPublishVerifyIpcHandler({
       execute: testDouble.fn().mockResolvedValue({
         ok: false,
@@ -483,5 +497,38 @@ describe("registerArtifactBrowserIpc", () => {
 
     expect(publishFailure.channel).not.toBe(DESKTOP_ARTIFACT_BROWSE_RESPONSE_CHANNEL.value);
     expect(verifyFailure.channel).not.toBe(DESKTOP_ARTIFACT_MEDIA_VIEW_RESPONSE_CHANNEL.value);
+  });
+
+  it("rejects untrusted publication senders before invoking provider work", async () => {
+    const execute = testDouble.fn();
+    const handler = createDesktopArtifactPublishIpcHandler(
+      { execute },
+      { isTrustedSender: () => false },
+    );
+    const request = createDesktopArtifactPublishRequest(
+      {
+        workspaceId: "workspace-a",
+        artifactId: "uploads/a.png",
+        target: {
+          provider: "huggingface",
+          repository: "openai/demo",
+          path: "images/a.png",
+        },
+        boundary: { host: "desktop", source: "desktop.renderer" },
+      },
+      { requestId: "req-untrusted-publish" },
+    );
+
+    const response = await handler({ sender: "spoofed" }, request);
+
+    expect(response).toMatchObject({
+      ok: false,
+      error: {
+        code: "forbidden",
+        message: "The desktop IPC sender is not trusted.",
+      },
+      requestId: "req-untrusted-publish",
+    });
+    expect(execute).not.toHaveBeenCalled();
   });
 });

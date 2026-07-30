@@ -13,6 +13,8 @@ import {
 import { resolvePostgresPoolConfig } from "../client/createPostgresPool";
 import { openPostgresDatabase } from "../postgres-database";
 import { createStructuredSystemDataRepository } from "../../system-data";
+import { runSystemBuildPersistenceConformance } from "../../system-build/tests/system-build-persistence-conformance";
+import { runSystemDeploymentPersistenceConformance } from "../../system-deployment/tests/system-deployment-persistence-conformance";
 
 const liveDatabaseUrl = process.env.TEST_POSTGRES_URL?.trim();
 
@@ -208,6 +210,23 @@ test(
       assert.equal(counter?.value.count, 24);
       assert.equal(new Set(counter?.value.writers).size, 24);
       assert.equal((await database.checkHealth()).healthy, true);
+      const systemBuildConformance = await runSystemBuildPersistenceConformance(
+        database.documents,
+        `postgres-${randomUUID()}`,
+      );
+      assert.equal(systemBuildConformance.buildCount, 36);
+      assert.equal(systemBuildConformance.releaseCount, 1);
+      assert.equal(systemBuildConformance.restartSafe, true);
+      const systemDeploymentConformance =
+        await runSystemDeploymentPersistenceConformance(
+          database.documents,
+          `postgres-${randomUUID()}`,
+        );
+      assert.equal(systemDeploymentConformance.currentConflict, true);
+      assert.equal(systemDeploymentConformance.retainedDeploymentCount, 2);
+      assert.equal(systemDeploymentConformance.retainedRunCount, 1);
+      assert.equal(systemDeploymentConformance.restartSafe, true);
+      assert.equal(systemDeploymentConformance.workspaceIsolation, true);
     } finally {
       await orgA.deleteDocument(namespace, "shared");
       await orgB.deleteDocument(namespace, "shared");

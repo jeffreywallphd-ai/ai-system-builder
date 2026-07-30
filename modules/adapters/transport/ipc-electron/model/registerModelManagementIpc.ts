@@ -2,6 +2,7 @@ import type {
   BrowseModelsUseCase,
   DeleteModelRecordUseCase,
   DownloadModelUseCase,
+  ModelDownloadTasksUseCase,
   GetModelDetailsUseCase,
   ListModelsUseCase,
   SaveModelReferenceUseCase,
@@ -28,6 +29,14 @@ import {
   DESKTOP_MODEL_TRAIN_STATUS_RESPONSE_CHANNEL,
   DESKTOP_MODEL_RECORD_UPDATE_RESPONSE_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_CANCEL_RESPONSE_CHANNEL,
   DESKTOP_MODEL_REFERENCE_SAVE_RESPONSE_CHANNEL,
   DESKTOP_MODEL_VALIDATE_REQUEST_CHANNEL,
   DESKTOP_MODEL_VALIDATE_RESPONSE_CHANNEL,
@@ -41,6 +50,10 @@ import {
   createDesktopModelTrainStatusSuccessResponse,
   createDesktopModelRecordUpdateSuccessResponse,
   createDesktopModelDownloadSuccessResponse,
+  createDesktopModelDownloadStartSuccessResponse,
+  createDesktopModelDownloadReadSuccessResponse,
+  createDesktopModelDownloadListSuccessResponse,
+  createDesktopModelDownloadCancelSuccessResponse,
   createDesktopModelReferenceSaveSuccessResponse,
   createDesktopModelValidateSuccessResponse,
   createDesktopModelPublishSuccessResponse,
@@ -65,6 +78,14 @@ import {
   type DesktopModelRecordUpdateResponse,
   type DesktopModelDownloadRequest,
   type DesktopModelDownloadResponse,
+  type DesktopModelDownloadStartRequest,
+  type DesktopModelDownloadStartResponse,
+  type DesktopModelDownloadReadRequest,
+  type DesktopModelDownloadReadResponse,
+  type DesktopModelDownloadListRequest,
+  type DesktopModelDownloadListResponse,
+  type DesktopModelDownloadCancelRequest,
+  type DesktopModelDownloadCancelResponse,
   type DesktopModelReferenceSaveRequest,
   type DesktopModelReferenceSaveResponse,
   type DesktopModelValidateRequest,
@@ -77,11 +98,13 @@ import { isRuntimeCapabilityUnavailableError } from "../../../../application/ser
 
 export interface RegisterModelManagementIpcDependencies {
   ipcMain: IpcMainHandlePort;
+  reportOperationFailure?: ModelOperationFailureReporter;
   browseModelsUseCase: Pick<BrowseModelsUseCase, "execute">;
   getModelDetailsUseCase: Pick<GetModelDetailsUseCase, "execute">;
   listModelsUseCase: Pick<ListModelsUseCase, "execute">;
   saveModelReferenceUseCase: Pick<SaveModelReferenceUseCase, "execute">;
   downloadModelUseCase: Pick<DownloadModelUseCase, "execute">;
+  modelDownloadTasksUseCase?: Pick<ModelDownloadTasksUseCase, "start" | "read" | "list" | "cancel">;
   updateModelRecordUseCase: Pick<UpdateModelRecordUseCase, "execute">;
   deleteModelRecordUseCase: Pick<DeleteModelRecordUseCase, "execute">;
   trainModelUseCase: Pick<TrainModelUseCase, "execute" | "read">;
@@ -89,10 +112,30 @@ export interface RegisterModelManagementIpcDependencies {
   publishModelUseCase: Pick<PublishModelUseCase, "execute">;
 }
 
+export type ModelOperationFailureReporter = (
+  operation: string,
+  error: unknown,
+) => void | Promise<void>;
+
+async function reportOperationFailure(
+  reporter: ModelOperationFailureReporter | undefined,
+  operation: string,
+  error: unknown,
+): Promise<void> {
+  try {
+    await reporter?.(operation, error);
+  } catch {
+    // Diagnostics must not replace or disclose the original operation failure.
+  }
+}
+
 function toFailureResponse<
   TResponse,
   TOperation extends IpcOperation = IpcOperation,
-  TChannel extends IpcChannelValue<TOperation, "response"> = IpcChannelValue<TOperation, "response">,
+  TChannel extends IpcChannelValue<TOperation, "response"> = IpcChannelValue<
+    TOperation,
+    "response"
+  >,
 >(
   channel: IpcChannel<TOperation, "response", TChannel>,
   error: unknown,
@@ -103,135 +146,327 @@ function toFailureResponse<
     createIpcError(
       channel,
       unavailable ? "unavailable" : "internal",
-      unavailable ? "Required runtime capability is not ready." : "Model management request failed.",
-      { details: unavailable ? error.details : undefined, requestId: request.requestId, correlationId: request.correlationId },
+      unavailable
+        ? "Required runtime capability is not ready."
+        : "Model management request failed.",
+      {
+        details: unavailable ? error.details : undefined,
+        requestId: request.requestId,
+        correlationId: request.correlationId,
+      },
     ),
   ) as TResponse;
 }
 
-export function createBrowseModelsIpcHandler(useCase: Pick<BrowseModelsUseCase, "execute">) {
-  return async (_event: unknown, request: DesktopModelBrowseRequest): Promise<DesktopModelBrowseResponse> => {
+export function createBrowseModelsIpcHandler(
+  useCase: Pick<BrowseModelsUseCase, "execute">,
+) {
+  return async (
+    _event: unknown,
+    request: DesktopModelBrowseRequest,
+  ): Promise<DesktopModelBrowseResponse> => {
     try {
       const result = await useCase.execute(request.payload);
-      return createDesktopModelBrowseSuccessResponse(result, { requestId: request.requestId, correlationId: request.correlationId });
+      return createDesktopModelBrowseSuccessResponse(result, {
+        requestId: request.requestId,
+        correlationId: request.correlationId,
+      });
     } catch (error) {
-      return toFailureResponse<DesktopModelBrowseResponse>(DESKTOP_MODEL_BROWSE_RESPONSE_CHANNEL, error, request);
+      return toFailureResponse<DesktopModelBrowseResponse>(
+        DESKTOP_MODEL_BROWSE_RESPONSE_CHANNEL,
+        error,
+        request,
+      );
     }
   };
 }
 
-export function createGetModelDetailsIpcHandler(useCase: Pick<GetModelDetailsUseCase, "execute">) {
-  return async (_event: unknown, request: DesktopModelDetailsReadRequest): Promise<DesktopModelDetailsReadResponse> => {
+export function createGetModelDetailsIpcHandler(
+  useCase: Pick<GetModelDetailsUseCase, "execute">,
+) {
+  return async (
+    _event: unknown,
+    request: DesktopModelDetailsReadRequest,
+  ): Promise<DesktopModelDetailsReadResponse> => {
     try {
       const result = await useCase.execute(request.payload);
-      return createDesktopModelDetailsReadSuccessResponse(result, { requestId: request.requestId, correlationId: request.correlationId });
+      return createDesktopModelDetailsReadSuccessResponse(result, {
+        requestId: request.requestId,
+        correlationId: request.correlationId,
+      });
     } catch (error) {
-      return toFailureResponse<DesktopModelDetailsReadResponse>(DESKTOP_MODEL_DETAILS_READ_RESPONSE_CHANNEL, error, request);
+      return toFailureResponse<DesktopModelDetailsReadResponse>(
+        DESKTOP_MODEL_DETAILS_READ_RESPONSE_CHANNEL,
+        error,
+        request,
+      );
     }
   };
 }
 
-export function createListModelsIpcHandler(useCase: Pick<ListModelsUseCase, "execute">) {
-  return async (_event: unknown, request: DesktopModelListRequest): Promise<DesktopModelListResponse> => {
+export function createListModelsIpcHandler(
+  useCase: Pick<ListModelsUseCase, "execute">,
+  reporter?: ModelOperationFailureReporter,
+) {
+  return async (
+    _event: unknown,
+    request: DesktopModelListRequest,
+  ): Promise<DesktopModelListResponse> => {
+    let result;
     try {
-      const result = await useCase.execute(request.payload);
-      return createDesktopModelListSuccessResponse(result, { requestId: request.requestId, correlationId: request.correlationId });
+      result = await useCase.execute(request.payload);
     } catch (error) {
-      return toFailureResponse<DesktopModelListResponse>(DESKTOP_MODEL_LIST_RESPONSE_CHANNEL, error, request);
+      await reportOperationFailure(reporter, "listModels.execute", error);
+      return toFailureResponse<DesktopModelListResponse>(
+        DESKTOP_MODEL_LIST_RESPONSE_CHANNEL,
+        error,
+        request,
+      );
+    }
+
+    try {
+      return createDesktopModelListSuccessResponse(result, {
+        requestId: request.requestId,
+        correlationId: request.correlationId,
+      });
+    } catch (error) {
+      await reportOperationFailure(reporter, "listModels.response", error);
+      return toFailureResponse<DesktopModelListResponse>(
+        DESKTOP_MODEL_LIST_RESPONSE_CHANNEL,
+        error,
+        request,
+      );
     }
   };
 }
 
-export function createSaveModelReferenceIpcHandler(useCase: Pick<SaveModelReferenceUseCase, "execute">) {
-  return async (_event: unknown, request: DesktopModelReferenceSaveRequest): Promise<DesktopModelReferenceSaveResponse> => {
+export function createSaveModelReferenceIpcHandler(
+  useCase: Pick<SaveModelReferenceUseCase, "execute">,
+) {
+  return async (
+    _event: unknown,
+    request: DesktopModelReferenceSaveRequest,
+  ): Promise<DesktopModelReferenceSaveResponse> => {
     try {
       const result = await useCase.execute(request.payload);
-      return createDesktopModelReferenceSaveSuccessResponse(result, { requestId: request.requestId, correlationId: request.correlationId });
+      return createDesktopModelReferenceSaveSuccessResponse(result, {
+        requestId: request.requestId,
+        correlationId: request.correlationId,
+      });
     } catch (error) {
-      return toFailureResponse<DesktopModelReferenceSaveResponse>(DESKTOP_MODEL_REFERENCE_SAVE_RESPONSE_CHANNEL, error, request);
+      return toFailureResponse<DesktopModelReferenceSaveResponse>(
+        DESKTOP_MODEL_REFERENCE_SAVE_RESPONSE_CHANNEL,
+        error,
+        request,
+      );
     }
   };
 }
 
-export function createDownloadModelIpcHandler(useCase: Pick<DownloadModelUseCase, "execute">) {
-  return async (_event: unknown, request: DesktopModelDownloadRequest): Promise<DesktopModelDownloadResponse> => {
+export function createDownloadModelIpcHandler(
+  useCase: Pick<DownloadModelUseCase, "execute">,
+) {
+  return async (
+    _event: unknown,
+    request: DesktopModelDownloadRequest,
+  ): Promise<DesktopModelDownloadResponse> => {
     try {
       const result = await useCase.execute(request.payload);
-      return createDesktopModelDownloadSuccessResponse(result, { requestId: request.requestId, correlationId: request.correlationId });
+      return createDesktopModelDownloadSuccessResponse(result, {
+        requestId: request.requestId,
+        correlationId: request.correlationId,
+      });
     } catch (error) {
-      return toFailureResponse<DesktopModelDownloadResponse>(DESKTOP_MODEL_DOWNLOAD_RESPONSE_CHANNEL, error, request);
+      return toFailureResponse<DesktopModelDownloadResponse>(
+        DESKTOP_MODEL_DOWNLOAD_RESPONSE_CHANNEL,
+        error,
+        request,
+      );
     }
   };
 }
 
-export function createUpdateModelRecordIpcHandler(useCase: Pick<UpdateModelRecordUseCase, "execute">) {
-  return async (_event: unknown, request: DesktopModelRecordUpdateRequest): Promise<DesktopModelRecordUpdateResponse> => {
+export function createStartModelDownloadIpcHandler(useCase: Pick<ModelDownloadTasksUseCase, "start">) {
+  return async (_event: unknown, request: DesktopModelDownloadStartRequest): Promise<DesktopModelDownloadStartResponse> => {
     try {
-      const result = await useCase.execute(request.payload);
-      return createDesktopModelRecordUpdateSuccessResponse(result, { requestId: request.requestId, correlationId: request.correlationId });
+      return createDesktopModelDownloadStartSuccessResponse(await useCase.start(request.payload), request);
     } catch (error) {
-      return toFailureResponse<DesktopModelRecordUpdateResponse>(DESKTOP_MODEL_RECORD_UPDATE_RESPONSE_CHANNEL, error, request);
+      return toFailureResponse<DesktopModelDownloadStartResponse>(DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL, error, request);
     }
   };
 }
 
-export function createDeleteModelRecordIpcHandler(useCase: Pick<DeleteModelRecordUseCase, "execute">) {
-  return async (_event: unknown, request: DesktopModelRecordDeleteRequest): Promise<DesktopModelRecordDeleteResponse> => {
+export function createReadModelDownloadIpcHandler(useCase: Pick<ModelDownloadTasksUseCase, "read">) {
+  return async (_event: unknown, request: DesktopModelDownloadReadRequest): Promise<DesktopModelDownloadReadResponse> => {
     try {
-      const result = await useCase.execute(request.payload);
-      return createDesktopModelRecordDeleteSuccessResponse(result, { requestId: request.requestId, correlationId: request.correlationId });
+      return createDesktopModelDownloadReadSuccessResponse(await useCase.read(request.payload), request);
     } catch (error) {
-      return toFailureResponse<DesktopModelRecordDeleteResponse>(DESKTOP_MODEL_RECORD_DELETE_RESPONSE_CHANNEL, error, request);
+      return toFailureResponse<DesktopModelDownloadReadResponse>(DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL, error, request);
     }
   };
 }
 
-
-export function createTrainModelIpcHandler(useCase: Pick<TrainModelUseCase, "execute">) {
-  return async (_event: unknown, request: DesktopModelTrainRequest): Promise<DesktopModelTrainResponse> => {
+export function createListModelDownloadsIpcHandler(useCase: Pick<ModelDownloadTasksUseCase, "list">) {
+  return async (_event: unknown, request: DesktopModelDownloadListRequest): Promise<DesktopModelDownloadListResponse> => {
     try {
-      const result = await useCase.execute(request.payload);
-      return createDesktopModelTrainSuccessResponse(result, { requestId: request.requestId, correlationId: request.correlationId });
+      return createDesktopModelDownloadListSuccessResponse(await useCase.list(request.payload), request);
     } catch (error) {
-      return toFailureResponse<DesktopModelTrainResponse>(DESKTOP_MODEL_TRAIN_RESPONSE_CHANNEL, error, request);
+      return toFailureResponse<DesktopModelDownloadListResponse>(DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL, error, request);
     }
   };
 }
 
-export function createReadModelTrainingStatusIpcHandler(useCase: Pick<TrainModelUseCase, "read">) {
-  return async (_event: unknown, request: DesktopModelTrainStatusRequest): Promise<DesktopModelTrainStatusResponse> => {
+export function createCancelModelDownloadIpcHandler(useCase: Pick<ModelDownloadTasksUseCase, "cancel">) {
+  return async (_event: unknown, request: DesktopModelDownloadCancelRequest): Promise<DesktopModelDownloadCancelResponse> => {
+    try {
+      return createDesktopModelDownloadCancelSuccessResponse(await useCase.cancel(request.payload), request);
+    } catch (error) {
+      return toFailureResponse<DesktopModelDownloadCancelResponse>(DESKTOP_MODEL_DOWNLOAD_CANCEL_RESPONSE_CHANNEL, error, request);
+    }
+  };
+}
+
+export function createUpdateModelRecordIpcHandler(
+  useCase: Pick<UpdateModelRecordUseCase, "execute">,
+) {
+  return async (
+    _event: unknown,
+    request: DesktopModelRecordUpdateRequest,
+  ): Promise<DesktopModelRecordUpdateResponse> => {
+    try {
+      const result = await useCase.execute(request.payload);
+      return createDesktopModelRecordUpdateSuccessResponse(result, {
+        requestId: request.requestId,
+        correlationId: request.correlationId,
+      });
+    } catch (error) {
+      return toFailureResponse<DesktopModelRecordUpdateResponse>(
+        DESKTOP_MODEL_RECORD_UPDATE_RESPONSE_CHANNEL,
+        error,
+        request,
+      );
+    }
+  };
+}
+
+export function createDeleteModelRecordIpcHandler(
+  useCase: Pick<DeleteModelRecordUseCase, "execute">,
+) {
+  return async (
+    _event: unknown,
+    request: DesktopModelRecordDeleteRequest,
+  ): Promise<DesktopModelRecordDeleteResponse> => {
+    try {
+      const result = await useCase.execute(request.payload);
+      return createDesktopModelRecordDeleteSuccessResponse(result, {
+        requestId: request.requestId,
+        correlationId: request.correlationId,
+      });
+    } catch (error) {
+      return toFailureResponse<DesktopModelRecordDeleteResponse>(
+        DESKTOP_MODEL_RECORD_DELETE_RESPONSE_CHANNEL,
+        error,
+        request,
+      );
+    }
+  };
+}
+
+export function createTrainModelIpcHandler(
+  useCase: Pick<TrainModelUseCase, "execute">,
+) {
+  return async (
+    _event: unknown,
+    request: DesktopModelTrainRequest,
+  ): Promise<DesktopModelTrainResponse> => {
+    try {
+      const result = await useCase.execute(request.payload);
+      return createDesktopModelTrainSuccessResponse(result, {
+        requestId: request.requestId,
+        correlationId: request.correlationId,
+      });
+    } catch (error) {
+      return toFailureResponse<DesktopModelTrainResponse>(
+        DESKTOP_MODEL_TRAIN_RESPONSE_CHANNEL,
+        error,
+        request,
+      );
+    }
+  };
+}
+
+export function createReadModelTrainingStatusIpcHandler(
+  useCase: Pick<TrainModelUseCase, "read">,
+) {
+  return async (
+    _event: unknown,
+    request: DesktopModelTrainStatusRequest,
+  ): Promise<DesktopModelTrainStatusResponse> => {
     try {
       const result = await useCase.read(request.payload.runId);
-      return createDesktopModelTrainStatusSuccessResponse(result, { requestId: request.requestId, correlationId: request.correlationId });
+      return createDesktopModelTrainStatusSuccessResponse(result, {
+        requestId: request.requestId,
+        correlationId: request.correlationId,
+      });
     } catch (error) {
-      return toFailureResponse<DesktopModelTrainStatusResponse>(DESKTOP_MODEL_TRAIN_STATUS_RESPONSE_CHANNEL, error, request);
+      return toFailureResponse<DesktopModelTrainStatusResponse>(
+        DESKTOP_MODEL_TRAIN_STATUS_RESPONSE_CHANNEL,
+        error,
+        request,
+      );
     }
   };
 }
 
-export function createValidateModelIpcHandler(useCase: Pick<ValidateModelUseCase, "execute">) {
-  return async (_event: unknown, request: DesktopModelValidateRequest): Promise<DesktopModelValidateResponse> => {
+export function createValidateModelIpcHandler(
+  useCase: Pick<ValidateModelUseCase, "execute">,
+) {
+  return async (
+    _event: unknown,
+    request: DesktopModelValidateRequest,
+  ): Promise<DesktopModelValidateResponse> => {
     try {
       const result = await useCase.execute(request.payload);
-      return createDesktopModelValidateSuccessResponse(result, { requestId: request.requestId, correlationId: request.correlationId });
+      return createDesktopModelValidateSuccessResponse(result, {
+        requestId: request.requestId,
+        correlationId: request.correlationId,
+      });
     } catch (error) {
-      return toFailureResponse<DesktopModelValidateResponse>(DESKTOP_MODEL_VALIDATE_RESPONSE_CHANNEL, error, request);
+      return toFailureResponse<DesktopModelValidateResponse>(
+        DESKTOP_MODEL_VALIDATE_RESPONSE_CHANNEL,
+        error,
+        request,
+      );
     }
   };
 }
 
-export function createPublishModelIpcHandler(useCase: Pick<PublishModelUseCase, "execute">) {
-  return async (_event: unknown, request: DesktopModelPublishRequest): Promise<DesktopModelPublishResponse> => {
+export function createPublishModelIpcHandler(
+  useCase: Pick<PublishModelUseCase, "execute">,
+) {
+  return async (
+    _event: unknown,
+    request: DesktopModelPublishRequest,
+  ): Promise<DesktopModelPublishResponse> => {
     try {
       const result = await useCase.execute(request.payload);
-      return createDesktopModelPublishSuccessResponse(result, { requestId: request.requestId, correlationId: request.correlationId });
+      return createDesktopModelPublishSuccessResponse(result, {
+        requestId: request.requestId,
+        correlationId: request.correlationId,
+      });
     } catch (error) {
-      return toFailureResponse<DesktopModelPublishResponse>(DESKTOP_MODEL_PUBLISH_RESPONSE_CHANNEL, error, request);
+      return toFailureResponse<DesktopModelPublishResponse>(
+        DESKTOP_MODEL_PUBLISH_RESPONSE_CHANNEL,
+        error,
+        request,
+      );
     }
   };
 }
 
-export function registerModelManagementIpc(dependencies: RegisterModelManagementIpcDependencies): void {
+export function registerModelManagementIpc(
+  dependencies: RegisterModelManagementIpcDependencies,
+): void {
   dependencies.ipcMain.handle(
     DESKTOP_MODEL_BROWSE_REQUEST_CHANNEL.value,
     createBrowseModelsIpcHandler(dependencies.browseModelsUseCase),
@@ -242,7 +477,10 @@ export function registerModelManagementIpc(dependencies: RegisterModelManagement
   );
   dependencies.ipcMain.handle(
     DESKTOP_MODEL_LIST_REQUEST_CHANNEL.value,
-    createListModelsIpcHandler(dependencies.listModelsUseCase),
+    createListModelsIpcHandler(
+      dependencies.listModelsUseCase,
+      dependencies.reportOperationFailure,
+    ),
   );
   dependencies.ipcMain.handle(
     DESKTOP_MODEL_REFERENCE_SAVE_REQUEST_CHANNEL.value,
@@ -252,6 +490,12 @@ export function registerModelManagementIpc(dependencies: RegisterModelManagement
     DESKTOP_MODEL_DOWNLOAD_REQUEST_CHANNEL.value,
     createDownloadModelIpcHandler(dependencies.downloadModelUseCase),
   );
+  if (dependencies.modelDownloadTasksUseCase) {
+    dependencies.ipcMain.handle(DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL.value, createStartModelDownloadIpcHandler(dependencies.modelDownloadTasksUseCase));
+    dependencies.ipcMain.handle(DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL.value, createReadModelDownloadIpcHandler(dependencies.modelDownloadTasksUseCase));
+    dependencies.ipcMain.handle(DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL.value, createListModelDownloadsIpcHandler(dependencies.modelDownloadTasksUseCase));
+    dependencies.ipcMain.handle(DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL.value, createCancelModelDownloadIpcHandler(dependencies.modelDownloadTasksUseCase));
+  }
   dependencies.ipcMain.handle(
     DESKTOP_MODEL_RECORD_UPDATE_REQUEST_CHANNEL.value,
     createUpdateModelRecordIpcHandler(dependencies.updateModelRecordUseCase),

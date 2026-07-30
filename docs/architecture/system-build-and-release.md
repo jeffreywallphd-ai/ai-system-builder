@@ -39,6 +39,15 @@ A build lock contains exact digests/versions for:
 
 The lock excludes credentials, raw paths, environment secrets, provider payloads, and user-private runtime content.
 
+For a controlled conversational release, the lock also contains one exact
+workspace model-record binding and one typed composer-to-history interaction.
+The model evidence includes a deterministic digest of the authority-owned model
+revision, not provider credentials or local paths. Release activation and each
+runtime start re-read the immutable release, re-resolve the model record in the
+target workspace, and compare that digest. Missing, changed, unavailable,
+cross-workspace, or incompatible bindings fail closed and require correction or
+a new build; a host never substitutes a default model.
+
 ## Build pipeline
 
 1. Freeze and normalize the requested system revision.
@@ -71,7 +80,19 @@ The same logical release may contain multiple target facets. A target activates 
 
 ## UI placement
 
-Systems owns system list, editor, validation, build, releases, and Run & Test. Assets owns Catalog and Studio. Operational deployment/runtime status remains separate from design/build records. Desktop and thin-client render the same safe read models and command outcomes.
+Systems owns Manage, Compose, and Publish. Compose Connections is the
+system-specific relationship workflow, so Systems has no duplicate Plans
+page. Build & test is a focused Compose modal for one exact saved revision.
+Publish lists active systems and application-projected build versions, is the
+only Systems surface that requests immutable release approval, and owns routine
+published-build lifecycle controls. Install also activates; eligible actions are
+derived from authoritative state; starting a visual system opens its exact
+trusted declarative interface automatically; starting a service has no UI.
+There is no standalone Run & Test tab and no renderer-entered deployment or run
+identifier. Assets owns
+Catalog and Studio. Operational deployment/runtime status remains separate from
+design/build records. Desktop and thin-client render the same safe read models
+and command outcomes.
 
 ## Current implementation status
 
@@ -93,8 +114,9 @@ both desktop and server hosts:
   evidence distinguish same-environment `repeatable` results from a future
   independently reproduced result;
 - workspace-scoped structured persistence, authenticated API routes, desktop
-  IPC/preload, and shared desktop/thin-client Build & Release UX use the same
-  application behavior; and
+  IPC/preload, and shared desktop/thin-client Build & test and Publish UX use
+  the same application behavior; renderer requests cannot select deployment,
+  capability, trust, ABI, or toolchain policy; and
 - cancelled, invalid, unresolved, incompatible, secret-bearing, policy-missing,
   and tampered builds fail without activating partial outputs.
 
@@ -103,13 +125,113 @@ or interrupted output may be retained as quarantined evidence or garbage
 collected by operator retention policy; it is never a release until approval
 re-verifies every referenced artifact.
 
-The separate `system-deployment` family now consumes an approved release,
+The guided build boundary is intentionally narrower than the low-level build
+command. `PrepareGuidedSystemBuildUseCase` re-reads and evaluates the exact
+saved revision and resolves every referenced implementation against the
+host-owned profile before it may report `ready`, while
+`RequestGuidedSystemBuildUseCase` injects that same host-owned build profile.
+Current System Foundation 3.0.0 definitions have exact, separately addressable
+trusted implementation releases and backing resources; historical 1.0.0 and
+2.0.0 releases remain immutable and available. `ListSystemPublicationWorkspaceUseCase` supplies stable,
+plain-language build-version and publication status projections. API and IPC
+allowlists reject renderer-supplied technical policy fields. Publication still
+uses the existing authorized approval operation with the expected lock digest;
+the application layer re-verifies artifacts and derives the immutable release.
+
+## Qualification, limits, and recovery
+
+- `npm run test:visual-composer` qualifies the supported packaged Windows
+  Electron and local Chrome targets through fresh isolated stores. Packaged
+  qualification rebuilds the current worktree before launch. The browser run
+  uses an ephemeral least-privilege credential with token enforcement and an
+  isolated dedicated qualification organization; its credential is not retained
+  in traces and the stored credential record is removed at teardown. The
+  sanitized report is exact-environment evidence, not a claim for other
+  browsers, operating systems, physical assistive technology, or production
+  capacity.
+- The shared persistence conformance scenario retains successful, failed, and
+  cancelled attempts across a representative 36-build history and verifies
+  workspace isolation, exact associations, optimistic conflicts, immutable and
+  idempotent releases, deterministic newest-first publication projection,
+  transaction rollback, and restart-safe reads. Thirty-six builds is a
+  regression workload, not a product maximum or performance service level.
+- SQLite runs that scenario in Electron's production database runtime together
+  with health, online backup, explicit restore confirmation, and rollback
+  checks. PostgreSQL parity is claimed only when the same scenario runs against
+  an isolated disposable `TEST_POSTGRES_URL`; a skipped live test is not
+  evidence. Managed backup/PITR and production load remain environment-owned
+  qualification.
+- Builds reject revisions above 5,000 instances and retain at most 200 bounded
+  diagnostics in a build result. Larger supported histories and capacity
+  targets require measured environment evidence rather than raising these
+  safety bounds casually.
+- Interrupted, failed, or cancelled attempts never become releases. On local
+  recovery, stop writes and follow
+  [Persistence Operations](../operations/persistence-operations.md) for health,
+  verified backup, explicit restore, and post-restore release/artifact checks.
+  Managed operators must restore the matching structured database and
+  content-addressed artifacts, then rerun integrity verification before
+  publication. Rollback does not bypass authorization, revocation, lock, or
+  artifact checks.
+
+The separate `system-deployment` family consumes an approved release,
 re-verifies every artifact at install, resolves the intersection of frozen
 facet compatibility, and records organization/workspace-scoped install,
-activation, readiness, rollback, revocation, run, and audit state. Desktop maps
-the three closed reference kinds to the trusted local profile; server maps
-campus/corporate and cloud shapes to their managed profiles. Thin client is a
-control surface only. Imported or authored UI/logic, independently qualified
-rebuilds, arbitrary provider execution, and a qualified container/WASI sandbox
-are not implied and remain unavailable until their explicit adapters and
-environment evidence exist.
+activation, readiness, rollback, revocation, run, and audit state. Its retained
+records are operational history; uninstall retires the one current deployment
+pointer for an exact organization, workspace, release, and host target without
+deleting earlier deployments, runs, or audit evidence.
+
+Routine published-build controls use the narrower
+`system-published-lifecycle` application facade. A renderer supplies only the
+exact release ID, one projected action, and the opaque revision it last read.
+The application resolves deployment and run identifiers, injects host policy,
+capabilities, secrets, egress, profile, target, and authority, and rejects stale
+or ineligible actions. The projected action states are:
+
+| Current state                                              | Available actions                                                                    |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Not installed                                              | Install                                                                              |
+| Active and stopped                                         | Start, Deactivate, Uninstall                                                         |
+| Inactive and stopped                                       | Activate, Uninstall                                                                  |
+| Running                                                    | Stop                                                                                 |
+| Interrupted stop                                           | Stop                                                                                 |
+| Interrupted uninstall                                      | Uninstall                                                                            |
+| Stopped with invalid release binding or runtime allocation | Safe cleanup actions only; Start/Activate are withheld with an actionable diagnostic |
+| Other transitional state                                   | No action until authoritative reconciliation completes                               |
+
+Install atomically creates the current deployment and activates it. Start
+persists a long-lived `running` session instead of reporting a completed
+handoff. Stop persists `stopping` before invoking the runtime so interruption
+cannot falsely project a stopped system. Uninstall is permitted only while
+stopped, persists `uninstalling`, deactivates runtime authority, marks the
+record `uninstalled`, and atomically removes its current pointer. Conflicting
+install requests converge on the already-current exact deployment; stale
+revisions and cross-workspace identities fail closed.
+
+Desktop maps trusted exact releases to the `local-desktop` target. Server maps
+campus/corporate and cloud shapes to host-owned managed targets. Both verify
+that the immutable release still exists with its exact digest before activation
+or start. A visual run may return a bounded launch descriptor containing only
+the exact release, digest, runtime profile, and host-owned surface kind; a
+service run has no UI descriptor. Thin client remains a command and safe-read
+surface and never becomes execution authority.
+
+Lifecycle projection revalidates the exact release binding and opaque runtime
+instance before presenting Start or Activate. Historical immutable chatbot
+releases without a selected model must be rebuilt and republished; they are not
+silently mutated or assigned a default. A valid historical release whose
+installation predates runtime-instance allocation may be explicitly uninstalled
+and reinstalled to receive a new isolated allocation. Failed actions remain
+visible after the authoritative status refresh instead of appearing to do
+nothing.
+
+Explicit Deactivate and Uninstall cleanup remains available for deployments
+created before runtime-instance records existed. Those actions may close and
+retain an exact associated instance when one is found, but they do not create,
+guess, or attach a data allocation during cleanup.
+
+Imported or authored UI/logic, independently qualified rebuilds, arbitrary
+provider execution, and a qualified container/WASI sandbox are not implied and
+remain unavailable until their explicit adapters and environment evidence
+exist.

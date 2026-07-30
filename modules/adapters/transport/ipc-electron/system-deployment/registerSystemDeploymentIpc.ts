@@ -6,7 +6,7 @@ import {
   createIpcSuccessResponse,
 } from "../../../../contracts/ipc";
 import { normalizeAssetImplementationDeploymentProfile } from "../../../../contracts/asset-implementation";
-import { createOrganizationId } from "../../../../contracts/organization";
+import type { OrganizationId } from "../../../../contracts/organization";
 import type { SystemDeploymentCapabilityPolicy } from "../../../../contracts/system-deployment";
 import {
   normalizeSystemDeploymentId,
@@ -21,20 +21,38 @@ export interface RegisterSystemDeploymentIpcDependencies extends Omit<
   "app"
 > {
   readonly ipcMain: IpcMainHandlePort;
+  readonly authority: {
+    readonly organizationId: OrganizationId;
+    readonly actorId: string;
+  };
 }
-
-const LOCAL_ORGANIZATION_ID = createOrganizationId("local");
 
 export function registerSystemDeploymentIpc(
   d: RegisterSystemDeploymentIpcDependencies,
 ): void {
+  if (d.lifecycleRead && d.lifecycleInvoke) {
+    handle(d, "lifecycleRead", (payload) =>
+      d.lifecycleRead!.execute({
+        ...context(d, payload),
+        releaseId: normalizeSystemReleaseId(required(payload.releaseId)),
+      }),
+    );
+    handle(d, "lifecycleInvoke", (payload) =>
+      d.lifecycleInvoke!.execute({
+        ...context(d, payload),
+        releaseId: normalizeSystemReleaseId(required(payload.releaseId)),
+        action: lifecycleAction(payload.action),
+        expectedRevision: required(payload.expectedRevision),
+      }),
+    );
+  }
   handle(d, "install", async (payload) => {
     const profile = normalizeAssetImplementationDeploymentProfile(
       required(payload.deploymentProfile),
     );
     if (!d.host.deploymentProfiles.includes(profile)) throw new Error();
     return d.install.execute({
-      ...context(payload),
+      ...context(d, payload),
       deploymentId: normalizeSystemDeploymentId(required(payload.deploymentId)),
       releaseId: normalizeSystemReleaseId(required(payload.releaseId)),
       deploymentProfile: profile,
@@ -50,7 +68,7 @@ export function registerSystemDeploymentIpc(
   for (const operation of ["activate", "health", "rollback", "revoke"] as const)
     handle(d, operation, (payload) =>
       d[operation].execute({
-        ...context(payload),
+        ...context(d, payload),
         deploymentId: normalizeSystemDeploymentId(
           required(payload.deploymentId),
         ),
@@ -58,13 +76,13 @@ export function registerSystemDeploymentIpc(
     );
   handle(d, "read", (payload) =>
     d.read.execute({
-      ...context(payload),
+      ...context(d, payload),
       deploymentId: normalizeSystemDeploymentId(required(payload.deploymentId)),
     }),
   );
   handle(d, "list", (payload) =>
     d.list.execute({
-      ...context(payload),
+      ...context(d, payload),
       ...(optional(payload.releaseId)
         ? { releaseId: normalizeSystemReleaseId(optional(payload.releaseId)!) }
         : {}),
@@ -72,7 +90,7 @@ export function registerSystemDeploymentIpc(
   );
   handle(d, "startRun", (payload) =>
     d.startRun.execute({
-      ...context(payload),
+      ...context(d, payload),
       deploymentId: normalizeSystemDeploymentId(required(payload.deploymentId)),
       runId: normalizeSystemDeploymentRunId(required(payload.runId)),
       requestedCapabilities: strings(payload.requestedCapabilities, 64),
@@ -82,13 +100,13 @@ export function registerSystemDeploymentIpc(
   );
   handle(d, "cancelRun", (payload) =>
     d.cancelRun.execute({
-      ...context(payload),
+      ...context(d, payload),
       runId: normalizeSystemDeploymentRunId(required(payload.runId)),
     }),
   );
   handle(d, "listRuns", (payload) =>
     d.listRuns.execute({
-      ...context(payload),
+      ...context(d, payload),
       ...(optional(payload.deploymentId)
         ? {
             deploymentId: normalizeSystemDeploymentId(
@@ -103,7 +121,7 @@ export function registerSystemDeploymentIpc(
   );
   handle(d, "listAudit", (payload) =>
     d.listAudit.execute({
-      ...context(payload),
+      ...context(d, payload),
       deploymentId: normalizeSystemDeploymentId(required(payload.deploymentId)),
       ...(integer(payload.limit) !== undefined
         ? { limit: integer(payload.limit) }
@@ -176,11 +194,14 @@ function handle(
   });
 }
 
-function context(payload: Record<string, unknown>) {
+function context(
+  d: RegisterSystemDeploymentIpcDependencies,
+  payload: Record<string, unknown>,
+) {
   return {
-    organizationId: LOCAL_ORGANIZATION_ID,
+    organizationId: d.authority.organizationId,
     workspaceId: createWorkspaceId(required(payload.workspaceId)),
-    actorId: "local-user",
+    actorId: required(d.authority.actorId),
   };
 }
 function parsePolicy(value: unknown): SystemDeploymentCapabilityPolicy {
@@ -222,3 +243,9 @@ const requiredInteger = (value: unknown) => {
 };
 const integer = (value: unknown) =>
   value === undefined ? undefined : requiredInteger(Number(value));
+const lifecycleAction = (value: unknown) => {
+  const action = required(value);
+  if (!["install", "activate", "deactivate", "start", "stop", "uninstall"].includes(action))
+    throw new Error();
+  return action as "install" | "activate" | "deactivate" | "start" | "stop" | "uninstall";
+};

@@ -1,3 +1,4 @@
+import type { Request } from "express";
 import type {
   ArchiveSystemBuilderSystemUseCase,
   CloneSystemBuilderSystemUseCase,
@@ -8,6 +9,7 @@ import type {
   ListSystemBuilderManagementUseCase,
   ListSystemBuilderTemplatesUseCase,
   ListSystemBuilderComposerAssetsUseCase,
+  ListSystemBuilderModelOptionsUseCase,
   ReadSystemBuilderComposerAssetUseCase,
   ReadSystemBuilderRevisionUseCase,
   ReadSystemBuilderSystemUseCase,
@@ -50,11 +52,11 @@ import {
   normalizeAssetSlotId,
 } from "../../../../contracts/asset";
 import { createWorkspaceId } from "../../../../contracts/workspace";
+import { requireExpressAuthenticatedPrincipalId } from "../security/expressAuthContext";
 
 interface RequestLike {
   body?: unknown;
   query?: Record<string, unknown>;
-  securityContext?: { principal?: { id?: string } };
 }
 interface ResponseLike {
   status(code: number): ResponseLike;
@@ -87,6 +89,7 @@ export interface RegisterSystemBuilderApiRoutesDependencies {
   listRevisions: Pick<ListSystemBuilderRevisionsUseCase, "execute">;
   listComposerAssets: Pick<ListSystemBuilderComposerAssetsUseCase, "execute">;
   readComposerAsset: Pick<ReadSystemBuilderComposerAssetUseCase, "execute">;
+  listModelOptions: Pick<ListSystemBuilderModelOptionsUseCase, "execute">;
   previewLayoutChange: Pick<PreviewSystemBuilderLayoutChangeUseCase, "execute">;
   previewFoundationUpgrade: Pick<
     PreviewSystemBuilderFoundationUpgradeUseCase,
@@ -204,6 +207,23 @@ export function registerSystemBuilderApiRoutes(
         res,
         "readComposerAsset",
         "The composer asset detail query is invalid.",
+      );
+    }
+  });
+  d.app.get("/api/systems/composer/model-options", async (req, res) => {
+    try {
+      result(
+        res,
+        "listModelOptions",
+        await d.listModelOptions.execute({
+          workspaceId: createWorkspaceId(required(req.query?.workspaceId)),
+        }),
+      );
+    } catch {
+      invalid(
+        res,
+        "listModelOptions",
+        "The model options query is invalid.",
       );
     }
   });
@@ -499,7 +519,7 @@ function failure(
     );
 }
 const actor = (request: RequestLike): string =>
-  request.securityContext?.principal?.id?.trim() || "authenticated-user";
+  requireExpressAuthenticatedPrincipalId(request as Request);
 const record = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new Error();

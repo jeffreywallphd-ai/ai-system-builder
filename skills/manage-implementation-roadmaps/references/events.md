@@ -8,6 +8,27 @@ The engine stores a timestamp and SHA-256 fingerprint in history. It stores
 summaries, not the full event payload. Commands in evidence are descriptive strings;
 the engine never executes them.
 
+## Security evidence convention
+
+The event schema stores a structured security impact in discovery, then uses
+acceptance criteria, risks, plans, and evidence without duplicating repository
+security policy. Follow the target repository's security-by-design standard:
+
+- `securityImpact.disposition` is `not-security-relevant` with a concrete summary,
+  or `security-relevant` with non-empty assets, trust boundaries, abuse cases,
+  controls, and verification plus explicit residual risks;
+- every increment includes `security-impact-reviewed` or a more specific security
+  acceptance criterion and maps it to a planned chunk;
+- security-relevant research records abuse/failure risks, and its plan names focused
+  denial/failure-path checks plus applicable completion gates;
+- evidence uses sanitized summaries and synthetic fixtures. Never store secrets,
+  credentials, protected prompts, private payloads, personal data, paths, raw logs,
+  or exploitable production details in events or artifacts.
+
+The engine rejects new discovery without `securityImpact` and rejects every new or
+revised increment that lacks `security-impact-reviewed` or a more specific
+`security-*` acceptance criterion. Existing stored roadmap state remains readable.
+
 ## Preparation events
 
 ### `discovery-recorded`
@@ -24,6 +45,16 @@ the engine never executes them.
     }
   ],
   "constraints": ["Preserve the existing public contract."],
+  "securityImpact": {
+    "disposition": "security-relevant",
+    "summary": "Host wiring changes a trust boundary.",
+    "assets": ["Authorized application behavior and safe diagnostics"],
+    "trustBoundaries": ["Application orchestration to host adapter composition"],
+    "abuseCases": ["An unavailable policy dependency falls back to permissive behavior"],
+    "controls": ["Fail-closed composition and sanitized failures"],
+    "verification": ["Focused denial and adapter-failure tests"],
+    "residualRisks": ["Controlled host qualification remains required"]
+  },
   "decisionRequired": true
 }
 ```
@@ -100,9 +131,17 @@ Use only after explicit user approval.
           "id": "contract-tests",
           "description": "Contract behavior passes unit tests.",
           "qualification": "local"
+        },
+        {
+          "id": "security-impact-reviewed",
+          "description": "Security impact, controls, denial behavior, rollback, and residual risk are reviewed and evidenced.",
+          "qualification": "local"
         }
       ],
-      "verification": ["Run the focused contract test."],
+      "verification": [
+        "Run the focused contract test.",
+        "Review the security disposition and run the mapped denial/failure-path test."
+      ],
       "rollback": "Remove the additive contract before consumers depend on it.",
       "excluded": ["Host wiring"],
       "allowPendingQualification": false
@@ -157,9 +196,17 @@ obtain a new `roadmap-approved` event before resuming implementation.
           "id": "experience-works",
           "description": "The complete experience works across supported hosts.",
           "qualification": "local"
+        },
+        {
+          "id": "security-impact-reviewed",
+          "description": "Security impact and safe rollback are reviewed and evidenced for the revised slice.",
+          "qualification": "local"
         }
       ],
-      "verification": ["Run focused tests and applicable completion gates."],
+      "verification": [
+        "Run focused tests and applicable completion gates.",
+        "Review the security disposition and safe rollback evidence."
+      ],
       "rollback": "Revert the integrated experience without changing preserved increments.",
       "excluded": ["Unrelated scope"],
       "allowPendingQualification": false
@@ -192,7 +239,10 @@ invalidates the prior roadmap approval.
       "url": "modules/application/ports/README.md"
     }
   ],
-  "risks": ["A host adapter may still need backward-compatible defaults."]
+  "risks": [
+    "A host adapter may still need backward-compatible defaults.",
+    "Security impact is relevant: an unavailable authorization or composition dependency must fail closed without exposing internal details."
+  ]
 }
 ```
 
@@ -215,10 +265,13 @@ Every criterion must be assigned to one or more planned chunks.
         "id": "contract-use-case",
         "title": "Contract and use case",
         "outcome": "The behavior is callable through the application port.",
-        "criteriaIds": ["contract-tests"]
+        "criteriaIds": ["contract-tests", "security-impact-reviewed"]
       }
     ],
-    "focusedTests": ["Focused unit tests for the active chunk"],
+    "focusedTests": [
+      "Focused unit tests for the active chunk",
+      "Focused denial and sanitized failure-path tests for the changed trust boundary"
+    ],
     "completionTests": [
       "Applicable repository gates after every planned chunk is implemented"
     ],

@@ -267,6 +267,7 @@ describe("composeDesktopHost", () => {
 
     host.registerArtifactUploadIpc({
       ipcMain,
+      senderTrust: { isTrustedSender: () => true },
       storageRootDirectory,
       runtimeRootDirectory,
     });
@@ -609,7 +610,7 @@ describe("composeDesktopHost", () => {
     const previousBaseUrl = process.env.PYTHON_RUNTIME_BASE_URL;
     process.env.PYTHON_RUNTIME_COMMAND = "__missing_python_runtime_command__";
     process.env.PYTHON_RUNTIME_ARGS = "";
-    process.env.PYTHON_RUNTIME_BASE_URL = "http://127.0.0.1:1";
+    process.env.PYTHON_RUNTIME_BASE_URL = "http://127.0.0.1:49998";
 
     try {
       const host = composeDesktopHost();

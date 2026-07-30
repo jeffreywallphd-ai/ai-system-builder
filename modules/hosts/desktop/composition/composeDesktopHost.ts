@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { cpus, freemem, totalmem } from "node:os";
+import path from "node:path";
 import type { LoggingPort } from "../../../application/ports/logging";
 import type {
   ApplicationSecretsPort,
@@ -100,8 +101,23 @@ import { createLocalConversationRepositoryAdapters } from "../../../adapters/per
 import { createLocalExecutionRunRepositoryAdapters } from "../../../adapters/persistence/execution-runs";
 import { composeExecutionPlanServices } from "../../shared/composition/composeExecutionPlanServices";
 import { composeConversationExecutionServices } from "../../shared/composition/composeConversationExecutionServices";
+import { composeSystemPublishedConversationRuntime } from "../../shared/composition/composeSystemPublishedConversationRuntime";
+import {
+  createConversationWorkflowHandler,
+  createSystemDataWorkflowHandler,
+  createSystemDeploymentWorkflowHandler,
+  createSystemReviewWorkflowHandler,
+} from "../../../application/services/system-run-workflow";
+import { composeSystemRunWorkflow } from "../../shared/composition/composeSystemRunWorkflow";
 import { registerElectronIpc } from "../../../adapters/transport/ipc-electron/registerElectronIpc";
 import type { IpcMainHandlePort } from "../../../adapters/transport/ipc-electron/ipcMainHandlePort";
+import type { IpcSenderTrustPolicy } from "../../../adapters/transport/ipc-electron/ipcMainHandlePort";
+import { createJsonlSecurityAuditLogAdapter } from "../../../adapters/security/audit/createJsonlSecurityAuditLogAdapter";
+import {
+  createOrganizationId,
+  type LocalIdentityProfile,
+} from "../../../contracts/organization";
+import { composeDesktopWorkspaceAuthorization } from "./composeDesktopWorkspaceAuthorization";
 import {
   createLoggingConfig,
   type LoggingConfig,
@@ -122,6 +138,7 @@ import { recordDesktopMemorySnapshot } from "../diagnostics";
 import { createDesktopRuntimeReadinessService } from "./composeDesktopRuntimeReadiness";
 import {
   createDesktopFeatureLifecycleRegistry,
+  createDesktopFeatureFailureDetail,
   type DesktopFeatureDisposeReason,
   type DesktopFeatureDisposeResult,
   type DesktopFeatureLifecyclePolicy,
@@ -138,6 +155,10 @@ import {
   createPythonConversationalTextGenerationInvocationAdapter,
 } from "../../../adapters/runtime/conversational-text-generation";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
+import {
+  createLocalSqliteSystemRuntimeDatabaseAdapter,
+  type LocalSqliteSystemRuntimeDatabaseAdapter,
+} from "../../../adapters/persistence/system-runtime";
 import { composeSystemBuilder } from "../../shared/composition/composeSystemBuilder";
 import type { SystemBuildArtifactPort } from "../../../application/ports/system-build";
 import {
@@ -152,6 +173,12 @@ import {
   createDefaultSystemDeploymentPolicy,
 } from "../../shared/composition/composeSystemDeployment";
 import { createTrustedSystemDeploymentRuntimeAdapter } from "../../../adapters/runtime/system-deployment";
+import { SystemDeploymentReleaseBindingService } from "../../../application/services/system-deployment";
+import { normalizeSystemRuntimeInstanceId } from "../../../contracts/system-deployment";
+import {
+  createDesktopPublishedSystemRuntimeLifecycle,
+  type DesktopPublishedSystemRuntimeWindowPort,
+} from "./desktopPublishedSystemRuntimeLifecycle";
 export {
   createDesktopRuntimeReadinessService,
   type CreateDesktopRuntimeReadinessServiceOptions,
@@ -222,6 +249,7 @@ export interface ComposeDesktopHostLoggingOptions {
 }
 
 export interface ComposeDesktopHostOptions {
+  localIdentity?: LocalIdentityProfile;
   persistence?: {
     documents: StructuredDocumentStore;
     organizationDocuments?: StructuredDocumentStore;
@@ -235,6 +263,8 @@ export interface ComposeDesktopHostOptions {
     huggingFaceFetchImplementation?: HuggingFaceFetchImplementation;
   };
   settings?: { localSettingsFilePath?: string };
+  runtimeDataRootDirectory?: string;
+  runtimeDatabases?: LocalSqliteSystemRuntimeDatabaseAdapter;
   folderPicker?: {
     selectFolder: (options?: {
       title?: string;
@@ -245,8 +275,10 @@ export interface ComposeDesktopHostOptions {
 
 export interface RegisterDesktopArtifactUploadIpcOptions {
   ipcMain: IpcMainHandlePort;
+  senderTrust: IpcSenderTrustPolicy;
   storageRootDirectory: string;
   runtimeRootDirectory?: string;
+  systemRuntimeWindows?: DesktopPublishedSystemRuntimeWindowPort;
 }
 
 export interface DesktopHostComposition {
@@ -254,6 +286,7 @@ export interface DesktopHostComposition {
   loggingConfig: LoggingConfig;
   applicationSettings: ApplicationSettingsPort;
   applicationSecrets: ApplicationSecretsPort;
+  systemRuntimeDatabases?: LocalSqliteSystemRuntimeDatabaseAdapter;
   modelDefaultResolver: ModelDefaultResolverPort;
   getHuggingFaceTokenStatus: () => HuggingFaceTokenStatus;
   setHuggingFaceToken: (token: string) => HuggingFaceTokenStatus;
@@ -571,6 +604,14 @@ export function composeDesktopHost(
     },
   };
   let internalAssetRegistry: InternalAssetRegistryComposition | undefined;
+  const systemRuntimeDatabases =
+    options.runtimeDatabases ??
+    (options.runtimeDataRootDirectory
+      ? createLocalSqliteSystemRuntimeDatabaseAdapter({
+          dataRootDirectory: options.runtimeDataRootDirectory,
+          now: options.now,
+        })
+      : undefined);
   recordHostMemorySnapshot("desktop.host.compose.return");
 
   return {
@@ -578,6 +619,7 @@ export function composeDesktopHost(
     loggingConfig,
     applicationSettings,
     applicationSecrets,
+    systemRuntimeDatabases,
     modelDefaultResolver,
     powerSuspensionBlocker: lazyPowerSuspensionBlocker,
     getHuggingFaceTokenStatus: () => tokenConfigStore.getStatus(),
@@ -672,6 +714,21 @@ export function composeDesktopHost(
         },
       );
       const startupWorkspaceShell = getStartupWorkspaceShell();
+      const workspaceAuthorization =
+        options.persistence?.documents && options.localIdentity
+          ? composeDesktopWorkspaceAuthorization({
+              documents: options.persistence.documents,
+              localIdentity: options.localIdentity,
+              audit: createJsonlSecurityAuditLogAdapter(
+                path.join(
+                  registerOptions.storageRootDirectory,
+                  "security",
+                  "authorization-audit.jsonl",
+                ),
+              ),
+              now: options.now,
+            })
+          : undefined;
       const runtimeReadiness = createDesktopRuntimeReadinessService({
         readPythonSupervisorState: () => "stopped",
         readComfyUiLifecycleState: () => "uninitialized",
@@ -692,6 +749,7 @@ export function composeDesktopHost(
               loggingPort,
               now: options.now,
               workspaceShell: startupWorkspaceShell,
+              workspaceAuthorization,
               documents: organizationDocuments,
             });
         },
@@ -705,6 +763,8 @@ export function composeDesktopHost(
           return async () =>
             module.composeDesktopArtifactRemoteFeature({
               artifacts: await getArtifactFeatures(),
+              workspaceShell: startupWorkspaceShell,
+              workspaceAuthorization,
               loggingPort,
               now: options.now,
               tokenProvider: () => tokenConfigStore.getToken(),
@@ -865,13 +925,24 @@ export function composeDesktopHost(
             },
             assetRegistryRead: {
               listDefinitionCards: async (query) =>
-                (await getAssetFeatures()).assetRegistryRead.listDefinitionCards(
-                  query,
-                ),
+                (
+                  await getAssetFeatures()
+                ).assetRegistryRead.listDefinitionCards(query),
               readDefinitionDetail: async (reference, readOptions) =>
-                (await getAssetFeatures()).assetRegistryRead.readDefinitionDetail(
+                (
+                  await getAssetFeatures()
+                ).assetRegistryRead.readDefinitionDetail(
                   reference,
                   readOptions,
+                ),
+            },
+            modelRegistry: {
+              listModels: async (request) =>
+                (await getModelFeatures()).modelRegistry.listModels(request),
+              getModelRecord: async (workspaceId, modelRecordId) =>
+                (await getModelFeatures()).modelRegistry.getModelRecord(
+                  workspaceId,
+                  modelRecordId,
                 ),
             },
             generateSystemId: () => `system.${randomUUID()}`,
@@ -918,6 +989,19 @@ export function composeDesktopHost(
               },
               artifacts: systemBuildArtifacts,
               hasher: createSha256SystemBuildHasher(),
+              guidedProfile: {
+                id: "local-desktop",
+                label: "This computer",
+                deploymentProfile: "local-desktop",
+                availableCapabilities: [],
+                permittedTrustLevels: [
+                  "system-trusted",
+                  "organization-approved",
+                  "workspace-approved",
+                ],
+                hostApiVersion: "1.0.0",
+                toolchainProfile: "ai-system-builder/1.0.0",
+              },
               now: options.now,
             })
           : undefined;
@@ -931,8 +1015,16 @@ export function composeDesktopHost(
               now: options.now,
             })
           : undefined;
+      const systemDeploymentReleaseBindings =
+        systemBuild && systemBuilder
+          ? new SystemDeploymentReleaseBindingService({
+              builds: systemBuild.repository,
+              modelAuthority: systemBuilder.modelAuthority,
+              hasher: createSha256SystemBuildHasher(),
+            })
+          : undefined;
       const systemDeployment =
-        organizationDocuments && systemBuild
+        organizationDocuments && systemBuild && systemRuntimeDatabases
           ? composeSystemDeployment({
               documents: organizationDocuments,
               builds: systemBuild.repository,
@@ -940,7 +1032,21 @@ export function composeDesktopHost(
               runtime: createTrustedSystemDeploymentRuntimeAdapter({
                 deploymentProfiles: ["local-desktop"],
                 now: options.now,
+                verifyReferenceRelease: async (deployment) => {
+                  const release = await systemBuild.repository.readRelease(
+                    deployment.workspaceId,
+                    deployment.releaseId,
+                  );
+                  return (
+                    !!release &&
+                    release.releaseDigest === deployment.releaseDigest &&
+                    release.systemId !== undefined
+                  );
+                },
+                resolveReleaseBindings: (deployment) =>
+                  systemDeploymentReleaseBindings!.resolve(deployment),
               }),
+              runtimeDatabases: systemRuntimeDatabases,
               revocations: {
                 async listRevokedImplementationReleaseIds(
                   _workspaceId,
@@ -959,6 +1065,22 @@ export function composeDesktopHost(
               },
               platformPolicy: createDefaultSystemDeploymentPolicy(),
               generateAuditId: () => `system-deployment-audit.${randomUUID()}`,
+              generateRuntimeInstanceId: () =>
+                normalizeSystemRuntimeInstanceId(
+                  `system-runtime-instance.${randomUUID()}`,
+                ),
+              publishedLifecycle: {
+                systems: systemBuilder!.repository,
+                hostTargetId: "local-desktop",
+                deploymentProfile: "local-desktop",
+                hostApiVersion: "1.0.0",
+                hostCapabilities: [],
+                sandboxQualified: false,
+                generateDeploymentId: () => `system-deployment.${randomUUID()}`,
+                generateRunId: () => `system-deployment-run.${randomUUID()}`,
+                resolveReleaseBindings: (deployment) =>
+                  systemDeploymentReleaseBindings!.resolve(deployment),
+              },
               now: options.now,
             })
           : undefined;
@@ -1108,6 +1230,15 @@ export function composeDesktopHost(
             async invokeConversationTurn(request) {
               return createPythonConversationalTextGenerationInvocationAdapter(
                 (await getPythonRuntimeFoundation()).runtimePort,
+                {
+                  getModelRecord: (workspaceId, modelRecordId) =>
+                    getModelFeatures().then((features) =>
+                      features.modelRegistry.getModelRecord(
+                        workspaceId,
+                        modelRecordId,
+                      ),
+                    ),
+                },
               ).invokeConversationTurn(request);
             },
           },
@@ -1119,6 +1250,103 @@ export function composeDesktopHost(
           },
           now: options.now,
         });
+      const publishedConversationRuntime =
+        systemDeployment?.publishedConversationAuthority
+          ? composeSystemPublishedConversationRuntime({
+              authority: systemDeployment.publishedConversationAuthority,
+              runtimeRepositorySessions:
+                systemDeployment.runtimeRepositorySessions,
+              adapterCatalog: createPythonConversationalRuntimeAdapterCatalog(),
+              runtimeGuard: {
+                async getRuntimeStatus(adapterId) {
+                  return createPythonConversationalRuntimeGuard(
+                    (await getPythonRuntimeFoundation()).runtimePort,
+                  ).getRuntimeStatus(adapterId);
+                },
+              },
+              invocationPort: {
+                async invokeConversationTurn(request) {
+                  return createPythonConversationalTextGenerationInvocationAdapter(
+                    (await getPythonRuntimeFoundation()).runtimePort,
+                    {
+                      getModelRecord: (workspaceId, modelRecordId) =>
+                        getModelFeatures().then((features) =>
+                          features.modelRegistry.getModelRecord(
+                            workspaceId,
+                            modelRecordId,
+                          ),
+                        ),
+                    },
+                  ).invokeConversationTurn(request);
+                },
+              },
+              now: options.now,
+            })
+          : undefined;
+      const loadSystemReview = getSystemReview;
+      const systemRunWorkflow = composeSystemRunWorkflow({
+        handlers: [
+          createConversationWorkflowHandler({
+            executionPlans: executionPlanRepository,
+            conversations: conversationExecutionServices,
+            now: options.now,
+          }),
+          ...(systemBuild && systemData
+            ? [
+                createSystemDataWorkflowHandler({
+                  builds: systemBuild.repository,
+                  definitions: systemData.definitions,
+                  runtime: systemData.runtime,
+                  now: options.now,
+                }),
+              ]
+            : []),
+          ...(systemBuild && loadSystemReview
+            ? [
+                createSystemReviewWorkflowHandler({
+                  builds: systemBuild.repository,
+                  definitions: {
+                    resolve: async (workspaceId, releaseId) =>
+                      (await loadSystemReview()).definitions.resolve(
+                        workspaceId,
+                        releaseId,
+                      ),
+                  },
+                  runtime: {
+                    describe: async (query) =>
+                      (await loadSystemReview()).runtime.describe(query),
+                    browse: async (query) =>
+                      (await loadSystemReview()).runtime.browse(query),
+                    detail: async (query) =>
+                      (await loadSystemReview()).runtime.detail(query),
+                    preview: async (query) =>
+                      (await loadSystemReview()).runtime.preview(query),
+                    listAudit: async (query) =>
+                      (await loadSystemReview()).runtime.listAudit(query),
+                  },
+                  now: options.now,
+                }),
+              ]
+            : []),
+          ...(systemBuild && systemDeployment
+            ? [
+                createSystemDeploymentWorkflowHandler({
+                  builds: systemBuild.repository,
+                  useCases: systemDeployment.useCases,
+                  deploymentProfiles: ["local-desktop"],
+                  hostApiVersion: "1.0.0",
+                  hostCapabilities: [],
+                  sandboxQualified: false,
+                  installationPolicy: createDefaultSystemDeploymentPolicy(),
+                  generateDeploymentId: () =>
+                    `system-deployment.${randomUUID()}`,
+                  generateRunId: () => `system-deployment-run.${randomUUID()}`,
+                  now: options.now,
+                }),
+              ]
+            : []),
+        ],
+      });
       const runtimeReadinessV2 = {
         inventory: new RuntimeCapabilityInventoryService(
           runtimeInventoryRepository,
@@ -1235,6 +1463,7 @@ export function composeDesktopHost(
         },
         artifact: {
           ipcMain: registerOptions.ipcMain,
+          senderTrust: registerOptions.senderTrust,
           tokens: {
             getHuggingFaceTokenStatus: () => tokenConfigStore.getStatus(),
             setHuggingFaceToken: (token) => tokenConfigStore.setToken(token),
@@ -1251,6 +1480,21 @@ export function composeDesktopHost(
         model: {
           ipcMain: registerOptions.ipcMain,
           getModelFeature: getModelFeatures,
+          reportOperationFailure: (operation, error) =>
+            loggingPort.log({
+              timestamp: new Date().toISOString(),
+              level: "error",
+              verbosity: "normal",
+              event: "desktop.host.model.operation.failed",
+              message:
+                "A desktop model operation failed with bounded diagnostics.",
+              component: "desktop-host-model-feature",
+              data: {
+                featureKey: "model-registry",
+                stage: operation,
+                ...createDesktopFeatureFailureDetail(error),
+              },
+            }),
         },
         imageGeneration: {
           ipcMain: registerOptions.ipcMain,
@@ -1513,37 +1757,44 @@ export function composeDesktopHost(
           assetDrafts: {
             create: async (command) => {
               const feature = (await getAssetFeatures()).assetStudio;
-              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              if (!feature)
+                throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.create(command);
             },
             update: async (command) => {
               const feature = (await getAssetFeatures()).assetStudio;
-              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              if (!feature)
+                throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.update(command);
             },
             read: async (query) => {
               const feature = (await getAssetFeatures()).assetStudio;
-              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              if (!feature)
+                throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.read(query);
             },
             list: async (query) => {
               const feature = (await getAssetFeatures()).assetStudio;
-              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              if (!feature)
+                throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.list(query);
             },
             review: async (command) => {
               const feature = (await getAssetFeatures()).assetStudio;
-              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              if (!feature)
+                throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.review(command);
             },
             publish: async (command) => {
               const feature = (await getAssetFeatures()).assetStudio;
-              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              if (!feature)
+                throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.publish(command);
             },
             abandon: async (command) => {
               const feature = (await getAssetFeatures()).assetStudio;
-              if (!feature) throw new Error("Asset Studio storage is unavailable.");
+              if (!feature)
+                throw new Error("Asset Studio storage is unavailable.");
               return feature.useCases.assetDrafts.abandon(command);
             },
           },
@@ -1595,6 +1846,13 @@ export function composeDesktopHost(
           ? {
               systemDeployment: {
                 ipcMain: registerOptions.ipcMain,
+                authority: {
+                  organizationId:
+                    options.localIdentity?.organizationId ??
+                    organizationDocuments?.organizationId ??
+                    createOrganizationId("local"),
+                  actorId: options.localIdentity?.principalId ?? "local-user",
+                },
                 host: {
                   deploymentProfiles: ["local-desktop"],
                   hostApiVersion: "1.0.0",
@@ -1602,9 +1860,32 @@ export function composeDesktopHost(
                   sandboxQualified: false,
                 },
                 ...systemDeployment.useCases,
+                ...(systemDeployment.publishedLifecycle
+                  ? {
+                      lifecycleRead: systemDeployment.publishedLifecycle.read,
+                      lifecycleInvoke:
+                        registerOptions.systemRuntimeWindows &&
+                        publishedConversationRuntime
+                          ? createDesktopPublishedSystemRuntimeLifecycle({
+                              lifecycle:
+                                systemDeployment.publishedLifecycle.invoke,
+                              windows: registerOptions.systemRuntimeWindows,
+                              controller: publishedConversationRuntime,
+                              prepareRuntime: async () =>
+                                (
+                                  await getPythonRuntimeFoundation()
+                                ).supervisor.start(),
+                            })
+                          : systemDeployment.publishedLifecycle.invoke,
+                    }
+                  : {}),
               },
             }
           : {}),
+        systemRunWorkflow: {
+          ipcMain: registerOptions.ipcMain,
+          workflows: systemRunWorkflow.useCases,
+        },
       });
       recordHostMemorySnapshot(
         "desktop.host.ipc-registration.lazy-handlers.after",

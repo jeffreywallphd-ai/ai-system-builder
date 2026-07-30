@@ -45,7 +45,9 @@ test("root manifest and lock retain the reviewed patched toolchain boundary", as
   assert.equal(manifest.devDependencies.electron, "41.10.2");
   assert.equal(manifest.dependencies.selfsigned, "5.5.0");
   assert.deepEqual(manifest.overrides, {
-    tar: "7.5.20",
+    "brace-expansion": "$brace-expansion",
+    "fast-uri": "3.1.4",
+    tar: "7.5.22",
     tmp: "0.2.7",
     "webpack-dev-server": "5.2.6",
     sockjs: { uuid: "11.1.1" },
@@ -57,7 +59,14 @@ test("root manifest and lock retain the reviewed patched toolchain boundary", as
   const versionsFor = (packageName) => lockedPackages
     .filter(([packagePath]) => packagePath.endsWith(`node_modules/${packageName}`))
     .map(([, entry]) => entry.version);
-  assert.deepEqual([...new Set(versionsFor("tar"))], ["7.5.20"]);
+  assert.deepEqual(lockfile.packages["node_modules/brace-expansion"], {
+    resolved: "dev-tools/vendor/brace-expansion-compat",
+    link: true,
+  });
+  assert.equal(lockfile.packages["dev-tools/vendor/brace-expansion-compat"].version, "5.0.8");
+  assert.equal(lockfile.packages["node_modules/brace-expansion-upstream"].version, "5.0.8");
+  assert.deepEqual([...new Set(versionsFor("fast-uri"))], ["3.1.4"]);
+  assert.deepEqual([...new Set(versionsFor("tar"))], ["7.5.22"]);
   assert.deepEqual([...new Set(versionsFor("tmp"))], ["0.2.7"]);
   assert.deepEqual([...new Set(versionsFor("uuid"))], ["11.1.1"]);
   assert.deepEqual([...new Set(versionsFor("webpack-dev-server"))], ["5.2.6"]);
@@ -65,11 +74,21 @@ test("root manifest and lock retain the reviewed patched toolchain boundary", as
 
 test("reviewed overrides retain the APIs used by the Electron Forge toolchain", () => {
   const require = createRequire(import.meta.url);
+  const braceExpansion = require("brace-expansion");
+  const fastUri = require("fast-uri");
+  const glob = require("glob");
   const tar = require("tar");
   const tmp = require("tmp");
   const uuid = require("uuid");
   const WebpackDevServer = require("webpack-dev-server");
 
+  assert.equal(typeof braceExpansion, "function");
+  assert.equal(braceExpansion.expand, braceExpansion);
+  assert.deepEqual(braceExpansion("file-{a,b}.txt"), ["file-a.txt", "file-b.txt"]);
+  const bounded = braceExpansion("{a,b}".repeat(30), { max: 100, maxLength: 1_000 });
+  assert.ok(bounded.reduce((total, item) => total + item.length, 0) <= 1_000);
+  assert.deepEqual(glob.sync("package.json", { cwd: process.cwd(), nodir: true }), ["package.json"]);
+  assert.equal(fastUri.parse("https://example.com/path").host, "example.com");
   assert.equal(typeof tar.extract, "function");
   assert.match(tmp.tmpNameSync({ postfix: ".txt" }), /\.txt$/);
   assert.match(uuid.v4(), /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);

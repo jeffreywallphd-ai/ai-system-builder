@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState, type ReactNode } from "react";
+import { ModelDownloadNotificationBridge, NotificationProvider, useNotificationCenter } from "../../../../modules/ui/shared";
 
 import { AppShell } from "./components/layout/AppShell";
 import { DesktopPageLoadingFallback } from "./components/layout/DesktopPageLoadingFallback";
@@ -8,8 +9,13 @@ import { desktopPageDefinitions, desktopPageRequiresWorkspace, type DesktopPageK
 import { desktopLazyPages, type DesktopLazyPageDiagnosticContext, type DesktopLazyPageRegistry } from "./routes/lazyDesktopPages";
 import { resolveDesktopWorkspaceRouteBoundary } from "./routes/workspaceRouteBoundary";
 import { recordRendererMemorySnapshot } from "./diagnostics/rendererMemoryDiagnostics";
+import { createDesktopModelsClient } from "./features/models/api/desktopModelsClient";
 
 type DesktopWorkspacePageKey = Extract<DesktopPageKey, "artifacts" | "assets" | "user-library" | "models" | "image-generation" | "systems">;
+const desktopModelDownloadNotificationClient = {
+  listModelDownloads: (input: Parameters<ReturnType<typeof createDesktopModelsClient>["listModelDownloads"]>[0]) =>
+    createDesktopModelsClient().listModelDownloads(input),
+};
 
 export function App() {
   useEffect(() => {
@@ -21,7 +27,9 @@ export function App() {
 
   return (
     <ActiveWorkspaceProvider>
-      <WorkspaceAwareDesktopApp />
+      <NotificationProvider>
+        <WorkspaceAwareDesktopApp />
+      </NotificationProvider>
     </ActiveWorkspaceProvider>
   );
 }
@@ -33,7 +41,13 @@ export interface WorkspaceAwareDesktopAppProps {
 export function WorkspaceAwareDesktopApp({ lazyPages = desktopLazyPages }: WorkspaceAwareDesktopAppProps = {}) {
   const { activePage, setActivePage } = useDesktopPage();
   const workspace = useActiveWorkspace();
+  const notifications = useNotificationCenter();
+  const setNotificationWorkspace = notifications.setActiveWorkspaceId;
   const [artifactRefreshToken, setArtifactRefreshToken] = useState(0);
+
+  useEffect(() => {
+    setNotificationWorkspace(workspace.activeWorkspaceId);
+  }, [setNotificationWorkspace, workspace.activeWorkspaceId]);
 
   const activePageDefinition = desktopPageDefinitions.find((page) => page.key === activePage);
   const routeRequiresWorkspace = desktopPageRequiresWorkspace(activePage);
@@ -129,13 +143,16 @@ export function WorkspaceAwareDesktopApp({ lazyPages = desktopLazyPages }: Works
   ) : renderGlobalPageContent(activePage);
 
   return (
-    <AppShell
-      activePage={routeBoundary.visibleActivePage}
-      onNavigate={setActivePage}
-      pages={desktopPageDefinitions}
-    >
-      <Suspense fallback={lazyPageFallback}>{content}</Suspense>
-    </AppShell>
+    <>
+      <ModelDownloadNotificationBridge client={desktopModelDownloadNotificationClient} workspaceId={workspace.activeWorkspaceId} />
+      <AppShell
+        activePage={routeBoundary.visibleActivePage}
+        onNavigate={setActivePage}
+        pages={desktopPageDefinitions}
+      >
+        <Suspense fallback={lazyPageFallback}>{content}</Suspense>
+      </AppShell>
+    </>
   );
 }
 

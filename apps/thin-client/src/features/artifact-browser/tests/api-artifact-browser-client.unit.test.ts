@@ -167,6 +167,7 @@ describe("api artifact browser client", () => {
       artifactId: "uploads/a.png",
       repository: "openai/demo",
       path: "images/a.png",
+      repositoryCreation: { approved: true, visibility: "public" },
     });
     const verified = await client.verifyPublishedArtifactBacking({
       artifactId: "uploads/a.png",
@@ -224,6 +225,9 @@ describe("api artifact browser client", () => {
       "/api/artifact/publish",
       expect.objectContaining({ method: "POST" }),
     );
+    expect(JSON.parse((fetchMock.mock.calls[7]?.[1] as RequestInit).body as string)).toMatchObject({
+      repositoryCreation: { approved: true, visibility: "public" },
+    });
     expect(fetchMock).toHaveBeenNthCalledWith(
       9,
       "/api/artifact/publish/verify",

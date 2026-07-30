@@ -681,7 +681,9 @@ function materializeBackingBundle(
       content: resource.content,
     });
   }
-  for (const change of normalizeAssetCustomizationSourceChanges(changes)) {
+  const normalizedChanges =
+    changes.length === 0 ? [] : normalizeAssetCustomizationSourceChanges(changes);
+  for (const change of normalizedChanges) {
     const key = change.path.toLowerCase();
     if (key === "other/definition.json") {
       throw new Error("The generated definition resource is protected.");

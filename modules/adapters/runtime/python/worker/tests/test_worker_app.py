@@ -31,6 +31,7 @@ class WorkerAppTests(unittest.TestCase):
                     downloaded=True,
                     from_cache=False,
                     local_path="/models/qwen",
+                    cache_handle="models--Qwen--Qwen3.5-4B/snapshots/revision-a",
                 ),
             ),
             patch("builtins.print") as print_mock,
@@ -66,7 +67,8 @@ class WorkerAppTests(unittest.TestCase):
         payload = json.loads(response.body.decode("utf-8"))
         self.assertEqual(payload["error"]["code"], "model_download_failed")
         self.assertEqual(payload["error"]["stage"], "generation")
-        self.assertEqual(payload["error"]["details"]["modelId"], "Qwen/Qwen3.5-4B")
+        self.assertNotIn("modelId", payload["error"]["details"])
+        self.assertNotIn("Automatic download failed", payload["error"]["message"])
         self.assertNotIn("Traceback", payload["error"]["message"])
         printed_events = [
             json.loads(call.args[0])["event"]
@@ -75,6 +77,7 @@ class WorkerAppTests(unittest.TestCase):
         ]
         self.assertIn("runtime.model_download.started", printed_events)
         self.assertIn("runtime.model_download.failed", printed_events)
+        self.assertNotIn("Qwen/Qwen3.5-4B", " ".join(str(call) for call in print_mock.call_args_list))
 
     def test_async_model_download_task_returns_download_result(self) -> None:
         request = StartPythonRuntimeTaskRequest(
@@ -92,6 +95,7 @@ class WorkerAppTests(unittest.TestCase):
                 downloaded=True,
                 from_cache=False,
                 local_path="/models/qwen",
+                cache_handle="models--Qwen--Qwen3.5-4B/snapshots/revision-a",
             ),
         ):
             result = _run_task(request)
@@ -103,7 +107,7 @@ class WorkerAppTests(unittest.TestCase):
                 "modelId": "Qwen/Qwen3.5-4B",
                 "downloaded": True,
                 "fromCache": False,
-                "localPath": "/models/qwen",
+                "modelHandle": "models--Qwen--Qwen3.5-4B/snapshots/revision-a",
             },
         )
 
@@ -132,6 +136,7 @@ class WorkerAppTests(unittest.TestCase):
                 downloaded=True,
                 from_cache=False,
                 local_path="/models/qwen",
+                cache_handle="models--Qwen--Qwen3.5-4B/snapshots/revision-a",
             )
 
         with patch(
@@ -148,6 +153,49 @@ class WorkerAppTests(unittest.TestCase):
         status = worker_app.read_task_status("download-progress-1")
         self.assertEqual(status.progress["stage"], "snapshot-download")
         self.assertEqual(status.progress["fileCount"], 12)
+
+    def test_validate_model_returns_opaque_report_references(self) -> None:
+        request = StartPythonRuntimeTaskRequest(
+            requestId="validate-1",
+            taskType="validate-model",
+            payload={
+                "modelRecordId": "model-1",
+                "modelPath": "/host/models/model-1",
+            },
+        )
+        with patch(
+            "modules.adapters.runtime.python.worker.app.validate_model_output",
+            return_value={
+                "status": "valid",
+                "validationReportPath": "/host/models/model-1/report.md",
+                "validationDiffPath": "/host/models/model-1/diff.json",
+            },
+        ):
+            result = _run_task(request)
+
+        self.assertRegex(
+            result["validationReportPath"],
+            r"^validation-report:[a-f0-9]{64}$",
+        )
+        self.assertRegex(
+            result["validationDiffPath"],
+            r"^validation-diff:[a-f0-9]{64}$",
+        )
+        self.assertNotIn("/host/models", json.dumps(result))
+
+    def test_validate_model_rejects_caller_selected_report_directory(self) -> None:
+        request = StartPythonRuntimeTaskRequest(
+            requestId="validate-unsafe",
+            taskType="validate-model",
+            payload={
+                "modelRecordId": "model-1",
+                "modelPath": "/host/models/model-1",
+                "reportOutputDirectory": "/renderer/selected",
+            },
+        )
+
+        with self.assertRaises(Exception):
+            _run_task(request)
 
 
 if __name__ == "__main__":

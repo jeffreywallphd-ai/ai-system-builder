@@ -9,6 +9,7 @@ export * from "./asset-resource-backed-view.service";
 export * from "./asset-source-identity.service";
 export * from "./asset-mutation-provenance.service";
 export * from "./asset-mutation-guard.service";
+export * from "./asset-mutation-workspace-guard.service";
 export * from "./asset-resource-backed-view-aggregate-provider.service";
 export * from "./asset-artifact-resource-backed-view-provider.service";
 export * from "./asset-image-resource-backed-view-provider.service";

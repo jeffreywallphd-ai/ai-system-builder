@@ -11,6 +11,7 @@ describe("organization contracts", () => {
   it("accepts safe durable identifiers and normalizes roles", () => {
     assert.equal(createOrganizationId("org-acme_1"), "org-acme_1");
     assert.equal(normalizeOrganizationRole(" ADMIN "), "admin");
+    assert.equal(normalizeOrganizationRole(" OPERATOR "), "operator");
   });
 
   it("rejects paths, locators, token-like values, and invalid roles", () => {

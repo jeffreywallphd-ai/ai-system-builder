@@ -9,7 +9,10 @@ import type {
   AssetPort,
 } from "../../../../contracts/asset";
 import { normalizeAssetId } from "../../../../contracts/asset";
-import type { SystemBuilderComposerAsset } from "../../../../contracts/system-builder";
+import {
+  createSystemBuilderModelBinding,
+  type SystemBuilderComposerAsset,
+} from "../../../../contracts/system-builder";
 import { SystemComposerInspector } from "../SystemComposerInspector";
 import { SystemComposerStylingPanel } from "../SystemComposerStylingPanel";
 
@@ -96,6 +99,74 @@ describe("SystemComposerInspector interactions", () => {
     await click(button("Reset defaults"));
     expect(onConfigurationChange).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Default title" }),
+    );
+  });
+
+  it("uses an authorized model picker and keeps the binding out of editable JSON", async () => {
+    const definition = asset("conversation.message-composer", [], {
+      fields: [
+        {
+          fieldId: "modelBinding",
+          valueKind: "resource-reference",
+          label: "Text generation model",
+          required: true,
+          uiHint: { hintKind: "resource-picker", section: "Model", order: 1 },
+          metadata: {
+            resourceKind: "model",
+            capabilityKind: "text-generation",
+          },
+        },
+        {
+          fieldId: "accessibilityLabel",
+          valueKind: "string",
+          label: "Accessibility label",
+          defaultValue: "Message composer",
+        },
+      ],
+      requiredFieldIds: ["modelBinding"],
+    });
+    const selected = instance("instance.composer", definition, {});
+    const onConfigurationChange = vi.fn();
+    render(
+      <SystemComposerInspector
+        mode="configuration"
+        selectedInstance={selected}
+        selectedDefinition={definition}
+        instances={[selected]}
+        catalog={[definition]}
+        bindings={[]}
+        modelOptions={[
+          {
+            binding: createSystemBuilderModelBinding("model.chat.local"),
+            displayName: "Local chat model",
+            lifecycleStatus: "validated",
+            taskTags: ["chat"],
+          },
+        ]}
+        onConfigurationChange={onConfigurationChange}
+        onAddConnection={vi.fn()}
+        onRemoveConnection={vi.fn()}
+      />,
+    );
+
+    const picker = container!.querySelector<HTMLSelectElement>(
+      "#modelBinding",
+    )!;
+    expect(Array.from(picker.options).map((option) => option.textContent)).toEqual(
+      ["Choose Text generation model", "Local chat model"],
+    );
+    expect(
+      Array.from(container!.querySelectorAll("textarea")).some((item) =>
+        item.value.includes("modelBinding"),
+      ),
+    ).toBe(false);
+
+    await change(picker, "model.chat.local");
+
+    expect(onConfigurationChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modelBinding: createSystemBuilderModelBinding("model.chat.local"),
+      }),
     );
   });
 
