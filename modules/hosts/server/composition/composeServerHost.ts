@@ -17,6 +17,7 @@ import { createComfyUiRuntimeInstaller } from "../../../adapters/runtime/install
 import {
   createPythonRuntimeAdapterFoundation,
   createPythonRuntimeTaskRegistryAdapter,
+  createPythonParquetDatasetReviewAdapter,
   ensurePythonRuntimeWorkerDependencies,
   resolvePythonRuntimeLoopbackEndpoint,
 } from "../../../adapters/runtime/python";
@@ -26,7 +27,10 @@ import { createLocalApplicationSettingsAdapter } from "../../../adapters/persist
 import { createLocalModelRegistryAdapter } from "../../../adapters/persistence/model";
 import { createHuggingFaceModelBrowseDetailsAdapter } from "../../../adapters/model/huggingface";
 import { createLocalImageAssetRegistryAdapter } from "../../../adapters/persistence/image";
-import { createLocalModelCheckpointResolverAdapter, createLocalModelFileListerAdapter } from "../../../adapters/model/local";
+import {
+  createLocalModelCheckpointResolverAdapter,
+  createLocalModelFileListerAdapter,
+} from "../../../adapters/model/local";
 import {
   createLocalUserLibraryAssetRepositoryAdapter,
   createLocalWorkspaceUserLibraryLinkRepositoryAdapter,
@@ -124,6 +128,10 @@ import {
   ValidateAssetCompositionPlanUseCase,
   CompareDatasetVersionsUseCase,
   ListDatasetVersionsUseCase,
+  ListDatasetReviewTargetsUseCase,
+  ReadDatasetReviewPageUseCase,
+  RejectDatasetReviewRowUseCase,
+  EditDatasetReviewRowUseCase,
   PrepareTrainingDatasetFromArtifactsUseCase,
   PublishDatasetVersionUseCase,
   ReadDatasetVersionReproductionUseCase,
@@ -1943,6 +1951,13 @@ export function composeServerHost(
         ? createStructuredDatasetVersionRepository(organizationDocuments)
         : undefined;
       const datasetVersionHasher = createSha256DatasetVersionHasher();
+      const datasetVersionFinalizer = datasetVersionRepository
+        ? new DatasetVersionFinalizationService({
+            repository: datasetVersionRepository,
+            artifacts: storage,
+            hasher: datasetVersionHasher,
+          })
+        : undefined;
       const datasetVersionUseCases = datasetVersionRepository
         ? {
             listDatasetVersionsUseCase: new ListDatasetVersionsUseCase({
@@ -1976,6 +1991,59 @@ export function composeServerHost(
               workspaceAuthorization,
               now: options.now,
             }),
+            listDatasetReviewTargetsUseCase:
+              new ListDatasetReviewTargetsUseCase({
+                repository: datasetVersionRepository,
+                catalog: artifactCatalog,
+                artifacts: storage,
+                parquet:
+                  createPythonParquetDatasetReviewAdapter(runtimeTaskRegistry),
+                finalizer: datasetVersionFinalizer!,
+                hasher: datasetVersionHasher,
+                workspaceRepository:
+                  workspaceFoundation.workspaceRepositories.workspaceRepository,
+                workspaceAuthorization,
+                now: options.now,
+              }),
+            readDatasetReviewPageUseCase: new ReadDatasetReviewPageUseCase({
+              repository: datasetVersionRepository,
+              catalog: artifactCatalog,
+              artifacts: storage,
+              parquet:
+                createPythonParquetDatasetReviewAdapter(runtimeTaskRegistry),
+              finalizer: datasetVersionFinalizer!,
+              hasher: datasetVersionHasher,
+              workspaceRepository:
+                workspaceFoundation.workspaceRepositories.workspaceRepository,
+              workspaceAuthorization,
+              now: options.now,
+            }),
+            rejectDatasetReviewRowUseCase: new RejectDatasetReviewRowUseCase({
+              repository: datasetVersionRepository,
+              catalog: artifactCatalog,
+              artifacts: storage,
+              parquet:
+                createPythonParquetDatasetReviewAdapter(runtimeTaskRegistry),
+              finalizer: datasetVersionFinalizer!,
+              hasher: datasetVersionHasher,
+              workspaceRepository:
+                workspaceFoundation.workspaceRepositories.workspaceRepository,
+              workspaceAuthorization,
+              now: options.now,
+            }),
+            editDatasetReviewRowUseCase: new EditDatasetReviewRowUseCase({
+              repository: datasetVersionRepository,
+              catalog: artifactCatalog,
+              artifacts: storage,
+              parquet:
+                createPythonParquetDatasetReviewAdapter(runtimeTaskRegistry),
+              finalizer: datasetVersionFinalizer!,
+              hasher: datasetVersionHasher,
+              workspaceRepository:
+                workspaceFoundation.workspaceRepositories.workspaceRepository,
+              workspaceAuthorization,
+              now: options.now,
+            }),
           }
         : undefined;
       const prepareTrainingDatasetUseCase =
@@ -1996,11 +2064,7 @@ export function composeServerHost(
             ? {
                 datasetVersioning: {
                   hasher: datasetVersionHasher,
-                  finalizer: new DatasetVersionFinalizationService({
-                    repository: datasetVersionRepository,
-                    artifacts: storage,
-                    hasher: datasetVersionHasher,
-                  }),
+                  finalizer: datasetVersionFinalizer!,
                 },
               }
             : {}),

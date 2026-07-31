@@ -4,6 +4,7 @@
  */
 export enum TaskType {
   DATASET_PREPARATION = "dataset-preparation",
+  DATASET_REVIEW = "dataset-review",
   MODEL_DOWNLOAD = "model-download",
   MODEL_TRAINING = "model-training",
   MODEL_VALIDATION = "model-validation",

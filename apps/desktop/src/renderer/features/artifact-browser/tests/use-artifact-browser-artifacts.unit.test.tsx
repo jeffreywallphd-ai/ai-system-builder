@@ -48,12 +48,32 @@ describe("useArtifactBrowserArtifacts", () => {
   it("loads and refreshes registered and unregistered artifacts using selected family filter", async () => {
     const browseArtifacts = vi
       .fn()
-      .mockResolvedValueOnce([{ storageKey: "uploads/cat.png", artifactFamily: "image" }])
+      .mockResolvedValueOnce([
+        { storageKey: "uploads/cat.png", artifactFamily: "image" },
+        {
+          storageKey: "workspaces/workspace-a/system-builds/evidence/digest",
+          artifactFamily: "structured-text",
+          mediaType: "application/vnd.ai-system-builder.build-evidence+json",
+        },
+        {
+          storageKey: "workspaces/workspace-a/system-builds/policy/digest",
+          artifactFamily: "structured-text",
+          mediaType: "application/vnd.ai-system-builder.policy+json",
+        },
+      ])
       .mockResolvedValueOnce([{ storageKey: "uploads/train.parquet", artifactFamily: "tabular" }])
       .mockResolvedValueOnce([{ storageKey: "uploads/train.parquet", artifactFamily: "tabular" }]);
     const browseUnregisteredArtifacts = vi
       .fn()
-      .mockResolvedValueOnce([{ storageKey: "uploads/orphan.json", relativePath: "orphan.json", fileName: "orphan.json" }])
+      .mockResolvedValueOnce([
+        { storageKey: "uploads/orphan.json", relativePath: "orphan.json", fileName: "orphan.json" },
+        {
+          storageKey: "workspaces/workspace-a/system-builds/provenance/digest",
+          relativePath: "system-builds/provenance/digest",
+          fileName: "digest",
+          mediaType: "application/vnd.in-toto+json",
+        },
+      ])
       .mockResolvedValueOnce([{ storageKey: "uploads/orphan-2.json", relativePath: "orphan-2.json", fileName: "orphan-2.json" }]);
     const client = {
       browseArtifacts,
@@ -89,6 +109,8 @@ describe("useArtifactBrowserArtifacts", () => {
     expect(hookState?.uploadedItems[0]?.storageKey).toBe("uploads/cat.png");
     expect(hookState?.generatedItems).toEqual([]);
     expect(hookState?.unregisteredItems[0]?.storageKey).toBe("uploads/orphan.json");
+    expect(hookState?.items).toHaveLength(1);
+    expect(hookState?.unregisteredItems).toHaveLength(1);
 
     await act(async () => {
       hookState?.setSelectedArtifactFamily("tabular");

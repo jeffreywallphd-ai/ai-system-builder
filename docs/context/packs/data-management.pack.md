@@ -44,8 +44,8 @@
   persists task workspace on catalog and imported-source records. Parquet
   selections remain tabular even when provider media type is omitted; do not
   accommodate an unscoped write.
-- Parquet preparation requires the managed worker's patched PyArrow pin and
-  keeps bounded structured-read failures distinct from model readiness.
+- Parquet preparation requires the managed worker's patched PyArrow pin and keeps bounded structured-read failures distinct from model readiness.
+- Artifact Browser gives uploaded and generated data the same cards; bounds JSON/JSON Lines to 100 formatted lines, Parquet to 10 rows, and PDF to one rasterized page; renders inert Markdown without raw HTML or remote images; and hides internal system-build and all `+json` artifacts while ordinary `.json`, `.jsonl`, and `.ndjson` files remain user-facing.
 - Hugging Face Step 2 may read or update only the host-owned token setting
   needed for private or gated datasets. Keep the token out of task commands,
   errors, logs, and roadmap evidence. The guided workflow is the sole mounted
@@ -130,6 +130,9 @@
 - Version history, comparison, and reproduction are workspace-authorized.
   Reproduction returns a recipe only after exact digest verification and uses
   stable source artifact ids to restore the ordered preparation workflow.
+- Group immutable versions by dataset identity, select the newest by default, and derive major/minor display labels from lineage; preparation report lines page actual ready or quarantined rows under the exact task scope and report fingerprint.
+- Dataset Review lists only locally readable Parquet artifacts, presents a continuous row-by-row modal plus a 10-row paginated table, requires exact row fingerprints, requires localization for repository-only files, and creates a 1.0 baseline plus 1.1 child on the first approved edit. Edit changes read-only values into a bounded typed form; Approve changes writes a new immutable minor version, Reject remains available, and Cancel exits without a decision change.
+- Store accepted generated review rows as a bounded, integrity-checked workspace-local temporary artifact so previews survive runtime-directory cleanup. Retain final private runtime outputs so failed approval remains retryable; clean preview and final artifacts after their terminal approval, cancellation, or discard boundary.
 - Use bounded input counts, bytes, rows, document extraction, chunk counts,
   generated rows, warning counts, runtime duration, previews, and reports.
 - Public diagnostics may include stage, counts, sizes, durations, provider

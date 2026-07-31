@@ -1565,6 +1565,12 @@ export function composeDesktopHost(
           ipcMain: registerOptions.ipcMain,
           getDatasetPreparationFeature: getDatasetPreparationFeatures,
           lifecycle: markDisposableFeatureReleased("dataset-preparation"),
+          getAuthoritativeRequestContext: options.localIdentity
+            ? () => ({
+                organizationId: options.localIdentity!.organizationId,
+                principalId: options.localIdentity!.principalId,
+              })
+            : undefined,
         },
         assetAuthoring: {
           ipcMain: registerOptions.ipcMain,

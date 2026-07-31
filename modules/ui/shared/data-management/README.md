@@ -26,6 +26,17 @@ The website and provider boundaries use deterministic host fixtures so the
 suite remains CI-safe and does not scrape live sites or depend on provider
 availability.
 
+Artifact Browser presents uploaded and generated artifacts with the same card
+layout. JSON and JSON Lines use a formatted preview capped at 100 lines;
+Markdown is converted to inert React elements without raw HTML, scriptable URL
+schemes, or remote image loading; Parquet shows at most its first 10 rows
+through the workspace-scoped review reader; and PDF shows a bounded raster of
+its first page rather than active embedded PDF content. Internal system-build
+artifacts stay in storage for traceability and do not appear in registered or
+unregistered browser lists. Artifact names and media types ending in `+json`
+are likewise internal; only ordinary `.json` and `.jsonl` JSON-family files
+and the equivalent `.ndjson` line format appear in the browser.
+
 The renderer slices local files into 1 MiB chunks and never builds a whole-file
 buffer. Inputs are locked while a task runs. Persisted host progress feeds the
 inline status and notification-center activity; users can leave the page,
@@ -47,6 +58,34 @@ and Advanced settings contain only controls used by the selected method.
 Desktop keeps saved workflow settings in an unnumbered section before Step 1,
 omits Task settings when the selected task has no additional choices, and
 places save and publication guidance directly in Review and create.
+
+Review and create turns each actionable quality-report line into a link to the
+actual ready, set-aside, or reason-matched records behind that count. The
+focused modal shows 10 records at a time, keeps its decision controls fixed
+while row content scrolls, and records local Approve or Reject decisions. The
+aggregate report sections are not the review items.
+
+The same large, fixed-control modal powers Dataset Review. Workspace Parquet
+datasets are shown once per logical dataset, their newest version is selected
+by default, and older versions remain available from a version selector.
+Repository-only files do not appear until they are localized. Review rows opens
+the modal; View table opens the 10-row paginated table below the cards. On wide
+screens, that table includes Approve, Reject, and Edit
+actions in its rightmost column.
+
+Approving or rejecting without version creation is a local review decision.
+Edit verifies the exact row fingerprint and changes the read-only row into a
+bounded editor. Approve changes preserves the selected version, writes the
+revised Parquet artifact, and creates the next immutable minor version. Reject
+remains available while editing so the reviewer can reject the row instead of
+saving an edit. Cancel exits the editor without saving or changing the review
+decision. An original workspace Parquet artifact is displayed as 1.0;
+its first immutable revision is 1.1.
+
+Dataset Preparation presents one selectable artifact list. Its All, Uploaded,
+and Generated filter controls that list; generated or runtime-produced results
+are mutually exclusive from Uploaded even when legacy metadata or a path looks
+upload-like.
 
 Text tasks accept CSV, JSON, JSON Lines, Parquet, TXT, Markdown, HTML, PDF, and
 DOCX sources when the original filename extension or media type identifies the

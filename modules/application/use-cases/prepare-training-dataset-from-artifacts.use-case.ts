@@ -46,7 +46,11 @@ import type {
   DatasetPreparationAdvancedReport,
   DatasetPreparationWarning,
   DatasetQualityApprovalRequest,
+  DatasetQualityReasonCode,
   DatasetQualityReport,
+  DatasetQualityReviewLineId,
+  DatasetQualityReviewPage,
+  DatasetQualityReviewRow,
   DatasetQualityRequestedConfig,
   DatasetQualityRuntimeConfig,
   PrepareTrainingDatasetRequest,
@@ -174,6 +178,13 @@ export interface PrepareTrainingDatasetFromArtifactsValue {
   };
 }
 
+export interface ReadPreparedDatasetQualityReviewPageInput {
+  readonly requestId: string;
+  readonly reportFingerprint: string;
+  readonly lineId: DatasetQualityReviewLineId;
+  readonly page: number;
+}
+
 interface PendingDatasetQualityReview {
   command: PrepareTrainingDatasetFromArtifactsCommand;
   runtimeResult: PrepareTrainingDatasetResult;
@@ -181,7 +192,11 @@ interface PendingDatasetQualityReview {
   quality: DatasetQualityRuntimeConfig;
   evidence: PrepareTrainingDatasetFromArtifactsValue;
   evidenceStorageKeys: string[];
-  scope: { workspaceId: string; organizationId?: string };
+  reviewStorage?: {
+    key: string;
+    sha256: string;
+  };
+  scope: { workspaceId: string; organizationId?: string; principalId?: string };
 }
 
 const MAX_DATASET_PREPARATION_SOURCE_COUNT = 256;
@@ -294,9 +309,7 @@ function validateDatasetPreparationCommand(
   }
   if (
     !isRecord(command.output) ||
-    !["jsonl", "json", "csv", "parquet"].includes(
-      String(command.output.format),
-    )
+    !["jsonl", "json", "csv", "parquet"].includes(String(command.output.format))
   ) {
     return "Choose a supported saved file format.";
   }
@@ -769,8 +782,7 @@ function canonicalRuntimeJson(value: unknown): string {
       .filter(([, item]) => item !== undefined)
       .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
       .map(
-        ([key, item]) =>
-          `${JSON.stringify(key)}:${canonicalRuntimeJson(item)}`,
+        ([key, item]) => `${JSON.stringify(key)}:${canonicalRuntimeJson(item)}`,
       )
       .join(",")}}`;
   }
@@ -801,6 +813,13 @@ function isDatasetPreparationSummary(
 
 const DATASET_QUALITY_REPORT_MAX_BYTES = 1024 * 1024;
 const DATASET_QUALITY_QUARANTINE_MAX_BYTES = 256 * 1024 * 1024;
+const DATASET_QUALITY_REVIEW_MAX_BYTES = 256 * 1024 * 1024;
+const DATASET_QUALITY_REVIEW_MAX_LINE_BYTES = 1024 * 1024;
+const DATASET_QUALITY_REVIEW_PAGE_SIZE = 10 as const;
+const DATASET_QUALITY_REVIEW_MAX_FIELDS = 256;
+const DATASET_QUALITY_REVIEW_MAX_DEPTH = 8;
+const DATASET_QUALITY_REVIEW_MAX_TEXT_BYTES = 8_192;
+const DATASET_QUALITY_REVIEW_MAX_ROW_BYTES = 32 * 1024;
 const DATASET_QUALITY_REPORT_FINGERPRINT_PATTERN = /^[a-f0-9]{64}$/;
 const DATASET_QUALITY_REASON_CODE_SET = new Set<string>(
   DATASET_QUALITY_REASON_CODES,
@@ -825,8 +844,7 @@ function isDatasetQualityReport(value: unknown): value is DatasetQualityReport {
     Number(value.counts.inputRows) < 0 ||
     Number(value.counts.acceptedRows) < 0 ||
     Number(value.counts.quarantinedRows) < 0 ||
-    Number(value.counts.acceptedRows) +
-      Number(value.counts.quarantinedRows) !==
+    Number(value.counts.acceptedRows) + Number(value.counts.quarantinedRows) !==
       Number(value.counts.inputRows) ||
     !isRecord(value.reasonCounts) ||
     !Array.isArray(value.samples) ||
@@ -890,6 +908,236 @@ function fingerprintsMatch(left: string, right: string): boolean {
     return false;
   }
   return timingSafeEqual(Buffer.from(left, "hex"), Buffer.from(right, "hex"));
+}
+
+function parseDatasetQualityReviewLineId(
+  value: unknown,
+):
+  | { kind: "ready" | "set-aside"; reason?: DatasetQualityReasonCode }
+  | undefined {
+  if (value === "ready" || value === "set-aside") {
+    return { kind: value };
+  }
+  if (typeof value !== "string" || !value.startsWith("reason:")) {
+    return undefined;
+  }
+  const reason = value.slice("reason:".length);
+  return DATASET_QUALITY_REASON_CODE_SET.has(reason)
+    ? { kind: "set-aside", reason: reason as DatasetQualityReasonCode }
+    : undefined;
+}
+
+function boundedReviewValue(
+  value: unknown,
+  budget: { remaining: number },
+  depth = 0,
+): unknown {
+  if (budget.remaining <= 0) return "[additional value omitted]";
+  if (depth > DATASET_QUALITY_REVIEW_MAX_DEPTH) return "[nested value]";
+  if (
+    value === null ||
+    typeof value === "boolean" ||
+    typeof value === "number"
+  ) {
+    budget.remaining -= Math.min(String(value).length, budget.remaining);
+    return value;
+  }
+  if (typeof value === "string") {
+    const bytes = Buffer.byteLength(value, "utf8");
+    if (
+      bytes <= DATASET_QUALITY_REVIEW_MAX_TEXT_BYTES &&
+      bytes <= budget.remaining
+    ) {
+      budget.remaining -= bytes;
+      return value;
+    }
+    const allowed = Math.min(
+      DATASET_QUALITY_REVIEW_MAX_TEXT_BYTES,
+      budget.remaining,
+    );
+    const suffix = " [truncated]";
+    const prefix = Buffer.from(value, "utf8")
+      .subarray(0, Math.max(0, allowed - Buffer.byteLength(suffix)))
+      .toString("utf8");
+    budget.remaining -= allowed;
+    return prefix + suffix;
+  }
+  if (Array.isArray(value)) {
+    return value
+      .slice(0, 100)
+      .map((item) => boundedReviewValue(item, budget, depth + 1));
+  }
+  if (isRecord(value)) {
+    const result: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value).slice(
+      0,
+      DATASET_QUALITY_REVIEW_MAX_FIELDS,
+    )) {
+      if (budget.remaining <= 0) {
+        result.additional_fields = "[additional fields omitted]";
+        break;
+      }
+      if (key === "__proto__" || key === "prototype" || key === "constructor") {
+        continue;
+      }
+      result[key.slice(0, 128)] = boundedReviewValue(item, budget, depth + 1);
+    }
+    return result;
+  }
+  return boundedReviewValue(String(value), budget, depth);
+}
+
+function readDatasetQualityReviewJsonlPage(
+  content: Uint8Array,
+  line: ReturnType<typeof parseDatasetQualityReviewLineId> & {},
+  page: number,
+  totalRows: number,
+): Promise<readonly DatasetQualityReviewRow[]> {
+  const offset = page * DATASET_QUALITY_REVIEW_PAGE_SIZE;
+  const rows: DatasetQualityReviewRow[] = [];
+  let matchingIndex = 0;
+  let physicalIndex = 0;
+  for (const rawLine of datasetQualityReviewJsonlLines(content)) {
+    if (!rawLine.trim()) {
+      continue;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(rawLine);
+    } catch {
+      throw new Error("Dataset preparation review data is invalid.");
+    }
+    if (!isRecord(parsed)) {
+      throw new Error(
+        "Dataset preparation review data contains an invalid row.",
+      );
+    }
+    let values: Record<string, unknown>;
+    let matches = line.kind === "ready";
+    if (line.kind === "ready") {
+      values = parsed;
+    } else {
+      const reasons = Array.isArray(parsed.reasonCodes)
+        ? parsed.reasonCodes.filter(
+            (reason): reason is string => typeof reason === "string",
+          )
+        : [];
+      matches = line.reason ? reasons.includes(line.reason) : true;
+      if (
+        typeof parsed.sourceArtifactId !== "string" ||
+        !Number.isSafeInteger(parsed.sourceRowIndex) ||
+        !isRecord(parsed.row) ||
+        reasons.some((reason) => !DATASET_QUALITY_REASON_CODE_SET.has(reason))
+      ) {
+        throw new Error(
+          "Dataset preparation review data contains invalid lineage.",
+        );
+      }
+      values = {
+        sourceArtifactId: parsed.sourceArtifactId,
+        sourceRowIndex: parsed.sourceRowIndex,
+        reasonCodes: reasons,
+        ...parsed.row,
+      };
+    }
+    if (matches) {
+      if (
+        matchingIndex >= offset &&
+        rows.length < DATASET_QUALITY_REVIEW_PAGE_SIZE
+      ) {
+        const bounded = boundedReviewValue(values, {
+          remaining: DATASET_QUALITY_REVIEW_MAX_ROW_BYTES,
+        });
+        if (!isRecord(bounded)) {
+          throw new Error(
+            "Dataset preparation review data contains an invalid row.",
+          );
+        }
+        const rowFingerprint = `sha256:${createHash("sha256")
+          .update(rawLine)
+          .digest("hex")}` as const;
+        rows.push({
+          rowIndex: physicalIndex,
+          rowFingerprint,
+          values: bounded,
+        });
+      }
+      matchingIndex += 1;
+      if (
+        rows.length === DATASET_QUALITY_REVIEW_PAGE_SIZE &&
+        matchingIndex >=
+          Math.min(totalRows, offset + DATASET_QUALITY_REVIEW_PAGE_SIZE)
+      ) {
+        break;
+      }
+    }
+    physicalIndex += 1;
+  }
+  return Promise.resolve(rows);
+}
+
+function validateDatasetQualityReviewJsonl(
+  content: Uint8Array,
+  expectedRows: number,
+): void {
+  let rows = 0;
+  for (const rawLine of datasetQualityReviewJsonlLines(content)) {
+    if (!rawLine.trim()) continue;
+    let value: unknown;
+    try {
+      value = JSON.parse(rawLine);
+    } catch {
+      throw new Error("Dataset preparation review data is invalid.");
+    }
+    if (!isRecord(value)) {
+      throw new Error(
+        "Dataset preparation review data contains an invalid row.",
+      );
+    }
+    rows += 1;
+    if (rows > expectedRows) {
+      throw new Error(
+        "Dataset preparation review row count does not match the quality report.",
+      );
+    }
+  }
+  if (rows !== expectedRows) {
+    throw new Error(
+      "Dataset preparation review row count does not match the quality report.",
+    );
+  }
+}
+
+function* datasetQualityReviewJsonlLines(
+  content: Uint8Array,
+): Generator<string> {
+  if (
+    !(content instanceof Uint8Array) ||
+    content.byteLength <= 0 ||
+    content.byteLength > DATASET_QUALITY_REVIEW_MAX_BYTES
+  ) {
+    throw new Error("Dataset preparation review data is unavailable.");
+  }
+  const bytes = Buffer.from(
+    content.buffer,
+    content.byteOffset,
+    content.byteLength,
+  );
+  let start = 0;
+  for (let end = 0; end <= bytes.length; end += 1) {
+    if (end < bytes.length && bytes[end] !== 0x0a) continue;
+    if (end === bytes.length && start === end) break;
+    let lineEnd = end;
+    if (lineEnd > start && bytes[lineEnd - 1] === 0x0d) lineEnd -= 1;
+    const lineBytes = bytes.subarray(start, lineEnd);
+    if (lineBytes.byteLength > DATASET_QUALITY_REVIEW_MAX_LINE_BYTES) {
+      throw new Error(
+        "Dataset preparation review data contains an oversized row.",
+      );
+    }
+    yield lineBytes.toString("utf8");
+    start = end + 1;
+  }
 }
 
 async function readBoundedOutput(
@@ -1109,13 +1357,14 @@ function compileRuntimeStructuredOutput(
   | {
       ok: true;
       value: NonNullable<
-        NonNullable<PrepareTrainingDatasetRequest["runtime"]>["structuredOutput"]
+        NonNullable<
+          PrepareTrainingDatasetRequest["runtime"]
+        >["structuredOutput"]
       >;
     }
   | { ok: false; message: string } {
   const taskType =
-    command.recipe.task?.taskType ??
-    DEFAULT_DATASET_PREPARATION_TASK_TYPE;
+    command.recipe.task?.taskType ?? DEFAULT_DATASET_PREPARATION_TASK_TYPE;
   const taskRecipe = command.recipe.task;
   const multiLabel =
     taskRecipe?.taskType === "llm-classification" &&
@@ -1123,7 +1372,7 @@ function compileRuntimeStructuredOutput(
   const allowedLabels =
     "labelSet" in (taskRecipe ?? {}) &&
     Array.isArray((taskRecipe as { labelSet?: unknown }).labelSet)
-      ? ((taskRecipe as { labelSet: string[] }).labelSet)
+      ? (taskRecipe as { labelSet: string[] }).labelSet
       : undefined;
   const requested = command.recipe.generation?.structuredOutput;
   const resolved = resolveDatasetPreparationVisualOutputShape(
@@ -1131,15 +1380,12 @@ function compileRuntimeStructuredOutput(
     requested?.visualShape,
     { multiLabel },
   );
-  const compiled = compileDatasetPreparationVisualOutputShape(
-    resolved.shape,
-    {
-      taskType,
-      outputFormat: command.output.format,
-      multiLabel,
-      allowedLabels,
-    },
-  );
+  const compiled = compileDatasetPreparationVisualOutputShape(resolved.shape, {
+    taskType,
+    outputFormat: command.output.format,
+    multiLabel,
+    allowedLabels,
+  });
   if (!compiled.ok) {
     return {
       ok: false,
@@ -1148,8 +1394,7 @@ function compileRuntimeStructuredOutput(
         "The generated output layout is invalid.",
     };
   }
-  const constrainedDecoding =
-    requested?.constrainedDecoding === true;
+  const constrainedDecoding = requested?.constrainedDecoding === true;
   if (constrainedDecoding && !compiled.value.decoderCompatible) {
     return {
       ok: false,
@@ -1190,8 +1435,7 @@ function resolveAdaptiveCommandForStagedSources(
   sourceInputs: PrepareTrainingDatasetRequest["sourceInputs"],
 ): PrepareTrainingDatasetFromArtifactsCommand {
   const taskType =
-    command.recipe.task?.taskType ??
-    DEFAULT_DATASET_PREPARATION_TASK_TYPE;
+    command.recipe.task?.taskType ?? DEFAULT_DATASET_PREPARATION_TASK_TYPE;
   const capabilities = sourceInputs.map((source) => {
     const capability = resolveDatasetPreparationSourceCapability({
       fileName: source.originalName ?? source.localPath,
@@ -1231,10 +1475,7 @@ function resolveAdaptiveCommandForStagedSources(
         textInputMode: command.recipe.task?.textInputMode,
       })
     : command.preparation!.method;
-  const preparation = createDatasetPreparationExecutionPlan(
-    resolution,
-    method,
-  );
+  const preparation = createDatasetPreparationExecutionPlan(resolution, method);
 
   if (
     command.preparation &&
@@ -1252,11 +1493,13 @@ function resolveAdaptiveCommandForStagedSources(
   ].includes(preparation.method);
   const needsFixedChunking = preparation.method === "fixed-length";
   const needsGeneration = preparation.generationMode !== "none";
-  const expectedAdvanced =
-    createDatasetPreparationAdvancedConfigForMethod(preparation.method);
+  const expectedAdvanced = createDatasetPreparationAdvancedConfigForMethod(
+    preparation.method,
+  );
 
   if (
-    (expectedAdvanced?.semantic?.enabled || expectedAdvanced?.synthetic?.enabled) &&
+    (expectedAdvanced?.semantic?.enabled ||
+      expectedAdvanced?.synthetic?.enabled) &&
     !command.quality
   ) {
     throw new Error(
@@ -1397,7 +1640,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
   >();
   private readonly taskScopeByRequestId = new Map<
     string,
-    { workspaceId: string; organizationId?: string }
+    { workspaceId: string; organizationId?: string; principalId?: string }
   >();
   private readonly runtimeQualityByRequestId = new Map<
     string,
@@ -1623,6 +1866,9 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         ...(context.organizationId
           ? { organizationId: String(context.organizationId) }
           : {}),
+        ...(context.principalId
+          ? { principalId: String(context.principalId) }
+          : {}),
       });
       try {
         await this.taskPowerLifecycle.startTask(
@@ -1781,6 +2027,9 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
                 quality,
                 evidence: reviewEvidence.value,
                 evidenceStorageKeys: reviewEvidence.storageKeys,
+                ...(reviewEvidence.reviewStorage
+                  ? { reviewStorage: reviewEvidence.reviewStorage }
+                  : {}),
                 scope,
               });
               retainForReview = true;
@@ -1892,7 +2141,12 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
           );
         }
         await this.deleteStoredArtifacts(
-          pendingReview.evidenceStorageKeys,
+          [
+            ...pendingReview.evidenceStorageKeys,
+            ...(pendingReview.reviewStorage
+              ? [pendingReview.reviewStorage.key]
+              : []),
+          ],
           context,
         );
         this.pendingQualityReviewsByRequestId.delete(requestId);
@@ -1952,6 +2206,153 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     }
   }
 
+  public async readPreparedDatasetQualityReviewPage(
+    input: ReadPreparedDatasetQualityReviewPageInput,
+    context?: ApplicationRequestContext,
+  ): Promise<ContractResult<DatasetQualityReviewPage>> {
+    const line = parseDatasetQualityReviewLineId(input?.lineId);
+    if (
+      !isWorkspaceId(context?.workspaceId) ||
+      !isRecord(input) ||
+      typeof input.requestId !== "string" ||
+      input.requestId.trim().length === 0 ||
+      typeof input.reportFingerprint !== "string" ||
+      !DATASET_QUALITY_REPORT_FINGERPRINT_PATTERN.test(
+        input.reportFingerprint,
+      ) ||
+      !line ||
+      !Number.isSafeInteger(input.page) ||
+      input.page < 0
+    ) {
+      return createFailureResult(
+        createContractError(
+          "validation",
+          "A valid workspace, task, report line, fingerprint, and page are required.",
+        ),
+        context,
+      );
+    }
+    const pending = this.pendingQualityReviewsByRequestId.get(input.requestId);
+    if (!pending || !this.isRecordedScopeOwned(pending.scope, context)) {
+      return createFailureResult(
+        createContractError(
+          "not-found",
+          "Dataset preparation review was not found.",
+        ),
+        context,
+      );
+    }
+    const report = pending.runtimeResult.qualityReport;
+    if (
+      !isDatasetQualityReport(report) ||
+      !fingerprintsMatch(report.reportFingerprint, input.reportFingerprint)
+    ) {
+      return createFailureResult(
+        createContractError(
+          "conflict",
+          "Dataset preparation review changed. Reload the results and retry.",
+        ),
+        context,
+      );
+    }
+    const totalRows =
+      line.kind === "ready"
+        ? report.counts.acceptedRows
+        : line.reason
+          ? (report.reasonCounts[line.reason] ?? 0)
+          : report.counts.quarantinedRows;
+    if (
+      input.page * DATASET_QUALITY_REVIEW_PAGE_SIZE >= totalRows &&
+      totalRows > 0
+    ) {
+      return createFailureResult(
+        createContractError(
+          "validation",
+          "The requested review page is outside the available rows.",
+        ),
+        context,
+      );
+    }
+    if (totalRows === 0) {
+      return createSuccessResult(
+        {
+          lineId: input.lineId,
+          page: input.page,
+          pageSize: DATASET_QUALITY_REVIEW_PAGE_SIZE,
+          totalRows,
+          rows: [],
+        },
+        context,
+      );
+    }
+    try {
+      const storage =
+        line.kind === "ready"
+          ? pending.reviewStorage
+          : pending.evidence.outputs.local?.quarantine
+            ? {
+                key: String(
+                  pending.evidence.outputs.local.quarantine.storage.key,
+                ),
+                sha256:
+                  pending.evidence.outputs.local.quarantine.storage.checksum
+                    ?.algorithm === "sha256"
+                    ? pending.evidence.outputs.local.quarantine.storage.checksum
+                        .value
+                    : undefined,
+              }
+            : undefined;
+      if (!storage) {
+        throw new Error("Dataset preparation review data is unavailable.");
+      }
+      const retrieved = await this.storage.retrieveArtifact<Uint8Array>(
+        createRetrieveArtifactRequest(storage.key),
+        context,
+      );
+      if (
+        !retrieved.ok ||
+        !(retrieved.value.content instanceof Uint8Array) ||
+        retrieved.value.content.byteLength === 0 ||
+        retrieved.value.content.byteLength > DATASET_QUALITY_REVIEW_MAX_BYTES
+      ) {
+        throw new Error("Dataset preparation review data is unavailable.");
+      }
+      if (
+        storage.sha256 &&
+        createHash("sha256").update(retrieved.value.content).digest("hex") !==
+          storage.sha256
+      ) {
+        throw new Error(
+          "Dataset preparation review data failed integrity checks.",
+        );
+      }
+      const rows = await readDatasetQualityReviewJsonlPage(
+        retrieved.value.content,
+        line,
+        input.page,
+        totalRows,
+      );
+      return createSuccessResult(
+        {
+          lineId: input.lineId,
+          page: input.page,
+          pageSize: DATASET_QUALITY_REVIEW_PAGE_SIZE,
+          totalRows,
+          rows,
+        },
+        context,
+      );
+    } catch {
+      return createFailureResult(
+        createContractError(
+          "unavailable",
+          "Dataset preparation review data could not be read.",
+        ),
+        context,
+      );
+    }
+  }
+
   public async approvePreparedTrainingDataset(
     approval: DatasetQualityApprovalRequest,
     context?: ApplicationRequestContext,
@@ -1984,10 +2385,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     const pending = this.pendingQualityReviewsByRequestId.get(
       approval.requestId,
     );
-    if (
-      !pending ||
-      !this.isRecordedScopeOwned(pending.scope, context)
-    ) {
+    if (!pending || !this.isRecordedScopeOwned(pending.scope, context)) {
       return createFailureResult(
         createContractError(
           "not-found",
@@ -2052,6 +2450,9 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         approved,
         context,
       );
+      if (pending.reviewStorage) {
+        await this.deleteStoredArtifacts([pending.reviewStorage.key], context);
+      }
       this.materializedResultsByRequestId.set(approval.requestId, finalized);
       this.pendingQualityReviewsByRequestId.delete(approval.requestId);
       await this.taskPowerLifecycle.completeTask(
@@ -2090,6 +2491,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
   ): Promise<{
     value: PrepareTrainingDatasetFromArtifactsValue;
     storageKeys: string[];
+    reviewStorage?: { key: string; sha256: string };
   }> {
     validateRuntimeSplitOutputs(runtimeResult);
     const report = runtimeResult.qualityReport;
@@ -2103,9 +2505,8 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       report.counts.inputRows >
         quality.effectivePolicy.maxRowsPerSource *
           command.sourceArtifactIds.length ||
-      report.approvalAllowed !== (report.counts.acceptedRows > 0) ||
-      (report.status === "blocked") !==
-        (report.counts.acceptedRows === 0)
+      report.approvalAllowed !== report.counts.acceptedRows > 0 ||
+      (report.status === "blocked") !== (report.counts.acceptedRows === 0)
     ) {
       throw new Error(
         "Dataset preparation returned invalid or mismatched quality evidence.",
@@ -2117,18 +2518,34 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     const quarantineOutputs = runtimeResult.outputs.filter(
       (output) => output.role === "quarantine",
     );
+    const reviewOutputs = runtimeResult.outputs.filter(
+      (output) => output.role === "review",
+    );
     if (
       reportOutputs.length !== 1 ||
       quarantineOutputs.length > 1 ||
-      (report.counts.quarantinedRows > 0) !==
-        (quarantineOutputs.length === 1)
+      reviewOutputs.length !== (report.counts.acceptedRows > 0 ? 1 : 0) ||
+      report.counts.quarantinedRows > 0 !== (quarantineOutputs.length === 1)
     ) {
       throw new Error(
         "Dataset preparation quality evidence outputs are incomplete.",
       );
     }
+    const reviewOutput = reviewOutputs[0];
+    if (
+      reviewOutput &&
+      (reviewOutput.mediaType !== "application/x-ndjson" ||
+        !isRecord(reviewOutput.metadata) ||
+        reviewOutput.metadata.rowCount !== report.counts.acceptedRows ||
+        reviewOutput.metadata.reportFingerprint !== report.reportFingerprint)
+    ) {
+      throw new Error(
+        "Dataset preparation review rows do not match the quality report.",
+      );
+    }
 
     const storageKeys: string[] = [];
+    let reviewStorage: { key: string; sha256: string } | undefined;
     const local: NonNullable<
       PrepareTrainingDatasetFromArtifactsValue["outputs"]["local"]
     > = {};
@@ -2183,11 +2600,10 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         throw new Error(reportStore.error.message);
       }
       storageKeys.push(String(reportStore.value.key));
-      local.report =
-        createStagedArtifactDescriptorFromStorageObjectDescriptor(
-          reportStore.value,
-          { sourceKind: "runtime", originalName: reportName },
-        );
+      local.report = createStagedArtifactDescriptorFromStorageObjectDescriptor(
+        reportStore.value,
+        { sourceKind: "runtime", originalName: reportName },
+      );
       await rm(reportPath, { force: true });
 
       const quarantineOutput = quarantineOutputs[0];
@@ -2207,6 +2623,9 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
           command.sourceArtifactIds,
         );
         const quarantineName = quarantineOutput.name + ".jsonl";
+        const quarantineSha256 = createHash("sha256")
+          .update(quarantineBytes)
+          .digest("hex");
         const quarantineStore = await this.storage.storeArtifact(
           createStoreArtifactRequest(quarantineBytes, {
             descriptor: {
@@ -2216,6 +2635,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
                 this.now(),
               ),
               mediaType: "application/x-ndjson",
+              checksum: { algorithm: "sha256", value: quarantineSha256 },
               metadata: {
                 workspaceId: context?.workspaceId,
                 originalFileName: quarantineName,
@@ -2236,7 +2656,55 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
             quarantineStore.value,
             { sourceKind: "runtime", originalName: quarantineName },
           );
-        await rm(quarantinePath, { force: true });
+      }
+
+      if (reviewOutput) {
+        const reviewPath = await resolveRuntimeOutputPath(
+          runtimeWorkingDirectory,
+          reviewOutput.outputHandle,
+        );
+        const reviewBytes = await readBoundedOutput(
+          reviewPath,
+          DATASET_QUALITY_REVIEW_MAX_BYTES,
+          "review rows",
+        );
+        validateDatasetQualityReviewJsonl(
+          reviewBytes,
+          report.counts.acceptedRows,
+        );
+        const reviewName = reviewOutput.name + ".jsonl";
+        const reviewSha256 = createHash("sha256")
+          .update(reviewBytes)
+          .digest("hex");
+        const reviewStore = await this.storage.storeArtifact(
+          createStoreArtifactRequest(reviewBytes, {
+            descriptor: {
+              key: buildGeneratedDatasetStorageKey(
+                reviewOutput.name,
+                "jsonl",
+                this.now(),
+              ),
+              mediaType: "application/x-ndjson",
+              checksum: { algorithm: "sha256", value: reviewSha256 },
+              metadata: {
+                workspaceId: context?.workspaceId,
+                originalFileName: reviewName,
+                runtimeRole: "review",
+                reportFingerprint: report.reportFingerprint,
+                rowCount: report.counts.acceptedRows,
+              },
+            },
+          }),
+          context,
+        );
+        if (!reviewStore.ok) {
+          throw new Error(reviewStore.error.message);
+        }
+        reviewStorage = {
+          key: String(reviewStore.value.key),
+          sha256: reviewSha256,
+        };
+        await rm(reviewPath, { force: true });
       }
 
       return {
@@ -2251,9 +2719,13 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
           },
         ),
         storageKeys,
+        ...(reviewStorage ? { reviewStorage } : {}),
       };
     } catch (error) {
-      await this.deleteStoredArtifacts(storageKeys, context);
+      await this.deleteStoredArtifacts(
+        [...storageKeys, ...(reviewStorage ? [reviewStorage.key] : [])],
+        context,
+      );
       throw error;
     }
   }
@@ -2286,187 +2758,68 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     const storedLocalKeys: string[] = [];
 
     try {
-    if (outputDestinations.local || this.datasetVersionFinalizer) {
-      const storageKey = buildGeneratedDatasetStorageKey(
-        datasetOutput.name,
-        command.output.format,
-        this.now(),
-      );
-      const originalFileName = `${datasetOutput.name}.${command.output.format}`;
-      const storeDataset = await this.storage.storeArtifact(
-        createStoreArtifactRequest(datasetBytes, {
-          descriptor: {
-            key: storageKey,
-            mediaType: datasetOutput.mediaType,
-            metadata: {
-              workspaceId: context?.workspaceId,
-              originalFileName,
-              runtimeRole: "dataset",
-              ...buildDatasetMetadata(
-                command,
-                runtimeResult.summary,
-                { provider: "local" },
-                datasetOutput.metadata,
-              ),
-            },
-          },
-        }),
-        context,
-      );
-      if (!storeDataset.ok) {
-        throw new Error(storeDataset.error.message);
-      }
-      storedLocalKeys.push(String(storeDataset.value.key));
-      resultOutputs.local = {
-        dataset: createStagedArtifactDescriptorFromStorageObjectDescriptor(
-          storeDataset.value,
-          {
-            sourceKind: "runtime",
-            originalName: originalFileName,
-          },
-        ),
-      };
-    }
-
-    if (outputDestinations.huggingFace && !this.datasetVersionFinalizer) {
-      const artifactRepoStorage = this.artifactRepoStorage;
-      if (!artifactRepoStorage) {
-        throw new Error(
-          "Hugging Face output requested but artifact repository storage is unavailable.",
-        );
-      }
-      const datasetPath = joinRepoPath(
-        outputDestinations.huggingFace.pathPrefix,
-        `${datasetOutput.name}.${command.output.format}`,
-      );
-      const publishDataset = await artifactRepoStorage.storeArtifactInRepo(
-        createStoreArtifactInRepoRequest(datasetBytes, {
-          target: {
-            provider: outputDestinations.huggingFace.provider,
-            repository: outputDestinations.huggingFace.repository,
-            revision: outputDestinations.huggingFace.revision,
-            path: datasetPath,
-          },
-          mediaType: datasetOutput.mediaType,
-          metadata: buildDatasetMetadata(
-            command,
-            runtimeResult.summary,
-            {
-              provider: "huggingface",
-              publication: {
-                repository: outputDestinations.huggingFace.repository,
-                path: datasetPath,
-                revision: outputDestinations.huggingFace.revision,
-              },
-            },
-            datasetOutput.metadata,
-          ),
-        }),
-        context,
-      );
-      if (!publishDataset.ok) {
-        throw new Error(publishDataset.error.message);
-      }
-      const publishDatasetTarget = publishDataset.value.descriptor.target;
-      const verifyPublishedDataset =
-        await artifactRepoStorage.hasArtifactInRepo(
-          createHasArtifactInRepoRequest(publishDatasetTarget),
-          context,
-        );
-      if (!verifyPublishedDataset.ok) {
-        throw new Error(verifyPublishedDataset.error.message);
-      }
-      resultOutputs.huggingFace = {
-        dataset: {
-          provider: "huggingface",
-          repository: publishDatasetTarget.repository,
-          path: publishDatasetTarget.path ?? datasetPath,
-          revision: publishDatasetTarget.revision,
-          exists: verifyPublishedDataset.value.exists,
-          verifiedAt: this.now(),
-        },
-      };
-    }
-
-    const splitOutputs = runtimeResult.outputs.filter(
-      (output): output is typeof output & { role: DatasetSplitOutputRole } =>
-        output.role === "train" ||
-        output.role === "validation" ||
-        output.role === "test",
-    );
-    for (const splitOutput of splitOutputs) {
-      const splitOutputPath = await resolveRuntimeOutputPath(
-        runtimeWorkingDirectory,
-        splitOutput.outputHandle,
-      );
-      await validateDatasetOutput(splitOutputPath, command.output.format);
-      const splitBytes = new Uint8Array(await readFile(splitOutputPath));
-
-      if ((outputDestinations.local || this.datasetVersionFinalizer) && resultOutputs.local) {
+      if (outputDestinations.local || this.datasetVersionFinalizer) {
         const storageKey = buildGeneratedDatasetStorageKey(
-          splitOutput.name,
+          datasetOutput.name,
           command.output.format,
           this.now(),
         );
-        const originalFileName = splitOutput.name + "." + command.output.format;
-        const storeSplit = await this.storage.storeArtifact(
-          createStoreArtifactRequest(splitBytes, {
+        const originalFileName = `${datasetOutput.name}.${command.output.format}`;
+        const storeDataset = await this.storage.storeArtifact(
+          createStoreArtifactRequest(datasetBytes, {
             descriptor: {
               key: storageKey,
-              mediaType: splitOutput.mediaType,
+              mediaType: datasetOutput.mediaType,
               metadata: {
                 workspaceId: context?.workspaceId,
                 originalFileName,
-                runtimeRole: splitOutput.role,
+                runtimeRole: "dataset",
                 ...buildDatasetMetadata(
                   command,
                   runtimeResult.summary,
                   { provider: "local" },
-                  splitOutput.metadata,
+                  datasetOutput.metadata,
                 ),
               },
             },
           }),
           context,
         );
-        if (!storeSplit.ok) {
-          throw new Error(storeSplit.error.message);
+        if (!storeDataset.ok) {
+          throw new Error(storeDataset.error.message);
         }
-        storedLocalKeys.push(String(storeSplit.value.key));
-        resultOutputs.local[splitOutput.role] =
-          createStagedArtifactDescriptorFromStorageObjectDescriptor(
-            storeSplit.value,
+        storedLocalKeys.push(String(storeDataset.value.key));
+        resultOutputs.local = {
+          dataset: createStagedArtifactDescriptorFromStorageObjectDescriptor(
+            storeDataset.value,
             {
               sourceKind: "runtime",
               originalName: originalFileName,
             },
-          );
+          ),
+        };
       }
 
-      if (
-        outputDestinations.huggingFace &&
-        !this.datasetVersionFinalizer &&
-        resultOutputs.huggingFace
-      ) {
+      if (outputDestinations.huggingFace && !this.datasetVersionFinalizer) {
         const artifactRepoStorage = this.artifactRepoStorage;
         if (!artifactRepoStorage) {
           throw new Error(
             "Hugging Face output requested but artifact repository storage is unavailable.",
           );
         }
-        const splitPath = joinRepoPath(
+        const datasetPath = joinRepoPath(
           outputDestinations.huggingFace.pathPrefix,
-          splitOutput.name + "." + command.output.format,
+          `${datasetOutput.name}.${command.output.format}`,
         );
-        const publishSplit = await artifactRepoStorage.storeArtifactInRepo(
-          createStoreArtifactInRepoRequest(splitBytes, {
+        const publishDataset = await artifactRepoStorage.storeArtifactInRepo(
+          createStoreArtifactInRepoRequest(datasetBytes, {
             target: {
               provider: outputDestinations.huggingFace.provider,
               repository: outputDestinations.huggingFace.repository,
               revision: outputDestinations.huggingFace.revision,
-              path: splitPath,
+              path: datasetPath,
             },
-            mediaType: splitOutput.mediaType,
+            mediaType: datasetOutput.mediaType,
             metadata: buildDatasetMetadata(
               command,
               runtimeResult.summary,
@@ -2474,41 +2827,161 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
                 provider: "huggingface",
                 publication: {
                   repository: outputDestinations.huggingFace.repository,
-                  path: splitPath,
+                  path: datasetPath,
                   revision: outputDestinations.huggingFace.revision,
                 },
               },
-              splitOutput.metadata,
+              datasetOutput.metadata,
             ),
           }),
           context,
         );
-        if (!publishSplit.ok) {
-          throw new Error(publishSplit.error.message);
+        if (!publishDataset.ok) {
+          throw new Error(publishDataset.error.message);
         }
-        const publishedTarget = publishSplit.value.descriptor.target;
-        const verified = await artifactRepoStorage.hasArtifactInRepo(
-          createHasArtifactInRepoRequest(publishedTarget),
-          context,
-        );
-        if (!verified.ok) {
-          throw new Error(verified.error.message);
+        const publishDatasetTarget = publishDataset.value.descriptor.target;
+        const verifyPublishedDataset =
+          await artifactRepoStorage.hasArtifactInRepo(
+            createHasArtifactInRepoRequest(publishDatasetTarget),
+            context,
+          );
+        if (!verifyPublishedDataset.ok) {
+          throw new Error(verifyPublishedDataset.error.message);
         }
-        resultOutputs.huggingFace[splitOutput.role] = {
-          provider: "huggingface",
-          repository: publishedTarget.repository,
-          path: publishedTarget.path ?? splitPath,
-          revision: publishedTarget.revision,
-          exists: verified.value.exists,
-          verifiedAt: this.now(),
+        resultOutputs.huggingFace = {
+          dataset: {
+            provider: "huggingface",
+            repository: publishDatasetTarget.repository,
+            path: publishDatasetTarget.path ?? datasetPath,
+            revision: publishDatasetTarget.revision,
+            exists: verifyPublishedDataset.value.exists,
+            verifiedAt: this.now(),
+          },
         };
       }
 
-      await rm(splitOutputPath, { force: true });
-    }
+      const splitOutputs = runtimeResult.outputs.filter(
+        (output): output is typeof output & { role: DatasetSplitOutputRole } =>
+          output.role === "train" ||
+          output.role === "validation" ||
+          output.role === "test",
+      );
+      for (const splitOutput of splitOutputs) {
+        const splitOutputPath = await resolveRuntimeOutputPath(
+          runtimeWorkingDirectory,
+          splitOutput.outputHandle,
+        );
+        await validateDatasetOutput(splitOutputPath, command.output.format);
+        const splitBytes = new Uint8Array(await readFile(splitOutputPath));
 
-    await rm(datasetOutputPath, { force: true });
-    return this.buildResultValue(command, runtimeResult, resultOutputs);
+        if (
+          (outputDestinations.local || this.datasetVersionFinalizer) &&
+          resultOutputs.local
+        ) {
+          const storageKey = buildGeneratedDatasetStorageKey(
+            splitOutput.name,
+            command.output.format,
+            this.now(),
+          );
+          const originalFileName =
+            splitOutput.name + "." + command.output.format;
+          const storeSplit = await this.storage.storeArtifact(
+            createStoreArtifactRequest(splitBytes, {
+              descriptor: {
+                key: storageKey,
+                mediaType: splitOutput.mediaType,
+                metadata: {
+                  workspaceId: context?.workspaceId,
+                  originalFileName,
+                  runtimeRole: splitOutput.role,
+                  ...buildDatasetMetadata(
+                    command,
+                    runtimeResult.summary,
+                    { provider: "local" },
+                    splitOutput.metadata,
+                  ),
+                },
+              },
+            }),
+            context,
+          );
+          if (!storeSplit.ok) {
+            throw new Error(storeSplit.error.message);
+          }
+          storedLocalKeys.push(String(storeSplit.value.key));
+          resultOutputs.local[splitOutput.role] =
+            createStagedArtifactDescriptorFromStorageObjectDescriptor(
+              storeSplit.value,
+              {
+                sourceKind: "runtime",
+                originalName: originalFileName,
+              },
+            );
+        }
+
+        if (
+          outputDestinations.huggingFace &&
+          !this.datasetVersionFinalizer &&
+          resultOutputs.huggingFace
+        ) {
+          const artifactRepoStorage = this.artifactRepoStorage;
+          if (!artifactRepoStorage) {
+            throw new Error(
+              "Hugging Face output requested but artifact repository storage is unavailable.",
+            );
+          }
+          const splitPath = joinRepoPath(
+            outputDestinations.huggingFace.pathPrefix,
+            splitOutput.name + "." + command.output.format,
+          );
+          const publishSplit = await artifactRepoStorage.storeArtifactInRepo(
+            createStoreArtifactInRepoRequest(splitBytes, {
+              target: {
+                provider: outputDestinations.huggingFace.provider,
+                repository: outputDestinations.huggingFace.repository,
+                revision: outputDestinations.huggingFace.revision,
+                path: splitPath,
+              },
+              mediaType: splitOutput.mediaType,
+              metadata: buildDatasetMetadata(
+                command,
+                runtimeResult.summary,
+                {
+                  provider: "huggingface",
+                  publication: {
+                    repository: outputDestinations.huggingFace.repository,
+                    path: splitPath,
+                    revision: outputDestinations.huggingFace.revision,
+                  },
+                },
+                splitOutput.metadata,
+              ),
+            }),
+            context,
+          );
+          if (!publishSplit.ok) {
+            throw new Error(publishSplit.error.message);
+          }
+          const publishedTarget = publishSplit.value.descriptor.target;
+          const verified = await artifactRepoStorage.hasArtifactInRepo(
+            createHasArtifactInRepoRequest(publishedTarget),
+            context,
+          );
+          if (!verified.ok) {
+            throw new Error(verified.error.message);
+          }
+          resultOutputs.huggingFace[splitOutput.role] = {
+            provider: "huggingface",
+            repository: publishedTarget.repository,
+            path: publishedTarget.path ?? splitPath,
+            revision: publishedTarget.revision,
+            exists: verified.value.exists,
+            verifiedAt: this.now(),
+          };
+        }
+      }
+
+      return this.buildResultValue(command, runtimeResult, resultOutputs);
     } catch (error) {
       await this.deleteStoredArtifacts(storedLocalKeys, context);
       throw error;
@@ -2570,84 +3043,113 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     const hasher = this.datasetVersionHasher;
     if (!finalizer || !hasher) return value;
     if (!context?.workspaceId) {
-      throw new Error("Workspace scope is required to finalize a dataset version.");
+      throw new Error(
+        "Workspace scope is required to finalize a dataset version.",
+      );
     }
     const local = value.outputs.local;
     if (!local?.dataset) {
-      throw new Error("A complete local dataset artifact is required to create a version.");
+      throw new Error(
+        "A complete local dataset artifact is required to create a version.",
+      );
     }
-    const rowCounts: Partial<Record<"dataset" | "train" | "validation" | "test" | "quarantine", number>> = {
+    const rowCounts: Partial<
+      Record<"dataset" | "train" | "validation" | "test" | "quarantine", number>
+    > = {
       dataset: runtimeResult.summary.datasetRowCount,
       train: runtimeResult.summary.trainRowCount,
       validation: runtimeResult.summary.validationRowCount ?? 0,
       test: runtimeResult.summary.testRowCount,
       quarantine: runtimeResult.summary.quarantinedRowCount ?? 0,
     };
-    const artifacts = (Object.entries(local) as Array<
-      ["dataset" | "train" | "validation" | "test" | "report" | "quarantine", StagedArtifactDescriptor | undefined]
-    >)
-      .filter((entry): entry is [typeof entry[0], StagedArtifactDescriptor] => Boolean(entry[1]))
+    const artifacts = (
+      Object.entries(local) as Array<
+        [
+          "dataset" | "train" | "validation" | "test" | "report" | "quarantine",
+          StagedArtifactDescriptor | undefined,
+        ]
+      >
+    )
+      .filter((entry): entry is [(typeof entry)[0], StagedArtifactDescriptor] =>
+        Boolean(entry[1]),
+      )
       .map(([role, descriptor]) => ({
         role,
         artifactKey: descriptor.storage.key,
         mediaType: descriptor.storage.mediaType ?? "application/octet-stream",
         sizeBytes: descriptor.storage.sizeBytes,
         checksum: descriptor.storage.checksum,
-        ...(role in rowCounts ? { rowCount: rowCounts[role as keyof typeof rowCounts] } : {}),
+        ...(role in rowCounts
+          ? { rowCount: rowCounts[role as keyof typeof rowCounts] }
+          : {}),
       }));
     const qualityReport = runtimeResult.qualityReport;
     const effectivePolicy = qualityReport?.policy;
     const baselineFingerprint = hasher.digest("dataset-quality:baseline:1");
-    const taskType = command.recipe.task?.taskType ?? DEFAULT_DATASET_PREPARATION_TASK_TYPE;
-    const datasetName = command.output.naming?.baseName?.trim() || `${taskType}-dataset`;
-    let result: Awaited<ReturnType<DatasetVersionFinalizationService["finalize"]>>;
+    const taskType =
+      command.recipe.task?.taskType ?? DEFAULT_DATASET_PREPARATION_TASK_TYPE;
+    const datasetName =
+      command.output.naming?.baseName?.trim() || `${taskType}-dataset`;
+    let result: Awaited<
+      ReturnType<DatasetVersionFinalizationService["finalize"]>
+    >;
     try {
       result = await finalizer.finalize(
         {
-        workspaceId: context.workspaceId,
-        ...(context.organizationId ? { organizationId: context.organizationId } : {}),
-        createdBy: context.principalId?.trim() || "local-user",
-        datasetName,
-        recipeSnapshot: {
-          recipe: command.recipe,
-          ...(command.advanced ? { advanced: command.advanced } : {}),
-          split: command.split,
-          output: { format: command.output.format, naming: command.output.naming },
-          ...(effectivePolicy ? { effectiveQualityPolicy: effectivePolicy } : {}),
-        },
-        recipeImplementation: {
-          id: "builtin.dataset-preparation",
-          version: "1.0.0",
-        },
-        sources: this.sourceVersionLineageByRequestId.get(requestId) ?? [],
-        artifacts,
-        split: {
-          strategy: command.split.shuffle === false ? "ordered" : "source-group",
-          seed: command.split.seed ?? 42,
-        },
-        quality: effectivePolicy
-          ? {
-              policyId: effectivePolicy.policyId,
-              policyVersion: effectivePolicy.revision,
-              policyFingerprint: hasher.digest(JSON.stringify(effectivePolicy)),
-              reportFingerprint: normalizeDatasetVersionDigest(
-                `sha256:${qualityReport!.reportFingerprint}`,
-              ),
-            }
-          : {
-              policyId: "baseline",
-              policyVersion: "1",
-              policyFingerprint: baselineFingerprint,
-              reportFingerprint: baselineFingerprint,
+          workspaceId: context.workspaceId,
+          ...(context.organizationId
+            ? { organizationId: context.organizationId }
+            : {}),
+          createdBy: context.principalId?.trim() || "local-user",
+          datasetName,
+          recipeSnapshot: {
+            recipe: command.recipe,
+            ...(command.advanced ? { advanced: command.advanced } : {}),
+            split: command.split,
+            output: {
+              format: command.output.format,
+              naming: command.output.naming,
             },
-        documentation: {
-          name: datasetName,
-          summary: `Prepared ${taskType.replaceAll("-", " ")} training dataset.`,
-          intendedUses: ["Model training and evaluation."],
-          limitations: ["Review source rights and suitability before use."],
-        },
-        totalRows: runtimeResult.summary.datasetRowCount,
-        createdAt: this.now(),
+            ...(effectivePolicy
+              ? { effectiveQualityPolicy: effectivePolicy }
+              : {}),
+          },
+          recipeImplementation: {
+            id: "builtin.dataset-preparation",
+            version: "1.0.0",
+          },
+          sources: this.sourceVersionLineageByRequestId.get(requestId) ?? [],
+          artifacts,
+          split: {
+            strategy:
+              command.split.shuffle === false ? "ordered" : "source-group",
+            seed: command.split.seed ?? 42,
+          },
+          quality: effectivePolicy
+            ? {
+                policyId: effectivePolicy.policyId,
+                policyVersion: effectivePolicy.revision,
+                policyFingerprint: hasher.digest(
+                  JSON.stringify(effectivePolicy),
+                ),
+                reportFingerprint: normalizeDatasetVersionDigest(
+                  `sha256:${qualityReport!.reportFingerprint}`,
+                ),
+              }
+            : {
+                policyId: "baseline",
+                policyVersion: "1",
+                policyFingerprint: baselineFingerprint,
+                reportFingerprint: baselineFingerprint,
+              },
+          documentation: {
+            name: datasetName,
+            summary: `Prepared ${taskType.replaceAll("-", " ")} training dataset.`,
+            intendedUses: ["Model training and evaluation."],
+            limitations: ["Review source rights and suitability before use."],
+          },
+          totalRows: runtimeResult.summary.datasetRowCount,
+          createdAt: this.now(),
         },
         context,
       );
@@ -2655,9 +3157,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       await this.deleteStoredArtifacts(
         artifacts
           .filter((artifact) =>
-            ["dataset", "train", "validation", "test"].includes(
-              artifact.role,
-            ),
+            ["dataset", "train", "validation", "test"].includes(artifact.role),
           )
           .map((artifact) => artifact.artifactKey),
         context,
@@ -2728,13 +3228,20 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
   }
 
   private isRecordedScopeOwned(
-    recordedScope: { workspaceId: string; organizationId?: string },
+    recordedScope: {
+      workspaceId: string;
+      organizationId?: string;
+      principalId?: string;
+    },
     context: ApplicationRequestContext,
   ): boolean {
     return (
       recordedScope.workspaceId === context.workspaceId &&
       (recordedScope.organizationId === undefined ||
-        recordedScope.organizationId === String(context.organizationId ?? ""))
+        recordedScope.organizationId ===
+          String(context.organizationId ?? "")) &&
+      (recordedScope.principalId === undefined ||
+        recordedScope.principalId === String(context.principalId ?? ""))
     );
   }
 
@@ -2874,8 +3381,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
             return failAndCleanup(retrieveResult.error);
           }
         }
-        const descriptorMediaType =
-          retrieveResult.value.descriptor.mediaType;
+        const descriptorMediaType = retrieveResult.value.descriptor.mediaType;
         const descriptorMetadata = retrieveResult.value.descriptor.metadata;
         const metadataOriginalName =
           descriptorMetadata &&
@@ -2889,14 +3395,11 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         const catalogRecord = artifactCatalog
           ? await artifactCatalog
               .readArtifactCatalogRecord({ storageKey }, context)
-              .then((result) =>
-                result.ok ? result.value.record : undefined,
-              )
+              .then((result) => (result.ok ? result.value.record : undefined))
           : undefined;
         const resolvedOriginalName =
           metadataOriginalName ?? catalogRecord?.originalName;
-        const sourceMediaType =
-          descriptorMediaType ?? catalogRecord?.mediaType;
+        const sourceMediaType = descriptorMediaType ?? catalogRecord?.mediaType;
         const taskType =
           command.recipe.task?.taskType ??
           DEFAULT_DATASET_PREPARATION_TASK_TYPE;

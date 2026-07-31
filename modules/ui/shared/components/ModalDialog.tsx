@@ -22,6 +22,42 @@ const focusableSelector = [
 
 const modalStack: string[] = [];
 
+interface ModalScrollLockState {
+  count: number;
+  readonly documentElementOverflow: string;
+  readonly bodyOverflow: string;
+}
+
+const modalScrollLocks = new WeakMap<Document, ModalScrollLockState>();
+
+function lockModalScroll(ownerDocument: Document): void {
+  const current = modalScrollLocks.get(ownerDocument);
+  if (current) {
+    current.count += 1;
+    return;
+  }
+
+  modalScrollLocks.set(ownerDocument, {
+    count: 1,
+    documentElementOverflow: ownerDocument.documentElement.style.overflow,
+    bodyOverflow: ownerDocument.body.style.overflow,
+  });
+  ownerDocument.documentElement.style.overflow = "hidden";
+  ownerDocument.body.style.overflow = "hidden";
+}
+
+function unlockModalScroll(ownerDocument: Document): void {
+  const current = modalScrollLocks.get(ownerDocument);
+  if (!current) return;
+  current.count -= 1;
+  if (current.count > 0) return;
+
+  ownerDocument.documentElement.style.overflow =
+    current.documentElementOverflow;
+  ownerDocument.body.style.overflow = current.bodyOverflow;
+  modalScrollLocks.delete(ownerDocument);
+}
+
 function isTopmostModal(modalId: string): boolean {
   return modalStack[modalStack.length - 1] === modalId;
 }
@@ -125,6 +161,7 @@ export function ModalDialog({
     const previouslyFocused = document.activeElement as HTMLElement | null;
     unregisterModal(instanceId);
     modalStack.push(instanceId);
+    lockModalScroll(dialog.ownerDocument);
     const initialTarget = focusInitialElement(
       dialog,
       initialFocusRefValue.current,
@@ -221,6 +258,7 @@ export function ModalDialog({
       document.removeEventListener("focusin", handleFocusIn, true);
       preferredFocusObserver?.disconnect();
       unregisterModal(instanceId);
+      unlockModalScroll(dialog.ownerDocument);
       if (
         previouslyFocused?.isConnected &&
         typeof previouslyFocused.focus === "function"

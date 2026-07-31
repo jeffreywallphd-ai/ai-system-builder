@@ -22,6 +22,20 @@ Desktop places reusable workflow settings in an unnumbered section before the
 four steps. It omits empty task-specific settings and keeps save and
 publication guidance in the Review and create body instead of nested cards.
 
+The shared Artifact Browser uses the same card presentation for uploaded and
+generated artifacts. User data remains previewable without exposing active
+content: JSON and JSON Lines are formatted and capped at 100 displayed lines,
+Markdown is rendered from an inert element allowlist with raw HTML and remote
+images disabled, and Parquet shows at most the first 10 rows through the
+workspace-authorized dataset review reader. PDF preview rasterizes only the
+first page to a bounded image with the pinned PDF.js parser instead of embedding
+the browser PDF viewer. Internal system-build artifacts, including evidence,
+provenance, policy, workflow, manifests, and build bundles, remain stored for
+traceability but are excluded from both registered and unregistered
+user-facing Artifact Browser lists. More generally, any filename or media type
+ending in `+json` is treated as internal metadata and omitted. Only ordinary
+`.json`, `.jsonl`, and `.ndjson` JSON-family files are user-facing.
+
 ## Capability authority
 
 The shared dataset-preparation capability registry under modules/contracts/runtime is the authority for advertised source formats and task compatibility. UI selectors and the application guard consume the same registry. When filesystem byte retrieval omits descriptor metadata, staging reconciles the original name and media type from the workspace-authorized catalog record before capability resolution; it never guesses that an unknown object is JSON. A format or task combination must not be shown as available merely because one adapter can recognize its extension.
@@ -156,7 +170,12 @@ The worker applies the same checks to provided and generated rows. Rejected rows
 enter a reversible, workspace-scoped quarantine with reason codes and source-row
 lineage. Review reports contain field, source, class, and language summaries,
 accepted and quarantined counts, bounded reason counts, and a small set of
-sanitized examples. Raw row values are not review evidence.
+sanitized examples. Aggregate reports never contain raw row values. During the
+private review window, an authorized caller may follow a ready, set-aside, or
+reason-count line to a separately stored, bounded page of the underlying rows.
+That review stream is scope- and exact-report-fingerprint-bound and is removed
+with the other contained runtime outputs after approval, cancellation, or
+discard.
 
 ## Adaptive preparation
 
@@ -399,6 +418,39 @@ verifies every local artifact, defaults to Private, requires a separate Public
 confirmation, commits the complete version in one bounded provider operation,
 and records only the returned immutable commit identifier. Preparation never
 performs automatic per-file publication when versioning is active.
+
+Dataset presentations group immutable records by dataset identity rather than
+rendering one card per version. The newest record is selected by default and a
+version selector exposes older records. Presentation labels are derived from
+immutable lineage: independent roots receive successive major labels and their
+descendants receive successive minor labels. The labels do not mutate stored
+version identity or content digests.
+
+The shared review navigator presents actual preparation records and Parquet
+rows in desktop and thin-client hosts. Each actionable preparation report line
+opens the underlying ready or quarantined records rather than treating the
+aggregate report section as a review item. Dataset Review lists only locally
+readable workspace Parquet artifacts plus locally readable versioned Parquet
+outputs; repository-only entries must be localized before review. Cards expose
+separate Review rows and View table actions, the table shows 10 rows per page,
+and the modal traverses rows continuously without exposing page controls. Row
+values never enter structured persistence.
+Editing a row requires an authenticated write scope and the exact
+index-and-SHA-256 fingerprint last returned to the caller. A stale fingerprint
+fails closed. The revised Parquet artifact is written and verified before an
+immutable child version becomes visible; the parent remains unchanged. The
+first approved edit to an unversioned artifact creates an imported 1.0 baseline
+followed by a 1.1 child, while each later edit advances the minor label. The
+editor preserves the original columns and value types, and version lineage
+stores only the replacement fingerprint rather than row content.
+
+Final dataset output handles remain in their private runtime working directory
+until approval either finalizes successfully or is explicitly discarded. The
+accepted-row review stream is copied into bounded workspace-local temporary
+artifact storage, verified by SHA-256 on each preview read, and removed from the
+runtime directory. It is deleted after approval, cancellation, or discard. A
+failed approval remains retryable with the same review fingerprint; final-output
+cleanup runs only after terminal success, cancellation, or discard.
 
 ## Diagnostic boundary
 

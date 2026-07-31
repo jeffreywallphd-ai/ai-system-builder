@@ -2543,6 +2543,23 @@ def prepare_training_dataset(
             )
         )
     if quality_report is not None:
+        if rows:
+            outputs.append(
+                _emit_rows(
+                    rows,
+                    "jsonl",
+                    "review",
+                    base_name,
+                    {
+                        "rowCount": len(rows),
+                        "reportFingerprint": quality_report[
+                            "reportFingerprint"
+                        ],
+                    },
+                    task_type,
+                    output_directory,
+                )
+            )
         outputs.append(
             _emit_json_document(
                 quality_report,

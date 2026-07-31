@@ -46,10 +46,16 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     { public: false, scopes: ["model:write"] },
   ],
   ["POST /api/model/download", { public: false, scopes: ["model:write"] }],
-  ["POST /api/model/download/start", { public: false, scopes: ["model:write"] }],
+  [
+    "POST /api/model/download/start",
+    { public: false, scopes: ["model:write"] },
+  ],
   ["POST /api/model/download/read", { public: false, scopes: ["model:read"] }],
   ["POST /api/model/download/list", { public: false, scopes: ["model:read"] }],
-  ["POST /api/model/download/cancel", { public: false, scopes: ["model:write"] }],
+  [
+    "POST /api/model/download/cancel",
+    { public: false, scopes: ["model:write"] },
+  ],
   ["POST /api/model/record/update", { public: false, scopes: ["model:write"] }],
   ["POST /api/model/record/delete", { public: false, scopes: ["model:write"] }],
 
@@ -215,6 +221,32 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   ],
   [
     "POST /api/dataset-preparation/tasks/:requestId/cancel",
+    { public: false, scopes: ["artifact:write"] },
+  ],
+  ["GET /api/dataset-reviews", { public: false, scopes: ["artifact:read"] }],
+  [
+    "GET /api/dataset-reviews/page",
+    { public: false, scopes: ["artifact:read"] },
+  ],
+  [
+    "POST /api/dataset-reviews/rejections",
+    { public: false, scopes: ["artifact:write"] },
+  ],
+  [
+    "POST /api/dataset-reviews/edits",
+    { public: false, scopes: ["artifact:write"] },
+  ],
+  ["GET /api/dataset-versions", { public: false, scopes: ["artifact:read"] }],
+  [
+    "GET /api/dataset-versions/compare",
+    { public: false, scopes: ["artifact:read"] },
+  ],
+  [
+    "GET /api/dataset-versions/:versionId/reproduction",
+    { public: false, scopes: ["artifact:read"] },
+  ],
+  [
+    "POST /api/dataset-versions/:versionId/publish",
     { public: false, scopes: ["artifact:write"] },
   ],
 
@@ -459,10 +491,7 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   ],
   ["GET /api/systems/data/records", { public: false, scopes: ["asset:read"] }],
   ["GET /api/systems/data/audit", { public: false, scopes: ["asset:read"] }],
-  [
-    "GET /api/systems/run-workflows",
-    { public: false, scopes: ["asset:read"] },
-  ],
+  ["GET /api/systems/run-workflows", { public: false, scopes: ["asset:read"] }],
   [
     "POST /api/systems/run-workflows/prepare",
     { public: false, scopes: ["asset:read"] },

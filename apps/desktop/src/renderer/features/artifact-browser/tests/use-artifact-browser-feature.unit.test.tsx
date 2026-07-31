@@ -30,7 +30,7 @@ function findArtifactDetailsButton(
   container: HTMLElement,
   storageKey: string,
 ): HTMLButtonElement {
-  const button = Array.from(container.querySelectorAll("button")).find(
+  const button = Array.from(document.body.querySelectorAll("button")).find(
     (candidate) =>
       candidate.textContent === "View Details" &&
       Boolean(
@@ -169,7 +169,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     });
 
     const publishToggleButton = Array.from(
-      container.querySelectorAll("button"),
+      document.body.querySelectorAll("button"),
     ).find(
       (button) => button.textContent === "Publish to Hugging Face",
     ) as HTMLButtonElement;
@@ -177,18 +177,18 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       publishToggleButton.click();
     });
 
-    const inputs = Array.from(container.querySelectorAll("input"));
+    const inputs = Array.from(document.body.querySelectorAll("input"));
     setInputValue(inputs[0] as HTMLInputElement, "openai/demo");
     setInputValue(inputs[2] as HTMLInputElement, "images");
-    const creationCheckbox = container.querySelector(
+    const creationCheckbox = document.body.querySelector(
       'input[type="checkbox"]',
     ) as HTMLInputElement;
     await act(async () => {
       creationCheckbox.click();
     });
-    expect(container.textContent).toContain("Private (recommended)");
+    expect(document.body.textContent).toContain("Private (recommended)");
 
-    const publishButton = Array.from(container.querySelectorAll("button")).find(
+    const publishButton = Array.from(document.body.querySelectorAll("button")).find(
       (button) => button.textContent === "Publish",
     ) as HTMLButtonElement;
     await act(async () => {
@@ -204,9 +204,9 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       mediaType: "",
       repositoryCreation: { approved: true, visibility: "private" },
     });
-    expect(container.textContent).toContain("Published Backing");
-    expect(container.textContent).toContain("openai/demo");
-    expect(container.textContent).toContain("Not yet verified");
+    expect(document.body.textContent).toContain("Published Backing");
+    expect(document.body.textContent).toContain("openai/demo");
+    expect(document.body.textContent).toContain("Not yet verified");
   });
 
   it("shows publish failure message", async () => {
@@ -272,7 +272,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       artifactButton.click();
     });
     const publishToggleButton = Array.from(
-      container.querySelectorAll("button"),
+      document.body.querySelectorAll("button"),
     ).find(
       (button) => button.textContent === "Publish to Hugging Face",
     ) as HTMLButtonElement;
@@ -280,11 +280,11 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       publishToggleButton.click();
     });
 
-    const inputs = Array.from(container.querySelectorAll("input"));
+    const inputs = Array.from(document.body.querySelectorAll("input"));
     setInputValue(inputs[0] as HTMLInputElement, "openai/demo");
     setInputValue(inputs[2] as HTMLInputElement, "images");
 
-    const publishButton = Array.from(container.querySelectorAll("button")).find(
+    const publishButton = Array.from(document.body.querySelectorAll("button")).find(
       (button) => button.textContent === "Publish",
     ) as HTMLButtonElement;
     await act(async () => {
@@ -358,7 +358,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     });
 
     const defaultsPanelToggle = Array.from(
-      container.querySelectorAll("button"),
+      document.body.querySelectorAll("button"),
     ).find((button) =>
       button.textContent?.includes("Hugging Face defaults"),
     ) as HTMLButtonElement;
@@ -403,18 +403,27 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       );
     });
 
-    expect(container.textContent).toContain("Artifact Browser");
-    expect(container.textContent).toContain("Artifact family");
-    expect(container.textContent).toContain(
+    expect(document.body.textContent).toContain("Artifact Browser");
+    expect(document.body.textContent).toContain("Artifact family");
+    expect(document.body.textContent).toContain(
       "There are currently no uploaded artifacts in the workspace.",
     );
-    expect(container.textContent).toContain(
+    expect(document.body.textContent).toContain(
       "There are currently no generated artifacts in the workspace.",
     );
-    expect(container.textContent).not.toContain("Register from Hugging Face");
+    expect(document.body.textContent).not.toContain("Register from Hugging Face");
   });
 
   it("lists non-image artifacts and only renders image preview for image media types", async () => {
+    const readParquetPreview = vi.fn().mockResolvedValue({
+      totalRows: 12,
+      rows: Array.from({ length: 10 }, (_, index) => ({
+        values: {
+          instruction: `Instruction ${index + 1}`,
+          output: `Output ${index + 1}`,
+        },
+      })),
+    });
     const client = {
       browseArtifacts: vi.fn().mockResolvedValue([
         {
@@ -426,6 +435,13 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
           storageKey: "uploads/train.parquet",
           artifactFamily: "tabular" as const,
           mediaType: "application/x-parquet",
+        },
+        {
+          storageKey: "generated/train.json",
+          originalName: "train.json",
+          sourceKind: "generated",
+          artifactFamily: "structured-text" as const,
+          mediaType: "application/json",
         },
       ]),
       readArtifactDetail: vi.fn().mockResolvedValue({
@@ -468,11 +484,25 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
 
     await act(async () => {
       root.render(
-        <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+        <ArtifactBrowserFeature
+          client={client}
+          workspaceId="workspace-a"
+          readParquetPreview={readParquetPreview}
+        />,
       );
     });
 
-    expect(container.textContent).toContain("uploads/train.parquet");
+    expect(document.body.textContent).toContain("uploads/train.parquet");
+    const generatedSection = document.body.querySelector<HTMLElement>(
+      "[aria-label='Generated artifacts']",
+    );
+    const generatedCard = generatedSection?.querySelector<HTMLElement>(
+      ".artifact-browser__artifact-card",
+    );
+    expect(generatedSection?.classList.contains("artifact-browser__uploaded-grid")).toBe(true);
+    expect(generatedCard?.querySelector("h4")?.textContent).toBe("train.json");
+    expect(generatedCard?.textContent).toContain("generated/train.json");
+    expect(generatedCard?.textContent).toContain("Status: generated");
     const parquetButton = findArtifactDetailsButton(
       container,
       "uploads/train.parquet",
@@ -483,10 +513,18 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     });
 
     expect(client.createArtifactMediaViewUrl).not.toHaveBeenCalled();
-    expect(container.querySelector("img")).toBeNull();
-    expect(container.textContent).toContain("application/x-parquet");
-    expect(container.textContent).toContain("tabular");
-    expect(container.textContent).toContain("upload");
+    expect(document.body.querySelector("img")).toBeNull();
+    expect(document.body.textContent).toContain("application/x-parquet");
+    expect(document.body.textContent).toContain("tabular");
+    expect(document.body.textContent).toContain("upload");
+    expect(readParquetPreview).toHaveBeenCalledWith({
+      workspaceId: "workspace-a",
+      artifactKey: "uploads/train.parquet",
+    });
+    expect(document.body.textContent).toContain("Showing the first 10 of 12 rows.");
+    expect(document.body.textContent).toContain("Instruction 1");
+    expect(document.body.textContent).toContain("Instruction 10");
+    expect(document.body.textContent).not.toContain("Instruction 11");
   });
 
   it("renders Unregistered Artifacts section and deletes only after exact typed confirmation", async () => {
@@ -533,13 +571,13 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       );
     });
 
-    expect(container.textContent).toContain("Unregistered Artifacts");
-    expect(container.textContent).toContain("orphan/report.pdf");
+    expect(document.body.textContent).toContain("Unregistered Artifacts");
+    expect(document.body.textContent).toContain("orphan/report.pdf");
 
     const registerButton = Array.from(
-      container.querySelectorAll("button"),
+      document.body.querySelectorAll("button"),
     ).find((button) => button.textContent === "Register") as HTMLButtonElement;
-    const deleteButton = Array.from(container.querySelectorAll("button")).find(
+    const deleteButton = Array.from(document.body.querySelectorAll("button")).find(
       (button) => button.textContent === "Delete",
     ) as HTMLButtonElement;
 
@@ -549,19 +587,19 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     await act(async () => {
       deleteButton.click();
     });
-    expect(container.textContent).toContain(
+    expect(document.body.textContent).toContain(
       "Type Delete to confirm this destructive action.",
     );
 
     const confirmationInput = Array.from(
-      container.querySelectorAll("input"),
+      document.body.querySelectorAll("input"),
     ).find(
       (input) => input.getAttribute("placeholder") === "Delete",
     ) as HTMLInputElement;
     setInputValue(confirmationInput, "Delete");
 
     const confirmDeleteButton = Array.from(
-      container.querySelectorAll("button"),
+      document.body.querySelectorAll("button"),
     ).find(
       (button) => button.textContent === "Confirm delete",
     ) as HTMLButtonElement;
@@ -623,7 +661,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       );
     });
 
-    const deleteButton = Array.from(container.querySelectorAll("button")).find(
+    const deleteButton = Array.from(document.body.querySelectorAll("button")).find(
       (button) => button.textContent === "Delete",
     ) as HTMLButtonElement;
 
@@ -632,14 +670,14 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     });
 
     const confirmationInput = Array.from(
-      container.querySelectorAll("input"),
+      document.body.querySelectorAll("input"),
     ).find(
       (input) => input.getAttribute("placeholder") === "Delete",
     ) as HTMLInputElement;
     setInputValue(confirmationInput, "delete");
 
     const confirmDeleteButton = Array.from(
-      container.querySelectorAll("button"),
+      document.body.querySelectorAll("button"),
     ).find(
       (button) => button.textContent === "Confirm delete",
     ) as HTMLButtonElement;
@@ -648,18 +686,18 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     });
 
     expect(client.deleteUnregisteredArtifact).not.toHaveBeenCalled();
-    expect(container.textContent).toContain(
+    expect(document.body.textContent).toContain(
       "Type Delete to confirm this destructive action.",
     );
 
-    const cancelButton = Array.from(container.querySelectorAll("button")).find(
+    const cancelButton = Array.from(document.body.querySelectorAll("button")).find(
       (button) => button.textContent === "Cancel",
     ) as HTMLButtonElement;
     await act(async () => {
       cancelButton.click();
     });
 
-    expect(container.textContent).not.toContain("Confirm delete");
+    expect(document.body.textContent).not.toContain("Confirm delete");
   });
 
   it("blocks registered delete when typed confirmation is not exact and does not use browser prompt", async () => {
@@ -725,7 +763,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       artifactButton.click();
     });
 
-    const deleteButton = Array.from(container.querySelectorAll("button")).find(
+    const deleteButton = Array.from(document.body.querySelectorAll("button")).find(
       (button) => button.textContent === "Delete registered artifact",
     ) as HTMLButtonElement;
 
@@ -734,14 +772,14 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     });
 
     const confirmationInput = Array.from(
-      container.querySelectorAll("input"),
+      document.body.querySelectorAll("input"),
     ).find(
       (input) => input.getAttribute("placeholder") === "Delete",
     ) as HTMLInputElement;
     setInputValue(confirmationInput, "DELETE");
 
     const confirmDeleteButton = Array.from(
-      container.querySelectorAll("button"),
+      document.body.querySelectorAll("button"),
     ).find(
       (button) => button.textContent === "Confirm delete",
     ) as HTMLButtonElement;
@@ -751,7 +789,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
 
     expect(promptSpy).not.toHaveBeenCalled();
     expect(client.deleteRegisteredArtifact).not.toHaveBeenCalled();
-    expect(container.textContent).toContain(
+    expect(document.body.textContent).toContain(
       "Type Delete to confirm this destructive action.",
     );
   });
@@ -817,7 +855,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       artifactButton.click();
     });
 
-    const deleteButton = Array.from(container.querySelectorAll("button")).find(
+    const deleteButton = Array.from(document.body.querySelectorAll("button")).find(
       (button) => button.textContent === "Delete registered artifact",
     ) as HTMLButtonElement;
     await act(async () => {
@@ -825,14 +863,14 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     });
 
     const confirmationInput = Array.from(
-      container.querySelectorAll("input"),
+      document.body.querySelectorAll("input"),
     ).find(
       (input) => input.getAttribute("placeholder") === "Delete",
     ) as HTMLInputElement;
     setInputValue(confirmationInput, "Delete");
 
     const confirmDeleteButton = Array.from(
-      container.querySelectorAll("button"),
+      document.body.querySelectorAll("button"),
     ).find(
       (button) => button.textContent === "Confirm delete",
     ) as HTMLButtonElement;
@@ -876,8 +914,8 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       );
     });
 
-    expect(container.textContent).toContain("Artifact family");
-    const familySelect = container.querySelector("select") as HTMLSelectElement;
+    expect(document.body.textContent).toContain("Artifact family");
+    const familySelect = document.body.querySelector("select") as HTMLSelectElement;
     expect(familySelect).toBeTruthy();
     expect(
       Array.from(familySelect.options).map((option) => option.value),
@@ -976,7 +1014,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       artifactButton.click();
     });
 
-    const recheckButton = Array.from(container.querySelectorAll("button")).find(
+    const recheckButton = Array.from(document.body.querySelectorAll("button")).find(
       (button) => button.textContent === "Re-check published backing",
     ) as HTMLButtonElement;
     await act(async () => {
@@ -986,7 +1024,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     expect(client.verifyPublishedArtifactBacking).toHaveBeenCalledWith({
       artifactId: "uploads/cat.png",
     });
-    expect(container.textContent).toContain("Last checked:");
+    expect(document.body.textContent).toContain("Last checked:");
   });
 
   it("localizes imported artifact bytes from the artifact panel", async () => {
@@ -1083,7 +1121,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     });
 
     const localizeButton = Array.from(
-      container.querySelectorAll("button"),
+      document.body.querySelectorAll("button"),
     ).find(
       (button) => button.textContent === "Localize artifact",
     ) as HTMLButtonElement;
@@ -1095,7 +1133,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       workspaceId: "workspace-a",
       artifactId: "artifacts/20260418000000-local01",
     });
-    expect(container.textContent).toContain(
+    expect(document.body.textContent).toContain(
       "Localized bytes key: artifacts/20260418000000-local01",
     );
   });
@@ -1193,8 +1231,8 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       );
     });
 
-    expect(container.textContent).toContain("Remote only");
-    expect(container.textContent).toContain("Published");
+    expect(document.body.textContent).toContain("Remote only");
+    expect(document.body.textContent).toContain("Published");
 
     const artifactButton = findArtifactDetailsButton(
       container,
@@ -1204,11 +1242,11 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       artifactButton.click();
     });
 
-    expect(container.textContent).toContain(
+    expect(document.body.textContent).toContain(
       "Remote-only artifact. Local preview is unavailable until localization.",
     );
-    expect(container.textContent).toContain("Re-check source backing");
-    expect(container.textContent).toContain("Localize artifact");
+    expect(document.body.textContent).toContain("Re-check source backing");
+    expect(document.body.textContent).toContain("Localize artifact");
   });
 });
 
@@ -1283,11 +1321,11 @@ it("renders website capture metadata and HTML source preview for website-ingeste
     artifactButton.click();
   });
 
-  expect(container.textContent).toContain("Website capture metadata");
-  expect(container.textContent).toContain("https://example.com/");
-  expect(container.textContent).toContain("simple-http");
-  expect(container.textContent).toContain("HTML source preview");
-  expect(container.textContent).toContain(
+  expect(document.body.textContent).toContain("Website capture metadata");
+  expect(document.body.textContent).toContain("https://example.com/");
+  expect(document.body.textContent).toContain("simple-http");
+  expect(document.body.textContent).toContain("HTML source preview");
+  expect(document.body.textContent).toContain(
     "<html><body><h1>Hello</h1></body></html>",
   );
   expect(client.createArtifactMediaViewUrl).not.toHaveBeenCalled();

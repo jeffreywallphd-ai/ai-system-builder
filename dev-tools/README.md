@@ -24,9 +24,11 @@ their owned files independently and write duration-ranked JSON reports under
 
 `npm run test:dataset-preparation:e2e` is the opt-in dataset creation matrix.
 Run it only when Dataset Preparation changes or when explicitly requested. It
-exercises all 39 supported training-task/material-division combinations with
-one or two bounded sources, writes real Parquet outputs, reopens them with
-PyArrow, and verifies non-empty task columns plus source association. It uses
+reports 27 top-level training-goal/material-division cases (nine goals by an
+existing dataset, combined datasets, and source material) plus the 39 detailed
+preparation-method combinations. Every case uses one or two bounded sources,
+writes real Parquet output, reopens it with PyArrow, and verifies non-empty task
+columns plus source association. It uses
 deterministic valid generation at the model boundary so it qualifies dataset
 creation without repeating large-model inference for every combination. It is
 intentionally outside `test:e2e` and `test:all`.

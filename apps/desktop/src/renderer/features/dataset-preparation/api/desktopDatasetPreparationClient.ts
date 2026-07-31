@@ -10,7 +10,16 @@ import type {
   DatasetVersionPublicationRecord,
   DatasetVersionRecord,
   DatasetVersionReproduction,
+  DatasetReviewDatasetGroup,
+  DatasetReviewRowEditResult,
+  DatasetReviewPage,
+  DatasetReviewPageSize,
+  DatasetReviewRowRejectionResult,
 } from "../../../../../../../modules/contracts/dataset";
+import type {
+  DatasetQualityReviewLineId,
+  DatasetQualityReviewPage,
+} from "../../../../../../../modules/contracts/runtime";
 
 interface PreloadResponseEnvelope {
   ok: boolean;
@@ -90,6 +99,13 @@ export interface DesktopDatasetPreparationClient {
     reportFingerprint: string,
     workspaceId?: string,
   ) => Promise<DesktopDatasetPreparationResult>;
+  readPreparedReviewPage?: (input: {
+    requestId: string;
+    reportFingerprint: string;
+    lineId: DatasetQualityReviewLineId;
+    page: number;
+    workspaceId?: string;
+  }) => Promise<DatasetQualityReviewPage>;
   listVersions?: (
     workspaceId: string,
     datasetId?: string,
@@ -111,6 +127,31 @@ export interface DesktopDatasetPreparationClient {
     createRepository?: boolean;
     publicAccessConfirmed?: true;
   }) => Promise<DatasetVersionPublicationRecord>;
+  listReviewTargets?: (
+    workspaceId: string,
+  ) => Promise<readonly DatasetReviewDatasetGroup[]>;
+  readReviewPage?: (input: {
+    workspaceId: string;
+    artifactKey: string;
+    versionId?: string;
+    page: number;
+    pageSize: DatasetReviewPageSize;
+  }) => Promise<DatasetReviewPage>;
+  rejectReviewRow?: (input: {
+    workspaceId: string;
+    artifactKey: string;
+    versionId?: string;
+    rowIndex: number;
+    rowFingerprint: `sha256:${string}`;
+  }) => Promise<DatasetReviewRowRejectionResult>;
+  editReviewRow?: (input: {
+    workspaceId: string;
+    artifactKey: string;
+    versionId?: string;
+    rowIndex: number;
+    rowFingerprint: `sha256:${string}`;
+    values: Readonly<Record<string, unknown>>;
+  }) => Promise<DatasetReviewRowEditResult>;
 }
 export type DesktopDatasetPreparationTaskReadResult =
   | {
@@ -166,8 +207,7 @@ function mapDatasetProgress(
       typeof progress.details?.phase === "string"
         ? progress.details.phase
         : undefined,
-    memoryOverflowActive:
-      progress.details?.memoryOverflowActive === true,
+    memoryOverflowActive: progress.details?.memoryOverflowActive === true,
     estimatedMemoryOverflowBytes:
       typeof progress.details?.estimatedMemoryOverflowBytes === "number"
         ? progress.details.estimatedMemoryOverflowBytes
@@ -591,6 +631,28 @@ export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparati
         throw normalizeDatasetPreparationTransportError(error);
       }
     },
+    async readPreparedReviewPage(input) {
+      if (!desktopApi.readPreparedDatasetQualityReviewPage) {
+        throw new Error("Dataset preparation row review is unavailable.");
+      }
+      const response =
+        await desktopApi.readPreparedDatasetQualityReviewPage(input);
+      const value = ensureSuccessEnvelope(
+        response,
+        "Dataset preparation rows could not be loaded.",
+      ).value as DatasetQualityReviewPage | undefined;
+      if (
+        !value ||
+        !Array.isArray(value.rows) ||
+        value.lineId !== input.lineId ||
+        value.page !== input.page
+      ) {
+        throw new Error(
+          "Dataset preparation row review response is incomplete.",
+        );
+      }
+      return value;
+    },
     async listVersions(workspaceId, datasetId) {
       if (!desktopApi.listDatasetVersions)
         throw new Error("Dataset version history is unavailable.");
@@ -646,6 +708,54 @@ export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparati
       if (!value?.publication)
         throw new Error("Dataset publication response is incomplete.");
       return value.publication;
+    },
+    async listReviewTargets(workspaceId) {
+      if (!desktopApi.listDatasetReviewTargets)
+        throw new Error("Dataset review is unavailable.");
+      const response = await desktopApi.listDatasetReviewTargets({
+        workspaceId,
+      });
+      const value = ensureSuccessEnvelope(
+        response,
+        "Workspace datasets could not be loaded.",
+      ).value as { groups?: readonly DatasetReviewDatasetGroup[] } | undefined;
+      return Array.isArray(value?.groups) ? value.groups : [];
+    },
+    async readReviewPage(input) {
+      if (!desktopApi.readDatasetReviewPage)
+        throw new Error("Dataset row review is unavailable.");
+      const response = await desktopApi.readDatasetReviewPage(input);
+      const value = ensureSuccessEnvelope(
+        response,
+        "Dataset rows could not be loaded.",
+      ).value as { page?: DatasetReviewPage } | undefined;
+      if (!value?.page)
+        throw new Error("Dataset row review response is incomplete.");
+      return value.page;
+    },
+    async rejectReviewRow(input) {
+      if (!desktopApi.rejectDatasetReviewRow)
+        throw new Error("Dataset row rejection is unavailable.");
+      const response = await desktopApi.rejectDatasetReviewRow(input);
+      const value = ensureSuccessEnvelope(
+        response,
+        "The selected row could not be rejected.",
+      ).value as DatasetReviewRowRejectionResult | undefined;
+      if (!value?.version)
+        throw new Error("Dataset row rejection response is incomplete.");
+      return value;
+    },
+    async editReviewRow(input) {
+      if (!desktopApi.editDatasetReviewRow)
+        throw new Error("Dataset row editing is unavailable.");
+      const response = await desktopApi.editDatasetReviewRow(input);
+      const value = ensureSuccessEnvelope(
+        response,
+        "The selected row could not be edited.",
+      ).value as DatasetReviewRowEditResult | undefined;
+      if (!value?.version)
+        throw new Error("Dataset row edit response is incomplete.");
+      return value;
     },
   };
 }

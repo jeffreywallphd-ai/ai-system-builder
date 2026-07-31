@@ -21,6 +21,7 @@ import { resolvePythonRuntimeTaskTimeoutMs } from "./pythonRuntimeTaskTimeoutPol
 
 const genericToPythonTaskTypeMap: Partial<Record<TaskType, string>> = {
   [TaskType.DATASET_PREPARATION]: "prepare-training-dataset",
+  [TaskType.DATASET_REVIEW]: "review-dataset",
   [TaskType.MODEL_DOWNLOAD]: "ensure-model-download",
   [TaskType.MODEL_TRAINING]: "train-model",
   [TaskType.MODEL_VALIDATION]: "validate-model",
@@ -40,6 +41,9 @@ function toGenericTaskType(
 ): RuntimeTaskRecord["taskType"] {
   if (taskType === "prepare-training-dataset") {
     return TaskType.DATASET_PREPARATION;
+  }
+  if (taskType === "review-dataset") {
+    return TaskType.DATASET_REVIEW;
   }
   if (taskType === "ensure-model-download") {
     return TaskType.MODEL_DOWNLOAD;

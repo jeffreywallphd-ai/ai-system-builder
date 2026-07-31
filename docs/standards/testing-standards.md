@@ -26,7 +26,8 @@ They are not written to satisfy vanity coverage metrics or performative CI check
   - `npm run test:standardande2e` (combined standard and end-to-end coverage)
   - `npm run test:all` (combined standard, end-to-end, and AI coverage)
   - `npm run test:dataset-preparation:e2e` (opt-in physical dataset creation
-    matrix, only for Dataset Preparation changes or an explicit request)
+    matrix with 27 explicit training-goal/material-division cases plus detailed
+    method coverage, only for Dataset Preparation changes or an explicit request)
   - `npm run test:non-browser` / `npm run test:vitest` (runner-specific coverage)
 
 The standard suite is the default feedback loop. The E2E suite contains every

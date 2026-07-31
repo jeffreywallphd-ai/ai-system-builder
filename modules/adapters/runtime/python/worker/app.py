@@ -25,6 +25,7 @@ from .models import (
     LoadedModelDescriptor,
     ModelStatusResult,
     PrepareTrainingDatasetRequest,
+    ReviewDatasetRequest,
     PythonRuntimeCapabilitiesResult,
     PythonRuntimeError,
     PythonRuntimeHealthCheckResult,
@@ -44,6 +45,7 @@ from .tasks.constrained_json_decoder import get_constrained_json_decoder_runtime
 from .tasks.local_text_generation import describe_loaded_generation_models, get_or_create_local_text_generator, unload_generation_models
 from .tasks.model_validation import validate_model_output
 from .tasks.prepare_training_dataset import prepare_training_dataset
+from .tasks.review_dataset import review_dataset
 from .tasks.train_model import train_model
 
 RUNTIME_ID = getenv("PYTHON_RUNTIME_ID", "python-sidecar")
@@ -314,6 +316,10 @@ def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
             output_directory=_runtime_output_directory(payload),
         ).model_dump(mode="json")
 
+    if request.taskType == "review-dataset":
+        payload = ReviewDatasetRequest.model_validate(request.payload)
+        return review_dataset(payload)
+
 
     if request.taskType == "conversation-text-generation":
         payload = request.payload if isinstance(request.payload, dict) else {}
@@ -502,6 +508,7 @@ def health() -> PythonRuntimeHealthCheckResult:
 def capabilities() -> PythonRuntimeCapabilitiesResult:
     supported = [
         "prepare-training-dataset",
+        "review-dataset",
         "ensure-model-download",
         "model-status",
         "unload-model",

@@ -463,6 +463,9 @@ class DatasetQualityTests(unittest.TestCase):
             quarantine_output = next(
                 output for output in result.outputs if output.role == "quarantine"
             )
+            review_output = next(
+                output for output in result.outputs if output.role == "review"
+            )
             report_text = Path(report_output.tempPath).read_text(encoding="utf-8")
             self.assertNotIn("private@example.com", report_text)
             quarantine_rows = [
@@ -472,6 +475,17 @@ class DatasetQualityTests(unittest.TestCase):
                 .splitlines()
             ]
             self.assertEqual(len(quarantine_rows), 3)
+            review_rows = [
+                json.loads(line)
+                for line in Path(review_output.tempPath)
+                .read_text(encoding="utf-8")
+                .splitlines()
+            ]
+            self.assertEqual(len(review_rows), result.summary.acceptedRowCount)
+            self.assertEqual(
+                review_output.metadata["reportFingerprint"],
+                result.qualityReport["reportFingerprint"],
+            )
             self.assertTrue(
                 any(
                     row["reasonCodes"]

@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   ARTIFACT_PREVIEW_MAX_BYTES,
+  ARTIFACT_PDF_PREVIEW_MAX_BYTES,
   createIdleArtifactPreview,
   createCompressedImagePreviewObjectUrl,
   createLoadingArtifactPreview,
   createMediaArtifactPreview,
+  createPdfFirstPagePreviewObjectUrl,
   createTextArtifactPreview,
   createUnavailableArtifactPreview,
   createUnsupportedArtifactPreview,
@@ -176,6 +178,23 @@ export function useArtifactSelectionContent(
                     ),
                   );
                 }
+              } else if (previewDescriptor.kind === "pdf") {
+                const media = await client.readArtifactMedia(locator, {
+                  workspaceId,
+                  maximumBytes: ARTIFACT_PDF_PREVIEW_MAX_BYTES,
+                });
+                const nextPreviewMediaUrl =
+                  await createPdfFirstPagePreviewObjectUrl(media.bytes);
+                setManagedPreviewMediaUrl(nextPreviewMediaUrl);
+                setArtifactPreview(
+                  createMediaArtifactPreview(
+                    {
+                      ...previewSource,
+                      mediaType: "application/pdf",
+                    },
+                    nextPreviewMediaUrl,
+                  ),
+                );
               } else {
                 const nextPreviewMediaUrl =
                   await client.createArtifactMediaViewUrl(locator, {

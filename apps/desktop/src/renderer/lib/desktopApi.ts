@@ -474,6 +474,16 @@ export interface DesktopDatasetPreparationApi {
     },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
+  readPreparedDatasetQualityReviewPage?: (
+    input: {
+      requestId: string;
+      reportFingerprint: string;
+      lineId: import("../../../../../modules/contracts/runtime").DatasetQualityReviewLineId;
+      page: number;
+      workspaceId?: string;
+    },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
   listDatasetVersions?: (
     input: { workspaceId: string; datasetId?: string },
     context?: DesktopBridgeRequestContext,
@@ -494,6 +504,41 @@ export interface DesktopDatasetPreparationApi {
       visibility: Exclude<DatasetPublicationVisibility, "protected">;
       createRepository?: boolean;
       publicAccessConfirmed?: true;
+    },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  listDatasetReviewTargets?: (
+    input: { workspaceId: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  readDatasetReviewPage?: (
+    input: {
+      workspaceId: string;
+      artifactKey: string;
+      versionId?: string;
+      page: number;
+      pageSize: 10 | 25 | 50;
+    },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  rejectDatasetReviewRow?: (
+    input: {
+      workspaceId: string;
+      artifactKey: string;
+      versionId?: string;
+      rowIndex: number;
+      rowFingerprint: `sha256:${string}`;
+    },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  editDatasetReviewRow?: (
+    input: {
+      workspaceId: string;
+      artifactKey: string;
+      versionId?: string;
+      rowIndex: number;
+      rowFingerprint: `sha256:${string}`;
+      values: Readonly<Record<string, unknown>>;
     },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
@@ -601,6 +646,16 @@ interface DesktopApiBridge {
     },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
+  readPreparedDatasetQualityReviewPage?: (
+    input: {
+      requestId: string;
+      reportFingerprint: string;
+      lineId: import("../../../../../modules/contracts/runtime").DatasetQualityReviewLineId;
+      page: number;
+      workspaceId?: string;
+    },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
   listDatasetVersions?: (
     input: { workspaceId: string; datasetId?: string },
     context?: DesktopBridgeRequestContext,
@@ -621,6 +676,41 @@ interface DesktopApiBridge {
       visibility: "private" | "public";
       createRepository?: boolean;
       publicAccessConfirmed?: true;
+    },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  listDatasetReviewTargets?: (
+    input: { workspaceId: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  readDatasetReviewPage?: (
+    input: {
+      workspaceId: string;
+      artifactKey: string;
+      versionId?: string;
+      page: number;
+      pageSize: 10 | 25 | 50;
+    },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  rejectDatasetReviewRow?: (
+    input: {
+      workspaceId: string;
+      artifactKey: string;
+      versionId?: string;
+      rowIndex: number;
+      rowFingerprint: `sha256:${string}`;
+    },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  editDatasetReviewRow?: (
+    input: {
+      workspaceId: string;
+      artifactKey: string;
+      versionId?: string;
+      rowIndex: number;
+      rowFingerprint: `sha256:${string}`;
+      values: Readonly<Record<string, unknown>>;
     },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;

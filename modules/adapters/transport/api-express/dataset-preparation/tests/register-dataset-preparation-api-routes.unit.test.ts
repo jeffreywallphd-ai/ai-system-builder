@@ -62,9 +62,7 @@ describe("registerDatasetPreparationApiRoutes", () => {
       prepareTrainingDatasetUseCase: {} as any,
       readGenerationCapacity,
     });
-    const handler = get.get(
-      "/api/dataset-preparation/generation-capacity",
-    );
+    const handler = get.get("/api/dataset-preparation/generation-capacity");
 
     const unauthorized = responseRecorder();
     await handler(
@@ -106,6 +104,7 @@ describe("registerDatasetPreparationApiRoutes", () => {
     });
 
     expect([...get.keys()]).toEqual([
+      "/api/dataset-preparation/tasks/:requestId/review-page",
       "/api/dataset-preparation/tasks/:requestId",
     ]);
     expect([...post.keys()].sort()).toEqual(
@@ -167,6 +166,60 @@ describe("registerDatasetPreparationApiRoutes", () => {
       ok: false,
       error: { code: "conflict" },
     });
+  });
+
+  it("binds prepared-row pages to the authenticated scope and exact report line", async () => {
+    const get = new Map<string, any>();
+    const readPreparedDatasetQualityReviewPage = testDouble.fn(async () => ({
+      ok: true,
+      value: {
+        lineId: "reason:exact-duplicate",
+        page: 0,
+        pageSize: 10,
+        totalRows: 1,
+        rows: [],
+      },
+    }));
+    registerDatasetPreparationApiRoutes({
+      app: {
+        get: (path, handler) => get.set(path, handler),
+        post: testDouble.fn(),
+      },
+      prepareTrainingDatasetUseCase: {
+        startPrepareTrainingDataset: testDouble.fn(),
+        readPrepareTrainingDataset: testDouble.fn(),
+        cancelPrepareTrainingDataset: testDouble.fn(),
+        approvePreparedTrainingDataset: testDouble.fn(),
+        readPreparedDatasetQualityReviewPage,
+      } as any,
+    });
+    const captured = responseRecorder();
+    await get.get("/api/dataset-preparation/tasks/:requestId/review-page")(
+      authenticatedRequest({
+        params: { requestId: "task-1" },
+        query: {
+          workspaceId: "workspace-a",
+          reportFingerprint: "a".repeat(64),
+          lineId: "reason:exact-duplicate",
+          page: "0",
+        },
+      }),
+      captured.response,
+    );
+    expect(captured.record.status).toBe(200);
+    expect(readPreparedDatasetQualityReviewPage).toHaveBeenCalledWith(
+      {
+        requestId: "task-1",
+        reportFingerprint: "a".repeat(64),
+        lineId: "reason:exact-duplicate",
+        page: 0,
+      },
+      expect.objectContaining({
+        workspaceId: "workspace-a",
+        organizationId: "org-a",
+        principalId: "person-1",
+      }),
+    );
   });
 
   it("rejects unauthenticated starts before invoking the use case", async () => {

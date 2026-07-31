@@ -7,6 +7,8 @@ import type {
   DatasetPreparationSummary,
   DatasetPreparationWarning,
   DatasetQualityReport,
+  DatasetQualityReviewLineId,
+  DatasetQualityReviewPage,
   DatasetQualityRequestedConfig,
   PrepareTrainingDatasetRequest,
 } from "../runtime";
@@ -20,6 +22,8 @@ export const DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_OPERATION =
   createTransportOperation("artifact", "prepare-training-dataset.cancel-task");
 export const DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_OPERATION =
   createTransportOperation("artifact", "prepare-training-dataset.approve");
+export const DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_OPERATION =
+  createTransportOperation("artifact", "prepare-training-dataset.review-page");
 
 export const DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL =
   createIpcChannel(DESKTOP_DATASET_PREPARE_TRAINING_START_OPERATION, "request");
@@ -58,6 +62,16 @@ export const DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_RESPONSE_CHANNEL =
     DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_OPERATION,
     "response",
   );
+export const DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_REQUEST_CHANNEL =
+  createIpcChannel(
+    DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_OPERATION,
+    "request",
+  );
+export const DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_RESPONSE_CHANNEL =
+  createIpcChannel(
+    DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_OPERATION,
+    "response",
+  );
 
 export interface DesktopDatasetPreparationBoundaryContext {
   host: "desktop";
@@ -87,6 +101,13 @@ export interface DesktopPrepareTrainingDatasetTaskCancelRequestPayload {
 export interface DesktopPrepareTrainingDatasetApproveRequestPayload {
   requestId: string;
   reportFingerprint: string;
+  boundary: DesktopDatasetPreparationBoundaryContext;
+}
+export interface DesktopPrepareTrainingDatasetReviewPageRequestPayload {
+  requestId: string;
+  reportFingerprint: string;
+  lineId: DatasetQualityReviewLineId;
+  page: number;
   boundary: DesktopDatasetPreparationBoundaryContext;
 }
 export interface DesktopPrepareTrainingDatasetStartSuccessValue {
@@ -192,6 +213,8 @@ export interface DesktopPrepareTrainingDatasetApproveSuccessValue {
   status: "succeeded";
   result: DesktopPrepareTrainingDatasetFinalResult;
 }
+export type DesktopPrepareTrainingDatasetReviewPageSuccessValue =
+  DatasetQualityReviewPage;
 
 export type DesktopPrepareTrainingDatasetStartRequest = IpcRequest<
   DesktopPrepareTrainingDatasetStartRequestPayload,
@@ -245,6 +268,19 @@ export type DesktopPrepareTrainingDatasetApproveResponse = IpcResponse<
   Record<string, never>,
   typeof DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_RESPONSE_CHANNEL.value
 >;
+export type DesktopPrepareTrainingDatasetReviewPageRequest = IpcRequest<
+  DesktopPrepareTrainingDatasetReviewPageRequestPayload,
+  typeof DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_OPERATION,
+  Record<string, never>,
+  typeof DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_REQUEST_CHANNEL.value
+>;
+export type DesktopPrepareTrainingDatasetReviewPageResponse = IpcResponse<
+  DesktopPrepareTrainingDatasetReviewPageSuccessValue,
+  Record<string, unknown>,
+  typeof DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_OPERATION,
+  Record<string, never>,
+  typeof DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_RESPONSE_CHANNEL.value
+>;
 
 type DesktopPrepareTrainingDatasetChannel =
   | typeof DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL
@@ -254,7 +290,9 @@ type DesktopPrepareTrainingDatasetChannel =
   | typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL
   | typeof DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_RESPONSE_CHANNEL
   | typeof DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_REQUEST_CHANNEL
-  | typeof DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_RESPONSE_CHANNEL;
+  | typeof DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_RESPONSE_CHANNEL
+  | typeof DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_REQUEST_CHANNEL
+  | typeof DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_RESPONSE_CHANNEL;
 
 const norm = (v: string, f: string) => {
   const n = v.trim();
@@ -362,6 +400,32 @@ export function createDesktopPrepareTrainingDatasetApproveSuccessResponse(
     options,
   );
 }
+export function createDesktopPrepareTrainingDatasetReviewPageRequest(
+  payload: DesktopPrepareTrainingDatasetReviewPageRequestPayload,
+  options?: { requestId?: string; correlationId?: string },
+): DesktopPrepareTrainingDatasetReviewPageRequest {
+  return createIpcRequest(
+    DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_REQUEST_CHANNEL,
+    {
+      requestId: norm(payload.requestId, "requestId"),
+      reportFingerprint: norm(payload.reportFingerprint, "reportFingerprint"),
+      lineId: payload.lineId,
+      page: payload.page,
+      boundary: b(payload.boundary),
+    },
+    options,
+  );
+}
+export function createDesktopPrepareTrainingDatasetReviewPageSuccessResponse(
+  value: DesktopPrepareTrainingDatasetReviewPageSuccessValue,
+  options?: { requestId?: string; correlationId?: string },
+): DesktopPrepareTrainingDatasetReviewPageResponse {
+  return createIpcSuccessResponse(
+    DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_RESPONSE_CHANNEL,
+    value,
+    options,
+  );
+}
 
 export function getDesktopPrepareTrainingDatasetChannel(
   kind: "start-request",
@@ -388,6 +452,12 @@ export function getDesktopPrepareTrainingDatasetChannel(
   kind: "approve-response",
 ): typeof DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_RESPONSE_CHANNEL;
 export function getDesktopPrepareTrainingDatasetChannel(
+  kind: "review-page-request",
+): typeof DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_REQUEST_CHANNEL;
+export function getDesktopPrepareTrainingDatasetChannel(
+  kind: "review-page-response",
+): typeof DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_RESPONSE_CHANNEL;
+export function getDesktopPrepareTrainingDatasetChannel(
   kind:
     | "start-request"
     | "start-response"
@@ -396,7 +466,9 @@ export function getDesktopPrepareTrainingDatasetChannel(
     | "task-cancel-request"
     | "task-cancel-response"
     | "approve-request"
-    | "approve-response",
+    | "approve-response"
+    | "review-page-request"
+    | "review-page-response",
 ): DesktopPrepareTrainingDatasetChannel {
   switch (kind) {
     case "start-request":
@@ -415,6 +487,10 @@ export function getDesktopPrepareTrainingDatasetChannel(
       return DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_REQUEST_CHANNEL;
     case "approve-response":
       return DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_RESPONSE_CHANNEL;
+    case "review-page-request":
+      return DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_REQUEST_CHANNEL;
+    case "review-page-response":
+      return DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_RESPONSE_CHANNEL;
     default:
       return assertNever(kind);
   }

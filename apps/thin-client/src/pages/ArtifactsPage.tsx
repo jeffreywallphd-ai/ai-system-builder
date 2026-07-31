@@ -1,13 +1,59 @@
+import { useMemo } from "react";
 import { ArtifactBrowserFeature } from "../features/artifact-browser";
 import { ArtifactIngestionFeature } from "../features/artifact-upload";
 import { DatasetPreparationFeature } from "../features/dataset-preparation";
 import { TabbedPanel } from "../components/ui/TabbedPanel";
+import { DatasetReviewWorkspace } from "../../../../modules/ui/shared/dataset-review";
+import { createApiDatasetPreparationClient } from "../features/dataset-preparation";
 
 export interface WorkspaceScopedPageProps {
   workspaceId: string;
   workspaceName: string;
 }
 export function ArtifactsPage({ workspaceId }: WorkspaceScopedPageProps) {
+  const datasetReviewService = useMemo(() => {
+    const client = createApiDatasetPreparationClient();
+    return {
+      listTargets: async (targetWorkspaceId: string) => {
+        if (!client.listReviewTargets)
+          throw new Error("Dataset review is unavailable.");
+        return (
+          await client.listReviewTargets({ workspaceId: targetWorkspaceId })
+        ).groups;
+      },
+      readPage: async (
+        input: Parameters<NonNullable<typeof client.readReviewPage>>[0],
+      ) => {
+        if (!client.readReviewPage)
+          throw new Error("Dataset row review is unavailable.");
+        return (await client.readReviewPage(input)).page;
+      },
+      rejectRow: async (
+        input: Parameters<NonNullable<typeof client.rejectReviewRow>>[0],
+      ) => {
+        if (!client.rejectReviewRow)
+          throw new Error("Dataset row rejection is unavailable.");
+        return client.rejectReviewRow(input);
+      },
+      editRow: async (
+        input: Parameters<NonNullable<typeof client.editReviewRow>>[0],
+      ) => {
+        if (!client.editReviewRow)
+          throw new Error("Dataset row editing is unavailable.");
+        return client.editReviewRow(input);
+      },
+    };
+  }, []);
+  const parquetPreviewReader = useMemo(() => {
+    const client = createApiDatasetPreparationClient();
+    return async (input: { workspaceId: string; artifactKey: string }) => {
+      if (!client.readReviewPage)
+        throw new Error("Parquet preview is unavailable.");
+      return (
+        await client.readReviewPage({ ...input, page: 0, pageSize: 10 })
+      ).page;
+    };
+  }, []);
   return (
     <section className="ui-stack ui-stack--sm">
       <h1>Data Management</h1>
@@ -32,6 +78,7 @@ export function ArtifactsPage({ workspaceId }: WorkspaceScopedPageProps) {
               <ArtifactBrowserFeature
                 key={`browser-${workspaceId}`}
                 workspaceId={workspaceId}
+                readParquetPreview={parquetPreviewReader}
               />
             ),
           },
@@ -42,6 +89,17 @@ export function ArtifactsPage({ workspaceId }: WorkspaceScopedPageProps) {
               <DatasetPreparationFeature
                 key={`dataset-${workspaceId}`}
                 workspaceId={workspaceId}
+              />
+            ),
+          },
+          {
+            id: "dataset-review",
+            label: "Dataset Review",
+            content: (
+              <DatasetReviewWorkspace
+                key={`review-${workspaceId}`}
+                workspaceId={workspaceId}
+                service={datasetReviewService}
               />
             ),
           },

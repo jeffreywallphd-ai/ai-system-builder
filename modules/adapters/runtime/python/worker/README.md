@@ -141,6 +141,12 @@ Implemented task:
   - emits aggregate plus physical train/validation/test artifacts in JSONL/JSON/CSV/Parquet, keeps source groups and exact duplicates together, and derives summary counts from emitted partitions
   - resolves task-schema mappings and applies deterministic field/source/class/language profiling, exact and bounded SimHash duplicate detection, text/language bounds, personal-data and credential screening, explicit unsafe/benchmark gates, and optional license/consent/source-row rules
   - sends rejected provided or generated rows to reversible quarantine with source-row lineage and emits a stable-fingerprint quality report containing only aggregate profiles, reason counts, and bounded sanitized examples
+  - writes a separate temporary JSON Lines review stream for accepted rows so
+    authorized report-line review can page through actual records without
+    placing row values in the aggregate report; quarantine remains the
+    corresponding source for set-aside and reason-matched pages; the application
+    copies the accepted stream into integrity-checked workspace-local temporary
+    artifact storage and removes this runtime copy before preview reads
   - optionally performs deterministic bounded semantic duplicate checks,
     per-source caps, source interleaving, coverage measurement, and task-aware
     contrast recommendations before split assignment without persisting row text

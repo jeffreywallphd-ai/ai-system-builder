@@ -1,6 +1,7 @@
 export const ARTIFACT_PREVIEW_MAX_BYTES = 64 * 1024;
 export const ARTIFACT_PREVIEW_MAX_CHARS = 16_000;
 export const ARTIFACT_PREVIEW_MAX_LINES = 80;
+export const ARTIFACT_PREVIEW_MAX_JSON_LINES = 100;
 export const ARTIFACT_PREVIEW_MAX_TABLE_ROWS = 25;
 export const ARTIFACT_PREVIEW_MAX_TABLE_COLUMNS = 20;
 export const ARTIFACT_PREVIEW_MAX_CELL_CHARS = 1_000;
@@ -9,10 +10,12 @@ export type ArtifactPreviewKind =
   | "text"
   | "markdown"
   | "json"
+  | "jsonl"
   | "csv"
   | "image"
   | "video"
   | "pdf"
+  | "parquet"
   | "office-document"
   | "office-spreadsheet"
   | "unsupported";
@@ -25,6 +28,20 @@ export interface ArtifactPreviewSource {
   readonly originalName?: string;
   readonly mediaType?: string;
   readonly artifactFamily?: string;
+}
+
+export function isArtifactBrowserVisible(
+  source: ArtifactPreviewSource,
+): boolean {
+  const mediaType = normalizeMediaType(source.mediaType);
+  const storageKey = source.storageKey.replace(/\\/g, "/").toLowerCase();
+  const originalName = source.originalName?.trim().toLowerCase() ?? "";
+  return !(
+    mediaType.endsWith("+json") ||
+    storageKey.endsWith("+json") ||
+    originalName.endsWith("+json") ||
+    storageKey.includes("/system-builds/")
+  );
 }
 
 export interface ArtifactPreviewDescriptor extends ArtifactPreviewSource {
@@ -110,8 +127,32 @@ export function describeArtifactPreview(
     return { ...source, kind: "pdf", fileTypeLabel: "PDF" };
   }
 
-  if (mediaType === "application/json" || extension === ".json") {
+  if (
+    mediaType === "application/x-parquet" ||
+    mediaType === "application/vnd.apache.parquet" ||
+    extension === ".parquet"
+  ) {
+    return { ...source, kind: "parquet", fileTypeLabel: "Parquet" };
+  }
+
+  if (
+    mediaType === "application/json" ||
+    mediaType.endsWith("+json") ||
+    extension === ".json" ||
+    extension.endsWith("+json")
+  ) {
     return { ...source, kind: "json", fileTypeLabel: "JSON" };
+  }
+
+  if (
+    mediaType === "application/x-ndjson" ||
+    mediaType === "application/ndjson" ||
+    mediaType === "application/jsonl" ||
+    mediaType === "application/x-jsonlines" ||
+    extension === ".jsonl" ||
+    extension === ".ndjson"
+  ) {
+    return { ...source, kind: "jsonl", fileTypeLabel: "JSON Lines" };
   }
 
   if (
@@ -215,7 +256,11 @@ export function createUnavailableArtifactPreview(
 
 export function isTextArtifactPreviewKind(kind: ArtifactPreviewKind): boolean {
   return (
-    kind === "text" || kind === "markdown" || kind === "json" || kind === "csv"
+    kind === "text" ||
+    kind === "markdown" ||
+    kind === "json" ||
+    kind === "jsonl" ||
+    kind === "csv"
   );
 }
 
@@ -223,11 +268,14 @@ export function isMediaArtifactPreviewKind(kind: ArtifactPreviewKind): boolean {
   return kind === "image" || kind === "video" || kind === "pdf";
 }
 
-function limitPreviewText(text: string): { text: string; truncated: boolean } {
+function limitPreviewText(
+  text: string,
+  maximumLines = ARTIFACT_PREVIEW_MAX_LINES,
+): { text: string; truncated: boolean } {
   const lines = text.split(/\r?\n/);
-  const lineLimited = lines.length > ARTIFACT_PREVIEW_MAX_LINES;
+  const lineLimited = lines.length > maximumLines;
   const firstLines = lineLimited
-    ? lines.slice(0, ARTIFACT_PREVIEW_MAX_LINES).join("\n")
+    ? lines.slice(0, maximumLines).join("\n")
     : text;
   const charLimited = firstLines.length > ARTIFACT_PREVIEW_MAX_CHARS;
   return {
@@ -263,55 +311,6 @@ function neutralizeTableCell(value: unknown): string {
       : (JSON.stringify(value) ?? String(value));
   const bounded = rendered.slice(0, ARTIFACT_PREVIEW_MAX_CELL_CHARS);
   return /^[=+\-@]/.test(bounded) ? `'${bounded}` : bounded;
-}
-
-function createJsonTable(
-  text: string,
-): ArtifactPreviewView["table"] | undefined {
-  const value = JSON.parse(text) as unknown;
-  if (Array.isArray(value)) {
-    const records = value.slice(0, ARTIFACT_PREVIEW_MAX_TABLE_ROWS);
-    if (
-      records.every(
-        (item) =>
-          item !== null && typeof item === "object" && !Array.isArray(item),
-      )
-    ) {
-      const columns = Array.from(
-        new Set(
-          records.flatMap((item) =>
-            Object.keys(item as Record<string, unknown>),
-          ),
-        ),
-      ).slice(0, ARTIFACT_PREVIEW_MAX_TABLE_COLUMNS);
-      return {
-        columns,
-        rows: records.map((item) =>
-          columns.map((column) =>
-            neutralizeTableCell(
-              (item as Record<string, unknown>)[column] ?? "",
-            ),
-          ),
-        ),
-      };
-    }
-    return {
-      columns: ["Value"],
-      rows: records.map((item) => [neutralizeTableCell(item)]),
-    };
-  }
-  if (value !== null && typeof value === "object") {
-    return {
-      columns: ["Field", "Value"],
-      rows: Object.entries(value as Record<string, unknown>)
-        .slice(0, ARTIFACT_PREVIEW_MAX_TABLE_ROWS)
-        .map(([key, item]) => [
-          neutralizeTableCell(key),
-          neutralizeTableCell(item),
-        ]),
-    };
-  }
-  return { columns: ["Value"], rows: [[neutralizeTableCell(value)]] };
 }
 
 function parseCsvRows(text: string): string[][] {
@@ -374,10 +373,43 @@ export function createTextArtifactPreview(
 ): ArtifactPreviewView {
   const descriptor = describeArtifactPreview(source);
   const previewName = source.originalName?.trim() || source.storageKey;
+  if (descriptor.kind === "json" || descriptor.kind === "jsonl") {
+    try {
+      const decoded = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+      const formatted =
+        descriptor.kind === "json"
+          ? JSON.stringify(JSON.parse(decoded), null, 2)
+          : decoded
+              .split(/\r?\n/)
+              .filter((line) => line.trim().length > 0)
+              .map((line) => JSON.stringify(JSON.parse(line), null, 2))
+              .join("\n");
+      const limited = limitPreviewText(
+        formatted ?? "null",
+        ARTIFACT_PREVIEW_MAX_JSON_LINES,
+      );
+      return {
+        status: "ready",
+        descriptor,
+        title: `${descriptor.fileTypeLabel} preview for ${previewName}`,
+        message:
+          "Showing the first 100 lines when available. Download the artifact to view the full file.",
+        text: limited.text,
+        truncated: limited.truncated,
+      };
+    } catch {
+      return {
+        status: "error",
+        descriptor,
+        title: `${descriptor.fileTypeLabel} preview for ${previewName}`,
+        message:
+          "The artifact could not be safely parsed. Download it to inspect the original file.",
+      };
+    }
+  }
   const decoded = decodeTextPreview(bytes);
   let table: ArtifactPreviewView["table"];
   try {
-    if (descriptor.kind === "json") table = createJsonTable(decoded.text);
     if (descriptor.kind === "csv") table = createCsvTable(decoded.text);
   } catch {
     return {
@@ -399,8 +431,6 @@ export function createTextArtifactPreview(
     table,
     truncated:
       decoded.truncated ||
-      (descriptor.kind === "json" &&
-        (table?.rows.length ?? 0) >= ARTIFACT_PREVIEW_MAX_TABLE_ROWS) ||
       (descriptor.kind === "csv" &&
         (table?.rows.length ?? 0) >= ARTIFACT_PREVIEW_MAX_TABLE_ROWS),
   };
@@ -418,9 +448,38 @@ export function createMediaArtifactPreview(
     title: `${descriptor.fileTypeLabel} preview for ${previewName}`,
     message:
       descriptor.kind === "pdf"
-        ? "Showing the first page when the browser supports PDF preview. Download the artifact to view the full file."
+        ? "Showing a safe image of the first page. Download the artifact to view the full file."
         : "Showing a compact preview. Download the artifact to view the original file.",
     mediaUrl,
+  };
+}
+
+export function createParquetArtifactPreview(
+  source: ArtifactPreviewSource,
+  rows: readonly Readonly<Record<string, unknown>>[],
+  totalRows: number,
+): ArtifactPreviewView {
+  const descriptor = describeArtifactPreview(source);
+  const previewName = source.originalName?.trim() || source.storageKey;
+  const boundedRows = rows.slice(0, 10);
+  const columns = Array.from(
+    new Set(boundedRows.flatMap((row) => Object.keys(row))),
+  ).slice(0, ARTIFACT_PREVIEW_MAX_TABLE_COLUMNS);
+  return {
+    status: "ready",
+    descriptor,
+    title: `${descriptor.fileTypeLabel} preview for ${previewName}`,
+    message:
+      totalRows > 10
+        ? `Showing the first 10 of ${totalRows} rows.`
+        : `Showing ${totalRows} ${totalRows === 1 ? "row" : "rows"}.`,
+    table: {
+      columns,
+      rows: boundedRows.map((row) =>
+        columns.map((column) => neutralizeTableCell(row[column] ?? "")),
+      ),
+    },
+    truncated: totalRows > 10,
   };
 }
 

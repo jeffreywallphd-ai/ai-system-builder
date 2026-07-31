@@ -92,13 +92,7 @@ export interface DatasetQualityRuntimeConfig {
 
 export interface DatasetQualityFieldProfile {
   field: string;
-  valueType:
-    | "string"
-    | "number"
-    | "boolean"
-    | "object"
-    | "array"
-    | "mixed";
+  valueType: "string" | "number" | "boolean" | "object" | "array" | "mixed";
   presentCount: number;
   missingCount: number;
   distinctCount: number;
@@ -158,14 +152,28 @@ export interface DatasetQualityReport {
 }
 
 export type DatasetQualityReviewState =
-  | "not-required"
-  | "review-required"
-  | "approved"
-  | "stopped";
+  "not-required" | "review-required" | "approved" | "stopped";
 
 export interface DatasetQualityApprovalRequest {
   requestId: string;
   reportFingerprint: string;
+}
+
+export type DatasetQualityReviewLineId =
+  "ready" | "set-aside" | `reason:${DatasetQualityReasonCode}`;
+
+export interface DatasetQualityReviewRow {
+  readonly rowIndex: number;
+  readonly rowFingerprint: `sha256:${string}`;
+  readonly values: Readonly<Record<string, unknown>>;
+}
+
+export interface DatasetQualityReviewPage {
+  readonly lineId: DatasetQualityReviewLineId;
+  readonly page: number;
+  readonly pageSize: 10;
+  readonly totalRows: number;
+  readonly rows: readonly DatasetQualityReviewRow[];
 }
 
 export interface DatasetQualityQuarantineRecord {

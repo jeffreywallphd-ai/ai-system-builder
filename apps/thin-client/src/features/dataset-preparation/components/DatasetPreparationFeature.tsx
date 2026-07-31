@@ -28,6 +28,8 @@ import {
   type DatasetPreparationGenerationCapacitySnapshot,
   type DatasetQualityPreset,
   type DatasetQualityReport,
+  type DatasetQualityReviewLineId,
+  type DatasetQualityReviewPage,
 } from "../../../../../../modules/contracts/runtime";
 import {
   DATASET_PREPARATION_TASK_OPTIONS,
@@ -40,6 +42,11 @@ import {
   getDatasetPreparationIntentCopy,
   getDatasetPreparationMethodCopy,
   getDatasetPreparationTaskOption,
+  DatasetReviewModal,
+  createDatasetQualityReviewLines,
+  createDatasetQualityReviewRowItems,
+  type DatasetQualityReviewLine,
+  type ReviewDecision,
 } from "../../../../../../modules/ui/shared";
 import {
   createApiArtifactBrowserClient,
@@ -142,15 +149,15 @@ function readPersistedStructuredOutputSettings(
     return {
       ...(typeof parsed.constrainedDecodingPreference === "boolean"
         ? {
-            constrainedDecodingPreference:
-              parsed.constrainedDecodingPreference,
+            constrainedDecodingPreference: parsed.constrainedDecodingPreference,
           }
         : {}),
       ...(parsed.shapes &&
       typeof parsed.shapes === "object" &&
       !Array.isArray(parsed.shapes)
         ? {
-            shapes: parsed.shapes as PersistedStructuredOutputSettings["shapes"],
+            shapes:
+              parsed.shapes as PersistedStructuredOutputSettings["shapes"],
           }
         : {}),
     };
@@ -508,6 +515,83 @@ export function DatasetPreparationFeature({
     advancedReport?: DatasetPreparationAdvancedReport;
   }>();
   const [reviewActionInFlight, setReviewActionInFlight] = useState(false);
+  const [qualityReviewModalOpen, setQualityReviewModalOpen] = useState(false);
+  const [qualityReviewIndex, setQualityReviewIndex] = useState(0);
+  const [qualityReviewDecisions, setQualityReviewDecisions] = useState<
+    Record<string, ReviewDecision>
+  >({});
+  const [qualityReviewLine, setQualityReviewLine] =
+    useState<DatasetQualityReviewLine>();
+  const [qualityReviewPage, setQualityReviewPage] =
+    useState<DatasetQualityReviewPage>();
+  const [qualityReviewPageLoading, setQualityReviewPageLoading] =
+    useState(false);
+  const [qualityReviewPageError, setQualityReviewPageError] =
+    useState<string>();
+  const qualityReviewLines = useMemo(
+    () =>
+      qualityReview
+        ? createDatasetQualityReviewLines(
+            qualityReview.report,
+            QUALITY_REASON_LABELS,
+          )
+        : [],
+    [qualityReview],
+  );
+  const qualityReviewItems = useMemo(
+    () =>
+      createDatasetQualityReviewRowItems(
+        qualityReviewPage,
+        qualityReviewLine?.label ?? "Prepared",
+      ),
+    [qualityReviewLine?.label, qualityReviewPage],
+  );
+  const reviewSection = (
+    item: (typeof qualityReviewItems)[number],
+    decision: ReviewDecision,
+  ) => {
+    setQualityReviewDecisions((current) => ({
+      ...current,
+      [item.id]: decision,
+    }));
+    setQualityReviewIndex((index) =>
+      Math.min(index + 1, Math.max(0, qualityReviewItems.length - 1)),
+    );
+  };
+  const openQualityReviewLine = async (
+    line: DatasetQualityReviewLine,
+    page = 0,
+    entry: "first" | "last" = "first",
+  ) => {
+    if (!qualityReview || line.count === 0) return;
+    setQualityReviewLine(line);
+    setQualityReviewIndex(0);
+    setQualityReviewPageLoading(true);
+    setQualityReviewPageError(undefined);
+    setQualityReviewModalOpen(true);
+    try {
+      const next = await preparation.readPreparedReviewPage({
+        workspaceId,
+        requestId: qualityReview.requestId,
+        reportFingerprint: qualityReview.report.reportFingerprint,
+        lineId: line.id as DatasetQualityReviewLineId,
+        page,
+      });
+      setQualityReviewPage(next);
+      setQualityReviewIndex(
+        entry === "last" ? Math.max(0, next.rows.length - 1) : 0,
+      );
+    } catch (reason) {
+      setQualityReviewPage(undefined);
+      setQualityReviewPageError(
+        reason instanceof Error
+          ? reason.message
+          : "Prepared records could not be loaded.",
+      );
+    } finally {
+      setQualityReviewPageLoading(false);
+    }
+  };
   const [taskType, setTaskType] =
     useState<DatasetPreparationTaskType>("llm-instruction");
   const [textGenerationPrompt, setTextGenerationPrompt] = useState(
@@ -516,8 +600,7 @@ export function DatasetPreparationFeature({
   );
   const [visualOutputShape, setVisualOutputShape] =
     useState<DatasetPreparationVisualOutputShape>(() => {
-      const saved =
-        initialStructuredOutputSettings.shapes?.["llm-instruction"];
+      const saved = initialStructuredOutputSettings.shapes?.["llm-instruction"];
       const compiled = saved
         ? compileDatasetPreparationVisualOutputShape(saved, {
             taskType: "llm-instruction",
@@ -526,9 +609,7 @@ export function DatasetPreparationFeature({
         : undefined;
       return compiled?.ok
         ? compiled.value.shape
-        : createDefaultDatasetPreparationVisualOutputShape(
-            "llm-instruction",
-          );
+        : createDefaultDatasetPreparationVisualOutputShape("llm-instruction");
     });
   const [constrainedDecodingPreference, setConstrainedDecodingPreference] =
     useState<boolean | undefined>(
@@ -638,9 +719,8 @@ export function DatasetPreparationFeature({
         effectivePreparationMethodId,
       )
     : undefined;
-  const generationModel = resolveDefaultDatasetPreparationTextGenerationModel(
-    taskType,
-  );
+  const generationModel =
+    resolveDefaultDatasetPreparationTextGenerationModel(taskType);
   const outputShapeCompilation = useMemo(
     () =>
       compileDatasetPreparationVisualOutputShape(visualOutputShape, {
@@ -653,11 +733,11 @@ export function DatasetPreparationFeature({
   );
   const constrainedDecodingAvailable = Boolean(
     preparationPlan &&
-      preparationPlan.generationMode !== "none" &&
-      generationModel?.inferenceMode !== "text2text" &&
-      outputShapeCompilation.ok &&
-      outputShapeCompilation.value.decoderCompatible &&
-      generationCapacity?.decoderAvailable === true,
+    preparationPlan.generationMode !== "none" &&
+    generationModel?.inferenceMode !== "text2text" &&
+    outputShapeCompilation.ok &&
+    outputShapeCompilation.value.decoderCompatible &&
+    generationCapacity?.decoderAvailable === true,
   );
   const recommendationCapacity = useMemo(
     () =>
@@ -715,9 +795,7 @@ export function DatasetPreparationFeature({
 
   useEffect(() => {
     const persisted = readPersistedStructuredOutputSettings(workspaceId);
-    setConstrainedDecodingPreference(
-      persisted.constrainedDecodingPreference,
-    );
+    setConstrainedDecodingPreference(persisted.constrainedDecodingPreference);
     const saved = persisted.shapes?.[taskType];
     const compiled = saved
       ? compileDatasetPreparationVisualOutputShape(saved, {
@@ -787,12 +865,7 @@ export function DatasetPreparationFeature({
         [taskType]: visualOutputShape,
       },
     });
-  }, [
-    constrainedDecodingPreference,
-    taskType,
-    visualOutputShape,
-    workspaceId,
-  ]);
+  }, [constrainedDecodingPreference, taskType, visualOutputShape, workspaceId]);
   const reuseVersionSetup = (
     reproduction: import("../../../../../../modules/contracts/dataset").DatasetVersionReproduction,
   ) => {
@@ -1281,8 +1354,8 @@ export function DatasetPreparationFeature({
                   Include source attribution with each example
                 </label>
                 <small className="ui-text-muted">
-                  Adds the source ID and any available source name, public
-                  link, author, and license beside every saved example.
+                  Adds the source ID and any available source name, public link,
+                  author, and license beside every saved example.
                 </small>
               </div>
             </details>
@@ -1485,8 +1558,7 @@ export function DatasetPreparationFeature({
                 </select>
               </label>
             ) : null}
-            {preparationPlan &&
-            preparationPlan.generationMode !== "none" ? (
+            {preparationPlan && preparationPlan.generationMode !== "none" ? (
               <section className="ui-stack ui-stack--sm">
                 <h3>Generation prompt</h3>
                 <label className="ui-stack ui-stack--sm">
@@ -1505,8 +1577,8 @@ export function DatasetPreparationFeature({
                   Tell the local model what to create and how to use the source.
                   Configure the exact output fields below; Instruction is copied
                   exactly, and Context is attached unchanged from the source
-                  section. Built-in safety, source-grounding, and JSON-only rules
-                  still apply.
+                  section. Built-in safety, source-grounding, and JSON-only
+                  rules still apply.
                 </small>
                 <DatasetPreparationOutputShapeEditor
                   idPrefix="thin-dataset-preparation-output"
@@ -1524,8 +1596,7 @@ export function DatasetPreparationFeature({
                     type="checkbox"
                     checked={constrainedDecodingEnabled}
                     disabled={
-                      status.kind === "loading" ||
-                      !constrainedDecodingAvailable
+                      status.kind === "loading" || !constrainedDecodingAvailable
                     }
                     onChange={(event) =>
                       setConstrainedDecodingPreference(event.target.checked)
@@ -1535,7 +1606,7 @@ export function DatasetPreparationFeature({
                 </label>
                 <small className="ui-text-muted">
                   When enabled, the local model follows the field layout while
-                  it writes each example. {" "}
+                  it writes each example.{" "}
                   {constrainedJsonRecommendationCopy(
                     constrainedJsonResolution.recommendationReason,
                   )}
@@ -1681,9 +1752,41 @@ export function DatasetPreparationFeature({
                   <dt>Examples checked</dt>
                   <dd>{qualityReview.report.counts.inputRows}</dd>
                   <dt>Examples ready</dt>
-                  <dd>{qualityReview.report.counts.acceptedRows}</dd>
+                  <dd>
+                    <button
+                      className="dataset-review__report-line"
+                      type="button"
+                      disabled={qualityReview.report.counts.acceptedRows === 0}
+                      onClick={() => {
+                        const line = qualityReviewLines.find(
+                          (item) => item.id === "ready",
+                        );
+                        if (line) void openQualityReviewLine(line);
+                      }}
+                    >
+                      <span>Open ready examples</span>
+                      <span>{qualityReview.report.counts.acceptedRows}</span>
+                    </button>
+                  </dd>
                   <dt>Examples set aside</dt>
-                  <dd>{qualityReview.report.counts.quarantinedRows}</dd>
+                  <dd>
+                    <button
+                      className="dataset-review__report-line"
+                      type="button"
+                      disabled={
+                        qualityReview.report.counts.quarantinedRows === 0
+                      }
+                      onClick={() => {
+                        const line = qualityReviewLines.find(
+                          (item) => item.id === "set-aside",
+                        );
+                        if (line) void openQualityReviewLine(line);
+                      }}
+                    >
+                      <span>Open set-aside examples</span>
+                      <span>{qualityReview.report.counts.quarantinedRows}</span>
+                    </button>
+                  </dd>
                 </dl>
                 {qualityReview.report.inspection ? (
                   <div className="ui-stack ui-stack--sm">
@@ -1799,8 +1902,22 @@ export function DatasetPreparationFeature({
                     {Object.entries(qualityReview.report.reasonCounts).map(
                       ([reason, count]) => (
                         <li key={reason}>
-                          {QUALITY_REASON_LABELS[reason] ?? "Other data issue"}:{" "}
-                          {count}
+                          <button
+                            className="dataset-review__report-line"
+                            type="button"
+                            onClick={() => {
+                              const line = qualityReviewLines.find(
+                                (item) => item.id === `reason:${reason}`,
+                              );
+                              if (line) void openQualityReviewLine(line);
+                            }}
+                          >
+                            <span>
+                              {QUALITY_REASON_LABELS[reason] ??
+                                "Other data issue"}
+                            </span>
+                            <span>{count}</span>
+                          </button>
                         </li>
                       ),
                     )}
@@ -1937,6 +2054,77 @@ export function DatasetPreparationFeature({
             onReuse={reuseVersionSetup}
           />
         ) : null}
+        <DatasetReviewModal
+          open={qualityReviewModalOpen}
+          title={
+            qualityReviewLine
+              ? `Review ${qualityReviewLine.label.toLowerCase()}`
+              : "Review prepared records"
+          }
+          onClose={() => setQualityReviewModalOpen(false)}
+          items={qualityReviewItems}
+          currentIndex={qualityReviewIndex}
+          decisions={qualityReviewDecisions}
+          busy={reviewActionInFlight || qualityReviewPageLoading}
+          approveLabel="Approve"
+          rejectLabel="Reject"
+          absoluteIndex={
+            qualityReviewPage
+              ? qualityReviewPage.page * qualityReviewPage.pageSize +
+                qualityReviewIndex
+              : qualityReviewIndex
+          }
+          totalItems={qualityReviewPage?.totalRows ?? qualityReviewItems.length}
+          previousDisabled={
+            !qualityReviewPage ||
+            qualityReviewPage.page * qualityReviewPage.pageSize +
+              qualityReviewIndex ===
+              0
+          }
+          nextDisabled={
+            !qualityReviewPage ||
+            qualityReviewPage.page * qualityReviewPage.pageSize +
+              qualityReviewIndex >=
+              qualityReviewPage.totalRows - 1
+          }
+          onPrevious={() => {
+            if (qualityReviewIndex > 0) {
+              setQualityReviewIndex((value) => value - 1);
+            } else if (qualityReviewLine && qualityReviewPage?.page) {
+              void openQualityReviewLine(
+                qualityReviewLine,
+                qualityReviewPage.page - 1,
+                "last",
+              );
+            }
+          }}
+          onNext={() => {
+            if (qualityReviewIndex < qualityReviewItems.length - 1) {
+              setQualityReviewIndex((value) => value + 1);
+            } else if (
+              qualityReviewLine &&
+              qualityReviewPage &&
+              (qualityReviewPage.page + 1) * qualityReviewPage.pageSize <
+                qualityReviewPage.totalRows
+            ) {
+              void openQualityReviewLine(
+                qualityReviewLine,
+                qualityReviewPage.page + 1,
+                "first",
+              );
+            }
+          }}
+          onCurrentIndexChange={setQualityReviewIndex}
+          onApprove={(item) => reviewSection(item, "approved")}
+          onReject={(item) => reviewSection(item, "rejected")}
+        />
+        <TransientNotificationPublisher
+          message={qualityReviewPageError}
+          title="Prepared records need attention"
+          tone="error"
+          source="Dataset Preparation"
+          workspaceId={workspaceId}
+        />
       </div>
     </section>
   );

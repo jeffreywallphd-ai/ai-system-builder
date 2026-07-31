@@ -176,6 +176,12 @@ describe("DatasetPreparationFeature", () => {
     expect(container.textContent).not.toContain(
       "models.tasks.qaGeneration.default",
     );
+    expect(container.textContent).toContain("Available artifacts");
+    expect(container.textContent).not.toContain("Uploaded Artifacts");
+    expect(container.textContent).not.toContain("Generated Artifacts");
+    expect(
+      container.querySelectorAll(".dataset-preparation__artifact-group"),
+    ).toHaveLength(1);
     const checkbox = container.querySelector(
       "input[type='checkbox']",
     ) as HTMLInputElement;
@@ -904,9 +910,7 @@ describe("DatasetPreparationFeature", () => {
       );
       expect(memoryOverflow?.value).toBe("limited");
       expect(
-        Array.from(memoryOverflow?.options ?? []).map(
-          (option) => option.value,
-        ),
+        Array.from(memoryOverflow?.options ?? []).map((option) => option.value),
       ).toEqual(["limited", "none", "extended"]);
       const constrainedControl = Array.from(
         container?.querySelectorAll("label") ?? [],

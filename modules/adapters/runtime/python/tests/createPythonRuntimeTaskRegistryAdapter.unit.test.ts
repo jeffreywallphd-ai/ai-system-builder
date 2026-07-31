@@ -168,6 +168,35 @@ describe("createPythonRuntimeTaskRegistryAdapter", () => {
     });
   });
 
+  it("maps DATASET_REVIEW to bounded long-running parquet work", async () => {
+    const runtimePort: any = {
+      startTask: testDouble.fn(async (request) => ({
+        requestId: request.requestId,
+      })),
+      readTaskStatus: testDouble.fn(),
+      cancelTask: testDouble.fn(),
+      getHealthStatus: testDouble.fn(),
+      getCapabilities: testDouble.fn(),
+      ensureModelDownloaded: testDouble.fn(),
+      getModelStatus: testDouble.fn(),
+      unloadModels: testDouble.fn(),
+    };
+    const adapter = createPythonRuntimeTaskRegistryAdapter(runtimePort);
+    await adapter.startTask({
+      workspaceId,
+      requestId: "review-1",
+      taskType: TaskType.DATASET_REVIEW,
+      payload: { operation: "read" },
+    });
+    expect(runtimePort.startTask).toHaveBeenCalledWith({
+      requestId: "review-1",
+      taskType: "review-dataset",
+      payload: { operation: "read" },
+      metadata: { workspaceId },
+      timeoutMs: PYTHON_RUNTIME_TASK_TIMEOUTS.datasetReview,
+    });
+  });
+
   it("maps MODEL_TRAINING startTask to train-model", async () => {
     const runtimePort: any = {
       startTask: testDouble.fn(async (request) => ({

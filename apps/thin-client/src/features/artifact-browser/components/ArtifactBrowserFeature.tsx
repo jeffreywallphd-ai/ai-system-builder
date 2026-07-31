@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useRef, useState } from "react";
 
 import {
   deriveArtifactBackingState,
@@ -7,19 +7,32 @@ import {
   derivePublishedBackingVerificationPresentation,
   ApplicationIcon,
   ArtifactPreviewPanel,
+  createLoadingArtifactPreview,
+  createParquetArtifactPreview,
+  createUnavailableArtifactPreview,
+  describeArtifactPreview,
   PanelHeading,
   TermWithHint,
   TransientNotificationPublisher,
   TypeBadge,
+  type ArtifactPreviewView,
   type PublishedBackingView,
 } from "../../../../../../modules/ui/shared";
 import type { ArtifactBrowserApiClient } from "../api/apiArtifactBrowserClient";
 import { useArtifactBrowserFeature } from "../hooks/useArtifactBrowserFeature";
+import { ModalDialog } from "../../../../../../modules/ui/shared/components/ModalDialog";
 
 export interface ArtifactBrowserFeatureProps {
   client?: ArtifactBrowserApiClient;
   workspaceId?: string;
   workspaceName?: string;
+  readParquetPreview?: (input: {
+    workspaceId: string;
+    artifactKey: string;
+  }) => Promise<{
+    totalRows: number;
+    rows: readonly { values: Readonly<Record<string, unknown>> }[];
+  }>;
 }
 
 function PublishedBackingPanel(
@@ -54,7 +67,9 @@ function PublishedBackingPanel(
   );
 }
 
-export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserFeatureProps) {
+export function ArtifactBrowserFeature({ client, workspaceId, readParquetPreview }: ArtifactBrowserFeatureProps) {
+  const [parquetPreview, setParquetPreview] = useState<ArtifactPreviewView>();
+  const previewRequestId = useRef(0);
   const {
     items,
     selectedStorageKey,
@@ -114,6 +129,51 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
 
   const backingState = deriveArtifactBackingState(detail, content);
 
+  const selectArtifactWithPreview = async (item: (typeof items)[number]) => {
+    const requestId = ++previewRequestId.current;
+    const source = {
+      storageKey: item.storageKey,
+      originalName: item.originalName,
+      mediaType: item.mediaType,
+      artifactFamily: item.artifactFamily,
+    };
+    const isParquet = describeArtifactPreview(source).kind === "parquet";
+    setParquetPreview(isParquet ? createLoadingArtifactPreview(source) : undefined);
+    await selectArtifact(item.storageKey);
+    if (requestId !== previewRequestId.current || !isParquet) return;
+    if (!workspaceId || !readParquetPreview) {
+      setParquetPreview(
+        createUnavailableArtifactPreview(
+          source,
+          "Parquet preview is unavailable in this session.",
+        ),
+      );
+      return;
+    }
+    try {
+      const page = await readParquetPreview({
+        workspaceId,
+        artifactKey: item.storageKey,
+      });
+      if (requestId !== previewRequestId.current) return;
+      setParquetPreview(
+        createParquetArtifactPreview(
+          source,
+          page.rows.map((row) => row.values),
+          page.totalRows,
+        ),
+      );
+    } catch {
+      if (requestId !== previewRequestId.current) return;
+      setParquetPreview(
+        createUnavailableArtifactPreview(
+          source,
+          "The first rows of this Parquet file could not be read.",
+        ),
+      );
+    }
+  };
+
   return (
     <section className="ui-panel ui-panel--elevated ui-panel--sectioned">
       <header className="ui-panel__section-header">
@@ -125,40 +185,35 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
       </div>
       {viewState.message && !transientViewState ? <p role={viewState.status === "error" ? "alert" : "status"}>{viewState.message}</p> : null}
       <TransientNotificationPublisher message={transientViewState ? viewState.message : undefined} title={viewState.status === "error" ? "Artifact action needs attention" : "Artifacts updated"} tone={viewState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
-      {pendingDeleteStorageKey ? (
-        <div className="ui-modal-overlay" role="presentation">
-          <section className="ui-panel ui-modal-dialog ui-stack ui-stack--sm" role="dialog" aria-label="Delete artifact confirmation" aria-modal="true">
-            <header className="ui-modal-header">
-              <h3>Delete artifact</h3>
-              <button className="ui-modal-close" type="button" aria-label="Close delete confirmation" onClick={cancelPendingDelete}>x</button>
-            </header>
-            <div className="ui-modal-body ui-stack ui-stack--sm">
-              <p>Type <strong>Delete</strong> to remove this artifact and local backing data.</p>
-              <p className="ui-text-muted">Artifact: {pendingDeleteStorageKey}</p>
-              <label className="ui-stack ui-stack--sm">
-                <span><TermWithHint termId="deleteConfirmation">Confirmation</TermWithHint></span>
-                <input
-                  className="ui-input"
-                  value={deleteConfirmationInput}
-                  onChange={(event) => setDeleteConfirmationInput(event.target.value)}
-                  placeholder="Delete"
-                />
-              </label>
-              <div className="ui-grid ui-grid--two">
-                <button
-                  className="ui-button ui-button--destructive"
-                  type="button"
-                  onClick={() => void confirmPendingDelete()}
-                  disabled={deleteConfirmationInput !== "Delete"}
-                >
-                  Confirm delete
-                </button>
-                <button className="ui-button" type="button" onClick={cancelPendingDelete}>Cancel</button>
-              </div>
-            </div>
-          </section>
+      <ModalDialog
+        open={Boolean(pendingDeleteStorageKey)}
+        title="Delete artifact"
+        closeLabel="Close delete confirmation"
+        onClose={cancelPendingDelete}
+      >
+        <p>Type <strong>Delete</strong> to remove this artifact and local backing data.</p>
+        <p className="ui-text-muted">Artifact: {pendingDeleteStorageKey}</p>
+        <label className="ui-stack ui-stack--sm">
+          <span><TermWithHint termId="deleteConfirmation">Confirmation</TermWithHint></span>
+          <input
+            className="ui-input"
+            value={deleteConfirmationInput}
+            onChange={(event) => setDeleteConfirmationInput(event.target.value)}
+            placeholder="Delete"
+          />
+        </label>
+        <div className="ui-grid ui-grid--two">
+          <button
+            className="ui-button ui-button--destructive"
+            type="button"
+            onClick={() => void confirmPendingDelete()}
+            disabled={deleteConfirmationInput !== "Delete"}
+          >
+            Confirm delete
+          </button>
+          <button className="ui-button" type="button" onClick={cancelPendingDelete}>Cancel</button>
         </div>
-      ) : null}
+      </ModalDialog>
 
       <button className="ui-button" type="button" onClick={toggleRegisterForm} disabled={registerState.status === "loading"}>Register from Hugging Face</button>
       {registerForm.showRegisterForm ? (
@@ -263,7 +318,7 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
             <div className="ui-type-row">
               <input type="checkbox" checked={selectedArtifactKeys.includes(item.storageKey)} onChange={() => toggleSelectedArtifactKey(item.storageKey)} />
               <TypeBadge value={item.mediaType ?? item.originalName ?? item.storageKey} />
-              <button className="ui-button" type="button" onClick={() => void selectArtifact(item.storageKey)} disabled={viewState.status === "loading" && selectedStorageKey === item.storageKey}>
+              <button className="ui-button" type="button" onClick={() => void selectArtifactWithPreview(item)} disabled={viewState.status === "loading" && selectedStorageKey === item.storageKey}>
                 <ApplicationIcon name="browse" />
                 <span className="ui-button__label">{item.originalName ?? item.storageKey}</span>
               </button>
@@ -319,7 +374,7 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
             <dt><TermWithHint termId="localization">Localization state</TermWithHint></dt>
             <dd>{backingState.isLocalized ? "localized" : backingState.isRemoteOnly ? "not localized" : "n/a"}</dd>
           </dl>
-          <ArtifactPreviewPanel preview={artifactPreview} />
+          <ArtifactPreviewPanel preview={parquetPreview ?? artifactPreview} />
           {artifactPreview.descriptor?.kind === "image" ? (
             <div className="ui-grid ui-grid--two">
               <button className="ui-button" type="button" onClick={() => void selectPreviousImage()} disabled={!canSelectPreviousImage}>
