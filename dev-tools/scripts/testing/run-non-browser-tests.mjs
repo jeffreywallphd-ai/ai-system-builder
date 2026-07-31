@@ -16,16 +16,25 @@ import {
   applyIgnoredFailureAdjustments,
   applyDiagnosticSummaryMetric,
   buildNonBrowserNodeTestRunOptions,
+  createNonBrowserAssetModule,
+  createTestTimingTracker,
   formatNonBrowserFailureSummary,
+  isNonBrowserAssetSource,
+  isVitestOwnedTestSource,
   isIgnorableRunnerSpawnFailure,
+  parseTestSuiteArgument,
+  shouldIncludeTestFileForSuite,
 } from "./non-browser-test-runner-core.mjs";
 import { assertNoSourceTreeJavaScriptArtifacts } from "./source-tree-contamination-guard.mjs";
 
 const runnerDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(runnerDir, "../../..");
+const suite = parseTestSuiteArgument(process.argv.slice(2));
 
 const reportRelativePath =
-  "artifacts/test-reports/non-browser-test-report.json";
+  suite === "all"
+    ? "artifacts/test-reports/non-browser-test-report.json"
+    : "artifacts/test-reports/non-browser-" + suite + "-test-report.json";
 const reportPath = path.resolve(repoRoot, reportRelativePath);
 const runtimeRoot = path.resolve(
   repoRoot,
@@ -51,9 +60,6 @@ const discoveryRoots = [
   "dev-tools/scripts/testing",
 ];
 const validTestFilePattern = /\.test\.[cm]?[jt]sx?$/i;
-const browserOnlyTestPattern = /\.(ui|e2e)\.test\.[cm]?[jt]sx?$/i;
-const browserAppPathPattern =
-  /^(apps\/desktop\/src\/renderer\/|apps\/thin-client\/src\/)/i;
 const ignoredDirectories = new Set([
   ".git",
   ".turbo",
@@ -73,6 +79,7 @@ const runtimeToSourceFile = new Map();
 
 const report = {
   generatedAt: new Date().toISOString(),
+  suite,
   repoRoot,
   reportPath: reportRelativePath,
   status: "failed",
@@ -94,11 +101,15 @@ const report = {
     durationMs: 0,
     success: false,
   },
+  slowestFiles: [],
+  slowestTests: [],
   failures: [],
   startupError: null,
 };
+const timingTracker = createTestTimingTracker();
 
 const writeReport = () => {
+  Object.assign(report, timingTracker.snapshot());
   report.discoveredFiles = [...new Set(discoveredSourceTestFiles)].sort();
   report.discoveredFileCount = report.discoveredFiles.length;
 
@@ -395,6 +406,17 @@ const walkAndBuildRuntime = (startPath) => {
       entry.name.endsWith(".node")
     ) {
       copyToRuntimeFile(absolutePath, runtimeAbsolutePath);
+    } else if (isNonBrowserAssetSource(normalizedSourcePath)) {
+      const assetModulePath = `${runtimeAbsolutePath}.js`;
+      writeRuntimeOutput(
+        assetModulePath,
+        createNonBrowserAssetModule(normalizedSourcePath),
+      );
+      runtimeToSourceFile.set(
+        path.resolve(assetModulePath),
+        normalizedSourcePath,
+      );
+      continue;
     } else {
       continue;
     }
@@ -404,13 +426,18 @@ const walkAndBuildRuntime = (startPath) => {
       normalizedSourcePath,
     );
 
-    if (
-      validTestFilePattern.test(entry.name) &&
-      !browserOnlyTestPattern.test(entry.name) &&
-      !browserAppPathPattern.test(normalizedSourcePath)
-    ) {
-      discoveredSourceTestFiles.push(normalizedSourcePath);
-      discoveredRuntimeTestFiles.push(path.resolve(runtimeAbsolutePath));
+    if (validTestFilePattern.test(entry.name)) {
+      const sourceText = readFileSync(absolutePath, "utf8");
+      const isOwnedByVitest = isVitestOwnedTestSource(sourceText);
+      const isSelected = shouldIncludeTestFileForSuite({
+        sourcePath: normalizedSourcePath,
+        sourceText,
+        suite,
+      });
+      if (!isOwnedByVitest && isSelected) {
+        discoveredSourceTestFiles.push(normalizedSourcePath);
+        discoveredRuntimeTestFiles.push(path.resolve(runtimeAbsolutePath));
+      }
     }
   }
 };
@@ -465,19 +492,37 @@ try {
   let ignoredRunnerSpawnFailures = 0;
 
   if (discoveredRuntimeTestFiles.length === 0) {
-    throw new Error("No non-browser test files were discovered.");
+    if (suite !== "ai") {
+      throw new Error("No non-browser test files were discovered.");
+    }
+    console.log(
+      "No explicitly marked non-browser AI tests were discovered; continuing with the controlled Python AI tests.",
+    );
   }
 
-  const testsStream = run(
-    buildNonBrowserNodeTestRunOptions({
-      files: discoveredRuntimeTestFiles,
-      cwd: repoRoot,
-    }),
-  );
+  const testsStream =
+    discoveredRuntimeTestFiles.length === 0
+      ? []
+      : run(
+          buildNonBrowserNodeTestRunOptions({
+            files: discoveredRuntimeTestFiles,
+            cwd: repoRoot,
+          }),
+        );
 
   for await (const streamEvent of testsStream) {
     const eventType = streamEvent?.type;
     const event = streamEvent?.data ?? streamEvent;
+
+    if (eventType === "test:pass" || eventType === "test:fail") {
+      timingTracker.record({
+        file: resolveSourcePath(event.file),
+        name: event.name,
+        nesting: event.nesting,
+        durationMs: event.details?.duration_ms,
+        status: eventType === "test:pass" ? "passed" : "failed",
+      });
+    }
 
     if (eventType === "test:diagnostic") {
       const didApply = applyDiagnosticSummaryMetric(
@@ -545,7 +590,5 @@ try {
   if (failureSummary.length > 0) {
     console.error(failureSummary);
   }
-  console.log(
-    "Review test report for failure details: artifacts/test-reports/non-browser-test-report.json",
-  );
+  console.log("Review test report and timing details: " + reportRelativePath);
 }

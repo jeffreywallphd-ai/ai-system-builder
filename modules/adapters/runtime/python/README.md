@@ -27,3 +27,32 @@ Foundation for the managed Python sidecar runtime adapter:
   handles are resolved to host-local paths only through the private
   `ModelDownloadCompletionPort`; public task/API/IPC records never contain the
   handle or resolved path.
+- Dataset-preparation mapping preserves the bounded optional advanced recipe and
+  returns aggregate capability, structure, semantic, and synthetic-verification
+  evidence. It never exposes embeddings, normalized source text, generated
+  candidate text, prompts, or runtime-local paths.
+- Selected source attribution is runtime-owned enrichment. The worker adds it
+  after generation from bounded selected-source metadata, strips non-public URL
+  details, and never accepts it from model output. Prepared artifact metadata
+  also carries the exact schema fingerprint and purpose paths used later to
+  reject mixed training layouts.
+- Token-constrained JSON generation is an optional worker capability, not a
+  baseline Python-runtime promise. The worker advertises
+  `dataset-preparation.constrained-json` only on Python 3.10 through 3.13 when
+  the exact reviewed decoder packages are importable. Python 3.9 and 3.14 may
+  still run the worker, but must not advertise or silently emulate this
+  capability.
+- Checked generation is fail-closed: schema, dependency, tokenizer,
+  compilation, dead-end, truncation, or validation failures return bounded
+  decoder codes and never retry without token constraints. Unchecked generation
+  remains a separate compatibility mode and still uses strict parsing and
+  semantic validation.
+- The task registry assigns an explicit bounded deadline by work class: two
+  minutes for short/unknown work, two hours for validation, eight hours for
+  dataset preparation, twelve hours for model downloads, and twenty-four hours
+  for model training. This shared policy applies to Dataset Preparation, Model
+  Management, desktop, thin client, and the direct model-download fallback.
+  Callers cannot replace these caps with unbounded renderer values.
+- Cancellation ends the selected task but does not stop the shared Python
+  runtime or unrelated tasks. Long deadlines reduce false failures; they do not
+  remove task progress, cancellation, terminal cleanup, or hard resource bounds.

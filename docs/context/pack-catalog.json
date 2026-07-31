@@ -202,6 +202,34 @@
       "verification": ["npm test"]
     },
     {
+      "id": "data-management",
+      "path": "docs/context/packs/data-management.pack.md",
+      "description": "Ingestion, staged sources, dataset preparation, split integrity, curation, versioning, and publication.",
+      "taskSignals": [
+        "data management",
+        "data ingestion",
+        "dataset preparation",
+        "training dataset",
+        "dataset split",
+        "data curation",
+        "dataset version"
+      ],
+      "pathSignals": [
+        "docs/architecture/data-management.md",
+        "modules/contracts/runtime/dataset-preparation",
+        "modules/application/use-cases/prepare-training-dataset",
+        "modules/adapters/runtime/python/worker/tasks/prepare_training_dataset.py",
+        "apps/desktop/src/renderer/features/dataset-preparation/",
+        "apps/thin-client/src/features/dataset-preparation/"
+      ],
+      "verification": [
+        "npm run docs:check",
+        "npm run architecture:check",
+        "npm test",
+        "npm run build:thin-client"
+      ]
+    },
+    {
       "id": "runtime",
       "path": "docs/context/packs/runtime.pack.md",
       "description": "Runtime contracts, adapters, execution, supervisors, and capability guards.",

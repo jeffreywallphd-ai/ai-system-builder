@@ -71,6 +71,10 @@ describe("api route security policy coverage", () => {
     expect(API_ROUTE_POLICIES.get("GET /api/asset-authoring/workspaces/:workspaceId/drafts")).toMatchObject({ public: false, scopes: ["asset:read"] });
     expect(API_ROUTE_POLICIES.get("POST /api/asset-authoring/workspaces/:workspaceId/drafts")).toMatchObject({ public: false, scopes: ["asset:write"] });
     expect(API_ROUTE_POLICIES.get("POST /api/asset-authoring/workspaces/:workspaceId/drafts/:draftId/publish")).toMatchObject({ public: false, scopes: ["asset:write"] });
+    expect(API_ROUTE_POLICIES.get("POST /api/dataset-preparation/start")).toMatchObject({ public: false, scopes: ["artifact:write"] });
+    expect(API_ROUTE_POLICIES.get("GET /api/dataset-preparation/tasks/:requestId")).toMatchObject({ public: false, scopes: ["artifact:read"] });
+    expect(API_ROUTE_POLICIES.get("POST /api/dataset-preparation/tasks/:requestId/approve")).toMatchObject({ public: false, scopes: ["artifact:write"] });
+    expect(API_ROUTE_POLICIES.get("POST /api/dataset-preparation/tasks/:requestId/cancel")).toMatchObject({ public: false, scopes: ["artifact:write"] });
   });
 
   it("denies unknown api routes", () => {
@@ -111,6 +115,21 @@ describe("api route security policy coverage", () => {
     expect(resolveApiRoutePolicy("PATCH", "/api/asset-authoring/workspaces/workspace-a/drafts/draft-1")).toMatchObject({ public: false, scopes: ["asset:write"] });
     expect(resolveApiRoutePolicy("POST", "/api/asset-authoring/workspaces/workspace-a/drafts/draft-1/publish")).toMatchObject({ public: false, scopes: ["asset:write"] });
     expect(resolveApiRoutePolicy("GET", "/api/asset-authoring/workspaces/workspace-a/overrides/override-1")).toMatchObject({ public: false, scopes: ["asset:read"] });
+  });
+
+  it("resolves concrete dataset preparation task paths through registered route templates", () => {
+    expect(resolveApiRoutePolicy("GET", "/api/dataset-preparation/tasks/task-1")).toMatchObject({
+      public: false,
+      scopes: ["artifact:read"],
+    });
+    expect(resolveApiRoutePolicy("POST", "/api/dataset-preparation/tasks/task-1/cancel")).toMatchObject({
+      public: false,
+      scopes: ["artifact:write"],
+    });
+    expect(resolveApiRoutePolicy("POST", "/api/dataset-preparation/tasks/task-1/approve")).toMatchObject({
+      public: false,
+      scopes: ["artifact:write"],
+    });
   });
 });
 

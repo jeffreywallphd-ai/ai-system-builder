@@ -50,6 +50,12 @@ conversation session before the instance database and platform database.
 - Artifact publication carries explicit workspace context. Main preserves safe
   authorization errors, while application authorization occurs before catalog,
   binding, credential, provider, or repository reads.
+- Governed Add data commands use the `ingestion.task-execute.request` channel.
+  Preload and main independently normalize the bounded command, main rejects an
+  untrusted sender before resolving the lazy ingestion feature, and the host
+  supplies workspace/organization authority. Renderers receive opaque task,
+  progress, snapshot-result, and sanitized error data, never checkpoint paths,
+  credentials, or raw provider responses.
 
 Current test coverage for this slice:
 

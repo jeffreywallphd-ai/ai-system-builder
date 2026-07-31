@@ -10,6 +10,8 @@ export * from "./foundation-assets";
 export * from "./system-builder";
 export * from "./glossary";
 export * from "./artifact-preview";
+export * from "./dataset-version";
+export * from "./data-management";
 export * from "./notifications";
 export * from "./components/ApplicationIcon";
 export * from "./components/EmptyState";

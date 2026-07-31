@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 from datetime import datetime, timezone
 from math import ceil
@@ -31,6 +32,18 @@ DIFFUSION_TRAINING_TASKS = {"diffusion-lora"}
 VISION_TRAINING_TASKS = {"vision-classification", "vision-detection", "vision-segmentation"}
 DEFAULT_SEQUENCE_LENGTH = 512
 MAX_REASONABLE_TOKENIZER_LENGTH = 1_000_000
+_PURPOSE_PATH_SEGMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]{0,63}$")
+_TRAINING_TASK_REQUIRED_PURPOSES = {
+    "llm-instruction": ("instruction", "output"),
+    "llm-classification": ("label",),
+    "llm-extraction": ("expected-output",),
+    "llm-embedding": ("anchor-text", "positive-text"),
+    "llm-reranker": ("query", "passage"),
+    "diffusion-lora": ("caption",),
+    "vision-classification": ("label",),
+    "vision-detection": ("label",),
+    "vision-segmentation": ("label",),
+}
 
 
 def _require_non_empty(value: str | None, field: str) -> str:
@@ -108,6 +121,74 @@ def _infer_dataset_format(dataset: Any, path: Path) -> str:
     if fmt not in SUPPORTED_DATASET_FORMATS:
         raise ValueError(f"Unsupported dataset format '{fmt}'. Supported formats: {', '.join(sorted(SUPPORTED_DATASET_FORMATS))}.")
     return fmt
+
+
+def _resolve_training_purpose_paths(
+    payload: TrainModelTaskRequest,
+) -> dict[str, tuple[str, ...]] | None:
+    resolved: list[dict[str, tuple[str, ...]] | None] = []
+    fingerprints: list[str | None] = []
+    for dataset in payload.datasets:
+        metadata = _to_dict(dataset.metadata)
+        artifact_metadata = _to_dict(metadata.get("artifactMetadata"))
+        structured_output = _to_dict(
+            artifact_metadata.get("structuredOutput")
+            or metadata.get("structuredOutput")
+        )
+        raw_paths = structured_output.get("purposePaths")
+        if raw_paths is None:
+            resolved.append(None)
+            fingerprints.append(None)
+            continue
+        raw_fingerprint = structured_output.get("schemaFingerprint")
+        if (
+            not isinstance(raw_fingerprint, str)
+            or re.fullmatch(r"[a-f0-9]{64}", raw_fingerprint) is None
+        ):
+            raise ValueError("Dataset structured-output metadata is invalid.")
+        if not isinstance(raw_paths, dict) or len(raw_paths) > 32:
+            raise ValueError("Dataset structured-output purpose paths are invalid.")
+        normalized: dict[str, tuple[str, ...]] = {}
+        for purpose, raw_path in raw_paths.items():
+            if (
+                not isinstance(purpose, str)
+                or len(purpose) > 64
+                or not isinstance(raw_path, list)
+                or not 1 <= len(raw_path) <= 8
+                or any(
+                    not isinstance(segment, str)
+                    or not _PURPOSE_PATH_SEGMENT.fullmatch(segment)
+                    for segment in raw_path
+                )
+            ):
+                raise ValueError("Dataset structured-output purpose paths are invalid.")
+            normalized[purpose] = tuple(raw_path)
+        resolved.append(normalized)
+        fingerprints.append(raw_fingerprint)
+
+    available = [paths for paths in resolved if paths is not None]
+    if not available:
+        return None
+    if len(available) != len(resolved):
+        raise ValueError(
+            "Selected datasets do not share the same generated field layout. Prepare matching dataset versions before training."
+        )
+    canonical = json.dumps(available[0], sort_keys=True)
+    if any(json.dumps(paths, sort_keys=True) != canonical for paths in available[1:]):
+        raise ValueError(
+            "Selected datasets do not share the same generated field layout. Prepare matching dataset versions before training."
+        )
+    available_fingerprints = [
+        fingerprint for fingerprint in fingerprints if fingerprint is not None
+    ]
+    if any(
+        fingerprint != available_fingerprints[0]
+        for fingerprint in available_fingerprints[1:]
+    ):
+        raise ValueError(
+            "Selected datasets do not share the same generated field layout. Prepare matching dataset versions before training."
+        )
+    return available[0]
 
 
 def _load_dataset(payload: TrainModelTaskRequest) -> tuple[Any, Any]:
@@ -254,10 +335,29 @@ def _resolve_effective_sequence_length(model: Any, tokenizer: Any, requested_len
     )
 
 
-def _tokenize_dataset(dataset: Any, tokenizer: Any, max_sequence_length: int | None) -> Any:
+def _tokenize_dataset(
+    dataset: Any,
+    tokenizer: Any,
+    max_sequence_length: int | None,
+    *,
+    training_task: str | None = None,
+    purpose_paths: dict[str, tuple[str, ...]] | None = None,
+) -> Any:
     block_size = _to_positive_int(max_sequence_length) or DEFAULT_SEQUENCE_LENGTH
 
     column_names = list(dataset["train"].column_names)
+    if purpose_paths is not None and training_task in _TRAINING_TASK_REQUIRED_PURPOSES:
+        missing_purposes = [
+            purpose
+            for purpose in _TRAINING_TASK_REQUIRED_PURPOSES[training_task]
+            if purpose not in purpose_paths
+        ]
+        if missing_purposes:
+            raise ValueError(
+                "Prepared dataset field layout is missing training-purpose mappings: "
+                + ", ".join(missing_purposes)
+                + "."
+            )
 
     def format_row(batch: dict[str, list[Any]], index: int) -> str:
         def value(column: str) -> str:
@@ -269,12 +369,60 @@ def _tokenize_dataset(dataset: Any, tokenizer: Any, max_sequence_length: int | N
                 return json.dumps(raw, ensure_ascii=False)
             return "" if raw is None else str(raw)
 
+        def path_value(path: tuple[str, ...]) -> str:
+            values = batch.get(path[0], [])
+            if index >= len(values):
+                return ""
+            raw: Any = values[index]
+            for segment in path[1:]:
+                if not isinstance(raw, dict):
+                    return ""
+                raw = raw.get(segment)
+            if isinstance(raw, (dict, list)):
+                return json.dumps(raw, ensure_ascii=False)
+            return "" if raw is None else str(raw)
+
+        def purpose_value(purpose: str) -> str:
+            path = purpose_paths.get(purpose) if purpose_paths else None
+            return path_value(path) if path else ""
+
+        if purpose_paths is not None and training_task == "llm-instruction":
+            instruction = purpose_value("instruction")
+            input_value = purpose_value("input")
+            context = purpose_value("context")
+            thought = purpose_value("thought")
+            output = purpose_value("output")
+            input_block = f"\nInput:\n{input_value}" if input_value else ""
+            context_block = f"\nContext:\n{context}" if context else ""
+            thought_block = f"\nThought:\n{thought}" if thought else ""
+            return f"Instruction:\n{instruction}{input_block}{context_block}{thought_block}\nResponse:\n{output}"
+
+        if purpose_paths is not None and training_task == "llm-classification":
+            return f"Text:\n{value('text')}\nLabel:\n{purpose_value('label')}"
+
+        if purpose_paths is not None and training_task == "llm-extraction":
+            return f"Text:\n{value('text')}\nExpected output:\n{purpose_value('expected-output')}"
+
+        if purpose_paths is not None and training_task == "llm-embedding":
+            negative = value("negativeText")
+            negative_block = f"\nNegative:\n{negative}" if negative else ""
+            return f"Anchor:\n{purpose_value('anchor-text')}\nPositive:\n{purpose_value('positive-text')}{negative_block}"
+
+        if purpose_paths is not None and training_task == "llm-reranker":
+            negative = value("negativePassage")
+            negative_block = f"\nNegative passage:\n{negative}" if negative else ""
+            return f"Query:\n{purpose_value('query')}\nPassage:\n{purpose_value('passage')}\nRelevance:\n{value('relevance')}{negative_block}"
+
         if {"instruction", "output"}.issubset(column_names):
             instruction = value("instruction")
             input_value = value("input")
+            context = value("context")
+            thought = value("thought")
             output = value("output")
             input_block = f"\nInput:\n{input_value}" if input_value else ""
-            return f"Instruction:\n{instruction}{input_block}\nResponse:\n{output}"
+            context_block = f"\nContext:\n{context}" if context else ""
+            thought_block = f"\nThought:\n{thought}" if thought else ""
+            return f"Instruction:\n{instruction}{input_block}{context_block}{thought_block}\nResponse:\n{output}"
 
         if {"text", "label"}.issubset(column_names):
             return f"Text:\n{value('text')}\nLabel:\n{value('label')}"
@@ -492,6 +640,7 @@ def train_model(
         )
 
     try:
+        purpose_paths = _resolve_training_purpose_paths(payload)
         if training_task in DIFFUSION_TRAINING_TASKS:
             from .train_model_multimodal import train_diffusion_lora_model
 
@@ -501,6 +650,7 @@ def train_model(
                 run_id=run_id,
                 output_path=output_path,
                 output_model_name=output_model_name,
+                purpose_paths=purpose_paths,
                 on_progress=on_progress,
             )
 
@@ -513,6 +663,7 @@ def train_model(
                 run_id=run_id,
                 output_path=output_path,
                 output_model_name=output_model_name,
+                purpose_paths=purpose_paths,
                 on_progress=on_progress,
             )
 
@@ -535,7 +686,13 @@ def train_model(
             warnings.append(sequence_length_warning)
             logs.append(sequence_length_warning)
 
-        tokenized = _tokenize_dataset(dataset, tokenizer, effective_sequence_length)
+        tokenized = _tokenize_dataset(
+            dataset,
+            tokenizer,
+            effective_sequence_length,
+            training_task=training_task,
+            purpose_paths=purpose_paths,
+        )
         tokenized_eval = tokenized["validation"] if "validation" in tokenized else None
 
         if payload.method in {"lora", "qlora"}:

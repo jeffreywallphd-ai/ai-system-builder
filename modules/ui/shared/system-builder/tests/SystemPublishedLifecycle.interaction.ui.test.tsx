@@ -10,6 +10,10 @@ import type {
 } from "../../../../contracts/system-deployment";
 import { SystemPublishedLifecycleCard } from "../SystemPublishedLifecycleCard";
 import type { SystemPublishedLifecycleClient } from "../SystemPublishedLifecycleClient";
+import {
+  NotificationTestHarness,
+  readNotificationMessages,
+} from "../../notifications/tests/NotificationTestHarness";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -69,12 +73,14 @@ describe("published build lifecycle controls", () => {
     } as unknown as SystemPublishedLifecycleClient;
 
     await mount(
-      <SystemPublishedLifecycleCard
-        workspaceId="workspace-a"
-        build={build}
-        client={client}
-        visualStartNotice="The system opened in its own window."
-      />,
+      <NotificationTestHarness>
+        <SystemPublishedLifecycleCard
+          workspaceId="workspace-a"
+          build={build}
+          client={client}
+          visualStartNotice="The system opened in its own window."
+        />
+      </NotificationTestHarness>,
     );
 
     await vi.waitFor(() => expect(button("Install")).toBeDefined());
@@ -88,14 +94,18 @@ describe("published build lifecycle controls", () => {
       action: "install",
       expectedRevision: "r1",
     });
-    expect(document.body.textContent).toContain("Installed and activated.");
+    expect(readNotificationMessages(document.body)).toContain(
+      "Installed and activated.",
+    );
     expect(button("Start")).toBeDefined();
     expect(button("Deactivate")).toBeDefined();
     expect(button("Uninstall")).toBeDefined();
     expect(findButton("Activate")).toBeUndefined();
 
     await act(async () => button("Start").click());
-    expect(document.body.textContent).toContain("opened in its own window");
+    expect(readNotificationMessages(document.body)).toContain(
+      "The system opened in its own window.",
+    );
     expect(button("Stop")).toBeDefined();
     expect(findButton("Start")).toBeUndefined();
     expect(findButton("Deactivate")).toBeUndefined();

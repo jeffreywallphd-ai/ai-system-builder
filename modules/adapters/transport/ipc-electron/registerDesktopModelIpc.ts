@@ -25,6 +25,7 @@ export function registerDesktopModelIpc(dependencies: RegisterDesktopModelIpcDep
     modelDownloadTasksUseCase: lazyProvidedObject(dependencies.getModelFeature, (feature) => feature.modelDownloadTasksUseCase!),
     updateModelRecordUseCase: lazyProvidedObject(dependencies.getModelFeature, (feature) => feature.updateModelRecordUseCase),
     deleteModelRecordUseCase: lazyProvidedObject(dependencies.getModelFeature, (feature) => feature.deleteModelRecordUseCase),
+    revealModelInFolderUseCase: lazyProvidedObject(dependencies.getModelFeature, (feature) => feature.revealModelInFolderUseCase),
     trainModelUseCase: lazyProvidedObject(dependencies.getModelFeature, (feature) => feature.trainModelUseCase),
     validateModelUseCase: lazyProvidedObject(dependencies.getModelFeature, (feature) => feature.validateModelUseCase),
     publishModelUseCase: lazyProvidedObject(dependencies.getModelFeature, (feature) => feature.publishModelUseCase),

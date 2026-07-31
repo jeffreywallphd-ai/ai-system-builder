@@ -93,6 +93,7 @@ import {
   DESKTOP_MODEL_DOWNLOAD_REQUEST_CHANNEL,
   DESKTOP_MODEL_RECORD_UPDATE_REQUEST_CHANNEL,
   DESKTOP_MODEL_RECORD_DELETE_REQUEST_CHANNEL,
+  DESKTOP_MODEL_FOLDER_REVEAL_REQUEST_CHANNEL,
   DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL,
   createDesktopModelBrowseSuccessResponse,
   createDesktopModelDetailsReadSuccessResponse,
@@ -101,6 +102,7 @@ import {
   createDesktopModelDownloadSuccessResponse,
   createDesktopModelRecordUpdateSuccessResponse,
   createDesktopModelRecordDeleteSuccessResponse,
+  createDesktopModelFolderRevealSuccessResponse,
   createDesktopModelTrainSuccessResponse,
   createDesktopModelTrainStatusSuccessResponse,
   DESKTOP_CONVERSATION_EXECUTION_V2_CREATE_SESSION_REQUEST_CHANNEL,
@@ -154,7 +156,10 @@ describe("desktop preload exposedApi bridge", () => {
       ),
       createIpcSuccessResponse(
         DESKTOP_SYSTEM_DEPLOYMENT_CHANNELS.lifecycleInvoke.response,
-        { state: "active-stopped", eligibleActions: ["start", "deactivate", "uninstall"] },
+        {
+          state: "active-stopped",
+          eligibleActions: ["start", "deactivate", "uninstall"],
+        },
       ),
     ];
     const invoke = testDouble
@@ -177,9 +182,11 @@ describe("desktop preload exposedApi bridge", () => {
       DESKTOP_SYSTEM_DEPLOYMENT_CHANNELS.lifecycleRead.request.value,
       DESKTOP_SYSTEM_DEPLOYMENT_CHANNELS.lifecycleInvoke.request.value,
     ]);
-    const payload = (invoke.mock.calls[1]?.[1] as {
-      payload: Record<string, unknown>;
-    }).payload;
+    const payload = (
+      invoke.mock.calls[1]?.[1] as {
+        payload: Record<string, unknown>;
+      }
+    ).payload;
     expect(payload).toEqual({
       workspaceId: "workspace-a",
       releaseId: "release-a",
@@ -193,8 +200,14 @@ describe("desktop preload exposedApi bridge", () => {
 
   it("maps guided build preparation, request, and publication reads to dedicated IPC channels", async () => {
     const responses = [
-      createIpcSuccessResponse(DESKTOP_SYSTEM_BUILD_CHANNELS.prepare.response, {}),
-      createIpcSuccessResponse(DESKTOP_SYSTEM_BUILD_CHANNELS.request.response, {}),
+      createIpcSuccessResponse(
+        DESKTOP_SYSTEM_BUILD_CHANNELS.prepare.response,
+        {},
+      ),
+      createIpcSuccessResponse(
+        DESKTOP_SYSTEM_BUILD_CHANNELS.request.response,
+        {},
+      ),
       createIpcSuccessResponse(
         DESKTOP_SYSTEM_BUILD_CHANNELS.publicationWorkspace.response,
         { systems: [] },
@@ -222,9 +235,11 @@ describe("desktop preload exposedApi bridge", () => {
     expect(invoke.mock.calls[1]?.[1]).toMatchObject({
       payload: { ...target, buildId: "build-2" },
     });
-    const requestPayload = (invoke.mock.calls[1]?.[1] as {
-      payload: Record<string, unknown>;
-    }).payload;
+    const requestPayload = (
+      invoke.mock.calls[1]?.[1] as {
+        payload: Record<string, unknown>;
+      }
+    ).payload;
     expect("deploymentProfile" in requestPayload).toBe(false);
     expect("toolchainProfile" in requestPayload).toBe(false);
   });
@@ -1078,7 +1093,9 @@ describe("desktop preload exposedApi bridge", () => {
 
   it("rejects concurrent artifact uploads before invoking IPC twice", async () => {
     let resolveUpload:
-      | ((value: ReturnType<typeof createDesktopArtifactUploadSuccessResponse>) => void)
+      | ((
+          value: ReturnType<typeof createDesktopArtifactUploadSuccessResponse>,
+        ) => void)
       | undefined;
     const firstUpload = new Promise<
       ReturnType<typeof createDesktopArtifactUploadSuccessResponse>
@@ -1215,7 +1232,10 @@ describe("desktop preload exposedApi bridge", () => {
     expect(invoke.mock.calls[0]?.[0]).toBe(
       DESKTOP_ARTIFACT_PUBLISH_REQUEST_CHANNEL.value,
     );
-    expect((invoke.mock.calls[0]?.[1] as DesktopArtifactPublishRequest).payload.repositoryCreation).toEqual({
+    expect(
+      (invoke.mock.calls[0]?.[1] as DesktopArtifactPublishRequest).payload
+        .repositoryCreation,
+    ).toEqual({
       approved: true,
       visibility: "private",
     });
@@ -1346,6 +1366,7 @@ it("maps localize-from-repo bridge calls to artifact localize-from-repo request 
   const api = createDesktopPreloadApi({ ipcRenderer: { invoke } });
 
   await api.localizeArtifactFromRepo({
+    workspaceId: "workspace-a",
     artifactId: "artifacts/20260418000000-local01",
   });
 
@@ -1491,9 +1512,15 @@ it("maps training dataset preparation bridge calls to dedicated IPC request chan
 
   const startResponse = await api.startPrepareTrainingDataset({
     sourceArtifactIds: ["artifact-1"],
+    preparation: {
+      schemaVersion: "1",
+      inputIntent: "create-from-source-material",
+      method: "topic-aware",
+      sourceKinds: ["document"],
+      generationMode: "task-examples",
+    },
     recipe: {
       normalization: { targetFormat: "markdown" },
-      chunking: { strategy: "character", chunkSize: 1_000, chunkOverlap: 200 },
       generation: {
         mode: "qa",
         model: {
@@ -1505,6 +1532,31 @@ it("maps training dataset preparation bridge calls to dedicated IPC request chan
     },
     split: { trainRatio: 0.8, testRatio: 0.2, seed: 7, shuffle: true },
     output: { format: "jsonl" },
+    advanced: {
+      preset: "topic-aware",
+      content: {
+        strategy: "semantic",
+        maxTokensPerChunk: 320,
+        maxSourceSpans: 10_000,
+        semanticBoundaryThreshold: 0.22,
+        ocrEnabled: false,
+      },
+      semantic: {
+        enabled: true,
+        embeddingAlgorithm: "hashed-token-v1",
+        similarityThreshold: 0.9,
+        maxComparisonsPerRow: 128,
+        hardNegativeMining: true,
+      },
+      synthetic: {
+        enabled: true,
+        candidatesPerChunk: 2,
+        minimumGroundingScore: 0.45,
+        minimumCriticScore: 0.6,
+        minimumDiversityScore: 0.2,
+        requireReview: true,
+      },
+    },
   });
   const readResponse = await api.readPrepareTrainingDatasetTask({
     requestId: "req-1",
@@ -1515,6 +1567,25 @@ it("maps training dataset preparation bridge calls to dedicated IPC request chan
   expect(invoke.mock.calls[0]?.[0]).toBe(
     DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL.value,
   );
+  expect(invoke.mock.calls[0]?.[1]).toMatchObject({
+    payload: {
+      command: {
+        preparation: {
+          method: "topic-aware",
+          generationMode: "task-examples",
+        },
+        advanced: {
+          preset: "topic-aware",
+          content: { strategy: "semantic" },
+        },
+        recipe: {
+          generation: {
+            model: { modelId: "Qwen/Qwen2.5-1.5B-Instruct" },
+          },
+        },
+      },
+    },
+  });
   expect(invoke.mock.calls[1]?.[0]).toBe(
     DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL.value,
   );
@@ -1720,6 +1791,10 @@ it("maps model management bridge calls to dedicated model channels", async () =>
       deletedLocalFiles: false,
       deletedBackingArtifactIds: [],
     }),
+    createDesktopModelFolderRevealSuccessResponse({
+      modelRecordId: "m1",
+      revealed: true,
+    }),
     createDesktopModelTrainSuccessResponse({
       runId: "run-1",
       status: "queued",
@@ -1750,6 +1825,7 @@ it("maps model management bridge calls to dedicated model channels", async () =>
   await api.downloadModel({ provider: "huggingface", modelId: "org/model" });
   await api.updateModelRecord({ modelRecordId: "m1", patch: {} });
   await api.deleteModelRecord({ modelRecordId: "m1" });
+  await api.revealModelInFolder({ modelRecordId: "m1" });
   await api.trainModel({
     baseModel: { modelRecordId: "m1" },
     datasets: [{ artifactId: "dataset-1", splitRole: "train" }],
@@ -1783,8 +1859,11 @@ it("maps model management bridge calls to dedicated model channels", async () =>
   expect(invoke.mock.calls[6]?.[0]).toBe(
     DESKTOP_MODEL_RECORD_DELETE_REQUEST_CHANNEL.value,
   );
-  expect(invoke.mock.calls[7]?.[0]).toBe("ipc.model.train.request");
-  expect(invoke.mock.calls[8]?.[0]).toBe(
+  expect(invoke.mock.calls[7]?.[0]).toBe(
+    DESKTOP_MODEL_FOLDER_REVEAL_REQUEST_CHANNEL.value,
+  );
+  expect(invoke.mock.calls[8]?.[0]).toBe("ipc.model.train.request");
+  expect(invoke.mock.calls[9]?.[0]).toBe(
     DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL.value,
   );
 });

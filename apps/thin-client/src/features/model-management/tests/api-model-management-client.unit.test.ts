@@ -24,6 +24,14 @@ describe('api model management client',()=>{
   await createApiModelManagementClient().listModels({source:'huggingface'});
   expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)).toEqual({source:'huggingface'});
  });
+ it('loads a path-free model file list on the server files endpoint', async()=>{
+  const fetchMock=vi.fn().mockResolvedValue({headers:{get:()=> 'application/json'},status:200,json:vi.fn().mockResolvedValue({ok:true,value:{modelRecordId:'m1',files:[{relativePath:'tokenizer/vocab.json',sizeBytes:12}],truncated:false}})});
+  vi.stubGlobal('fetch', fetchMock);
+  const result=await createApiModelManagementClient().listModelFiles({workspaceId:'workspace-a' as never,modelRecordId:'m1'});
+  expect(fetchMock.mock.calls[0][0]).toBe('/api/model/files/list');
+  expect(result.files).toEqual([{relativePath:'tokenizer/vocab.json',sizeBytes:12}]);
+  expect(JSON.stringify(result)).not.toContain('C:\\');
+ });
  it('throws on failure envelope with code/details', async()=>{
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({headers:{get:()=> 'application/json'},status:400,json:vi.fn().mockResolvedValue({ok:false,error:{message:'bad',code:'validation',details:{field:'provider'}}})}));
   await expect(createApiModelManagementClient().listModels()).rejects.toMatchObject({message:'bad', code:'validation', details:{field:'provider'}});

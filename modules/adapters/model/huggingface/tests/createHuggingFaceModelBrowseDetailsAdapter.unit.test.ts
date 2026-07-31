@@ -86,6 +86,63 @@ describe("createHuggingFaceModelBrowseDetailsAdapter", () => {
     expect(firstAdditionalFields).toContain("tags");
   });
 
+  it("passes a custom task tag without widening persisted model task tags", async () => {
+    const hubClient = createHubClientDouble();
+    const adapter = createHuggingFaceModelBrowseDetailsAdapter({ hubClient });
+
+    await adapter.browseModels({
+      provider: "huggingface",
+      customTaskTag: "image-classification",
+      limit: 10,
+    });
+
+    expect(hubClient.listModels.mock.calls[0]?.[0]).toMatchObject({
+      search: { task: "image-classification" },
+      limit: 10,
+    });
+  });
+
+  it("uses and returns only the bounded Hugging Face cursor value", async () => {
+    const previousFetch = globalThis.fetch;
+    const fetchDouble = testDouble.fn(async (input: URL | RequestInfo) => {
+      const url = new URL(typeof input === "string" ? input : input.toString());
+      expect(url.searchParams.get("cursor")).toBe("page-2");
+      return new Response("[]", {
+        status: 200,
+        headers: {
+          Link: '<https://huggingface.co/api/models?cursor=page-3>; rel="next"',
+        },
+      });
+    });
+    globalThis.fetch = fetchDouble as typeof fetch;
+    try {
+      const hubClient = createHubClientDouble({
+        listModels: testDouble.fn(async function* (params) {
+          await params.fetch?.("https://huggingface.co/api/models?limit=10");
+          yield {
+            name: "openai/demo-model",
+            downloads: 1,
+            likes: 1,
+            private: false,
+            gated: false,
+          };
+        }),
+      });
+      const adapter = createHuggingFaceModelBrowseDetailsAdapter({ hubClient });
+
+      const result = await adapter.browseModels({
+        provider: "huggingface",
+        cursor: "page-2",
+        limit: 10,
+      });
+
+      expect(result.nextCursor).toBe("page-3");
+      expect(JSON.stringify(result)).not.toContain("https://huggingface.co");
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+  });
+
   it("prefers human-readable repository ids over opaque provider ids", async () => {
     const hubClient = createHubClientDouble({
       listModels: testDouble.fn(async function* () {

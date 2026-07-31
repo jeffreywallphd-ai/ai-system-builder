@@ -177,6 +177,20 @@ describe("SecureEgressBroker", () => {
     await expectSecureEgressCode(session.fetch("https://example.com/two"), "size-exceeded");
   });
 
+  it("accepts an empty 304 response without a content type for conditional refreshes", async () => {
+    const result = await publicBroker(async () => response({
+      status: 304,
+      headers: { etag: '\"current\"' },
+      chunks: [],
+    }))
+      .createSession({ allowedMediaTypes: ["text/html"] })
+      .fetch("https://example.com/page");
+
+    expect(result.status).toBe(304);
+    expect(result.headers.etag).toBe('\"current\"');
+    expect(result.bytes.byteLength).toBe(0);
+  });
+
   it("keeps the deadline active while streaming the response body", async () => {
     const broker = publicBroker(async ({ signal }) => ({
       status: 200,

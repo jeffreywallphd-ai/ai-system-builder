@@ -197,6 +197,26 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     "POST /api/artifact/ingest-website-pages-batch",
     { public: false, scopes: ["artifact:write"] },
   ],
+  [
+    "GET /api/dataset-preparation/generation-capacity",
+    { public: false, scopes: ["artifact:read"] },
+  ],
+  [
+    "POST /api/dataset-preparation/start",
+    { public: false, scopes: ["artifact:write"] },
+  ],
+  [
+    "GET /api/dataset-preparation/tasks/:requestId",
+    { public: false, scopes: ["artifact:read"] },
+  ],
+  [
+    "POST /api/dataset-preparation/tasks/:requestId/approve",
+    { public: false, scopes: ["artifact:write"] },
+  ],
+  [
+    "POST /api/dataset-preparation/tasks/:requestId/cancel",
+    { public: false, scopes: ["artifact:write"] },
+  ],
 
   ["GET /api/assets/definitions", { public: false, scopes: ["asset:read"] }],
   [

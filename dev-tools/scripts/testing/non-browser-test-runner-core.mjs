@@ -1,6 +1,107 @@
 const metricPattern =
   /^(?:\W+)?\s*(tests|suites|pass|fail|cancelled|skipped|todo|duration_ms)\s+(.+)$/;
 
+const supportedTestSuites = new Set([
+  "standard",
+  "e2e",
+  "ai",
+  "standardande2e",
+  "all",
+]);
+const endToEndTestFilePattern = /\.(?:e2e|integration)\.test\.[cm]?[jt]sx?$/i;
+const endToEndTestMarkerPattern = /^\s*\/\/\s*@test-duration\s+long\s*$/m;
+const aiTestMarkerPattern = /^\s*\/\/\s*@test-suite\s+ai\s*$/m;
+const vitestImportPattern = /\bfrom\s+["']vitest["']/m;
+const nonBrowserAssetSourcePattern = /\.(?:png|svg)$/i;
+
+export const isVitestOwnedTestSource = (sourceText) =>
+  vitestImportPattern.test(sourceText);
+
+export const isNonBrowserAssetSource = (sourcePath) =>
+  typeof sourcePath === "string" &&
+  nonBrowserAssetSourcePattern.test(sourcePath);
+
+export const createNonBrowserAssetModule = (sourcePath) => {
+  if (!isNonBrowserAssetSource(sourcePath)) {
+    throw new Error("Unsupported non-browser test asset source.");
+  }
+  const fileName = sourcePath.split(/[\\/]/).at(-1);
+  return `export default ${JSON.stringify(fileName)};\n`;
+};
+
+export const classifyTestFileSuite = (sourcePath, sourceText = "") => {
+  if (aiTestMarkerPattern.test(sourceText)) {
+    return "ai";
+  }
+  return endToEndTestFilePattern.test(sourcePath) ||
+    endToEndTestMarkerPattern.test(sourceText)
+    ? "e2e"
+    : "standard";
+};
+
+export const shouldIncludeTestFileForSuite = ({
+  sourcePath,
+  sourceText,
+  suite,
+}) =>
+  suite === "all" ||
+  (suite === "standardande2e" &&
+    classifyTestFileSuite(sourcePath, sourceText) !== "ai") ||
+  classifyTestFileSuite(sourcePath, sourceText) === suite;
+
+export const parseTestSuiteArgument = (args, fallback = "all") => {
+  const explicitArgument = args.find((argument) =>
+    argument.startsWith("--suite="),
+  );
+  const suite = explicitArgument
+    ? explicitArgument.slice("--suite=".length)
+    : fallback;
+  if (supportedTestSuites.has(suite) === false) {
+    throw new Error(
+      "Unsupported test suite. Expected standard, e2e, ai, standardande2e, or all.",
+    );
+  }
+  return suite;
+};
+
+export const createTestTimingTracker = ({ limit = 20 } = {}) => {
+  const fileDurations = new Map();
+  const testDurations = [];
+
+  return {
+    record({ file, name, nesting, durationMs, status }) {
+      if (
+        typeof file !== "string" ||
+        !Number.isFinite(durationMs) ||
+        durationMs < 0
+      ) {
+        return;
+      }
+      const normalizedNesting = Number.isFinite(nesting) ? nesting : 0;
+      testDurations.push({
+        file,
+        name,
+        durationMs,
+        nesting: normalizedNesting,
+        status,
+      });
+      if (normalizedNesting === 0) {
+        fileDurations.set(file, (fileDurations.get(file) ?? 0) + durationMs);
+      }
+    },
+    snapshot() {
+      const slowestFiles = [...fileDurations.entries()]
+        .map(([file, durationMs]) => ({ file, durationMs }))
+        .sort((left, right) => right.durationMs - left.durationMs)
+        .slice(0, limit);
+      const slowestTests = [...testDurations]
+        .sort((left, right) => right.durationMs - left.durationMs)
+        .slice(0, limit);
+      return { slowestFiles, slowestTests };
+    },
+  };
+};
+
 export const buildNonBrowserNodeTestRunOptions = ({ files, cwd }) => ({
   cwd,
   files: [...files],

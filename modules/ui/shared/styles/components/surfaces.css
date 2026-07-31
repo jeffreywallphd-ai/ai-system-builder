@@ -25,7 +25,24 @@
 .ui-panel--sectioned,
 .ui-panel--collapsible {
   padding: 0;
+}
+
+.ui-panel--sectioned {
   overflow: hidden;
+}
+
+.ui-panel--collapsible {
+  overflow: visible;
+}
+
+.ui-panel--collapsible > .ui-panel__toggle:first-child {
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+}
+
+.ui-panel--collapsible > .ui-panel__body:last-child {
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
 }
 
 .ui-panel__section-header,

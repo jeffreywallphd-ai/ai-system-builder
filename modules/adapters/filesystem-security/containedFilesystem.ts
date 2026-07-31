@@ -1,6 +1,7 @@
 import { constants } from "node:fs";
 import {
   lstat,
+  link,
   mkdir,
   open,
   readdir,
@@ -222,6 +223,65 @@ export async function writeContainedFile(input: {
     throw error;
   }
   return { key: resolved.key, absolutePath: resolved.absolutePath };
+}
+
+export async function writeContainedFileStream(input: {
+  rootDirectory: string;
+  key: string;
+  content: AsyncIterable<Uint8Array>;
+  maximumBytes: number;
+  overwrite: boolean;
+}): Promise<{ key: string; absolutePath: string; sizeBytes: number }> {
+  if (!Number.isSafeInteger(input.maximumBytes) || input.maximumBytes < 0) {
+    throw new FilesystemContainmentError("Streamed artifact maximum bytes must be a non-negative safe integer.");
+  }
+  const resolved = await resolveContainedParent(input.rootDirectory, input.key, true);
+  const noFollow = constants.O_NOFOLLOW ?? 0;
+  if (input.overwrite) {
+    try {
+      const existing = await lstat(resolved.absolutePath);
+      assertRegularFile(existing, "Artifact stream overwrite");
+      if (!isInside(resolved.root, await realpath(resolved.absolutePath))) {
+        throw new FilesystemContainmentError("Artifact stream overwrite rejected a file outside the configured root.");
+      }
+    } catch (error) {
+      if (!isMissing(error)) throw error;
+    }
+  }
+  const temporaryPath = path.join(path.dirname(resolved.absolutePath), `.${path.basename(resolved.absolutePath)}.${randomUUID()}.stream.tmp`);
+  const handle = await open(temporaryPath, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | noFollow, 0o600);
+  let sizeBytes = 0;
+  try {
+    for await (const chunk of input.content) {
+      if (!(chunk instanceof Uint8Array)) throw new FilesystemContainmentError("Streamed artifact chunks must be binary bytes.");
+      if (sizeBytes + chunk.byteLength > input.maximumBytes) throw new FilesystemContainmentError("Streamed artifact exceeds the permitted byte limit.");
+      let offset = 0;
+      while (offset < chunk.byteLength) {
+        const result = await handle.write(chunk, offset, chunk.byteLength - offset);
+        if (result.bytesWritten < 1) throw new FilesystemContainmentError("Streamed artifact write made no progress.");
+        offset += result.bytesWritten;
+      }
+      sizeBytes += chunk.byteLength;
+    }
+    await handle.sync();
+  } catch (error) {
+    await handle.close().catch(() => undefined);
+    await unlink(temporaryPath).catch(() => undefined);
+    throw error;
+  }
+  await handle.close();
+  try {
+    if (input.overwrite) {
+      await rename(temporaryPath, resolved.absolutePath);
+    } else {
+      await link(temporaryPath, resolved.absolutePath);
+      await unlink(temporaryPath);
+    }
+  } catch (error) {
+    await unlink(temporaryPath).catch(() => undefined);
+    throw error;
+  }
+  return { key: resolved.key, absolutePath: resolved.absolutePath, sizeBytes };
 }
 
 export async function readContainedFile(input: {

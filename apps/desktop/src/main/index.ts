@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 
 import { composeDesktopHost } from "../../../../modules/hosts/desktop";
 import { recordDesktopMemorySnapshot } from "../../../../modules/hosts/desktop/diagnostics";
@@ -14,6 +14,7 @@ import {
   readLocalIdentityProfile,
 } from "../../../../modules/adapters/security/local-identity";
 import { isTrustedIpcSender } from "./trustedIpcSender";
+import { createRevealModelPath } from "./revealModelPath";
 import {
   createSystemRuntimeWindowManager,
   type RuntimeBrowserWindowLike,
@@ -209,6 +210,7 @@ app.whenReady().then(async () => {
     storageRootDirectory,
     runtimeRootDirectory: desktopDataRootDirectory,
     systemRuntimeWindows,
+    revealModelPath: createRevealModelPath(shell),
   });
   recordDesktopMemorySnapshot({
     milestone: "desktop.ipc.register.after",

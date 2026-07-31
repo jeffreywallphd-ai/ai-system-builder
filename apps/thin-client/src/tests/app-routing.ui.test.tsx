@@ -52,7 +52,7 @@ describe("thin-client routing and page composition", () => {
       root.render(<App />);
     });
 
-    expect(container.textContent).toContain("Build visual AI workflows from your artifacts");
+    expect(container.textContent).toContain("Build and manage");
 
     const imageButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Image Generation");
     expect(imageButton).toBeDefined();
@@ -96,8 +96,8 @@ describe("thin-client routing and page composition", () => {
     await act(async () => {
       artifactsButton?.dispatchEvent(new Event("click", { bubbles: true }));
     });
-    expect(container.textContent).toContain("Data Artifact Ingester");
-    expect(container.querySelector(".ui-panel__section-header h2")?.textContent).toBe("Data Artifact Ingester");
+    expect(container.textContent).toContain("Data Management");
+    expect(container.querySelector(".ui-panel__section-header h2")?.textContent).toBe("Add data");
 
     const browserTab = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Artifact Browser");
     await act(async () => {

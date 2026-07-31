@@ -15,6 +15,10 @@ import {
   type RegisterWebsiteIngestionApiRoutesDependencies,
 } from "./website-ingestion/registerWebsiteIngestionApiRoutes";
 import {
+  registerIngestionTaskApiRoute,
+  type RegisterIngestionTaskApiRouteDependencies,
+} from "./ingestion-task/registerIngestionTaskApiRoute";
+import {
   registerImageGenerationApiRoutes,
   type RegisterImageGenerationApiRoutesDependencies,
 } from "./image-generation/registerImageGenerationApiRoutes";
@@ -34,6 +38,14 @@ import {
   registerRuntimeReadinessApiRoutes,
   type RegisterRuntimeReadinessApiRoutesDependencies,
 } from "./runtime-readiness/registerRuntimeReadinessApiRoutes";
+import {
+  registerDatasetPreparationApiRoutes,
+  type RegisterDatasetPreparationApiRoutesDependencies,
+} from "./dataset-preparation/registerDatasetPreparationApiRoutes";
+import {
+  registerDatasetVersionApiRoutes,
+  type RegisterDatasetVersionApiRoutesDependencies,
+} from "./dataset-version/registerDatasetVersionApiRoutes";
 import {
   registerAssetRegistryApiRoutes,
   type RegisterAssetRegistryApiRoutesDependencies,
@@ -112,11 +124,14 @@ export interface RegisterExpressApiDependencies {
     RegisterArtifactBrowserApiRoutesDependencies["app"] &
     RegisterArtifactRepoApiRoutesDependencies["app"] &
     RegisterWebsiteIngestionApiRoutesDependencies["app"] &
+    RegisterIngestionTaskApiRouteDependencies["app"] &
     RegisterImageGenerationApiRoutesDependencies["app"] &
     RegisterModelManagementApiRoutesDependencies["app"] &
     RegisterApplicationSettingsApiRoutesDependencies["app"] &
     RegisterServerControlApiRoutesDependencies["app"] &
     RegisterRuntimeReadinessApiRoutesDependencies["app"] &
+    RegisterDatasetPreparationApiRoutesDependencies["app"] &
+    RegisterDatasetVersionApiRoutesDependencies["app"] &
     RegisterAssetRegistryApiRoutesDependencies["app"] &
     RegisterAssetMutationApiRoutesDependencies["app"] &
     RegisterWorkspaceApiRoutesDependencies["app"] &
@@ -136,6 +151,7 @@ export interface RegisterExpressApiDependencies {
   storeArtifactUploadUseCase: RegisterArtifactUploadApiRouteDependencies["storeArtifactUploadUseCase"];
   ingestWebsitePageUseCase?: RegisterWebsiteIngestionApiRoutesDependencies["ingestWebsitePageUseCase"];
   ingestWebsitePagesBatchUseCase?: RegisterWebsiteIngestionApiRoutesDependencies["ingestWebsitePagesBatchUseCase"];
+  ingestionTasks: RegisterIngestionTaskApiRouteDependencies["ingestionTasks"];
   browseArtifactsUseCase: RegisterArtifactBrowserApiRoutesDependencies["browseArtifactsUseCase"];
   readArtifactDetailUseCase: RegisterArtifactBrowserApiRoutesDependencies["readArtifactDetailUseCase"];
   readArtifactContentUseCase: RegisterArtifactBrowserApiRoutesDependencies["readArtifactContentUseCase"];
@@ -158,6 +174,7 @@ export interface RegisterExpressApiDependencies {
   browseModelsUseCase: RegisterModelManagementApiRoutesDependencies["browseModelsUseCase"];
   getModelDetailsUseCase: RegisterModelManagementApiRoutesDependencies["getModelDetailsUseCase"];
   listModelsUseCase: RegisterModelManagementApiRoutesDependencies["listModelsUseCase"];
+  listModelFilesUseCase?: RegisterModelManagementApiRoutesDependencies["listModelFilesUseCase"];
   saveModelReferenceUseCase: RegisterModelManagementApiRoutesDependencies["saveModelReferenceUseCase"];
   downloadModelUseCase: RegisterModelManagementApiRoutesDependencies["downloadModelUseCase"];
   modelDownloadTasksUseCase?: RegisterModelManagementApiRoutesDependencies["modelDownloadTasksUseCase"];
@@ -172,6 +189,9 @@ export interface RegisterExpressApiDependencies {
   clearSettingUseCase?: RegisterApplicationSettingsApiRoutesDependencies["clearSettingUseCase"];
   restartServer?: RegisterServerControlApiRoutesDependencies["restartServer"];
   runtimeReadiness?: RegisterRuntimeReadinessApiRoutesDependencies["runtimeReadiness"];
+  prepareTrainingDatasetUseCase?: RegisterDatasetPreparationApiRoutesDependencies["prepareTrainingDatasetUseCase"];
+  readDatasetPreparationGenerationCapacity?: RegisterDatasetPreparationApiRoutesDependencies["readGenerationCapacity"];
+  datasetVersionUseCases?: Omit<RegisterDatasetVersionApiRoutesDependencies, "app">;
   assetRegistryRead?: RegisterAssetRegistryApiRoutesDependencies["assetRegistryRead"];
   assetMutationUseCases?: Omit<
     RegisterAssetMutationApiRoutesDependencies,
@@ -275,11 +295,17 @@ export function registerExpressApi(
     });
   }
 
+  registerIngestionTaskApiRoute({
+    app: dependencies.app,
+    ingestionTasks: dependencies.ingestionTasks,
+  });
+
   registerModelManagementApiRoutes({
     app: dependencies.app,
     browseModelsUseCase: dependencies.browseModelsUseCase,
     getModelDetailsUseCase: dependencies.getModelDetailsUseCase,
     listModelsUseCase: dependencies.listModelsUseCase,
+    listModelFilesUseCase: dependencies.listModelFilesUseCase,
     saveModelReferenceUseCase: dependencies.saveModelReferenceUseCase,
     downloadModelUseCase: dependencies.downloadModelUseCase,
     modelDownloadTasksUseCase: dependencies.modelDownloadTasksUseCase,
@@ -433,6 +459,22 @@ export function registerExpressApi(
     registerRuntimeReadinessApiRoutes({
       app: dependencies.app,
       runtimeReadiness: dependencies.runtimeReadiness,
+    });
+  }
+
+  if (dependencies.prepareTrainingDatasetUseCase) {
+    registerDatasetPreparationApiRoutes({
+      app: dependencies.app,
+      prepareTrainingDatasetUseCase: dependencies.prepareTrainingDatasetUseCase,
+      readGenerationCapacity:
+        dependencies.readDatasetPreparationGenerationCapacity,
+    });
+  }
+
+  if (dependencies.datasetVersionUseCases) {
+    registerDatasetVersionApiRoutes({
+      app: dependencies.app,
+      ...dependencies.datasetVersionUseCases,
     });
   }
 

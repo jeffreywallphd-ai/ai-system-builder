@@ -26,6 +26,12 @@ This file is the repository entry point for coding agents. Keep it short; use th
   an implementation roadmap" as sufficient invocation. The skill still
   requires explicit user approval of high-level options and the completed
   roadmap before implementation.
+- Once roadmap implementation is explicitly requested and the roadmap is approved,
+  continue through every approved increment by default without routine
+  per-increment approval pauses. Stop only for changed scope or high-level
+  decisions, newly required authority, destructive or production actions,
+  credentials, unresolved security choices, genuine blockers or external
+  qualification, explicit user checkpoints, and final overall approval.
 - Keep repository skills portable across supported coding agents. Add or update
   skill tests, routing documentation, and installation guidance in the same
   change as a skill behavior change.
@@ -59,9 +65,12 @@ Record unresolved code/documentation conflicts in `docs/docs-mismatch-register.m
 
 ## Verification
 
-For implementation-roadmap work, run only focused tests for internal chunks. Run
-the full suite and repository-wide completion gates once after the entire increment
-is implemented, as required by `skills/manage-implementation-roadmaps/SKILL.md`.
+For implementation-roadmap work, run only focused tests for internal chunks and
+only change-relevant tests after each increment. After every increment is
+implemented, run combined standard and end-to-end coverage plus repository-wide
+completion gates once for non-AI roadmaps. For AI-related roadmaps, run the all-suite
+command, which adds the opt-in AI suite, once at that boundary, as required by
+`skills/manage-implementation-roadmaps/SKILL.md`.
 
 Run the narrowest relevant tests while iterating, then run the applicable repository gates:
 
@@ -69,7 +78,12 @@ Run the narrowest relevant tests while iterating, then run the applicable reposi
 - `npm run architecture:check` for source changes that can affect module dependencies.
 - `npm run agent-support:check` for agent instructions, context routing, or evaluation changes.
 - `npm run security:dependencies` when manifests, lockfiles, dependency resolution, install/build scripts, workflow actions, container inputs, SBOM generation, or release dependency trees change.
-- `npm test` for implementation changes and before final handoff when practical.
+- `npm test` for the standard unit and interaction suite.
+- `npm run test:e2e` for integration and end-to-end coverage when applicable.
+- `npm run test:standardande2e` once after every non-AI roadmap increment is
+  implemented and before final roadmap handoff.
+- `npm run test:ai` and `npm run test:all` only for AI-related tasks or an
+  explicit user request; `test:all` combines standard, end-to-end, and AI suites.
 - `npm run build:server` when server build or wiring changes.
 - `npm run build:thin-client` when thin-client build or wiring changes.
 

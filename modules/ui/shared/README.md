@@ -1,6 +1,14 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
-- User-facing glossary hints live in `modules/ui/shared/glossary`; add or update entries when introducing novel form-field or detail-label terms.
+- User-facing glossary hints live in `modules/ui/shared/glossary`; add or update entries when introducing novel form-field or detail-label terms. Expanded collapsible panels must allow hint bubbles to extend beyond the card boundary instead of clipping their definitions.
+- Dataset Preparation output fields live in
+  `modules/ui/shared/data-management`. Keep the editor task-aware and usable
+  without raw JSON Schema knowledge: show every generated task's default model
+  schema, use labeled native controls, protect required training purposes, and
+  keep decoder guidance in plain language. When source attribution is selected,
+  show its locked companion fields beside the example shape and explain that
+  the system adds them from source records after generation; do not make them
+  editable model fields.
 - Global renderer notifications live in `modules/ui/shared/notifications`. Desktop
   and thin-client shells mount one provider, place the bell immediately before
   Settings, and render the fixed dropdown/toast viewport below the top bar.

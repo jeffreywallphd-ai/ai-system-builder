@@ -125,8 +125,18 @@ describe("renderer cleanup policies", () => {
     const revoke = vi.fn();
     Object.defineProperty(URL, "revokeObjectURL", { configurable: true, writable: true, value: revoke });
     const client = {
-      readArtifactDetail: vi.fn().mockResolvedValue({ storageKey: "artifact.cleanup", artifactId: "artifact.cleanup" }),
-      readArtifactContent: vi.fn().mockResolvedValue({ mediaType: "image/png", availability: "available" }),
+      readArtifactDetail: vi.fn().mockResolvedValue({
+        artifactId: "artifact.cleanup",
+        locator: { storageKey: "artifact.cleanup" },
+        originalName: "artifact-cleanup.png",
+        mediaType: "image/png",
+        artifactFamily: "image",
+      }),
+      readArtifactContent: vi.fn().mockResolvedValue({
+        locator: { storageKey: "artifact.cleanup" },
+        mediaType: "image/png",
+        availability: "available",
+      }),
       createArtifactMediaViewUrl: vi.fn().mockResolvedValue("blob:artifact-cleanup"),
     };
     const c = mount(<ArtifactPreviewHarness client={client} />);

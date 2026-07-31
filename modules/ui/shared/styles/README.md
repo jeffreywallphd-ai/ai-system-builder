@@ -13,3 +13,11 @@ Shared decorative artwork belongs in `modules/ui/shared/assets/illustrations/` a
 Unselected tabs retain a visible border so the complete tab set reads as interactive. Wide-screen navigation groups use semantic disclosure controls, and collapsing the global sidebar must allow the content container to use the reclaimed width. Colored type badges and action icons are shared primitives: use them alongside text, not as unlabeled substitutes.
 
 Guided multi-step tasks use the shared `WorkflowSequence` and `WorkflowStep` components with the `ui-workflow` visual layer. Reuse that sequence for ordered conceptual stages, connecting rails, active-step emphasis, responsive field grids, and review/action surfaces. Feature components continue to own their fields, validation, state, and side effects; the shared workflow primitive owns presentation and accessible section structure only.
+
+Form controls must use the shared primary blue-and-dark visual language.
+`controls.css` removes browser-native fieldset, radio, checkbox, and file-button
+chrome so operating-system colors cannot leak into product forms. Use
+`ui-choice-group`, `ui-choice-list`, and `ui-choice` for selectable options,
+`ui-file-input` for file selection, and an explicit `ui-button` class for
+actions. Semantic warning colors remain reserved for warning state; they are
+not a form-control theme.

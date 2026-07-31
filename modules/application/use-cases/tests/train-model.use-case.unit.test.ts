@@ -39,7 +39,19 @@ describe("TrainModelUseCase", () => {
     retrieveArtifact: testDouble.fn(async () => ({
       ok: true as const,
       value: {
-        descriptor: { key: "generated/dataset-1.parquet", mediaType: "application/x-parquet" },
+        descriptor: {
+          key: "generated/dataset-1.parquet",
+          mediaType: "application/x-parquet",
+          metadata: {
+            structuredOutput: {
+              schemaFingerprint: "a".repeat(64),
+              purposePaths: {
+                text: ["result", "body"],
+                label: ["result", "category"],
+              },
+            },
+          },
+        },
         content: new TextEncoder().encode("dataset-bytes"),
       },
     })),
@@ -303,6 +315,13 @@ describe("TrainModelUseCase", () => {
     expect(startRequest.payload.datasets[0].artifactId).toBe("generated/20260429160945623-2e7fe0660f46449f9ce819d011eb13f9-training-dataset.parquet");
     expect(startRequest.payload.datasets[0].path).toContain("training-dataset.parquet");
     expect(startRequest.payload.datasets[0].format).toBe("parquet");
+    expect(startRequest.payload.datasets[0].metadata.artifactMetadata.structuredOutput).toEqual({
+      schemaFingerprint: "a".repeat(64),
+      purposePaths: {
+        text: ["result", "body"],
+        label: ["result", "category"],
+      },
+    });
   });
 
   it("stages source artifact paths for image training datasets", async () => {

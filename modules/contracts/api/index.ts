@@ -3,6 +3,7 @@ export * from "./api-request";
 export * from "./api-error";
 export * from "./api-response";
 export * from "./artifact-upload-api-contract";
+export * from "./ingestion-task-api-contract";
 export * from "./artifact-browse-api-contract";
 export * from "./artifact-read-api-contract";
 export * from "./artifact-content-read-api-contract";
@@ -21,6 +22,8 @@ export * from "./huggingface-namespace-datasets-api-contract";
 export * from "./huggingface-dataset-parquet-files-api-contract";
 export * from "./huggingface-files-import-api-contract";
 export * from "./runtime-readiness-api-contract";
+export * from "./dataset-preparation-api-contract";
+export * from "./dataset-version-api-contract";
 export * from "./asset-registry-api-contract";
 
 export * from "./workspace-api-contract";

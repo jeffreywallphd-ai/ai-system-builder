@@ -146,6 +146,41 @@ test("roadmap skill supports exact and natural-language routing", async () => {
   }
 });
 
+test("roadmap test guidance keeps aggregate suites at the overall completion boundary", async () => {
+  const sources = await Promise.all([
+    readFile(path.join(roadmapSkillRoot, "SKILL.md"), "utf8"),
+    readFile(path.join(roadmapSkillRoot, "references", "workflow.md"), "utf8"),
+    readFile(
+      path.join(roadmapSkillRoot, "references", "installation.md"),
+      "utf8",
+    ),
+    readFile(path.join(roadmapSkillRoot, "agents", "openai.yaml"), "utf8"),
+    readFile("docs/diagnostics/implementation-roadmap-skill.md", "utf8"),
+    readFile("AGENTS.md", "utf8"),
+  ]);
+  for (const source of sources) {
+    assert.match(source, /standard[\s\S]{0,80}end-to-end/i);
+    assert.match(source, /AI-related/i);
+    assert.match(
+      source,
+      /after\s+(?:all|every)(?: roadmap)? increments?\s+(?:are|is)\s+implemented/i,
+    );
+  }
+  assert.match(sources[0], /only the completion tests and gates relevant/);
+});
+
+test("root scripts expose standard, end-to-end, AI, and aggregate test commands", async () => {
+  const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+  assert.match(packageJson.scripts.test, /test:standard/);
+  assert.match(packageJson.scripts["test:e2e"], /--suite=e2e/);
+  assert.match(packageJson.scripts["test:ai"], /--suite=ai/);
+  assert.match(
+    packageJson.scripts["test:standardande2e"],
+    /--suite=standardande2e/,
+  );
+  assert.match(packageJson.scripts["test:all"], /--suite=all/);
+});
+
 test("security-by-design guidance and roadmap evidence stay synchronized", async () => {
   const [
     standard,
@@ -181,7 +216,14 @@ test("security-by-design guidance and roadmap evidence stay synchronized", async
   assert.match(standard, /not-security-relevant/);
   assert.match(standard, /security-relevant/);
   assert.match(standard, /npm run security:dependencies/);
-  for (const source of [agents, docs, baseline, routing, securityDecision, skill]) {
+  for (const source of [
+    agents,
+    docs,
+    baseline,
+    routing,
+    securityDecision,
+    skill,
+  ]) {
     assert.match(source, /docs\/standards\/security-by-design-standards\.md/);
   }
   assert.match(securityPack, /security impact screen/i);

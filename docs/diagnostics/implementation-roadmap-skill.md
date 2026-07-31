@@ -45,6 +45,14 @@ The workflow requires:
    review acceptance evidence, with proportional threat/control, denial-path,
    rollback, and residual-risk coverage.
 
+When implementation is explicitly requested and the completed roadmap is approved,
+the default is continuous execution through every ordered increment to an end-to-end
+production-ready result. Routine increment completion, research, planning, report,
+and focused-test checkpoints do not require another approval. Agents still stop for
+changed scope or high-level decisions, new authority, destructive or production
+actions, credentials, unresolved security choices, genuine blockers or external
+qualification, an explicit user checkpoint, and final overall approval.
+
 Security is not an optional increment or a late release gate. Every increment uses
 `security-impact-reviewed` or a more specific criterion. A
 `not-security-relevant` result requires review evidence and a concrete rationale;
@@ -71,10 +79,13 @@ Before roadmap approval, audit every boundary between adjacent increments. Keep 
 boundary only when it separates independently useful behavior or a material
 architecture, compatibility, migration, security, operational, rollback, or
 controlled-qualification concern. Otherwise merge the work. Run only focused checks
-as internal chunks land, batch report updates around meaningful outcomes, and run
-the full suite and costly repository-wide gates once after every planned chunk in
-the increment is implemented. Use focused risk regressions instead of an early full
-suite.
+as internal chunks land and only change-relevant completion checks after an
+increment is implemented. Batch report updates around meaningful outcomes. Run the
+combined standard and end-to-end coverage and costly repository-wide gates once
+after every roadmap increment is implemented. For AI-related work, use the all-suite
+command so the AI suite is included. Do not run AI or all-suite coverage for non-AI
+work unless explicitly requested. Use focused risk regressions instead of an early
+broad suite.
 
 If execution reveals that the pending roadmap is too fine-grained, record the
 feedback, preserve completed increments and their evidence, replace the pending
@@ -148,7 +159,9 @@ Run:
 python -m unittest discover -s skills/manage-implementation-roadmaps/tests -p "test_*.py" -v
 npm run docs:check
 npm run agent-support:check
-npm test
+npm run test:standardande2e
+# For AI-related skill changes or an explicit request:
+npm run test:all
 ```
 
 Use the creating host's skill validator and preview the repository package before

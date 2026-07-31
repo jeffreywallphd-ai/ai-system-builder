@@ -8,6 +8,7 @@ import {
   DESKTOP_MODEL_LIST_REQUEST_CHANNEL,
   DESKTOP_MODEL_RECORD_DELETE_REQUEST_CHANNEL,
   DESKTOP_MODEL_RECORD_UPDATE_REQUEST_CHANNEL,
+  DESKTOP_MODEL_FOLDER_REVEAL_REQUEST_CHANNEL,
   DESKTOP_MODEL_REFERENCE_SAVE_REQUEST_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_REQUEST_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL,
@@ -26,6 +27,7 @@ import {
   createDesktopModelTrainStatusRequest,
   createDesktopModelPublishRequest,
   createDesktopModelDownloadListRequest,
+  createDesktopModelFolderRevealRequest,
 } from "../../../../contracts/ipc";
 import {
   createBrowseModelsIpcHandler,
@@ -34,6 +36,7 @@ import {
   createTrainModelIpcHandler,
   createPublishModelIpcHandler,
   createListModelDownloadsIpcHandler,
+  createRevealModelInFolderIpcHandler,
   registerModelManagementIpc,
 } from "../model/registerModelManagementIpc";
 
@@ -49,6 +52,7 @@ describe("registerModelManagementIpc", () => {
       downloadModelUseCase: { execute: testDouble.fn() },
       updateModelRecordUseCase: { execute: testDouble.fn() },
       deleteModelRecordUseCase: { execute: testDouble.fn() },
+      revealModelInFolderUseCase: { execute: testDouble.fn() },
       trainModelUseCase: { execute: testDouble.fn(), read: testDouble.fn() },
       validateModelUseCase: { execute: testDouble.fn() },
       publishModelUseCase: { execute: testDouble.fn() },
@@ -62,6 +66,7 @@ describe("registerModelManagementIpc", () => {
       DESKTOP_MODEL_DOWNLOAD_REQUEST_CHANNEL.value,
       DESKTOP_MODEL_RECORD_UPDATE_REQUEST_CHANNEL.value,
       DESKTOP_MODEL_RECORD_DELETE_REQUEST_CHANNEL.value,
+      DESKTOP_MODEL_FOLDER_REVEAL_REQUEST_CHANNEL.value,
       DESKTOP_MODEL_TRAIN_REQUEST_CHANNEL.value,
       DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL.value,
       DESKTOP_MODEL_VALIDATE_REQUEST_CHANNEL.value,
@@ -106,7 +111,7 @@ describe("registerModelManagementIpc", () => {
     const tasks = { start: testDouble.fn(), read: testDouble.fn(), list: testDouble.fn(async () => ({ activities: [] })), cancel: testDouble.fn() };
     registerModelManagementIpc({
       ipcMain: { handle: testDouble.fn((channel: string) => channels.push(channel)) },
-      browseModelsUseCase: { execute: testDouble.fn() }, getModelDetailsUseCase: { execute: testDouble.fn() }, listModelsUseCase: { execute: testDouble.fn() }, saveModelReferenceUseCase: { execute: testDouble.fn() }, downloadModelUseCase: { execute: testDouble.fn() }, modelDownloadTasksUseCase: tasks, updateModelRecordUseCase: { execute: testDouble.fn() }, deleteModelRecordUseCase: { execute: testDouble.fn() }, trainModelUseCase: { execute: testDouble.fn(), read: testDouble.fn() }, validateModelUseCase: { execute: testDouble.fn() }, publishModelUseCase: { execute: testDouble.fn() },
+      browseModelsUseCase: { execute: testDouble.fn() }, getModelDetailsUseCase: { execute: testDouble.fn() }, listModelsUseCase: { execute: testDouble.fn() }, saveModelReferenceUseCase: { execute: testDouble.fn() }, downloadModelUseCase: { execute: testDouble.fn() }, modelDownloadTasksUseCase: tasks, updateModelRecordUseCase: { execute: testDouble.fn() }, deleteModelRecordUseCase: { execute: testDouble.fn() }, revealModelInFolderUseCase: { execute: testDouble.fn() }, trainModelUseCase: { execute: testDouble.fn(), read: testDouble.fn() }, validateModelUseCase: { execute: testDouble.fn() }, publishModelUseCase: { execute: testDouble.fn() },
     });
     expect(channels).toContain(DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL.value);
     expect(channels).toContain(DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL.value);
@@ -116,6 +121,20 @@ describe("registerModelManagementIpc", () => {
     const response = await handler({}, createDesktopModelDownloadListRequest({ workspaceId: 'workspace-a' as never, includeCompleted: true }));
     expect(response.ok).toBe(true);
     expect(tasks.list).toHaveBeenCalled();
+  });
+
+  it("maps the folder reveal request without exposing a local path", async () => {
+    const execute = testDouble.fn(async () => ({ modelRecordId: "model-1", revealed: true as const }));
+    const handler = createRevealModelInFolderIpcHandler({ execute });
+
+    const response = await handler({}, createDesktopModelFolderRevealRequest({
+      workspaceId: "workspace-a" as never,
+      modelRecordId: "model-1",
+    }));
+
+    expect(execute).toHaveBeenCalledWith({ workspaceId: "workspace-a", modelRecordId: "model-1" });
+    expect(response).toMatchObject({ ok: true, value: { modelRecordId: "model-1", revealed: true } });
+    expect(JSON.stringify(response)).not.toContain("localPath");
   });
 
   it("reports model-list failures without changing the sanitized response", async () => {

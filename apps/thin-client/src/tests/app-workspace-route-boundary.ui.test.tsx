@@ -107,7 +107,9 @@ describe("thin-client app workspace route boundary", () => {
     expect(container.textContent).toContain("Current Workspace");
     expect(container.textContent).toContain("Thin Workspace");
     expect(container.textContent).toContain("Model Management");
-    expect(container.textContent).not.toContain("No workspace selected");
+    expect(
+      container.querySelector("[aria-label='Workspace required']"),
+    ).toBeNull();
     expect(container.querySelector("button[aria-current='page']")?.textContent).toBe("Models");
   });
 });

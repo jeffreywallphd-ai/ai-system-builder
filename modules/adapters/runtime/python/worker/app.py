@@ -40,6 +40,7 @@ from .models import (
     ValidateModelTaskResult,
 )
 from .tasks.example_generation import ensure_generation_model_downloaded
+from .tasks.constrained_json_decoder import get_constrained_json_decoder_runtime_status
 from .tasks.local_text_generation import describe_loaded_generation_models, get_or_create_local_text_generator, unload_generation_models
 from .tasks.model_validation import validate_model_output
 from .tasks.prepare_training_dataset import prepare_training_dataset
@@ -50,6 +51,31 @@ WORKER_VERSION = getenv("PYTHON_RUNTIME_WORKER_VERSION", "0.1.0")
 WORKER_STARTED_AT = datetime.now(timezone.utc).isoformat()
 PYTHON_VERSION = platform.python_version()
 RUNTIME_AUTH_TOKEN = getenv("PYTHON_RUNTIME_AUTH_TOKEN", "").strip()
+
+_TASK_ERROR_CODE_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,95}$")
+_TASK_ERROR_STAGES = {"normalization", "chunking", "generation", "split"}
+
+
+def _safe_task_error_code(error: Exception) -> str:
+    candidate = getattr(error, "error_code", None)
+    return (
+        candidate
+        if isinstance(candidate, str) and _TASK_ERROR_CODE_PATTERN.fullmatch(candidate)
+        else "task_failed"
+    )
+
+
+def _safe_task_error_stage(error: Exception) -> str | None:
+    candidate = getattr(error, "stage", None)
+    return candidate if candidate in _TASK_ERROR_STAGES else None
+
+
+def _safe_task_error_message(error: Exception) -> str:
+    if getattr(error, "error_code", None) == "model_download_invalid_snapshot":
+        return "Downloaded files did not form a complete model. Retry to resume and verify the saved files."
+    if getattr(error, "error_code", None) == "model_download_interrupted":
+        return "Model download was interrupted. Retry to resume the saved partial download."
+    return "Runtime task failed. Review host diagnostics and retry."
 
 app = FastAPI(title="ai-system-builder python runtime worker", version=WORKER_VERSION)
 TASK_EXECUTOR = ThreadPoolExecutor(max_workers=1)
@@ -232,16 +258,52 @@ def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
     if request.taskType == "prepare-training-dataset":
         payload = PrepareTrainingDatasetRequest.model_validate(request.payload)
 
-        def on_generation_progress(progress: dict[str, int]) -> None:
+        def on_generation_progress(progress: dict[str, Any]) -> None:
             processed = progress.get("processedChunkCount") or 0
             total = progress.get("totalChunkCount") or 0
+            explicit_message = progress.get("message")
+            message = (
+                explicit_message
+                if isinstance(explicit_message, str) and explicit_message.strip()
+                else f"Processing chunk {min(processed + 1, total)}/{total}..."
+            )
             _update_task(
                 request.requestId,
                 progress={
                     "totalChunkCount": total,
                     "processedChunkCount": processed,
                     "generatedRowCount": progress.get("generatedRowCount") or 0,
-                    "message": f"Processing chunk {min(processed + 1, total)}/{total}...",
+                    "message": message,
+                    **(
+                        {"phase": progress["phase"]}
+                        if isinstance(progress.get("phase"), str)
+                        else {}
+                    ),
+                    **(
+                        {"memoryOverflowActive": True}
+                        if progress.get("memoryOverflowActive") is True
+                        else {}
+                    ),
+                    **(
+                        {
+                            "estimatedMemoryOverflowBytes": progress[
+                                "estimatedMemoryOverflowBytes"
+                            ]
+                        }
+                        if isinstance(
+                            progress.get("estimatedMemoryOverflowBytes"), int
+                        )
+                        else {}
+                    ),
+                    **(
+                        {
+                            "memoryOverflowLimitBytes": progress[
+                                "memoryOverflowLimitBytes"
+                            ]
+                        }
+                        if isinstance(progress.get("memoryOverflowLimitBytes"), int)
+                        else {}
+                    ),
                 },
             )
             print(json.dumps({"event": "runtime.dataset_preparation.generation.progress"}), flush=True)
@@ -387,12 +449,16 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
             data = _run_task(request)
             _update_task(request.requestId, status="succeeded", data=data, completedAt=_now_iso())
         except Exception as error:
+            error_code = _safe_task_error_code(error)
+            error_stage = _safe_task_error_stage(error)
             print(
                 json.dumps(
                     {
                         "event": "runtime.task.failed",
                         "taskType": request.taskType,
                         "diagnosticClass": type(error).__name__,
+                        "errorCode": error_code,
+                        **({"stage": error_stage} if error_stage else {}),
                     },
                     ensure_ascii=False,
                 ),
@@ -402,12 +468,12 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
                 request.requestId,
                 status="failed",
                 error=PythonRuntimeError(
-                    code="task_failed",
-                    errorCode=getattr(error, "error_code", "task_failed"),
-                    stage=getattr(error, "stage", None),
-                    message="Runtime task failed. Review host diagnostics and retry.",
+                    code=error_code,
+                    errorCode=error_code,
+                    stage=error_stage,
+                    message=_safe_task_error_message(error),
                     details={"diagnosticClass": type(error).__name__},
-                    retryable=False,
+                    retryable=getattr(error, "retryable", False) is True,
                 ),
                 completedAt=_now_iso(),
             )
@@ -419,7 +485,12 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
     _update_task(request.requestId, future=future)
     with TASK_REGISTRY_LOCK:
         record = TASK_REGISTRY[request.requestId]
-    return StartPythonRuntimeTaskResult(requestId=request.requestId, taskType=request.taskType, accepted=True, status=record["status"], startedAt=record["startedAt"], updatedAt=record["updatedAt"], metadata=record["metadata"])
+    accepted_status = (
+        record["status"]
+        if record["status"] in {"queued", "running"}
+        else "running"
+    )
+    return StartPythonRuntimeTaskResult(requestId=request.requestId, taskType=request.taskType, accepted=True, status=accepted_status, startedAt=record["startedAt"], updatedAt=record["updatedAt"], metadata=record["metadata"])
 
 
 @app.get("/health", response_model=PythonRuntimeHealthCheckResult)
@@ -429,7 +500,19 @@ def health() -> PythonRuntimeHealthCheckResult:
 
 @app.get("/capabilities", response_model=PythonRuntimeCapabilitiesResult)
 def capabilities() -> PythonRuntimeCapabilitiesResult:
-    return PythonRuntimeCapabilitiesResult(runtimeId=RUNTIME_ID, capabilities=["prepare-training-dataset", "ensure-model-download", "model-status", "unload-model", "dataset-preparation.auto-inference-mode", "train-model", "validate-model", "conversation-text-generation"])
+    supported = [
+        "prepare-training-dataset",
+        "ensure-model-download",
+        "model-status",
+        "unload-model",
+        "dataset-preparation.auto-inference-mode",
+        "train-model",
+        "validate-model",
+        "conversation-text-generation",
+    ]
+    if get_constrained_json_decoder_runtime_status().available:
+        supported.append("dataset-preparation.constrained-json")
+    return PythonRuntimeCapabilitiesResult(runtimeId=RUNTIME_ID, capabilities=supported)
 
 
 @app.post("/tasks/start", response_model=StartPythonRuntimeTaskResult)
@@ -491,7 +574,28 @@ def ensure_model_download(request: EnsureModelDownloadRequest) -> EnsureModelDow
             ),
             flush=True,
         )
-        return JSONResponse(status_code=502, content={"error": PythonRuntimeError(code="model_download_failed", errorCode="generation_model_not_available", stage="generation", message="Model download failed. Review host diagnostics and retry.", details={"provider": request.provider}, retryable=True).model_dump(mode="json")})
+        safe_error_code = _safe_task_error_code(error)
+        return JSONResponse(
+            status_code=502,
+            content={
+                "error": PythonRuntimeError(
+                    code="model_download_failed",
+                    errorCode=(
+                        safe_error_code
+                        if safe_error_code != "task_failed"
+                        else "generation_model_not_available"
+                    ),
+                    stage=_safe_task_error_stage(error) or "generation",
+                    message=(
+                        _safe_task_error_message(error)
+                        if safe_error_code != "task_failed"
+                        else "Model download failed. Review host diagnostics and retry."
+                    ),
+                    details={"provider": request.provider},
+                    retryable=getattr(error, "retryable", True) is True,
+                ).model_dump(mode="json")
+            },
+        )
     print(
         json.dumps(
             {

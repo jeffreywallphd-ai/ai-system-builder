@@ -17,6 +17,9 @@ Server/thin-client image-generation work also exposed the need to keep runtime r
 
 - Hosts are execution authorities.
 - Runtime instances are owned by the executing host.
+- A host may provide a bounded activation seam to an explicit, state-changing
+  execution guard so an eligible local runtime can start before readiness is
+  re-checked. Readiness and status reads never invoke that seam.
 - Desktop and server runtime roots/processes/state are independent by default.
 - Per-feature execution placement is the intended future extension point.
 - Desktop renderer continues to use preload/IPC.
@@ -84,7 +87,6 @@ Server/thin-client image-generation work also exposed the need to keep runtime r
 - Add runtime-root config helpers and tests.
 - Compose application runtime readiness providers from installer/supervisor/task state at host boundaries, then expose snapshots through desktop/server transports in later work.
 - Update context packs when feature routing work begins.
-
 
 ## Security boundary cross-reference
 

@@ -163,8 +163,8 @@ export function toImageGenerationModelDropdownValue(
   >,
 ): string | undefined {
   const candidates = [
-    model.modelRecordId,
     model.modelId,
+    model.modelRecordId,
     model.displayName,
     model.localPath,
   ];
@@ -310,7 +310,9 @@ export function useImageGenerationFeature(
   useEffect(
     () => () => {
       for (const url of previewUrlsRef.current) {
-        URL.revokeObjectURL(url);
+        if (typeof URL.revokeObjectURL === "function") {
+          URL.revokeObjectURL(url);
+        }
         recordRendererMemorySnapshot({
           milestone: "renderer.preview.object-url.revoked",
           component: "desktop-renderer-preview-cleanup",

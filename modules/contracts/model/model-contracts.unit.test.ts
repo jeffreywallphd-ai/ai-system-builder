@@ -19,6 +19,7 @@ import {
   normalizeModelInventoryRecord,
   normalizeModelValidationSummary,
   normalizePublishModelRequest,
+  normalizeRevealModelInFolderRequest,
   normalizeRegisterDownloadedModelRequest,
   normalizeRegisterGeneratedModelRequest,
   normalizeValidateModelRequest,
@@ -44,6 +45,7 @@ describe("model contracts", () => {
       provider: "huggingface",
       query: " mistral ",
       taskTags: ["summarization", " chat "],
+      customTaskTag: " IMAGE-CLASSIFICATION ",
       authorOrOrg: " mistralai ",
       limit: 25,
       cursor: " next ",
@@ -55,6 +57,7 @@ describe("model contracts", () => {
       provider: "huggingface",
       query: "mistral",
       taskTags: ["summarization", "chat"],
+      customTaskTag: "image-classification",
       authorOrOrg: "mistralai",
       limit: 25,
       cursor: "next",
@@ -88,6 +91,19 @@ describe("model contracts", () => {
     expect(normalizeBrowseModelsRequest({ provider: "huggingface", limit: 12.9 }).limit).toBe(DEFAULT_BROWSE_MODELS_LIMIT);
     expect(normalizeBrowseModelsRequest({ provider: "huggingface", limit: 5000 }).limit).toBe(MAX_BROWSE_MODELS_LIMIT);
     expect(normalizeBrowseModelsRequest({ provider: "huggingface" }).limit).toBe(DEFAULT_BROWSE_MODELS_LIMIT);
+    expect(MAX_BROWSE_MODELS_LIMIT).toBe(50);
+    expect(() => normalizeBrowseModelsRequest({ provider: "huggingface", customTaskTag: "bad task" })).toThrow(/customTaskTag/);
+    expect(() => normalizeBrowseModelsRequest({ provider: "huggingface", cursor: "bad cursor" })).toThrow(/cursor/);
+  });
+
+  it("normalizes path-opaque model folder requests", () => {
+    expect(normalizeRevealModelInFolderRequest({
+      workspaceId: "workspace-a" as never,
+      modelRecordId: " model-1 ",
+    })).toEqual({
+      workspaceId: "workspace-a",
+      modelRecordId: "model-1",
+    });
   });
 
   it("recommends inference mode from known pipeline/task tags", () => {

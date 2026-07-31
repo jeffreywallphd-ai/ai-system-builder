@@ -128,6 +128,10 @@ import type {
   DesktopPythonRuntimeLogEntry,
   DesktopPythonRuntimeStatusPayload,
 } from "../../../contracts/ipc";
+import {
+  PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
+  type DatasetPreparationGenerationCapacitySnapshot,
+} from "../../../contracts/runtime";
 import type { HuggingFaceFetchImplementation } from "../../../adapters/storage/huggingface";
 import {
   createHuggingFaceTokenConfigStore,
@@ -279,6 +283,7 @@ export interface RegisterDesktopArtifactUploadIpcOptions {
   storageRootDirectory: string;
   runtimeRootDirectory?: string;
   systemRuntimeWindows?: DesktopPublishedSystemRuntimeWindowPort;
+  revealModelPath?: (localPath: string) => Promise<void> | void;
 }
 
 export interface DesktopHostComposition {
@@ -472,6 +477,7 @@ export function composeDesktopHost(
   const readSharedModelStorageDirectory = () =>
     readRuntimeSettingString(SHARED_MODEL_STORAGE_DIRECTORY_SETTING_KEY);
 
+  let pythonRuntimeFoundation: DesktopPythonRuntimeFeature | undefined;
   let pythonRuntimeFoundationPromise:
     Promise<DesktopPythonRuntimeFeature> | undefined;
   const getPythonRuntimeFoundation = async () => {
@@ -497,6 +503,7 @@ export function composeDesktopHost(
           "desktop.host.python-runtime-foundation.compose.after",
           { baseUrlConfigured: Boolean(resolvePythonRuntimeBaseUrl()) },
         );
+        pythonRuntimeFoundation = feature;
         return feature;
       })();
     }
@@ -505,11 +512,23 @@ export function composeDesktopHost(
 
   const readPythonRuntimeStatus =
     async (): Promise<DesktopPythonRuntimeStatusPayload> => {
+      const createGenerationCapacity = (
+        decoderAvailable: boolean,
+      ): DatasetPreparationGenerationCapacitySnapshot => ({
+        schemaVersion: "1",
+        capturedAt: (now ?? (() => new Date().toISOString()))(),
+        decoderAvailable,
+        schemaSupported: true,
+        logicalProcessorCount: cpus().length,
+        totalSystemMemoryBytes: totalmem(),
+        availableSystemMemoryBytes: freemem(),
+      });
       if (!pythonRuntimeFoundationPromise) {
         const status = createUnavailablePythonRuntimeStatus({
           runtimeLogs,
           memoryUsagePercent: readMemoryUsagePercent(),
           cpuUsagePercent: readCpuUsagePercent(),
+          generationCapacity: createGenerationCapacity(false),
         });
         if (!lastObservedRuntimeHealthSnapshot) {
           lastObservedRuntimeHealthSnapshot = {
@@ -526,8 +545,10 @@ export function composeDesktopHost(
         }
         return status;
       }
-      const pythonRuntimeFoundation = await pythonRuntimeFoundationPromise;
-      const supervisorStatus = pythonRuntimeFoundation.supervisor.getStatus();
+      const resolvedPythonRuntimeFoundation =
+        await pythonRuntimeFoundationPromise;
+      const supervisorStatus =
+        resolvedPythonRuntimeFoundation.supervisor.getStatus();
       let healthy = false;
       let runtimeStatus =
         supervisorStatus === "ready" ? "ready" : supervisorStatus;
@@ -537,9 +558,9 @@ export function composeDesktopHost(
       if (supervisorStatus === "starting" || supervisorStatus === "ready") {
         try {
           const [health, runtimeCapabilities, modelStatus] = await Promise.all([
-            pythonRuntimeFoundation.runtimePort.getHealthStatus(),
-            pythonRuntimeFoundation.runtimePort.getCapabilities(),
-            pythonRuntimeFoundation.runtimePort.getModelStatus(),
+            resolvedPythonRuntimeFoundation.runtimePort.getHealthStatus(),
+            resolvedPythonRuntimeFoundation.runtimePort.getCapabilities(),
+            resolvedPythonRuntimeFoundation.runtimePort.getModelStatus(),
           ]);
           healthy = health.healthy;
           runtimeStatus = health.status.status;
@@ -583,6 +604,11 @@ export function composeDesktopHost(
         capabilities,
         loadedModels,
         activeTaskCount,
+        generationCapacity: createGenerationCapacity(
+          capabilities.includes(
+            PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
+          ),
+        ),
         systemResources: {
           memoryUsagePercent: readMemoryUsagePercent(),
           cpuUsagePercent: readCpuUsagePercent(),
@@ -730,7 +756,14 @@ export function composeDesktopHost(
             })
           : undefined;
       const runtimeReadiness = createDesktopRuntimeReadinessService({
-        readPythonSupervisorState: () => "stopped",
+        readPythonSupervisorState: () => {
+          const status = pythonRuntimeFoundation?.supervisor.getStatus();
+          return status === "starting" ||
+            status === "ready" ||
+            status === "failed"
+            ? status
+            : "stopped";
+        },
         readComfyUiLifecycleState: () => "uninitialized",
         async readComfyUiInstallStatus() {
           return "unknown";
@@ -855,6 +888,7 @@ export function composeDesktopHost(
               getArtifacts: getArtifactFeatures,
               getRuntimeTaskFeatures,
               getPythonRuntimeFoundation,
+              revealModelPath: registerOptions.revealModelPath,
             });
         },
       });
@@ -886,6 +920,19 @@ export function composeDesktopHost(
           return async () =>
             module.composeDesktopIngestionFeature({
               artifacts: await getArtifactFeatures(),
+              remoteArtifacts: await getArtifactRemoteFeatures(),
+              storageRootDirectory: registerOptions.storageRootDirectory,
+              documents: organizationDocuments,
+              workspaceRepository: startupWorkspaceShell.workspaceRepository,
+              workspaceAuthorization,
+              organizationContextProvider: options.localIdentity
+                ? {
+                    getCurrentOrganizationContext: () => ({
+                      organizationId: options.localIdentity!.organizationId,
+                      principalId: options.localIdentity!.principalId,
+                    }),
+                  }
+                : undefined,
               now: options.now,
             });
         },
@@ -903,6 +950,9 @@ export function composeDesktopHost(
                 artifacts: await getArtifactFeatures(),
                 runtime: await getRuntimeTaskFeatures(),
                 getArtifactRemoteFeatures,
+                documents: organizationDocuments,
+                workspaceRepository: startupWorkspaceShell.workspaceRepository,
+                workspaceAuthorization,
                 now: options.now,
               });
           },
@@ -1507,6 +1557,7 @@ export function composeDesktopHost(
         },
         ingestion: {
           ipcMain: registerOptions.ipcMain,
+          senderTrust: registerOptions.senderTrust,
           getIngestionFeature: getIngestionFeatures,
           lifecycle: markDisposableFeatureReleased("website-ingestion"),
         },

@@ -23,6 +23,21 @@
   background: var(--color-bg-subtle);
 }
 
+.dataset-preparation__saved-settings-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.dataset-preparation__saved-settings-header > div {
+  flex: 1 1 18rem;
+}
+
+.dataset-preparation__saved-settings-header h3 {
+  margin: 0;
+}
+
 .dataset-preparation__section-title,
 .dataset-preparation__group-title {
   margin: 0;

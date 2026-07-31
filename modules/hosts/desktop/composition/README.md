@@ -47,6 +47,14 @@ Desktop host composition keeps core startup services resident and treats feature
 
 Generic disposal must not delete persisted records or files, must not stop Python or ComfyUI, and must not cancel active runtime work. Python process stop, Python model unload, and ComfyUI process/runtime unload remain explicit user/runtime-control paths.
 
+Explicit Python-backed execution requests such as dataset preparation use the
+desktop host's bounded capability activation seam. When readiness initially
+reports the lazy Python runtime as stopped, the execution guard starts the
+supervisor, reads live supervisor-backed readiness again, and proceeds only when
+the requested capability is ready. Passive readiness, task status, list, and
+cancel reads do not start the runtime. Startup or readiness failures remain
+fail-closed and expose only sanitized capability details.
+
 Desktop Python composition canonicalizes both the worker bind and client base
 URL to host-owned loopback HTTP, then delegates per-launch bearer generation and
 rotation to the shared Python runtime foundation. Runtime launch credentials are

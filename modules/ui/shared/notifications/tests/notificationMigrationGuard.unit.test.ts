@@ -100,7 +100,7 @@ describe("notification message migration inventory", () => {
     const requiredContextualCopy = [
       "No model records found.",
       "No model results found.",
-      "No datasets were found for that namespace.",
+      "No datasets were found for that user or organization.",
       "No files found for this dataset.",
       "found zero compatible image-generation models.",
       "No system change or runtime action has occurred.",

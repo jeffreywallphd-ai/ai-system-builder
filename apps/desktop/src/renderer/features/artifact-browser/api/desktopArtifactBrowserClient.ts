@@ -98,6 +98,7 @@ export interface DesktopArtifactBrowserClient {
     mediaType?: string;
   }) => Promise<DesktopRegisteredArtifactFromRepo>;
   localizeArtifactFromRepo: (input: {
+    workspaceId: string;
     artifactId: string;
   }) => Promise<DesktopLocalizedArtifactFromRepo>;
 }
@@ -406,18 +407,21 @@ export function createDesktopArtifactBrowserClient(): DesktopArtifactBrowserClie
         throw new Error("Workspace id is required to publish an artifact.");
       }
       return ensureSuccess(
-        await desktopApi.publishArtifactToRepo({
-          workspaceId: input.workspaceId,
-          artifactId: input.artifactId,
-          target: {
-            provider: "huggingface",
-            repository: input.repository,
-            path: input.path,
-            revision: input.revision,
+        await desktopApi.publishArtifactToRepo(
+          {
+            workspaceId: input.workspaceId,
+            artifactId: input.artifactId,
+            target: {
+              provider: "huggingface",
+              repository: input.repository,
+              path: input.path,
+              revision: input.revision,
+            },
+            mediaType: input.mediaType,
+            repositoryCreation: input.repositoryCreation,
           },
-          mediaType: input.mediaType,
-          repositoryCreation: input.repositoryCreation,
-        }, { workspaceId: input.workspaceId }),
+          { workspaceId: input.workspaceId },
+        ),
         (value) => value as DesktopPublishedBacking,
         "Failed to publish artifact.",
       );
@@ -467,6 +471,7 @@ export function createDesktopArtifactBrowserClient(): DesktopArtifactBrowserClie
     async localizeArtifactFromRepo(input) {
       return ensureSuccess(
         await desktopApi.localizeArtifactFromRepo({
+          workspaceId: input.workspaceId,
           artifactId: input.artifactId,
         }),
         (value) => value as DesktopLocalizedArtifactFromRepo,

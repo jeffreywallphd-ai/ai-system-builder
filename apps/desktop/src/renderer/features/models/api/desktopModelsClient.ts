@@ -14,6 +14,7 @@ import {
   type DesktopModelTrainingResult,
   type DesktopValidateModelResult,
   type DesktopPublishModelResult,
+  type DesktopRevealModelInFolderResult,
 } from "../../../lib/desktopApi";
 import type { ListModelsRequest, ModelTaskTag } from "../../../../../../../modules/contracts/model";
 import { createWorkspaceId } from "../../../../../../../modules/contracts/workspace";
@@ -25,10 +26,20 @@ interface PreloadEnvelope {
 }
 
 
+export type DesktopManagedModelInventoryRecord = DesktopModelInventoryRecord & {
+  localFilesAvailable?: boolean;
+  validationReportAvailable?: boolean;
+};
+
 function sanitizeModelRecord<T>(model: T): T {
   if (typeof model !== "object" || model === null) return model;
-  const { localPath: _localPath, validationReportPath: _validationReportPath, ...safeModel } = model as Record<string, unknown>;
-  return safeModel as T;
+  const { localPath, validationReportPath, ...safeModel } = model as Record<string, unknown>;
+  return {
+    ...safeModel,
+    localFilesAvailable: typeof localPath === "string" && localPath.trim().length > 0,
+    validationReportAvailable:
+      typeof validationReportPath === "string" && validationReportPath.trim().length > 0,
+  } as T;
 }
 
 function sanitizeDownloadResult(result: DesktopDownloadModelResult): DesktopDownloadModelResult {
@@ -50,7 +61,7 @@ function ensureSuccess<T>(response: unknown, pick: (value: unknown) => T, fallba
 export interface DesktopModelsClient {
   browseModels: (input: DesktopModelBrowseRequest) => Promise<{ models: DesktopModelBrowseItem[]; nextCursor?: string }>;
   getModelDetails: (input: { provider: "huggingface"; modelId: string }) => Promise<DesktopModelDetailsResult["model"]>;
-  listModels: (input?: ListModelsRequest) => Promise<DesktopModelInventoryRecord[]>;
+  listModels: (input?: ListModelsRequest) => Promise<DesktopManagedModelInventoryRecord[]>;
   saveModelReference: (input: { modelId: string; displayName?: string; inferenceMode?: "text2text" | "causal" | "chat" | "text-to-image"; taskTags?: ModelTaskTag[]; artifactForm?: "full-model" | "adapter" | "merged-model" | "checkpoint"; metadata?: Record<string, unknown>; workspaceId: string }) => Promise<DesktopModelInventoryRecord>;
   downloadModel: (input: { modelId: string; displayName?: string; inferenceMode?: "text2text" | "causal" | "chat" | "text-to-image"; taskTags?: ModelTaskTag[]; artifactForm?: "full-model" | "adapter" | "merged-model" | "checkpoint"; metadata?: Record<string, unknown>; workspaceId: string }) => Promise<DesktopDownloadModelResult>;
   startModelDownload: (input: { modelId: string; displayName?: string; inferenceMode?: "text2text" | "causal" | "chat" | "text-to-image"; taskTags?: ModelTaskTag[]; artifactForm?: "full-model" | "adapter" | "merged-model" | "checkpoint"; metadata?: Record<string, unknown>; workspaceId: string }) => Promise<DesktopStartModelDownloadResult>;
@@ -59,6 +70,7 @@ export interface DesktopModelsClient {
   cancelModelDownload: (input: { requestId: string; workspaceId: string }) => Promise<DesktopCancelModelDownloadResult>;
   updateModelRecord: (input: { modelRecordId: string; patch: Record<string, unknown> }) => Promise<DesktopModelInventoryRecord>;
   deleteModelRecord: (input: { modelRecordId: string; deleteLocalFiles?: boolean; deleteBackingArtifacts?: boolean; workspaceId: string }) => Promise<DesktopDeleteModelRecordResult>;
+  revealModelInFolder: (input: { modelRecordId: string; workspaceId: string }) => Promise<DesktopRevealModelInFolderResult>;
   trainModel: (input: DesktopModelTrainingRequest) => Promise<DesktopModelTrainingResult>;
   readModelTrainingStatus: (input: { runId: string }) => Promise<DesktopModelTrainingResult>;
   validateModel: (input: { workspaceId: string; modelRecordId: string; modelPath?: string; expectedLoRA?: boolean }) => Promise<DesktopValidateModelResult>;
@@ -216,6 +228,19 @@ export function createDesktopModelsClient(): DesktopModelsClient {
         await desktopApi.deleteModelRecord({ ...input, workspaceId: createWorkspaceId(input.workspaceId) }),
         (value) => value as DesktopDeleteModelRecordResult,
         "Failed to delete model record.",
+      );
+    },
+    async revealModelInFolder(input) {
+      if (!desktopApi.revealModelInFolder) {
+        throw new Error("Desktop preload model folder bridge is unavailable.");
+      }
+      return ensureSuccess(
+        await desktopApi.revealModelInFolder({
+          ...input,
+          workspaceId: createWorkspaceId(input.workspaceId),
+        }),
+        (value) => value as DesktopRevealModelInFolderResult,
+        "Failed to open the model folder.",
       );
     },
     async trainModel(input) {

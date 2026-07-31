@@ -3,6 +3,8 @@ import type {
   BrowseModelsResult,
   DeleteModelRecordRequest,
   DeleteModelRecordResult,
+  RevealModelInFolderRequest,
+  RevealModelInFolderResult,
   DownloadModelRequest,
   DownloadModelResult,
   StartModelDownloadTaskResult,
@@ -44,6 +46,7 @@ export const DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION = createTransportOperation("m
 export const DESKTOP_MODEL_DOWNLOAD_CANCEL_OPERATION = createTransportOperation("model", "download-cancel");
 export const DESKTOP_MODEL_RECORD_UPDATE_OPERATION = createTransportOperation("model", "record-update");
 export const DESKTOP_MODEL_RECORD_DELETE_OPERATION = createTransportOperation("model", "record-delete");
+export const DESKTOP_MODEL_FOLDER_REVEAL_OPERATION = createTransportOperation("model", "folder-reveal");
 export const DESKTOP_MODEL_TRAIN_OPERATION = createTransportOperation("model", "train");
 export const DESKTOP_MODEL_TRAIN_STATUS_OPERATION = createTransportOperation("model", "train-status");
 export const DESKTOP_MODEL_VALIDATE_OPERATION = createTransportOperation("model", "validate");
@@ -71,6 +74,8 @@ export const DESKTOP_MODEL_RECORD_UPDATE_REQUEST_CHANNEL = createIpcChannel(DESK
 export const DESKTOP_MODEL_RECORD_UPDATE_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_MODEL_RECORD_UPDATE_OPERATION, "response");
 export const DESKTOP_MODEL_RECORD_DELETE_REQUEST_CHANNEL = createIpcChannel(DESKTOP_MODEL_RECORD_DELETE_OPERATION, "request");
 export const DESKTOP_MODEL_RECORD_DELETE_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_MODEL_RECORD_DELETE_OPERATION, "response");
+export const DESKTOP_MODEL_FOLDER_REVEAL_REQUEST_CHANNEL = createIpcChannel(DESKTOP_MODEL_FOLDER_REVEAL_OPERATION, "request");
+export const DESKTOP_MODEL_FOLDER_REVEAL_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_MODEL_FOLDER_REVEAL_OPERATION, "response");
 export const DESKTOP_MODEL_TRAIN_REQUEST_CHANNEL = createIpcChannel(DESKTOP_MODEL_TRAIN_OPERATION, "request");
 export const DESKTOP_MODEL_TRAIN_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_MODEL_TRAIN_OPERATION, "response");
 export const DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL = createIpcChannel(DESKTOP_MODEL_TRAIN_STATUS_OPERATION, "request");
@@ -179,6 +184,19 @@ export type DesktopModelRecordDeleteResponse = IpcResponse<
   Record<string, never>,
   typeof DESKTOP_MODEL_RECORD_DELETE_RESPONSE_CHANNEL.value
 >;
+export type DesktopModelFolderRevealRequest = IpcRequest<
+  RevealModelInFolderRequest,
+  typeof DESKTOP_MODEL_FOLDER_REVEAL_OPERATION,
+  Record<string, never>,
+  typeof DESKTOP_MODEL_FOLDER_REVEAL_REQUEST_CHANNEL.value
+>;
+export type DesktopModelFolderRevealResponse = IpcResponse<
+  RevealModelInFolderResult,
+  Record<string, unknown>,
+  typeof DESKTOP_MODEL_FOLDER_REVEAL_OPERATION,
+  Record<string, never>,
+  typeof DESKTOP_MODEL_FOLDER_REVEAL_RESPONSE_CHANNEL.value
+>;
 
 export type DesktopModelTrainRequest = IpcRequest<
   ModelTrainingRequest,
@@ -282,6 +300,12 @@ export function createDesktopModelRecordDeleteRequest(payload: DeleteModelRecord
 }
 export function createDesktopModelRecordDeleteSuccessResponse(result: DeleteModelRecordResult, options?: { requestId?: string; correlationId?: string }): DesktopModelRecordDeleteResponse {
   return createIpcSuccessResponse(DESKTOP_MODEL_RECORD_DELETE_RESPONSE_CHANNEL, result, options) as DesktopModelRecordDeleteResponse;
+}
+export function createDesktopModelFolderRevealRequest(payload: RevealModelInFolderRequest, options?: { requestId?: string; correlationId?: string }): DesktopModelFolderRevealRequest {
+  return createIpcRequest(DESKTOP_MODEL_FOLDER_REVEAL_REQUEST_CHANNEL, payload, options);
+}
+export function createDesktopModelFolderRevealSuccessResponse(result: RevealModelInFolderResult, options?: { requestId?: string; correlationId?: string }): DesktopModelFolderRevealResponse {
+  return createIpcSuccessResponse(DESKTOP_MODEL_FOLDER_REVEAL_RESPONSE_CHANNEL, result, options) as DesktopModelFolderRevealResponse;
 }
 
 export function createDesktopModelTrainRequest(payload: ModelTrainingRequest, options?: { requestId?: string; correlationId?: string }): DesktopModelTrainRequest {

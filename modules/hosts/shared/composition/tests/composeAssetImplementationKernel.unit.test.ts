@@ -1,3 +1,4 @@
+// @test-duration long
 import { createHash } from "node:crypto";
 
 import { describe, expect, it } from "../../../../testing/node-test";

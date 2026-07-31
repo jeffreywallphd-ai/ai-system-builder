@@ -13,6 +13,8 @@ This module contains the first concrete artifact-repo storage provider adapter.
   - `storeArtifactInRepo` via official Hub client `uploadFile`,
   - `retrieveArtifactFromRepo` through the shared secure-egress broker and the
     provider's canonical resolve URL.
+  - `publishDatasetVersion` through the official Hub client's one-commit,
+    multi-file operation, returning the immutable commit identifier.
 
 ## Configuration
 
@@ -35,6 +37,13 @@ This module contains the first concrete artifact-repo storage provider adapter.
   repository before the create API is called.
 - New repositories preserve the explicit visibility choice. Product UI defaults
   to `private`; public creation is a separate explicit selection.
+- Dataset-version publication accepts only Private or Public, requires the
+  application command's explicit confirmation, limits file count and aggregate
+  bytes, rejects unsafe or duplicate repository paths, and never creates a
+  missing repository without separate approval and managed authorization.
+- A failed or ambiguous commit returns failure and does not create local success
+  evidence. Credentials, provider response payloads, and commit URLs are not
+  copied into dataset-version records or public diagnostics.
 - Model publication also defaults missing repository creation to private when a
   caller omits visibility. Creating a public model repository requires an
   explicit `private: false` request.
@@ -47,10 +56,14 @@ This module contains the first concrete artifact-repo storage provider adapter.
   and concurrency are controlled before localization.
 - The brokered retrieval path is the only download path; there is no unbounded
   `arrayBuffer` fallback.
-- Dataset browsing reads the Hub's logical Parquet inventory rather than a raw
-  recursive repository tree. Returned URLs must remain on the configured Hub
-  origin, match the requested dataset, use the converted Parquet revision, and
-  stay within the configured file-count limit before any entry is exposed.
+- Dataset browsing resolves the provider's converted Parquet ref to a commit
+  SHA, then uses the official Hub client's recursive file listing at that exact
+  revision. Only contained Parquet paths within the configured file and
+  inspection limits are exposed, and later retrieval remains pinned to the SHA.
+- Mutable branch names and malformed revision responses are not accepted as
+  provider-ingestion evidence. The legacy converted-Parquet logical URL remains
+  readable only for older callers; new browse results use exact repository paths
+  and commit revisions.
 - This is intentionally a small provider slice, not full provider lifecycle management.
 - Tests are mock-driven and deterministic (no live network dependency).
 - Fail-closed tests cover absent approval, managed denial, private creation, and

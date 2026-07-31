@@ -40,6 +40,9 @@
 - Executable implementations, package bytes, build evidence, and system releases are separate from Asset Kernel semantic records; route implementation/package work through ADR-0030 through ADR-0034.
 - Imported/authored code never runs in product, Electron main/preload, API server, or database processes; require the accepted sandbox and capability-broker boundary.
 - Runtime readiness is host-owned capability availability; it does not start/install/repair runtimes during read operations.
+- Data Management uses the staged-artifact model and a shared capability
+  registry to produce bounded, role-tagged training-dataset outputs. Route
+  ingestion/preparation work through `data-management.pack.md`.
 - Security is a universal design constraint and layered, adapter-based implementation concern. Use ADR-0015 and `security.pack.md` whenever the impact screen identifies a changed trust, authority, data, execution, diagnostic, or supply-chain boundary, even if the task was not labeled security work.
 - Historical implementation details belong in issues, PRs, or release notes, not in this reusable baseline.
 
@@ -66,6 +69,8 @@ Use only the docs needed for the current task:
 - `docs/architecture/workspace-model.md` - workspace identity, selection, scoping, and activation semantics.
 - `docs/architecture/persistence-and-storage.md` - persistence/storage separation and artifact storage rules.
 - `docs/architecture/runtime-model.md` - runtime ownership, capability, and execution model.
+- `docs/architecture/data-management.md` - source capability, staging,
+  preparation, split-integrity, and result boundaries.
 - `docs/architecture/host-model.md` - host composition and transport placement.
 - `docs/standards/coding-standards.md` - implementation discipline and abstraction restraint.
 - `docs/standards/naming-standards.md` - role-revealing naming requirements.
