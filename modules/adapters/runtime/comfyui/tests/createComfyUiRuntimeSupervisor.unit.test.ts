@@ -18,6 +18,27 @@ function createMockChildProcess() {
 }
 
 describe("createComfyUiRuntimeSupervisor", () => {
+  it("defaults launch arguments to CPU to avoid ComfyUI CUDA autodetection", () => {
+    expect(buildComfyUiRuntimeLaunchArguments({ host: "127.0.0.1", port: 8188 })).toEqual([
+      "main.py",
+      "--cpu",
+      "--listen",
+      "127.0.0.1",
+      "--port",
+      "8188",
+    ]);
+  });
+
+  it("preserves explicit auto launch mode for troubleshooting", () => {
+    expect(buildComfyUiRuntimeLaunchArguments({ host: "127.0.0.1", port: 8188, runtimeDeviceMode: "auto" })).toEqual([
+      "main.py",
+      "--listen",
+      "127.0.0.1",
+      "--port",
+      "8188",
+    ]);
+  });
+
   it("builds DirectML launch arguments without falling through to CUDA autodetection", () => {
     expect(buildComfyUiRuntimeLaunchArguments({ host: "127.0.0.1", port: 8188, runtimeDeviceMode: "directml" })).toEqual([
       "main.py",
@@ -205,6 +226,36 @@ describe("createComfyUiRuntimeSupervisor", () => {
     expect(health).toMatchObject({ status: "stopped" });
   });
 
+  it("waits for process exit when stopping before mode restart", async () => {
+    const mockChild = createMockChildProcess();
+    const spawnImplementation = testDouble.fn(() => mockChild as any);
+    const fetchImplementation = testDouble.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ devices: [] }),
+    });
+    const supervisor = createComfyUiRuntimeSupervisor({
+      workingDirectory: "/tmp/comfyui",
+      spawnImplementation: spawnImplementation as never,
+      fetchImplementation: fetchImplementation as never,
+      healthCheckIntervalMs: 1,
+      startupTimeoutMs: 200,
+    });
+
+    await supervisor.start();
+    const stopped = supervisor.stop();
+    let settled = false;
+    void stopped.then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    mockChild.emit("exit", null, "SIGTERM");
+    await stopped;
+    expect(settled).toBe(true);
+    expect(supervisor.isRunning()).toBe(false);
+  });
+
   it("fails startup without timeout cleanup when the process exits before health checks complete", async () => {
     const mockChild = createMockChildProcess();
     const spawnImplementation = testDouble.fn(() => mockChild as any);
@@ -250,7 +301,13 @@ describe("createComfyUiRuntimeSupervisor", () => {
     const firstChild = createMockChildProcess();
     const secondChild = createMockChildProcess();
     const spawnImplementation = testDouble.fn()
-      .mockImplementationOnce(() => firstChild as any)
+      .mockImplementationOnce(() => {
+        queueMicrotask(() => {
+          firstChild.stderr.write("torchaudio WinError 127 specified procedure could not be found");
+          firstChild.emit("exit", 1, null);
+        });
+        return firstChild as any;
+      })
       .mockImplementationOnce(() => secondChild as any);
     const fetchImplementation = testDouble.fn()
       .mockRejectedValueOnce(new Error("booting"))
@@ -270,10 +327,6 @@ describe("createComfyUiRuntimeSupervisor", () => {
       healthCheckIntervalMs: 1,
       startupTimeoutMs: 100,
     });
-    queueMicrotask(() => {
-      firstChild.stderr.write("torchaudio WinError 127 specified procedure could not be found");
-      firstChild.emit("exit", 1, null);
-    });
     await supervisor.start();
     expect(installer.repairInstall).toHaveBeenCalledTimes(1);
     expect(installer.repairInstall.mock.calls[0]?.[0]?.metadata?.repairReason).toBe("torchaudio");
@@ -283,7 +336,13 @@ describe("createComfyUiRuntimeSupervisor", () => {
 
   it("throws clear error when dependency repair fails", async () => {
     const firstChild = createMockChildProcess();
-    const spawnImplementation = testDouble.fn(() => firstChild as any);
+    const spawnImplementation = testDouble.fn(() => {
+      queueMicrotask(() => {
+        firstChild.stderr.write("_torchaudio WinError 127");
+        firstChild.emit("exit", 1, null);
+      });
+      return firstChild as any;
+    });
     const installer = {
       ensureInstalled: testDouble.fn(async () => ({ status: "installed" as const })),
       repairInstall: testDouble.fn(async () => ({ status: "failed" as const, error: { message: "pip failed" } })),
@@ -293,17 +352,16 @@ describe("createComfyUiRuntimeSupervisor", () => {
       workingDirectory: "/tmp/comfyui", installRoot: "/tmp/comfyui", autoInstall: true, installer,
       spawnImplementation: spawnImplementation as never, fetchImplementation: testDouble.fn(async () => { throw new Error("boot"); }) as never, healthCheckIntervalMs: 1, startupTimeoutMs: 50,
     });
-    queueMicrotask(() => {
-      firstChild.stderr.write("_torchaudio WinError 127");
-      firstChild.emit("exit", 1, null);
-    });
     await expect(supervisor.start()).rejects.toThrow("ComfyUI dependency mismatch detected (torchaudio/torchvision). The system attempted repair but failed.");
   });
 
   it("throws clear error when retry startup fails after repair", async () => {
     const firstChild = createMockChildProcess();
     const secondChild = createMockChildProcess();
-    const spawnImplementation = testDouble.fn().mockImplementationOnce(() => firstChild as any).mockImplementationOnce(() => secondChild as any);
+    const spawnImplementation = testDouble.fn().mockImplementationOnce(() => {
+      queueMicrotask(() => { firstChild.stderr.write("torchaudio WinError 127"); firstChild.emit("exit", 1, null); });
+      return firstChild as any;
+    }).mockImplementationOnce(() => secondChild as any);
     const installer = {
       ensureInstalled: testDouble.fn(async () => ({ status: "installed" as const })),
       repairInstall: testDouble.fn(async () => ({ status: "installed" as const })),
@@ -313,7 +371,6 @@ describe("createComfyUiRuntimeSupervisor", () => {
       workingDirectory: "/tmp/comfyui", installRoot: "/tmp/comfyui", autoInstall: true, installer,
       spawnImplementation: spawnImplementation as never, fetchImplementation: testDouble.fn(async () => { throw new Error("boot"); }) as never, healthCheckIntervalMs: 1, startupTimeoutMs: 80,
     });
-    queueMicrotask(() => { firstChild.stderr.write("torchaudio WinError 127"); firstChild.emit("exit", 1, null); });
     setTimeout(() => { secondChild.stderr.write("still broken"); secondChild.emit("exit", 1, null); }, 10);
     await expect(supervisor.start()).rejects.toThrow("ComfyUI failed after dependency repair. See logs for details.");
     expect(installer.repairInstall).toHaveBeenCalledTimes(1);
@@ -334,7 +391,10 @@ describe("createComfyUiRuntimeSupervisor", () => {
   it("classifies torchvision mismatch and uses targeted repair reason", async () => {
     const firstChild = createMockChildProcess();
     const secondChild = createMockChildProcess();
-    const spawnImplementation = testDouble.fn().mockImplementationOnce(() => firstChild as any).mockImplementationOnce(() => secondChild as any);
+    const spawnImplementation = testDouble.fn().mockImplementationOnce(() => {
+      queueMicrotask(() => { firstChild.stderr.write("torchvision import failure"); firstChild.emit("exit", 1, null); });
+      return firstChild as any;
+    }).mockImplementationOnce(() => secondChild as any);
     const installer = {
       ensureInstalled: testDouble.fn(async () => ({ status: "installed" as const })),
       repairInstall: testDouble.fn(async () => ({ status: "installed" as const })),
@@ -344,8 +404,24 @@ describe("createComfyUiRuntimeSupervisor", () => {
       workingDirectory: "/tmp/comfyui", installRoot: "/tmp/comfyui", autoInstall: true, installer,
       spawnImplementation: spawnImplementation as never, fetchImplementation: testDouble.fn().mockRejectedValueOnce(new Error("boot")).mockResolvedValue({ ok: true, status: 200, json: async () => ({ devices: [] }) }) as never, healthCheckIntervalMs: 1, startupTimeoutMs: 80,
     });
-    queueMicrotask(() => { firstChild.stderr.write("torchvision import failure"); firstChild.emit("exit", 1, null); });
     await supervisor.start();
     expect(installer.repairInstall.mock.calls[0]?.[0]?.metadata?.repairReason).toBe("torchvision");
   });
+});
+
+it("surfaces actionable guidance for unmanaged install root failures", async () => {
+  const installer = {
+    ensureInstalled: testDouble.fn(async () => ({ status: "failed" as const, error: { code: "unmanaged-install-root", message: "Install root is non-empty and unmanaged" } })),
+    repairInstall: testDouble.fn(),
+    getInstallStatus: testDouble.fn(),
+  };
+  const supervisor = createComfyUiRuntimeSupervisor({
+    workingDirectory: "/tmp/comfyui",
+    installRoot: "/tmp/comfyui",
+    autoInstall: true,
+    installer,
+    spawnImplementation: testDouble.fn() as never,
+  });
+
+  await expect(supervisor.start()).rejects.toThrow("Set COMFYUI_INSTALL_ROOT to a managed ComfyUI checkout, set SERVER_RUNTIME_ROOT to a clean runtime directory");
 });

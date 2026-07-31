@@ -96,11 +96,25 @@ print(json.dumps({
 
 const WORKER_DEPENDENCY_PROBE_SCRIPT = `
 # asb:worker-dependency-probe
+import importlib.metadata
 import importlib.util
-required = ["accelerate", "datasets", "fastapi", "hf_xet", "peft", "pyarrow", "safetensors", "uvicorn", "huggingface_hub", "transformers"]
+import sys
+required = ["accelerate", "docx", "fastapi", "hf_xet", "huggingface_hub", "markdownify", "pyarrow", "pypdf", "safetensors", "transformers", "uvicorn"]
+decoder_supported = (3, 10) <= sys.version_info[:2] < (3, 14)
+if decoder_supported:
+  required.extend(["jsonschema", "outlines", "outlines_core"])
 missing = [name for name in required if importlib.util.find_spec(name) is None]
 if missing:
   raise ModuleNotFoundError(f"No module named '{missing[0]}'")
+core_expected_versions = {"accelerate": "1.14.0", "pyarrow": "25.0.0"}
+core_mismatched = [name for name, expected in core_expected_versions.items() if importlib.metadata.version(name) != expected]
+if core_mismatched:
+  raise RuntimeError("Core dependency version mismatch")
+if decoder_supported:
+  expected_versions = {"jsonschema": "4.26.0", "outlines": "1.3.2", "outlines-core": "0.2.14"}
+  mismatched = [name for name, expected in expected_versions.items() if importlib.metadata.version(name) != expected]
+  if mismatched:
+    raise RuntimeError("Decoder dependency version mismatch")
 `.trim();
 
 const TORCH_INSTALL_PROBE_SCRIPT = `
@@ -124,7 +138,7 @@ print(json.dumps(result))
 `.trim();
 
 function normalizeOutput(result: SpawnSyncReturns<string>): string {
-  const output = [result.stdout, result.stderr]
+  const output = [result.stdout, result.stderr, result.error?.message]
     .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     .join("\n")
     .trim();
@@ -542,7 +556,7 @@ function installWorkerRequirementsIfNeeded(
     throw new Error(`Failed to probe Python runtime worker dependencies: ${probeOutput}`);
   }
 
-  const missingDependencyPattern = /No module named ['"](accelerate|datasets|fastapi|hf_xet|peft|pyarrow|safetensors|uvicorn|huggingface_hub|transformers)['"]/i;
+  const missingDependencyPattern = /(?:No module named ['"](?:accelerate|docx|fastapi|hf_xet|huggingface_hub|jsonschema|markdownify|outlines|outlines_core|pyarrow|pypdf|safetensors|transformers|uvicorn)['"]|Core dependency version mismatch|Decoder dependency version mismatch)/i;
   if (!missingDependencyPattern.test(probeOutput)) {
     throw new Error(
       `Python dependency probe failed for an unexpected reason; aborting startup. ${probeOutput}`,
@@ -654,10 +668,7 @@ export function ensurePythonRuntimeWorkerDependencies(
     }
 
     attemptTorchInstallFlow(spawnSyncImplementation, options, target, diagnostics);
-  } catch (error) {
+  } finally {
     persistDiagnostics(options, diagnostics);
-    throw error;
   }
-
-  persistDiagnostics(options, diagnostics);
 }

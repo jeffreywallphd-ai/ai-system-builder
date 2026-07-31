@@ -15,12 +15,13 @@ export function SettingsStatusMessage(props: SettingsStatusMessageProps) {
   }
 
   if (props.errorMessage) {
-    return <p className="ui-status" role="alert">{props.errorMessage}</p>;
+    return <TransientNotificationPublisher message={props.errorMessage} title="Settings need attention" tone="error" source="Settings" />;
   }
 
   if (props.successMessage) {
-    return <p className="ui-status ui-status--success" role="status">{props.successMessage}</p>;
+    return <TransientNotificationPublisher message={props.successMessage} title="Settings updated" tone="success" source="Settings" />;
   }
 
   return null;
 }
+import { TransientNotificationPublisher } from "../../../../../../../modules/ui/shared";

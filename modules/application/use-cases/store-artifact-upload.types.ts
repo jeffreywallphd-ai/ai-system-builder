@@ -4,6 +4,8 @@ import type {
 } from "../../contracts/ingestion";
 import type { ContractErrorDetails } from "../../contracts/shared";
 
+export { ARTIFACT_UPLOAD_MAXIMUM_BYTES } from "../../contracts/artifact-upload";
+
 export interface StoreArtifactUploadCommand {
   fileName: string;
   mediaType: string;
@@ -12,6 +14,7 @@ export interface StoreArtifactUploadCommand {
 
 export interface StoreArtifactUploadCommandContext {
   source: string;
+  workspaceId?: string;
 }
 
 export type StoreArtifactUploadUseCaseResult<

@@ -1,10 +1,16 @@
 import { createApiError } from "./api-error";
 import { createApiRequest, type ApiRequest } from "./api-request";
-import { createApiFailureResponse, createApiSuccessResponse, type ApiResponse } from "./api-response";
+import {
+  createApiFailureResponse,
+  createApiSuccessResponse,
+  type ApiResponse,
+} from "./api-response";
 
-export const API_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION = "artifact.localize.from-repo" as const;
+export const API_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION =
+  "artifact.localize.from-repo" as const;
 
 export interface ApiArtifactLocalizeFromRepoRequestPayload {
+  workspaceId: string;
   artifactId: string;
   source: string;
 }
@@ -55,6 +61,7 @@ export function createApiArtifactLocalizeFromRepoRequest(
   return createApiRequest(
     API_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION,
     {
+      workspaceId: normalizeRequired(payload.workspaceId, "workspaceId"),
       artifactId: normalizeRequired(payload.artifactId, "artifactId"),
       source: normalizeRequired(payload.source, "source"),
     },
@@ -66,15 +73,28 @@ export function createApiArtifactLocalizeFromRepoSuccessResponse(
   value: ApiArtifactLocalizeFromRepoResponseValue,
   options?: { requestId?: string; correlationId?: string },
 ): ApiArtifactLocalizeFromRepoResponse {
-  return createApiSuccessResponse(API_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION, value, options);
+  return createApiSuccessResponse(
+    API_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION,
+    value,
+    options,
+  );
 }
 
 export function createApiArtifactLocalizeFromRepoFailureResponse(
   code: "validation" | "not-found" | "unavailable" | "internal",
   message: string,
-  options?: { details?: Record<string, unknown>; requestId?: string; correlationId?: string },
+  options?: {
+    details?: Record<string, unknown>;
+    requestId?: string;
+    correlationId?: string;
+  },
 ): ApiArtifactLocalizeFromRepoResponse {
   return createApiFailureResponse(
-    createApiError(API_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION, code, message, options),
+    createApiError(
+      API_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION,
+      code,
+      message,
+      options,
+    ),
   );
 }

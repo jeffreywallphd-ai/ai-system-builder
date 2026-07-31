@@ -5,6 +5,12 @@ import {
   deriveArtifactListStatusLabels,
   derivePublishedBackingDisplayRows,
   derivePublishedBackingVerificationPresentation,
+  ApplicationIcon,
+  ArtifactPreviewPanel,
+  PanelHeading,
+  TermWithHint,
+  TransientNotificationPublisher,
+  TypeBadge,
   type PublishedBackingView,
 } from "../../../../../../../modules/ui/shared";
 import type { DesktopArtifactBrowserClient } from "../api/desktopArtifactBrowserClient";
@@ -16,6 +22,8 @@ import { copyArtifactMediaBytesToArrayBuffer } from "../helpers/artifactMediaByt
 
 export interface ArtifactBrowserFeatureProps {
   client?: DesktopArtifactBrowserClient;
+  workspaceId?: string;
+  workspaceName?: string;
 }
 
 const HUGGING_FACE_SETTINGS_KEYS = ["huggingface.token", "huggingface.defaultNamespace"] as const;
@@ -40,7 +48,7 @@ function PublishedBackingPanel(
             <dd>{row.value}</dd>
           </Fragment>
         ))}
-        <dt>Verification</dt>
+        <dt><TermWithHint termId="verification">Verification</TermWithHint></dt>
         <dd>{verification.statusLabel}</dd>
         <dt>Checked</dt>
         <dd>{verification.lastCheckedLabel}</dd>
@@ -52,21 +60,22 @@ function PublishedBackingPanel(
   );
 }
 
-export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) {
+export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserFeatureProps) {
   const settings = useApplicationSettings({ keys: useMemo(() => ["huggingface.defaultNamespace"], []) });
   const [downloadState, setDownloadState] = useState<{ status: "idle" | "error"; message?: string }>({
     status: "idle",
   });
   const [showHuggingFaceDefaults, setShowHuggingFaceDefaults] = useState(false);
+  const [isDetailPopupOpen, setDetailPopupOpen] = useState(false);
   const {
     uploadedItems,
     generatedItems,
+    otherItems,
     unregisteredItems,
     selectedStorageKey,
     detail,
     content,
-    imageViewUrl,
-    htmlPreview,
+    artifactPreview,
     publishState,
     localizeState,
     sourceVerifyState,
@@ -96,9 +105,15 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
     setPathInRepo,
     setRevision,
     setMediaType,
+    setCreateRepositoryIfMissing,
+    setRepositoryVisibility,
     togglePublishForm,
     readArtifactMedia,
-  } = useArtifactBrowserFeature(client);
+  } = useArtifactBrowserFeature(client, workspaceId);
+  const transientViewState = Boolean(viewState.message && (
+    /^(Deleted|Registered)\b/.test(viewState.message)
+    || (viewState.status === "error" && !/^(Failed to load|Unable to load|Delete cancelled)/i.test(viewState.message))
+  ));
   const backingState = deriveArtifactBackingState(detail, content);
   const defaultNamespace = settings.valuesByKey.get("huggingface.defaultNamespace")?.value;
 
@@ -132,6 +147,15 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
 
   const publishRepositoryPreview = resolvePublishRepository();
   const publishPathPreview = resolvePublishPath();
+
+  const openArtifactDetails = useCallback(async (storageKey: string) => {
+    await selectArtifact(storageKey);
+    setDetailPopupOpen(true);
+  }, [selectArtifact]);
+
+  const closeDetailPopup = useCallback(() => {
+    setDetailPopupOpen(false);
+  }, []);
 
   const onDownloadSelectedArtifact = useCallback(async () => {
     if (!detail) {
@@ -168,17 +192,16 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
   }, [content?.availability, detail, readArtifactMedia]);
 
   return (
-    <section className="ui-panel ui-panel--elevated ui-stack ui-stack--sm">
-      <header className="ui-grid ui-grid--two">
-        <h2 className="ui-panel__title">Artifact Browser</h2>
-        <button className="ui-button" type="button" onClick={() => void refreshArtifacts()}>
-          Refresh
-        </button>
+    <section className="ui-panel ui-panel--elevated ui-panel--sectioned">
+      <header className="ui-panel__section-header">
+        <PanelHeading icon="browse" tone="violet">Artifact Browser</PanelHeading>
       </header>
-      {viewState.message ? <p role={viewState.status === "error" ? "alert" : "status"}>{viewState.message}</p> : null}
+      <div className="ui-panel__section-body ui-stack ui-stack--sm">
+      {viewState.message && !transientViewState ? <p role={viewState.status === "error" ? "alert" : "status"}>{viewState.message}</p> : null}
+      <TransientNotificationPublisher message={transientViewState ? viewState.message : undefined} title={viewState.status === "error" ? "Artifact action needs attention" : "Artifacts updated"} tone={viewState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
       <section className="ui-stack ui-stack--sm">
         <label className="ui-stack ui-stack--sm">
-          <span>Filter artifacts</span>
+          <span><TermWithHint termId="artifactFamily">Artifact family</TermWithHint></span>
           <select
             className="ui-input"
             value={selectedArtifactFamily}
@@ -193,7 +216,7 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
           </select>
         </label>
         <label className="ui-stack ui-stack--sm">
-          <span>Filter by source</span>
+          <span><TermWithHint termId="filterSource">Filter by source</TermWithHint></span>
           <select
             className="ui-input"
             value={selectedStorageFilter}
@@ -205,72 +228,118 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
           </select>
         </label>
       </section>
+      <div className="artifact-browser__toolbar">
+        <button className="ui-button" type="button" onClick={() => void refreshArtifacts()}>
+          <ApplicationIcon name="refresh" />
+          <span className="ui-button__label">Refresh</span>
+        </button>
+      </div>
       {pendingDeleteConfirmation ? (
-        <div className="ui-modal-overlay" role="presentation">
+        <div className={`ui-modal-overlay${isDetailPopupOpen ? " ui-modal-overlay--stacked" : ""}`} role="presentation">
           <section className="ui-panel ui-modal-dialog ui-stack ui-stack--sm" role="dialog" aria-label="Delete confirmation" aria-modal="true">
-            <h3>{pendingDeleteConfirmation.label}</h3>
-            <p>Type <strong>Delete</strong> to confirm this destructive action.</p>
-            <label className="ui-stack ui-stack--sm">
-              <span>Confirmation</span>
-              <input
-                className="ui-input"
-                value={deleteConfirmationInput}
-                onChange={(event) => setDeleteConfirmationInput(event.target.value)}
-                placeholder="Delete"
-              />
-            </label>
-            <div className="ui-grid ui-grid--two">
-              <button
-                className="ui-button ui-button--destructive"
-                type="button"
-                onClick={() => void confirmPendingDelete()}
-                disabled={deleteConfirmationInput !== "Delete"}
-              >
-                Confirm delete
-              </button>
-              <button className="ui-button" type="button" onClick={cancelPendingDelete}>Cancel</button>
+            <header className="ui-modal-header">
+              <h3>Delete artifact</h3>
+              <button className="ui-modal-close" type="button" aria-label="Close delete confirmation" onClick={cancelPendingDelete}>x</button>
+            </header>
+            <div className="ui-modal-body ui-stack ui-stack--sm">
+              <p>Type <strong>Delete</strong> to confirm this destructive action.</p>
+              <p className="ui-text-muted">Artifact: {pendingDeleteConfirmation.storageKey}</p>
+              <label className="ui-stack ui-stack--sm">
+                <span><TermWithHint termId="deleteConfirmation">Confirmation</TermWithHint></span>
+                <input
+                  className="ui-input"
+                  value={deleteConfirmationInput}
+                  onChange={(event) => setDeleteConfirmationInput(event.target.value)}
+                  placeholder="Delete"
+                />
+              </label>
+              <div className="ui-grid ui-grid--two">
+                <button
+                  className="ui-button ui-button--destructive"
+                  type="button"
+                  onClick={() => void confirmPendingDelete()}
+                  disabled={deleteConfirmationInput !== "Delete"}
+                >
+                  Confirm delete
+                </button>
+                <button className="ui-button" type="button" onClick={cancelPendingDelete}>Cancel</button>
+              </div>
             </div>
           </section>
         </div>
       ) : null}
-      <div className="ui-grid ui-grid--two">
+      <div className="ui-stack ui-stack--sm">
         <div className="ui-stack ui-stack--sm">
           <h3>Uploaded Artifacts</h3>
-          <section className="ui-stack ui-stack--sm">
+          <section className="artifact-browser__uploaded-grid" aria-label="Uploaded artifacts">
+            {uploadedItems.length === 0 ? (
+              <p className="ui-text-muted artifact-browser__empty-note">There are currently no uploaded artifacts in the workspace.</p>
+            ) : null}
             {uploadedItems.map((item) => (
-              <section key={item.storageKey}>
-                <p>{item.originalName ?? item.storageKey}</p>
-                <p>Status: {item.metadata?.backingState ? (
-                  <small>{deriveArtifactListStatusLabels(item.metadata.backingState).join(" · ")}</small>
-                ) : null}
+              <article className="artifact-browser__artifact-card ui-stack ui-stack--sm" key={item.storageKey}>
+                <div className="ui-stack ui-stack--sm">
+                  <div className="ui-type-label"><TypeBadge value={item.mediaType ?? item.originalName ?? item.storageKey} /><h4 className="artifact-browser__artifact-card-title">{item.originalName ?? item.storageKey}</h4></div>
+                  <p className="artifact-browser__artifact-card-key">{item.storageKey}</p>
+                </div>
+                <p className="artifact-browser__artifact-card-status">
+                  Status: {item.metadata?.backingState ? deriveArtifactListStatusLabels(item.metadata.backingState).join(" | ") : "local"}
                 </p>
-                <button className="ui-button" type="button" onClick={() => void selectArtifact(item.storageKey)} disabled={viewState.status === "loading" && selectedStorageKey === item.storageKey}>
-                  View Details
+                <button className="ui-button" type="button" onClick={() => void openArtifactDetails(item.storageKey)} disabled={viewState.status === "loading" && selectedStorageKey === item.storageKey}>
+                  <ApplicationIcon name="browse" />
+                  <span className="ui-button__label">View Details</span>
                 </button>                
-              </section>              
+              </article>
             ))}
           </section>
           <h3>Generated Artifacts</h3>
-          <section className="ui-stack ui-stack--sm">
+          <section className="ui-stack ui-stack--sm artifact-browser__list-section">
+            {generatedItems.length === 0 ? (
+              <p className="ui-text-muted">There are currently no generated artifacts in the workspace.</p>
+            ) : null}
             {generatedItems.map((item) => (
               <section key={item.storageKey}>
-                <p>{item.originalName ?? item.storageKey}</p>
+                <p className="ui-type-label"><TypeBadge value={item.mediaType ?? item.originalName ?? item.storageKey} /><span>{item.originalName ?? item.storageKey}</span></p>
                 <p>Status: {item.metadata?.backingState ? (
                   <small>{deriveArtifactListStatusLabels(item.metadata.backingState).join(" · ")}</small>
                 ) : null}
                 </p>
-                <button className="ui-button" type="button" onClick={() => void selectArtifact(item.storageKey)} disabled={viewState.status === "loading" && selectedStorageKey === item.storageKey}>
-                  View Details
+                <button className="ui-button" type="button" onClick={() => void openArtifactDetails(item.storageKey)} disabled={viewState.status === "loading" && selectedStorageKey === item.storageKey}>
+                  <ApplicationIcon name="browse" />
+                  <span className="ui-button__label">View Details</span>
                 </button>
               </section>
             ))}
           </section>
-          <section className="ui-stack ui-stack--sm">
+          <h3>Other Registered Artifacts</h3>
+          <section className="artifact-browser__uploaded-grid" aria-label="Other registered artifacts">
+            {otherItems.length === 0 ? (
+              <p className="ui-text-muted artifact-browser__empty-note">There are currently no other registered artifacts in the workspace.</p>
+            ) : null}
+            {otherItems.map((item) => (
+              <article className="artifact-browser__artifact-card ui-stack ui-stack--sm" key={item.storageKey}>
+                <div className="ui-stack ui-stack--sm">
+                  <div className="ui-type-label"><TypeBadge value={item.mediaType ?? item.originalName ?? item.storageKey} /><h4 className="artifact-browser__artifact-card-title">{item.originalName ?? item.storageKey}</h4></div>
+                  <p className="artifact-browser__artifact-card-key">{item.storageKey}</p>
+                </div>
+                <p className="artifact-browser__artifact-card-status">
+                  Status: {item.metadata?.backingState ? deriveArtifactListStatusLabels(item.metadata.backingState).join(" | ") : "registered"}
+                </p>
+                <button className="ui-button" type="button" onClick={() => void openArtifactDetails(item.storageKey)} disabled={viewState.status === "loading" && selectedStorageKey === item.storageKey}>
+                  <ApplicationIcon name="browse" />
+                  <span className="ui-button__label">View Details</span>
+                </button>
+              </article>
+            ))}
+          </section>
+          <section className="ui-stack ui-stack--sm artifact-browser__list-section">
             <h3>Unregistered Artifacts</h3>
             <ul className="ui-stack ui-stack--sm">
+              {unregisteredItems.length === 0 ? (
+                <li className="ui-text-muted">There are currently no unregistered artifacts in the workspace.</li>
+              ) : null}
               {unregisteredItems.map((item) => (
                 <li key={item.storageKey}>
-                  <p>{item.relativePath}</p>
+                  <p className="ui-type-label"><TypeBadge value={item.mediaType ?? item.relativePath} /><span>{item.relativePath}</span></p>
                   <small>{item.mediaType ?? "unknown media type"} · {item.storageKey.split(".").pop() ?? "unknown"}</small>
                   <div className="ui-grid ui-grid--two">
                     <button
@@ -294,21 +363,27 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
           </section>
         </div>
 
-        <div className="ui-stack ui-stack--sm">
-          <h3>Detail & preview</h3>
+        {isDetailPopupOpen ? (
+          <div className="ui-modal-overlay" role="presentation">
+            <section className="ui-panel ui-modal-dialog artifact-browser__detail-dialog ui-stack ui-stack--sm" role="dialog" aria-label="Detail and preview" aria-modal="true">
+              <header className="ui-modal-header">
+                <h3>Detail & preview</h3>
+                <button className="ui-modal-close" type="button" aria-label="Close detail and preview" onClick={closeDetailPopup}>x</button>
+              </header>
+              <div className="ui-modal-body ui-stack ui-stack--sm">
           {detail ? (
             <dl className="ui-grid ui-grid--two">
-              <dt>Selected key</dt>
+              <dt><TermWithHint termId="storedKey">Selected key</TermWithHint></dt>
               <dd>{detail.locator.storageKey}</dd>
-              <dt>Media type</dt>
-              <dd>{detail.mediaType ?? "unknown"}</dd>
-              <dt>Artifact family</dt>
+              <dt><TermWithHint termId="mediaType">Media type</TermWithHint></dt>
+              <dd className="ui-type-label"><TypeBadge value={detail.mediaType ?? detail.originalName ?? detail.locator.storageKey} /><span>{detail.mediaType ?? "unknown"}</span></dd>
+              <dt><TermWithHint termId="artifactFamily">Artifact family</TermWithHint></dt>
               <dd>{detail.artifactFamily}</dd>
-              <dt>Source</dt>
+              <dt><TermWithHint termId="source">Source</TermWithHint></dt>
               <dd>{detail.sourceKind ?? "unknown"}</dd>
-              <dt>Size bytes</dt>
+              <dt><TermWithHint termId="storedSize">Size bytes</TermWithHint></dt>
               <dd>{detail.sizeBytes ?? "unknown"}</dd>
-              <dt>Created at</dt>
+              <dt><TermWithHint termId="createdAt">Created at</TermWithHint></dt>
               <dd>{detail.createdAt ?? "unknown"}</dd>
             </dl>
           ) : (<p className="ui-text-muted">Select an artifact to inspect metadata and preview availability.</p>)}
@@ -317,19 +392,19 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
             <section className="ui-stack ui-stack--sm">
               <h3>Website capture metadata</h3>
               <dl className="ui-grid ui-grid--two">
-                <dt>Source URL</dt>
+                <dt><TermWithHint termId="sourceUrl">Source URL</TermWithHint></dt>
                 <dd>{detail.metadata.websiteCapture.sourceUrl}</dd>
                 <dt>Resolved URL</dt>
                 <dd>{detail.metadata.websiteCapture.resolvedUrl}</dd>
-                <dt>Requested mode</dt>
+                <dt><TermWithHint termId="singlePageMode">Requested mode</TermWithHint></dt>
                 <dd>{detail.metadata.websiteCapture.requestedMode}</dd>
-                <dt>Acquisition mechanism</dt>
+                <dt><TermWithHint termId="acquisitionMechanism">Acquisition mechanism</TermWithHint></dt>
                 <dd>{detail.metadata.websiteCapture.acquisitionMechanismUsed}</dd>
                 <dt>Retrieved at</dt>
                 <dd>{detail.metadata.websiteCapture.retrievedAt}</dd>
                 <dt>HTTP status</dt>
                 <dd>{detail.metadata.websiteCapture.httpStatus ?? "unknown"}</dd>
-                <dt>Content-Type</dt>
+                <dt><TermWithHint termId="contentType">Content-Type</TermWithHint></dt>
                 <dd>{detail.metadata.websiteCapture.contentTypeHeader ?? "unknown"}</dd>
               </dl>
             </section>
@@ -337,11 +412,11 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
 
           {content ? (
             <dl className="ui-grid ui-grid--two">
-              <dt>Availability</dt>
+              <dt><TermWithHint termId="availability">Availability</TermWithHint></dt>
               <dd>{content.availability}</dd>
-              <dt>Retrieval</dt>
+              <dt><TermWithHint termId="retrieval">Retrieval</TermWithHint></dt>
               <dd>{content.retrieval}</dd>
-              <dt>Local bytes</dt>
+              <dt><TermWithHint termId="localBytes">Local bytes</TermWithHint></dt>
               <dd>{content.availability === "available" ? "present" : "missing"}</dd>
             </dl>
           ) : null}
@@ -357,14 +432,15 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
                 Download artifact
               </button>
               <button className="ui-button ui-button--destructive" type="button" onClick={() => requestDeleteRegisteredArtifact(detail.locator.storageKey)}>Delete registered artifact</button>
-              {downloadState.message ? <p role="alert">{downloadState.message}</p> : null}
+              <TransientNotificationPublisher message={downloadState.message} title="Artifact download needs attention" tone="error" source="Artifact Browser" workspaceId={workspaceId} />
               <h3>Local Object State</h3>
               <dl className="ui-grid ui-grid--two">
-                <dt>Local object availability</dt>
+                <dt><TermWithHint termId="localObject">Local object availability</TermWithHint></dt>
                 <dd>{backingState.hasLocalObjectAvailable ? "available" : "not available"}</dd>
-                <dt>Localization state</dt>
+                <dt><TermWithHint termId="localization">Localization state</TermWithHint></dt>
                 <dd>{backingState.isLocalized ? "localized" : backingState.isRemoteOnly ? "not localized" : "n/a"}</dd>
               </dl>
+              <ArtifactPreviewPanel preview={artifactPreview} />
               {backingState.isRemoteOnly ? (
                 <p role="status">Remote-only artifact. Local preview is unavailable until localization.</p>
               ) : null}
@@ -375,17 +451,17 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
             <section className="ui-stack ui-stack--sm">
               <h3>Imported Source Backing</h3>
               <dl className="ui-grid ui-grid--two">
-                <dt>Provider</dt>
+                <dt><TermWithHint termId="provider">Provider</TermWithHint></dt>
                 <dd>{detail.metadata.importedSourceBacking.target.provider}</dd>
-                <dt>Repo</dt>
+                <dt><TermWithHint termId="repository">Repo</TermWithHint></dt>
                 <dd>{detail.metadata.importedSourceBacking.target.repository}</dd>
-                <dt>Path</dt>
+                <dt><TermWithHint termId="pathInRepository">Path</TermWithHint></dt>
                 <dd>{detail.metadata.importedSourceBacking.target.path}</dd>
-                <dt>Revision</dt>
+                <dt><TermWithHint termId="revision">Revision</TermWithHint></dt>
                 <dd>{detail.metadata.importedSourceBacking.target.revision ?? "main"}</dd>
-                <dt>Source verified</dt>
+                <dt><TermWithHint termId="sourceVerified">Source verified</TermWithHint></dt>
                 <dd>{detail.metadata.importedSourceBacking.verification.exists ? "yes" : "no"}</dd>
-                <dt>Source checked</dt>
+                <dt><TermWithHint termId="sourceChecked">Source checked</TermWithHint></dt>
                 <dd>{detail.metadata.importedSourceBacking.verification.verifiedAt ?? "never"}</dd>
               </dl>
               <button
@@ -406,29 +482,11 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
                   {localizeState.status === "loading" ? "Localizing..." : "Localize artifact"}
                 </button>
               ) : null}
-              {sourceVerifyState.message ? (
-                <p role={sourceVerifyState.status === "error" ? "alert" : "status"}>{sourceVerifyState.message}</p>
-              ) : null}
-              {localizeState.message ? (
-                <p role={localizeState.status === "error" ? "alert" : "status"}>{localizeState.message}</p>
-              ) : null}
+              <TransientNotificationPublisher message={sourceVerifyState.status !== "loading" ? sourceVerifyState.message : undefined} title={sourceVerifyState.status === "error" ? "Source verification needs attention" : "Source verification completed"} tone={sourceVerifyState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
+              <TransientNotificationPublisher message={localizeState.status !== "loading" ? localizeState.message : undefined} title={localizeState.status === "error" ? "Artifact localization needs attention" : "Artifact localized"} tone={localizeState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
               {localizedArtifact ? (
                 <p role="status">Localized bytes key: {localizedArtifact.localObject.key}</p>
               ) : null}
-            </section>
-          ) : null}
-
-          {imageViewUrl && content?.availability === "available" ? (
-            <figure className="ui-stack ui-stack--sm">
-              <img src={imageViewUrl} alt={detail?.locator.storageKey ?? "Selected artifact"} />
-              <figcaption>Image preview for {detail?.locator.storageKey}</figcaption>
-            </figure>
-          ) : null}
-
-          {htmlPreview && content?.availability === "available" ? (
-            <section className="ui-stack ui-stack--sm">
-              <h3>HTML source preview</h3>
-              <pre className="ui-panel artifact-browser__html-preview">{htmlPreview}</pre>
             </section>
           ) : null}
 
@@ -453,7 +511,7 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
                       <p role="note">Private or gated Hugging Face repositories may require a desktop-host token.</p>
                       <div className="ui-grid ui-grid--two">
                         <label className="ui-stack ui-stack--sm">
-                          <span>Dataset repository name</span>
+                          <span><TermWithHint termId="repository">Dataset repository name</TermWithHint></span>
                           <input
                             className="ui-input"
                             value={publishForm.repository}
@@ -469,14 +527,36 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
                             <small className="ui-text-muted">Format: owner/repository.</small>
                           )}
                         </label>
-                        <label className="ui-stack ui-stack--sm"><span>Revision (optional)</span><input className="ui-input" value={publishForm.revision} onChange={(event) => setRevision(event.target.value)} /></label>
+                        <label className="ui-stack ui-stack--sm"><span><TermWithHint termId="revision">Revision</TermWithHint> (optional)</span><input className="ui-input" value={publishForm.revision} onChange={(event) => setRevision(event.target.value)} /></label>
                         <label className="ui-stack ui-stack--sm">
-                          <span>Path prefix (optional)</span>
+                          <span><TermWithHint termId="pathPrefix">Path prefix</TermWithHint> (optional)</span>
                           <input className="ui-input" value={publishForm.pathInRepo} onChange={(event) => setPathInRepo(event.target.value)} />
                           <small className="ui-text-muted">Publishes artifact to: {publishPathPreview}</small>
                         </label>
                       </div>
-                      <label className="ui-stack ui-stack--sm"><span>Media type (optional)</span><input className="ui-input" value={publishForm.mediaType} onChange={(event) => setMediaType(event.target.value)} /></label>
+                      <label className="ui-stack ui-stack--sm"><span><TermWithHint termId="mediaType">Media type</TermWithHint> (optional)</span><input className="ui-input" value={publishForm.mediaType} onChange={(event) => setMediaType(event.target.value)} /></label>
+                      <label className="ui-checkbox-row">
+                        <input
+                          type="checkbox"
+                          checked={publishForm.createRepositoryIfMissing}
+                          onChange={(event) => setCreateRepositoryIfMissing(event.target.checked)}
+                        />
+                        <span>Create the repository if it does not exist</span>
+                      </label>
+                      {publishForm.createRepositoryIfMissing ? (
+                        <label className="ui-stack ui-stack--sm">
+                          <span>New repository visibility</span>
+                          <select
+                            className="ui-select"
+                            value={publishForm.repositoryVisibility}
+                            onChange={(event) => setRepositoryVisibility(event.target.value as "private" | "public")}
+                          >
+                            <option value="private">Private (recommended)</option>
+                            <option value="public">Public</option>
+                          </select>
+                          <small className="ui-text-muted">This choice is used only if the target repository must be created.</small>
+                        </label>
+                      ) : null}
                       <button
                         className="ui-button"
                         type="button"
@@ -486,6 +566,9 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
                           path: resolvePublishPath(),
                           revision: publishForm.revision,
                           mediaType: publishForm.mediaType,
+                          repositoryCreation: publishForm.createRepositoryIfMissing
+                            ? { approved: true, visibility: publishForm.repositoryVisibility }
+                            : undefined,
                         })}
                       >
                         {publishState.status === "loading" ? "Publishing..." : "Publish"}
@@ -496,7 +579,7 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
               ) : (
                 <p role="status">Publish is available after local bytes are present.</p>
               )}
-              {publishState.message ? (<p role={publishState.status === "error" ? "alert" : "status"}>{publishState.message}</p>) : null}
+              <TransientNotificationPublisher message={publishState.status !== "loading" ? publishState.message : undefined} title={publishState.status === "error" ? "Artifact publishing needs attention" : "Artifact published"} tone={publishState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
             </section>
           ) : null}
 
@@ -507,7 +590,11 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
               onRecheck={() => void recheckPublishedBacking()}
             />
           ) : null}
-        </div>
+              </div>
+            </section>
+          </div>
+        ) : null}
+      </div>
       </div>
     </section>
   );

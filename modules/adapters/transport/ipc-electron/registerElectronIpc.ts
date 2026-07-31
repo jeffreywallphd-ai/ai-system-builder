@@ -1,164 +1,261 @@
 import {
-  registerArtifactUploadIpc,
-  type RegisterArtifactUploadIpcDependencies,
-} from "./artifact-upload/registerArtifactUploadIpc";
-import type { IpcMainHandlePort } from "./ipcMainHandlePort";
+  registerDesktopArtifactIpc,
+  type RegisterDesktopArtifactIpcDependencies,
+} from "./registerDesktopArtifactIpc";
 import {
-  registerArtifactBrowserIpc,
-  type RegisterArtifactBrowserIpcDependencies,
-} from "./artifact-browser/registerArtifactBrowserIpc";
+  registerDesktopAssetIpc,
+  type RegisterDesktopAssetIpcDependencies,
+} from "./registerDesktopAssetIpc";
 import {
-  registerWebsiteIngestionIpc,
-  type RegisterWebsiteIngestionIpcDependencies,
-} from "./website-ingestion/registerWebsiteIngestionIpc";
+  registerDesktopDatasetPreparationIpc,
+  type RegisterDesktopDatasetPreparationIpcDependencies,
+} from "./registerDesktopDatasetPreparationIpc";
 import {
-  registerDatasetPreparationIpc,
-  type RegisterDatasetPreparationIpcDependencies,
-} from "./dataset-preparation/registerDatasetPreparationIpc";
+  registerDesktopImageGenerationIpc,
+  type RegisterDesktopImageGenerationIpcDependencies,
+} from "./registerDesktopImageGenerationIpc";
 import {
-  registerPythonRuntimeIpc,
-  type PythonRuntimeControlPort,
-} from "./python-runtime/registerPythonRuntimeIpc";
+  registerDesktopIngestionIpc,
+  type RegisterDesktopIngestionIpcDependencies,
+} from "./registerDesktopIngestionIpc";
 import {
-  registerApplicationSettingsIpc,
-  type RegisterApplicationSettingsIpcDependencies,
-} from "./settings/registerApplicationSettingsIpc";
+  registerDesktopModelIpc,
+  type RegisterDesktopModelIpcDependencies,
+} from "./registerDesktopModelIpc";
 import {
-  registerModelManagementIpc,
-  type RegisterModelManagementIpcDependencies,
-} from "./model/registerModelManagementIpc";
-import { registerImageGenerationIpc, type RegisterImageGenerationIpcDependencies } from "./image-generation/registerImageGenerationIpc";
-import { registerComfyUiRuntimeIpc } from "./comfyui-runtime/registerComfyUiRuntimeIpc";
-import type { RuntimeInstallerPort } from "../../../application/ports/runtime-installer/runtime-installer.port";
+  registerDesktopRuntimeIpc,
+  type RegisterDesktopRuntimeIpcDependencies,
+} from "./registerDesktopRuntimeIpc";
+import {
+  registerDesktopStartupIpc,
+  type RegisterDesktopStartupIpcDependencies,
+} from "./registerDesktopStartupIpc";
+import {
+  registerAssetAuthoringIpc,
+  type RegisterAssetAuthoringIpcDependencies,
+} from "./asset-authoring/registerAssetAuthoringIpc";
+import {
+  registerUserLibraryIpc,
+  type RegisterUserLibraryIpcDependencies,
+} from "./user-library/registerUserLibraryIpc";
+import {
+  registerEffectiveAssetProjectionIpc,
+  type RegisterEffectiveAssetProjectionIpcDependencies,
+} from "./effective-asset-projections/registerEffectiveAssetProjectionIpc";
+import {
+  registerAssetCompositionIpc,
+  type RegisterAssetCompositionIpcDependencies,
+} from "./asset-composition/registerAssetCompositionIpc";
+import {
+  registerConversationExecutionIpc,
+  type RegisterConversationExecutionIpcDependencies,
+} from "./conversations/registerConversationExecutionIpc";
+import {
+  registerAssetImplementationIpc,
+  type RegisterAssetImplementationIpcDependencies,
+} from "./asset-implementation/registerAssetImplementationIpc";
+import {
+  registerAssetPackageIpc,
+  type RegisterAssetPackageIpcDependencies,
+} from "./asset-package/registerAssetPackageIpc";
+import {
+  registerAssetStudioIpc,
+  type RegisterAssetStudioIpcDependencies,
+} from "./asset-studio/registerAssetStudioIpc";
+import {
+  registerSystemBuilderIpc,
+  type RegisterSystemBuilderIpcDependencies,
+} from "./system-builder/registerSystemBuilderIpc";
+import {
+  registerSystemBuildIpc,
+  type RegisterSystemBuildIpcDependencies,
+} from "./system-build/registerSystemBuildIpc";
+import {
+  registerSystemDataIpc,
+  type RegisterSystemDataIpcDependencies,
+} from "./system-data/registerSystemDataIpc";
+import {
+  registerSystemReviewIpc,
+  type RegisterSystemReviewIpcDependencies,
+} from "./system-review/registerSystemReviewIpc";
+import {
+  registerSystemDeploymentIpc,
+  type RegisterSystemDeploymentIpcDependencies,
+} from "./system-deployment/registerSystemDeploymentIpc";
+import {
+  registerSystemRunWorkflowIpc,
+  type RegisterSystemRunWorkflowIpcDependencies,
+} from "./system-run-workflow/registerSystemRunWorkflowIpc";
+export type {
+  AsyncFeatureProvider,
+  LazyProvidedObjectOptions,
+} from "./lazyFeatureProvider";
+
+export type DesktopIpcRegistrationMilestoneRecorder = (
+  milestone: string,
+) => void;
 
 export interface RegisterElectronIpcDependencies {
-  ipcMain: IpcMainHandlePort;
-  pythonRuntime: PythonRuntimeControlPort;
-  getHuggingFaceTokenStatus: RegisterArtifactBrowserIpcDependencies["getHuggingFaceTokenStatus"];
-  setHuggingFaceToken: RegisterArtifactBrowserIpcDependencies["setHuggingFaceToken"];
-  clearHuggingFaceToken: RegisterArtifactBrowserIpcDependencies["clearHuggingFaceToken"];
-  storeArtifactUploadUseCase: RegisterArtifactUploadIpcDependencies["storeArtifactUploadUseCase"];
-  browseArtifactsUseCase: RegisterArtifactBrowserIpcDependencies["browseArtifactsUseCase"];
-  browseUnregisteredArtifactsUseCase: RegisterArtifactBrowserIpcDependencies["browseUnregisteredArtifactsUseCase"];
-  registerUnregisteredArtifactUseCase: RegisterArtifactBrowserIpcDependencies["registerUnregisteredArtifactUseCase"];
-  deleteUnregisteredArtifactUseCase: RegisterArtifactBrowserIpcDependencies["deleteUnregisteredArtifactUseCase"];
-  deleteRegisteredArtifactUseCase: RegisterArtifactBrowserIpcDependencies["deleteRegisteredArtifactUseCase"];
-  readArtifactDetailUseCase: RegisterArtifactBrowserIpcDependencies["readArtifactDetailUseCase"];
-  readArtifactContentUseCase: RegisterArtifactBrowserIpcDependencies["readArtifactContentUseCase"];
-  artifactMediaViewRetrieval: RegisterArtifactBrowserIpcDependencies["artifactMediaViewRetrieval"];
-  publishArtifactToRepoUseCase: RegisterArtifactBrowserIpcDependencies["publishArtifactToRepoUseCase"];
-  browseHuggingFaceNamespaceDatasetsUseCase: RegisterArtifactBrowserIpcDependencies["browseHuggingFaceNamespaceDatasetsUseCase"];
-  browseHuggingFaceDatasetParquetFilesUseCase: RegisterArtifactBrowserIpcDependencies["browseHuggingFaceDatasetParquetFilesUseCase"];
-  verifyPublishedArtifactBackingUseCase: RegisterArtifactBrowserIpcDependencies["verifyPublishedArtifactBackingUseCase"];
-  verifyImportedArtifactSourceBackingUseCase: RegisterArtifactBrowserIpcDependencies["verifyImportedArtifactSourceBackingUseCase"];
-  registerArtifactFromRepoUseCase: RegisterArtifactBrowserIpcDependencies["registerArtifactFromRepoUseCase"];
-  localizeArtifactFromRepoUseCase: RegisterArtifactBrowserIpcDependencies["localizeArtifactFromRepoUseCase"];
-  ingestWebsitePageUseCase: RegisterWebsiteIngestionIpcDependencies["ingestWebsitePageUseCase"];
-  ingestWebsitePagesBatchUseCase: RegisterWebsiteIngestionIpcDependencies["ingestWebsitePagesBatchUseCase"];
-  prepareTrainingDatasetUseCase: RegisterDatasetPreparationIpcDependencies["prepareTrainingDatasetUseCase"];
-  listSettingsDefinitionsUseCase: RegisterApplicationSettingsIpcDependencies["listSettingsDefinitionsUseCase"];
-  readSettingsUseCase: RegisterApplicationSettingsIpcDependencies["readSettingsUseCase"];
-  updateSettingUseCase: RegisterApplicationSettingsIpcDependencies["updateSettingUseCase"];
-  clearSettingUseCase: RegisterApplicationSettingsIpcDependencies["clearSettingUseCase"];
-  resolveModelDefaultUseCase: RegisterApplicationSettingsIpcDependencies["resolveModelDefaultUseCase"];
-  browseModelsUseCase: RegisterModelManagementIpcDependencies["browseModelsUseCase"];
-  getModelDetailsUseCase: RegisterModelManagementIpcDependencies["getModelDetailsUseCase"];
-  listModelsUseCase: RegisterModelManagementIpcDependencies["listModelsUseCase"];
-  saveModelReferenceUseCase: RegisterModelManagementIpcDependencies["saveModelReferenceUseCase"];
-  downloadModelUseCase: RegisterModelManagementIpcDependencies["downloadModelUseCase"];
-  updateModelRecordUseCase: RegisterModelManagementIpcDependencies["updateModelRecordUseCase"];
-  deleteModelRecordUseCase: RegisterModelManagementIpcDependencies["deleteModelRecordUseCase"];
-  trainModelUseCase: RegisterModelManagementIpcDependencies["trainModelUseCase"];
-  validateModelUseCase: RegisterModelManagementIpcDependencies["validateModelUseCase"];
-  publishModelUseCase: RegisterModelManagementIpcDependencies["publishModelUseCase"];
-  generateImageUseCase: RegisterImageGenerationIpcDependencies["generateImageUseCase"];
-  imageGenerationFinalizationOrchestrator?: RegisterImageGenerationIpcDependencies["imageGenerationFinalizationOrchestrator"];
-  comfyUiInstaller: RuntimeInstallerPort;
-  comfyUiInstallRoot: string;
+  startup: RegisterDesktopStartupIpcDependencies;
+  artifact: RegisterDesktopArtifactIpcDependencies;
+  asset: RegisterDesktopAssetIpcDependencies;
+  model: RegisterDesktopModelIpcDependencies;
+  imageGeneration: RegisterDesktopImageGenerationIpcDependencies;
+  runtime: RegisterDesktopRuntimeIpcDependencies;
+  ingestion: RegisterDesktopIngestionIpcDependencies;
+  datasetPreparation: RegisterDesktopDatasetPreparationIpcDependencies;
+  userLibrary?: RegisterUserLibraryIpcDependencies;
+  assetAuthoring?: RegisterAssetAuthoringIpcDependencies;
+  effectiveAssetProjections?: RegisterEffectiveAssetProjectionIpcDependencies;
+  assetComposition?: RegisterAssetCompositionIpcDependencies;
+  conversations?: RegisterConversationExecutionIpcDependencies;
+  assetImplementations?: RegisterAssetImplementationIpcDependencies;
+  assetPackages?: RegisterAssetPackageIpcDependencies;
+  assetStudio?: RegisterAssetStudioIpcDependencies;
+  systemBuilder?: RegisterSystemBuilderIpcDependencies;
+  systemBuild?: RegisterSystemBuildIpcDependencies;
+  systemData?: RegisterSystemDataIpcDependencies;
+  systemReview?: RegisterSystemReviewIpcDependencies;
+  systemDeployment?: RegisterSystemDeploymentIpcDependencies;
+  systemRunWorkflow?: RegisterSystemRunWorkflowIpcDependencies;
+  recordMilestone?: DesktopIpcRegistrationMilestoneRecorder;
+}
+
+function registerGroup(
+  recordMilestone: DesktopIpcRegistrationMilestoneRecorder | undefined,
+  milestone: string,
+  register: () => void,
+): void {
+  recordMilestone?.(`desktop.host.ipc.${milestone}.register.before`);
+  register();
+  recordMilestone?.(`desktop.host.ipc.${milestone}.register.after`);
 }
 
 export function registerElectronIpc(
   dependencies: RegisterElectronIpcDependencies,
 ): void {
-  registerArtifactUploadIpc({
-    ipcMain: dependencies.ipcMain,
-    storeArtifactUploadUseCase: dependencies.storeArtifactUploadUseCase,
-  });
-
-  registerArtifactBrowserIpc({
-    ipcMain: dependencies.ipcMain,
-    getHuggingFaceTokenStatus: dependencies.getHuggingFaceTokenStatus,
-    setHuggingFaceToken: dependencies.setHuggingFaceToken,
-    clearHuggingFaceToken: dependencies.clearHuggingFaceToken,
-    browseArtifactsUseCase: dependencies.browseArtifactsUseCase,
-    browseUnregisteredArtifactsUseCase: dependencies.browseUnregisteredArtifactsUseCase,
-    registerUnregisteredArtifactUseCase: dependencies.registerUnregisteredArtifactUseCase,
-    deleteUnregisteredArtifactUseCase: dependencies.deleteUnregisteredArtifactUseCase,
-    deleteRegisteredArtifactUseCase: dependencies.deleteRegisteredArtifactUseCase,
-    readArtifactDetailUseCase: dependencies.readArtifactDetailUseCase,
-    readArtifactContentUseCase: dependencies.readArtifactContentUseCase,
-    artifactMediaViewRetrieval: dependencies.artifactMediaViewRetrieval,
-    publishArtifactToRepoUseCase: dependencies.publishArtifactToRepoUseCase,
-    browseHuggingFaceNamespaceDatasetsUseCase: dependencies.browseHuggingFaceNamespaceDatasetsUseCase,
-    browseHuggingFaceDatasetParquetFilesUseCase: dependencies.browseHuggingFaceDatasetParquetFilesUseCase,
-    verifyPublishedArtifactBackingUseCase: dependencies.verifyPublishedArtifactBackingUseCase,
-    verifyImportedArtifactSourceBackingUseCase: dependencies.verifyImportedArtifactSourceBackingUseCase,
-    registerArtifactFromRepoUseCase: dependencies.registerArtifactFromRepoUseCase,
-    localizeArtifactFromRepoUseCase: dependencies.localizeArtifactFromRepoUseCase,
-  });
-
-  registerWebsiteIngestionIpc({
-    ipcMain: dependencies.ipcMain,
-    ingestWebsitePageUseCase: dependencies.ingestWebsitePageUseCase,
-    ingestWebsitePagesBatchUseCase: dependencies.ingestWebsitePagesBatchUseCase,
-  });
-
-  registerDatasetPreparationIpc({
-    ipcMain: dependencies.ipcMain,
-    prepareTrainingDatasetUseCase: dependencies.prepareTrainingDatasetUseCase,
-  });
-
-  registerApplicationSettingsIpc({
-    ipcMain: dependencies.ipcMain,
-    listSettingsDefinitionsUseCase: dependencies.listSettingsDefinitionsUseCase,
-    readSettingsUseCase: dependencies.readSettingsUseCase,
-    updateSettingUseCase: dependencies.updateSettingUseCase,
-    clearSettingUseCase: dependencies.clearSettingUseCase,
-    resolveModelDefaultUseCase: dependencies.resolveModelDefaultUseCase,
-  });
-  registerModelManagementIpc({
-    ipcMain: dependencies.ipcMain,
-    browseModelsUseCase: dependencies.browseModelsUseCase,
-    getModelDetailsUseCase: dependencies.getModelDetailsUseCase,
-    listModelsUseCase: dependencies.listModelsUseCase,
-    saveModelReferenceUseCase: dependencies.saveModelReferenceUseCase,
-    downloadModelUseCase: dependencies.downloadModelUseCase,
-    updateModelRecordUseCase: dependencies.updateModelRecordUseCase,
-    deleteModelRecordUseCase: dependencies.deleteModelRecordUseCase,
-    trainModelUseCase: dependencies.trainModelUseCase,
-    validateModelUseCase: dependencies.validateModelUseCase,
-    publishModelUseCase: dependencies.publishModelUseCase,
-  });
-
-  registerImageGenerationIpc({
-    ipcMain: dependencies.ipcMain,
-    generateImageUseCase: dependencies.generateImageUseCase,
-    imageGenerationFinalizationOrchestrator: dependencies.imageGenerationFinalizationOrchestrator,
-  });
-
-  registerComfyUiRuntimeIpc({
-    ipcMain: dependencies.ipcMain,
-    installer: dependencies.comfyUiInstaller,
-    installRoot: dependencies.comfyUiInstallRoot,
-  });
-
-  registerPythonRuntimeIpc({
-    ipcMain: dependencies.ipcMain,
-    startPythonRuntime: dependencies.pythonRuntime.startPythonRuntime,
-    stopPythonRuntime: dependencies.pythonRuntime.stopPythonRuntime,
-    restartPythonRuntime: dependencies.pythonRuntime.restartPythonRuntime,
-    unloadPythonRuntimeModel: dependencies.pythonRuntime.unloadPythonRuntimeModel,
-    clearPythonRuntimeLogs: dependencies.pythonRuntime.clearPythonRuntimeLogs,
-    readPythonRuntimeStatus: dependencies.pythonRuntime.readPythonRuntimeStatus,
-  });
+  registerGroup(dependencies.recordMilestone, "startup-group", () =>
+    registerDesktopStartupIpc(dependencies.startup),
+  );
+  registerGroup(dependencies.recordMilestone, "artifact-group", () =>
+    registerDesktopArtifactIpc(dependencies.artifact),
+  );
+  registerGroup(dependencies.recordMilestone, "asset-group", () =>
+    registerDesktopAssetIpc(dependencies.asset),
+  );
+  registerGroup(dependencies.recordMilestone, "model-group", () =>
+    registerDesktopModelIpc(dependencies.model),
+  );
+  registerGroup(dependencies.recordMilestone, "image-generation-group", () =>
+    registerDesktopImageGenerationIpc(dependencies.imageGeneration),
+  );
+  registerGroup(dependencies.recordMilestone, "runtime-group", () =>
+    registerDesktopRuntimeIpc(dependencies.runtime),
+  );
+  registerGroup(dependencies.recordMilestone, "ingestion-group", () =>
+    registerDesktopIngestionIpc(dependencies.ingestion),
+  );
+  registerGroup(dependencies.recordMilestone, "dataset-preparation-group", () =>
+    registerDesktopDatasetPreparationIpc(dependencies.datasetPreparation),
+  );
+  if (dependencies.userLibrary) {
+    registerGroup(dependencies.recordMilestone, "user-library-group", () =>
+      registerUserLibraryIpc(dependencies.userLibrary!),
+    );
+  }
+  if (dependencies.assetAuthoring) {
+    registerGroup(dependencies.recordMilestone, "asset-authoring-group", () =>
+      registerAssetAuthoringIpc(dependencies.assetAuthoring!),
+    );
+  }
+  if (dependencies.effectiveAssetProjections) {
+    registerGroup(
+      dependencies.recordMilestone,
+      "effective-asset-projections-group",
+      () =>
+        registerEffectiveAssetProjectionIpc(
+          dependencies.effectiveAssetProjections!,
+        ),
+    );
+  }
+  if (dependencies.assetComposition) {
+    registerGroup(dependencies.recordMilestone, "asset-composition-group", () =>
+      registerAssetCompositionIpc(dependencies.assetComposition!),
+    );
+  }
+  if (dependencies.conversations) {
+    registerGroup(dependencies.recordMilestone, "conversations-group", () =>
+      registerConversationExecutionIpc(dependencies.conversations!),
+    );
+  }
+  if (dependencies.assetImplementations) {
+    registerGroup(
+      dependencies.recordMilestone,
+      "asset-implementations-group",
+      () => registerAssetImplementationIpc(dependencies.assetImplementations!),
+    );
+  }
+  if (dependencies.assetPackages) {
+    registerGroup(dependencies.recordMilestone, "asset-packages-group", () =>
+      registerAssetPackageIpc(dependencies.assetPackages!),
+    );
+  }
+  if (dependencies.assetStudio) {
+    registerGroup(dependencies.recordMilestone, "asset-studio-group", () =>
+      registerAssetStudioIpc(dependencies.assetStudio!),
+    );
+  }
+  if (dependencies.systemBuilder) {
+    registerGroup(dependencies.recordMilestone, "system-builder-group", () =>
+      registerSystemBuilderIpc(dependencies.systemBuilder!),
+    );
+  }
+  if (dependencies.systemBuild) {
+    registerGroup(dependencies.recordMilestone, "system-build-group", () =>
+      registerSystemBuildIpc(dependencies.systemBuild!),
+    );
+  }
+  if (dependencies.systemData) {
+    registerGroup(dependencies.recordMilestone, "system-data-group", () =>
+      registerSystemDataIpc(dependencies.systemData!),
+    );
+  }
+  if (dependencies.systemReview) {
+    registerGroup(dependencies.recordMilestone, "system-review-group", () =>
+      registerSystemReviewIpc(dependencies.systemReview!),
+    );
+  }
+  if (dependencies.systemDeployment) {
+    registerGroup(dependencies.recordMilestone, "system-deployment-group", () =>
+      registerSystemDeploymentIpc(dependencies.systemDeployment!),
+    );
+  }
+  if (dependencies.systemRunWorkflow) {
+    registerGroup(dependencies.recordMilestone, "system-run-workflow-group", () =>
+      registerSystemRunWorkflowIpc(dependencies.systemRunWorkflow!),
+    );
+  }
 }
+
+export type {
+  RegisterDesktopArtifactIpcDependencies,
+  RegisterDesktopAssetIpcDependencies,
+  RegisterDesktopDatasetPreparationIpcDependencies,
+  RegisterDesktopImageGenerationIpcDependencies,
+  RegisterDesktopIngestionIpcDependencies,
+  RegisterDesktopModelIpcDependencies,
+  RegisterDesktopRuntimeIpcDependencies,
+  RegisterDesktopStartupIpcDependencies,
+  RegisterUserLibraryIpcDependencies,
+  RegisterAssetAuthoringIpcDependencies,
+  RegisterEffectiveAssetProjectionIpcDependencies,
+  RegisterAssetCompositionIpcDependencies,
+  RegisterConversationExecutionIpcDependencies,
+  RegisterAssetImplementationIpcDependencies,
+  RegisterAssetPackageIpcDependencies,
+  RegisterAssetStudioIpcDependencies,
+  RegisterSystemBuilderIpcDependencies,
+  RegisterSystemReviewIpcDependencies,
+  RegisterSystemDeploymentIpcDependencies,
+  RegisterSystemRunWorkflowIpcDependencies,
+};

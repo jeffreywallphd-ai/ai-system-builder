@@ -34,11 +34,11 @@ interface WebsiteBatchIngestionItem {
 }
 
 type WebsiteUploadClient = ApiArtifactUploadClient & {
-  ingestWebsitePage?: (input: { url: string; mode?: WebsiteIngestionMode }) => Promise<
+  ingestWebsitePage?: (input: { url: string; mode?: WebsiteIngestionMode; workspaceId: string }) => Promise<
     | { ok: true; value: WebsiteSingleIngestionResult }
     | { ok: false; error: { message: string } }
   >;
-  ingestWebsitePagesBatch?: (input: { targets: Array<{ url: string }>; mode?: WebsiteIngestionMode }) => Promise<
+  ingestWebsitePagesBatch?: (input: { targets: Array<{ url: string }>; mode?: WebsiteIngestionMode; workspaceId: string }) => Promise<
     | { ok: true; value: { items: WebsiteBatchIngestionItem[]; summary: WebsiteBatchIngestionSummary } }
     | { ok: false; error: { message: string } }
   >;
@@ -74,6 +74,7 @@ export interface UseWebsiteArtifactIngestionResult {
 export function useWebsiteArtifactIngestion(
   uploadClient: WebsiteUploadClient,
   onUploadComplete?: () => void,
+  workspaceId?: string,
 ): UseWebsiteArtifactIngestionResult {
   const [websiteSingleUrl, setWebsiteSingleUrl] = useState("");
   const [websiteSingleMode, setWebsiteSingleMode] = useState<WebsiteIngestionMode>("automatic");
@@ -89,6 +90,11 @@ export function useWebsiteArtifactIngestion(
       return;
     }
 
+    if (!workspaceId?.trim()) {
+      setWebsiteSingleViewState({ status: "error", message: "Select an active workspace before scraping a web page." });
+      return;
+    }
+
     if (!uploadClient.ingestWebsitePage) {
       setWebsiteSingleViewState({ status: "error", message: "Website ingestion is unavailable for this client." });
       return;
@@ -97,7 +103,7 @@ export function useWebsiteArtifactIngestion(
     setWebsiteSingleViewState({ status: "loading", message: "Ingesting website page..." });
 
     try {
-      const response = await uploadClient.ingestWebsitePage({ url, mode: websiteSingleMode });
+      const response = await uploadClient.ingestWebsitePage({ url, mode: websiteSingleMode, workspaceId });
       if (!response.ok) {
         setWebsiteSingleViewState({ status: "error", message: response.error.message });
         return;
@@ -130,6 +136,11 @@ export function useWebsiteArtifactIngestion(
       return;
     }
 
+    if (!workspaceId?.trim()) {
+      setWebsiteBatchViewState({ status: "error", message: "Select an active workspace before scraping web pages." });
+      return;
+    }
+
     if (!uploadClient.ingestWebsitePagesBatch) {
       setWebsiteBatchViewState({ status: "error", message: "Website batch ingestion is unavailable for this client." });
       return;
@@ -138,7 +149,7 @@ export function useWebsiteArtifactIngestion(
     setWebsiteBatchViewState({ status: "loading", message: `Ingesting ${targets.length} website page(s)...` });
 
     try {
-      const response = await uploadClient.ingestWebsitePagesBatch({ targets, mode: websiteBatchMode });
+      const response = await uploadClient.ingestWebsitePagesBatch({ targets, mode: websiteBatchMode, workspaceId });
       if (!response.ok) {
         setWebsiteBatchViewState({ status: "error", message: response.error.message });
         return;

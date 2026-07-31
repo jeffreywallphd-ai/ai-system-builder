@@ -9,6 +9,7 @@ import {
   type IngestWebsitePagesBatchSuccessValue,
 } from "../ingestion";
 import { createTransportOperation } from "../transport";
+import { createWorkspaceId } from "../workspace";
 import {
   createIpcChannel,
   type IpcChannel,
@@ -56,6 +57,7 @@ export const DESKTOP_INGEST_WEBSITE_PAGES_BATCH_RESPONSE_CHANNEL = createIpcChan
 export interface DesktopWebsiteIngestionBoundaryContext {
   host: "desktop";
   source: string;
+  workspaceId?: string;
 }
 
 export interface DesktopIngestWebsitePageRequestPayload {
@@ -121,6 +123,7 @@ function normalizeBoundary(
   return {
     host: "desktop",
     source: normalizeRequiredTextField(boundary.source, "boundary.source"),
+    ...(boundary.workspaceId ? { workspaceId: createWorkspaceId(boundary.workspaceId) } : {}),
   };
 }
 

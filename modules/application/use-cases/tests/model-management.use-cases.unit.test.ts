@@ -1,4 +1,5 @@
 import { describe, expect, it, testDouble } from "../../../testing/node-test";
+import { createWorkspaceId } from "../../../contracts/workspace";
 
 import type { ArtifactCatalogDeletePort } from "../../ports/artifact-catalog";
 import type { ModelRegistryPort } from "../../ports/model";
@@ -12,6 +13,8 @@ import {
 } from "../model";
 
 describe("model management use cases", () => {
+  const workspaceId = createWorkspaceId("workspace.test");
+
   it("saves a remote Hugging Face reference as a model asset", async () => {
     const saveModelReference = testDouble.fn<ModelRegistryPort["saveModelReference"]>(async (request) => ({
       model: {
@@ -42,6 +45,7 @@ describe("model management use cases", () => {
     });
 
     const result = await useCase.execute({
+      workspaceId,
       provider: "huggingface",
       modelId: " openai/demo-model ",
       displayName: " Demo Model ",
@@ -52,6 +56,7 @@ describe("model management use cases", () => {
 
     const saveCall = saveModelReference.mock.calls[0]?.[0];
     expect(saveCall?.provider).toBe("huggingface");
+    expect(saveCall?.workspaceId).toBe(workspaceId);
     expect(saveCall?.modelId).toBe("openai/demo-model");
     expect(saveCall?.displayName).toBe("Demo Model");
     expect(result.model.lifecycleStatus).toBe("saved-reference");
@@ -71,6 +76,7 @@ describe("model management use cases", () => {
     });
 
     await expect(useCase.execute({
+      workspaceId,
       displayName: "Downloaded",
       source: "local",
       provider: "huggingface",
@@ -114,6 +120,7 @@ describe("model management use cases", () => {
     });
 
     const result = await useCase.execute({
+      workspaceId,
       provider: "huggingface",
       modelId: " org/demo-model ",
       displayName: " Demo Model ",
@@ -122,8 +129,15 @@ describe("model management use cases", () => {
       metadata: { likes: 10 },
     });
 
-    expect(ensureModelDownloaded).toHaveBeenCalledWith({ provider: "transformers", modelId: "org/demo-model" });
+    expect(ensureModelDownloaded).toHaveBeenCalledWith({
+      provider: "transformers",
+      modelId: "org/demo-model",
+      inferenceMode: "causal",
+      taskTags: ["text-generation"],
+      artifactForm: undefined,
+    });
     const registerCall = registerDownloadedModel.mock.calls[0]?.[0];
+    expect(registerCall?.workspaceId).toBe(workspaceId);
     expect(registerCall?.displayName).toBe("Demo Model");
     expect(registerCall?.source).toBe("huggingface");
     expect(registerCall?.provider).toBe("huggingface");
@@ -163,6 +177,7 @@ describe("model management use cases", () => {
     });
 
     const result = await useCase.execute({
+      workspaceId,
       displayName: "Adapter Output",
       artifactForm: "adapter",
       localPath: "/models/adapter",
@@ -172,6 +187,7 @@ describe("model management use cases", () => {
     });
 
     const generatedCall = registerGeneratedModel.mock.calls[0]?.[0];
+    expect(generatedCall?.workspaceId).toBe(workspaceId);
     expect(generatedCall?.generatedFromRunId).toBe("run-42");
     expect(result.model.baseModelId).toBe("base-1");
   });
@@ -205,6 +221,7 @@ describe("model management use cases", () => {
     });
 
     const result = await useCase.execute({
+      workspaceId,
       modelRecordId: "model-1",
       patch: {
         validationStatus: "valid",
@@ -250,10 +267,10 @@ describe("model management use cases", () => {
       artifactCatalogDeletePort: { deleteArtifactCatalogRecord },
     });
 
-    await useCase.execute({ modelRecordId: "model-1" });
+    await useCase.execute({ workspaceId, modelRecordId: "model-1" });
     expect(deleteArtifactCatalogRecord).not.toHaveBeenCalled();
 
-    const withArtifacts = await useCase.execute({ modelRecordId: "model-1", deleteBackingArtifacts: true });
+    const withArtifacts = await useCase.execute({ workspaceId, modelRecordId: "model-1", deleteBackingArtifacts: true });
     expect(deleteArtifactCatalogRecord).toHaveBeenCalledTimes(1);
     expect(withArtifacts.deletedBackingArtifactIds).toEqual(["art-1"]);
   });

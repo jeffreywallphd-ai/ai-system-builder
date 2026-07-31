@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { ModelDefaultConfig, ModelDefaultInferenceMode } from "../../../../../../../modules/contracts/settings";
+import { TermWithHint } from "../../../../../../../modules/ui/shared";
 
 export interface ModelDefaultSettingFieldProps {
   value?: unknown;
@@ -28,7 +29,7 @@ export function ModelDefaultSettingField(props: ModelDefaultSettingFieldProps) {
   return (
     <div className="settings-model-default ui-grid ui-grid--two">
       <label className="ui-stack ui-stack--sm">
-        <span>Provider</span>
+        <span><TermWithHint termId="provider">Provider</TermWithHint></span>
         <select
           className="ui-input"
           value={draft.provider}
@@ -39,7 +40,7 @@ export function ModelDefaultSettingField(props: ModelDefaultSettingFieldProps) {
         </select>
       </label>
       <label className="ui-stack ui-stack--sm">
-        <span>Model ID</span>
+        <span><TermWithHint termId="modelId">Model ID</TermWithHint></span>
         <input
           data-testid="model-default-model-id"
           className="ui-input"
@@ -49,7 +50,7 @@ export function ModelDefaultSettingField(props: ModelDefaultSettingFieldProps) {
         />
       </label>
       <label className="ui-stack ui-stack--sm">
-        <span>Inference mode</span>
+        <span><TermWithHint termId="inference">Inference mode</TermWithHint></span>
         <select
           data-testid="model-default-inference-mode"
           className="ui-input"
@@ -61,7 +62,7 @@ export function ModelDefaultSettingField(props: ModelDefaultSettingFieldProps) {
         </select>
       </label>
       <label className="ui-stack ui-stack--sm">
-        <span>Device</span>
+        <span><TermWithHint termId="runtime">Device</TermWithHint></span>
         <select
           className="ui-input"
           value={draft.device ?? ""}
@@ -75,7 +76,7 @@ export function ModelDefaultSettingField(props: ModelDefaultSettingFieldProps) {
         </select>
       </label>
       <label className="ui-stack ui-stack--sm">
-        <span>Torch dtype</span>
+        <span><TermWithHint termId="settingValue">Torch dtype</TermWithHint></span>
         <select
           className="ui-input"
           value={draft.torchDtype ?? ""}

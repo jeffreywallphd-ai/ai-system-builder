@@ -1,0 +1,62 @@
+import type { ConversationFailure, ConversationSessionRecord } from '../conversations';
+import { createTransportOperation } from '../transport';
+import { createIpcChannel } from './ipc-channel';
+import type { IpcRequest } from './ipc-request';
+
+export const DESKTOP_CONVERSATION_EXECUTION_V2_CREATE_SESSION_OPERATION = createTransportOperation('conversations.execution', 'create-session');
+export const DESKTOP_CONVERSATION_EXECUTION_V2_APPROVE_SESSION_OPERATION = createTransportOperation('conversations.execution', 'approve-session');
+export const DESKTOP_CONVERSATION_EXECUTION_V2_LIST_SESSIONS_OPERATION = createTransportOperation('conversations.execution', 'list-sessions');
+export const DESKTOP_CONVERSATION_EXECUTION_V2_READ_SESSION_OPERATION = createTransportOperation('conversations.execution', 'read-session');
+export const DESKTOP_CONVERSATION_EXECUTION_V2_READ_TRANSCRIPT_OPERATION = createTransportOperation('conversations.execution', 'read-transcript');
+export const DESKTOP_CONVERSATION_EXECUTION_V2_READ_TURN_ACTIVITY_OPERATION = createTransportOperation('conversations.execution', 'read-turn-activity');
+export const DESKTOP_CONVERSATION_EXECUTION_V2_SUBMIT_TURN_OPERATION = createTransportOperation('conversations.execution', 'submit-turn');
+export const DESKTOP_CONVERSATION_EXECUTION_V2_CANCEL_TURN_OPERATION = createTransportOperation('conversations.execution', 'cancel-turn');
+export const DESKTOP_CONVERSATION_EXECUTION_V2_RETRY_TURN_OPERATION = createTransportOperation('conversations.execution', 'retry-turn');
+
+export const DESKTOP_CONVERSATION_EXECUTION_V2_CREATE_SESSION_REQUEST_CHANNEL = createIpcChannel(DESKTOP_CONVERSATION_EXECUTION_V2_CREATE_SESSION_OPERATION, 'request');
+export const DESKTOP_CONVERSATION_EXECUTION_V2_APPROVE_SESSION_REQUEST_CHANNEL = createIpcChannel(DESKTOP_CONVERSATION_EXECUTION_V2_APPROVE_SESSION_OPERATION, 'request');
+export const DESKTOP_CONVERSATION_EXECUTION_V2_LIST_SESSIONS_REQUEST_CHANNEL = createIpcChannel(DESKTOP_CONVERSATION_EXECUTION_V2_LIST_SESSIONS_OPERATION, 'request');
+export const DESKTOP_CONVERSATION_EXECUTION_V2_READ_SESSION_REQUEST_CHANNEL = createIpcChannel(DESKTOP_CONVERSATION_EXECUTION_V2_READ_SESSION_OPERATION, 'request');
+export const DESKTOP_CONVERSATION_EXECUTION_V2_READ_TRANSCRIPT_REQUEST_CHANNEL = createIpcChannel(DESKTOP_CONVERSATION_EXECUTION_V2_READ_TRANSCRIPT_OPERATION, 'request');
+export const DESKTOP_CONVERSATION_EXECUTION_V2_READ_TURN_ACTIVITY_REQUEST_CHANNEL = createIpcChannel(DESKTOP_CONVERSATION_EXECUTION_V2_READ_TURN_ACTIVITY_OPERATION, 'request');
+export const DESKTOP_CONVERSATION_EXECUTION_V2_SUBMIT_TURN_REQUEST_CHANNEL = createIpcChannel(DESKTOP_CONVERSATION_EXECUTION_V2_SUBMIT_TURN_OPERATION, 'request');
+export const DESKTOP_CONVERSATION_EXECUTION_V2_CANCEL_TURN_REQUEST_CHANNEL = createIpcChannel(DESKTOP_CONVERSATION_EXECUTION_V2_CANCEL_TURN_OPERATION, 'request');
+export const DESKTOP_CONVERSATION_EXECUTION_V2_RETRY_TURN_REQUEST_CHANNEL = createIpcChannel(DESKTOP_CONVERSATION_EXECUTION_V2_RETRY_TURN_OPERATION, 'request');
+
+export type DesktopConversationCreateSessionRequestPayload = { workspaceId: string; sourceExecutionPlanId: string };
+export type DesktopConversationApproveSessionRequestPayload = { workspaceId: string; conversationSessionId: string; executionApprovalId: string };
+export type DesktopConversationListSessionsRequestPayload = { workspaceId: string; status?: string; includeArchived?: boolean; sourceExecutionPlanId?: string; cursor?: string; limit?: number };
+export type DesktopConversationReadSessionRequestPayload = { workspaceId: string; conversationSessionId: string };
+export type DesktopConversationReadTranscriptRequestPayload = { workspaceId: string; conversationSessionId: string };
+export type DesktopConversationReadTurnActivityRequestPayload = { workspaceId: string; conversationSessionId: string; conversationTurnId: string };
+export type DesktopConversationSubmitTurnRequestPayload = { workspaceId: string; conversationSessionId: string; text: string; operationId: string };
+export type DesktopConversationCancelTurnRequestPayload = { workspaceId: string; conversationSessionId: string; conversationTurnId: string; operationId: string };
+export type DesktopConversationRetryTurnRequestPayload = { workspaceId: string; conversationSessionId: string; conversationTurnId: string; operationId: string };
+
+export type DesktopConversationActionAvailabilityPayload = { mayOpen:boolean; mayApprove:boolean; maySubmitMessage:boolean; mayClose:boolean; mayArchive:boolean; mayCancel:boolean; mayRetry:boolean };
+export type DesktopConversationSessionAvailabilityPayload = { setupStatus:string; blockerCode?:string; blockerMessage?:string; hostSubmitSupport:'supported'|'unsupported'|'unavailable'; cancellation:{supported:boolean;available:boolean}; retry:{supported:boolean;available:boolean;deferred:boolean}; streaming:{supported:false;available:false} };
+export type DesktopConversationSessionListItemPayload = { conversationSessionId:string; sessionLabel:string; sourceExecutionPlanId:string; sourceCompositionPlanId?:string; sessionStatus:string; approvalStatus:string; runtimeStatus:string; turnCount:number; latestAssistantResponseAvailable:boolean; latestActivityAt:string; createdAt:string; updatedAt:string; closedAt?:string; archivedAt?:string; actions:DesktopConversationActionAvailabilityPayload; availability:DesktopConversationSessionAvailabilityPayload };
+export type DesktopConversationSessionDetailPayload = DesktopConversationSessionListItemPayload & { source:{systemLabel:string;sourceExecutionPlanId:string;sourceCompositionPlanId?:string;sourceRuntimeReadinessBindingId?:string;basedOnReusableConversationalSystem:boolean;sourceKind:string;summary:string}; latestTurnId?:string; latestTurnStatus?:string; latestRunStatus?:string; latestFailureCategory?:string };
+export type DesktopConversationTranscriptPayload = { ok:true; turns:Array<{turnId:string; sequence:number; turnStatus:string; createdAt:string; updatedAt:string; completedAt?:string; activityState:string; executionRunId?:string; userMessage?:{id:string;role:'user';text:string;createdAt:string}; assistantResponse?:{id:string;role:'assistant';text:string;createdAt:string;completedAt?:string;status?:string}}> } | { ok:false; code:string; message:string };
+export type DesktopConversationTurnActivityPayload = { ok:true; turnId:string; turnStatus:string; executionRunId?:string; executionStatus?:string; progressState:string; failureCategory?:string; assistantResponseAvailable:boolean; cancellation:{supported:boolean;available:boolean}; retry:{supported:boolean;available:boolean;deferred:boolean}; events:Array<{at:string;kind:string;label:string}>; createdAt:string; updatedAt:string; completedAt?:string } | { ok:false; code:string; message:string };
+export type DesktopConversationOperationResultPayload<T> = { kind:'success'; value:T } | ConversationFailure;
+export type DesktopConversationListSessionsResponsePayload = { items: DesktopConversationSessionListItemPayload[]; nextCursor?: string };
+export type DesktopConversationReadSessionResponsePayload = DesktopConversationSessionDetailPayload | undefined;
+export type DesktopConversationCreateSessionResponsePayload = DesktopConversationOperationResultPayload<ConversationSessionRecord>;
+export type DesktopConversationApproveSessionResponsePayload = DesktopConversationOperationResultPayload<ConversationSessionRecord>;
+export type DesktopConversationReadTranscriptResponsePayload = DesktopConversationTranscriptPayload;
+export type DesktopConversationReadTurnActivityResponsePayload = DesktopConversationTurnActivityPayload;
+export type DesktopConversationSubmitTurnResponsePayload = DesktopConversationOperationResultPayload<{ conversationTurnId: string; executionRunId: string; assistantResponseId?: string; status: string; assistantResponseText?: string }>;
+export type DesktopConversationCancelTurnResponsePayload = DesktopConversationOperationResultPayload<{ status: 'not-supported' | 'cancelled' }>;
+export type DesktopConversationRetryTurnResponsePayload = DesktopConversationOperationResultPayload<{ status: 'not-supported'; conversationTurnId: string }>;
+export type DesktopConversationIpcFailurePayload = ConversationFailure;
+
+export type DesktopConversationCreateSessionRequest = IpcRequest<DesktopConversationCreateSessionRequestPayload>;
+export type DesktopConversationApproveSessionRequest = IpcRequest<DesktopConversationApproveSessionRequestPayload>;
+export type DesktopConversationListSessionsRequest = IpcRequest<DesktopConversationListSessionsRequestPayload>;
+export type DesktopConversationReadSessionRequest = IpcRequest<DesktopConversationReadSessionRequestPayload>;
+export type DesktopConversationReadTranscriptRequest = IpcRequest<DesktopConversationReadTranscriptRequestPayload>;
+export type DesktopConversationReadTurnActivityRequest = IpcRequest<DesktopConversationReadTurnActivityRequestPayload>;
+export type DesktopConversationSubmitTurnRequest = IpcRequest<DesktopConversationSubmitTurnRequestPayload>;
+export type DesktopConversationCancelTurnRequest = IpcRequest<DesktopConversationCancelTurnRequestPayload>;
+export type DesktopConversationRetryTurnRequest = IpcRequest<DesktopConversationRetryTurnRequestPayload>;

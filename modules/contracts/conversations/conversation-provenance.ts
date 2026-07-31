@@ -1,0 +1,2 @@
+export type ConversationProvenanceKind='conversation-session-created'|'conversation-session-approved'|'conversation-session-activated'|'conversation-session-marked-stale'|'conversation-session-closed'|'conversation-turn-created'|'conversation-user-message-recorded'|'conversation-assistant-response-recorded'|'conversation-turn-succeeded'|'conversation-turn-failed'|'conversation-turn-cancelled';
+export type ConversationProvenanceEntry={kind:ConversationProvenanceKind;at:string;actorId?:string;workspaceId?:string;conversationSessionId?:string;conversationTurnId?:string};

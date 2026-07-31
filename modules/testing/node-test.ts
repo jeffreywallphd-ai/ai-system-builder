@@ -22,7 +22,12 @@ type ExpectStringMatchingMatcher = {
   readonly regex: RegExp;
 };
 
-type MatcherValue = ExpectAnyMatcher | ExpectStringMatchingMatcher;
+type ExpectObjectContainingMatcher = {
+  readonly __matcher: "objectContaining";
+  readonly value: Record<string, unknown>;
+};
+
+type MatcherValue = ExpectAnyMatcher | ExpectStringMatchingMatcher | ExpectObjectContainingMatcher;
 
 type SpyFunction<TFunction extends AnyFunction = AnyFunction> = TFunction & {
   mock: {
@@ -30,8 +35,12 @@ type SpyFunction<TFunction extends AnyFunction = AnyFunction> = TFunction & {
   };
   mockResolvedValue(value: Awaited<ReturnType<TFunction>>): SpyFunction<TFunction>;
   mockRejectedValue(error: unknown): SpyFunction<TFunction>;
+  mockResolvedValueOnce(value: Awaited<ReturnType<TFunction>>): SpyFunction<TFunction>;
+  mockRejectedValueOnce(error: unknown): SpyFunction<TFunction>;
+  mockReturnValue(value: ReturnType<TFunction>): SpyFunction<TFunction>;
   mockReturnThis(): SpyFunction<TFunction>;
   mockImplementation(implementation: TFunction): SpyFunction<TFunction>;
+  mockImplementationOnce(implementation: TFunction): SpyFunction<TFunction>;
   mockClear(): SpyFunction<TFunction>;
 };
 
@@ -47,7 +56,8 @@ function isMatcherValue(value: unknown): value is MatcherValue {
     value !== null &&
     "__matcher" in value &&
     ((value as MatcherValue).__matcher === "any" ||
-      (value as MatcherValue).__matcher === "stringMatching")
+      (value as MatcherValue).__matcher === "stringMatching" ||
+      (value as MatcherValue).__matcher === "objectContaining")
   );
 }
 
@@ -55,6 +65,10 @@ function deepMatch(actual: any, expected: any): boolean {
   if (isMatcherValue(expected)) {
     if (expected.__matcher === "any") {
       return actual instanceof expected.ctor || typeof actual === expected.ctor.name.toLowerCase();
+    }
+
+    if (expected.__matcher === "objectContaining") {
+      return deepMatch(actual, expected.value);
     }
 
     return typeof actual === "string" && expected.regex.test(actual);
@@ -93,10 +107,16 @@ function createSpyFunction<TFunction extends AnyFunction>(
   implementation?: TFunction,
 ): SpyFunction<TFunction> {
   let impl = implementation;
+  const onceImplementations: TFunction[] = [];
   const calls: Parameters<TFunction>[] = [];
 
   const spy = ((...args: Parameters<TFunction>) => {
     calls.push(args);
+
+    const onceImplementation = onceImplementations.shift();
+    if (onceImplementation) {
+      return onceImplementation(...args);
+    }
 
     if (!impl) {
       return undefined as ReturnType<TFunction>;
@@ -117,6 +137,21 @@ function createSpyFunction<TFunction extends AnyFunction>(
     return spy;
   };
 
+  spy.mockResolvedValueOnce = (value: Awaited<ReturnType<TFunction>>) => {
+    onceImplementations.push((() => Promise.resolve(value)) as TFunction);
+    return spy;
+  };
+
+  spy.mockRejectedValueOnce = (error: unknown) => {
+    onceImplementations.push((() => Promise.reject(error)) as TFunction);
+    return spy;
+  };
+
+  spy.mockReturnValue = (value: ReturnType<TFunction>) => {
+    impl = (() => value) as TFunction;
+    return spy;
+  };
+
   spy.mockReturnThis = () => {
     impl = function thisImplementation(this: unknown) {
       return this as ReturnType<TFunction>;
@@ -126,6 +161,11 @@ function createSpyFunction<TFunction extends AnyFunction>(
 
   spy.mockImplementation = (nextImplementation: TFunction) => {
     impl = nextImplementation;
+    return spy;
+  };
+
+  spy.mockImplementationOnce = (nextImplementation: TFunction) => {
+    onceImplementations.push(nextImplementation);
     return spy;
   };
 
@@ -207,6 +247,22 @@ function createMatchers(actual: unknown, isNot: boolean) {
         `Expected ${formatExpected(actual)} ${isNot ? "not " : ""}to match ${formatExpected(expected)}.`,
       );
     },
+    toMatch(expected: string | RegExp) {
+      if (typeof actual !== "string") {
+        throwWithMessage("toMatch requires a string.");
+      }
+
+      const matches =
+        typeof expected === "string"
+          ? actual.includes(expected)
+          : expected.test(actual);
+
+      assertWithNot(
+        isNot,
+        matches,
+        `Expected ${formatExpected(actual)} ${isNot ? "not " : ""}to match ${formatExpected(expected)}.`,
+      );
+    },
     toBeUndefined() {
       if (isNot) {
         assert.notStrictEqual(actual, undefined);
@@ -231,6 +287,18 @@ function createMatchers(actual: unknown, isNot: boolean) {
       }
 
       assert.strictEqual(actualType, expectedType);
+    },
+    toBeGreaterThan(expected: number) {
+      if (typeof actual !== "number") {
+        throwWithMessage("toBeGreaterThan requires a number.");
+      }
+
+      if (isNot) {
+        assert.equal(actual > expected, false);
+        return;
+      }
+
+      assert.equal(actual > expected, true);
     },
     toHaveBeenCalledTimes(expected: number) {
       ensureSpy(actual, "toHaveBeenCalledTimes");
@@ -325,6 +393,18 @@ function createMatchers(actual: unknown, isNot: boolean) {
 
 function createResolveMatchers(actual: Promise<unknown>, isNot: boolean) {
   return {
+    async toBe(expected: unknown) {
+      const value = await actual;
+      createMatchers(value, isNot).toBe(expected);
+    },
+    async toEqual(expected: unknown) {
+      const value = await actual;
+      createMatchers(value, isNot).toEqual(expected);
+    },
+    async toMatchObject(expected: unknown) {
+      const value = await actual;
+      createMatchers(value, isNot).toMatchObject(expected);
+    },
     async toBeUndefined() {
       const value = await actual;
       createMatchers(value, isNot).toBeUndefined();
@@ -402,6 +482,11 @@ expect.stringMatching = (regex: RegExp): ExpectStringMatchingMatcher => ({
   regex,
 });
 
+expect.objectContaining = (value: Record<string, unknown>): ExpectObjectContainingMatcher => ({
+  __matcher: "objectContaining",
+  value,
+});
+
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2)
   ? (<T>() => T extends B ? 1 : 2) extends (<T>() => T extends A ? 1 : 2)
     ? true
@@ -414,8 +499,12 @@ export function expectTypeOf<T>() {
     },
     toExtend<U>(..._args: T extends U ? [] : ["Expected type to extend target"]) {
     },
+    toMatchTypeOf<U>(..._args: T extends U ? [] : ["Expected type to match target"]) {
+    },
     not: {
       toExtend<U>(..._args: T extends U ? ["Expected type not to extend target"] : []) {
+      },
+      toMatchTypeOf<U>(..._args: T extends U ? ["Expected type not to match target"] : []) {
       },
     },
   };

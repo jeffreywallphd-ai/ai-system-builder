@@ -23,12 +23,38 @@ export * from "./localize-artifact-from-repo.use-case";
 
 export * from "./browse-huggingface-namespace-datasets.use-case";
 export * from "./browse-huggingface-dataset-parquet-files.use-case";
+export * from "./import-huggingface-files.use-case";
 export * from "./delete-registered-artifact.use-case";
 export * from "./ingest-website-page.use-case";
 export * from "./ingest-website-pages-batch.use-case";
 export * from "./prepare-training-dataset-from-artifacts.use-case";
+export * from "./dataset-version";
+export * from "./ingestion-acquisition";
 export * from "./settings";
 
 export * from "./model";
 
 export * from "./image-generation";
+
+export * from "./workspace";
+
+export * from "./asset";
+
+export * from "./user-library";
+
+export * from "./asset-authoring";
+
+export * from "./effective-asset-projections";
+
+export * from "./asset-composition";
+
+export * from "./runtime-readiness";
+
+export * from "./execution-plans";
+export * from "./conversations";
+export * from "./system-builder";
+export * from "./system-build";
+export * from "./system-data";
+export * from "./system-review";
+export * from "./system-deployment";
+export * from "./system-run-workflow";

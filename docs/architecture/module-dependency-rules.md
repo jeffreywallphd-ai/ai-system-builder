@@ -1,5 +1,9 @@
 # Module Dependency Rules
 
+- Status: current
+- Related decisions: `docs/adr/ADR-0001-repository-structure.md`, `docs/adr/ADR-0003-host-model-and-transport-separation.md`
+- Verification: `docs/architecture/architecture-verification.md`
+
 This document defines practical dependency rules for `ai-system-builder`.
 
 The objective is simple: keep core logic independent, keep boundaries explicit, and stop accidental coupling early.
@@ -66,6 +70,7 @@ Configuration loading/resolution remains a composition-root responsibility today
 **Rule**: Contracts are stable cross-boundary language, not implementation containers.
 Contract families must compose, not fork:
 
+- Keep `modules/contracts/asset` as the shared Asset Kernel contract family for core asset identity/lifecycle/provenance/reference/definition/instance/binding/composition vocabulary only; detailed configuration, AI-context, port/rule validation, registry/application ports, persistence, and resource-backed mapping belong to later Asset Kernel contract baseline layers.
 - Treat `modules/contracts/transport` as the shared transport envelope and operation base.
 - Keep API and IPC contracts as specializations over that shared base.
 - Keep operation identity and IPC channel derivation helper-driven rather than ad hoc string assembly.
@@ -149,10 +154,11 @@ Avoid these patterns even if they "work":
 
 ## Enforcement status
 
-Some automated rule enforcement may be added later (lint/import rules/build checks), but full tooling is **not yet finalized**.
+`npm run architecture:check` scans production TypeScript imports, re-exports, `require` calls, and dynamic imports under `modules/` and `apps/` against `dev-tools/config/architecture-boundaries.json`. It enforces the stable cross-layer prohibitions in this document and reports boundary-specific remediation.
 
-Current baseline enforcement already includes contract-surface and anti-drift invariant tests under `modules/contracts/**/tests` and `modules/contracts/tests`.
-Treat this document as mandatory review criteria in addition to those tests.
+The generic guard excludes tests because boundary tests intentionally inspect outer layers. Contract-surface, transport-parity, public-exposure, and feature-specific anti-drift invariants remain covered by focused tests under `modules/**/tests` and the full `npm test` suite.
+
+The current guard evaluates repository-relative source edges. Exact existing exceptions must include a mismatch-register link and remediation reason in the machine-readable configuration; exceptions do not authorize another source to repeat the dependency. Package-alias, transitive external dependency, business-policy placement, and app bootstrap quality still require focused tests and review.
 
 ## Lightweight review checklist
 
@@ -166,3 +172,22 @@ Before merging, confirm:
 - Are apps only bootstrapping/composing?
 
 If any answer is "no", refactor before adding more code on top.
+
+## Security dependency guidance
+
+- `modules/contracts/security` may be imported broadly where contract types are needed.
+- Application security ports may be used by application services/use cases.
+- `modules/adapters/security` implementations must not be imported by domain/application layers.
+- Transport adapters may compose security adapters/ports.
+- Feature UI must not import server security adapters.
+- Security adapters must not depend on feature UI.
+- Domain code must not depend on Express, TLS socket APIs, filesystem credential stores, or crypto implementation details.
+
+See ADR-0015.
+
+
+## Workspace context propagation rule
+
+Workspace-owned operations cannot rely on renderer/page gating alone. The active workspace id must be represented in shared contracts and carried through clients, API/IPC/preload transports, application use cases, port interfaces, provider seams, and persistence adapters. Lower layers should fail safely or return sanitized diagnostics when workspace context is absent; they must not invent default/global workspace ids or add legacy global fallback behavior.
+
+Topic ownership belongs in the specific architecture docs for each area. Do not maintain phase/topic maps in dependency rules; update the relevant architecture doc and ADR instead.

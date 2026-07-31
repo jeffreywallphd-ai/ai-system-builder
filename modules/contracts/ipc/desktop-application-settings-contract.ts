@@ -20,6 +20,7 @@ export const DESKTOP_APPLICATION_SETTINGS_READ_OPERATION = createTransportOperat
 export const DESKTOP_APPLICATION_SETTINGS_UPDATE_OPERATION = createTransportOperation("application-settings", "update");
 export const DESKTOP_APPLICATION_SETTINGS_CLEAR_OPERATION = createTransportOperation("application-settings", "clear");
 export const DESKTOP_APPLICATION_SETTINGS_RESOLVE_MODEL_DEFAULT_OPERATION = createTransportOperation("application-settings", "resolve-model-default");
+export const DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_OPERATION = createTransportOperation("application-settings", "select-folder");
 
 export const DESKTOP_APPLICATION_SETTINGS_LIST_DEFINITIONS_REQUEST_CHANNEL = createIpcChannel(
   DESKTOP_APPLICATION_SETTINGS_LIST_DEFINITIONS_OPERATION,
@@ -63,6 +64,15 @@ export const DESKTOP_APPLICATION_SETTINGS_RESOLVE_MODEL_DEFAULT_REQUEST_CHANNEL 
 );
 export const DESKTOP_APPLICATION_SETTINGS_RESOLVE_MODEL_DEFAULT_RESPONSE_CHANNEL = createIpcChannel(
   DESKTOP_APPLICATION_SETTINGS_RESOLVE_MODEL_DEFAULT_OPERATION,
+  "response",
+);
+
+export const DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_REQUEST_CHANNEL = createIpcChannel(
+  DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_OPERATION,
+  "request",
+);
+export const DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_RESPONSE_CHANNEL = createIpcChannel(
+  DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_OPERATION,
   "response",
 );
 
@@ -141,6 +151,31 @@ export type DesktopApplicationSettingsResolveModelDefaultResponse = IpcResponse<
   typeof DESKTOP_APPLICATION_SETTINGS_RESOLVE_MODEL_DEFAULT_RESPONSE_CHANNEL.value
 >;
 
+export interface DesktopApplicationSettingsSelectFolderPayload {
+  title?: string;
+  defaultPath?: string;
+}
+
+export interface DesktopApplicationSettingsSelectFolderResult {
+  canceled: boolean;
+  path?: string;
+}
+
+export type DesktopApplicationSettingsSelectFolderRequest = IpcRequest<
+  DesktopApplicationSettingsSelectFolderPayload,
+  typeof DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_OPERATION,
+  Record<string, never>,
+  typeof DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_REQUEST_CHANNEL.value
+>;
+
+export type DesktopApplicationSettingsSelectFolderResponse = IpcResponse<
+  DesktopApplicationSettingsSelectFolderResult,
+  Record<string, unknown>,
+  typeof DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_OPERATION,
+  Record<string, never>,
+  typeof DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_RESPONSE_CHANNEL.value
+>;
+
 export function createDesktopApplicationSettingsListDefinitionsRequest(
   payload: ListApplicationSettingDefinitionsRequest = {},
   options?: { requestId?: string; correlationId?: string },
@@ -215,8 +250,22 @@ export function createDesktopApplicationSettingsResolveModelDefaultSuccessRespon
   );
 }
 
+export function createDesktopApplicationSettingsSelectFolderRequest(
+  payload: DesktopApplicationSettingsSelectFolderPayload = {},
+  options?: { requestId?: string; correlationId?: string },
+): DesktopApplicationSettingsSelectFolderRequest {
+  return createIpcRequest(DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_REQUEST_CHANNEL, payload, options);
+}
+
+export function createDesktopApplicationSettingsSelectFolderSuccessResponse(
+  result: DesktopApplicationSettingsSelectFolderResult,
+  options?: { requestId?: string; correlationId?: string },
+): DesktopApplicationSettingsSelectFolderResponse {
+  return createIpcSuccessResponse(DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_RESPONSE_CHANNEL, result, options);
+}
+
 export function getDesktopApplicationSettingsChannel(
-  operation: "listDefinitions" | "readSettings" | "updateSetting" | "clearSetting" | "resolveModelDefault",
+  operation: "listDefinitions" | "readSettings" | "updateSetting" | "clearSetting" | "resolveModelDefault" | "selectFolder",
   kind: "request" | "response",
 ) {
   if (operation === "listDefinitions") {
@@ -232,6 +281,9 @@ export function getDesktopApplicationSettingsChannel(
   }
   if (operation === "clearSetting") {
     return kind === "request" ? DESKTOP_APPLICATION_SETTINGS_CLEAR_REQUEST_CHANNEL : DESKTOP_APPLICATION_SETTINGS_CLEAR_RESPONSE_CHANNEL;
+  }
+  if (operation === "selectFolder") {
+    return kind === "request" ? DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_REQUEST_CHANNEL : DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_RESPONSE_CHANNEL;
   }
   return kind === "request"
     ? DESKTOP_APPLICATION_SETTINGS_RESOLVE_MODEL_DEFAULT_REQUEST_CHANNEL

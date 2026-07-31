@@ -65,6 +65,14 @@ describe("desktop python runtime ipc contract", () => {
         localPath: " /tmp/models/flan ",
       }],
       activeTaskCount: 0,
+      generationCapacity: {
+        schemaVersion: "1",
+        capturedAt: "2026-07-30T12:00:00.000Z",
+        decoderAvailable: true,
+        schemaSupported: true,
+        logicalProcessorCount: 12,
+        totalSystemMemoryBytes: 32 * 1024 ** 3,
+      },
       logs: [{
         timestamp: "2026-04-20T00:00:00.000Z",
         level: "info",
@@ -75,6 +83,10 @@ describe("desktop python runtime ipc contract", () => {
     expect(statusResponse.value.logs[0]?.message).toBe("Runtime is healthy.");
     expect(statusResponse.value.loadedModels?.[0]?.modelId).toBe("google/flan-t5-base");
     expect(statusResponse.value.loadedModels?.[0]?.localPath).toBe("/tmp/models/flan");
+    expect(statusResponse.value.generationCapacity).toMatchObject({
+      decoderAvailable: true,
+      logicalProcessorCount: 12,
+    });
 
     const controlResponse = createDesktopPythonRuntimeControlSuccessResponse({
       supervisorStatus: "starting",

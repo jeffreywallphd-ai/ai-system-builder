@@ -1,0 +1,4 @@
+import type { ExecutionPlanId, ExecutionStepId, ExecutionDependencyId, ExecutionInputId, ExecutionOutputId, ExecutionAdapterReferenceId, ExecutionSafetyGateId, ExecutionResourceEstimateId } from './execution-plan-identity';
+import type { ExecutionBlocker, ExecutionDiagnostic } from './execution-plan-diagnostics';
+import type { ExecutionStepKind, ExecutionStepStatus } from './execution-plan-status';
+export interface ExecutionStep { id: ExecutionStepId; sourceCompositionPlanId: string; sourceNodeId?: string; sourceRelationshipId?: string; planId?: ExecutionPlanId; kind: ExecutionStepKind; status: ExecutionStepStatus; label: string; summary?: string; requiredAdapterReferenceIds: ExecutionAdapterReferenceId[]; inputIds: ExecutionInputId[]; outputIds: ExecutionOutputId[]; dependencyIds: ExecutionDependencyId[]; safetyGateIds: ExecutionSafetyGateId[]; resourceEstimateId?: ExecutionResourceEstimateId; blockers: ExecutionBlocker[]; diagnostics: ExecutionDiagnostic[]; }

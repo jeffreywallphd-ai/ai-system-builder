@@ -7,13 +7,14 @@ out/
 coverage/
 .vite/
 .webpack/
-package-lock.json
-
 *.log
 npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+*.safetensors
+*.pt
 
 .env
 .env.local
@@ -38,12 +39,19 @@ apps/server/dist/
 apps/server/*.tsbuildinfo
 apps/server/.local/
 apps/server/server-artifacts/
+apps/server/server-runtime/
 
 apps/web-thin-client/dist/
 apps/web-thin-client/.vite/
 apps/web-thin-client/*.tsbuildinfo
 
+apps/thin-client/.local/
+
 artifacts/
+docs/tmp/
+
+# Local Codex helper tooling
+.local-codex/
 
 *.tsbuildinfo
 

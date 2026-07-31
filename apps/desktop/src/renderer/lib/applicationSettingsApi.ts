@@ -38,6 +38,7 @@ export interface ApplicationSettingsApi {
   updateSetting: (input: { key: string; value: ApplicationSettingPrimitiveValue }) => Promise<DesktopApplicationSettingUpdateResult>;
   clearSetting: (input: { key: string }) => Promise<DesktopApplicationSettingUpdateResult>;
   resolveModelDefault: (input: { taskKey: string; featureKey?: string }) => Promise<DesktopResolvedModelDefaultResult>;
+  selectFolder: (input?: { title?: string; defaultPath?: string }) => Promise<{ canceled: boolean; path?: string }>;
 }
 
 function normalizeOptionalCategory(category?: string): ApplicationSettingCategory | undefined {
@@ -136,6 +137,17 @@ export function createApplicationSettingsApi(): ApplicationSettingsApi {
         await resolver(normalizedInput),
         (value) => value as DesktopResolvedModelDefaultResult,
         "Failed to resolve model default.",
+      );
+    },
+
+    async selectFolder(input = {}) {
+      if (!desktopApi.selectApplicationSettingsFolder) {
+        throw new Error("Desktop preload folder selection bridge is unavailable.");
+      }
+      return ensureSuccess(
+        await desktopApi.selectApplicationSettingsFolder(input),
+        (value) => value as { canceled: boolean; path?: string },
+        "Failed to select folder.",
       );
     },
   };

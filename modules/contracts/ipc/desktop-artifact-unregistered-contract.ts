@@ -3,6 +3,7 @@ import {
   type UnregisteredArtifactBrowseSuccessValue,
   normalizeUnregisteredArtifactBrowseSuccessValue,
 } from "../artifact-browser";
+import { createWorkspaceId } from "../workspace";
 import { createTransportOperation } from "../transport";
 import { createIpcChannel } from "./ipc-channel";
 import { createIpcRequest, type IpcRequest } from "./ipc-request";
@@ -55,11 +56,13 @@ interface DesktopArtifactBoundaryContext {
 }
 
 export interface DesktopArtifactUnregisteredBrowseRequestPayload {
+  workspaceId: string;
   boundary: DesktopArtifactBoundaryContext;
 }
 
 export interface DesktopArtifactUnregisteredMutationRequestPayload {
   storageKey: string;
+  workspaceId: string;
   boundary: DesktopArtifactBoundaryContext;
 }
 
@@ -99,6 +102,7 @@ export function createDesktopArtifactUnregisteredBrowseRequest(
   return createIpcRequest(
     DESKTOP_ARTIFACT_UNREGISTERED_BROWSE_REQUEST_CHANNEL,
     {
+      workspaceId: createWorkspaceId(payload.workspaceId),
       boundary: normalizeBoundary(payload.boundary),
     },
     options,
@@ -138,6 +142,7 @@ export function createDesktopArtifactUnregisteredRegisterRequest(
     DESKTOP_ARTIFACT_UNREGISTERED_REGISTER_REQUEST_CHANNEL,
     {
       storageKey: normalizeRequiredText(payload.storageKey, "storageKey"),
+      workspaceId: createWorkspaceId(payload.workspaceId),
       boundary: normalizeBoundary(payload.boundary),
     },
     options,
@@ -177,6 +182,7 @@ export function createDesktopArtifactUnregisteredDeleteRequest(
     DESKTOP_ARTIFACT_UNREGISTERED_DELETE_REQUEST_CHANNEL,
     {
       storageKey: normalizeRequiredText(payload.storageKey, "storageKey"),
+      workspaceId: createWorkspaceId(payload.workspaceId),
       boundary: normalizeBoundary(payload.boundary),
     },
     options,

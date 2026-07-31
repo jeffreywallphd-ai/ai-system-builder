@@ -3,7 +3,7 @@
 - Status: accepted
 - Date: 2026-04-14
 - Deciders: ai-system-builder maintainers
-- Related: docs/adr/ADR-0001-repository-structure.md, docs/architecture/persistence-and-storage.md
+- Related: docs/adr/ADR-0001-repository-structure.md, docs/adr/ADR-0025-deployment-shaped-structured-persistence.md, docs/architecture/persistence-and-storage.md
 
 ## Context
 
@@ -43,6 +43,13 @@ Key risk areas to avoid:
 - Linkage between persistence metadata and storage artifacts should be explicit (for example through normalized artifact keys or `ArtifactStorageBinding`) without collapsing persistence and storage into one concern.
 
 This sets architectural roles without freezing all storage implementation specifics at this stage.
+
+## Current Implementation Note
+
+ADR-0025 supersedes only this ADR's repository-wide PostgreSQL default. Local
+structured persistence now targets SQLite; campus, corporate, and cloud server
+deployments target PostgreSQL. Persistence/storage separation and every storage
+family decision in this ADR remain accepted.
 
 ## Alternatives Considered
 

@@ -1,3 +1,4 @@
+import type { WorkspaceId } from "../workspace";
 import { normalizeArtifactReference, type ArtifactReference } from "../artifact";
 import { normalizeTransformReference, type TransformReference } from "../transform";
 import {
@@ -19,6 +20,7 @@ export interface DatasetDescriptor<
   TMetadata extends DatasetMetadata = DatasetMetadata,
 > {
   id: string;
+  workspaceId?: WorkspaceId;
   name?: string;
   schema?: DatasetSchemaSummary;
   sourceArtifacts?: ArtifactReference[];
@@ -55,6 +57,7 @@ export function normalizeDatasetDescriptor<
   return {
     ...descriptor,
     id: normalizeRequiredText(descriptor.id, "Dataset id"),
+    workspaceId: descriptor.workspaceId,
     name: normalizeOptionalText(descriptor.name),
     schema: normalizeDatasetSchemaSummary(descriptor.schema),
     sourceArtifacts: descriptor.sourceArtifacts?.map(normalizeArtifactReference),

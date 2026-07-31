@@ -6,6 +6,7 @@ describe("storage family invariants", () => {
   it("exports shared foundation plus specialized artifact-object and artifact-repo surfaces", () => {
     expect(Object.keys(storageContracts).sort()).toEqual([
       "ARTIFACT_STORAGE_BINDING_ROLES",
+      "RETRIEVE_ARTIFACT_MAXIMUM_BYTES",
       "STORAGE_ARTIFACT_KEY_FORMAT_DESCRIPTION",
       "STORAGE_INSTANCE_KINDS",
       "STORAGE_KINDS",
@@ -133,6 +134,7 @@ describe("storage family invariants", () => {
 
     expect(objectRequest).toEqual({
       key: "artifacts/report.json",
+      maximumBytes: undefined,
       requestId: undefined,
       correlationId: undefined,
     });

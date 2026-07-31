@@ -1,4 +1,9 @@
-import { describe, expect, it, testDouble } from "../../../../testing/node-test";
+import {
+  describe,
+  expect,
+  it,
+  testDouble,
+} from "../../../../testing/node-test";
 
 import {
   DESKTOP_ARTIFACT_BROWSE_REQUEST_CHANNEL,
@@ -33,6 +38,8 @@ import {
   DESKTOP_HUGGING_FACE_TOKEN_CLEAR_REQUEST_CHANNEL,
   DESKTOP_HUGGING_FACE_NAMESPACE_DATASETS_BROWSE_REQUEST_CHANNEL,
   DESKTOP_HUGGING_FACE_DATASET_PARQUET_FILES_BROWSE_REQUEST_CHANNEL,
+  DESKTOP_HUGGING_FACE_FILES_IMPORT_REQUEST_CHANNEL,
+  createDesktopHuggingFaceFilesImportRequest,
 } from "../../../../contracts/ipc";
 import {
   createDesktopArtifactRegisterFromRepoIpcHandler,
@@ -46,29 +53,40 @@ import {
 
 function createUseCases() {
   return {
+    senderTrust: { isTrustedSender: () => true },
     browseArtifactsUseCase: { execute: testDouble.fn() },
     browseUnregisteredArtifactsUseCase: { execute: testDouble.fn() },
     registerUnregisteredArtifactUseCase: { execute: testDouble.fn() },
     deleteUnregisteredArtifactUseCase: { execute: testDouble.fn() },
+    deleteRegisteredArtifactUseCase: { execute: testDouble.fn() },
     readArtifactDetailUseCase: { execute: testDouble.fn() },
     readArtifactContentUseCase: { execute: testDouble.fn() },
-    artifactMediaViewRetrieval: { retrieveArtifactViewerMediaByStorageKey: testDouble.fn() },
+    artifactMediaViewRetrieval: {
+      retrieveArtifactViewerMediaByStorageKey: testDouble.fn(),
+    },
     publishArtifactToRepoUseCase: { execute: testDouble.fn() },
     browseHuggingFaceNamespaceDatasetsUseCase: { execute: testDouble.fn() },
     browseHuggingFaceDatasetParquetFilesUseCase: { execute: testDouble.fn() },
+    importHuggingFaceFilesUseCase: { execute: testDouble.fn() },
     verifyPublishedArtifactBackingUseCase: { execute: testDouble.fn() },
     verifyImportedArtifactSourceBackingUseCase: { execute: testDouble.fn() },
     registerArtifactFromRepoUseCase: { execute: testDouble.fn() },
     localizeArtifactFromRepoUseCase: { execute: testDouble.fn() },
     getHuggingFaceTokenStatus: testDouble.fn(() => ({ configured: false })),
-    setHuggingFaceToken: testDouble.fn(() => ({ configured: true, maskedToken: "••••1234" })),
+    setHuggingFaceToken: testDouble.fn(() => ({
+      configured: true,
+      maskedToken: "••••1234",
+    })),
     clearHuggingFaceToken: testDouble.fn(() => ({ configured: false })),
   };
 }
 
 describe("registerArtifactBrowserIpc", () => {
   it("registers browse/read/content channels and delegates to focused use case ports", async () => {
-    const handlers = new Map<string, Parameters<IpcMainHandlePort["handle"]>[1]>();
+    const handlers = new Map<
+      string,
+      Parameters<IpcMainHandlePort["handle"]>[1]
+    >();
     const ipcMain: IpcMainHandlePort = {
       handle: testDouble.fn((channel, listener) => {
         handlers.set(channel, listener);
@@ -76,11 +94,19 @@ describe("registerArtifactBrowserIpc", () => {
     };
 
     const dependencies = createUseCases();
-    (dependencies.browseArtifactsUseCase.execute as ReturnType<typeof testDouble.fn>).mockResolvedValue({
+    (
+      dependencies.browseArtifactsUseCase.execute as ReturnType<
+        typeof testDouble.fn
+      >
+    ).mockResolvedValue({
       ok: true,
       value: { items: [] },
     });
-    (dependencies.readArtifactDetailUseCase.execute as ReturnType<typeof testDouble.fn>).mockResolvedValue({
+    (
+      dependencies.readArtifactDetailUseCase.execute as ReturnType<
+        typeof testDouble.fn
+      >
+    ).mockResolvedValue({
       ok: true,
       value: {
         artifact: {
@@ -89,7 +115,11 @@ describe("registerArtifactBrowserIpc", () => {
         },
       },
     });
-    (dependencies.readArtifactContentUseCase.execute as ReturnType<typeof testDouble.fn>).mockResolvedValue({
+    (
+      dependencies.readArtifactContentUseCase.execute as ReturnType<
+        typeof testDouble.fn
+      >
+    ).mockResolvedValue({
       ok: true,
       value: {
         content: {
@@ -100,11 +130,24 @@ describe("registerArtifactBrowserIpc", () => {
       },
     });
 
-    (dependencies.artifactMediaViewRetrieval.retrieveArtifactViewerMediaByStorageKey as ReturnType<typeof testDouble.fn>).mockResolvedValue({
+    (
+      dependencies.artifactMediaViewRetrieval
+        .retrieveArtifactViewerMediaByStorageKey as ReturnType<
+        typeof testDouble.fn
+      >
+    ).mockResolvedValue({
       ok: true,
-      value: { storageKey: "uploads/a.png", mediaType: "image/png", bytes: new Uint8Array([1]) },
+      value: {
+        storageKey: "uploads/a.png",
+        mediaType: "image/png",
+        bytes: new Uint8Array([1]),
+      },
     });
-    (dependencies.publishArtifactToRepoUseCase.execute as ReturnType<typeof testDouble.fn>).mockResolvedValue({
+    (
+      dependencies.publishArtifactToRepoUseCase.execute as ReturnType<
+        typeof testDouble.fn
+      >
+    ).mockResolvedValue({
       ok: true,
       value: {
         target: {
@@ -117,7 +160,11 @@ describe("registerArtifactBrowserIpc", () => {
         verification: { exists: true, verifiedAt: "2026-04-17T00:00:00.000Z" },
       },
     });
-    (dependencies.verifyPublishedArtifactBackingUseCase.execute as ReturnType<typeof testDouble.fn>).mockResolvedValue({
+    (
+      dependencies.verifyPublishedArtifactBackingUseCase.execute as ReturnType<
+        typeof testDouble.fn
+      >
+    ).mockResolvedValue({
       ok: true,
       value: {
         target: {
@@ -130,7 +177,10 @@ describe("registerArtifactBrowserIpc", () => {
         verification: { exists: true, verifiedAt: "2026-04-17T00:00:00.000Z" },
       },
     });
-    (dependencies.verifyImportedArtifactSourceBackingUseCase.execute as ReturnType<typeof testDouble.fn>).mockResolvedValue({
+    (
+      dependencies.verifyImportedArtifactSourceBackingUseCase
+        .execute as ReturnType<typeof testDouble.fn>
+    ).mockResolvedValue({
       ok: true,
       value: {
         target: {
@@ -143,7 +193,11 @@ describe("registerArtifactBrowserIpc", () => {
         verification: { exists: true, verifiedAt: "2026-04-17T00:00:00.000Z" },
       },
     });
-    (dependencies.registerArtifactFromRepoUseCase.execute as ReturnType<typeof testDouble.fn>).mockResolvedValue({
+    (
+      dependencies.registerArtifactFromRepoUseCase.execute as ReturnType<
+        typeof testDouble.fn
+      >
+    ).mockResolvedValue({
       ok: true,
       value: {
         artifactId: "artifacts/20260418000000-import001",
@@ -156,11 +210,18 @@ describe("registerArtifactBrowserIpc", () => {
             revision: "main",
             locator: "openai/demo/images/a.png",
           },
-          verification: { exists: true, verifiedAt: "2026-04-17T00:00:00.000Z" },
+          verification: {
+            exists: true,
+            verifiedAt: "2026-04-17T00:00:00.000Z",
+          },
         },
       },
     });
-    (dependencies.localizeArtifactFromRepoUseCase.execute as ReturnType<typeof testDouble.fn>).mockResolvedValue({
+    (
+      dependencies.localizeArtifactFromRepoUseCase.execute as ReturnType<
+        typeof testDouble.fn
+      >
+    ).mockResolvedValue({
       ok: true,
       value: {
         artifactId: "artifacts/20260418000000-local01",
@@ -182,30 +243,76 @@ describe("registerArtifactBrowserIpc", () => {
 
     registerArtifactBrowserIpc({ ipcMain, ...dependencies });
 
-    expect(ipcMain.handle).toHaveBeenCalledTimes(18);
-    expect(handlers.has(DESKTOP_HUGGING_FACE_TOKEN_GET_REQUEST_CHANNEL.value)).toBe(true);
-    expect(handlers.has(DESKTOP_HUGGING_FACE_TOKEN_SET_REQUEST_CHANNEL.value)).toBe(true);
-    expect(handlers.has(DESKTOP_HUGGING_FACE_TOKEN_CLEAR_REQUEST_CHANNEL.value)).toBe(true);
-    expect(handlers.has(DESKTOP_HUGGING_FACE_NAMESPACE_DATASETS_BROWSE_REQUEST_CHANNEL.value)).toBe(true);
-    expect(handlers.has(DESKTOP_HUGGING_FACE_DATASET_PARQUET_FILES_BROWSE_REQUEST_CHANNEL.value)).toBe(true);
-    expect(handlers.has(DESKTOP_ARTIFACT_BROWSE_REQUEST_CHANNEL.value)).toBe(true);
-    expect(handlers.has(DESKTOP_ARTIFACT_UNREGISTERED_BROWSE_REQUEST_CHANNEL.value)).toBe(true);
-    expect(handlers.has(DESKTOP_ARTIFACT_UNREGISTERED_REGISTER_REQUEST_CHANNEL.value)).toBe(true);
-    expect(handlers.has(DESKTOP_ARTIFACT_UNREGISTERED_DELETE_REQUEST_CHANNEL.value)).toBe(true);
-    expect(handlers.has(DESKTOP_ARTIFACT_REGISTERED_DELETE_REQUEST_CHANNEL.value)).toBe(true);
-    expect(handlers.has(DESKTOP_ARTIFACT_READ_REQUEST_CHANNEL.value)).toBe(true);
-    expect(handlers.has(DESKTOP_ARTIFACT_CONTENT_READ_REQUEST_CHANNEL.value)).toBe(true);
-    expect(handlers.has(DESKTOP_ARTIFACT_MEDIA_VIEW_REQUEST_CHANNEL.value)).toBe(true);
-    expect(handlers.has(DESKTOP_ARTIFACT_PUBLISH_REQUEST_CHANNEL.value)).toBe(true);
-    expect(handlers.has(DESKTOP_ARTIFACT_PUBLISH_VERIFY_REQUEST_CHANNEL.value)).toBe(true);
-    expect(handlers.has(DESKTOP_ARTIFACT_SOURCE_VERIFY_REQUEST_CHANNEL.value)).toBe(true);
-    expect(handlers.has(DESKTOP_ARTIFACT_REGISTER_FROM_REPO_REQUEST_CHANNEL.value)).toBe(true);
-    expect(handlers.has(DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_REQUEST_CHANNEL.value)).toBe(true);
+    expect(ipcMain.handle).toHaveBeenCalledTimes(19);
+    expect(
+      handlers.has(DESKTOP_HUGGING_FACE_TOKEN_GET_REQUEST_CHANNEL.value),
+    ).toBe(true);
+    expect(
+      handlers.has(DESKTOP_HUGGING_FACE_TOKEN_SET_REQUEST_CHANNEL.value),
+    ).toBe(true);
+    expect(
+      handlers.has(DESKTOP_HUGGING_FACE_TOKEN_CLEAR_REQUEST_CHANNEL.value),
+    ).toBe(true);
+    expect(
+      handlers.has(
+        DESKTOP_HUGGING_FACE_NAMESPACE_DATASETS_BROWSE_REQUEST_CHANNEL.value,
+      ),
+    ).toBe(true);
+    expect(
+      handlers.has(
+        DESKTOP_HUGGING_FACE_DATASET_PARQUET_FILES_BROWSE_REQUEST_CHANNEL.value,
+      ),
+    ).toBe(true);
+    expect(
+      handlers.has(DESKTOP_HUGGING_FACE_FILES_IMPORT_REQUEST_CHANNEL.value),
+    ).toBe(true);
+    expect(handlers.has(DESKTOP_ARTIFACT_BROWSE_REQUEST_CHANNEL.value)).toBe(
+      true,
+    );
+    expect(
+      handlers.has(DESKTOP_ARTIFACT_UNREGISTERED_BROWSE_REQUEST_CHANNEL.value),
+    ).toBe(true);
+    expect(
+      handlers.has(
+        DESKTOP_ARTIFACT_UNREGISTERED_REGISTER_REQUEST_CHANNEL.value,
+      ),
+    ).toBe(true);
+    expect(
+      handlers.has(DESKTOP_ARTIFACT_UNREGISTERED_DELETE_REQUEST_CHANNEL.value),
+    ).toBe(true);
+    expect(
+      handlers.has(DESKTOP_ARTIFACT_REGISTERED_DELETE_REQUEST_CHANNEL.value),
+    ).toBe(true);
+    expect(handlers.has(DESKTOP_ARTIFACT_READ_REQUEST_CHANNEL.value)).toBe(
+      true,
+    );
+    expect(
+      handlers.has(DESKTOP_ARTIFACT_CONTENT_READ_REQUEST_CHANNEL.value),
+    ).toBe(true);
+    expect(
+      handlers.has(DESKTOP_ARTIFACT_MEDIA_VIEW_REQUEST_CHANNEL.value),
+    ).toBe(true);
+    expect(handlers.has(DESKTOP_ARTIFACT_PUBLISH_REQUEST_CHANNEL.value)).toBe(
+      true,
+    );
+    expect(
+      handlers.has(DESKTOP_ARTIFACT_PUBLISH_VERIFY_REQUEST_CHANNEL.value),
+    ).toBe(true);
+    expect(
+      handlers.has(DESKTOP_ARTIFACT_SOURCE_VERIFY_REQUEST_CHANNEL.value),
+    ).toBe(true);
+    expect(
+      handlers.has(DESKTOP_ARTIFACT_REGISTER_FROM_REPO_REQUEST_CHANNEL.value),
+    ).toBe(true);
+    expect(
+      handlers.has(DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_REQUEST_CHANNEL.value),
+    ).toBe(true);
 
     await handlers.get(DESKTOP_ARTIFACT_BROWSE_REQUEST_CHANNEL.value)?.(
       {},
       createDesktopArtifactBrowseRequest({
         artifactFamily: "image",
+        workspaceId: "workspace-a",
         boundary: { host: "desktop", source: "desktop.renderer" },
       }),
     );
@@ -213,6 +320,7 @@ describe("registerArtifactBrowserIpc", () => {
       {},
       createDesktopArtifactReadRequest({
         locator: { storageKey: "uploads/a.png" },
+        workspaceId: "workspace-a",
         boundary: { host: "desktop", source: "desktop.renderer" },
       }),
     );
@@ -220,6 +328,7 @@ describe("registerArtifactBrowserIpc", () => {
       {},
       createDesktopArtifactContentReadRequest({
         locator: { storageKey: "uploads/a.png" },
+        workspaceId: "workspace-a",
         boundary: { host: "desktop", source: "desktop.renderer" },
       }),
     );
@@ -227,12 +336,14 @@ describe("registerArtifactBrowserIpc", () => {
       {},
       createDesktopArtifactMediaViewRequest({
         storageKey: "uploads/a.png",
+        workspaceId: "workspace-a",
         boundary: { host: "desktop", source: "desktop.renderer" },
       }),
     );
     await handlers.get(DESKTOP_ARTIFACT_PUBLISH_REQUEST_CHANNEL.value)?.(
       {},
       createDesktopArtifactPublishRequest({
+        workspaceId: "workspace-a",
         artifactId: "uploads/a.png",
         target: {
           provider: "huggingface",
@@ -256,7 +367,9 @@ describe("registerArtifactBrowserIpc", () => {
         boundary: { host: "desktop", source: "desktop.renderer" },
       }),
     );
-    await handlers.get(DESKTOP_ARTIFACT_REGISTER_FROM_REPO_REQUEST_CHANNEL.value)?.(
+    await handlers.get(
+      DESKTOP_ARTIFACT_REGISTER_FROM_REPO_REQUEST_CHANNEL.value,
+    )?.(
       {},
       createDesktopArtifactRegisterFromRepoRequest({
         target: {
@@ -267,9 +380,12 @@ describe("registerArtifactBrowserIpc", () => {
         boundary: { host: "desktop", source: "desktop.renderer" },
       }),
     );
-    await handlers.get(DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_REQUEST_CHANNEL.value)?.(
+    await handlers.get(
+      DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_REQUEST_CHANNEL.value,
+    )?.(
       {},
       createDesktopArtifactLocalizeFromRepoRequest({
+        workspaceId: "workspace-a",
         artifactId: "artifacts/20260418000000-local01",
         boundary: { host: "desktop", source: "desktop.renderer" },
       }),
@@ -277,37 +393,73 @@ describe("registerArtifactBrowserIpc", () => {
 
     expect(dependencies.browseArtifactsUseCase.execute).toHaveBeenCalledWith(
       { artifactFamily: "image" },
-      { requestId: undefined, correlationId: undefined },
+      {
+        requestId: undefined,
+        correlationId: undefined,
+        workspaceId: "workspace-a",
+      },
     );
     expect(dependencies.readArtifactDetailUseCase.execute).toHaveBeenCalledWith(
       { locator: { storageKey: "uploads/a.png" } },
-      { requestId: undefined, correlationId: undefined },
-    );
-    expect(dependencies.readArtifactContentUseCase.execute).toHaveBeenCalledWith(
-      { locator: { storageKey: "uploads/a.png" } },
-      { requestId: undefined, correlationId: undefined },
-    );
-    expect(dependencies.artifactMediaViewRetrieval.retrieveArtifactViewerMediaByStorageKey).toHaveBeenCalledWith(
-      { storageKey: "uploads/a.png" },
-      { requestId: undefined, correlationId: undefined },
-    );
-    expect(dependencies.publishArtifactToRepoUseCase.execute).toHaveBeenCalledWith({
-      artifactId: "uploads/a.png",
-      target: {
-        provider: "huggingface",
-        repository: "openai/demo",
-        path: "images/a.png",
-        revision: undefined,
+      {
+        requestId: undefined,
+        correlationId: undefined,
+        workspaceId: "workspace-a",
       },
-      mediaType: undefined,
-    });
-    expect(dependencies.verifyPublishedArtifactBackingUseCase.execute).toHaveBeenCalledWith({
+    );
+    expect(
+      dependencies.readArtifactContentUseCase.execute,
+    ).toHaveBeenCalledWith(
+      { locator: { storageKey: "uploads/a.png" } },
+      {
+        requestId: undefined,
+        correlationId: undefined,
+        workspaceId: "workspace-a",
+      },
+    );
+    expect(
+      dependencies.artifactMediaViewRetrieval
+        .retrieveArtifactViewerMediaByStorageKey,
+    ).toHaveBeenCalledWith(
+      { storageKey: "uploads/a.png" },
+      {
+        requestId: undefined,
+        correlationId: undefined,
+        workspaceId: "workspace-a",
+      },
+    );
+    expect(
+      dependencies.publishArtifactToRepoUseCase.execute,
+    ).toHaveBeenCalledWith(
+      {
+        artifactId: "uploads/a.png",
+        target: {
+          provider: "huggingface",
+          repository: "openai/demo",
+          path: "images/a.png",
+          revision: undefined,
+        },
+        mediaType: undefined,
+      },
+      {
+        requestId: undefined,
+        correlationId: undefined,
+        workspaceId: "workspace-a",
+      },
+    );
+    expect(
+      dependencies.verifyPublishedArtifactBackingUseCase.execute,
+    ).toHaveBeenCalledWith({
       artifactId: "uploads/a.png",
     });
-    expect(dependencies.verifyImportedArtifactSourceBackingUseCase.execute).toHaveBeenCalledWith({
+    expect(
+      dependencies.verifyImportedArtifactSourceBackingUseCase.execute,
+    ).toHaveBeenCalledWith({
       artifactId: "uploads/a.png",
     });
-    expect(dependencies.registerArtifactFromRepoUseCase.execute).toHaveBeenCalledWith(
+    expect(
+      dependencies.registerArtifactFromRepoUseCase.execute,
+    ).toHaveBeenCalledWith(
       {
         target: {
           provider: "huggingface",
@@ -320,14 +472,22 @@ describe("registerArtifactBrowserIpc", () => {
       },
       { requestId: undefined, correlationId: undefined },
     );
-    expect(dependencies.localizeArtifactFromRepoUseCase.execute).toHaveBeenCalledWith({
-      artifactId: "artifacts/20260418000000-local01",
-    });
+    expect(
+      dependencies.localizeArtifactFromRepoUseCase.execute,
+    ).toHaveBeenCalledWith(
+      { artifactId: "artifacts/20260418000000-local01" },
+      {
+        requestId: undefined,
+        correlationId: undefined,
+        workspaceId: "workspace-a",
+      },
+    );
   });
 
   it("maps descriptor-oriented content failures through explicit response helper", () => {
     const request = createDesktopArtifactContentReadRequest({
       locator: { storageKey: "uploads/missing.png" },
+      workspaceId: "workspace-a",
       boundary: { host: "desktop", source: "desktop.renderer" },
     });
 
@@ -354,35 +514,45 @@ describe("registerArtifactBrowserIpc", () => {
   });
 
   it("maps request correlation metadata with an explicit helper", () => {
-    const request = createDesktopArtifactBrowseRequest({
-      artifactFamily: "image",
-      boundary: { host: "desktop", source: "desktop.renderer" },
-    }, {
-      requestId: "req-ipc-1",
-      correlationId: "corr-ipc-1",
-    });
+    const request = createDesktopArtifactBrowseRequest(
+      {
+        artifactFamily: "image",
+        workspaceId: "workspace-a",
+        boundary: { host: "desktop", source: "desktop.renderer" },
+      },
+      {
+        requestId: "req-ipc-1",
+        correlationId: "corr-ipc-1",
+      },
+    );
 
     expect(mapDesktopArtifactRequestContext(request)).toEqual({
       requestId: "req-ipc-1",
       correlationId: "corr-ipc-1",
+      workspaceId: "workspace-a",
     });
   });
 
   it("fails register-from-repo requests with invalid artifact family at the IPC boundary", async () => {
     const registerFromRepoUseCase = { execute: testDouble.fn() };
-    const handler = createDesktopArtifactRegisterFromRepoIpcHandler(registerFromRepoUseCase);
-    const request = createDesktopArtifactRegisterFromRepoRequest({
-      target: {
-        provider: "huggingface",
-        repository: "openai/demo",
-        path: "images/a.png",
+    const handler = createDesktopArtifactRegisterFromRepoIpcHandler(
+      registerFromRepoUseCase,
+    );
+    const request = createDesktopArtifactRegisterFromRepoRequest(
+      {
+        target: {
+          provider: "huggingface",
+          repository: "openai/demo",
+          path: "images/a.png",
+        },
+        artifactFamily: "application",
+        boundary: { host: "desktop", source: "desktop.renderer" },
       },
-      artifactFamily: "application",
-      boundary: { host: "desktop", source: "desktop.renderer" },
-    }, {
-      requestId: "req-register-invalid-family",
-      correlationId: "corr-register-invalid-family",
-    });
+      {
+        requestId: "req-register-invalid-family",
+        correlationId: "corr-register-invalid-family",
+      },
+    );
 
     const response = await handler({}, request);
 
@@ -400,36 +570,46 @@ describe("registerArtifactBrowserIpc", () => {
   });
 
   it("maps publish and publish-verify failures to operation-specific IPC response channels", async () => {
-    const publishRequest = createDesktopArtifactPublishRequest({
-      artifactId: "uploads/a.png",
-      target: {
-        provider: "huggingface",
-        repository: "openai/demo",
-        path: "images/a.png",
-      },
-      boundary: { host: "desktop", source: "desktop.renderer" },
-    }, {
-      requestId: "req-publish",
-      correlationId: "corr-publish",
-    });
-    const publishVerifyRequest = createDesktopArtifactPublishVerifyRequest({
-      artifactId: "uploads/a.png",
-      boundary: { host: "desktop", source: "desktop.renderer" },
-    }, {
-      requestId: "req-verify",
-      correlationId: "corr-verify",
-    });
-
-    const publishHandler = createDesktopArtifactPublishIpcHandler({
-      execute: testDouble.fn().mockResolvedValue({
-        ok: false,
-        error: {
-          code: "validation",
-          message: "target.path must be set",
-          details: { field: "target.path" },
+    const publishRequest = createDesktopArtifactPublishRequest(
+      {
+        workspaceId: "workspace-a",
+        artifactId: "uploads/a.png",
+        target: {
+          provider: "huggingface",
+          repository: "openai/demo",
+          path: "images/a.png",
         },
-      }),
-    });
+        boundary: { host: "desktop", source: "desktop.renderer" },
+      },
+      {
+        requestId: "req-publish",
+        correlationId: "corr-publish",
+      },
+    );
+    const publishVerifyRequest = createDesktopArtifactPublishVerifyRequest(
+      {
+        artifactId: "uploads/a.png",
+        boundary: { host: "desktop", source: "desktop.renderer" },
+      },
+      {
+        requestId: "req-verify",
+        correlationId: "corr-verify",
+      },
+    );
+
+    const publishHandler = createDesktopArtifactPublishIpcHandler(
+      {
+        execute: testDouble.fn().mockResolvedValue({
+          ok: false,
+          error: {
+            code: "validation",
+            message: "target.path must be set",
+            details: { field: "target.path" },
+          },
+        }),
+      },
+      { isTrustedSender: () => true },
+    );
     const publishVerifyHandler = createDesktopArtifactPublishVerifyIpcHandler({
       execute: testDouble.fn().mockResolvedValue({
         ok: false,
@@ -470,7 +650,44 @@ describe("registerArtifactBrowserIpc", () => {
       metadata: undefined,
     });
 
-    expect(publishFailure.channel).not.toBe(DESKTOP_ARTIFACT_BROWSE_RESPONSE_CHANNEL.value);
-    expect(verifyFailure.channel).not.toBe(DESKTOP_ARTIFACT_MEDIA_VIEW_RESPONSE_CHANNEL.value);
+    expect(publishFailure.channel).not.toBe(
+      DESKTOP_ARTIFACT_BROWSE_RESPONSE_CHANNEL.value,
+    );
+    expect(verifyFailure.channel).not.toBe(
+      DESKTOP_ARTIFACT_MEDIA_VIEW_RESPONSE_CHANNEL.value,
+    );
+  });
+
+  it("rejects untrusted publication senders before invoking provider work", async () => {
+    const execute = testDouble.fn();
+    const handler = createDesktopArtifactPublishIpcHandler(
+      { execute },
+      { isTrustedSender: () => false },
+    );
+    const request = createDesktopArtifactPublishRequest(
+      {
+        workspaceId: "workspace-a",
+        artifactId: "uploads/a.png",
+        target: {
+          provider: "huggingface",
+          repository: "openai/demo",
+          path: "images/a.png",
+        },
+        boundary: { host: "desktop", source: "desktop.renderer" },
+      },
+      { requestId: "req-untrusted-publish" },
+    );
+
+    const response = await handler({ sender: "spoofed" }, request);
+
+    expect(response).toMatchObject({
+      ok: false,
+      error: {
+        code: "forbidden",
+        message: "The desktop IPC sender is not trusted.",
+      },
+      requestId: "req-untrusted-publish",
+    });
+    expect(execute).not.toHaveBeenCalled();
   });
 });

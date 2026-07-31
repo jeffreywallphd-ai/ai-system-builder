@@ -7,6 +7,7 @@ interface UseArtifactDeleteFlowParams {
   refreshArtifacts: () => Promise<void>;
   clearSelectedArtifact: () => void;
   setViewState: (value: ArtifactBrowserViewState) => void;
+  workspaceId?: string;
 }
 
 export function useArtifactDeleteFlow({
@@ -14,6 +15,7 @@ export function useArtifactDeleteFlow({
   refreshArtifacts,
   clearSelectedArtifact,
   setViewState,
+  workspaceId,
 }: UseArtifactDeleteFlowParams) {
   const confirmation = useArtifactDeleteConfirmation();
 
@@ -23,7 +25,7 @@ export function useArtifactDeleteFlow({
       if (!client.deleteUnregisteredArtifact) {
         throw new Error("Unregistered artifact delete flow is unavailable.");
       }
-      await client.deleteUnregisteredArtifact({ storageKey });
+      await client.deleteUnregisteredArtifact({ storageKey, workspaceId });
       await refreshArtifacts();
       setViewState({ status: "success", message: `Deleted ${storageKey}.` });
     } catch (error) {
@@ -40,7 +42,7 @@ export function useArtifactDeleteFlow({
       if (!client.deleteRegisteredArtifact) {
         throw new Error("Registered artifact delete flow is unavailable.");
       }
-      await client.deleteRegisteredArtifact({ storageKey });
+      await client.deleteRegisteredArtifact({ storageKey, workspaceId });
       clearSelectedArtifact();
       await refreshArtifacts();
       setViewState({ status: "success", message: `Deleted ${storageKey}.` });

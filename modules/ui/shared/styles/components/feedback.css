@@ -1,0 +1,176 @@
+.ui-status,
+.ui-feedback {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  background: rgb(16 35 58 / 72%);
+  color: var(--color-text-secondary);
+}
+
+.ui-status[role="alert"],
+.ui-feedback--error,
+.ui-status--error {
+  border-color: color-mix(
+    in srgb,
+    var(--color-danger) 45%,
+    var(--color-border-soft)
+  );
+  background: color-mix(in srgb, var(--color-danger) 8%, var(--color-bg-panel));
+  color: #ff9da8;
+}
+
+.ui-status--success {
+  border-color: color-mix(
+    in srgb,
+    var(--color-success) 45%,
+    var(--color-border-soft)
+  );
+  background: color-mix(
+    in srgb,
+    var(--color-success) 7%,
+    var(--color-bg-panel)
+  );
+  color: #75e59c;
+}
+
+.ui-loading-spinner {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.ui-loading-spinner > span {
+  inline-size: 1rem;
+  block-size: 1rem;
+  border: 2px solid var(--color-border);
+  border-block-start-color: var(--color-accent);
+  border-radius: 50%;
+  animation: ui-loading-spin 0.8s linear infinite;
+}
+
+@keyframes ui-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ui-glossary-term {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  min-width: 0;
+  vertical-align: baseline;
+}
+
+.ui-glossary-hint {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.ui-glossary-hint__button {
+  inline-size: 1rem;
+  block-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-primary);
+  color: var(--color-text-secondary);
+  cursor: help;
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+}
+
+.ui-glossary-hint__button:hover,
+.ui-glossary-hint__button:focus-visible {
+  border-color: var(--color-accent);
+  color: var(--color-text-primary);
+  outline: none;
+}
+
+.ui-glossary-hint__bubble {
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-xs));
+  inset-inline-start: 0;
+  z-index: var(--z-sticky);
+  inline-size: min(20rem, calc(100vw - (2 * var(--space-lg))));
+  display: none;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-md);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  text-align: left;
+}
+
+.ui-glossary-hint__bubble span {
+  color: var(--color-text-secondary);
+}
+
+.ui-glossary-hint:hover .ui-glossary-hint__bubble,
+.ui-glossary-hint:focus-within .ui-glossary-hint__bubble,
+.ui-glossary-hint--open .ui-glossary-hint__bubble {
+  display: flex;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-loading-spinner > span {
+    animation-duration: 1.8s;
+  }
+}
+.ui-empty-state {
+  min-block-size: 12rem;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: var(--space-xs);
+  padding: var(--space-lg);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  background:
+    radial-gradient(circle at 50% 25%, rgb(52 111 214 / 14%), transparent 42%),
+    var(--color-bg-subtle);
+  color: var(--color-text-primary);
+  text-align: center;
+}
+
+.ui-empty-state__icon {
+  inline-size: 4.25rem;
+  block-size: 4.25rem;
+  display: grid;
+  place-items: center;
+  margin-block-end: var(--space-xs);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: rgb(29 61 108 / 45%);
+  color: var(--color-accent-hover);
+}
+
+.ui-empty-state__icon .ui-app-icon {
+  inline-size: 1.8rem;
+  block-size: 1.8rem;
+}
+
+.ui-empty-state p {
+  max-inline-size: 32rem;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.ui-empty-state--compact {
+  min-block-size: 9rem;
+  padding: var(--space-md);
+}

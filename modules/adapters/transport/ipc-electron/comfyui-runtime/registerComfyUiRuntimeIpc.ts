@@ -1,4 +1,3 @@
-import type { RuntimeInstallerPort } from "../../../../application/ports/runtime-installer/runtime-installer.port";
 import {
   DESKTOP_COMFYUI_INSTALL_REPAIR_REQUEST_CHANNEL,
   DESKTOP_COMFYUI_INSTALL_REPAIR_RESPONSE_CHANNEL,
@@ -13,15 +12,20 @@ import {
   type DesktopComfyUiRepairInstallRequest,
   type DesktopComfyUiRepairInstallResponse,
 } from "../../../../contracts/ipc";
+import type { RuntimeInstallResult, RuntimeInstallStatusResult } from "../../../../contracts/runtime-installer";
 import type { IpcMainHandlePort } from "../ipcMainHandlePort";
-import { buildComfyUiInstallRequest } from "../../../runtime/installer/comfyui/createComfyUiRuntimeInstaller";
 
-export interface RegisterComfyUiRuntimeIpcDependencies { ipcMain: IpcMainHandlePort; installer: RuntimeInstallerPort; installRoot: string; }
+export interface DesktopComfyUiRuntimeIpcFeature {
+  readInstallStatus: (request: DesktopComfyUiInstallStatusRequest) => Promise<RuntimeInstallStatusResult>;
+  repairInstall: (request: DesktopComfyUiRepairInstallRequest) => Promise<RuntimeInstallResult>;
+}
+
+export interface RegisterComfyUiRuntimeIpcDependencies { ipcMain: IpcMainHandlePort; comfyUi: DesktopComfyUiRuntimeIpcFeature; }
 
 export function registerComfyUiRuntimeIpc(dependencies: RegisterComfyUiRuntimeIpcDependencies): void {
   dependencies.ipcMain.handle(DESKTOP_COMFYUI_INSTALL_STATUS_READ_REQUEST_CHANNEL.value, async (_event, request: DesktopComfyUiInstallStatusRequest): Promise<DesktopComfyUiInstallStatusResponse> => {
     try {
-      const value = await dependencies.installer.getInstallStatus({ targetId: "comfyui", installRoot: request.payload.installRoot ?? dependencies.installRoot });
+      const value = await dependencies.comfyUi.readInstallStatus(request);
       return createDesktopComfyUiInstallStatusSuccessResponse(value, { requestId: request.requestId, correlationId: request.correlationId });
     } catch (error) {
       return createIpcFailureResponse(createIpcError(
@@ -35,9 +39,7 @@ export function registerComfyUiRuntimeIpc(dependencies: RegisterComfyUiRuntimeIp
 
   dependencies.ipcMain.handle(DESKTOP_COMFYUI_INSTALL_REPAIR_REQUEST_CHANNEL.value, async (_event, request: DesktopComfyUiRepairInstallRequest): Promise<DesktopComfyUiRepairInstallResponse> => {
     try {
-      const installRequest = buildComfyUiInstallRequest({ installRoot: request.payload.installRoot ?? dependencies.installRoot, allowUpdate: request.payload.allowUpdate, forceRepair: request.payload.forceRepair });
-      const value = await dependencies.installer.repairInstall?.(installRequest)
-      ?? await dependencies.installer.ensureInstalled(installRequest);
+      const value = await dependencies.comfyUi.repairInstall(request);
       return createDesktopComfyUiRepairInstallSuccessResponse(value, { requestId: request.requestId, correlationId: request.correlationId });
     } catch (error) {
       return createIpcFailureResponse(createIpcError(

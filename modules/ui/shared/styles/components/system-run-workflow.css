@@ -1,0 +1,161 @@
+.system-run-workflow {
+  min-width: 0;
+}
+
+.system-run-workflow__profile-heading,
+.system-run-workflow__action-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
+
+.system-run-workflow__profile-heading > div,
+.system-run-workflow__action-summary > div {
+  display: grid;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.system-run-workflow__profile-meta,
+.system-run-workflow__review,
+.system-run-workflow__review-values,
+.system-run-workflow__key-values {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: var(--space-sm);
+  margin: 0;
+}
+
+.system-run-workflow__profile-meta > div,
+.system-run-workflow__review > div,
+.system-run-workflow__review-values > div,
+.system-run-workflow__key-values > div {
+  min-width: 0;
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-xs);
+  background: rgb(4 15 28 / 42%);
+}
+
+.system-run-workflow__profile-meta dt,
+.system-run-workflow__review dt,
+.system-run-workflow__review-values dt,
+.system-run-workflow__key-values dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.system-run-workflow__profile-meta dd,
+.system-run-workflow__review dd,
+.system-run-workflow__review-values dd,
+.system-run-workflow__key-values dd {
+  margin: var(--space-2xs) 0 0;
+  overflow-wrap: anywhere;
+}
+
+.system-run-workflow__blockers,
+.system-run-workflow__results,
+.system-run-workflow__transcript,
+.system-run-workflow__artifacts,
+.system-run-workflow__audit,
+.system-run-workflow__diagnostics {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.system-run-workflow__blockers {
+  padding-inline-start: var(--space-lg);
+  list-style: disc;
+  color: var(--color-warning);
+}
+
+.system-run-workflow__results {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+}
+
+.system-run-workflow__block {
+  min-width: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  background: rgb(7 20 36 / 48%);
+}
+
+.system-run-workflow__block > h4,
+.system-run-workflow__block > p {
+  margin-block-start: 0;
+}
+
+.system-run-workflow__table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.system-run-workflow__transcript li,
+.system-run-workflow__artifacts li,
+.system-run-workflow__audit li {
+  min-width: 0;
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-xs);
+  background: rgb(4 15 28 / 42%);
+}
+
+.system-run-workflow__transcript p,
+.system-run-workflow__audit p,
+.system-run-workflow__artifacts p {
+  margin-block: var(--space-xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.system-run-workflow__transcript time,
+.system-run-workflow__audit time {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.system-run-workflow__audit li {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-sm);
+}
+
+.system-run-workflow__artifacts pre {
+  max-height: 16rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.system-run-workflow__artifacts img {
+  display: block;
+  max-width: min(100%, 36rem);
+  max-height: 24rem;
+  object-fit: contain;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-xs);
+}
+
+.system-run-workflow__diagnostics .ui-status {
+  display: grid;
+  gap: var(--space-2xs);
+}
+
+@media (max-width: 42rem) {
+  .system-run-workflow__profile-heading,
+  .system-run-workflow__action-summary {
+    flex-direction: column;
+  }
+
+  .system-run-workflow__results {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

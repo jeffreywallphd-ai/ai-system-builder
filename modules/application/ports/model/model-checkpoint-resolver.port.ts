@@ -1,6 +1,8 @@
 export interface ResolveModelCheckpointRequest {
   selectedModel?: string;
+  workspaceId?: string;
   taskTag?: string;
+  runtimeDeviceMode?: string;
 }
 
 export interface ResolveModelCheckpointResult {

@@ -1,0 +1,247 @@
+{
+  "schemaVersion": 1,
+  "scenarios": [
+    {
+      "id": "docs-link-correction",
+      "task": "Fix a broken documentation link and verify docs routing without changing behavior.",
+      "affectedPaths": ["docs/context/prompt-routing.md"],
+      "expectedPacks": ["docs-standards"],
+      "forbiddenPacks": ["runtime", "persistence-storage"],
+      "requiredSources": ["docs/standards/documentation-standards.md", "docs/standards/documentation-metadata-standards.md"],
+      "requiredChecks": ["npm run docs:check"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["The corrected target exists and the docs check passes."]
+    },
+    {
+      "id": "application-dependency-regression",
+      "task": "Prevent an application service dependency boundary regression and add a focused test.",
+      "affectedPaths": ["modules/application/services/example/example.service.ts"],
+      "expectedPacks": ["architecture", "testing"],
+      "forbiddenPacks": ["desktop-styling", "image-generation"],
+      "requiredSources": ["docs/architecture/module-dependency-rules.md", "docs/standards/change-impact-matrix.md"],
+      "requiredChecks": ["npm run architecture:check", "npm test"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["The application layer has no outward adapter import and the regression is executable."]
+    },
+    {
+      "id": "server-route-security",
+      "task": "Add authorization policy to an existing Express route and preserve sanitized server API failures.",
+      "affectedPaths": ["modules/adapters/transport/api-express/example/registerExampleRoutes.ts"],
+      "expectedPacks": ["security", "server-host"],
+      "forbiddenPacks": ["desktop-styling", "ipc-electron"],
+      "requiredSources": ["docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md", "docs/architecture/host-model.md"],
+      "requiredChecks": ["npm test", "npm run build:server"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["Unauthorized and unknown operations fail closed without exposing internal detail."]
+    },
+    {
+      "id": "implicit-upload-security-boundary",
+      "task": "Add a bounded file upload to an existing Express feature route without changing identity policy.",
+      "affectedPaths": ["modules/adapters/transport/api-express/example/registerExampleUploadRoutes.ts"],
+      "expectedPacks": ["security", "server-host"],
+      "forbiddenPacks": ["desktop-styling", "image-generation"],
+      "requiredSources": ["docs/standards/security-by-design-standards.md", "docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md"],
+      "requiredChecks": ["npm test", "npm run build:server"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["The design identifies the upload trust boundary and proves authorization, type and size bounds, sanitized failures, and fail-closed storage behavior."]
+    },
+    {
+      "id": "enterprise-oauth-decision",
+      "task": "Implement OAuth organization authentication for a corporate deployment.",
+      "affectedPaths": ["modules/adapters/transport/api-express/security/"],
+      "expectedPacks": ["security"],
+      "forbiddenPacks": ["desktop-styling", "image-generation"],
+      "requiredSources": ["docs/adr/decision-readiness.md", "docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md"],
+      "requiredChecks": ["npm run docs:check"],
+      "decisionExpectation": "escalate",
+      "acceptanceSignals": ["The agent presents identity, trust, tenancy, and deployment consequences before implementation."]
+    },
+    {
+      "id": "local-persistence-isolation",
+      "task": "Correct a local persistence workspace isolation bug and add a regression test.",
+      "affectedPaths": ["modules/adapters/persistence/workspace/local-workspace-repository.ts"],
+      "expectedPacks": ["persistence-storage", "testing"],
+      "forbiddenPacks": ["desktop-styling", "runtime-installer"],
+      "requiredSources": ["docs/architecture/persistence-and-storage.md", "docs/architecture/workspace-model.md"],
+      "requiredChecks": ["npm run architecture:check", "npm test"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["Workspace A and B cannot read or overwrite each other's same-id records."]
+    },
+    {
+      "id": "postgres-deployment-policy",
+      "task": "Define database migration, backup, tenancy, and failover policy for campus and cloud Postgres deployment.",
+      "affectedPaths": ["modules/adapters/persistence/postgres/", "apps/server/src/config/database.ts"],
+      "expectedPacks": ["persistence-storage", "server-host"],
+      "forbiddenPacks": ["desktop-styling", "image-generation"],
+      "requiredSources": ["docs/adr/decision-readiness.md", "docs/adr/ADR-0004-persistence-and-storage-separation.md", "docs/architecture/persistence-and-storage.md"],
+      "requiredChecks": ["npm run docs:check"],
+      "decisionExpectation": "escalate",
+      "acceptanceSignals": ["Deployment-specific lifecycle choices are approved before durable schema or operator commitments."]
+    },
+    {
+      "id": "desktop-ipc-operation",
+      "task": "Add a typed Electron IPC operation to an existing desktop feature through the preload bridge.",
+      "affectedPaths": ["modules/contracts/ipc/desktop-example-contract.ts", "apps/desktop/src/preload/exposedApi.ts"],
+      "expectedPacks": ["ipc-electron", "desktop-host"],
+      "forbiddenPacks": ["server-host", "desktop-styling"],
+      "requiredSources": ["docs/architecture/host-model.md", "docs/architecture/module-dependency-rules.md"],
+      "requiredChecks": ["npm run architecture:check", "npm test"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["Operation identity, channel derivation, handler, preload, and client remain typed and narrow."]
+    },
+    {
+      "id": "renderer-css-change",
+      "task": "Adjust responsive CSS styling for a renderer feature without changing data or runtime behavior.",
+      "affectedPaths": ["apps/desktop/src/renderer/styles/features/example.css"],
+      "expectedPacks": ["desktop-styling", "desktop-implementation"],
+      "forbiddenPacks": ["runtime", "persistence-storage", "server-host"],
+      "requiredSources": ["docs/adr/ADR-0007-desktop-renderer-styling-foundation-and-layering.md"],
+      "requiredChecks": ["npm test"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["The change stays in the existing style layers and preserves responsive behavior."]
+    },
+    {
+      "id": "runtime-installer-repair",
+      "task": "Fix runtime installer repair behavior for a failed ComfyUI installation.",
+      "affectedPaths": ["modules/adapters/runtime/installer/comfyui/createComfyUiRuntimeInstaller.ts"],
+      "expectedPacks": ["runtime-installer", "runtime"],
+      "forbiddenPacks": ["desktop-styling", "user-library"],
+      "requiredSources": ["docs/adr/ADR-0014-runtime-installer.md", "docs/architecture/runtime-model.md"],
+      "requiredChecks": ["npm run architecture:check", "npm test"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["Repair remains installer-owned, stateful, deterministic, and safely reported."]
+    },
+    {
+      "id": "image-generation-timeout",
+      "task": "Debug an image generation timeout without weakening runtime lifecycle or error handling.",
+      "affectedPaths": ["modules/adapters/runtime/comfyui/createComfyUiHttpClient.ts"],
+      "expectedPacks": ["debugging-error-handling", "image-generation"],
+      "forbiddenPacks": ["user-library", "desktop-styling"],
+      "requiredSources": ["docs/adr/ADR-0012-image-generation-runtime.md", "docs/architecture/runtime-model.md"],
+      "requiredChecks": ["npm test"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["The failure timeline identifies the owning seam and the fix preserves timeout-safe lifecycle semantics."]
+    },
+    {
+      "id": "user-library-persistence",
+      "task": "Fix persistence of a detached User Library copy while preserving provenance and workspace isolation.",
+      "affectedPaths": ["modules/adapters/persistence/user-library/createLocalUserLibraryRepositoryAdapters.ts"],
+      "expectedPacks": ["user-library", "persistence-storage"],
+      "forbiddenPacks": ["runtime", "desktop-styling"],
+      "requiredSources": ["docs/adr/ADR-0017-user-library-and-cross-workspace-reuse.md", "docs/architecture/persistence-and-storage.md"],
+      "requiredChecks": ["npm test"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["The copy is detached, provenance is retained, and no cross-workspace overwrite occurs."]
+    },
+    {
+      "id": "conversation-streaming-decision",
+      "task": "Expose streaming conversation execution through API, IPC, desktop, and thin-client surfaces.",
+      "affectedPaths": ["modules/application/services/conversational-execution/"],
+      "expectedPacks": ["controlled-conversational-system-execution"],
+      "forbiddenPacks": ["image-generation", "desktop-styling"],
+      "requiredSources": ["docs/adr/decision-readiness.md", "docs/adr/ADR-0023-controlled-conversational-system-execution.md"],
+      "requiredChecks": ["npm run docs:check"],
+      "decisionExpectation": "escalate",
+      "acceptanceSignals": ["Streaming lifecycle, cancellation, transport parity, persistence, and privacy consequences are decided first."]
+    },
+    {
+      "id": "asset-contract-placement",
+      "task": "Place a new Asset Kernel contract family extension without creating a parallel repository structure.",
+      "affectedPaths": ["modules/contracts/asset/"],
+      "expectedPacks": ["asset-kernel", "repository-overview"],
+      "forbiddenPacks": ["runtime", "desktop-styling"],
+      "requiredSources": ["docs/adr/ADR-0016-asset-kernel-terminology-and-architecture-baseline.md", "docs/architecture/module-dependency-rules.md"],
+      "requiredChecks": ["npm run architecture:check", "npm test"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["The extension uses the existing Asset Kernel family and public barrel discipline."]
+    },
+    {
+      "id": "authoring-projection-preview",
+      "task": "Fix an asset authoring draft preview effective asset projection without enabling deferred publication behavior.",
+      "affectedPaths": ["modules/application/use-cases/asset-authoring/", "modules/application/use-cases/effective-asset-projections/"],
+      "expectedPacks": ["asset-authoring", "effective-asset-projections"],
+      "forbiddenPacks": ["runtime", "server-host"],
+      "requiredSources": ["docs/adr/ADR-0018-asset-authoring-customization-and-overrides.md", "docs/adr/ADR-0019-effective-asset-projections.md"],
+      "requiredChecks": ["npm test"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["Draft preview remains workspace-scoped, non-executing, and truthful about deferred capabilities."]
+    },
+    {
+      "id": "composition-readiness-binding",
+      "task": "Correct asset composition compatibility input used by runtime readiness capability matching.",
+      "affectedPaths": ["modules/application/use-cases/asset-composition/", "modules/application/use-cases/runtime-readiness/"],
+      "expectedPacks": ["asset-composition-planning", "runtime-readiness-binding"],
+      "forbiddenPacks": ["runtime-installer", "desktop-styling"],
+      "requiredSources": ["docs/adr/ADR-0020-asset-composition-planning.md", "docs/adr/ADR-0021-runtime-readiness-binding.md"],
+      "requiredChecks": ["npm test"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["Compatibility and readiness remain separate non-executing records with explicit blockers."]
+    },
+    {
+      "id": "system-builder-status-boundary",
+      "task": "Prepare a composed-system contract and Systems page without putting software or runtime status on the system record.",
+      "affectedPaths": ["modules/contracts/system-builder/", "apps/desktop/src/renderer/pages/SystemBuilderPage.tsx", "apps/desktop/src/renderer/features/settings/components/SoftwareStatusSection.tsx"],
+      "expectedPacks": ["system-builder", "desktop-implementation"],
+      "forbiddenPacks": ["server-host", "runtime-installer"],
+      "requiredSources": ["docs/adr/ADR-0024-system-builder-area-and-software-status-placement.md", "docs/architecture/system-builder.md"],
+      "requiredChecks": ["npm run architecture:check", "npm test"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["Systems is workspace-scoped, records specialize AssetComposition, and Software status remains under Settings."]
+    },
+    {
+      "id": "execution-plan-preflight",
+      "task": "Add a regression test for an execution plan preflight safety gate without invoking a provider.",
+      "affectedPaths": ["modules/application/use-cases/execution-plans/"],
+      "expectedPacks": ["execution-plan-preparation", "testing"],
+      "forbiddenPacks": ["runtime", "image-generation"],
+      "requiredSources": ["docs/adr/ADR-0022-execution-plan-preparation.md", "docs/standards/testing-standards.md"],
+      "requiredChecks": ["npm test"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["The safety gate is observable and execution remains deferred."]
+    },
+    {
+      "id": "dataset-split-integrity",
+      "task": "Correct training dataset split integrity and surface bounded preparation warnings without exposing source content.",
+      "affectedPaths": [
+        "modules/adapters/runtime/python/worker/tasks/prepare_training_dataset.py",
+        "apps/desktop/src/renderer/features/dataset-preparation/"
+      ],
+      "expectedPacks": ["data-management", "runtime"],
+      "forbiddenPacks": ["image-generation", "user-library"],
+      "requiredSources": [
+        "docs/architecture/data-management.md",
+        "docs/security/data-management-threat-model.md"
+      ],
+      "requiredChecks": [
+        "npm run architecture:check",
+        "npm test"
+      ],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": [
+        "Physical split counts are deterministic, related or duplicate rows cannot cross splits, and public diagnostics contain no protected source or model content."
+      ]
+    },
+    {
+      "id": "task-progress-diagnostics",
+      "task": "Fix runtime task registry progress logging so long-running task diagnostics stay structured and safe.",
+      "affectedPaths": ["modules/application/services/runtime/runtime-task-registry.service.ts", "modules/adapters/observability/logging/"],
+      "expectedPacks": ["runtime-task-registry", "logging"],
+      "forbiddenPacks": ["desktop-styling", "user-library"],
+      "requiredSources": ["docs/adr/ADR-0011-runtime-task-registry.md", "docs/standards/logging-standards.md"],
+      "requiredChecks": ["npm test"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["Progress remains lifecycle-owned and diagnostics expose no sensitive task payloads."]
+    },
+    {
+      "id": "agent-governance-change",
+      "task": "Change agent governance and context evaluation rules while keeping documentation and CI aligned.",
+      "affectedPaths": ["docs/standards/ai-agent-development-standards.md", "dev-tools/agent-evals/scenarios.json"],
+      "expectedPacks": ["docs-standards", "testing"],
+      "forbiddenPacks": ["runtime", "image-generation"],
+      "requiredSources": ["docs/standards/ai-agent-development-standards.md", "docs/standards/agent-support-evaluation-standards.md"],
+      "requiredChecks": ["npm run docs:check", "npm run agent-support:check", "npm test"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["Routing metadata, scenarios, validators, tests, and CI change together."]
+    }
+  ]
+}

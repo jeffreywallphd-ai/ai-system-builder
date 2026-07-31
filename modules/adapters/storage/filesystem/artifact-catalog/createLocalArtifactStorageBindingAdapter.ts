@@ -1,23 +1,28 @@
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { ArtifactStorageBindingPort } from "../../../../application/ports/storage";
+import type {
+  ArtifactStorageBindingBatchReadPort,
+  ArtifactStorageBindingPort,
+} from "../../../../application/ports/storage";
 import { createContractError, createFailureResult, createSuccessResult } from "../../../../contracts/shared";
 import {
   normalizeArtifactStorageBinding,
   type ArtifactStorageBinding,
 } from "../../../../contracts/storage";
+import { mutateDocumentRecord, readDocumentRecord, type StructuredDocumentStore } from "../../../persistence/shared";
 
 const DEFAULT_BINDINGS_FILE = ".catalog/artifact-storage-bindings.ndjson";
 
 export interface CreateLocalArtifactStorageBindingAdapterOptions {
   rootDirectory: string;
   bindingsFile?: string;
+  documents?: StructuredDocumentStore;
 }
 
 type ArtifactStorageBindingLine =
   | ArtifactStorageBinding
-  | { artifactId: string; deletedAt: string };
+  | { workspaceId?: ArtifactStorageBinding["workspaceId"]; artifactId: string; deletedAt: string };
 
 function parseBindingLine(line: string): ArtifactStorageBindingLine | undefined {
   try {
@@ -32,6 +37,7 @@ function parseBindingLine(line: string): ArtifactStorageBindingLine | undefined 
       }
 
       return {
+        workspaceId: typeof parsed.workspaceId === "string" ? parsed.workspaceId as ArtifactStorageBinding["workspaceId"] : undefined,
         artifactId: parsed.artifactId.trim(),
         deletedAt: parsed.deletedAt,
       };
@@ -47,6 +53,7 @@ function parseBindingLine(line: string): ArtifactStorageBindingLine | undefined 
     }
 
     return normalizeArtifactStorageBinding({
+      workspaceId: typeof parsed.workspaceId === "string" ? parsed.workspaceId as ArtifactStorageBinding["workspaceId"] : undefined,
       artifactId: parsed.artifactId,
       role: parsed.role,
       backing: parsed.backing as ArtifactStorageBinding["backing"],
@@ -59,12 +66,16 @@ function parseBindingLine(line: string): ArtifactStorageBindingLine | undefined 
 
 export function createLocalArtifactStorageBindingAdapter(
   options: CreateLocalArtifactStorageBindingAdapterOptions,
-): ArtifactStorageBindingPort {
+): ArtifactStorageBindingPort & ArtifactStorageBindingBatchReadPort {
   const rootDirectory = path.resolve(options.rootDirectory);
   const bindingsFile = options.bindingsFile ?? DEFAULT_BINDINGS_FILE;
   const bindingsPath = path.join(rootDirectory, bindingsFile);
 
   async function readBindings(): Promise<ArtifactStorageBinding[]> {
+    if (options.documents) {
+      const stored = (await readDocumentRecord({ rootDirectory, documents: options.documents }, bindingsFile, [] as ArtifactStorageBindingLine[])).value;
+      return stored.map((entry) => parseBindingLine(JSON.stringify(entry))).filter((entry): entry is ArtifactStorageBinding => Boolean(entry && !("deletedAt" in entry)));
+    }
     const content = await readFile(bindingsPath, "utf8").catch(() => "");
     if (!content.trim()) {
       return [];
@@ -84,7 +95,8 @@ export function createLocalArtifactStorageBindingAdapter(
       }
 
       if ("deletedAt" in parsed) {
-        const existingKeys = keysByArtifactId.get(parsed.artifactId);
+        const tombstoneKey = parsed.workspaceId ? `${parsed.workspaceId}::${parsed.artifactId}` : parsed.artifactId;
+        const existingKeys = keysByArtifactId.get(tombstoneKey);
         if (!existingKeys) {
           continue;
         }
@@ -92,16 +104,17 @@ export function createLocalArtifactStorageBindingAdapter(
         for (const key of existingKeys) {
           latestByCompositeKey.delete(key);
         }
-        keysByArtifactId.delete(parsed.artifactId);
+        keysByArtifactId.delete(tombstoneKey);
         continue;
       }
 
-      const key = `${parsed.artifactId}::${parsed.role}::${parsed.backing.provider}::${parsed.backing.locator}`;
+      const artifactKey = parsed.workspaceId ? `${parsed.workspaceId}::${parsed.artifactId}` : parsed.artifactId;
+      const key = `${artifactKey}::${parsed.role}::${parsed.backing.provider}::${parsed.backing.locator}`;
       latestByCompositeKey.set(key, parsed);
-      let artifactKeys = keysByArtifactId.get(parsed.artifactId);
+      let artifactKeys = keysByArtifactId.get(artifactKey);
       if (!artifactKeys) {
         artifactKeys = new Set<string>();
-        keysByArtifactId.set(parsed.artifactId, artifactKeys);
+        keysByArtifactId.set(artifactKey, artifactKeys);
       }
       artifactKeys.add(key);
     }
@@ -109,10 +122,41 @@ export function createLocalArtifactStorageBindingAdapter(
     return Array.from(latestByCompositeKey.values());
   }
 
+  async function mutateBindings<TResult>(
+    mutation: (bindings: ArtifactStorageBinding[]) => { bindings: ArtifactStorageBinding[]; result: TResult },
+  ): Promise<TResult> {
+    if (!options.documents) throw new Error("Structured document storage is required for atomic binding mutation.");
+    return mutateDocumentRecord(
+      { rootDirectory, documents: options.documents },
+      bindingsFile,
+      [] as ArtifactStorageBindingLine[],
+      (stored) => {
+        const bindings = stored
+          .map((entry) => parseBindingLine(JSON.stringify(entry)))
+          .filter((entry): entry is ArtifactStorageBinding => Boolean(entry && !("deletedAt" in entry)));
+        const next = mutation(bindings);
+        return { value: next.bindings, result: next.result };
+      },
+    );
+  }
+
   return {
     async upsertArtifactStorageBinding(request, context = {}) {
       try {
         const normalizedBinding = normalizeArtifactStorageBinding(request.binding);
+        if (options.documents) {
+          await mutateBindings((bindings) => ({
+            bindings: [...bindings.filter((entry) => !(
+              entry.workspaceId === normalizedBinding.workspaceId &&
+              entry.artifactId === normalizedBinding.artifactId &&
+              entry.role === normalizedBinding.role &&
+              entry.backing.provider === normalizedBinding.backing.provider &&
+              entry.backing.locator === normalizedBinding.backing.locator
+            )), normalizedBinding],
+            result: undefined,
+          }));
+          return createSuccessResult({ binding: normalizedBinding }, context);
+        }
         await mkdir(path.dirname(bindingsPath), { recursive: true });
         await appendFile(bindingsPath, `${JSON.stringify(normalizedBinding)}\n`, "utf8");
         return createSuccessResult({ binding: normalizedBinding }, context);
@@ -137,7 +181,33 @@ export function createLocalArtifactStorageBindingAdapter(
         );
       }
 
-      const bindings = (await readBindings()).filter((entry) => entry.artifactId === artifactId);
+      const workspaceId = request.workspaceId?.trim();
+      const bindings = (await readBindings()).filter((entry) => entry.artifactId === artifactId && (!workspaceId || entry.workspaceId === workspaceId));
+      return createSuccessResult({ bindings }, context);
+    },
+
+    async readArtifactStorageBindingsBatch(request, context = {}) {
+      const artifactIds = [...new Set(request.artifactIds.map((value) => value.trim()))];
+      if (
+        artifactIds.length === 0
+        || artifactIds.length > 250
+        || artifactIds.some((artifactId) => artifactId.length === 0)
+      ) {
+        return createFailureResult(
+          createContractError(
+            "validation",
+            "artifactIds must contain between 1 and 250 unique non-empty identifiers.",
+          ),
+          context,
+        );
+      }
+
+      const selectedIds = new Set(artifactIds);
+      const workspaceId = request.workspaceId?.trim();
+      const bindings = (await readBindings()).filter((entry) => (
+        selectedIds.has(entry.artifactId)
+        && (!workspaceId || entry.workspaceId === workspaceId)
+      ));
       return createSuccessResult({ bindings }, context);
     },
 
@@ -151,14 +221,21 @@ export function createLocalArtifactStorageBindingAdapter(
       }
 
       try {
-        const bindings = await readBindings();
-        const exists = bindings.some((entry) => entry.artifactId === artifactId);
-        if (!exists) {
-          return createSuccessResult({ deleted: false }, context);
+        const workspaceId = request.workspaceId?.trim();
+        if (options.documents) {
+          const deleted = await mutateBindings((bindings) => ({
+            bindings: bindings.filter((entry) => entry.artifactId !== artifactId || (workspaceId && entry.workspaceId !== workspaceId)),
+            result: bindings.some((entry) => entry.artifactId === artifactId && (!workspaceId || entry.workspaceId === workspaceId)),
+          }));
+          return createSuccessResult({ deleted }, context);
         }
 
+        const bindings = await readBindings();
+        const exists = bindings.some((entry) => entry.artifactId === artifactId && (!workspaceId || entry.workspaceId === workspaceId));
+        if (!exists) return createSuccessResult({ deleted: false }, context);
+
         await mkdir(path.dirname(bindingsPath), { recursive: true });
-        await appendFile(bindingsPath, `${JSON.stringify({ artifactId, deletedAt: new Date().toISOString() })}\n`, "utf8");
+        await appendFile(bindingsPath, `${JSON.stringify({ workspaceId, artifactId, deletedAt: new Date().toISOString() })}\n`, "utf8");
         return createSuccessResult({ deleted: true }, context);
       } catch (error) {
         return createFailureResult(

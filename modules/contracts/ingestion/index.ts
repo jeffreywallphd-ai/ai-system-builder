@@ -11,3 +11,7 @@ export * from "./ingest-website-page-request";
 export * from "./ingest-website-page-result";
 export * from "./ingest-website-pages-batch-request";
 export * from "./ingest-website-pages-batch-result";
+export * from "./acquisition-task";
+export * from "./acquisition-task-command";
+export * from "./source-snapshot";
+export * from "./governed-website-capture";

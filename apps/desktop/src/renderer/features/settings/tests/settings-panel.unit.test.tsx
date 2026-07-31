@@ -2,6 +2,7 @@ import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { NotificationTestHarness, readNotificationMessages } from "../../../../../../../modules/ui/shared/notifications/tests/NotificationTestHarness";
 import { SettingsPanel } from "../components/SettingsPanel";
 import type { DesktopApplicationSettingsClient } from "../api/desktopApplicationSettingsClient";
 
@@ -10,6 +11,7 @@ const definitions = [
   { key: "runtime.python.defaultDevice", category: "runtime", label: "Device", valueKind: "select", options: [{ value: "auto" }, { value: "cpu" }, { value: "cuda" }] },
   { key: "runtime.enableTelemetry", category: "runtime", label: "Enable telemetry", valueKind: "boolean" },
   { key: "huggingface.token", category: "huggingface", label: "Hugging Face token", valueKind: "secret", sensitive: true },
+  { key: "models.sharedStorageDirectory", category: "models", label: "Shared model storage folder", valueKind: "folder" },
   { key: "models.default", category: "models", label: "Global default model", valueKind: "object" },
 ] as const;
 
@@ -18,6 +20,7 @@ const baseValues = [
   { key: "runtime.python.defaultDevice", configured: true, value: "auto" },
   { key: "runtime.enableTelemetry", configured: true, value: true },
   { key: "huggingface.token", configured: true, masked: true, maskedValue: "********" },
+  { key: "models.sharedStorageDirectory", configured: true, value: "C:\\models" },
   {
     key: "models.default",
     configured: true,
@@ -32,6 +35,7 @@ let clearSetting: ReturnType<typeof vi.fn>;
 let listDefinitions: ReturnType<typeof vi.fn>;
 let readSettings: ReturnType<typeof vi.fn>;
 let resolveModelDefault: ReturnType<typeof vi.fn>;
+let selectFolder: ReturnType<typeof vi.fn>;
 
 vi.mock("../api/desktopApplicationSettingsClient", () => ({
   createDesktopApplicationSettingsClient: () => mockClient,
@@ -43,6 +47,7 @@ const mockClient: DesktopApplicationSettingsClient = {
   updateSetting: (...args) => updateSetting(...args),
   clearSetting: (...args) => clearSetting(...args),
   resolveModelDefault: (...args) => resolveModelDefault(...args),
+  selectFolder: (...args) => selectFolder(...args),
 };
 
 beforeEach(() => {
@@ -53,6 +58,7 @@ beforeEach(() => {
   resolveModelDefault = vi.fn().mockResolvedValue({
     resolved: { provider: "transformers", modelId: "google/flan-t5-base", inferenceMode: "text2text", source: "global", settingKey: "models.default" },
   });
+  selectFolder = vi.fn().mockResolvedValue({ canceled: false, path: "D:\\shared-models" });
 });
 
 afterEach(async () => {
@@ -78,7 +84,11 @@ async function renderPanel(props: Partial<ComponentProps<typeof SettingsPanel>> 
   document.body.appendChild(container);
   root = createRoot(container);
   await act(async () => {
-    root?.render(<SettingsPanel title="Test" {...props} />);
+    root?.render(
+      <NotificationTestHarness>
+        <SettingsPanel title="Test" {...props} />
+      </NotificationTestHarness>,
+    );
   });
 }
 
@@ -95,6 +105,28 @@ describe("SettingsPanel", () => {
 
     expect(listDefinitions).toHaveBeenCalledWith({ category: undefined, keys: ["runtime.python.defaultDevice", "models.default"] });
     expect(readSettings).toHaveBeenCalledWith({ category: undefined, keys: ["runtime.python.defaultDevice", "models.default"] });
+  });
+
+  it("does not reload settings when equivalent key arrays are recreated", async () => {
+    await renderPanel({ keys: ["huggingface.defaultNamespace"] as never });
+
+    expect(listDefinitions).toHaveBeenCalledTimes(1);
+    expect(readSettings).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root?.render(
+        <NotificationTestHarness>
+          <SettingsPanel
+            title="Test"
+            keys={["huggingface.defaultNamespace"] as never}
+          />
+        </NotificationTestHarness>,
+      );
+      await Promise.resolve();
+    });
+
+    expect(listDefinitions).toHaveBeenCalledTimes(1);
+    expect(readSettings).toHaveBeenCalledTimes(1);
   });
 
   it("updates string, select, and boolean settings", async () => {
@@ -146,6 +178,18 @@ describe("SettingsPanel", () => {
     expect(clearSetting).toHaveBeenCalledWith({ key: "huggingface.token" });
   });
 
+  it("lets folder settings browse through the desktop bridge", async () => {
+    await renderPanel({ keys: ["models.sharedStorageDirectory"] as never });
+
+    await act(async () => {
+      (container?.querySelector('[data-testid="setting-models.sharedStorageDirectory-browse"]') as HTMLButtonElement).click();
+    });
+
+    const input = container?.querySelector('[data-testid="setting-models.sharedStorageDirectory-input"]') as HTMLInputElement;
+    expect(selectFolder).toHaveBeenCalledWith({ title: "Shared model storage folder", defaultPath: "C:\\models" });
+    expect(input.value).toBe("D:\\shared-models");
+  });
+
   it("renders and saves model default with modelId and inferenceMode together", async () => {
     await renderPanel({ keys: ["models.default"] as never });
 
@@ -179,7 +223,8 @@ describe("SettingsPanel", () => {
     listDefinitions.mockRejectedValueOnce(new Error("settings unavailable"));
     await renderPanel();
 
-    expect(container?.textContent).toContain("settings unavailable");
+    expect(readNotificationMessages(container!)).toContain("settings unavailable");
+    expect(container?.textContent).not.toContain("settings unavailable");
   });
 
   it("supports compact feature-local rendering", async () => {

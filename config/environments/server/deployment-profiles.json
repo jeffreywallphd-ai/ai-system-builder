@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "shape": "campus-server",
+      "structuredPersistence": "postgres",
+      "artifactStorage": "durable-mounted-filesystem",
+      "requiredSecretEnvironment": ["DATABASE_URL"],
+      "requiredEnvironment": ["NODE_ENV", "DEPLOYMENT_SHAPE", "AI_SYSTEM_BUILDER_SECURITY_MODE", "AI_SYSTEM_BUILDER_OIDC_ISSUER", "AI_SYSTEM_BUILDER_OIDC_AUDIENCE", "AI_SYSTEM_BUILDER_OIDC_JWKS_URI", "AI_SYSTEM_BUILDER_TENANT_PLACEMENT_MODE", "SERVER_STORAGE_ROOT", "SERVER_RUNTIME_ROOT"],
+      "defaultPoolMax": 10
+    },
+    {
+      "shape": "corporate-server",
+      "structuredPersistence": "postgres",
+      "artifactStorage": "durable-managed-volume",
+      "requiredSecretEnvironment": ["DATABASE_URL"],
+      "requiredEnvironment": ["NODE_ENV", "DEPLOYMENT_SHAPE", "AI_SYSTEM_BUILDER_SECURITY_MODE", "AI_SYSTEM_BUILDER_OIDC_ISSUER", "AI_SYSTEM_BUILDER_OIDC_AUDIENCE", "AI_SYSTEM_BUILDER_OIDC_JWKS_URI", "AI_SYSTEM_BUILDER_TENANT_PLACEMENT_MODE", "SERVER_STORAGE_ROOT", "SERVER_RUNTIME_ROOT"],
+      "defaultPoolMax": 10
+    },
+    {
+      "shape": "cloud",
+      "structuredPersistence": "postgres",
+      "artifactStorage": "durable-managed-volume",
+      "requiredSecretEnvironment": ["DATABASE_URL"],
+      "requiredEnvironment": ["NODE_ENV", "DEPLOYMENT_SHAPE", "AI_SYSTEM_BUILDER_SECURITY_MODE", "AI_SYSTEM_BUILDER_OIDC_ISSUER", "AI_SYSTEM_BUILDER_OIDC_AUDIENCE", "AI_SYSTEM_BUILDER_OIDC_JWKS_URI", "AI_SYSTEM_BUILDER_TENANT_PLACEMENT_MODE", "SERVER_STORAGE_ROOT", "SERVER_RUNTIME_ROOT"],
+      "defaultPoolMax": 10
+    }
+  ]
+}

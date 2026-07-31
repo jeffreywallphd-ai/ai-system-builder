@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from modules.adapters.runtime.python.worker.tasks import model_validation as validation_module
 from modules.adapters.runtime.python.worker.tasks.model_validation import validate_model_output
 
@@ -81,6 +83,77 @@ def test_validate_sharded_safetensors_detects_missing_shard(tmp_path: Path) -> N
     assert result["shardCount"] == 2
 
 
+@pytest.mark.parametrize(
+    "unsafe_shard",
+    [
+        "../outside.safetensors",
+        "/private/outside.safetensors",
+        "C:/private/outside.safetensors",
+        "shards\\outside.safetensors",
+    ],
+)
+def test_validate_sharded_safetensors_rejects_unsafe_members(
+    tmp_path: Path,
+    unsafe_shard: str,
+) -> None:
+    (tmp_path / "model.safetensors.index.json").write_text(
+        json.dumps({"weight_map": {"layer.0": unsafe_shard}}),
+        encoding="utf-8",
+    )
+
+    result = validate_model_output(tmp_path)
+
+    assert result["status"] == "invalid"
+    assert any(
+        "unsafe shard reference" in error
+        or "out-of-root shard reference" in error
+        for error in result["errors"]
+    )
+
+
+def test_validate_sharded_safetensors_accepts_contained_nested_member(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    shard_directory = tmp_path / "shards"
+    shard_directory.mkdir()
+    shard = shard_directory / "model-00001-of-00001.safetensors"
+    shard.write_bytes(b"x")
+    (tmp_path / "model.safetensors.index.json").write_text(
+        json.dumps({"weight_map": {"layer.0": "shards/model-00001-of-00001.safetensors"}}),
+        encoding="utf-8",
+    )
+    (tmp_path / "config.json").write_text("{}", encoding="utf-8")
+    _mock_safe_open(
+        monkeypatch,
+        {"model-00001-of-00001.safetensors": {"layer.0": [2, 2]}},
+    )
+
+    result = validate_model_output(tmp_path)
+
+    assert result["status"] in {"valid", "warning"}
+    assert result["shardCount"] == 1
+
+
+def test_validate_sharded_safetensors_rejects_linked_member(tmp_path: Path) -> None:
+    outside = tmp_path.parent / "outside-shard.safetensors"
+    outside.write_bytes(b"x")
+    linked = tmp_path / "linked.safetensors"
+    try:
+        linked.symlink_to(outside)
+    except OSError:
+        pytest.skip("This host does not permit creating test symlinks.")
+    (tmp_path / "model.safetensors.index.json").write_text(
+        json.dumps({"weight_map": {"layer.0": "linked.safetensors"}}),
+        encoding="utf-8",
+    )
+
+    result = validate_model_output(tmp_path)
+
+    assert result["status"] == "invalid"
+    assert any("linked shards" in error for error in result["errors"])
+
+
 def test_validate_sharded_safetensors_detects_missing_tensor_key(monkeypatch, tmp_path: Path) -> None:
     (tmp_path / "model.safetensors.index.json").write_text(
         json.dumps({"weight_map": {"layer.0": "model-00001-of-00001.safetensors", "layer.1": "model-00001-of-00001.safetensors"}}),
@@ -141,6 +214,20 @@ def test_validate_detects_lora_tensor_keys(monkeypatch, tmp_path: Path) -> None:
 
     assert result["detectedLoRA"] is True
     assert diff["detectedLoRAKeys"] == ["layers.0.attn.q_proj.lora_A.weight"]
+
+
+def test_validate_diffusers_lora_weights(monkeypatch, tmp_path: Path) -> None:
+    (tmp_path / "adapter_config.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "pytorch_lora_weights.safetensors").write_bytes(b"x")
+    _mock_safe_open(monkeypatch, {"pytorch_lora_weights.safetensors": {"unet.down_blocks.0.attn.to_q.lora_A.weight": [8, 4]}})
+
+    result = validate_model_output(tmp_path, expected_lora=True)
+    diff = json.loads((tmp_path / "model_validation_diff.json").read_text(encoding="utf-8"))
+
+    assert result["status"] in {"valid", "warning"}
+    assert result["serializationFormat"] == "diffusers-lora-safetensors"
+    assert result["detectedLoRA"] is True
+    assert diff["hfCompatibility"]["adapterFiles"] is True
 
 
 def test_publish_strict_validation_fails_when_tensor_checks_are_skipped(monkeypatch, tmp_path: Path) -> None:

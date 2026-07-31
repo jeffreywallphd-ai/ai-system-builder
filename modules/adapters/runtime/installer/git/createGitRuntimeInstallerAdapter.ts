@@ -261,6 +261,59 @@ export function createGitRuntimeInstallerAdapter(
     }
   }
 
+  async function adoptUnmanagedGitInstall(request: RuntimeInstallRequest): Promise<RuntimeInstallResult | undefined> {
+    if (!request.installRoot || request.source.type !== "git") {
+      return undefined;
+    }
+
+    try {
+      const remoteResult = await runGit(["-C", request.installRoot, "config", "--get", "remote.origin.url"], "git-remote-read-failed");
+      const remoteOriginUrl = remoteResult.stdout.trim();
+      if (!remoteOriginUrl || remoteOriginUrl !== request.source.repositoryUrl) {
+        return undefined;
+      }
+
+      const commitResult = await runGit(["-C", request.installRoot, "rev-parse", "HEAD"], "git-rev-parse-failed");
+      const commitSha = commitResult.stdout.trim();
+      const installedAt = now();
+      const metadata: RuntimeInstallMetadata = {
+        managedBy: "ai-system-builder",
+        targetId: request.targetId,
+        installRoot: request.installRoot,
+        source: request.source,
+        requestedRef: request.source.ref,
+        resolvedRef: request.source.ref,
+        commitSha,
+        installedAt,
+        lastCheckedAt: installedAt,
+      };
+      await writeMetadata(metadata);
+      log("info", "Adopted unmanaged runtime git install using matching origin remote.", {
+        targetId: request.targetId,
+        installRoot: request.installRoot,
+        commitSha,
+      });
+      return {
+        targetId: request.targetId,
+        status: "installed",
+        installRoot: request.installRoot,
+        source: request.source,
+        requestedRef: request.source.ref,
+        resolvedRef: request.source.ref,
+        commitSha,
+        installedAt,
+        lastCheckedAt: installedAt,
+      };
+    } catch (error) {
+      log("debug", "Unmanaged runtime git install adoption skipped.", {
+        targetId: request.targetId,
+        installRoot: request.installRoot,
+        error,
+      });
+      return undefined;
+    }
+  }
+
   async function ensureInstalled(request: RuntimeInstallRequest): Promise<RuntimeInstallResult> {
     const operationStartedAt = Date.now();
     log("info", "Ensuring runtime install from git source.", { targetId: request.targetId, installRoot: request.installRoot });
@@ -292,6 +345,12 @@ export function createGitRuntimeInstallerAdapter(
     }
 
     if (status.status === "failed" || status.status === "unknown") {
+      if (status.error?.code === "unmanaged-install-root" && request.forceRepair !== true) {
+        const adoptionResult = await adoptUnmanagedGitInstall(request);
+        if (adoptionResult) {
+          return adoptionResult;
+        }
+      }
       const forceRepairMessage =
         request.forceRepair === true
           ? "forceRepair is not implemented for unmanaged install roots because destructive repair is forbidden"

@@ -1,5 +1,7 @@
 # Filesystem Artifact Store Adapters
 
+> AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
+
 `createFilesystemArtifactObjectStorageAdapter` is the canonical filesystem-backed
 `ArtifactObjectStoragePort` implementation for host-local artifact bytes.
 

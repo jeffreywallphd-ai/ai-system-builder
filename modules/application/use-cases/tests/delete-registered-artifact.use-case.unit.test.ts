@@ -6,6 +6,8 @@ import type { ArtifactObjectStoragePort, ArtifactStorageBindingPort } from "../.
 import { DeleteRegisteredArtifactUseCase } from "../delete-registered-artifact.use-case";
 
 describe("DeleteRegisteredArtifactUseCase", () => {
+  const context = { workspaceId: "workspace-a" };
+
   function createCatalogRead(callOrder?: string[]): Pick<ArtifactCatalogReadPort, "readArtifactCatalogRecord"> {
     return {
       readArtifactCatalogRecord: testDouble.fn(async () => {
@@ -61,7 +63,7 @@ describe("DeleteRegisteredArtifactUseCase", () => {
       artifactBindingStorage,
     });
 
-    const result = await useCase.execute({ storageKey: "artifacts/a-1" });
+    const result = await useCase.execute({ storageKey: "artifacts/a-1" }, context);
 
     expect(result.ok).toBe(true);
     expect(callOrder).toEqual([
@@ -94,7 +96,7 @@ describe("DeleteRegisteredArtifactUseCase", () => {
       artifactBindingStorage,
     });
 
-    const result = await useCase.execute({ storageKey: "artifacts/a-1" });
+    const result = await useCase.execute({ storageKey: "artifacts/a-1" }, context);
 
     expect(result.ok).toBe(false);
     if (result.ok) {
@@ -139,7 +141,7 @@ describe("DeleteRegisteredArtifactUseCase", () => {
       artifactBindingStorage,
     });
 
-    const result = await useCase.execute({ storageKey: "artifacts/a-1" });
+    const result = await useCase.execute({ storageKey: "artifacts/a-1" }, context);
 
     expect(result.ok).toBe(false);
     if (result.ok) {
@@ -186,7 +188,7 @@ describe("DeleteRegisteredArtifactUseCase", () => {
       artifactBindingStorage,
     });
 
-    const result = await useCase.execute({ storageKey: "artifacts/a-1" });
+    const result = await useCase.execute({ storageKey: "artifacts/a-1" }, context);
 
     expect(result.ok).toBe(false);
     if (result.ok) {
@@ -232,7 +234,7 @@ describe("DeleteRegisteredArtifactUseCase", () => {
       artifactBindingStorage,
     });
 
-    const result = await useCase.execute({ storageKey: "artifacts/a-1" });
+    const result = await useCase.execute({ storageKey: "artifacts/a-1" }, context);
 
     expect(result.ok).toBe(true);
     expect(artifactCatalogDelete.deleteArtifactCatalogRecord).toHaveBeenCalledTimes(1);

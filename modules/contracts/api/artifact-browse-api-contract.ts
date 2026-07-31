@@ -1,3 +1,4 @@
+import { createWorkspaceId } from "../workspace";
 import {
   ARTIFACT_BROWSE_OPERATION,
   normalizeArtifactBrowseSuccessValue,
@@ -21,6 +22,7 @@ export interface ApiArtifactBrowseBoundaryContext {
 
 export interface ApiArtifactBrowseRequestPayload {
   artifactFamily?: ArtifactFamily;
+  workspaceId: string;
   boundary: ApiArtifactBrowseBoundaryContext;
 }
 
@@ -53,6 +55,7 @@ function normalizeApiArtifactBrowsePayload(
 ): ApiArtifactBrowseRequestPayload {
   return {
     artifactFamily: payload.artifactFamily,
+    workspaceId: createWorkspaceId(payload.workspaceId),
     boundary: {
       host: "server",
       source: normalizeRequiredTextField(payload.boundary.source, "boundary.source"),
@@ -95,7 +98,7 @@ export function createApiArtifactBrowseSuccessResponse(
 }
 
 export function createApiArtifactBrowseFailureResponse(
-  code: "validation" | "internal" | "unavailable",
+  code: "validation" | "forbidden" | "internal" | "unavailable",
   message: string,
   options?: {
     details?: Record<string, unknown>;

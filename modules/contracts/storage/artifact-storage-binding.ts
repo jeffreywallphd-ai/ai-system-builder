@@ -1,3 +1,4 @@
+import { createWorkspaceId, type WorkspaceId } from "../workspace";
 import {
   normalizeStorageBackingReference,
   type StorageBackingReference,
@@ -13,6 +14,7 @@ export const ARTIFACT_STORAGE_BINDING_ROLES = [
 export type ArtifactStorageBindingRole = (typeof ARTIFACT_STORAGE_BINDING_ROLES)[number];
 
 export interface ArtifactStorageBinding {
+  workspaceId?: WorkspaceId;
   artifactId: string;
   backing: StorageBackingReference;
   role: ArtifactStorageBindingRole;
@@ -41,6 +43,7 @@ export function normalizeArtifactStorageBinding(
   }
 
   return {
+    workspaceId: typeof binding.workspaceId === "string" ? createWorkspaceId(binding.workspaceId) : undefined,
     artifactId,
     backing: normalizeStorageBackingReference(binding.backing),
     role,

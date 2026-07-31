@@ -1,0 +1,334 @@
+{
+  "blockers": [],
+  "chunks": [],
+  "completion": null,
+  "createdAt": "2026-07-29T03:25:06Z",
+  "currentIncrementId": null,
+  "decisions": [
+    {
+      "approvalNote": "The user explicitly approved the revised intent-driven retained lifecycle, including install-and-activate, stopped-state uninstall, automatic visual launch on Start, server-only Start behavior, and Stop as the only running-state action.",
+      "approvedAt": "2026-07-29T04:05:14Z",
+      "approvedFingerprint": "e6db016454a2003b139d504b56e6b5e6063800c335afc49d698d35f32633951e",
+      "context": "Publish consolidation is user-directed. The lifecycle must preserve exact-release integrity, workspace isolation, truthful retained state, audit history, and secure runtime authority while presenting only actions that are valid for the current system state.",
+      "id": "published-system-lifecycle-model",
+      "options": [
+        {
+          "consequences": [
+            "Not installed exposes Install; Install performs install then activation without exposing a separate initial Activate step",
+            "Installed, active, and stopped exposes Start, Deactivate, and Uninstall; installed, inactive, and stopped exposes Activate and Uninstall",
+            "Running exposes Stop only; Stop returns the system to its prior installed activation state and eligible stopped controls",
+            "Uninstall is available for any stopped installed system and records an auditable retained transition instead of deleting history",
+            "Opaque deployment and run identifiers remain internal, duplicate install intents are idempotent, and the standalone Run & Test tab is removed",
+            "Qualified built-in visual systems open automatically from verified exact-release declarative content and typed runtime bindings; nonvisual servers start without an Open control; imported or authored execution remains unavailable without a qualified sandbox"
+          ],
+          "id": "retained-stateful-lifecycle",
+          "label": "Intent-driven retained lifecycle",
+          "recommended": true,
+          "summary": "Retain one application-owned current deployment per release and host target. Install also activates. Stopped systems expose only state-valid Start, Activate or Deactivate, and Uninstall controls; running systems expose only Stop. Start automatically opens a qualified visual system and starts a nonvisual server without an Open System control.",
+          "tradeoffs": [
+            "Provides the complete user outcome but requires coordinated contract, application, persistence, runtime-session, host, transport, shared-UI, release-rendering, and documentation changes",
+            "Preserves audit, rollback, exact-release integrity, workspace isolation, and truthful lifecycle state",
+            "Requires explicit handling for partial install-and-activate failure and for a runtime that starts successfully when automatic visual launch fails"
+          ]
+        },
+        {
+          "consequences": [
+            "The interface becomes simpler but continues to overstate runtime functionality",
+            "Uninstall and deactivate remain aliases or unsupported",
+            "A visual system still cannot open after Start"
+          ],
+          "id": "existing-command-facade",
+          "label": "Existing command facade",
+          "recommended": false,
+          "summary": "Move the existing operations into Publish, automatically select identifiers, and keep the current install, activate, and zero-output run semantics.",
+          "tradeoffs": [
+            "Smaller and faster interface change",
+            "Avoids new persistence and runtime-session contracts",
+            "Does not launch the created system or provide meaningful Start and Stop behavior"
+          ]
+        },
+        {
+          "consequences": [
+            "Uninstall physically removes state and can orphan or erase historical evidence",
+            "Failure recovery cannot reliably distinguish stopped, lost, or deleted sessions",
+            "Conflicts with the repository's retained immutable release and audited deployment posture"
+          ],
+          "id": "ephemeral-destructive-lifecycle",
+          "label": "Ephemeral destructive lifecycle",
+          "recommended": false,
+          "summary": "Launch a temporary interface directly from a release and delete deployment and session records when stopped or uninstalled.",
+          "tradeoffs": [
+            "Simple visible lifecycle with fewer retained records",
+            "Weakens audit, rollback, reconciliation, recovery, and operational history",
+            "Creates destructive deletion and cross-host consistency problems"
+          ]
+        }
+      ],
+      "proposalFingerprint": "e6db016454a2003b139d504b56e6b5e6063800c335afc49d698d35f32633951e",
+      "question": "How should Publish expose install, activation, execution, launch, stop, and uninstall without asking users to manage deployment internals?",
+      "selectedOptionId": "retained-stateful-lifecycle",
+      "status": "approved",
+      "title": "Published system lifecycle model"
+    }
+  ],
+  "discovery": {
+    "constraints": [
+      "Immutable releases and archived system history must remain retained and restorable.",
+      "Lifecycle filtering belongs in application-owned eligibility, not renderer clients or persistence deletion.",
+      "Discovery, preparation, and invocation must all reject missing, archived, cross-workspace, or mismatched owning systems.",
+      "Reviewed execution-plan workflows remain governed by their separate plan lifecycle."
+    ],
+    "decisionRequired": false,
+    "recordedAt": "2026-07-29T03:25:07Z",
+    "securityImpact": {
+      "abuseCases": [
+        "An archived system release remains selectable and can be invoked.",
+        "A release whose owning system record is missing or belongs to another workspace is treated as active.",
+        "A system is archived after discovery but before preparation or invocation."
+      ],
+      "assets": [
+        "Workspace-owned system lifecycle authority",
+        "Exact immutable release identity",
+        "Deployment, data, and artifact-review action authority"
+      ],
+      "controls": [
+        "Application handlers derive eligibility from the authoritative workspace-owned system record.",
+        "Missing, archived, cross-workspace, and system-id-mismatched records fail closed.",
+        "Preparation and invocation re-check lifecycle eligibility instead of trusting a prior summary."
+      ],
+      "disposition": "security-relevant",
+      "residualRisks": [
+        "Previously installed deployments remain separate retained operational records and are not deleted by this visibility fix."
+      ],
+      "summary": "The fix changes which workspace-owned immutable releases may cross the Run and Test interaction and execution boundary.",
+      "trustBoundaries": [
+        "System Builder lifecycle repository to application workflow discovery",
+        "Prepared release profile to explicit application invocation",
+        "Workspace-scoped host composition to API and IPC projections"
+      ],
+      "verification": [
+        "Focused discovery omission tests for archived and missing systems.",
+        "Focused stale lifecycle denial tests for preparation and invocation.",
+        "Desktop and server host-composition checks plus repository gates."
+      ]
+    },
+    "sources": [
+      {
+        "note": "Records, review, and deployment handlers discover releases directly from the build repository.",
+        "title": "System run workflow handlers",
+        "url": "modules/application/services/system-run-workflow"
+      },
+      {
+        "note": "Provides authoritative workspace-scoped system records and lifecycle status.",
+        "title": "System Builder repository port",
+        "url": "modules/application/ports/system-builder/system-builder-repository.port.ts"
+      },
+      {
+        "note": "Requires application-owned exact-source discovery and fail-closed preparation and invocation.",
+        "title": "System Run Workflows architecture",
+        "url": "docs/architecture/system-run-workflows.md"
+      },
+      {
+        "note": "The completed general workflow remains pending final user approval.",
+        "title": "Predecessor roadmap",
+        "url": "docs/systems-general-run-workflow-implementation-roadmap.md"
+      }
+    ],
+    "summary": "Release-backed workflow handlers currently query immutable releases without joining their owning System Builder lifecycle record. Archived records retain immutable releases by design, so those releases remain discoverable until application-owned workflow eligibility checks active ownership."
+  },
+  "evidence": [],
+  "feedback": [
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "published-build-release-identity",
+      "impact": "within-increment",
+      "nextAction": "Revise the pending increment so authoritative active-source eligibility also projects the same human-recognizable system and build identity used by Publish.",
+      "recordedAt": "2026-07-29T03:36:52Z",
+      "summary": "Publish identifies an approved source by active system name and build version, while Run & Test lists opaque release identifiers alongside releases retained for archived systems. Local metadata confirms one active published release and two archived-system releases, making the active build difficult to identify even though both surfaces share one repository.",
+      "targetIncrementId": "active-release-workflow-eligibility"
+    },
+    {
+      "category": "scope",
+      "disposition": "needs-decision",
+      "id": "publish-lifecycle-consolidation",
+      "impact": "scope-change",
+      "nextAction": "Approve a retained deployment and runtime-session lifecycle model, then revise the pending roadmap to consolidate Publish and remove the standalone Run & Test experience.",
+      "recordedAt": "2026-07-29T03:56:24Z",
+      "summary": "Replace the identifier-driven Run & Test workflow with state-aware lifecycle controls on each published build in Publish. Users must not enter deployment or run identifiers, dependent actions must appear only when eligible, and starting a qualified visual system must provide a real release-bound interface rather than a bookkeeping-only handoff.",
+      "targetIncrementId": "active-release-workflow-eligibility"
+    },
+    {
+      "category": "decision",
+      "disposition": "needs-decision",
+      "id": "intent-driven-publish-lifecycle",
+      "impact": "high-level",
+      "nextAction": "Replace the pending lifecycle proposal with the clarified intent-driven state model and obtain explicit approval.",
+      "recordedAt": "2026-07-29T04:03:32Z",
+      "summary": "The consolidated Publish lifecycle must expose only state-valid intent controls. Install also activates. A stopped installed system may be started, deactivated when active, activated when inactive, or uninstalled. Starting a visual system opens its release-bound interface automatically, while starting a server starts it without an Open System control. A running system exposes only Stop.",
+      "targetIncrementId": "active-release-workflow-eligibility"
+    }
+  ],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "a3ed55858354acfe2f0b152a3929725d38a6459771ca9b3b778ed572d7bca4b4",
+      "recordedAt": "2026-07-29T03:25:07Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "82e820b0f80ed1dd12f8404395586deb29292d6c948da9e6e4e35f262c166b7a",
+      "recordedAt": "2026-07-29T03:25:07Z",
+      "sequence": 2,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "b2363ee043c67c51d5f7e28c2ca9c54c61149b5ba6d6802a0b4981beab8c72f3",
+      "recordedAt": "2026-07-29T03:36:52Z",
+      "sequence": 3,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "8c863abd6adea5fb457afe529dd5dfb147879aa51b036a9d20ac174d6a27b73d",
+      "recordedAt": "2026-07-29T03:36:52Z",
+      "sequence": 4,
+      "type": "roadmap-revised"
+    },
+    {
+      "eventFingerprint": "956b48e1236e5f3a848458b73bee66afd5698a1be2487bbd24e783273572bb21",
+      "recordedAt": "2026-07-29T03:56:24Z",
+      "sequence": 5,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "fd4331910b356e15d02a3ed8bb77e308ee78f051c2032f3bc54f263a365a4b28",
+      "recordedAt": "2026-07-29T03:56:24Z",
+      "sequence": 6,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "48311497d736c28cf341e853c8c5b26d1c09b231e7c9c9594c4d9db37047175d",
+      "recordedAt": "2026-07-29T04:03:32Z",
+      "sequence": 7,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "7a8c3637addcc2f98d85bbcb0bd70211ca3a83d8e54196ac8f201bf9400e263e",
+      "recordedAt": "2026-07-29T04:03:32Z",
+      "sequence": 8,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "302a5a7e2dd67de4f5e5b81e6de7ebb921f10c163cf45a5162fc5135290397b1",
+      "recordedAt": "2026-07-29T04:05:14Z",
+      "sequence": 9,
+      "type": "decision-approved"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Every supported active published build is discoverable in Run & Test with a deterministic system-name and build-version label that maps to its exact immutable release.",
+          "id": "published-source-correlated",
+          "qualification": "local"
+        },
+        {
+          "description": "Release-backed Run & Test profiles omit releases whose owning system is archived, deleted, cross-workspace, or mismatched while retaining their immutable history.",
+          "id": "inactive-releases-hidden",
+          "qualification": "local"
+        },
+        {
+          "description": "Preparation and invocation re-read active owning-system state and fail closed when lifecycle eligibility changes after discovery.",
+          "id": "lifecycle-rechecked",
+          "qualification": "local"
+        },
+        {
+          "description": "Desktop and server compose the same authoritative source catalog, and shared UI tests prove published-source labels remain recognizable without renderer-owned authority.",
+          "id": "host-ui-parity",
+          "qualification": "local"
+        },
+        {
+          "description": "Workspace isolation, exact release integrity, lifecycle authority, fail-closed denial, secure rollback, retained immutable history, and residual deployment-record risk are documented and evidenced.",
+          "id": "security-lifecycle-reviewed",
+          "qualification": "local"
+        },
+        {
+          "description": "Focused catalog, handler, host, and UI tests pass before applicable documentation, architecture, build, and full repository gates run once for the completed increment.",
+          "id": "repository-gates",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": null,
+      "completedChunks": [],
+      "deliverables": [
+        "Shared application published-release source catalog",
+        "Active lifecycle checks in every release-backed workflow handler",
+        "Desktop and server host-composition parity",
+        "Recognizable Run & Test source labels correlated to Publish system and build versions",
+        "Archived, deleted, mismatched, stale-lifecycle, identity-correlation, and UI regression tests",
+        "Updated workflow architecture, context guidance, and temporary report"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "Deleting immutable releases, builds, revisions, deployments, runs, or audit records",
+        "Changing archive and restore semantics in Manage",
+        "Changing reviewed execution-plan workflow lifecycle",
+        "Renderer-only filtering or renderer-owned release identity",
+        "Changing release digests or republishing existing releases"
+      ],
+      "id": "active-release-workflow-eligibility",
+      "number": 1,
+      "objective": "Make Run & Test expose supported workflows only for active published systems and label each exact release with the same recognizable system and build identity shown in Publish.",
+      "plan": null,
+      "research": [],
+      "rollback": "Remove the catalog-backed release workflow registrations so Run & Test fails closed while immutable releases, builds, system records, deployments, runs, and audit history remain unchanged.",
+      "startedAt": null,
+      "status": "pending",
+      "title": "Authoritative published-source catalog",
+      "verification": [
+        "Run focused source-catalog tests that correlate active Publish build summaries to exact Run & Test release sources and exclude archived, deleted, cross-workspace, and mismatched owners.",
+        "Run focused records, review, and deployment handler tests for discovery plus post-discovery lifecycle denial.",
+        "Run focused desktop/server composition and shared UI interaction tests for recognizable labels and capability-specific workflows.",
+        "After the complete increment, run documentation, architecture, server and thin-client builds, and npm test once."
+      ],
+      "workPackages": [
+        {
+          "id": "application-source-catalog",
+          "outcome": "Application-owned discovery joins active System Builder records, completed builds, and immutable releases into one workspace-scoped exact-source catalog with deterministic system and build labels.",
+          "title": "Shared published-source catalog"
+        },
+        {
+          "id": "workflow-eligibility",
+          "outcome": "Records, review, and deployment handlers discover catalog sources and re-check active ownership during preparation and invocation so archived, deleted, mismatched, and stale sources fail closed.",
+          "title": "Release workflow lifecycle enforcement"
+        },
+        {
+          "id": "host-and-ui-parity",
+          "outcome": "Desktop and server hosts inject the same catalog, while the shared Run & Test UI presents system name, build version, publication context, and bounded technical release identity consistently.",
+          "title": "Host and presentation parity"
+        },
+        {
+          "id": "regression-docs",
+          "outcome": "Focused application, host, and UI tests prove Publish-to-Run & Test identity correlation and inactive-source exclusion, with canonical workflow documentation updated.",
+          "title": "Regression evidence and documentation"
+        }
+      ]
+    }
+  ],
+  "name": "Systems Run Workflow Active Source Eligibility",
+  "objective": "Ensure Run & Test exposes and invokes release-backed workflows only while the owning workspace system remains active.",
+  "paths": {
+    "report": "docs/tmp/systems-run-workflow-active-source-implementation-report.md",
+    "roadmap": "docs/systems-run-workflow-active-source-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/systems-run-workflow-active-source/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": null,
+  "schemaVersion": 1,
+  "slug": "systems-run-workflow-active-source",
+  "status": "roadmap-drafting",
+  "updatedAt": "2026-07-29T04:05:14Z"
+}

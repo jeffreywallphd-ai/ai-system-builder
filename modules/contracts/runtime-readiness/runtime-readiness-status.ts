@@ -1,0 +1,18 @@
+export const RUNTIME_READINESS_STATUSES=["draft","checking","ready-for-setup","blocked","missing-requirements","provider-unavailable","provider-unsupported","configuration-required","permission-required","stale","invalid","archived"] as const;
+export const RUNTIME_PROVIDER_AVAILABILITY_STATUSES=["available","unavailable","not-installed","not-configured","permission-required","unsupported","stale","unknown","error"] as const;
+export const RUNTIME_BINDING_STATUSES=["candidate","selected","bound","blocked","missing-requirement","provider-unavailable","configuration-required","permission-required","unsupported","stale","invalid"] as const;
+export const RUNTIME_BINDING_MATCH_STATUSES=["candidate","matched","blocked","missing-requirement","provider-unavailable","unsupported","invalid","unknown"] as const;
+export type RuntimeReadinessStatus=(typeof RUNTIME_READINESS_STATUSES)[number];
+export type RuntimeProviderAvailabilityStatus=(typeof RUNTIME_PROVIDER_AVAILABILITY_STATUSES)[number];
+export type RuntimeBindingStatus=(typeof RUNTIME_BINDING_STATUSES)[number];
+export type RuntimeBindingMatchStatus=(typeof RUNTIME_BINDING_MATCH_STATUSES)[number];
+const n=(v:string)=>v.trim().toLowerCase();
+const norm=<T extends readonly string[]>(v:string,allowed:T,label:string)=>{const x=n(v); if(!allowed.includes(x)) throw new Error(`${label} is invalid.`); return x as T[number];};
+export const isRuntimeReadinessStatus=(v:unknown):v is RuntimeReadinessStatus=>typeof v==="string"&&RUNTIME_READINESS_STATUSES.includes(n(v) as RuntimeReadinessStatus);
+export const isRuntimeProviderAvailabilityStatus=(v:unknown):v is RuntimeProviderAvailabilityStatus=>typeof v==="string"&&RUNTIME_PROVIDER_AVAILABILITY_STATUSES.includes(n(v) as RuntimeProviderAvailabilityStatus);
+export const isRuntimeBindingStatus=(v:unknown):v is RuntimeBindingStatus=>typeof v==="string"&&RUNTIME_BINDING_STATUSES.includes(n(v) as RuntimeBindingStatus);
+export const isRuntimeBindingMatchStatus=(v:unknown):v is RuntimeBindingMatchStatus=>typeof v==="string"&&RUNTIME_BINDING_MATCH_STATUSES.includes(n(v) as RuntimeBindingMatchStatus);
+export const normalizeRuntimeReadinessStatus=(v:string)=>norm(v,RUNTIME_READINESS_STATUSES,"Runtime readiness status");
+export const normalizeRuntimeProviderAvailabilityStatus=(v:string)=>norm(v,RUNTIME_PROVIDER_AVAILABILITY_STATUSES,"Runtime provider availability status");
+export const normalizeRuntimeBindingStatus=(v:string)=>norm(v,RUNTIME_BINDING_STATUSES,"Runtime binding status");
+export const normalizeRuntimeBindingMatchStatus=(v:string)=>norm(v,RUNTIME_BINDING_MATCH_STATUSES,"Runtime binding match status");

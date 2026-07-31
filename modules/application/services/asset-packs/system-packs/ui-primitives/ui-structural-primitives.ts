@@ -1,0 +1,360 @@
+import {
+  allowedChildRule,
+  booleanField,
+  createUiStructuralPrimitiveDefinition,
+  createUiStructuralPrimitiveEntry,
+  enumField,
+  eventPort,
+  inputPort,
+  integerField,
+  stateInputPort,
+  stringField,
+  type UiStructuralPrimitiveSpec,
+} from "./ui-structural-primitive-builders";
+
+const spacing = ["none", "compact", "comfortable", "spacious"] as const;
+const padding = ["none", "compact", "comfortable", "spacious"] as const;
+const emphasis = ["none", "subtle", "standard", "strong"] as const;
+const alignment = ["start", "center", "end", "stretch"] as const;
+const responsiveBehavior = ["preserve", "wrap", "collapse", "reflow"] as const;
+
+const specs: readonly UiStructuralPrimitiveSpec[] = [
+  {
+    id: "builtin.ui.container",
+    displayName: "Container",
+    description: "Semantic top-level or nested UI container for grouping related structural children.",
+    purpose: "Represent a bounded UI structure region that groups child assets with shared layout semantics.",
+    userSummary: "Groups related UI structure in one semantic region.",
+    capabilities: [
+      "Declares child containment without choosing a visual implementation.",
+      "Captures layout direction, spacing, padding, width behavior, visibility, and accessible labeling.",
+    ],
+    configurationFields: [
+      stringField("label", "Label", "", "Human-readable container label."),
+      enumField("layoutDirection", "Layout direction", ["vertical", "horizontal"], "vertical"),
+      enumField("spacing", "Spacing", spacing, "comfortable"),
+      enumField("padding", "Padding", padding, "comfortable"),
+      enumField("widthBehavior", "Width behavior", ["content", "fill", "constrained"], "fill"),
+      stringField("visibilityCondition", "Visibility condition", "", "Semantic condition name, not code."),
+      stringField("accessibilityLabel", "Accessibility label"),
+    ],
+    defaultConfiguration: {
+      label: "",
+      layoutDirection: "vertical",
+      spacing: "comfortable",
+      padding: "comfortable",
+      widthBehavior: "fill",
+      visibilityCondition: "",
+      accessibilityLabel: "",
+    },
+    ports: [
+      inputPort("children", "Children", "Child semantic UI assets contained by this container."),
+      stateInputPort("visibility-state", "Visibility state", "Optional semantic state deciding whether this container is visible."),
+    ],
+    compositionRules: [
+      allowedChildRule("container.allows-ui-structure-children", "Containers may contain sections, panels, cards, stacks, grids, tabs, and collapsible sections."),
+    ],
+    configurationGuidance: "Use layoutDirection, spacing, padding, and widthBehavior to describe intent without using style strings.",
+    compositionGuidance: "Use containers around related structural children; compose forms and data display assets later when those categories exist.",
+    accessibilityGuidance: "Provide accessibilityLabel when the visible label is absent or ambiguous.",
+    exampleDescription: "A dashboard content region containing a section header and a grid of cards.",
+    tags: ["container", "layout"],
+  },
+  {
+    id: "builtin.ui.section",
+    displayName: "Section",
+    description: "Semantic UI section with optional title, description, and child structure.",
+    purpose: "Represent a named region of a screen or flow that can hold related UI assets.",
+    userSummary: "Defines a named region for related content.",
+    capabilities: [
+      "Declares section title and descriptive context.",
+      "Supports semantic collapsibility without implementing disclosure behavior.",
+    ],
+    configurationFields: [
+      stringField("title", "Title"),
+      stringField("description", "Description"),
+      booleanField("collapsible", "Collapsible", false),
+      booleanField("defaultExpanded", "Default expanded", true),
+      enumField("spacing", "Spacing", spacing, "comfortable"),
+      stringField("visibilityCondition", "Visibility condition", "", "Semantic condition name, not code."),
+    ],
+    defaultConfiguration: {
+      title: "",
+      description: "",
+      collapsible: false,
+      defaultExpanded: true,
+      spacing: "comfortable",
+      visibilityCondition: "",
+    },
+    ports: [
+      inputPort("children", "Children", "Child semantic UI assets presented within this section."),
+      stateInputPort("visibility-state", "Visibility state", "Optional semantic state deciding whether this section is visible."),
+    ],
+    compositionRules: [
+      allowedChildRule("section.allows-structure-children", "Sections may contain panels, cards, stacks, grids, tabs, and later form or display assets."),
+    ],
+    configurationGuidance: "Use title and description for screen-reader-friendly region context; only enable collapsible when hiding detail is helpful.",
+    compositionGuidance: "Use sections to divide meaningful areas rather than as a generic style wrapper.",
+    accessibilityGuidance: "Use a clear title when the section introduces a new topic or task.",
+    exampleDescription: "A settings section that groups account preference panels.",
+    tags: ["section", "region"],
+  },
+  {
+    id: "builtin.ui.panel",
+    displayName: "Panel",
+    description: "Semantic panel for grouped information or controls inside a larger structure.",
+    purpose: "Represent a bounded group that needs a title, description, emphasis, and optional action placement.",
+    userSummary: "Groups related screen elements inside a named panel.",
+    capabilities: [
+      "Declares panel purpose and emphasis.",
+      "Provides a semantic action placement hint without defining action implementation.",
+    ],
+    configurationFields: [
+      stringField("title", "Title"),
+      stringField("description", "Description"),
+      enumField("variant", "Variant", ["standard", "aside", "callout", "inspection"], "standard"),
+      enumField("emphasis", "Emphasis", emphasis, "standard"),
+      enumField("padding", "Padding", padding, "comfortable"),
+      enumField("actionsPlacement", "Actions placement", ["none", "header", "footer", "inline"], "none"),
+    ],
+    defaultConfiguration: {
+      title: "",
+      description: "",
+      variant: "standard",
+      emphasis: "standard",
+      padding: "comfortable",
+      actionsPlacement: "none",
+    },
+    ports: [inputPort("children", "Children", "Child semantic UI assets inside this panel.")],
+    compositionRules: [
+      allowedChildRule("panel.allows-content-children", "Panels may contain structural children and later compatible content, form, or display assets."),
+    ],
+    configurationGuidance: "Choose variant and emphasis by meaning, not by visual style names.",
+    compositionGuidance: "Use panels for bounded groups within sections; avoid using panels for every minor item.",
+    accessibilityGuidance: "Use title and description when the panel needs a navigable or understandable name.",
+    exampleDescription: "A review panel containing summary cards and later action primitives.",
+    tags: ["panel", "group"],
+  },
+  {
+    id: "builtin.ui.card",
+    displayName: "Card",
+    description: "Semantic card for a compact, repeatable, or selectable content unit.",
+    purpose: "Represent a compact item or summary that can be composed inside sections, panels, stacks, or grids.",
+    userSummary: "Defines a compact content block or repeated item.",
+    capabilities: [
+      "Describes card title, description, media placement intent, emphasis, and click behavior.",
+      "Supports repeated composition without defining rendering or navigation.",
+    ],
+    configurationFields: [
+      stringField("title", "Title"),
+      stringField("description", "Description"),
+      enumField("mediaPlacement", "Media placement", ["none", "leading", "top", "inline"], "none"),
+      enumField("emphasis", "Emphasis", emphasis, "standard"),
+      enumField("clickBehavior", "Click behavior", ["none", "select", "expand", "open-detail"], "none"),
+      enumField("padding", "Padding", padding, "comfortable"),
+    ],
+    defaultConfiguration: {
+      title: "",
+      description: "",
+      mediaPlacement: "none",
+      emphasis: "standard",
+      clickBehavior: "none",
+      padding: "comfortable",
+    },
+    ports: [inputPort("children", "Children", "Child semantic UI assets inside this card.")],
+    compositionRules: [
+      allowedChildRule("card.allows-content-children", "Cards may contain compact structural children and later compatible content or display assets."),
+    ],
+    configurationGuidance: "Use clickBehavior as semantic intent only; do not include route names or handlers.",
+    compositionGuidance: "Use cards for repeatable summaries or compact standalone units inside stacks and grids.",
+    accessibilityGuidance: "Ensure title describes the card when clickBehavior makes the card selectable.",
+    exampleDescription: "A project summary card inside a grid.",
+    tags: ["card", "summary"],
+  },
+  {
+    id: "builtin.ui.stack",
+    displayName: "Stack",
+    description: "Semantic one-dimensional layout primitive for ordered child assets.",
+    purpose: "Represent ordered vertical or horizontal grouping where spacing and alignment matter.",
+    userSummary: "Arranges child assets in one direction.",
+    capabilities: [
+      "Declares direction, spacing, alignment, wrapping, and responsive behavior.",
+      "Keeps layout intent separate from style classes or layout engine details.",
+    ],
+    configurationFields: [
+      enumField("direction", "Direction", ["vertical", "horizontal"], "vertical"),
+      enumField("spacing", "Spacing", spacing, "comfortable"),
+      enumField("alignment", "Alignment", alignment, "stretch"),
+      booleanField("wrap", "Wrap", false),
+      enumField("responsiveBehavior", "Responsive behavior", responsiveBehavior, "reflow"),
+    ],
+    defaultConfiguration: {
+      direction: "vertical",
+      spacing: "comfortable",
+      alignment: "stretch",
+      wrap: false,
+      responsiveBehavior: "reflow",
+    },
+    ports: [
+      inputPort("children", "Children", "Ordered child semantic UI assets."),
+      inputPort("layout-items", "Layout items", "Items participating in the one-dimensional layout."),
+    ],
+    compositionRules: [
+      allowedChildRule("stack.allows-ordered-children", "Stacks may contain structural children and later compatible content, form, or display assets."),
+      {
+        ruleId: "stack.child-cardinality",
+        ruleKind: "cardinality",
+        description: "Stacks are useful with one or more semantic children.",
+        cardinality: { min: 1 },
+      },
+    ],
+    configurationGuidance: "Set direction and spacing to describe reading or task order.",
+    compositionGuidance: "Use stacks when child order is linear; use grids for two-dimensional grouping.",
+    accessibilityGuidance: "Preserve logical reading order when choosing direction and wrap behavior.",
+    exampleDescription: "A vertical stack of panels in an account settings screen.",
+    tags: ["stack", "layout"],
+  },
+  {
+    id: "builtin.ui.grid",
+    displayName: "Grid",
+    description: "Semantic two-dimensional layout primitive for related child assets.",
+    purpose: "Represent a collection arranged by columns, gaps, item alignment, and responsive behavior.",
+    userSummary: "Arranges related child assets across columns.",
+    capabilities: [
+      "Declares column count, gap, item alignment, and responsive behavior.",
+      "Supports repeatable child composition without defining data display semantics.",
+    ],
+    configurationFields: [
+      integerField("columnCount", "Column count", 2, 1, 12),
+      enumField("gap", "Gap", spacing, "comfortable"),
+      enumField("responsiveBehavior", "Responsive behavior", responsiveBehavior, "reflow"),
+      enumField("itemAlignment", "Item alignment", alignment, "stretch"),
+    ],
+    defaultConfiguration: {
+      columnCount: 2,
+      gap: "comfortable",
+      responsiveBehavior: "reflow",
+      itemAlignment: "stretch",
+    },
+    ports: [
+      inputPort("children", "Children", "Child semantic UI assets in the grid."),
+      inputPort("layout-items", "Layout items", "Items participating in the two-dimensional layout."),
+    ],
+    compositionRules: [
+      allowedChildRule("grid.allows-layout-children", "Grids may contain cards, panels, sections, and later compatible content or display assets."),
+      {
+        ruleId: "grid.child-cardinality",
+        ruleKind: "cardinality",
+        description: "Grids are useful with one or more semantic children.",
+        cardinality: { min: 1 },
+      },
+    ],
+    configurationGuidance: "Use columnCount as a semantic density hint and responsiveBehavior to describe adaptation intent.",
+    compositionGuidance: "Use grids for comparable repeated items; use stacks for sequence or reading order.",
+    accessibilityGuidance: "Avoid using grid placement to change the intended reading sequence.",
+    exampleDescription: "A two-column grid of feature cards.",
+    tags: ["grid", "layout"],
+  },
+  {
+    id: "builtin.ui.tabs",
+    displayName: "Tabs",
+    description: "Semantic tab set for switching between related content panels.",
+    purpose: "Represent mutually selectable tab items and active tab state without implementing interaction.",
+    userSummary: "Groups related views behind semantic tabs.",
+    capabilities: [
+      "Declares tab orientation, default tab, activation mode, and tab-list labeling intent.",
+      "Exposes active-tab semantic input and change event ports.",
+    ],
+    configurationFields: [
+      enumField("orientation", "Orientation", ["horizontal", "vertical"], "horizontal"),
+      stringField("defaultTab", "Default tab"),
+      enumField("activationMode", "Activation mode", ["automatic", "manual"], "automatic"),
+      booleanField("showTabListLabel", "Show tab list label", false),
+    ],
+    defaultConfiguration: {
+      orientation: "horizontal",
+      defaultTab: "",
+      activationMode: "automatic",
+      showTabListLabel: false,
+    },
+    ports: [
+      inputPort("tab-items", "Tab items", "Semantic tab item definitions or tab content assets.", "semantic-tab-items"),
+      stateInputPort("active-tab", "Active tab", "Optional semantic active-tab state."),
+      eventPort("active-tab-changed", "Active tab changed", "Declarative event emitted when a future implementation changes active tab."),
+    ],
+    compositionRules: [
+      allowedChildRule("tabs.allows-tab-content", "Tabs may contain section, panel, card, stack, or grid assets as tab content."),
+      {
+        ruleId: "tabs.requires-tab-items",
+        ruleKind: "cardinality",
+        description: "Tabs require at least two conceptual tab items to be useful.",
+        cardinality: { min: 2 },
+      },
+    ],
+    configurationGuidance: "Set defaultTab to a semantic tab identifier and choose activationMode by accessibility needs.",
+    compositionGuidance: "Use tabs for peer content groups, not for step-by-step workflows or primary navigation.",
+    accessibilityGuidance: "Provide a tab-list label when surrounding context does not name the tab group.",
+    exampleDescription: "A details area with Overview, Activity, and Settings tabs.",
+    tags: ["tabs", "switching"],
+  },
+  {
+    id: "builtin.ui.collapsible-section",
+    displayName: "Collapsible Section",
+    description: "Semantic disclosure section for content that can be expanded or collapsed.",
+    purpose: "Represent optional detail content with explicit expanded state semantics.",
+    userSummary: "Groups detail content that may be expanded or collapsed.",
+    capabilities: [
+      "Declares title, summary, default expansion, and multi-open intent.",
+      "Exposes expanded-state semantic input and change event ports.",
+    ],
+    configurationFields: [
+      stringField("title", "Title"),
+      booleanField("defaultExpanded", "Default expanded", false),
+      booleanField("allowMultipleOpen", "Allow multiple open", true),
+      stringField("summary", "Summary"),
+      stringField("accessibilityLabel", "Accessibility label"),
+    ],
+    defaultConfiguration: {
+      title: "",
+      defaultExpanded: false,
+      allowMultipleOpen: true,
+      summary: "",
+      accessibilityLabel: "",
+    },
+    ports: [
+      stateInputPort("expanded-state", "Expanded state", "Optional semantic expanded-state descriptor."),
+      inputPort("children", "Children", "Child semantic UI assets inside the collapsible section."),
+      eventPort("expanded-state-changed", "Expanded state changed", "Declarative event emitted when a future implementation changes expansion state."),
+    ],
+    compositionRules: [
+      allowedChildRule("collapsible-section.allows-detail-children", "Collapsible sections may contain sections, panels, cards, stacks, grids, and later form or display assets."),
+    ],
+    configurationGuidance: "Use summary for a short preview of hidden detail and accessibilityLabel when the title alone is not enough.",
+    compositionGuidance: "Use collapsible sections for optional detail, not for primary content that must always be visible.",
+    accessibilityGuidance: "Ensure the title or accessibilityLabel explains what will be expanded.",
+    exampleDescription: "An advanced settings section that starts collapsed.",
+    tags: ["collapsible", "section"],
+  },
+];
+
+export const UI_STRUCTURAL_PRIMITIVE_DEFINITIONS = specs.map(
+  createUiStructuralPrimitiveDefinition,
+);
+
+export const UI_STRUCTURAL_PRIMITIVE_ENTRIES =
+  UI_STRUCTURAL_PRIMITIVE_DEFINITIONS.map((definition, index) =>
+    createUiStructuralPrimitiveEntry(definition, specs[index]?.tags ?? []),
+  );
+
+export const UI_STRUCTURAL_PRIMITIVE_CATALOG = {
+  categoryId: "ui-structure",
+  version: "1.0.0",
+  definitions: UI_STRUCTURAL_PRIMITIVE_DEFINITIONS,
+  entries: UI_STRUCTURAL_PRIMITIVE_ENTRIES,
+  deferredPrimitiveIds: [
+    "builtin.ui.dialog",
+    "builtin.ui.drawer",
+    "builtin.ui.toolbar",
+    "builtin.ui.navigation-item",
+  ],
+} as const;

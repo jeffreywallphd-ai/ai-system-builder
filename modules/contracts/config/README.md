@@ -1,7 +1,15 @@
 # Configuration Contracts
 
+> AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
+
 Typed configuration contracts for host, runtime, logging, persistence, and
 storage concerns.
+
+The config family also defines the finite structured-persistence target mapping:
+`local` uses SQLite with embedded single-host access; `campus-server`,
+`corporate-server`, and `cloud` use PostgreSQL with client/server access. This is
+a deployment target contract, not proof that an adapter is active in host
+composition.
 
 This family is intentionally small:
 

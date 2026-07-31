@@ -5,6 +5,8 @@ import type { DesktopModelInventoryRecord, DesktopModelTrainingResult } from "..
 import { createDesktopApplicationSettingsClient } from "../../settings";
 import type { DesktopModelsClient } from "../api/desktopModelsClient";
 import { useModelsClient } from "./useModelsClient";
+import { createWorkspaceId } from "../../../../../../../modules/contracts/workspace";
+import type { DatasetPreparationTaskType } from "../../../../../../../modules/contracts/runtime";
 
 type TrainingStatus = "idle" | "running" | "succeeded" | "failed";
 type PollableTrainingStatus = DesktopModelTrainingResult["status"];
@@ -51,13 +53,20 @@ function resolveHuggingFaceRepositoryInput(repository: string, defaultNamespace?
   return `${defaultNamespace}/${normalizedRepository}`;
 }
 
-export function useModelTrainingFeature(client?: DesktopModelsClient) {
+function isVisionTrainingTask(trainingTask: DatasetPreparationTaskType): boolean {
+  return trainingTask === "vision-classification"
+    || trainingTask === "vision-detection"
+    || trainingTask === "vision-segmentation";
+}
+
+export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceId?: string) {
   const modelClient = useModelsClient(client);
 
   const [models, setModels] = useState<DesktopModelInventoryRecord[]>([]);
   const [datasetArtifacts, setDatasetArtifacts] = useState<DesktopArtifactBrowseItem[]>([]);
   const [baseModelRecordId, setBaseModelRecordId] = useState("");
   const [selectedDatasetArtifactIds, setSelectedDatasetArtifactIds] = useState<string[]>([]);
+  const [trainingTask, setTrainingTask] = useState<DatasetPreparationTaskType>("llm-instruction");
   const [method, setMethod] = useState<"lora" | "qlora" | "full-finetune">("lora");
   const [numEpochs, setNumEpochs] = useState("2");
   const [maxSteps, setMaxSteps] = useState("");
@@ -89,13 +98,17 @@ export function useModelTrainingFeature(client?: DesktopModelsClient) {
   const [message, setMessage] = useState<string>();
   const [result, setResult] = useState<DesktopModelTrainingResult>();
 
-  const isMethodSupported = true;
+  const isMethodSupported = trainingTask === "diffusion-lora"
+    ? method === "lora"
+    : isVisionTrainingTask(trainingTask)
+      ? method === "lora" || method === "full-finetune"
+      : true;
 
   const datasetArtifactIds = useMemo(() => selectedDatasetArtifactIds, [selectedDatasetArtifactIds]);
 
   useEffect(() => {
     const load = async () => {
-      const listed = await modelClient.listModels({});
+      const listed = workspaceId ? await modelClient.listModels({ workspaceId: createWorkspaceId(workspaceId) }) : [];
       let artifacts: DesktopArtifactBrowseItem[] = [];
       try {
         const { createDesktopArtifactBrowserClient } = await import("../../artifact-browser/api/desktopArtifactBrowserClient");
@@ -105,14 +118,24 @@ export function useModelTrainingFeature(client?: DesktopModelsClient) {
       }
       setModels(listed);
       setDatasetArtifacts(
-        artifacts.filter((artifact) => artifact.mediaType === "application/x-parquet" || artifact.storageKey.toLowerCase().endsWith(".parquet")),
+        artifacts.filter((artifact) => {
+          const key = artifact.storageKey.toLowerCase();
+          return artifact.mediaType === "application/x-parquet"
+            || artifact.mediaType === "application/x-ndjson"
+            || artifact.mediaType === "application/json"
+            || artifact.mediaType === "text/csv"
+            || key.endsWith(".parquet")
+            || key.endsWith(".jsonl")
+            || key.endsWith(".json")
+            || key.endsWith(".csv");
+        }),
       );
       if (!baseModelRecordId && listed.length > 0) {
         setBaseModelRecordId(listed[0]?.modelRecordId ?? "");
       }
     };
     void load();
-  }, [modelClient, baseModelRecordId]);
+  }, [modelClient, baseModelRecordId, workspaceId]);
 
   useEffect(() => {
     try {
@@ -129,6 +152,17 @@ export function useModelTrainingFeature(client?: DesktopModelsClient) {
       setDefaultHuggingFaceNamespace(undefined);
     }
   }, []);
+
+  useEffect(() => {
+    if (trainingTask === "diffusion-lora" && method !== "lora") {
+      setMethod("lora");
+      return;
+    }
+
+    if (isVisionTrainingTask(trainingTask) && method === "qlora") {
+      setMethod("lora");
+    }
+  }, [method, trainingTask]);
 
   const resolvedHuggingFaceRepository = resolveHuggingFaceRepositoryInput(huggingFaceRepository, defaultHuggingFaceNamespace);
   const hasOutputDestination = localDestinationEnabled || (huggingFaceDestinationEnabled && Boolean(resolvedHuggingFaceRepository));
@@ -163,8 +197,15 @@ export function useModelTrainingFeature(client?: DesktopModelsClient) {
     setResult(undefined);
 
     try {
+      if (!workspaceId) {
+        setStatus("failed");
+        setMessage("Select a workspace before training models.");
+        return;
+      }
       const targetModules = loraTargetModules.split(",").map((entry) => entry.trim()).filter((entry) => entry.length > 0);
       const trainingResult = await modelClient.trainModel({
+        workspaceId: createWorkspaceId(workspaceId),
+        trainingTask,
         baseModel: { modelRecordId: baseModelRecordId },
         datasets: datasetArtifactIds.map((artifactId, index) => ({ artifactId, splitRole: index === 0 ? "train" : "validation" })),
         method,
@@ -209,6 +250,7 @@ export function useModelTrainingFeature(client?: DesktopModelsClient) {
           },
         },
         validation: { enabled: validateAfterTraining, expectedLoRA: method !== "full-finetune" },
+        runtimeMetadata: { trainingTask },
       });
 
       setResult(trainingResult);
@@ -236,7 +278,7 @@ export function useModelTrainingFeature(client?: DesktopModelsClient) {
       if (latestResult.status === "succeeded") {
         setStatus("succeeded");
         setMessage("Training completed.");
-        const refreshed = await modelClient.listModels({});
+        const refreshed = workspaceId ? await modelClient.listModels({ workspaceId: createWorkspaceId(workspaceId) }) : [];
         setModels(refreshed);
       } else {
         setStatus("failed");
@@ -255,6 +297,8 @@ export function useModelTrainingFeature(client?: DesktopModelsClient) {
     setBaseModelRecordId,
     selectedDatasetArtifactIds,
     setSelectedDatasetArtifactIds,
+    trainingTask,
+    setTrainingTask,
     method,
     setMethod,
     numEpochs,

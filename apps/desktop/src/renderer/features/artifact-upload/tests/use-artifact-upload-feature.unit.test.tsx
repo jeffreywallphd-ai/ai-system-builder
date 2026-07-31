@@ -2,27 +2,42 @@ import { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { ARTIFACT_UPLOAD_MAXIMUM_BYTES } from "../../../../../../../modules/contracts/artifact-upload";
 import { useArtifactUploadFeature } from "../hooks/useArtifactUploadFeature";
 import type { ArtifactUploadClient } from "../api/desktopArtifactUploadClient";
 
 interface HookProbeProps {
-  client: ArtifactUploadClient;
+  client: Partial<ArtifactUploadClient> & Pick<ArtifactUploadClient, "uploadArtifact" | "getAcceptedTypes">;
+  workspaceId?: string;
 }
 
-function HookProbe({ client }: HookProbeProps) {
-  const { selectedFile, viewState, acceptedFileTypes, onFileChange, onUploadSubmit } = useArtifactUploadFeature(client);
+function HookProbe({ client, workspaceId = "workspace-a" }: HookProbeProps) {
+  const { selectedFiles, viewState, acceptedFileTypes, onFileChange, onUploadSubmit, onCancelUpload } = useArtifactUploadFeature(client as ArtifactUploadClient, undefined, workspaceId);
 
   return (
     <form onSubmit={(event) => void onUploadSubmit(event)}>
-      <input type="file" onChange={onFileChange} />
+      <input type="file" multiple onChange={onFileChange} />
       <button type="submit">Upload</button>
-      <p data-testid="selected-file">{selectedFile ? selectedFile.name : "none"}</p>
+      <button type="button" data-testid="cancel-upload" onClick={onCancelUpload}>Cancel upload</button>
+      <p data-testid="selected-files">{selectedFiles.length > 0 ? selectedFiles.map((file) => file.name).join(",") : "none"}</p>
       <p data-testid="status">{viewState.status}</p>
       <p data-testid="message">{viewState.message ?? ""}</p>
       <p data-testid="stored-key">{viewState.key ?? ""}</p>
+      <p data-testid="results">{viewState.results?.map((result) => `${result.fileName}:${result.status}:${result.message}`).join("|") ?? ""}</p>
       <p data-testid="accepted-file-types">{acceptedFileTypes}</p>
     </form>
   );
+}
+
+function createDeferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (reason?: unknown) => void } {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+
+  return { promise, resolve, reject };
 }
 
 function setInputFiles(input: HTMLInputElement, files: File[]): void {
@@ -92,7 +107,7 @@ describe("useArtifactUploadFeature", () => {
       form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     });
 
-    expect(container.querySelector("[data-testid='selected-file']")?.textContent).toBe("cat.png");
+    expect(container.querySelector("[data-testid='selected-files']")?.textContent).toBe("cat.png");
     expect(container.querySelector("[data-testid='status']")?.textContent).toBe("success");
     expect(container.querySelector("[data-testid='stored-key']")?.textContent).toBe("uploads/cat.png");
     expect(container.querySelector("[data-testid='accepted-file-types']")?.textContent).toBe(
@@ -126,8 +141,199 @@ describe("useArtifactUploadFeature", () => {
     expect(uploadArtifact).not.toHaveBeenCalled();
     expect(container.querySelector("[data-testid='status']")?.textContent).toBe("error");
     expect(container.querySelector("[data-testid='message']")?.textContent).toBe(
-      "Select one artifact file before uploading.",
+      "Select one or more artifact files before uploading.",
     );
+  });
+
+  it("rejects oversized files before allocating their bytes", async () => {
+    const uploadArtifact = vi.fn();
+    const getAcceptedTypes = vi.fn().mockResolvedValue({
+      acceptedExtensions: [".bin"],
+      acceptedMediaTypes: ["application/octet-stream"],
+      maximumBytes: ARTIFACT_UPLOAD_MAXIMUM_BYTES,
+    });
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoot = root;
+    mountedContainer = container;
+
+    await act(async () => {
+      root.render(<HookProbe client={{ uploadArtifact, getAcceptedTypes }} />);
+    });
+
+    const input = container.querySelector("input[type='file']") as HTMLInputElement;
+    const form = container.querySelector("form") as HTMLFormElement;
+    const file = new File([new Uint8Array([1])], "oversized.bin", {
+      type: "application/octet-stream",
+    });
+    Object.defineProperty(file, "size", {
+      configurable: true,
+      value: ARTIFACT_UPLOAD_MAXIMUM_BYTES + 1,
+    });
+    const arrayBuffer = vi.fn();
+    Object.defineProperty(file, "arrayBuffer", { value: arrayBuffer });
+
+    await act(async () => {
+      setInputFiles(input, [file]);
+    });
+    await act(async () => {
+      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(arrayBuffer).not.toHaveBeenCalled();
+    expect(uploadArtifact).not.toHaveBeenCalled();
+    expect(container.querySelector("[data-testid='status']")?.textContent).toBe("error");
+    expect(container.querySelector("[data-testid='message']")?.textContent).toContain(
+      `must not exceed ${ARTIFACT_UPLOAD_MAXIMUM_BYTES} bytes`,
+    );
+  });
+
+  it("continues uploading remaining files when one selected file fails", async () => {
+    const uploadArtifact = vi.fn(async (input: Parameters<ArtifactUploadClient["uploadArtifact"]>[0]) => {
+      if (input.fileName === "blocked.exe") {
+        return {
+          ok: false,
+          error: {
+            code: "validation",
+            message: "Artifact type is not accepted: application/octet-stream.",
+          },
+        } as const;
+      }
+
+      return {
+        ok: true,
+        value: {
+          descriptor: {
+            key: `uploads/${input.fileName}`,
+            mediaType: input.mediaType,
+            sizeBytes: input.bytes.byteLength,
+          },
+        },
+      } as const;
+    });
+    const getAcceptedTypes = vi.fn().mockResolvedValue({
+      acceptedExtensions: [".png", ".md"],
+      acceptedMediaTypes: ["image/png", "text/markdown"],
+    });
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoot = root;
+    mountedContainer = container;
+
+    await act(async () => {
+      root.render(<HookProbe client={{ uploadArtifact, getAcceptedTypes }} />);
+    });
+
+    const input = container.querySelector("input[type='file']") as HTMLInputElement;
+    const form = container.querySelector("form") as HTMLFormElement;
+    const files = [
+      new File([new Uint8Array([1])], "cat.png", { type: "image/png" }),
+      new File([new Uint8Array([2])], "blocked.exe", { type: "" }),
+      new File([new Uint8Array([3])], "notes.md", { type: "" }),
+    ];
+    files.forEach((file, index) => {
+      Object.defineProperty(file, "arrayBuffer", {
+        value: async () => new Uint8Array([index + 1]).buffer,
+      });
+    });
+
+    await act(async () => {
+      setInputFiles(input, files);
+    });
+    await act(async () => {
+      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(uploadArtifact).toHaveBeenCalledTimes(3);
+    expect(uploadArtifact).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      fileName: "notes.md",
+      mediaType: "text/markdown",
+    }));
+    expect(container.querySelector("[data-testid='status']")?.textContent).toBe("partial");
+    expect(container.querySelector("[data-testid='message']")?.textContent).toBe("Stored 2 of 3 files. 1 failed.");
+    expect(container.querySelector("[data-testid='results']")?.textContent).toContain("blocked.exe:error:Artifact type is not accepted");
+    expect(container.querySelector("[data-testid='results']")?.textContent).toContain("notes.md:success:Stored notes.md.");
+  });
+
+  it("cancels a selected upload batch after the current file finishes", async () => {
+    const firstUpload = createDeferred<Awaited<ReturnType<ArtifactUploadClient["uploadArtifact"]>>>();
+    const uploadArtifact = vi.fn((input: Parameters<ArtifactUploadClient["uploadArtifact"]>[0]) => {
+      if (input.fileName === "first.png") {
+        return firstUpload.promise;
+      }
+
+      return Promise.resolve({
+        ok: true,
+        value: {
+          descriptor: {
+            key: `uploads/${input.fileName}`,
+            mediaType: input.mediaType,
+            sizeBytes: input.bytes.byteLength,
+          },
+        },
+      } as const);
+    });
+    const getAcceptedTypes = vi.fn().mockResolvedValue({
+      acceptedExtensions: [".png"],
+      acceptedMediaTypes: ["image/png"],
+    });
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoot = root;
+    mountedContainer = container;
+
+    await act(async () => {
+      root.render(<HookProbe client={{ uploadArtifact, getAcceptedTypes }} />);
+    });
+
+    const input = container.querySelector("input[type='file']") as HTMLInputElement;
+    const form = container.querySelector("form") as HTMLFormElement;
+    const files = [
+      new File([new Uint8Array([1])], "first.png", { type: "image/png" }),
+      new File([new Uint8Array([2])], "second.png", { type: "image/png" }),
+    ];
+    files.forEach((file, index) => {
+      Object.defineProperty(file, "arrayBuffer", {
+        value: async () => new Uint8Array([index + 1]).buffer,
+      });
+    });
+
+    await act(async () => {
+      setInputFiles(input, files);
+    });
+    await act(async () => {
+      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      await Promise.resolve();
+    });
+
+    expect(uploadArtifact).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      (container.querySelector("[data-testid='cancel-upload']") as HTMLButtonElement).click();
+    });
+    expect(container.querySelector("[data-testid='message']")?.textContent).toBe("Canceling upload after the current file finishes...");
+
+    await act(async () => {
+      firstUpload.resolve({
+        ok: true,
+        value: {
+          descriptor: {
+            key: "uploads/first.png",
+            mediaType: "image/png",
+            sizeBytes: 1,
+          },
+        },
+      });
+    });
+
+    expect(uploadArtifact).toHaveBeenCalledOnce();
+    expect(container.querySelector("[data-testid='status']")?.textContent).toBe("canceled");
+    expect(container.querySelector("[data-testid='message']")?.textContent).toBe("Upload canceled after 1 of 2 files. 1 stored, 0 failed.");
   });
 
   it("falls back to text/markdown when browser file type metadata is empty", async () => {
@@ -215,15 +421,17 @@ describe("useArtifactUploadFeature", () => {
 
     expect(container.querySelector("[data-testid='status']")?.textContent).toBe("success");
   });
+
 });
 
 interface WebsiteHookProbeProps {
   client: ArtifactUploadClient;
   onUploadComplete?: () => void;
   initialBatchInput?: string;
+  workspaceId?: string;
 }
 
-function WebsiteHookProbe({ client, onUploadComplete, initialBatchInput }: WebsiteHookProbeProps) {
+function WebsiteHookProbe({ client, onUploadComplete, initialBatchInput, workspaceId = "workspace-a" }: WebsiteHookProbeProps) {
   const {
     websiteSingleUrl,
     websiteBatchInput,
@@ -233,7 +441,7 @@ function WebsiteHookProbe({ client, onUploadComplete, initialBatchInput }: Websi
     setWebsiteBatchInput,
     ingestWebsiteSingle,
     ingestWebsiteBatch,
-  } = useArtifactUploadFeature(client, onUploadComplete);
+  } = useArtifactUploadFeature(client, onUploadComplete, workspaceId);
 
   useEffect(() => {
     if (initialBatchInput) {
@@ -289,7 +497,7 @@ it("submits single website ingestion and refreshes upload browser on success", a
     (container.querySelector("[data-testid='ingest-single']") as HTMLButtonElement).click();
   });
 
-  expect(ingestWebsitePage).toHaveBeenCalledWith({ url: "https://example.com", mode: "automatic" });
+  expect(ingestWebsitePage).toHaveBeenCalledWith({ url: "https://example.com", mode: "automatic", workspaceId: "workspace-a" });
   expect(onUploadComplete).toHaveBeenCalledTimes(1);
 
   await act(async () => {
@@ -337,6 +545,7 @@ it("submits website batch ingestion, renders summary message, and triggers one r
   expect(ingestWebsitePagesBatch).toHaveBeenCalledWith({
     targets: [{ url: "https://example.com/a" }, { url: "https://example.com/b" }],
     mode: "automatic",
+    workspaceId: "workspace-a",
   });
   expect(container.querySelector("[data-testid='batch-message']")?.textContent).toContain("2/2 succeeded");
   expect(onUploadComplete).toHaveBeenCalledTimes(1);

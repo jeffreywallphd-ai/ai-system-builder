@@ -1,63 +1,100 @@
 # Prompt Routing
 
-Use this guide to select **minimum-sufficient** context packs for prompts.
+Use this guide to select **minimum-sufficient** context packs. Start with `index.pack.md`, then add only packs that materially affect the requested work.
 
-## Baseline (Always Include)
+## Baseline
 
-- `docs/context/packs/index.pack.md` is the authoritative baseline pack.
-- Include it in all automated prompt assembly.
+- Always include `docs/context/packs/index.pack.md`.
+- Read `docs/README.md` before assembling task context.
+- Use `docs/context/pack-catalog.json` for machine-readable task/path signals and applicable checks.
+- Default to no more than two additional packs: one primary concern and one adjacent boundary.
+- Add another pack only after repository search proves that boundary is materially affected; for broad work, stage context and implementation by boundary instead of preloading everything.
+- Packs are routing aids and compact summaries; canonical ADRs, architecture docs, and standards win on conflict.
+- Before editing, apply `docs/standards/security-by-design-standards.md` and record `not-security-relevant` with a concrete rationale or `security-relevant` with the affected assets, trust boundaries, abuse/failure cases, controls, and evidence. This screen does not count against the additional-pack limit.
 
-## Add Packs by Task Concern
+## Pack Selection Table
 
-| If the task materially involves... | Add this pack |
-| --- | --- |
-| repo layout, module placement, dependency direction at a repo level | `docs/context/packs/repository-overview.pack.md` |
-| cross-layer architecture or boundary decisions | `docs/context/packs/architecture.pack.md` |
-| runtime adapters, runtime contract shape, runtime execution flow | `docs/context/packs/runtime.pack.md` |
-| runtime task registry lifecycle for long-running runtime tasks (start/read/cancel, shared lifecycle/progress/retention semantics) | `docs/context/packs/runtime-task-registry.pack.md` |
-| image generation feature architecture/contracts, ComfyUI runtime-sidecar concerns, image asset modeling | `docs/context/packs/image-generation.pack.md` |
-| runtime installer architecture, installer contracts/ports, install-state modeling | `docs/context/packs/runtime-installer.pack.md` |
-| Electron/desktop host lifecycle, IPC/preload boundaries, desktop composition | `docs/context/packs/desktop-host.pack.md` |
-| desktop renderer structure, page/feature/component boundaries, renderer API-client usage | `docs/context/packs/desktop-implementation.pack.md` |
-| desktop renderer CSS/style architecture, shared style layering, token-first styling decisions | `docs/context/packs/desktop-styling.pack.md` |
-| server host lifecycle, Express transport boundaries, thin web client coupling | `docs/context/packs/server-host.pack.md` |
-| persistence vs storage responsibilities, ingestion/staged-artifact semantics for uploads/scrape/generated intake paths, artifact browser/read/view contracts (list/detail/content separation), shared storage foundation contracts (`StorageKind`, `StorageProviderId`, `StorageBackingReference`), artifact-object storage contracts, artifact-repo storage contracts/provider concerns (including Hugging Face dataset/model repo integration direction), AppData/server roots, metadata-vs-file boundaries | `docs/context/packs/persistence-storage.pack.md` |
-| documentation updates, canonical-vs-context discipline, doc governance | `docs/context/packs/docs-standards.pack.md` |
-| structured logging behavior, diagnosability, log field/level discipline | `docs/context/packs/logging.pack.md` |
-| test strategy, regression coverage, layered testing expectations | `docs/context/packs/testing.pack.md` |
-| debugging, error diagnosis, failure lifecycle analysis, bug-fix prompts | `docs/context/packs/debugging-error-handling.pack.md` |
+| If the task materially involves...                                                                                         | Add this pack                                                                                                        |
+| -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| repository layout, package placement, dependency direction                                                                 | `docs/context/packs/repository-overview.pack.md`                                                                     |
+| cross-layer architecture or boundary decisions                                                                             | `docs/context/packs/architecture.pack.md`                                                                            |
+| Asset Kernel vocabulary, Asset Registry/Library, system packs, resource-backed asset views                                 | `docs/context/packs/asset-kernel.pack.md`                                                                            |
+| user library, promote/link/copy/import reuse, cross-workspace provenance/propagation                                       | `docs/context/packs/user-library.pack.md`                                                                            |
+| custom asset creation, authored drafts, revisions, overrides, layered definition/source customization, promotion readiness | `docs/context/packs/asset-authoring.pack.md`                                                                         |
+| effective/materialized projections, projection readiness, blockers, diagnostics                                            | `docs/context/packs/effective-asset-projections.pack.md`                                                             |
+| asset composition plans, compatibility, dependencies, planning blockers                                                    | `docs/context/packs/asset-composition-planning.pack.md`                                                              |
+| composed systems, System Builder records, Systems navigation, software-status placement                                    | `docs/context/packs/system-builder.pack.md`                                                                          |
+| runtime readiness, capability matching, runtime resources, execution-output readiness                                      | `docs/context/packs/runtime-readiness-binding.pack.md`                                                               |
+| execution plans, dry-run/preflight, planned steps/inputs/outputs, safety gates                                             | `docs/context/packs/execution-plan-preparation.pack.md`                                                              |
+| conversational runnable systems, sessions, turns, runs, text-generation adapters                                           | `docs/context/packs/controlled-conversational-system-execution.pack.md`                                              |
+| ingestion, staged sources, dataset preparation, split integrity, curation, versioning, or dataset publication             | `docs/context/packs/data-management.pack.md`                                                                         |
+| runtime adapters, runtime contracts, runtime execution flow                                                                | `docs/context/packs/runtime.pack.md`                                                                                 |
+| runtime task registry lifecycle, progress, cancellation, retention                                                         | `docs/context/packs/runtime-task-registry.pack.md`                                                                   |
+| runtime installers, auto-install, install state, ComfyUI/Git installs                                                      | `docs/context/packs/runtime-installer.pack.md`                                                                       |
+| image generation, ComfyUI sidecar, image assets/generated outputs                                                          | `docs/context/packs/image-generation.pack.md`                                                                        |
+| Electron host lifecycle, IPC/preload boundaries, desktop composition                                                       | `docs/context/packs/desktop-host.pack.md`                                                                            |
+| Electron IPC contracts, operation-derived channels, preload invoke boundaries                                              | `docs/context/packs/ipc-electron.pack.md`                                                                            |
+| renderer feature/page/component work, renderer clients, UI state                                                           | `docs/context/packs/desktop-implementation.pack.md`                                                                  |
+| renderer CSS/style architecture, shared style layers, tokens                                                               | `docs/context/packs/desktop-styling.pack.md`                                                                         |
+| server lifecycle, Express APIs, thin-client coupling, API route handlers                                                   | `docs/context/packs/server-host.pack.md`                                                                             |
+| persistence/storage, artifacts/uploads, storage keys, AppData/server roots, model/artifact storage                         | `docs/context/packs/persistence-storage.pack.md`                                                                     |
+| authn/authz, OIDC, organization tenancy/placement, route policy, HTTPS/TLS, tokens, credentials, audit, sanitization, public API/IPC, uploads, untrusted parsing, outbound network, executable inputs, sensitive data, AI context, or supply-chain boundaries | `docs/context/packs/security.pack.md` + the single owning host/runtime/storage/feature pack; add persistence-storage when data isolation changes |
+| structured logging, diagnostic events, verbosity, safe failure reporting                                                   | `docs/context/packs/logging.pack.md`                                                                                 |
+| documentation governance, agent change planning, decision readiness, change impact, canonical-vs-context updates           | `docs/context/packs/docs-standards.pack.md`                                                                          |
+| test strategy, regression coverage, test placement                                                                         | `docs/context/packs/testing.pack.md`                                                                                 |
+| debugging, failures, stack traces, hangs, timeouts, broken UI/API/runtime behavior                                         | `docs/context/packs/debugging-error-handling.pack.md`                                                                |
 
-## Debugging/Error Routing (Explicit)
+## Common Pack Chains
 
-For prompts containing debugging/failure language (for example: `error`, `bug`, `broken`, `failed`, `fails`, `exception`, `stack trace`, `traceback`, `diagnose`, `debug`, `fix this issue`, `fetch failed`, `hangs`, `timeout`, `progress not updating`, `background task`, `runtime keeps running`, `transport disconnect`, `IPC failure`, `preload failure`, `worker failure`, `Python runtime failure`):
+- Debugging: `index` + `debugging-error-handling` + the single pack owning the first failing seam.
+- Image generation defect: `index` + `image-generation`; add only one of `runtime`, `runtime-task-registry`, `runtime-installer`, `persistence-storage`, or the affected host after localization.
+- Asset Library/Registry: `index` + `asset-kernel` + the affected UI, transport/host, persistence, or security pack.
+- Workspace-scoped persistence: `index` + the owning feature pack + `persistence-storage`; load security or a host pack only when that boundary also changes.
+- User Library: `index` + `user-library` + either `asset-kernel` for semantics or `persistence-storage` for repository behavior.
+- Asset authoring: `index` + `asset-authoring` + either `asset-kernel`,
+  `user-library`, `effective-asset-projections`, or `security` based on the
+  adjacent behavior; use `security` for Asset Studio source overlays or
+  materialization.
+- Projection/composition/readiness/planning: select the one owning layer plus one immediate neighbor; move forward through the chain in separate reasoning stages.
+- System Builder: `index` + `system-builder`; add `asset-kernel` or `asset-composition-planning` for data semantics, or `desktop-implementation` for Systems/Settings UI placement.
+- Controlled conversational execution: `index` + `controlled-conversational-system-execution`; add the execution-plan or runtime pack only when that exact boundary changes.
+- Data Management: `index` + `data-management`; add only the one owning
+  storage, runtime, UI, server, or security pack proven relevant to the current
+  boundary.
+- Security: `index` + `security` + the one public host/client/feature boundary being changed.
+- Implicit security boundary: when an otherwise ordinary feature changes authority, isolation, public payloads, untrusted input, storage, runtime/provider I/O, diagnostics, dependencies, migration, or rollback, route it as `index` + `security` + the owning boundary pack even if the request never says “security.”
+- Desktop renderer styling: `index` + `desktop-styling` + `desktop-implementation`.
 
-- Always include `docs/context/packs/debugging-error-handling.pack.md`.
-- If the failure touches runtime/Python/worker/background-task behavior, also include `docs/context/packs/runtime.pack.md`.
-- If the failure touches IPC/preload/desktop transport boundaries, also include `docs/context/packs/desktop-host.pack.md` (and `docs/context/packs/server-host.pack.md` when server transport boundaries are involved).
-- If the failure touches renderer/UI state or progress display, also include `docs/context/packs/desktop-implementation.pack.md` (and `docs/context/packs/desktop-styling.pack.md` only when styling behavior is part of the defect).
+## Canonical Escalation Rules
 
-Routing rule for feature prompts:
+Read and update canonical docs when the task:
 
-- If the task relates to image generation, ComfyUI, or image assets, include `docs/context/packs/image-generation.pack.md`.
-- If the task relates to runtime installer, auto install, ComfyUI install, sidecar install, or Git runtime install, include `docs/context/packs/runtime-installer.pack.md`.
-- Keep routing minimum-sufficient; do not include unrelated packs or full-repo context by default.
+- changes architecture, repository structure, standards, or documented behavior,
+- changes dependency direction, host/transport/runtime responsibility, persistence/storage responsibility, security policy, or workspace scope,
+- changes Asset Kernel semantics, pack/source semantics, mutation behavior, resolver behavior, or public transport/UI exposure,
+- changes a trust boundary, authority decision, sensitive data flow, executable input, dependency/release input, safe diagnostic, migration, recovery, or rollback posture,
+- exposes a context-pack summary that is incomplete, stale, or ambiguous.
 
-## Selection Rules
+Before architecture-sensitive implementation, consult `docs/adr/decision-readiness.md`. Proposed or decision-required areas must return to decision work instead of being implemented from inference.
 
-- Start with `index.pack.md`, then add only packs materially relevant to the task.
-- Do not include packs “just in case.”
-- Select packs based on the task’s actual architectural and implementation concerns.
-- Pack inclusion does not remove the requirement to read/update canonical docs when task scope requires it.
+## Boundary Split Rules
 
-## Escalate to Canonical Docs When
+- Do not combine API/server-host, IPC/preload/desktop-host, and desktop/thin-client parity implementation into one prompt unless the user explicitly asks for a cross-boundary implementation.
+- Do not add host/API/IPC/UI exposure while working on contracts/application services unless the prompt explicitly includes that surface.
+- Do not include runtime/provider/storage packs for read-only UI tasks unless those boundaries are directly touched.
+- Do not include all phase packs for asset work; include the narrow chain that matches the task.
 
-- The task changes architecture, repository structure, standards, or documented behavior.
-- The task changes boundaries, dependency direction, host/transport/runtime responsibilities, or persistence/storage responsibilities.
-- The task creates or changes canonical rules; update canonical docs in the same work item.
-- A pack summary appears incomplete or ambiguous for the requested change.
+## Implementation Roadmap Routing
 
-Packs are summaries and routing aids, not substitutes for canonical sources.
+Requests to prepare, implement, continue, resume, or review an implementation
+roadmap route to `skills/manage-implementation-roadmaps/SKILL.md`. Drafting or
+review alone does not authorize code changes. Once implementation is explicitly
+requested and the roadmap is approved, continue through every approved increment
+by default; do not insert routine per-increment approval pauses. Stop only when the
+skill's scope, authority, security, blocker, controlled-environment, or final
+approval gates apply.
 
 ## Stop Condition
 
-- If required canonical guidance is missing, unclear, or conflicting, do not invent policy silently; treat the task as requiring canonical clarification/update in the same work item.
+- If required canonical guidance is missing, unclear, or conflicting, update or request clarification for the canonical docs rather than inventing policy silently.
+- If the security impact cannot be dispositioned, or a material identity, tenancy, secret, sandbox, public exposure, encryption, retention, audit, or residual-risk choice is unresolved, stop at the decision gate rather than assuming a permissive policy.

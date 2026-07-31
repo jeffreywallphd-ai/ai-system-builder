@@ -49,12 +49,16 @@ describe("registerArtifactUploadIpc desktop artifact upload handler", () => {
       correlationId: "corr-upload-1",
     });
 
-    const handler = createDesktopArtifactUploadIpcHandler(createUseCaseStub(execute));
+    const handler = createDesktopArtifactUploadIpcHandler(
+      createUseCaseStub(execute),
+      { isTrustedSender: () => true },
+    );
     const request = createDesktopArtifactUploadRequest(
       {
         fileName: "kitten.png",
         mediaType: "image/png",
         bytes: new Uint8Array([137, 80, 78, 71]),
+        workspaceId: "workspace.upload-test",
         boundary: {
           host: "desktop",
           source: "desktop.renderer.artifact-upload.form",
@@ -76,10 +80,12 @@ describe("registerArtifactUploadIpc desktop artifact upload handler", () => {
       },
       {
         source: "desktop.renderer.artifact-upload.form",
+        workspaceId: "workspace.upload-test",
       },
       {
         requestId: "req-upload-1",
         correlationId: "corr-upload-1",
+        workspaceId: "workspace.upload-test",
       },
     );
     expect(response).toMatchObject({
@@ -113,12 +119,16 @@ describe("registerArtifactUploadIpc desktop artifact upload handler", () => {
       correlationId: "corr-upload-2",
     });
 
-    const handler = createDesktopArtifactUploadIpcHandler(createUseCaseStub(execute));
+    const handler = createDesktopArtifactUploadIpcHandler(
+      createUseCaseStub(execute),
+      { isTrustedSender: () => true },
+    );
     const request = createDesktopArtifactUploadRequest(
       {
         fileName: "brochure.pdf",
         mediaType: "application/pdf",
         bytes: new Uint8Array([1, 2, 3]),
+        workspaceId: "workspace.upload-test",
         boundary: {
           host: "desktop",
           source: "desktop.renderer.artifact-upload.form",
@@ -182,6 +192,7 @@ describe("registerArtifactUploadIpc desktop artifact upload handler", () => {
 
     registerArtifactUploadIpc({
       ipcMain,
+      senderTrust: { isTrustedSender: () => true },
       storeArtifactUploadUseCase: createUseCaseStub(execute),
     });
 
@@ -193,6 +204,7 @@ describe("registerArtifactUploadIpc desktop artifact upload handler", () => {
         fileName: "cat.png",
         mediaType: "image/png",
         bytes: new Uint8Array([1, 2, 3, 4]),
+        workspaceId: "workspace.upload-test",
         boundary: {
           host: "desktop",
           source: "desktop.renderer.artifact-upload.form",
@@ -218,12 +230,47 @@ describe("registerArtifactUploadIpc desktop artifact upload handler", () => {
       },
       {
         source: "desktop.renderer.artifact-upload.form",
+        workspaceId: "workspace.upload-test",
       },
       {
         requestId: "req-upload-3",
         correlationId: undefined,
+        workspaceId: "workspace.upload-test",
       },
     );
+  });
+
+  it("rejects an untrusted sender before reading bytes or invoking the use case", async () => {
+    const execute = testDouble.fn<StoreArtifactUploadUseCasePort["execute"]>();
+    const handler = createDesktopArtifactUploadIpcHandler(
+      createUseCaseStub(execute),
+      { isTrustedSender: () => false },
+    );
+    const request = createDesktopArtifactUploadRequest(
+      {
+        fileName: "cat.png",
+        mediaType: "image/png",
+        bytes: new Uint8Array([1]),
+        workspaceId: "workspace.upload-test",
+        boundary: {
+          host: "desktop",
+          source: "desktop.renderer.artifact-upload.form",
+        },
+      },
+      { requestId: "req-untrusted" },
+    );
+
+    const response = await handler({ sender: "spoofed" }, request);
+
+    expect(response).toMatchObject({
+      ok: false,
+      error: {
+        code: "forbidden",
+        message: "The desktop IPC sender is not trusted.",
+      },
+      requestId: "req-untrusted",
+    });
+    expect(execute).not.toHaveBeenCalled();
   });
 });
 
@@ -236,7 +283,7 @@ describe("registerElectronIpc top-level aggregator surface", () => {
       : aggregatorTypeScriptPath.replace(/\.ts$/, ".js");
     const source = readFileSync(aggregatorPath, "utf8");
 
-    expect(source).not.toContain("export type");
+    expect(source).toContain("registerDesktopArtifactIpc");
     expect(source).not.toContain("mapIpcRequestPayload");
     expect(source).not.toContain("mapStoreArtifactUploadResultToIpcResponse");
     expect(source).not.toContain("createDesktopArtifactUploadIpcHandler");

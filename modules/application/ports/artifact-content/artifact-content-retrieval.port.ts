@@ -3,6 +3,7 @@ import type { ApplicationRequestContext } from "../application-request-context";
 
 export interface RetrieveArtifactViewerMediaByStorageKeyRequest {
   storageKey: string;
+  maximumBytes?: number;
 }
 
 export interface ArtifactContentRetrievalValue {

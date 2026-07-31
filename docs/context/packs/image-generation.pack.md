@@ -38,17 +38,17 @@ Use this pack for tasks involving image generation contracts, runtime lifecycle 
 - Runtime task registry is the execution path for image generation workloads.
 - Assets are created post-execution in the application layer, not in the runtime layer.
 
-## Prompt 4/7 Application Layer Notes
+## Application Layer Notes
 
 - Application image generation use cases must depend on `RuntimeTaskRegistryPort` for task lifecycle orchestration.
 - ComfyUI integration remains adapter-only and must not leak into contracts or application use-case imports.
-- Image asset registration for generated outputs is intentionally deferred to the next prompt.
+- Generated-output finalization and image asset registration belong after runtime completion in application/asset flows, not in runtime adapters.
 
 
 ## Runtime Installer Alignment
 
 - ComfyUI may be auto-installed through the Runtime Installer abstraction.
-- ComfyUI supervisor should call installer-before-start in a later prompt, not in this contract/architecture step.
+- ComfyUI supervisor may call installer-before-start through host/runtime composition; keep installation outside image generation contracts and use cases.
 - Installation is separate from image generation contracts and application use cases.
 
 
@@ -67,3 +67,20 @@ Use this pack for tasks involving image generation contracts, runtime lifecycle 
 - DirectML override env vars for torch companions are advanced controls and can break compatibility if set incorrectly.
 - When detected, the supervisor performs one managed dependency repair attempt and retries startup once before surfacing a clear actionable failure.
 - The repair flow is non-destructive: it repairs managed Python dependencies and does not delete models or ComfyUI repo files.
+- ComfyUI host composition defaults to CPU when no accelerator is explicitly configured or clearly detected; do not let implicit ComfyUI autodetection assume NVIDIA/CUDA.
+
+
+
+## Host-owned execution and output ownership
+
+- Image generation can execute in desktop local mode, server/thin-client mode, or future desktop remote mode.
+- The executing host owns ComfyUI/Python runtime process/install/cache state.
+- Generated outputs finalize into the executing host artifact storage.
+- Thin-client and future desktop-remote UI should consume artifact-backed references/media URLs.
+- UI should not depend on ComfyUI temp output folders.
+- Model/checkpoint resolution belongs to the executing host.
+- Canonical references: ADR-0013 and ADR-0012.
+
+- Image-generation routes should require image-generation scopes through centralized route policy.
+- Generated image artifacts should be authorized via artifact storage/media routes.
+- ComfyUI temp paths must not be exposed as security-relevant client state.

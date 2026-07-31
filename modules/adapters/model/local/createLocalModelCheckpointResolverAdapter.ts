@@ -1,5 +1,5 @@
 import { copyFile, mkdir, readdir, stat } from "node:fs/promises";
-import { basename, extname, join } from "node:path";
+import { extname, join } from "node:path";
 
 import type { ModelRegistryPort, ModelCheckpointResolverPort } from "../../../application/ports/model";
 
@@ -74,7 +74,7 @@ export function createLocalModelCheckpointResolverAdapter(deps: {
       if (!selected) return {};
       if (isCheckpointFile(selected) && !selected.includes("/") && !selected.includes("\\")) return { checkpoint: selected };
 
-      const models = await deps.modelRegistry.listModels({ search: selected, limit: 200 });
+      const models = await deps.modelRegistry.listModels({ workspaceId: request.workspaceId as never, search: selected, limit: 200 });
       const record = models.models.find((m) => [m.modelRecordId, m.modelId, m.displayName, m.localPath].some((x) => normalize(x) === selected));
       if (!record) {
         throw new Error(`No matching downloaded model record found for selected model '${selected}'. Choose a downloaded checkpoint-compatible model or provide a checkpoint filename (${CHECKPOINT_EXTENSIONS.join(", ")}).`);
@@ -93,7 +93,12 @@ export function createLocalModelCheckpointResolverAdapter(deps: {
         throw new Error(`Unable to resolve ComfyUI checkpoint for selected model '${selected}'. Matched model record: ${record.modelRecordId}. Local folder checked: ${localPath}. Supported extensions: ${CHECKPOINT_EXTENSIONS.join(", ")}. Synchronization attempted: no.`);
       }
 
-      const candidates = files.filter(isCheckpointFile).sort((a, b) => score(a) - score(b) || a.localeCompare(b));
+      const metadataCheckpointFile = typeof record.metadata?.checkpointFile === "string" ? record.metadata.checkpointFile.trim() : undefined;
+      const candidates = files.filter(isCheckpointFile).sort((a, b) => {
+        if (metadataCheckpointFile && a === metadataCheckpointFile) return -1;
+        if (metadataCheckpointFile && b === metadataCheckpointFile) return 1;
+        return score(a) - score(b) || a.localeCompare(b);
+      });
       if (candidates.length === 0) {
         throw new Error(`Downloaded model '${selected}' is not currently usable as a ComfyUI checkpoint. Matched model record: ${record.modelRecordId}. Local folder checked: ${localPath}. Supported extensions: ${CHECKPOINT_EXTENSIONS.join(", ")}. Synchronization attempted: no. Next action: download a checkpoint-format model artifact.`);
       }

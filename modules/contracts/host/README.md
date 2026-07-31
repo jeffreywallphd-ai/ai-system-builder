@@ -1,5 +1,7 @@
 # Host Context Contracts
 
+> AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
+
 Shared host context contracts for passing host metadata across boundaries without
 leaking framework objects.
 

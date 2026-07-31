@@ -11,12 +11,15 @@ import {
 import { type ModelInferenceMode, normalizeModelInferenceMode } from "./model-inference-mode";
 import { type ModelBrowseProvider, normalizeModelBrowseProvider } from "./model-browse-provider";
 import { normalizeModelInventoryRecord, type ModelInventoryRecord } from "./model-inventory";
+import { createWorkspaceId, type WorkspaceId } from "../workspace";
 import { type ModelValidationStatus, normalizeModelValidationStatus } from "./model-validation";
 
 export const DEFAULT_LIST_MODELS_LIMIT = 50;
 export const MAX_LIST_MODELS_LIMIT = 500;
+export const MAX_LIST_MODEL_FILES = 500;
 
 export interface ListModelsRequest {
+  workspaceId?: WorkspaceId;
   source?: ModelSource;
   lifecycleStatus?: ModelLifecycleStatus;
   artifactForm?: ModelArtifactForm;
@@ -26,6 +29,7 @@ export interface ListModelsRequest {
   limit?: number;
   cursor?: string;
   includeDiscovered?: boolean;
+  includeSharedStorage?: boolean;
 }
 
 export interface ListModelsResult {
@@ -34,6 +38,7 @@ export interface ListModelsResult {
 }
 
 export interface SaveModelReferenceRequest {
+  workspaceId?: WorkspaceId;
   modelRecordId?: string;
   provider: ModelBrowseProvider;
   modelId: string;
@@ -49,6 +54,7 @@ export interface SaveModelReferenceResult {
 }
 
 export interface DownloadModelRequest {
+  workspaceId?: WorkspaceId;
   modelRecordId?: string;
   provider: ModelBrowseProvider;
   modelId: string;
@@ -71,6 +77,7 @@ export interface DownloadModelResult {
 }
 
 export interface RegisterDownloadedModelRequest {
+  workspaceId?: WorkspaceId;
   modelRecordId?: string;
   displayName: string;
   source: Extract<ModelSource, "local" | "huggingface">;
@@ -96,6 +103,7 @@ export interface RegisterDownloadedModelResult {
 }
 
 export interface RegisterGeneratedModelRequest {
+  workspaceId?: WorkspaceId;
   modelRecordId?: string;
   displayName: string;
   provider?: ModelBrowseProvider;
@@ -121,6 +129,7 @@ export interface RegisterGeneratedModelResult {
 }
 
 export interface UpdateModelRecordRequest {
+  workspaceId?: WorkspaceId;
   modelRecordId: string;
   patch: Partial<Omit<ModelInventoryRecord, "modelRecordId" | "createdAt">>;
 }
@@ -130,6 +139,7 @@ export interface UpdateModelRecordResult {
 }
 
 export interface DeleteModelRecordRequest {
+  workspaceId?: WorkspaceId;
   modelRecordId: string;
   deleteLocalFiles?: boolean;
   deleteBackingArtifacts?: boolean;
@@ -140,6 +150,13 @@ export interface DeleteModelRecordResult {
   deletedRegistryRecord: boolean;
   deletedLocalFiles: boolean;
   deletedBackingArtifactIds: string[];
+}
+
+function normalizeWorkspaceId(value: WorkspaceId | string | undefined): WorkspaceId {
+  if (typeof value !== "string") {
+    throw new Error("workspaceId must be provided for workspace-scoped model operations.");
+  }
+  return createWorkspaceId(value);
 }
 
 function normalizeOptionalText(value: string | undefined): string | undefined {
@@ -179,6 +196,7 @@ function normalizeListLimit(limit: number | undefined): number {
 
 export function normalizeListModelsRequest(request: ListModelsRequest): ListModelsRequest {
   return {
+    workspaceId: normalizeWorkspaceId(request.workspaceId),
     source: typeof request.source === "string" ? normalizeModelSource(request.source) : undefined,
     lifecycleStatus:
       typeof request.lifecycleStatus === "string"
@@ -192,7 +210,34 @@ export function normalizeListModelsRequest(request: ListModelsRequest): ListMode
     limit: normalizeListLimit(request.limit),
     cursor: normalizeOptionalText(request.cursor),
     includeDiscovered: request.includeDiscovered === false ? false : undefined,
+    includeSharedStorage: request.includeSharedStorage === true ? true : undefined,
   };
+}
+
+export interface RevealModelInFolderRequest {
+  workspaceId?: WorkspaceId;
+  modelRecordId: string;
+}
+
+export interface RevealModelInFolderResult {
+  modelRecordId: string;
+  revealed: true;
+}
+
+export interface ListModelFilesRequest {
+  workspaceId?: WorkspaceId;
+  modelRecordId: string;
+}
+
+export interface ModelFileListItem {
+  relativePath: string;
+  sizeBytes: number;
+}
+
+export interface ListModelFilesResult {
+  modelRecordId: string;
+  files: ModelFileListItem[];
+  truncated: boolean;
 }
 
 export function normalizeListModelsResult(result: ListModelsResult): ListModelsResult {
@@ -204,6 +249,7 @@ export function normalizeListModelsResult(result: ListModelsResult): ListModelsR
 
 export function normalizeSaveModelReferenceRequest(request: SaveModelReferenceRequest): SaveModelReferenceRequest {
   return {
+    workspaceId: normalizeWorkspaceId(request.workspaceId),
     modelRecordId: normalizeOptionalText(request.modelRecordId),
     provider: normalizeModelBrowseProvider(request.provider),
     modelId: normalizeRequiredText(request.modelId, "modelId"),
@@ -217,6 +263,7 @@ export function normalizeSaveModelReferenceRequest(request: SaveModelReferenceRe
 
 export function normalizeDownloadModelRequest(request: DownloadModelRequest): DownloadModelRequest {
   return {
+    workspaceId: normalizeWorkspaceId(request.workspaceId),
     modelRecordId: normalizeOptionalText(request.modelRecordId),
     provider: normalizeModelBrowseProvider(request.provider),
     modelId: normalizeRequiredText(request.modelId, "modelId"),
@@ -233,6 +280,7 @@ export function normalizeRegisterDownloadedModelRequest(
 ): RegisterDownloadedModelRequest {
   return {
     ...request,
+    workspaceId: normalizeWorkspaceId(request.workspaceId),
     modelRecordId: normalizeOptionalText(request.modelRecordId),
     displayName: normalizeRequiredText(request.displayName, "displayName"),
     source: normalizeModelSource(request.source) as RegisterDownloadedModelRequest["source"],
@@ -262,6 +310,7 @@ export function normalizeRegisterGeneratedModelRequest(
 ): RegisterGeneratedModelRequest {
   return {
     ...request,
+    workspaceId: normalizeWorkspaceId(request.workspaceId),
     modelRecordId: normalizeOptionalText(request.modelRecordId),
     displayName: normalizeRequiredText(request.displayName, "displayName"),
     provider: typeof request.provider === "string" ? normalizeModelBrowseProvider(request.provider) : "unknown",
@@ -288,6 +337,7 @@ export function normalizeRegisterGeneratedModelRequest(
 
 export function normalizeUpdateModelRecordRequest(request: UpdateModelRecordRequest): UpdateModelRecordRequest {
   return {
+    workspaceId: normalizeWorkspaceId(request.workspaceId),
     modelRecordId: normalizeRequiredText(request.modelRecordId, "modelRecordId"),
     patch: request.patch,
   };
@@ -295,8 +345,57 @@ export function normalizeUpdateModelRecordRequest(request: UpdateModelRecordRequ
 
 export function normalizeDeleteModelRecordRequest(request: DeleteModelRecordRequest): DeleteModelRecordRequest {
   return {
+    workspaceId: normalizeWorkspaceId(request.workspaceId),
     modelRecordId: normalizeRequiredText(request.modelRecordId, "modelRecordId"),
     deleteLocalFiles: request.deleteLocalFiles === true,
     deleteBackingArtifacts: request.deleteBackingArtifacts === true,
+  };
+}
+
+export function normalizeRevealModelInFolderRequest(
+  request: RevealModelInFolderRequest,
+): RevealModelInFolderRequest {
+  return {
+    workspaceId: normalizeWorkspaceId(request.workspaceId),
+    modelRecordId: normalizeRequiredText(request.modelRecordId, "modelRecordId"),
+  };
+}
+
+export function normalizeListModelFilesRequest(
+  request: ListModelFilesRequest,
+): ListModelFilesRequest {
+  return {
+    workspaceId: normalizeWorkspaceId(request.workspaceId),
+    modelRecordId: normalizeRequiredText(request.modelRecordId, "modelRecordId"),
+  };
+}
+
+export function normalizeListModelFilesResult(
+  result: ListModelFilesResult,
+): ListModelFilesResult {
+  if (result.files.length > MAX_LIST_MODEL_FILES) {
+    throw new Error(`Model file lists cannot contain more than ${MAX_LIST_MODEL_FILES} files.`);
+  }
+
+  return {
+    modelRecordId: normalizeRequiredText(result.modelRecordId, "modelRecordId"),
+    files: result.files.map((file) => {
+      const relativePath = file.relativePath.trim().replace(/\\/g, "/");
+      const segments = relativePath.split("/");
+      if (
+        relativePath.length === 0
+        || relativePath.length > 1_024
+        || relativePath.startsWith("/")
+        || /^[A-Za-z]:/.test(relativePath)
+        || segments.some((segment) => !segment || segment === "." || segment === ".." || /[\u0000-\u001f\u007f]/.test(segment))
+      ) {
+        throw new Error("Model file paths must be safe repository-relative paths.");
+      }
+      if (!Number.isSafeInteger(file.sizeBytes) || file.sizeBytes < 0) {
+        throw new Error("Model file sizes must be non-negative safe integers.");
+      }
+      return { relativePath, sizeBytes: file.sizeBytes };
+    }),
+    truncated: result.truncated === true,
   };
 }

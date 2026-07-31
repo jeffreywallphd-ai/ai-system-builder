@@ -37,6 +37,7 @@ export interface UseWebsiteArtifactIngestionResult {
 export function useWebsiteArtifactIngestion(
   uploadClient: ArtifactUploadClient,
   onUploadComplete?: () => void,
+  workspaceId?: string,
 ): UseWebsiteArtifactIngestionResult {
   const [websiteSingleUrl, setWebsiteSingleUrl] = useState("");
   const [websiteSingleMode, setWebsiteSingleMode] = useState<WebsiteIngestionMode>("automatic");
@@ -52,10 +53,15 @@ export function useWebsiteArtifactIngestion(
       return;
     }
 
+    if (!workspaceId?.trim()) {
+      setWebsiteSingleViewState({ status: "error", message: "Select an active workspace before scraping a web page." });
+      return;
+    }
+
     setWebsiteSingleViewState({ status: "loading", message: "Ingesting website page..." });
 
     try {
-      const response = await uploadClient.ingestWebsitePage({ url, mode: websiteSingleMode });
+      const response = await uploadClient.ingestWebsitePage({ url, mode: websiteSingleMode, workspaceId });
       if (!response.ok) {
         setWebsiteSingleViewState({ status: "error", message: response.error.message });
         return;
@@ -87,10 +93,15 @@ export function useWebsiteArtifactIngestion(
       return;
     }
 
+    if (!workspaceId?.trim()) {
+      setWebsiteBatchViewState({ status: "error", message: "Select an active workspace before scraping web pages." });
+      return;
+    }
+
     setWebsiteBatchViewState({ status: "loading", message: `Ingesting ${targets.length} website page(s)...` });
 
     try {
-      const response = await uploadClient.ingestWebsitePagesBatch({ targets, mode: websiteBatchMode });
+      const response = await uploadClient.ingestWebsitePagesBatch({ targets, mode: websiteBatchMode, workspaceId });
       if (!response.ok) {
         setWebsiteBatchViewState({ status: "error", message: response.error.message });
         return;

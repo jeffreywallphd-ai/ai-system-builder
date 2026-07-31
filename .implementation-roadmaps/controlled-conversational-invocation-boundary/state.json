@@ -1,0 +1,476 @@
+{
+  "blockers": [],
+  "chunks": [
+    {
+      "areas": [
+        "Application conversational-execution ports",
+        "Protected invocation-context validation"
+      ],
+      "chunkId": "structured-port-and-context-boundary",
+      "completedAt": "2026-07-28T14:33:51Z",
+      "criteriaIds": [
+        "ports-are-safe-and-structured",
+        "context-is-protected-and-bounded"
+      ],
+      "documentation": [
+        "Controlled conversational execution architecture",
+        "Controlled conversational execution context pack",
+        "ADR-0023"
+      ],
+      "feedbackAddressed": [],
+      "id": "protected-invocation-boundary-reconciliation-structured-port-and-context-boundary",
+      "incrementId": "protected-invocation-boundary-reconciliation",
+      "summary": "Hardened the provider-neutral invocation, catalog, protected-context, and runtime-guard ports around an explicit approved asset-derived source chain, then implemented exact-shape, association, content, history, generation-setting, and high-confidence unsafe-material validation.",
+      "tests": [
+        "Focused port and service tests passed under Node 24",
+        "Architecture dependency gate passed"
+      ],
+      "title": "Structured port and protected-context boundary"
+    },
+    {
+      "areas": [
+        "Adapter selection service",
+        "Runtime guard service",
+        "Conversation turn invocation orchestrator"
+      ],
+      "chunkId": "approval-runtime-invocation-orchestration",
+      "completedAt": "2026-07-28T14:33:51Z",
+      "criteriaIds": [
+        "orchestration-is-gated-and-side-effect-free"
+      ],
+      "documentation": [
+        "Controlled conversational execution architecture",
+        "ADR-0023"
+      ],
+      "feedbackAddressed": [],
+      "id": "protected-invocation-boundary-reconciliation-approval-runtime-invocation-orchestration",
+      "incrementId": "protected-invocation-boundary-reconciliation",
+      "summary": "Strengthened adapter selection, runtime guard, and single-turn orchestration so approval validity, explicit source/runtime compatibility, runtime readiness, protected-context preparation, context validation, and one injected invocation occur in order with sanitized outcomes and no persistence or logging behavior.",
+      "tests": [
+        "Deterministic fake orchestration tests passed under Node 24",
+        "Prompt 4 approval and eligibility tests passed under Node 24"
+      ],
+      "title": "Approval, runtime, and invocation orchestration"
+    },
+    {
+      "areas": [
+        "Current Python conversational adapter compatibility",
+        "Persisted turn lifecycle and read-model compatibility",
+        "Shared host composition",
+        "Canonical documentation and service barrel"
+      ],
+      "chunkId": "later-consumer-doc-and-gate-reconciliation",
+      "completedAt": "2026-07-28T14:33:51Z",
+      "criteriaIds": [
+        "ports-are-safe-and-structured",
+        "context-is-protected-and-bounded",
+        "orchestration-is-gated-and-side-effect-free",
+        "current-branch-is-truthful-and-qualified"
+      ],
+      "documentation": [
+        "Controlled conversational execution architecture",
+        "Controlled conversational execution context pack",
+        "ADR-0023"
+      ],
+      "feedbackAddressed": [],
+      "id": "protected-invocation-boundary-reconciliation-later-consumer-doc-and-gate-reconciliation",
+      "incrementId": "protected-invocation-boundary-reconciliation",
+      "summary": "Updated current Python adapter, persisted turn lifecycle, session availability, and shared host consumers for the strengthened source/runtime request shapes; removed committed conflict markers and stale historical status claims; kept later functionality intact.",
+      "tests": [
+        "27 focused boundary, adapter, and approval tests passed",
+        "19 downstream lifecycle and read-model tests passed",
+        "Docs, architecture, agent-support, and server-build gates passed",
+        "Full non-browser suite completed with 2619 passed, 5 unrelated failures, and 2 skipped"
+      ],
+      "title": "Later-consumer, documentation, and gate reconciliation"
+    }
+  ],
+  "completion": {
+    "completedAt": "2026-07-28T14:34:38Z",
+    "summary": "The controlled conversational invocation boundary reconciliation roadmap is implemented and locally qualified, with all scoped acceptance criteria satisfied and unrelated repository-wide failures documented."
+  },
+  "createdAt": "2026-07-28T13:56:50Z",
+  "currentIncrementId": null,
+  "decisions": [],
+  "discovery": {
+    "constraints": [
+      "Preserve the composed-system, reviewed-plan, runtime-readiness, session-approval, and turn-eligibility chain.",
+      "Keep protected instruction, message, and history content transient and outside ordinary execution metadata, diagnostics, provenance, and read models.",
+      "Do not add provider payloads, credentials, paths, environment data, commands, logs, executable graphs, or secret material to application-facing records.",
+      "Do not introduce new API, IPC, preload, client, UI, persistence, cancellation, retry, or streaming behavior.",
+      "Preserve the already-landed Prompt 6 Python adapter and Prompt 7 lifecycle consumers without treating them as part of the Prompt 5 implementation.",
+      "Resolve committed conflict markers by reconciling current behavior, not by reverting later approved work.",
+      "Use focused tests while changing chunks and reserve the full non-browser suite and repository gates for increment completion."
+    ],
+    "decisionRequired": false,
+    "recordedAt": "2026-07-28T13:57:01Z",
+    "sources": [
+      {
+        "note": "Accepted composed-system, approval, runtime-adapter, and protected-content boundaries.",
+        "title": "Controlled conversational execution architecture",
+        "url": "docs/architecture/controlled-conversational-system-execution.md"
+      },
+      {
+        "note": "Accepted first adapter direction and explicit deferrals.",
+        "title": "ADR-0023",
+        "url": "docs/adr/ADR-0023-controlled-conversational-system-execution.md"
+      },
+      {
+        "note": "Existing provider-neutral port family requiring hardening.",
+        "title": "Prompt 5 application ports",
+        "url": "modules/application/ports/conversational-execution"
+      },
+      {
+        "note": "Existing service family containing committed conflict markers and incomplete validation coverage.",
+        "title": "Prompt 5 orchestration services",
+        "url": "modules/application/services/conversational-execution"
+      },
+      {
+        "note": "Reusable invocation-time prerequisite revalidation seam.",
+        "title": "Prompt 4 approval validity",
+        "url": "modules/application/use-cases/conversations/conversation-session-approval-validity.service.ts"
+      }
+    ],
+    "summary": "The original Prompt 5 seam exists, but the current rebuild branch has advanced through the Python adapter, persisted turn lifecycle, host composition, and Run & Test work. The latest security commit committed merge-conflict markers in the Prompt 5 orchestrator, context validator, service barrel, architecture, and context pack. The original Prompt 5 tests are also too narrow to prove the required approval, structured source, protected-context, runtime-guard, safe-outcome, and dependency-boundary invariants. Prompt 4 focused tests pass and its current invocation-validity service re-reads plan, composition, and readiness records."
+  },
+  "evidence": [
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/application/ports/conversational-execution/tests/conversational-execution-ports.unit.test.ts; npm run architecture:check",
+      "criterionId": "ports-are-safe-and-structured",
+      "id": "evidence-1",
+      "incrementId": "protected-invocation-boundary-reconciliation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-28T14:34:22Z",
+      "summary": "Provider-neutral port/export/boundary tests passed, structured approved-source associations are required, and the repository architecture gate accepted the dependency direction."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/application/services/conversational-execution/tests/conversational-execution-services.unit.test.ts",
+      "criterionId": "context-is-protected-and-bounded",
+      "id": "evidence-2",
+      "incrementId": "protected-invocation-boundary-reconciliation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-28T14:34:22Z",
+      "summary": "Protected-context tests passed for bounded valid technical text, composed-system instruction/history/settings, exact structural associations, over-limit rejection, unexpected payload fields, and high-confidence raw secret, stack, environment, signed URL, base64, and workflow dumps."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/application/services/conversational-execution/tests/conversational-execution-services.unit.test.ts modules/application/use-cases/conversations/tests/conversation-session-phase13-prompt4.unit.test.ts",
+      "criterionId": "orchestration-is-gated-and-side-effect-free",
+      "id": "evidence-3",
+      "incrementId": "protected-invocation-boundary-reconciliation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-28T14:34:22Z",
+      "summary": "Deterministic tests proved approval-first ordering, adapter and runtime guard short-circuiting, post-guard context materialization, pre-invocation context validation, exactly-one invocation, safe outcome mapping, and sanitized exceptions without repository dependencies."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "npm run docs:check; npm run architecture:check; npm run agent-support:check; npm run build:server; npm run test:non-browser",
+      "criterionId": "current-branch-is-truthful-and-qualified",
+      "id": "evidence-4",
+      "incrementId": "protected-invocation-boundary-reconciliation",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-28T14:34:22Z",
+      "summary": "Conflict markers and stale no-adapter claims were removed; later adapter/lifecycle consumers passed 19 downstream tests; docs, architecture, agent-support, and server build gates passed. The complete non-browser suite ran 2626 tests with 2619 passing and five failures confined to unrelated server-runtime, Python HTTP client, dataset typecheck, and host diagnostic baselines."
+    }
+  ],
+  "feedback": [],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "fc460ef5b5f9163c724f50fafe24d4b0d115a114b808631500ad2b200082c48e",
+      "recordedAt": "2026-07-28T13:57:01Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "004d41be616bb3e972f962170f8c099d6519bf5d24105da2aa510be0bef63dff",
+      "recordedAt": "2026-07-28T13:57:18Z",
+      "sequence": 2,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "5f03de308527698445f5d8fa530b12f22d5fe7be196d4484687d8aed4d883bed",
+      "recordedAt": "2026-07-28T13:57:26Z",
+      "sequence": 3,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "60d46cc0f9c6c93810259b62b1fe9642ce2f4d96002aaf2f28b499612c19aac0",
+      "recordedAt": "2026-07-28T13:57:34Z",
+      "sequence": 4,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "45e9b2315e458e1f840d1753b3c53464a28ed867cfa4eb6a9de40a7644988c6e",
+      "recordedAt": "2026-07-28T13:57:34Z",
+      "sequence": 5,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "06add89e493c7aaae5b3eaa40c02ac4fcefc2e1d1ca15c2d7200c8f8492c08a1",
+      "recordedAt": "2026-07-28T13:57:53Z",
+      "sequence": 6,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "2d0e1ea6870fd08b35fcb76a9a78d2899d6529a6521bb6af4513e06fce904d12",
+      "recordedAt": "2026-07-28T14:33:51Z",
+      "sequence": 7,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "9f21439ec34824876af06cc73b965d14024ffaeb140f48045c71913f1e19c874",
+      "recordedAt": "2026-07-28T14:33:51Z",
+      "sequence": 8,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "dc8b79d326955b5074415180640c217f0edada0292b5f9f6ba04610014418cd1",
+      "recordedAt": "2026-07-28T14:33:51Z",
+      "sequence": 9,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "4c1700e52d28be751afc8b2c354e9e07bc154c8102552f2629592debbad829eb",
+      "recordedAt": "2026-07-28T14:34:22Z",
+      "sequence": 10,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a64b43f253c700c6e0ab5ab6bb506ceadb9e259e1a69617fc83dbc472889f5aa",
+      "recordedAt": "2026-07-28T14:34:22Z",
+      "sequence": 11,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "48bcdce3d0de476b1727a29a50b382d949dceffdd4870528420ca5ff2cd85589",
+      "recordedAt": "2026-07-28T14:34:22Z",
+      "sequence": 12,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ad0f91f35e5e5fda7ee15cdebd8a6554da6b3d2c95949a5104466aba4ce75317",
+      "recordedAt": "2026-07-28T14:34:22Z",
+      "sequence": 13,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "030cc0bd982dad67691dd084395358bf2b98527921f8f1b41ae64628d4f1eefd",
+      "recordedAt": "2026-07-28T14:34:38Z",
+      "sequence": 14,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "a9a1682720c3062346abe0943c3738d64ad88a4ffc1b711e1a0038a93c6abe1d",
+      "recordedAt": "2026-07-28T14:34:38Z",
+      "sequence": 15,
+      "type": "roadmap-completed"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Invocation, catalog, protected-context, and guard ports expose only provider-neutral safe types, require explicit approved-source associations, and remain free of outer-layer imports.",
+          "id": "ports-are-safe-and-structured",
+          "qualification": "local"
+        },
+        {
+          "description": "Protected context validation enforces exact structural associations, bounded content/history/settings, rejects unsafe structured or high-confidence secret payloads, and permits legitimate technical discussion.",
+          "id": "context-is-protected-and-bounded",
+          "qualification": "local"
+        },
+        {
+          "description": "The Prompt 5 orchestrator reuses Prompt 4 approval validity, orders adapter/runtime/context checks correctly, maps safe outcomes, invokes once only on success, and contains no persistence or logging behavior.",
+          "id": "orchestration-is-gated-and-side-effect-free",
+          "qualification": "local"
+        },
+        {
+          "description": "Committed conflict markers and stale Prompt 5-only status claims are removed, later adapter/lifecycle consumers remain compatible, and applicable focused, documentation, architecture, agent-support, build, and non-browser gates pass.",
+          "id": "current-branch-is-truthful-and-qualified",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-28T14:34:38Z",
+      "completedChunks": [
+        "structured-port-and-context-boundary",
+        "approval-runtime-invocation-orchestration",
+        "later-consumer-doc-and-gate-reconciliation"
+      ],
+      "completionSummary": "The protected conversational invocation boundary is structured, approval-gated, context-safe, compatible with current later consumers, documented truthfully, and qualified by focused and repository gates; unrelated full-suite baseline failures are recorded separately.",
+      "deliverables": [
+        "Hardened conversational-execution application port family",
+        "Hardened adapter selection, context validation, runtime guard, and turn orchestrator services",
+        "Deterministic fake-based port/service and boundary regression tests",
+        "Compatible updates to current Prompt 6/7 consumers where the strengthened seam requires them",
+        "Reconciled controlled-conversational architecture, ADR, and context pack",
+        "Focused and repository-wide verification evidence"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "A new runtime/provider adapter or provider credential flow",
+        "New host, API, IPC, preload, client, or UI surface",
+        "New persisted turn/run/result behavior",
+        "Cancellation, retry, progress streaming, tools, retrieval, memory, multimodal, workflow, or image-generation behavior",
+        "Mutation of Asset Kernel, foundation, authoring, projection, composition, readiness, plan, or session records"
+      ],
+      "id": "protected-invocation-boundary-reconciliation",
+      "number": 1,
+      "objective": "Complete the controlled conversational invocation port/service seam, remove committed merge drift, preserve later consumers, and prove the approved safety and dependency invariants.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "The existing accepted ADR and the user's detailed implementation request resolve the high-level architecture and exclusions.",
+          "Prompt 4 semantics remain authoritative and are reused rather than reimplemented in Prompt 5.",
+          "No production asset-backed instruction materializer exists yet; the protected context port remains the only authorized materialization boundary and must not fabricate ad hoc chatbot instructions.",
+          "The current branch's Python adapter and persisted lifecycle are later approved consumers that must remain compatible but are not newly implemented by this increment."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "ports-are-safe-and-structured",
+              "context-is-protected-and-bounded"
+            ],
+            "id": "structured-port-and-context-boundary",
+            "outcome": "The port family and context validator encode the approved source chain, bounded transient content, safe runtime references, and forbidden structural payload rules.",
+            "title": "Structured port and protected-context boundary"
+          },
+          {
+            "criteriaIds": [
+              "orchestration-is-gated-and-side-effect-free"
+            ],
+            "id": "approval-runtime-invocation-orchestration",
+            "outcome": "Selection, guard, and orchestration services enforce prerequisite order, sanitize failures, and invoke exactly once without persistence or logging.",
+            "title": "Approval, runtime, and invocation orchestration"
+          },
+          {
+            "criteriaIds": [
+              "ports-are-safe-and-structured",
+              "context-is-protected-and-bounded",
+              "orchestration-is-gated-and-side-effect-free",
+              "current-branch-is-truthful-and-qualified"
+            ],
+            "id": "later-consumer-doc-and-gate-reconciliation",
+            "outcome": "Prompt 6/7 consumers remain compatible, current behavior is documented without conflict markers or stale claims, and the integrated branch passes required checks.",
+            "title": "Later-consumer, documentation, and gate reconciliation"
+          }
+        ],
+        "completionTests": [
+          "Affected TypeScript diagnostics",
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check",
+          "npm run build:server",
+          "npm run test:non-browser"
+        ],
+        "documentation": [
+          "docs/architecture/controlled-conversational-system-execution.md",
+          "docs/adr/ADR-0023-controlled-conversational-system-execution.md",
+          "docs/context/packs/controlled-conversational-system-execution.pack.md",
+          "Generated roadmap and temporary report"
+        ],
+        "fingerprint": "686da438552079c4832274c975f310ad6a8c01b026ce05b26b11fc039da679a7",
+        "focusedTests": [
+          "Prompt 5 application port boundary tests",
+          "Prompt 5 application service tests",
+          "Prompt 4 approval/eligibility tests",
+          "Python conversational adapter tests",
+          "Prompt 7 turn lifecycle tests",
+          "Conversation read-model and shared host-composition tests"
+        ],
+        "recordedAt": "2026-07-28T13:57:53Z",
+        "rollback": "Revert the port, service, consumer, test, and documentation reconciliation as one change while preserving all unrelated Prompt 6/7 and security work.",
+        "steps": [
+          "Define structured approved-source, protected-context, selection, guard, invocation, and orchestration result types and update the four application ports.",
+          "Implement deterministic selection, guard, context validation, and orchestration behavior with safe exception mapping and strict check ordering.",
+          "Update current Prompt 6/7 consumers, add comprehensive fake/boundary tests, reconcile docs and conflict markers, then run completion gates."
+        ],
+        "summary": "Repair and strengthen the Prompt 5 boundary in three coherent chunks, run focused tests for each chunk, then qualify the integrated current branch once."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-28T13:57:34Z",
+          "risks": [
+            "Strengthening port signatures affects the later Python adapter, Prompt 7 submit use case, read-model availability, and shared host composition.",
+            "Scanning arbitrary user text for broad words such as curl, path, token, or base64 would violate the requirement to allow legitimate technical content.",
+            "The current host context seam has no approved asset-backed instruction materializer; the Prompt 5 repair must require source association and keep instruction materialization behind the port without fabricating prompt text.",
+            "Canonical docs currently contain literal merge markers and mutually inconsistent Prompt 5 versus current adapter status."
+          ],
+          "sources": [
+            {
+              "title": "Prompt 4 focused tests",
+              "url": "modules/application/use-cases/conversations/tests/conversation-session-phase13-prompt4.unit.test.ts"
+            },
+            {
+              "title": "Current shared conversation composition",
+              "url": "modules/hosts/shared/composition/composeConversationExecutionServices.ts"
+            },
+            {
+              "title": "Current Python conversational adapter",
+              "url": "modules/adapters/runtime/conversational-text-generation/python-conversational-text-generation.adapter.ts"
+            },
+            {
+              "title": "Current persisted turn submission",
+              "url": "modules/application/use-cases/conversations/submit-conversation-turn.use-case.ts"
+            },
+            {
+              "title": "Testing standards",
+              "url": "docs/standards/testing-standards.md"
+            }
+          ],
+          "summary": "The current branch proves Prompt 4 eligibility and approval through application use cases and repository-backed invocation-time revalidation. Prompt 5 ports and services are application-local, but the port family lacks structured source associations, selection/guard validation is pass-through, context validation has conflicting implementations, and the orchestrator has committed conflict markers. The shared host currently materializes only the user message while the later Python adapter and persisted lifecycle consumers already exist. The repair should strengthen the Prompt 5 seam and make context/source association explicit without inventing provider, persistence, or UI behavior."
+        }
+      ],
+      "rollback": "Revert the additive port/service hardening and consumer signature updates together; do not remove later Prompt 6/7 records, adapters, transports, or UI.",
+      "startedAt": "2026-07-28T13:57:34Z",
+      "status": "completed",
+      "title": "Protected invocation boundary reconciliation and qualification",
+      "verification": [
+        "Run focused Prompt 4, Prompt 5, Python adapter, Prompt 7, host-composition, and read-model tests after their owning chunks are complete.",
+        "Run TypeScript diagnostics for affected application/adapter/host consumers.",
+        "After all chunks pass, run npm run docs:check, npm run architecture:check, npm run agent-support:check, npm run build:server, and npm run test:non-browser under Node 24."
+      ],
+      "workPackages": [
+        {
+          "id": "provider-neutral-port-family",
+          "outcome": "Typed selection, runtime guard, protected-context preparation, invocation, and safe result contracts require structured approved-source associations without exposing provider-native state.",
+          "title": "Provider-neutral invocation ports"
+        },
+        {
+          "id": "gated-orchestration",
+          "outcome": "Application services validate source/session/runtime/context prerequisites in order, sanitize failures, and invoke an injected adapter at most once without persistence or logging.",
+          "title": "Approval-gated orchestration"
+        },
+        {
+          "id": "drift-and-qualification",
+          "outcome": "Prompt 6/7 consumers compile against the seam, canonical docs describe current behavior truthfully, conflict markers are eliminated, and focused plus repository gates pass.",
+          "title": "Current-branch reconciliation and qualification"
+        }
+      ]
+    }
+  ],
+  "name": "Controlled Conversational Invocation Boundary",
+  "objective": "Reconcile and complete the approved protected conversational invocation port and orchestration boundary while preserving later adapter and lifecycle consumers.",
+  "paths": {
+    "report": "docs/tmp/controlled-conversational-invocation-boundary-implementation-report.md",
+    "roadmap": "docs/controlled-conversational-invocation-boundary-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/controlled-conversational-invocation-boundary/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": {
+    "approvedAt": "2026-07-28T13:57:26Z",
+    "fingerprint": "29c75bcea8a19245645dfe262986d489e76e224bf0513611823d46a2d7190190",
+    "note": "The user explicitly requested implementation of the detailed Phase 13 Prompt 5 scope and then explicitly requested continuation of that work; this state reconstructs that already-approved single increment without changing its architecture, scope, ordering, or acceptance constraints."
+  },
+  "schemaVersion": 1,
+  "slug": "controlled-conversational-invocation-boundary",
+  "status": "completed",
+  "updatedAt": "2026-07-28T14:34:38Z"
+}

@@ -5,6 +5,7 @@ import {
   DESKTOP_APPLICATION_SETTINGS_LIST_DEFINITIONS_REQUEST_CHANNEL,
   DESKTOP_APPLICATION_SETTINGS_READ_REQUEST_CHANNEL,
   DESKTOP_APPLICATION_SETTINGS_RESOLVE_MODEL_DEFAULT_REQUEST_CHANNEL,
+  DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_REQUEST_CHANNEL,
   DESKTOP_APPLICATION_SETTINGS_UPDATE_REQUEST_CHANNEL,
   createDesktopApplicationSettingsReadRequest,
   createDesktopApplicationSettingsResolveModelDefaultSuccessResponse,
@@ -17,6 +18,7 @@ describe("desktop application settings ipc contract", () => {
     expect(DESKTOP_APPLICATION_SETTINGS_UPDATE_REQUEST_CHANNEL.value).toBe("ipc.application-settings.update.request");
     expect(DESKTOP_APPLICATION_SETTINGS_CLEAR_REQUEST_CHANNEL.value).toBe("ipc.application-settings.clear.request");
     expect(DESKTOP_APPLICATION_SETTINGS_RESOLVE_MODEL_DEFAULT_REQUEST_CHANNEL.value).toBe("ipc.application-settings.resolve-model-default.request");
+    expect(DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_REQUEST_CHANNEL.value).toBe("ipc.application-settings.select-folder.request");
   });
 
   it("creates read request and resolve response envelopes", () => {

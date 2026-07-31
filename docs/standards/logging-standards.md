@@ -1,5 +1,8 @@
 # Logging Standards
 
+- Status: accepted
+- Verification: `npm test`
+
 ## Purpose
 
 Logging in `ai-system-builder` is a diagnostics capability, not a console side effect.

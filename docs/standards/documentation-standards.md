@@ -1,5 +1,8 @@
 # Documentation Standards
 
+- Status: accepted
+- Verification: `npm run docs:check`
+
 ## Purpose
 
 Documentation in `ai-system-builder` is part of the system, not commentary about the system.
@@ -46,7 +49,42 @@ Avoid:
 - vague placeholders (`TBD`, `future-proof`, `to be decided later`) without concrete scope,
 - generic textbook prose not tied to repository boundaries,
 - duplicate guidance spread across multiple docs with subtle conflicts,
-- “aspirational” statements with no observable implementation or decision backing.
+- "aspirational" statements with no observable implementation or decision backing.
+
+## Current-state documentation rule
+
+Canonical docs describe current decisions, current boundaries, and durable rationale.
+They are not change logs, prompt transcripts, implementation diaries, roadmap trackers, or phase closeout notes.
+
+Use feature/domain names instead of phase labels. For example, prefer "asset composition planning" over "Phase 10" and "controlled conversational execution" over "Phase 13".
+
+Allowed historical context:
+
+- ADR rationale may mention prior alternatives or superseded decisions when that history explains the accepted decision.
+- Superseded/deprecated ADRs may preserve their original context when their status and replacement are explicit.
+
+Not allowed in canonical docs or context packs:
+
+- prompt-by-prompt ownership sequences,
+- review labels used as architectural milestones,
+- roadmap checkpoint sections,
+- "final closeout" notes that repeat task history instead of current behavior,
+- claims that a feature is deferred when code has implemented it, unless the doc explicitly marks the implementation as unsupported or experimental.
+
+If a reviewer needs implementation history, link to an issue, PR, or changelog outside the canonical architecture surface. Do not make reusable docs depend on chat history.
+
+## Source-of-truth rule
+
+Use this order when sources disagree:
+
+1. Existing implementation behavior, when code is present and covered by tests or host wiring.
+2. Canonical architecture docs and accepted/superseding ADRs.
+3. README and support docs.
+4. Context packs.
+
+When code has moved ahead of an ADR, do not silently force the code back to the older ADR wording. Update the architecture doc or add a successor/current-implementation note to the ADR, then update downstream README/context docs. Until the canonical update lands, record the conflict in `docs/docs-mismatch-register.md`.
+
+Context packs must include a canonical source/reference section. They summarize current task guidance and link to source docs; they must not become the only place where a behavior, boundary, or standard is defined.
 
 ## Documentation update requirements
 
@@ -66,6 +104,8 @@ Documentation updates are required in the same change set when any of the follow
 A pull request is incomplete if behavior changed but canonical documentation was not updated.
 Document seam ownership and stable boundary rules; do not mirror adapter internals or transient implementation details.
 
+Run `npm run docs:check` before closing documentation-heavy work. The check enforces context pack line budgets, rejects common phase/prompt diary phrases in canonical docs and packs, and prevents hand-maintained ADR inventories from returning.
+
 ## When to update ADRs vs architecture docs vs standards
 
 ### Update an ADR when
@@ -76,11 +116,13 @@ Document seam ownership and stable boundary rules; do not mirror adapter interna
 
 Use `docs/adr/template.md` and maintain ADR status (`proposed`, `accepted`, `superseded`, `deprecated`).
 
+Accepted ADRs may contain a short current-implementation note when code has legitimately superseded a scoped detail but the original decision remains useful. If the new behavior changes the decision itself, prefer a successor ADR and mark the older ADR as superseded.
+
 ### Update architecture docs when
 
 - repository shape, layer responsibilities, or dependency rules change,
 - host model/runtime model/persistence model behavior changes,
-- previously “not finalized” areas become concrete.
+- previously "not finalized" areas become concrete.
 
 ### Update standards docs when
 
@@ -95,6 +137,7 @@ Use `docs/adr/template.md` and maintain ADR status (`proposed`, `accepted`, `sup
 - Context docs may summarize, sequence, or package guidance for tasks.
 - Context docs must link back to canonical sources.
 - Context docs must not quietly introduce conflicting architecture or standards.
+- Context docs must stay current-state oriented and must not preserve phase or prompt history as reusable guidance.
 
 If a context doc conflicts with an ADR/architecture/standard doc, fix the context doc or propose a canonical doc update first.
 
@@ -102,7 +145,13 @@ When a canonical change affects context-pack guidance, update only the materiall
 
 ## Consistency and templates
 
-Use repository templates where they exist (`docs/templates/`, `docs/adr/template.md`) to keep structure consistent.
+Use the canonical repository templates to keep structure consistent:
+
+- ADRs: `docs/adr/template.md`.
+- Context packs: `docs/context/packs/pack.template.md`.
+- Epic, feature, and story context: `docs/context/templates/`.
+
+Use `docs/standards/documentation-metadata-standards.md` for canonical status, decision, and verification metadata. Do not add owners or review dates that cannot be maintained or proven.
 
 Expectations:
 
@@ -120,5 +169,6 @@ Before merging:
 - Should this have been an ADR instead of a silent doc edit?
 - If behavior changed in code, were architecture/standards/context docs updated appropriately?
 - Would a new contributor understand what to do without reading chat history?
+- Did this remove or avoid phase, prompt, review, roadmap, closeout, and diary wording unless it is necessary ADR rationale?
 
-If the answer to any question is “no”, revise before merge.
+If the answer to any question is "no", revise before merge.

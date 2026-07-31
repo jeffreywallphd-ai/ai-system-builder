@@ -1,4 +1,8 @@
 import { createTransportOperation } from "../transport";
+import {
+  normalizeDatasetPreparationGenerationCapacitySnapshot,
+  type DatasetPreparationGenerationCapacitySnapshot,
+} from "../runtime";
 import { createIpcChannel, type IpcChannel, type IpcChannelValue } from "./ipc-channel";
 import { createIpcRequest, type IpcRequest } from "./ipc-request";
 import { createIpcSuccessResponse, type IpcResponse } from "./ipc-response";
@@ -65,6 +69,7 @@ export interface DesktopPythonRuntimeStatusPayload {
   loadedModels?: DesktopPythonRuntimeLoadedModel[];
   activeTaskCount?: number;
   systemResources?: DesktopSystemResourceUsage;
+  generationCapacity?: DatasetPreparationGenerationCapacitySnapshot;
 }
 
 export interface DesktopPythonRuntimeBoundaryContext {
@@ -164,6 +169,10 @@ function normalizeStatusPayload(
     })),
     activeTaskCount: payload.activeTaskCount ?? 0,
     systemResources: normalizedSystemResources,
+    generationCapacity:
+      normalizeDatasetPreparationGenerationCapacitySnapshot(
+        payload.generationCapacity,
+      ),
   };
 }
 

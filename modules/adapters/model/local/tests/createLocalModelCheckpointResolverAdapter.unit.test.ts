@@ -17,15 +17,15 @@ describe("createLocalModelCheckpointResolverAdapter", () => {
     const comfyDir = await tempDir("comfy-safe-");
     await writeFile(join(modelDir, "model.safetensors"), "x");
     const adapter = createLocalModelCheckpointResolverAdapter({ modelRegistry: registryWith({ modelRecordId: "m1", displayName: "sdxl", modelId: "org/sdxl", localPath: modelDir, provider: "huggingface", source: "huggingface" }), comfyUiCheckpointDirectory: comfyDir });
-    await expect(adapter.resolveCheckpoint({ selectedModel: "org/sdxl" })).resolves.toEqual({ checkpoint: "model.safetensors" });
-    await expect(readFile(join(comfyDir, "model.safetensors"), "utf8")).resolves.toBe("x");
+    expect(await adapter.resolveCheckpoint({ selectedModel: "org/sdxl" })).toEqual({ checkpoint: "model.safetensors" });
+    expect(await readFile(join(comfyDir, "model.safetensors"), "utf8")).toBe("x");
   });
 
   it("resolves single ckpt", async () => {
     const modelDir = await tempDir("model-ckpt-");
     await writeFile(join(modelDir, "model.ckpt"), "x");
     const adapter = createLocalModelCheckpointResolverAdapter({ modelRegistry: registryWith({ modelRecordId: "m1", displayName: "sdxl", modelId: "org/sdxl", localPath: modelDir, provider: "huggingface", source: "huggingface" }) });
-    await expect(adapter.resolveCheckpoint({ selectedModel: "org/sdxl" })).resolves.toEqual({ checkpoint: "model.ckpt" });
+    expect(await adapter.resolveCheckpoint({ selectedModel: "org/sdxl" })).toEqual({ checkpoint: "model.ckpt" });
   });
 
   it("prefers safetensors over ckpt and uses lexical tie-breaker", async () => {
@@ -34,19 +34,19 @@ describe("createLocalModelCheckpointResolverAdapter", () => {
     await writeFile(join(modelDir, "b.safetensors"), "x");
     await writeFile(join(modelDir, "a.safetensors"), "x");
     const adapter = createLocalModelCheckpointResolverAdapter({ modelRegistry: registryWith({ modelRecordId: "m1", displayName: "sdxl", modelId: "org/sdxl", localPath: modelDir, provider: "huggingface", source: "huggingface" }) });
-    await expect(adapter.resolveCheckpoint({ selectedModel: "org/sdxl" })).resolves.toEqual({ checkpoint: "a.safetensors" });
+    expect(await adapter.resolveCheckpoint({ selectedModel: "org/sdxl" })).toEqual({ checkpoint: "a.safetensors" });
   });
 
   it("matches inventory record by modelRecordId", async () => {
     const modelDir = await tempDir("model-id-");
     await writeFile(join(modelDir, "model.safetensors"), "x");
     const adapter = createLocalModelCheckpointResolverAdapter({ modelRegistry: registryWith({ modelRecordId: "rec-123", displayName: "sdxl", modelId: "org/sdxl", localPath: modelDir, provider: "huggingface", source: "huggingface" }) });
-    await expect(adapter.resolveCheckpoint({ selectedModel: "rec-123" })).resolves.toEqual({ checkpoint: "model.safetensors" });
+    expect(await adapter.resolveCheckpoint({ selectedModel: "rec-123" })).toEqual({ checkpoint: "model.safetensors" });
   });
 
   it("returns checkpoint filename directly when already valid", async () => {
     const adapter = createLocalModelCheckpointResolverAdapter({ modelRegistry: registryWith({}) });
-    await expect(adapter.resolveCheckpoint({ selectedModel: "foo.safetensors" })).resolves.toEqual({ checkpoint: "foo.safetensors" });
+    expect(await adapter.resolveCheckpoint({ selectedModel: "foo.safetensors" })).toEqual({ checkpoint: "foo.safetensors" });
   });
 
   it("fails for no matching record", async () => {

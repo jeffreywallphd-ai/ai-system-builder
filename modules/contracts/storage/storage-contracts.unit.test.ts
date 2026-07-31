@@ -163,12 +163,16 @@ describe("storage contracts", () => {
       correlationId: "corr-3",
     });
 
-    const error = createContractError("unavailable", "Storage backend unavailable", {
-      details: {
-        adapter: "local-fs",
+    const error = createContractError(
+      "unavailable",
+      "Storage backend unavailable",
+      {
+        details: {
+          adapter: "local-fs",
+        },
+        requestId: "req-3",
       },
-      requestId: "req-3",
-    });
+    );
     const failure = createDeleteArtifactFailureResult(error);
 
     expect(failure).toEqual({
@@ -188,16 +192,21 @@ describe("storage contracts", () => {
   });
 
   it("creates explicit lookup requests for retrieve and existence checks", () => {
-    const retrieveRequest = createRetrieveArtifactRequest(" artifacts/output-1 ", {
-      requestId: "req-4",
-      correlationId: "corr-4",
-    });
+    const retrieveRequest = createRetrieveArtifactRequest(
+      " artifacts/output-1 ",
+      {
+        requestId: "req-4",
+        correlationId: "corr-4",
+        maximumBytes: 2_097_152,
+      },
+    );
     const hasRequest = createHasArtifactRequest(" artifacts/output-1 ", {
       requestId: "req-4",
     });
 
     expect(retrieveRequest).toEqual({
       key: "artifacts/output-1",
+      maximumBytes: 2_097_152,
       requestId: "req-4",
       correlationId: "corr-4",
     });
@@ -206,6 +215,17 @@ describe("storage contracts", () => {
       requestId: "req-4",
       correlationId: undefined,
     });
+  });
+
+  it("rejects invalid artifact read ceilings at the contract boundary", () => {
+    expect(() =>
+      createRetrieveArtifactRequest("artifacts/output-1", { maximumBytes: 0 }),
+    ).toThrow("maximumBytes must be an integer between 1 and 67108864.");
+    expect(() =>
+      createRetrieveArtifactRequest("artifacts/output-1", {
+        maximumBytes: 1.5,
+      }),
+    ).toThrow("maximumBytes must be an integer between 1 and 67108864.");
   });
 
   it("creates store success responses with artifact descriptor metadata", () => {
@@ -283,12 +303,16 @@ describe("storage contracts", () => {
   });
 
   it("creates store failure responses with shared contract error semantics", () => {
-    const error = createContractError("unavailable", "Storage backend unavailable", {
-      details: {
-        adapter: "memory",
+    const error = createContractError(
+      "unavailable",
+      "Storage backend unavailable",
+      {
+        details: {
+          adapter: "memory",
+        },
+        correlationId: "corr-6",
       },
-      correlationId: "corr-6",
-    });
+    );
 
     const failure = createStoreArtifactFailureResult(error, {
       requestId: "req-6",
@@ -333,16 +357,19 @@ describe("storage contracts", () => {
   });
 
   it("creates repo-family requests and results with repo targets", () => {
-    const storeRequest = createStoreArtifactInRepoRequest(new Uint8Array([7, 8, 9]), {
-      target: {
-        provider: " huggingface ",
-        repository: " openai/demo-artifacts ",
-        revision: " main ",
-        path: " images/cat.png ",
+    const storeRequest = createStoreArtifactInRepoRequest(
+      new Uint8Array([7, 8, 9]),
+      {
+        target: {
+          provider: " huggingface ",
+          repository: " openai/demo-artifacts ",
+          revision: " main ",
+          path: " images/cat.png ",
+        },
+        mediaType: "image/png",
+        overwrite: true,
       },
-      mediaType: "image/png",
-      overwrite: true,
-    });
+    );
 
     expect(storeRequest).toEqual({
       target: {
@@ -396,6 +423,7 @@ describe("storage contracts", () => {
 
   it("creates artifact storage bindings against thin shared backing references", () => {
     const binding = normalizeArtifactStorageBinding({
+      workspaceId: "workspace-a" as never,
       artifactId: " artifact-42 ",
       backing: {
         kind: " artifact-repo ",
@@ -408,6 +436,7 @@ describe("storage contracts", () => {
     });
 
     expect(binding).toEqual({
+      workspaceId: "workspace-a",
       artifactId: "artifact-42",
       backing: {
         kind: "artifact-repo",
@@ -419,5 +448,4 @@ describe("storage contracts", () => {
       createdAt: "2026-04-17T00:00:00.000Z",
     });
   });
-
 });

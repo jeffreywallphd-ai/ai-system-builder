@@ -1,3 +1,4 @@
+import { createWorkspaceId, type WorkspaceId } from "../workspace";
 import { type ModelTaskTag, normalizeModelTaskTags } from "../../domain/model";
 import { type ModelBrowseProvider, normalizeModelBrowseProvider } from "./model-browse-provider";
 import { type ModelInferenceMode, normalizeModelInferenceMode } from "./model-inference-mode";
@@ -16,6 +17,7 @@ export interface ModelTrainingDatasetInput {
   splitRole?: ModelTrainingDatasetSplitRole;
   format?: string;
   path?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ModelTrainingBaseModel {
@@ -102,6 +104,8 @@ export interface ModelTrainingValidationConfig {
 }
 
 export interface ModelTrainingRequest {
+  workspaceId?: WorkspaceId;
+  trainingTask?: string;
   baseModel: ModelTrainingBaseModel;
   datasets: ModelTrainingDatasetInput[];
   method: ModelTrainingMethod;
@@ -244,6 +248,7 @@ export function normalizeModelTrainingRequest(request: ModelTrainingRequest): Mo
     splitRole: normalizeDatasetSplitRole(dataset.splitRole),
     format: normalizeOptionalText(dataset.format),
     path: normalizeOptionalText(dataset.path),
+    metadata: dataset.metadata,
   }));
 
   if (datasets.length === 0) {
@@ -251,6 +256,8 @@ export function normalizeModelTrainingRequest(request: ModelTrainingRequest): Mo
   }
 
   return {
+    workspaceId: request.workspaceId ? createWorkspaceId(request.workspaceId) : undefined,
+    trainingTask: normalizeOptionalText(request.trainingTask),
     baseModel: {
       modelRecordId: normalizeOptionalText(request.baseModel.modelRecordId),
       provider: typeof request.baseModel.provider === "string" ? normalizeModelBrowseProvider(request.baseModel.provider) : undefined,

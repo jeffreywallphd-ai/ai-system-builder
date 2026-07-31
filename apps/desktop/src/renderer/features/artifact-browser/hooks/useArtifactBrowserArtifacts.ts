@@ -7,16 +7,19 @@ import type {
   DesktopUnregisteredArtifactBrowseItem,
 } from "../../../lib/desktopApi";
 import type { DesktopArtifactBrowserClient } from "../api/desktopArtifactBrowserClient";
+import { isGeneratedArtifact, isUploadedArtifact } from "../helpers/artifactStorageGrouping";
 
 interface UseArtifactBrowserArtifactsParams {
   client: DesktopArtifactBrowserClient;
   setViewState: (value: ArtifactBrowserViewState) => void;
+  workspaceId?: string;
 }
 
 export interface UseArtifactBrowserArtifactsResult {
   items: DesktopArtifactBrowseItem[];
   uploadedItems: DesktopArtifactBrowseItem[];
   generatedItems: DesktopArtifactBrowseItem[];
+  otherItems: DesktopArtifactBrowseItem[];
   unregisteredItems: DesktopUnregisteredArtifactBrowseItem[];
   selectedArtifactFamily: DesktopArtifactFamily | "all";
   setSelectedArtifactFamily: (value: DesktopArtifactFamily | "all") => void;
@@ -28,6 +31,7 @@ export interface UseArtifactBrowserArtifactsResult {
 export function useArtifactBrowserArtifacts({
   client,
   setViewState,
+  workspaceId,
 }: UseArtifactBrowserArtifactsParams): UseArtifactBrowserArtifactsResult {
   const [items, setItems] = useState<DesktopArtifactBrowseItem[]>([]);
   const [unregisteredItems, setUnregisteredItems] = useState<DesktopUnregisteredArtifactBrowseItem[]>([]);
@@ -38,16 +42,16 @@ export function useArtifactBrowserArtifacts({
     setViewState({ status: "loading", message: "Loading artifacts..." });
     try {
       const [browseItems, unregistered] = await Promise.all([
-        client.browseArtifacts(selectedArtifactFamily === "all" ? {} : { artifactFamily: selectedArtifactFamily }),
-        client.browseUnregisteredArtifacts?.() ?? Promise.resolve([]),
+        workspaceId ? client.browseArtifacts(selectedArtifactFamily === "all" ? { workspaceId } : { artifactFamily: selectedArtifactFamily, workspaceId }) : Promise.resolve([]),
+        workspaceId ? (client.browseUnregisteredArtifacts?.({ workspaceId }) ?? Promise.resolve([])) : Promise.resolve([]),
       ]);
 
       const filteredByStorage = browseItems.filter((item) => {
         if (selectedStorageFilter === "uploaded") {
-          return item.storageKey.startsWith("uploads/");
+          return isUploadedArtifact(item);
         }
         if (selectedStorageFilter === "generated") {
-          return item.storageKey.startsWith("generated/");
+          return isGeneratedArtifact(item);
         }
         return true;
       });
@@ -55,9 +59,9 @@ export function useArtifactBrowserArtifacts({
       setUnregisteredItems(unregistered);
       setViewState({
         status: "success",
-        message: (filteredByStorage.length + unregistered.length) > 0
-          ? "Loaded artifacts."
-          : "No artifacts found yet.",
+        ...((filteredByStorage.length + unregistered.length) > 0
+          ? {}
+          : { message: "No artifacts found yet." }),
       });
     } catch (error) {
       setViewState({
@@ -65,15 +69,19 @@ export function useArtifactBrowserArtifacts({
         message: error instanceof Error ? error.message : "Failed to load artifacts.",
       });
     }
-  }, [client, selectedArtifactFamily, selectedStorageFilter, setViewState]);
+  }, [client, selectedArtifactFamily, selectedStorageFilter, setViewState, workspaceId]);
 
-  const uploadedItems = items.filter((item) => item.storageKey.startsWith("uploads/"));
-  const generatedItems = items.filter((item) => item.storageKey.startsWith("generated/"));
+  const uploadedItems = items.filter(isUploadedArtifact);
+  const generatedItems = items.filter(isGeneratedArtifact);
+  const otherItems = items.filter(
+    (item) => !isUploadedArtifact(item) && !isGeneratedArtifact(item),
+  );
 
   return {
     items,
     uploadedItems,
     generatedItems,
+    otherItems,
     unregisteredItems,
     selectedArtifactFamily,
     setSelectedArtifactFamily,

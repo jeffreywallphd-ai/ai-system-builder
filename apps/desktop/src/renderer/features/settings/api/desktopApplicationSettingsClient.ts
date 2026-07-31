@@ -15,6 +15,7 @@ export interface DesktopApplicationSettingsClient {
   updateSetting: (input: { key: ApplicationSettingKey; value: ApplicationSettingPrimitiveValue }) => ReturnType<ApplicationSettingsApi["updateSetting"]>;
   clearSetting: (input: { key: ApplicationSettingKey }) => ReturnType<ApplicationSettingsApi["clearSetting"]>;
   resolveModelDefault: (input: ResolveModelDefaultRequest) => ReturnType<ApplicationSettingsApi["resolveModelDefault"]>;
+  selectFolder: (input?: { title?: string; defaultPath?: string }) => ReturnType<ApplicationSettingsApi["selectFolder"]>;
 }
 
 export function createDesktopApplicationSettingsClient(): DesktopApplicationSettingsClient {

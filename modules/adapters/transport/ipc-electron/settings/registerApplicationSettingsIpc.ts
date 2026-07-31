@@ -7,12 +7,15 @@ import {
   DESKTOP_APPLICATION_SETTINGS_READ_RESPONSE_CHANNEL,
   DESKTOP_APPLICATION_SETTINGS_RESOLVE_MODEL_DEFAULT_REQUEST_CHANNEL,
   DESKTOP_APPLICATION_SETTINGS_RESOLVE_MODEL_DEFAULT_RESPONSE_CHANNEL,
+  DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_REQUEST_CHANNEL,
+  DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_RESPONSE_CHANNEL,
   DESKTOP_APPLICATION_SETTINGS_UPDATE_REQUEST_CHANNEL,
   DESKTOP_APPLICATION_SETTINGS_UPDATE_RESPONSE_CHANNEL,
   createDesktopApplicationSettingsClearSuccessResponse,
   createDesktopApplicationSettingsListDefinitionsSuccessResponse,
   createDesktopApplicationSettingsReadSuccessResponse,
   createDesktopApplicationSettingsResolveModelDefaultSuccessResponse,
+  createDesktopApplicationSettingsSelectFolderSuccessResponse,
   createDesktopApplicationSettingsUpdateSuccessResponse,
   createIpcError,
   createIpcFailureResponse,
@@ -24,6 +27,8 @@ import {
   type DesktopApplicationSettingsReadResponse,
   type DesktopApplicationSettingsResolveModelDefaultRequest,
   type DesktopApplicationSettingsResolveModelDefaultResponse,
+  type DesktopApplicationSettingsSelectFolderRequest,
+  type DesktopApplicationSettingsSelectFolderResponse,
   type DesktopApplicationSettingsUpdateRequest,
   type DesktopApplicationSettingsUpdateResponse,
   type IpcFailureResponse,
@@ -44,6 +49,7 @@ export interface RegisterApplicationSettingsIpcDependencies {
   updateSettingUseCase: Pick<UpdateSettingUseCase, "execute">;
   clearSettingUseCase: Pick<ClearSettingUseCase, "execute">;
   resolveModelDefaultUseCase: Pick<ResolveModelDefaultUseCase, "execute">;
+  selectFolder?: (options?: { title?: string; defaultPath?: string }) => Promise<{ canceled: boolean; path?: string }>;
 }
 
 type ApplicationSettingsFailureResponseChannel =
@@ -51,7 +57,8 @@ type ApplicationSettingsFailureResponseChannel =
   | typeof DESKTOP_APPLICATION_SETTINGS_READ_RESPONSE_CHANNEL
   | typeof DESKTOP_APPLICATION_SETTINGS_UPDATE_RESPONSE_CHANNEL
   | typeof DESKTOP_APPLICATION_SETTINGS_CLEAR_RESPONSE_CHANNEL
-  | typeof DESKTOP_APPLICATION_SETTINGS_RESOLVE_MODEL_DEFAULT_RESPONSE_CHANNEL;
+  | typeof DESKTOP_APPLICATION_SETTINGS_RESOLVE_MODEL_DEFAULT_RESPONSE_CHANNEL
+  | typeof DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_RESPONSE_CHANNEL;
 
 type ApplicationSettingsFailureResponse =
   IpcFailureResponse<
@@ -173,6 +180,31 @@ export function createResolveModelDefaultIpcHandler(useCase: Pick<ResolveModelDe
   };
 }
 
+export function createSelectApplicationSettingsFolderIpcHandler(
+  selectFolder?: (options?: { title?: string; defaultPath?: string }) => Promise<{ canceled: boolean; path?: string }>,
+) {
+  return async (
+    _event: unknown,
+    request: DesktopApplicationSettingsSelectFolderRequest,
+  ): Promise<DesktopApplicationSettingsSelectFolderResponse> => {
+    try {
+      if (!selectFolder) {
+        return createDesktopApplicationSettingsSelectFolderSuccessResponse(
+          { canceled: true },
+          { requestId: request.requestId, correlationId: request.correlationId },
+        );
+      }
+      const result = await selectFolder(request.payload);
+      return createDesktopApplicationSettingsSelectFolderSuccessResponse(
+        result,
+        { requestId: request.requestId, correlationId: request.correlationId },
+      );
+    } catch (error) {
+      return toFailureResponse(DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_RESPONSE_CHANNEL, error, request);
+    }
+  };
+}
+
 export function registerApplicationSettingsIpc(dependencies: RegisterApplicationSettingsIpcDependencies): void {
   dependencies.ipcMain.handle(
     DESKTOP_APPLICATION_SETTINGS_LIST_DEFINITIONS_REQUEST_CHANNEL.value,
@@ -193,5 +225,9 @@ export function registerApplicationSettingsIpc(dependencies: RegisterApplication
   dependencies.ipcMain.handle(
     DESKTOP_APPLICATION_SETTINGS_RESOLVE_MODEL_DEFAULT_REQUEST_CHANNEL.value,
     createResolveModelDefaultIpcHandler(dependencies.resolveModelDefaultUseCase),
+  );
+  dependencies.ipcMain.handle(
+    DESKTOP_APPLICATION_SETTINGS_SELECT_FOLDER_REQUEST_CHANNEL.value,
+    createSelectApplicationSettingsFolderIpcHandler(dependencies.selectFolder),
   );
 }

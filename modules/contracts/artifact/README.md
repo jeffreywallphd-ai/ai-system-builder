@@ -1,5 +1,7 @@
 # Artifact Contracts
 
+> AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
+
 Artifact contracts define boundary-safe metadata for stored and flowing ELT-side data objects.
 
 Use this family for artifact-level semantics that sit above storage operations:

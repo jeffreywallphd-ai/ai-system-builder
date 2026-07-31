@@ -18,6 +18,9 @@ export class DownloadModelUseCase {
     const download = await this.dependencies.modelDownloader.ensureModelDownloaded({
       provider: "transformers",
       modelId: normalizedRequest.modelId,
+      inferenceMode: normalizedRequest.inferenceMode,
+      taskTags: normalizedRequest.taskTags,
+      artifactForm: normalizedRequest.artifactForm,
     });
 
     if (!download.localPath) {
@@ -26,6 +29,7 @@ export class DownloadModelUseCase {
 
     const result = await this.dependencies.modelRegistry.registerDownloadedModel({
       modelRecordId: normalizedRequest.modelRecordId,
+      workspaceId: normalizedRequest.workspaceId,
       displayName: normalizedRequest.displayName ?? normalizedRequest.modelId,
       source: "huggingface",
       provider: normalizedRequest.provider,

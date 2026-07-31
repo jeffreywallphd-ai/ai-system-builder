@@ -20,6 +20,7 @@ export const APPLICATION_SETTING_VALUE_KINDS = [
   "boolean",
   "secret",
   "select",
+  "folder",
   "object",
 ] as const;
 
@@ -50,6 +51,8 @@ export interface ApplicationSettingDefinition {
   category: ApplicationSettingCategory;
   label: string;
   description?: string;
+  placeholder?: string;
+  instructions?: string;
   valueKind: ApplicationSettingValueKind;
   sensitive?: boolean;
   defaultValue?: ApplicationSettingPrimitiveValue;

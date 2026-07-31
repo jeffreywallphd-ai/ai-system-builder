@@ -1,5 +1,6 @@
 import {
   normalizeArtifactRepoTarget,
+  type ArtifactRepositoryCreationPolicy,
   type ArtifactRepoTarget,
   type StoreArtifactInRepoSuccessValue,
 } from "../storage";
@@ -23,6 +24,7 @@ export interface ApiArtifactRepoStoreRequestPayload {
   contentBase64: string;
   mediaType?: string;
   overwrite?: boolean;
+  repositoryCreation?: ArtifactRepositoryCreationPolicy;
   boundary: ApiArtifactRepoStoreBoundaryContext;
 }
 
@@ -60,11 +62,25 @@ function normalizeApiArtifactRepoStorePayload(
     contentBase64: normalizeRequiredTextField(payload.contentBase64, "contentBase64"),
     mediaType: payload.mediaType?.trim() || undefined,
     overwrite: payload.overwrite,
+    repositoryCreation: normalizeRepositoryCreation(payload.repositoryCreation),
     boundary: {
       host: "server",
       source: normalizeRequiredTextField(payload.boundary.source, "boundary.source"),
     },
   };
+}
+
+function normalizeRepositoryCreation(
+  value: ArtifactRepositoryCreationPolicy | undefined,
+): ArtifactRepositoryCreationPolicy | undefined {
+  if (!value) return undefined;
+  if (value.approved !== true) {
+    throw new Error("repositoryCreation.approved must be true when repository creation is requested.");
+  }
+  if (value.visibility !== "private" && value.visibility !== "public") {
+    throw new Error("repositoryCreation.visibility must be private or public.");
+  }
+  return { approved: true, visibility: value.visibility };
 }
 
 export function createApiArtifactRepoStoreRequest(

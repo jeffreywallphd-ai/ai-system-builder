@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   useArtifactBrowserPublishLogic,
   type ArtifactBrowserViewState,
+  type ArtifactPreviewView,
   type UseArtifactBrowserPublishLogicResult,
 } from "../../../../../../../modules/ui/shared";
 import type {
@@ -32,12 +33,14 @@ export interface UseArtifactBrowserFeatureResult {
   items: DesktopArtifactBrowseItem[];
   uploadedItems: DesktopArtifactBrowseItem[];
   generatedItems: DesktopArtifactBrowseItem[];
+  otherItems: DesktopArtifactBrowseItem[];
   unregisteredItems: DesktopUnregisteredArtifactBrowseItem[];
   selectedStorageKey?: string;
   detail?: DesktopArtifactDetail;
   content?: DesktopArtifactContentDescriptor;
   imageViewUrl?: string;
   htmlPreview?: string;
+  artifactPreview: ArtifactPreviewView;
   publishState: ArtifactBrowserViewState;
   registerState: ArtifactBrowserViewState;
   localizeState: ArtifactBrowserViewState;
@@ -73,6 +76,10 @@ export interface UseArtifactBrowserFeatureResult {
     path: string;
     revision?: string;
     mediaType?: string;
+    repositoryCreation?: {
+      approved: true;
+      visibility: "private" | "public";
+    };
   }) => Promise<void>;
   registerArtifactFromHuggingFace: (input?: {
     repository?: string;
@@ -84,8 +91,12 @@ export interface UseArtifactBrowserFeatureResult {
   browseHuggingFaceDatasetParquetFiles: (repository: string) => Promise<void>;
   closeHuggingFaceDatasetParquetFiles: () => void;
   huggingFaceNamespaceDatasets: DesktopHuggingFaceNamespaceDataset[];
-  getHuggingFaceDatasetParquetFiles: (repository: string) => DesktopHuggingFaceDatasetParquetFile[];
-  getHuggingFaceDatasetFilesState: (repository: string) => ArtifactBrowserViewState;
+  getHuggingFaceDatasetParquetFiles: (
+    repository: string,
+  ) => DesktopHuggingFaceDatasetParquetFile[];
+  getHuggingFaceDatasetFilesState: (
+    repository: string,
+  ) => ArtifactBrowserViewState;
   expandedHuggingFaceDataset?: string;
   localizeArtifactFromRepo: () => Promise<void>;
   recheckPublishedBacking: () => Promise<void>;
@@ -94,8 +105,12 @@ export interface UseArtifactBrowserFeatureResult {
   setPathInRepo: (value: string) => void;
   setRevision: (value: string) => void;
   setMediaType: (value: string) => void;
+  setCreateRepositoryIfMissing: (value: boolean) => void;
+  setRepositoryVisibility: (value: "private" | "public") => void;
   togglePublishForm: () => void;
-  readArtifactMedia: (storageKey: string) => Promise<{ mediaType?: string; bytes: Uint8Array }>;
+  readArtifactMedia: (
+    storageKey: string,
+  ) => Promise<{ mediaType?: string; bytes: Uint8Array }>;
   setRegisterRepository: (value: string) => void;
   setRegisterNamespace: (value: string) => void;
   setRegisterPathInRepo: (value: string) => void;
@@ -109,20 +124,26 @@ export interface UseArtifactBrowserFeatureResult {
 
 export function useArtifactBrowserFeature(
   client?: DesktopArtifactBrowserClient,
+  workspaceId?: string,
 ): UseArtifactBrowserFeatureResult {
   const artifactClient = useArtifactBrowserClient(client);
-  const [viewState, setViewState] = useState<ArtifactBrowserViewState>({ status: "idle" });
+  const [viewState, setViewState] = useState<ArtifactBrowserViewState>({
+    status: "idle",
+  });
   const artifacts = useArtifactBrowserArtifacts({
     client: artifactClient,
     setViewState,
+    workspaceId,
   });
 
   const selection = useArtifactSelectionContent(
     artifactClient,
     setViewState,
+    workspaceId,
   );
 
   const publishLogic = useArtifactBrowserPublishLogic<DesktopArtifactDetail>({
+    workspaceId,
     selectedStorageKey: selection.selectedStorageKey,
     client: artifactClient,
     async readSelectedArtifactDetail() {
@@ -130,17 +151,22 @@ export function useArtifactBrowserFeature(
         return undefined;
       }
 
-      return artifactClient.readArtifactDetail({ storageKey: selection.selectedStorageKey });
+      return artifactClient.readArtifactDetail(
+        { storageKey: selection.selectedStorageKey },
+        { workspaceId },
+      );
     },
   });
 
   const mutations = useArtifactBrowserMutations({
     client: artifactClient,
+    workspaceId,
     refreshArtifacts: artifacts.refreshArtifacts,
     setViewState,
   });
   const deleteFlow = useArtifactDeleteFlow({
     client: artifactClient,
+    workspaceId,
     refreshArtifacts: artifacts.refreshArtifacts,
     clearSelectedArtifact: selection.clearSelectedArtifact,
     setViewState,
@@ -148,6 +174,7 @@ export function useArtifactBrowserFeature(
 
   const huggingFace = useArtifactBrowserHuggingFace({
     client: artifactClient,
+    workspaceId,
     refreshArtifacts: artifacts.refreshArtifacts,
     selectArtifact: selection.selectArtifact,
     selectedStorageKey: selection.selectedStorageKey,
@@ -159,16 +186,23 @@ export function useArtifactBrowserFeature(
 
   useEffect(() => {
     void artifacts.refreshArtifacts();
-    void artifactClient.getHuggingFaceTokenStatus().then(huggingFace.setHuggingFaceTokenStatus).catch(() => {
-      huggingFace.setHuggingFaceTokenStatus({ configured: false });
-    });
-  }, [artifactClient, artifacts.refreshArtifacts]);
+    void artifactClient
+      .getHuggingFaceTokenStatus()
+      .then(huggingFace.setHuggingFaceTokenStatus)
+      .catch(() => {
+        huggingFace.setHuggingFaceTokenStatus({ configured: false });
+      });
+  }, [artifactClient, artifacts.refreshArtifacts, workspaceId]);
 
   async function publishArtifactToHuggingFace(input?: {
     repository: string;
     path: string;
     revision?: string;
     mediaType?: string;
+    repositoryCreation?: {
+      approved: true;
+      visibility: "private" | "public";
+    };
   }): Promise<void> {
     await publishLogic.publishArtifactToHuggingFace(input);
     await artifacts.refreshArtifacts();
@@ -186,12 +220,14 @@ export function useArtifactBrowserFeature(
     items: artifacts.items,
     uploadedItems: artifacts.uploadedItems,
     generatedItems: artifacts.generatedItems,
+    otherItems: artifacts.otherItems,
     unregisteredItems: artifacts.unregisteredItems,
     selectedStorageKey: selection.selectedStorageKey,
     detail: selection.detail,
     content: selection.content,
     imageViewUrl: selection.imageViewUrl,
     htmlPreview: selection.htmlPreview,
+    artifactPreview: selection.artifactPreview,
     publishState: publishLogic.publishState,
     registerState: huggingFace.registerState,
     localizeState: huggingFace.localizeState,
@@ -206,7 +242,8 @@ export function useArtifactBrowserFeature(
     selectArtifact: selection.selectArtifact,
     refreshArtifacts: artifacts.refreshArtifacts,
     registerUnregisteredArtifact: mutations.registerUnregisteredArtifact,
-    requestDeleteUnregisteredArtifact: deleteFlow.requestDeleteUnregisteredArtifact,
+    requestDeleteUnregisteredArtifact:
+      deleteFlow.requestDeleteUnregisteredArtifact,
     requestDeleteRegisteredArtifact: deleteFlow.requestDeleteRegisteredArtifact,
     setDeleteConfirmationInput: deleteFlow.setDeleteConfirmationInput,
     confirmPendingDelete: deleteFlow.confirmPendingDelete,
@@ -216,13 +253,18 @@ export function useArtifactBrowserFeature(
     selectedStorageFilter: artifacts.selectedStorageFilter,
     setSelectedStorageFilter: artifacts.setSelectedStorageFilter,
     publishArtifactToHuggingFace,
-    registerArtifactFromHuggingFace: huggingFace.registerArtifactFromHuggingFace,
+    registerArtifactFromHuggingFace:
+      huggingFace.registerArtifactFromHuggingFace,
     registerHuggingFaceNamespace: huggingFace.registerHuggingFaceNamespace,
-    browseHuggingFaceDatasetParquetFiles: huggingFace.browseHuggingFaceDatasetParquetFiles,
-    closeHuggingFaceDatasetParquetFiles: huggingFace.closeHuggingFaceDatasetParquetFiles,
+    browseHuggingFaceDatasetParquetFiles:
+      huggingFace.browseHuggingFaceDatasetParquetFiles,
+    closeHuggingFaceDatasetParquetFiles:
+      huggingFace.closeHuggingFaceDatasetParquetFiles,
     huggingFaceNamespaceDatasets: huggingFace.huggingFaceNamespaceDatasets,
-    getHuggingFaceDatasetParquetFiles: huggingFace.getHuggingFaceDatasetParquetFiles,
-    getHuggingFaceDatasetFilesState: huggingFace.getHuggingFaceDatasetFilesState,
+    getHuggingFaceDatasetParquetFiles:
+      huggingFace.getHuggingFaceDatasetParquetFiles,
+    getHuggingFaceDatasetFilesState:
+      huggingFace.getHuggingFaceDatasetFilesState,
     expandedHuggingFaceDataset: huggingFace.expandedHuggingFaceDataset,
     localizeArtifactFromRepo: huggingFace.localizeArtifactFromRepo,
     recheckPublishedBacking,
@@ -231,8 +273,11 @@ export function useArtifactBrowserFeature(
     setPathInRepo: publishLogic.setPathInRepo,
     setRevision: publishLogic.setRevision,
     setMediaType: publishLogic.setMediaType,
+    setCreateRepositoryIfMissing: publishLogic.setCreateRepositoryIfMissing,
+    setRepositoryVisibility: publishLogic.setRepositoryVisibility,
     togglePublishForm: publishLogic.togglePublishForm,
-    readArtifactMedia: (storageKey: string) => artifactClient.readArtifactMedia({ storageKey }),
+    readArtifactMedia: (storageKey: string) =>
+      artifactClient.readArtifactMedia({ storageKey }),
     setRegisterRepository: huggingFace.setRegisterRepository,
     setRegisterNamespace: huggingFace.setRegisterNamespace,
     setRegisterPathInRepo: huggingFace.setRegisterPathInRepo,

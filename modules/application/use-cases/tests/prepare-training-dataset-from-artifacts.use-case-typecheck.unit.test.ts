@@ -66,8 +66,10 @@ describe("prepare training dataset TypeScript regression guards", () => {
     );
 
     expect(source).toContain("const artifactCatalog = this.artifactCatalog;");
-    expect(source).toContain("const catalogOriginalName = artifactCatalog");
-    expect(source).toContain("artifactCatalog.readArtifactCatalogRecord(");
+    expect(source).toContain("const catalogRecord = artifactCatalog");
+    expect(source).toContain("descriptorMediaType ?? catalogRecord?.mediaType");
+    expect(source).toContain("await artifactCatalog");
+    expect(source).toContain(".readArtifactCatalogRecord(");
     expect(source).not.toContain("this.artifactCatalog.readArtifactCatalogRecord(");
   });
 

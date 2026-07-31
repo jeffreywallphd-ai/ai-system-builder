@@ -3,7 +3,7 @@
 - Status: accepted
 - Date: 2026-04-14
 - Deciders: ai-system-builder maintainers
-- Related: docs/adr/template.md
+- Related: docs/adr/template.md, docs/adr/ADR-0025-deployment-shaped-structured-persistence.md
 
 ## Context
 
@@ -62,6 +62,13 @@ ai-system-builder/
 ```
 
 This decision sets directory ownership only. It does not force early package publication or excessive internal abstractions.
+
+## Current Implementation Note
+
+ADR-0025 supersedes the repository-wide PostgreSQL default stated in this ADR.
+Structured persistence now defaults to SQLite for the local deployment shape and
+PostgreSQL for campus, corporate, and cloud server shapes. The directory and
+dependency decisions in this ADR remain accepted.
 
 ## Consequences
 

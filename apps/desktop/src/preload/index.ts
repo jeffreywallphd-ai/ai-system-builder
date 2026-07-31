@@ -17,6 +17,7 @@ export function exposeDesktopPreloadApi(
 
 const api = createDesktopPreloadApi({
   ipcRenderer,
+  memoryDiagnosticsEnabled: process.env.DESKTOP_MEMORY_DIAGNOSTICS === "1",
 });
 
 exposeDesktopPreloadApi(contextBridge, api);

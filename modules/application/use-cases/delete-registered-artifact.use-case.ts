@@ -6,6 +6,9 @@ import {
 import type { ApplicationRequestContext } from "../ports";
 import type { ArtifactCatalogDeletePort, ArtifactCatalogReadPort } from "../ports/artifact-catalog";
 import type { ArtifactObjectStoragePort, ArtifactStorageBindingPort } from "../ports/storage";
+import type { WorkspaceRepository } from "../ports/workspace";
+import type { WorkspaceOperationAuthorizationPort } from "../ports/security";
+import { resolveArtifactWorkspaceContext } from "./artifact-workspace-context";
 
 export interface DeleteRegisteredArtifactCommand {
   storageKey: string;
@@ -16,6 +19,8 @@ export interface DeleteRegisteredArtifactUseCaseDependencies {
   artifactCatalogDelete: ArtifactCatalogDeletePort;
   storage: Pick<ArtifactObjectStoragePort, "deleteArtifact">;
   artifactBindingStorage: Pick<ArtifactStorageBindingPort, "deleteArtifactStorageBindings">;
+  workspaceRepository?: Pick<WorkspaceRepository, "readWorkspace">;
+  workspaceAuthorization?: WorkspaceOperationAuthorizationPort;
 }
 
 type RegisteredDeleteStepStatus = "not-attempted" | "succeeded" | "failed";
@@ -25,15 +30,28 @@ export class DeleteRegisteredArtifactUseCase {
   private readonly artifactCatalogDelete: ArtifactCatalogDeletePort;
   private readonly storage: Pick<ArtifactObjectStoragePort, "deleteArtifact">;
   private readonly artifactBindingStorage: Pick<ArtifactStorageBindingPort, "deleteArtifactStorageBindings">;
+  private readonly workspaceRepository?: Pick<WorkspaceRepository, "readWorkspace">;
+  private readonly workspaceAuthorization?: WorkspaceOperationAuthorizationPort;
 
   public constructor(dependencies: DeleteRegisteredArtifactUseCaseDependencies) {
     this.artifactCatalogRead = dependencies.artifactCatalogRead;
     this.artifactCatalogDelete = dependencies.artifactCatalogDelete;
     this.storage = dependencies.storage;
     this.artifactBindingStorage = dependencies.artifactBindingStorage;
+    this.workspaceRepository = dependencies.workspaceRepository;
+    this.workspaceAuthorization = dependencies.workspaceAuthorization;
   }
 
   public async execute(command: DeleteRegisteredArtifactCommand, context: ApplicationRequestContext = {}) {
+    const workspaceContext = await resolveArtifactWorkspaceContext(context, this.workspaceRepository, this.workspaceAuthorization ? {
+      port: this.workspaceAuthorization,
+      operation: "artifact.delete",
+      requiredScopes: ["artifact:write"],
+    } : undefined);
+    if (!workspaceContext.ok) {
+      return workspaceContext;
+    }
+
     if (!command.storageKey?.trim()) {
       return createFailureResult(
         createContractError("validation", "storageKey must be a non-empty string."),
@@ -100,6 +118,7 @@ export class DeleteRegisteredArtifactUseCase {
       );
 
     const readCatalog = await this.artifactCatalogRead.readArtifactCatalogRecord({
+      workspaceId: workspaceContext.value.workspaceId,
       storageKey,
     }, context);
 
@@ -141,6 +160,7 @@ export class DeleteRegisteredArtifactUseCase {
 
     progress.catalog.status = "failed";
     const deleteCatalog = await this.artifactCatalogDelete.deleteArtifactCatalogRecord({
+      workspaceId: workspaceContext.value.workspaceId,
       storageKey,
     }, context);
 

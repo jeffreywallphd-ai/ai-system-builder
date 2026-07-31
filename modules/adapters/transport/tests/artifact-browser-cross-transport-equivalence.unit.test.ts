@@ -35,6 +35,7 @@ async function invokeApiArtifactContentReadRoute(
     readArtifactDetailUseCase: { execute: testDouble.fn() },
     readArtifactContentUseCase: { execute },
     artifactMediaViewRetrieval: { retrieveArtifactViewerMediaByStorageKey: testDouble.fn() },
+    deleteRegisteredArtifactUseCase: { execute: testDouble.fn() },
   });
 
   const response = {
@@ -46,6 +47,7 @@ async function invokeApiArtifactContentReadRoute(
     {
       body: {
         locator: { storageKey: "uploads/cat.png" },
+        workspaceId: "workspace-a",
         source: "shared.artifact-browser",
       },
       headers: {
@@ -81,6 +83,7 @@ describe("artifact browser cross-transport equivalence", () => {
       createDesktopArtifactContentReadRequest(
         {
           locator: { storageKey: "uploads/cat.png" },
+          workspaceId: "workspace-a",
           boundary: { host: "desktop", source: "shared.artifact-browser" },
         },
         {
@@ -106,11 +109,11 @@ describe("artifact browser cross-transport equivalence", () => {
 
     expect(executeFromIpc).toHaveBeenCalledWith(
       { locator: { storageKey: "uploads/cat.png" } },
-      { requestId: "req-artifact-1", correlationId: "corr-artifact-1" },
+      { requestId: "req-artifact-1", correlationId: "corr-artifact-1", workspaceId: "workspace-a" },
     );
     expect(executeFromApi).toHaveBeenCalledWith(
       { locator: { storageKey: "uploads/cat.png" } },
-      { requestId: "req-artifact-1", correlationId: "corr-artifact-1" },
+      { requestId: "req-artifact-1", correlationId: "corr-artifact-1", workspaceId: "workspace-a" },
     );
   });
 });

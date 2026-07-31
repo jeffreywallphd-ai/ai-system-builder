@@ -1,4 +1,3 @@
-import { readdir, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 
 import type {
@@ -17,6 +16,7 @@ import type {
 import type { ApplicationRequestContext } from "../../../../application/ports";
 import type { ArtifactObjectStoragePort } from "../../../../application/ports/storage";
 import type { ArtifactStorageBindingPort } from "../../../../application/ports/storage";
+import type { ArtifactStorageBindingBatchReadPort } from "../../../../application/ports/storage";
 import {
   createArtifactBrowserLocator,
   type ArtifactBrowseItem,
@@ -31,10 +31,20 @@ import {
 import {
   normalizeStorageArtifactKey,
   resolveArtifactRepoBackingTarget,
+  type ArtifactStorageBinding,
   type ArtifactStorageBindingRole,
   type StorageObjectMetadata,
 } from "../../../../contracts/storage";
+import { isWorkspaceId, type WorkspaceId } from "../../../../contracts/workspace";
 import { resolveArtifactFamily } from "../../../../application/shared/artifact-family-classifier";
+import type { OrganizationRequestContextProviderPort } from "../../../../application/ports/organization";
+import { resolveOrganizationStorageKey } from "../organizationStorageScope";
+import {
+  deleteContainedFile,
+  FilesystemContainmentError,
+  listContainedFiles,
+  statContainedFile,
+} from "../../../filesystem-security";
 
 export interface FilesystemArtifactBrowserReadAdapter
   extends ArtifactBrowserMetadataReadPort,
@@ -46,10 +56,21 @@ export interface CreateFilesystemArtifactBrowserReadAdapterOptions {
   artifactCatalogRead: ArtifactCatalogReadPort;
   artifactCatalogAppend: ArtifactCatalogAppendPort;
   storage?: Pick<ArtifactObjectStoragePort, "hasArtifact">;
-  artifactBindingRead?: Pick<ArtifactStorageBindingPort, "readArtifactStorageBindings">;
+  artifactBindingRead?: Pick<ArtifactStorageBindingPort, "readArtifactStorageBindings">
+    & Partial<Pick<ArtifactStorageBindingBatchReadPort, "readArtifactStorageBindingsBatch">>;
+  organizationContextProvider?: OrganizationRequestContextProviderPort;
+  maximumBrowseItems?: number;
+  browseAvailabilityConcurrency?: number;
 }
 
 const UPLOADS_ROOT_SEGMENT = "uploads";
+const DEFAULT_MAXIMUM_BROWSE_ITEMS = 250;
+const DEFAULT_BROWSE_AVAILABILITY_CONCURRENCY = 8;
+
+
+function requireWorkspaceId(context: ApplicationRequestContext): WorkspaceId | undefined {
+  return isWorkspaceId(context.workspaceId) ? context.workspaceId : undefined;
+}
 
 function toUploadStorageKeyRelativePath(storageKey: string): string | undefined {
   const normalized = normalizeStorageArtifactKey(storageKey);
@@ -87,31 +108,6 @@ function inferMediaTypeFromStorageKey(storageKey: string): string | undefined {
     default:
       return undefined;
   }
-}
-
-async function listRelativeFilesRecursively(rootDirectory: string): Promise<string[]> {
-  async function walk(absoluteDirectory: string, relativePrefix: string): Promise<string[]> {
-    const entries = await readdir(absoluteDirectory, { withFileTypes: true }).catch(() => []);
-    const discovered: string[] = [];
-    for (const entry of entries) {
-      const relativePath = relativePrefix.length > 0
-        ? `${relativePrefix}/${entry.name}`
-        : entry.name;
-      const absolutePath = path.join(absoluteDirectory, entry.name);
-      if (entry.isDirectory()) {
-        discovered.push(...(await walk(absolutePath, relativePath)));
-        continue;
-      }
-
-      if (entry.isFile()) {
-        discovered.push(relativePath);
-      }
-    }
-
-    return discovered;
-  }
-
-  return walk(rootDirectory, "");
 }
 
 interface RepoBackingReadModel {
@@ -228,10 +224,15 @@ async function readBrowseStateMetadata(
   options: CreateFilesystemArtifactBrowserReadAdapterOptions,
   artifactId: string,
   context: ApplicationRequestContext,
+  prefetchedBindings?: readonly ArtifactStorageBinding[],
 ): Promise<ArtifactBrowserStateMetadata | undefined> {
   const [publishedBacking, importedSourceBacking, hasLocalObjectAvailable] = await Promise.all([
-    readLatestRepoBackingByRole(options, artifactId, context, "published"),
-    readLatestRepoBackingByRole(options, artifactId, context, "imported-source"),
+    prefetchedBindings
+      ? Promise.resolve(readLatestRepoBackingFromBindings(prefetchedBindings, "published"))
+      : readLatestRepoBackingByRole(options, artifactId, context, "published"),
+    prefetchedBindings
+      ? Promise.resolve(readLatestRepoBackingFromBindings(prefetchedBindings, "imported-source"))
+      : readLatestRepoBackingByRole(options, artifactId, context, "imported-source"),
     readLocalObjectAvailability(options, artifactId, context),
   ]);
 
@@ -248,6 +249,43 @@ async function readBrowseStateMetadata(
       isRemoteOnly,
     },
   };
+}
+
+function readLatestRepoBackingFromBindings(
+  bindings: readonly ArtifactStorageBinding[],
+  role: ArtifactStorageBindingRole,
+): RepoBackingReadModel | undefined {
+  const latestBinding = bindings
+    .filter((binding) => binding.role === role && binding.backing.kind === "artifact-repo")
+    .sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""))[0];
+  if (!latestBinding) return undefined;
+  const target = resolveArtifactRepoBackingTarget(latestBinding.backing);
+  if (!target) return undefined;
+  return {
+    target,
+    verification: {
+      exists: latestBinding.backing.verification?.exists ?? false,
+      verifiedAt: latestBinding.backing.verification?.verifiedAt,
+    },
+  };
+}
+
+async function mapWithConcurrency<T, TResult>(
+  values: readonly T[],
+  concurrency: number,
+  map: (value: T, index: number) => Promise<TResult>,
+): Promise<TResult[]> {
+  const results = new Array<TResult>(values.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(concurrency, values.length) }, async () => {
+    while (nextIndex < values.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await map(values[index]!, index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
 }
 
 function toDetailValue(record: ArtifactCatalogRecord): ArtifactReadSuccessValue {
@@ -280,7 +318,23 @@ function toContentValue(record: ArtifactCatalogRecord): ArtifactContentReadSucce
 export function createFilesystemArtifactBrowserReadAdapter(
   options: CreateFilesystemArtifactBrowserReadAdapterOptions,
 ): FilesystemArtifactBrowserReadAdapter {
-  const uploadsRoot = path.resolve(options.rootDirectory, UPLOADS_ROOT_SEGMENT);
+  const maximumBrowseItems = options.maximumBrowseItems ?? DEFAULT_MAXIMUM_BROWSE_ITEMS;
+  const browseAvailabilityConcurrency = options.browseAvailabilityConcurrency
+    ?? DEFAULT_BROWSE_AVAILABILITY_CONCURRENCY;
+  if (!Number.isSafeInteger(maximumBrowseItems) || maximumBrowseItems < 1 || maximumBrowseItems > 250) {
+    throw new Error("maximumBrowseItems must be a safe integer between 1 and 250.");
+  }
+  if (
+    !Number.isSafeInteger(browseAvailabilityConcurrency)
+    || browseAvailabilityConcurrency < 1
+    || browseAvailabilityConcurrency > 16
+  ) {
+    throw new Error("browseAvailabilityConcurrency must be a safe integer between 1 and 16.");
+  }
+  const resolveScopedStorageKey = (storageKey: string) => resolveOrganizationStorageKey(
+    storageKey,
+    options.organizationContextProvider,
+  );
 
   return {
     async browseArtifacts(
@@ -289,6 +343,7 @@ export function createFilesystemArtifactBrowserReadAdapter(
     ) {
       const browseResult = await options.artifactCatalogRead.browseArtifactCatalogRecords(
         {
+          workspaceId: requireWorkspaceId(context),
           artifactFamily: request.artifactFamily,
         },
         context,
@@ -300,10 +355,33 @@ export function createFilesystemArtifactBrowserReadAdapter(
 
       const items = browseResult.value.records
         .map((record) => toBrowseItem(record))
-        .sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""));
+        .sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""))
+        .slice(0, maximumBrowseItems);
 
-      const enrichedItems = await Promise.all(items.map(async (item) => {
-        const stateMetadata = await readBrowseStateMetadata(options, item.storageKey, context);
+      const bindingsByArtifactId = new Map<string, ArtifactStorageBinding[]>();
+      if (items.length > 0 && options.artifactBindingRead?.readArtifactStorageBindingsBatch) {
+        const batch = await options.artifactBindingRead.readArtifactStorageBindingsBatch({
+          artifactIds: items.map((item) => item.storageKey),
+        }, context);
+        if (batch.ok) {
+          for (const item of items) bindingsByArtifactId.set(item.storageKey, []);
+          for (const binding of batch.value.bindings) {
+            const workspaceId = requireWorkspaceId(context);
+            if (binding.workspaceId && binding.workspaceId !== workspaceId) continue;
+            const bindings = bindingsByArtifactId.get(binding.artifactId) ?? [];
+            bindings.push(binding);
+            bindingsByArtifactId.set(binding.artifactId, bindings);
+          }
+        }
+      }
+
+      const enrichedItems = await mapWithConcurrency(items, browseAvailabilityConcurrency, async (item) => {
+        const stateMetadata = await readBrowseStateMetadata(
+          options,
+          item.storageKey,
+          context,
+          bindingsByArtifactId.get(item.storageKey),
+        );
         if (!stateMetadata) {
           return item;
         }
@@ -312,7 +390,7 @@ export function createFilesystemArtifactBrowserReadAdapter(
           ...item,
           metadata: withArtifactStateMetadata(item.metadata, stateMetadata),
         };
-      }));
+      });
 
       return createSuccessResult({ items: enrichedItems }, context);
     },
@@ -323,7 +401,7 @@ export function createFilesystemArtifactBrowserReadAdapter(
     ) {
       const storageKey = normalizeStorageArtifactKey(request.locator.storageKey);
       const readResult = await options.artifactCatalogRead.readArtifactCatalogRecord(
-        { storageKey },
+        { workspaceId: requireWorkspaceId(context), storageKey },
         context,
       );
 
@@ -355,7 +433,7 @@ export function createFilesystemArtifactBrowserReadAdapter(
     ) {
       const storageKey = normalizeStorageArtifactKey(request.locator.storageKey);
       const readResult = await options.artifactCatalogRead.readArtifactCatalogRecord(
-        { storageKey },
+        { workspaceId: requireWorkspaceId(context), storageKey },
         context,
       );
 
@@ -414,13 +492,29 @@ export function createFilesystemArtifactBrowserReadAdapter(
     },
 
     async browseUnregisteredArtifacts(context: ApplicationRequestContext = {}) {
-      const [catalogResult, uploadRelativePaths] = await Promise.all([
-        options.artifactCatalogRead.browseArtifactCatalogRecords({}, context),
-        listRelativeFilesRecursively(uploadsRoot),
-      ]);
+      const catalogResult = await options.artifactCatalogRead.browseArtifactCatalogRecords(
+        { workspaceId: requireWorkspaceId(context) },
+        context,
+      );
 
       if (!catalogResult.ok) {
         return catalogResult;
+      }
+
+      let uploadRelativePaths: string[];
+      try {
+        uploadRelativePaths = await listContainedFiles({
+          rootDirectory: options.rootDirectory,
+          prefix: resolveScopedStorageKey(UPLOADS_ROOT_SEGMENT),
+        });
+      } catch (error) {
+        return createFailureResult(
+          createContractError(
+            error instanceof FilesystemContainmentError ? "validation" : "unavailable",
+            "Unable to inspect unregistered artifact storage safely.",
+          ),
+          context,
+        );
       }
 
       const registeredUploadKeys = new Set(
@@ -433,14 +527,17 @@ export function createFilesystemArtifactBrowserReadAdapter(
         .filter((relativePath) => !registeredUploadKeys.has(relativePath))
         .map(async (relativePath) => {
           const storageKey = normalizeStorageArtifactKey(`${UPLOADS_ROOT_SEGMENT}/${relativePath}`);
-          const fileStats = await stat(path.resolve(uploadsRoot, relativePath)).catch(() => undefined);
+          const fileStats = await statContainedFile({
+            rootDirectory: options.rootDirectory,
+            key: resolveScopedStorageKey(storageKey),
+          }).catch(() => undefined);
 
           return {
             storageKey,
             relativePath,
             fileName: path.basename(relativePath),
             mediaType: inferMediaTypeFromStorageKey(storageKey),
-            sizeBytes: fileStats?.isFile() ? fileStats.size : undefined,
+            sizeBytes: fileStats?.size,
           };
         }));
 
@@ -456,16 +553,31 @@ export function createFilesystemArtifactBrowserReadAdapter(
         );
       }
 
-      const [catalogResult, fileStats] = await Promise.all([
-        options.artifactCatalogRead.browseArtifactCatalogRecords({}, context),
-        stat(path.resolve(options.rootDirectory, storageKey)).catch(() => undefined),
-      ]);
+      const catalogResult = await options.artifactCatalogRead.browseArtifactCatalogRecords(
+        { workspaceId: requireWorkspaceId(context) },
+        context,
+      );
 
       if (!catalogResult.ok) {
         return catalogResult;
       }
 
-      if (!fileStats?.isFile()) {
+      let fileStats: Awaited<ReturnType<typeof statContainedFile>> | undefined;
+      try {
+        fileStats = await statContainedFile({
+          rootDirectory: options.rootDirectory,
+          key: resolveScopedStorageKey(storageKey),
+        });
+      } catch (error) {
+        if (error instanceof FilesystemContainmentError) {
+          return createFailureResult(
+            createContractError("validation", "Unregistered artifact path is not safely contained."),
+            context,
+          );
+        }
+      }
+
+      if (!fileStats) {
         return createFailureResult(
           createContractError("not-found", `Unregistered artifact file not found for "${storageKey}".`),
           context,
@@ -483,6 +595,7 @@ export function createFilesystemArtifactBrowserReadAdapter(
       const mediaType = inferMediaTypeFromStorageKey(storageKey);
       const appendResult = await options.artifactCatalogAppend.appendArtifactCatalogRecord({
         record: {
+          workspaceId: requireWorkspaceId(context),
           storageKey,
           artifactFamily: resolveArtifactFamily({ mediaType, fileName: storageKey }),
           mediaType,
@@ -509,7 +622,7 @@ export function createFilesystemArtifactBrowserReadAdapter(
         );
       }
 
-      const catalogResult = await options.artifactCatalogRead.browseArtifactCatalogRecords({}, context);
+      const catalogResult = await options.artifactCatalogRead.browseArtifactCatalogRecords({ workspaceId: requireWorkspaceId(context) }, context);
       if (!catalogResult.ok) {
         return catalogResult;
       }
@@ -523,8 +636,23 @@ export function createFilesystemArtifactBrowserReadAdapter(
       }
 
       try {
-        await unlink(path.resolve(options.rootDirectory, storageKey));
-      } catch {
+        const deletion = await deleteContainedFile({
+          rootDirectory: options.rootDirectory,
+          key: resolveScopedStorageKey(storageKey),
+        });
+        if (!deletion.deleted) {
+          return createFailureResult(
+            createContractError("not-found", `Unregistered artifact file not found for "${storageKey}".`),
+            context,
+          );
+        }
+      } catch (error) {
+        if (error instanceof FilesystemContainmentError) {
+          return createFailureResult(
+            createContractError("validation", "Unregistered artifact path is not safely contained."),
+            context,
+          );
+        }
         return createFailureResult(
           createContractError("not-found", `Unregistered artifact file not found for "${storageKey}".`),
           context,

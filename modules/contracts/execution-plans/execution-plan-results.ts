@@ -1,0 +1,18 @@
+import type { ExecutionDiagnostic } from './execution-plan-diagnostics'; import type { ExecutionPlanRecord } from './execution-plan-record';
+import { normalizeExecutionDiagnostic } from './execution-plan-normalization';
+export type ExecutionPlanFailureKind='validation'|'not-found'|'conflict'|'blocked'|'stale'|'unavailable'|'unsupported'|'safety-review-required'|'source-readiness-not-ready'|'internal';
+export type ExecutionPlanFailure={ kind:'failure'; failureKind:ExecutionPlanFailureKind; diagnostics: ExecutionDiagnostic[] };
+export type ExecutionPlanSuccess<T>={ kind:'success'; value:T };
+export const createExecutionPlanSuccess=<T>(value:T):ExecutionPlanSuccess<T>=>({kind:'success',value});
+export const createExecutionPlanFailure=(failureKind:ExecutionPlanFailureKind,diagnostics:ExecutionDiagnostic[]):ExecutionPlanFailure=>({kind:'failure',failureKind,diagnostics:diagnostics.map(normalizeExecutionDiagnostic)});
+export type CreateExecutionPlanResult=ExecutionPlanSuccess<ExecutionPlanRecord>|ExecutionPlanFailure;
+export type ReadExecutionPlanResult=ExecutionPlanSuccess<ExecutionPlanRecord>|ExecutionPlanFailure;
+export type ListExecutionPlansResult=ExecutionPlanSuccess<ExecutionPlanRecord[]>|ExecutionPlanFailure;
+export type ArchiveExecutionPlanResult=ExecutionPlanSuccess<ExecutionPlanRecord>|ExecutionPlanFailure;
+export type RefreshExecutionPlanResult=ExecutionPlanSuccess<ExecutionPlanRecord>|ExecutionPlanFailure;
+export type PrepareExecutionStepsResult=ExecutionPlanSuccess<ExecutionPlanRecord>|ExecutionPlanFailure;
+export type PrepareExecutionDependenciesResult=ExecutionPlanSuccess<ExecutionPlanRecord>|ExecutionPlanFailure;
+export type PrepareExecutionInputsResult=ExecutionPlanSuccess<ExecutionPlanRecord>|ExecutionPlanFailure;
+export type PrepareExecutionOutputsResult=ExecutionPlanSuccess<ExecutionPlanRecord>|ExecutionPlanFailure;
+export type ValidateExecutionPlanResult=ExecutionPlanSuccess<ExecutionPlanRecord>|ExecutionPlanFailure;
+export type PreviewExecutionPlanResult=ExecutionPlanSuccess<ExecutionPlanRecord>|ExecutionPlanFailure;

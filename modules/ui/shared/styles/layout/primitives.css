@@ -1,0 +1,47 @@
+.ui-stack,
+.stack-lg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.ui-stack--xs {
+  gap: var(--space-xs);
+}
+
+.ui-stack--sm {
+  gap: var(--space-sm);
+}
+
+.ui-stack--md {
+  gap: var(--space-md);
+}
+
+.ui-stack--lg,
+.stack-lg {
+  gap: var(--space-lg);
+}
+
+.ui-grid {
+  display: grid;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.ui-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ui-cluster,
+.ui-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+@media (max-width: 42rem) {
+  .ui-grid--two {
+    grid-template-columns: 1fr;
+  }
+}

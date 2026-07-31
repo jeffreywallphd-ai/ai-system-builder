@@ -3,3 +3,4 @@ export * from "./SettingField";
 export * from "./SecretSettingField";
 export * from "./ModelDefaultSettingField";
 export * from "./SettingsStatusMessage";
+export * from "./SoftwareStatusSection";

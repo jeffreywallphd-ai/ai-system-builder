@@ -8,6 +8,9 @@ describe("artifact-family-classifier", () => {
     expect(resolveArtifactFamily({ mediaType: "application/pdf" })).toBe("document");
     expect(resolveArtifactFamily({ mediaType: "text/markdown" })).toBe("text");
     expect(resolveArtifactFamily({ mediaType: "application/json" })).toBe("structured-text");
+    expect(resolveArtifactFamily({ mediaType: "application/json; charset=utf-8" })).toBe("structured-text");
+    expect(resolveArtifactFamily({ mediaType: "application/ld+json" })).toBe("structured-text");
+    expect(resolveArtifactFamily({ mediaType: "application/x-ndjson" })).toBe("structured-text");
     expect(resolveArtifactFamily({ mediaType: "application/x-parquet" })).toBe("tabular");
     expect(resolveArtifactFamily({ mediaType: "application/octet-stream" })).toBe("binary");
   });
@@ -15,6 +18,8 @@ describe("artifact-family-classifier", () => {
   it("falls back to file-name/extension mapping when media type is absent", () => {
     expect(resolveArtifactFamily({ fileName: "notes.md" })).toBe("text");
     expect(resolveArtifactFamily({ extension: "json" })).toBe("structured-text");
+    expect(resolveArtifactFamily({ fileName: "records.jsonl" })).toBe("structured-text");
+    expect(resolveArtifactFamily({ fileName: "records.ndjson" })).toBe("structured-text");
     expect(resolveArtifactFamily({ fileName: "table.parquet" })).toBe("tabular");
     expect(resolveArtifactFamily({ fileName: "binary/blob.bin" })).toBe("binary");
   });

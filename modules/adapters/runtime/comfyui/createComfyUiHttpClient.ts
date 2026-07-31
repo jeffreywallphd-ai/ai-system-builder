@@ -1,7 +1,9 @@
 import {
   mapComfyUiHistoryResponse,
+  mapComfyUiFreeMemoryResponse,
   mapComfyUiPromptResponse,
   mapComfyUiQueueResponse,
+  type ComfyUiFreeMemoryResponse,
   type ComfyUiHistoryResponse,
   type ComfyUiPromptResponse,
   type ComfyUiQueueResponse,
@@ -10,6 +12,7 @@ import {
 export interface CreateComfyUiHttpClientOptions {
   baseUrl: string;
   fetchImplementation?: typeof fetch;
+  requestTimeoutMs?: number;
 }
 
 export interface ComfyUiHttpClient {
@@ -17,6 +20,8 @@ export interface ComfyUiHttpClient {
   getQueue(): Promise<ComfyUiQueueResponse>;
   getHistory(): Promise<ComfyUiHistoryResponse>;
   submitPrompt(promptPayload: unknown): Promise<ComfyUiPromptResponse>;
+  cancelPrompt(promptId: string): Promise<{ cancelled: boolean }>;
+  unloadModels(): Promise<ComfyUiFreeMemoryResponse>;
 }
 
 function trimTrailingSlash(value: string): string {
@@ -32,12 +37,12 @@ async function parseJsonResponseSafe(response: Response): Promise<unknown | unde
 }
 
 function mapPayload<T>(endpoint: string, response: Response, payload: unknown | undefined, mapper: (payload: unknown) => T): T {
-  if (payload === undefined) {
-    throw new Error(`ComfyUI request failed for ${endpoint} with status ${response.status} and invalid JSON response body.`);
-  }
-
   if (!response.ok) {
     throw new Error(`ComfyUI request failed for ${endpoint} with status ${response.status}.`);
+  }
+
+  if (payload === undefined) {
+    throw new Error(`ComfyUI request failed for ${endpoint} with status ${response.status} and invalid JSON response body.`);
   }
 
   try {
@@ -50,28 +55,52 @@ function mapPayload<T>(endpoint: string, response: Response, payload: unknown | 
 export function createComfyUiHttpClient(options: CreateComfyUiHttpClientOptions): ComfyUiHttpClient {
   const fetcher = options.fetchImplementation ?? fetch;
   const baseUrl = trimTrailingSlash(options.baseUrl);
+  const requestTimeoutMs = Math.min(
+    Math.max(options.requestTimeoutMs ?? 30_000, 1_000),
+    120_000,
+  );
+  const boundedFetch = async (
+    endpoint: string,
+    init: RequestInit,
+  ): Promise<Response> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
+    try {
+      return await fetcher(`${baseUrl}${endpoint}`, {
+        ...init,
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new Error(`ComfyUI request timed out for ${endpoint}.`);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
 
   return {
     async getSystemStats() {
-      const response = await fetcher(`${baseUrl}/system_stats`, { method: "GET" });
+      const response = await boundedFetch("/system_stats", { method: "GET" });
       const payload = await parseJsonResponseSafe(response);
       return mapPayload("/system_stats", response, payload, (value) => value);
     },
 
     async getQueue() {
-      const response = await fetcher(`${baseUrl}/queue`, { method: "GET" });
+      const response = await boundedFetch("/queue", { method: "GET" });
       const payload = await parseJsonResponseSafe(response);
       return mapPayload("/queue", response, payload, mapComfyUiQueueResponse);
     },
 
     async getHistory() {
-      const response = await fetcher(`${baseUrl}/history`, { method: "GET" });
+      const response = await boundedFetch("/history", { method: "GET" });
       const payload = await parseJsonResponseSafe(response);
       return mapPayload("/history", response, payload, mapComfyUiHistoryResponse);
     },
 
     async submitPrompt(promptPayload: unknown) {
-      const response = await fetcher(`${baseUrl}/prompt`, {
+      const response = await boundedFetch("/prompt", {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -80,6 +109,38 @@ export function createComfyUiHttpClient(options: CreateComfyUiHttpClientOptions)
       });
       const payload = await parseJsonResponseSafe(response);
       return mapPayload("/prompt", response, payload, mapComfyUiPromptResponse);
+    },
+
+    async cancelPrompt(promptId) {
+      if (!promptId.trim() || promptId.length > 256) {
+        throw new Error("ComfyUI cancellation requires a valid prompt identifier.");
+      }
+      const response = await boundedFetch("/queue", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ delete: [promptId] }),
+      });
+      if (!response.ok) {
+        throw new Error(
+          `ComfyUI request failed for /queue with status ${response.status}.`,
+        );
+      }
+      return { cancelled: true };
+    },
+
+    async unloadModels() {
+      const response = await boundedFetch("/free", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ unload_models: true, free_memory: true }),
+      });
+      const payload = await parseJsonResponseSafe(response);
+      if (response.ok && payload === undefined) {
+        return { unloadedModels: true, freedMemory: true };
+      }
+      return mapPayload("/free", response, payload, mapComfyUiFreeMemoryResponse);
     },
   };
 }

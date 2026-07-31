@@ -10,20 +10,27 @@ import {
   type AcceptedArtifactUploadPolicy,
 } from "../../domain";
 import type { LoggingPort } from "../ports/logging";
+import type { WorkspaceRepository } from "../ports/workspace";
+import type { WorkspaceOperationAuthorizationPort } from "../ports/security";
 import type { ArtifactStoragePort } from "../ports/storage";
-import type {
-  StoreArtifactUploadCommand,
-  StoreArtifactUploadCommandContext,
-  StoreArtifactUploadUseCaseResult,
+import {
+  ARTIFACT_UPLOAD_MAXIMUM_BYTES,
+  type StoreArtifactUploadCommand,
+  type StoreArtifactUploadCommandContext,
+  type StoreArtifactUploadUseCaseResult,
 } from "./store-artifact-upload.types";
 import { mapStoreArtifactUploadToRegisterStagedArtifactResult } from "./artifact-upload/mapStoreArtifactUploadToRegisterStagedArtifactResult";
 import { mapAcceptedArtifactUploadPolicyToContract } from "./artifact-upload/mapAcceptedArtifactUploadPolicyToContract";
+import { resolveArtifactWorkspaceContext } from "./artifact-workspace-context";
 
 export interface StoreArtifactUploadUseCaseDependencies {
   storage: ArtifactStoragePort;
   logging: LoggingPort;
   acceptedUploadPolicy?: AcceptedArtifactUploadPolicy;
+  maximumBytes?: number;
   now?: () => string;
+  workspaceRepository?: Pick<WorkspaceRepository, "readWorkspace">;
+  workspaceAuthorization?: WorkspaceOperationAuthorizationPort;
 }
 
 const STORE_ARTIFACT_UPLOAD_USE_CASE = "StoreArtifactUploadUseCase";
@@ -81,16 +88,25 @@ export class StoreArtifactUploadUseCase {
   private readonly logging: LoggingPort;
   private readonly now: () => string;
   private readonly acceptedUploadPolicy: AcceptedArtifactUploadPolicy;
+  private readonly maximumBytes: number;
+  private readonly workspaceRepository?: Pick<WorkspaceRepository, "readWorkspace">;
+  private readonly workspaceAuthorization?: WorkspaceOperationAuthorizationPort;
 
   public constructor(dependencies: StoreArtifactUploadUseCaseDependencies) {
     this.storage = dependencies.storage;
     this.logging = dependencies.logging;
     this.now = dependencies.now ?? (() => new Date().toISOString());
     this.acceptedUploadPolicy = dependencies.acceptedUploadPolicy ?? createDefaultAcceptedArtifactUploadPolicy();
+    this.maximumBytes = dependencies.maximumBytes ?? ARTIFACT_UPLOAD_MAXIMUM_BYTES;
+    if (!Number.isSafeInteger(this.maximumBytes) || this.maximumBytes < 1) {
+      throw new Error("Artifact upload maximumBytes must be a positive safe integer.");
+    }
+    this.workspaceRepository = dependencies.workspaceRepository;
+    this.workspaceAuthorization = dependencies.workspaceAuthorization;
   }
 
   public getAcceptedUploadPolicy(): ArtifactUploadAcceptedTypePolicy {
-    return mapAcceptedArtifactUploadPolicyToContract(this.acceptedUploadPolicy);
+    return mapAcceptedArtifactUploadPolicyToContract(this.acceptedUploadPolicy, this.maximumBytes);
   }
 
   public async execute(
@@ -99,13 +115,32 @@ export class StoreArtifactUploadUseCase {
     context: {
       requestId?: string;
       correlationId?: string;
+      workspaceId?: string;
     } = {},
   ): Promise<StoreArtifactUploadUseCaseResult> {
+    const effectiveContext = { ...context, workspaceId: context.workspaceId ?? commandContext.workspaceId };
+    const workspaceContext = await resolveArtifactWorkspaceContext(effectiveContext, this.workspaceRepository, this.workspaceAuthorization ? {
+      port: this.workspaceAuthorization,
+      operation: "artifact.upload",
+      requiredScopes: ["artifact:write"],
+    } : undefined);
+    if (!workspaceContext.ok) {
+      return mapStoreArtifactUploadToRegisterStagedArtifactResult(workspaceContext, effectiveContext);
+    }
+
+    if (command.bytes.byteLength > this.maximumBytes) {
+      return toFailureResult(
+        "validation",
+        `Artifact upload exceeds the ${this.maximumBytes}-byte limit.`,
+        context,
+      );
+    }
+
     const startedAt = Date.now();
     const candidate = createArtifactIntakeCandidate({
       fileName: command.fileName,
       mediaType: command.mediaType,
-      bytesLength: command.bytes.length,
+      bytes: command.bytes,
     });
 
     await this.logging.log({
@@ -159,7 +194,7 @@ export class StoreArtifactUploadUseCase {
             },
           },
         }),
-        context,
+        effectiveContext,
       );
 
       if (!storeResult.ok) {
@@ -191,7 +226,7 @@ export class StoreArtifactUploadUseCase {
           sourceKind: "upload",
           originalName: candidate.fileName,
         },
-        context,
+        effectiveContext,
       );
 
       await this.logging.log({

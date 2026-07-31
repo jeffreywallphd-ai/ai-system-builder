@@ -12,7 +12,28 @@ describe("ImageGenerationResults", () => {
     });
     expect(c.textContent).not.toContain("Preview retrieval is deferred");
     expect(c.querySelector("img")?.getAttribute("src")).toBe("blob:x");
-    expect(c.querySelector("img")?.getAttribute("style")).toContain("max-width: 100%");
+  expect(c.querySelector("img")?.getAttribute("style")).toContain("max-width: 100%");
+  await act(async () => root.unmount());
+  });
+
+  it("renders previous generations in a maximizable session gallery", async () => {
+    const c = document.createElement("div");
+    const root = createRoot(c);
+    await act(async () => {
+      root.render(
+        <ImageGenerationResults
+          status="succeeded"
+          outputs={[]}
+          finalizedAssets={[{ assetId: "current", artifactId: "artifact-current", previewUrl: "blob:current", previewStatus: "ready" }]}
+          sessionGallery={[{ id: "g1", createdAt: "2026-05-27T00:00:00.000Z", assets: [{ assetId: "previous", artifactId: "artifact-previous", previewUrl: "blob:previous", previewStatus: "ready" }] }]}
+        />,
+      );
+    });
+    expect(c.textContent).toContain("Session Gallery");
+    const buttons = c.querySelectorAll(".image-generation-result-card__preview");
+    expect(buttons.length).toBe(2);
+    await act(async () => (buttons[1] as HTMLButtonElement).click());
+    expect(c.querySelector("[role='dialog']")).not.toBeNull();
     await act(async () => root.unmount());
   });
 

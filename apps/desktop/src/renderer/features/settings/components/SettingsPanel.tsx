@@ -41,6 +41,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
             compact={props.compact}
             onSave={async (value) => settings.updateSetting(definition.key, value)}
             onClear={async () => settings.clearSetting(definition.key)}
+            onSelectFolder={settings.selectFolder}
           />
         </section>
       ))}

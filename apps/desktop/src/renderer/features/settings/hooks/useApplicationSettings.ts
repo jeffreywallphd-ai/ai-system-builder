@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   ApplicationSettingCategory,
@@ -31,6 +31,7 @@ export interface UseApplicationSettingsResult {
   refresh: () => Promise<void>;
   updateSetting: (key: ApplicationSettingKey, value: ApplicationSettingPrimitiveValue) => Promise<void>;
   clearSetting: (key: ApplicationSettingKey) => Promise<void>;
+  selectFolder: (request?: { title?: string; defaultPath?: string }) => Promise<string | undefined>;
   resolveModelDefault: (request: ResolveModelDefaultRequest) => Promise<ResolvedModelDefault>;
 }
 
@@ -53,7 +54,19 @@ export function useApplicationSettings(options: UseApplicationSettingsOptions = 
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
   const [successMessage, setSuccessMessage] = useState<string | undefined>(undefined);
 
-  const query = useMemo(() => ({ category: options.category, keys: options.keys }), [options.category, options.keys]);
+  const keysSignature = options.keys === undefined ? undefined : JSON.stringify(options.keys);
+  const stableKeysRef = useRef<{
+    signature: string | undefined;
+    keys: ApplicationSettingKey[] | undefined;
+  }>({ signature: undefined, keys: undefined });
+  if (stableKeysRef.current.signature !== keysSignature) {
+    stableKeysRef.current = {
+      signature: keysSignature,
+      keys: options.keys === undefined ? undefined : [...options.keys],
+    };
+  }
+  const stableKeys = stableKeysRef.current.keys;
+  const query = useMemo(() => ({ category: options.category, keys: stableKeys }), [options.category, stableKeys]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -141,6 +154,14 @@ export function useApplicationSettings(options: UseApplicationSettingsOptions = 
     return result.resolved;
   }, [client]);
 
+  const selectFolder = useCallback(async (request: { title?: string; defaultPath?: string } = {}) => {
+    if (!client?.selectFolder) {
+      throw new Error("Folder selection is unavailable.");
+    }
+    const result = await client.selectFolder(request);
+    return result.canceled ? undefined : result.path;
+  }, [client]);
+
   return {
     definitions,
     valuesByKey,
@@ -152,6 +173,7 @@ export function useApplicationSettings(options: UseApplicationSettingsOptions = 
     refresh,
     updateSetting,
     clearSetting,
+    selectFolder,
     resolveModelDefault,
   };
 }

@@ -207,6 +207,53 @@ describe("createGitRuntimeInstallerAdapter", () => {
     expect(fs.writeFile).not.toHaveBeenCalled();
   });
 
+  it("adopts unmanaged git install when origin remote matches request source", async () => {
+    const fs = createFsMocks({
+      existingRoot: true,
+      metadata: {
+        managedBy: "ai-system-builder",
+        targetId: "other-target",
+        installRoot: baseRequest.installRoot,
+        source: baseRequest.source,
+        installedAt: "2026-01-01T00:00:00.000Z",
+        lastCheckedAt: "2026-01-01T00:00:00.000Z",
+      },
+    });
+    const execFile = testDouble.fn(async (_file: string, args: readonly string[] = []) => {
+      if (args.includes("config")) return { stdout: `${baseRequest.source.repositoryUrl}\n`, stderr: "" };
+      if (args.includes("rev-parse")) return { stdout: "abc123\n", stderr: "" };
+      return { stdout: "", stderr: "" };
+    });
+    const adapter = createGitRuntimeInstallerAdapter({ ...fs, execFile, now: () => "2026-01-03T00:00:00.000Z" });
+    const result = await adapter.ensureInstalled(baseRequest);
+    expect(result.status).toBe("installed");
+    expect(execFile).toHaveBeenCalledWith("git", ["-C", baseRequest.installRoot, "config", "--get", "remote.origin.url"]);
+    expect(fs.writeFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not adopt unmanaged git install when origin remote does not match request source", async () => {
+    const fs = createFsMocks({
+      existingRoot: true,
+      metadata: {
+        managedBy: "ai-system-builder",
+        targetId: "other-target",
+        installRoot: baseRequest.installRoot,
+        source: baseRequest.source,
+        installedAt: "2026-01-01T00:00:00.000Z",
+        lastCheckedAt: "2026-01-01T00:00:00.000Z",
+      },
+    });
+    const execFile = testDouble.fn(async (_file: string, args: readonly string[] = []) => {
+      if (args.includes("config")) return { stdout: "https://example.com/other.git\n", stderr: "" };
+      return { stdout: "", stderr: "" };
+    });
+    const adapter = createGitRuntimeInstallerAdapter({ ...fs, execFile });
+    const result = await adapter.ensureInstalled(baseRequest);
+    expect(result.status).toBe("failed");
+    expect(result.error?.code).toBe("unmanaged-install-root");
+    expect(fs.writeFile).not.toHaveBeenCalled();
+  });
+
   it("forceRepair true on managed install runs conservative update path", async () => {
     const fs = createFsMocks({
       existingRoot: true,

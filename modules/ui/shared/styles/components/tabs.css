@@ -1,0 +1,80 @@
+.ui-tabbed-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-tabbed-panel__tablist,
+.asset-library-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2xs);
+  padding: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-block-end: 1px solid var(--color-border);
+}
+
+.ui-tabbed-panel__tab,
+.asset-library-tabs [role="tab"] {
+  position: relative;
+  min-block-size: var(--control-height-md);
+  padding: 0 var(--space-md);
+  margin-block-end: -1px;
+  border: 1px solid var(--color-border-soft);
+  border-block-end-color: var(--color-border);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: rgb(7 20 36 / 58%);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ui-tabbed-panel__tab::after,
+.asset-library-tabs [role="tab"]::after {
+  content: "";
+  position: absolute;
+  inset-inline: var(--space-sm);
+  inset-block-end: 0;
+  block-size: 2px;
+  border-radius: var(--radius-pill);
+  background: transparent;
+}
+
+.ui-tabbed-panel__tab:hover,
+.asset-library-tabs [role="tab"]:hover {
+  border-color: var(--color-border-strong);
+  border-block-end-color: var(--color-border);
+  background: rgb(76 145 255 / 7%);
+  color: var(--color-text-primary);
+}
+
+.ui-tabbed-panel__tab:focus-visible,
+.asset-library-tabs [role="tab"]:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.ui-tabbed-panel__tab--active,
+.asset-library-tabs [role="tab"][aria-selected="true"] {
+  z-index: 1;
+  border-color: var(--color-border-strong);
+  border-block-end-color: transparent;
+  background: rgb(76 145 255 / 8%);
+  color: var(--color-text-primary);
+}
+
+.ui-tabbed-panel__tab--active::after,
+.asset-library-tabs [role="tab"][aria-selected="true"]::after {
+  background: var(--color-accent);
+  box-shadow: 0 0 0.75rem rgb(76 145 255 / 55%);
+}
+
+.ui-tabbed-panel__panel {
+  padding: var(--space-lg);
+  border: 1px solid var(--color-border);
+  border-block-start: 0;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: linear-gradient(145deg, rgb(16 35 58 / 96%), rgb(10 25 43 / 96%));
+}

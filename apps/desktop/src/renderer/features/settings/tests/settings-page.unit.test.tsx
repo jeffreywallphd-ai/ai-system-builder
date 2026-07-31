@@ -28,6 +28,7 @@ let readSettings: ReturnType<typeof vi.fn>;
 let updateSetting: ReturnType<typeof vi.fn>;
 let clearSetting: ReturnType<typeof vi.fn>;
 let resolveModelDefault: ReturnType<typeof vi.fn>;
+let selectFolder: ReturnType<typeof vi.fn>;
 
 vi.mock("../api/desktopApplicationSettingsClient", () => ({
   createDesktopApplicationSettingsClient: () => mockClient,
@@ -39,6 +40,7 @@ const mockClient: DesktopApplicationSettingsClient = {
   updateSetting: (...args) => updateSetting(...args),
   clearSetting: (...args) => clearSetting(...args),
   resolveModelDefault: (...args) => resolveModelDefault(...args),
+  selectFolder: (...args) => selectFolder(...args),
 };
 
 beforeEach(() => {
@@ -47,6 +49,7 @@ beforeEach(() => {
   updateSetting = vi.fn().mockResolvedValue({ value: { key: "x", configured: true } });
   clearSetting = vi.fn().mockResolvedValue({ value: { key: "x", configured: false } });
   resolveModelDefault = vi.fn().mockResolvedValue({ resolved: { provider: "transformers", modelId: "google/flan-t5-base", inferenceMode: "text2text", source: "global" } });
+  selectFolder = vi.fn().mockResolvedValue({ canceled: true });
 });
 
 afterEach(async () => {
@@ -73,8 +76,8 @@ describe("SettingsPage", () => {
     expect(container.textContent).toContain("Hugging Face");
     expect(container.textContent).toContain("Models");
     expect(container.textContent).toContain("Runtime");
-    expect(container.textContent).toContain("Dataset Preparation");
     expect(container.textContent).toContain("Publishing");
+    expect(container.textContent).toContain("Software status");
   });
 
   it("updates non-secret and masks secret set/clear", async () => {

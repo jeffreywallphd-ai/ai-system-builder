@@ -16,9 +16,34 @@ import { normalizeModelTaskTag } from "../../../domain/model";
 
 const DEFAULT_HUGGING_FACE_BASE_URL = "https://huggingface.co" as const;
 
-class HuggingFaceModelClientUnavailableError extends Error {}
+type HuggingFaceModelProviderFailureCode = "not-found" | "unavailable";
+
+class HuggingFaceModelProviderError extends Error {
+  public readonly code: HuggingFaceModelProviderFailureCode;
+  public readonly details: Record<string, unknown>;
+
+  public constructor(
+    code: HuggingFaceModelProviderFailureCode,
+    message: string,
+    details: Record<string, unknown> = {},
+  ) {
+    super(message);
+    this.name = "HuggingFaceModelProviderError";
+    this.code = code;
+    this.details = details;
+  }
+}
+
+class HuggingFaceModelClientUnavailableError extends HuggingFaceModelProviderError {
+  public constructor(message: string, details: Record<string, unknown> = {}) {
+    super("unavailable", message, details);
+    this.name = "HuggingFaceModelClientUnavailableError";
+  }
+}
 
 type HuggingFaceModelOperation = "browseModels" | "getModelDetails";
+type HuggingFaceFetchInput = Parameters<typeof fetch>[0];
+type HuggingFaceFetch = (input: HuggingFaceFetchInput, init?: RequestInit) => Promise<Response>;
 
 interface HuggingFaceModelListEntry {
   id?: string;
@@ -67,19 +92,22 @@ interface HuggingFaceModelHubClient {
     limit?: number;
     additionalFields?: string[];
     accessToken?: string;
+    fetch?: HuggingFaceFetch;
   }): AsyncIterable<HuggingFaceModelListEntry> | Promise<Iterable<HuggingFaceModelListEntry>>;
   modelInfo(params: {
     name: string;
     accessToken?: string;
     additionalFields?: string[];
+    fetch?: HuggingFaceFetch;
   }): Promise<HuggingFaceModelInfo>;
 }
 
 export interface CreateHuggingFaceModelBrowseDetailsAdapterOptions {
   accessToken?: string;
-  accessTokenProvider?: () => string | undefined;
+  accessTokenProvider?: () => string | undefined | Promise<string | undefined>;
   hubClient?: HuggingFaceModelHubClient;
   officialHubClientLoader?: () => Promise<HuggingFaceModelHubClient>;
+  logger?: { info:(event:string,data:Record<string,unknown>)=>void; warn:(event:string,data:Record<string,unknown>)=>void };
 }
 
 function toOptionalText(value: unknown): string | undefined {
@@ -287,30 +315,103 @@ function getErrorStatus(error: unknown): number | undefined {
   return undefined;
 }
 
-function mapHuggingFaceError(operation: HuggingFaceModelOperation, error: unknown): Error {
+function getErrorTextField(error: unknown, fieldName: "name" | "message" | "code"): string | undefined {
+  if (!isObject(error)) {
+    return undefined;
+  }
+
+  const value = error[fieldName];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function getErrorCause(error: unknown): unknown {
+  return isObject(error) && "cause" in error ? error.cause : undefined;
+}
+
+function summarizeProviderError(error: unknown): Record<string, unknown> {
+  const cause = getErrorCause(error);
+  return {
+    errorName: getErrorTextField(error, "name"),
+    errorMessage: error instanceof Error ? error.message : String(error),
+    errorCode: getErrorTextField(error, "code"),
+    causeName: getErrorTextField(cause, "name"),
+    causeMessage: cause instanceof Error ? cause.message : typeof cause === "string" ? cause : undefined,
+    causeCode: getErrorTextField(cause, "code"),
+    status: getErrorStatus(error),
+  };
+}
+
+function isProviderTransportError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  const errorCode = getErrorTextField(error, "code") ?? getErrorTextField(getErrorCause(error), "code");
+  return (
+    message.includes("fetch failed") ||
+    message.includes("network") ||
+    errorCode?.startsWith("UND_ERR_") === true ||
+    errorCode === "ECONNRESET" ||
+    errorCode === "ECONNREFUSED" ||
+    errorCode === "ETIMEDOUT" ||
+    errorCode === "ENOTFOUND" ||
+    errorCode === "EAI_AGAIN"
+  );
+}
+
+function mapHuggingFaceError(operation: HuggingFaceModelOperation, error: unknown): HuggingFaceModelProviderError {
   if (error instanceof HuggingFaceModelClientUnavailableError) {
     return error;
   }
 
+  const details = {
+    provider: "huggingface",
+    operation,
+    ...summarizeProviderError(error),
+  };
+
   const status = getErrorStatus(error);
   if (status === 401 || status === 403) {
-    return new Error(`Hugging Face ${operation} failed: unauthorized or access denied.`);
+    return new HuggingFaceModelProviderError(
+      "unavailable",
+      `Hugging Face ${operation} failed: unauthorized or access denied.`,
+      details,
+    );
   }
 
   if (status === 404) {
-    return new Error(`Hugging Face ${operation} failed: model was not found.`);
+    return new HuggingFaceModelProviderError(
+      "not-found",
+      `Hugging Face ${operation} failed: model was not found.`,
+      details,
+    );
   }
 
   if (status === 429) {
-    return new Error(`Hugging Face ${operation} failed: rate limited by provider.`);
+    return new HuggingFaceModelProviderError(
+      "unavailable",
+      `Hugging Face ${operation} failed: rate limited by provider.`,
+      details,
+    );
   }
 
   if (status !== undefined && status >= 500) {
-    return new Error(`Hugging Face ${operation} failed: provider unavailable.`);
+    return new HuggingFaceModelProviderError(
+      "unavailable",
+      `Hugging Face ${operation} failed: provider unavailable.`,
+      details,
+    );
   }
 
-  return new Error(
+  if (isProviderTransportError(error)) {
+    return new HuggingFaceModelProviderError(
+      "unavailable",
+      `Hugging Face ${operation} failed: provider request could not be completed (${error instanceof Error ? error.message : String(error)}).`,
+      details,
+    );
+  }
+
+  return new HuggingFaceModelProviderError(
+    "unavailable",
     `Hugging Face ${operation} failed unexpectedly: ${error instanceof Error ? error.message : String(error)}`,
+    details,
   );
 }
 
@@ -330,11 +431,10 @@ async function loadOfficialHubClient(): Promise<HuggingFaceModelHubClient> {
   return assertHubClient(loaded);
 }
 
-async function collectListModels(
-  iterableLike: AsyncIterable<HuggingFaceModelListEntry> | Promise<Iterable<HuggingFaceModelListEntry>>,
-): Promise<HuggingFaceModelListEntry[]> {
-  const resolved = await iterableLike;
-  if (Symbol.asyncIterator in Object(resolved)) {
+async function collectListModels(iterableLike: unknown): Promise<HuggingFaceModelListEntry[]> {
+  const resolved = await Promise.resolve(iterableLike as never);
+  if (Array.isArray(resolved)) return resolved as HuggingFaceModelListEntry[];
+  if (resolved && typeof resolved === "object" && Symbol.asyncIterator in Object(resolved)) {
     const rows: HuggingFaceModelListEntry[] = [];
     for await (const row of resolved as AsyncIterable<HuggingFaceModelListEntry>) {
       rows.push(row);
@@ -342,19 +442,129 @@ async function collectListModels(
     return rows;
   }
 
-  return Array.from(resolved as Iterable<HuggingFaceModelListEntry>);
+  if (resolved && typeof resolved === "object" && Symbol.iterator in Object(resolved)) return Array.from(resolved as Iterable<HuggingFaceModelListEntry>);
+  throw new Error("Hugging Face listModels returned unsupported shape.");
+}
+
+function summarizeFetchUrl(input: HuggingFaceFetchInput): Record<string, unknown> {
+  const rawUrl = typeof input === "string"
+    ? input
+    : input instanceof URL
+      ? input.toString()
+      : input.url;
+
+  try {
+    const url = new URL(rawUrl);
+    return { host: url.host, path: url.pathname };
+  } catch {
+    return { host: undefined, path: undefined };
+  }
+}
+
+function toFetchUrl(input: HuggingFaceFetchInput): URL {
+  const rawUrl = typeof input === "string"
+    ? input
+    : input instanceof URL
+      ? input.toString()
+      : input.url;
+  return new URL(rawUrl);
+}
+
+function readNextHuggingFaceCursor(linkHeader: string | null): string | undefined {
+  if (!linkHeader) {
+    return undefined;
+  }
+
+  for (const link of linkHeader.split(",")) {
+    if (!/rel\s*=\s*["']?next["']?/i.test(link)) {
+      continue;
+    }
+    const target = /<([^>]+)>/.exec(link)?.[1];
+    if (!target) {
+      return undefined;
+    }
+    const url = new URL(target, DEFAULT_HUGGING_FACE_BASE_URL);
+    if (url.origin !== DEFAULT_HUGGING_FACE_BASE_URL || url.pathname !== "/api/models") {
+      return undefined;
+    }
+    return toOptionalText(url.searchParams.get("cursor"));
+  }
+
+  return undefined;
 }
 
 export function createHuggingFaceModelBrowseDetailsAdapter(
   options: CreateHuggingFaceModelBrowseDetailsAdapterOptions = {},
 ): ModelBrowsePort & ModelDetailsPort {
   const fallbackAccessToken = options.accessToken;
+  const logger=options.logger;
   const accessTokenProvider = options.accessTokenProvider;
   const officialHubClientLoader = options.officialHubClientLoader ?? loadOfficialHubClient;
 
-  const resolveAccessToken = () => accessTokenProvider?.() ?? fallbackAccessToken;
+  const resolveAccessToken = async () => (await accessTokenProvider?.()) ?? fallbackAccessToken;
   let lazyHubClient: Promise<HuggingFaceModelHubClient> | undefined;
   const expandedModelFields = ["author", "cardData", "config", "sha", "tags", "safetensors", "transformersInfo"] as const;
+
+  function createDiagnosticFetch(operation: HuggingFaceModelOperation): HuggingFaceFetch {
+    return async (input, init) => {
+      const startedAt = Date.now();
+      const urlSummary = summarizeFetchUrl(input);
+      logger?.info("hf.adapter.fetch.request", {
+        operation,
+        method: init?.method ?? "GET",
+        ...urlSummary,
+      });
+
+      try {
+        const response = await fetch(input, init);
+        logger?.info("hf.adapter.fetch.response", {
+          operation,
+          status: response.status,
+          ok: response.ok,
+          elapsedMs: Date.now() - startedAt,
+          ...urlSummary,
+        });
+        return response;
+      } catch (error) {
+        logger?.warn("hf.adapter.fetch.failure", {
+          operation,
+          elapsedMs: Date.now() - startedAt,
+          ...urlSummary,
+          ...summarizeProviderError(error),
+        });
+        throw error;
+      }
+    };
+  }
+
+  function createPagedBrowseFetch(cursor?: string): {
+    fetch: HuggingFaceFetch;
+    readNextCursor: () => string | undefined;
+  } {
+    const diagnosticFetch = createDiagnosticFetch("browseModels");
+    let firstRequest = true;
+    let nextCursor: string | undefined;
+
+    return {
+      async fetch(input, init) {
+        let requestInput = input;
+        if (firstRequest && cursor) {
+          const url = toFetchUrl(input);
+          if (url.origin !== DEFAULT_HUGGING_FACE_BASE_URL || url.pathname !== "/api/models") {
+            throw new Error("Hugging Face browse pagination target was invalid.");
+          }
+          url.searchParams.set("cursor", cursor);
+          requestInput = url;
+        }
+        firstRequest = false;
+
+        const response = await diagnosticFetch(requestInput, init);
+        nextCursor = readNextHuggingFaceCursor(response.headers.get("Link"));
+        return response;
+      },
+      readNextCursor: () => nextCursor,
+    };
+  }
 
   async function resolveHubClient(): Promise<HuggingFaceModelHubClient> {
     if (options.hubClient) {
@@ -362,7 +572,8 @@ export function createHuggingFaceModelBrowseDetailsAdapter(
     }
 
     if (!lazyHubClient) {
-      lazyHubClient = officialHubClientLoader().catch((error) => {
+      logger?.info("hf.adapter.dynamic_import.start",{});
+      lazyHubClient = officialHubClientLoader().then((c)=>{logger?.info("hf.adapter.dynamic_import.success",{hasListModels:typeof c.listModels==="function",hasModelInfo:typeof c.modelInfo==="function"}); return c;}).catch((error) => {logger?.warn("hf.adapter.dynamic_import.failure",{message:error instanceof Error?error.message:String(error)});
         throw new HuggingFaceModelClientUnavailableError(
           `Failed to initialize @huggingface/hub client: ${error instanceof Error ? error.message : String(error)}.`,
         );
@@ -376,37 +587,50 @@ export function createHuggingFaceModelBrowseDetailsAdapter(
     async browseModels(request: BrowseModelsRequest): Promise<BrowseModelsResult> {
       try {
         const hubClient = await resolveHubClient();
-        const items = await collectListModels(hubClient.listModels({
+        const accessToken = await resolveAccessToken();
+        const pagedBrowse = createPagedBrowseFetch(request.cursor);
+        logger?.info("hf.adapter.browse.request",{query:request.query,owner:request.authorOrOrg,task:request.taskTags?.[0],limit:request.limit,hasToken:Boolean(accessToken)});
+        const items = await collectListModels(await hubClient.listModels({
           search: {
             query: request.query,
             owner: request.authorOrOrg,
-            task: request.taskTags?.[0],
+            task: request.customTaskTag ?? request.taskTags?.[0],
             tags: request.taskTags && request.taskTags.length > 1 ? request.taskTags.slice(1) : undefined,
           },
           sort: request.sort,
           limit: request.limit,
           additionalFields: [...expandedModelFields],
-          accessToken: resolveAccessToken(),
+          accessToken,
+          fetch: pagedBrowse.fetch,
         }));
 
         const models = items.map((entry) => toModelBrowseItem(entry));
+        logger?.info("hf.adapter.browse.success",{resultCount:models.length});
         return normalizeBrowseModelsResult({
           models,
-          // @huggingface/hub listModels does not expose a stable cursor in this adapter slice.
-          nextCursor: undefined,
+          nextCursor: pagedBrowse.readNextCursor(),
         });
       } catch (error) {
-        throw mapHuggingFaceError("browseModels", error);
+        const mappedError = mapHuggingFaceError("browseModels", error);
+        logger?.warn("hf.adapter.browse.failure", {
+          code: mappedError.code,
+          message: mappedError.message,
+          details: mappedError.details,
+        });
+        throw mappedError;
       }
     },
 
     async getModelDetails(request: GetModelDetailsRequest): Promise<GetModelDetailsResult> {
       try {
         const hubClient = await resolveHubClient();
+        const accessToken = await resolveAccessToken();
+        logger?.info("hf.adapter.details.request",{modelId:request.modelId,hasToken:Boolean(accessToken)});
         const info = await hubClient.modelInfo({
           name: request.modelId,
-          accessToken: resolveAccessToken(),
+          accessToken,
           additionalFields: [...expandedModelFields],
+          fetch: createDiagnosticFetch("getModelDetails"),
         });
 
         const browseItem = toModelBrowseItem(info);
@@ -456,7 +680,13 @@ export function createHuggingFaceModelBrowseDetailsAdapter(
 
         return normalizeGetModelDetailsResult({ model });
       } catch (error) {
-        throw mapHuggingFaceError("getModelDetails", error);
+        const mappedError = mapHuggingFaceError("getModelDetails", error);
+        logger?.warn("hf.adapter.details.failure", {
+          code: mappedError.code,
+          message: mappedError.message,
+          details: mappedError.details,
+        });
+        throw mappedError;
       }
     },
   };

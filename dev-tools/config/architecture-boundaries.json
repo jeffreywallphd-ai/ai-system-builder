@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "documentation": "docs/architecture/module-dependency-rules.md",
+  "boundaries": [
+    {
+      "name": "domain",
+      "pathPrefix": "modules/domain/",
+      "forbiddenTargets": ["application", "adapters", "hosts", "ui", "apps"],
+      "remediation": "Keep domain code framework-neutral and depend only on domain-owned or approved shared utilities."
+    },
+    {
+      "name": "application",
+      "pathPrefix": "modules/application/",
+      "forbiddenTargets": ["adapters", "hosts", "ui", "apps"],
+      "remediation": "Depend on domain, contract-family surfaces, and application ports; inject outer implementations from a host."
+    },
+    {
+      "name": "contracts",
+      "pathPrefix": "modules/contracts/",
+      "forbiddenTargets": ["application", "adapters", "hosts", "ui", "apps"],
+      "remediation": "Keep boundary language self-contained and free of business logic or implementation layers."
+    },
+    {
+      "name": "adapters",
+      "pathPrefix": "modules/adapters/",
+      "forbiddenTargets": ["hosts", "ui", "apps"],
+      "remediation": "Implement inward-facing ports without importing composition roots, application entry points, or UI."
+    },
+    {
+      "name": "hosts",
+      "pathPrefix": "modules/hosts/",
+      "forbiddenTargets": ["ui", "apps"],
+      "remediation": "Keep hosts as composition/lifecycle owners; apps may invoke hosts, not the reverse."
+    },
+    {
+      "name": "ui",
+      "pathPrefix": "modules/ui/",
+      "forbiddenTargets": ["adapters", "hosts", "apps"],
+      "remediation": "Use UI-facing contracts and clients instead of infrastructure, host, or app internals."
+    },
+    {
+      "name": "apps",
+      "pathPrefix": "apps/",
+      "forbiddenTargets": [],
+      "remediation": "Keep apps limited to bootstrap, build, and delivery-surface wiring."
+    }
+  ],
+  "allowedViolations": [
+    {
+      "source": "modules/contracts/api/asset-registry-api-contract.ts",
+      "targetBoundary": "application",
+      "specifier": "../../application/services/asset/asset-registry-read-facade.types",
+      "tracking": "docs/docs-mismatch-register.md#dm-20260716-001",
+      "reason": "Existing API contract imports application-owned Asset Registry read-facade types pending relocation to a contract family."
+    },
+    {
+      "source": "modules/contracts/ipc/desktop-asset-registry-contract.ts",
+      "targetBoundary": "application",
+      "specifier": "../../application/services/asset/asset-registry-read-facade.types",
+      "tracking": "docs/docs-mismatch-register.md#dm-20260716-001",
+      "reason": "Existing IPC contract imports application-owned Asset Registry read-facade types pending relocation to a contract family."
+    }
+  ],
+  "ignoredDirectoryNames": [".git", ".local", ".webpack", "artifacts", "build", "dist", "node_modules", "out", "tests", "__tests__"],
+  "ignoredFilePatterns": ["\\.test\\.", "\\.spec\\.", "\\.d\\.[cm]?ts$"]
+}

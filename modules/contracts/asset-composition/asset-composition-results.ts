@@ -1,0 +1,18 @@
+import type { AssetCompositionDiagnostic, AssetCompositionDiagnosticCode } from "./asset-composition-diagnostics";
+import type { AssetCompositionPlan } from "./asset-composition-plan";
+export type AssetCompositionFailureKind="validation"|"not-found"|"conflict"|"blocked"|"stale"|"unavailable"|"unsupported"|"internal";
+export type AssetCompositionFailure={kind:AssetCompositionFailureKind;code:AssetCompositionDiagnosticCode;diagnostics:AssetCompositionDiagnostic[]};
+export type AssetCompositionResultSuccess<T>={status:"success";value:T};
+export type AssetCompositionResultFailure={status:"failure";failure:AssetCompositionFailure};
+export type CreateAssetCompositionPlanResult=AssetCompositionResultSuccess<AssetCompositionPlan>|AssetCompositionResultFailure;
+export type UpdateAssetCompositionPlanResult=AssetCompositionResultSuccess<AssetCompositionPlan>|AssetCompositionResultFailure;
+export type ReadAssetCompositionPlanResult=AssetCompositionResultSuccess<AssetCompositionPlan>|AssetCompositionResultFailure;
+export type ListAssetCompositionPlansResult=AssetCompositionResultSuccess<{records:AssetCompositionPlan[];nextCursor?:string}>|AssetCompositionResultFailure;
+export type ArchiveAssetCompositionPlanResult=AssetCompositionResultSuccess<AssetCompositionPlan>|AssetCompositionResultFailure;
+export type AddProjectionToCompositionPlanResult=AssetCompositionResultSuccess<AssetCompositionPlan>|AssetCompositionResultFailure;
+export type RemoveProjectionFromCompositionPlanResult=AssetCompositionResultSuccess<AssetCompositionPlan>|AssetCompositionResultFailure;
+export type UpdateCompositionNodeRoleResult=AssetCompositionResultSuccess<AssetCompositionPlan>|AssetCompositionResultFailure;
+export type ConnectCompositionNodesResult=AssetCompositionResultSuccess<AssetCompositionPlan>|AssetCompositionResultFailure;
+export type DisconnectCompositionNodesResult=AssetCompositionResultSuccess<AssetCompositionPlan>|AssetCompositionResultFailure;
+export type ValidateAssetCompositionPlanResult=AssetCompositionResultSuccess<AssetCompositionPlan>|AssetCompositionResultFailure;
+export type RefreshAssetCompositionPlanFromProjectionsResult=AssetCompositionResultSuccess<AssetCompositionPlan>|AssetCompositionResultFailure;

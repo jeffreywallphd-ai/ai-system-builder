@@ -21,6 +21,11 @@ export interface ComfyUiPromptResponse {
   node_errors?: Record<string, unknown>;
 }
 
+export interface ComfyUiFreeMemoryResponse {
+  unloadedModels: boolean;
+  freedMemory: boolean;
+}
+
 export function mapComfyUiQueueResponse(payload: unknown): ComfyUiQueueResponse {
   const record = asObject(payload, "queue response");
   const queueRunning = record.queue_running;
@@ -54,5 +59,13 @@ export function mapComfyUiPromptResponse(payload: unknown): ComfyUiPromptRespons
     prompt_id: record.prompt_id,
     number,
     node_errors: nodeErrors,
+  };
+}
+
+export function mapComfyUiFreeMemoryResponse(payload: unknown): ComfyUiFreeMemoryResponse {
+  const record = asObject(payload, "free memory response");
+  return {
+    unloadedModels: record.unload_models === true || record.unloaded_models === true,
+    freedMemory: record.free_memory === true || record.freed_memory === true,
   };
 }

@@ -28,6 +28,7 @@ describe("artifact-browser api contracts", () => {
     const browseResponse = createApiArtifactBrowseSuccessResponse({
       items: [
         {
+          artifactId: " artifact-21 ",
           storageKey: " staged/images/artifact-21 ",
           artifactFamily: "image",
           mediaType: " image/png ",
@@ -63,6 +64,7 @@ describe("artifact-browser api contracts", () => {
       value: {
         items: [
           {
+            artifactId: "artifact-21",
             storageKey: "staged/images/artifact-21",
             artifactFamily: "image",
             mediaType: "image/png",
@@ -119,6 +121,7 @@ describe("artifact-browser api contracts", () => {
       locator: {
         storageKey: " staged/images/artifact-22 ",
       },
+      workspaceId: "workspace-a" as never,
       boundary: {
         host: "server",
         source: " api.artifact-read ",
@@ -128,6 +131,7 @@ describe("artifact-browser api contracts", () => {
       locator: {
         storageKey: " staged/images/artifact-22 ",
       },
+      workspaceId: "workspace-a" as never,
       boundary: {
         host: "server",
         source: " api.artifact-content-read ",
@@ -135,6 +139,7 @@ describe("artifact-browser api contracts", () => {
     });
     const browseRequest = createApiArtifactBrowseRequest({
       artifactFamily: "image",
+      workspaceId: "workspace-a" as never,
       boundary: {
         host: "server",
         source: " api.artifact-browse ",
@@ -151,6 +156,7 @@ describe("artifact-browser api contracts", () => {
   it("accepts generic artifactFamily filters without image/data coupling", () => {
     const browseRequest = createApiArtifactBrowseRequest({
       artifactFamily: "application",
+      workspaceId: "workspace-a" as never,
       boundary: {
         host: "server",
         source: "api.artifact-browse",

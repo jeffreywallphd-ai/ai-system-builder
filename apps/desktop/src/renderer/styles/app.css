@@ -1,21 +1,5 @@
-@import "./tokens.css";
-@import "./reset.css";
-@import "./typography.css";
+@import "../../../../../modules/ui/shared/styles/application.css";
 
-@import "./layout/container.css";
-@import "./layout/grid.css";
-@import "./layout/stack.css";
-
-@import "./components/shell.css";
-@import "./components/buttons.css";
-@import "./components/inputs.css";
-@import "./components/panels.css";
-@import "./components/tabs.css";
-@import "./components/feedback.css";
 @import "./components/python-runtime-footer.css";
 @import "./components/settings.css";
-
-#root {
-  min-height: 100vh;
-}
-
+@import "./components/dataset-preparation.css";

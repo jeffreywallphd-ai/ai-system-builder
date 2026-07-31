@@ -1,0 +1,18 @@
+import type { WorkspaceId } from "../workspace";
+import type { EffectiveAssetProjectionId } from "../effective-asset-projections";
+import type { AssetCompositionPlan } from "./asset-composition-plan";
+import type { AssetCompositionNodeId, AssetCompositionPlanId, AssetCompositionRelationshipId } from "./asset-composition-identity";
+import type { AssetCompositionNodeRole } from "./asset-composition-role";
+import type { AssetCompositionRelationshipKind } from "./asset-composition-relationship";
+export type CreateAssetCompositionPlanCommand={targetWorkspaceId:WorkspaceId;name:string;description?:string;};
+export type UpdateAssetCompositionPlanCommand={targetWorkspaceId:WorkspaceId;planId:AssetCompositionPlanId;name?:string;description?:string;status?:AssetCompositionPlan["status"]};
+export type ReadAssetCompositionPlanCommand={targetWorkspaceId:WorkspaceId;planId:AssetCompositionPlanId};
+export type ListAssetCompositionPlansCommand={targetWorkspaceId:WorkspaceId;status?:AssetCompositionPlan["status"];selectedProjectionId?:EffectiveAssetProjectionId;effectiveAssetReference?:import("../asset").AssetReference;nodeRole?:AssetCompositionNodeRole;relationshipKind?:AssetCompositionRelationshipKind;compatibilityStatus?:import("./asset-composition-status").AssetCompositionCompatibilityStatus;blockedOnly?:boolean;conflictedOnly?:boolean;staleOnly?:boolean;archived?:boolean;text?:string;limit?:number;cursor?:string};
+export type ArchiveAssetCompositionPlanCommand={targetWorkspaceId:WorkspaceId;planId:AssetCompositionPlanId;archivedAt?:string};
+export type AddProjectionToCompositionPlanCommand={targetWorkspaceId:WorkspaceId;planId:AssetCompositionPlanId;projectionId:EffectiveAssetProjectionId;label?:string;role?:AssetCompositionNodeRole};
+export type RemoveProjectionFromCompositionPlanCommand={targetWorkspaceId:WorkspaceId;planId:AssetCompositionPlanId;projectionId:EffectiveAssetProjectionId};
+export type UpdateCompositionNodeRoleCommand={targetWorkspaceId:WorkspaceId;planId:AssetCompositionPlanId;nodeId:AssetCompositionNodeId;role:AssetCompositionNodeRole};
+export type ConnectCompositionNodesCommand={targetWorkspaceId:WorkspaceId;planId:AssetCompositionPlanId;sourceNodeId:AssetCompositionNodeId;targetNodeId:AssetCompositionNodeId;relationshipKind:AssetCompositionRelationshipKind;relationshipId?:AssetCompositionRelationshipId};
+export type DisconnectCompositionNodesCommand={targetWorkspaceId:WorkspaceId;planId:AssetCompositionPlanId;relationshipId:AssetCompositionRelationshipId};
+export type ValidateAssetCompositionPlanCommand={targetWorkspaceId:WorkspaceId;planId:AssetCompositionPlanId};
+export type RefreshAssetCompositionPlanFromProjectionsCommand={targetWorkspaceId:WorkspaceId;planId:AssetCompositionPlanId};

@@ -98,4 +98,4 @@ Keep criteria testable and reviewable.
 
 - Expected deliverables (code/tests/docs).
 - Expected verification commands.
-- Explicit completion checklist for handoff/review.
+- Explicit completion checklist for review.

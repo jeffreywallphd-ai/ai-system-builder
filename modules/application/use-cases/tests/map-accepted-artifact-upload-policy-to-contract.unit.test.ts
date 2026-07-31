@@ -14,6 +14,7 @@ describe("mapAcceptedArtifactUploadPolicyToContract", () => {
     expect(contractPolicy).toEqual({
       acceptedMediaTypes: ["image/png", "text/plain"],
       acceptedExtensions: [".png", ".txt"],
+      maximumBytes: 64 * 1024 * 1024,
     });
   });
 });

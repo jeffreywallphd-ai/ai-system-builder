@@ -169,6 +169,7 @@ describe("desktop artifact-browser ipc contract", () => {
       locator: {
         storageKey: " staged/images/artifact-32 ",
       },
+      workspaceId: "workspace-a",
       boundary: {
         host: "desktop",
         source: " desktop.renderer.artifact-read ",
@@ -178,6 +179,7 @@ describe("desktop artifact-browser ipc contract", () => {
       locator: {
         storageKey: " staged/images/artifact-32 ",
       },
+      workspaceId: "workspace-a",
       boundary: {
         host: "desktop",
         source: " desktop.renderer.artifact-content-read ",
@@ -185,6 +187,7 @@ describe("desktop artifact-browser ipc contract", () => {
     });
     const browseRequest = createDesktopArtifactBrowseRequest({
       artifactFamily: "image",
+      workspaceId: "workspace-a",
       boundary: {
         host: "desktop",
         source: " desktop.renderer.artifact-browse ",
@@ -193,6 +196,7 @@ describe("desktop artifact-browser ipc contract", () => {
 
     const mediaViewRequest = createDesktopArtifactMediaViewRequest({
       storageKey: " staged/images/artifact-32 ",
+      workspaceId: "workspace-a",
       boundary: {
         host: "desktop",
         source: " desktop.renderer.artifact-media-view ",
@@ -210,6 +214,7 @@ describe("desktop artifact-browser ipc contract", () => {
   it("accepts generic artifactFamily filters without narrowing to image/data", () => {
     const browseRequest = createDesktopArtifactBrowseRequest({
       artifactFamily: "application",
+      workspaceId: "workspace-a",
       boundary: {
         host: "desktop",
         source: "desktop.renderer.artifact-browse",
@@ -221,6 +226,7 @@ describe("desktop artifact-browser ipc contract", () => {
 
   it("defines a publish contract that mirrors the shared publish operation semantics", () => {
     const request = createDesktopArtifactPublishRequest({
+      workspaceId: "workspace-a",
       artifactId: " uploads/cat.png ",
       target: {
         provider: " huggingface ",
@@ -230,6 +236,7 @@ describe("desktop artifact-browser ipc contract", () => {
       },
       mediaType: " image/png ",
       verify: true,
+      repositoryCreation: { approved: true, visibility: "private" },
       boundary: {
         host: "desktop",
         source: " desktop.renderer.artifact-browser ",
@@ -252,6 +259,7 @@ describe("desktop artifact-browser ipc contract", () => {
 
     expect(request.operation).toBe("artifact.publish");
     expect(request.payload).toMatchObject({
+      workspaceId: "workspace-a",
       artifactId: "uploads/cat.png",
       target: {
         provider: "huggingface",
@@ -259,6 +267,7 @@ describe("desktop artifact-browser ipc contract", () => {
         path: "images/cat.png",
         revision: "main",
       },
+      repositoryCreation: { approved: true, visibility: "private" },
       mediaType: "image/png",
       verify: true,
       boundary: {

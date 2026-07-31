@@ -1,3 +1,4 @@
+import { createWorkspaceId } from "../workspace";
 import {
   ARTIFACT_BROWSE_OPERATION,
   normalizeArtifactBrowseSuccessValue,
@@ -37,6 +38,7 @@ export interface DesktopArtifactBrowseBoundaryContext {
 
 export interface DesktopArtifactBrowseRequestPayload {
   artifactFamily?: ArtifactFamily;
+  workspaceId: string;
   boundary: DesktopArtifactBrowseBoundaryContext;
 }
 
@@ -71,6 +73,7 @@ function normalizeDesktopArtifactBrowsePayload(
 ): DesktopArtifactBrowseRequestPayload {
   return {
     artifactFamily: payload.artifactFamily,
+    workspaceId: createWorkspaceId(payload.workspaceId),
     boundary: {
       host: "desktop",
       source: normalizeRequiredTextField(payload.boundary.source, "boundary.source"),

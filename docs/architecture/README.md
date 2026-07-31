@@ -1,5 +1,7 @@
 # Architecture Documentation Guide
 
+> AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
+
 This directory defines the **intended architecture and operating boundaries** for `ai-system-builder`.
 
 These documents are the practical reference for contributors (human and AI) when deciding:
@@ -13,13 +15,13 @@ These documents are the practical reference for contributors (human and AI) when
 
 - `docs/architecture/` explains the target system shape and boundary model.
 - `docs/adr/` records specific architectural decisions and their rationale over time.
-- `docs/context/` captures implementation context, current state, and situational notes.
+- `docs/context/` packages current task-routing summaries derived from canonical docs.
 
 In short:
 
 - Architecture docs = operating model and dependency boundaries.
 - ADRs = individual decisions (accepted, superseded, proposed).
-- Context docs = where we are right now.
+- Context docs = minimum-sufficient task routing and implementation context.
 
 ## Scope and intent
 
@@ -39,6 +41,7 @@ These docs intentionally avoid fake precision. Where implementation details are 
 1. Read `system-overview.md` first for system shape.
 2. Use `module-dependency-rules.md` before creating imports or moving files.
 3. Use host/runtime/persistence docs before adding host wiring or adapter logic.
+   For ingestion and dataset preparation, also read data-management.md.
 4. If you need to change a major boundary rule, update architecture docs and add/update an ADR.
 
 ## Review rule of thumb
@@ -60,3 +63,4 @@ The architecture is deliberately ahead of implementation detail, but not ahead o
 - Major direction is set.
 - Exact protocols and some enforcement mechanisms are still emerging.
 - Documentation should guide with confidence where decisions exist, and explicitly mark open areas where they do not.
+- Do not use this folder as a later scope, implementation-history diary, prompt transcript, or closeout log.

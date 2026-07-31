@@ -7,11 +7,13 @@ import { PythonRuntimeFooter } from "../features/python-runtime/components/Pytho
 import { TabbedPanel } from "../components/ui/TabbedPanel";
 
 export interface ArtifactsPageProps {
+  workspaceId: string;
+  workspaceName: string;
   refreshToken: number;
   onUploaded: () => void;
 }
 
-export function ArtifactsPage({ refreshToken, onUploaded }: ArtifactsPageProps) {
+export function ArtifactsPage({ workspaceId, refreshToken, onUploaded }: ArtifactsPageProps) {
   const [activeTabId, setActiveTabId] = useState("ingestion");
 
   return (
@@ -26,17 +28,17 @@ export function ArtifactsPage({ refreshToken, onUploaded }: ArtifactsPageProps) 
           {
             id: "ingestion",
             label: "Artifact Ingestion",
-            content: <ArtifactIngestionFeature onUploadComplete={onUploaded} />,
+            content: <ArtifactIngestionFeature key={`ingest-${workspaceId}`} workspaceId={workspaceId} onUploadComplete={onUploaded} />,
           },
           {
             id: "browser",
             label: "Artifact Browser",
-            content: <ArtifactBrowserFeature key={refreshToken} />,
+            content: <ArtifactBrowserFeature key={`${workspaceId}-${refreshToken}`} workspaceId={workspaceId} />,
           },
           {
             id: "dataset-preparation",
             label: "Dataset Preparation",
-            content: <DatasetPreparationFeature onPrepared={onUploaded} />,
+            content: <DatasetPreparationFeature key={`dataset-${workspaceId}`} workspaceId={workspaceId} onPrepared={onUploaded} />,
           },
         ]}
       />

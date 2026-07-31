@@ -5,6 +5,8 @@ import {
   type ArtifactBrowseItem,
 } from "../../../contracts/artifact-browser";
 import { createContractError } from "../../../contracts/shared";
+import { createSecurityApplicationError } from "../../../contracts/security";
+import { createWorkspaceId } from "../../../contracts/workspace";
 import type {
   ArtifactBrowserContentReadPort,
   ArtifactBrowserMetadataReadPort,
@@ -35,6 +37,35 @@ function createContentReadPort(
 }
 
 describe("artifact browser read use cases", () => {
+  it("denies workspace access before artifact reads when managed authorization rejects", async () => {
+    const browseArtifacts = testDouble.fn<ArtifactBrowserMetadataReadPort["browseArtifacts"]>();
+    const authorizeWorkspaceOperation = testDouble.fn().mockRejectedValue(
+      createSecurityApplicationError("security.forbidden", "private policy detail"),
+    );
+    const useCase = new BrowseArtifactsUseCase({
+      artifactBrowserMetadataRead: createMetadataReadPort({ browseArtifacts }),
+      workspaceRepository: {
+        readWorkspace: async () => ({
+          organizationId: "org-b" as never,
+          workspaceId: createWorkspaceId("workspace-a"),
+          displayName: "Other tenant workspace",
+          status: "active",
+          createdAt: "2026-07-27T00:00:00.000Z",
+          updatedAt: "2026-07-27T00:00:00.000Z",
+        }),
+      },
+      workspaceAuthorization: { authorizeWorkspaceOperation } as never,
+    });
+
+    const result = await useCase.execute({}, { workspaceId: "workspace-a" });
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected authorization failure.");
+    expect(result.error.code).toBe("forbidden");
+    expect(result.error.message).toBe("Workspace access is forbidden.");
+    expect(JSON.stringify(result)).not.toContain("private policy detail");
+    expect(browseArtifacts).not.toHaveBeenCalled();
+  });
+
   it("browse returns metadata-oriented image browse results", async () => {
     const browseArtifacts = testDouble
       .fn<ArtifactBrowserMetadataReadPort["browseArtifacts"]>()
@@ -43,6 +74,7 @@ describe("artifact browser read use cases", () => {
         value: {
           items: [
             {
+              artifactId: " staged/images/cat-1 ",
               storageKey: " staged/images/cat-1 ",
               artifactFamily: "image",
               mediaType: " image/png ",
@@ -62,6 +94,7 @@ describe("artifact browser read use cases", () => {
       {
         requestId: "req-browse-1",
         correlationId: "corr-browse-1",
+        workspaceId: "workspace-a",
       },
     );
 
@@ -87,6 +120,7 @@ describe("artifact browser read use cases", () => {
       {
         requestId: "req-browse-1",
         correlationId: "corr-browse-1",
+        workspaceId: "workspace-a",
       },
     );
   });
@@ -100,10 +134,10 @@ describe("artifact browser read use cases", () => {
 
     const result = await useCase.execute({
       artifactFamily: "document",
-    });
+    }, { workspaceId: "workspace-a" });
 
     expect(result.ok).toBe(true);
-    expect(browseArtifacts).toHaveBeenCalledWith({ artifactFamily: "document" }, {});
+    expect(browseArtifacts).toHaveBeenCalledWith({ artifactFamily: "document" }, { workspaceId: "workspace-a" });
   });
 
   it("detail returns one artifact metadata/read-model result by locator", async () => {
@@ -129,7 +163,7 @@ describe("artifact browser read use cases", () => {
 
     const result = await useCase.execute<{ width: number }>({
       locator: createArtifactBrowserLocator(" staged/images/cat-2 "),
-    });
+    }, { workspaceId: "workspace-a" });
 
     expect(result.ok).toBe(true);
     if (!result.ok) {
@@ -159,7 +193,7 @@ describe("artifact browser read use cases", () => {
 
     const notFoundResult = await useCase.execute({
       locator: createArtifactBrowserLocator("staged/images/missing-1"),
-    });
+    }, { workspaceId: "workspace-a" });
 
     expect(notFoundResult.ok).toBe(false);
     if (notFoundResult.ok) {
@@ -169,7 +203,7 @@ describe("artifact browser read use cases", () => {
 
     const validationResult = await useCase.execute({
       locator: { storageKey: "   " },
-    });
+    }, { workspaceId: "workspace-a" });
 
     expect(validationResult.ok).toBe(false);
     if (validationResult.ok) {
@@ -200,7 +234,7 @@ describe("artifact browser read use cases", () => {
 
     const result = await useCase.execute({
       locator: createArtifactBrowserLocator(" staged/images/cat-3 "),
-    });
+    }, { workspaceId: "workspace-a" });
 
     expect(result.ok).toBe(true);
     if (!result.ok) {
@@ -231,7 +265,7 @@ describe("artifact browser read use cases", () => {
 
     const notFoundResult = await useCase.execute({
       locator: createArtifactBrowserLocator("staged/images/missing-content-1"),
-    });
+    }, { workspaceId: "workspace-a" });
 
     expect(notFoundResult.ok).toBe(false);
     if (notFoundResult.ok) {
@@ -241,7 +275,7 @@ describe("artifact browser read use cases", () => {
 
     const validationResult = await useCase.execute({
       locator: { storageKey: "" },
-    });
+    }, { workspaceId: "workspace-a" });
 
     expect(validationResult.ok).toBe(false);
     if (validationResult.ok) {

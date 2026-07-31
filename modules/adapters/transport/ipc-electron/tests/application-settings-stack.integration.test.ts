@@ -96,7 +96,7 @@ describe("application settings ipc integration", () => {
     };
 
     expect(response.ok).toBe(true);
-    expect(response.value?.resolved.inferenceMode).toBe("text2text");
+    expect(response.value?.resolved.inferenceMode).toBe("auto");
     expect(["task", "global", "builtin"]).toContain(response.value?.resolved.source);
   });
 });

@@ -3,6 +3,7 @@ import {
   type DeleteModelRecordRequest,
   type DeleteModelRecordResult,
 } from "../../../contracts/model";
+import { isWorkspaceId } from "../../../contracts/workspace";
 import type { ArtifactCatalogDeletePort } from "../../ports/artifact-catalog";
 import type { ModelRegistryPort } from "../../ports/model";
 
@@ -14,7 +15,11 @@ export class DeleteModelRecordUseCase {
   public async execute(request: DeleteModelRecordRequest): Promise<DeleteModelRecordResult> {
     const normalizedRequest = normalizeDeleteModelRecordRequest(request);
 
-    const current = await this.dependencies.modelRegistry.getModelRecord(normalizedRequest.modelRecordId);
+    if (!isWorkspaceId(normalizedRequest.workspaceId)) {
+      throw new Error("workspaceId must be provided for workspace-scoped model operations.");
+    }
+
+    const current = await this.dependencies.modelRegistry.getModelRecord(normalizedRequest.workspaceId, normalizedRequest.modelRecordId);
     const deletedBackingArtifactIds: string[] = [];
 
     if (normalizedRequest.deleteBackingArtifacts && current?.backingArtifactIds?.length) {

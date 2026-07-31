@@ -1,0 +1,2993 @@
+{
+  "blockers": [],
+  "chunks": [
+    {
+      "areas": [
+        "Architecture decision records",
+        "Asset authoring architecture",
+        "Asset authoring and execution security",
+        "Threat model",
+        "Decision readiness"
+      ],
+      "chunkId": "layered-decision",
+      "completedAt": "2026-07-18T10:48:50Z",
+      "criteriaIds": [
+        "decision-recorded"
+      ],
+      "documentation": [
+        "ADR-0035",
+        "Asset authoring/customization architecture",
+        "Asset authoring/execution security architecture",
+        "Asset package/authoring threat model",
+        "Documentation map"
+      ],
+      "feedbackAddressed": [],
+      "id": "architecture-contract-layered-decision",
+      "incrementId": "architecture-contract",
+      "summary": "Accepted ADR-0035 and aligned canonical architecture/security guidance for exact layered bases, sparse semantic changes, bounded source overlays, immutable review materialization, protected fields, conflicts, and distinct workspace-owned publication.",
+      "tests": [
+        "npm run docs:check passed"
+      ],
+      "title": "Layered customization architecture decision"
+    },
+    {
+      "areas": [
+        "Asset authoring contracts",
+        "Asset implementation identity integration",
+        "Asset Studio source limits",
+        "Contract normalization and diagnostics",
+        "Contract security regression tests"
+      ],
+      "chunkId": "layered-contracts",
+      "completedAt": "2026-07-18T10:56:37Z",
+      "criteriaIds": [
+        "contracts-validated"
+      ],
+      "documentation": [
+        "Public asset-authoring contract barrel and protected-field vocabulary"
+      ],
+      "feedbackAddressed": [],
+      "id": "architecture-contract-layered-contracts",
+      "incrementId": "architecture-contract",
+      "summary": "Added additive layered-derived customization models and strict normalizers for exact definition/release/snapshot/artifact bases, sparse semantic patches, bounded changed-file upsert/delete inputs, source-overlay descriptors, immutable review snapshots, distinct publication lineage, protected fields, safe diagnostics, lifecycle, provenance, and sanitized failures.",
+      "tests": [
+        "Focused asset-authoring and asset-implementation contract suites passed: 16 tests",
+        "npm run architecture:check passed",
+        "Scoped TypeScript diagnostic filter reported no Increment 1 contract errors",
+        "Full root TypeScript check remains nonzero from unrelated pre-existing test-fixture errors"
+      ],
+      "title": "Derived customization contracts and invariants"
+    },
+    {
+      "areas": [
+        "Asset authoring context pack",
+        "Context pack catalog",
+        "Prompt routing",
+        "System overview",
+        "Documentation and agent-support verification"
+      ],
+      "chunkId": "layered-verification",
+      "completedAt": "2026-07-18T11:02:42Z",
+      "criteriaIds": [
+        "docs-pass"
+      ],
+      "documentation": [
+        "Asset authoring context pack",
+        "Context pack catalog and prompt routing",
+        "System overview",
+        "Durable implementation report"
+      ],
+      "feedbackAddressed": [],
+      "id": "architecture-contract-layered-verification",
+      "incrementId": "architecture-contract",
+      "summary": "Aligned the asset-authoring context pack, catalog signals, prompt routing, system overview, documentation map, and canonical status guidance with ADR-0035, then completed the required repository verification gates.",
+      "tests": [
+        "npm run docs:check passed",
+        "npm run agent-support:check passed: 26 packs and 19 scenarios",
+        "npm run architecture:check passed",
+        "npm test passed: 2,365 passed, 1 skipped, 0 failed across 2,366 tests",
+        "Roadmap skill tests passed earlier in this task: 14 tests"
+      ],
+      "title": "Documentation, context, and repository verification"
+    },
+    {
+      "areas": [
+        "Shared React presentation primitives",
+        "Asset Library mutation confirmation",
+        "Shared modal styling",
+        "Modal stack and focus lifecycle"
+      ],
+      "chunkId": "modal-dialog-foundation",
+      "completedAt": "2026-07-18T11:25:39Z",
+      "criteriaIds": [
+        "modal-accessible"
+      ],
+      "documentation": [
+        "Shared UI component ownership README"
+      ],
+      "feedbackAddressed": [],
+      "id": "shared-surface-foundation-modal-dialog-foundation",
+      "incrementId": "shared-surface-foundation",
+      "summary": "Added a shared cross-host ModalDialog that composes the existing modal styles and owns visible naming, initial focus, Tab and Shift+Tab containment, focus-in recovery, topmost-only Escape handling, stacked overlays, disabled close behavior, opt-in backdrop close, and logical opener restoration. Migrated the shared asset mutation confirmation to the primitive and aligned the close affordance with the documented red square treatment.",
+      "tests": [
+        "ModalDialog focused DOM suite passed: 2 tests",
+        "Desktop webpack TypeScript check passed"
+      ],
+      "title": "Accessible shared modal dialog foundation"
+    },
+    {
+      "areas": [
+        "Shared React presentation primitives",
+        "Desktop UI compatibility boundary",
+        "Thin-client UI compatibility boundary",
+        "Data Management and Artifacts tab behavior"
+      ],
+      "chunkId": "shared-tabbed-panel",
+      "completedAt": "2026-07-18T11:25:57Z",
+      "criteriaIds": [
+        "tabs-attached",
+        "existing-tabs-preserved"
+      ],
+      "documentation": [
+        "Shared UI component ownership README"
+      ],
+      "feedbackAddressed": [],
+      "id": "shared-surface-foundation-shared-tabbed-panel",
+      "incrementId": "shared-surface-foundation",
+      "summary": "Centralized TabbedPanel in modules/ui/shared/components, added labeled tablist/tab/tabpanel relationships, roving focus, horizontal ArrowLeft/ArrowRight wrapping, Home/End activation, valid-default recovery, and a focusable attached panel. Desktop and thin-client compatibility modules now re-export the shared implementation, so Data Management, Artifacts, and Models retain their public imports without behavioral forks.",
+      "tests": [
+        "TabbedPanel focused DOM suite passed: 3 tests",
+        "Desktop page-section regression suite passed: 9 tests",
+        "npm run architecture:check passed"
+      ],
+      "title": "Shared keyboard-operable attached tab panel"
+    },
+    {
+      "areas": [
+        "Desktop Assets page",
+        "Thin-client Assets page",
+        "Desktop Systems page",
+        "Thin-client Systems page",
+        "Cross-surface renderer tests"
+      ],
+      "chunkId": "assets-systems-tab-migration",
+      "completedAt": "2026-07-18T11:26:13Z",
+      "criteriaIds": [
+        "tabs-attached",
+        "existing-tabs-preserved"
+      ],
+      "documentation": [
+        "Shared UI component ownership README",
+        "Durable implementation report"
+      ],
+      "feedbackAddressed": [],
+      "id": "shared-surface-foundation-assets-systems-tab-migration",
+      "incrementId": "shared-surface-foundation",
+      "summary": "Migrated the top-level Assets and Systems pages in desktop and thin client from hand-rolled floating controls to the shared attached TabbedPanel, preserved every host-specific tab and capability, memoized Systems clients that were previously created only inside active branches, and corrected both Asset page tests to exercise required workspace-scoped loading under the proper Vitest browser harness.",
+      "tests": [
+        "Desktop and thin-client Asset page suites passed: 4 tests",
+        "Desktop page-section suite passed: 9 tests",
+        "Desktop webpack TypeScript check passed",
+        "Thin-client production build passed",
+        "npm run docs:check passed",
+        "npm run architecture:check passed",
+        "npm test passed: 2,370 passed, 1 skipped, 0 failed across 2,371 tests",
+        "git diff --check passed with line-ending warnings only"
+      ],
+      "title": "Assets and Systems attached tab-card migration"
+    },
+    {
+      "areas": [
+        "Shared Asset Library browser state",
+        "Desktop Asset Browser",
+        "Thin-client Asset Browser",
+        "Shared ModalDialog portal and layer tokens",
+        "Responsive Asset Browser styles",
+        "Desktop IPC and host composition regressions"
+      ],
+      "chunkId": "responsive-browser",
+      "completedAt": "2026-07-18T12:35:23Z",
+      "criteriaIds": [
+        "card-modal-flow",
+        "responsive-layout",
+        "cross-surface-parity"
+      ],
+      "documentation": [
+        "Durable implementation report"
+      ],
+      "feedbackAddressed": [
+        "asset-library-read-error",
+        "asset-modal-header-stacking"
+      ],
+      "id": "complete-assets-experience-responsive-browser",
+      "incrementId": "complete-assets-experience",
+      "summary": "Replaced the side-detail Asset Browser with responsive definition and resource-view card grids, shared asynchronous detail modals portaled above application chrome, stacked mutation confirmation, workspace-scoped reads, and stale or rejected request protection across desktop and thin client.",
+      "tests": [
+        "Desktop Asset Browser feature suite passed: 15 tests",
+        "Desktop Asset Library hook suite passed: 10 tests",
+        "Shared modal, Asset Browser, and IPC suites passed: 22 tests",
+        "Fresh-workspace internal registry composition suite passed: 12 tests",
+        "Thin-client production build passed"
+      ],
+      "title": "Reliable responsive card-and-modal Asset Browser"
+    },
+    {
+      "areas": [
+        "Asset package contracts",
+        "Bounded package inspector",
+        "Shared Import Assets presenter",
+        "Desktop Assets page",
+        "Thin-client Assets page",
+        "Responsive package authoring styles",
+        "Canonical package authoring documentation"
+      ],
+      "chunkId": "import-assets-experience",
+      "completedAt": "2026-07-18T13:16:28Z",
+      "criteriaIds": [
+        "template-contract-valid",
+        "template-non-executing",
+        "guidance-complete",
+        "cross-surface-parity"
+      ],
+      "documentation": [
+        "Asset package authoring guide",
+        "Asset implementation and package architecture",
+        "Documentation map",
+        "Contract and shared UI READMEs"
+      ],
+      "feedbackAddressed": [],
+      "id": "complete-assets-experience-import-assets-experience",
+      "incrementId": "complete-assets-experience",
+      "summary": "Renamed the cross-host workflow to Import Assets, added a canonical deterministic and inspector-valid non-executing .aisb-package starter, implemented a tested local Blob download and responsive ordered instructions, and documented the complete bounded authoring, evidence, admission, installation, and activation sequence.",
+      "tests": [
+        "Package inspector and shared presenter suites passed: 5 tests",
+        "Starter download and cross-host Assets page suites passed: 5 tests",
+        "Desktop webpack TypeScript check passed",
+        "Thin-client production build passed",
+        "Documentation and architecture checks passed",
+        "npm test passed: 2,374 passed, 1 skipped, 0 failed across 2,375 tests",
+        "git diff --check passed with line-ending warnings only"
+      ],
+      "title": "Import Assets starter and authoring guidance"
+    },
+    {
+      "areas": [
+        "Asset implementation backing-resource contracts, persistence, foundation catalog, package admission, and preview consumption",
+        "Derived customization contracts, target catalog, optimistic persistence, and application lifecycle",
+        "Canonical asset authoring, implementation/package, contract, and context documentation"
+      ],
+      "chunkId": "customization-domain-catalog",
+      "completedAt": "2026-07-18T14:25:45Z",
+      "criteriaIds": [
+        "eligible-sources-searchable",
+        "workspace-isolated",
+        "base-remains-immutable",
+        "sparse-reuse",
+        "safe-materialization",
+        "new-owned-lineage"
+      ],
+      "documentation": [
+        "Asset authoring/customization architecture",
+        "Asset implementations and packages architecture",
+        "Asset authoring context pack",
+        "Contracts README"
+      ],
+      "feedbackAddressed": [
+        "customizer-implementation-sections",
+        "foundation-backing-resources",
+        "foundation-backing-resource-content",
+        "increment-test-sequencing"
+      ],
+      "id": "layered-customization-workflow-customization-domain-catalog",
+      "incrementId": "layered-customization-workflow",
+      "summary": "Implemented real immutable backing resources for all System Foundation assets and admitted package releases, plus the exact target catalog and workspace-isolated derived customization create, update, review-materialize, publish, history, and abandon lifecycle.",
+      "tests": [
+        "Focused TypeScript checks passed for the customization domain and backing/package integration files",
+        "Focused 21-test matrix passed for contracts, foundation resources, package admission, host seeding, preview consumption, workspace isolation, restart persistence, materialization, publication, and base immutability"
+      ],
+      "title": "Customization domain, target catalog, and materialization lifecycle"
+    },
+    {
+      "areas": [
+        "Shared customization application facade and operation identities",
+        "Server API and desktop IPC/preload transports with security policy coverage",
+        "Desktop/thin-client clients and server/desktop host composition"
+      ],
+      "chunkId": "customization-host-transports",
+      "completedAt": "2026-07-18T16:48:33Z",
+      "criteriaIds": [
+        "workspace-isolated",
+        "transport-aligned",
+        "safe-materialization"
+      ],
+      "documentation": [
+        "Asset authoring/customization architecture and context pack",
+        "Contracts README"
+      ],
+      "feedbackAddressed": [
+        "customizer-implementation-sections",
+        "foundation-backing-resources",
+        "foundation-backing-resource-content",
+        "increment-test-sequencing"
+      ],
+      "id": "layered-customization-workflow-customization-host-transports",
+      "incrementId": "layered-customization-workflow",
+      "summary": "Composed the derived customization workflow into server and desktop hosts with typed API, IPC, preload, and renderer clients, exact authorized backing-resource details, workspace enforcement, and trusted actor attribution.",
+      "tests": [
+        "Focused TypeScript checks passed for contracts, transports, preload, clients, and both host compositions",
+        "Focused transport/security/host matrix passed: 84 tests",
+        "Focused preload matrix passed: 34 tests; focused client matrix passed: 5 tests"
+      ],
+      "title": "Aligned server, desktop, preload, and client boundaries"
+    },
+    {
+      "areas": [
+        "Shared ordered customization workflow and responsive backing-resource editors",
+        "Desktop and thin-client Assets composition with exact per-card Customize actions",
+        "Controlled tabs, target-change confirmation, and recoverable history management"
+      ],
+      "chunkId": "customization-ordered-experience",
+      "completedAt": "2026-07-18T17:43:09Z",
+      "criteriaIds": [
+        "eligible-sources-searchable",
+        "selection-controlled",
+        "internals-visible",
+        "ordered-workflow",
+        "copy-confirmed"
+      ],
+      "documentation": [
+        "Asset authoring/customization architecture",
+        "Asset authoring context pack"
+      ],
+      "feedbackAddressed": [
+        "feedback-asset-browser-customize-action",
+        "customizer-implementation-sections",
+        "foundation-backing-resources",
+        "foundation-backing-resource-content",
+        "increment-test-sequencing"
+      ],
+      "id": "layered-customization-workflow-customization-ordered-experience",
+      "incrementId": "layered-customization-workflow",
+      "summary": "Delivered one shared desktop/thin-client ordered customizer with exact Asset Browser handoff, controlled target switching, sparse semantic and backing-resource edits, review/publication, searchable history, and confirmed abandon actions.",
+      "tests": [
+        "Focused Node UI matrix passed: 37 tests",
+        "Focused cross-host interaction matrix passed: 10 tests",
+        "Desktop webpack and thin-client TypeScript checks passed"
+      ],
+      "title": "Shared end-to-end ordered customization experience"
+    },
+    {
+      "areas": [
+        "Asset Studio contracts and normalization",
+        "Structured draft persistence",
+        "Studio application lifecycle",
+        "Shared desktop and server composition"
+      ],
+      "chunkId": "studio-draft-lifecycle",
+      "completedAt": "2026-07-18T19:43:38Z",
+      "criteriaIds": [
+        "studio-drafts-persist",
+        "studio-review-publish-safe"
+      ],
+      "documentation": [
+        "Temporary implementation report"
+      ],
+      "feedbackAddressed": [],
+      "id": "unified-asset-studio-saved-studio-draft-lifecycle",
+      "incrementId": "unified-asset-studio-saved",
+      "summary": "Added workspace-isolated resource-backed Studio drafts with complete structured semantics, immutable source artifacts, optimistic updates, review invalidation, review snapshots, safe definition publication, and restart-safe persistence.",
+      "tests": [
+        "Focused Studio draft contract and lifecycle matrix passed: 4 tests",
+        "Scoped TypeScript diagnostic filter reported no Studio draft errors"
+      ],
+      "title": "Resource-backed Studio draft lifecycle"
+    },
+    {
+      "areas": [
+        "Asset Studio API and desktop IPC contracts",
+        "Server and desktop host composition with route security",
+        "Desktop preload/renderer and thin-client lifecycle adapters"
+      ],
+      "chunkId": "studio-host-transports",
+      "completedAt": "2026-07-18T20:08:05Z",
+      "criteriaIds": [
+        "studio-transports-aligned"
+      ],
+      "documentation": [
+        "Temporary Increment 5 implementation report"
+      ],
+      "feedbackAddressed": [
+        "feedback-desktop-customization-envelope"
+      ],
+      "id": "unified-asset-studio-saved-studio-host-transports",
+      "incrementId": "unified-asset-studio-saved",
+      "summary": "Exposed the structured Studio asset-draft lifecycle through authenticated server API and desktop IPC/preload transports, aligned desktop and thin-client adapters, and preserved canonical failure envelopes.",
+      "tests": [
+        "Desktop and thin-client scoped TypeScript checks passed",
+        "Focused API/IPC transport parity test passed",
+        "Focused desktop and thin-client adapter tests passed: 2 tests"
+      ],
+      "title": "Aligned Studio host transports and clients"
+    },
+    {
+      "areas": [
+        "Ordered semantic, configuration, AI context, composition, and backing-resource Studio sections",
+        "Responsive Saved cards with native and idempotent legacy draft handoff",
+        "Desktop/thin-client tab consolidation and canonical authoring documentation"
+      ],
+      "chunkId": "unified-studio-saved-experience",
+      "completedAt": "2026-07-18T20:34:24Z",
+      "criteriaIds": [
+        "single-studio-surface",
+        "saved-reopens-exact-draft",
+        "asset-tabs-consolidated"
+      ],
+      "documentation": [
+        "Asset authoring/customization architecture and context pack",
+        "Shared Asset Studio UI README",
+        "Temporary Increment 5 implementation report"
+      ],
+      "feedbackAddressed": [
+        "single-studio-saved-assets"
+      ],
+      "id": "unified-asset-studio-saved-unified-studio-saved-experience",
+      "incrementId": "unified-asset-studio-saved",
+      "summary": "Delivered one shared desktop/thin-client Studio surface for complete semantic data and actual categorized backing resources, plus a Saved list that reopens exact native drafts and lazily upgrades legacy drafts without mutation or duplicate rows.",
+      "tests": [
+        "Desktop and thin-client scoped TypeScript checks passed",
+        "Focused lifecycle and unified UI matrix passed: 8 tests",
+        "Documentation drift checks passed"
+      ],
+      "title": "Single ordered Studio and Saved-assets experience"
+    },
+    {
+      "areas": [
+        "System-owned and admitted-import customization lifecycle matrix",
+        "Studio post-restart exact draft read and rediscovery",
+        "Immutable base and no-authored-release execution assertions"
+      ],
+      "chunkId": "representative-lifecycle-matrix",
+      "completedAt": "2026-07-18T20:52:15Z",
+      "criteriaIds": [
+        "e2e-default-imported",
+        "e2e-studio-saved"
+      ],
+      "documentation": [
+        "Temporary concise Increment 6 implementation report"
+      ],
+      "feedbackAddressed": [],
+      "id": "production-qualification-representative-lifecycle-matrix",
+      "incrementId": "production-qualification",
+      "summary": "Qualified admitted imported, System Foundation, and from-scratch Studio assets through distinct publication, immutable bases, exact resource restoration, restart rediscovery, workspace isolation, and non-execution.",
+      "tests": [
+        "Focused derived-customization and Studio lifecycle matrix passed: 5 tests"
+      ],
+      "title": "Representative lifecycle and restart matrix"
+    },
+    {
+      "areas": [
+        "Fail-closed implementation revocation eligibility",
+        "Unsafe path, protected content, secret, size, stale, and workspace negative coverage",
+        "Shared workflow list semantics, modal focus/stacking, safe status announcements, and narrow-layout contracts"
+      ],
+      "chunkId": "failure-security-accessibility",
+      "completedAt": "2026-07-18T21:02:13Z",
+      "criteriaIds": [
+        "desktop-thin-accessibility",
+        "security-review"
+      ],
+      "documentation": [
+        "Temporary concise Increment 6 implementation report"
+      ],
+      "feedbackAddressed": [],
+      "id": "production-qualification-failure-security-accessibility",
+      "incrementId": "production-qualification",
+      "summary": "Hardened customization against revoked or unavailable revocation truth, unsafe and oversized Studio source, and unavailable Saved adapters while improving ordered workflow semantics and proving modal, status, labeling, and responsive behavior across shared hosts.",
+      "tests": [
+        "Focused security, lifecycle, modal, accessibility-semantic, and responsive matrix passed: 24 tests",
+        "Desktop and thin-client scoped TypeScript checks passed",
+        "Diff whitespace check passed"
+      ],
+      "title": "Fail-closed, security, accessibility, and responsive qualification"
+    },
+    {
+      "areas": [
+        "dev-tools/config/asset-system-qualification.json",
+        "dev-tools/scripts/qualification/tests/asset-system-qualification.unit.test.mjs",
+        "docs/operations/asset-experience-controlled-review.md",
+        "docs/operations/asset-system-support-qualification.md",
+        "docs/architecture/asset-authoring-and-execution-security.md",
+        "docs/context/packs/asset-authoring.pack.md",
+        "modules/ui/shared/components/README.md",
+        "modules/ui/shared/asset-studio/README.md",
+        "docs/README.md"
+      ],
+      "chunkId": "release-evidence-gates",
+      "completedAt": "2026-07-18T21:08:22Z",
+      "criteriaIds": [
+        "all-gates-pass"
+      ],
+      "documentation": [
+        "docs/operations/asset-experience-controlled-review.md",
+        "docs/operations/asset-system-support-qualification.md",
+        "docs/architecture/asset-authoring-and-execution-security.md",
+        "docs/context/packs/asset-authoring.pack.md",
+        "modules/ui/shared/components/README.md",
+        "modules/ui/shared/asset-studio/README.md",
+        "docs/README.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "production-qualification-release-evidence-gates",
+      "incrementId": "production-qualification",
+      "summary": "Added reusable controlled asset-experience review guidance, required automated asset-experience evidence for every support profile, documented fail-closed revocation eligibility and non-execution boundaries, and added regression coverage for the qualification policy.",
+      "tests": [
+        "node --test dev-tools/scripts/qualification/tests/asset-system-qualification.unit.test.mjs",
+        "npm run asset-system:check",
+        "npm run docs:check",
+        "npm run agent-support:check",
+        "git diff --check"
+      ],
+      "title": "Release evidence, canonical docs, and complete gates"
+    }
+  ],
+  "completion": null,
+  "createdAt": "2026-07-18T10:28:03Z",
+  "currentIncrementId": null,
+  "decisions": [
+    {
+      "approvalNote": "The user explicitly approved Option 1, Layered derived customization.",
+      "approvedAt": "2026-07-18T10:28:37Z",
+      "approvedFingerprint": "9332226bca059fa68a245b005d4ab23429e9ed74f70115659ff5a546ba880775",
+      "context": "The accepted authoring ADR permits sparse semantic overrides but defers raw code there; Asset Studio separately owns bounded authorized source proposals and immutable snapshots. The selected model changes contracts, persistence, provenance, materialization, and conflict handling.",
+      "id": "customization-persistence",
+      "options": [
+        {
+          "consequences": [
+            "The original asset and release remain immutable",
+            "Semantic patches and source overlays remain separate typed records",
+            "Conflict detection is based on exact pinned base identities"
+          ],
+          "id": "layered-derived",
+          "label": "Layered derived customization",
+          "recommended": true,
+          "summary": "Pin a workspace-owned customization to exact base definition and implementation identities, persist sparse semantic changes plus a bounded changed-file overlay, and materialize a complete immutable snapshot only for review, build, and release.",
+          "tradeoffs": [
+            "Preserves provenance and avoids logical duplication of unchanged content",
+            "Requires a successor ADR and coordinated application workflow"
+          ]
+        },
+        {
+          "consequences": [
+            "Every customization owns a complete independent source tree",
+            "Upstream lineage remains informational rather than structurally reusable"
+          ],
+          "id": "detached-copy",
+          "label": "Fully detached copy",
+          "recommended": false,
+          "summary": "Duplicate the full definition and implementation source into a new workspace draft before editing.",
+          "tradeoffs": [
+            "Simpler mental model",
+            "Duplicates unchanged data and weakens update/conflict semantics"
+          ]
+        },
+        {
+          "consequences": [
+            "Current override contracts remain mostly unchanged",
+            "Users switch surfaces to customize implementation code"
+          ],
+          "id": "safe-fields-only",
+          "label": "Safe fields with separate Studio",
+          "recommended": false,
+          "summary": "Enable searchable safe semantic overrides and retain Asset Studio as a separate code-authoring task.",
+          "tradeoffs": [
+            "Smallest architecture change",
+            "Does not deliver one integrated internals workflow"
+          ]
+        }
+      ],
+      "proposalFingerprint": "9332226bca059fa68a245b005d4ab23429e9ed74f70115659ff5a546ba880775",
+      "question": "How should an integrated definition-and-code customization preserve source immutability while creating a modified workspace-owned asset?",
+      "selectedOptionId": "layered-derived",
+      "status": "approved",
+      "title": "Customization persistence and source reuse"
+    }
+  ],
+  "discovery": {
+    "constraints": [
+      "Preserve desktop and thin-client feature parity for shared Assets and Systems behavior.",
+      "Reuse shared renderer tokens, modal styling, WorkflowSequence, and the Data Management tabbed-panel presentation.",
+      "Keep source assets, trusted implementation releases, and system.foundation immutable.",
+      "Require explicit workspace identity and exact base definition and implementation references.",
+      "Keep semantic override data separate from bounded authorized source text and implementation artifacts.",
+      "Package browsing and template inspection must remain bounded and non-executing.",
+      "Do not imply public marketplace, automatic update, activation, or unqualified execution support.",
+      "Add regression tests at owning layers and run repository documentation, architecture, agent-support, test, and affected build gates."
+    ],
+    "decisionRequired": true,
+    "recordedAt": "2026-07-18T10:28:37Z",
+    "sources": [
+      {
+        "note": "Defines discovery, decision, impact, verification, and documentation requirements.",
+        "title": "Agent Guide",
+        "url": "AGENTS.md"
+      },
+      {
+        "note": "Routes canonical architecture and roadmap documentation.",
+        "title": "Documentation Guide",
+        "url": "docs/README.md"
+      },
+      {
+        "note": "Requires workspace ownership, immutable sources, sparse safe edits, and separate authorized Asset Studio source handling.",
+        "title": "Asset authoring architecture",
+        "url": "docs/architecture/asset-authoring-customization-and-overrides.md"
+      },
+      {
+        "note": "Separates semantic definitions, implementation releases, package inspection, admission, installation, and activation.",
+        "title": "Asset implementation and package architecture",
+        "url": "docs/architecture/asset-implementations-and-packages.md"
+      },
+      {
+        "note": "Requires contained focus, Escape close, accessible naming, and focus restoration.",
+        "title": "WAI modal dialog pattern",
+        "url": "https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/"
+      },
+      {
+        "note": "Defines the tab, tablist, and attached tabpanel relationship and keyboard behavior.",
+        "title": "WAI tabs pattern",
+        "url": "https://www.w3.org/WAI/ARIA/apg/patterns/tabs/"
+      },
+      {
+        "note": "Requires non-excepted controls and content to remain usable without two-dimensional page scrolling at narrow equivalent widths.",
+        "title": "WCAG 2.2 reflow guidance",
+        "url": "https://www.w3.org/WAI/WCAG22/Understanding/reflow.html"
+      }
+    ],
+    "summary": "The Asset Browser currently uses fixed-width filters and a two-column list/detail layout; Assets and Systems hand-roll floating tabs while Data Management already uses an attached tabbed panel. Shared modal styling exists without a reusable behavioral component. Package import has a bounded non-executing .aisb-package contract but no starter download. Existing authoring supports safe sparse overrides, while authorized source editing is separately owned by Asset Studio; an integrated derived customization therefore requires an explicit successor decision and coordinated contract, application, host, transport, UI, security, and documentation work."
+  },
+  "evidence": [
+    {
+      "artifact": "docs/adr/ADR-0035-layered-derived-asset-customization.md",
+      "command": "npm run docs:check",
+      "criterionId": "decision-recorded",
+      "id": "evidence-1",
+      "incrementId": "architecture-contract",
+      "kind": "documentation",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T10:48:50Z",
+      "summary": "ADR-0035 and the aligned canonical architecture/security documents explicitly distinguish sparse semantic patches, authorized source overlays, immutable exact bases, and materialized derived snapshots; the documentation gate passed locally."
+    },
+    {
+      "artifact": "modules/contracts/asset-authoring/tests/asset-derived-customization-contracts.unit.test.ts",
+      "command": "node --import tsx --test modules/contracts/asset-authoring/tests/asset-derived-customization-contracts.unit.test.ts modules/contracts/asset-authoring/tests/asset-authoring-contracts.unit.test.ts modules/contracts/asset-implementation/tests/asset-implementation-contracts.unit.test.ts",
+      "criterionId": "contracts-validated",
+      "id": "evidence-2",
+      "incrementId": "architecture-contract",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T10:56:37Z",
+      "summary": "Focused tests prove the additive contracts accept bounded sparse semantic/source changes and reject missing workspace context, inexact bases, protected-field attempts, unsafe or duplicate paths, unsupported types, oversized or secret-bearing content, stale review, mismatched overlay digests, and non-distinct publication lineage."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "npm run docs:check && npm run agent-support:check && npm run architecture:check && npm test",
+      "criterionId": "docs-pass",
+      "id": "evidence-3",
+      "incrementId": "architecture-contract",
+      "kind": "documentation",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T11:02:42Z",
+      "summary": "Canonical documentation, routed context, dependency architecture, and the complete non-browser regression suite all pass with the accepted layered-derived decision and additive contract boundary."
+    },
+    {
+      "artifact": "modules/ui/shared/components/tests/ModalDialog.unit.test.tsx",
+      "command": "node --import tsx --test modules/ui/shared/components/tests/ModalDialog.unit.test.tsx && npx tsc -p apps/desktop/tsconfig.webpack.json --noEmit --pretty false",
+      "criterionId": "modal-accessible",
+      "id": "evidence-4",
+      "incrementId": "shared-surface-foundation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T11:25:50Z",
+      "summary": "DOM tests verify visible accessible naming, aria-modal semantics, explicit initial focus, forward and reverse focus containment, topmost-only Escape close for nested dialogs, and focus restoration to the underlying and original opener; the desktop ES2021 webpack compiler also accepts the implementation."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "node --import tsx --test apps/desktop/src/renderer/tests/page-section-loading.unit.test.tsx && npm test",
+      "criterionId": "existing-tabs-preserved",
+      "id": "evidence-5",
+      "incrementId": "shared-surface-foundation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T11:26:04Z",
+      "summary": "The existing Data Management and Artifacts tab paths consume the compatibility re-export of the shared implementation, retain deferred browser/detail loading, and render the same attached tablist and bordered panel classes; the full non-browser suite reports no regression."
+    },
+    {
+      "artifact": "modules/ui/shared/components/tests/TabbedPanel.unit.test.tsx",
+      "command": "node --import tsx --test modules/ui/shared/components/tests/TabbedPanel.unit.test.tsx apps/desktop/src/renderer/tests/page-section-loading.unit.test.tsx && npx vitest run apps/desktop/src/renderer/pages/tests/asset-library-page.unit.test.tsx apps/thin-client/src/pages/tests/asset-library-page.unit.test.tsx && npm run build:thin-client",
+      "criterionId": "tabs-attached",
+      "id": "evidence-6",
+      "incrementId": "shared-surface-foundation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T11:26:19Z",
+      "summary": "Both renderer hosts now render Assets and Systems through the shared ui-tabbed-panel tablist and bordered/background tabpanel relationship; shared keyboard tests, cross-surface Asset tests, desktop Systems regression tests, the desktop webpack compiler, and the thin-client production build pass."
+    },
+    {
+      "artifact": "modules/ui/shared/components/tests/ModalDialog.unit.test.tsx",
+      "command": "node --import ./.local-codex/jsdom-test-preload.mjs --import tsx --test apps/desktop/src/renderer/features/asset-library/tests/asset-library-feature.unit.test.tsx && node --import tsx --test modules/ui/shared/components/tests/ModalDialog.unit.test.tsx",
+      "criterionId": "card-modal-flow",
+      "id": "evidence-7",
+      "incrementId": "complete-assets-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T12:35:23Z",
+      "summary": "Desktop DOM and shared modal tests prove cards replace the side-detail layout, card activation opens a named loading-aware modal in a body portal, the modal layers above application chrome, nested confirmations remain topmost, Escape closes only the topmost dialog, and focus returns to the card."
+    },
+    {
+      "artifact": "modules/ui/shared/asset-library/tests/assetLibraryBrowser.unit.test.ts",
+      "command": "node --import tsx --test modules/ui/shared/asset-library/tests/assetLibraryBrowser.unit.test.ts",
+      "criterionId": "responsive-layout",
+      "id": "evidence-8",
+      "incrementId": "complete-assets-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T12:35:23Z",
+      "summary": "Shared regression coverage verifies auto-fitting filter and card grids, bounded controls, removal of the side-detail layout, and common responsive styles consumed by both hosts."
+    },
+    {
+      "artifact": "apps/thin-client/dist",
+      "command": "node --import ./.local-codex/jsdom-test-preload.mjs --import tsx --test apps/desktop/src/renderer/features/asset-library/tests/asset-library-feature.unit.test.tsx && node --import tsx --test apps/desktop/src/renderer/features/asset-library/tests/use-asset-library-feature.unit.test.ts && npm run build:thin-client",
+      "criterionId": "cross-surface-parity",
+      "id": "evidence-9",
+      "incrementId": "complete-assets-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T12:35:23Z",
+      "summary": "Desktop feature and hook suites verify grid, modal, workspace read, mutation, error, and race behavior; the thin-client TypeScript and Vite production build passes against the matching host implementation and shared presenters."
+    },
+    {
+      "artifact": "docs/asset-package-authoring-guide.md",
+      "command": "node --import tsx --test modules/adapters/package/aisb/tests/aisb-package-inspector.unit.test.ts modules/ui/shared/asset-package/tests/AssetPackageManager.unit.test.tsx && npx vitest run modules/ui/shared/asset-package/tests/asset-package-starter-download.ui.test.ts apps/desktop/src/renderer/pages/tests/asset-library-page.unit.test.tsx apps/thin-client/src/pages/tests/asset-library-page.unit.test.tsx && npx tsc -p apps/desktop/tsconfig.webpack.json --noEmit --pretty false && npm run build:thin-client && npm run docs:check && npm run architecture:check && npm test",
+      "criterionId": "guidance-complete",
+      "id": "evidence-10",
+      "incrementId": "complete-assets-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T13:16:28Z",
+      "summary": "Both hosts expose Import Assets language and a working local Blob download for the canonical deterministic starter; the real bounded inspector accepts the non-executing package, responsive presenter tests pass, and contract-aligned authoring and trust guidance is available in product and canonical documentation."
+    },
+    {
+      "artifact": "modules/contracts/asset-package/asset-package-starter.ts",
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test modules/adapters/package/aisb/tests/aisb-package-inspector.unit.test.ts",
+      "criterionId": "template-contract-valid",
+      "id": "evidence-11",
+      "incrementId": "complete-assets-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T13:17:25Z",
+      "summary": "The contract-owned starter serializes to identical UTF-8 bytes across calls, round-trips to the canonical container, carries an exact verified size and SHA-256 entry descriptor, and is accepted by the production bounded package inspector."
+    },
+    {
+      "artifact": "modules/ui/shared/asset-package/tests/asset-package-starter-download.ui.test.ts",
+      "command": "node --preserve-symlinks --preserve-symlinks-main --import tsx --test modules/adapters/package/aisb/tests/aisb-package-inspector.unit.test.ts && npx vitest run modules/ui/shared/asset-package/tests/asset-package-starter-download.ui.test.ts",
+      "criterionId": "template-non-executing",
+      "id": "evidence-12",
+      "incrementId": "complete-assets-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T13:17:25Z",
+      "summary": "The starter contains one text/plain README entry, zero implementations, zero requested capabilities, and no executable content; generation and local Blob download use only canonical in-memory data while inspection remains the existing non-executing bounded read path."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "eligible-sources-searchable",
+      "id": "evidence-13",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:20Z",
+      "summary": "Built-in, imported, authored, and customized exact targets are searchable with truthful eligibility and backing-resource summaries. Focused domain/catalog tests plus the complete non-browser suite and cross-host UI matrix passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "workspace-isolated",
+      "id": "evidence-14",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "Derived customization reads, writes, artifacts, transports, and publication remain scoped to the requested workspace. Workspace-isolation and transport tests plus the complete non-browser suite passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "transport-aligned",
+      "id": "evidence-15",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "Server API, desktop IPC/preload, and both renderer clients expose aligned authorized customization operations. Transport, security, preload, client, and host tests plus both affected builds passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "base-remains-immutable",
+      "id": "evidence-16",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "Customization lifecycle operations and publication preserve exact immutable base definitions, releases, snapshots, and resources. Base-immutability and publication tests plus the complete non-browser suite passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "sparse-reuse",
+      "id": "evidence-17",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "Unchanged semantic values and backing resources remain logically reused while only changed files are overlaid. Sparse patch and materialization tests plus editor model tests passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "safe-materialization",
+      "id": "evidence-18",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "Review revalidates and materializes bounded content as an immutable snapshot without executing it. Materialization, path/content validation, transport sanitization, and complete non-browser tests passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "new-owned-lineage",
+      "id": "evidence-19",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "Publishing a reviewed customization creates distinct workspace-owned definition and implementation-draft lineage. Publication and persistence tests plus the complete non-browser suite passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "selection-controlled",
+      "id": "evidence-20",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "The shared editor requires exact selection and confirms target changes before discarding unsaved editor state. Cross-host jsdom/page interaction matrix passed: 8 tests."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "internals-visible",
+      "id": "evidence-21",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "The ordered editor exposes semantic definition internals and actual frontend structure, styling, backend logic, and other backing resources. Shared editor model tests, jsdom interactions, desktop TypeScript, and thin-client build passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "ordered-workflow",
+      "id": "evidence-22",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "Desktop and thin client share one ordered select, edit, save, review, publish, and history workflow. Cross-host jsdom/page matrix passed and both affected builds passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test; focused cross-host Vitest matrix; desktop webpack TypeScript; thin-client and server builds; documentation, architecture, agent-support, and diff gates",
+      "criterionId": "copy-confirmed",
+      "id": "evidence-23",
+      "incrementId": "layered-customization-workflow",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "summary": "Save, publish, target-change, and abandon actions clearly preserve the base and confirm destructive editor-state changes. Interaction tests and the complete non-browser suite passed."
+    },
+    {
+      "artifact": null,
+      "command": "npm test && npm run build:thin-client && npm run package",
+      "criterionId": "single-studio-surface",
+      "id": "evidence-24",
+      "incrementId": "unified-asset-studio-saved",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T20:40:38Z",
+      "summary": "Shared Studio UI tests and both production host builds verified one ordered semantic and backing-resource editor."
+    },
+    {
+      "artifact": null,
+      "command": "npm test",
+      "criterionId": "studio-drafts-persist",
+      "id": "evidence-25",
+      "incrementId": "unified-asset-studio-saved",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T20:40:41Z",
+      "summary": "Lifecycle and persistence tests verified workspace isolation, restart-safe structured drafts, immutable bounded resource artifacts, and revision checks."
+    },
+    {
+      "artifact": null,
+      "command": "npm test",
+      "criterionId": "saved-reopens-exact-draft",
+      "id": "evidence-26",
+      "incrementId": "unified-asset-studio-saved",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T20:40:44Z",
+      "summary": "Saved-surface tests verified exact native draft restoration and idempotent legacy draft upgrade into Studio."
+    },
+    {
+      "artifact": null,
+      "command": "npm test && npm run build:server && npm run package",
+      "criterionId": "studio-transports-aligned",
+      "id": "evidence-27",
+      "incrementId": "unified-asset-studio-saved",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T20:40:51Z",
+      "summary": "Transport parity, renderer adapter, full-suite, server build, and desktop package checks verified aligned API and IPC behavior."
+    },
+    {
+      "artifact": null,
+      "command": "npm test",
+      "criterionId": "studio-review-publish-safe",
+      "id": "evidence-28",
+      "incrementId": "unified-asset-studio-saved",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T20:40:54Z",
+      "summary": "Workflow tests verified immutable review snapshots and definition plus implementation-draft publication without activation or execution."
+    },
+    {
+      "artifact": null,
+      "command": "npm test",
+      "criterionId": "asset-tabs-consolidated",
+      "id": "evidence-29",
+      "incrementId": "unified-asset-studio-saved",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T20:40:58Z",
+      "summary": "Desktop and thin-client tab tests verified Browse, Import Assets, Studio, Saved, and Customizations with no Create or split Drafts workflow."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "node --import tsx --test modules/application/use-cases/asset-authoring/tests/asset-derived-customization-workflow.unit.test.ts; npm test",
+      "criterionId": "e2e-default-imported",
+      "id": "evidence-30",
+      "incrementId": "production-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T21:14:15Z",
+      "summary": "Focused and full tests prove System Foundation and admitted imported bases can be customized, reviewed, published as distinct workspace assets, rediscovered after restart, and left exactly unchanged."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "node --import tsx --test modules/application/use-cases/asset-studio/tests/asset-studio-asset-draft-workflow.unit.test.ts; npm test",
+      "criterionId": "e2e-studio-saved",
+      "id": "evidence-31",
+      "incrementId": "production-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T21:14:18Z",
+      "summary": "Focused and full tests prove a resource-backed Studio asset can be saved unpublished, reopened exactly from Saved after restart, reviewed, published, and rediscovered without executing authored source."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "npm test; npm run docs:check; npm run architecture:check; npm run agent-support:check; npm run security:dependencies; npm run asset-system:check; npm run build:server; npm run build:thin-client; npm run package; git diff --check",
+      "criterionId": "all-gates-pass",
+      "id": "evidence-32",
+      "incrementId": "production-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-18T21:14:23Z",
+      "summary": "The 475-file non-browser suite and every required documentation, architecture, agent-support, dependency-security, asset-system policy, server, thin-client, and desktop packaging gate passed; diff validation found no whitespace errors."
+    },
+    {
+      "artifact": null,
+      "command": "Follow docs/operations/asset-experience-controlled-review.md",
+      "criterionId": "desktop-thin-accessibility",
+      "id": "evidence-33",
+      "incrementId": "production-qualification",
+      "kind": "manual",
+      "outcome": "pending",
+      "recordedAt": "2026-07-18T21:14:26Z",
+      "summary": "Automated shared-host tests passed for labels, ordered list semantics, modal focus and stacking, status/error behavior, and narrow-layout rules. Controlled keyboard, screen-reader, 400-percent zoom/reflow, and contrast review on supported desktop and thin-client environments remains required and is not inferred."
+    },
+    {
+      "artifact": null,
+      "command": "Follow docs/operations/asset-experience-controlled-review.md",
+      "criterionId": "security-review",
+      "id": "evidence-34",
+      "incrementId": "production-qualification",
+      "kind": "manual",
+      "outcome": "pending",
+      "recordedAt": "2026-07-18T21:14:31Z",
+      "summary": "Automated review passed for source containment, unsafe paths, protected content, secrets, size limits, stale revisions, workspace isolation, immutable bases, non-execution, safe diagnostics, and fail-closed revocation truth. The controlled target-environment security review remains required and is not inferred."
+    }
+  ],
+  "feedback": [
+    {
+      "category": "scope",
+      "disposition": "accepted",
+      "id": "increment-sizing-economics",
+      "impact": "scope-change",
+      "nextAction": "Preserve completed increments, replace the pending suffix with fewer economically cohesive increments, render the exact revision, and obtain renewed roadmap approval.",
+      "recordedAt": "2026-07-18T11:35:41Z",
+      "summary": "The user reported that the pending roadmap splits closely related work into increments that are too small, causing disproportionate research, planning, reporting, testing, approval, and token overhead.",
+      "targetIncrementId": "asset-browser-grid"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "asset-library-read-error",
+      "impact": "within-increment",
+      "nextAction": "Exercise the real workspace-scoped desktop transport and composition path, preserve safe actionable failures, and add regression coverage while implementing the card-and-modal browser.",
+      "recordedAt": "2026-07-18T11:53:38Z",
+      "summary": "The user previously reported that the desktop Asset Browser displayed Unable to read Asset Library data instead of usable assets.",
+      "targetIncrementId": "complete-assets-experience"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "asset-modal-header-stacking",
+      "impact": "within-increment",
+      "nextAction": "Portal the shared modal outside the page stacking context, assign dedicated modal layers above application chrome, and add regression coverage.",
+      "recordedAt": "2026-07-18T12:35:23Z",
+      "summary": "The Asset Browser modal close button was hidden beneath the application header.",
+      "targetIncrementId": "complete-assets-experience"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "temporary-roadmap-reports",
+      "impact": "within-increment",
+      "nextAction": "Update the repository roadmap skill, engine, tests, ignore rules, and guidance; relocate the active report without losing state.",
+      "recordedAt": "2026-07-18T12:43:10Z",
+      "summary": "Implementation reports must be temporary, stored under ignored docs/tmp, excluded from the remote repository, and removed only after explicit final approval of the overall work.",
+      "targetIncrementId": "complete-assets-experience"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "concise-roadmap-reports",
+      "impact": "within-increment",
+      "nextAction": "Render compact status, progress, next-work, unresolved-feedback, blocker, and recent-chunk summaries while retaining full details only in canonical JSON state and the roadmap.",
+      "recordedAt": "2026-07-18T12:45:28Z",
+      "summary": "Temporary implementation reports must remain minimally verbose summaries rather than duplicating the full roadmap, evidence history, and event state.",
+      "targetIncrementId": "complete-assets-experience"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "increment-test-sequencing",
+      "impact": "within-increment",
+      "nextAction": "Separate focused chunk tests from completion tests in the Increment 4 plan, and run the full suite only once after all Increment 4 chunks are implemented.",
+      "recordedAt": "2026-07-18T13:23:28Z",
+      "summary": "Full-suite tests must wait until every implementation chunk in the active increment is complete; internal chunks receive only their focused tests.",
+      "targetIncrementId": "layered-customization-workflow"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "customizer-implementation-sections",
+      "impact": "within-increment",
+      "nextAction": "Include explicit frontend structure, frontend styling, backend logic, and other source subsections in Increment 4 target details, editing, review, materialization, and focused UI tests.",
+      "recordedAt": "2026-07-18T13:28:26Z",
+      "summary": "The end-to-end asset customizer must expose associated frontend structural logic, frontend styling logic, backend logic, and other implementation source as distinct ordered sections.",
+      "targetIncrementId": "layered-customization-workflow"
+    },
+    {
+      "category": "scope",
+      "disposition": "accepted",
+      "id": "foundation-backing-resources",
+      "impact": "within-increment",
+      "nextAction": "Seed immutable backing-resource artifacts and structured release links for the complete foundation catalog, consume them in the customization target catalog, and add closed-catalog conformance tests.",
+      "recordedAt": "2026-07-18T13:40:01Z",
+      "summary": "Every existing system.foundation asset must have a deterministic implementation backing resource linked to its exact trusted implementation so it remains functional and customizable.",
+      "targetIncrementId": "layered-customization-workflow"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "foundation-backing-resource-content",
+      "impact": "within-increment",
+      "nextAction": "Generate canonical bounded implementation bundles for the complete foundation catalog, make the trusted foundation preview/runtime consume those programs, persist bundle artifacts, and retain only safe descriptors in structured records.",
+      "recordedAt": "2026-07-18T13:50:48Z",
+      "summary": "Foundation backing resources must contain the actual portable frontend structure, styling, and backend or declarative logic needed by each asset, not only metadata descriptors about those resources.",
+      "targetIncrementId": "layered-customization-workflow"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "feedback-asset-browser-customize-action",
+      "impact": "within-increment",
+      "nextAction": "Implement card-to-customizer selection and tab navigation in the ordered-experience chunk.",
+      "recordedAt": "2026-07-18T14:29:59Z",
+      "summary": "Each Asset Browser asset card needs a Customize action that opens the selected asset in the Customizations tab.",
+      "targetIncrementId": "layered-customization-workflow"
+    },
+    {
+      "category": "scope",
+      "disposition": "accepted",
+      "id": "single-studio-saved-assets",
+      "impact": "scope-change",
+      "nextAction": "Insert one cohesive Studio and Saved-assets increment before production qualification.",
+      "recordedAt": "2026-07-18T17:54:41Z",
+      "summary": "Studio must provide one ordered surface for new from-scratch semantic definitions and actual backing resources; Create is removed, and Saved lists unpublished assets that reopen in Studio.",
+      "targetIncrementId": "production-qualification"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "feedback-desktop-customization-envelope",
+      "impact": "within-increment",
+      "nextAction": "Use the canonical ok/value IPC envelope in the desktop client, retain legacy compatibility, and cover the renderer, preload, and IPC chain with focused regression tests.",
+      "recordedAt": "2026-07-18T19:44:09Z",
+      "summary": "Desktop Customize actions and Customizations search reported Unable to complete request because the renderer client parsed an obsolete envelope shape.",
+      "targetIncrementId": "unified-asset-studio-saved"
+    }
+  ],
+  "history": [
+    {
+      "eventFingerprint": "2519af3f182d4b374234548a7d5baabda503819f08cc4b36735cf56543f7a4e1",
+      "recordedAt": "2026-07-18T10:28:37Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "2c3e6911df916f44cb40c965a43752b42f03ba1def3ce66bd1657ce2d6f9c077",
+      "recordedAt": "2026-07-18T10:28:37Z",
+      "sequence": 2,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "09d04d0457e4e2063410c84f5f4a66a3cc25ad099edc030fe6f88de728e94cd1",
+      "recordedAt": "2026-07-18T10:28:37Z",
+      "sequence": 3,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "2373ba1729e45d5ce7cf04e2e647ac6c9bb3873a39004bb072226d301496b85f",
+      "recordedAt": "2026-07-18T10:28:37Z",
+      "sequence": 4,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "3d4f2b39047504e8cd7442373634312d24c96329b04fc146567acc376d40516c",
+      "recordedAt": "2026-07-18T10:32:39Z",
+      "sequence": 5,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "6a828f7bbf3512a94ab517bf66b9f61d28e397397199701c198b6da899b36877",
+      "recordedAt": "2026-07-18T10:33:16Z",
+      "sequence": 6,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "3338417aadf3318849cc3333b7cd89c76141fd78f260505a4fa9ff44f619437f",
+      "recordedAt": "2026-07-18T10:37:51Z",
+      "sequence": 7,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "090d8b8231e9243f79a5c56d7c92a6a9ac88dac9ebd64a2dc5a2bbfefb3b042c",
+      "recordedAt": "2026-07-18T10:37:51Z",
+      "sequence": 8,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "c22ec797d7ddfd939b4fe939ac3f8015040d11d65d6a6836f7e3d3cad9b14e9e",
+      "recordedAt": "2026-07-18T10:48:50Z",
+      "sequence": 9,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "23d7c194a74ed33e659aa1ae40c619e07d8fb5a2f454312b31542feeb39c9504",
+      "recordedAt": "2026-07-18T10:48:50Z",
+      "sequence": 10,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "148930fbe115fa91be5d56f5acbd9e9c7bb6a9f36f36e457b149a29eaddcbeff",
+      "recordedAt": "2026-07-18T10:56:37Z",
+      "sequence": 11,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "0e365df94479d0b826056fcc6a962c1276e60b850c4c9a4f9b4ae1a027a7a939",
+      "recordedAt": "2026-07-18T10:56:37Z",
+      "sequence": 12,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5114d9669806cb78ae9048195026f53c3a36db0da66e11b10cc792fed1513406",
+      "recordedAt": "2026-07-18T11:02:42Z",
+      "sequence": 13,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "816de4372f975a1ed9db2d850af9368331e371b37c52f3d5ad5a667f34bd03c5",
+      "recordedAt": "2026-07-18T11:02:42Z",
+      "sequence": 14,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e1b4049763e847657a713e8239e8fe60db22c3db54ba8540616c6841da21419e",
+      "recordedAt": "2026-07-18T11:02:42Z",
+      "sequence": 15,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "e781468a78224f59ac0b642b10aa170f219b74951fa2a871b6aaba0d3052cb21",
+      "recordedAt": "2026-07-18T11:05:16Z",
+      "sequence": 16,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "be2defed9a0dfcbd53f47fd2897dace4b0372737bf7281dd4f89848dc736c5fd",
+      "recordedAt": "2026-07-18T11:09:41Z",
+      "sequence": 17,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "02d30517f532638eb175af75471a1511fcd213e1ad27ce0b06f5e12097f2710a",
+      "recordedAt": "2026-07-18T11:09:47Z",
+      "sequence": 18,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "463970a66ae1adbc04e39c7ee66f1c9eb4360f0d719b4d139392bca6dcc0d73c",
+      "recordedAt": "2026-07-18T11:25:39Z",
+      "sequence": 19,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "8fc88da6e07a07ab061759096b0aa312dddf6905e04a9a09666a345b2779d37a",
+      "recordedAt": "2026-07-18T11:25:50Z",
+      "sequence": 20,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "18e01009c81192fd4c76fdcdecbc0b562e5d1988da1f622e1d186de110105455",
+      "recordedAt": "2026-07-18T11:25:57Z",
+      "sequence": 21,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "f54e0ca5200d17bf3cc0bfdf9456bab146ce3819a01a152b7ed5703044645ae8",
+      "recordedAt": "2026-07-18T11:26:04Z",
+      "sequence": 22,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "472ea20f307f123191119918a85543ac04369e6af9548aff722cfc9552b1b3c3",
+      "recordedAt": "2026-07-18T11:26:13Z",
+      "sequence": 23,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "23803b5752dcbebb17f510dbaf73d7471fbde53bdcf40fd2220120d938802888",
+      "recordedAt": "2026-07-18T11:26:19Z",
+      "sequence": 24,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "0456f8802a908825297d9981597ed3fcc1d0f0eb10a64679754c12864bd376a9",
+      "recordedAt": "2026-07-18T11:26:30Z",
+      "sequence": 25,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "159b74709688be9b4d8f0613a67bef6b5259dd9d7af99c3ed60afdc7c8142e2c",
+      "recordedAt": "2026-07-18T11:35:41Z",
+      "sequence": 26,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "c1579ef1b0660b0aafa78b30309f2755998df0fb76febff4faee387b660e9c68",
+      "recordedAt": "2026-07-18T11:35:42Z",
+      "sequence": 27,
+      "type": "roadmap-revised"
+    },
+    {
+      "eventFingerprint": "0f364a2c98af8948afcccccce9291574593cec4d9f279680af97a130b44c6e5e",
+      "recordedAt": "2026-07-18T11:39:05Z",
+      "sequence": 28,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "585c33903c86faa1a29edc2178c3771e8f9bdcc1e22e42fe4f38140d6e7ddceb",
+      "recordedAt": "2026-07-18T11:39:05Z",
+      "sequence": 29,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "f3b89467c9640959e7cd9c3000ae058834e7aa26f47fb310a07f311c3493c3f7",
+      "recordedAt": "2026-07-18T11:53:38Z",
+      "sequence": 30,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "9b4d4c9cf187f9f0e563a03118f8d1bd974d1663b76399f739fca88c82920ed0",
+      "recordedAt": "2026-07-18T11:53:47Z",
+      "sequence": 31,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "2ca9c83d615b63bcec0a5bf3d81a1e5244fb4a3e47c574e111314d677dc4bd2e",
+      "recordedAt": "2026-07-18T11:53:54Z",
+      "sequence": 32,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "435333a87b5a4fe5a5bcfbe37266d192b2e6685f6515d447a1537496ae959c03",
+      "recordedAt": "2026-07-18T12:35:23Z",
+      "sequence": 33,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "db3e8875e4272702dab42bd2a8c47afea7018a36aba6a39b3fa2878a3a7f67e1",
+      "recordedAt": "2026-07-18T12:35:23Z",
+      "sequence": 34,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "bb7f9be2b63b06520d8a0fcc022100cc2891125167b1f1a6f720beb4dc4defba",
+      "recordedAt": "2026-07-18T12:35:23Z",
+      "sequence": 35,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "90139288f4288d0639ceb2d91ab56c674a4f5c0888d6d198b9894111eb1aee54",
+      "recordedAt": "2026-07-18T12:35:23Z",
+      "sequence": 36,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "72f7b7c4f4b947e6f71b0073bb1e19163701f4749101fac726c7bde465c02204",
+      "recordedAt": "2026-07-18T12:35:23Z",
+      "sequence": 37,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "91f7f4698df3aaa03c835c77c2c2ae728b4e4a679ff2681dab2d3d7d72d30780",
+      "recordedAt": "2026-07-18T12:43:10Z",
+      "sequence": 38,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "aac659be726016a14ce81d6e2c10b25b6e0944e6c346da5bfa2d02580c0bc980",
+      "recordedAt": "2026-07-18T12:45:28Z",
+      "sequence": 39,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "10c2905eb2585622641b50224e796d787dcb0ad1b97e2c7081ac03b592b18d02",
+      "recordedAt": "2026-07-18T12:54:55Z",
+      "sequence": 40,
+      "type": "report-relocated"
+    },
+    {
+      "eventFingerprint": "d81c5bd742cc519be1e0af3034b739c586e677182c6301c259c2b62d84db7ebc",
+      "recordedAt": "2026-07-18T13:16:28Z",
+      "sequence": 41,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c7ea611d7e9b546993a4bc89577ea5c6bd3ccdd51de805ce3115866f2e943d7c",
+      "recordedAt": "2026-07-18T13:16:28Z",
+      "sequence": 42,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "4f9a6c8fcaecdbdecb3f1f00903622d440c838cd2ccaf360ef8eff8712de7f9e",
+      "recordedAt": "2026-07-18T13:17:25Z",
+      "sequence": 43,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3ca14b502314dd86ef4073d6b953f25a36a484295a8c0d6047d760e404077a40",
+      "recordedAt": "2026-07-18T13:17:25Z",
+      "sequence": 44,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "6f2302e929aa9c4503e3b97bedbbab7097dc3f5beed980245946f7096e710500",
+      "recordedAt": "2026-07-18T13:17:25Z",
+      "sequence": 45,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "257d9b466e903267ce28d64e290557d6a3e70447144f9d8481e2dc44610e616c",
+      "recordedAt": "2026-07-18T13:23:28Z",
+      "sequence": 46,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "9cc276be8ce3e2536bc3ff1c2d78208ebe6d92e69b060b7579fef9c62623c8a9",
+      "recordedAt": "2026-07-18T13:23:28Z",
+      "sequence": 47,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "26ab2e7ecf4b1e7c59aab13ea79887df60cce3a2afbd794f6895f2abdd1c1409",
+      "recordedAt": "2026-07-18T13:28:26Z",
+      "sequence": 48,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "87b522357ae15614c1ae43e0aa61d0fbfb437e5b7a7badf19bd1d28c0dfebafc",
+      "recordedAt": "2026-07-18T13:35:09Z",
+      "sequence": 49,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "23606da8647caccd76ec2bfbe15d052cad3960538c3e0521c843c9bd043bd51e",
+      "recordedAt": "2026-07-18T13:35:13Z",
+      "sequence": 50,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "6d69f8a0c4be37ee29809026793bd51923e23c7729ed11d1899fa569915f30fd",
+      "recordedAt": "2026-07-18T13:40:01Z",
+      "sequence": 51,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "0e897189dfa44201b139bf1fa689934e90f165f20bde9e83ce666bc5e73788c5",
+      "recordedAt": "2026-07-18T13:50:48Z",
+      "sequence": 52,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "3ba2cede1aa3431e6601aa3f0e9692141ac529ab8d5d1c3d0ccbdeeee517002b",
+      "recordedAt": "2026-07-18T14:25:45Z",
+      "sequence": 53,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "74667ec2ffd8e7762e77a348a6c3bf0ef7834c1a3f653d25292636099f534d63",
+      "recordedAt": "2026-07-18T14:29:59Z",
+      "sequence": 54,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "ab0abb60bac93ae47c67f41036f9efe4b90887acacd960ccbff4973f610f37ca",
+      "recordedAt": "2026-07-18T16:48:33Z",
+      "sequence": 55,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "967926bb42f1963b1a7ea9167e5c91a3c3c670f8f079a11d54cece8b34fd60af",
+      "recordedAt": "2026-07-18T17:43:09Z",
+      "sequence": 56,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "7bd45b0185b509f73b722120f03ab82dd55bf3d0942932aea51880e2f0e2ef4c",
+      "recordedAt": "2026-07-18T17:52:20Z",
+      "sequence": 57,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "86a5592a61481237294069318756feeeee9b525c61805ea43f0dcafec1e0c57f",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 58,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "0f0ff5862d7f45093cbb25f3a7292dc6b074f05e75b84191c9d429c8b1fb4283",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 59,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9a2a9f180636be53c44d67c2cd7a02736be6f7d8514ddb1328c224776c2aa204",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 60,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f6bb959db53dc7b130d8879118cbbaadc0234a583ce716c470e81d04270bdb8d",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 61,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c2ca4297bed7035ca1f8da4e8bed3e30ea7dbe4839556437049c3037a82f0358",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 62,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "4f810ac1690108ff02059db8d056e6d74e0a4ee994fc40153f3df00139e910b5",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 63,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ae2bd98feeb9606bd510e9f9f1c6c5579222ee19e171e842798f5df1a29111a1",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 64,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "2f86b001c9430ea10e1cb373577c1d320ad829dc60a1d5febd6a48bda3ce76f0",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 65,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "26781a99ccebdec57d55bdbcb5c491e872b270af5c7031b8deca6ba15e1c9690",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 66,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f064419f8ce43da5dde8dc389d2319f64e2732121f763d493a95286e788eabf5",
+      "recordedAt": "2026-07-18T17:52:21Z",
+      "sequence": 67,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "649ca28e9c5a93b0faf35860ba4f8a7c62bd0b4478a86a84c9fc027cf4ac2a99",
+      "recordedAt": "2026-07-18T17:52:22Z",
+      "sequence": 68,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "78b10411ba7ccc9d31f84f3e549df4fad01bbd372095ff19b3656015fa3e997b",
+      "recordedAt": "2026-07-18T17:54:41Z",
+      "sequence": 69,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "51e0b7e2920c77fc9402cea672eabf8bbe5cd7722c83bf2c1c2bbb720d992b5f",
+      "recordedAt": "2026-07-18T17:54:41Z",
+      "sequence": 70,
+      "type": "roadmap-revised"
+    },
+    {
+      "eventFingerprint": "02455d6ead0d5e7a50631d97052b149c253bf7eefa27f78ab308a2f98c9db702",
+      "recordedAt": "2026-07-18T17:54:42Z",
+      "sequence": 71,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "f33eb5242620b0f21d386471d632fc29587fbe7d4392699f418d07e2a44b8018",
+      "recordedAt": "2026-07-18T19:07:18Z",
+      "sequence": 72,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "39f3dcef35fca67844665d2cde090655679ff7dc3b768b798914341b00771dba",
+      "recordedAt": "2026-07-18T19:11:38Z",
+      "sequence": 73,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "f84601ca514fe800ad00646df88e1f4cd08a40d9e57838eadd8993b4d2497d7f",
+      "recordedAt": "2026-07-18T19:11:38Z",
+      "sequence": 74,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "1fcbc003bf1af80cf38b927ab573fb32ed95d40782a8949d7f4c274d36571ecd",
+      "recordedAt": "2026-07-18T19:43:38Z",
+      "sequence": 75,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "e78b30012ab4eb2b5d6f0323430680983a492896b3bc41fec13ef65a7eab21aa",
+      "recordedAt": "2026-07-18T19:44:09Z",
+      "sequence": 76,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "dbb4817bf118c8abce511962fcc73d55d9083f1245040a9cd951cf72cf52b10f",
+      "recordedAt": "2026-07-18T20:08:05Z",
+      "sequence": 77,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "392a9be0570121090a50e75f9f231c4314292d7c44c8953353f5bb85f6d83749",
+      "recordedAt": "2026-07-18T20:34:24Z",
+      "sequence": 78,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "3260014f3a9d4bf8a1ea18a1f7447af2b5e4e67a9462381f59581fdae61b3233",
+      "recordedAt": "2026-07-18T20:40:38Z",
+      "sequence": 79,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "086ac2cda1b9c5238bea243a3059d966734e2e1e7c213a7a79f7ad51695b0332",
+      "recordedAt": "2026-07-18T20:40:41Z",
+      "sequence": 80,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "bfa8aedb0bf7824ed09ca96e22ec7a14049458059b91b351f684228166ae8043",
+      "recordedAt": "2026-07-18T20:40:44Z",
+      "sequence": 81,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "4fe43ac1caf77e707f7583a663ab69ef0ba1a0fafea058f539cf13e38391aee8",
+      "recordedAt": "2026-07-18T20:40:51Z",
+      "sequence": 82,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "0935372cd3cce29f6b5332ab0d1b08ddfbcf9ffdcff361b7387e48549916cef1",
+      "recordedAt": "2026-07-18T20:40:54Z",
+      "sequence": 83,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "114c9b0f1f45a7411effb97ab623a0c365d2d98f132ccbc93e70b3c0586b2390",
+      "recordedAt": "2026-07-18T20:40:58Z",
+      "sequence": 84,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "92f726eb68baa1e11745fc1b61200f38cf28ca2a48169b5070a658c5e9c9186a",
+      "recordedAt": "2026-07-18T20:41:01Z",
+      "sequence": 85,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "96301c286f1494e086f3d0f89307ca831738e1821da7cda0bca28e5914cc268b",
+      "recordedAt": "2026-07-18T20:45:29Z",
+      "sequence": 86,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "75a4abaf4b19ce3561b7ca036ef2d264a0f18fdb7a1d666992139b8b2722fd9a",
+      "recordedAt": "2026-07-18T20:45:33Z",
+      "sequence": 87,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "74b8ae07e125106cbfb6ce01447e87991bc21023ca061c1426cca6cd9f342fe7",
+      "recordedAt": "2026-07-18T20:45:36Z",
+      "sequence": 88,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "90ae24cdc8334b9834a3a42f5b943824877b3496b88cfaf8aabb6f688f06010d",
+      "recordedAt": "2026-07-18T20:52:15Z",
+      "sequence": 89,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "6df9b963a960f3df0595849df9da9a4489220090422d1e3a2bfc3ebc23924fdf",
+      "recordedAt": "2026-07-18T21:02:13Z",
+      "sequence": 90,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "f84885c32958e94b88f4e1d8f71ff782f1202d03a66962faf9fbed097fac5a10",
+      "recordedAt": "2026-07-18T21:08:22Z",
+      "sequence": 91,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "15f989ce14419db734e95538dd5b0f2410ea95b1c9fb0fd8b0afdf3748a066e0",
+      "recordedAt": "2026-07-18T21:14:15Z",
+      "sequence": 92,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "85d71d4575d3c77abf9e2dcd38879576a8f6ce875f35affd916decec448621a4",
+      "recordedAt": "2026-07-18T21:14:18Z",
+      "sequence": 93,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "0c4da638cbb722f9805a11642eda7d97244d717f41c331758e81cda22442b4a9",
+      "recordedAt": "2026-07-18T21:14:23Z",
+      "sequence": 94,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c6736cc9cf230ace0c94ee3a38acb125fab4a4e70f752908980789420096df9f",
+      "recordedAt": "2026-07-18T21:14:26Z",
+      "sequence": 95,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9860d6e8c4dad88da001533cf591a4239b0a3d8a38d6fdd2d422dcafe9e34632",
+      "recordedAt": "2026-07-18T21:14:31Z",
+      "sequence": 96,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "95d398fca77447297756408e629f102627491589a154f9f18829d0a23332119b",
+      "recordedAt": "2026-07-18T21:14:33Z",
+      "sequence": 97,
+      "type": "increment-completed"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Canonical documentation explicitly distinguishes semantic patches, authorized source overlays, immutable base releases, and materialized derived snapshots.",
+          "id": "decision-recorded",
+          "qualification": "local"
+        },
+        {
+          "description": "Typed contracts reject unsafe paths/content, missing workspace or exact base identity, and attempts to mutate protected source identity while accepting bounded sparse changes.",
+          "id": "contracts-validated",
+          "qualification": "local"
+        },
+        {
+          "description": "Documentation and architecture checks pass for the approved decision and contract boundary.",
+          "id": "docs-pass",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-18T11:02:42Z",
+      "completedChunks": [
+        "layered-decision",
+        "layered-contracts",
+        "layered-verification"
+      ],
+      "completionSummary": "Increment 1 is complete: ADR-0035, canonical architecture/security guidance, strict additive layered-derived customization contracts, negative security invariants, routed context, and repository verification are implemented with no persistence, transport, host, UI, activation, deployment, or execution behavior added.",
+      "deliverables": [
+        "Successor ADR and updated canonical authoring/security architecture",
+        "Additive asset-authoring customization contracts and normalizers",
+        "Contract and anti-drift unit tests",
+        "Updated context packs and status documentation"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "Persistence and transport implementation",
+        "User-facing customization workflow",
+        "Execution or activation of customized code"
+      ],
+      "id": "architecture-contract",
+      "number": 1,
+      "objective": "Ratify the approved layered-derived model and establish stable typed semantics before application or UI consumers are added.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "Increment 1 is contract and documentation only; it does not add persistence, transport, host, UI, build, activation, or execution behavior.",
+          "The current SafeAssetEditableFieldPatch remains the semantic change vocabulary until a later approved schema broadens it.",
+          "Raw changed source text is authorized authoring content stored behind the artifact/Asset Studio boundary, never structured Asset Kernel or list/readiness metadata.",
+          "Logical reuse is represented by exact base references plus changed-file descriptors; physical content deduplication is not required."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "decision-recorded"
+            ],
+            "id": "layered-decision",
+            "outcome": "Canonical docs explicitly define the approved layered-derived model and its immutable security boundaries.",
+            "title": "Layered customization architecture decision"
+          },
+          {
+            "criteriaIds": [
+              "contracts-validated"
+            ],
+            "id": "layered-contracts",
+            "outcome": "Additive typed contracts accept bounded sparse changes and reject missing workspace/base identity, unsafe paths or content metadata, and protected-source mutation semantics.",
+            "title": "Derived customization contracts and invariants"
+          },
+          {
+            "criteriaIds": [
+              "docs-pass"
+            ],
+            "id": "layered-verification",
+            "outcome": "Context guidance and verification evidence match the accepted decision and additive contract boundary.",
+            "title": "Documentation, context, and repository verification"
+          }
+        ],
+        "documentation": [
+          "Successor ADR",
+          "Asset authoring/customization architecture",
+          "Asset authoring/execution security architecture and threat model",
+          "Decision readiness register",
+          "Asset authoring context pack",
+          "Durable roadmap implementation report"
+        ],
+        "fingerprint": "1f89ac5ae66f8084b3a5f2af05bf5f235e2324d22c8321b723a995a4cf54bf21",
+        "recordedAt": "2026-07-18T10:37:51Z",
+        "rollback": "Remove the additive derived-customization contract files and successor documentation before downstream persistence or transport consumers depend on them; existing safe override and Asset Studio contracts remain unchanged.",
+        "steps": [
+          "Record a successor ADR and update canonical architecture/security guidance for exact base pinning, workspace ownership, sparse semantic patches, bounded source overlays, materialization, conflicts, and protected fields.",
+          "Add normalized asset-authoring contract types for derived customization drafts, exact semantic and implementation base identity, source-overlay descriptors, immutable review snapshots, lifecycle status, provenance, and safe diagnostics.",
+          "Add focused positive and negative contract tests, update the asset-authoring context/status guidance, and run contract, documentation, architecture, and agent-support checks."
+        ],
+        "summary": "Ratify and implement the additive layered-derived customization contract while preserving the existing override and Asset Studio boundaries.",
+        "tests": [
+          "Focused asset-authoring contract unit tests",
+          "TypeScript contract compilation through the repository test harness",
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check"
+        ]
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-18T10:37:51Z",
+          "risks": [
+            "A derived contract that embeds raw source text in structured metadata would violate the Asset Studio and Asset Kernel boundary.",
+            "A semantic base reference without kind asset-definition-version and an explicit version would not be exact enough for deterministic conflict detection.",
+            "A source overlay that does not pin both the implementation release and source snapshot could silently float when a release changes.",
+            "Protected identity, trust, lifecycle, package, and release fields must remain read-only until an explicit safe schema authorizes changes.",
+            "Physical blob deduplication is adapter-specific and must not be claimed by the logical layered contract."
+          ],
+          "sources": [
+            {
+              "note": "Defines workspace isolation, immutable sources, safe semantic fields, and the authorized Asset Studio exception for bounded relative source paths and text.",
+              "title": "Asset authoring architecture",
+              "url": "docs/architecture/asset-authoring-customization-and-overrides.md"
+            },
+            {
+              "note": "Requires bounded source proposals, full human review, immutable snapshots, and fail-closed execution boundaries.",
+              "title": "Sandboxed asset authoring decision",
+              "url": "docs/adr/ADR-0032-sandboxed-asset-authoring-and-execution.md"
+            },
+            {
+              "note": "Provides exact implementation release and source snapshot identities plus content-addressed artifact descriptors.",
+              "title": "Asset implementation contracts",
+              "url": "modules/contracts/asset-implementation/asset-implementation-models.ts"
+            },
+            {
+              "note": "Provides bounded relative source-file proposals and keeps source content outside Asset Kernel metadata.",
+              "title": "Asset Studio contracts",
+              "url": "modules/contracts/asset-studio/asset-studio-contracts.ts"
+            },
+            {
+              "note": "Primary-source precedent for immutable content identity through media type, digest, and size descriptors.",
+              "title": "OCI descriptor model",
+              "url": "https://github.com/opencontainers/image-spec/blob/main/descriptor.md"
+            },
+            {
+              "note": "Primary-source precedent for uniquely identifying immutable source revisions and preserving provenance.",
+              "title": "SLSA source requirements",
+              "url": "https://slsa.dev/spec/v1.2/source-requirements"
+            }
+          ],
+          "summary": "The existing asset-authoring family already owns workspace-scoped semantic drafts and non-destructive overrides, while asset-implementation and Asset Studio separately own exact implementation releases, bounded source proposals, verified immutable artifacts, and source snapshots. Increment 1 can therefore add a layered-derived customization contract without changing dependency direction: pin an exact semantic definition version and exact implementation release/source snapshot, store only a sparse safe semantic patch plus a bounded source-overlay descriptor in structured records, keep changed source content in the authorized artifact boundary, and materialize a full immutable snapshot only for review/build/release."
+        }
+      ],
+      "rollback": "Remove the additive unconsumed contract types and successor documentation before later increments depend on them.",
+      "startedAt": "2026-07-18T10:33:16Z",
+      "status": "completed",
+      "title": "Layered customization architecture and contracts",
+      "verification": [
+        "Run focused asset-authoring contract and architecture invariant tests.",
+        "Run npm run docs:check and npm run architecture:check."
+      ],
+      "workPackages": [
+        {
+          "id": "successor-decision",
+          "outcome": "An accepted successor ADR defines exact base pinning, workspace ownership, immutable source behavior, sparse semantic patches, bounded source overlays, materialization, conflict handling, and protected fields.",
+          "title": "Successor architecture decision"
+        },
+        {
+          "id": "contract-model",
+          "outcome": "The asset-authoring contract family represents draft, review, publication, provenance, exact base references, changed semantic fields, changed source files, and safe diagnostics without mixing source bytes into Asset Kernel metadata.",
+          "title": "Derived customization contract model"
+        },
+        {
+          "id": "security-invariants",
+          "outcome": "Path, size, secret-like content, identity, workspace, immutability, and cross-family boundary invariants are documented and tested.",
+          "title": "Security and contract invariants"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Modal tests prove naming, Escape close, focus containment/restoration, and stacked-dialog behavior.",
+          "id": "modal-accessible",
+          "qualification": "local"
+        },
+        {
+          "description": "Assets and Systems use shared tab and tabpanel semantics with the tab strip visually attached to the bordered content card on both surfaces.",
+          "id": "tabs-attached",
+          "qualification": "local"
+        },
+        {
+          "description": "Existing Data Management and Artifacts tab behavior remains covered and unchanged apart from shared implementation reuse.",
+          "id": "existing-tabs-preserved",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-18T11:26:30Z",
+      "completedChunks": [
+        "modal-dialog-foundation",
+        "shared-tabbed-panel",
+        "assets-systems-tab-migration"
+      ],
+      "completionSummary": "Increment 2 is complete: desktop and thin client share one accessible ModalDialog and one keyboard-operable attached TabbedPanel; Assets and Systems now use the same bordered/background tab-card presentation as Data Management, existing Artifacts and Models imports remain compatible, and focused, cross-surface, compiler, build, documentation, architecture, and full regression gates pass. The Asset Browser card grid and asset-detail modal remain intentionally pending for Increment 3.",
+      "deliverables": [
+        "Shared ModalDialog and TabbedPanel components",
+        "Assets and Systems attached tab/card composition",
+        "Shared token-first styles",
+        "Component and page regression tests"
+      ],
+      "dependsOn": [
+        "architecture-contract"
+      ],
+      "excluded": [
+        "Asset Browser card/detail behavior",
+        "Customization persistence"
+      ],
+      "id": "shared-surface-foundation",
+      "number": 2,
+      "objective": "Turn the existing visual modal and tab patterns into reusable, accessible cross-surface components and apply the attached card shell to Assets and Systems.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "Increment 2 changes shared presentation behavior only and does not implement the Asset Browser grid/detail modal or customization persistence.",
+          "Tabs use automatic activation for arrow, Home, and End navigation because the selected panel is already rendered locally without a separate user-triggered network activation step.",
+          "Modal backdrop clicks do not close by default; callers can opt in only when discarding the modal state is safe.",
+          "Existing app-local TabbedPanel module paths remain as re-export shims so current consumers do not need broad import rewrites."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "modal-accessible"
+            ],
+            "id": "modal-dialog-foundation",
+            "outcome": "One cross-host modal primitive provides accessible naming, focus lifecycle, Escape handling, visible close affordance, and topmost-only nested dialog behavior on the existing shared styles.",
+            "title": "Accessible shared modal dialog foundation"
+          },
+          {
+            "criteriaIds": [
+              "tabs-attached",
+              "existing-tabs-preserved"
+            ],
+            "id": "shared-tabbed-panel",
+            "outcome": "Desktop and thin client reuse one tab implementation with WAI-aligned semantics and keyboard behavior while retaining the existing attached Data Management and Artifacts presentation.",
+            "title": "Shared keyboard-operable attached tab panel"
+          },
+          {
+            "criteriaIds": [
+              "tabs-attached",
+              "existing-tabs-preserved"
+            ],
+            "id": "assets-systems-tab-migration",
+            "outcome": "Both hosts render Assets and Systems tabs as accessible controls physically attached to bordered/background tabpanels without changing routes or feature availability.",
+            "title": "Assets and Systems attached tab-card migration"
+          }
+        ],
+        "documentation": [
+          "Shared UI README component ownership and interaction contract",
+          "Durable implementation report",
+          "Context guidance only if implementation changes the already-documented shared ownership model"
+        ],
+        "fingerprint": "3c1a1f4dc709064c4ebca255ce046f1a5df63462ea9eb81f1069251a2c3f0307",
+        "recordedAt": "2026-07-18T11:09:47Z",
+        "rollback": "Restore the app-local TabbedPanel implementations and hand-rolled Assets/Systems tab markup, and remove the additive shared ModalDialog before Increment 3 consumes it; no persisted user data or transport contract is involved.",
+        "steps": [
+          "Add a shared ModalDialog that composes the existing modal CSS and owns accessible naming, initial focus, focus containment, Escape close, opener restoration, explicit close behavior, and topmost-only stacked-dialog handling.",
+          "Move TabbedPanel behavior to modules/ui/shared/components, add WAI-aligned roving focus and keyboard activation, and turn the desktop/thin-client copies into compatibility re-exports.",
+          "Migrate the top-level Assets and Systems pages in both hosts to the shared TabbedPanel, preserve route and feature parity, update shared component guidance, and run focused and repository verification."
+        ],
+        "summary": "Centralize accessible modal and tab behavior in the shared UI boundary, retain existing app import compatibility, and migrate Assets and Systems to the attached bordered tab-card presentation already used by Data Management.",
+        "tests": [
+          "Shared ModalDialog DOM tests for naming, initial focus, Tab and Shift+Tab containment, Escape, stacked dialogs, and focus restoration",
+          "Shared TabbedPanel DOM tests for roles, relationships, selection, click activation, arrow navigation, Home/End, and invalid/default tab recovery",
+          "Desktop and thin-client AssetLibraryPage tests",
+          "Desktop Systems and Data Management/Artifacts page regression tests",
+          "npm run architecture:check",
+          "npm run docs:check",
+          "npm test when focused verification passes"
+        ]
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-18T11:09:41Z",
+          "risks": [
+            "Independent document listeners in nested dialogs could close more than the topmost dialog unless the shared primitive owns a stack registry.",
+            "Focus restoration must tolerate an opener that has been removed and must return to an underlying dialog when a stacked child closes.",
+            "Moving TabbedPanel directly into one host would preserve duplication or reverse dependency direction; the implementation must live in modules/ui/shared.",
+            "Keyboard tab activation can remount active content, so the migration must preserve the current one-panel-at-a-time behavior and avoid adding delayed loading semantics.",
+            "Shared CSS and component changes affect both renderer surfaces and require focused shared tests plus existing Assets, Systems, Data Management, and Artifacts regression coverage."
+          ],
+          "sources": [
+            {
+              "note": "Places code-native presentation primitives shared by both React surfaces in modules/ui/shared/components.",
+              "title": "Shared application component guidance",
+              "url": "modules/ui/shared/components/README.md"
+            },
+            {
+              "note": "Keeps renderer pages focused on composition and rejects duplicated reusable feature logic.",
+              "title": "Desktop implementation context",
+              "url": "docs/context/packs/desktop-implementation.pack.md"
+            },
+            {
+              "note": "Requires shared token-first tabs and modal presentation across desktop and thin-client surfaces.",
+              "title": "Desktop styling context",
+              "url": "docs/context/packs/desktop-styling.pack.md"
+            },
+            {
+              "note": "Already defines the attached tablist and bordered tabpanel presentation used by Data Management.",
+              "title": "Existing shared tabs styling",
+              "url": "modules/ui/shared/styles/components/tabs.css"
+            },
+            {
+              "note": "Requires accessible naming, focus placement and containment, Escape close, a visible close control, and logical focus restoration.",
+              "title": "WAI modal dialog pattern",
+              "url": "https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/"
+            },
+            {
+              "note": "Defines tablist/tab/tabpanel relationships, roving focus, arrow navigation, Home/End behavior, and active-panel labeling.",
+              "title": "WAI tabs pattern",
+              "url": "https://www.w3.org/WAI/ARIA/apg/patterns/tabs/"
+            }
+          ],
+          "summary": "Both renderer hosts currently carry identical TabbedPanel implementations while Assets and Systems hand-roll tab state and render uncontained content below a visually separate tab strip. Shared tabs.css already owns the attached tab-and-panel presentation used by Data Management, and modules/ui/shared/components is the approved cross-host presentation boundary. Shared modal CSS also exists, but current dialogs hand-roll role and styling without one focus-containment, Escape, restoration, or stacked-dialog behavior. Increment 2 can therefore centralize behavior in framework-level shared components, keep host pages as composition only, re-export the shared tab component through the existing app-local paths for compatibility, and migrate the top-level Assets and Systems surfaces without changing their routes or feature availability."
+        }
+      ],
+      "rollback": "Keep the current app-local tab components and modal markup until the shared components pass parity tests, then remove only redundant wrappers.",
+      "startedAt": "2026-07-18T11:05:16Z",
+      "status": "completed",
+      "title": "Shared modal and attached tab foundations",
+      "verification": [
+        "Run focused shared component and Assets/Systems page tests.",
+        "Run architecture checks and affected renderer type/build checks."
+      ],
+      "workPackages": [
+        {
+          "id": "modal-component",
+          "outcome": "A shared ModalDialog reuses current ui-modal styling and provides accessible naming, initial focus, focus containment, Escape close, focus restoration, body scrolling, and stacked-dialog support.",
+          "title": "Shared modal behavior"
+        },
+        {
+          "id": "tab-component",
+          "outcome": "The existing Data Management tab shell is consolidated into a shared component with correct roles, relationships, focus, and keyboard behavior.",
+          "title": "Shared attached tabs"
+        },
+        {
+          "id": "asset-system-shells",
+          "outcome": "Both pages render tabs physically attached to bordered, token-based tab panels consistent with Data Management on desktop and thin client.",
+          "title": "Assets and Systems card shells"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Keyboard and pointer activation of either asset-card kind opens the correct loading, success, unavailable, or error detail state in a modal and returns focus on close.",
+          "id": "card-modal-flow",
+          "qualification": "local"
+        },
+        {
+          "description": "Cards and filters reduce to usable single-column layouts at narrow widths without clipping controls or creating page-level horizontal scrolling.",
+          "id": "responsive-layout",
+          "qualification": "local"
+        },
+        {
+          "description": "Desktop and thin-client tests cover equivalent browse, filter, selection, modal, nested-confirmation, import guidance, and starter-download behavior.",
+          "id": "cross-surface-parity",
+          "qualification": "local"
+        },
+        {
+          "description": "The downloaded starter is deterministic, bounded, and validated by the same package contract and inspection rules used for imports, with placeholders clearly identified where user replacement is required.",
+          "id": "template-contract-valid",
+          "qualification": "local"
+        },
+        {
+          "description": "Tests prove generation and inspection perform no installation, scripts, activation, network access, or execution.",
+          "id": "template-non-executing",
+          "qualification": "local"
+        },
+        {
+          "description": "The Import Assets page explains the complete safe authoring and import sequence and exposes a working download control on both surfaces.",
+          "id": "guidance-complete",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-18T13:17:25Z",
+      "completedChunks": [
+        "responsive-browser",
+        "import-assets-experience"
+      ],
+      "completionSummary": "The complete Assets browsing and import experience is implemented across desktop and thin client: responsive card grids replace the side-detail layout, shared modals provide reliable accessible details above application chrome, filters reflow without overflow, Asset Library reads fail safely, and Import Assets provides a tested safe starter plus complete authoring guidance.",
+      "deliverables": [
+        "Desktop and thin-client responsive card-grid Asset Browser",
+        "Shared-modal definition and resource detail experience",
+        "Responsive browse filter and card styling",
+        "Import Assets tab and workflow copy",
+        "Deterministic downloadable .aisb-package starter",
+        "In-product and canonical package-authoring instructions",
+        "Cross-surface component, hook, contract, template, accessibility, and regression tests"
+      ],
+      "dependsOn": [
+        "shared-surface-foundation"
+      ],
+      "excluded": [
+        "Changing Asset Library data semantics",
+        "Public package marketplace or registry discovery",
+        "Automatic package admission, activation, update, or execution",
+        "A general-purpose archive format"
+      ],
+      "id": "complete-assets-experience",
+      "number": 3,
+      "objective": "Deliver the complete user-facing Assets browse and import experience across desktop and thin client: responsive asset cards, modal details, responsive filters, Import Assets language, and a safe downloadable .aisb-package starter with complete guidance.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "The bounded UTF-8 JSON .aisb-package v1 container remains the only supported starter format.",
+          "A browser-native Blob and anchor download is supported in both renderer hosts, as already demonstrated by desktop artifact download behavior.",
+          "No API or IPC operation is needed because generating and downloading static contract-owned starter bytes is local and non-executing.",
+          "The card grid uses ordinary buttons and document navigation rather than the ARIA interactive-grid pattern.",
+          "No Asset Library read or mutation data semantics change in this increment."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "card-modal-flow",
+              "responsive-layout",
+              "cross-surface-parity"
+            ],
+            "id": "responsive-browser",
+            "outcome": "Desktop and thin client reliably load workspace assets, render definition and resource results as responsive cards, show all asynchronous detail states in the shared modal, preserve nested mutation behavior and focus, and reflow filters without page-level overflow.",
+            "title": "Reliable responsive card-and-modal Asset Browser"
+          },
+          {
+            "criteriaIds": [
+              "template-contract-valid",
+              "template-non-executing",
+              "guidance-complete",
+              "cross-surface-parity"
+            ],
+            "id": "import-assets-experience",
+            "outcome": "Both hosts present Import Assets language, a deterministic inspector-valid and non-executing .aisb-package starter download, and complete contract-aligned authoring and trust instructions.",
+            "title": "Import Assets starter and authoring guidance"
+          }
+        ],
+        "documentation": [
+          "Canonical .aisb-package authoring guide linked from docs/README.md",
+          "Asset implementation/package architecture and security guidance if behavior clarification is required",
+          "Shared Asset Library and package component ownership README coverage",
+          "Durable implementation roadmap report"
+        ],
+        "fingerprint": "7d29270541c9d4faa0fc1e9029432250e8671ecff99e1c95a9847004a29c9202",
+        "recordedAt": "2026-07-18T11:53:54Z",
+        "rollback": "The detail presenters, read contracts, package inspection, installation records, and stable internal tab identity remain unchanged; revert the card/modal composition and remove the additive starter/guidance without migrating or deleting data.",
+        "steps": [
+          "Harden shared Asset Library selection against stale asynchronous reads and verify the real workspace-scoped desktop read boundary.",
+          "Replace both hosts' list-plus-side-detail composition with responsive card grids and shared-modal loading, error, success, validation, mutation, nested-confirmation, close, and focus behavior.",
+          "Replace fixed filter tracks with an auto-fitting bounded grid that reflows at narrow and zoom-equivalent widths.",
+          "Add a deterministic contract-owned .aisb-package starter, safe client-side download control, Import Assets language, and complete in-product and canonical authoring instructions.",
+          "Run focused tests while each chunk lands, update the durable report after each meaningful outcome, then run cross-host builds and applicable repository-wide gates once before completing the increment."
+        ],
+        "summary": "Deliver the complete Assets browse and import experience in two substantial internal chunks, then run the expensive repository gates once at increment completion.",
+        "tests": [
+          "Shared Asset Library browser request-sequencing and detail-presenter tests",
+          "Desktop and thin-client Asset Library DOM tests for card activation, modal loading/success/error, Escape, focus restoration, validation, and nested confirmation",
+          "Desktop IPC/preload/client and host-composition regression for workspace-scoped Asset Library reads",
+          "CSS/source regression assertions for auto-fit, minmax, min-inline-size, and narrow reflow",
+          "Contract starter determinism and real AISB inspector validation tests",
+          "Shared AssetPackageManager tests for naming, instructions, download behavior, object-URL cleanup, and non-execution",
+          "Affected renderer type checks and builds",
+          "Near completion: docs:check, architecture:check, agent-support:check, and npm test"
+        ]
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-18T11:53:47Z",
+          "risks": [
+            "Late definition or resource detail promises can overwrite a newer selection unless reads are sequenced.",
+            "The nested mutation confirmation must be visually stacked and remain the only dialog responding to Escape while the detail modal stays open beneath it.",
+            "The desktop and thin-client feature copies can drift unless equivalent tests assert the same modal, cards, filters, download, and failure behavior.",
+            "The starter must remain byte-for-byte deterministic and pass the real inspector while making every example identity, digest, source entry, capability, compatibility, SBOM, provenance, and signature responsibility explicit.",
+            "Object URLs must be revoked after the synchronous user-initiated download without revoking before activation.",
+            "The previously reported desktop data error needs a workspace-scoped transport/composition regression, not merely a mocked renderer success."
+          ],
+          "sources": [
+            {
+              "note": "Owns list filters, workspace propagation, asynchronous detail reads, validation reads, and selected detail state.",
+              "title": "Shared Asset Library browser state",
+              "url": "modules/ui/shared/asset-library/assetLibraryBrowser.ts"
+            },
+            {
+              "note": "Shows the duplicated list-plus-side-detail composition and resource mutation confirmation flow.",
+              "title": "Desktop Asset Library feature",
+              "url": "apps/desktop/src/renderer/features/asset-library/components/AssetLibraryFeature.tsx"
+            },
+            {
+              "note": "Owns the cross-host non-executing inspection, approval, installation, and activation UI.",
+              "title": "Shared Asset package manager",
+              "url": "modules/ui/shared/asset-package/AssetPackageManager.tsx"
+            },
+            {
+              "note": "Defines the real media type, JSON parsing, path, size, digest, capability, compatibility, semantic manifest, and evidence checks the starter tests must pass.",
+              "title": "Bounded AISB package inspector",
+              "url": "modules/adapters/package/aisb/createAisbPackageInspector.ts"
+            },
+            {
+              "note": "Keeps the starter on the bounded JSON v1 format and separates inspection, admission, installation, and activation.",
+              "title": "Asset implementation and package architecture",
+              "url": "docs/architecture/asset-implementations-and-packages.md"
+            },
+            {
+              "note": "Requires focus inside the dialog, contained Tab navigation, Escape close, visible naming, and logical focus restoration, including nested dialogs.",
+              "title": "WAI-ARIA modal dialog pattern",
+              "url": "https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/"
+            },
+            {
+              "note": "Requires non-excepted content to remain usable without two-dimensional scrolling at an equivalent 320 CSS pixel width.",
+              "title": "WCAG 2.2 reflow understanding",
+              "url": "https://www.w3.org/WAI/WCAG22/Understanding/reflow.html"
+            },
+            {
+              "note": "Defines auto-fit and minmax tracks for as many usable columns as fit without overflowing.",
+              "title": "CSS Grid repeat-to-fill",
+              "url": "https://www.w3.org/TR/css-grid-2/#auto-repeat"
+            },
+            {
+              "note": "Defines user-initiated downloads and suggested filenames through the anchor download attribute.",
+              "title": "HTML download behavior",
+              "url": "https://html.spec.whatwg.org/multipage/links.html#downloading-resources"
+            }
+          ],
+          "summary": "The existing renderer hosts share the same Asset Library browser state and detail presenters but duplicate the page components. The current two-column CSS keeps cards in a vertical list and places selected details beside it, while fixed toolbar tracks overflow until a single breakpoint. The shared ModalDialog already owns focus containment, Escape, stacking order, accessible naming, and focus restoration, so detail cards can open loading, error, unavailable, and success content without new modal infrastructure. The browser state needs request sequencing to prevent late asynchronous reads from replacing a newer selection. The bounded JSON .aisb-package v1 contract and real inspector can support a deterministic client-side starter; a Blob/object-URL download requires no server or IPC operation and performs no package inspection, installation, activation, network access, or execution."
+        }
+      ],
+      "rollback": "Retain existing detail presenters as modal bodies so the grid can be reverted independently, and remove additive starter download and guidance without changing Asset Library data semantics or existing package inspection and installation operations.",
+      "startedAt": "2026-07-18T11:39:05Z",
+      "status": "completed",
+      "title": "Complete responsive Assets browsing and import experience",
+      "verification": [
+        "Run shared Asset Library model and hook tests, both renderer feature suites, package contract and inspection tests, starter-template tests, and presenter tests while implementing internal chunks.",
+        "Near increment completion, run affected desktop and thin-client type/build checks, documentation checks, architecture checks, and the applicable regression suite once."
+      ],
+      "workPackages": [
+        {
+          "id": "card-grid",
+          "outcome": "Definition and resource-backed results render as responsive, keyboard-operable cards with concise metadata and clear detail actions.",
+          "title": "Definition and resource card grids"
+        },
+        {
+          "id": "detail-modal",
+          "outcome": "Selecting a card opens the shared loading-aware detail modal, closes cleanly, restores focus, supports stacked mutation confirmation, and never leaves stale selection.",
+          "title": "Asynchronous detail modal"
+        },
+        {
+          "id": "responsive-filters",
+          "outcome": "Search, filters, refresh, and cards use auto-fitting grids that reflow to one column without page-level horizontal overflow.",
+          "title": "Responsive browse controls"
+        },
+        {
+          "id": "import-language",
+          "outcome": "Labels, headings, descriptions, accessible names, tests, and documentation consistently say Import Assets while stable internal operation identities remain unchanged.",
+          "title": "Import Assets language"
+        },
+        {
+          "id": "starter-template",
+          "outcome": "A deterministic .aisb-package starter is generated from canonical contract-owned data, contains safe placeholders and example structure, and cannot execute during download or inspection.",
+          "title": "Downloadable package starter"
+        },
+        {
+          "id": "import-instructions",
+          "outcome": "Users can follow manifest, entries, digest, SBOM, provenance, capability, compatibility, inspection, admission, and trust guidance without inferring marketplace or automatic activation support.",
+          "title": "In-product and canonical authoring guidance"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "A workspace can search and select exact eligible built-in or system, admitted installed imported, and authored asset versions with truthful unavailable reasons for unsupported targets.",
+          "id": "eligible-sources-searchable",
+          "qualification": "local"
+        },
+        {
+          "description": "Missing workspace context and cross-workspace imported or authored target reads and writes fail closed while system-owned metadata remains read-only and safely visible.",
+          "id": "workspace-isolated",
+          "qualification": "local"
+        },
+        {
+          "description": "API, IPC, preload, host, and client tests prove aligned request, response, error, and operation identities without raw storage or provider data leakage.",
+          "id": "transport-aligned",
+          "qualification": "local"
+        },
+        {
+          "description": "Creating, editing, publishing, failing, or abandoning a customization never changes the selected base definition, implementation release, package, authored record, or system-owned source.",
+          "id": "base-remains-immutable",
+          "qualification": "local"
+        },
+        {
+          "description": "Unchanged semantic fields and source files remain referenced by exact base identity while only modified fields and files create new customization entries before materialization.",
+          "id": "sparse-reuse",
+          "qualification": "local"
+        },
+        {
+          "description": "Review materialization validates containment, sizes, allowed extensions, dependencies, capabilities, secret-like content, digests, and optimistic revisions before producing an immutable snapshot.",
+          "id": "safe-materialization",
+          "qualification": "local"
+        },
+        {
+          "description": "Publishing produces a distinct workspace-owned asset lineage with explicit provenance and no implicit build, release, installation, activation, deployment, or execution.",
+          "id": "new-owned-lineage",
+          "qualification": "local"
+        },
+        {
+          "description": "No customization fields are editable until a specific eligible exact asset version is selected, and changing the target requires explicit confirmation that clears incompatible work.",
+          "id": "selection-controlled",
+          "qualification": "local"
+        },
+        {
+          "description": "The workflow shows all important authorized semantic and implementation internals, distinguishes editable, protected, reused, and changed content, and explains why protected fields cannot be edited.",
+          "id": "internals-visible",
+          "qualification": "local"
+        },
+        {
+          "description": "Users complete selection, definition, interfaces and configuration, implementation, and review and create sections in a predictable ordered interface consistent with other workflow features.",
+          "id": "ordered-workflow",
+          "qualification": "local"
+        },
+        {
+          "description": "Successful completion visibly creates a new workspace-owned asset and leaves the base unchanged; errors preserve recoverable draft work and expose safe remediation.",
+          "id": "copy-confirmed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-18T17:52:22Z",
+      "completedChunks": [
+        "customization-domain-catalog",
+        "customization-host-transports",
+        "customization-ordered-experience"
+      ],
+      "completionSummary": "Increment 4 now delivers a tested, documented, cross-host layered customization workflow over exact immutable bases and real backing resources, with aligned transports, ordered editing, review materialization, distinct publication, and recoverable history.",
+      "deliverables": [
+        "Customization target contracts, application read service, and host-composed source readers",
+        "Derived customization application use cases and ports",
+        "Structured and content-addressed artifact persistence adapters",
+        "Asset Studio source-overlay materialization and immutable review integration",
+        "Aligned API, IPC, preload, host, and renderer clients",
+        "Shared ordered WorkflowSequence customization presenter",
+        "Desktop and thin-client Customizations tab integration",
+        "Search, selection, semantic editing, source overlay, review, creation, history, and recovery states",
+        "Lifecycle, immutability, isolation, conflict, transport, accessibility, validation, and negative tests"
+      ],
+      "dependsOn": [
+        "architecture-contract",
+        "shared-surface-foundation",
+        "complete-assets-experience"
+      ],
+      "excluded": [
+        "Reading unadmitted or quarantined package source as an editable asset",
+        "Uncontrolled arbitrary JSON editing",
+        "Direct mutation of imported, built-in, system-owned, or authored base records",
+        "Automatic conflict rebase",
+        "Automatic build, release, installation, activation, deployment, or execution"
+      ],
+      "id": "layered-customization-workflow",
+      "number": 4,
+      "objective": "Deliver one production-complete vertical slice for searchable exact target selection, sparse layered customization, bounded source overlays, immutable review materialization, workspace-owned publication, and the ordered desktop and thin-client workflow without mutating any base asset.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "Implementation backing resources means immutable source or admitted bundle artifacts associated with an exact implementation release, not the separate resource-backed asset catalog family.",
+          "A system default may expose only a safe declarative backing representation; protected host implementation code remains read-only and undisclosed.",
+          "Customization publication creates a workspace-owned AssetDefinition plus AssetImplementationDraft and reviewed source snapshot; qualified build and AssetImplementationRelease publication remain separate gates.",
+          "Authored records without an exact definition, implementation release, and readable backing resource remain searchable but ineligible with a truthful reason.",
+          "No raw source path or content is stored in structured customization records or safe diagnostics."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "eligible-sources-searchable",
+              "workspace-isolated",
+              "base-remains-immutable",
+              "sparse-reuse",
+              "safe-materialization",
+              "new-owned-lineage"
+            ],
+            "id": "customization-domain-catalog",
+            "outcome": "Searchable exact targets, bounded backing resources, restart-safe sparse drafts, immutable review snapshots, and distinct workspace-owned definition and implementation-draft publication work without mutating bases.",
+            "title": "Customization domain, target catalog, and materialization lifecycle"
+          },
+          {
+            "criteriaIds": [
+              "workspace-isolated",
+              "transport-aligned",
+              "safe-materialization"
+            ],
+            "id": "customization-host-transports",
+            "outcome": "Authorized API and IPC operations expose the same bounded target and lifecycle semantics across hosts without leaking storage internals or crossing workspaces.",
+            "title": "Aligned server, desktop, preload, and client boundaries"
+          },
+          {
+            "criteriaIds": [
+              "eligible-sources-searchable",
+              "selection-controlled",
+              "internals-visible",
+              "ordered-workflow",
+              "copy-confirmed"
+            ],
+            "id": "customization-ordered-experience",
+            "outcome": "Desktop and thin-client users select an exact eligible base, edit controlled semantic fields and changed backing resources in explicit frontend structure, frontend styling, backend logic, and other sections, review reused versus changed content, create a distinct asset, and manage recoverable history.",
+            "title": "Shared end-to-end ordered customization experience"
+          }
+        ],
+        "completionTests": [
+          "After all three chunks are implemented: run the complete Increment 4 focused matrix together.",
+          "Run desktop TypeScript/webpack validation, thin-client production build, server build, docs:check, architecture:check, agent-support:check, git diff validation, and npm test once.",
+          "Do not run npm test or any equivalent repository-wide suite before every planned Increment 4 chunk is implemented."
+        ],
+        "documentation": [
+          "ADR-0035 contract reconciliation",
+          "Asset authoring/customization architecture and security boundaries",
+          "Asset implementation backing-resource terminology and current status",
+          "Nearest contracts, shared UI, host, and transport READMEs",
+          "Context pack and concise temporary implementation report"
+        ],
+        "fingerprint": "b5880d3f3b69f95196c8385e08199fbe4f604cdd1c0a526fcabf3a3ff56fa69d",
+        "focusedTests": [
+          "Chunk 1 only: derived customization contract, target catalog, use-case, persistence, artifact validation, immutability, workspace isolation, and optimistic-conflict tests.",
+          "Chunk 2 only: asset-authoring API, IPC, preload contract, host composition, desktop client, thin client, transport parity, and sanitized-error tests.",
+          "Chunk 3 only: shared workbench, resource categorization, ordered sections, selection reset confirmation, review/create, history, keyboard, desktop host page, and thin-client host page tests."
+        ],
+        "recordedAt": "2026-07-18T13:35:13Z",
+        "rollback": "Keep all new contracts and operations additive and capability-gated; the existing authored-assets, drafts, safe overrides, Asset Studio, package lifecycle, and Asset Browser remain usable if derived-customization creation is disabled. Persisted derived drafts remain readable and are never deleted during rollback.",
+        "steps": [
+          "Add bounded target, backing-resource, command, result, and publication contracts; compose searchable exact targets from definitions, releases, installed packages, authored records, and immutable artifacts.",
+          "Add workspace-isolated derived draft persistence and create, read, list, update, review-materialize, publish-to-definition-and-implementation-draft, and abandon use cases with optimistic revisions and immutable bases.",
+          "Expose the same catalog and lifecycle operations through server API, desktop IPC/preload, host composition, and thin/desktop clients with sanitized failures.",
+          "Build one shared WorkflowSequence presenter for exact selection, definition, interfaces/configuration, implementation backing resources, review/create, and history; categorize associated resources as frontend structure, frontend styling, backend logic, or other.",
+          "After every planned chunk and focused test passes, update canonical documentation and run the Increment 4 completion tests and repository-wide suite once."
+        ],
+        "summary": "Implement Increment 4 as three cohesive vertical chunks: the application-owned customization domain and backing-resource catalog, aligned host transports and clients, then one shared ordered desktop/thin workflow with explicit frontend structure, frontend styling, backend logic, and other resource sections. Run only each chunk's focused tests while work remains; run the full completion matrix once after all three chunks are implemented."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-18T13:35:09Z",
+          "risks": [
+            "System-owned host implementation code must not be misrepresented as editable package source; only its safe declarative backing representation can be exposed.",
+            "Imported binary or unsupported facet artifacts must remain visible but non-editable with a truthful eligibility reason.",
+            "Raw backing-resource content must stay bounded, workspace-authorized, absent from structured records and diagnostics, and persisted only through immutable artifact storage.",
+            "Publication must not bypass the existing successful-build requirement for implementation releases or imply activation authority."
+          ],
+          "sources": [
+            {
+              "title": "Layered derived customization decision",
+              "url": "docs/adr/ADR-0035-layered-derived-asset-customization.md"
+            },
+            {
+              "title": "Asset authoring and customization architecture",
+              "url": "docs/architecture/asset-authoring-customization-and-overrides.md"
+            },
+            {
+              "title": "Asset implementation and package architecture",
+              "url": "docs/architecture/asset-implementations-and-packages.md"
+            },
+            {
+              "title": "Asset implementation kernel composition",
+              "url": "modules/hosts/shared/composition/composeAssetImplementationKernel.ts"
+            },
+            {
+              "title": "Package admission use case",
+              "url": "modules/application/use-cases/asset-package/admit-asset-package.use-case.ts"
+            },
+            {
+              "title": "Asset Studio workflow composition",
+              "url": "modules/hosts/shared/composition/composeAssetStudioWorkflow.ts"
+            },
+            {
+              "title": "Current asset authoring transports and UI",
+              "url": "modules/adapters/transport/api-express/asset-authoring/registerAssetAuthoringApiRoutes.ts"
+            }
+          ],
+          "summary": "The accepted layered model can reuse immutable implementation artifacts, source snapshots, Asset Studio validation limits, structured authoring persistence, and existing definition/release repositories. Current target readers are intentionally unavailable, package admission retains exact facet artifacts without an aggregate editable source snapshot, and system defaults expose closed declarative implementation descriptors rather than repository source. The repository's resource-backed asset model is a separate catalog concept; customization should present source and bundle artifacts as implementation backing resources. Because non-system implementation release publication requires a successful qualified build, publishing a customization must create a distinct workspace-owned definition plus implementation draft and reviewed source snapshot, while build, implementation release, binding, activation, deployment, and execution remain separate explicit gates."
+        }
+      ],
+      "rollback": "Keep all new operations additive and capability-gated, retain the existing list and disable view until the guided workflow passes integration, and disable creation without deleting drafts or changing existing authored, package, or base-asset data.",
+      "startedAt": "2026-07-18T13:23:28Z",
+      "status": "completed",
+      "title": "End-to-end layered Asset Customization workflow",
+      "verification": [
+        "Run focused contract, target-reader, application, persistence, artifact-storage, Asset Studio, host, API, IPC, preload, client, workflow, and renderer tests as their internal chunks land.",
+        "Near increment completion, run keyboard-focused UI tests, architecture checks, server and thin-client builds, desktop type and package checks, documentation checks, and the applicable regression suite once."
+      ],
+      "workPackages": [
+        {
+          "id": "target-catalog",
+          "outcome": "Application-owned list, search, and detail operations expose exact semantic and implementation identities, source kind, eligibility, provenance, editable sections, protected fields, and safe diagnostics for built-in, admitted imported, and authored assets.",
+          "title": "Workspace-scoped customization target catalog"
+        },
+        {
+          "id": "source-boundaries",
+          "outcome": "Host-composed readers and API, IPC, preload, and renderer clients map current registries, installed packages, and workspace records into one typed isolated catalog without UI-to-storage access or raw data leakage.",
+          "title": "Source adapters and aligned read transports"
+        },
+        {
+          "id": "draft-lifecycle",
+          "outcome": "Application use cases own create, read, update, validate, review, publish, and abandon transitions with optimistic revisions and exact pinned bases.",
+          "title": "Derived customization draft lifecycle"
+        },
+        {
+          "id": "overlay-storage",
+          "outcome": "Structured records retain semantic patches and safe manifest metadata while content-addressed artifacts retain only bounded changed source files and immutable review snapshots.",
+          "title": "Sparse semantic and source-overlay persistence"
+        },
+        {
+          "id": "studio-materialization",
+          "outcome": "Authorized boundaries assemble changed and unchanged content into a complete reviewable immutable snapshot; publication creates a new workspace-owned definition and implementation lineage and never activates it.",
+          "title": "Asset Studio review materialization"
+        },
+        {
+          "id": "mutation-boundaries",
+          "outcome": "Desktop and server hosts expose aligned customization operations with authorization, workspace isolation, sanitized diagnostics, optimistic conflict handling, and recoverable failures.",
+          "title": "Persistence, host, transport, and client mutation wiring"
+        },
+        {
+          "id": "select-section",
+          "outcome": "The first ordered workflow section searches eligible assets, shows source, version, trust, and eligibility, and requires explicit exact selection before editing.",
+          "title": "Search and select exact base asset"
+        },
+        {
+          "id": "definition-sections",
+          "outcome": "Ordered sections show original and proposed identity, provenance, description, classification, tags, safe metadata, interfaces, schemas, configuration, capabilities, and protected read-only fields.",
+          "title": "Definition, interfaces, and configuration sections"
+        },
+        {
+          "id": "implementation-section",
+          "outcome": "Authorized users inspect facets, entry points, dependencies, capabilities, and bounded source files, then add or edit only changed overlay files with clear security diagnostics.",
+          "title": "Implementation and source section"
+        },
+        {
+          "id": "review-create-section",
+          "outcome": "A final diff, provenance, and security review identifies reused versus changed content and creates the distinct customization only after explicit confirmation.",
+          "title": "Review and create derived asset"
+        },
+        {
+          "id": "customization-history",
+          "outcome": "Existing drafts and published customizations remain searchable with truthful status, conflicts, provenance, and supported disable or abandon actions.",
+          "title": "Customization history and management"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Desktop and thin client each expose one ordered Studio tab that edits both complete semantic definition sections and actual categorized backing resources for a new from-scratch asset.",
+          "id": "single-studio-surface",
+          "qualification": "local"
+        },
+        {
+          "description": "A new resource-backed Studio asset can be saved without publication, survives host restart, remains workspace-isolated, and retains source bytes only in bounded immutable artifact storage.",
+          "id": "studio-drafts-persist",
+          "qualification": "local"
+        },
+        {
+          "description": "Saved lists unpublished assets and opens the selected exact draft with all semantic and backing-resource content restored in Studio.",
+          "id": "saved-reopens-exact-draft",
+          "qualification": "local"
+        },
+        {
+          "description": "Server API and desktop IPC/preload operations enforce the same validation, workspace authorization, optimistic revision, sanitized failure, and bounded resource semantics.",
+          "id": "studio-transports-aligned",
+          "qualification": "local"
+        },
+        {
+          "description": "Review materializes an immutable source snapshot and publication creates a distinct definition plus implementation draft without build, activation, deployment, or execution.",
+          "id": "studio-review-publish-safe",
+          "qualification": "local"
+        },
+        {
+          "description": "Create is absent, Drafts is labeled Saved, Customizations remains dedicated to derived copies, and cross-tab handoff never splits editing across multiple tabs.",
+          "id": "asset-tabs-consolidated",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-18T20:41:01Z",
+      "completedChunks": [
+        "studio-draft-lifecycle",
+        "studio-host-transports",
+        "unified-studio-saved-experience"
+      ],
+      "completionSummary": "Increment 5 delivers one tested and documented cross-host Studio for complete semantic data and actual backing resources, persistent unpublished Saved drafts, safe review and publication, aligned transports, and exact legacy-aware reopening.",
+      "deliverables": [
+        "Resource-backed Studio draft contracts, persistence, application lifecycle, and artifact integration",
+        "Aligned API, IPC, preload, host, and client operations",
+        "Shared ordered semantic and backing-resource Studio sections",
+        "Saved-assets list with exact Studio reopening",
+        "Removed Create tab and renamed Drafts tab",
+        "Focused cross-host, workspace-isolation, restart, security, accessibility, and navigation tests",
+        "Updated ADR or architecture guidance, READMEs, context pack, and temporary report"
+      ],
+      "dependsOn": [
+        "layered-customization-workflow"
+      ],
+      "excluded": [
+        "Executing authored code in the product renderer, Electron main process, or API server",
+        "Automatic dependency installation, build, activation, deployment, or publication",
+        "Public marketplace or registry behavior",
+        "Cross-workspace collaborative editing"
+      ],
+      "id": "unified-asset-studio-saved",
+      "number": 5,
+      "objective": "Deliver one ordered Studio surface for creating, saving, reopening, reviewing, and publishing from-scratch semantic assets with actual frontend structure, frontend styling, backend logic, and other backing resources across desktop and thin-client hosts.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "A Studio draft may reference an exact intended definition before that definition is published because implementation drafts already validate identity shape rather than registry existence.",
+          "The structured Studio record stores a complete validated semantic definition and safe artifact descriptors; actual backing-resource content remains only in immutable artifact storage and authorized read views.",
+          "Legacy authored drafts remain readable and are seeded into Studio without mutation; the first Studio save records legacy provenance and Saved de-duplicates the upgraded item.",
+          "Review and definition publication are supported, but build, implementation release publication, binding, activation, deployment, and execution remain separate unavailable or explicit gates."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "studio-drafts-persist",
+              "studio-review-publish-safe"
+            ],
+            "id": "studio-draft-lifecycle",
+            "outcome": "Workspace-isolated from-scratch drafts persist complete validated semantic definitions and only safe artifact descriptors, restore bounded backing resources, invalidate stale reviews on edit, materialize immutable snapshots, and publish a definition plus implementation draft without execution.",
+            "title": "Resource-backed Studio draft lifecycle"
+          },
+          {
+            "criteriaIds": [
+              "studio-transports-aligned"
+            ],
+            "id": "studio-host-transports",
+            "outcome": "Server API and desktop IPC/preload plus both renderer clients expose identical typed draft operations, trusted actor attribution, workspace enforcement, optimistic revisions, bounded content, and sanitized errors while retaining proposal assistance.",
+            "title": "Aligned Studio host transports and clients"
+          },
+          {
+            "criteriaIds": [
+              "single-studio-surface",
+              "saved-reopens-exact-draft",
+              "asset-tabs-consolidated"
+            ],
+            "id": "unified-studio-saved-experience",
+            "outcome": "Desktop and thin client share reusable semantic and categorized resource sections, one complete Studio tab, an unpublished Saved list with exact and legacy handoff, no Create tab, and no split editing workflow.",
+            "title": "Single ordered Studio and Saved-assets experience"
+          }
+        ],
+        "completionTests": [
+          "After every planned chunk is implemented and focused checks pass: run the complete Increment 5 focused matrix together.",
+          "Run desktop webpack TypeScript and package validation, server and thin-client production builds, docs:check, architecture:check, agent-support:check, git diff validation, and npm test once.",
+          "Do not run npm test or another repository-wide suite before every Increment 5 chunk is implemented."
+        ],
+        "documentation": [
+          "Asset authoring/customization and implementation/package architecture",
+          "Sandboxed authoring security and decision-readiness guidance if the new record boundary requires clarification",
+          "Asset Studio, asset-authoring, contract, transport, and shared UI READMEs",
+          "Asset authoring context pack and concise temporary implementation report"
+        ],
+        "fingerprint": "024beb4a891938933ac33e2489f80fbdd3effd952b7f92855dd23366965d7bcd",
+        "focusedTests": [
+          "Chunk 1 only: Studio draft contract normalization, bounded resource validation, structured repository conflict/isolation/restart tests, create/update/read/list/review/publish/abandon use-case tests, definition collision tests, review invalidation, artifact containment, and implementation snapshot tests.",
+          "Chunk 2 only: API operation/envelope/security tests, IPC channel/handler tests, preload allowlist tests, desktop and thin-client tests, host composition tests, and transport-parity/sanitized-failure tests.",
+          "Chunk 3 only: shared semantic/resource section model and component tests, ordered Studio interactions, coding-assistance integration, Saved merge/legacy seed/exact reopen tests, tab removal/rename tests, keyboard/focus/responsive tests, and desktop/thin page tests."
+        ],
+        "recordedAt": "2026-07-18T19:11:38Z",
+        "rollback": "Keep the new contract and persistence namespace additive, preserve legacy drafts and all immutable artifacts/snapshots, capability-gate new mutation operations, and restore the prior Studio/Saved presentation without deleting user data or published definitions.",
+        "steps": [
+          "Add strict Studio asset-draft contracts, structured persistence, immutable resource-bundle storage, create/read/list/update/review/publish/abandon behavior, legacy provenance, and host composition.",
+          "Expose the draft lifecycle through aligned API and desktop IPC/preload operations plus desktop and thin clients, preserving existing proposal assistance operations.",
+          "Extract reusable semantic and backing-resource section presenters from Customizations, build the ordered from-scratch Studio, merge new and legacy unpublished records in Saved, route exact selections into Studio, and remove Create.",
+          "Update canonical architecture, ADR readiness if needed, context, contract/UI READMEs, tests, and the concise temporary report.",
+          "After all chunks and focused tests pass, run the complete Increment 5 builds and repository gates once."
+        ],
+        "summary": "Implement the unified Studio and Saved experience in three cohesive vertical chunks: first the application-owned resource-backed draft lifecycle, then aligned transports and clients, then one shared ordered UI with legacy Saved seeding and tab consolidation. Run only each chunk's focused checks while work remains and run the full Increment 5 completion matrix once after all three chunks pass."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-18T19:11:38Z",
+          "risks": [
+            "Raw resource paths and content must pass only through authorized Studio commands and immutable artifact storage, never structured draft records or diagnostics.",
+            "Updating semantic or resource content after review must invalidate the prior review while retaining immutable historical snapshots.",
+            "Publication must reject exact-definition collisions with different content and must not imply build, release, binding, activation, deployment, or execution.",
+            "Legacy safe-field drafts need a non-destructive Studio upgrade path and must not disappear from Saved.",
+            "Desktop lazy composition, server composition, API, IPC, preload, and both clients must stay contract-aligned and workspace-scoped."
+          ],
+          "sources": [
+            {
+              "title": "Asset Studio shared manager and contracts",
+              "url": "modules/ui/shared/asset-studio/AssetStudioManager.tsx"
+            },
+            {
+              "title": "Asset Studio workflow composition",
+              "url": "modules/hosts/shared/composition/composeAssetStudioWorkflow.ts"
+            },
+            {
+              "title": "Implementation source snapshot use case",
+              "url": "modules/application/use-cases/asset-implementation/snapshot-asset-implementation-source.use-case.ts"
+            },
+            {
+              "title": "Derived customization materialization workflow",
+              "url": "modules/application/use-cases/asset-authoring/asset-derived-customization-workflow.use-case.ts"
+            },
+            {
+              "title": "Backing resource contracts and validation",
+              "url": "modules/contracts/asset-implementation/asset-implementation-backing-resource-normalization.ts"
+            },
+            {
+              "title": "Legacy authored draft model and repository",
+              "url": "modules/contracts/asset-authoring/asset-authoring-models.ts"
+            },
+            {
+              "title": "Executable implementation boundary",
+              "url": "docs/adr/ADR-0030-executable-asset-implementations-and-releases.md"
+            },
+            {
+              "title": "Sandboxed authoring boundary",
+              "url": "docs/adr/ADR-0032-sandboxed-asset-authoring-and-execution.md"
+            }
+          ],
+          "summary": "Current Studio authors only implementation proposals against an exact definition, while legacy authored drafts persist only safe semantic fields. The implementation create use case does not require the definition to be published, and the existing snapshot service plus derived-customization workflow already provide the bounded bundle validation, immutable artifact, definition materialization, and publication seams needed for one coordinated from-scratch Studio. A dedicated structured Studio-draft record avoids raw source in metadata and avoids mutating the legacy draft schema; Saved can merge new Studio summaries with legacy drafts and seed a one-time Studio upgrade while preserving legacy data."
+        }
+      ],
+      "rollback": "Keep legacy authored-draft reads compatible and all new records readable; disable new Studio mutation capabilities and restore the prior tabs without deleting saved drafts, artifacts, snapshots, or published definitions.",
+      "startedAt": "2026-07-18T19:07:18Z",
+      "status": "completed",
+      "title": "Unified resource-backed Asset Studio and Saved assets",
+      "verification": [
+        "Run focused contract, application, persistence, artifact, API, IPC, preload, client, shared-section, Studio, Saved-navigation, restart, workspace-isolation, and negative security tests while each chunk is active.",
+        "After every Increment 5 chunk passes focused checks, run desktop TypeScript/package validation, server and thin-client builds, docs:check, architecture:check, agent-support:check, git diff validation, and npm test once."
+      ],
+      "workPackages": [
+        {
+          "id": "studio-draft-domain",
+          "outcome": "A backward-compatible authored-draft evolution coordinates full semantic definition data, exact intended identity, immutable backing-resource artifacts, implementation draft identity, optimistic revision, and lifecycle without storing source text in structured records.",
+          "title": "Workspace-owned resource-backed Studio drafts"
+        },
+        {
+          "id": "studio-lifecycle",
+          "outcome": "Application use cases create, read, list, update, review-materialize, publish, and abandon exact workspace drafts while preserving non-execution, safe diagnostics, and distinct publication and activation gates.",
+          "title": "Save, reopen, review, and publish lifecycle"
+        },
+        {
+          "id": "studio-transports",
+          "outcome": "API, IPC, preload, host composition, and both renderer clients expose the same workspace-isolated Studio draft operations and bounded resource details.",
+          "title": "Aligned desktop and server boundaries"
+        },
+        {
+          "id": "shared-studio-sections",
+          "outcome": "Studio reuses shared semantic and backing-resource section components from Customizations for definition, configuration/interfaces, AI context/composition, frontend structure, frontend styling, backend logic, other resources, and save/review/publish.",
+          "title": "One reusable ordered authoring surface"
+        },
+        {
+          "id": "saved-navigation",
+          "outcome": "Create is removed; Drafts becomes Saved, lists unpublished workspace assets, and opens an exact draft in the single Studio tab in both hosts.",
+          "title": "Saved assets and tab consolidation"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "A built-in or system asset and an admitted installed imported asset can each be selected, customized, reviewed, published as distinct workspace-owned assets, rediscovered after restart, and proven not to mutate their bases.",
+          "id": "e2e-default-imported",
+          "qualification": "local"
+        },
+        {
+          "description": "A new from-scratch resource-backed asset can be saved unpublished, reopened from Saved in Studio, reviewed, published, and rediscovered after restart without executing authored source.",
+          "id": "e2e-studio-saved",
+          "qualification": "local"
+        },
+        {
+          "description": "Focused suites, npm test, documentation, architecture, agent-support, dependency security, server, thin-client, and desktop build or package gates pass or have explicitly recorded environmental limitations with no product defect concealed.",
+          "id": "all-gates-pass",
+          "qualification": "local"
+        },
+        {
+          "description": "Documented keyboard, screen-reader, 400-percent zoom and reflow, contrast, focus, modal, and responsive checks pass on supported desktop and thin-client surfaces.",
+          "id": "desktop-thin-accessibility",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "A controlled security review confirms source containment, non-execution during browsing and import inspection, workspace isolation, immutable bases, safe diagnostics, and no implied activation or deployment authority.",
+          "id": "security-review",
+          "qualification": "controlled-environment"
+        }
+      ],
+      "allowPendingQualification": true,
+      "completedAt": "2026-07-18T21:14:33Z",
+      "completedChunks": [
+        "representative-lifecycle-matrix",
+        "failure-security-accessibility",
+        "release-evidence-gates"
+      ],
+      "completionSummary": "Increment 6 completes the automated end-to-end production hardening and qualification for System Foundation, imported, and Studio-authored asset lifecycles across shared desktop and thin-client contracts. All repository gates pass; controlled manual accessibility and target-environment security evidence remains explicitly pending.",
+      "deliverables": [
+        "End-to-end and negative regression coverage",
+        "Desktop and thin-client build and package evidence",
+        "Accessibility and responsive review evidence",
+        "Updated canonical docs, context, READMEs, and support qualification",
+        "Final implementation report with commands, results, risks, and limitations"
+      ],
+      "dependsOn": [
+        "unified-asset-studio-saved"
+      ],
+      "excluded": [
+        "Public marketplace or registry discovery",
+        "Automatic package updates",
+        "Automatic build, installation, activation, deployment, or unqualified execution",
+        "Cross-workspace collaborative editing"
+      ],
+      "id": "production-qualification",
+      "number": 6,
+      "objective": "Prove the complete Assets and Systems experience, layered customization, and unified resource-backed Studio behavior across supported hosts, representative bases and new assets, restart persistence, failure and security modes, responsive layouts, accessibility expectations, and canonical documentation.",
+      "pendingCriteria": [
+        "desktop-thin-accessibility",
+        "security-review"
+      ],
+      "plan": {
+        "assumptions": [
+          "The shared React surfaces are the authoritative UI implementation for both desktop and thin client.",
+          "Imported and authored source remains non-executable until a separately qualified sandbox exists.",
+          "Controlled manual accessibility and security evidence may remain pending when the required environment or reviewer is unavailable, but it must never be inferred from automated tests."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "e2e-default-imported",
+              "e2e-studio-saved"
+            ],
+            "id": "representative-lifecycle-matrix",
+            "outcome": "System Foundation, admitted imported, and Studio-authored assets are qualified through save, reopen, review, publication, restart rediscovery, immutable-base, and non-execution assertions.",
+            "title": "Representative lifecycle and restart matrix"
+          },
+          {
+            "criteriaIds": [
+              "desktop-thin-accessibility",
+              "security-review"
+            ],
+            "id": "failure-security-accessibility",
+            "outcome": "Negative matrices and cross-host shared-surface checks cover isolation, stale state, unsafe and oversized content, unavailable adapters, modal/focus semantics, keyboard naming, status announcements, and narrow-layout CSS; controlled manual evidence is recorded truthfully.",
+            "title": "Fail-closed, security, accessibility, and responsive qualification"
+          },
+          {
+            "criteriaIds": [
+              "all-gates-pass"
+            ],
+            "id": "release-evidence-gates",
+            "outcome": "Canonical docs and support qualification match implemented behavior and limitations, sanitized evidence is ready for controlled review, and every applicable repository, security, build, and package gate has one final recorded result.",
+            "title": "Release evidence, canonical docs, and complete gates"
+          }
+        ],
+        "completionTests": [
+          "npm test",
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check",
+          "npm run security:dependencies",
+          "npm run asset-system:check",
+          "npm run build:server",
+          "npm run build:thin-client",
+          "npm run package"
+        ],
+        "documentation": [
+          "Asset and System Support Qualification",
+          "Asset authoring and execution security architecture",
+          "Asset authoring context pack and nearest READMEs",
+          "Temporary concise roadmap implementation report"
+        ],
+        "fingerprint": "8df22d4ffc926280f02ea98ceed5a72e1b362a4891afab8205251c4ab67b4560",
+        "focusedTests": [
+          "Focused lifecycle tests for the representative matrix",
+          "Focused qualification and shared UI tests for failure, security, accessibility semantics, and responsive contracts",
+          "Qualification harness and documentation checks for release evidence"
+        ],
+        "recordedAt": "2026-07-18T20:45:36Z",
+        "rollback": "Retain safe browse, import, Saved, Studio, and Customizations behavior plus persisted drafts; revert qualification-only checks independently and capability-gate create operations without deleting user data.",
+        "steps": [
+          "Extend representative lifecycle coverage across System Foundation, admitted imported, and from-scratch Studio assets, including restart rediscovery and immutable-base or non-execution proofs.",
+          "Exercise failure, security, accessibility-semantic, modal, and responsive invariants across shared desktop and thin-client surfaces; fix any product defects found.",
+          "Update canonical qualification documentation and sanitized controlled-review templates, then run the complete release gate set once all chunks are implemented."
+        ],
+        "summary": "Qualify the complete Assets experience with representative lifecycle matrices, fail-closed and cross-host UI hardening, then one final release-evidence and repository-gate pass."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-18T20:45:33Z",
+          "risks": [
+            "Automated semantic checks cannot establish WCAG conformance; controlled keyboard, screen-reader, zoom/reflow, contrast, and focus evidence must remain pending until actually performed.",
+            "A qualification test must not execute imported or authored source merely to prove persistence or publication.",
+            "Qualification artifacts must stay sanitized and must not commit environment-specific evidence or host paths."
+          ],
+          "sources": [
+            {
+              "title": "Approved Increment 6 roadmap",
+              "url": "docs/asset-experience-layered-customization-implementation-roadmap.md"
+            },
+            {
+              "title": "Asset and System Support Qualification",
+              "url": "docs/operations/asset-system-support-qualification.md"
+            },
+            {
+              "title": "Machine-readable qualification policy",
+              "url": "dev-tools/config/asset-system-qualification.json"
+            },
+            {
+              "title": "Derived customization lifecycle tests",
+              "url": "modules/application/use-cases/asset-authoring/tests/asset-derived-customization-workflow.unit.test.ts"
+            },
+            {
+              "title": "Studio draft lifecycle tests",
+              "url": "modules/application/use-cases/asset-studio/tests/asset-studio-asset-draft-workflow.unit.test.ts"
+            },
+            {
+              "title": "Asset authoring security boundary",
+              "url": "docs/architecture/asset-authoring-and-execution-security.md"
+            }
+          ],
+          "summary": "Existing derived-customization and Studio lifecycle tests already prove most persistence, immutability, review, publication, and non-execution invariants; Increment 6 should extend them to both System Foundation and admitted imported bases, consolidate cross-host UI qualification, expand negative security coverage, and produce explicit sanitized controlled-review evidence without inferring manual passes."
+        }
+      ],
+      "rollback": "Keep new create operations capability-gated while retaining read-only browse, import, Saved, Studio history, and Customizations behavior plus all persisted drafts; do not delete user data to disable the feature.",
+      "startedAt": "2026-07-18T20:45:29Z",
+      "status": "implemented-pending-qualification",
+      "title": "End-to-end production qualification and hardening",
+      "verification": [
+        "Run focused and full non-browser tests, UI tests, docs:check, architecture:check, agent-support:check, security:dependencies, server and thin-client builds, and desktop package or build validation.",
+        "Run and record controlled accessibility, reflow, and security qualification on supported surfaces."
+      ],
+      "workPackages": [
+        {
+          "id": "scenario-tests",
+          "outcome": "Tests cover default or system and admitted imported customization plus new Studio asset save, reopen, review, publication, browse visibility, restart persistence, and original immutability on desktop and server paths.",
+          "title": "Representative end-to-end scenarios"
+        },
+        {
+          "id": "failure-security",
+          "outcome": "Cross-workspace access, stale revisions or bases, unsafe paths or content, oversized files, revoked or unavailable package truth, interrupted persistence, and unavailable Studio adapters fail closed with recoverable safe UI states.",
+          "title": "Failure and security qualification"
+        },
+        {
+          "id": "accessibility-responsive",
+          "outcome": "Keyboard, focus, modal stacking, tab semantics, screen-reader naming and status, 400-percent zoom and reflow, contrast, and narrow-layout checks are recorded for desktop and thin client.",
+          "title": "Accessibility and responsive qualification"
+        },
+        {
+          "id": "documentation-release",
+          "outcome": "Canonical architecture, security, package authoring, UI guidance, context packs, READMEs, support qualification, and durable roadmap and report state match implemented behavior and limitations.",
+          "title": "Documentation and release evidence"
+        }
+      ]
+    }
+  ],
+  "name": "Asset Experience and Layered Customization",
+  "objective": "Deliver a responsive card-and-modal Asset Browser, consistent attached tab surfaces for Assets and Systems, a guided Import Assets template experience, and a production-ready workspace-owned layered customization workflow that preserves immutable source assets while exposing authorized definition and implementation internals.",
+  "paths": {
+    "report": "docs/tmp/asset-experience-layered-customization-implementation-report.md",
+    "roadmap": "docs/asset-experience-layered-customization-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/asset-experience-layered-customization/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": {
+    "approvedAt": "2026-07-18T17:54:42Z",
+    "fingerprint": "66ab56b6115450df42f5777e05e79a0715e3790e0de660c8f5915f5d5772fa51",
+    "note": "The user explicitly requested one Studio tab for semantic data and backing resources, directed implementation as requested, and approved adding a new cohesive increment after Increment 4."
+  },
+  "schemaVersion": 1,
+  "slug": "asset-experience-layered-customization",
+  "status": "implementation-complete-qualification-pending",
+  "updatedAt": "2026-07-18T21:14:33Z"
+}

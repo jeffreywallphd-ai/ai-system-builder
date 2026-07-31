@@ -1,5 +1,8 @@
 # Naming Standards
 
+- Status: accepted
+- Verification: `npm test`
+
 ## Purpose
 
 Names in `ai-system-builder` must reveal architectural role, not just implementation convenience.
@@ -34,7 +37,7 @@ If one of these is unavoidable, narrow it with role + domain context (for exampl
 Examples:
 
 - `modules/adapters/persistence/postgres/`
-- `modules/adapters/transport/express/`
+- `modules/adapters/transport/api-express/`
 - `modules/hosts/desktop/`
 
 Do not create vague folder buckets such as `modules/common/` or `modules/misc/` to bypass boundary discipline.

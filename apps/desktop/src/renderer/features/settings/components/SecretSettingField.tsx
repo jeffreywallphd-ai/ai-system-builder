@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import { TermWithHint } from "../../../../../../../modules/ui/shared";
+
 export interface SecretSettingFieldProps {
   label: string;
   configured: boolean;
@@ -19,15 +21,18 @@ export function SecretSettingField(props: SecretSettingFieldProps) {
         {props.label}: {props.configured ? (props.maskedValue ?? "Configured") : "Not configured"}
       </p>
       <div className="settings-secret__controls">
-        <input
-          data-testid="secret-input"
-          className="ui-input"
-          type="password"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder="Enter new secret"
-          disabled={props.disabled}
-        />
+        <label className="ui-stack ui-stack--sm">
+          <span><TermWithHint termId="settingValue">{props.label}</TermWithHint></span>
+          <input
+            data-testid="secret-input"
+            className="ui-input"
+            type="password"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder="Enter new secret"
+            disabled={props.disabled}
+          />
+        </label>
         <button
           data-testid="secret-save"
           className="ui-button"

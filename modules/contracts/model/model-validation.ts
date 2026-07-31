@@ -1,3 +1,4 @@
+import { createWorkspaceId, type WorkspaceId } from "../workspace";
 import { normalizeModelSerializationFormat, type ModelSerializationFormat } from "../../domain/model";
 
 export const MODEL_VALIDATION_STATUSES = ["unknown", "valid", "invalid", "warning"] as const;
@@ -21,6 +22,7 @@ export interface ModelValidationSummary {
 }
 
 export interface ValidateModelRequest {
+  workspaceId: WorkspaceId;
   modelRecordId: string;
   modelPath?: string;
   reportOutputDirectory?: string;
@@ -95,4 +97,35 @@ export function normalizeModelValidationSummary(summary: ModelValidationSummary)
     warnings: normalizeStringList(summary.warnings),
     errors: normalizeStringList(summary.errors),
   };
+}
+
+
+function normalizeRequiredWorkspaceId(value: WorkspaceId | string | undefined): WorkspaceId {
+  if (typeof value !== "string") {
+    throw new Error("workspaceId must be provided for workspace-scoped model operations.");
+  }
+
+  return createWorkspaceId(value);
+}
+
+export function normalizeValidateModelRequest(request: ValidateModelRequest): ValidateModelRequest {
+  return {
+    workspaceId: normalizeRequiredWorkspaceId(request.workspaceId),
+    modelRecordId: normalizeRequiredText(request.modelRecordId, "modelRecordId"),
+    modelPath: normalizeOptionalText(request.modelPath),
+    reportOutputDirectory: normalizeOptionalText(request.reportOutputDirectory),
+    expectedLoRA: typeof request.expectedLoRA === "boolean" ? request.expectedLoRA : undefined,
+    expectedRecurrentAdditions: typeof request.expectedRecurrentAdditions === "boolean" ? request.expectedRecurrentAdditions : undefined,
+    allowWarnings: typeof request.allowWarnings === "boolean" ? request.allowWarnings : undefined,
+    validationStrictness: request.validationStrictness === "publish" ? "publish" : request.validationStrictness === "normal" ? "normal" : undefined,
+  };
+}
+
+function normalizeRequiredText(value: string, fieldName: string): string {
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    throw new Error(`${fieldName} must be a non-empty trimmed string.`);
+  }
+
+  return normalized;
 }

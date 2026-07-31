@@ -1,0 +1,64 @@
+.ui-type-badge {
+  min-inline-size: 2.65rem;
+  min-block-size: 1.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 0 var(--space-xs);
+  border: 1px solid rgb(var(--ui-type-color) / 45%);
+  border-radius: 0.35rem;
+  background: linear-gradient(
+    145deg,
+    rgb(var(--ui-type-color) / 34%),
+    rgb(var(--ui-type-color) / 14%)
+  );
+  color: rgb(var(--ui-type-color));
+  font-size: 0.625rem;
+  font-weight: 760;
+  letter-spacing: 0.035em;
+  line-height: 1;
+  box-shadow: inset 0 1px rgb(255 255 255 / 6%);
+}
+
+.ui-type-badge--red {
+  --ui-type-color: 239 110 132;
+}
+
+.ui-type-badge--blue {
+  --ui-type-color: 83 156 255;
+}
+
+.ui-type-badge--green {
+  --ui-type-color: 83 207 132;
+}
+
+.ui-type-badge--violet {
+  --ui-type-color: 171 112 255;
+}
+
+.ui-type-badge--amber {
+  --ui-type-color: 238 180 76;
+}
+
+.ui-type-badge--cyan {
+  --ui-type-color: 66 204 224;
+}
+
+.ui-type-badge--neutral {
+  --ui-type-color: 145 164 189;
+}
+
+.ui-type-row,
+.ui-type-label {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.ui-type-row > :last-child,
+.ui-type-label > :last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

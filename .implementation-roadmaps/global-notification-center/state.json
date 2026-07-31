@@ -1,0 +1,1197 @@
+{
+  "blockers": [],
+  "chunks": [
+    {
+      "areas": [
+        "Shared UI notification state and provider",
+        "Accessible notification center and toast viewport",
+        "Desktop and thin-client application shells",
+        "Shared notification styling and application icon"
+      ],
+      "chunkId": "shared-notification-shell",
+      "completedAt": "2026-07-29T22:32:26Z",
+      "criteriaIds": [
+        "shared-notification-center-is-usable",
+        "transient-lifecycle-is-exact",
+        "security-notification-and-task-boundaries-reviewed"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [],
+      "id": "authoritative-notification-center-and-download-queue-shared-notification-shell",
+      "incrementId": "authoritative-notification-center-and-download-queue",
+      "summary": "Added the bounded, workspace-aware global notification provider, accessible top-bar bell and dropdown, five-second fading toast viewport, and shared desktop/thin-client shell integration.",
+      "tests": [
+        "Notification reducer and sanitizer focused tests passed",
+        "Notification timing and keyboard interaction test passed",
+        "Desktop and thin-client shell placement tests passed",
+        "Changed production files produced no TypeScript diagnostics; the repository-wide type check remains red from unrelated existing test-fixture errors"
+      ],
+      "title": "Bounded shared notification shell"
+    },
+    {
+      "areas": [
+        "Shared model-download task contracts and application ports",
+        "Model-download task application service",
+        "Python runtime task registry adapter and router",
+        "Desktop and server host composition"
+      ],
+      "chunkId": "authoritative-model-download-lifecycle",
+      "completedAt": "2026-07-29T22:51:57Z",
+      "criteriaIds": [
+        "model-download-lifecycle-is-authoritative",
+        "download-activity-survives-navigation",
+        "security-notification-and-task-boundaries-reviewed"
+      ],
+      "documentation": [
+        "Runtime model architecture updated",
+        "Python runtime and runtime contract READMEs updated",
+        "Runtime Task Registry context pack updated"
+      ],
+      "feedbackAddressed": [],
+      "id": "authoritative-notification-center-and-download-queue-authoritative-model-download-lifecycle",
+      "incrementId": "authoritative-notification-center-and-download-queue",
+      "summary": "Promoted model downloads into the authoritative runtime task lifecycle with workspace-owned start, read, list, cancel, structured progress, monotonic terminal state, and exactly-once model registration.",
+      "tests": [
+        "Application lifecycle tests passed for workspace denial, terminal state, public redaction, cancellation, and exactly-once registration",
+        "Python adapter and runtime router tests passed for mapping, bounded listing, structured progress, and failure handling",
+        "Host composition and API security enforcement tests passed"
+      ],
+      "title": "Authoritative model-download lifecycle"
+    },
+    {
+      "areas": [
+        "Model-management API routes and security policy",
+        "Desktop IPC contracts, handlers, preload, and renderer client",
+        "Thin-client model-management client",
+        "Global model-download notification bridge and model-page integration"
+      ],
+      "chunkId": "cross-host-download-notifications",
+      "completedAt": "2026-07-29T22:52:00Z",
+      "criteriaIds": [
+        "shared-notification-center-is-usable",
+        "model-download-lifecycle-is-authoritative",
+        "download-activity-survives-navigation",
+        "security-notification-and-task-boundaries-reviewed"
+      ],
+      "documentation": [
+        "Desktop and thin-client READMEs updated",
+        "Shared UI README and desktop styling context pack updated"
+      ],
+      "feedbackAddressed": [],
+      "id": "authoritative-notification-center-and-download-queue-cross-host-download-notifications",
+      "incrementId": "authoritative-notification-center-and-download-queue",
+      "summary": "Added short model-download lifecycle operations across API, IPC, preload, desktop, and thin clients and projected recoverable authoritative activity into the global notification center across navigation.",
+      "tests": [
+        "API and IPC lifecycle contract tests passed",
+        "Desktop and thin-client client tests passed",
+        "Global activity recovery and terminal notification interaction tests passed",
+        "Desktop and thin-client shell interaction tests passed"
+      ],
+      "title": "Cross-host download notifications"
+    },
+    {
+      "areas": [
+        "Shared notification producer adapter",
+        "Classified desktop, thin-client, and shared UI message inventory",
+        "Removed-pattern anti-drift test"
+      ],
+      "chunkId": "classification-publisher-and-guard",
+      "completedAt": "2026-07-29T23:32:57Z",
+      "criteriaIds": [
+        "all-transient-page-messages-are-migrated",
+        "contextual-state-remains-actionable",
+        "notification-behavior-is-consistent-across-features",
+        "security-migrated-output-reviewed"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [
+        "feedback-forge-transient-publisher-ref-arity"
+      ],
+      "id": "application-wide-transient-message-migration-classification-publisher-and-guard",
+      "incrementId": "application-wide-transient-message-migration",
+      "summary": "Added the provider-safe one-transition notification publisher plus a reviewed repository inventory and anti-drift guard for every production alert/status surface.",
+      "tests": [
+        "Transient publisher interaction and deduplication tests passed",
+        "Migration inventory and removed-pattern guard passed"
+      ],
+      "title": "Classified migration publisher and anti-drift guard"
+    },
+    {
+      "areas": [
+        "Shared asset studio, package, authoring, and library surfaces",
+        "Shared System Builder and system lifecycle surfaces",
+        "Contextual versus transient message classification"
+      ],
+      "chunkId": "shared-feature-outcome-migration",
+      "completedAt": "2026-07-29T23:32:59Z",
+      "criteriaIds": [
+        "all-transient-page-messages-are-migrated",
+        "contextual-state-remains-actionable",
+        "notification-behavior-is-consistent-across-features",
+        "migration-preserves-current-user-work",
+        "security-migrated-output-reviewed"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [],
+      "id": "application-wide-transient-message-migration-shared-feature-outcome-migration",
+      "incrementId": "application-wide-transient-message-migration",
+      "summary": "Migrated shared asset, System Builder, lifecycle, publish, and run terminal outcomes to one global notification while preserving inline validation, blockers, diagnostics, retry context, and active progress.",
+      "tests": [
+        "Shared asset and notification interaction tests passed",
+        "System build, management, run, and foundation-upgrade notification tests passed"
+      ],
+      "title": "Shared feature outcome migration"
+    },
+    {
+      "areas": [
+        "Desktop feature outcomes",
+        "Thin-client feature outcomes",
+        "Workspace-scoped source labeling and host parity"
+      ],
+      "chunkId": "desktop-and-thin-outcome-migration",
+      "completedAt": "2026-07-29T23:33:01Z",
+      "criteriaIds": [
+        "all-transient-page-messages-are-migrated",
+        "contextual-state-remains-actionable",
+        "notification-behavior-is-consistent-across-features",
+        "security-migrated-output-reviewed"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [
+        "feedback-forge-transient-publisher-ref-arity"
+      ],
+      "id": "application-wide-transient-message-migration-desktop-and-thin-outcome-migration",
+      "incrementId": "application-wide-transient-message-migration",
+      "summary": "Migrated desktop and thin-client settings, models, artifact workflows, asset authoring/library, user library, dataset, and image terminal outcomes while retaining structural state and task controls inline.",
+      "tests": [
+        "Desktop and thin-client notification-aware feature tests passed",
+        "Desktop and thin-client renderer typechecks passed",
+        "Desktop Forge packaging passed after the reported compile fix"
+      ],
+      "title": "Desktop and thin-client outcome migration"
+    },
+    {
+      "areas": [
+        "Cross-feature notification qualification",
+        "Documentation, ADR, context-pack, and security guidance",
+        "Repository completion gates and desktop Forge packaging"
+      ],
+      "chunkId": "migration-qualification-and-guidance",
+      "completedAt": "2026-07-29T23:41:43Z",
+      "criteriaIds": [
+        "all-transient-page-messages-are-migrated",
+        "contextual-state-remains-actionable",
+        "notification-behavior-is-consistent-across-features",
+        "migration-preserves-current-user-work",
+        "security-migrated-output-reviewed"
+      ],
+      "documentation": [
+        "Shared UI producer and classification guidance updated",
+        "Desktop and thin-client renderer guidance updated",
+        "Renderer styling ADR and desktop styling context pack updated",
+        "Security-by-design notification diagnostic controls updated"
+      ],
+      "feedbackAddressed": [
+        "feedback-forge-transient-publisher-ref-arity"
+      ],
+      "id": "application-wide-transient-message-migration-migration-qualification-and-guidance",
+      "incrementId": "application-wide-transient-message-migration",
+      "summary": "Qualified the application-wide migration with notification-aware feature tests, anti-drift coverage, cross-host type/build/package gates, the full repository suite, and canonical producer/security guidance.",
+      "tests": [
+        "Focused notification, shared System Builder, asset, host feature, and anti-drift tests passed",
+        "Documentation, architecture, agent-support, server, and thin-client gates passed",
+        "Full non-browser suite passed with 2754 tests and no failures",
+        "Desktop Electron Forge package passed"
+      ],
+      "title": "Migration qualification and guidance"
+    }
+  ],
+  "completion": {
+    "completedAt": "2026-07-29T23:42:02Z",
+    "summary": "The global notification center, authoritative model-download queue, application-wide message migration, security controls, documentation, and end-to-end qualification are complete with no pending evidence."
+  },
+  "createdAt": "2026-07-29T22:16:32Z",
+  "currentIncrementId": null,
+  "decisions": [
+    {
+      "approvalNote": "The user explicitly approved Option A: a bounded session-scoped notification center backed by authoritative model-download task lifecycle state.",
+      "approvedAt": "2026-07-29T22:19:07Z",
+      "approvedFingerprint": "eb6a0eca0a0d610d2f64898ef2eb1b1a2ddb9e42b8585d02153926d026a344f7",
+      "context": "The choice determines whether download progress is truthful and cross-page, whether notification history survives restart, and whether this remains a renderer presentation feature or becomes a new persisted platform service.",
+      "id": "notification-ownership-retention-and-task-authority",
+      "options": [
+        {
+          "consequences": [
+            "Transient toasts stay for five seconds and fade, while the dropdown keeps bounded session history and active work until dismissed or terminally handled.",
+            "Model downloads can show queued/running state and provider-reported percentage when available, with an honest indeterminate state otherwise.",
+            "Desktop and thin client share behavior and presentation while host-specific clients retain transport ownership.",
+            "Contextual field validation, blocking diagnostics, loading/empty state, and security/readiness guidance remain inline rather than disappearing after five seconds."
+          ],
+          "id": "session-center-authoritative-tasks",
+          "label": "Session center with authoritative tasks",
+          "recommended": true,
+          "summary": "Create one bounded session-scoped shared notification center for desktop and thin client, migrate transient page/tab outcomes into it, retain current-session history, and promote model downloads into the existing authoritative runtime-task lifecycle so queued, running, progress, failure, cancellation, and completion remain visible across navigation.",
+          "tradeoffs": [
+            "Provides the requested real queue and progress instead of inventing percentages in the renderer.",
+            "Requires a coordinated runtime contract, application, adapter, API/IPC/preload/client, and UI change plus canonical architecture/ADR reconciliation because model downloads are not currently a shared TaskType.",
+            "Avoids a new notification database and retention policy; ordinary notification history resets on app reload while authoritative active tasks can be recovered from the task source."
+          ]
+        },
+        {
+          "consequences": [
+            "The top-bar center solves visibility for saves and errors but only partially satisfies the requested download-progress behavior.",
+            "Downloads display indeterminate activity until the existing request returns.",
+            "A later roadmap would still need to promote downloads into authoritative task contracts."
+          ],
+          "id": "session-center-ui-only-activity",
+          "label": "Session center with UI-only activity",
+          "recommended": false,
+          "summary": "Create the same session-scoped center and migrate transient messages, but leave model download APIs blocking and represent only renderer-known queued/downloading/completed states without a shared task identity or authoritative percentage.",
+          "tradeoffs": [
+            "Smaller and lower-risk cross-layer implementation because runtime contracts and transports remain unchanged.",
+            "Cannot truthfully provide a real multi-download queue, percentage, recovery after navigation/reload, or cancellation; the UI only knows that a request is pending.",
+            "Feature-owned request state can drift from backend work after transport interruption or component unmount."
+          ]
+        },
+        {
+          "consequences": [
+            "Notification history and unread state survive restart and could be shared across clients.",
+            "The implementation becomes a platform capability rather than a shared UI feature.",
+            "A dedicated persistence/security architecture decision and broader qualification would be required before implementation."
+          ],
+          "id": "durable-platform-inbox-and-task-stream",
+          "label": "Durable platform inbox and task stream",
+          "recommended": false,
+          "summary": "Create a persisted server/desktop notification inbox with read state, retention, cross-session history, and task-event delivery, and also promote model downloads into durable task records.",
+          "tradeoffs": [
+            "Provides restart persistence and could support future multi-device delivery.",
+            "Introduces new persistence schema, retention/deletion, authorization, tenancy, synchronization, audit, transport, and migration decisions far beyond the requested in-app visibility feature.",
+            "Carries the highest disclosure and stale-data risk because user-visible diagnostics are stored durably."
+          ]
+        }
+      ],
+      "proposalFingerprint": "eb6a0eca0a0d610d2f64898ef2eb1b1a2ddb9e42b8585d02153926d026a344f7",
+      "question": "How much authority and durability should the new top-bar notification center own, especially for model download queues and progress?",
+      "selectedOptionId": "session-center-authoritative-tasks",
+      "status": "approved",
+      "title": "Notification ownership, retention, and download progress authority"
+    }
+  ],
+  "discovery": {
+    "constraints": [
+      "Put the notification bell immediately before Settings in both app shells and render its anchored panel below the sticky header at the content area's top-right.",
+      "Use one shared host-neutral notification model, provider, presenter, icon, styles, and behavior; app shells may own platform wiring but must not fork the interaction contract.",
+      "Transient page or tab action outcomes appear for five seconds and then fade out, while the dropdown retains a bounded session history until the user clears or dismisses it.",
+      "Do not remove contextual field validation, modal/build diagnostics, loading and empty states, blocking readiness or security guidance, or inline progress controls whose local context is required to complete the task; migrate only duplicative transient action messages and page/tab notices.",
+      "Long-running activity must be derived from authoritative task or operation state rather than logs, labels, timers, or renderer-invented percentages; unknown or unavailable progress remains explicitly indeterminate.",
+      "Scope every workspace-owned notification and task to the authoritative active workspace and prevent stale workspace messages from being presented as current.",
+      "Bound message length, history count, live-region announcements, active task count, polling, and retained metadata; never display secrets, raw provider payloads, private prompts, local paths, stack traces, or raw logs.",
+      "Preserve the existing dirty System Builder changes and reconcile the overlapping SystemBuilderWorkspace transient-message migration without overwriting the prior chatbot build fix.",
+      "Add no dependency unless current platform primitives prove insufficient, and keep notification presentation out of domain/application business logic.",
+      "Use focused tests during each approved increment and run applicable documentation, architecture, agent-support, server, thin-client, desktop, and repository-wide gates once at the increment boundary."
+    ],
+    "decisionRequired": true,
+    "recordedAt": "2026-07-29T22:16:37Z",
+    "securityImpact": {
+      "abuseCases": [
+        "A raw error, path, token, prompt, provider response, or stack trace is copied into retained notification history.",
+        "A stale or forged renderer activity is shown as authoritative progress or completion.",
+        "Notifications from one workspace remain visible after switching to another workspace.",
+        "Unbounded repeated events, task polling, history retention, or live announcements exhaust resources or make the UI unusable.",
+        "A critical blocking validation, security, or readiness message disappears after five seconds because all contextual messages are removed indiscriminately.",
+        "Out-of-order task updates regress progress, revive completed work, or present a failed download as successful."
+      ],
+      "assets": [
+        "Sanitized user-visible action outcomes and failure summaries",
+        "Workspace-scoped model and runtime task identities and progress",
+        "Secrets, local paths, private prompts, provider payloads, stack traces, and raw logs that must never enter notification records",
+        "Accurate unread, completion, failure, cancellation, and stale-task state",
+        "Bounded renderer memory, polling, and assistive-technology announcement volume"
+      ],
+      "controls": [
+        "Accept a small typed allowlisted notification shape with bounded sanitized copy, severity, source, workspace scope, timestamps, and optional authoritative activity reference; exclude arbitrary payloads and raw details.",
+        "Keep transient five-second toast lifecycle separate from bounded session history and persistent active-task state; leave contextual validation and blockers inline.",
+        "Project task activity only from authoritative feature clients or the shared runtime task registry, with monotonic terminal-state handling and explicit indeterminate progress when no percentage exists.",
+        "Filter or clear workspace-scoped records on workspace changes and never infer workspace ownership from labels or display names.",
+        "Cap history, active items, message size, polling cadence, retries, and announcements; deduplicate repeated equivalent events and honor reduced-motion preferences.",
+        "Use accessible button naming, focus containment/restoration, keyboard dismissal, status semantics, and restrained live-region behavior without making the UI an authorization boundary."
+      ],
+      "disposition": "security-relevant",
+      "residualRisks": [
+        "Session-only history is lost on restart unless the durable-inbox option is selected; this is intentional data minimization under the recommended option.",
+        "Some providers cannot report byte-accurate progress, so truthful progress may remain indeterminate even after task promotion.",
+        "Automated accessibility tests require later physical keyboard, screen-reader, zoom/reflow, contrast, focus, and status-announcement qualification on supported surfaces.",
+        "A main-process or server compromise remains outside the renderer notification center's control and must be handled by existing host, transport, and runtime security boundaries."
+      ],
+      "summary": "The feature aggregates public UI diagnostics and workspace-scoped task progress across pages, changes message retention and visibility, and may expose download/runtime state through new contracts. It therefore affects confidentiality, workspace isolation, trust in operational state, resource bounds, and accessibility announcements.",
+      "trustBoundaries": [
+        "Feature and page actions to the shared renderer notification store",
+        "Application/runtime task state through API or IPC clients to activity projections",
+        "Active workspace changes to visible and retained notification state",
+        "Notification store to top-bar visual, keyboard, focus, and live-region presentation"
+      ],
+      "verification": [
+        "Reducer/store tests for five-second expiry, fade state, bounded history, deduplication, unread/read/clear behavior, terminal-state monotonicity, and cleanup.",
+        "Negative tests proving tokens, paths, stack traces, prompts, raw payloads, logs, and oversized strings are rejected or sanitized before retention and display.",
+        "Cross-workspace tests proving stale workspace notifications and task activity cannot appear under another active workspace.",
+        "Desktop and thin-client shell tests for bell placement, unread badge, panel anchoring, outside-click/Escape behavior, focus restoration, keyboard navigation, reduced motion, and screen-reader semantics.",
+        "Task and transport tests for queued, running, percentage/indeterminate, success, failure, cancellation, stale reads, retry bounds, and page-navigation continuity.",
+        "Migration tests proving transient action outcomes move to the center while field validation, build/modal diagnostics, loading, empty, readiness, and security context remain inline."
+      ]
+    },
+    "sources": [
+      {
+        "note": "Requires smallest coherent changes, shared-first UI boundaries, the change-impact matrix, and a structured security impact screen.",
+        "title": "Repository agent guide",
+        "url": "AGENTS.md"
+      },
+      {
+        "note": "Requires one shared shell and token-first styling implementation for desktop and thin-client surfaces.",
+        "title": "Desktop renderer and shared styling decisions",
+        "url": "docs/adr/ADR-0007-desktop-renderer-styling-foundation-and-layering.md"
+      },
+      {
+        "note": "Shared renderer structure is ready; runtime-task behavior is implemented under a proposed decision and must not be broadened silently.",
+        "title": "Architecture decision readiness",
+        "url": "docs/adr/decision-readiness.md"
+      },
+      {
+        "note": "Public diagnostics, retention, downloads, task status, workspace isolation, resource bounds, and UI output make this security-relevant.",
+        "title": "Mandatory security standard",
+        "url": "docs/standards/security-by-design-standards.md"
+      },
+      {
+        "note": "The header is already sticky and the content container is the correct shared anchor for a top-right notification surface below the header.",
+        "title": "Shared shell styling",
+        "url": "modules/ui/shared/styles/components/shell.css"
+      },
+      {
+        "note": "The right-side actions currently end with Settings and have no global message owner.",
+        "title": "Desktop application shell",
+        "url": "apps/desktop/src/renderer/components/layout/AppShell.tsx"
+      },
+      {
+        "note": "The thin client duplicates the shell composition and needs the same shared notification primitive and provider contract.",
+        "title": "Thin-client application shell",
+        "url": "apps/thin-client/src/components/layout/AppShell.tsx"
+      },
+      {
+        "note": "RuntimeTaskRecord already carries status, progress, timestamps, workspace identity, and bounded task metadata for supported task types.",
+        "title": "Shared runtime task contracts",
+        "url": "modules/contracts/runtime/runtime-task-record.ts"
+      },
+      {
+        "note": "Model download is not a shared TaskType today, so it cannot yet be listed or read through the authoritative registry.",
+        "title": "Current runtime task types",
+        "url": "modules/contracts/runtime/task-type.ts"
+      },
+      {
+        "note": "It starts and polls a private ensure-model-download task internally, then returns only after completion.",
+        "title": "Current Python model download client",
+        "url": "modules/adapters/runtime/python/client/createPythonRuntimeHttpClient.ts"
+      },
+      {
+        "note": "Browse, save, and download outcomes render as local paragraphs and the download request exposes no cross-page queue.",
+        "title": "Current page-level model messages",
+        "url": "apps/desktop/src/renderer/features/models/components/BrowseModelsTab.tsx"
+      },
+      {
+        "note": "Dataset Preparation parses runtime log text for percentages, which is not a suitable global authority or thin-client contract.",
+        "title": "Current derived model download progress",
+        "url": "apps/desktop/src/renderer/features/dataset-preparation/hooks/modelDownloadProgress.ts"
+      }
+    ],
+    "summary": "Desktop and thin-client already share the same sticky shell structure and shared shell styling, but each shell independently renders only navigation and Settings actions. Transient action outcomes are fragmented across feature-local strings, view-state records, notices, alerts, and status paragraphs, so messages can scroll out of view and often remain indefinitely. Long-running work is also fragmented: the shared runtime task registry carries bounded progress for several task types, while model-management downloads currently block their API/IPC request until a private Python ensure-model-download task completes; only Dataset Preparation derives model-download percentages by parsing runtime logs. A truthful cross-page queue therefore requires an explicit choice between UI-only indeterminate activity and elevating model downloads into an authoritative public task lifecycle."
+  },
+  "evidence": [
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/ui/shared/notifications/tests/*.test.tsx apps/desktop/src/renderer/tests/app-shell-visible-page.ui.test.tsx; npx vitest run apps/thin-client/src/tests/app-shell-visible-page.ui.test.tsx",
+      "criterionId": "shared-notification-center-is-usable",
+      "id": "evidence-1",
+      "incrementId": "authoritative-notification-center-and-download-queue",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T23:06:29Z",
+      "summary": "Shared interaction and desktop/thin shell tests prove bell placement, bounded history, unread/clear behavior, anchored panel interaction, Escape/outside dismissal, and focus restoration."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/ui/shared/notifications/tests/notificationState.unit.test.ts modules/ui/shared/notifications/tests/NotificationCenter.interaction.ui.test.tsx",
+      "criterionId": "transient-lifecycle-is-exact",
+      "id": "evidence-2",
+      "incrementId": "authoritative-notification-center-and-download-queue",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T23:06:34Z",
+      "summary": "Reducer and interaction tests prove the exact 5,000ms visible lifecycle, fade transition, later toast removal, retained bounded history, deterministic timer cleanup, and reduced-motion behavior."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/application/use-cases/model/tests/model-download-tasks.use-case.unit.test.ts modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts modules/adapters/runtime/tests/createRuntimeTaskRegistryRouter.unit.test.ts modules/adapters/transport/api-express/tests/register-model-management-api-routes.unit.test.ts modules/adapters/transport/ipc-electron/tests/register-model-management-ipc.unit.test.ts",
+      "criterionId": "model-download-lifecycle-is-authoritative",
+      "id": "evidence-3",
+      "incrementId": "authoritative-notification-center-and-download-queue",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T23:06:39Z",
+      "summary": "Application, runtime adapter, router, API, and IPC tests prove short start/read/list/cancel calls, workspace-scoped identity, structured or indeterminate progress, truthful terminal states, and exactly-once registration."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/ui/shared/notifications/tests/ModelDownloadNotificationBridge.interaction.ui.test.tsx modules/application/use-cases/model/tests/model-download-tasks.use-case.unit.test.ts",
+      "criterionId": "download-activity-survives-navigation",
+      "id": "evidence-4",
+      "incrementId": "authoritative-notification-center-and-download-queue",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T23:06:44Z",
+      "summary": "Global bridge and lifecycle tests prove bounded authoritative task recovery after remount/navigation, monotonic terminal updates, stale-terminal suppression, and exactly-once inventory finalization."
+    },
+    {
+      "artifact": "artifacts/test-reports/non-browser-test-report.json",
+      "command": "node --import tsx --test modules/ui/shared/notifications/tests/notificationState.unit.test.ts modules/application/use-cases/model/tests/model-download-tasks.use-case.unit.test.ts modules/adapters/transport/api-express/security/security-enforcement.unit.test.ts; npm test",
+      "criterionId": "security-notification-and-task-boundaries-reviewed",
+      "id": "evidence-5",
+      "incrementId": "authoritative-notification-center-and-download-queue",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T23:06:51Z",
+      "summary": "Sanitizer, workspace-denial, transport security, and full-suite tests prove bounded copy and records, secret/path/raw-payload redaction, cross-workspace fail-closed behavior, deduplication, and active/history resource limits."
+    },
+    {
+      "artifact": null,
+      "command": "Focused notification migration guard and desktop, thin-client, shared feature interaction tests",
+      "criterionId": "all-transient-page-messages-are-migrated",
+      "id": "evidence-6",
+      "incrementId": "application-wide-transient-message-migration",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T23:41:44Z",
+      "summary": "The classified inventory and removed-pattern guard pass, and notification-aware feature tests prove terminal outcomes publish once without duplicate local banners."
+    },
+    {
+      "artifact": null,
+      "command": "Focused shared System Builder and host feature interaction tests",
+      "criterionId": "contextual-state-remains-actionable",
+      "id": "evidence-7",
+      "incrementId": "application-wide-transient-message-migration",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T23:41:50Z",
+      "summary": "Focused System Builder, asset, settings, model, artifact, and task tests retain inline validation, loading, empty, diagnostic, blocker, retry, result, and progress context while terminal outcomes move globally."
+    },
+    {
+      "artifact": null,
+      "command": "Focused UI tests; desktop and thin-client typechecks; server and thin-client builds; Electron Forge package",
+      "criterionId": "notification-behavior-is-consistent-across-features",
+      "id": "evidence-8",
+      "incrementId": "application-wide-transient-message-migration",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T23:41:52Z",
+      "summary": "Desktop and thin-client feature tests, shared notification lifecycle tests, cross-host builds, and desktop packaging pass with one shared severity, source, workspace, deduplication, history, and timing contract."
+    },
+    {
+      "artifact": null,
+      "command": "Worktree diff review, focused System Builder tests, and git diff hygiene check",
+      "criterionId": "migration-preserves-current-user-work",
+      "id": "evidence-9",
+      "incrementId": "application-wide-transient-message-migration",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T23:41:54Z",
+      "summary": "The dirty worktree was reconciled before and after migration; overlapping System Builder edits remained intact, their focused tests passed, and no unrelated user-owned file was removed or reverted."
+    },
+    {
+      "artifact": null,
+      "command": "Notification sanitizer, workspace isolation, bounded-history, failure-path, migration-guard, full-suite, and security-guidance review",
+      "criterionId": "security-migrated-output-reviewed",
+      "id": "evidence-10",
+      "incrementId": "application-wide-transient-message-migration",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-29T23:41:57Z",
+      "summary": "Security-relevant output retention and workspace presentation were reviewed. Migrated producers use bounded sanitized copy and authoritative workspace/source context; redaction, isolation, bounds, failure paths, and critical inline blockers remain covered. No residual risk requires controlled-environment qualification."
+    }
+  ],
+  "feedback": [
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "feedback-forge-transient-publisher-ref-arity",
+      "impact": "within-increment",
+      "nextAction": "Initialize the ref explicitly and re-run desktop packaging.",
+      "recordedAt": "2026-07-29T23:32:53Z",
+      "summary": "Desktop Forge compilation reported a missing initial value for the transient publisher ref.",
+      "targetIncrementId": "application-wide-transient-message-migration"
+    }
+  ],
+  "finalApproval": {
+    "approvedAt": "2026-07-30T00:05:25Z",
+    "note": "User explicitly approved the completed notification-center work and its refinement on 2026-07-29."
+  },
+  "history": [
+    {
+      "eventFingerprint": "86092fd4a6a87b0fe6017831c4abcca5b7be2bd4473faf6352b3762b2b68d8fc",
+      "recordedAt": "2026-07-29T22:16:37Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "cf50da31bd12c74f58baee232bf30fbc657f89dc068fd0c19aec6d0d34c7fedd",
+      "recordedAt": "2026-07-29T22:16:37Z",
+      "sequence": 2,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "65238de5f6c342742bd37d7d931fca4d036562d51a058e977a3249b8f8da6eff",
+      "recordedAt": "2026-07-29T22:19:07Z",
+      "sequence": 3,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "ee130bebc8a1bbffa26a9f1fc782159ce3b87af403f88eccc14d8227ee3312c0",
+      "recordedAt": "2026-07-29T22:19:07Z",
+      "sequence": 4,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "f5dda1d95aa6122f1bc57c3abec6f6008c691db5699b85dba1cfdccdfa99141b",
+      "recordedAt": "2026-07-29T22:21:21Z",
+      "sequence": 5,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "9f2d91f452737a16701ba2677ed9d568d20268cf21256f8833af2d6ffaf6d002",
+      "recordedAt": "2026-07-29T22:21:21Z",
+      "sequence": 6,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "a0dc2cf1a5f90454ed9a80cec9635cdaa83b46360e38c4cd3062413913353acc",
+      "recordedAt": "2026-07-29T22:23:36Z",
+      "sequence": 7,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "da7690543fdc6bdf052f58760645378a46511b5cf31e6d4b3cfe2b147a1c8df9",
+      "recordedAt": "2026-07-29T22:23:36Z",
+      "sequence": 8,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "685a2e59a450d0f229f5b0eedc8fd284ffa646f7b40a480eb3b8518eff903aaf",
+      "recordedAt": "2026-07-29T22:32:26Z",
+      "sequence": 9,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "68f2b8091e390a9c298e12c1ccbdf29fd689b7d4986529386402c66b45a52983",
+      "recordedAt": "2026-07-29T22:51:57Z",
+      "sequence": 10,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "61b3eab2d785d39d7a5d472d19be24d0c92c9c1baed418494874dbeb7307a5e0",
+      "recordedAt": "2026-07-29T22:52:00Z",
+      "sequence": 11,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "9c97bfaa6de2b3736641f1086b7e4993843b893dd7474c5a20434ec88365456b",
+      "recordedAt": "2026-07-29T23:06:29Z",
+      "sequence": 12,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "703be3d9b0ba2a36f86a2b07ac39b623d2cc03452bdcf74548ae399ae650b774",
+      "recordedAt": "2026-07-29T23:06:34Z",
+      "sequence": 13,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "10f81c12d51a4d3a12e520a1e26800ea8a5a741382c44c3a8ec586b5219afb76",
+      "recordedAt": "2026-07-29T23:06:39Z",
+      "sequence": 14,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "91101e9e2f489e07fe4d55f55fda12965fbca082a55e26ee77d1a36bdc7ca445",
+      "recordedAt": "2026-07-29T23:06:44Z",
+      "sequence": 15,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "dd3cbbe5d20a655526f9342488fd3565c5e3aad7ee47b5eab64d44b6284ed85a",
+      "recordedAt": "2026-07-29T23:06:51Z",
+      "sequence": 16,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "7a96299374be0c77ddafa0e1ea9ff9ad55fbfb8463e5e1e9f43a55893082baa3",
+      "recordedAt": "2026-07-29T23:06:58Z",
+      "sequence": 17,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "94194315d32c756ccb72cf6a7c8513b03d71b199ba6a3dfe9655930bb2afda74",
+      "recordedAt": "2026-07-29T23:07:30Z",
+      "sequence": 18,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "b4481541585a5ec36a44c8e0718d1624cab1c69f69aea72b0bfcd6ffdeca01ff",
+      "recordedAt": "2026-07-29T23:09:32Z",
+      "sequence": 19,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "acef3c8c7ca2a7a6dee8d83e6d1b184767c7a559f24da172923e2fcd33f16259",
+      "recordedAt": "2026-07-29T23:09:37Z",
+      "sequence": 20,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "0c37a40a26070b76a0618d2407a42f17d03e72a868ccdc83e821f928c4afee39",
+      "recordedAt": "2026-07-29T23:32:53Z",
+      "sequence": 21,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "95a840d8990a780ff3874a91e65a983487c51e7c7d6c03a85bfd0b8c222c55d0",
+      "recordedAt": "2026-07-29T23:32:57Z",
+      "sequence": 22,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "8a835ef755987e3d3e6288cb126ba183d40aae698ad7e784137e042cfda058fc",
+      "recordedAt": "2026-07-29T23:32:59Z",
+      "sequence": 23,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "04b7b21873270390347fe10c0785e1a42b0038895b82d717ee4f85c0a580cb63",
+      "recordedAt": "2026-07-29T23:33:01Z",
+      "sequence": 24,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "13a7fedf483ee297817de90ce3886b47e623418b1581909fd6b00155de3ca23f",
+      "recordedAt": "2026-07-29T23:41:43Z",
+      "sequence": 25,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "8cfa82bb76461f1b023a699e0b716d98de9cc71b96d64d6f11991663c48ab001",
+      "recordedAt": "2026-07-29T23:41:44Z",
+      "sequence": 26,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "fc846b1074c4dc7af7ed126914b101dc31bd5345ac4388241c48a1547123af1b",
+      "recordedAt": "2026-07-29T23:41:50Z",
+      "sequence": 27,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a93f03270943ed4efeb42cd57b0c20d33e238de83fbd571c47f7ecbdfed21cc5",
+      "recordedAt": "2026-07-29T23:41:52Z",
+      "sequence": 28,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ba624a4facf4c90aa1a38f454689e3ea47044edd4a36c626ccc2904a81292878",
+      "recordedAt": "2026-07-29T23:41:54Z",
+      "sequence": 29,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "091f1db424fef5d71cec38d0fb46fb33e47e5d02eca65b8c4f041e4280f1d0de",
+      "recordedAt": "2026-07-29T23:41:57Z",
+      "sequence": 30,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d8162607eeadeaf2c7a30cea93c7efa420ae803369243a62a738df832a8d307d",
+      "recordedAt": "2026-07-29T23:42:00Z",
+      "sequence": 31,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "098fec4c1d51b14ae8cc45e59082e6f394507b6f8d9a979f80fc97370842268d",
+      "recordedAt": "2026-07-29T23:42:02Z",
+      "sequence": 32,
+      "type": "roadmap-completed"
+    },
+    {
+      "eventFingerprint": "870ff09d3175d0e9872f831756281a5880d31014c4653788bfb71143cd27c303",
+      "recordedAt": "2026-07-30T00:05:25Z",
+      "sequence": 33,
+      "type": "final-approval-recorded"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Desktop and thin client show a notification bell immediately before Settings; activating it opens a keyboard-accessible panel below the sticky header at the content area's top-right with unread state, bounded history, dismiss/clear actions, outside-click and Escape behavior, and focus restoration.",
+          "id": "shared-notification-center-is-usable",
+          "qualification": "local"
+        },
+        {
+          "description": "A transient action notification is visible for five seconds, then enters a tested fade state and leaves the toast region without being prematurely removed from bounded session history; reduced-motion mode removes motion without changing timing or access.",
+          "id": "transient-lifecycle-is-exact",
+          "qualification": "local"
+        },
+        {
+          "description": "Model downloads start asynchronously and expose one workspace-scoped request identity with truthful queued, running, structured percentage or indeterminate progress, succeeded, failed, and cancelled states; API/IPC requests do not remain open until download completion.",
+          "id": "model-download-lifecycle-is-authoritative",
+          "qualification": "local"
+        },
+        {
+          "description": "An accepted model download remains visible from other pages and is recovered from authoritative task listing after the Models component remounts; successful completion refreshes inventory exactly once and stale or out-of-order reads cannot regress terminal state.",
+          "id": "download-activity-survives-navigation",
+          "qualification": "local"
+        },
+        {
+          "description": "Notification copy and task projections are bounded, sanitized, workspace-isolated, deduplicated, resource-limited, and proven not to expose tokens, paths, prompts, stack traces, raw logs, provider payloads, or cross-workspace task state; missing or ambiguous authority fails closed.",
+          "id": "security-notification-and-task-boundaries-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-29T23:06:58Z",
+      "completedChunks": [
+        "shared-notification-shell",
+        "authoritative-model-download-lifecycle",
+        "cross-host-download-notifications"
+      ],
+      "completionSummary": "The shared notification center and authoritative cross-host model-download queue are implemented, documented, security-reviewed, and verified by focused tests, all repository checks, both production builds, desktop packaging, and the full test suite.",
+      "deliverables": [
+        "Shared notification types, sanitizer, reducer/provider, lifecycle hooks, presenter components, bell icon, and shared styles",
+        "Desktop and thin-client shell integration with bounded session history, unread state, five-second toasts, and anchored dropdown",
+        "Model-download Runtime Task Registry contract and application lifecycle integration",
+        "Python runtime mapping for structured download progress and truthful cancellation/terminal state",
+        "API, IPC, preload, desktop-client, and thin-client lifecycle operations and task recovery",
+        "Model-management integration that replaces local download messages and derived log progress with authoritative activity",
+        "Focused store, UI, accessibility, runtime, transport, workspace-isolation, bounds, and non-disclosure tests",
+        "Runtime, UI, security, host, context-pack, and nearest README documentation updates"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "Durable notification or task-history persistence across application restart",
+        "Cross-device notification synchronization or push delivery",
+        "Byte-accurate progress when the provider supplies only indeterminate or file-level state",
+        "A general distributed queue or change to runtime-process topology",
+        "Formal physical screen-reader or other-platform release qualification"
+      ],
+      "id": "authoritative-notification-center-and-download-queue",
+      "number": 1,
+      "objective": "Deliver the shared top-bar notification experience in desktop and thin client and make model downloads first-class authoritative runtime tasks whose queue, progress, cancellation, and terminal state remain visible across navigation.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "Session-scoped current-process task recovery is sufficient for navigation and lazy remount; durable restart history remains explicitly excluded.",
+          "Provider progress may be percentage, file-count, byte-count, or indeterminate and must be presented truthfully.",
+          "The existing synchronous download behavior may be retained only as a renderer/client compatibility helper implemented over short start/read calls, not as a long-held server or IPC operation.",
+          "Increment 1 does not alter the existing dirty System Builder files; their transient messages are handled in Increment 2."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "shared-notification-center-is-usable",
+              "transient-lifecycle-is-exact",
+              "security-notification-and-task-boundaries-reviewed"
+            ],
+            "id": "shared-notification-shell",
+            "outcome": "Both applications share one accessible bell, panel, five-second toast lifecycle, bounded sanitized session history, unread/read/clear behavior, workspace filtering, focus restoration, responsive anchoring, and reduced-motion behavior.",
+            "title": "Bounded shared notification shell"
+          },
+          {
+            "criteriaIds": [
+              "model-download-lifecycle-is-authoritative",
+              "download-activity-survives-navigation",
+              "security-notification-and-task-boundaries-reviewed"
+            ],
+            "id": "authoritative-model-download-lifecycle",
+            "outcome": "The shared Runtime Task Registry owns model-download start/read/list/cancel and structured progress, while an application service verifies workspace ownership, hides runtime data, and registers successful downloads exactly once.",
+            "title": "Authoritative model-download lifecycle"
+          },
+          {
+            "criteriaIds": [
+              "shared-notification-center-is-usable",
+              "model-download-lifecycle-is-authoritative",
+              "download-activity-survives-navigation",
+              "security-notification-and-task-boundaries-reviewed"
+            ],
+            "id": "cross-host-download-notifications",
+            "outcome": "API, IPC, preload, desktop, and thin-client clients use short lifecycle calls; model pages recover and display authoritative activity globally, emit bounded terminal notifications, refresh inventory once, and never expose paths or raw runtime payloads.",
+            "title": "Cross-host download notifications"
+          }
+        ],
+        "completionTests": [
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check when context routing changes",
+          "npm run build:server",
+          "npm run build:thin-client",
+          "npm run package where practical",
+          "npm test"
+        ],
+        "documentation": [
+          "Runtime model architecture and ADR-0011 current implementation note",
+          "Desktop/thin renderer styling ADR and shared UI README",
+          "Desktop and thin-client README shell/model-download behavior",
+          "Runtime Task Registry, desktop implementation, and security context packs",
+          "Security threat/control delta or canonical security guidance where behavior changes",
+          "Concise temporary implementation report"
+        ],
+        "fingerprint": "a9ab200af85c27018fbd789e0330b04891d1ffb2290f4144e03a00950d1d40f3",
+        "focusedTests": [
+          "Shared sanitizer/reducer/provider and desktop/thin shell interaction tests for bounds, exact timers, fade, dedupe, unread/read/clear, focus, Escape/outside click, workspace switch, reduced motion, and cleanup",
+          "Runtime contract/adapter and model application tests for task type mapping, progress allowlisting, current-process list, start/read/cancel, unknown ids, workspace denial, terminal monotonicity, exactly-once registration, and local-path/raw-payload non-disclosure",
+          "API, IPC, preload, desktop client, thin client, and model-page tests for short lifecycle calls, navigation recovery, polling cleanup, cancellation, terminal notifications, inventory refresh, and sanitized failures"
+        ],
+        "recordedAt": "2026-07-29T22:23:36Z",
+        "rollback": "Remove the additive task lifecycle transports and shell activity projection together, preserve current model authorization and timeout controls, and keep incomplete task results fail-closed. Do not restore log-derived global progress, expose task data, or mark a download successful without authoritative terminal state and completed model registration.",
+        "steps": [
+          "Add the shared notification contracts, sanitizer, reducer/provider, bell, anchored panel, toast viewport, icon, styling, and deterministic interaction tests; mount them once in both application roots and shells.",
+          "Add model-download task type and safe progress mapping, current-process registry listing, application-owned start/read/list/cancel and exactly-once registration, plus focused runtime/application denial and non-disclosure tests.",
+          "Add model-download lifecycle operations across API, IPC, preload, desktop and thin clients; update model-management UI to project downloads into the notification center and keep compatibility callers on short client-side polling rather than long-held transport requests.",
+          "Update runtime/UI/security/current-implementation documentation and, after every chunk passes its focused tests, run the complete Increment 1 gates once."
+        ],
+        "summary": "Implement Increment 1 in three cohesive chunks: establish the bounded shared notification experience in both shells; promote model downloads into the shared task lifecycle with safe application finalization; then expose and consume that lifecycle across API/IPC clients and model UI before running the increment completion gates."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-29T22:23:36Z",
+          "risks": [
+            "The current download result includes a local path; returning generic task data to API, IPC, preload, or notification UI would disclose host filesystem detail.",
+            "Changing model.download from completion to task acceptance can break Dataset Preparation and other callers unless renderer clients receive an explicit short-polling compatibility helper.",
+            "Concurrent status and list reads can register the same completed model more than once unless finalization is idempotent and guarded by one shared promise/result.",
+            "The worker does not expose a list endpoint, so authoritative navigation recovery must use bounded current-process registry records rather than inventing a renderer queue or broadening runtime topology.",
+            "Progress payloads contain provider-specific fields; mapping must allowlist bounded percentage/current/total/unit/message data instead of forwarding details wholesale.",
+            "Workspace switches, stale reads, and out-of-order polling can expose or regress another workspace's activity unless the application service verifies request ownership and the renderer store enforces monotonic terminal states.",
+            "Timer, listener, polling, and object-URL style cleanup defects could leak resources across lazy page remounts; provider and client teardown need deterministic tests.",
+            "The existing uncommitted System Builder changes overlap only with Increment 2 and must remain untouched during Increment 1."
+          ],
+          "sources": [
+            {
+              "title": "Shared shell styling",
+              "url": "modules/ui/shared/styles/components/shell.css"
+            },
+            {
+              "title": "Desktop and thin-client renderer styling decision",
+              "url": "docs/adr/ADR-0007-desktop-renderer-styling-foundation-and-layering.md"
+            },
+            {
+              "title": "Runtime task registry decision",
+              "url": "docs/adr/ADR-0011-runtime-task-registry.md"
+            },
+            {
+              "title": "Runtime model architecture",
+              "url": "docs/architecture/runtime-model.md"
+            },
+            {
+              "title": "Runtime Task Registry context pack",
+              "url": "docs/context/packs/runtime-task-registry.pack.md"
+            },
+            {
+              "title": "Current model download use case",
+              "url": "modules/application/use-cases/model/download-model.use-case.ts"
+            },
+            {
+              "title": "Python Runtime Task Registry adapter",
+              "url": "modules/adapters/runtime/python/createPythonRuntimeTaskRegistryAdapter.ts"
+            },
+            {
+              "title": "Python runtime model-download task",
+              "url": "modules/adapters/runtime/python/worker/app.py"
+            },
+            {
+              "title": "Structured model download progress",
+              "url": "modules/adapters/runtime/python/worker/tasks/local_text_generation.py"
+            },
+            {
+              "title": "Desktop model feature composition",
+              "url": "modules/hosts/desktop/composition/composeDesktopModelFeature.ts"
+            }
+          ],
+          "summary": "The sticky desktop and thin-client shells can share a provider, bell, anchored panel, and toast viewport from modules/ui/shared without changing route authority. The Python worker already runs ensure-model-download asynchronously and emits bounded structured file/byte progress, but the Node Python client currently hides that lifecycle behind polling and the generic adapter neither maps the task type nor lists current-process records. The smallest authoritative path is to add model-download to the shared TaskType, let the Python registry adapter start/read/cancel and retain bounded current-process records for listing, and add a model application task service that owns workspace-scoped request descriptors, exactly-once model registration, and sanitized projections. API/IPC/preload clients can then use short start/read/list/cancel calls, while renderer convenience code may poll those operations without holding transport requests open."
+        }
+      ],
+      "rollback": "Disable the shell activity projection and remove the additive model-download lifecycle operations together, allowing the existing bounded synchronous model download path to remain temporarily available only if its current authorization, workspace, sanitization, and timeout controls are unchanged. Do not fabricate progress, fall back to log parsing, expose raw runtime payloads, or mark incomplete downloads successful.",
+      "startedAt": "2026-07-29T22:21:21Z",
+      "status": "completed",
+      "title": "Authoritative notification center and model-download queue",
+      "verification": [
+        "Run focused shared state and presenter tests for sanitizer bounds, deduplication, unread/read/clear, exact five-second and fade timing, active-task transitions, cleanup, keyboard/focus semantics, responsive anchoring, and reduced motion while implementing the UI work packages.",
+        "Run focused runtime-contract, application-service, Python adapter, registry router, API, IPC, preload, and client tests for start/read/list/cancel, structured and indeterminate progress, terminal finalization, recoverable polling failure, unknown task ids, and no long-held request behavior.",
+        "Run focused failure and denial tests for malformed or oversized progress, workspace mismatch, stale/out-of-order updates, forged task identity, secret/path/raw-log non-disclosure, task-count/history/poll bounds, adapter failure, and cancellation races.",
+        "After all work packages are complete, run documentation, architecture, agent-support, server build, thin-client build, desktop package/typecheck where practical, and the full repository test suite once for the increment."
+      ],
+      "workPackages": [
+        {
+          "id": "bounded-notification-state",
+          "outcome": "A host-neutral typed provider and reducer own sanitized session history, unread state, deduplication, workspace scope, five-second transient visibility, fade lifecycle, active activity records, and deterministic cleanup without persisting sensitive diagnostics.",
+          "title": "Bounded notification state and lifecycle"
+        },
+        {
+          "id": "shared-shell-notification-surface",
+          "outcome": "Desktop and thin-client shells place one accessible notification bell immediately before Settings and reuse one anchored top-right panel, toast stack, icon, styling, keyboard/focus behavior, responsive layout, and reduced-motion treatment.",
+          "title": "Shared shell notification surface"
+        },
+        {
+          "id": "authoritative-model-download-tasks",
+          "outcome": "Model download start, queued/running progress, read, list, cancellation, terminal finalization, and retention use the shared Runtime Task Registry with explicit workspace ownership and structured bounded progress instead of long-held transport requests or log parsing.",
+          "title": "Authoritative model-download task lifecycle"
+        },
+        {
+          "id": "cross-host-download-activity",
+          "outcome": "Application services, desktop IPC/preload clients, server API clients, and model-management presenters expose the same sanitized task lifecycle, recover active downloads after page navigation, and update model inventory only from authoritative successful completion.",
+          "title": "Cross-host download activity projection"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Every inventoried page or tab transient save, success, action failure, and similar outcome in desktop, thin client, and shared UI publishes exactly one notification and no longer renders a duplicative local message that can scroll out of view.",
+          "id": "all-transient-page-messages-are-migrated",
+          "qualification": "local"
+        },
+        {
+          "description": "Field validation, confirmation/modal and build diagnostics, loading and empty states, blocking readiness/security guidance, and progress controls that require local task context remain inline, accessible, and are not converted into five-second-only messages.",
+          "id": "contextual-state-remains-actionable",
+          "qualification": "local"
+        },
+        {
+          "description": "Save, create, update, delete/archive, upload/import/localize/publish, build/run, settings, image, model, and workspace actions use consistent severity, source labeling, five-second visibility, history, unread, deduplication, and navigation behavior on both supported React surfaces.",
+          "id": "notification-behavior-is-consistent-across-features",
+          "qualification": "local"
+        },
+        {
+          "description": "The existing uncommitted System Builder chatbot-build fix is preserved, its overlapping transient-message sites are migrated without semantic regression, and no unrelated user change is overwritten or absorbed into notification behavior.",
+          "id": "migration-preserves-current-user-work",
+          "qualification": "local"
+        },
+        {
+          "description": "Every migrated producer supplies only bounded user-safe copy and authoritative workspace/source context; failure-path tests prove no regression in redaction, cross-workspace isolation, resource bounds, critical inline blockers, or assistive-technology announcement volume.",
+          "id": "security-migrated-output-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-07-29T23:42:00Z",
+      "completedChunks": [
+        "classification-publisher-and-guard",
+        "shared-feature-outcome-migration",
+        "desktop-and-thin-outcome-migration",
+        "migration-qualification-and-guidance"
+      ],
+      "completionSummary": "Application-wide transient outcomes are migrated, contextual state is preserved, the anti-drift inventory is enforced, guidance is updated, and all focused and repository completion gates pass.",
+      "deliverables": [
+        "Repository-wide classified inventory of current page/tab message sites encoded in focused tests or migration fixtures",
+        "Notification-center adoption across all shared transient outcome producers",
+        "Notification-center adoption across desktop- and thin-client-specific transient outcome producers",
+        "Removal of duplicative local transient banners, notices, success paragraphs, and page-level action-error blocks",
+        "Preserved inline field errors, modal/build diagnostics, loading and empty states, readiness/security blockers, and necessary inline progress controls",
+        "Anti-drift tests for old page/tab transient message patterns and duplicate notification rendering",
+        "Cross-feature UI, accessibility, timing, workspace-switch, navigation, failure-path, and non-disclosure tests",
+        "Updated shared UI, desktop, thin-client, architecture, ADR/current-implementation, security, context-pack, and contributor guidance"
+      ],
+      "dependsOn": [
+        "authoritative-notification-center-and-download-queue"
+      ],
+      "excluded": [
+        "Persisting ordinary notification history across restart",
+        "Email, operating-system, mobile, browser-push, webhook, or cross-device notifications",
+        "Turning logs, audit events, or every background diagnostic into user notifications",
+        "Changing business outcomes, authorization, validation, or feature workflows solely to standardize message copy",
+        "Removing contextual messages that users need to identify or correct a specific field, modal, build, readiness, or security problem"
+      ],
+      "id": "application-wide-transient-message-migration",
+      "number": 2,
+      "objective": "Replace remaining desktop, thin-client, and shared page/tab transient save, action, and error messages with the notification center while preserving contextual validation, blocking diagnostics, loading/empty state, and task controls where users need them.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "Session-scoped notification history remains approved and no persistence migration is required.",
+          "Application roots always provide NotificationProvider, while isolated tests and reusable previews may omit it safely.",
+          "Message-state producers can remain temporarily for action control and test compatibility even when their duplicative page-level renderer is removed.",
+          "The existing dirty System Builder chatbot-build reconciliation remains authoritative and is not rewritten by this migration."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "all-transient-page-messages-are-migrated",
+              "contextual-state-remains-actionable",
+              "notification-behavior-is-consistent-across-features",
+              "security-migrated-output-reviewed"
+            ],
+            "id": "classification-publisher-and-guard",
+            "outcome": "A provider-safe typed publisher emits each bounded message transition once, and a reviewed inventory/guard encodes every migrated or intentionally preserved message category.",
+            "title": "Classified migration publisher and anti-drift guard"
+          },
+          {
+            "criteriaIds": [
+              "all-transient-page-messages-are-migrated",
+              "contextual-state-remains-actionable",
+              "notification-behavior-is-consistent-across-features",
+              "migration-preserves-current-user-work",
+              "security-migrated-output-reviewed"
+            ],
+            "id": "shared-feature-outcome-migration",
+            "outcome": "Shared asset and system features publish transient action outcomes globally without duplicative local banners or changes to contextual diagnostics and current System Builder work.",
+            "title": "Shared feature outcome migration"
+          },
+          {
+            "criteriaIds": [
+              "all-transient-page-messages-are-migrated",
+              "contextual-state-remains-actionable",
+              "notification-behavior-is-consistent-across-features",
+              "security-migrated-output-reviewed"
+            ],
+            "id": "desktop-and-thin-outcome-migration",
+            "outcome": "Host-specific settings, model, artifact, upload, workspace, library, and related action outcomes use the same global contract on both React surfaces.",
+            "title": "Desktop and thin-client outcome migration"
+          },
+          {
+            "criteriaIds": [
+              "all-transient-page-messages-are-migrated",
+              "contextual-state-remains-actionable",
+              "notification-behavior-is-consistent-across-features",
+              "migration-preserves-current-user-work",
+              "security-migrated-output-reviewed"
+            ],
+            "id": "migration-qualification-and-guidance",
+            "outcome": "Cross-feature tests, source guards, documentation, builds, packaging, and the full suite prove consistent notification ownership and preserved contextual state.",
+            "title": "Migration qualification and guidance"
+          }
+        ],
+        "completionTests": [
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check when context routing changes",
+          "npm run build:server",
+          "npm run build:thin-client",
+          "npm run package where practical",
+          "npm test"
+        ],
+        "documentation": [
+          "Shared UI README notification producer guidance",
+          "Desktop and thin-client README ownership guidance",
+          "Desktop styling/current implementation context pack",
+          "Security/control delta and concise temporary roadmap report"
+        ],
+        "fingerprint": "3a6aad70ee1c6ba16f1349a96aa1df66023a26d728f62339cec76e9dbd920c8b",
+        "focusedTests": [
+          "Publisher tests for one event per transition, clearing and repeating, no-provider isolation, workspace scope, deduplication, sanitizer bounds, and unmount cleanup",
+          "Shared asset and system interaction tests updated from local transient text to captured notification records while retaining contextual validation/build/readiness assertions",
+          "Desktop and thin settings/model/artifact/upload/workspace/library interaction tests for one notification per terminal action and preserved inline task/result state",
+          "Source inventory guard and security failure-path tests for paths, secrets, oversized/repeated messages, stale workspace state, and assistive announcement bounds"
+        ],
+        "recordedAt": "2026-07-29T23:09:37Z",
+        "rollback": "Revert migrations by coherent feature group while retaining the notification center; restore only that group's prior safe local outcomes and preserve every contextual validation, retry, build, readiness, and progress surface.",
+        "steps": [
+          "Add an optional-provider-safe transient outcome publisher, a reviewed source inventory, and a focused guard that distinguishes migrated outcome blocks from preserved contextual state.",
+          "Replace shared asset, system authoring, management, lifecycle, publish, and workflow action banners with typed notification publication while preserving inline validation, modal/build diagnostics, retry controls, readiness, and progress.",
+          "Replace desktop and thin settings, model, artifact, upload, workspace, user-library, and other host-specific action outcome messages while leaving loading, result detail, task progress, and field errors inline.",
+          "Run focused migration and non-disclosure tests, update shared/host architecture and contributor guidance, then run all increment completion gates once."
+        ],
+        "summary": "Migrate transient page and tab outcomes in four bounded chunks: establish a safe publisher and classified anti-drift inventory; migrate shared asset and system surfaces; migrate desktop/thin host features; then qualify cross-host behavior and canonical guidance without removing contextual state."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-07-29T23:09:32Z",
+          "risks": [
+            "Blanket removal of role=status or role=alert would erase contextual loading, validation, build, readiness, task-progress, and retry feedback.",
+            "Feature components are frequently tested outside the application root, so the migration publisher must be safe without a provider while remaining mandatory in production composition.",
+            "Rendering-driven publication can duplicate messages across harmless rerenders unless it tracks message transitions and uses bounded deduplication keys.",
+            "The current dirty System Builder change overlaps its top-level error and notice block; edits must be surgical and preserve the chatbot interaction reconciliation behavior and tests.",
+            "Raw action failures can contain local paths or transport details; every migrated producer must still pass through the shared sanitizer and retain only bounded copy.",
+            "Workspace-scoped producers must pass authoritative workspace ids so a switch cannot expose stale notifications from another workspace."
+          ],
+          "sources": [
+            {
+              "title": "Shared asset action banners",
+              "url": "modules/ui/shared/asset-studio/UnifiedAssetStudio.tsx"
+            },
+            {
+              "title": "System Builder workspace outcomes and contextual diagnostics",
+              "url": "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx"
+            },
+            {
+              "title": "Desktop model action states",
+              "url": "apps/desktop/src/renderer/features/models/components/BrowseModelsTab.tsx"
+            },
+            {
+              "title": "Desktop and thin artifact workflow messages",
+              "url": "apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx"
+            },
+            {
+              "title": "Desktop settings outcome presenter",
+              "url": "apps/desktop/src/renderer/features/settings/components/SettingsStatusMessage.tsx"
+            },
+            {
+              "title": "Shared notification provider contract",
+              "url": "modules/ui/shared/notifications/NotificationProvider.tsx"
+            }
+          ],
+          "summary": "Transient outcomes are concentrated in shared asset/system action banners and host-specific settings, model, artifact, workspace, and library view-state messages. Task progress, loading/empty state, field validation, build/run diagnostics, retry panels, and result-detail lists are structurally distinct and must remain inline. A small effect-based shared publisher can migrate outcome rendering without coupling feature hooks to host transports or breaking isolated component tests."
+        }
+      ],
+      "rollback": "Revert feature migrations in coherent area groups while keeping the global center available for already-migrated producers; restore only the exact prior contextual/transient rendering for that group and never remove inline validation, blockers, or sanitization. If the center itself must be disabled, stop new notification publication and retain safe local failure feedback until the entire dependent migration is reverted.",
+      "startedAt": "2026-07-29T23:07:30Z",
+      "status": "completed",
+      "title": "Application-wide transient message migration",
+      "verification": [
+        "Run focused feature/component tests per migration chunk and update existing assertions from local transient text to the shared notification contract while retaining assertions for contextual inline state.",
+        "Run repository searches and a focused anti-drift test over production TSX/TS sources to verify classified transient patterns are removed without blanket-banning semantic role=status, role=alert, aria-live, or ui-status usage required for contextual accessibility.",
+        "Run cross-host shell/page tests for notification delivery after navigation, one-event deduplication, workspace switching, five-second timing, keyboard/focus behavior, and simultaneous active download plus transient outcomes.",
+        "Run focused non-disclosure, oversized/repeated-message, unmounted-producer, stale-request, and failure-path tests using synthetic fixtures.",
+        "After all work packages are complete, run documentation, architecture, agent-support, server build, thin-client build, desktop package/typecheck where practical, and the full repository test suite once for the increment."
+      ],
+      "workPackages": [
+        {
+          "id": "message-classification-and-guard",
+          "outcome": "A reviewed inventory classifies every current status/alert site as transient outcome, contextual validation, structural state, blocking diagnostic, or active progress, and a focused source/test guard prevents migrated page-level transient patterns from returning.",
+          "title": "Transient-message classification and anti-drift guard"
+        },
+        {
+          "id": "shared-feature-migration",
+          "outcome": "System Builder, system lifecycle, asset authoring/package/studio/library, workflow, artifact, and other shared features publish sanitized typed notifications for transient outcomes and remove their duplicative local message blocks without disturbing current drafts, diagnostics, modals, or blocking guidance.",
+          "title": "Shared feature migration"
+        },
+        {
+          "id": "desktop-and-thin-feature-migration",
+          "outcome": "Host-specific Settings, workspace, model, image generation, upload, user-library, effective-projection, dataset, training, and other feature actions use the same notification API and no longer strand transient messages inside scrollable pages.",
+          "title": "Desktop and thin-client feature migration"
+        },
+        {
+          "id": "migration-qualification-and-documentation",
+          "outcome": "Cross-host interaction tests prove one notification per outcome, preserved local context, navigation continuity, accessible announcements, dirty-worktree reconciliation, and updated canonical guidance for notification ownership and future feature integration.",
+          "title": "Migration qualification and documentation"
+        }
+      ]
+    }
+  ],
+  "name": "Global Notification Center",
+  "objective": "Replace transient page and tab messages with an accessible top-bar notification center and represent authoritative long-running work, including model download queues and progress, across desktop and thin-client surfaces.",
+  "paths": {
+    "report": "docs/tmp/global-notification-center-implementation-report.md",
+    "roadmap": "docs/global-notification-center-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/global-notification-center/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": {
+    "approvedAt": "2026-07-29T22:21:21Z",
+    "fingerprint": "b16fb3402b87749b6a081c0050f9c596613435b4315932c26dc14dce4c2b70d5",
+    "note": "The user explicitly approved the two-increment roadmap and requested implementation increment by increment through a production-ready end-to-end solution."
+  },
+  "schemaVersion": 1,
+  "slug": "global-notification-center",
+  "status": "final-approved",
+  "updatedAt": "2026-07-30T00:05:25Z"
+}

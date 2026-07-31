@@ -1,0 +1,14 @@
+import type { AssetCompositionPlanId } from "../asset-composition";
+import type { WorkspaceId } from "../workspace";
+import type { RuntimeBindingCandidateId, RuntimeReadinessBindingId } from "./runtime-readiness-identity";
+import type { RuntimeReadinessStatus } from "./runtime-readiness-status";
+export interface CreateRuntimeReadinessBindingCommand{readonly targetWorkspaceId:WorkspaceId;readonly compositionPlanId:AssetCompositionPlanId;}
+export interface ReadRuntimeReadinessBindingCommand{readonly targetWorkspaceId:WorkspaceId;readonly readinessBindingId:RuntimeReadinessBindingId;}
+export interface ListRuntimeReadinessBindingsCommand{readonly targetWorkspaceId:WorkspaceId;readonly compositionPlanId?:AssetCompositionPlanId;readonly status?:RuntimeReadinessStatus;}
+export interface ArchiveRuntimeReadinessBindingCommand extends ReadRuntimeReadinessBindingCommand{}
+export interface RefreshRuntimeInventoryCommand{readonly targetWorkspaceId:WorkspaceId;readonly readinessBindingId?:RuntimeReadinessBindingId;readonly compositionPlanId?:AssetCompositionPlanId;}
+export interface ExtractRuntimeRequirementsCommand{readonly targetWorkspaceId:WorkspaceId;readonly compositionPlanId:AssetCompositionPlanId;readonly readinessBindingId?:RuntimeReadinessBindingId;}
+export interface MatchRuntimeBindingCandidatesCommand{readonly targetWorkspaceId:WorkspaceId;readonly readinessBindingId:RuntimeReadinessBindingId;}
+export interface SelectRuntimeBindingCandidateCommand{readonly targetWorkspaceId:WorkspaceId;readonly readinessBindingId:RuntimeReadinessBindingId;readonly bindingCandidateId:RuntimeBindingCandidateId;}
+export interface ValidateRuntimeReadinessBindingCommand extends ReadRuntimeReadinessBindingCommand{}
+export interface RefreshRuntimeReadinessBindingCommand extends ReadRuntimeReadinessBindingCommand{}

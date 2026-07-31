@@ -5,29 +5,53 @@ import * as configContracts from "..";
 describe("config family invariants", () => {
   it("exports only config-family contract surfaces from the family barrel", () => {
     expect(Object.keys(configContracts).sort()).toEqual([
+      "KNOWN_DEPLOYMENT_SHAPES",
       "PERSISTENCE_ADAPTER_ID_FORMAT_DESCRIPTION",
       "PERSISTENCE_NAMESPACE_FORMAT_DESCRIPTION",
       "PERSISTENCE_OPERATION_TIMEOUT_MS_FORMAT_DESCRIPTION",
       "STORAGE_ADAPTER_ID_FORMAT_DESCRIPTION",
       "STORAGE_NAMESPACE_FORMAT_DESCRIPTION",
       "STORAGE_OPERATION_TIMEOUT_MS_FORMAT_DESCRIPTION",
+      "TENANT_PLACEMENT_MODES",
+      "createDefaultDeploymentPersistenceTarget",
       "createHostConfig",
       "createLoggingConfig",
       "createPersistenceConfig",
       "createRuntimeConfig",
       "createStorageConfig",
       "createSystemConfig",
+      "createTenantPlacementConfig",
+      "isDeploymentShape",
       "isPersistenceAdapterId",
       "isPersistenceNamespace",
       "isStorageAdapterId",
       "isStorageNamespace",
+      "normalizeDeploymentShape",
       "normalizePersistenceAdapterId",
       "normalizePersistenceNamespace",
       "normalizePersistenceOperationTimeoutMs",
       "normalizeStorageAdapterId",
       "normalizeStorageNamespace",
       "normalizeStorageOperationTimeoutMs",
+      "tenantPlacementAllowsOrganization",
     ]);
+  });
+
+  it("keeps deployment persistence defaults explicit and finite", () => {
+    expect(configContracts.KNOWN_DEPLOYMENT_SHAPES).toEqual([
+      "local",
+      "campus-server",
+      "corporate-server",
+      "cloud",
+    ]);
+
+    expect(
+      configContracts.createDefaultDeploymentPersistenceTarget("local"),
+    ).toMatchObject({
+      deploymentShape: "local",
+      persistence: { adapter: "sqlite" },
+      accessMode: "embedded-single-host",
+    });
   });
 
   it("keeps persistence and storage config typed, normalized, and concern-specific", () => {

@@ -4,14 +4,33 @@ import { createApiArtifactBrowserClient } from "../src/features/artifact-browser
 import { resolveArtifactFamily } from "../../../modules/application/shared/artifact-family-classifier";
 
 const originalFetch = globalThis.fetch;
+const originalLocalStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
 
 afterEach(() => {
   (globalThis as { fetch?: typeof fetch }).fetch = originalFetch;
+  if (originalLocalStorage) {
+    Object.defineProperty(globalThis, "localStorage", originalLocalStorage);
+  } else {
+    delete (globalThis as { localStorage?: Storage }).localStorage;
+  }
 });
 
 describe("thin-client api artifact browser family resolution", () => {
   it("uses the canonical resolver for register-from-repo artifactFamily payloads", async () => {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const localStorageValues = new Map<string, string>();
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (key: string) => localStorageValues.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          localStorageValues.set(key, value);
+        },
+        removeItem: (key: string) => {
+          localStorageValues.delete(key);
+        },
+      },
+    });
     (globalThis as { fetch?: typeof fetch }).fetch = (async (
       input: RequestInfo | URL,
       init?: RequestInit,

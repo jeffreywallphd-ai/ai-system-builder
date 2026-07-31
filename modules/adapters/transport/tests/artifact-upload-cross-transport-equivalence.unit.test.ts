@@ -75,6 +75,7 @@ async function invokeApiUploadRoute(
         fileName: "cat.png",
         mediaType: "image/png",
         bytes: [137, 80, 78, 71],
+        workspaceId: "workspace-a",
         source: "shared.upload.form",
       },
       headers: {
@@ -106,7 +107,10 @@ describe("artifact upload cross-transport equivalence", () => {
           sourceKind: "upload",
         },
       });
-    const ipcHandler = createDesktopArtifactUploadIpcHandler(createIpcUseCaseStub(executeFromIpc));
+    const ipcHandler = createDesktopArtifactUploadIpcHandler(
+      createIpcUseCaseStub(executeFromIpc),
+      { isTrustedSender: () => true },
+    );
 
     await ipcHandler(
       {},
@@ -115,6 +119,7 @@ describe("artifact upload cross-transport equivalence", () => {
           fileName: "cat.png",
           mediaType: "image/png",
           bytes: new Uint8Array([137, 80, 78, 71]),
+          workspaceId: "workspace-a",
           boundary: {
             host: "desktop",
             source: "shared.upload.form",
@@ -150,10 +155,12 @@ describe("artifact upload cross-transport equivalence", () => {
       },
       {
         source: "shared.upload.form",
+        workspaceId: "workspace-a",
       },
       {
         requestId: "req-transport-1",
         correlationId: "corr-transport-1",
+        workspaceId: "workspace-a",
       },
     );
     expect(executeFromApi).toHaveBeenCalledWith(
@@ -164,10 +171,12 @@ describe("artifact upload cross-transport equivalence", () => {
       },
       {
         source: "shared.upload.form",
+        workspaceId: "workspace-a",
       },
       {
         requestId: "req-transport-1",
         correlationId: "corr-transport-1",
+        workspaceId: "workspace-a",
       },
     );
   });
@@ -189,6 +198,7 @@ describe("artifact upload cross-transport equivalence", () => {
           correlationId: "corr-transport-2",
         }),
       ),
+      { isTrustedSender: () => true },
     )(
       {},
       createDesktopArtifactUploadRequest(
@@ -196,6 +206,7 @@ describe("artifact upload cross-transport equivalence", () => {
           fileName: "cat.png",
           mediaType: "image/png",
           bytes: new Uint8Array([137, 80, 78, 71]),
+          workspaceId: "workspace-a",
           boundary: {
             host: "desktop",
             source: "shared.upload.form",
@@ -253,6 +264,7 @@ describe("artifact upload cross-transport equivalence", () => {
           correlationId: "corr-transport-3",
         }),
       ),
+      { isTrustedSender: () => true },
     )(
       {},
       createDesktopArtifactUploadRequest(
@@ -260,6 +272,7 @@ describe("artifact upload cross-transport equivalence", () => {
           fileName: "cat.png",
           mediaType: "image/png",
           bytes: new Uint8Array([137, 80, 78, 71]),
+          workspaceId: "workspace-a",
           boundary: {
             host: "desktop",
             source: "shared.upload.form",

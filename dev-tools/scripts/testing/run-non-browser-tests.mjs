@@ -10,33 +10,56 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { run } from "node:test";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import {
   applyIgnoredFailureAdjustments,
   applyDiagnosticSummaryMetric,
   buildNonBrowserNodeTestRunOptions,
+  createNonBrowserAssetModule,
+  createTestTimingTracker,
+  formatNonBrowserFailureSummary,
+  isNonBrowserAssetSource,
+  isVitestOwnedTestSource,
   isIgnorableRunnerSpawnFailure,
+  parseTestSuiteArgument,
+  shouldIncludeTestFileForSuite,
 } from "./non-browser-test-runner-core.mjs";
+import { assertNoSourceTreeJavaScriptArtifacts } from "./source-tree-contamination-guard.mjs";
 
 const runnerDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(runnerDir, "../../..");
+const suite = parseTestSuiteArgument(process.argv.slice(2));
 
-const reportRelativePath = "artifacts/test-reports/non-browser-test-report.json";
+const reportRelativePath =
+  suite === "all"
+    ? "artifacts/test-reports/non-browser-test-report.json"
+    : "artifacts/test-reports/non-browser-" + suite + "-test-report.json";
 const reportPath = path.resolve(repoRoot, reportRelativePath);
-const runtimeRoot = path.resolve(repoRoot, "artifacts/test-runtime/non-browser");
-const runnerRelativePath = "dev-tools/scripts/testing/run-non-browser-tests.mjs";
+const runtimeRoot = path.resolve(
+  repoRoot,
+  "artifacts/test-runtime/non-browser",
+);
+const runnerRelativePath =
+  "dev-tools/scripts/testing/run-non-browser-tests.mjs";
 
 const discoveryRoots = [
   "modules",
   "apps/server",
   "apps/desktop",
   "apps/thin-client",
+  "dev-tools/config",
+  "dev-tools/scripts/agent-support",
+  "dev-tools/scripts/architecture",
+  "dev-tools/scripts/docs",
+  "dev-tools/scripts/deployment",
+  "dev-tools/scripts/qualification",
+  "dev-tools/scripts/server",
+  "dev-tools/scripts/security",
+  "dev-tools/scripts/thin-client",
   "dev-tools/scripts/testing",
 ];
 const validTestFilePattern = /\.test\.[cm]?[jt]sx?$/i;
-const browserOnlyTestPattern = /\.(ui|e2e)\.test\.[cm]?[jt]sx?$/i;
-const browserAppPathPattern = /^(apps\/desktop\/src\/renderer\/|apps\/thin-client\/src\/)/i;
 const ignoredDirectories = new Set([
   ".git",
   ".turbo",
@@ -56,6 +79,7 @@ const runtimeToSourceFile = new Map();
 
 const report = {
   generatedAt: new Date().toISOString(),
+  suite,
   repoRoot,
   reportPath: reportRelativePath,
   status: "failed",
@@ -77,11 +101,15 @@ const report = {
     durationMs: 0,
     success: false,
   },
+  slowestFiles: [],
+  slowestTests: [],
   failures: [],
   startupError: null,
 };
+const timingTracker = createTestTimingTracker();
 
 const writeReport = () => {
+  Object.assign(report, timingTracker.snapshot());
   report.discoveredFiles = [...new Set(discoveredSourceTestFiles)].sort();
   report.discoveredFileCount = report.discoveredFiles.length;
 
@@ -151,14 +179,18 @@ const serializeError = (value) => {
 
   return {
     name: typeof maybeError.name === "string" ? maybeError.name : "Error",
-    message: typeof maybeError.message === "string" ? maybeError.message : String(value),
+    message:
+      typeof maybeError.message === "string"
+        ? maybeError.message
+        : String(value),
     stack: typeof maybeError.stack === "string" ? maybeError.stack : undefined,
     code: typeof maybeError.code === "string" ? maybeError.code : undefined,
     cause:
       cause && typeof cause === "object"
         ? {
             name: typeof cause.name === "string" ? cause.name : undefined,
-            message: typeof cause.message === "string" ? cause.message : String(cause),
+            message:
+              typeof cause.message === "string" ? cause.message : String(cause),
             stack: typeof cause.stack === "string" ? cause.stack : undefined,
             code: typeof cause.code === "string" ? cause.code : undefined,
           }
@@ -176,12 +208,18 @@ const resolveRuntimeSpecifier = (specifier, runtimeAbsolutePath) => {
     return specifier;
   }
 
-  const canonicalSpecifier = specifier.endsWith("/") ? specifier.slice(0, -1) : specifier;
+  const canonicalSpecifier = specifier.endsWith("/")
+    ? specifier.slice(0, -1)
+    : specifier;
   const runtimeDir = path.dirname(runtimeAbsolutePath);
   const resolvedBase = path.resolve(runtimeDir, canonicalSpecifier);
   const specifierExtension = path.extname(canonicalSpecifier).toLowerCase();
 
-  if (specifierExtension === ".js" || specifierExtension === ".mjs" || specifierExtension === ".cjs") {
+  if (
+    specifierExtension === ".js" ||
+    specifierExtension === ".mjs" ||
+    specifierExtension === ".cjs"
+  ) {
     return canonicalSpecifier;
   }
 
@@ -209,15 +247,24 @@ const resolveRuntimeSpecifier = (specifier, runtimeAbsolutePath) => {
     return `${canonicalSpecifier}.cjs`;
   }
 
-  if (isDirectoryPath(resolvedBase) && pathExists(path.join(resolvedBase, "index.js"))) {
+  if (
+    isDirectoryPath(resolvedBase) &&
+    pathExists(path.join(resolvedBase, "index.js"))
+  ) {
     return `${canonicalSpecifier}/index.js`;
   }
 
-  if (isDirectoryPath(resolvedBase) && pathExists(path.join(resolvedBase, "index.mjs"))) {
+  if (
+    isDirectoryPath(resolvedBase) &&
+    pathExists(path.join(resolvedBase, "index.mjs"))
+  ) {
     return `${canonicalSpecifier}/index.mjs`;
   }
 
-  if (isDirectoryPath(resolvedBase) && pathExists(path.join(resolvedBase, "index.cjs"))) {
+  if (
+    isDirectoryPath(resolvedBase) &&
+    pathExists(path.join(resolvedBase, "index.cjs"))
+  ) {
     return `${canonicalSpecifier}/index.cjs`;
   }
 
@@ -230,7 +277,10 @@ const rewriteRuntimeImportsInFile = (runtimeAbsolutePath) => {
   const rewrittenFromImports = sourceText.replace(
     /(from\s+)(["'])(\.[^"'()]+)\2/g,
     (match, prefix, quote, specifier) => {
-      const resolvedSpecifier = resolveRuntimeSpecifier(specifier, runtimeAbsolutePath);
+      const resolvedSpecifier = resolveRuntimeSpecifier(
+        specifier,
+        runtimeAbsolutePath,
+      );
       return `${prefix}${quote}${resolvedSpecifier}${quote}`;
     },
   );
@@ -238,7 +288,10 @@ const rewriteRuntimeImportsInFile = (runtimeAbsolutePath) => {
   const rewrittenDynamicImports = rewrittenFromImports.replace(
     /(import\(\s*)(["'])(\.[^"'()]+)\2(\s*\))/g,
     (match, prefix, quote, specifier, suffix) => {
-      const resolvedSpecifier = resolveRuntimeSpecifier(specifier, runtimeAbsolutePath);
+      const resolvedSpecifier = resolveRuntimeSpecifier(
+        specifier,
+        runtimeAbsolutePath,
+      );
       return `${prefix}${quote}${resolvedSpecifier}${quote}${suffix}`;
     },
   );
@@ -306,7 +359,9 @@ const transpileToRuntimeFile = (sourceAbsolutePath, runtimeAbsolutePath) => {
     });
   } catch (error) {
     const details = serializeError(error);
-    throw new Error(`Failed to transpile ${normalizeToPosixPath(path.relative(repoRoot, sourceAbsolutePath))}: ${details.message}`);
+    throw new Error(
+      `Failed to transpile ${normalizeToPosixPath(path.relative(repoRoot, sourceAbsolutePath))}: ${details.message}`,
+    );
   }
 
   writeRuntimeOutput(runtimeAbsolutePath, transpileResult.outputText);
@@ -341,26 +396,48 @@ const walkAndBuildRuntime = (startPath) => {
     const relativeRuntimePath = mapOutputExtension(relativeSourcePath);
     const runtimeAbsolutePath = path.resolve(runtimeRoot, relativeRuntimePath);
 
-    if (transpileEligiblePattern.test(entry.name) && !declarationFilePattern.test(entry.name)) {
+    if (
+      transpileEligiblePattern.test(entry.name) &&
+      !declarationFilePattern.test(entry.name)
+    ) {
       transpileToRuntimeFile(absolutePath, runtimeAbsolutePath);
     } else if (
       (entry.name.endsWith(".json") && entry.name !== "package.json") ||
       entry.name.endsWith(".node")
     ) {
       copyToRuntimeFile(absolutePath, runtimeAbsolutePath);
+    } else if (isNonBrowserAssetSource(normalizedSourcePath)) {
+      const assetModulePath = `${runtimeAbsolutePath}.js`;
+      writeRuntimeOutput(
+        assetModulePath,
+        createNonBrowserAssetModule(normalizedSourcePath),
+      );
+      runtimeToSourceFile.set(
+        path.resolve(assetModulePath),
+        normalizedSourcePath,
+      );
+      continue;
     } else {
       continue;
     }
 
-    runtimeToSourceFile.set(path.resolve(runtimeAbsolutePath), normalizedSourcePath);
+    runtimeToSourceFile.set(
+      path.resolve(runtimeAbsolutePath),
+      normalizedSourcePath,
+    );
 
-    if (
-      validTestFilePattern.test(entry.name) &&
-      !browserOnlyTestPattern.test(entry.name) &&
-      !browserAppPathPattern.test(normalizedSourcePath)
-    ) {
-      discoveredSourceTestFiles.push(normalizedSourcePath);
-      discoveredRuntimeTestFiles.push(path.resolve(runtimeAbsolutePath));
+    if (validTestFilePattern.test(entry.name)) {
+      const sourceText = readFileSync(absolutePath, "utf8");
+      const isOwnedByVitest = isVitestOwnedTestSource(sourceText);
+      const isSelected = shouldIncludeTestFileForSuite({
+        sourcePath: normalizedSourcePath,
+        sourceText,
+        suite,
+      });
+      if (!isOwnedByVitest && isSelected) {
+        discoveredSourceTestFiles.push(normalizedSourcePath);
+        discoveredRuntimeTestFiles.push(path.resolve(runtimeAbsolutePath));
+      }
     }
   }
 };
@@ -403,29 +480,55 @@ const resolveSourcePath = (maybeRuntimeFile) => {
 
   const normalized = path.resolve(maybeRuntimeFile);
   const sourcePath = runtimeToSourceFile.get(normalized);
-  return sourcePath ?? normalizeToPosixPath(path.relative(repoRoot, maybeRuntimeFile));
+  return (
+    sourcePath ??
+    normalizeToPosixPath(path.relative(repoRoot, maybeRuntimeFile))
+  );
 };
 
 try {
+  assertNoSourceTreeJavaScriptArtifacts(repoRoot);
   discoverAndPrepareRuntime();
   let ignoredRunnerSpawnFailures = 0;
 
   if (discoveredRuntimeTestFiles.length === 0) {
-    throw new Error("No non-browser test files were discovered.");
+    if (suite !== "ai") {
+      throw new Error("No non-browser test files were discovered.");
+    }
+    console.log(
+      "No explicitly marked non-browser AI tests were discovered; continuing with the controlled Python AI tests.",
+    );
   }
 
-  for (const runtimeTestFile of discoveredRuntimeTestFiles) {
-    await import(pathToFileURL(runtimeTestFile).href);
-  }
-
-  const testsStream = run(buildNonBrowserNodeTestRunOptions());
+  const testsStream =
+    discoveredRuntimeTestFiles.length === 0
+      ? []
+      : run(
+          buildNonBrowserNodeTestRunOptions({
+            files: discoveredRuntimeTestFiles,
+            cwd: repoRoot,
+          }),
+        );
 
   for await (const streamEvent of testsStream) {
     const eventType = streamEvent?.type;
     const event = streamEvent?.data ?? streamEvent;
 
+    if (eventType === "test:pass" || eventType === "test:fail") {
+      timingTracker.record({
+        file: resolveSourcePath(event.file),
+        name: event.name,
+        nesting: event.nesting,
+        durationMs: event.details?.duration_ms,
+        status: eventType === "test:pass" ? "passed" : "failed",
+      });
+    }
+
     if (eventType === "test:diagnostic") {
-      const didApply = applyDiagnosticSummaryMetric(report.summary, event?.message);
+      const didApply = applyDiagnosticSummaryMetric(
+        report.summary,
+        event?.message,
+      );
       if (didApply) {
         continue;
       }
@@ -472,7 +575,7 @@ try {
   process.exitCode = 1;
   report.startupError = serializeError(error);
 
-  if(
+  if (
     report.summary.counts.tests === 0 &&
     report.summary.counts.suites === 0 &&
     report.failures.length === 0
@@ -483,5 +586,9 @@ try {
   }
 } finally {
   writeReport();
-  console.log("Review test report for failure details: artifacts/test-reports/non-browser-test-report.json");
+  const failureSummary = formatNonBrowserFailureSummary(report);
+  if (failureSummary.length > 0) {
+    console.error(failureSummary);
+  }
+  console.log("Review test report and timing details: " + reportRelativePath);
 }

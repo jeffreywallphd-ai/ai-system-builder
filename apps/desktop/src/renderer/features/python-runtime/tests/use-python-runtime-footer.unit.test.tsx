@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -118,4 +119,33 @@ describe("usePythonRuntimeFooter", () => {
       await Promise.resolve();
     });
   });
+
+  it("clears runtime polling intervals and listeners on unmount without stopping backend tasks", async () => {
+    const client: DesktopPythonRuntimeClient = {
+      readStatus: vi.fn().mockResolvedValue(createSnapshot()),
+      controlRuntime: vi.fn().mockResolvedValue(createSnapshot()),
+    };
+    const clearIntervalSpy = vi.spyOn(window, "clearInterval");
+    const removeListenerSpy = vi.spyOn(window, "removeEventListener");
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoot = root;
+    mountedContainer = container;
+
+    await act(async () => {
+      root.render(<HookProbe client={client} />);
+      await Promise.resolve();
+    });
+    await act(async () => {
+      root.unmount();
+    });
+    mountedRoot = undefined;
+
+    expect(clearIntervalSpy).toHaveBeenCalledTimes(2);
+    expect(removeListenerSpy).toHaveBeenCalledWith("dataset-preparation-training-started", expect.any(Function));
+    expect(client.controlRuntime).not.toHaveBeenCalled();
+  });
+
 });

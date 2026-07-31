@@ -18,8 +18,11 @@ import {
   normalizeModelInferenceMode,
   normalizeModelInventoryRecord,
   normalizeModelValidationSummary,
+  normalizePublishModelRequest,
+  normalizeRevealModelInFolderRequest,
   normalizeRegisterDownloadedModelRequest,
   normalizeRegisterGeneratedModelRequest,
+  normalizeValidateModelRequest,
   recommendModelInferenceMode,
   type BrowseModelsResult,
   type ModelInferenceMode,
@@ -42,6 +45,7 @@ describe("model contracts", () => {
       provider: "huggingface",
       query: " mistral ",
       taskTags: ["summarization", " chat "],
+      customTaskTag: " IMAGE-CLASSIFICATION ",
       authorOrOrg: " mistralai ",
       limit: 25,
       cursor: " next ",
@@ -53,6 +57,7 @@ describe("model contracts", () => {
       provider: "huggingface",
       query: "mistral",
       taskTags: ["summarization", "chat"],
+      customTaskTag: "image-classification",
       authorOrOrg: "mistralai",
       limit: 25,
       cursor: "next",
@@ -86,6 +91,19 @@ describe("model contracts", () => {
     expect(normalizeBrowseModelsRequest({ provider: "huggingface", limit: 12.9 }).limit).toBe(DEFAULT_BROWSE_MODELS_LIMIT);
     expect(normalizeBrowseModelsRequest({ provider: "huggingface", limit: 5000 }).limit).toBe(MAX_BROWSE_MODELS_LIMIT);
     expect(normalizeBrowseModelsRequest({ provider: "huggingface" }).limit).toBe(DEFAULT_BROWSE_MODELS_LIMIT);
+    expect(MAX_BROWSE_MODELS_LIMIT).toBe(50);
+    expect(() => normalizeBrowseModelsRequest({ provider: "huggingface", customTaskTag: "bad task" })).toThrow(/customTaskTag/);
+    expect(() => normalizeBrowseModelsRequest({ provider: "huggingface", cursor: "bad cursor" })).toThrow(/cursor/);
+  });
+
+  it("normalizes path-opaque model folder requests", () => {
+    expect(normalizeRevealModelInFolderRequest({
+      workspaceId: "workspace-a" as never,
+      modelRecordId: " model-1 ",
+    })).toEqual({
+      workspaceId: "workspace-a",
+      modelRecordId: "model-1",
+    });
   });
 
   it("recommends inference mode from known pipeline/task tags", () => {
@@ -139,6 +157,7 @@ describe("model contracts", () => {
 
   it("supports model training request/result and validation report shapes", () => {
     const request: ModelTrainingRequest = {
+      trainingTask: "llm-classification",
       baseModel: {
         provider: "huggingface",
         modelId: "mistralai/Mistral-7B-Instruct-v0.2",
@@ -174,6 +193,7 @@ describe("model contracts", () => {
     };
 
     expect(request.method).toBe("qlora");
+    expect(request.trainingTask).toBe("llm-classification");
     expect(result.status).toBe("queued");
     expect(MODEL_TRAINING_METHODS).toEqual(["lora", "qlora", "full-finetune"]);
     expect(MODEL_TRAINING_STATUSES).toEqual(["queued", "running", "succeeded", "failed", "cancelled"]);
@@ -199,6 +219,22 @@ describe("model contracts", () => {
       errors: undefined,
     });
     expect(MODEL_VALIDATION_STATUSES).toEqual(["unknown", "valid", "invalid", "warning"]);
+  });
+
+
+  it("requires workspace id for model validation and publishing requests", () => {
+    expect(() => normalizeValidateModelRequest({ modelRecordId: "m1" } as never)).toThrow("workspaceId must be provided");
+    expect(() => normalizePublishModelRequest({ modelRecordId: "m1", repository: "owner/repo" } as never)).toThrow("workspaceId must be provided");
+
+    expect(normalizeValidateModelRequest({ workspaceId: "workspace-a" as never, modelRecordId: " m1 " })).toMatchObject({
+      workspaceId: "workspace-a",
+      modelRecordId: "m1",
+    });
+    expect(normalizePublishModelRequest({ workspaceId: "workspace-a" as never, modelRecordId: " m1 ", repository: " owner/repo " })).toMatchObject({
+      workspaceId: "workspace-a",
+      modelRecordId: "m1",
+      repository: "owner/repo",
+    });
   });
 
   it("supports inventory backing artifact links and generated/adapter lineage fields", () => {
@@ -256,25 +292,30 @@ describe("model contracts", () => {
 
   it("normalizes list/delete model-management operation requests", () => {
     const list = normalizeListModelsRequest({
+      workspaceId: "workspace-a" as never,
       source: "generated",
       lifecycleStatus: "generated",
       artifactForm: "adapter",
       search: " demo ",
       limit: 999,
       includeDiscovered: false,
+      includeSharedStorage: true,
     });
 
     expect(list.limit).toBe(MAX_LIST_MODELS_LIMIT);
     expect(list.search).toBe("demo");
     expect(list.includeDiscovered).toBe(false);
+    expect(list.includeSharedStorage).toBe(true);
 
     const del = normalizeDeleteModelRecordRequest({
+      workspaceId: "workspace-a" as never,
       modelRecordId: " model-1 ",
       deleteLocalFiles: true,
       deleteBackingArtifacts: false,
     });
 
     expect(del).toEqual({
+      workspaceId: "workspace-a",
       modelRecordId: "model-1",
       deleteLocalFiles: true,
       deleteBackingArtifacts: false,
@@ -283,6 +324,7 @@ describe("model contracts", () => {
 
   it("preserves validation metadata when registering downloaded and generated models", () => {
     const downloaded: RegisterDownloadedModelRequest = {
+      workspaceId: "workspace-a" as never,
       displayName: " Downloaded Model ",
       source: "huggingface",
       provider: "huggingface",
@@ -299,6 +341,7 @@ describe("model contracts", () => {
     });
 
     expect(normalizeRegisterGeneratedModelRequest({
+      workspaceId: "workspace-a" as never,
       displayName: " Generated Adapter ",
       provider: "huggingface",
       localPath: " C:/models/generated ",

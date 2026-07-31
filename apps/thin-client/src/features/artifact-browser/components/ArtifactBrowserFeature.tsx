@@ -5,6 +5,12 @@ import {
   deriveArtifactListStatusLabels,
   derivePublishedBackingDisplayRows,
   derivePublishedBackingVerificationPresentation,
+  ApplicationIcon,
+  ArtifactPreviewPanel,
+  PanelHeading,
+  TermWithHint,
+  TransientNotificationPublisher,
+  TypeBadge,
   type PublishedBackingView,
 } from "../../../../../../modules/ui/shared";
 import type { ArtifactBrowserApiClient } from "../api/apiArtifactBrowserClient";
@@ -12,6 +18,8 @@ import { useArtifactBrowserFeature } from "../hooks/useArtifactBrowserFeature";
 
 export interface ArtifactBrowserFeatureProps {
   client?: ArtifactBrowserApiClient;
+  workspaceId?: string;
+  workspaceName?: string;
 }
 
 function PublishedBackingPanel(
@@ -34,7 +42,7 @@ function PublishedBackingPanel(
             <dd>{row.value}</dd>
           </Fragment>
         ))}
-        <dt>Verification</dt>
+        <dt><TermWithHint termId="verification">Verification</TermWithHint></dt>
         <dd>{verification.statusLabel}</dd>
         <dt>Checked</dt>
         <dd>{verification.lastCheckedLabel}</dd>
@@ -46,28 +54,41 @@ function PublishedBackingPanel(
   );
 }
 
-export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) {
+export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserFeatureProps) {
   const {
     items,
-    huggingFaceTokenStatus,
-    tokenInput,
-    tokenState,
     selectedStorageKey,
+    pendingDeleteStorageKey,
+    deleteConfirmationInput,
+    selectedArtifactKeys,
+    bulkDeleteConfirmationInput,
     detail,
     content,
-    imageViewUrl,
+    artifactPreview,
+    canSelectPreviousImage,
+    canSelectNextImage,
     publishState,
     registerState,
     localizeState,
     sourceVerifyState,
     publishedBacking,
     localizedArtifact,
-    publishForm,
     registerForm,
     viewState,
     selectArtifact,
     refreshArtifacts,
-    publishArtifactToHuggingFace,
+    selectPreviousImage,
+    selectNextImage,
+    requestDeleteRegisteredArtifact,
+    confirmPendingDelete,
+    cancelPendingDelete,
+    setDeleteConfirmationInput,
+    toggleSelectedArtifactKey,
+    clearSelectedArtifactKeys,
+    toggleAllArtifactKeys,
+    areAllArtifactKeysSelected,
+    setBulkDeleteConfirmationInput,
+    deleteSelectedArtifacts,
     registerArtifactFromHuggingFace,
     registerHuggingFaceNamespace,
     browseHuggingFaceDatasetParquetFiles,
@@ -79,53 +100,71 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
     localizeArtifactFromRepo,
     recheckPublishedBacking,
     recheckSourceBacking,
-    setRepository,
-    setPathInRepo,
-    setRevision,
-    setMediaType,
-    togglePublishForm,
     setRegisterRepository,
     setRegisterNamespace,
     setRegisterPathInRepo,
     setRegisterRevision,
     setRegisterMediaType,
     toggleRegisterForm,
-    setTokenInput,
-    saveHuggingFaceToken,
-    clearHuggingFaceToken,
-  } = useArtifactBrowserFeature(client);
+  } = useArtifactBrowserFeature(client, workspaceId);
+  const transientViewState = Boolean(viewState.message && (
+    /^Deleted\b/.test(viewState.message)
+    || (viewState.status === "error" && !/^(Failed to load|Unable to load|Select a workspace|Type Delete)/i.test(viewState.message))
+  ));
 
   const backingState = deriveArtifactBackingState(detail, content);
 
   return (
-    <section className="ui-panel ui-stack ui-stack--sm">
-      <header className="ui-grid ui-grid--two"><h2>Data Artifact Browser</h2><button className="ui-button" type="button" onClick={() => void refreshArtifacts()}>Refresh</button></header>
-      {viewState.message ? <p role={viewState.status === "error" ? "alert" : "status"}>{viewState.message}</p> : null}
-      <section className="ui-stack ui-stack--sm">
-        <h3>Hugging Face token</h3>
-        <p role="status">
-          Status: {huggingFaceTokenStatus.configured ? `configured (${huggingFaceTokenStatus.maskedToken ?? "••••"})` : "not configured"}
-        </p>
-        <label className="ui-stack ui-stack--sm">
-          <span>Access token</span>
-          <input className="ui-input" type="password" value={tokenInput} onChange={(event) => setTokenInput(event.target.value)} placeholder="hf_..." />
-        </label>
-        <div className="ui-grid ui-grid--two">
-          <button className="ui-button" type="button" onClick={() => void saveHuggingFaceToken()} disabled={tokenState.status === "loading" || tokenInput.trim().length === 0}>
-            {tokenState.status === "loading" ? "Saving..." : "Save token"}
-          </button>
-          <button className="ui-button" type="button" onClick={() => void clearHuggingFaceToken()} disabled={tokenState.status === "loading" || !huggingFaceTokenStatus.configured}>
-            Clear token
-          </button>
+    <section className="ui-panel ui-panel--elevated ui-panel--sectioned">
+      <header className="ui-panel__section-header">
+        <PanelHeading icon="browse" tone="violet">Artifact Browser</PanelHeading>
+      </header>
+      <div className="ui-panel__section-body ui-stack ui-stack--sm">
+      <div className="artifact-browser__toolbar">
+        <button className="ui-button" type="button" onClick={() => void refreshArtifacts()}><ApplicationIcon name="refresh" /><span className="ui-button__label">Refresh</span></button>
+      </div>
+      {viewState.message && !transientViewState ? <p role={viewState.status === "error" ? "alert" : "status"}>{viewState.message}</p> : null}
+      <TransientNotificationPublisher message={transientViewState ? viewState.message : undefined} title={viewState.status === "error" ? "Artifact action needs attention" : "Artifacts updated"} tone={viewState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
+      {pendingDeleteStorageKey ? (
+        <div className="ui-modal-overlay" role="presentation">
+          <section className="ui-panel ui-modal-dialog ui-stack ui-stack--sm" role="dialog" aria-label="Delete artifact confirmation" aria-modal="true">
+            <header className="ui-modal-header">
+              <h3>Delete artifact</h3>
+              <button className="ui-modal-close" type="button" aria-label="Close delete confirmation" onClick={cancelPendingDelete}>x</button>
+            </header>
+            <div className="ui-modal-body ui-stack ui-stack--sm">
+              <p>Type <strong>Delete</strong> to remove this artifact and local backing data.</p>
+              <p className="ui-text-muted">Artifact: {pendingDeleteStorageKey}</p>
+              <label className="ui-stack ui-stack--sm">
+                <span><TermWithHint termId="deleteConfirmation">Confirmation</TermWithHint></span>
+                <input
+                  className="ui-input"
+                  value={deleteConfirmationInput}
+                  onChange={(event) => setDeleteConfirmationInput(event.target.value)}
+                  placeholder="Delete"
+                />
+              </label>
+              <div className="ui-grid ui-grid--two">
+                <button
+                  className="ui-button ui-button--destructive"
+                  type="button"
+                  onClick={() => void confirmPendingDelete()}
+                  disabled={deleteConfirmationInput !== "Delete"}
+                >
+                  Confirm delete
+                </button>
+                <button className="ui-button" type="button" onClick={cancelPendingDelete}>Cancel</button>
+              </div>
+            </div>
+          </section>
         </div>
-        {tokenState.message ? <p role={tokenState.status === "error" ? "alert" : "status"}>{tokenState.message}</p> : null}
-      </section>
+      ) : null}
 
       <button className="ui-button" type="button" onClick={toggleRegisterForm} disabled={registerState.status === "loading"}>Register from Hugging Face</button>
       {registerForm.showRegisterForm ? (
         <section className="ui-stack ui-stack--sm">
           <p role="note">Private or gated Hugging Face repositories may require a host/server token.</p>
-          <label className="ui-stack ui-stack--sm"><span>Namespace (user/org)</span><input className="ui-input" value={registerForm.namespace} onChange={(event) => setRegisterNamespace(event.target.value)} placeholder="OpenFinAL" required /></label>
+          <label className="ui-stack ui-stack--sm"><span><TermWithHint termId="namespace">Namespace</TermWithHint> (user/org)</span><input className="ui-input" value={registerForm.namespace} onChange={(event) => setRegisterNamespace(event.target.value)} placeholder="OpenFinAL" required /></label>
           <button className="ui-button" type="button" disabled={registerState.status === "loading" || registerForm.namespace.trim().length === 0} onClick={() => void registerHuggingFaceNamespace()}>
             Register namespace
           </button>
@@ -153,7 +192,7 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
                           Close
                         </button>
                       </div>
-                      {getHuggingFaceDatasetFilesState(dataset.repository).status === "loading" ? <p role="status">Loading dataset files…</p> : null}
+                      {getHuggingFaceDatasetFilesState(dataset.repository).status === "loading" ? <p role="status">Loading dataset files...</p> : null}
                       {getHuggingFaceDatasetFilesState(dataset.repository).status === "error" ? (
                         <p role="alert">{getHuggingFaceDatasetFilesState(dataset.repository).message ?? "Failed to load dataset files."}</p>
                       ) : null}
@@ -184,30 +223,53 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
               ))}
             </ul>
           )}
-          <label className="ui-stack ui-stack--sm"><span>Repository</span><input className="ui-input" value={registerForm.repository} onChange={(event) => setRegisterRepository(event.target.value)} required /></label>
-          <label className="ui-stack ui-stack--sm"><span>Path in repo</span><input className="ui-input" value={registerForm.pathInRepo} onChange={(event) => setRegisterPathInRepo(event.target.value)} required /></label>
-          <label className="ui-stack ui-stack--sm"><span>Revision (optional)</span><input className="ui-input" value={registerForm.revision} onChange={(event) => setRegisterRevision(event.target.value)} /></label>
-          <label className="ui-stack ui-stack--sm"><span>Media type (optional)</span><input className="ui-input" value={registerForm.mediaType} onChange={(event) => setRegisterMediaType(event.target.value)} /></label>
+          <label className="ui-stack ui-stack--sm"><span><TermWithHint termId="repository">Repository</TermWithHint></span><input className="ui-input" value={registerForm.repository} onChange={(event) => setRegisterRepository(event.target.value)} required /></label>
+          <label className="ui-stack ui-stack--sm"><span><TermWithHint termId="pathInRepository">Path in repo</TermWithHint></span><input className="ui-input" value={registerForm.pathInRepo} onChange={(event) => setRegisterPathInRepo(event.target.value)} required /></label>
+          <label className="ui-stack ui-stack--sm"><span><TermWithHint termId="revision">Revision</TermWithHint> (optional)</span><input className="ui-input" value={registerForm.revision} onChange={(event) => setRegisterRevision(event.target.value)} /></label>
+          <label className="ui-stack ui-stack--sm"><span><TermWithHint termId="mediaType">Media type</TermWithHint> (optional)</span><input className="ui-input" value={registerForm.mediaType} onChange={(event) => setRegisterMediaType(event.target.value)} /></label>
           <button className="ui-button" type="button" disabled={registerState.status === "loading" || registerForm.repository.trim().length === 0 || registerForm.pathInRepo.trim().length === 0} onClick={() => void registerArtifactFromHuggingFace()}>
             {registerState.status === "loading" ? "Registering..." : "Register"}
           </button>
-          {registerState.message ? <p role={registerState.status === "error" ? "alert" : "status"}>{registerState.message}</p> : null}
+          <TransientNotificationPublisher message={registerState.status !== "loading" ? registerState.message : undefined} title={registerState.status === "error" ? "Artifact registration needs attention" : "Artifact registered"} tone={registerState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
         </section>
       ) : null}
 
       <ul className="ui-stack ui-stack--sm">
-        {items.map((item) => (
-          <li key={item.originalName ?? item.storageKey}>
-            <button
-              className="ui-button"
-              type="button"
-              onClick={() => void selectArtifact(item.storageKey)}
-              disabled={viewState.status === "loading" && selectedStorageKey === item.storageKey}
-            >
-              {item.originalName ?? item.storageKey}
+        <li className="ui-stack ui-stack--sm">
+          <label>
+            <input
+              type="checkbox"
+              checked={areAllArtifactKeysSelected}
+              onChange={toggleAllArtifactKeys}
+              disabled={items.length === 0}
+            />
+            {areAllArtifactKeysSelected ? " Deselect all artifacts" : " Select all artifacts"}
+          </label>
+        </li>
+        <li className="ui-grid ui-grid--two">
+          <label className="ui-stack ui-stack--sm">
+            <span><TermWithHint termId="deleteConfirmation">Bulk delete confirmation</TermWithHint></span>
+            <input className="ui-input" value={bulkDeleteConfirmationInput} onChange={(event) => setBulkDeleteConfirmationInput(event.target.value)} placeholder="Delete All" />
+          </label>
+          <div className="ui-stack ui-stack--sm">
+            <button className="ui-button ui-button--destructive" type="button" onClick={() => void deleteSelectedArtifacts()} disabled={selectedArtifactKeys.length === 0 || bulkDeleteConfirmationInput !== "Delete All"}>
+              Delete Selected ({selectedArtifactKeys.length})
             </button>
+            <button className="ui-button" type="button" onClick={clearSelectedArtifactKeys} disabled={selectedArtifactKeys.length === 0}>Clear selection</button>
+          </div>
+        </li>
+        {items.map((item) => (
+          <li key={item.storageKey}>
+            <div className="ui-type-row">
+              <input type="checkbox" checked={selectedArtifactKeys.includes(item.storageKey)} onChange={() => toggleSelectedArtifactKey(item.storageKey)} />
+              <TypeBadge value={item.mediaType ?? item.originalName ?? item.storageKey} />
+              <button className="ui-button" type="button" onClick={() => void selectArtifact(item.storageKey)} disabled={viewState.status === "loading" && selectedStorageKey === item.storageKey}>
+                <ApplicationIcon name="browse" />
+                <span className="ui-button__label">{item.originalName ?? item.storageKey}</span>
+              </button>
+            </div>
             {item.metadata?.backingState ? (
-              <small>{deriveArtifactListStatusLabels(item.metadata.backingState).join(" · ")}</small>
+              <small>{deriveArtifactListStatusLabels(item.metadata.backingState).join(" - ")}</small>
             ) : null}
           </li>
         ))}
@@ -215,41 +277,59 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
 
       {detail ? (
         <dl className="ui-grid ui-grid--two">
-          <dt>Selected key</dt>
+          <dt><TermWithHint termId="storedKey">Selected key</TermWithHint></dt>
           <dd>{detail.locator.storageKey}</dd>
-          <dt>Media type</dt>
-          <dd>{detail.mediaType ?? "unknown"}</dd>
-          <dt>Artifact family</dt>
+          <dt><TermWithHint termId="mediaType">Media type</TermWithHint></dt>
+          <dd className="ui-type-label"><TypeBadge value={detail.mediaType ?? detail.originalName ?? detail.locator.storageKey} /><span>{detail.mediaType ?? "unknown"}</span></dd>
+          <dt><TermWithHint termId="artifactFamily">Artifact family</TermWithHint></dt>
           <dd>{detail.artifactFamily}</dd>
-          <dt>Source</dt>
+          <dt><TermWithHint termId="source">Source</TermWithHint></dt>
           <dd>{detail.sourceKind ?? "unknown"}</dd>
-          <dt>Size bytes</dt>
+          <dt><TermWithHint termId="storedSize">Size bytes</TermWithHint></dt>
           <dd>{detail.sizeBytes ?? "unknown"}</dd>
-          <dt>Created at</dt>
+          <dt><TermWithHint termId="createdAt">Created at</TermWithHint></dt>
           <dd>{detail.createdAt ?? "unknown"}</dd>
         </dl>
       ) : <p className="ui-text-muted">Select a data artifact to inspect metadata and preview availability.</p>}
 
       {content ? (
         <dl className="ui-grid ui-grid--two">
-          <dt>Availability</dt>
+          <dt><TermWithHint termId="availability">Availability</TermWithHint></dt>
           <dd>{content.availability}</dd>
-          <dt>Retrieval</dt>
+          <dt><TermWithHint termId="retrieval">Retrieval</TermWithHint></dt>
           <dd>{content.retrieval}</dd>
-          <dt>Local bytes</dt>
+          <dt><TermWithHint termId="localBytes">Local bytes</TermWithHint></dt>
           <dd>{content.availability === "available" ? "present" : "missing"}</dd>
         </dl>
       ) : null}
 
       {detail ? (
         <section className="ui-stack ui-stack--sm">
+          <button
+            className="ui-button ui-button--destructive"
+            type="button"
+            onClick={() => requestDeleteRegisteredArtifact(detail.locator.storageKey)}
+          >
+            Delete artifact
+          </button>
           <h3>Local Object State</h3>
           <dl className="ui-grid ui-grid--two">
-            <dt>Local object availability</dt>
+            <dt><TermWithHint termId="localObject">Local object availability</TermWithHint></dt>
             <dd>{backingState.hasLocalObjectAvailable ? "available" : "not available"}</dd>
-            <dt>Localization state</dt>
+            <dt><TermWithHint termId="localization">Localization state</TermWithHint></dt>
             <dd>{backingState.isLocalized ? "localized" : backingState.isRemoteOnly ? "not localized" : "n/a"}</dd>
           </dl>
+          <ArtifactPreviewPanel preview={artifactPreview} />
+          {artifactPreview.descriptor?.kind === "image" ? (
+            <div className="ui-grid ui-grid--two">
+              <button className="ui-button" type="button" onClick={() => void selectPreviousImage()} disabled={!canSelectPreviousImage}>
+                Previous
+              </button>
+              <button className="ui-button" type="button" onClick={() => void selectNextImage()} disabled={!canSelectNextImage}>
+                Next
+              </button>
+            </div>
+          ) : null}
           {backingState.isRemoteOnly ? (
             <p role="status">Remote-only artifact. Local preview is unavailable until localization.</p>
           ) : null}
@@ -260,17 +340,17 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
         <section className="ui-stack ui-stack--sm">
           <h3>Imported Source Backing</h3>
           <dl className="ui-grid ui-grid--two">
-            <dt>Provider</dt>
+            <dt><TermWithHint termId="provider">Provider</TermWithHint></dt>
             <dd>{detail.metadata.importedSourceBacking.target.provider}</dd>
-            <dt>Repo</dt>
+            <dt><TermWithHint termId="repository">Repo</TermWithHint></dt>
             <dd>{detail.metadata.importedSourceBacking.target.repository}</dd>
-            <dt>Path</dt>
+            <dt><TermWithHint termId="pathInRepository">Path</TermWithHint></dt>
             <dd>{detail.metadata.importedSourceBacking.target.path}</dd>
-            <dt>Revision</dt>
+            <dt><TermWithHint termId="revision">Revision</TermWithHint></dt>
             <dd>{detail.metadata.importedSourceBacking.target.revision ?? "main"}</dd>
-            <dt>Source verified</dt>
+            <dt><TermWithHint termId="sourceVerified">Source verified</TermWithHint></dt>
             <dd>{detail.metadata.importedSourceBacking.verification.exists ? "yes" : "no"}</dd>
-            <dt>Source checked</dt>
+            <dt><TermWithHint termId="sourceChecked">Source checked</TermWithHint></dt>
             <dd>{detail.metadata.importedSourceBacking.verification.verifiedAt ?? "never"}</dd>
           </dl>
           <button
@@ -291,47 +371,11 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
               {localizeState.status === "loading" ? "Localizing..." : "Localize artifact"}
             </button>
           ) : null}
-          {sourceVerifyState.message ? (
-            <p role={sourceVerifyState.status === "error" ? "alert" : "status"}>{sourceVerifyState.message}</p>
-          ) : null}
-          {localizeState.message ? (
-            <p role={localizeState.status === "error" ? "alert" : "status"}>{localizeState.message}</p>
-          ) : null}
+          <TransientNotificationPublisher message={sourceVerifyState.status !== "loading" ? sourceVerifyState.message : undefined} title={sourceVerifyState.status === "error" ? "Source verification needs attention" : "Source verification completed"} tone={sourceVerifyState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
+          <TransientNotificationPublisher message={localizeState.status !== "loading" ? localizeState.message : undefined} title={localizeState.status === "error" ? "Artifact localization needs attention" : "Artifact localized"} tone={localizeState.status === "error" ? "error" : "success"} source="Artifact Browser" workspaceId={workspaceId} />
           {localizedArtifact ? (
             <p role="status">Localized bytes key: {localizedArtifact.localObject.key}</p>
           ) : null}
-        </section>
-      ) : null}
-
-      {imageViewUrl && content?.availability === "available" ? (
-        <figure className="ui-stack ui-stack--sm">
-          <img src={imageViewUrl} alt={detail?.locator.storageKey ?? "Selected artifact"} />
-          <figcaption>Image preview for {detail?.locator.storageKey}</figcaption>
-        </figure>
-      ) : null}
-
-      {detail ? (
-        <section className="ui-stack ui-stack--sm">
-          {backingState.hasLocalObjectAvailable ? (
-            <>
-              <button className="ui-button" type="button" disabled={publishState.status === "loading"} onClick={togglePublishForm}>Publish to Hugging Face</button>
-              {publishForm.showPublishForm ? (
-                <>
-                  <p role="note">Private or gated Hugging Face repositories may require a host/server token.</p>
-                  <label className="ui-stack ui-stack--sm"><span>Repository</span><input className="ui-input" value={publishForm.repository} onChange={(event) => setRepository(event.target.value)} required /></label>
-                  <label className="ui-stack ui-stack--sm"><span>Path in repo</span><input className="ui-input" value={publishForm.pathInRepo} onChange={(event) => setPathInRepo(event.target.value)} required /></label>
-                  <label className="ui-stack ui-stack--sm"><span>Revision (optional)</span><input className="ui-input" value={publishForm.revision} onChange={(event) => setRevision(event.target.value)} /></label>
-                  <label className="ui-stack ui-stack--sm"><span>Media type (optional)</span><input className="ui-input" value={publishForm.mediaType} onChange={(event) => setMediaType(event.target.value)} /></label>
-                  <button className="ui-button" type="button" disabled={publishState.status === "loading" || publishForm.repository.trim().length === 0 || publishForm.pathInRepo.trim().length === 0} onClick={() => void publishArtifactToHuggingFace()}>
-                    {publishState.status === "loading" ? "Publishing..." : "Publish"}
-                  </button>
-                </>
-              ) : null}
-            </>
-          ) : (
-            <p role="status">Publish is available after local bytes are present.</p>
-          )}
-          {publishState.message ? (<p role={publishState.status === "error" ? "alert" : "status"}>{publishState.message}</p>) : null}
         </section>
       ) : null}
 
@@ -342,7 +386,7 @@ export function ArtifactBrowserFeature({ client }: ArtifactBrowserFeatureProps) 
           onRecheck={() => void recheckPublishedBacking()}
         />
       ) : null}
-
+      </div>
     </section>
   );
 }

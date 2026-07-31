@@ -1,0 +1,21 @@
+{
+  "nativeApplyPatch": {
+    "codexExecutable": "/path/to/codex"
+  },
+  "repositorySnapshot": {
+    "repo": ".",
+    "logCount": 3,
+    "ignorePaths": [".local-codex/helpers.json"]
+  },
+  "repositoryChecks": {
+    "repo": ".",
+    "formatPaths": ["package.json"],
+    "focusedTests": [],
+    "installElectron": false,
+    "documentation": true,
+    "agentSupport": true,
+    "architecture": true,
+    "deployment": true,
+    "fullSuite": false
+  }
+}

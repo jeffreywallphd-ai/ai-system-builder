@@ -1,0 +1,140 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-system-builder
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ai-system-builder
+  template:
+    metadata:
+      labels:
+        app: ai-system-builder
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: server
+          image: registry.example.invalid/ai-system-builder@sha256:REPLACE_WITH_64_HEX_DIGEST
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: https
+              containerPort: 3010
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: DEPLOYMENT_SHAPE
+              value: cloud
+            - name: AI_SYSTEM_BUILDER_SECURITY_MODE
+              value: oidc-bearer
+            - name: AI_SYSTEM_BUILDER_OIDC_ISSUER
+              value: https://identity.example.invalid
+            - name: AI_SYSTEM_BUILDER_OIDC_AUDIENCE
+              value: ai-system-builder
+            - name: AI_SYSTEM_BUILDER_OIDC_JWKS_URI
+              value: https://identity.example.invalid/.well-known/jwks.json
+            - name: AI_SYSTEM_BUILDER_TENANT_PLACEMENT_MODE
+              value: pooled
+            - name: AI_SYSTEM_BUILDER_TLS_CERT_MODE
+              value: manual
+            - name: AI_SYSTEM_BUILDER_TLS_CERT_PATH
+              value: /run/tls/tls.crt
+            - name: AI_SYSTEM_BUILDER_TLS_KEY_PATH
+              value: /run/tls/tls.key
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ai-system-builder-secrets
+                  key: database-url
+            - name: POSTGRES_SSL_MODE
+              value: verify-full
+            - name: POSTGRES_SSL_CA_PEM
+              valueFrom:
+                secretKeyRef:
+                  name: ai-system-builder-secrets
+                  key: postgres-ca-pem
+            - name: SERVER_STORAGE_ROOT
+              value: /var/lib/ai-system-builder/artifacts
+            - name: SERVER_RUNTIME_ROOT
+              value: /var/lib/ai-system-builder/runtime
+          startupProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /health/live
+              port: https
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /health/live
+              port: https
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /health/ready
+              port: https
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          volumeMounts:
+            - name: tls
+              mountPath: /run/tls
+              readOnly: true
+            - name: artifact-storage
+              mountPath: /var/lib/ai-system-builder/artifacts
+            - name: runtime-storage
+              mountPath: /var/lib/ai-system-builder/runtime
+            - name: temporary-storage
+              mountPath: /tmp
+      volumes:
+        - name: tls
+          secret:
+            secretName: ai-system-builder-tls
+        - name: artifact-storage
+          persistentVolumeClaim:
+            claimName: ai-system-builder-artifacts
+        - name: runtime-storage
+          emptyDir: {}
+        - name: temporary-storage
+          emptyDir:
+            sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-system-builder
+spec:
+  selector:
+    app: ai-system-builder
+  ports:
+    - name: https
+      port: 3010
+      targetPort: https

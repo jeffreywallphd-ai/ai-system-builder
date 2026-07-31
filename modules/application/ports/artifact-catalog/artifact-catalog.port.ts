@@ -7,14 +7,17 @@ export interface AppendArtifactCatalogRecordRequest {
 }
 
 export interface BrowseArtifactCatalogRecordsRequest {
+  workspaceId?: ArtifactCatalogRecord["workspaceId"];
   artifactFamily?: ArtifactCatalogRecord["artifactFamily"];
 }
 
 export interface ReadArtifactCatalogRecordRequest {
+  workspaceId?: ArtifactCatalogRecord["workspaceId"];
   storageKey: string;
 }
 
 export interface DeleteArtifactCatalogRecordRequest {
+  workspaceId?: ArtifactCatalogRecord["workspaceId"];
   storageKey: string;
 }
 

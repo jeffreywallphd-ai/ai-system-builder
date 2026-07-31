@@ -19,8 +19,3 @@
   display: grid;
   gap: var(--space-sm);
 }
-
-.artifact-browser__html-preview {
-  max-height: 16rem;
-  overflow: auto;
-}

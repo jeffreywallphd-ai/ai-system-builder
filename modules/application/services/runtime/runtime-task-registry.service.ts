@@ -1,6 +1,7 @@
 import type {
   CancelRuntimeTaskResult,
   RuntimeTaskRecord,
+  RuntimeTaskStatusRecord,
   RuntimeTaskStatus,
   StartRuntimeTaskRequest,
   StartRuntimeTaskResult,
@@ -10,6 +11,10 @@ import type { RuntimeTaskRegistryPort } from "../../ports/runtime";
 import type { TaskPowerLifecyclePort } from "./task-power-lifecycle.service";
 
 const TERMINAL_STATUSES: ReadonlySet<RuntimeTaskStatus> = new Set(["succeeded", "failed", "cancelled", "unknown"]);
+
+function isRuntimeTaskRecord(record: RuntimeTaskStatusRecord): record is RuntimeTaskRecord {
+  return !("recordType" in record);
+}
 
 export interface RuntimeTaskRegistryLifecycleHooks {
   onStarted?: (requestId: string, taskType: TaskType) => Promise<void>;
@@ -60,12 +65,14 @@ export class RuntimeTaskRegistryService {
   public async readTaskAndCompleteLifecycleIfTerminal(
     requestId: string,
     hooks?: RuntimeTaskRegistryLifecycleHooks,
-  ): Promise<RuntimeTaskRecord> {
+  ): Promise<RuntimeTaskStatusRecord> {
     const record = await this.taskRegistry.getTaskStatus(requestId);
     if (TERMINAL_STATUSES.has(record.status)) {
       await this.completeLifecycle(requestId, record.status);
       try {
-        await hooks?.onTerminal?.(record);
+        if (isRuntimeTaskRecord(record)) {
+          await hooks?.onTerminal?.(record);
+        }
       } catch {
         // Hook failures must not fail terminal reads.
       }

@@ -1,0 +1,7 @@
+export type ThinClientDiagnosticLevel = "info" | "warn";
+export interface ThinClientDiagnosticEvent { timestamp: string; feature: string; operation: string; phase: string; message: string; metadata?: Record<string, unknown>; }
+const MAX_EVENTS = 100; const PREFIX = "[thin-client]";
+const subscribers = new Set<(events: ThinClientDiagnosticEvent[]) => void>(); let events: ThinClientDiagnosticEvent[] = [];
+const sanitizeMetadata = (metadata?: Record<string, unknown>) => { if (!metadata) return undefined; const next: Record<string, unknown> = {}; for (const [k, v] of Object.entries(metadata)) { if (/token/i.test(k)) continue; if (typeof v === "string" && (v.startsWith("/") || /^[a-zA-Z]:\\/.test(v))) next[k] = "[redacted-path]"; else next[k] = v; } return next; };
+export function logThinClientDiagnostic(level: ThinClientDiagnosticLevel, event: Omit<ThinClientDiagnosticEvent, "timestamp">): void { const full: ThinClientDiagnosticEvent = { ...event, timestamp: new Date().toISOString(), metadata: sanitizeMetadata(event.metadata) }; events = [full, ...events].slice(0, MAX_EVENTS); subscribers.forEach((s)=>s(events)); const payload = { feature: full.feature, operation: full.operation, phase: full.phase, message: full.message, ...full.metadata }; if (level === "warn") console.warn(PREFIX, payload); else console.info(PREFIX, payload); }
+export function subscribeThinClientDiagnostics(subscriber: (events: ThinClientDiagnosticEvent[]) => void): () => void { subscribers.add(subscriber); subscriber(events); return () => subscribers.delete(subscriber); }

@@ -3,6 +3,8 @@ export interface ImageGenerationOutput {
   engine: string;
   fileName: string;
   subfolder?: string;
+  contentBase64?: string;
+  mediaType?: string;
   promptId?: string;
   width?: number;
   height?: number;

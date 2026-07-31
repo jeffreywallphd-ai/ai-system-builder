@@ -1,3 +1,4 @@
+import { createWorkspaceId } from "../workspace";
 import {
   ARTIFACT_CONTENT_READ_OPERATION,
   normalizeArtifactBrowserLocator,
@@ -38,6 +39,7 @@ export interface DesktopArtifactContentReadBoundaryContext {
 
 export interface DesktopArtifactContentReadRequestPayload {
   locator: ArtifactBrowserLocator;
+  workspaceId: string;
   boundary: DesktopArtifactContentReadBoundaryContext;
 }
 
@@ -72,6 +74,7 @@ function normalizeDesktopArtifactContentReadPayload(
 ): DesktopArtifactContentReadRequestPayload {
   return {
     locator: normalizeArtifactBrowserLocator(payload.locator),
+    workspaceId: createWorkspaceId(payload.workspaceId),
     boundary: {
       host: "desktop",
       source: normalizeRequiredTextField(payload.boundary.source, "boundary.source"),

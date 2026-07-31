@@ -1,0 +1,96 @@
+body {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-base);
+  color: var(--color-text-primary);
+  background:
+    radial-gradient(
+      circle at 76% -15%,
+      rgb(32 99 221 / 17%),
+      transparent 30rem
+    ),
+    linear-gradient(
+      135deg,
+      #071322 0%,
+      var(--color-bg-primary) 58%,
+      #071426 100%
+    );
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--color-text-primary);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.015em;
+}
+
+h1 {
+  font-size: var(--font-size-2xl);
+  font-weight: 720;
+}
+
+h2 {
+  font-size: var(--font-size-xl);
+  font-weight: 680;
+}
+
+h3 {
+  font-size: var(--font-size-lg);
+  font-weight: 650;
+}
+
+p {
+  color: var(--color-text-secondary);
+}
+
+a {
+  color: var(--color-accent-hover);
+}
+
+code,
+pre {
+  font-family: var(--font-family-mono);
+}
+
+:where(
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  li,
+  dt,
+  dd,
+  figcaption,
+  small,
+  summary,
+  code
+) {
+  overflow-wrap: anywhere;
+}
+
+::selection {
+  background: rgb(76 145 255 / 32%);
+  color: var(--color-text-primary);
+}
+
+.ui-text-muted {
+  color: var(--color-text-muted);
+}
+
+.ui-visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

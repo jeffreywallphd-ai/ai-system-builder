@@ -1,15 +1,16 @@
 import { ArtifactBrowserFeature } from "../features/artifact-browser";
 import { ArtifactIngestionFeature } from "../features/artifact-upload";
+import { DatasetPreparationFeature } from "../features/dataset-preparation";
 import { TabbedPanel } from "../components/ui/TabbedPanel";
 
-export interface ArtifactsPageProps {
-  refreshToken: number;
-  onUploaded: () => void;
+export interface WorkspaceScopedPageProps {
+  workspaceId: string;
+  workspaceName: string;
 }
-
-export function ArtifactsPage({ refreshToken, onUploaded }: ArtifactsPageProps) {
+export function ArtifactsPage({ workspaceId }: WorkspaceScopedPageProps) {
   return (
-    <section className="ui-stack ui-stack--sm" data-refresh-token={refreshToken}>
+    <section className="ui-stack ui-stack--sm">
+      <h1>Data Management</h1>
       <TabbedPanel
         tabListAriaLabel="Artifact workspace panels"
         defaultTabId="ingestion"
@@ -17,16 +18,35 @@ export function ArtifactsPage({ refreshToken, onUploaded }: ArtifactsPageProps) 
           {
             id: "ingestion",
             label: "Artifact Ingestion",
-            content: <ArtifactIngestionFeature onUploadComplete={onUploaded} />,
+            content: (
+              <ArtifactIngestionFeature
+                key={`ingest-${workspaceId}`}
+                workspaceId={workspaceId}
+              />
+            ),
           },
           {
             id: "browser",
             label: "Artifact Browser",
-            content: <ArtifactBrowserFeature key={refreshToken} />,
+            content: (
+              <ArtifactBrowserFeature
+                key={`browser-${workspaceId}`}
+                workspaceId={workspaceId}
+              />
+            ),
+          },
+          {
+            id: "dataset-preparation",
+            label: "Dataset Preparation",
+            content: (
+              <DatasetPreparationFeature
+                key={`dataset-${workspaceId}`}
+                workspaceId={workspaceId}
+              />
+            ),
           },
         ]}
       />
     </section>
   );
 }
-

@@ -4,61 +4,90 @@
 
 ## Purpose
 
-- Provide focused guidance for desktop host composition and Electron boundary discipline.
+- Guide desktop host composition and Electron boundary discipline.
+- Keep `apps/desktop`, main/preload/IPC, and desktop bootstrap wiring aligned to shared contracts and use cases.
 
 ## Use When
 
-- Working in `apps/desktop`.
-- Working in `modules/hosts/desktop`.
-- Implementing/changing Electron `main`, preload, IPC, window lifecycle, or desktop bootstrap wiring.
+- Working in `apps/desktop`, `modules/hosts/desktop`, Electron main/preload/IPC, window lifecycle, desktop runtime composition, or desktop workspace shell behavior.
+- Diagnosing desktop IPC/preload/runtime-readiness failures.
 
 ## Do Not Use When
 
-- Server-only transport/host tasks.
-- Runtime or domain/application changes with no desktop-host impact.
+- Server-only API/host tasks.
+- Pure application/domain/runtime work with no desktop host or IPC impact.
 
 ## Core Guidance
 
-- Desktop is a host model, not the entire architecture.
-- Electron and Electron Forge are the desktop host/build tooling path.
+- Desktop is a host model, not the whole architecture.
+- Electron and Electron Forge are desktop host/build tooling.
 - Preload and IPC are transport/boundary mechanics, not business logic layers.
-- IPC contracts must remain transport specializations: reuse transport request/response/error semantics and add only channel identity context.
-- Keep IPC channel naming constrained and operation-derived (`ipc.<operation>.<kind>`), so operation and channel do not drift independently.
-- Restrict IPC channel kind to `request`, `response`, or `event`; do not introduce ad hoc kind variants.
-- Keep business policy and use-case orchestration in application/domain, not `main`/preload/IPC glue.
-- Desktop host code should compose adapters and lifecycle behavior, then delegate inward.
-- When adding desktop host features, typecheck the full desktop composition dependency closure under `apps/desktop/tsconfig.webpack.json`; `ts-loader` with `noEmitOnError` can surface reachable TypeScript diagnostics as a vague `emitted no output` failure at `composeDesktopHost.ts`.
-- When desktop composition wraps a typed adapter/application port to add logging or host lifecycle behavior, spread the full existing port first and override only the adapted method(s); hand-built partial port objects can drift when port contracts add methods and surface as vague `ts-loader` no-output failures.
-- Pass inward host metadata through `modules/contracts/host` host-context shapes,
-  not Electron-specific objects.
-- Keep host-context metadata small and serialization-friendly (JSON-serializable values only).
-- Do not encode auth/session/request/window/framework semantics in host-context metadata.
-- Electron-specific assumptions must not leak into shared application/domain contracts.
+- Keep business policy and use-case orchestration in application/domain, not main/preload/IPC glue.
+- IPC contracts specialize shared transport envelopes and use operation-derived channels.
+- Desktop host composes adapters, runtime/readiness providers, credential stores, storage roots, and lifecycle behavior, then delegates inward.
+- Host context passed inward should be small, JSON-serializable, and free of Electron/request/session/window objects.
+- Desktop renderer should keep using preload/IPC even when a feature later delegates to a remote server.
+
+## Host-Owned Runtime Guidance
+
+- Desktop local runtime roots are desktop-owned and separate from server runtime roots by default.
+- Published systems use one host-derived contained SQLite database per opaque
+  runtime instance. IPC/renderers never receive paths or database handles, and
+  desktop shutdown drains all open runtime sessions.
+- Published visual systems use a bounded dedicated-window registry and a
+  separate minimal preload. Main derives release/session authority from the
+  exact live main frame, denies navigation/popups/permissions/foreign IPC, and
+  closes windows and conversation sessions before runtime and platform stores.
+- Runtime readiness IPC depends on application `RuntimeReadinessPort` and shared runtime readiness contracts.
+- Readiness providers must read non-starting supervisor/installer signals only.
+- Runtime-backed start use cases may receive readiness guards; read/cancel/finalize paths should not be guarded unless the contract requires it.
+- Typecheck the desktop composition closure when touching host wiring; `ts-loader` failures can surface as vague no-output errors.
+- When wrapping ports for logging/lifecycle, spread the full existing port first and override adapted methods only.
+
+## Asset And Workspace Notes
+
+- Include `asset-kernel` when desktop work exposes Asset Registry/Library, resource-backed views, generated outputs, or asset mutations.
+- Desktop Asset Library reads and approved mutations must flow through preload-backed clients, not direct imports of application services, host composition, repositories, providers, or persistence adapters.
+- Public Asset Registry reads are workspace-aware and must carry `workspaceId` without global fallback.
+- Approved Asset Library mutations are narrow: register resource-backed view, finalize generated output, import external repository object, and localize external repository object.
+- Desktop workspace UI uses real preload/IPC workspace operations for list/create/read/save/clear active selection.
+- Renderer code must not synthesize authoritative workspace ids, derive ids from display names, create hidden/default workspaces, auto-seed startup workspaces, expose pack installer UI, or treat active selection as authorization.
 
 ## Key Constraints
 
 - Do not turn IPC handlers into a miscellaneous service layer.
-- Keep desktop transport translation thin and contract-driven.
-- Keep IPC request/response/error envelopes transport-compatible and free of Electron object leakage.
-- Preserve compatibility with multi-host architecture by avoiding desktop-only coupling in core layers.
+- Keep desktop transport translation thin, contract-driven, and sanitized.
+- Do not leak Electron objects, raw paths, storage roots, env values, tokens, stack traces, process internals, or raw adapter payloads through IPC/preload.
+- Do not put configured-server runtime calls directly in renderer components.
+- Do not add pack import/export/install/activation UI, resolver execution, provider browsing, scans, byte reads, workflow execution, collaboration, or marketplace behavior unless canonical scope changes.
 
 ## Canonical Source Docs
 
-- `docs/architecture/host-model.md` — host responsibilities and desktop-first staging.
-- `docs/adr/ADR-0003-host-model-and-transport-separation.md` — separation of host lifecycle and transport concerns.
-- `docs/architecture/module-dependency-rules.md` — dependency boundaries for hosts and adapters.
-- `docs/standards/coding-standards.md` — anti-patterns around host/transport logic leakage.
-- `docs/standards/logging-standards.md` — startup and boundary diagnostics expectations.
+- `docs/architecture/host-model.md` - desktop host responsibilities.
+- `docs/adr/ADR-0003-host-model-and-transport-separation.md` - host/transport separation.
+- `docs/adr/ADR-0013-host-owned-runtime-execution-and-feature-placement.md` - local/remote runtime ownership.
+- `docs/architecture/module-dependency-rules.md` - host/adapter dependency boundaries.
+- `docs/standards/coding-standards.md` - host/transport anti-patterns.
+- `docs/standards/logging-standards.md` - startup and boundary diagnostics.
 
-## Common Over-Inclusions to Avoid
+## Companion Packs
 
-- Loading server host/API transport guidance for desktop-only tasks.
-- Treating Electron API details as architectural rules for all modules.
-- Pulling persistence/storage deep detail unless desktop work changes those boundaries.
+- `ipc-electron` for channels, handlers, and preload contracts.
+- `desktop-implementation` for renderer/page/client work.
+- `desktop-styling` for renderer CSS/style changes.
+- `runtime`, `runtime-task-registry`, or `runtime-installer` for runtime ownership.
+- `asset-kernel`, `persistence-storage`, `security`, and `testing` when those boundaries are touched.
+
+## Common Over-Inclusions To Avoid
+
+- Loading server/API guidance for desktop-only work.
+- Treating Electron API details as shared architecture rules.
+- Pulling persistence/storage details unless desktop work changes those boundaries.
+- Keeping prompt-history notes in desktop host context.
 
 ## Prompt Assembly Notes
 
 - Typical set: `index` + `desktop-host`.
-- Add `desktop-implementation` for renderer/main/preload structure work.
-- Add `architecture` for cross-layer changes.
-- Add `logging` for startup/IPC diagnostics and `testing` for regression-sensitive changes.
+- Add `ipc-electron` for IPC/preload work.
+- Add `desktop-implementation` for renderer work.
+- Add `logging` and `testing` for diagnostics and regression-sensitive changes.

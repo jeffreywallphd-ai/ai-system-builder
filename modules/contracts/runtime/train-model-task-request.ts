@@ -13,6 +13,7 @@ export interface TrainModelRuntimeDatasetInput {
   splitRole: "train" | "validation" | "test";
   format?: string;
   path?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface TrainModelRuntimeCommonParameters {
@@ -50,6 +51,7 @@ export interface TrainModelRuntimeAdvancedParameters {
 }
 
 export interface TrainModelTaskRequest {
+  trainingTask?: string;
   baseModel: TrainModelRuntimeBaseModelInput;
   datasets: TrainModelRuntimeDatasetInput[];
   method: ModelTrainingMethod;

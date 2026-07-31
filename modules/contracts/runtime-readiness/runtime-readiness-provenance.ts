@@ -1,0 +1,6 @@
+import type { WorkspaceActorReference, WorkspaceId } from "../workspace";
+import type { AssetCompositionPlanId } from "../asset-composition";
+import type { RuntimeBindingCandidateId, RuntimeBindingId, RuntimeCapabilityId, RuntimeProviderCandidateId, RuntimeReadinessBindingId, RuntimeRequirementId } from "./runtime-readiness-identity";
+import type { RuntimeReadinessSafeMetadata } from "./runtime-readiness-models";
+export type RuntimeReadinessProvenanceKind="readiness-binding-created"|"inventory-checked"|"requirements-extracted"|"capability-matched"|"binding-candidate-created"|"binding-selected"|"readiness-checked"|"readiness-archived"|"readiness-refreshed"|"readiness-validated"|"readiness-blocked"|"readiness-status-updated"|"runtime-inventory-stale-detected";
+export interface RuntimeReadinessProvenanceEvent{readonly kind:RuntimeReadinessProvenanceKind;readonly operationAt:string;readonly targetWorkspaceId:WorkspaceId;readonly readinessBindingId?:RuntimeReadinessBindingId;readonly compositionPlanId?:AssetCompositionPlanId;readonly requirementId?:RuntimeRequirementId;readonly capabilityId?:RuntimeCapabilityId;readonly providerCandidateId?:RuntimeProviderCandidateId;readonly bindingCandidateId?:RuntimeBindingCandidateId;readonly bindingId?:RuntimeBindingId;readonly actor?:WorkspaceActorReference; readonly safeDetails?: RuntimeReadinessSafeMetadata;}

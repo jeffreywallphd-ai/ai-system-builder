@@ -15,22 +15,40 @@ import type {
   ReadArtifactDetailCommand,
   ReadArtifactDetailUseCaseResult,
 } from "./artifact-browser-read.types";
+import { resolveArtifactWorkspaceContext } from "./artifact-workspace-context";
+import type { WorkspaceRepository } from "../ports/workspace";
+import type { WorkspaceOperationAuthorizationPort } from "../ports/security";
 
 export interface ReadArtifactDetailUseCaseDependencies {
   artifactBrowserMetadataRead: ArtifactBrowserMetadataReadPort;
+  workspaceRepository?: Pick<WorkspaceRepository, "readWorkspace">;
+  workspaceAuthorization?: WorkspaceOperationAuthorizationPort;
 }
 
 export class ReadArtifactDetailUseCase {
+  private readonly workspaceRepository?: Pick<WorkspaceRepository, "readWorkspace">;
   private readonly artifactBrowserMetadataRead: ArtifactBrowserMetadataReadPort;
+  private readonly workspaceAuthorization?: WorkspaceOperationAuthorizationPort;
 
   public constructor(dependencies: ReadArtifactDetailUseCaseDependencies) {
     this.artifactBrowserMetadataRead = dependencies.artifactBrowserMetadataRead;
+    this.workspaceRepository = dependencies.workspaceRepository;
+    this.workspaceAuthorization = dependencies.workspaceAuthorization;
   }
 
   public async execute<TMetadata extends StorageObjectMetadata = StorageObjectMetadata>(
     command: ReadArtifactDetailCommand,
     context: ArtifactBrowserCommandContext = {},
   ): Promise<ReadArtifactDetailUseCaseResult<ContractErrorDetails, TMetadata>> {
+    const workspaceContext = await resolveArtifactWorkspaceContext(context, this.workspaceRepository, this.workspaceAuthorization ? {
+      port: this.workspaceAuthorization,
+      operation: "artifact.detail.read",
+      requiredScopes: ["artifact:read"],
+    } : undefined);
+    if (!workspaceContext.ok) {
+      return workspaceContext;
+    }
+
     let locator;
 
     try {

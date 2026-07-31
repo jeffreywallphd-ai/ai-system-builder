@@ -1,5 +1,6 @@
 import { describe, expect, it } from "../../../testing/node-test";
 
+import { ARTIFACT_UPLOAD_MAXIMUM_BYTES } from "../../artifact-upload";
 import {
   DESKTOP_ARTIFACT_UPLOAD_OPERATION,
   DESKTOP_ARTIFACT_UPLOAD_REQUEST_CHANNEL,
@@ -40,6 +41,7 @@ describe("desktop artifact upload ipc contract", () => {
         fileName: "  kitten.png  ",
         mediaType: " image/png ",
         bytes,
+        workspaceId: "workspace-a",
         boundary: {
           host: "desktop",
           source: "  desktop.renderer.artifact-upload.form  ",
@@ -58,6 +60,7 @@ describe("desktop artifact upload ipc contract", () => {
         fileName: "kitten.png",
         mediaType: "image/png",
         bytes,
+        workspaceId: "workspace-a",
         boundary: {
           host: "desktop",
           source: "desktop.renderer.artifact-upload.form",
@@ -110,6 +113,7 @@ describe("desktop artifact upload ipc contract", () => {
         fileName: "   ",
         mediaType: "image/png",
         bytes: new Uint8Array([1]),
+        workspaceId: "workspace-a",
         boundary: {
           host: "desktop",
           source: "desktop.renderer.artifact-upload.form",
@@ -122,11 +126,27 @@ describe("desktop artifact upload ipc contract", () => {
         fileName: "kitten.png",
         mediaType: "image/png",
         bytes: new Uint8Array([]),
+        workspaceId: "workspace-a",
         boundary: {
           host: "desktop",
           source: "desktop.renderer.artifact-upload.form",
         },
       }),
     ).toThrow("bytes must contain at least one byte.");
+
+    expect(() =>
+      createDesktopArtifactUploadRequest({
+        fileName: "kitten.png",
+        mediaType: "image/png",
+        bytes: new Uint8Array(ARTIFACT_UPLOAD_MAXIMUM_BYTES + 1),
+        workspaceId: "workspace-a",
+        boundary: {
+          host: "desktop",
+          source: "desktop.renderer.artifact-upload.form",
+        },
+      }),
+    ).toThrow(
+      `bytes must not exceed ${ARTIFACT_UPLOAD_MAXIMUM_BYTES} bytes.`,
+    );
   });
 });

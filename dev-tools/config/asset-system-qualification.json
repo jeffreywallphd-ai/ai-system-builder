@@ -1,0 +1,245 @@
+{
+  "schemaVersion": 1,
+  "productVersion": "0.1.0",
+  "compatibilityMatrix": [
+    {
+      "component": "definition",
+      "supported": "immutable exact asset-definition identity and declared definition version",
+      "changeRule": "breaking definition changes publish a new major definition version"
+    },
+    {
+      "component": "implementation",
+      "supported": "immutable release identity with semantic version, exact definition version, host API range, optional runtime ABI range, profile, trust, and facet evidence",
+      "changeRule": "resolution requires every declared constraint; revocation overrides compatibility"
+    },
+    {
+      "component": "package",
+      "supported": "asset package format 1.0 with exact entry and package digests",
+      "changeRule": "unknown format majors fail admission; admitted package bytes remain immutable"
+    },
+    {
+      "component": "system",
+      "supported": "system lock schema 1.0 and content-addressed approved release",
+      "changeRule": "rebuild or correction creates a new build/release and never rewrites a lock"
+    },
+    {
+      "component": "schema",
+      "supported": "Asset Kernel local schema 1 and structured SQLite/PostgreSQL schema 2",
+      "changeRule": "monotonic migration only; newer unsupported schemas fail startup"
+    },
+    {
+      "component": "host",
+      "supported": "host API 1.x with exact runtime request version 1.0.0 in current compositions",
+      "changeRule": "facet host API ranges must include the selected host version"
+    },
+    {
+      "component": "runtime",
+      "supported": "trusted built-in reference runtime; optional runtime ABI must satisfy the frozen facet range",
+      "changeRule": "imported or authored execution remains sandbox-unavailable until separately qualified"
+    },
+    {
+      "component": "deployment",
+      "supported": "local-desktop, campus-server, cloud-server control profiles; thin-client is control-only",
+      "changeRule": "profile and platform policy are host-owned and unsupported capability widening fails before execution"
+    }
+  ],
+  "deprecationPolicy": {
+    "minimumMinorReleasesBeforeRemoval": 1,
+    "requiresReplacement": true,
+    "requiresDocumentation": true,
+    "removalRequiresMajorVersion": true,
+    "revocationOverridesWindow": true
+  },
+  "performanceBudgets": [
+    {
+      "operation": "catalog.browse",
+      "workload": "1000 authorized summaries, warm local store",
+      "percentile": 95,
+      "maximumMilliseconds": 200
+    },
+    {
+      "operation": "studio.validate",
+      "workload": "500 instances and 1000 bindings, warm definition cache",
+      "percentile": 95,
+      "maximumMilliseconds": 350
+    },
+    {
+      "operation": "implementation.resolve",
+      "workload": "500 candidate releases with revocation and compatibility evidence",
+      "percentile": 95,
+      "maximumMilliseconds": 150
+    },
+    {
+      "operation": "system.build",
+      "workload": "500 instances with trusted implementations and in-memory artifact sink",
+      "percentile": 95,
+      "maximumMilliseconds": 2500
+    },
+    {
+      "operation": "system.preview",
+      "workload": "2 MiB supported artifact at the release-bound preview boundary",
+      "percentile": 95,
+      "maximumMilliseconds": 750
+    },
+    {
+      "operation": "runtime.handoff",
+      "workload": "active trusted reference deployment with empty capability set",
+      "percentile": 95,
+      "maximumMilliseconds": 500
+    }
+  ],
+  "admissionControls": [
+    {
+      "id": "package",
+      "limits": {
+        "maximumPackageBytes": 33554432,
+        "maximumEntries": 128,
+        "maximumEntryBytes": 8388608,
+        "maximumExpandedBytes": 67108864,
+        "maximumDefinitions": 5000,
+        "maximumImplementations": 5000,
+        "maximumFacetsPerImplementation": 16,
+        "maximumCapabilities": 64,
+        "maximumDependencies": 256
+      },
+      "source": "modules/adapters/package/aisb/createAisbPackageInspector.ts"
+    },
+    {
+      "id": "build",
+      "limits": {
+        "maximumInstances": 5000,
+        "maximumDiagnostics": 200
+      },
+      "source": "modules/application/use-cases/system-build/system-build-use-cases.ts"
+    },
+    {
+      "id": "preview",
+      "limits": {
+        "maximumPreviewBytes": 8388608,
+        "referencePreviewBytes": 2097152,
+        "maximumListItems": 200,
+        "maximumRows": 25,
+        "maximumColumns": 20,
+        "maximumCellCharacters": 1000,
+        "maximumTextCharacters": 16000
+      },
+      "source": "modules/application/use-cases/system-review/system-review-use-cases.ts"
+    },
+    {
+      "id": "release-manifest",
+      "limits": {
+        "maximumManifestBytes": 8388608,
+        "maximumInstances": 5000
+      },
+      "source": "modules/application/use-cases/system-deployment/system-deployment-use-cases.ts"
+    },
+    {
+      "id": "execution",
+      "limits": {
+        "maximumRunSeconds": 300,
+        "maximumMemoryMiB": 512,
+        "maximumOutputBytes": 1048576,
+        "maximumConcurrentRuns": 4
+      },
+      "source": "modules/hosts/shared/composition/composeSystemDeployment.ts"
+    }
+  ],
+  "qualificationProfiles": [
+    {
+      "profile": "local-windows",
+      "requiredEvidence": [
+        "repository-gates",
+        "desktop-package",
+        "sqlite-recovery",
+        "artifact-recovery",
+        "reference-systems",
+        "asset-experience-automated",
+        "revocation-drill",
+        "performance",
+        "security-automated",
+        "security-manual",
+        "accessibility-automated",
+        "accessibility-manual"
+      ]
+    },
+    {
+      "profile": "local-macos",
+      "requiredEvidence": [
+        "repository-gates",
+        "desktop-package",
+        "signed-notarized-package",
+        "sqlite-recovery",
+        "artifact-recovery",
+        "reference-systems",
+        "asset-experience-automated",
+        "revocation-drill",
+        "performance",
+        "security-automated",
+        "security-manual",
+        "accessibility-automated",
+        "accessibility-manual"
+      ]
+    },
+    {
+      "profile": "local-linux",
+      "requiredEvidence": [
+        "repository-gates",
+        "desktop-package",
+        "sqlite-recovery",
+        "artifact-recovery",
+        "filesystem-faults",
+        "reference-systems",
+        "asset-experience-automated",
+        "revocation-drill",
+        "performance",
+        "security-automated",
+        "security-manual",
+        "accessibility-automated",
+        "accessibility-manual"
+      ]
+    },
+    {
+      "profile": "campus-server",
+      "requiredEvidence": [
+        "repository-gates",
+        "server-build",
+        "postgres-live",
+        "postgres-recovery",
+        "artifact-recovery",
+        "thin-client-smoke",
+        "tenant-isolation",
+        "reference-systems",
+        "asset-experience-automated",
+        "revocation-drill",
+        "load-concurrency-cancellation",
+        "performance",
+        "security-automated",
+        "security-manual",
+        "accessibility-automated",
+        "accessibility-manual"
+      ]
+    },
+    {
+      "profile": "cloud-server",
+      "requiredEvidence": [
+        "repository-gates",
+        "server-build",
+        "managed-postgres-tls",
+        "managed-pitr-recovery",
+        "object-storage-recovery",
+        "thin-client-smoke",
+        "tenant-isolation",
+        "reference-systems",
+        "asset-experience-automated",
+        "revocation-drill",
+        "load-concurrency-cancellation",
+        "sandbox-resource-limits",
+        "performance",
+        "security-automated",
+        "security-manual",
+        "accessibility-automated",
+        "accessibility-manual"
+      ]
+    }
+  ]
+}

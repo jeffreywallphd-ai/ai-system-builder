@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PythonRuntimeError(BaseModel):
@@ -38,6 +38,9 @@ class PythonRuntimeCapabilitiesResult(BaseModel):
 class EnsureModelDownloadRequest(BaseModel):
     provider: Literal["transformers"]
     modelId: str
+    inferenceMode: str | None = None
+    taskTags: list[str] | None = None
+    artifactForm: str | None = None
 
 
 class EnsureModelDownloadResult(BaseModel):
@@ -45,7 +48,7 @@ class EnsureModelDownloadResult(BaseModel):
     modelId: str
     downloaded: bool
     fromCache: bool
-    localPath: str | None = None
+    modelHandle: str | None = None
 
 
 class LoadedModelDescriptor(BaseModel):
@@ -168,12 +171,13 @@ class LocalModelConfig(BaseModel):
     inferenceMode: Literal["auto", "text2text", "causal", "chat"] = "auto"
     device: Literal["cpu", "cuda", "auto"] | None = None
     torchDtype: Literal["auto", "float16", "bfloat16", "float32"] | None = None
+    memoryOverflowPolicy: Literal["none", "limited", "extended"] = "none"
 
 
 class ExampleGenerationConfig(BaseModel):
     mode: Literal["qa"]
     model: LocalModelConfig
-    promptTemplate: str | None = None
+    promptTemplate: str | None = Field(default=None, max_length=8_000)
     maxExamplesPerChunk: int | None = None
     batchSize: int | None = Field(default=None, gt=0)
     generationParams: GenerationParams | None = None
@@ -181,13 +185,36 @@ class ExampleGenerationConfig(BaseModel):
 
 
 class DatasetPreparationRecipe(BaseModel):
-    normalization: DocumentNormalizationConfig
-    chunking: MarkdownChunkingConfig
-    generation: ExampleGenerationConfig
+    task: dict[str, Any] | None = None
+    normalization: DocumentNormalizationConfig | None = None
+    chunking: MarkdownChunkingConfig | None = None
+    generation: ExampleGenerationConfig | None = None
+
+
+class DatasetPreparationExecutionPlan(BaseModel):
+    schemaVersion: Literal["1"]
+    inputIntent: Literal[
+        "use-existing-dataset",
+        "combine-existing-datasets",
+        "create-from-source-material",
+    ]
+    method: Literal[
+        "validate-and-split",
+        "combine-and-split",
+        "fixed-length",
+        "topic-aware",
+        "structure-aware",
+        "use-source-metadata",
+        "model-assisted-metadata",
+        "use-existing-annotations",
+    ]
+    sourceKinds: list[Literal["structured", "document", "image"]]
+    generationMode: Literal["none", "task-examples", "metadata-text"]
 
 
 class DatasetSplitConfig(BaseModel):
     trainRatio: float
+    validationRatio: float | None = None
     testRatio: float
     seed: int | None = None
     shuffle: bool | None = None
@@ -203,18 +230,112 @@ class DatasetOutputConfig(BaseModel):
     destinations: dict[str, Any] | None = None
 
 
+class DatasetQualityRequestedPolicy(BaseModel):
+    preset: Literal["recommended", "strict"]
+    allowedLanguages: list[str] | None = None
+    requireLicenseMetadata: bool | None = None
+    requireConsentMetadata: bool | None = None
+    includeSourceAttribution: bool | None = None
+    excludedBenchmarkIds: list[str] | None = None
+    maxRowsPerSource: int | None = Field(default=None, ge=1, le=1_000_000)
+
+
+class DatasetQualityMandatoryChecks(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    sourceAssociation: Literal[True]
+
+    schemaCheck: Literal[True] = Field(alias="schema")
+    exactDuplicates: Literal[True]
+    fuzzyDuplicates: Literal[True]
+    sensitivePersonalData: Literal[True]
+    secretLikeContent: Literal[True]
+    splitLeakage: Literal[True]
+
+
+class DatasetQualityEffectivePolicy(BaseModel):
+    policyId: str
+    revision: str
+    scope: Literal["workspace", "organization"]
+    preset: Literal["recommended", "strict"]
+    allowedLanguages: list[str]
+    requireLicenseMetadata: bool
+    requireConsentMetadata: bool
+    includeSourceAttribution: bool = False
+    excludedBenchmarkIds: list[str]
+    maxRowsPerSource: int = Field(ge=1, le=1_000_000)
+    minimumTextCharacters: int = Field(ge=0, le=1_000_000)
+    maximumTextCharacters: int = Field(ge=1, le=1_000_000)
+    fuzzyDuplicateSimilarity: float = Field(ge=0.0, le=1.0)
+    maxFuzzyCandidatesPerRow: int = Field(ge=1, le=1024)
+    maxReportSamplesPerReason: int = Field(ge=0, le=100)
+    mandatoryChecks: DatasetQualityMandatoryChecks
+
+
+class DatasetQualityRuntimeConfig(BaseModel):
+    requestedPolicy: DatasetQualityRequestedPolicy
+    effectivePolicy: DatasetQualityEffectivePolicy
+    reviewRequired: bool
+
+
+class AdvancedContentProcessingConfig(BaseModel):
+    strategy: Literal["token", "sentence", "section", "table", "semantic", "layout"]
+    maxTokensPerChunk: int | None = Field(default=None, ge=32, le=4096)
+    maxSourceSpans: int | None = Field(default=None, ge=1, le=100_000)
+    semanticBoundaryThreshold: float | None = Field(default=None, ge=0.0, le=1.0)
+    layoutEnabled: bool | None = None
+    ocrEnabled: bool | None = None
+
+
+class AdvancedSemanticCurationConfig(BaseModel):
+    enabled: bool
+    embeddingAlgorithm: Literal["hashed-token-v1"] | None = None
+    similarityThreshold: float | None = Field(default=None, ge=0.0, le=1.0)
+    maxComparisonsPerRow: int | None = Field(default=None, ge=1, le=1024)
+    maxRowsPerSource: int | None = Field(default=None, ge=1, le=1_000_000)
+    balanceField: str | None = Field(default=None, max_length=128)
+    hardNegativeMining: bool | None = None
+
+
+class AdvancedSyntheticVerificationConfig(BaseModel):
+    enabled: bool
+    candidatesPerChunk: int | None = Field(default=None, ge=1, le=4)
+    minimumGroundingScore: float | None = Field(default=None, ge=0.0, le=1.0)
+    minimumCriticScore: float | None = Field(default=None, ge=0.0, le=1.0)
+    minimumDiversityScore: float | None = Field(default=None, ge=0.0, le=1.0)
+    requireReview: bool | None = None
+
+
+class DatasetPreparationAdvancedConfig(BaseModel):
+    preset: Literal[
+        "standard",
+        "better-document-understanding",
+        "generate-examples",
+        "topic-aware",
+        "structure-aware",
+    ]
+    content: AdvancedContentProcessingConfig | None = None
+    semantic: AdvancedSemanticCurationConfig | None = None
+    synthetic: AdvancedSyntheticVerificationConfig | None = None
+
+
 class PrepareTrainingDatasetRequest(BaseModel):
+    workspaceId: str | None = None
     sourceInputs: list[DatasetPreparationSourceInput]
+    preparation: DatasetPreparationExecutionPlan | None = None
     recipe: DatasetPreparationRecipe
     split: DatasetSplitConfig
     output: DatasetOutputConfig
+    quality: DatasetQualityRuntimeConfig | None = None
+    advanced: DatasetPreparationAdvancedConfig | None = None
     runtime: dict[str, Any] | None = None
 
 
 class PythonRuntimeOutputDescriptor(BaseModel):
     name: str
-    role: Literal["dataset", "train", "test", "metrics", "report", "artifact"] | None = None
-    tempPath: str
+    role: Literal["dataset", "train", "validation", "test", "metrics", "report", "quarantine", "artifact"] | None = None
+    outputHandle: str
+    tempPath: str = Field(exclude=True)
     mediaType: str
     sizeBytes: int | None = None
     metadata: dict[str, Any] | None = None
@@ -228,7 +349,10 @@ class DatasetPreparationSummary(BaseModel):
     generatedExampleCount: int
     datasetRowCount: int
     trainRowCount: int
+    validationRowCount: int
     testRowCount: int
+    acceptedRowCount: int | None = None
+    quarantinedRowCount: int | None = None
 
 
 class DatasetPreparationWarning(BaseModel):
@@ -240,6 +364,8 @@ class DatasetPreparationWarning(BaseModel):
 class PrepareTrainingDatasetResult(BaseModel):
     outputs: list[PythonRuntimeOutputDescriptor]
     summary: DatasetPreparationSummary
+    qualityReport: dict[str, Any] | None = None
+    advancedReport: dict[str, Any] | None = None
     warnings: list[DatasetPreparationWarning] | None = None
 
 
@@ -256,9 +382,11 @@ class TrainModelDatasetInput(BaseModel):
     splitRole: Literal["train", "validation", "test"]
     format: str | None = None
     path: str | None = None
+    metadata: dict[str, Any] | None = None
 
 
 class TrainModelTaskRequest(BaseModel):
+    trainingTask: str | None = None
     baseModel: TrainModelBaseModelInput
     datasets: list[TrainModelDatasetInput]
     method: Literal["lora", "qlora", "full-finetune"]
@@ -284,9 +412,10 @@ class TrainModelTaskResult(BaseModel):
 
 
 class ValidateModelTaskRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     modelRecordId: str
     modelPath: str
-    reportOutputDirectory: str | None = None
     expectedLoRA: bool | None = None
     expectedRecurrentAdditions: bool | None = None
     validationStrictness: Literal["normal", "publish"] | None = None

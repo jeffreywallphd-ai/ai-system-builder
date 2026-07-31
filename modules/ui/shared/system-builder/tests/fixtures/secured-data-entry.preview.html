@@ -1,0 +1,122 @@
+<div>
+  <div>
+    <div data-slot="top-bar"></div>
+    <div data-slot="start-sidebar">
+      <nav aria-label="Requests">
+        <strong>Requests</strong>
+        <ul>
+          <li><button type="button" aria-current="page">Overview</button></li>
+        </ul>
+      </nav>
+    </div>
+    <div data-slot="content">
+      <div>
+        <div data-slot="content">
+          <main>
+            <header><h1>Service requests</h1></header>
+            <div data-slot="content">
+              <div data-slot="items">
+                <article>
+                  <header>
+                    <h2>New request</h2>
+                    <p>Create a secured service request.</p>
+                  </header>
+                  <div data-slot="content">
+                    <form aria-label="Request details">
+                      <fieldset>
+                        <legend>Request details</legend>
+                        <div data-slot="fields">
+                          <label>
+                            <span>Title *</span>
+                            <input type="text" required />
+                          </label>
+                          <label>
+                            <span>Amount *</span>
+                            <input
+                              type="number"
+                              required
+                              min="0"
+                              max="1000000"
+                            />
+                          </label>
+                          <label>
+                            <span>Status *</span>
+                            <select required>
+                              <option value="" selected>Select</option>
+                              <option value="draft">Draft</option>
+                              <option value="submitted">Submitted</option>
+                              <option value="approved">Approved</option>
+                            </select>
+                          </label>
+                          <label>
+                            <span>Due date *</span>
+                            <input type="date" required />
+                          </label>
+                        </div>
+                      </fieldset>
+                      <div data-slot="actions">
+                        <button type="submit">Save request</button>
+                      </div>
+                    </form>
+                  </div>
+                </article>
+                <div data-slot="items">
+                  <article>
+                    <header>
+                      <h2>Recent requests</h2>
+                      <p>Review the latest authorized requests.</p>
+                    </header>
+                    <div data-slot="content">
+                      <section aria-label="Requests">
+                        <h2>Requests</h2>
+                        <table>
+                          <thead>
+                            <tr>
+                              <th scope="col">Name</th>
+                              <th scope="col">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td>Example record</td>
+                              <td>Ready</td>
+                            </tr>
+                            <tr>
+                              <td>Second record</td>
+                              <td>Draft</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </section>
+                    </div>
+                  </article>
+                  <article>
+                    <header>
+                      <h2>Selected request</h2>
+                      <p>Inspect the currently selected request.</p>
+                    </header>
+                    <div data-slot="content">
+                      <section aria-label="Request details">
+                        <h2>Request details</h2>
+                        <dl>
+                          <div>
+                            <dt>Name</dt>
+                            <dd>Example record</dd>
+                          </div>
+                          <div>
+                            <dt>Status</dt>
+                            <dd>Ready</dd>
+                          </div>
+                        </dl>
+                      </section>
+                    </div>
+                  </article>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

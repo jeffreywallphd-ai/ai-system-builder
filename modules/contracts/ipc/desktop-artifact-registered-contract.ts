@@ -1,3 +1,4 @@
+import { createWorkspaceId } from "../workspace";
 import { createTransportOperation } from "../transport";
 import { createIpcChannel } from "./ipc-channel";
 import { createIpcRequest, type IpcRequest } from "./ipc-request";
@@ -26,6 +27,7 @@ interface DesktopArtifactBoundaryContext {
 
 export interface DesktopArtifactRegisteredDeleteRequestPayload {
   storageKey: string;
+  workspaceId: string;
   boundary: DesktopArtifactBoundaryContext;
 }
 
@@ -61,6 +63,7 @@ export function createDesktopArtifactRegisteredDeleteRequest(
     DESKTOP_ARTIFACT_REGISTERED_DELETE_REQUEST_CHANNEL,
     {
       storageKey: normalizeRequiredText(payload.storageKey, "storageKey"),
+      workspaceId: createWorkspaceId(payload.workspaceId),
       boundary: {
         host: "desktop",
         source: normalizeRequiredText(payload.boundary.source, "boundary.source"),

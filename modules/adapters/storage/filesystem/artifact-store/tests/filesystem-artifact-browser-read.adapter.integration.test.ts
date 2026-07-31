@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -46,6 +46,7 @@ describe("filesystem artifact browser read adapter", () => {
           mediaType: "image/png",
         },
       }),
+      { workspaceId: "workspace-a" },
     );
     await objectStorage.storeArtifact(
       createStoreArtifactRequest(new Uint8Array([4, 5, 6]), {
@@ -54,9 +55,10 @@ describe("filesystem artifact browser read adapter", () => {
           mediaType: "application/x-parquet",
         },
       }),
+      { workspaceId: "workspace-a" },
     );
 
-    const browseResult = await browserRead.browseArtifacts({});
+    const browseResult = await browserRead.browseArtifacts({}, { workspaceId: "workspace-a" });
     expect(browseResult.ok).toBe(true);
     if (!browseResult.ok) {
       throw new Error("Expected browse success.");
@@ -98,12 +100,13 @@ describe("filesystem artifact browser read adapter", () => {
           },
         },
       }),
+      { workspaceId: "workspace-a" },
     );
 
     await mkdir(path.join(rootDirectory, "hidden"), { recursive: true });
     await writeFile(path.join(rootDirectory, "hidden", "not-cataloged.png"), new Uint8Array([9, 9]));
 
-    const browseResult = await browserRead.browseArtifacts({ artifactFamily: "image" });
+    const browseResult = await browserRead.browseArtifacts({ artifactFamily: "image" }, { workspaceId: "workspace-a" });
 
     expect(browseResult.ok).toBe(true);
     if (!browseResult.ok) {
@@ -143,10 +146,11 @@ describe("filesystem artifact browser read adapter", () => {
           mediaType: "image/png",
         },
       }),
+      { workspaceId: "workspace-a" },
     );
 
-    const detail = await browserRead.readArtifactDetail({ locator: { storageKey: "uploads/session/dog.png" } });
-    const content = await browserRead.readArtifactContent({ locator: { storageKey: "uploads/session/dog.png" } });
+    const detail = await browserRead.readArtifactDetail({ locator: { storageKey: "uploads/session/dog.png" } }, { workspaceId: "workspace-a" });
+    const content = await browserRead.readArtifactContent({ locator: { storageKey: "uploads/session/dog.png" } }, { workspaceId: "workspace-a" });
 
     expect(detail.ok).toBe(true);
     expect(content.ok).toBe(true);
@@ -184,11 +188,12 @@ describe("filesystem artifact browser read adapter", () => {
           mediaType: "image/png",
         },
       }),
+      { workspaceId: "workspace-a" },
     );
 
     const detail = await browserRead.readArtifactDetail({
       locator: { storageKey: "uploads/session/without-metadata.png" },
-    });
+    }, { workspaceId: "workspace-a" });
 
     expect(detail.ok).toBe(true);
     if (!detail.ok) {
@@ -227,6 +232,7 @@ describe("filesystem artifact browser read adapter", () => {
           mediaType: "image/png",
         },
       }),
+      { workspaceId: "workspace-a" },
     );
     await artifactBindings.upsertArtifactStorageBinding({
       binding: {
@@ -250,7 +256,7 @@ describe("filesystem artifact browser read adapter", () => {
 
     const detail = await browserRead.readArtifactDetail({
       locator: { storageKey: "uploads/session/published.png" },
-    });
+    }, { workspaceId: "workspace-a" });
 
     expect(detail.ok).toBe(true);
     if (!detail.ok) {
@@ -295,6 +301,7 @@ describe("filesystem artifact browser read adapter", () => {
           mediaType: "image/png",
         },
       }),
+      { workspaceId: "workspace-a" },
     );
     await artifactBindings.upsertArtifactStorageBinding({
       binding: {
@@ -312,7 +319,7 @@ describe("filesystem artifact browser read adapter", () => {
 
     const detail = await browserRead.readArtifactDetail({
       locator: { storageKey: "uploads/session/legacy.png" },
-    });
+    }, { workspaceId: "workspace-a" });
 
     expect(detail.ok).toBe(true);
     if (!detail.ok) {
@@ -357,6 +364,7 @@ describe("filesystem artifact browser read adapter", () => {
           mediaType: "image/png",
         },
       }),
+      { workspaceId: "workspace-a" },
     );
     await artifactBindings.upsertArtifactStorageBinding({
       binding: {
@@ -395,10 +403,10 @@ describe("filesystem artifact browser read adapter", () => {
       },
     });
 
-    const browse = await browserRead.browseArtifacts({ artifactFamily: "image" });
+    const browse = await browserRead.browseArtifacts({ artifactFamily: "image" }, { workspaceId: "workspace-a" });
     const detail = await browserRead.readArtifactDetail({
       locator: { storageKey: "artifacts/20260418000000-local01" },
-    });
+    }, { workspaceId: "workspace-a" });
 
     expect(browse.ok).toBe(true);
     if (!browse.ok) {
@@ -450,11 +458,12 @@ describe("filesystem artifact browser read adapter", () => {
       createStoreArtifactRequest(new Uint8Array([1, 2, 3]), {
         descriptor: { key: "uploads/session/registered.json", mediaType: "application/json" },
       }),
+      { workspaceId: "workspace-a" },
     );
     await mkdir(path.join(rootDirectory, "uploads", "session"), { recursive: true });
     await writeFile(path.join(rootDirectory, "uploads", "session", "orphan.parquet"), new Uint8Array([7, 8]));
 
-    const result = await browserRead.browseUnregisteredArtifacts();
+    const result = await browserRead.browseUnregisteredArtifacts({ workspaceId: "workspace-a" });
     expect(result.ok).toBe(true);
     if (!result.ok) {
       throw new Error("Expected unregistered browse success.");
@@ -483,10 +492,10 @@ describe("filesystem artifact browser read adapter", () => {
 
     const registerResult = await browserRead.registerUnregisteredArtifact({
       storageKey: "uploads/session/report.pdf",
-    });
+    }, { workspaceId: "workspace-a" });
     expect(registerResult.ok).toBe(true);
 
-    const browseRegistered = await browserRead.browseArtifacts({});
+    const browseRegistered = await browserRead.browseArtifacts({}, { workspaceId: "workspace-a" });
     expect(browseRegistered.ok).toBe(true);
     if (!browseRegistered.ok) {
       throw new Error("Expected browse success.");
@@ -520,14 +529,15 @@ describe("filesystem artifact browser read adapter", () => {
           mediaType: "application/pdf",
         },
       }),
+      { workspaceId: "workspace-a" },
     );
     await mkdir(path.join(rootDirectory, "uploads", "session"), { recursive: true });
     await writeFile(path.join(rootDirectory, "uploads", "session", "from-unregistered.pdf"), new Uint8Array([6, 6, 6]));
     await browserRead.registerUnregisteredArtifact({
       storageKey: "uploads/session/from-unregistered.pdf",
-    });
+    }, { workspaceId: "workspace-a" });
 
-    const browseResult = await browserRead.browseArtifacts({ artifactFamily: "document" });
+    const browseResult = await browserRead.browseArtifacts({ artifactFamily: "document" }, { workspaceId: "workspace-a" });
     expect(browseResult.ok).toBe(true);
     if (!browseResult.ok) {
       throw new Error("Expected browse success.");
@@ -552,14 +562,118 @@ describe("filesystem artifact browser read adapter", () => {
 
     const deleteResult = await browserRead.deleteUnregisteredArtifact({
       storageKey: "uploads/session/delete-me.txt",
-    });
+    }, { workspaceId: "workspace-a" });
     expect(deleteResult.ok).toBe(true);
 
-    const listResult = await browserRead.browseUnregisteredArtifacts();
+    const listResult = await browserRead.browseUnregisteredArtifacts({ workspaceId: "workspace-a" });
     expect(listResult.ok).toBe(true);
     if (!listResult.ok) {
       throw new Error("Expected browse success.");
     }
     expect(listResult.value.items.find((item) => item.storageKey === "uploads/session/delete-me.txt")).toBeUndefined();
+  });
+
+  it("rejects traversal and junction escape attempts in unregistered registration and deletion", async () => {
+    const rootDirectory = await createTempRoot();
+    const outsideDirectory = await createTempRoot();
+    const artifactCatalog = createLocalArtifactCatalogPersistenceAdapter({ rootDirectory });
+    const browserRead = createFilesystemArtifactBrowserReadAdapter({
+      rootDirectory,
+      artifactCatalogRead: artifactCatalog,
+      artifactCatalogAppend: artifactCatalog,
+    });
+
+    const traversalRegistration = await browserRead.registerUnregisteredArtifact({
+      storageKey: "uploads/../../outside.bin",
+    });
+    const traversalDeletion = await browserRead.deleteUnregisteredArtifact({
+      storageKey: "uploads/../../outside.bin",
+    });
+    expect(traversalRegistration.ok).toBe(false);
+    expect(traversalDeletion.ok).toBe(false);
+    if (traversalRegistration.ok || traversalDeletion.ok) {
+      throw new Error("Expected traversal attempts to be rejected.");
+    }
+    expect(traversalRegistration.error.code).toBe("validation");
+    expect(traversalDeletion.error.code).toBe("validation");
+
+    await mkdir(path.join(rootDirectory, "uploads"), { recursive: true });
+    await writeFile(path.join(outsideDirectory, "secret.bin"), new Uint8Array([4, 5, 6]));
+    await symlink(
+      outsideDirectory,
+      path.join(rootDirectory, "uploads", "escape"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    const junctionRegistration = await browserRead.registerUnregisteredArtifact({
+      storageKey: "uploads/escape/secret.bin",
+    });
+    const junctionDeletion = await browserRead.deleteUnregisteredArtifact({
+      storageKey: "uploads/escape/secret.bin",
+    });
+    expect(junctionRegistration.ok).toBe(false);
+    expect(junctionDeletion.ok).toBe(false);
+    if (junctionRegistration.ok || junctionDeletion.ok) {
+      throw new Error("Expected junction attempts to be rejected.");
+    }
+    expect(junctionRegistration.error.code).toBe("validation");
+    expect(junctionDeletion.error.code).toBe("validation");
+    expect(new Uint8Array(await readFile(path.join(outsideDirectory, "secret.bin")))).toEqual(
+      new Uint8Array([4, 5, 6]),
+    );
+  });
+
+  it("caps browse enrichment, batches binding reads, and limits availability concurrency", async () => {
+    const rootDirectory = await createTempRoot();
+    const records = Array.from({ length: 6 }, (_, index) => ({
+      workspaceId: "workspace-a",
+      storageKey: `uploads/item-${index}.png`,
+      artifactFamily: "image" as const,
+      mediaType: "image/png",
+      createdAt: `2026-07-27T00:00:0${index}.000Z`,
+    }));
+    let activeAvailabilityReads = 0;
+    let maximumActiveAvailabilityReads = 0;
+    let batchReads = 0;
+    let singleBindingReads = 0;
+    const browserRead = createFilesystemArtifactBrowserReadAdapter({
+      rootDirectory,
+      artifactCatalogRead: {
+        browseArtifactCatalogRecords: async () => ({ ok: true as const, value: { records } }),
+        readArtifactCatalogRecord: async () => ({ ok: false as const, error: { code: "not-found", message: "missing" } }),
+      } as any,
+      artifactCatalogAppend: {} as any,
+      artifactBindingRead: {
+        readArtifactStorageBindings: async () => {
+          singleBindingReads += 1;
+          return { ok: true as const, value: { bindings: [] } };
+        },
+        readArtifactStorageBindingsBatch: async () => {
+          batchReads += 1;
+          return { ok: true as const, value: { bindings: [] } };
+        },
+      },
+      storage: {
+        hasArtifact: async () => {
+          activeAvailabilityReads += 1;
+          maximumActiveAvailabilityReads = Math.max(
+            maximumActiveAvailabilityReads,
+            activeAvailabilityReads,
+          );
+          await new Promise<void>((resolve) => setImmediate(resolve));
+          activeAvailabilityReads -= 1;
+          return { ok: true as const, value: { exists: true } };
+        },
+      },
+      maximumBrowseItems: 3,
+      browseAvailabilityConcurrency: 2,
+    });
+
+    const result = await browserRead.browseArtifacts({}, { workspaceId: "workspace-a" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected bounded browse success.");
+    expect(result.value.items.length).toBe(3);
+    expect(batchReads).toBe(1);
+    expect(singleBindingReads).toBe(0);
+    expect(maximumActiveAvailabilityReads <= 2).toBe(true);
   });
 });

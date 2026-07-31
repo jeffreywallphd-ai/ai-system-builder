@@ -1,3 +1,4 @@
+import { createWorkspaceId } from "../workspace";
 import {
   ARTIFACT_READ_OPERATION,
   normalizeArtifactBrowserLocator,
@@ -23,6 +24,7 @@ export interface ApiArtifactReadBoundaryContext {
 
 export interface ApiArtifactReadRequestPayload {
   locator: ArtifactBrowserLocator;
+  workspaceId: string;
   boundary: ApiArtifactReadBoundaryContext;
 }
 
@@ -59,6 +61,7 @@ function normalizeApiArtifactReadPayload(
 ): ApiArtifactReadRequestPayload {
   return {
     locator: normalizeArtifactBrowserLocator(payload.locator),
+    workspaceId: createWorkspaceId(payload.workspaceId),
     boundary: {
       host: "server",
       source: normalizeRequiredTextField(payload.boundary.source, "boundary.source"),
@@ -103,7 +106,7 @@ export function createApiArtifactReadSuccessResponse<
 }
 
 export function createApiArtifactReadFailureResponse(
-  code: "validation" | "not-found" | "internal" | "unavailable",
+  code: "validation" | "forbidden" | "not-found" | "internal" | "unavailable",
   message: string,
   options?: {
     details?: Record<string, unknown>;

@@ -1,21 +1,20 @@
+import { API_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION } from "../api/artifact-localize-from-repo-api-contract";
 import {
-  API_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION,
-} from "../api/artifact-localize-from-repo-api-contract";
-import { createIpcChannel, type IpcChannel, type IpcChannelValue } from "./ipc-channel";
+  createIpcChannel,
+  type IpcChannel,
+  type IpcChannelValue,
+} from "./ipc-channel";
 import { createIpcRequest, type IpcRequest } from "./ipc-request";
 import { createIpcSuccessResponse, type IpcResponse } from "./ipc-response";
 
-export const DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION = API_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION;
+export const DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION =
+  API_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION;
 
-export const DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_REQUEST_CHANNEL = createIpcChannel(
-  DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION,
-  "request",
-);
+export const DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_REQUEST_CHANNEL =
+  createIpcChannel(DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION, "request");
 
-export const DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_RESPONSE_CHANNEL = createIpcChannel(
-  DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION,
-  "response",
-);
+export const DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_RESPONSE_CHANNEL =
+  createIpcChannel(DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION, "response");
 
 export interface DesktopArtifactLocalizeFromRepoBoundaryContext {
   host: "desktop";
@@ -23,6 +22,7 @@ export interface DesktopArtifactLocalizeFromRepoBoundaryContext {
 }
 
 export interface DesktopArtifactLocalizeFromRepoRequestPayload {
+  workspaceId: string;
   artifactId: string;
   boundary: DesktopArtifactLocalizeFromRepoBoundaryContext;
 }
@@ -72,10 +72,14 @@ function normalizePayload(
   payload: DesktopArtifactLocalizeFromRepoRequestPayload,
 ): DesktopArtifactLocalizeFromRepoRequestPayload {
   return {
+    workspaceId: normalizeRequiredTextField(payload.workspaceId, "workspaceId"),
     artifactId: normalizeRequiredTextField(payload.artifactId, "artifactId"),
     boundary: {
       host: "desktop",
-      source: normalizeRequiredTextField(payload.boundary.source, "boundary.source"),
+      source: normalizeRequiredTextField(
+        payload.boundary.source,
+        "boundary.source",
+      ),
     },
   };
 }
@@ -110,13 +114,19 @@ export function createDesktopArtifactLocalizeFromRepoSuccessResponse(
 
 export function isDesktopArtifactLocalizeFromRepoRequestChannel(
   value: string,
-): value is IpcChannelValue<typeof DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION, "request"> {
+): value is IpcChannelValue<
+  typeof DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION,
+  "request"
+> {
   return value === DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_REQUEST_CHANNEL.value;
 }
 
 export function isDesktopArtifactLocalizeFromRepoResponseChannel(
   value: string,
-): value is IpcChannelValue<typeof DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION, "response"> {
+): value is IpcChannelValue<
+  typeof DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION,
+  "response"
+> {
   return value === DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_RESPONSE_CHANNEL.value;
 }
 
@@ -125,14 +135,20 @@ export function getDesktopArtifactLocalizeFromRepoChannel(
 ): IpcChannel<
   typeof DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION,
   "request",
-  IpcChannelValue<typeof DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION, "request">
+  IpcChannelValue<
+    typeof DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION,
+    "request"
+  >
 >;
 export function getDesktopArtifactLocalizeFromRepoChannel(
   kind: "response",
 ): IpcChannel<
   typeof DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION,
   "response",
-  IpcChannelValue<typeof DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION, "response">
+  IpcChannelValue<
+    typeof DESKTOP_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION,
+    "response"
+  >
 >;
 export function getDesktopArtifactLocalizeFromRepoChannel(
   kind: "request" | "response",

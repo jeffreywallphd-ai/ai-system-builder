@@ -8,7 +8,7 @@ describe("api artifact browser client", () => {
     vi.unstubAllGlobals();
   });
 
-  it("calls browse/detail/content/publish/verify/localize endpoints and maps responses", async () => {
+  it("calls browse/detail/content/delete/publish/verify/localize endpoints and maps responses", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
@@ -40,7 +40,13 @@ describe("api artifact browser client", () => {
         json: vi.fn().mockResolvedValue({
           ok: true,
           value: {
-            items: [{ storageKey: "uploads/a.png", artifactFamily: "image", mediaType: "image/png" }],
+            items: [
+              {
+                storageKey: "uploads/a.png",
+                artifactFamily: "image",
+                mediaType: "image/png",
+              },
+            ],
           },
         }),
       })
@@ -65,6 +71,14 @@ describe("api artifact browser client", () => {
               availability: "available",
               retrieval: "deferred",
             },
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        json: vi.fn().mockResolvedValue({
+          ok: true,
+          value: {
+            storageKey: "uploads/a.png",
           },
         }),
       })
@@ -151,13 +165,24 @@ describe("api artifact browser client", () => {
     const tokenSaved = await client.setHuggingFaceToken({ token: "hf_1234" });
     const tokenCleared = await client.clearHuggingFaceToken();
     const browse = await client.browseArtifacts();
-    const detail = await client.readArtifactDetail({ storageKey: "uploads/a.png" });
-    const content = await client.readArtifactContent({ storageKey: "uploads/a.png" });
-    const imageViewUrl = client.createArtifactMediaViewUrl({ storageKey: "uploads/a.png" });
+    const detail = await client.readArtifactDetail({
+      storageKey: "uploads/a.png",
+    });
+    const content = await client.readArtifactContent({
+      storageKey: "uploads/a.png",
+    });
+    const deleted = await client.deleteRegisteredArtifact(
+      { storageKey: "uploads/a.png" },
+      { workspaceId: "workspace-a" },
+    );
+    const imageViewUrl = client.createArtifactMediaViewUrl({
+      storageKey: "uploads/a.png",
+    });
     const publish = await client.publishArtifactToHuggingFace({
       artifactId: "uploads/a.png",
       repository: "openai/demo",
       path: "images/a.png",
+      repositoryCreation: { approved: true, visibility: "public" },
     });
     const verified = await client.verifyPublishedArtifactBacking({
       artifactId: "uploads/a.png",
@@ -166,6 +191,7 @@ describe("api artifact browser client", () => {
       artifactId: "uploads/a.png",
     });
     const localized = await client.localizeArtifactFromRepo({
+      workspaceId: "workspace-a",
       artifactId: "artifacts/20260418000000-local01",
     });
 
@@ -189,7 +215,10 @@ describe("api artifact browser client", () => {
       "/api/artifact/browse",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ artifactFamily: undefined, source: "thin-client.artifact-browser" }),
+        body: JSON.stringify({
+          artifactFamily: undefined,
+          source: "thin-client.artifact-browser",
+        }),
       }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
@@ -204,21 +233,38 @@ describe("api artifact browser client", () => {
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       7,
-      "/api/artifact/publish",
-      expect.objectContaining({ method: "POST" }),
+      "/api/artifact/delete",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          locator: { storageKey: "uploads/a.png" },
+          workspaceId: "workspace-a",
+          source: "thin-client.artifact-browser",
+        }),
+      }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       8,
+      "/api/artifact/publish",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(
+      JSON.parse((fetchMock.mock.calls[7]?.[1] as RequestInit).body as string),
+    ).toMatchObject({
+      repositoryCreation: { approved: true, visibility: "public" },
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      9,
       "/api/artifact/publish/verify",
       expect.objectContaining({ method: "POST" }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
-      9,
+      10,
       "/api/artifact/source/verify",
       expect.objectContaining({ method: "POST" }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
-      10,
+      11,
       "/api/artifact/localize-from-repo",
       expect.objectContaining({ method: "POST" }),
     );
@@ -229,8 +275,19 @@ describe("api artifact browser client", () => {
     expect(browse[0].storageKey).toBe("uploads/a.png");
     expect(detail.locator.storageKey).toBe("uploads/a.png");
     expect(content.retrieval).toBe("deferred");
+    expect(deleted.storageKey).toBe("uploads/a.png");
     expect((content as unknown as { bytes?: unknown }).bytes).toBeUndefined();
-    expect(imageViewUrl).toBe("/api/artifact/media/view?storageKey=uploads%2Fa.png");
+    expect(imageViewUrl).toBe(
+      "/api/artifact/media/view?storageKey=uploads%2Fa.png",
+    );
+    expect(
+      client.createArtifactMediaViewUrl(
+        { storageKey: "uploads/a.png" },
+        { workspaceId: "workspace-a" },
+      ),
+    ).toBe(
+      "/api/artifact/media/view?storageKey=uploads%2Fa.png&workspaceId=workspace-a",
+    );
     expect(publish.verification.exists).toBe(true);
     expect(verified.verification.exists).toBe(true);
     expect(sourceVerified.verification.exists).toBe(false);
@@ -293,7 +350,9 @@ describe("api artifact browser client", () => {
       expect(call?.[1]).toMatchObject({
         method: "POST",
       });
-      const body = JSON.parse((call?.[1] as { body?: string })?.body ?? "{}") as {
+      const body = JSON.parse(
+        (call?.[1] as { body?: string })?.body ?? "{}",
+      ) as {
         artifactFamily?: string;
         target?: { path?: string };
         mediaType?: string;
@@ -308,5 +367,66 @@ describe("api artifact browser client", () => {
       );
     }
   });
-});
 
+  it("imports Hugging Face files through the batch import endpoint", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      status: 200,
+      json: vi.fn().mockResolvedValue({
+        ok: true,
+        value: {
+          repositories: [
+            {
+              repository: "openai/demo",
+              revision: "main",
+              status: "succeeded",
+              files: [
+                {
+                  repository: "openai/demo",
+                  revision: "main",
+                  path: "data/train.parquet",
+                  status: "registered",
+                  artifactId: "artifacts/20260418000000-import001",
+                },
+              ],
+            },
+          ],
+          summary: { attempted: 1, succeeded: 1, failed: 0 },
+        },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createApiArtifactBrowserClient({ apiBaseUrl: "/api" });
+    const result = await client.importHuggingFaceFiles?.({
+      files: [
+        {
+          repository: "openai/demo",
+          path: "data/train.parquet",
+          revision: "main",
+        },
+      ],
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/huggingface/files/import",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          repositories: undefined,
+          files: [
+            {
+              repository: "openai/demo",
+              path: "data/train.parquet",
+              revision: "main",
+            },
+          ],
+          source: "thin-client.artifact-browser",
+        }),
+      }),
+    );
+    expect(result?.summary.succeeded).toBe(1);
+    expect(result?.repositories[0]?.files[0]?.artifactId).toBe(
+      "artifacts/20260418000000-import001",
+    );
+  });
+});

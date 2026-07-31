@@ -26,6 +26,7 @@ export interface IngestWebsitePageUseCasePort {
     context?: {
       requestId?: string;
       correlationId?: string;
+      workspaceId?: string;
     },
   ) => Promise<IngestWebsitePageResult>;
 }
@@ -36,6 +37,7 @@ export interface IngestWebsitePagesBatchUseCasePort {
     context?: {
       requestId?: string;
       correlationId?: string;
+      workspaceId?: string;
     },
   ) => Promise<IngestWebsitePagesBatchResult>;
 }
@@ -108,6 +110,7 @@ export function createDesktopIngestWebsitePageIpcHandler(
       {
         requestId: request.requestId,
         correlationId: request.correlationId,
+        workspaceId: request.payload.boundary.workspaceId,
       },
     );
 
@@ -127,6 +130,7 @@ export function createDesktopIngestWebsitePagesBatchIpcHandler(
       {
         requestId: request.requestId,
         correlationId: request.correlationId,
+        workspaceId: request.payload.boundary.workspaceId,
       },
     );
 

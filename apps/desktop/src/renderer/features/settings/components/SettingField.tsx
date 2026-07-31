@@ -6,6 +6,7 @@ import type {
   ApplicationSettingValue,
   ModelDefaultConfig,
 } from "../../../../../../../modules/contracts/settings";
+import { TermWithHint } from "../../../../../../../modules/ui/shared";
 import { ModelDefaultSettingField } from "./ModelDefaultSettingField";
 import { SecretSettingField } from "./SecretSettingField";
 
@@ -16,6 +17,7 @@ export interface SettingFieldProps {
   compact?: boolean;
   onSave: (value: ApplicationSettingPrimitiveValue) => Promise<void>;
   onClear: () => Promise<void>;
+  onSelectFolder?: (request?: { title?: string; defaultPath?: string }) => Promise<string | undefined>;
 }
 
 export function SettingField(props: SettingFieldProps) {
@@ -62,7 +64,7 @@ export function SettingField(props: SettingFieldProps) {
           disabled={props.disabled}
           onChange={(event) => void props.onSave(event.target.checked)}
         />
-        {props.definition.label}
+        <TermWithHint termId="settingValue">{props.definition.label}</TermWithHint>
       </label>
     );
   }
@@ -70,7 +72,7 @@ export function SettingField(props: SettingFieldProps) {
   if (props.definition.valueKind === "select") {
     return (
       <label className="ui-stack ui-stack--sm">
-        <span>{props.definition.label}</span>
+        <span><TermWithHint termId="settingValue">{props.definition.label}</TermWithHint></span>
         <select data-testid={`setting-${props.definition.key}-select`} className="ui-input" value={draft} disabled={props.disabled} onChange={(event) => setDraft(event.target.value)}>
           <option value="">Select…</option>
           {(props.definition.options ?? []).map((option) => (
@@ -83,18 +85,21 @@ export function SettingField(props: SettingFieldProps) {
   }
 
   const isNumber = props.definition.valueKind === "number";
+  const isFolder = props.definition.valueKind === "folder";
 
   return (
     <label className="ui-stack ui-stack--sm">
-      <span>{props.definition.label}</span>
+      <span><TermWithHint termId="settingValue">{props.definition.label}</TermWithHint></span>
       <input
         data-testid={`setting-${props.definition.key}-input`}
         className="ui-input"
         type={isNumber ? "number" : "text"}
         value={draft}
+        placeholder={props.definition.placeholder}
         disabled={props.disabled}
         onChange={(event) => setDraft(event.target.value)}
       />
+      {props.definition.instructions ? <p className="ui-text-muted">{props.definition.instructions}</p> : null}
       <div className="ui-grid ui-grid--two">
         <button
           data-testid={`setting-${props.definition.key}-save`}
@@ -105,6 +110,19 @@ export function SettingField(props: SettingFieldProps) {
         >
           Save
         </button>
+        {isFolder && props.onSelectFolder ? (
+          <button
+            data-testid={`setting-${props.definition.key}-browse`}
+            className="ui-button"
+            type="button"
+            disabled={props.disabled}
+            onClick={() => void props.onSelectFolder?.({ title: props.definition.label, defaultPath: draft || undefined }).then((path) => {
+              if (path) setDraft(path);
+            })}
+          >
+            Browse
+          </button>
+        ) : null}
         <button data-testid={`setting-${props.definition.key}-clear`} className="ui-button ui-button--destructive" type="button" disabled={props.disabled || !configured} onClick={() => void props.onClear()}>
           Clear
         </button>

@@ -1,0 +1,16 @@
+import type { RuntimeReadinessDiagnostic, RuntimeReadinessDiagnosticCode } from "./runtime-readiness-diagnostics";
+import type { RuntimeInventory, RuntimeReadinessBinding } from "./runtime-readiness-models";
+export type RuntimeReadinessFailureKind="validation"|"not-found"|"conflict"|"blocked"|"stale"|"unavailable"|"unsupported"|"permission-required"|"configuration-required"|"internal";
+export type RuntimeReadinessFailure={kind:RuntimeReadinessFailureKind;code:RuntimeReadinessDiagnosticCode;diagnostics:RuntimeReadinessDiagnostic[]};
+export type RuntimeReadinessResultSuccess<T>={status:"success";value:T};
+export type RuntimeReadinessResultFailure={status:"failure";failure:RuntimeReadinessFailure};
+export type CreateRuntimeReadinessBindingResult=RuntimeReadinessResultSuccess<RuntimeReadinessBinding>|RuntimeReadinessResultFailure;
+export type ReadRuntimeReadinessBindingResult=RuntimeReadinessResultSuccess<RuntimeReadinessBinding>|RuntimeReadinessResultFailure;
+export type ListRuntimeReadinessBindingsResult=RuntimeReadinessResultSuccess<{records:RuntimeReadinessBinding[];nextCursor?:string}>|RuntimeReadinessResultFailure;
+export type ArchiveRuntimeReadinessBindingResult=RuntimeReadinessResultSuccess<RuntimeReadinessBinding>|RuntimeReadinessResultFailure;
+export type RefreshRuntimeInventoryResult=RuntimeReadinessResultSuccess<RuntimeInventory>|RuntimeReadinessResultFailure;
+export type ExtractRuntimeRequirementsResult=RuntimeReadinessResultSuccess<RuntimeReadinessBinding>|RuntimeReadinessResultFailure;
+export type MatchRuntimeBindingCandidatesResult=RuntimeReadinessResultSuccess<RuntimeReadinessBinding>|RuntimeReadinessResultFailure;
+export type SelectRuntimeBindingCandidateResult=RuntimeReadinessResultSuccess<RuntimeReadinessBinding>|RuntimeReadinessResultFailure;
+export type ValidateRuntimeReadinessBindingResult=RuntimeReadinessResultSuccess<RuntimeReadinessBinding>|RuntimeReadinessResultFailure;
+export type RefreshRuntimeReadinessBindingResult=RuntimeReadinessResultSuccess<RuntimeReadinessBinding>|RuntimeReadinessResultFailure;

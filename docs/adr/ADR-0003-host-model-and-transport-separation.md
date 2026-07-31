@@ -59,6 +59,15 @@ Merging concerns obscures ownership boundaries and increases the risk that lifec
 
 ## Consequences
 
+## Related follow-up clarification
+
+ADR-0003 separates host responsibilities from transport responsibilities. ADR-0013 builds on this by defining host-owned runtime execution and future per-feature execution placement.
+
+Desktop remote execution (future work) must preserve renderer -> preload/IPC boundaries. Remote delegation should be selected in desktop host composition, not in renderer components.
+
+- Related: ADR-0013
+
+
 ### Positive
 
 - Application logic remains reusable across desktop and server host models.
@@ -80,3 +89,8 @@ Merging concerns obscures ownership boundaries and increases the risk that lifec
 - Keep contract public-surface discipline explicit: root contracts exports are family namespaces only, and non-contract modules consume contracts through family barrels.
 - Add guidance for composition root placement in `apps/desktop/` and `apps/server/` to prevent logic leakage into transport handlers.
 - Create a future ADR for hybrid synchronization/coordination once implementation planning begins.
+
+
+## Security boundary cross-reference
+
+ADR-0015 defines security architecture boundaries across host, transport, storage, and runtime concerns.

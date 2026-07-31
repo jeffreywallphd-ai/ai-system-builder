@@ -1,5 +1,7 @@
 # IPC Handlers
 
+> AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
+
 IPC handlers in this adapter must stay transport-thin:
 
 - accept contract request envelopes from IPC

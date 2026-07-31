@@ -1,0 +1,58 @@
+name: ai-system-builder-qualification
+
+services:
+  postgres:
+    image: postgres:18-bookworm@sha256:1961f96e6029a02c3812d7cb329a3b03a3ac2bb067058dec17b0f5596aca9296
+    environment:
+      POSTGRES_DB: ai_system_builder
+      POSTGRES_USER: ai_system_builder
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ai_system_builder -d ai_system_builder"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - postgres-data:/var/lib/postgresql
+
+  server:
+    image: ai-system-builder:qualification
+    build:
+      context: ../..
+      dockerfile: deployments/server/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      NODE_ENV: production
+      DEPLOYMENT_SHAPE: campus-server
+      DATABASE_URL: postgresql://ai_system_builder:${POSTGRES_PASSWORD}@postgres:5432/ai_system_builder
+      POSTGRES_SSL_MODE: disable
+      AI_SYSTEM_BUILDER_SECURITY_MODE: oidc-bearer
+      AI_SYSTEM_BUILDER_OIDC_ISSUER: https://identity.example.invalid
+      AI_SYSTEM_BUILDER_OIDC_AUDIENCE: ai-system-builder-qualification
+      AI_SYSTEM_BUILDER_OIDC_JWKS_URI: https://identity.example.invalid/.well-known/jwks.json
+      AI_SYSTEM_BUILDER_TENANT_PLACEMENT_MODE: pooled
+      AI_SYSTEM_BUILDER_TLS_CERT_MODE: auto-local-ca
+      SERVER_STORAGE_ROOT: /var/lib/ai-system-builder/artifacts
+      SERVER_RUNTIME_ROOT: /var/lib/ai-system-builder/runtime
+    ports:
+      - "3010:3010"
+    volumes:
+      - server-artifacts:/var/lib/ai-system-builder/artifacts
+      - server-runtime:/var/lib/ai-system-builder/runtime
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+
+volumes:
+  postgres-data:
+  server-artifacts:
+  server-runtime:

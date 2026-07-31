@@ -1,0 +1,7 @@
+import { describe, expect, it } from '../../../testing/node-test';
+import { MAX_ASSISTANT_RESPONSE_LENGTH, MAX_USER_MESSAGE_LENGTH, normalizeConversationSessionId, normalizeConversationTurnId, normalizeConversationMessageId, normalizeAssistantResponseId, normalizeConversationHistoryReferenceId, normalizeConversationSessionStatus, normalizeConversationTurnStatus, normalizeConversationMessageRole, normalizeUserVisibleMessageText } from '..';
+
+describe('conversation contracts',()=>{
+ it('normalizes ids/statuses/roles',()=>{expect(normalizeConversationSessionId('sess-1')).toBe('sess-1'); expect(normalizeConversationTurnId('turn-1')).toBe('turn-1'); expect(normalizeConversationMessageId('msg-1')).toBe('msg-1'); expect(normalizeAssistantResponseId('resp-1')).toBe('resp-1'); expect(normalizeConversationHistoryReferenceId('hist-1')).toBe('hist-1'); expect(normalizeConversationSessionStatus('active')).toBe('active'); expect(normalizeConversationTurnStatus('submitted')).toBe('submitted'); expect(normalizeConversationMessageRole('user')).toBe('user');});
+ it('preserves normal technical text and rejects empty/too long',()=>{expect(normalizeUserVisibleMessageText('path command token API workflow code')).toContain('workflow'); expect(()=>normalizeUserVisibleMessageText('   ')).toThrow('Conversation message text is invalid.'); expect(()=>normalizeUserVisibleMessageText('x'.repeat(MAX_USER_MESSAGE_LENGTH+1))).toThrow('Conversation message text is invalid.'); expect(MAX_ASSISTANT_RESPONSE_LENGTH).toBeGreaterThan(MAX_USER_MESSAGE_LENGTH/2);});
+});

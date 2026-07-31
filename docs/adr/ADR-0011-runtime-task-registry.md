@@ -1,7 +1,6 @@
 # ADR-0011: Runtime Task Registry for Long-Running Work
 
-## Status
-Proposed
+- Status: proposed
 
 ## Context
 

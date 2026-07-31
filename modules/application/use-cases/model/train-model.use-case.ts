@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join, parse, relative, resolve } from "node:path";
 
@@ -10,11 +10,12 @@ import {
   type ModelTrainingProgress,
 } from "../../../contracts/model";
 import { TaskType, type RuntimeTaskRecord } from "../../../contracts/runtime";
-import { createRetrieveArtifactRequest } from "../../../contracts/storage";
+import { createRetrieveArtifactRequest, type ArtifactStorageBinding } from "../../../contracts/storage";
+import { isWorkspaceId } from "../../../contracts/workspace";
 import type { GeneratedModelStoragePort, ModelPublisherPort, ModelRegistryPort } from "../../ports/model";
 import type { RuntimeTaskRegistryPort } from "../../ports/runtime";
 import type { ArtifactObjectStoragePort, ArtifactStorageBindingPort } from "../../ports/storage";
-import type { TaskPowerLifecyclePort } from "../../services/runtime";
+import type { RuntimeCapabilityGuardService, TaskPowerLifecyclePort } from "../../services/runtime";
 
 function ensureBaseModelSelection(request: ModelTrainingRequest): void {
   if (!request.baseModel.modelRecordId && !request.baseModel.modelId && !request.baseModel.localPath) {
@@ -46,7 +47,41 @@ function ensureOutputDestinationSelection(request: ModelTrainingRequest): void {
   }
 }
 
-function extensionForMediaType(mediaType: string | undefined): string {
+const IMAGE_TRAINING_TASKS = new Set(["diffusion-lora", "vision-classification", "vision-detection", "vision-segmentation"]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isImageTrainingTask(trainingTask: string | undefined): boolean {
+  return typeof trainingTask === "string" && IMAGE_TRAINING_TASKS.has(trainingTask.trim().toLowerCase());
+}
+
+function extensionForMediaType(mediaType: string | undefined, fallback = ".parquet"): string {
+  if (mediaType === "image/png") {
+    return ".png";
+  }
+
+  if (mediaType === "image/jpeg" || mediaType === "image/jpg") {
+    return ".jpg";
+  }
+
+  if (mediaType === "image/webp") {
+    return ".webp";
+  }
+
+  if (mediaType === "image/gif") {
+    return ".gif";
+  }
+
+  if (mediaType === "image/bmp") {
+    return ".bmp";
+  }
+
+  if (mediaType === "image/tiff") {
+    return ".tiff";
+  }
+
   if (mediaType === "application/x-parquet" || mediaType === "application/vnd.apache.parquet") {
     return ".parquet";
   }
@@ -63,7 +98,7 @@ function extensionForMediaType(mediaType: string | undefined): string {
     return ".csv";
   }
 
-  return ".parquet";
+  return fallback;
 }
 
 function sanitizeRuntimeDatasetFileSegment(value: string): string {
@@ -89,6 +124,51 @@ function buildRuntimeDatasetPath(
   return join(runtimeDatasetDir, `${prefix}${extension}`);
 }
 
+function buildRuntimeSourceArtifactPath(
+  runtimeDatasetDir: string,
+  artifactId: string,
+  mediaType: string | undefined,
+  sourceIndex: number,
+): string {
+  const sourceName = basename(artifactId);
+  const stem = sanitizeRuntimeDatasetFileSegment(parse(sourceName).name || sourceName);
+  const extension = parse(sourceName).ext || extensionForMediaType(mediaType, ".bin");
+  const prefix = `${String(sourceIndex + 1).padStart(4, "0")}-${stem}`;
+  return join(runtimeDatasetDir, "sources", `${prefix}${extension}`);
+}
+
+function resolvePreferredObjectStorageBinding(
+  bindings: ArtifactStorageBinding[],
+): ArtifactStorageBinding | undefined {
+  return bindings.find((binding) =>
+    binding.backing.kind === "artifact-object"
+    && binding.backing.provider === "local"
+    && binding.role === "primary")
+    ?? bindings.find((binding) => binding.backing.kind === "artifact-object")
+    ?? bindings[0];
+}
+
+function resolveLocalStorageKeyForArtifact(
+  artifactId: string,
+  bindings: ArtifactStorageBinding[],
+): string {
+  const preferredBinding = resolvePreferredObjectStorageBinding(bindings);
+  if (preferredBinding?.backing.kind === "artifact-object" && preferredBinding.backing.locator) {
+    return preferredBinding.backing.locator;
+  }
+
+  return artifactId;
+}
+
+function extractSourceArtifactIds(metadata: Record<string, unknown> | undefined): string[] {
+  const sourceArtifactIds = metadata?.["sourceArtifactIds"];
+  if (!Array.isArray(sourceArtifactIds)) {
+    return [];
+  }
+
+  return Array.from(new Set(sourceArtifactIds.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)));
+}
+
 export class TrainModelUseCase {
   private readonly registeredResultsByRequestId = new Map<string, ModelTrainingResult>();
   private readonly requestContextByRequestId = new Map<string, { normalizedRequest: ModelTrainingRequest; baseModelRecordId?: string }>();
@@ -103,6 +183,7 @@ export class TrainModelUseCase {
       generatedModelStorage?: GeneratedModelStoragePort;
       modelPublisher?: ModelPublisherPort;
       taskPowerLifecycle: TaskPowerLifecyclePort;
+      runtimeCapabilityGuard?: Pick<RuntimeCapabilityGuardService, "requireCapabilityReady">;
     },
   ) {}
 
@@ -111,11 +192,15 @@ export class TrainModelUseCase {
     ensureBaseModelSelection(normalizedRequest);
     ensureDatasetSelections(normalizedRequest);
     ensureOutputDestinationSelection(normalizedRequest);
+    await this.dependencies.runtimeCapabilityGuard?.requireCapabilityReady("model-training");
 
     let baseModelRecordId: string | undefined = normalizedRequest.baseModel.modelRecordId;
 
     if (normalizedRequest.baseModel.modelRecordId) {
-      const baseModelRecord = await this.dependencies.modelRegistry.getModelRecord(normalizedRequest.baseModel.modelRecordId);
+      if (!isWorkspaceId(normalizedRequest.workspaceId)) {
+        throw new Error("workspaceId must be provided to resolve workspace-scoped base model records.");
+      }
+      const baseModelRecord = await this.dependencies.modelRegistry.getModelRecord(normalizedRequest.workspaceId, normalizedRequest.baseModel.modelRecordId);
       if (!baseModelRecord) {
         throw new Error(`Base model record '${normalizedRequest.baseModel.modelRecordId}' was not found.`);
       }
@@ -135,7 +220,7 @@ export class TrainModelUseCase {
     try {
       const resolvedDatasets = [];
       for (const [datasetIndex, dataset] of normalizedRequest.datasets.entries()) {
-        const resolved = await this.resolveDatasetForRuntime(dataset, datasetIndex, () => runtimeDatasetDir, (value) => { runtimeDatasetDir = value; });
+        const resolved = await this.resolveDatasetForRuntime(normalizedRequest, dataset, datasetIndex, () => runtimeDatasetDir, (value) => { runtimeDatasetDir = value; });
         resolvedDatasets.push(resolved);
       }
 
@@ -144,6 +229,10 @@ export class TrainModelUseCase {
         payload: {
           ...normalizedRequest,
           datasets: resolvedDatasets,
+          runMetadata: {
+            ...normalizedRequest.runtimeMetadata,
+            trainingTask: normalizedRequest.trainingTask,
+          },
         },
       });
 
@@ -223,11 +312,19 @@ export class TrainModelUseCase {
     const generated = trainingResult.generatedModelCandidate;
     const registration = normalizedRequest.output.registration;
     const destination = normalizedRequest.output.destination;
-    const localStorageResult = destination.local.enabled
+    const stagedStorageResult = destination.local.enabled || destination.huggingFace?.enabled
       ? await this.storeGeneratedModelLocally(normalizedRequest, trainingResult, generated)
       : undefined;
+    const localStorageResult = destination.local.enabled ? stagedStorageResult : undefined;
     const publishedResult = destination.huggingFace?.enabled
-      ? await this.publishGeneratedModel(normalizedRequest, statusRecord.requestId, generated)
+      ? await this.publishGeneratedModel(
+        normalizedRequest,
+        statusRecord.requestId,
+        {
+          ...generated,
+          localPath: stagedStorageResult?.localPath,
+        },
+      )
       : undefined;
     const trainingValidation = generated.metadata && typeof generated.metadata["validation"] === "object"
       ? generated.metadata["validation"] as Record<string, unknown>
@@ -242,6 +339,7 @@ export class TrainModelUseCase {
       ? this.rewriteGeneratedMetadataPaths(generated.metadata, generated.localPath, localStorageResult.localPath)
       : (publishedResult ? this.removeGeneratedMetadataOutputPaths(generated.metadata) : generated.metadata);
     const registered = await this.dependencies.modelRegistry.registerGeneratedModel({
+      ...(normalizedRequest.workspaceId ? { workspaceId: normalizedRequest.workspaceId } : {}),
       displayName: registration?.displayName ?? generated.displayName,
       provider: publishedResult ? "huggingface" : generated.provider,
       modelId: publishedResult?.repository ?? generated.modelId ?? localStorageResult?.modelId,
@@ -277,6 +375,7 @@ export class TrainModelUseCase {
 
     const outputModel = publishedResult
       ? (await this.dependencies.modelRegistry.updateModelRecord({
+          ...(normalizedRequest.workspaceId ? { workspaceId: normalizedRequest.workspaceId } : {}),
           modelRecordId: registered.model.modelRecordId,
           patch: {
             published: {
@@ -347,7 +446,12 @@ export class TrainModelUseCase {
       throw new Error("Hugging Face model publishing is not configured.");
     }
 
+    if (!isWorkspaceId(request.workspaceId)) {
+      throw new Error("workspaceId must be provided for workspace-scoped model publishing.");
+    }
+
     return this.dependencies.modelPublisher.publishModel({
+      workspaceId: request.workspaceId,
       modelRecordId: requestId,
       repository: huggingFace.repository,
       revision: huggingFace.revision,
@@ -441,6 +545,7 @@ export class TrainModelUseCase {
   }
 
   private async resolveDatasetForRuntime(
+    request: ModelTrainingRequest,
     dataset: ModelTrainingRequest["datasets"][number],
     datasetIndex: number,
     getRuntimeDatasetDir: () => string | undefined,
@@ -450,7 +555,10 @@ export class TrainModelUseCase {
       return dataset;
     }
 
-    const bindingsResult = await this.dependencies.storageBindings.readArtifactStorageBindings({ artifactId: dataset.artifactId });
+    const bindingsResult = await this.dependencies.storageBindings.readArtifactStorageBindings({
+      ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
+      artifactId: dataset.artifactId,
+    });
     if (!bindingsResult.ok) {
       throw new Error(`Failed to resolve storage binding for dataset artifact '${dataset.artifactId}': ${bindingsResult.error.message}`);
     }
@@ -473,6 +581,9 @@ export class TrainModelUseCase {
     if (!retrieved.ok) {
       throw new Error(`Failed to retrieve local dataset artifact '${dataset.artifactId}' from artifact-object storage key '${storageKey}': ${retrieved.error.message}`);
     }
+    const datasetArtifactMetadata = isRecord(retrieved.value.descriptor.metadata)
+      ? retrieved.value.descriptor.metadata
+      : undefined;
 
     let runtimeDatasetDir = getRuntimeDatasetDir();
     if (!runtimeDatasetDir) {
@@ -481,11 +592,74 @@ export class TrainModelUseCase {
     }
     const localPath = buildRuntimeDatasetPath(runtimeDatasetDir, dataset.artifactId, retrieved.value.descriptor.mediaType, datasetIndex);
     await writeFile(localPath, Buffer.from(retrieved.value.content as Uint8Array));
+    const stagedSourceArtifactPaths = isImageTrainingTask(request.trainingTask)
+      ? await this.stageSourceArtifactsForRuntime(request, datasetArtifactMetadata, runtimeDatasetDir)
+      : undefined;
+    const datasetRuntimeMetadata = {
+      ...dataset.metadata,
+      ...(datasetArtifactMetadata ? { artifactMetadata: datasetArtifactMetadata } : {}),
+      ...(stagedSourceArtifactPaths && Object.keys(stagedSourceArtifactPaths).length > 0
+        ? {
+            sourceArtifactIds: Object.keys(stagedSourceArtifactPaths),
+            stagedSourceArtifactPaths,
+          }
+        : {}),
+    };
     return {
       ...dataset,
       path: localPath,
       format: dataset.format ?? parse(localPath).ext.replace(/^\./, ""),
+      ...(Object.keys(datasetRuntimeMetadata).length > 0 ? { metadata: datasetRuntimeMetadata } : {}),
     };
+  }
+
+  private async stageSourceArtifactsForRuntime(
+    request: ModelTrainingRequest,
+    datasetMetadata: Record<string, unknown> | undefined,
+    runtimeDatasetDir: string,
+  ): Promise<Record<string, string>> {
+    const sourceArtifactIds = extractSourceArtifactIds(datasetMetadata);
+    if (sourceArtifactIds.length === 0) {
+      return {};
+    }
+
+    const stagedSourceArtifactPaths: Record<string, string> = {};
+    await mkdir(join(runtimeDatasetDir, "sources"), { recursive: true });
+
+    for (const [sourceIndex, artifactId] of sourceArtifactIds.entries()) {
+      const bindingsResult = await this.dependencies.storageBindings.readArtifactStorageBindings({
+        ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
+        artifactId,
+      });
+      if (!bindingsResult.ok) {
+        throw new Error(`Failed to resolve storage binding for source artifact '${artifactId}': ${bindingsResult.error.message}`);
+      }
+
+      const localFilesystemBinding = bindingsResult.value.bindings.find((binding) =>
+        binding.backing.provider === "local-filesystem"
+        && binding.backing.locator.trim().length > 0,
+      );
+      if (localFilesystemBinding) {
+        stagedSourceArtifactPaths[artifactId] = localFilesystemBinding.backing.locator;
+        continue;
+      }
+
+      const storageKey = resolveLocalStorageKeyForArtifact(artifactId, bindingsResult.value.bindings);
+      if (!storageKey.trim()) {
+        throw new Error(`Storage locator missing for source artifact '${artifactId}'.`);
+      }
+
+      const retrieved = await this.dependencies.storage.retrieveArtifact(createRetrieveArtifactRequest(storageKey));
+      if (!retrieved.ok) {
+        throw new Error(`Failed to retrieve source artifact '${artifactId}' from artifact-object storage key '${storageKey}': ${retrieved.error.message}`);
+      }
+
+      const localPath = buildRuntimeSourceArtifactPath(runtimeDatasetDir, artifactId, retrieved.value.descriptor.mediaType, sourceIndex);
+      await writeFile(localPath, Buffer.from(retrieved.value.content as Uint8Array));
+      stagedSourceArtifactPaths[artifactId] = localPath;
+    }
+
+    return stagedSourceArtifactPaths;
   }
 
   private async completePowerLifecycle(requestId: string, status: "succeeded" | "failed" | "cancelled" | "unknown"): Promise<void> {

@@ -1,19 +1,16 @@
+import { createWorkspaceId } from "../workspace";
+import { RETRIEVE_ARTIFACT_MAXIMUM_BYTES } from "../storage";
 import { createOperationIdentity, type OperationIdentity } from "../shared";
 import {
   createIpcChannel,
   type IpcChannel,
   type IpcChannelValue,
 } from "./ipc-channel";
-import {
-  createIpcRequest,
-  type IpcRequest,
-} from "./ipc-request";
-import {
-  createIpcSuccessResponse,
-  type IpcResponse,
-} from "./ipc-response";
+import { createIpcRequest, type IpcRequest } from "./ipc-request";
+import { createIpcSuccessResponse, type IpcResponse } from "./ipc-response";
 
-export const DESKTOP_ARTIFACT_MEDIA_VIEW_OPERATION: OperationIdentity = createOperationIdentity("artifact", "media", "view");
+export const DESKTOP_ARTIFACT_MEDIA_VIEW_OPERATION: OperationIdentity =
+  createOperationIdentity("artifact", "media", "view");
 
 export const DESKTOP_ARTIFACT_MEDIA_VIEW_REQUEST_CHANNEL = createIpcChannel(
   DESKTOP_ARTIFACT_MEDIA_VIEW_OPERATION,
@@ -32,6 +29,8 @@ export interface DesktopArtifactMediaViewBoundaryContext {
 
 export interface DesktopArtifactMediaViewRequestPayload {
   storageKey: string;
+  workspaceId: string;
+  maximumBytes?: number;
   boundary: DesktopArtifactMediaViewBoundaryContext;
 }
 
@@ -69,11 +68,26 @@ function normalizeRequiredTextField(value: string, fieldName: string): string {
 function normalizeDesktopArtifactMediaViewPayload(
   payload: DesktopArtifactMediaViewRequestPayload,
 ): DesktopArtifactMediaViewRequestPayload {
+  if (
+    payload.maximumBytes !== undefined &&
+    (!Number.isInteger(payload.maximumBytes) ||
+      payload.maximumBytes < 1 ||
+      payload.maximumBytes > RETRIEVE_ARTIFACT_MAXIMUM_BYTES)
+  ) {
+    throw new Error(
+      `maximumBytes must be an integer between 1 and ${RETRIEVE_ARTIFACT_MAXIMUM_BYTES}.`,
+    );
+  }
   return {
     storageKey: normalizeRequiredTextField(payload.storageKey, "storageKey"),
+    workspaceId: createWorkspaceId(payload.workspaceId),
+    maximumBytes: payload.maximumBytes,
     boundary: {
       host: "desktop",
-      source: normalizeRequiredTextField(payload.boundary.source, "boundary.source"),
+      source: normalizeRequiredTextField(
+        payload.boundary.source,
+        "boundary.source",
+      ),
     },
   };
 }
@@ -134,15 +148,15 @@ export function getDesktopArtifactMediaViewChannel(
   kind: "request" | "response",
 ):
   | IpcChannel<
-    typeof DESKTOP_ARTIFACT_MEDIA_VIEW_OPERATION,
-    "request",
-    IpcChannelValue<typeof DESKTOP_ARTIFACT_MEDIA_VIEW_OPERATION, "request">
-  >
+      typeof DESKTOP_ARTIFACT_MEDIA_VIEW_OPERATION,
+      "request",
+      IpcChannelValue<typeof DESKTOP_ARTIFACT_MEDIA_VIEW_OPERATION, "request">
+    >
   | IpcChannel<
-    typeof DESKTOP_ARTIFACT_MEDIA_VIEW_OPERATION,
-    "response",
-    IpcChannelValue<typeof DESKTOP_ARTIFACT_MEDIA_VIEW_OPERATION, "response">
-  > {
+      typeof DESKTOP_ARTIFACT_MEDIA_VIEW_OPERATION,
+      "response",
+      IpcChannelValue<typeof DESKTOP_ARTIFACT_MEDIA_VIEW_OPERATION, "response">
+    > {
   return kind === "request"
     ? DESKTOP_ARTIFACT_MEDIA_VIEW_REQUEST_CHANNEL
     : DESKTOP_ARTIFACT_MEDIA_VIEW_RESPONSE_CHANNEL;

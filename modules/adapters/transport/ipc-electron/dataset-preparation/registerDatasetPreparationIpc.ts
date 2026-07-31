@@ -2,7 +2,7 @@ import type {
   PrepareTrainingDatasetFromArtifactsCommand,
 } from "../../../../application/use-cases";
 import type { ContractResult } from "../../../../contracts/shared";
-import type { RuntimeTaskRecord } from "../../../../contracts/runtime";
+import type { RuntimeTaskProgress, RuntimeTaskStatusRecord } from "../../../../contracts/runtime";
 import {
   DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL,
   DESKTOP_DATASET_PREPARE_TRAINING_START_RESPONSE_CHANNEL,
@@ -10,9 +10,12 @@ import {
   DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_RESPONSE_CHANNEL,
   DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL,
   DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_RESPONSE_CHANNEL,
+  DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_REQUEST_CHANNEL,
+  DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_RESPONSE_CHANNEL,
   createDesktopPrepareTrainingDatasetStartSuccessResponse,
   createDesktopPrepareTrainingDatasetTaskReadSuccessResponse,
   createDesktopPrepareTrainingDatasetTaskCancelSuccessResponse,
+  createDesktopPrepareTrainingDatasetApproveSuccessResponse,
   createIpcError,
   createIpcFailureResponse,
   type DesktopPrepareTrainingDatasetStartRequest,
@@ -22,25 +25,29 @@ import {
   type DesktopPrepareTrainingDatasetTaskCancelRequest,
   type DesktopPrepareTrainingDatasetTaskCancelResponse,
   type DesktopPrepareTrainingDatasetTaskReadSuccessValue,
+  type DesktopPrepareTrainingDatasetApproveRequest,
+  type DesktopPrepareTrainingDatasetApproveResponse,
+  type DesktopPrepareTrainingDatasetApproveSuccessValue,
   type DesktopPrepareTrainingDatasetFinalResult,
 } from "../../../../contracts/ipc";
 import type { IpcMainHandlePort } from "../ipcMainHandlePort";
 
 type StartResultValue = { requestId: string; taskType: string; accepted: true; status: "queued" | "running"; startedAt?: string; updatedAt?: string; metadata?: Record<string, unknown> };
-type RuntimeTaskStatusReadResult = RuntimeTaskRecord & {
+type RuntimeTaskStatusReadResult = RuntimeTaskStatusRecord & {
   message?: string;
 };
-type ReadResultValue = RuntimeTaskStatusReadResult | { requestId: string; taskType: string; status: "succeeded"; result: DesktopPrepareTrainingDatasetFinalResult; startedAt?: string; updatedAt?: string; completedAt?: string };
+type ReadResultValue = RuntimeTaskStatusReadResult | { requestId: string; taskType: string; status: "succeeded" | "review-required"; result: DesktopPrepareTrainingDatasetFinalResult; startedAt?: string; updatedAt?: string; completedAt?: string };
 type CancelResultValue = { requestId: string; cancelled: boolean; status: "cancelled" | "running" | "unknown" };
 
 export interface PrepareTrainingDatasetFromArtifactsUseCasePort {
-  startPrepareTrainingDataset: (command: PrepareTrainingDatasetFromArtifactsCommand, context?: { requestId?: string; correlationId?: string }) => Promise<ContractResult<StartResultValue>>;
-  readPrepareTrainingDataset: (requestId: string, context?: { requestId?: string; correlationId?: string }) => Promise<ContractResult<ReadResultValue>>;
-  cancelPrepareTrainingDataset?: (requestId: string, context?: { requestId?: string; correlationId?: string }) => Promise<ContractResult<CancelResultValue>>;
+  startPrepareTrainingDataset: (command: PrepareTrainingDatasetFromArtifactsCommand, context?: { requestId?: string; correlationId?: string; workspaceId?: string }) => Promise<ContractResult<StartResultValue>>;
+  readPrepareTrainingDataset: (requestId: string, context?: { requestId?: string; correlationId?: string; workspaceId?: string }) => Promise<ContractResult<ReadResultValue>>;
+  cancelPrepareTrainingDataset?: (requestId: string, context?: { requestId?: string; correlationId?: string; workspaceId?: string }) => Promise<ContractResult<CancelResultValue>>;
+  approvePreparedTrainingDataset?: (approval: { requestId: string; reportFingerprint: string }, context?: { requestId?: string; correlationId?: string; workspaceId?: string }) => Promise<ContractResult<DesktopPrepareTrainingDatasetApproveSuccessValue>>;
 }
 export interface RegisterDatasetPreparationIpcDependencies { ipcMain: IpcMainHandlePort; prepareTrainingDatasetUseCase: PrepareTrainingDatasetFromArtifactsUseCasePort; }
 
-function mapTaskProgress(progress: RuntimeTaskRecord["progress"]): { message?: string; processed?: number; total?: number } | undefined {
+function mapTaskProgress(progress: RuntimeTaskProgress | undefined): { message?: string; processed?: number; total?: number } | undefined {
   if (!progress) {
     return undefined;
   }
@@ -64,7 +71,12 @@ function mapTaskMessage(value: RuntimeTaskStatusReadResult): string | undefined 
     return value.message;
   }
 
-  return typeof value.progress?.message === "string" ? value.progress.message : undefined;
+  if (typeof value.error?.message === "string") {
+    return value.error.message;
+  }
+
+  const progress = "progress" in value ? value.progress : undefined;
+  return typeof progress?.message === "string" ? progress.message : undefined;
 }
 
 function mapTaskError(value: RuntimeTaskStatusReadResult): { code?: string; message: string; details?: Record<string, unknown> } {
@@ -76,27 +88,34 @@ function mapTaskError(value: RuntimeTaskStatusReadResult): { code?: string; mess
 }
 
 function mapPrepareTrainingDatasetTaskStatusToIpcValue(value: ReadResultValue): DesktopPrepareTrainingDatasetTaskReadSuccessValue {
-  const shared = { requestId: value.requestId, taskType: value.taskType, startedAt: value.startedAt, updatedAt: value.updatedAt };
-  if (value.status === "succeeded") {
+  const progress = "progress" in value ? value.progress : undefined;
+  const completedAt = "completedAt" in value ? value.completedAt : undefined;
+  const shared = {
+    requestId: value.requestId,
+    taskType: "taskType" in value ? value.taskType : undefined,
+    startedAt: "startedAt" in value ? value.startedAt : undefined,
+    updatedAt: value.updatedAt,
+  };
+  if (value.status === "succeeded" || value.status === "review-required") {
     if ("result" in value) {
-      return { ...shared, status: "succeeded", result: value.result, completedAt: value.completedAt };
+      return { ...shared, status: value.status, result: value.result, completedAt };
     }
-    return { ...shared, status: "unknown", message: "Dataset preparation succeeded without materialized result.", completedAt: value.completedAt };
+    return { ...shared, status: "unknown", message: "Dataset preparation succeeded without materialized result.", completedAt };
   }
-  if (value.status === "failed") return { ...shared, status: "failed", error: mapTaskError(value), completedAt: value.completedAt };
-  if (value.status === "cancelled") return { ...shared, status: "cancelled", message: mapTaskMessage(value), progress: mapTaskProgress(value.progress), completedAt: value.completedAt };
-  if (value.status === "unknown") return { ...shared, status: "unknown", message: mapTaskMessage(value), progress: mapTaskProgress(value.progress), completedAt: value.completedAt };
-  return { ...shared, status: value.status, progress: mapTaskProgress(value.progress) };
+  if (value.status === "failed") return { ...shared, status: "failed", error: mapTaskError(value), completedAt };
+  if (value.status === "cancelled") return { ...shared, status: "cancelled", message: mapTaskMessage(value), progress: mapTaskProgress(progress), completedAt };
+  if (value.status === "unknown") return { ...shared, status: "unknown", message: mapTaskMessage(value), progress: mapTaskProgress(progress), completedAt };
+  return { ...shared, status: value.status, progress: mapTaskProgress(progress) };
 }
 
 export const createDesktopPrepareTrainingDatasetStartIpcHandler = (useCase: PrepareTrainingDatasetFromArtifactsUseCasePort) => async (_e: unknown, request: DesktopPrepareTrainingDatasetStartRequest): Promise<DesktopPrepareTrainingDatasetStartResponse> => {
-  const result = await useCase.startPrepareTrainingDataset(request.payload.command, { requestId: request.requestId, correlationId: request.correlationId });
+  const result = await useCase.startPrepareTrainingDataset(request.payload.command, { requestId: request.requestId, correlationId: request.correlationId, workspaceId: request.payload.boundary.workspaceId });
   if (result.ok) return createDesktopPrepareTrainingDatasetStartSuccessResponse(result.value, { requestId: result.requestId ?? request.requestId, correlationId: result.correlationId ?? request.correlationId });
   return createIpcFailureResponse(createIpcError(DESKTOP_DATASET_PREPARE_TRAINING_START_RESPONSE_CHANNEL, result.error.code, result.error.message, { details: result.error.details, requestId: result.requestId ?? request.requestId, correlationId: result.correlationId ?? request.correlationId }));
 };
 
 export const createDesktopPrepareTrainingDatasetTaskReadIpcHandler = (useCase: PrepareTrainingDatasetFromArtifactsUseCasePort) => async (_e: unknown, request: DesktopPrepareTrainingDatasetTaskReadRequest): Promise<DesktopPrepareTrainingDatasetTaskReadResponse> => {
-  const result = await useCase.readPrepareTrainingDataset(request.payload.requestId, { requestId: request.requestId, correlationId: request.correlationId });
+  const result = await useCase.readPrepareTrainingDataset(request.payload.requestId, { requestId: request.requestId, correlationId: request.correlationId, workspaceId: request.payload.boundary.workspaceId });
   if (result.ok) return createDesktopPrepareTrainingDatasetTaskReadSuccessResponse(mapPrepareTrainingDatasetTaskStatusToIpcValue(result.value), { requestId: result.requestId ?? request.requestId, correlationId: result.correlationId ?? request.correlationId });
   return createIpcFailureResponse(createIpcError(DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_RESPONSE_CHANNEL, result.error.code, result.error.message, { details: result.error.details, requestId: result.requestId ?? request.requestId, correlationId: result.correlationId ?? request.correlationId }));
 };
@@ -105,13 +124,23 @@ export const createDesktopPrepareTrainingDatasetTaskCancelIpcHandler = (useCase:
   if (!useCase.cancelPrepareTrainingDataset) {
     return createIpcFailureResponse(createIpcError(DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_RESPONSE_CHANNEL, "unavailable", "Dataset preparation cancellation is unavailable.", { requestId: request.requestId, correlationId: request.correlationId }));
   }
-  const result = await useCase.cancelPrepareTrainingDataset(request.payload.requestId, { requestId: request.requestId, correlationId: request.correlationId });
+  const result = await useCase.cancelPrepareTrainingDataset(request.payload.requestId, { requestId: request.requestId, correlationId: request.correlationId, workspaceId: request.payload.boundary.workspaceId });
   if (result.ok) return createDesktopPrepareTrainingDatasetTaskCancelSuccessResponse(result.value, { requestId: result.requestId ?? request.requestId, correlationId: result.correlationId ?? request.correlationId });
   return createIpcFailureResponse(createIpcError(DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_RESPONSE_CHANNEL, result.error.code, result.error.message, { details: result.error.details, requestId: result.requestId ?? request.requestId, correlationId: result.correlationId ?? request.correlationId }));
+};
+
+export const createDesktopPrepareTrainingDatasetApproveIpcHandler = (useCase: PrepareTrainingDatasetFromArtifactsUseCasePort) => async (_e: unknown, request: DesktopPrepareTrainingDatasetApproveRequest): Promise<DesktopPrepareTrainingDatasetApproveResponse> => {
+  if (!useCase.approvePreparedTrainingDataset) {
+    return createIpcFailureResponse(createIpcError(DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_RESPONSE_CHANNEL, "unavailable", "Dataset approval is unavailable.", { requestId: request.requestId, correlationId: request.correlationId }));
+  }
+  const result = await useCase.approvePreparedTrainingDataset({ requestId: request.payload.requestId, reportFingerprint: request.payload.reportFingerprint }, { requestId: request.requestId, correlationId: request.correlationId, workspaceId: request.payload.boundary.workspaceId });
+  if (result.ok) return createDesktopPrepareTrainingDatasetApproveSuccessResponse(result.value, { requestId: result.requestId ?? request.requestId, correlationId: result.correlationId ?? request.correlationId });
+  return createIpcFailureResponse(createIpcError(DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_RESPONSE_CHANNEL, result.error.code, result.error.message, { details: result.error.details, requestId: result.requestId ?? request.requestId, correlationId: result.correlationId ?? request.correlationId }));
 };
 
 export function registerDatasetPreparationIpc(dependencies: RegisterDatasetPreparationIpcDependencies): void {
   dependencies.ipcMain.handle(DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL.value, createDesktopPrepareTrainingDatasetStartIpcHandler(dependencies.prepareTrainingDatasetUseCase));
   dependencies.ipcMain.handle(DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL.value, createDesktopPrepareTrainingDatasetTaskReadIpcHandler(dependencies.prepareTrainingDatasetUseCase));
   dependencies.ipcMain.handle(DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL.value, createDesktopPrepareTrainingDatasetTaskCancelIpcHandler(dependencies.prepareTrainingDatasetUseCase));
+  dependencies.ipcMain.handle(DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_REQUEST_CHANNEL.value, createDesktopPrepareTrainingDatasetApproveIpcHandler(dependencies.prepareTrainingDatasetUseCase));
 }

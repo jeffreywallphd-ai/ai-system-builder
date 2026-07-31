@@ -1,7 +1,6 @@
 # ADR-0010: Python Runtime Sidecar Architecture for AI Workloads
 
-## Status
-Proposed
+- Status: proposed
 
 ## Context
 

@@ -1,5 +1,7 @@
 # Transform Contracts
 
+> AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
+
 Transform contracts capture ELT-style derivation semantics without binding to specific engines.
 
 This family provides:

@@ -1,5 +1,8 @@
 # Coding Standards
 
+- Status: accepted
+- Verification: `npm test`
+
 ## Purpose
 
 These standards enforce maintainable implementation and architectural discipline for the repository rebuild.

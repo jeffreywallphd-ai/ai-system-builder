@@ -31,18 +31,24 @@
   - progress/status monitor failure
   - cancellation/stop flow
   - stale async state
+  - missing runtime task correlation or unsupported task listing
 - Treat long-running work carefully:
   - for desktop long-running tasks, combine async task lifecycle (start/poll/cancel) with Electron power-suspension blocking instead of relying on long-held transport requests
   - transport failure does not necessarily mean task failure
   - background task can continue after request disconnect
   - `finally` teardown can incorrectly kill active progress monitoring
   - polling/subscriptions should survive recoverable disconnects
+  - readiness-guard-rejected starts should surface unavailable responses and should not tell callers to poll nonexistent tasks
+  - unknown task status/cancel reads should be explicit not-found/unknown outcomes, should use `recordType: "not-found"` when no valid task family is known, should not start runtimes, and should not fake an invalid `TaskType` when the task family is unknown
 - Fix lifecycle behavior first; do not stop at improving error wording.
 - Preserve architecture boundaries while debugging:
   - UI handles UI state and progress display
   - preload/IPC remain proxy/transport boundaries
   - use cases enforce application rules
   - adapters translate provider/runtime details
+  - provider-level failures should become sanitized structured readiness/status objects where the application service can isolate them; raw provider exception text must stay out of readiness snapshots/statuses
+  - guarded runtime-backed starts should fail as structured unavailable responses rather than generic internals when readiness reports the required feature capability is not ready
+  - unexpected transport handler failures and task-list delegate failures should return sanitized, generic messages/metadata rather than raw exception text
   - runtime workers execute tasks
 - Add tests for execution timelines and state transitions, not only final outputs.
 

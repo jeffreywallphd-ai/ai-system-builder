@@ -11,6 +11,7 @@ import {
   type UpdateApplicationSettingRequest,
 } from "../../../contracts/settings";
 import type { ApplicationSettingsPort } from "../../../application/ports/settings";
+import { mutateDocumentRecord, readDocumentRecord, writeDocumentRecord, type StructuredDocumentStore } from "../shared";
 
 interface SettingsFileShape {
   settings?: Record<string, ApplicationSettingPrimitiveValue>;
@@ -19,6 +20,8 @@ interface SettingsFileShape {
 
 export interface LocalApplicationSettingsAdapterOptions {
   filePath: string;
+  rootDirectory?: string;
+  documents?: StructuredDocumentStore;
   now?: () => string;
   definitions?: ApplicationSettingDefinition[];
 }
@@ -31,6 +34,9 @@ export function createLocalApplicationSettingsAdapter(
   const definitionByKey = new Map(definitions.map((definition) => [definition.key, definition] as const));
 
   async function readDocument(): Promise<SettingsFileShape> {
+    if (options.documents) {
+      return (await readDocumentRecord({ rootDirectory: options.rootDirectory ?? dirname(options.filePath), documents: options.documents }, "application-settings/application-settings.json", { settings: {} })).value;
+    }
     try {
       const json = await readFile(options.filePath, "utf8");
       const parsed = JSON.parse(json) as SettingsFileShape;
@@ -53,6 +59,10 @@ export function createLocalApplicationSettingsAdapter(
   }
 
   async function writeDocument(nextDocument: SettingsFileShape): Promise<void> {
+    if (options.documents) {
+      await writeDocumentRecord({ rootDirectory: options.rootDirectory ?? dirname(options.filePath), documents: options.documents }, "application-settings/application-settings.json", nextDocument);
+      return;
+    }
     const directory = dirname(options.filePath);
     await mkdir(directory, { recursive: true });
 
@@ -62,20 +72,20 @@ export function createLocalApplicationSettingsAdapter(
   }
 
   async function updateSetting(key: string, value: ApplicationSettingPrimitiveValue | undefined): Promise<void> {
-    const document = await readDocument();
-    const currentSettings = document.settings ?? {};
-    const nextSettings = { ...currentSettings };
-
-    if (value === undefined) {
-      delete nextSettings[key];
-    } else {
-      nextSettings[key] = value;
+    if (options.documents) {
+      await mutateDocumentRecord(
+        { rootDirectory: options.rootDirectory ?? dirname(options.filePath), documents: options.documents },
+        "application-settings/application-settings.json",
+        { settings: {} } as SettingsFileShape,
+        (document) => ({
+          value: withUpdatedSetting(document, key, value),
+          result: undefined,
+        }),
+      );
+      return;
     }
-
-    await writeDocument({
-      ...document,
-      settings: nextSettings,
-    });
+    const document = await readDocument();
+    await writeDocument(withUpdatedSetting(document, key, value));
   }
 
   function selectDefinitions(request: ReadApplicationSettingsRequest = {}): ApplicationSettingDefinition[] {
@@ -141,4 +151,15 @@ export function createLocalApplicationSettingsAdapter(
       };
     },
   };
+}
+
+function withUpdatedSetting(
+  document: SettingsFileShape,
+  key: string,
+  value: ApplicationSettingPrimitiveValue | undefined,
+): SettingsFileShape {
+  const nextSettings = { ...(document.settings ?? {}) };
+  if (value === undefined) delete nextSettings[key];
+  else nextSettings[key] = value;
+  return { ...document, settings: nextSettings };
 }
