@@ -29,6 +29,30 @@ class StructuredOutputRuntimeTests(unittest.TestCase):
         with self.assertRaisesRegex(StructuredOutputValidationError, "fingerprint"):
             resolve_runtime_structured_output(runtime)
 
+        runtime = runtime_structured_output_fixture(constrained=True)
+        runtime["structuredOutput"]["example"]["example"]["output"] = "changed"
+        with self.assertRaisesRegex(StructuredOutputValidationError, "fingerprint"):
+            resolve_runtime_structured_output(runtime)
+
+    def test_rejects_a_fingerprinted_example_that_does_not_match_the_schema(self) -> None:
+        schema = {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["value"],
+            "properties": {"value": {"type": "number"}},
+        }
+        runtime = runtime_structured_output_from_schema(
+            schema,
+            "example",
+            {"output": ["value"]},
+            example={"value": "not-a-number"},
+        )
+        with self.assertRaisesRegex(
+            StructuredOutputValidationError,
+            "example output.value",
+        ):
+            resolve_runtime_structured_output(runtime)
+
     def test_validates_nested_exact_fields_without_jsonschema_dependency(self) -> None:
         schema = {
             "type": "object",

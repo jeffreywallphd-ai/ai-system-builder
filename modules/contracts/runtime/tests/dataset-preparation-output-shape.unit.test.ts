@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   compileDatasetPreparationVisualOutputShape,
   createDefaultDatasetPreparationVisualOutputShape,
+  listDatasetPreparationAvailableOutputPurposes,
   listDatasetPreparationRequiredOutputPurposes,
   resolveDatasetPreparationVisualOutputShape,
   type DatasetPreparationVisualOutputShape,
@@ -43,10 +44,15 @@ describe("dataset preparation visual output shapes", () => {
       );
       assert.equal(result.value.envelopeSchema.additionalProperties, false);
       assert.equal(result.value.exampleSchema.additionalProperties, false);
+      assert.equal(result.value.exampleEnvelope.status, "ok");
+      assert.ok(
+        result.value.exampleEnvelope[result.value.payloadKey],
+        `${taskType} should have a visible format example`,
+      );
     }
   });
 
-  it("pairs every example-creation system prompt with a complete default schema", () => {
+  it("pairs every generation system prompt with a complete default schema", () => {
     assert.deepEqual(
       [...DATASET_PREPARATION_TEXT_GENERATION_TASK_TYPES].sort(),
       [...DATASET_PREPARATION_TASK_TYPES].sort(),
@@ -59,7 +65,9 @@ describe("dataset preparation visual output shapes", () => {
         { outputFormat: "parquet" },
       );
       assert.ok(prompt, `${taskType} should have example instructions`);
+      assert.match(prompt, /^You generate /);
       assert.match(prompt, /structured output schema exactly/i);
+      assert.match(prompt, /no text before or after/i);
       assert.equal(result.ok, true, `${taskType} should have a visible schema`);
       if (!result.ok) continue;
       for (const purpose of listDatasetPreparationRequiredOutputPurposes(
@@ -71,6 +79,12 @@ describe("dataset preparation visual output shapes", () => {
         );
       }
     }
+    const instructionPrompt = resolveDefaultDatasetPreparationPromptTemplate(
+      "llm-instruction",
+    ) ?? "";
+    assert.match(instructionPrompt, /Copy the configured Instruction value exactly/);
+    assert.match(instructionPrompt, /do not create, summarize, or rewrite it/);
+    assert.doesNotMatch(instructionPrompt, /write a concise instruction/i);
   });
 
   it("resolves omitted layouts to task defaults without changing saved layouts", () => {
@@ -111,6 +125,10 @@ describe("dataset preparation visual output shapes", () => {
           enum: ["positive", "negative"],
         },
       );
+      assert.equal(
+        (single.value.exampleEnvelope.example as Record<string, unknown>).label,
+        "positive",
+      );
     }
 
     const multi = compile(
@@ -134,6 +152,117 @@ describe("dataset preparation visual output shapes", () => {
         ["a", "b"],
       );
     }
+  });
+
+  it("keeps Thought optional and text-only for instruction tuning", () => {
+    assert.ok(
+      listDatasetPreparationAvailableOutputPurposes(
+        "llm-instruction",
+      ).includes("thought"),
+    );
+    assert.ok(
+      !listDatasetPreparationRequiredOutputPurposes(
+        "llm-instruction",
+      ).includes("thought"),
+    );
+    assert.ok(
+      listDatasetPreparationAvailableOutputPurposes(
+        "llm-instruction",
+      ).includes("context"),
+    );
+    const shape = createDefaultDatasetPreparationVisualOutputShape(
+      "llm-instruction",
+    );
+    assert.deepEqual(
+      shape.fields.map((field) => field.purpose),
+      ["instruction", "input", "context", "output"],
+    );
+    shape.fields.push({
+      id: "thought",
+      name: "thought",
+      kind: "text",
+      required: true,
+      purpose: "thought",
+      example: "Connect the supporting evidence to the answer.",
+    });
+    const result = compile(shape, "llm-instruction");
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.deepEqual(result.value.purposePaths.thought, ["thought"]);
+      assert.deepEqual(result.value.purposePaths.context, ["context"]);
+      assert.equal(
+        (result.value.exampleEnvelope.example as Record<string, unknown>)
+          .thought,
+        "Connect the supporting evidence to the answer.",
+      );
+      assert.deepEqual(result.value.exampleEnvelope.example, {
+        instruction: "Answer the input using only the provided context.",
+        input: "When does the city library close on weekdays?",
+        context: "The city library closes at 6:00 PM on weekdays.",
+        output: "The city library closes at 6:00 PM on weekdays.",
+        thought: "Connect the supporting evidence to the answer.",
+      });
+    }
+
+    shape.fields[shape.fields.length - 1]!.kind = "number";
+    const incompatible = compile(shape, "llm-instruction");
+    assert.equal(incompatible.ok, false);
+    assert.ok(
+      diagnosticCodes(incompatible).includes("purpose-incompatible"),
+    );
+  });
+
+  it("fixes Instruction to its configured value while other examples remain guidance", () => {
+    const shape = createDefaultDatasetPreparationVisualOutputShape(
+      "llm-instruction",
+    );
+    shape.fields[0]!.choices = ["legacy-choice"];
+    shape.fields[1]!.example = "Exact example source passage.";
+    const result = compile(shape, "llm-instruction");
+
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+    const properties = result.value.exampleSchema.properties as Record<
+      string,
+      Record<string, unknown>
+    >;
+    assert.equal(properties.instruction.enum, undefined);
+    assert.equal(
+      properties.instruction.const,
+      "Answer the input using only the provided context.",
+    );
+    assert.equal(result.value.shape.fields[0]!.choices, undefined);
+    assert.equal(
+      (result.value.exampleEnvelope.example as Record<string, unknown>).input,
+      "Exact example source passage.",
+    );
+  });
+
+  it("rejects malformed or oversized sample values before generation", () => {
+    const numberShape = createDefaultDatasetPreparationVisualOutputShape(
+      "llm-instruction",
+    );
+    numberShape.fields.push({
+      id: "score",
+      name: "score",
+      kind: "number",
+      required: false,
+      example: "not-a-number",
+    });
+    const invalidNumber = compile(numberShape, "llm-instruction");
+    assert.equal(invalidNumber.ok, false);
+    assert.ok(
+      diagnosticCodes(invalidNumber).includes("field-example-invalid"),
+    );
+
+    const extraction =
+      createDefaultDatasetPreparationVisualOutputShape("llm-extraction");
+    extraction.fields[0]!.example = '{"nested":{"not":"supported"}}';
+    const invalidObject = compile(extraction, "llm-extraction");
+    assert.equal(invalidObject.ok, false);
+    assert.ok(
+      diagnosticCodes(invalidObject).includes("field-example-invalid"),
+    );
   });
 
   it("compiles renamed and nested fields deterministically with training-purpose paths", () => {

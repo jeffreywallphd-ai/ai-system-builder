@@ -1165,6 +1165,7 @@ function compileRuntimeStructuredOutput(
   }
   const fingerprintInput = {
     schema: compiled.value.envelopeSchema,
+    example: compiled.value.exampleEnvelope,
     payloadKey: compiled.value.payloadKey,
     purposePaths: compiled.value.purposePaths,
     constrainedDecoding,
@@ -1271,7 +1272,7 @@ function resolveAdaptiveCommandForStagedSources(
   }
   if (needsGeneration && !isRecord(command.recipe.generation)) {
     throw new Error(
-      "Local example-creation settings are required for the selected method.",
+      "Local generation settings are required for the selected method.",
     );
   }
 

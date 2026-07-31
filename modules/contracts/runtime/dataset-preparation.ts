@@ -100,59 +100,63 @@ export const DATASET_PREPARATION_TEXT_GENERATION_MODEL_PRESETS: readonly Dataset
 const DATASET_PREPARATION_QUALITY_TEXT_GENERATION_MODEL =
   DATASET_PREPARATION_TEXT_GENERATION_MODEL_PRESETS[0].model;
 
+const DATASET_PREPARATION_JSON_ONLY_OUTPUT_INSTRUCTION =
+  "Follow the runtime-provided structured output schema exactly. Return only one JSON object with no text before or after it.";
+
 export const DEFAULT_DATASET_PREPARATION_PROMPT_TEMPLATES: Record<
   DatasetPreparationTextGenerationTaskType,
   string
 > = {
   "llm-instruction": [
-    "Prepare one high-quality instruction-tuning candidate from the supplied source.",
-    "Write a natural, specific user instruction; preserve an exact supporting source span as the input when context is needed; and provide a complete answer supported by that span.",
-    "Prefer a focused task over a broad summary. If the source cannot support a faithful example, skip it.",
-    "Follow the runtime-provided structured output schema exactly.",
+    "You generate grounded instruction-tuning records from the supplied source material.",
+    "Copy the configured Instruction value exactly. Use the runtime-supplied Context as evidence, but do not create, summarize, or rewrite it; the runtime attaches that source section unchanged. Generate one natural, specific user Input and a complete Output supported by that Context.",
+    "Prefer a focused task over a broad summary. Generate Thought only when the output format includes it, and keep it concise and source-grounded. If the source cannot support a faithful record, use the runtime's skip form.",
+    DATASET_PREPARATION_JSON_ONLY_OUTPUT_INSTRUCTION,
   ].join("\n"),
   "llm-classification": [
-    "Prepare one text-classification candidate from the supplied source.",
-    "Use only configured labels and match their spelling exactly. For a single-label task choose exactly one; for a multi-label task include every supported label and no others. Without a label set, use short, reusable category names rather than sentences.",
-    "Do not turn the task into question answering or add an explanation. Skip ambiguous sources instead of guessing.",
-    "Follow the runtime-provided structured output schema exactly.",
+    "You generate grounded text-classification records from the supplied source material.",
+    "Assign only configured labels and match their spelling exactly. For a single-label task choose exactly one; for a multi-label task include every supported label and no others. Without a label set, use short, reusable category names rather than sentences.",
+    "Do not answer the source or add explanations. Use the runtime's skip form when classification is ambiguous.",
+    DATASET_PREPARATION_JSON_ONLY_OUTPUT_INSTRUCTION,
   ].join("\n"),
   "llm-extraction": [
-    "Prepare one information-extraction candidate from the supplied source.",
-    "Return a compact expected-output object containing only facts explicitly present in the source. Preserve names, dates, identifiers, numbers, units, and nullability exactly; do not fill missing values or normalize away meaning.",
-    "Use stable, descriptive field names and skip the source when no meaningful structured facts are present.",
-    "Follow the runtime-provided structured output schema exactly.",
+    "You generate grounded information-extraction records from the supplied source material.",
+    "Populate the configured output fields with only facts explicitly present in the source. Preserve names, dates, identifiers, numbers, units, and nullability exactly; do not fill missing values or normalize away meaning.",
+    "Use stable, descriptive field names where the configured format permits them. Use the runtime's skip form when no meaningful structured facts are present.",
+    DATASET_PREPARATION_JSON_ONLY_OUTPUT_INSTRUCTION,
   ].join("\n"),
   "llm-embedding": [
-    "Prepare one positive pair for embedding training from the supplied source.",
-    "Write a natural search query that expresses a real information need, then copy the shortest exact source passage that fully satisfies it.",
-    "Make the pair semantically meaningful without relying on shared boilerplate, filenames, or outside knowledge. Skip sources that do not support a clear positive pair.",
-    "Follow the runtime-provided structured output schema exactly.",
+    "You generate grounded positive pairs for embedding training from the supplied source material.",
+    "Generate a natural search Input that expresses a real information need, then copy the shortest exact source passage that fully satisfies it as the matching text.",
+    "Make the pair semantically meaningful without relying on shared boilerplate, filenames, or outside knowledge. Use the runtime's skip form when the source does not support a clear positive pair.",
+    DATASET_PREPARATION_JSON_ONLY_OUTPUT_INSTRUCTION,
   ].join("\n"),
   "llm-reranker": [
-    "Prepare one relevant query-passage candidate for reranker training from the supplied source.",
-    "Write a natural search query and copy an exact source passage that directly satisfies it. Relevance must come from the passage content, not filenames, position, or shared wording alone.",
-    "Skip sources that do not support an unambiguous relevant passage. Negative passages are selected separately by the runtime.",
-    "Follow the runtime-provided structured output schema exactly.",
+    "You generate grounded query-passage records for reranker training from the supplied source material.",
+    "Generate a natural search query and copy an exact source passage that directly satisfies it. Relevance must come from the passage content, not filenames, position, or shared wording alone.",
+    "Use the runtime's skip form when the source does not support an unambiguous relevant passage. Negative passages are selected separately by the runtime.",
+    DATASET_PREPARATION_JSON_ONLY_OUTPUT_INSTRUCTION,
   ].join("\n"),
   "diffusion-lora": [
-    "Prepare one concise caption for image LoRA training using only the supplied filename, metadata, trigger token, and concept settings.",
-    "The image pixels are not available. Include the trigger token exactly when provided, describe only supported attributes, and omit filenames, camera claims, identities, or visual details that the metadata does not establish.",
-    "Follow the runtime-provided structured output schema exactly.",
+    "You generate grounded captions for image LoRA training using only the supplied filename, metadata, trigger token, and concept settings.",
+    "The image pixels are not available. Generate one concise caption, include the trigger token exactly when provided, describe only supported attributes, and omit filenames, camera claims, identities, or visual details that the metadata does not establish. Use the runtime's skip form when the supplied data is insufficient.",
+    DATASET_PREPARATION_JSON_ONLY_OUTPUT_INSTRUCTION,
   ].join("\n"),
   "vision-classification": [
-    "Prepare one image-classification label using only the supplied filename and metadata; the image pixels are not available.",
-    "Choose exactly one allowed label when provided and match its spelling exactly. Otherwise use one short, reusable category name.",
-    "Skip ambiguous records instead of inferring unseen visual content. Follow the runtime-provided structured output schema exactly.",
+    "You generate grounded image-classification labels using only the supplied filename and metadata; the image pixels are not available.",
+    "Assign exactly one allowed label when provided and match its spelling exactly. Otherwise assign one short, reusable category name.",
+    "Use the runtime's skip form when the record is ambiguous; never infer unseen visual content.",
+    DATASET_PREPARATION_JSON_ONLY_OUTPUT_INSTRUCTION,
   ].join("\n"),
   "vision-detection": [
-    "Prepare object label text only for the supplied, reviewed bounding-box annotations.",
-    "The image pixels are not available. Never create, move, resize, or infer boxes. Choose an allowed label exactly when provided, and skip annotations whose existing evidence does not support a label.",
-    "Follow the runtime-provided structured output schema exactly.",
+    "You generate grounded object-label text only for supplied, reviewed bounding-box annotations.",
+    "The image pixels are not available. Never create, move, resize, or infer boxes. Assign an allowed label exactly when provided, and use the runtime's skip form when existing evidence does not support a label.",
+    DATASET_PREPARATION_JSON_ONLY_OUTPUT_INSTRUCTION,
   ].join("\n"),
   "vision-segmentation": [
-    "Prepare region label text only for the supplied, reviewed mask annotation.",
-    "The image pixels are not available. Never create, alter, or infer masks. Choose an allowed label exactly when provided, and skip annotations whose existing evidence does not support a label.",
-    "Follow the runtime-provided structured output schema exactly.",
+    "You generate grounded region-label text only for supplied, reviewed mask annotations.",
+    "The image pixels are not available. Never create, alter, or infer masks. Assign an allowed label exactly when provided, and use the runtime's skip form when existing evidence does not support a label.",
+    DATASET_PREPARATION_JSON_ONLY_OUTPUT_INSTRUCTION,
   ].join("\n"),
 };
 

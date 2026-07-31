@@ -9,10 +9,16 @@ import {
   normalizeSystemBuildId,
   type SystemBuildArtifactDescriptor,
 } from "../../../../contracts/system-build";
+import type { ModelInventoryRecord } from "../../../../contracts/model";
+import {
+  createSystemBuilderModelBinding,
+  readSystemBuilderConversationInteraction,
+  SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID,
+} from "../../../../contracts/system-builder";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
 import { createSha256SystemBuildHasher } from "../../../../adapters/storage/system-build";
-import { SYSTEM_FOUNDATION_PACK_MANIFEST } from "../../../../application/services/asset-packs/system-packs/system-foundation-pack.manifest";
+import { SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST } from "../../../../application/services/asset-packs/system-packs";
 import type {
   SystemBuildArtifactPort,
   SystemBuildImplementationResolverPort,
@@ -28,7 +34,7 @@ describe("secured data-entry reference system", () => {
   it("creates, builds, approves, and runs the release with policy, masking, migration, and audit evidence", async () => {
     const documents = createInMemoryStructuredDocumentStore();
     const definitions = new Map(
-      SYSTEM_FOUNDATION_PACK_MANIFEST.assets.map((entry) => [
+      SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST.assets.map((entry) => [
         `${entry.definition.definitionId}@${entry.definition.version}`,
         entry.definition,
       ]),
@@ -67,7 +73,7 @@ describe("secured data-entry reference system", () => {
       created.value.systemId,
       created.value.currentRevisionId,
     );
-    expect(revision?.instances.length).toBe(35);
+    expect(revision?.instances.length).toBeGreaterThan(40);
 
     const hasher = createSha256SystemBuildHasher();
     const artifacts = createMemoryArtifactPort(hasher);
@@ -216,7 +222,7 @@ describe("secured data-entry reference system", () => {
   it("creates, builds, and approves the controlled chatbot without exposing protected instructions", async () => {
     const documents = createInMemoryStructuredDocumentStore();
     const definitions = new Map(
-      SYSTEM_FOUNDATION_PACK_MANIFEST.assets.map((entry) => [
+      SYSTEM_FOUNDATION_CURRENT_PACK_MANIFEST.assets.map((entry) => [
         `${entry.definition.definitionId}@${entry.definition.version}`,
         entry.definition,
       ]),
@@ -232,6 +238,16 @@ describe("secured data-entry reference system", () => {
         listDefinitionCards: async () => ({ items: [] }),
         readDefinitionDetail: async () => undefined,
       },
+      modelRegistry: {
+        async listModels() {
+          return { models: [chatModelRecord] };
+        },
+        async getModelRecord(_requestedWorkspaceId, modelRecordId) {
+          return modelRecordId === chatModelRecord.modelRecordId
+            ? chatModelRecord
+            : undefined;
+        },
+      },
       generateSystemId: () => "system.controlled-chatbot-reference",
       now: () => timestamp,
     });
@@ -245,18 +261,54 @@ describe("secured data-entry reference system", () => {
     expect(created.ok).toBe(true);
     if (!created.ok)
       throw new Error("Expected the controlled chatbot to be created.");
-    expect(created.value.status).toBe("validated");
-    const revision = await builder.repository.readRevision(
+    expect(created.value.status).toBe("blocked");
+    const initialRevision = await builder.repository.readRevision(
       workspaceId,
       created.value.systemId,
       created.value.currentRevisionId,
     );
-    expect(revision?.instances.length).toBe(31);
-    const instruction = revision?.instances.find(
+    expect(initialRevision?.instances.length).toBeGreaterThan(30);
+    if (!initialRevision)
+      throw new Error("Expected the controlled chatbot revision.");
+    const instruction = initialRevision.instances.find(
       (item) =>
         String(item.definitionRef.id) === "builtin.ai.instruction-template",
     );
     expect(instruction?.metadata?.protectedConfiguration).toBe(true);
+    const selectedInstances = initialRevision.instances.map((instance) =>
+      String(instance.definitionRef.id) === "conversation.message-composer"
+        ? {
+            ...instance,
+            selectedConfiguration: {
+              ...instance.selectedConfiguration,
+              [SYSTEM_BUILDER_MODEL_BINDING_FIELD_ID]:
+                createSystemBuilderModelBinding(
+                  chatModelRecord.modelRecordId,
+                ),
+            },
+          }
+        : instance,
+    );
+    const saved = await builder.useCases.saveRevision.execute({
+      workspaceId,
+      systemId: created.value.systemId,
+      expectedRecordRevision: created.value.revision,
+      actorId: "owner-1",
+      composition: initialRevision.composition,
+      instances: selectedInstances,
+      bindings: initialRevision.bindings,
+      structure: initialRevision.structure,
+      placements: initialRevision.placements,
+    });
+    expect(saved.ok).toBe(true);
+    if (!saved.ok)
+      throw new Error("Expected the selected chatbot model to be saved.");
+    expect(saved.value.validationIssues).toEqual([]);
+    expect(
+      saved.value.bindings
+        .map(readSystemBuilderConversationInteraction)
+        .filter(Boolean).length,
+    ).toBe(1);
 
     const hasher = createSha256SystemBuildHasher();
     const artifacts = createMemoryArtifactPort(hasher);
@@ -281,7 +333,7 @@ describe("secured data-entry reference system", () => {
       buildId: normalizeSystemBuildId("build.controlled-chatbot-reference"),
       workspaceId,
       systemId: created.value.systemId,
-      systemRevisionId: created.value.currentRevisionId,
+      systemRevisionId: saved.value.revisionId,
       deploymentProfile: "local-desktop",
       availableCapabilities: [],
       permittedTrustLevels: ["system-trusted"],
@@ -289,9 +341,14 @@ describe("secured data-entry reference system", () => {
       toolchainProfile: "system-builder/1.0.0",
       actorId: "owner-1",
     });
-    expect(built.ok && built.value.status).toBe("succeeded");
-    if (!built.ok || !built.value.lockDigest)
-      throw new Error("Expected a successful chatbot build.");
+    if (!built.ok)
+      throw new Error("Expected the chatbot build request to be accepted.");
+    if (built.value.status !== "succeeded" || !built.value.lockDigest)
+      throw new Error(
+        `Expected a successful chatbot build: ${built.value.diagnostics
+          .map((diagnostic) => `${diagnostic.code}: ${diagnostic.message}`)
+          .join("; ")}`,
+      );
     const approved = await builds.useCases.approve.execute({
       workspaceId,
       buildId: built.value.buildId,
@@ -311,6 +368,20 @@ describe("secured data-entry reference system", () => {
   });
 });
 
+const chatModelRecord: ModelInventoryRecord = {
+  workspaceId,
+  modelRecordId: "model.chat.local",
+  displayName: "Local chat model",
+  source: "local",
+  lifecycleStatus: "validated",
+  artifactForm: "full-model",
+  provider: "huggingface",
+  modelId: "local/chat",
+  createdAt: timestamp,
+  taskTags: ["chat"],
+  validationStatus: "valid",
+};
+
 function createAnyFacetImplementationResolver(): SystemBuildImplementationResolverPort {
   return {
     async resolve(request) {
@@ -329,7 +400,25 @@ function createAnyFacetImplementationResolver(): SystemBuildImplementationResolv
           ],
         };
       }
-      const safeId = String(request.definitionRef.id).replace(
+      const definitionId = String(request.definitionRef.id);
+      if (
+        definitionId.startsWith("builtin.security.") &&
+        facet !== "policy"
+      ) {
+        return {
+          status: "unimplemented",
+          definitionRef: request.definitionRef,
+          selectedFacets: [],
+          diagnostics: [
+            {
+              severity: "info",
+              code: "facet.policy-required",
+              message: "Security assets use the policy facet.",
+            },
+          ],
+        };
+      }
+      const safeId = definitionId.replace(
         /[^a-zA-Z0-9.-]/g,
         "-",
       );

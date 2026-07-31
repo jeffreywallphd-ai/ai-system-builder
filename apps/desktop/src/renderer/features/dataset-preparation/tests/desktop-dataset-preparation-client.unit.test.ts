@@ -296,7 +296,17 @@ describe("desktop dataset preparation client", () => {
       .mockResolvedValueOnce({ ok: true, value: { status: "running", progress: { message: "step", processed: 1, total: 2 } } })
       .mockResolvedValueOnce({ ok: true, value: { status: "cancelled" } })
       .mockResolvedValueOnce({ ok: true, value: { status: "unknown" } })
-      .mockResolvedValueOnce({ ok: true, value: { status: "failed", error: { message: "boom" } } });
+      .mockResolvedValueOnce({
+        ok: true,
+        value: {
+          status: "failed",
+          error: {
+            code: "structured_output_settings_invalid",
+            stage: "generation",
+            message: "secret=/private/source",
+          },
+        },
+      });
     hostWindow.window.desktopApi = {
       uploadArtifact: async () => ({ ok: false }), getArtifactUploadPolicy: async () => ({ ok: false }),
       browseArtifacts: async () => ({ ok: true, value: { items: [] } }), readArtifactDetail: async () => ({ ok: false }),
@@ -309,6 +319,19 @@ describe("desktop dataset preparation client", () => {
     await expect(client.readPrepareTrainingDatasetTask("req")).resolves.toMatchObject({ ok: true, status: "running" });
     await expect(client.readPrepareTrainingDatasetTask("req")).resolves.toMatchObject({ ok: true, status: "cancelled" });
     await expect(client.readPrepareTrainingDatasetTask("req")).resolves.toMatchObject({ ok: true, status: "unknown" });
-    await expect(client.readPrepareTrainingDatasetTask("req")).resolves.toMatchObject({ ok: false, error: { code: "failed", message: "boom" } });
+    const failed = await client.readPrepareTrainingDatasetTask("req");
+    expect(failed).toMatchObject({
+      ok: false,
+      error: {
+        code: "structured_output_settings_invalid",
+        message:
+          "The desired output format needs review. Reset or correct it in Generation prompt, then retry.",
+        details: {
+          stage: "generation",
+          reasonCode: "structured_output_settings_invalid",
+        },
+      },
+    });
+    expect(JSON.stringify(failed)).not.toContain("private/source");
   });
 });

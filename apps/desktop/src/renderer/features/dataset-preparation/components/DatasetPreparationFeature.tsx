@@ -1186,7 +1186,7 @@ export function DatasetPreparationFeature({
 
                     {renderCollapsibleSection(
                       "automated-formatting",
-                      "Example creation",
+                      "Generation prompt",
                       <>
                         <p className="dataset-preparation__section-description ui-text-muted">
                           {isModelTextGenerationEnabled
@@ -1198,7 +1198,7 @@ export function DatasetPreparationFeature({
                             <label className="ui-stack ui-stack--sm">
                               <span>
                                 <TermWithHint termId="systemPrompt">
-                                  Example instructions
+                                  System prompt instructions
                                 </TermWithHint>
                               </span>
                               <textarea

@@ -6,15 +6,31 @@ import {
   applyDiagnosticSummaryMetric,
   buildNonBrowserNodeTestRunOptions,
   classifyTestFileDuration,
+  createNonBrowserAssetModule,
   createTestTimingTracker,
   formatNonBrowserFailureSummary,
   isVitestOwnedTestSource,
   isIgnorableRunnerSpawnFailure,
+  isNonBrowserAssetSource,
   parseTestSuiteArgument,
   shouldIncludeTestFileForSuite,
 } from "../non-browser-test-runner-core.mjs";
 
 describe("non-browser test runner core helpers", () => {
+  it("creates inert ESM modules only for supported visual test assets", () => {
+    assert.equal(isNonBrowserAssetSource("assets/branding/logo.svg"), true);
+    assert.equal(isNonBrowserAssetSource("assets/page-art.PNG"), true);
+    assert.equal(isNonBrowserAssetSource("assets/private.txt"), false);
+    assert.equal(
+      createNonBrowserAssetModule("assets/branding/logo.svg"),
+      'export default "logo.svg";\n',
+    );
+    assert.throws(
+      () => createNonBrowserAssetModule("assets/private.txt"),
+      /Unsupported non-browser test asset source/,
+    );
+  });
+
   it("builds node:test run options with repository runner defaults", () => {
     const files = ["C:/repo/test-a.mjs", "C:/repo/test-b.mjs"];
     const runOptions = buildNonBrowserNodeTestRunOptions({

@@ -6,9 +6,22 @@ const longRunningTestFilePattern =
   /\.(?:e2e|integration)\.test\.[cm]?[jt]sx?$/i;
 const longRunningTestMarkerPattern = /^\s*\/\/\s*@test-duration\s+long\s*$/m;
 const vitestImportPattern = /\bfrom\s+["']vitest["']/m;
+const nonBrowserAssetSourcePattern = /\.(?:png|svg)$/i;
 
 export const isVitestOwnedTestSource = (sourceText) =>
   vitestImportPattern.test(sourceText);
+
+export const isNonBrowserAssetSource = (sourcePath) =>
+  typeof sourcePath === "string" &&
+  nonBrowserAssetSourcePattern.test(sourcePath);
+
+export const createNonBrowserAssetModule = (sourcePath) => {
+  if (!isNonBrowserAssetSource(sourcePath)) {
+    throw new Error("Unsupported non-browser test asset source.");
+  }
+  const fileName = sourcePath.split(/[\\/]/).at(-1);
+  return `export default ${JSON.stringify(fileName)};\n`;
+};
 
 export const classifyTestFileDuration = (sourcePath, sourceText = "") =>
   longRunningTestFilePattern.test(sourcePath) ||

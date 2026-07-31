@@ -16,8 +16,10 @@ import {
   applyIgnoredFailureAdjustments,
   applyDiagnosticSummaryMetric,
   buildNonBrowserNodeTestRunOptions,
+  createNonBrowserAssetModule,
   createTestTimingTracker,
   formatNonBrowserFailureSummary,
+  isNonBrowserAssetSource,
   isVitestOwnedTestSource,
   isIgnorableRunnerSpawnFailure,
   parseTestSuiteArgument,
@@ -404,6 +406,17 @@ const walkAndBuildRuntime = (startPath) => {
       entry.name.endsWith(".node")
     ) {
       copyToRuntimeFile(absolutePath, runtimeAbsolutePath);
+    } else if (isNonBrowserAssetSource(normalizedSourcePath)) {
+      const assetModulePath = `${runtimeAbsolutePath}.js`;
+      writeRuntimeOutput(
+        assetModulePath,
+        createNonBrowserAssetModule(normalizedSourcePath),
+      );
+      runtimeToSourceFile.set(
+        path.resolve(assetModulePath),
+        normalizedSourcePath,
+      );
+      continue;
     } else {
       continue;
     }

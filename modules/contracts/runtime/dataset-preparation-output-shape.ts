@@ -21,7 +21,9 @@ export type DatasetPreparationOutputFieldKind =
 export const DATASET_PREPARATION_OUTPUT_PURPOSES = [
   "instruction",
   "input",
+  "context",
   "output",
+  "thought",
   "label",
   "expected-output",
   "anchor-text",
@@ -40,6 +42,9 @@ export interface DatasetPreparationVisualOutputField {
   required: boolean;
   purpose?: DatasetPreparationOutputPurpose;
   children?: DatasetPreparationVisualOutputField[];
+  /** Plain-language example used only as prompt guidance for this field. */
+  example?: string;
+  /** Legacy enum constraint retained for saved-layout compatibility. */
   choices?: string[];
   maxLength?: number;
   maxItems?: number;
@@ -65,6 +70,7 @@ export const DATASET_PREPARATION_OUTPUT_SHAPE_DIAGNOSTIC_CODES = [
   "field-kind-invalid",
   "field-required-invalid",
   "field-children-invalid",
+  "field-example-invalid",
   "field-choices-invalid",
   "field-limit-invalid",
   "purpose-invalid",
@@ -90,6 +96,7 @@ export interface DatasetPreparationCompiledOutputShape {
   payloadKey: "example" | "value";
   exampleSchema: Record<string, unknown>;
   envelopeSchema: Record<string, unknown>;
+  exampleEnvelope: Record<string, unknown>;
   purposePaths: Partial<
     Record<DatasetPreparationOutputPurpose, readonly string[]>
   >;
@@ -135,6 +142,7 @@ const PROTECTED_ROOT_FIELD_NAMES = new Set([
   "sourceRowIndex",
 ]);
 const MAX_FIELD_LENGTH = 8_000;
+const MAX_FIELD_EXAMPLE_LENGTH = 8_000;
 const MAX_FIELD_CHOICE_LENGTH = 120;
 
 export function createDatasetPreparationSourceAttributionSchema(): Record<
@@ -168,12 +176,17 @@ const PURPOSE_SPECS: Record<
 > = {
   instruction: { label: "Instruction", kinds: ["text"], maxLength: 2_000 },
   input: {
-    label: "Supporting input",
+    label: "Input",
     kinds: ["text"],
-    allowEmpty: true,
+    maxLength: 2_000,
+  },
+  context: {
+    label: "Context",
+    kinds: ["text"],
     maxLength: MAX_FIELD_LENGTH,
   },
-  output: { label: "Answer", kinds: ["text"], maxLength: MAX_FIELD_LENGTH },
+  output: { label: "Output", kinds: ["text"], maxLength: MAX_FIELD_LENGTH },
+  thought: { label: "Thought", kinds: ["text"], maxLength: MAX_FIELD_LENGTH },
   label: { label: "Label", kinds: ["text", "text-list"], maxLength: 120 },
   "expected-output": {
     label: "Extracted information",
@@ -194,7 +207,7 @@ const PURPOSE_SPECS: Record<
   caption: { label: "Caption", kinds: ["text"], maxLength: 500 },
 };
 
-const TASK_PURPOSES: Record<
+const TASK_REQUIRED_PURPOSES: Record<
   DatasetPreparationTaskType,
   readonly DatasetPreparationOutputPurpose[]
 > = {
@@ -207,6 +220,48 @@ const TASK_PURPOSES: Record<
   "vision-classification": ["label"],
   "vision-detection": ["label"],
   "vision-segmentation": ["label"],
+};
+
+const TASK_OPTIONAL_PURPOSES: Record<
+  DatasetPreparationTaskType,
+  readonly DatasetPreparationOutputPurpose[]
+> = {
+  "llm-instruction": ["context", "thought"],
+  "llm-classification": [],
+  "llm-extraction": [],
+  "llm-embedding": [],
+  "llm-reranker": [],
+  "diffusion-lora": [],
+  "vision-classification": [],
+  "vision-detection": [],
+  "vision-segmentation": [],
+};
+
+const TASK_AVAILABLE_PURPOSES: Record<
+  DatasetPreparationTaskType,
+  readonly DatasetPreparationOutputPurpose[]
+> = {
+  ...TASK_REQUIRED_PURPOSES,
+  "llm-instruction": [
+    ...TASK_REQUIRED_PURPOSES["llm-instruction"],
+    ...TASK_OPTIONAL_PURPOSES["llm-instruction"],
+  ],
+};
+
+const PURPOSE_EXAMPLES: Record<DatasetPreparationOutputPurpose, string> = {
+  instruction: "Answer the input using only the provided context.",
+  input: "When does the city library close on weekdays?",
+  context: "The city library closes at 6:00 PM on weekdays.",
+  output: "The city library closes at 6:00 PM on weekdays.",
+  thought:
+    "The supporting information directly states that the weekday closing time is 6:00 PM.",
+  label: "example-label",
+  "expected-output": '{"closing_time":"6:00 PM"}',
+  "anchor-text": "When does the city library close on weekdays?",
+  "positive-text": "The city library closes at 6:00 PM on weekdays.",
+  query: "When does the city library close on weekdays?",
+  passage: "The city library closes at 6:00 PM on weekdays.",
+  caption: "A blue ceramic mug on a wooden table.",
 };
 
 const METADATA_TASKS = new Set<DatasetPreparationTaskType>([
@@ -243,19 +298,47 @@ const field = (
   kind,
   required: true,
   purpose,
+  example: PURPOSE_EXAMPLES[purpose],
   ...options,
 });
 
 export function listDatasetPreparationRequiredOutputPurposes(
   taskType: DatasetPreparationTaskType,
 ): readonly DatasetPreparationOutputPurpose[] {
-  return TASK_PURPOSES[taskType];
+  return TASK_REQUIRED_PURPOSES[taskType];
+}
+
+export function listDatasetPreparationAvailableOutputPurposes(
+  taskType: DatasetPreparationTaskType,
+): readonly DatasetPreparationOutputPurpose[] {
+  return TASK_AVAILABLE_PURPOSES[taskType];
 }
 
 export function describeDatasetPreparationOutputPurpose(
   purpose: DatasetPreparationOutputPurpose,
 ): DatasetPreparationOutputPurposeDescription {
   return PURPOSE_SPECS[purpose];
+}
+
+export function resolveDatasetPreparationOutputFieldExample(
+  kind: DatasetPreparationOutputFieldKind,
+  purpose?: DatasetPreparationOutputPurpose,
+): string {
+  if (purpose) return PURPOSE_EXAMPLES[purpose];
+  switch (kind) {
+    case "text":
+      return "Example text";
+    case "number":
+      return "0";
+    case "boolean":
+      return "true";
+    case "text-list":
+      return "Example item";
+    case "record":
+      return '{"field":"Example value"}';
+    case "group":
+      return "";
+  }
 }
 
 export function createDefaultDatasetPreparationVisualOutputShape(
@@ -270,6 +353,9 @@ export function createDefaultDatasetPreparationVisualOutputShape(
           maxLength: 2_000,
         }),
         field("input", "input", "text", "input", {
+          maxLength: 2_000,
+        }),
+        field("context", "context", "text", "context", {
           maxLength: MAX_FIELD_LENGTH,
         }),
         field("output", "output", "text", "output", {
@@ -382,6 +468,105 @@ function normalizeChoiceValues(value: unknown): string[] | undefined {
   return choices;
 }
 
+function normalizeRecordExample(
+  value: string,
+): { normalized: string; value: Record<string, unknown> } | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return undefined;
+  }
+  if (!isRecord(parsed)) return undefined;
+  const entries = Object.entries(parsed);
+  if (entries.length < 1 || entries.length > 64) return undefined;
+  for (const [name, entry] of entries) {
+    if (
+      !FIELD_NAME_PATTERN.test(name) ||
+      UNSAFE_FIELD_NAMES.has(name) ||
+      !(
+        entry === null ||
+        typeof entry === "boolean" ||
+        (typeof entry === "number" && Number.isFinite(entry)) ||
+        (typeof entry === "string" && entry.length <= MAX_FIELD_LENGTH)
+      )
+    ) {
+      return undefined;
+    }
+  }
+  return { normalized: canonicalJson(parsed), value: parsed };
+}
+
+function normalizeFieldExample(
+  rawExample: unknown,
+  kind: DatasetPreparationOutputFieldKind,
+  purpose: DatasetPreparationOutputPurpose | undefined,
+  options: {
+    allowedLabels?: readonly string[];
+    maxLength: number;
+    maxItems: number;
+  },
+): { normalized?: string; value?: unknown } | undefined {
+  if (kind === "group") {
+    return rawExample === undefined || rawExample === ""
+      ? {}
+      : undefined;
+  }
+  const candidateValue: unknown =
+    purpose === "label" && options.allowedLabels?.length
+      ? options.allowedLabels[0]!
+      : rawExample === undefined
+        ? resolveDatasetPreparationOutputFieldExample(kind, purpose)
+        : rawExample;
+  if (
+    typeof candidateValue !== "string" ||
+    candidateValue.length > MAX_FIELD_EXAMPLE_LENGTH
+  ) {
+    return undefined;
+  }
+  const candidate = candidateValue.replace(/\r\n?/g, "\n").trim();
+  switch (kind) {
+    case "text":
+      if (
+        (!candidate && !(purpose && PURPOSE_SPECS[purpose].allowEmpty)) ||
+        candidate.length > options.maxLength
+      ) {
+        return undefined;
+      }
+      return { normalized: candidate, value: candidate };
+    case "number": {
+      if (!candidate) return undefined;
+      const numberValue = Number(candidate);
+      return Number.isFinite(numberValue)
+        ? { normalized: String(numberValue), value: numberValue }
+        : undefined;
+    }
+    case "boolean": {
+      const normalized = candidate.toLowerCase();
+      return normalized === "true" || normalized === "false"
+        ? { normalized, value: normalized === "true" }
+        : undefined;
+    }
+    case "text-list": {
+      const values = candidate
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      if (
+        values.length < 1 ||
+        values.length > options.maxItems ||
+        new Set(values).size !== values.length ||
+        values.some((item) => item.length > options.maxLength)
+      ) {
+        return undefined;
+      }
+      return { normalized: values.join("\n"), value: values };
+    }
+    case "record":
+      return normalizeRecordExample(candidate);
+  }
+}
+
 function fieldSchema(
   visualField: DatasetPreparationVisualOutputField,
   options: DatasetPreparationOutputShapeCompileOptions,
@@ -394,7 +579,7 @@ function fieldSchema(
   const configuredChoices =
     visualField.purpose === "label" && options.allowedLabels?.length
       ? [...options.allowedLabels]
-      : visualField.choices;
+      : undefined;
   switch (visualField.kind) {
     case "text":
       return {
@@ -402,6 +587,9 @@ function fieldSchema(
           type: "string",
           ...(purposeSpec?.allowEmpty ? {} : { minLength: 1 }),
           maxLength,
+          ...(visualField.purpose === "instruction" && visualField.example
+            ? { const: visualField.example }
+            : {}),
           ...(configuredChoices?.length ? { enum: configuredChoices } : {}),
         },
         decoderCompatible: true,
@@ -501,6 +689,7 @@ export function compileDatasetPreparationVisualOutputShape(
 
   const seenIds = new Set<string>();
   const purposePaths = new Map<DatasetPreparationOutputPurpose, string[]>();
+  const exampleValues = new Map<string, unknown>();
   let fieldCount = 0;
   let nested = false;
   const normalizeFields = (
@@ -571,7 +760,7 @@ export function compileDatasetPreparationVisualOutputShape(
         error("purpose-invalid", "Choose a supported training purpose.", id);
       }
       if (purpose) {
-        if (!TASK_PURPOSES[options.taskType].includes(purpose)) {
+        if (!TASK_AVAILABLE_PURPOSES[options.taskType].includes(purpose)) {
           error("purpose-invalid", "This training purpose does not belong to the selected training goal.", id);
         } else if (!PURPOSE_SPECS[purpose].kinds.includes(kind)) {
           error("purpose-incompatible", `${PURPOSE_SPECS[purpose].label} needs a compatible value type.`, id);
@@ -607,6 +796,30 @@ export function compileDatasetPreparationVisualOutputShape(
         error("field-limit-invalid", "List length must be within the supported limit.", id);
       }
 
+      const normalizedExample = normalizeFieldExample(
+        rawField.example,
+        kind,
+        purpose,
+        {
+          allowedLabels: compileOptions.allowedLabels,
+          maxLength:
+            maxLength ??
+            (purpose ? PURPOSE_SPECS[purpose].maxLength : undefined) ??
+            MAX_FIELD_LENGTH,
+          maxItems:
+            maxItems ?? DATASET_PREPARATION_OUTPUT_SHAPE_MAX_LIST_ITEMS,
+        },
+      );
+      if (!normalizedExample) {
+        error(
+          "field-example-invalid",
+          "Provide one example that matches the selected value type.",
+          id,
+        );
+      } else if (normalizedExample.value !== undefined) {
+        exampleValues.set(id, normalizedExample.value);
+      }
+
       let children: DatasetPreparationVisualOutputField[] | undefined;
       if (kind === "group") {
         if (!Array.isArray(rawField.children) || rawField.children.length === 0) {
@@ -628,7 +841,9 @@ export function compileDatasetPreparationVisualOutputShape(
         required: rawField.required === true,
         ...(purpose ? { purpose } : {}),
         ...(children ? { children } : {}),
-        ...(choices ? { choices } : {}),
+        ...(normalizedExample?.normalized !== undefined
+          ? { example: normalizedExample.normalized }
+          : {}),
         ...(maxLength ? { maxLength } : {}),
         ...(maxItems ? { maxItems } : {}),
       });
@@ -640,7 +855,7 @@ export function compileDatasetPreparationVisualOutputShape(
   if (fields.length === 0) {
     error("field-count-invalid", "The output layout must contain at least one field.");
   }
-  for (const purpose of TASK_PURPOSES[options.taskType]) {
+  for (const purpose of TASK_REQUIRED_PURPOSES[options.taskType]) {
     if (!purposePaths.has(purpose)) {
       error("purpose-missing", `${PURPOSE_SPECS[purpose].label} is required for this training goal.`);
     }
@@ -685,8 +900,25 @@ export function compileDatasetPreparationVisualOutputShape(
     });
   }
 
+  const exampleValueForField = (
+    visualField: DatasetPreparationVisualOutputField,
+  ): unknown =>
+    visualField.kind === "group"
+      ? Object.fromEntries(
+          (visualField.children ?? []).map((child) => [
+            child.name,
+            exampleValueForField(child),
+          ]),
+        )
+      : exampleValues.get(visualField.id);
+  const examplePayload = Object.fromEntries(
+    fields.map((visualField) => [
+      visualField.name,
+      exampleValueForField(visualField),
+    ]),
+  );
   const payloadKey = METADATA_TASKS.has(options.taskType) ? "value" : "example";
-  const fieldKind = TASK_PURPOSES[options.taskType][0];
+  const fieldKind = TASK_REQUIRED_PURPOSES[options.taskType][0];
   const envelopeProperties: Record<string, unknown> = {
     schemaVersion: { const: "1" },
     taskType: { const: options.taskType },
@@ -722,6 +954,13 @@ export function compileDatasetPreparationVisualOutputShape(
       },
     ],
   };
+  const exampleEnvelope: Record<string, unknown> = {
+    schemaVersion: "1",
+    taskType: options.taskType,
+    ...(payloadKey === "value" ? { fieldKind } : {}),
+    status: "ok",
+    [payloadKey]: examplePayload,
+  };
   const sortedPurposePaths = Object.fromEntries(
     [...purposePaths.entries()]
       .sort(([left], [right]) => left.localeCompare(right))
@@ -732,6 +971,7 @@ export function compileDatasetPreparationVisualOutputShape(
     shape,
     purposePaths: sortedPurposePaths,
     envelopeSchema,
+    exampleEnvelope,
   });
 
   return {
@@ -741,6 +981,7 @@ export function compileDatasetPreparationVisualOutputShape(
       payloadKey,
       exampleSchema,
       envelopeSchema,
+      exampleEnvelope,
       purposePaths: sortedPurposePaths,
       canonicalFingerprintMaterial,
       decoderCompatible,

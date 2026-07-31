@@ -310,11 +310,122 @@
         "Documentation, architecture, and agent-support gates passed"
       ],
       "title": "Desktop/thin parity and bounded functional flow"
+    },
+    {
+      "areas": [
+        "Desktop packaged Python worker",
+        "Managed runtime dependency readiness",
+        "Training schema integrity"
+      ],
+      "chunkId": "packaged-runtime",
+      "completedAt": "2026-07-30T22:33:41Z",
+      "criteriaIds": [
+        "packaged-host-readiness",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Python adapter and worker READMEs",
+        "Runtime architecture guidance"
+      ],
+      "feedbackAddressed": [],
+      "id": "production-hardening-and-qualification-packaged-runtime",
+      "incrementId": "production-hardening-and-qualification",
+      "summary": "Qualified the exact conditional decoder dependency and truthful capability path, shipped the managed Python worker as a desktop package resource, resolved packaged and development worker locations explicitly, and enforced the compiled output-schema fingerprint at training time.",
+      "tests": [
+        "Packaged worker path and dependency readiness regressions passed",
+        "Python worker and runtime adapter suites passed",
+        "Desktop packaging, server build, and thin-client build passed"
+      ],
+      "title": "Packaged runtime qualification"
+    },
+    {
+      "areas": [
+        "Adaptive resource recommendation",
+        "Accessible visual output editor",
+        "Trusted attribution companion fields"
+      ],
+      "chunkId": "resource-usability-and-performance",
+      "completedAt": "2026-07-30T22:34:18Z",
+      "criteriaIds": [
+        "representative-resource-and-usability-qualification",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Data Management architecture and user guidance",
+        "Data Management threat model"
+      ],
+      "feedbackAddressed": [],
+      "id": "production-hardening-and-qualification-resource-usability-and-performance",
+      "incrementId": "production-hardening-and-qualification",
+      "summary": "Verified deterministic adaptive recommendations for sufficient, constrained, stale, unknown, and explicitly overridden capacity profiles; verified accessible visual schema editing and locked trusted attribution fields locally; retained representative accelerator and non-developer usability qualification as controlled-environment pending.",
+      "tests": [
+        "Adaptive capacity, output schema, and runtime contract regressions passed",
+        "Desktop and thin-client visual editor interactions passed",
+        "Attribution preparation regressions passed"
+      ],
+      "title": "Resource, usability, and performance evidence"
+    },
+    {
+      "areas": [
+        "Architecture and context guidance",
+        "Security threat and control review",
+        "Dependency provenance and roadmap workflow"
+      ],
+      "chunkId": "architecture-security-and-guidance",
+      "completedAt": "2026-07-30T22:34:18Z",
+      "criteriaIds": [
+        "documentation-and-dependency-gates",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Data Management and runtime architecture",
+        "Data Management threat model",
+        "Runtime, security, and Data Management context packs",
+        "Repository implementation-roadmap skill guidance"
+      ],
+      "feedbackAddressed": [],
+      "id": "production-hardening-and-qualification-architecture-security-and-guidance",
+      "incrementId": "production-hardening-and-qualification",
+      "summary": "Aligned architecture, threat-model, context, README, supply-chain, and roadmap guidance with bounded visual schemas, protected purpose mappings, trusted post-generation attribution, exact optional dependency readiness, fail-closed checked generation, and the residual unchecked-path risks.",
+      "tests": [
+        "Documentation, architecture, and agent-support checks passed",
+        "Dependency security inventory passed with direct decoder dependency coverage",
+        "Diff hygiene check passed"
+      ],
+      "title": "Architecture, security, and guidance"
+    },
+    {
+      "areas": [
+        "Repository completion gates",
+        "Non-browser test runtime",
+        "Secured reference-system E2E coverage"
+      ],
+      "chunkId": "completion-gates",
+      "completedAt": "2026-07-30T22:34:18Z",
+      "criteriaIds": [
+        "packaged-host-readiness",
+        "documentation-and-dependency-gates",
+        "full-short-and-long-suites",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Implementation roadmap and temporary implementation report"
+      ],
+      "feedbackAddressed": [],
+      "id": "production-hardening-and-qualification-completion-gates",
+      "incrementId": "production-hardening-and-qualification",
+      "summary": "Completed applicable packages and repository gates, fixed stale UI integration fixtures and the secured current-reference chatbot flow without weakening assertions, and passed the separately invoked full short and long suites.",
+      "tests": [
+        "npm run test:short passed: 2,925 Node tests plus 361 Vitest tests, with one Node skip and no failures",
+        "npm run test:long passed: Node long phase plus 3 of 3 Vitest tests with no failures",
+        "Current secured chatbot reference E2E verifies explicit model selection and exactly one persisted-history interaction before build"
+      ],
+      "title": "Completion gates"
     }
   ],
   "completion": null,
   "createdAt": "2026-07-30T18:57:05Z",
-  "currentIncrementId": "production-hardening-and-qualification",
+  "currentIncrementId": null,
   "decisions": [
     {
       "approvalNote": "User explicitly selected Option C: checked by default on computers with sufficient resources and unchecked by default on constrained systems.",
@@ -719,6 +830,61 @@
       "outcome": "passed",
       "recordedAt": "2026-07-30T21:16:15Z",
       "summary": "Reviewed untrusted visual layouts, runtime-owned schema compilation, bounded fields and purpose paths, nested CSV denial, fail-closed decoder behavior, sanitized diagnostics, and post-generation trusted attribution. No model-generated value can overwrite attribution or runtime lineage fields."
+    },
+    {
+      "artifact": null,
+      "command": "npm run package; npm run build:server; npm run build:thin-client",
+      "criterionId": "packaged-host-readiness",
+      "id": "evidence-17",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T22:34:18Z",
+      "summary": "Desktop packaging contains the managed Python worker and resolves it explicitly; exact dependency and capability checks remain fail closed outside the reviewed Python/package combination; desktop package, server build, and thin-client build completed successfully."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "representative-resource-and-usability-qualification",
+      "id": "evidence-18",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-07-30T22:34:18Z",
+      "summary": "Local bounded-profile and accessibility regressions pass, but this Python 3.14 host has no representative reviewed Python 3.10-3.13 accelerator environment and cannot provide a non-developer usability session. No representative hardware, latency, or usability claim is inferred from the local simulations."
+    },
+    {
+      "artifact": null,
+      "command": "npm run docs:check; npm run architecture:check; npm run agent-support:check; npm run security:dependencies",
+      "criterionId": "documentation-and-dependency-gates",
+      "id": "evidence-19",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "documentation",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T22:34:18Z",
+      "summary": "Canonical architecture, security, context, README, dependency inventory, and agent workflow guidance reflect the shipped bounded-schema, trusted-attribution, adaptive resource, exact-dependency, and rollback behavior."
+    },
+    {
+      "artifact": "artifacts/test-reports/test-long-suite-report.json",
+      "command": "npm run test:short; npm run test:long",
+      "criterionId": "full-short-and-long-suites",
+      "id": "evidence-20",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T22:34:18Z",
+      "summary": "The separately invoked full short suite passed with 2,925 Node tests and 361 Vitest tests, and the separately invoked long suite passed its Node phase and all 3 Vitest tests without failures."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-21",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-30T22:34:19Z",
+      "summary": "Security-relevant review confirms host-owned envelope and purpose mappings, bounded schema and processor resources, no checked-mode fallback, sanitized diagnostics, exact dependency integrity, trusted post-generation attribution with public-URL sanitization, and documented residual risk for unchecked generation and user-added fields. Representative supported-host qualification remains separately pending."
     }
   ],
   "feedback": [
@@ -1104,6 +1270,66 @@
       "recordedAt": "2026-07-30T21:17:30Z",
       "sequence": 60,
       "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "4cd8fccedcb13f8efd544b3ccfa271a90fce49427ae5e4b1da27eb7e09792eab",
+      "recordedAt": "2026-07-30T22:33:41Z",
+      "sequence": 61,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "011df08411fdfd6fb00f49375b01d2d587ae6bc6fc2a30fdb8a4e1a132499c09",
+      "recordedAt": "2026-07-30T22:34:18Z",
+      "sequence": 62,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "e184ef2cd1f8dafcd864e55a993b39ee8a2a792d8e6dec5ffe19d5533cca8702",
+      "recordedAt": "2026-07-30T22:34:18Z",
+      "sequence": 63,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "448c9d0c08814a8992061f0e7a9b6c40346689d5783a71c00baf3a79d851f42b",
+      "recordedAt": "2026-07-30T22:34:18Z",
+      "sequence": 64,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "c0cde2ec841be7145545c5e7a12779655c81fd429cff7db7314c7a52346010f9",
+      "recordedAt": "2026-07-30T22:34:18Z",
+      "sequence": 65,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5b711fcd56aa0e7e3460a62fd369c58fa01a992ecf06c3847b19c7cf89c35995",
+      "recordedAt": "2026-07-30T22:34:18Z",
+      "sequence": 66,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b4e45321e79df9dc072e26b085d6e2d333d238033beb813be1d8f09ecc5dbc21",
+      "recordedAt": "2026-07-30T22:34:18Z",
+      "sequence": 67,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "6a25db0876172422168a79c62203e6203f5b838dcaf3fea6640df923a0931a8a",
+      "recordedAt": "2026-07-30T22:34:18Z",
+      "sequence": 68,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ea5dda412a42a37b66a5d82d4d67c066678d12adb6c44c780bf0add5ad1ba646",
+      "recordedAt": "2026-07-30T22:34:19Z",
+      "sequence": 69,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "0ec3ab534ad8e7795b7fc107539833f891c41bf8039eb27aa463f241319d32b7",
+      "recordedAt": "2026-07-30T22:34:19Z",
+      "sequence": 70,
+      "type": "increment-completed"
     }
   ],
   "increments": [
@@ -1885,8 +2111,14 @@
         }
       ],
       "allowPendingQualification": true,
-      "completedAt": null,
-      "completedChunks": [],
+      "completedAt": "2026-07-30T22:34:19Z",
+      "completedChunks": [
+        "packaged-runtime",
+        "resource-usability-and-performance",
+        "architecture-security-and-guidance",
+        "completion-gates"
+      ],
+      "completionSummary": "Completed production hardening, packaged-host readiness, security and guidance alignment, and separate full short and long completion suites. Local implementation and gates pass; representative supported-hardware and non-developer usability qualification remains honestly pending under the roadmap's controlled-environment policy.",
       "deliverables": [
         "Qualified managed-worker and host packages",
         "Sanitized resource, latency, accessibility, and usability evidence",
@@ -1906,6 +2138,9 @@
       "id": "production-hardening-and-qualification",
       "number": 5,
       "objective": "Complete packaging, security, documentation, representative performance and usability qualification, and the one-time repository-wide completion gates after all feature increments are implemented.",
+      "pendingCriteria": [
+        "representative-resource-and-usability-qualification"
+      ],
       "plan": {
         "assumptions": [
           "No new architecture decision is required because the work remains within accepted Python-adapter, host composition, shared UI, and Data Management boundaries.",
@@ -2029,7 +2264,7 @@
       ],
       "rollback": "Disable decoder and visual-builder capability advertisement, hide the controls, resolve recipes to task defaults, and retain the strict unchecked generation and validation path; remove the isolated dependency only after packaged hosts no longer reference it.",
       "startedAt": "2026-07-30T21:17:30Z",
-      "status": "implementing",
+      "status": "implemented-pending-qualification",
       "title": "Production hardening and qualification",
       "verification": [
         "Run focused packaged-worker startup and host readiness checks before final gates.",
@@ -2075,6 +2310,6 @@
   },
   "schemaVersion": 1,
   "slug": "optional-constrained-json-generation",
-  "status": "executing",
-  "updatedAt": "2026-07-30T21:17:30Z"
+  "status": "implementation-complete-qualification-pending",
+  "updatedAt": "2026-07-30T22:34:19Z"
 }

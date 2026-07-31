@@ -57,14 +57,19 @@ identity, local paths, and volatile utilization so an untouched control cannot
 oscillate while work is running.
 
 `dataset-preparation-output-shape.ts` is the shared authority for the editable
-output layout used by example creation. It supplies task-compatible defaults,
-plain-language training-purpose metadata, bounded visual field definitions,
-deterministic purpose paths, and one exact JSON Schema envelope for prompting,
-validation, constrained decoding, and row conversion. Envelope fields and
-training purposes are protected from rename/removal. Nested layouts require
-JSON or Parquet, and the legacy free-form extraction record remains usable but
-is explicitly ineligible for token-level constraints until its fields are
-defined.
+output layout used by the Generation prompt. It supplies task-compatible defaults,
+plain-language training-purpose metadata, bounded visual field definitions and
+sample values, deterministic purpose paths, one exact JSON Schema envelope, and
+one schema-valid example envelope for prompting, validation, constrained
+decoding, and row conversion. Labels are compiled from Step 1 settings rather
+than duplicated as visual-field choices. New instruction-tuning defaults keep
+Instruction, Input, Context, and Output separate: Instruction is a fixed
+configured value, Input is the generated user request, and Context is unchanged
+runtime-supplied source data. Optional Thought remains an independent
+text-only chain-of-thought field. Envelope fields and required training purposes are
+protected from rename/removal. Nested layouts require JSON or Parquet, and the
+legacy free-form extraction record remains usable but is explicitly ineligible
+for token-level constraints until its fields are defined.
 
 The model-owned schema intentionally excludes `sourceAttribution`. When the
 quality policy selects attribution, the shared editor displays a separate
@@ -81,11 +86,15 @@ unavailable capabilities and must not admit synthetic rows when review is
 absent or disabled.
 
 Text-bearing dataset-preparation recipes use `task.textInputMode` to choose provided source text versus generated text,
-and `generation.promptTemplate` carries the editable task objective for generated examples, labels, captions, or
+and `generation.promptTemplate` carries the editable system prompt instructions for generated examples, labels, captions, or
 extracted fields. Mandatory runtime-owned system rules keep source content and task settings in an untrusted-data role,
 and chat-capable models receive those rules through the tokenizer's system-message role. Each generation receives an
-exact task-bound JSON Schema envelope; the worker rejects malformed, mismatched, oversized, extra-field, non-allowlisted,
-or non-source-span output before deterministically assembling the task profile's row fields for JSON, CSV, or Parquet.
+exact task-bound JSON Schema envelope plus a configured sample. Fixed values are
+enforced by schema, runtime-supplied fields are attached outside model generation,
+and the model must return exactly one JSON object without prose,
+Markdown, code fences, or other pre/post output. The worker rejects malformed, mismatched, oversized, extra-field,
+non-allowlisted, or non-source-span output before deterministically assembling the task profile's row fields for JSON,
+CSV, or Parquet.
 Detection and segmentation objectives may label existing reviewed annotations but never synthesize boxes or masks.
 Built-in model presets stay within the 7B limit: quality uses `Qwen/Qwen2.5-7B-Instruct`, while compact uses
 `Qwen/Qwen2.5-3B-Instruct`. Task-scoped generation parameter defaults also live here so UI and runtime request builders

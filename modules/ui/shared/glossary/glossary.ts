@@ -649,8 +649,8 @@ export const glossaryEntries = {
     definition: "Choose whether the dataset should use text already in your files or have a local model write missing labels, captions, questions, or answers.",
   },
   systemPrompt: {
-    term: "Example instructions",
-    definition: "Describe the examples you want the local model to create, including useful tone or wording preferences. Built-in safety, source-grounding, and output-format rules still apply.",
+    term: "System prompt instructions",
+    definition: "Tell the local model how to generate each training item, including what to create, how to use the source, and useful tone or wording preferences. Configure the exact output fields separately below; the Instruction field is copied exactly, Context comes unchanged from the source section, and built-in safety, source-grounding, and JSON-only rules still apply.",
   },
   modelPreset: {
     term: "Model preset",

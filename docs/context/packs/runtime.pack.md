@@ -48,6 +48,10 @@
 - Readiness snapshots are host-scoped and should read each top-level provider at most once per snapshot.
 - Missing-provider statuses are for direct or explicitly requested capabilities, not every unsupported future capability.
 - Readiness reads, task status reads, task cancel reads, and task list reads must not start, stop, install, repair, or unboundedly probe runtimes.
+- Explicit state-changing feature starts may use a host-injected bounded
+  activation seam for an eligible local runtime, but must re-read readiness and
+  fail closed before task creation. Never expose raw activation failures or use
+  this seam from passive readiness/task reads.
 - The managed Python sidecar is host-private: bind/client configuration is
   canonical loopback HTTP only, and every endpoint (including readiness probes)
   requires the current per-launch bearer token. Rotate that child-only token

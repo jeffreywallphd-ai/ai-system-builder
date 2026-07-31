@@ -312,6 +312,7 @@ function buildCommand(
   structuredOutput: {
     visualShape: DatasetPreparationVisualOutputShape;
     constrainedDecoding: boolean;
+    promptTemplate: string;
   },
   adaptive: {
     chunkSize: number;
@@ -387,9 +388,9 @@ function buildCommand(
         ? {
             generation: {
               mode: "qa" as const,
-              promptTemplate: resolveDefaultDatasetPreparationPromptTemplate(
-                task.taskType,
-              ),
+              promptTemplate:
+                structuredOutput.promptTemplate.trim() ||
+                resolveDefaultDatasetPreparationPromptTemplate(task.taskType),
               model: {
                 provider: "transformers" as const,
                 modelId: model?.modelId ?? "Qwen/Qwen2.5-7B-Instruct",
@@ -509,6 +510,10 @@ export function DatasetPreparationFeature({
   const [reviewActionInFlight, setReviewActionInFlight] = useState(false);
   const [taskType, setTaskType] =
     useState<DatasetPreparationTaskType>("llm-instruction");
+  const [textGenerationPrompt, setTextGenerationPrompt] = useState(
+    () =>
+      resolveDefaultDatasetPreparationPromptTemplate("llm-instruction") ?? "",
+  );
   const [visualOutputShape, setVisualOutputShape] =
     useState<DatasetPreparationVisualOutputShape>(() => {
       const saved =
@@ -735,6 +740,9 @@ export function DatasetPreparationFeature({
       suppressNextTaskOutputReset.current = false;
       return;
     }
+    setTextGenerationPrompt(
+      resolveDefaultDatasetPreparationPromptTemplate(taskType) ?? "",
+    );
     const persisted = readPersistedStructuredOutputSettings(workspaceId);
     const saved = persisted.shapes?.[taskType];
     const compiled = saved
@@ -794,6 +802,7 @@ export function DatasetPreparationFeature({
     const savedTaskType = snapshot.recipe?.task?.taskType;
     const savedStructuredOutput =
       snapshot.recipe?.generation?.structuredOutput ?? {};
+    const savedPromptTemplate = snapshot.recipe?.generation?.promptTemplate;
     const savedMethod = snapshot.preparation?.method;
     setSelectedArtifactIds([...reproduction.sourceArtifactIds]);
     if (
@@ -828,6 +837,8 @@ export function DatasetPreparationFeature({
       setConstrainedDecodingPreference(
         savedStructuredOutput.constrainedDecoding,
       );
+    if (typeof savedPromptTemplate === "string")
+      setTextGenerationPrompt(savedPromptTemplate);
     if (typeof savedMethod === "string") {
       setPreparationMethodId(savedMethod as DatasetPreparationMethodId);
     }
@@ -1040,6 +1051,7 @@ export function DatasetPreparationFeature({
           {
             visualShape: visualOutputShape,
             constrainedDecoding: constrainedDecodingEnabled,
+            promptTemplate: textGenerationPrompt,
           },
           adaptiveValues,
         ),
@@ -1475,6 +1487,26 @@ export function DatasetPreparationFeature({
             {preparationPlan &&
             preparationPlan.generationMode !== "none" ? (
               <section className="ui-stack ui-stack--sm">
+                <h3>Generation prompt</h3>
+                <label className="ui-stack ui-stack--sm">
+                  <span>System prompt instructions</span>
+                  <textarea
+                    className="ui-input"
+                    value={textGenerationPrompt}
+                    disabled={status.kind === "loading"}
+                    onChange={(event) =>
+                      setTextGenerationPrompt(event.target.value)
+                    }
+                    rows={6}
+                  />
+                </label>
+                <small className="ui-text-muted">
+                  Tell the local model what to create and how to use the source.
+                  Configure the exact output fields below; Instruction is copied
+                  exactly, and Context is attached unchanged from the source
+                  section. Built-in safety, source-grounding, and JSON-only rules
+                  still apply.
+                </small>
                 <DatasetPreparationOutputShapeEditor
                   idPrefix="thin-dataset-preparation-output"
                   taskType={taskType}

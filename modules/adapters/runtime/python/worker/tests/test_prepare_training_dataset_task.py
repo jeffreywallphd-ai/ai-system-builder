@@ -213,10 +213,11 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
                 {"taskType": "llm-instruction"},
                 {
                     "instruction": "Describe the sequence.",
-                    "input": "abcdefghij",
+                    "input": "Which sequence is shown?",
+                    "context": "abcdefghij",
                     "output": "The sequence runs from a through j.",
                 },
-                {"instruction", "input", "output"},
+                {"instruction", "input", "context", "output"},
             ),
             (
                 "llm-classification",
@@ -316,8 +317,9 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
                     answer="The sequence runs from a through j.",
                     generation_mode="structured-json-v1",
                     structured_fields={
-                        "instruction": "Describe the sequence.",
-                        "input": chunk.text,
+                        "instruction": "Answer the input using only the context.",
+                        "input": "Which sequence is shown?",
+                        "context": chunk.text,
                         "output": "The sequence runs from a through j.",
                     },
                 )
@@ -333,8 +335,12 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         self.assertEqual(generator.call_count, 1)
         aggregate = next(output for output in result.outputs if output.role == "dataset")
         row = json.loads(Path(aggregate.tempPath).read_text(encoding="utf-8").splitlines()[0])
-        self.assertEqual(row["instruction"], "Describe the sequence.")
-        self.assertEqual(row["input"], "abcdefghij")
+        self.assertEqual(
+            row["instruction"],
+            "Answer the input using only the context.",
+        )
+        self.assertEqual(row["input"], "Which sequence is shown?")
+        self.assertEqual(row["context"], "abcdefghij")
 
     def test_explicit_topic_aware_plan_omits_fixed_size_and_overlap(self) -> None:
         payload = self._build_payload("jsonl")
@@ -483,6 +489,59 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         self.assertEqual(metadata["preparation"]["method"], "validate-and-split")
         self.assertNotIn("generationModel", metadata)
 
+    def test_existing_instruction_dataset_preserves_separate_input_and_context(self) -> None:
+        source_path = Path(self.temp_dir.name) / "instruction-ready.jsonl"
+        source_path.write_text(
+            json.dumps(
+                {
+                    "instruction": "Answer the input using only the context.",
+                    "input": "When does the library close?",
+                    "context": "The library closes at 6:00 PM.",
+                    "output": "The library closes at 6:00 PM.",
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        payload = PrepareTrainingDatasetRequest.model_validate(
+            {
+                "sourceInputs": [
+                    {
+                        "artifactId": "ready-instruction-1",
+                        "localPath": str(source_path),
+                        "mediaType": "application/x-ndjson",
+                        "originalName": "instruction-ready.jsonl",
+                    }
+                ],
+                "preparation": {
+                    "schemaVersion": "1",
+                    "inputIntent": "use-existing-dataset",
+                    "method": "validate-and-split",
+                    "sourceKinds": ["structured"],
+                    "generationMode": "none",
+                },
+                "recipe": {
+                    "task": {
+                        "taskType": "llm-instruction",
+                        "textInputMode": "provided",
+                    }
+                },
+                "split": {
+                    "trainRatio": 0.8,
+                    "validationRatio": 0.1,
+                    "testRatio": 0.1,
+                },
+                "output": {"format": "jsonl"},
+            }
+        )
+
+        result = prepare_training_dataset(payload)
+
+        dataset = next(output for output in result.outputs if output.role == "dataset")
+        row = json.loads(Path(dataset.tempPath).read_text(encoding="utf-8").splitlines()[0])
+        self.assertEqual(row["input"], "When does the library close?")
+        self.assertEqual(row["context"], "The library closes at 6:00 PM.")
+
     def test_explicit_plan_rejects_mixed_existing_and_source_material(self) -> None:
         source_path = Path(self.temp_dir.name) / "ready.jsonl"
         source_path.write_text(
@@ -555,6 +614,7 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
                         "chunkIndex",
                         "instruction",
                         "input",
+                        "context",
                         "output",
                         "prompt",
                         "completion",
@@ -575,6 +635,7 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
                         "chunkIndex",
                         "instruction",
                         "input",
+                        "context",
                         "output",
                         "prompt",
                         "completion",
@@ -595,6 +656,7 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
                         "chunkIndex",
                         "instruction",
                         "input",
+                        "context",
                         "output",
                         "prompt",
                         "completion",
@@ -1077,6 +1139,8 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         self.assertIn("Write concise product training captions.", prompts[0])
         self.assertIn("widget.png", prompts[0])
         self.assertIn("asbwidget", prompts[0])
+        self.assertIn("Configured output sample", prompts[0])
+        self.assertIn("Do not output anything before or after", prompts[0])
 
     def test_prepares_vision_classification_manifest_with_generated_allowed_label(self) -> None:
         payload = self._build_payload("jsonl")
@@ -1130,6 +1194,7 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         self.assertEqual(row["label"], "billing")
         self.assertEqual(row["labelSet"], ["billing", "support"])
         self.assertIn('"allowedLabels": ["billing", "support"]', prompts[0])
+        self.assertIn("Configured output sample", prompts[0])
 
     def test_detection_manifest_requires_annotations(self) -> None:
         payload = self._build_payload("jsonl")

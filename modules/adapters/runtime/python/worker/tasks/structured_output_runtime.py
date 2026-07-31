@@ -17,7 +17,9 @@ _FIELD_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]{0,63}$")
 _PURPOSES = {
     "instruction",
     "input",
+    "context",
     "output",
+    "thought",
     "label",
     "expected-output",
     "anchor-text",
@@ -31,6 +33,7 @@ _PURPOSES = {
 @dataclass(frozen=True)
 class RuntimeStructuredOutput:
     schema: dict[str, Any]
+    example: dict[str, Any]
     schema_fingerprint: str
     payload_key: str
     purpose_paths: dict[str, tuple[str, ...]]
@@ -91,6 +94,7 @@ def resolve_runtime_structured_output(
     raw = runtime["structuredOutput"]
     if set(raw) != {
         "schema",
+        "example",
         "schemaFingerprint",
         "payloadKey",
         "purposePaths",
@@ -98,12 +102,14 @@ def resolve_runtime_structured_output(
     }:
         raise StructuredOutputValidationError("Compiled generated output settings are invalid.")
     schema = raw.get("schema")
+    example = raw.get("example")
     fingerprint = raw.get("schemaFingerprint")
     payload_key = raw.get("payloadKey")
     raw_paths = raw.get("purposePaths")
     constrained = raw.get("constrainedDecoding")
     if (
         not isinstance(schema, dict)
+        or not isinstance(example, dict)
         or not isinstance(fingerprint, str)
         or not _FINGERPRINT_PATTERN.fullmatch(fingerprint)
         or payload_key not in {"example", "value"}
@@ -123,6 +129,7 @@ def resolve_runtime_structured_output(
         purpose_paths[purpose] = tuple(path)
     fingerprint_input = {
         "schema": schema,
+        "example": example,
         "payloadKey": payload_key,
         "purposePaths": raw_paths,
         "constrainedDecoding": constrained,
@@ -134,8 +141,10 @@ def resolve_runtime_structured_output(
     if not hmac.compare_digest(fingerprint, expected):
         raise StructuredOutputValidationError("The generated output layout fingerprint is invalid.")
     _validate_schema_definition(schema)
+    validate_json_schema_value(example, schema, "example output")
     return RuntimeStructuredOutput(
         schema=schema,
+        example=example,
         schema_fingerprint=fingerprint,
         payload_key=payload_key,
         purpose_paths=purpose_paths,

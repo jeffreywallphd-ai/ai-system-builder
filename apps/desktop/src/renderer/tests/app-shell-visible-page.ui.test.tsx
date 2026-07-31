@@ -1,3 +1,7 @@
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+
 require.extensions[".svg"] = (module: NodeModule) => {
   module.exports = "logo.svg";
 };

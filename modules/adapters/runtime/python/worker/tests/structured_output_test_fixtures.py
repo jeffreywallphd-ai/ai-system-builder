@@ -13,6 +13,7 @@ _PURPOSE_PATHS: dict[str, dict[str, list[str]]] = {
     "llm-instruction": {
         "instruction": ["instruction"],
         "input": ["input"],
+        "context": ["context"],
         "output": ["output"],
     },
     "llm-classification": {"label": ["label"]},
@@ -27,6 +28,43 @@ _PURPOSE_PATHS: dict[str, dict[str, list[str]]] = {
     "vision-detection": {"label": ["labels"]},
     "vision-segmentation": {"label": ["label"]},
 }
+
+
+def _example_from_schema(schema: dict[str, Any]) -> Any:
+    if "const" in schema:
+        return schema["const"]
+    if isinstance(schema.get("enum"), list) and schema["enum"]:
+        return schema["enum"][0]
+    if isinstance(schema.get("anyOf"), list):
+        non_null = [
+            option
+            for option in schema["anyOf"]
+            if isinstance(option, dict) and option.get("type") != "null"
+        ]
+        return _example_from_schema(non_null[0] if non_null else schema["anyOf"][0])
+    schema_type = schema.get("type")
+    if schema_type == "object":
+        properties = schema.get("properties")
+        required = schema.get("required")
+        if isinstance(properties, dict) and isinstance(required, list):
+            return {
+                name: _example_from_schema(properties[name])
+                for name in required
+                if name in properties
+            }
+        additional = schema.get("additionalProperties")
+        if isinstance(additional, dict):
+            return {"field": _example_from_schema(additional)}
+        return {}
+    if schema_type == "array":
+        return [_example_from_schema(schema.get("items") or {"type": "string"})]
+    if schema_type == "number":
+        return 0
+    if schema_type == "boolean":
+        return True
+    if schema_type == "null":
+        return None
+    return "example"
 
 
 def _image_schema(task_type: str) -> dict[str, Any]:
@@ -93,11 +131,18 @@ def runtime_structured_output_from_schema(
     purpose_paths: dict[str, list[str]],
     *,
     constrained: bool = False,
+    example: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    resolved_example = example or _example_from_schema(schema)
+    resolved_paths = {
+        purpose: list(path)
+        for purpose, path in purpose_paths.items()
+    }
     fingerprint_input = {
         "schema": schema,
+        "example": resolved_example,
         "payloadKey": payload_key,
-        "purposePaths": purpose_paths,
+        "purposePaths": resolved_paths,
         "constrainedDecoding": constrained,
     }
     serialized = json.dumps(

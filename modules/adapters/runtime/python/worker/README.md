@@ -58,6 +58,16 @@ Implemented task:
     artifact/span/region/page lineage; scanned-image OCR is explicitly unavailable
   - uses bounded structured CSV/JSON/JSONL/Parquet rows directly when they already match the selected LLM, diffusion, or vision task schema
   - generates QA-derived task rows for LLM instruction, classification, extraction, embedding-pair, and reranker profiles through local `transformers` model configuration when source documents need generated examples
+  - keeps instruction rows structurally distinct: Instruction is the fixed
+    configured behavior, Input is the generated user request, Context is the
+    unchanged runtime-supplied source section, Output is the desired response,
+    and optional Thought remains a separate text-only chain-of-thought field
+  - omits Context from the model generation schema, attaches it from the current
+    source section before final validation, and rejects model-authored Context;
+    the evidence-provider boundary can later accept retrieved context
+  - places the compiler-owned schema and schema-valid format example in every
+    generated-example prompt and requires exactly one JSON object with no prose,
+    Markdown, code fence, unrequested reasoning, or other pre/post output
   - can pass an exact bounded Draft 2020-12 schema to the local causal/chat
     generator; the model-bound Outlines Core processor masks every next-token
     choice, requires EOS at an accepting state, and then parses and validates
@@ -86,11 +96,13 @@ Implemented task:
     citation, lexical grounding, critic score, safety, duplicate, and diversity
     before admission; rejected candidates remain reviewable in quarantine and all
     admitted candidates still pass the mandatory quality review
-  - emits only bounded aggregate diagnostic fields; source text, prompts, model output, provider payloads, and runtime-local paths are excluded
+  - emits only bounded aggregate diagnostic fields; controlled preparation failures preserve a stable snake-case reason code and one of the four public stage names so the host can show actionable guidance, while source text, prompts, model output, provider payloads, runtime-local paths, and raw exception messages remain excluded
 - `train-model`
   - supports causal language model training over text-like datasets
   - accepts the LLM instruction, classification, extraction, embedding-pair, and reranker training tasks
   - formats those row schemas into causal-LM training text when present
+  - formats separate Input and Context blocks and includes an optional text-only
+    Thought block only when those purposes exist in the prepared schema
   - resolves custom fields only through prepared artifact purpose paths with a
     matching exact schema fingerprint; missing, malformed, or mixed layout
     metadata fails before model loading

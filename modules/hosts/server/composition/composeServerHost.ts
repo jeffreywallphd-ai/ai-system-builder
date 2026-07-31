@@ -59,10 +59,16 @@ import { createStructuredDatasetVersionRepository } from "../../../adapters/pers
 import { createStructuredIngestionAcquisitionRepository } from "../../../adapters/persistence/ingestion";
 import { createSha256DatasetVersionHasher } from "../../../adapters/storage/dataset-version";
 import { createFilesystemIngestionCheckpointStorage } from "../../../adapters/storage/ingestion-checkpoint";
-import { GovernedIngestionTaskUseCases, GovernedWebsiteIngestionUseCases } from "../../../application/use-cases/ingestion-acquisition";
+import {
+  GovernedIngestionTaskUseCases,
+  GovernedWebsiteIngestionUseCases,
+} from "../../../application/use-cases/ingestion-acquisition";
 import type { ApplicationRequestContext } from "../../../application/ports";
 import type { IngestionTaskTransportCommand } from "../../../contracts/ingestion";
-import { createContractError, createFailureResult } from "../../../contracts/shared";
+import {
+  createContractError,
+  createFailureResult,
+} from "../../../contracts/shared";
 import { SystemArtifactIdFactory } from "../../../domain/artifact";
 import {
   BrowseArtifactsUseCase,
@@ -147,7 +153,10 @@ import {
 import type { ProviderCredentialStatus } from "../../../contracts/security";
 import { composeServerProviderCredentials } from "./composeServerProviderCredentials";
 import { createRuntimePreparedModelCheckpointResolver } from "../../shared/createRuntimePreparedModelCheckpointResolver";
-import { createWebsiteHtmlAcquisitionPort, GovernedWebsiteCaptureAdapter } from "../../../adapters/ingestion";
+import {
+  createWebsiteHtmlAcquisitionPort,
+  GovernedWebsiteCaptureAdapter,
+} from "../../../adapters/ingestion";
 import {
   registerExpressApi,
   type RegisterExpressApiDependencies,
@@ -1040,36 +1049,47 @@ export function composeServerHost(
       });
       const ingestionTasks = organizationDocuments
         ? (() => {
-            const repository = createStructuredIngestionAcquisitionRepository(organizationDocuments);
+            const repository = createStructuredIngestionAcquisitionRepository(
+              organizationDocuments,
+            );
             const website = new GovernedWebsiteIngestionUseCases({
               repository,
               capture: new GovernedWebsiteCaptureAdapter({ now: options.now }),
               streamStorage: storage,
               artifactCleanup: storage,
-              workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository,
+              workspaceRepository:
+                workspaceFoundation.workspaceRepositories.workspaceRepository,
               workspaceAuthorization,
               now: options.now,
             });
             return new GovernedIngestionTaskUseCases({
-            repository,
-            checkpoints: createFilesystemIngestionCheckpointStorage({
-              rootDirectory: registerOptions.storageRootDirectory,
+              repository,
+              checkpoints: createFilesystemIngestionCheckpointStorage({
+                rootDirectory: registerOptions.storageRootDirectory,
+                organizationContextProvider:
+                  options.organizationContextProvider,
+              }),
+              streamStorage: storage,
+              artifactCleanup: storage,
+              registerArtifactFromRepo,
+              workspaceRepository:
+                workspaceFoundation.workspaceRepositories.workspaceRepository,
+              workspaceAuthorization,
               organizationContextProvider: options.organizationContextProvider,
-            }),
-            streamStorage: storage,
-            artifactCleanup: storage,
-            registerArtifactFromRepo,
-            workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository,
-            workspaceAuthorization,
-            organizationContextProvider: options.organizationContextProvider,
-            website,
-            now: options.now,
-          });
+              website,
+              now: options.now,
+            });
           })()
         : {
-            async executeCommand(_command: IngestionTaskTransportCommand, context: ApplicationRequestContext = {}) {
+            async executeCommand(
+              _command: IngestionTaskTransportCommand,
+              context: ApplicationRequestContext = {},
+            ) {
               return createFailureResult(
-                createContractError("unavailable", "Ingestion task persistence is unavailable."),
+                createContractError(
+                  "unavailable",
+                  "Ingestion task persistence is unavailable.",
+                ),
                 context,
               );
             },
@@ -1899,6 +1919,18 @@ export function composeServerHost(
       });
       const runtimeCapabilityGuard = new RuntimeCapabilityGuardService(
         runtimeReadiness,
+        {
+          async prepareCapability(capabilityId) {
+            if (
+              capabilityId === "python-runtime" ||
+              capabilityId === "dataset-preparation" ||
+              capabilityId === "model-training" ||
+              capabilityId === "model-validation"
+            ) {
+              await pythonRuntimeFoundation.supervisor.start();
+            }
+          },
+        },
       );
       const datasetVersionRepository = organizationDocuments
         ? createStructuredDatasetVersionRepository(organizationDocuments)
@@ -1906,15 +1938,34 @@ export function composeServerHost(
       const datasetVersionHasher = createSha256DatasetVersionHasher();
       const datasetVersionUseCases = datasetVersionRepository
         ? {
-            listDatasetVersionsUseCase: new ListDatasetVersionsUseCase({ repository: datasetVersionRepository, workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository, workspaceAuthorization }),
-            compareDatasetVersionsUseCase: new CompareDatasetVersionsUseCase({ repository: datasetVersionRepository, workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository, workspaceAuthorization }),
-            readDatasetVersionReproductionUseCase: new ReadDatasetVersionReproductionUseCase({ repository: datasetVersionRepository, artifacts: storage, hasher: datasetVersionHasher, workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository, workspaceAuthorization }),
+            listDatasetVersionsUseCase: new ListDatasetVersionsUseCase({
+              repository: datasetVersionRepository,
+              workspaceRepository:
+                workspaceFoundation.workspaceRepositories.workspaceRepository,
+              workspaceAuthorization,
+            }),
+            compareDatasetVersionsUseCase: new CompareDatasetVersionsUseCase({
+              repository: datasetVersionRepository,
+              workspaceRepository:
+                workspaceFoundation.workspaceRepositories.workspaceRepository,
+              workspaceAuthorization,
+            }),
+            readDatasetVersionReproductionUseCase:
+              new ReadDatasetVersionReproductionUseCase({
+                repository: datasetVersionRepository,
+                artifacts: storage,
+                hasher: datasetVersionHasher,
+                workspaceRepository:
+                  workspaceFoundation.workspaceRepositories.workspaceRepository,
+                workspaceAuthorization,
+              }),
             publishDatasetVersionUseCase: new PublishDatasetVersionUseCase({
               repository: datasetVersionRepository,
               artifacts: storage,
               publisher: huggingFaceArtifactRepoStorage,
               hasher: datasetVersionHasher,
-              workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository,
+              workspaceRepository:
+                workspaceFoundation.workspaceRepositories.workspaceRepository,
               workspaceAuthorization,
               now: options.now,
             }),
@@ -1938,7 +1989,11 @@ export function composeServerHost(
             ? {
                 datasetVersioning: {
                   hasher: datasetVersionHasher,
-                  finalizer: new DatasetVersionFinalizationService({ repository: datasetVersionRepository, artifacts: storage, hasher: datasetVersionHasher }),
+                  finalizer: new DatasetVersionFinalizationService({
+                    repository: datasetVersionRepository,
+                    artifacts: storage,
+                    hasher: datasetVersionHasher,
+                  }),
                 },
               }
             : {}),
@@ -2171,8 +2226,7 @@ export function composeServerHost(
           }
           return {
             schemaVersion: "1" as const,
-            capturedAt:
-              options.now?.() ?? new Date().toISOString(),
+            capturedAt: options.now?.() ?? new Date().toISOString(),
             decoderAvailable,
             schemaSupported: true,
             logicalProcessorCount: cpus().length,

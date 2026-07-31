@@ -389,9 +389,13 @@ def _tokenize_dataset(
         if purpose_paths is not None and training_task == "llm-instruction":
             instruction = purpose_value("instruction")
             input_value = purpose_value("input")
+            context = purpose_value("context")
+            thought = purpose_value("thought")
             output = purpose_value("output")
             input_block = f"\nInput:\n{input_value}" if input_value else ""
-            return f"Instruction:\n{instruction}{input_block}\nResponse:\n{output}"
+            context_block = f"\nContext:\n{context}" if context else ""
+            thought_block = f"\nThought:\n{thought}" if thought else ""
+            return f"Instruction:\n{instruction}{input_block}{context_block}{thought_block}\nResponse:\n{output}"
 
         if purpose_paths is not None and training_task == "llm-classification":
             return f"Text:\n{value('text')}\nLabel:\n{purpose_value('label')}"
@@ -412,9 +416,13 @@ def _tokenize_dataset(
         if {"instruction", "output"}.issubset(column_names):
             instruction = value("instruction")
             input_value = value("input")
+            context = value("context")
+            thought = value("thought")
             output = value("output")
             input_block = f"\nInput:\n{input_value}" if input_value else ""
-            return f"Instruction:\n{instruction}{input_block}\nResponse:\n{output}"
+            context_block = f"\nContext:\n{context}" if context else ""
+            thought_block = f"\nThought:\n{thought}" if thought else ""
+            return f"Instruction:\n{instruction}{input_block}{context_block}{thought_block}\nResponse:\n{output}"
 
         if {"text", "label"}.issubset(column_names):
             return f"Text:\n{value('text')}\nLabel:\n{value('label')}"

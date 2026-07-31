@@ -129,12 +129,34 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
     expect(runtimeStartRequest.payload.runtime.structuredOutput).toMatchObject({
       payloadKey: "example",
       constrainedDecoding: false,
+      example: {
+        schemaVersion: "1",
+        taskType: "llm-instruction",
+        status: "ok",
+        example: expect.any(Object),
+      },
       purposePaths: {
         instruction: ["instruction"],
         input: ["input"],
+        context: ["context"],
         output: ["output"],
       },
     });
+    expect(
+      runtimeStartRequest.payload.runtime.structuredOutput.example.example
+        .instruction,
+    ).toContain("using only the provided context");
+    expect(
+      runtimeStartRequest.payload.runtime.structuredOutput.example.example.input,
+    ).toBe("When does the city library close on weekdays?");
+    expect(
+      runtimeStartRequest.payload.runtime.structuredOutput.example.example
+        .context,
+    ).toBe("The city library closes at 6:00 PM on weekdays.");
+    expect(
+      runtimeStartRequest.payload.runtime.structuredOutput.example.example
+        .output,
+    ).toContain("closes at 6:00 PM");
     expect(runtimeStartRequest.payload.runtime.structuredOutput.schema).toMatchObject({
       type: "object",
       additionalProperties: false,

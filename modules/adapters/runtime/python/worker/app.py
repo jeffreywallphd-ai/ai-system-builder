@@ -52,6 +52,23 @@ WORKER_STARTED_AT = datetime.now(timezone.utc).isoformat()
 PYTHON_VERSION = platform.python_version()
 RUNTIME_AUTH_TOKEN = getenv("PYTHON_RUNTIME_AUTH_TOKEN", "").strip()
 
+_TASK_ERROR_CODE_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,95}$")
+_TASK_ERROR_STAGES = {"normalization", "chunking", "generation", "split"}
+
+
+def _safe_task_error_code(error: Exception) -> str:
+    candidate = getattr(error, "error_code", None)
+    return (
+        candidate
+        if isinstance(candidate, str) and _TASK_ERROR_CODE_PATTERN.fullmatch(candidate)
+        else "task_failed"
+    )
+
+
+def _safe_task_error_stage(error: Exception) -> str | None:
+    candidate = getattr(error, "stage", None)
+    return candidate if candidate in _TASK_ERROR_STAGES else None
+
 app = FastAPI(title="ai-system-builder python runtime worker", version=WORKER_VERSION)
 TASK_EXECUTOR = ThreadPoolExecutor(max_workers=1)
 TASK_REGISTRY_LOCK = Lock()
@@ -388,12 +405,16 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
             data = _run_task(request)
             _update_task(request.requestId, status="succeeded", data=data, completedAt=_now_iso())
         except Exception as error:
+            error_code = _safe_task_error_code(error)
+            error_stage = _safe_task_error_stage(error)
             print(
                 json.dumps(
                     {
                         "event": "runtime.task.failed",
                         "taskType": request.taskType,
                         "diagnosticClass": type(error).__name__,
+                        "errorCode": error_code,
+                        **({"stage": error_stage} if error_stage else {}),
                     },
                     ensure_ascii=False,
                 ),
@@ -403,9 +424,9 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
                 request.requestId,
                 status="failed",
                 error=PythonRuntimeError(
-                    code="task_failed",
-                    errorCode=getattr(error, "error_code", "task_failed"),
-                    stage=getattr(error, "stage", None),
+                    code=error_code,
+                    errorCode=error_code,
+                    stage=error_stage,
                     message="Runtime task failed. Review host diagnostics and retry.",
                     details={"diagnosticClass": type(error).__name__},
                     retryable=False,

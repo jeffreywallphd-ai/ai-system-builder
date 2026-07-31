@@ -94,6 +94,85 @@ function ensureSuccessEnvelope(response: unknown, fallbackMessage: string): { va
   return { value: response.value };
 }
 
+const DATASET_PREPARATION_FAILURE_MESSAGES: Readonly<Record<string, string>> = {
+  preparation_input_intent_ambiguous:
+    "The selected files mix existing datasets with source material. Prepare those groups separately.",
+  preparation_plan_mismatch:
+    "The preparation method no longer matches the selected files. Return to Step 3, choose a method again, and retry.",
+  preparation_inactive_normalization:
+    "Some preparation settings conflict with the selected method. Return to Step 3, reselect the method, and retry.",
+  preparation_inactive_chunking:
+    "Some preparation settings conflict with the selected method. Return to Step 3, reselect the method, and retry.",
+  preparation_inactive_generation:
+    "Some preparation settings conflict with the selected method. Return to Step 3, reselect the method, and retry.",
+  preparation_generation_mode_mismatch:
+    "Some preparation settings conflict with the selected method. Return to Step 3, reselect the method, and retry.",
+  preparation_advanced_mismatch:
+    "Some Advanced settings conflict with the selected method. Return to Step 3, reselect the method, and retry.",
+  preparation_inactive_advanced:
+    "Advanced document settings are not used by the selected method. Return to Step 3, reselect the method, and retry.",
+  split_validation_failed:
+    "Training, validation, and test portions need review. Make sure they add up to 1.0 and keep some data for validation or testing.",
+  structured_output_settings_invalid:
+    "The desired output format needs review. Reset or correct it in Generation prompt, then retry.",
+  generation_model_not_available:
+    "The selected generation model is not ready. Download it in Advanced settings, then retry.",
+  generation_settings_missing:
+    "Choose a generation method and model in Step 3, then retry.",
+  synthetic_review_required:
+    "This preparation method requires data checks and review. Keep data checks enabled and retry.",
+  advanced_quality_review_required:
+    "This preparation method requires data checks and review. Keep data checks enabled and retry.",
+  normalization_failed:
+    "One or more selected files could not be read. Review the file types and retry.",
+  chunking_failed:
+    "The source could not be divided using the selected method. Review the Step 3 preparation settings and retry.",
+  chunk_limit_exceeded:
+    "The selected settings created too many source sections. Reduce the source size or adjust the Step 3 preparation settings.",
+  generation_no_examples:
+    "No usable training examples were created. Review the selected source, generation prompt, and model, then retry.",
+  generation_failed:
+    "The model could not create valid training examples. Review the generation prompt and desired output format, then retry.",
+  text_generation_failed:
+    "The model could not create a required text value. Review the generation prompt and model, then retry.",
+  text_generation_empty:
+    "The model returned an empty required value. Review the generation prompt and desired output format, then retry.",
+  source_association_invalid:
+    "A generated training item could not be linked to its source. Reselect the source files and retry.",
+  dataset_preparation_task_unsupported:
+    "The selected training goal is not supported by the local runtime yet.",
+  dataset_preparation_no_manifest_rows:
+    "No usable image training rows could be created. Review the selected files and their labels or annotations.",
+  runtime_timeout:
+    "Dataset preparation took longer than allowed. Retry with fewer files or smaller source sections.",
+};
+
+function mapDatasetPreparationTaskFailure(error: {
+  code?: string;
+  stage?: string;
+} | undefined): {
+  code: string;
+  message: string;
+  details?: Record<string, unknown>;
+} {
+  const code =
+    typeof error?.code === "string" && /^[a-z][a-z0-9_]{0,95}$/.test(error.code)
+      ? error.code
+      : "task_failed";
+  const stage =
+    typeof error?.stage === "string" &&
+    ["normalization", "chunking", "generation", "split"].includes(error.stage)
+      ? error.stage
+      : undefined;
+  return {
+    code,
+    message:
+      DATASET_PREPARATION_FAILURE_MESSAGES[code] ??
+      "Dataset preparation could not finish. Review the selected files and settings, then retry.",
+    ...(stage ? { details: { stage, reasonCode: code } } : {}),
+  };
+}
+
 function toBrowseItems(value: unknown): DesktopArtifactBrowseItem[] {
   if (typeof value !== "object" || value === null) {
     return [];
@@ -185,7 +264,7 @@ export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparati
         if (!response.ok) {
           return { ok: false, error: { code: response.error?.code ?? "internal", message: response.error?.message ?? "Dataset preparation failed.", details: response.error?.details } };
         }
-        const value = response.value as { status?: string; progress?: { message?: string; processed?: number; total?: number; details?: Record<string, unknown> }; result?: DesktopPreparedTrainingDatasetResult; error?: { message?: string } } | undefined;
+        const value = response.value as { status?: string; progress?: { message?: string; processed?: number; total?: number; details?: Record<string, unknown> }; result?: DesktopPreparedTrainingDatasetResult; error?: { code?: string; stage?: string; message?: string } } | undefined;
         if (
           (value?.status === "succeeded" ||
             value?.status === "review-required") &&
@@ -194,7 +273,7 @@ export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparati
           return { ok: true, status: value.status, value: value.result };
         }
         if (value?.status === "failed") {
-          return { ok: false, error: { code: "failed", message: value.error?.message ?? "Dataset preparation failed." } };
+          return { ok: false, error: mapDatasetPreparationTaskFailure(value.error) };
         }
         if (value?.status === "cancelled") {
           return { ok: true, status: "cancelled" };

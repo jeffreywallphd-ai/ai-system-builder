@@ -198,8 +198,8 @@ enter reversible quarantine with stable reason codes. No generated candidate is
 saved into a dataset without the mandatory quality review and explicit user
 approval.
 
-Local example creation separates runtime-owned system rules from untrusted
-source/task data and from the user-editable task objective. The runtime requests
+The Generation prompt separates runtime-owned system rules from untrusted
+source/task data and from the user-editable system prompt instructions. The runtime requests
 one versioned, task-bound JSON Schema envelope, validates exact fields, bounds
 nested values, and rejects mismatched tasks, extra fields, non-allowlisted
 labels, or required passages that are not exact source spans. Validated values
@@ -209,20 +209,36 @@ reviewed annotations only; it cannot claim pixel inspection or create boxes or
 masks.
 
 Advanced users edit that output through a visual field layout, not raw JSON
-Schema. They may add, remove, rename, reorder, or nest bounded fields and choose
-basic value types and allowed choices. The selected task contributes protected
-training purposes, such as instruction, answer, label, query, passage, or
-caption; each required purpose must remain assigned exactly once to a compatible
-required field. Runtime-owned envelope names, unsafe object-property names,
-unbounded recursion, external schema references, and unsupported value types are
-not editable.
+Schema. They may add, remove, rename, reorder, or nest bounded fields, choose
+plain-language value types, and provide a bounded example value for each field.
+Those values form one schema-valid sample JSON output. Instruction is compiled
+as a fixed value that the generator must copy exactly; the remaining generated
+values guide format rather than becoming enumerated choices. Labels remain authoritative in the Step 1
+training-goal settings and are not duplicated here. The selected task contributes
+protected training purposes, such as Instruction, Input, Context, Output, label,
+query, passage, caption, or the optional instruction-training Thought field.
+For new instruction-tuning layouts, Input is the user request while Context is
+the supporting source section; they are never combined into one sample value.
+The generation schema omits Context, and the worker attaches the current source
+section unchanged before validating the completed record. This makes Context a
+runtime-supplied evidence field rather than model-authored content and leaves the
+evidence-provider boundary available for a future retrieval-backed source.
+Each required
+purpose must remain assigned exactly once to a compatible required field.
+Instruction, Input, Context, Output, and Thought purposes accept text only.
+Runtime-owned envelope names,
+unsafe object-property names, unbounded recursion, external schema references,
+and unsupported value types are not editable.
 
 The shared compiler turns the saved visual layout into deterministic training-
-purpose paths and one exact schema used by the prompt, optional token-level
-decoder, parser, row mapper, and Parquet writer. This prevents those consumers
-from interpreting separate templates. Nested output may be written as JSON or
-Parquet but is rejected before generation when CSV is selected. Existing saved
-recipes without a layout receive the task's compatible default. Legacy
+purpose paths, one exact schema, and one schema-valid example envelope used by
+the prompt, optional token-level decoder, parser, row mapper, and Parquet writer.
+The compiler fingerprint binds both the schema and example so the host and worker
+cannot interpret separate templates. Every generation prompt requires exactly
+one JSON object that matches the runtime schema and forbids prose, Markdown,
+code fences, or other text before or after it. Nested output may be written as
+JSON or Parquet but is rejected before generation when CSV is selected. Existing
+saved recipes without a layout receive the task's compatible defaults. Legacy
 extraction may continue to use a bounded free-form record for prompt-guided
 validation, but token-level constraints remain unavailable until the user names
 the extracted fields.

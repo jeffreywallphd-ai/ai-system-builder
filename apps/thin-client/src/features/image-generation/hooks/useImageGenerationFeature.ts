@@ -110,6 +110,7 @@ export function useImageGenerationFeature(
   const finalizedByRequestRef = useRef(new Set<string>());
   const modelInventoryRequestRef = useRef(0);
   const imageArtifactsRequestRef = useRef(0);
+  const displayedValidationErrorRef = useRef<string | undefined>(undefined);
 
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; pollRunIdRef.current += 1; activeRequestRef.current = undefined; }; }, []);
 
@@ -329,8 +330,12 @@ export function useImageGenerationFeature(
 
   useEffect(() => {
     if (!hasAttemptedGeneration) return;
-    setError(validationError);
-  }, [form, hasAttemptedGeneration, validationError]);
+    const previousValidationError = displayedValidationErrorRef.current;
+    displayedValidationErrorRef.current = validationError;
+    setError((current) =>
+      validationError ?? (current === previousValidationError ? undefined : current),
+    );
+  }, [hasAttemptedGeneration, validationError]);
 
 
   useEffect(() => {

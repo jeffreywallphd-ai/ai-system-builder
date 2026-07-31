@@ -2,8 +2,8 @@
 
 # Optional Constrained JSON Generation Implementation Roadmap
 
-- Status: `executing`
-- Updated: `2026-07-30T21:17:30Z`
+- Status: `implementation-complete-qualification-pending`
+- Updated: `2026-07-30T22:34:19Z`
 
 ## Objective
 
@@ -121,7 +121,7 @@ The generated example payload may be customized, but the outer schema version, t
 | 2: Visual output-shape contract and compiler | Define a bounded, task-aware visual field tree that compiles deterministically into one exact example schema and role mapping without requiring users to write JSON or JSON Schema. | adaptive-preference-foundation | `completed` |
 | 3: Constrained decoder and schema enforcement | Add a pinned adapter-owned JSON Schema logits processor to local Qwen generation and enforce the compiler's exact schema without weakening existing semantic validation. | visual-output-schema-foundation | `completed` |
 | 4: End-to-end generation pipeline and visual builder | Expose the adaptive checkbox and approachable visual output builder in both hosts, persist user intent, and carry custom names and nesting safely through generation, validation, dataset output, and training. | constrained-decoder-engine | `completed` |
-| 5: Production hardening and qualification | Complete packaging, security, documentation, representative performance and usability qualification, and the one-time repository-wide completion gates after all feature increments are implemented. | pipeline-and-visual-builder | `implementing` |
+| 5: Production hardening and qualification | Complete packaging, security, documentation, representative performance and usability qualification, and the one-time repository-wide completion gates after all feature increments are implemented. | pipeline-and-visual-builder | `implemented-pending-qualification` |
 
 ## Increment 1: Adaptive preference and resource recommendation
 
@@ -322,7 +322,7 @@ Hide the visual builder and checkbox, resolve recipes to task defaults, and forc
 ## Increment 5: Production hardening and qualification
 
 - Id: `production-hardening-and-qualification`
-- Status: `implementing`
+- Status: `implemented-pending-qualification`
 - Dependencies: `pipeline-and-visual-builder`
 
 Complete packaging, security, documentation, representative performance and usability qualification, and the one-time repository-wide completion gates after all feature increments are implemented.
@@ -346,11 +346,11 @@ Complete packaging, security, documentation, representative performance and usab
 
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
-| `packaged-host-readiness`: Desktop and server packages install and start the pinned dependency, advertise truthful decoder and schema readiness, and preserve fail-closed checked behavior. | local | not recorded |
-| `representative-resource-and-usability-qualification`: A representative sufficient accelerator profile and constrained CPU profile confirm the adaptive state, explicit override, bounded memory and latency, valid checked output, and successful visual-builder use by a non-developer without retaining prompts or generated output in evidence. | controlled-environment | not recorded |
-| `documentation-and-dependency-gates`: Architecture, security, context, README, guidance, dependency provenance, license, audit, and SBOM checks describe and validate the shipped behavior and residual risks. | local | not recorded |
-| `full-short-and-long-suites`: After all increments are implemented, the complete short-duration suite and separately invoked long-duration E2E suite pass once with applicable desktop, server, and thin-client builds. | local | not recorded |
-| `security-impact-reviewed`: Final review confirms protected task purposes and envelope fields, bounded schema and resource use, no silent fallback, safe diagnostics, dependency integrity, and documented risk for unchecked generation and user-added fields. | local | not recorded |
+| `packaged-host-readiness`: Desktop and server packages install and start the pinned dependency, advertise truthful decoder and schema readiness, and preserve fail-closed checked behavior. | local | passed (test) |
+| `representative-resource-and-usability-qualification`: A representative sufficient accelerator profile and constrained CPU profile confirm the adaptive state, explicit override, bounded memory and latency, valid checked output, and successful visual-builder use by a non-developer without retaining prompts or generated output in evidence. | controlled-environment | pending (external) |
+| `documentation-and-dependency-gates`: Architecture, security, context, README, guidance, dependency provenance, license, audit, and SBOM checks describe and validate the shipped behavior and residual risks. | local | passed (documentation) |
+| `full-short-and-long-suites`: After all increments are implemented, the complete short-duration suite and separately invoked long-duration E2E suite pass once with applicable desktop, server, and thin-client builds. | local | passed (test) |
+| `security-impact-reviewed`: Final review confirms protected task purposes and envelope fields, bounded schema and resource use, no silent fallback, safe diagnostics, dependency integrity, and documented risk for unchecked generation and user-added fields. | local | passed (review) |
 
 ### Verification
 

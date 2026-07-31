@@ -184,14 +184,17 @@ describe("DatasetPreparationFeature", () => {
     });
     const formattingToggle = Array.from(
       container.querySelectorAll("button"),
-    ).find((button) => button.textContent?.includes("Example creation"));
+    ).find((button) => button.textContent?.includes("Generation prompt"));
     await act(async () => {
       formattingToggle?.dispatchEvent(
         new MouseEvent("click", { bubbles: true }),
       );
     });
     expect(container.textContent).toContain("Inference mode");
-    expect(container.textContent).toContain("Model JSON schema preview");
+    expect(container.textContent).toContain("System prompt instructions");
+    expect(container.textContent).toContain("Desired output format");
+    expect(container.textContent).toContain("JSON output preview");
+    expect(container.textContent).toContain("Advanced structure preview");
     const attributionLabel = Array.from(
       container.querySelectorAll("label"),
     ).find((label) =>
@@ -339,7 +342,7 @@ describe("DatasetPreparationFeature", () => {
     const formattingToggle = Array.from(
       container.querySelectorAll("button"),
     ).find((button) =>
-      button.textContent?.includes("Example creation"),
+      button.textContent?.includes("Generation prompt"),
     ) as HTMLButtonElement;
     await act(async () => {
       formattingToggle.click();
@@ -508,7 +511,7 @@ describe("DatasetPreparationFeature", () => {
     });
     const exampleCreation = Array.from(
       container.querySelectorAll("button"),
-    ).find((button) => button.textContent?.includes("Example creation"));
+    ).find((button) => button.textContent?.includes("Generation prompt"));
     await act(async () => {
       exampleCreation?.click();
     });
@@ -1810,7 +1813,7 @@ describe("DatasetPreparationFeature", () => {
     const formattingToggle = Array.from(
       container.querySelectorAll("button"),
     ).find((button) =>
-      button.textContent?.includes("Example creation"),
+      button.textContent?.includes("Generation prompt"),
     ) as HTMLButtonElement;
     await act(async () => {
       formattingToggle.click();

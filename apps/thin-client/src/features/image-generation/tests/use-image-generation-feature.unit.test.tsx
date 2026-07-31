@@ -97,14 +97,21 @@ describe("useImageGenerationFeature", () => {
   it("does not submit a selected reference-only checkpoint image model", async () => {
     const client = { createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn(), readImageGeneration: vi.fn(), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
     const modelClient = { listModels: vi.fn().mockResolvedValue({ models: [model("ref", "saved-reference", "text-to-image")] }) };
+    let feature!: ReturnType<typeof useImageGenerationFeature>;
     function H() {
       const f = useImageGenerationFeature(client, undefined, modelClient, undefined, "workspace-a");
-      return <div><button id="select" onClick={() => f.setSelectedModelRecordId("ref")}>select</button><button id="prompt" onClick={() => f.setForm((x) => ({ ...x, prompt: "cat" }))}>prompt</button><button id="start" onClick={() => void f.start()}>start</button><span id="error">{f.error ?? ""}</span></div>;
+      feature = f;
+      return <div><button id="select" onClick={() => f.setSelectedModelRecordId("ref")}>select</button><button id="prompt" onClick={() => f.setForm((x) => ({ ...x, prompt: "cat" }))}>prompt</button><button id="start" onClick={() => void f.start()}>start</button><span id="selected">{f.selectedModelRecordId}</span><span id="status">{f.status}</span><span id="error">{f.error ?? ""}</span></div>;
     }
     const c = document.createElement("div"); const root = createRoot(c);
-    await act(async()=>{root.render(<H />);});
-    await act(async()=>{(c.querySelector("#select") as HTMLButtonElement).click(); (c.querySelector("#prompt") as HTMLButtonElement).click();});
-    await act(async()=>{(c.querySelector("#start") as HTMLButtonElement).click();});
+    await act(async()=>{root.render(<H />); await flush();});
+    await act(async()=>{(c.querySelector("#select") as HTMLButtonElement).click();});
+    await act(async()=>{(c.querySelector("#prompt") as HTMLButtonElement).click();});
+    expect((c.querySelector("#selected") as HTMLElement).textContent).toBe("ref");
+    expect(feature.selectedModelRecord?.modelRecordId).toBe("ref");
+    expect(feature.validationError).toBeUndefined();
+    expect(feature.status).toBe("idle");
+    await act(async()=>{await feature.start();});
     expect(client.startImageGeneration).not.toHaveBeenCalled();
     expect((c.querySelector("#error") as HTMLElement).textContent).toContain("saved reference only");
   });
@@ -191,7 +198,8 @@ describe("useImageGenerationFeature", () => {
     function H() { const f = useImageGenerationFeature(client, undefined, modelClient, undefined, "workspace-a"); return <div><button id="setup" onClick={() => f.setForm((x) => ({ ...x, prompt: "face", faceIdEnabled: true, faceIdArtifactId1: "a1", faceIdArtifactId2: "a1", faceIdArtifactId3: "a2" }))}>set</button><button id="start" onClick={() => void f.start()}>s</button></div>; }
     const c = document.createElement("div"); const root = createRoot(c);
     await act(async()=>{root.render(<H />);});
-    await act(async()=>{(c.querySelector("#setup") as HTMLButtonElement).click(); (c.querySelector("#start") as HTMLButtonElement).click();});
+    await act(async()=>{(c.querySelector("#setup") as HTMLButtonElement).click();});
+    await act(async()=>{(c.querySelector("#start") as HTMLButtonElement).click();});
     expect(client.startImageGeneration).toHaveBeenCalledWith(expect.objectContaining({ faceId: { enabled: true, references: [{ artifactId: "a1" }, { artifactId: "a1" }, { artifactId: "a2" }], identityStrength: 0.85, structureStrength: 0.75, noise: 0.35 } }));
   });
 

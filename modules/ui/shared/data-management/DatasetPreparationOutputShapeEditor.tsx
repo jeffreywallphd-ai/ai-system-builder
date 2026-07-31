@@ -6,7 +6,8 @@ import {
   createDefaultDatasetPreparationVisualOutputShape,
   createDatasetPreparationSourceAttributionSchema,
   describeDatasetPreparationOutputPurpose,
-  listDatasetPreparationRequiredOutputPurposes,
+  listDatasetPreparationAvailableOutputPurposes,
+  resolveDatasetPreparationOutputFieldExample,
   type DatasetPreparationOutputFieldKind,
   type DatasetPreparationOutputPurpose,
   type DatasetPreparationTaskType,
@@ -29,10 +30,10 @@ export interface DatasetPreparationOutputShapeEditorProps {
 const FIELD_KIND_LABELS: Record<DatasetPreparationOutputFieldKind, string> = {
   text: "Text",
   number: "Number",
-  boolean: "Yes or no",
-  group: "Field group",
-  "text-list": "List of text values",
-  record: "Flexible set of named values",
+  boolean: "True / False",
+  group: "Object with fields",
+  "text-list": "List",
+  record: "Object",
 };
 
 type FieldPath = readonly number[];
@@ -73,6 +74,7 @@ function createNewField(
     name: nextFieldName(siblings),
     kind: "text",
     required: false,
+    example: resolveDatasetPreparationOutputFieldExample("text"),
   };
 }
 
@@ -124,23 +126,11 @@ function fieldContainsTrainingPurpose(
   );
 }
 
-function parseChoices(value: string): string[] | undefined {
-  const choices = Array.from(
-    new Set(
-      value
-        .split(/[\n,]/)
-        .map((choice) => choice.trim())
-        .filter(Boolean),
-    ),
-  );
-  return choices.length > 0 ? choices : undefined;
-}
-
 function FieldControl({
   label,
   children,
 }: {
-  label: string;
+  label: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -162,7 +152,14 @@ export function DatasetPreparationOutputShapeEditor({
   disabled = false,
   onChange,
 }: DatasetPreparationOutputShapeEditorProps) {
-  const requiredPurposes = listDatasetPreparationRequiredOutputPurposes(taskType);
+  const availablePurposes =
+    listDatasetPreparationAvailableOutputPurposes(taskType);
+  const assignedPurposes: DatasetPreparationOutputPurpose[] = [];
+  visitFields(shape.fields, (field) => {
+    if (field.purpose && !assignedPurposes.includes(field.purpose)) {
+      assignedPurposes.push(field.purpose);
+    }
+  });
   const compileResult = compileDatasetPreparationVisualOutputShape(shape, {
     taskType,
     outputFormat,
@@ -182,11 +179,9 @@ export function DatasetPreparationOutputShapeEditor({
     fields.map((field, index) => {
       const path = [...parentPath, index];
       const fieldLabel = field.name.trim() || `Field ${index + 1}`;
-      const compatiblePurposes = requiredPurposes.filter((purpose) =>
-        describeDatasetPreparationOutputPurpose(purpose).kinds.includes(
-          field.kind,
-        ),
-      );
+      const visibleKinds = field.purpose
+        ? describeDatasetPreparationOutputPurpose(field.purpose).kinds
+        : DATASET_PREPARATION_OUTPUT_FIELD_KINDS;
       const updateField = (
         update: (
           current: DatasetPreparationVisualOutputField,
@@ -253,10 +248,17 @@ export function DatasetPreparationOutputShapeEditor({
                           purpose,
                         ).kinds.includes(kind)
                       : true;
+                    const nextPurpose = purposeCompatible
+                      ? purpose
+                      : undefined;
                     return {
                       ...current,
                       kind,
-                      ...(purposeCompatible ? {} : { purpose: undefined }),
+                      purpose: nextPurpose,
+                      example: resolveDatasetPreparationOutputFieldExample(
+                        kind,
+                        nextPurpose,
+                      ),
                       ...(kind === "group"
                         ? {
                             children:
@@ -276,7 +278,7 @@ export function DatasetPreparationOutputShapeEditor({
                 }}
                 value={field.kind}
               >
-                {DATASET_PREPARATION_OUTPUT_FIELD_KINDS.map((kind) => (
+                {visibleKinds.map((kind) => (
                   <option key={kind} value={kind}>
                     {FIELD_KIND_LABELS[kind]}
                   </option>
@@ -291,16 +293,40 @@ export function DatasetPreparationOutputShapeEditor({
                   const purpose = event.target.value as
                     | DatasetPreparationOutputPurpose
                     | "";
-                  updateField((current) => ({
-                    ...current,
-                    purpose: purpose || undefined,
-                    required: purpose ? true : current.required,
-                  }));
+                  updateField((current) => {
+                    if (!purpose) {
+                      return { ...current, purpose: undefined };
+                    }
+                    const purposeKinds =
+                      describeDatasetPreparationOutputPurpose(purpose).kinds;
+                    const kind = purposeKinds.includes(current.kind)
+                      ? current.kind
+                      : purposeKinds[0]!;
+                    return {
+                      ...current,
+                      kind,
+                      purpose,
+                      required: true,
+                      example:
+                        resolveDatasetPreparationOutputFieldExample(
+                          kind,
+                          purpose,
+                        ),
+                      ...(kind === "group"
+                        ? {
+                            children:
+                              current.children?.length
+                                ? current.children
+                                : [createNewField(shape, [])],
+                          }
+                        : { children: undefined }),
+                    };
+                  });
                 }}
                 value={field.purpose ?? ""}
               >
                 <option value="">Not used directly for training</option>
-                {compatiblePurposes.map((purpose) => (
+                {availablePurposes.map((purpose) => (
                   <option key={purpose} value={purpose}>
                     {describeDatasetPreparationOutputPurpose(purpose).label}
                   </option>
@@ -323,20 +349,95 @@ export function DatasetPreparationOutputShapeEditor({
             </label>
           </div>
 
-          {(field.kind === "text" || field.kind === "text-list") && (
-            <FieldControl label="Allowed choices (optional, one per line or separated by commas)">
-              <textarea
-                aria-label={`${fieldLabel} allowed choices`}
-                disabled={disabled}
-                onInput={(event) =>
-                  updateField((current) => ({
-                    ...current,
-                    choices: parseChoices(event.currentTarget.value),
-                  }))
-                }
-                rows={2}
-                value={(field.choices ?? []).join("\n")}
-              />
+          {field.purpose === "label" ? (
+            <p className="ui-text-muted">
+              Labels are selected in the training goal settings in Step 1, so
+              they are not repeated here.
+            </p>
+          ) : field.kind === "group" ? null : (
+            <FieldControl
+              label={
+                field.purpose === "instruction"
+                  ? (
+                      <>
+                        Instruction{" "}
+                        <strong>— describe how the model should behave</strong>
+                      </>
+                    )
+                  : field.purpose === "input"
+                    ? "Example input"
+                    : field.purpose === "context"
+                      ? "Example supporting data"
+                    : field.purpose === "output"
+                      ? "Example output"
+                      : field.purpose === "thought"
+                        ? "Example thought"
+                        : field.purpose === "anchor-text"
+                          ? "Example search input"
+                          : field.purpose === "positive-text"
+                            ? "Example matching text"
+                            : field.purpose === "query"
+                              ? "Example query"
+                              : field.purpose === "passage"
+                                ? "Example passage"
+                                : field.purpose === "caption"
+                                  ? "Example caption"
+                        : field.purpose === "expected-output" ||
+                            field.kind === "record"
+                          ? "Example output (JSON)"
+                          : field.kind === "text-list"
+                            ? "Sample list (one item per line)"
+                            : "Example value"
+              }
+            >
+              {field.kind === "boolean" ? (
+                <select
+                  aria-label={`${fieldLabel} example value`}
+                  disabled={disabled}
+                  onChange={(event) =>
+                    updateField((current) => ({
+                      ...current,
+                      example: event.target.value,
+                    }))
+                  }
+                  value={field.example ?? "true"}
+                >
+                  <option value="true">True</option>
+                  <option value="false">False</option>
+                </select>
+              ) : field.kind === "number" ? (
+                <input
+                  aria-label={`${fieldLabel} example value`}
+                  disabled={disabled}
+                  onInput={(event) =>
+                    updateField((current) => ({
+                      ...current,
+                      example: event.currentTarget.value,
+                    }))
+                  }
+                  type="number"
+                  value={field.example ?? "0"}
+                />
+              ) : (
+                <textarea
+                  aria-label={`${fieldLabel} example value`}
+                  disabled={disabled}
+                  onInput={(event) =>
+                    updateField((current) => ({
+                      ...current,
+                      example: event.currentTarget.value,
+                    }))
+                  }
+                  rows={3}
+                  value={
+                    field.example ??
+                    resolveDatasetPreparationOutputFieldExample(
+                      field.kind,
+                      field.purpose,
+                    )
+                  }
+                />
+              )}
             </FieldControl>
           )}
 
@@ -391,10 +492,10 @@ export function DatasetPreparationOutputShapeEditor({
     >
       <div className="dataset-output-shape-editor__heading">
         <div>
-          <h4 id={`${idPrefix}-heading`}>Example output fields</h4>
+          <h4 id={`${idPrefix}-heading`}>Desired output format</h4>
           <p>
-            Choose clear field names and tell the software which fields are
-            needed for training. You do not need to write JSON.
+            Define one sample JSON result the model should follow for each
+            source section. Labels remain in Step 1 and are not duplicated here.
           </p>
         </div>
         <button
@@ -413,9 +514,9 @@ export function DatasetPreparationOutputShapeEditor({
       </div>
 
       <div className="dataset-output-shape-editor__purposes">
-        <strong>Fields the training goal needs</strong>
+        <strong>Needed for training</strong>
         <ul>
-          {requiredPurposes.map((purpose) => (
+          {assignedPurposes.map((purpose) => (
             <li key={purpose}>
               {describeDatasetPreparationOutputPurpose(purpose).label}
             </li>
@@ -425,10 +526,10 @@ export function DatasetPreparationOutputShapeEditor({
 
       <div aria-live="polite" className="dataset-output-shape-editor__validation">
         {diagnostics.length === 0 ? (
-          <p>Output fields are ready.</p>
+          <p>Desired output format is ready.</p>
         ) : (
           <>
-            <strong>Check the output fields</strong>
+            <strong>Check the desired output format</strong>
             <ul>
               {diagnostics.slice(0, 8).map((diagnostic, index) => (
                 <li key={`${diagnostic.code}-${diagnostic.fieldId ?? index}`}>
@@ -454,10 +555,24 @@ export function DatasetPreparationOutputShapeEditor({
       </button>
 
       <details className="dataset-output-shape-editor__preview">
-        <summary>Model JSON schema preview</summary>
+        <summary>JSON output preview</summary>
         <p>
-          Advanced preview of the exact structure supplied with the example
-          instructions and used by the checks and optional constraints.
+          This sample format is supplied with the instructions. Fixed fields,
+          such as Instruction, are copied exactly. Context is attached unchanged
+          from the source section. The model creates the remaining requested
+          values from that evidence.
+        </p>
+        <pre aria-label="JSON output preview">
+          {compileResult.ok
+            ? JSON.stringify(compileResult.value.exampleEnvelope, null, 2)
+            : "Fix the output field messages to create the output preview."}
+        </pre>
+      </details>
+      <details className="dataset-output-shape-editor__preview">
+        <summary>Advanced structure preview</summary>
+        <p>
+          Exact validation structure used by the checks and optional JSON
+          constraints.
         </p>
         <pre aria-label="Generated JSON schema preview">
           {compileResult.ok

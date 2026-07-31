@@ -3,6 +3,10 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ArtifactBrowserFeature } from "../components/ArtifactBrowserFeature";
+import {
+  NotificationTestHarness,
+  readNotificationMessages,
+} from "../../../../../../../modules/ui/shared/notifications/tests/NotificationTestHarness";
 
 function setInputValue(input: HTMLInputElement, value: string): void {
   const descriptor = Object.getOwnPropertyDescriptor(
@@ -150,7 +154,9 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
 
     await act(async () => {
       root.render(
-        <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+        <NotificationTestHarness>
+          <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />
+        </NotificationTestHarness>,
       );
     });
 
@@ -252,7 +258,9 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
 
     await act(async () => {
       root.render(
-        <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />,
+        <NotificationTestHarness>
+          <ArtifactBrowserFeature client={client} workspaceId="workspace-a" />
+        </NotificationTestHarness>,
       );
     });
 
@@ -283,10 +291,13 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       publishButton.click();
     });
 
-    expect(container.textContent).toContain("Missing Hugging Face token.");
-    expect(container.textContent).toContain(
-      "This Hugging Face repository may require an access token.",
-    );
+    const notificationMessages = readNotificationMessages(container);
+    expect(notificationMessages.some((message) =>
+      message.includes("Missing Hugging Face token."),
+    )).toBe(true);
+    expect(notificationMessages.some((message) =>
+      message.includes("This Hugging Face repository may require an access token."),
+    )).toBe(true);
   });
 
   it("renders Hugging Face defaults collapsed by default", async () => {

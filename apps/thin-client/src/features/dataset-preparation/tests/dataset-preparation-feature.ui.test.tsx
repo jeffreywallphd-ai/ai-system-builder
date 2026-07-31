@@ -349,8 +349,11 @@ describe("thin DatasetPreparationFeature", () => {
     expect(container.textContent).toContain("Topic-aware sections");
     expect(container.textContent).toContain("Maximum section length");
     expect(container.textContent).not.toContain("Overlap between sections");
-    expect(container.textContent).toContain("Example output fields");
-    expect(container.textContent).toContain("Model JSON schema preview");
+    expect(container.textContent).toContain("Generation prompt");
+    expect(container.textContent).toContain("System prompt instructions");
+    expect(container.textContent).toContain("Desired output format");
+    expect(container.textContent).toContain("JSON output preview");
+    expect(container.textContent).toContain("Advanced structure preview");
     expect(
       container.querySelector(
         'pre[aria-label="Generated JSON schema preview"]',
@@ -400,6 +403,7 @@ describe("thin DatasetPreparationFeature", () => {
           recipe: expect.objectContaining({
             task: expect.objectContaining({ textInputMode: "generate" }),
             generation: expect.objectContaining({
+              promptTemplate: expect.stringContaining("instruction-tuning"),
               structuredOutput: expect.objectContaining({
                 constrainedDecoding: false,
                 visualShape: expect.objectContaining({

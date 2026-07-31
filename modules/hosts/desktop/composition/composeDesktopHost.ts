@@ -476,6 +476,7 @@ export function composeDesktopHost(
   const readSharedModelStorageDirectory = () =>
     readRuntimeSettingString(SHARED_MODEL_STORAGE_DIRECTORY_SETTING_KEY);
 
+  let pythonRuntimeFoundation: DesktopPythonRuntimeFeature | undefined;
   let pythonRuntimeFoundationPromise:
     Promise<DesktopPythonRuntimeFeature> | undefined;
   const getPythonRuntimeFoundation = async () => {
@@ -501,6 +502,7 @@ export function composeDesktopHost(
           "desktop.host.python-runtime-foundation.compose.after",
           { baseUrlConfigured: Boolean(resolvePythonRuntimeBaseUrl()) },
         );
+        pythonRuntimeFoundation = feature;
         return feature;
       })();
     }
@@ -541,8 +543,10 @@ export function composeDesktopHost(
         }
         return status;
       }
-      const pythonRuntimeFoundation = await pythonRuntimeFoundationPromise;
-      const supervisorStatus = pythonRuntimeFoundation.supervisor.getStatus();
+      const resolvedPythonRuntimeFoundation =
+        await pythonRuntimeFoundationPromise;
+      const supervisorStatus =
+        resolvedPythonRuntimeFoundation.supervisor.getStatus();
       let healthy = false;
       let runtimeStatus =
         supervisorStatus === "ready" ? "ready" : supervisorStatus;
@@ -552,9 +556,9 @@ export function composeDesktopHost(
       if (supervisorStatus === "starting" || supervisorStatus === "ready") {
         try {
           const [health, runtimeCapabilities, modelStatus] = await Promise.all([
-            pythonRuntimeFoundation.runtimePort.getHealthStatus(),
-            pythonRuntimeFoundation.runtimePort.getCapabilities(),
-            pythonRuntimeFoundation.runtimePort.getModelStatus(),
+            resolvedPythonRuntimeFoundation.runtimePort.getHealthStatus(),
+            resolvedPythonRuntimeFoundation.runtimePort.getCapabilities(),
+            resolvedPythonRuntimeFoundation.runtimePort.getModelStatus(),
           ]);
           healthy = health.healthy;
           runtimeStatus = health.status.status;
@@ -750,7 +754,14 @@ export function composeDesktopHost(
             })
           : undefined;
       const runtimeReadiness = createDesktopRuntimeReadinessService({
-        readPythonSupervisorState: () => "stopped",
+        readPythonSupervisorState: () => {
+          const status = pythonRuntimeFoundation?.supervisor.getStatus();
+          return status === "starting" ||
+            status === "ready" ||
+            status === "failed"
+            ? status
+            : "stopped";
+        },
         readComfyUiLifecycleState: () => "uninitialized",
         async readComfyUiInstallStatus() {
           return "unknown";

@@ -12,6 +12,8 @@ import type { DatasetPreparationOutputPurpose } from "./dataset-preparation-outp
 
 export interface DatasetPreparationRuntimeStructuredOutput {
   schema: Record<string, unknown>;
+  /** Host-compiled format example validated against schema before prompting. */
+  example: Record<string, unknown>;
   schemaFingerprint: string;
   payloadKey: "example" | "value";
   purposePaths: Partial<

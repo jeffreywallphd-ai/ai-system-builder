@@ -32,13 +32,15 @@ let root: Root | undefined;
 let container: HTMLDivElement | undefined;
 
 function setNativeValue(
-  element: HTMLInputElement | HTMLSelectElement,
+  element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
   value: string,
 ): void {
   const prototype =
     element instanceof dom.window.HTMLSelectElement
       ? dom.window.HTMLSelectElement.prototype
-      : dom.window.HTMLInputElement.prototype;
+      : element instanceof dom.window.HTMLTextAreaElement
+        ? dom.window.HTMLTextAreaElement.prototype
+        : dom.window.HTMLInputElement.prototype;
   Object.getOwnPropertyDescriptor(prototype, "value")!.set!.call(
     element,
     value,
@@ -93,16 +95,51 @@ describe("DatasetPreparationOutputShapeEditor", () => {
   it("uses labeled native controls and protects fields assigned to training purposes", async () => {
     const view = await renderEditor();
 
-    expect(view.textContent).toContain("You do not need to write JSON");
+    expect(view.textContent).toContain(
+      "Define one sample JSON result",
+    );
     expect(view.textContent).toContain("Instruction");
-    expect(view.textContent).toContain("Supporting input");
-    expect(view.textContent).toContain("Answer");
+    expect(view.textContent).toContain("Input");
+    expect(view.textContent).toContain("Context");
+    expect(view.textContent).toContain("Output");
+    expect(
+      view.querySelector(".dataset-output-shape-editor__purposes")?.textContent,
+    ).toContain("Context");
+    expect(view.textContent).not.toContain("Allowed choices");
+    expect(view.textContent).toContain(
+      "Instruction — describe how the model should behave",
+    );
+    expect(
+      view.querySelector<HTMLTextAreaElement>(
+        'textarea[aria-label="instruction example value"]',
+      )?.value,
+    ).toContain("using only the provided context");
+    expect(
+      view.querySelector<HTMLTextAreaElement>(
+        'textarea[aria-label="input example value"]',
+      )?.value,
+    ).toBe("When does the city library close on weekdays?");
+    expect(
+      view.querySelector<HTMLTextAreaElement>(
+        'textarea[aria-label="context example value"]',
+      )?.value,
+    ).toBe("The city library closes at 6:00 PM on weekdays.");
+    expect(
+      view.querySelector<HTMLTextAreaElement>(
+        'textarea[aria-label="output example value"]',
+      )?.value,
+    ).toContain("closes at 6:00 PM");
     expect(
       view.querySelectorAll('input[aria-label$="field name"]').length,
-    ).toBe(3);
+    ).toBe(4);
     expect(
       view.querySelectorAll('select[aria-label$="value type"]').length,
-    ).toBe(3);
+    ).toBe(4);
+    expect(
+      view.querySelector<HTMLSelectElement>(
+        'select[aria-label="instruction value type"]',
+      )?.options.length,
+    ).toBe(1);
     expect(
       view.querySelector<HTMLButtonElement>(
         'button[aria-label="Remove instruction"]',
@@ -128,16 +165,16 @@ describe("DatasetPreparationOutputShapeEditor", () => {
     const typeControls = view.querySelectorAll<HTMLSelectElement>(
       'select[aria-label$="value type"]',
     );
-    expect(typeControls.length).toBe(4);
+    expect(typeControls.length).toBe(5);
 
-    const customType = typeControls[3]!;
+    const customType = typeControls[4]!;
     await act(async () => {
       setNativeValue(customType, "group");
     });
     expect(view.textContent).toContain("Add field inside");
     expect(
       view.querySelectorAll('input[aria-label$="field name"]').length,
-    ).toBe(5);
+    ).toBe(6);
 
     const preview = view.querySelector<HTMLPreElement>(
       'pre[aria-label="Generated JSON schema preview"]',
@@ -155,7 +192,52 @@ describe("DatasetPreparationOutputShapeEditor", () => {
     ).toBe("instruction");
   });
 
-  it("shows the task-specific default schema for every example-creation prompt", async () => {
+  it("offers optional Thought as text and shows it in the sample JSON", async () => {
+    const view = await renderEditor();
+    const addField = Array.from(view.querySelectorAll("button")).find(
+      (button) => button.textContent === "Add field",
+    )!;
+    await act(async () => addField.click());
+    const purpose = view.querySelectorAll<HTMLSelectElement>(
+      'select[aria-label$="training purpose"]',
+    )[4]!;
+    expect(Array.from(purpose.options).map((option) => option.text)).toContain(
+      "Thought",
+    );
+
+    const typeBeforePurpose = view.querySelectorAll<HTMLSelectElement>(
+      'select[aria-label$="value type"]',
+    )[4]!;
+    await act(async () => setNativeValue(typeBeforePurpose, "number"));
+    await act(async () => setNativeValue(purpose, "thought"));
+    const type = view.querySelectorAll<HTMLSelectElement>(
+      'select[aria-label$="value type"]',
+    )[4]!;
+    expect(type.value).toBe("text");
+    expect(type.options.length).toBe(1);
+    expect(
+      view.querySelector<HTMLTextAreaElement>(
+        'textarea[aria-label="new_field_1 example value"]',
+      )?.value,
+    ).toContain("weekday closing time");
+    expect(
+      view.querySelector<HTMLPreElement>(
+        'pre[aria-label="JSON output preview"]',
+      )?.textContent,
+    ).toContain('"new_field_1"');
+  });
+
+  it("keeps configured labels in Step 1 instead of duplicating them", async () => {
+    const view = await renderEditor({ taskType: "llm-classification" });
+    expect(view.textContent).toContain(
+      "Labels are selected in the training goal settings in Step 1",
+    );
+    expect(
+      view.querySelector('textarea[aria-label="label example value"]'),
+    ).toBe(null);
+  });
+
+  it("shows the task-specific default schema for every generation prompt", async () => {
     for (const taskType of DATASET_PREPARATION_TEXT_GENERATION_TASK_TYPES) {
       if (root) await act(async () => root?.unmount());
       container?.remove();
@@ -166,7 +248,8 @@ describe("DatasetPreparationOutputShapeEditor", () => {
         'pre[aria-label="Generated JSON schema preview"]',
       );
       expect(preview?.textContent).toContain(`"const": "${taskType}"`);
-      expect(view.textContent).toContain("Model JSON schema preview");
+      expect(view.textContent).toContain("JSON output preview");
+      expect(view.textContent).toContain("Advanced structure preview");
     }
   });
 

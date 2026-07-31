@@ -131,8 +131,19 @@ def test_tokenize_dataset_uses_nested_purpose_paths_for_custom_instruction_field
             assert remove_columns == ["request", "result"]
             return callback(
                 {
-                    "request": [{"task": "Explain the policy", "context": "Policy text"}],
-                    "result": [{"answer": "The policy explanation"}],
+                    "request": [
+                        {
+                            "task": "Answer the input using only the context.",
+                            "input": "What does the policy say?",
+                            "context": "Policy text",
+                        }
+                    ],
+                    "result": [
+                        {
+                            "thought": "The policy text directly supports the explanation.",
+                            "answer": "The policy explanation",
+                        }
+                    ],
                 }
             )
 
@@ -151,13 +162,15 @@ def test_tokenize_dataset_uses_nested_purpose_paths_for_custom_instruction_field
         training_task="llm-instruction",
         purpose_paths={
             "instruction": ("request", "task"),
-            "input": ("request", "context"),
+            "input": ("request", "input"),
+            "context": ("request", "context"),
+            "thought": ("result", "thought"),
             "output": ("result", "answer"),
         },
     )
 
     assert tokenizer.captured_texts == [
-        "Instruction:\nExplain the policy\nInput:\nPolicy text\nResponse:\nThe policy explanation"
+        "Instruction:\nAnswer the input using only the context.\nInput:\nWhat does the policy say?\nContext:\nPolicy text\nThought:\nThe policy text directly supports the explanation.\nResponse:\nThe policy explanation"
     ]
 
 
