@@ -2,8 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { ModelArtifactForm, ModelLifecycleStatus, ModelSource, ModelTaskTag } from "../../../../../../../modules/contracts/model";
 import { createWorkspaceId } from "../../../../../../../modules/contracts/workspace";
-import type { DesktopModelBrowseItem, DesktopModelDetailsResult, DesktopModelInventoryRecord } from "../../../lib/desktopApi";
-import type { DesktopModelsClient } from "../api/desktopModelsClient";
+import type { DesktopModelBrowseItem, DesktopModelDetailsResult } from "../../../lib/desktopApi";
+import type {
+  DesktopManagedModelInventoryRecord,
+  DesktopModelsClient,
+} from "../api/desktopModelsClient";
 import { recordSectionLoadMilestone } from "../../../diagnostics/sectionLoadDiagnostics";
 import { useModelsClient } from "./useModelsClient";
 
@@ -23,6 +26,19 @@ function normalizeOptionalTaskTag(value: string): ModelTaskTag | undefined {
   return allowed.includes(normalized as ModelTaskTag) ? normalized as ModelTaskTag : undefined;
 }
 
+function resolveBrowseTaskFilter(
+  selection: string,
+  otherTaskTag: string,
+): { taskTags?: ModelTaskTag[]; customTaskTag?: string } {
+  const value = selection === "other" ? otherTaskTag.trim() : selection.trim();
+  const taskTag = normalizeOptionalTaskTag(value);
+  return taskTag
+    ? { taskTags: [taskTag] }
+    : value.length > 0
+      ? { customTaskTag: value }
+      : {};
+}
+
 function normalizeOptionalSelect<TOption extends string>(value: string, options: readonly TOption[]): TOption | undefined {
   const normalized = value.trim().toLowerCase();
   if (!normalized) {
@@ -36,9 +52,13 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
   const modelClient = useModelsClient(client);
   const [browseQuery, setBrowseQuery] = useState("");
   const [browseTaskTag, setBrowseTaskTag] = useState("");
+  const [browseOtherTaskTag, setBrowseOtherTaskTag] = useState("");
   const [browseLimit, setBrowseLimit] = useState("25");
   const [browseState, setBrowseState] = useState<ViewState>({ status: "idle" });
   const [browseItems, setBrowseItems] = useState<DesktopModelBrowseItem[]>([]);
+  const [browsePageIndex, setBrowsePageIndex] = useState(0);
+  const [browsePageCursors, setBrowsePageCursors] = useState<Array<string | undefined>>([undefined]);
+  const [browseNextCursor, setBrowseNextCursor] = useState<string>();
   const [selectedBrowseModel, setSelectedBrowseModel] = useState<DesktopModelBrowseItem>();
   const [selectedBrowseModelDetails, setSelectedBrowseModelDetails] = useState<DesktopModelDetailsResult["model"]>();
   const [detailsState, setDetailsState] = useState<ViewState>({ status: "idle" });
@@ -46,28 +66,41 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
   const [downloadState, setDownloadState] = useState<ViewState>({ status: "idle" });
 
   const [manageState, setManageState] = useState<ViewState>({ status: "idle" });
-  const [models, setModels] = useState<DesktopModelInventoryRecord[]>([]);
+  const [models, setModels] = useState<DesktopManagedModelInventoryRecord[]>([]);
   const [manageSource, setManageSource] = useState("");
   const [manageLifecycleStatus, setManageLifecycleStatus] = useState("");
   const [manageArtifactForm, setManageArtifactForm] = useState("");
   const [manageSearch, setManageSearch] = useState("");
-  const [selectedManagedModel, setSelectedManagedModel] = useState<DesktopModelInventoryRecord>();
+  const [selectedManagedModel, setSelectedManagedModel] = useState<DesktopManagedModelInventoryRecord>();
   const [pendingDeleteModelRecordId, setPendingDeleteModelRecordId] = useState<string>();
   const [deleteConfirmationInput, setDeleteConfirmationInput] = useState("");
   const [publishRepository, setPublishRepository] = useState("");
+  const [folderOpenState, setFolderOpenState] = useState<ViewState>({ status: "idle" });
 
-  const searchModels = useCallback(async () => {
+  const executeModelSearch = useCallback(async (
+    cursor: string | undefined,
+    targetPageIndex: number,
+    targetPageCursors: Array<string | undefined>,
+  ) => {
+    if (browseTaskTag === "other" && browseOtherTaskTag.trim().length === 0) {
+      setBrowseState({ status: "error", message: "Enter a task tag for Other, then retry." });
+      return;
+    }
     recordSectionLoadMilestone("renderer.section.load.start", { pageKey: "models", sectionKey: "models.remote-browse", trigger: "search" });
     setBrowseState({ status: "loading", message: "Searching models..." });
     try {
-      const taskTag = normalizeOptionalTaskTag(browseTaskTag);
+      const taskFilter = resolveBrowseTaskFilter(browseTaskTag, browseOtherTaskTag);
       const result = await modelClient.browseModels({
         provider: "huggingface",
         query: browseQuery || undefined,
-        taskTags: taskTag ? [taskTag] : undefined,
+        ...taskFilter,
         limit: normalizeOptionalNumber(browseLimit),
+        cursor,
       });
       setBrowseItems(result.models);
+      setBrowsePageIndex(targetPageIndex);
+      setBrowsePageCursors(targetPageCursors);
+      setBrowseNextCursor(result.nextCursor);
       setSelectedBrowseModel(undefined);
       setSelectedBrowseModelDetails(undefined);
       setDetailsState({ status: "idle" });
@@ -79,7 +112,34 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
       setBrowseState({ status: "error", message: error instanceof Error ? error.message : "Failed to browse models." });
       recordSectionLoadMilestone("renderer.section.load.failed", { pageKey: "models", sectionKey: "models.remote-browse", trigger: "search" });
     }
-  }, [browseLimit, browseQuery, browseTaskTag, modelClient]);
+  }, [browseLimit, browseOtherTaskTag, browseQuery, browseTaskTag, modelClient]);
+
+  const searchModels = useCallback(async () => {
+    await executeModelSearch(undefined, 0, [undefined]);
+  }, [executeModelSearch]);
+
+  const searchNextPage = useCallback(async () => {
+    if (!browseNextCursor) {
+      return;
+    }
+    await executeModelSearch(
+      browseNextCursor,
+      browsePageIndex + 1,
+      [...browsePageCursors.slice(0, browsePageIndex + 1), browseNextCursor],
+    );
+  }, [browseNextCursor, browsePageCursors, browsePageIndex, executeModelSearch]);
+
+  const searchPreviousPage = useCallback(async () => {
+    if (browsePageIndex === 0) {
+      return;
+    }
+    const previousPageIndex = browsePageIndex - 1;
+    await executeModelSearch(
+      browsePageCursors[previousPageIndex],
+      previousPageIndex,
+      browsePageCursors.slice(0, browsePageIndex + 1),
+    );
+  }, [browsePageCursors, browsePageIndex, executeModelSearch]);
 
   const loadPopularModels = useCallback(async () => {
     setBrowseState({ status: "loading", message: "Loading popular models..." });
@@ -221,11 +281,38 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
       return;
     }
     if (!workspaceId) { setManageState({ status: "error", message: "Select a workspace before deleting model records." }); return; }
-    await modelClient.deleteModelRecord({ workspaceId, modelRecordId: pendingDeleteModelRecordId, deleteBackingArtifacts: false, deleteLocalFiles: false });
-    setPendingDeleteModelRecordId(undefined);
-    setDeleteConfirmationInput("");
-    await refreshModels();
+    try {
+      await modelClient.deleteModelRecord({ workspaceId, modelRecordId: pendingDeleteModelRecordId, deleteBackingArtifacts: false, deleteLocalFiles: false });
+      setPendingDeleteModelRecordId(undefined);
+      setDeleteConfirmationInput("");
+      await refreshModels();
+    } catch (error) {
+      setManageState({ status: "error", message: error instanceof Error ? error.message : "Failed to delete the model record." });
+    }
   }, [deleteConfirmationInput, modelClient, pendingDeleteModelRecordId, refreshModels, workspaceId]);
+
+  const revealManagedModelInFolder = useCallback(async () => {
+    if (!selectedManagedModel) {
+      return;
+    }
+    if (!workspaceId) {
+      setFolderOpenState({ status: "error", message: "Select a workspace before opening model files." });
+      return;
+    }
+    setFolderOpenState({ status: "loading" });
+    try {
+      await modelClient.revealModelInFolder({
+        workspaceId,
+        modelRecordId: selectedManagedModel.modelRecordId,
+      });
+      setFolderOpenState({ status: "success" });
+    } catch (error) {
+      setFolderOpenState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Failed to open the model folder.",
+      });
+    }
+  }, [modelClient, selectedManagedModel, workspaceId]);
 
   const lifecycleCounts = useMemo(() => ({
     saved: models.filter((item) => item.lifecycleStatus === "saved-reference").length,
@@ -270,16 +357,22 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
     setBrowseQuery,
     browseTaskTag,
     setBrowseTaskTag,
+    browseOtherTaskTag,
+    setBrowseOtherTaskTag,
     browseLimit,
     setBrowseLimit,
     browseState,
     browseItems,
+    browsePageIndex,
+    browseNextCursor,
     selectedBrowseModel,
     selectedBrowseModelDetails,
     detailsState,
     saveState,
     downloadState,
     searchModels,
+    searchNextPage,
+    searchPreviousPage,
     selectBrowseModel,
     saveModelReference,
     downloadModel,
@@ -301,6 +394,8 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
     deleteConfirmationInput,
     setDeleteConfirmationInput,
     confirmDeleteModelRecord,
+    revealManagedModelInFolder,
+    folderOpenState,
     lifecycleCounts,
     validateManagedModel,
     publishManagedModel,

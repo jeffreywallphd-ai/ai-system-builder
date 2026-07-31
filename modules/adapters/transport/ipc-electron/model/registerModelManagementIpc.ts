@@ -10,7 +10,9 @@ import type {
   TrainModelUseCase,
   ValidateModelUseCase,
   PublishModelUseCase,
+  RevealModelInFolderUseCase,
 } from "../../../../application/use-cases/model";
+import { isRevealModelInFolderError } from "../../../../application/use-cases/model";
 import {
   DESKTOP_MODEL_BROWSE_REQUEST_CHANNEL,
   DESKTOP_MODEL_DETAILS_READ_REQUEST_CHANNEL,
@@ -23,6 +25,8 @@ import {
   DESKTOP_MODEL_DETAILS_READ_RESPONSE_CHANNEL,
   DESKTOP_MODEL_LIST_RESPONSE_CHANNEL,
   DESKTOP_MODEL_RECORD_DELETE_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_FOLDER_REVEAL_REQUEST_CHANNEL,
+  DESKTOP_MODEL_FOLDER_REVEAL_RESPONSE_CHANNEL,
   DESKTOP_MODEL_TRAIN_REQUEST_CHANNEL,
   DESKTOP_MODEL_TRAIN_RESPONSE_CHANNEL,
   DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL,
@@ -46,6 +50,7 @@ import {
   createDesktopModelDetailsReadSuccessResponse,
   createDesktopModelListSuccessResponse,
   createDesktopModelRecordDeleteSuccessResponse,
+  createDesktopModelFolderRevealSuccessResponse,
   createDesktopModelTrainSuccessResponse,
   createDesktopModelTrainStatusSuccessResponse,
   createDesktopModelRecordUpdateSuccessResponse,
@@ -70,6 +75,8 @@ import {
   type DesktopModelListResponse,
   type DesktopModelRecordDeleteRequest,
   type DesktopModelRecordDeleteResponse,
+  type DesktopModelFolderRevealRequest,
+  type DesktopModelFolderRevealResponse,
   type DesktopModelRecordUpdateRequest,
   type DesktopModelTrainRequest,
   type DesktopModelTrainResponse,
@@ -107,6 +114,7 @@ export interface RegisterModelManagementIpcDependencies {
   modelDownloadTasksUseCase?: Pick<ModelDownloadTasksUseCase, "start" | "read" | "list" | "cancel">;
   updateModelRecordUseCase: Pick<UpdateModelRecordUseCase, "execute">;
   deleteModelRecordUseCase: Pick<DeleteModelRecordUseCase, "execute">;
+  revealModelInFolderUseCase: Pick<RevealModelInFolderUseCase, "execute">;
   trainModelUseCase: Pick<TrainModelUseCase, "execute" | "read">;
   validateModelUseCase: Pick<ValidateModelUseCase, "execute">;
   publishModelUseCase: Pick<PublishModelUseCase, "execute">;
@@ -372,6 +380,42 @@ export function createDeleteModelRecordIpcHandler(
   };
 }
 
+export function createRevealModelInFolderIpcHandler(
+  useCase: Pick<RevealModelInFolderUseCase, "execute">,
+) {
+  return async (
+    _event: unknown,
+    request: DesktopModelFolderRevealRequest,
+  ): Promise<DesktopModelFolderRevealResponse> => {
+    try {
+      const result = await useCase.execute(request.payload);
+      return createDesktopModelFolderRevealSuccessResponse(result, {
+        requestId: request.requestId,
+        correlationId: request.correlationId,
+      });
+    } catch (error) {
+      if (isRevealModelInFolderError(error)) {
+        return createIpcFailureResponse(
+          createIpcError(
+            DESKTOP_MODEL_FOLDER_REVEAL_RESPONSE_CHANNEL,
+            error.code,
+            error.message,
+            {
+              requestId: request.requestId,
+              correlationId: request.correlationId,
+            },
+          ),
+        ) as DesktopModelFolderRevealResponse;
+      }
+      return toFailureResponse<DesktopModelFolderRevealResponse>(
+        DESKTOP_MODEL_FOLDER_REVEAL_RESPONSE_CHANNEL,
+        error,
+        request,
+      );
+    }
+  };
+}
+
 export function createTrainModelIpcHandler(
   useCase: Pick<TrainModelUseCase, "execute">,
 ) {
@@ -503,6 +547,10 @@ export function registerModelManagementIpc(
   dependencies.ipcMain.handle(
     DESKTOP_MODEL_RECORD_DELETE_REQUEST_CHANNEL.value,
     createDeleteModelRecordIpcHandler(dependencies.deleteModelRecordUseCase),
+  );
+  dependencies.ipcMain.handle(
+    DESKTOP_MODEL_FOLDER_REVEAL_REQUEST_CHANNEL.value,
+    createRevealModelInFolderIpcHandler(dependencies.revealModelInFolderUseCase),
   );
   dependencies.ipcMain.handle(
     DESKTOP_MODEL_TRAIN_REQUEST_CHANNEL.value,

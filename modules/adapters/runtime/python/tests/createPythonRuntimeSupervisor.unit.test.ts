@@ -360,6 +360,8 @@ describe("createPythonRuntimeSupervisor", () => {
       JSON.stringify({
         event: "runtime.task.failed",
         diagnosticClass: "RuntimeError",
+        stage: "generation",
+        errorCode: "structured_output_settings_invalid",
         requestId: "private-task-id",
       }),
     );
@@ -370,7 +372,9 @@ describe("createPythonRuntimeSupervisor", () => {
     expect(serialized).not.toContain("secret");
     expect(serialized).not.toContain("private-task-id");
     expect(serialized).toContain("stderr:unstructured-output");
-    expect(serialized).toContain("stdout:runtime.task.failed:RuntimeError");
+    expect(serialized).toContain(
+      "stdout:runtime.task.failed:RuntimeError:stage=generation:code=structured_output_settings_invalid",
+    );
     expect(supervisor.getStatus()).toBe("ready");
   });
 });

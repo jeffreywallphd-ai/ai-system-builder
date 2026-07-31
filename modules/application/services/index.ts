@@ -5,6 +5,8 @@ export * from "./system-builder";
 export * from "./system-deployment";
 export * from "./system-run-workflow";
 export * from "./asset-packs";
+export * from "./dataset-preparation";
+export * from "./dataset-version";
 
 export * from "./runtime-readiness";
 

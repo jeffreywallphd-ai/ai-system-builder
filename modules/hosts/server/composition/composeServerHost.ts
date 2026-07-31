@@ -20,12 +20,13 @@ import {
   ensurePythonRuntimeWorkerDependencies,
   resolvePythonRuntimeLoopbackEndpoint,
 } from "../../../adapters/runtime/python";
+import { PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON } from "../../../contracts/runtime";
 import { createGitRuntimeInstallerAdapter } from "../../../adapters/runtime/installer/git/createGitRuntimeInstallerAdapter";
 import { createLocalApplicationSettingsAdapter } from "../../../adapters/persistence/settings";
 import { createLocalModelRegistryAdapter } from "../../../adapters/persistence/model";
 import { createHuggingFaceModelBrowseDetailsAdapter } from "../../../adapters/model/huggingface";
 import { createLocalImageAssetRegistryAdapter } from "../../../adapters/persistence/image";
-import { createLocalModelCheckpointResolverAdapter } from "../../../adapters/model/local";
+import { createLocalModelCheckpointResolverAdapter, createLocalModelFileListerAdapter } from "../../../adapters/model/local";
 import {
   createLocalUserLibraryAssetRepositoryAdapter,
   createLocalWorkspaceUserLibraryLinkRepositoryAdapter,
@@ -52,6 +53,22 @@ import {
   AuthorizeWorkspaceOperationService,
   type AuthorizeOperationService,
 } from "../../../application/services/security";
+import { createDefaultDatasetQualityPolicyProvider } from "../../../application/services/dataset-preparation";
+import { DatasetVersionFinalizationService } from "../../../application/services/dataset-version";
+import { createStructuredDatasetVersionRepository } from "../../../adapters/persistence/dataset-version";
+import { createStructuredIngestionAcquisitionRepository } from "../../../adapters/persistence/ingestion";
+import { createSha256DatasetVersionHasher } from "../../../adapters/storage/dataset-version";
+import { createFilesystemIngestionCheckpointStorage } from "../../../adapters/storage/ingestion-checkpoint";
+import {
+  GovernedIngestionTaskUseCases,
+  GovernedWebsiteIngestionUseCases,
+} from "../../../application/use-cases/ingestion-acquisition";
+import type { ApplicationRequestContext } from "../../../application/ports";
+import type { IngestionTaskTransportCommand } from "../../../contracts/ingestion";
+import {
+  createContractError,
+  createFailureResult,
+} from "../../../contracts/shared";
 import { SystemArtifactIdFactory } from "../../../domain/artifact";
 import {
   BrowseArtifactsUseCase,
@@ -77,6 +94,7 @@ import {
   GetModelDetailsUseCase,
   LocalizeExternalRepositoryObjectAsAssetUseCase,
   ListModelsUseCase,
+  ListModelFilesUseCase,
   SaveModelReferenceUseCase,
   DownloadModelUseCase,
   ModelDownloadTasksUseCase,
@@ -104,6 +122,11 @@ import {
   RemoveProjectionFromCompositionPlanUseCase,
   UpdateAssetCompositionPlanUseCase,
   ValidateAssetCompositionPlanUseCase,
+  CompareDatasetVersionsUseCase,
+  ListDatasetVersionsUseCase,
+  PrepareTrainingDatasetFromArtifactsUseCase,
+  PublishDatasetVersionUseCase,
+  ReadDatasetVersionReproductionUseCase,
 } from "../../../application/use-cases";
 import { createRuntimeTaskRegistryRouter } from "../../../adapters/runtime/createRuntimeTaskRegistryRouter";
 import {
@@ -131,7 +154,10 @@ import {
 import type { ProviderCredentialStatus } from "../../../contracts/security";
 import { composeServerProviderCredentials } from "./composeServerProviderCredentials";
 import { createRuntimePreparedModelCheckpointResolver } from "../../shared/createRuntimePreparedModelCheckpointResolver";
-import { createWebsiteHtmlAcquisitionPort } from "../../../adapters/ingestion";
+import {
+  createWebsiteHtmlAcquisitionPort,
+  GovernedWebsiteCaptureAdapter,
+} from "../../../adapters/ingestion";
 import {
   registerExpressApi,
   type RegisterExpressApiDependencies,
@@ -695,16 +721,18 @@ export function composeServerHost(
         env.DEPLOYMENT_SHAPE?.trim() &&
         env.DATABASE_URL?.trim()
       ) {
-        systemRuntimeDatabases = createManagedPostgresSystemRuntimeDatabaseAdapter({
-          provisioningConfig: resolvePostgresPoolConfig(env),
-          credentials: createFilesystemSystemRuntimePostgresCredentialStore(
-            joinHostPath(
-              registerOptions.runtimeRootDirectory ?? defaultRuntimeRootDirectory,
-              "secrets",
+        systemRuntimeDatabases =
+          createManagedPostgresSystemRuntimeDatabaseAdapter({
+            provisioningConfig: resolvePostgresPoolConfig(env),
+            credentials: createFilesystemSystemRuntimePostgresCredentialStore(
+              joinHostPath(
+                registerOptions.runtimeRootDirectory ??
+                  defaultRuntimeRootDirectory,
+                "secrets",
+              ),
             ),
-          ),
-          now: options.now,
-        });
+            now: options.now,
+          });
       }
       const applicationSettings = createLocalApplicationSettingsAdapter({
         filePath:
@@ -1020,6 +1048,53 @@ export function composeServerHost(
         now: options.now,
         artifactIdFactory: new SystemArtifactIdFactory(),
       });
+      const ingestionTasks = organizationDocuments
+        ? (() => {
+            const repository = createStructuredIngestionAcquisitionRepository(
+              organizationDocuments,
+            );
+            const website = new GovernedWebsiteIngestionUseCases({
+              repository,
+              capture: new GovernedWebsiteCaptureAdapter({ now: options.now }),
+              streamStorage: storage,
+              artifactCleanup: storage,
+              workspaceRepository:
+                workspaceFoundation.workspaceRepositories.workspaceRepository,
+              workspaceAuthorization,
+              now: options.now,
+            });
+            return new GovernedIngestionTaskUseCases({
+              repository,
+              checkpoints: createFilesystemIngestionCheckpointStorage({
+                rootDirectory: registerOptions.storageRootDirectory,
+                organizationContextProvider:
+                  options.organizationContextProvider,
+              }),
+              streamStorage: storage,
+              artifactCleanup: storage,
+              registerArtifactFromRepo,
+              workspaceRepository:
+                workspaceFoundation.workspaceRepositories.workspaceRepository,
+              workspaceAuthorization,
+              organizationContextProvider: options.organizationContextProvider,
+              website,
+              now: options.now,
+            });
+          })()
+        : {
+            async executeCommand(
+              _command: IngestionTaskTransportCommand,
+              context: ApplicationRequestContext = {},
+            ) {
+              return createFailureResult(
+                createContractError(
+                  "unavailable",
+                  "Ingestion task persistence is unavailable.",
+                ),
+                context,
+              );
+            },
+          };
       const importHuggingFaceFiles = new ImportHuggingFaceFilesUseCase({
         browseFiles: browseHuggingFaceDatasetParquetFiles,
         registerArtifact: registerArtifactFromRepo,
@@ -1595,10 +1670,8 @@ export function composeServerHost(
                 hostApiVersion: "1.0.0",
                 hostCapabilities: [],
                 sandboxQualified: false,
-                generateDeploymentId: () =>
-                  `system-deployment.${randomUUID()}`,
-                generateRunId: () =>
-                  `system-deployment-run.${randomUUID()}`,
+                generateDeploymentId: () => `system-deployment.${randomUUID()}`,
+                generateRunId: () => `system-deployment-run.${randomUUID()}`,
                 resolveReleaseBindings: (deployment) =>
                   systemDeploymentReleaseBindings!.resolve(deployment),
               },
@@ -1693,6 +1766,12 @@ export function composeServerHost(
         providers: { huggingface: huggingFaceModelBrowseDetails },
       });
       const listModelsUseCase = new ListModelsUseCase({ modelRegistry });
+      const listModelFilesUseCase = new ListModelFilesUseCase({
+        modelRegistry,
+        modelFileLister: createLocalModelFileListerAdapter({
+          allowedRootDirectories: [hfHome, transformersCache],
+        }),
+      });
       const saveModelReferenceUseCase = new SaveModelReferenceUseCase({
         modelRegistry,
       });
@@ -1753,7 +1832,9 @@ export function composeServerHost(
       });
       const pythonRuntimeTaskRegistry = createPythonRuntimeTaskRegistryAdapter(
         pythonRuntimeFoundation.runtimePort,
-        { ensureRuntimeReady: () => pythonRuntimeFoundation.supervisor.start() },
+        {
+          ensureRuntimeReady: () => pythonRuntimeFoundation.supervisor.start(),
+        },
       );
       const runtimeTaskRegistry = createRuntimeTaskRegistryRouter({
         image: imageRuntimeTaskRegistry,
@@ -1845,7 +1926,86 @@ export function composeServerHost(
       });
       const runtimeCapabilityGuard = new RuntimeCapabilityGuardService(
         runtimeReadiness,
+        {
+          async prepareCapability(capabilityId) {
+            if (
+              capabilityId === "python-runtime" ||
+              capabilityId === "dataset-preparation" ||
+              capabilityId === "model-training" ||
+              capabilityId === "model-validation"
+            ) {
+              await pythonRuntimeFoundation.supervisor.start();
+            }
+          },
+        },
       );
+      const datasetVersionRepository = organizationDocuments
+        ? createStructuredDatasetVersionRepository(organizationDocuments)
+        : undefined;
+      const datasetVersionHasher = createSha256DatasetVersionHasher();
+      const datasetVersionUseCases = datasetVersionRepository
+        ? {
+            listDatasetVersionsUseCase: new ListDatasetVersionsUseCase({
+              repository: datasetVersionRepository,
+              workspaceRepository:
+                workspaceFoundation.workspaceRepositories.workspaceRepository,
+              workspaceAuthorization,
+            }),
+            compareDatasetVersionsUseCase: new CompareDatasetVersionsUseCase({
+              repository: datasetVersionRepository,
+              workspaceRepository:
+                workspaceFoundation.workspaceRepositories.workspaceRepository,
+              workspaceAuthorization,
+            }),
+            readDatasetVersionReproductionUseCase:
+              new ReadDatasetVersionReproductionUseCase({
+                repository: datasetVersionRepository,
+                artifacts: storage,
+                hasher: datasetVersionHasher,
+                workspaceRepository:
+                  workspaceFoundation.workspaceRepositories.workspaceRepository,
+                workspaceAuthorization,
+              }),
+            publishDatasetVersionUseCase: new PublishDatasetVersionUseCase({
+              repository: datasetVersionRepository,
+              artifacts: storage,
+              publisher: huggingFaceArtifactRepoStorage,
+              hasher: datasetVersionHasher,
+              workspaceRepository:
+                workspaceFoundation.workspaceRepositories.workspaceRepository,
+              workspaceAuthorization,
+              now: options.now,
+            }),
+          }
+        : undefined;
+      const prepareTrainingDatasetUseCase =
+        new PrepareTrainingDatasetFromArtifactsUseCase({
+          runtimeTaskRegistry,
+          storageBindings: artifactBindings,
+          storage,
+          artifactRepoStorage,
+          artifactCatalog,
+          taskPowerLifecycle: {
+            async startTask() {},
+            async completeTask() {},
+          },
+          runtimeCapabilityGuard,
+          datasetQualityPolicyProvider:
+            createDefaultDatasetQualityPolicyProvider(),
+          ...(datasetVersionRepository
+            ? {
+                datasetVersioning: {
+                  hasher: datasetVersionHasher,
+                  finalizer: new DatasetVersionFinalizationService({
+                    repository: datasetVersionRepository,
+                    artifacts: storage,
+                    hasher: datasetVersionHasher,
+                  }),
+                },
+              }
+            : {}),
+          now: options.now,
+        });
       const localModelCheckpointResolver =
         createLocalModelCheckpointResolverAdapter({
           modelRegistry,
@@ -2000,8 +2160,7 @@ export function composeServerHost(
                   installationPolicy: createDefaultSystemDeploymentPolicy(),
                   generateDeploymentId: () =>
                     `system-deployment.${randomUUID()}`,
-                  generateRunId: () =>
-                    `system-deployment-run.${randomUUID()}`,
+                  generateRunId: () => `system-deployment-run.${randomUUID()}`,
                   now: options.now,
                 }),
               ]
@@ -2020,6 +2179,7 @@ export function composeServerHost(
         storeArtifactUploadUseCase,
         ingestWebsitePageUseCase,
         ingestWebsitePagesBatchUseCase,
+        ingestionTasks,
         browseArtifactsUseCase: browseArtifacts,
         readArtifactDetailUseCase: readArtifactDetail,
         readArtifactContentUseCase: readArtifactContent,
@@ -2041,6 +2201,7 @@ export function composeServerHost(
         browseModelsUseCase,
         getModelDetailsUseCase,
         listModelsUseCase,
+        listModelFilesUseCase,
         saveModelReferenceUseCase,
         downloadModelUseCase,
         modelDownloadTasksUseCase,
@@ -2057,6 +2218,30 @@ export function composeServerHost(
         modelManagementLogger,
         restartServer: options.restartServer,
         runtimeReadiness,
+        prepareTrainingDatasetUseCase,
+        readDatasetPreparationGenerationCapacity: async () => {
+          let decoderAvailable = false;
+          if (pythonRuntimeFoundation.supervisor.getStatus() === "ready") {
+            try {
+              const capabilities =
+                await pythonRuntimeFoundation.runtimePort.getCapabilities();
+              decoderAvailable = capabilities.capabilities.includes(
+                PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
+              );
+            } catch {
+              decoderAvailable = false;
+            }
+          }
+          return {
+            schemaVersion: "1" as const,
+            capturedAt: options.now?.() ?? new Date().toISOString(),
+            decoderAvailable,
+            schemaSupported: true,
+            logicalProcessorCount: cpus().length,
+            totalSystemMemoryBytes: totalmem(),
+          };
+        },
+        datasetVersionUseCases,
         assetRegistryRead: internalAssetRegistry.workspaceReadFacade,
         workspaceServices: {
           workspaceRepository:
@@ -2322,7 +2507,8 @@ export function composeServerHost(
                 ...(systemDeployment.publishedLifecycle
                   ? {
                       lifecycleRead: systemDeployment.publishedLifecycle.read,
-                      lifecycleInvoke: systemDeployment.publishedLifecycle.invoke,
+                      lifecycleInvoke:
+                        systemDeployment.publishedLifecycle.invoke,
                     }
                   : {}),
               },

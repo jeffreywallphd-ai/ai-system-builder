@@ -118,6 +118,127 @@ def test_tokenize_dataset_formats_classification_rows_for_causal_training() -> N
     assert tokenized["labels"] == [[1, 2, 3]]
 
 
+def test_tokenize_dataset_uses_nested_purpose_paths_for_custom_instruction_fields() -> None:
+    class _Split:
+        column_names = ["request", "result"]
+
+    class _DatasetDict(dict):
+        def __init__(self):
+            super().__init__({"train": _Split()})
+
+        def map(self, callback, *, batched: bool, remove_columns: list[str]):
+            assert batched is True
+            assert remove_columns == ["request", "result"]
+            return callback(
+                {
+                    "request": [
+                        {
+                            "task": "Answer the input using only the context.",
+                            "input": "What does the policy say?",
+                            "context": "Policy text",
+                        }
+                    ],
+                    "result": [
+                        {
+                            "thought": "The policy text directly supports the explanation.",
+                            "answer": "The policy explanation",
+                        }
+                    ],
+                }
+            )
+
+    class _Tokenizer:
+        captured_texts: list[str] | None = None
+
+        def __call__(self, texts, **_kwargs):
+            self.captured_texts = texts
+            return {"input_ids": [[1, 2, 3]]}
+
+    tokenizer = _Tokenizer()
+    train_model_module._tokenize_dataset(
+        _DatasetDict(),
+        tokenizer,
+        128,
+        training_task="llm-instruction",
+        purpose_paths={
+            "instruction": ("request", "task"),
+            "input": ("request", "input"),
+            "context": ("request", "context"),
+            "thought": ("result", "thought"),
+            "output": ("result", "answer"),
+        },
+    )
+
+    assert tokenizer.captured_texts == [
+        "Instruction:\nAnswer the input using only the context.\nInput:\nWhat does the policy say?\nContext:\nPolicy text\nThought:\nThe policy text directly supports the explanation.\nResponse:\nThe policy explanation"
+    ]
+
+
+def test_resolve_training_purpose_paths_requires_matching_dataset_layouts(tmp_path: Path) -> None:
+    payload = _request(tmp_path)
+    payload.datasets[0].metadata = {
+        "artifactMetadata": {
+            "structuredOutput": {
+                "schemaFingerprint": "a" * 64,
+                "purposePaths": {
+                    "instruction": ["request"],
+                    "output": ["answer"],
+                }
+            }
+        }
+    }
+    resolved = train_model_module._resolve_training_purpose_paths(payload)
+    assert resolved == {
+        "instruction": ("request",),
+        "output": ("answer",),
+    }
+
+    second = payload.datasets[0].model_copy(deep=True)
+    second.artifactId = "dataset-2"
+    second.metadata = None
+    payload.datasets.append(second)
+    try:
+        train_model_module._resolve_training_purpose_paths(payload)
+    except ValueError as error:
+        assert "same generated field layout" in str(error)
+    else:
+        raise AssertionError("Mixed purpose-map metadata should fail closed.")
+
+    payload.datasets = [payload.datasets[0], payload.datasets[0].model_copy(deep=True)]
+    payload.datasets[1].artifactId = "dataset-2"
+    payload.datasets[1].metadata["artifactMetadata"]["structuredOutput"][
+        "schemaFingerprint"
+    ] = "b" * 64
+    try:
+        train_model_module._resolve_training_purpose_paths(payload)
+    except ValueError as error:
+        assert "same generated field layout" in str(error)
+    else:
+        raise AssertionError("Mismatched schema fingerprints should fail closed.")
+
+
+def test_multimodal_label_collectors_use_nested_purpose_paths() -> None:
+    purpose_paths = {"label": ("result", "category")}
+    classification_rows = [{"result": {"category": "invoice"}}]
+    detection_rows = [
+        {
+            "boundingBoxes": [[1, 2, 3, 4]],
+            "boxFormat": "xywh",
+            "result": {"category": "invoice"},
+        }
+    ]
+
+    assert multimodal_module._collect_classification_labels(
+        classification_rows, purpose_paths
+    ) == ["invoice"]
+    assert multimodal_module._collect_detection_labels(
+        detection_rows, purpose_paths
+    ) == ["invoice"]
+    assert multimodal_module._collect_segmentation_labels(
+        classification_rows, purpose_paths
+    ) == ["invoice"]
+
+
 def test_train_model_validates_required_inputs(tmp_path: Path) -> None:
     payload = _request(tmp_path)
     payload.datasets = []

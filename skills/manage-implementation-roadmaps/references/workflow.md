@@ -7,6 +7,9 @@
 - A request to draft, inspect, research, or review is not implementation approval.
 - Implementation proceeds in ordered increments. Each increment is researched and
   planned immediately before its code changes.
+- Once implementation is explicitly requested and the roadmap is approved,
+  execution continues automatically through all approved increments. Routine
+  increment boundaries are not approval gates.
 - Durable roadmap/state artifacts and a temporary local report supplement
   conversation state; they do not replace user communication.
 - Evidence describes what actually ran. Pending, skipped, and controlled-environment
@@ -199,7 +202,10 @@ Write an implementation plan with:
 - coherent work chunks;
 - acceptance criteria covered by each chunk;
 - focused tests mapped to internal chunks;
-- completion tests and repository-wide gates reserved for the completed increment;
+- completion tests and gates limited to the completed increment's changed surfaces;
+- combined standard and end-to-end coverage plus repository-wide gates reserved
+  until every roadmap increment is implemented, with the AI suite added only for
+  AI-related roadmaps or an explicit request;
 - documentation updates;
 - assumptions;
 - rollback.
@@ -226,18 +232,20 @@ After a meaningful chunk or a useful batch of closely related chunks:
 Reasonable report checkpoints include completion of a vertical slice, a resolved
 defect, a host integration, a significant UI outcome, or a gate/review boundary.
 Batch minor internal chunks into the next such checkpoint. While any planned chunk
-remains unimplemented, run only the focused tests for the chunk being changed. Do
-not run the full suite or all-tests matrix as an early risk check; add or run a
-focused regression instead.
+remains unimplemented, run only the focused tests for the chunk being changed. Once
+an increment is implemented, run only tests and gates relevant to its changed
+surfaces. Do not run the complete standard suite, complete end-to-end suite, AI
+suite, or aggregate matrix while roadmap increments remain; add or run a focused
+regression instead.
 
 ### 5. Verify and complete
 
 Only after every planned chunk is implemented and its focused tests pass, run the
-plan's completion tests and repository-wide gates once for the whole increment.
-Record their results as completion evidence before applying `increment-completed`.
-If a completion test fails, return to focused diagnosis and focused regression
-tests; rerun the completion set only after the repair is ready for another complete
-increment qualification.
+plan's increment-relevant completion tests and gates. Record their results as
+increment evidence before applying `increment-completed`. If an increment check
+fails, return to focused diagnosis and focused regression tests; rerun only the
+relevant completion set after the repair is ready for another increment
+qualification.
 
 Record evidence separately for each acceptance criterion. The latest evidence is
 authoritative. A controlled-environment criterion may remain pending only when the
@@ -251,9 +259,25 @@ Security evidence states the disposition and uses sanitized summaries. A
 residual risk, and any controlled-environment evidence without copying secrets,
 private content, provider-native payloads, paths, or exploitable production detail.
 
+After every increment is implemented and its relevant checks pass, run the
+repository-defined combined standard and end-to-end coverage, followed by the
+applicable repository-wide gates, once for a non-AI roadmap. For an AI-related
+roadmap, run the all-suite command instead so the AI suite is included. Do not run
+AI or all-suite coverage for non-AI work unless explicitly requested. Record these
+overall results before `roadmap-completed`; do not infer controlled-environment
+passes from them.
+
 An increment closes only when every planned chunk is recorded and every criterion
 has passing or explicitly permitted pending evidence. A roadmap closes only when all
 criteria, including controlled-environment qualification, pass.
+
+After an increment closes, start the next approved increment without asking for
+routine confirmation. Pause only for stale approval caused by changed scope or a
+high-level decision, newly required authority, destructive or production action,
+credentials or external coordination, an unresolved security policy choice, a
+genuine blocker or controlled-environment gap, or an explicit user-requested
+checkpoint. This continuation rule does not infer initial implementation approval,
+expand scope, or remove final overall approval.
 
 After recording `roadmap-completed`, present the concise temporary report and wait
 for explicit user approval of the overall completed work. Record

@@ -19,7 +19,11 @@ The server host keeps artifact-object and artifact-repo storage families as peer
 Route composition now includes:
 
 - artifact upload + artifact browser routes over artifact-object storage/catalog stack, and
-- artifact-repo routes (`/api/artifact-repo/has`, `/api/artifact-repo/store`) via dedicated repo-storage use cases.
+- artifact-repo routes (`/api/artifact-repo/has`, `/api/artifact-repo/store`) via dedicated repo-storage use cases, and
+- dataset-preparation start/read/approve/cancel routes backed by the shared application
+  use case, runtime task registry, artifact storage/repository ports, and server
+  runtime-readiness guard; the host also composes the default quality-policy
+  provider so a requested review cannot fall back to an absent authority.
 
 Current artifact-repo provider registration is Hugging Face only.
 

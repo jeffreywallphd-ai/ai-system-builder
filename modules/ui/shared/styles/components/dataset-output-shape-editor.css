@@ -1,0 +1,97 @@
+.dataset-output-shape-editor {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.dataset-output-shape-editor__heading {
+  align-items: start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.dataset-output-shape-editor__heading h4,
+.dataset-output-shape-editor__heading p,
+.dataset-output-shape-editor__validation p {
+  margin: 0;
+}
+
+.dataset-output-shape-editor__purposes,
+.dataset-output-shape-editor__validation {
+  background: var(--color-surface-subtle, rgba(37, 99, 235, 0.06));
+  border: 1px solid var(--color-border, rgba(100, 116, 139, 0.45));
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.dataset-output-shape-editor__purposes ul,
+.dataset-output-shape-editor__validation ul {
+  margin-bottom: 0;
+}
+
+.dataset-output-shape-editor__tree,
+.dataset-output-shape-editor__field {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.dataset-output-shape-editor__field {
+  border: 1px solid var(--color-border, rgba(100, 116, 139, 0.45));
+  border-radius: 0.5rem;
+  min-inline-size: 0;
+  overflow: visible;
+  padding: 0.75rem;
+}
+
+.dataset-output-shape-editor__field[data-depth="2"],
+.dataset-output-shape-editor__field[data-depth="3"],
+.dataset-output-shape-editor__field[data-depth="4"],
+.dataset-output-shape-editor__field[data-depth="5"] {
+  margin-inline-start: 1rem;
+}
+
+.dataset-output-shape-editor__grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.dataset-output-shape-editor__control {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.dataset-output-shape-editor__control input,
+.dataset-output-shape-editor__control select,
+.dataset-output-shape-editor__control textarea {
+  inline-size: 100%;
+}
+
+.dataset-output-shape-editor__checkbox {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dataset-output-shape-editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.dataset-output-shape-editor__preview pre {
+  max-block-size: 24rem;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 42rem) {
+  .dataset-output-shape-editor__heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dataset-output-shape-editor__field[data-depth] {
+    margin-inline-start: 0;
+  }
+}

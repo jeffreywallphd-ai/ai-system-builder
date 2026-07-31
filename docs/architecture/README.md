@@ -41,6 +41,7 @@ These docs intentionally avoid fake precision. Where implementation details are 
 1. Read `system-overview.md` first for system shape.
 2. Use `module-dependency-rules.md` before creating imports or moving files.
 3. Use host/runtime/persistence docs before adding host wiring or adapter logic.
+   For ingestion and dataset preparation, also read data-management.md.
 4. If you need to change a major boundary rule, update architecture docs and add/update an ADR.
 
 ## Review rule of thumb

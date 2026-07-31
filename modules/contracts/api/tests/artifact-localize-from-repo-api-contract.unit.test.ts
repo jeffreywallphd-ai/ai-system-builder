@@ -8,12 +8,16 @@ import {
 describe("artifact localize-from-repo api contract", () => {
   it("normalizes artifact localize-from-repo request payload", () => {
     const request = createApiArtifactLocalizeFromRepoRequest({
+      workspaceId: " workspace-a ",
       artifactId: " artifacts/abc123 ",
       source: " thin-client.artifact-browser ",
     });
 
-    expect(API_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION).toBe("artifact.localize.from-repo");
+    expect(API_ARTIFACT_LOCALIZE_FROM_REPO_OPERATION).toBe(
+      "artifact.localize.from-repo",
+    );
     expect(request.payload).toEqual({
+      workspaceId: "workspace-a",
       artifactId: "artifacts/abc123",
       source: "thin-client.artifact-browser",
     });

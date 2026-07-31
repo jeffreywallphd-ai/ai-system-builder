@@ -38,6 +38,14 @@ Add shared import-usefulness step:
 - exposed through server API, desktop IPC/preload, thin-client and desktop artifact-browser clients/UI.
 - imported-source verification re-check (`artifact.source.verify`) follows the same shared application path through server + desktop transports.
 
+Dataset preparation now consumes the same identity/backing distinction:
+
+- internal artifact ids select workspace-owned sources;
+- a remote imported-source backing is localized explicitly when no local object
+  is available;
+- provider repository, path, and immutable revision remain lineage metadata and
+  never become a runtime-local storage key or a replacement internal id.
+
 ## Consequences
 
 ### Positive

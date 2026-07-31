@@ -9,3 +9,5 @@ export * from "./model-publisher.port";
 export * from "./generated-model-storage.port";
 
 export * from "./model-checkpoint-resolver.port";
+export * from "./model-location-revealer.port";
+export * from "./model-file-lister.port";

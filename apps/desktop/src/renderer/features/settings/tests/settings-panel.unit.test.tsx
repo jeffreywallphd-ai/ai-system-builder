@@ -114,7 +114,14 @@ describe("SettingsPanel", () => {
     expect(readSettings).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      root?.render(<SettingsPanel title="Test" keys={["huggingface.defaultNamespace"] as never} />);
+      root?.render(
+        <NotificationTestHarness>
+          <SettingsPanel
+            title="Test"
+            keys={["huggingface.defaultNamespace"] as never}
+          />
+        </NotificationTestHarness>,
+      );
       await Promise.resolve();
     });
 

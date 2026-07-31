@@ -5,7 +5,7 @@ import path from "node:path";
 import type { LoggingPort } from "../../../../application/ports/logging";
 import type { ApplicationRequestContext } from "../../../../application/ports";
 import type { ArtifactCatalogAppendPort } from "../../../../application/ports/artifact-catalog";
-import type { ArtifactObjectStoragePort } from "../../../../application/ports/storage";
+import type { ArtifactObjectStoragePort, ArtifactStreamStoragePort, StoreArtifactStreamRequest } from "../../../../application/ports/storage";
 import { resolveArtifactFamily } from "../../../../application/shared/artifact-family-classifier";
 import type { ContractErrorCode } from "../../../../contracts/shared";
 import { createContractError } from "../../../../contracts/shared";
@@ -42,6 +42,7 @@ import {
   removeEmptyContainedParent,
   statContainedFile,
   writeContainedFile,
+  writeContainedFileStream,
 } from "../../../filesystem-security";
 
 const STORAGE_COMPONENT = "adapters.storage.filesystem";
@@ -205,7 +206,7 @@ function resolveRequestContext(
 
 export function createFilesystemArtifactObjectStorageAdapter(
   options: CreateFilesystemArtifactStorageAdapterOptions,
-): ArtifactObjectStoragePort {
+): ArtifactObjectStoragePort & ArtifactStreamStoragePort {
   if (options.rootDirectory.trim().length === 0) {
     throw new Error("rootDirectory must be a non-empty path.");
   }
@@ -456,6 +457,58 @@ export function createFilesystemArtifactObjectStorageAdapter(
       }
     },
 
+    async storeArtifactStream(
+      request: StoreArtifactStreamRequest,
+      context: ApplicationRequestContext = {},
+    ): Promise<StoreArtifactResult> {
+      const requestContext = resolveRequestContext(request, context);
+      let scopedKey: string | undefined;
+      let published = false;
+      try {
+        if (!Number.isSafeInteger(request.maximumBytes) || request.maximumBytes < 0 || !Number.isSafeInteger(request.expectedSizeBytes) || request.expectedSizeBytes < 0 || request.expectedSizeBytes > request.maximumBytes) {
+          throw new StorageAdapterValidationError("Streamed artifact bounds are invalid.");
+        }
+        const expectedDigest = request.expectedSha256?.trim().toLowerCase();
+        if (expectedDigest && !/^sha256:[a-f0-9]{64}$/.test(expectedDigest)) throw new StorageAdapterValidationError("Streamed artifact expected digest is invalid.");
+        const originalFileName = typeof (request.descriptor.metadata as { originalFileName?: unknown } | undefined)?.originalFileName === "string"
+          ? (request.descriptor.metadata as { originalFileName: string }).originalFileName
+          : undefined;
+        const key = request.descriptor.key
+          ? normalizeStorageArtifactKey(request.descriptor.key)
+          : createGeneratedKey({ mediaType: request.descriptor.mediaType, originalFileName, workspaceId: context.workspaceId });
+        scopedKey = resolveOrganizationStorageKey(key, options.organizationContextProvider);
+        const hash = createHash(STORAGE_CHECKSUM_ALGORITHM);
+        const content = async function* () {
+          for await (const chunk of request.content) {
+            if (!(chunk instanceof Uint8Array)) throw new StorageAdapterValidationError("Streamed artifact content must contain binary chunks.");
+            hash.update(chunk);
+            yield chunk;
+          }
+        };
+        const writeResult = await writeContainedFileStream({ rootDirectory, key: scopedKey, content: content(), maximumBytes: request.maximumBytes, overwrite: request.overwrite === true });
+        published = true;
+        const checksum: StorageObjectChecksum = { algorithm: STORAGE_CHECKSUM_ALGORITHM, value: hash.digest("hex") };
+        if (writeResult.sizeBytes !== request.expectedSizeBytes || (expectedDigest && expectedDigest !== `sha256:${checksum.value}`)) {
+          throw new StorageAdapterVerificationError("Streamed artifact verification failed.");
+        }
+        const writtenStats = await statPath(writeResult.absolutePath);
+        if (!writtenStats.isFile() || writtenStats.size !== writeResult.sizeBytes) throw new StorageAdapterVerificationError("Streamed artifact post-write verification failed.");
+        const extension = extensionFromOriginalFileName(originalFileName) ?? path.extname(key).replace(/^\./, "");
+        if (options.artifactCatalogAppend) {
+          if (!isWorkspaceId(context.workspaceId)) throw new StorageAdapterValidationError("Workspace id is required for artifact catalog writes.");
+          const appendResult = await options.artifactCatalogAppend.appendArtifactCatalogRecord({ record: { workspaceId: context.workspaceId, storageKey: key, artifactFamily: resolveArtifactFamily({ mediaType: request.descriptor.mediaType, extension, fileName: originalFileName }), mediaType: request.descriptor.mediaType, sizeBytes: writeResult.sizeBytes, sourceKind: "upload", originalName: originalFileName, createdAt: now(), checksum } }, requestContext);
+          if (!appendResult.ok) throw new StorageAdapterVerificationError(appendResult.error.message);
+        }
+        await logBoundaryEvent({ level: "info", name: "storage.filesystem.stream-store.succeeded", message: "Stored a streamed artifact in filesystem storage.", operation: "storage.artifact.stream-store", requestId: requestContext.requestId, correlationId: requestContext.correlationId, outcome: "success", data: { key, sizeBytes: writeResult.sizeBytes, checksumAlgorithm: checksum.algorithm } });
+        return createStoreArtifactSuccessResult({ key, mediaType: request.descriptor.mediaType, sizeBytes: writeResult.sizeBytes, checksum, metadata: request.descriptor.metadata }, requestContext);
+      } catch (error) {
+        if (published && scopedKey) await deleteContainedFile({ rootDirectory, key: scopedKey }).catch(() => undefined);
+        const code = toErrorCode(error);
+        await logBoundaryEvent({ level: "error", name: "storage.filesystem.stream-store.failed", message: "Failed to store a streamed artifact.", operation: "storage.artifact.stream-store", requestId: requestContext.requestId, correlationId: requestContext.correlationId, outcome: "failure", error: { errorType: "storage", errorCode: code, errorMessage: "Failed to store streamed artifact bytes.", details: { filesystemCode: toFilesystemCode(error) ?? "unknown" } } });
+        return createStoreArtifactFailureResult(createContractError(code, "Failed to store streamed artifact bytes.", { ...requestContext, details: { operation: "storeArtifactStream", filesystemCode: toFilesystemCode(error) } }), requestContext);
+      }
+    },
+
     async retrieveArtifact<TContent = Uint8Array>(
       request: RetrieveArtifactRequest,
       context: ApplicationRequestContext = {},
@@ -615,6 +668,6 @@ export function createFilesystemArtifactObjectStorageAdapter(
  */
 export function createFilesystemArtifactStorageAdapter(
   options: CreateFilesystemArtifactStorageAdapterOptions,
-): ArtifactObjectStoragePort {
+): ArtifactObjectStoragePort & ArtifactStreamStoragePort {
   return createFilesystemArtifactObjectStorageAdapter(options);
 }

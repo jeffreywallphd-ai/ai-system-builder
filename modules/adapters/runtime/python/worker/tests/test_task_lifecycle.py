@@ -6,6 +6,9 @@ from unittest.mock import patch
 
 from modules.adapters.runtime.python.worker import app as worker_app
 from modules.adapters.runtime.python.worker.models import StartPythonRuntimeTaskRequest
+from modules.adapters.runtime.python.worker.tasks.prepare_training_dataset import (
+    DatasetPreparationStageError,
+)
 
 
 class TaskLifecycleTests(unittest.TestCase):
@@ -52,19 +55,73 @@ class TaskLifecycleTests(unittest.TestCase):
             self.assertNotIn("secret", status.error.message)
             self.assertNotIn("/private/model", str(status.error.model_dump()))
 
+    def test_dataset_failure_preserves_bounded_stage_and_error_code(self) -> None:
+        failure = DatasetPreparationStageError(
+            "normalization",
+            "private source detail",
+            "preparation_plan_mismatch",
+        )
+        with patch(
+            "modules.adapters.runtime.python.worker.app._run_task",
+            side_effect=failure,
+        ):
+            worker_app.start_task(
+                StartPythonRuntimeTaskRequest(
+                    requestId="r-stage",
+                    taskType="prepare-training-dataset",
+                    payload={
+                        "sourceInputs": [],
+                        "recipe": {},
+                        "split": {"trainRatio": 0.8, "testRatio": 0.2},
+                        "output": {"format": "jsonl"},
+                    },
+                )
+            )
+            time.sleep(0.2)
+            status = worker_app.read_task_status("r-stage")
+
+        self.assertEqual(status.status, "failed")
+        self.assertEqual(status.error.code, "preparation_plan_mismatch")
+        self.assertEqual(status.error.errorCode, "preparation_plan_mismatch")
+        self.assertEqual(status.error.stage, "normalization")
+        self.assertNotIn("private source detail", str(status.error.model_dump()))
+
     def test_dataset_progress_updates_registry(self) -> None:
-        def fake_prepare(_payload, on_generation_progress):
-            on_generation_progress({"totalChunkCount": 2, "processedChunkCount": 1, "generatedRowCount": 5})
+        def fake_prepare(_payload, on_generation_progress, output_directory=None):
+            del output_directory
+            on_generation_progress({
+                "phase": "memory-overflow",
+                "message": "The model is using system-managed disk/swap because available memory is low. Generation may run more slowly.",
+                "totalChunkCount": 2,
+                "processedChunkCount": 1,
+                "generatedRowCount": 5,
+                "memoryOverflowActive": True,
+                "estimatedMemoryOverflowBytes": 512 * 1024 ** 2,
+                "memoryOverflowLimitBytes": 1024 ** 3,
+            })
             time.sleep(0.1)
             return type("R", (), {"model_dump": lambda self, mode: {"summary": {"generatedExampleCount": 5}}})()
 
-        with patch("modules.adapters.runtime.python.worker.app.prepare_training_dataset", side_effect=fake_prepare):
+        with (
+            patch(
+                "modules.adapters.runtime.python.worker.app._runtime_output_directory",
+                return_value=None,
+            ),
+            patch(
+                "modules.adapters.runtime.python.worker.app.prepare_training_dataset",
+                side_effect=fake_prepare,
+            ),
+        ):
             worker_app.start_task(StartPythonRuntimeTaskRequest(requestId="r4", taskType="prepare-training-dataset", payload={"sourceInputs": [], "recipe": {"normalization": {"targetFormat": "markdown"}, "chunking": {"strategy": "character", "chunkSize": 1, "chunkOverlap": 0}, "generation": {"mode": "qa", "model": {"provider": "transformers", "modelId": "m"}}}, "split": {"trainRatio": 0.5, "testRatio": 0.5}, "output": {"format": "jsonl"}}))
             time.sleep(0.05)
             status = worker_app.read_task_status("r4")
             self.assertIsNotNone(status.progress)
             self.assertEqual(status.progress["processedChunkCount"], 1)
-            self.assertEqual(status.progress["message"], "Processing chunk 2/2...")
+            self.assertEqual(status.progress["phase"], "memory-overflow")
+            self.assertTrue(status.progress["memoryOverflowActive"])
+            self.assertEqual(status.progress["estimatedMemoryOverflowBytes"], 512 * 1024 ** 2)
+            self.assertEqual(status.progress["memoryOverflowLimitBytes"], 1024 ** 3)
+            self.assertIn("may run more slowly", status.progress["message"])
 
     def test_duplicate_request_id_is_rejected(self) -> None:
         def slow_train(_payload, on_progress=None):

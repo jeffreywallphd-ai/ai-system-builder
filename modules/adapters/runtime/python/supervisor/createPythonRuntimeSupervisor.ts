@@ -125,7 +125,26 @@ export function createPythonRuntimeSupervisor(
             /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(parsed.diagnosticClass)
               ? parsed.diagnosticClass
               : undefined;
-          return `${source}:${event}${diagnosticClass ? `:${diagnosticClass}` : ""}`;
+          const stage =
+            typeof parsed.stage === "string" &&
+            ["normalization", "chunking", "generation", "split"].includes(
+              parsed.stage,
+            )
+              ? parsed.stage
+              : undefined;
+          const errorCode =
+            typeof parsed.errorCode === "string" &&
+            /^[a-z][a-z0-9_]{0,95}$/.test(parsed.errorCode)
+              ? parsed.errorCode
+              : undefined;
+          return [
+            `${source}:${event}`,
+            diagnosticClass,
+            stage ? `stage=${stage}` : undefined,
+            errorCode ? `code=${errorCode}` : undefined,
+          ]
+            .filter((value): value is string => Boolean(value))
+            .join(":");
         }
       } catch {
         // Non-structured subprocess output is intentionally represented by class only.

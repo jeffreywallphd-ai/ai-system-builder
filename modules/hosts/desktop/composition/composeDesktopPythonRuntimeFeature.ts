@@ -4,6 +4,8 @@ import { PYTHON_RUNTIME_DATASET_PREPARATION_REQUIRED_CAPABILITIES } from "../../
 import {
   resolvePythonRuntimeBaseUrl,
   resolvePythonRuntimeHostAndPort,
+  resolveDesktopPythonRuntimeCommand,
+  resolveDesktopPythonRuntimeWorkerDirectory,
   classifyPythonRuntimeStdioLogLevel,
   shouldPreparePythonRuntimeWorkerDependencies,
   type DesktopPythonRuntimeFeature,
@@ -49,9 +51,9 @@ export async function composeDesktopPythonRuntimeFeature(
     HF_HUB_DISABLE_SYMLINKS_WARNING:
       process.env.HF_HUB_DISABLE_SYMLINKS_WARNING ?? "1",
   };
-  const pythonRuntimeCommand =
-    process.env.PYTHON_RUNTIME_COMMAND ??
-    (process.platform === "win32" ? "python" : "python3");
+  const pythonRuntimeCommand = resolveDesktopPythonRuntimeCommand({
+    configuredCommand: process.env.PYTHON_RUNTIME_COMMAND,
+  });
 
   return createPythonRuntimeAdapterFoundation({
     client: { baseUrl: pythonRuntimeBaseUrl },
@@ -60,9 +62,11 @@ export async function composeDesktopPythonRuntimeFeature(
       args: process.env.PYTHON_RUNTIME_ARGS?.split(" ").filter(Boolean) ?? [
         "main.py",
       ],
-      cwd:
-        process.env.PYTHON_RUNTIME_WORKER_DIR ??
-        "modules/adapters/runtime/python/worker",
+      cwd: resolveDesktopPythonRuntimeWorkerDirectory({
+        configuredWorkerDirectory: process.env.PYTHON_RUNTIME_WORKER_DIR,
+        resourcesPath: (process as NodeJS.Process & { resourcesPath?: string })
+          .resourcesPath,
+      }),
       env: pythonRuntimeEnvironment,
       startupTimeoutMs: pythonRuntimeStartupTimeoutMs,
       requiredCapabilities:

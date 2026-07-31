@@ -10,11 +10,23 @@ import { desktopLazyPages, type DesktopLazyPageDiagnosticContext, type DesktopLa
 import { resolveDesktopWorkspaceRouteBoundary } from "./routes/workspaceRouteBoundary";
 import { recordRendererMemorySnapshot } from "./diagnostics/rendererMemoryDiagnostics";
 import { createDesktopModelsClient } from "./features/models/api/desktopModelsClient";
+import { createDesktopDatasetPreparationClient } from "./features/dataset-preparation/api/desktopDatasetPreparationClient";
+import { DatasetPreparationNotificationBridge } from "./features/dataset-preparation/components/DatasetPreparationNotificationBridge";
 
 type DesktopWorkspacePageKey = Extract<DesktopPageKey, "artifacts" | "assets" | "user-library" | "models" | "image-generation" | "systems">;
 const desktopModelDownloadNotificationClient = {
   listModelDownloads: (input: Parameters<ReturnType<typeof createDesktopModelsClient>["listModelDownloads"]>[0]) =>
     createDesktopModelsClient().listModelDownloads(input),
+};
+const desktopDatasetPreparationNotificationClient = {
+  readPrepareTrainingDatasetTask: (
+    requestId: string,
+    workspaceId?: string,
+  ) =>
+    createDesktopDatasetPreparationClient().readPrepareTrainingDatasetTask(
+      requestId,
+      workspaceId,
+    ),
 };
 
 export function App() {
@@ -145,6 +157,10 @@ export function WorkspaceAwareDesktopApp({ lazyPages = desktopLazyPages }: Works
   return (
     <>
       <ModelDownloadNotificationBridge client={desktopModelDownloadNotificationClient} workspaceId={workspace.activeWorkspaceId} />
+      <DatasetPreparationNotificationBridge
+        client={desktopDatasetPreparationNotificationClient}
+        workspaceId={workspace.activeWorkspaceId}
+      />
       <AppShell
         activePage={routeBoundary.visibleActivePage}
         onNavigate={setActivePage}

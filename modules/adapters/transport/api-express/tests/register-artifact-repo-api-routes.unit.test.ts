@@ -1,4 +1,9 @@
-import { describe, expect, it, testDouble } from "../../../../testing/node-test";
+import {
+  describe,
+  expect,
+  it,
+  testDouble,
+} from "../../../../testing/node-test";
 
 import {
   registerArtifactRepoApiRoutes,
@@ -7,9 +12,26 @@ import {
 
 describe("registerArtifactRepoApiRoutes", () => {
   it("registers has/store routes and delegates to focused repo-storage use cases", async () => {
-    const handlers = new Map<string, Parameters<ArtifactRepoExpressRoutePort["post"]>[1]>();
-    const getHandlers = new Map<string, NonNullable<ArtifactRepoExpressRoutePort["get"]> extends (...args: infer T) => unknown ? T[1] : never>();
-    const deleteHandlers = new Map<string, NonNullable<ArtifactRepoExpressRoutePort["delete"]> extends (...args: infer T) => unknown ? T[1] : never>();
+    const handlers = new Map<
+      string,
+      Parameters<ArtifactRepoExpressRoutePort["post"]>[1]
+    >();
+    const getHandlers = new Map<
+      string,
+      NonNullable<ArtifactRepoExpressRoutePort["get"]> extends (
+        ...args: infer T
+      ) => unknown
+        ? T[1]
+        : never
+    >();
+    const deleteHandlers = new Map<
+      string,
+      NonNullable<ArtifactRepoExpressRoutePort["delete"]> extends (
+        ...args: infer T
+      ) => unknown
+        ? T[1]
+        : never
+    >();
     const app: ArtifactRepoExpressRoutePort = {
       post: testDouble.fn((routePath, handler) => {
         handlers.set(routePath, handler);
@@ -23,13 +45,22 @@ describe("registerArtifactRepoApiRoutes", () => {
     };
 
     const hasArtifactInRepoUseCase = {
-      execute: testDouble.fn(async () => ({ ok: true, value: { exists: true } })),
+      execute: testDouble.fn(async () => ({
+        ok: true,
+        value: { exists: true },
+      })),
     };
     const browseHuggingFaceNamespaceDatasetsUseCase = {
-      execute: testDouble.fn(async () => ({ ok: true, value: { namespace: "openai", datasets: [] } })),
+      execute: testDouble.fn(async () => ({
+        ok: true,
+        value: { namespace: "openai", datasets: [] },
+      })),
     };
     const browseHuggingFaceDatasetParquetFilesUseCase = {
-      execute: testDouble.fn(async () => ({ ok: true, value: { repository: "openai/demo", revision: "main", files: [] } })),
+      execute: testDouble.fn(async () => ({
+        ok: true,
+        value: { repository: "openai/demo", revision: "main", files: [] },
+      })),
     };
     const importHuggingFaceFilesUseCase = {
       execute: testDouble.fn(async () => ({
@@ -156,7 +187,10 @@ describe("registerArtifactRepoApiRoutes", () => {
     registerArtifactRepoApiRoutes({
       app,
       getHuggingFaceTokenStatus: () => ({ configured: false }),
-      setHuggingFaceToken: () => ({ configured: true, maskedToken: "••••1234" }),
+      setHuggingFaceToken: () => ({
+        configured: true,
+        maskedToken: "••••1234",
+      }),
       clearHuggingFaceToken: () => ({ configured: false }),
       hasArtifactInRepoUseCase,
       browseHuggingFaceNamespaceDatasetsUseCase,
@@ -277,13 +311,16 @@ describe("registerArtifactRepoApiRoutes", () => {
       },
       response,
     );
-    expect(verifyImportedArtifactSourceBackingUseCase.execute).toHaveBeenCalledWith({
+    expect(
+      verifyImportedArtifactSourceBackingUseCase.execute,
+    ).toHaveBeenCalledWith({
       artifactId: "uploads/a.bin",
     });
 
     await handlers.get("/api/artifact/localize-from-repo")?.(
       {
         body: {
+          workspaceId: "workspace-a",
           artifactId: "artifacts/20260418000000-local01",
         },
         headers: {},
@@ -299,13 +336,21 @@ describe("registerArtifactRepoApiRoutes", () => {
       { headers: {} },
       response,
     );
-    expect(localizeArtifactFromRepoUseCase.execute).toHaveBeenCalledWith({
-      artifactId: "artifacts/20260418000000-local01",
-    });
+    expect(localizeArtifactFromRepoUseCase.execute).toHaveBeenCalledWith(
+      { artifactId: "artifacts/20260418000000-local01" },
+      {
+        requestId: undefined,
+        correlationId: undefined,
+        workspaceId: "workspace-a",
+      },
+    );
   });
 
   it("returns validation error envelope for invalid store payload", async () => {
-    const handlers = new Map<string, Parameters<ArtifactRepoExpressRoutePort["post"]>[1]>();
+    const handlers = new Map<
+      string,
+      Parameters<ArtifactRepoExpressRoutePort["post"]>[1]
+    >();
     const app: ArtifactRepoExpressRoutePort = {
       post: testDouble.fn((routePath, handler) => {
         handlers.set(routePath, handler);
@@ -315,7 +360,10 @@ describe("registerArtifactRepoApiRoutes", () => {
     registerArtifactRepoApiRoutes({
       app,
       getHuggingFaceTokenStatus: () => ({ configured: false }),
-      setHuggingFaceToken: () => ({ configured: true, maskedToken: "••••1234" }),
+      setHuggingFaceToken: () => ({
+        configured: true,
+        maskedToken: "••••1234",
+      }),
       clearHuggingFaceToken: () => ({ configured: false }),
       hasArtifactInRepoUseCase: { execute: testDouble.fn() },
       browseHuggingFaceNamespaceDatasetsUseCase: { execute: testDouble.fn() },
@@ -350,7 +398,8 @@ describe("registerArtifactRepoApiRoutes", () => {
     );
 
     expect(response.status).toHaveBeenCalledWith(400);
-    const body = (response.json as ReturnType<typeof testDouble.fn>).mock.calls[0]?.[0];
+    const body = (response.json as ReturnType<typeof testDouble.fn>).mock
+      .calls[0]?.[0];
     expect(body).toMatchObject({
       ok: false,
       operation: "artifact.repo.store",
@@ -361,7 +410,10 @@ describe("registerArtifactRepoApiRoutes", () => {
   });
 
   it("returns validation error envelope for invalid publish payload", async () => {
-    const handlers = new Map<string, Parameters<ArtifactRepoExpressRoutePort["post"]>[1]>();
+    const handlers = new Map<
+      string,
+      Parameters<ArtifactRepoExpressRoutePort["post"]>[1]
+    >();
     const app: ArtifactRepoExpressRoutePort = {
       post: testDouble.fn((routePath, handler) => {
         handlers.set(routePath, handler);
@@ -371,7 +423,10 @@ describe("registerArtifactRepoApiRoutes", () => {
     registerArtifactRepoApiRoutes({
       app,
       getHuggingFaceTokenStatus: () => ({ configured: false }),
-      setHuggingFaceToken: () => ({ configured: true, maskedToken: "••••1234" }),
+      setHuggingFaceToken: () => ({
+        configured: true,
+        maskedToken: "••••1234",
+      }),
       clearHuggingFaceToken: () => ({ configured: false }),
       hasArtifactInRepoUseCase: { execute: testDouble.fn() },
       browseHuggingFaceNamespaceDatasetsUseCase: { execute: testDouble.fn() },
@@ -406,7 +461,8 @@ describe("registerArtifactRepoApiRoutes", () => {
     );
 
     expect(response.status).toHaveBeenCalledWith(400);
-    const body = (response.json as ReturnType<typeof testDouble.fn>).mock.calls[0]?.[0];
+    const body = (response.json as ReturnType<typeof testDouble.fn>).mock
+      .calls[0]?.[0];
     expect(body).toMatchObject({
       ok: false,
       operation: "artifact.publish",
@@ -417,7 +473,10 @@ describe("registerArtifactRepoApiRoutes", () => {
   });
 
   it("imports selected Hugging Face files through the batch import use case", async () => {
-    const handlers = new Map<string, Parameters<ArtifactRepoExpressRoutePort["post"]>[1]>();
+    const handlers = new Map<
+      string,
+      Parameters<ArtifactRepoExpressRoutePort["post"]>[1]
+    >();
     const app: ArtifactRepoExpressRoutePort = {
       post: testDouble.fn((routePath, handler) => {
         handlers.set(routePath, handler);
@@ -427,18 +486,22 @@ describe("registerArtifactRepoApiRoutes", () => {
       execute: testDouble.fn(async () => ({
         ok: true,
         value: {
-          repositories: [{
-            repository: "openai/demo",
-            revision: "main",
-            status: "succeeded",
-            files: [{
+          repositories: [
+            {
               repository: "openai/demo",
               revision: "main",
-              path: "data/train.parquet",
-              status: "registered",
-              artifactId: "artifacts/20260418000000-import001",
-            }],
-          }],
+              status: "succeeded",
+              files: [
+                {
+                  repository: "openai/demo",
+                  revision: "main",
+                  path: "data/train.parquet",
+                  status: "registered",
+                  artifactId: "artifacts/20260418000000-import001",
+                },
+              ],
+            },
+          ],
           summary: { attempted: 1, succeeded: 1, failed: 0 },
         },
       })),
@@ -447,7 +510,10 @@ describe("registerArtifactRepoApiRoutes", () => {
     registerArtifactRepoApiRoutes({
       app,
       getHuggingFaceTokenStatus: () => ({ configured: false }),
-      setHuggingFaceToken: () => ({ configured: true, maskedToken: "â€¢â€¢â€¢â€¢1234" }),
+      setHuggingFaceToken: () => ({
+        configured: true,
+        maskedToken: "â€¢â€¢â€¢â€¢1234",
+      }),
       clearHuggingFaceToken: () => ({ configured: false }),
       hasArtifactInRepoUseCase: { execute: testDouble.fn() },
       browseHuggingFaceNamespaceDatasetsUseCase: { execute: testDouble.fn() },
@@ -469,7 +535,13 @@ describe("registerArtifactRepoApiRoutes", () => {
     await handlers.get("/api/huggingface/files/import")?.(
       {
         body: {
-          files: [{ repository: "openai/demo", path: "data/train.parquet", revision: "main" }],
+          files: [
+            {
+              repository: "openai/demo",
+              path: "data/train.parquet",
+              revision: "main",
+            },
+          ],
           source: "thin-client.artifact-browser",
         },
         headers: {},
@@ -480,12 +552,21 @@ describe("registerArtifactRepoApiRoutes", () => {
     expect(importHuggingFaceFilesUseCase.execute).toHaveBeenCalledWith(
       {
         repositories: [],
-        files: [{ repository: "openai/demo", path: "data/train.parquet", revision: "main", mediaType: undefined }],
+        files: [
+          {
+            repository: "openai/demo",
+            path: "data/train.parquet",
+            revision: "main",
+            mediaType: undefined,
+          },
+        ],
       },
       { requestId: undefined, correlationId: undefined },
     );
     expect(response.status).toHaveBeenCalledWith(200);
-    expect((response.json as ReturnType<typeof testDouble.fn>).mock.calls[0]?.[0]).toMatchObject({
+    expect(
+      (response.json as ReturnType<typeof testDouble.fn>).mock.calls[0]?.[0],
+    ).toMatchObject({
       ok: true,
       value: {
         summary: { attempted: 1, succeeded: 1, failed: 0 },

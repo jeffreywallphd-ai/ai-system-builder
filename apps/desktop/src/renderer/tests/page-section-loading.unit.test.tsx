@@ -383,7 +383,7 @@ describe("desktop page section loading", () => {
     const { container: c, api } = await mount(
       <SystemBuilderPage workspaceId="w1" workspaceName="Workspace" />,
     );
-    expect(c.textContent).toContain("System Builder");
+    expect(c.textContent).toContain("System composition");
     expect(c.textContent).not.toContain("Plans");
     expect(c.textContent).toContain("Publish");
     expect(c.textContent).not.toContain("Build & Release");

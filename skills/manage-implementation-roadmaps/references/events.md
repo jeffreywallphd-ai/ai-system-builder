@@ -49,8 +49,12 @@ revised increment that lacks `security-impact-reviewed` or a more specific
     "disposition": "security-relevant",
     "summary": "Host wiring changes a trust boundary.",
     "assets": ["Authorized application behavior and safe diagnostics"],
-    "trustBoundaries": ["Application orchestration to host adapter composition"],
-    "abuseCases": ["An unavailable policy dependency falls back to permissive behavior"],
+    "trustBoundaries": [
+      "Application orchestration to host adapter composition"
+    ],
+    "abuseCases": [
+      "An unavailable policy dependency falls back to permissive behavior"
+    ],
     "controls": ["Fail-closed composition and sanitized failures"],
     "verification": ["Focused denial and adapter-failure tests"],
     "residualRisks": ["Controlled host qualification remains required"]
@@ -273,7 +277,7 @@ Every criterion must be assigned to one or more planned chunks.
       "Focused denial and sanitized failure-path tests for the changed trust boundary"
     ],
     "completionTests": [
-      "Applicable repository gates after every planned chunk is implemented"
+      "Tests and gates relevant to this increment after every planned chunk is implemented"
     ],
     "documentation": ["Nearest README", "Roadmap report"],
     "rollback": "Remove the additive port and use case.",

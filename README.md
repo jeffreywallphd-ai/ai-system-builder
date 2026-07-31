@@ -46,7 +46,14 @@ Install dependencies with Node 24 from the tracked lockfile using `npm ci`, then
 - `npm run docs:check` — documentation and context drift checks.
 - `npm run architecture:check` — enforced module dependency direction.
 - `npm run agent-support:check` — context catalog and agent-evaluation integrity.
-- `npm test` — non-browser unit and integration suite.
+- `npm test` / `npm run test:standard` — standard unit and interaction
+  feedback.
+- `npm run test:e2e` — integration and end-to-end coverage.
+- `npm run test:ai` — opt-in tests that load or run AI components; use only
+  for AI-related changes or an explicit request.
+- `npm run test:standardande2e` — standard and end-to-end coverage together.
+- `npm run test:all` — standard, end-to-end, and AI coverage; use only for
+  AI-related changes or an explicit request.
 - `npm run test:visual-composer` — one-worker packaged Windows desktop and
   local Chrome System Composer qualification; run `npm run package` first.
 - `npm run build:server` — server build.

@@ -1,7 +1,7 @@
 # Persistence and Storage
 
 - Status: current
-- Related decisions: `docs/adr/ADR-0004-persistence-and-storage-separation.md`, `docs/adr/ADR-0025-deployment-shaped-structured-persistence.md`, `docs/adr/ADR-0026-local-sqlite-runtime.md`, `docs/adr/ADR-0027-managed-postgresql-runtime.md`, `docs/adr/ADR-0028-atomic-structured-document-mutations.md`, `docs/adr/ADR-0029-organization-tenancy-identity-and-authorization.md`, `docs/adr/ADR-0039-dedicated-system-runtime-data-plane.md`
+- Related decisions: `docs/adr/ADR-0004-persistence-and-storage-separation.md`, `docs/adr/ADR-0025-deployment-shaped-structured-persistence.md`, `docs/adr/ADR-0026-local-sqlite-runtime.md`, `docs/adr/ADR-0027-managed-postgresql-runtime.md`, `docs/adr/ADR-0028-atomic-structured-document-mutations.md`, `docs/adr/ADR-0029-organization-tenancy-identity-and-authorization.md`, `docs/adr/ADR-0039-dedicated-system-runtime-data-plane.md`, `docs/adr/ADR-0040-immutable-dataset-versions-lineage-and-publication.md`
 - Verification: `docs/architecture/architecture-verification.md`
 
 ## Asset Kernel relationship
@@ -175,6 +175,15 @@ deadlock detected (`40P01`). JSON compatibility mode serializes same-file
 mutations only within one Node process and is not valid shared-server
 persistence. These mechanics prevent collection-wide lost updates; they do not
 invent domain merge rules for two writers replacing the same logical record.
+
+Dataset-version repositories specialize this rule with insert-only immutable
+records. Dataset bytes and generated documentation remain in artifact storage;
+the structured record contains bounded metadata and exact digests. Finalization
+writes and validates artifacts first and inserts the version record last, so a
+reader cannot observe a partial version. Publication evidence is a separate
+append-only namespace and requires an existing version. These semantics do not
+claim a distributed transaction across structured persistence, artifact storage,
+and external providers.
 
 ### Operational boundary
 
@@ -563,7 +572,7 @@ Workspace records, active-selection preferences, and system-pack activation reco
 
 Workspace-owned resources require explicit workspace ids and must not fall back to legacy global storage. Artifacts/uploads use a workspace-scoped root/keyspace. Image assets, generated outputs, dataset outputs, model inventory records, and runtime task outputs are workspace-scoped where implemented; legacy global records are not auto-migrated or silently assigned to a hidden/default workspace. Storage descriptors exposed through contracts remain path-free, and public diagnostics must not expose raw roots or provider payloads.
 
-workspace foundations final cleanup hardens resource reads at the storage boundary: artifact byte retrieval must first validate the workspace-owned catalog record and must not fetch bytes after missing, invalid, wrong-workspace, or unavailable catalog ownership checks. Missing catalog files represent an empty catalog, but non-`ENOENT` catalog read failures are operational failures and must not be hidden as empty lists. Storage/catalog/generated-image errors crossing application, API, IPC, preload, renderer, or thin-client boundaries must use fixed sanitized messages plus safe operation/error-code details only. Generated image persistence must validate/brand workspace ids before constructing `workspaces/<workspaceId>/generated/images/...` keys. Normal model UI/API read models omit raw `localPath`, `validationReportPath`, and equivalent filesystem diagnostics; upload clients require an active workspace id before sending API/IPC requests.
+workspace foundations final cleanup hardens resource reads at the storage boundary: artifact byte retrieval must first validate the workspace-owned catalog record and must not fetch bytes after missing, invalid, wrong-workspace, or unavailable catalog ownership checks. Missing catalog files represent an empty catalog, but non-`ENOENT` catalog read failures are operational failures and must not be hidden as empty lists. Storage/catalog/generated-image errors crossing application, API, IPC, preload, renderer, or thin-client boundaries must use fixed sanitized messages plus safe operation/error-code details only. Generated image persistence must validate/brand workspace ids before constructing `workspaces/<workspaceId>/generated/images/...` keys. Normal model UI/API read models omit raw `localPath`, `validationReportPath`, and equivalent filesystem diagnostics; upload clients require an active workspace id before sending API/IPC requests. Desktop Model Management may reveal a local model in the operating-system file manager only through a workspace-scoped model-record command: the application resolves the stored location, the desktop host validates it as an absolute path before invoking the file manager, and IPC/preload responses never return the path. Server Model Management never exposes or opens a host path; after an explicit **Show model files** action in the Details modal, it may return at most 500 relative file names and sizes from the workspace-owned model record. Server enumeration must remain within operator-configured model-cache roots, bound visited entries and directory depth, validate link targets, return no file contents or absolute paths, and fail closed for remote-only, missing, or out-of-root records. Missing records, remote-only records, unavailable host support, and host failures fail closed with bounded path-free messages.
 
 ## Workspace persistence boundary
 

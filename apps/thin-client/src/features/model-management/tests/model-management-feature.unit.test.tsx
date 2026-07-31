@@ -49,6 +49,24 @@ describe('ModelManagementFeature',()=>{
   expect(container.querySelectorAll('section ul li.ui-panel').length).toBeGreaterThan(0);
  });
 
+ it('loads server model files only after Show model files is clicked in Details', async()=>{
+  const listModelFiles=vi.fn().mockResolvedValue({modelRecordId:'r1',files:[{relativePath:'config.json',sizeBytes:42}],truncated:false});
+  const client:any={
+    listModels:vi.fn().mockResolvedValue({models:[{modelRecordId:'r1',displayName:'M',provider:'huggingface',source:'huggingface',lifecycleStatus:'downloaded',artifactForm:'full-model',createdAt:'2026-01-01',localFilesAvailable:true}]}),
+    listModelFiles,browseModels:vi.fn().mockResolvedValue({models:[]}),getModelDetails:vi.fn(),saveModelReference:vi.fn(),downloadModel:vi.fn(),deleteModelRecord:vi.fn()
+  };
+  container=document.createElement('div'); document.body.appendChild(container); root=createRoot(container);
+  await act(async()=>{root.render(<ModelManagementFeature client={client} workspaceId="workspace-a"/>);});
+  const detailsButton=Array.from(container.querySelectorAll('button')).find((button)=>button.textContent==='Details');
+  await act(async()=>{detailsButton?.dispatchEvent(new MouseEvent('click',{bubbles:true}));});
+  expect(listModelFiles).not.toHaveBeenCalled();
+  expect(document.body.textContent).not.toContain('config.json');
+  const showFilesButton=Array.from(document.body.querySelectorAll('button')).find((button)=>button.textContent==='Show model files');
+  await act(async()=>{showFilesButton?.dispatchEvent(new MouseEvent('click',{bubbles:true}));});
+  expect(listModelFiles).toHaveBeenCalledWith({workspaceId:'workspace-a',modelRecordId:'r1'});
+  expect(document.body.textContent).toContain('config.json');
+ });
+
  it('keeps an empty browse result inline instead of publishing it', async()=>{
   const client:any={listModels:vi.fn().mockResolvedValue({models:[]}),browseModels:vi.fn().mockResolvedValue({models:[]}),getModelDetails:vi.fn(),saveModelReference:vi.fn(),downloadModel:vi.fn(),deleteModelRecord:vi.fn()};
   container=document.createElement('div'); document.body.appendChild(container); root=createRoot(container);

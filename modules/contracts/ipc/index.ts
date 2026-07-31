@@ -4,6 +4,7 @@ export * from "./ipc-request";
 export * from "./ipc-error";
 export * from "./ipc-response";
 export * from "./desktop-artifact-upload-contract";
+export * from "./desktop-ingestion-task-contract";
 export * from "./desktop-artifact-browse-contract";
 export * from "./desktop-artifact-unregistered-contract";
 export * from "./desktop-artifact-read-contract";
@@ -24,6 +25,7 @@ export * from "./desktop-artifact-registered-contract";
 
 export * from "./desktop-website-ingestion-contract";
 export * from "./desktop-dataset-preparation-contract";
+export * from "./desktop-dataset-version-contract";
 export * from "./desktop-python-runtime-contract";
 export * from "./desktop-runtime-readiness-contract";
 export * from "./desktop-feature-lifecycle-contract";

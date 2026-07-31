@@ -13,8 +13,15 @@ import { SecureEgressBroker } from "../../../security/egress";
 
 function createHubClientDouble() {
   return {
+    listFiles: testDouble.fn(() => (async function* () {
+      yield { type: "file" as const, size: 3, path: "default/train/0000.parquet" };
+      yield { type: "file" as const, size: 2, path: "default/test/0000.parquet" };
+    })()),
     fileExists: testDouble.fn(async () => true),
     uploadFile: testDouble.fn(async () => undefined),
+    commit: testDouble.fn(async () => ({
+      commit: { oid: "a".repeat(40), url: "https://huggingface.co/datasets/example/repo/commit/fixture" },
+    })),
     downloadFile: testDouble.fn(async () => new Response(new Uint8Array([1, 2, 3]), {
       status: 200,
       headers: {
@@ -43,6 +50,66 @@ function createEgressBrokerDouble(
 }
 
 describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
+  it("publishes a dataset version as one bounded multi-file commit and returns its immutable revision", async () => {
+    const hubClient = createHubClientDouble();
+    const adapter = createHuggingFaceArtifactRepoStorageAdapter({
+      hubClient,
+      accessToken: "hf_test",
+    });
+    const result = await adapter.publishDatasetVersion({
+      provider: "hugging-face",
+      repositoryId: "example/support-data",
+      branch: "main",
+      visibility: "private",
+      repositoryCreationApproved: false,
+      versionDigest: `sha256:${"b".repeat(64)}`,
+      files: [
+        { path: "README.md", content: new TextEncoder().encode("# Dataset"), mediaType: "text/markdown", digest: `sha256:${"c".repeat(64)}` },
+        { path: "data/dataset.jsonl", content: new TextEncoder().encode("{}\n"), mediaType: "application/jsonl", digest: `sha256:${"d".repeat(64)}` },
+      ],
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        provider: "hugging-face",
+        repositoryId: "example/support-data",
+        revision: "a".repeat(40),
+      },
+    });
+    expect(hubClient.commit).toHaveBeenCalledTimes(1);
+    const request = hubClient.commit.mock.calls[0]?.[0] as any;
+    expect(request.repo).toEqual({ type: "dataset", name: "example/support-data" });
+    expect(request.branch).toBe("main");
+    expect(request.operations.map((operation: any) => operation.path)).toEqual([
+      "README.md",
+      "data/dataset.jsonl",
+    ]);
+  });
+
+  it("requires explicit creation approval and applies public visibility when a dataset repository is missing", async () => {
+    const hubClient = createHubClientDouble();
+    let attempts = 0;
+    hubClient.commit = testDouble.fn(async () => {
+      attempts += 1;
+      if (attempts === 1) throw { statusCode: 404, message: "missing" };
+      return { commit: { oid: "e".repeat(40), url: "https://huggingface.co/commit/fixture" } };
+    });
+    const fetchImplementation = testDouble.fn(async () => new Response(null, { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+    const authorizeRepositoryCreate = testDouble.fn(async () => true);
+    const adapter = createHuggingFaceArtifactRepoStorageAdapter({ hubClient, accessToken: "hf_test", fetchImplementation, authorizeRepositoryCreate });
+    const result = await adapter.publishDatasetVersion({
+      provider: "hugging-face", repositoryId: "example/new-data", branch: "main", visibility: "public",
+      repositoryCreationApproved: true, versionDigest: `sha256:${"f".repeat(64)}`,
+      files: [{ path: "README.md", content: new Uint8Array([1]), mediaType: "text/markdown", digest: `sha256:${"1".repeat(64)}` }],
+    });
+    expect(result.ok).toBe(true);
+    expect(authorizeRepositoryCreate).toHaveBeenCalledWith({ provider: "huggingface", repository: "example/new-data", visibility: "public" });
+    expect(fetchImplementation).toHaveBeenCalledWith(
+      "https://huggingface.co/api/repos/create",
+      expect.objectContaining({ body: JSON.stringify({ name: "new-data", organization: "example", type: "dataset", private: false }) }),
+    );
+    expect(hubClient.commit).toHaveBeenCalledTimes(2);
+  });
   it("requires official hub client availability when no hub client is provided", async () => {
     const adapter = createHuggingFaceArtifactRepoStorageAdapter({
       officialHubClientLoader: testDouble.fn(async () => {
@@ -601,15 +668,12 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
     expect(fetchImplementation).toHaveBeenCalled();
   });
 
-  it("lists only bounded logical dataset parquet files", async () => {
-    const fetchImplementation = testDouble.fn(async () => new Response(JSON.stringify({
-      default: {
-        train: ["https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet/default/train/0.parquet"],
-        test: ["https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet/default/test/0.parquet"],
-      },
-    }), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+  it("lists only bounded dataset parquet files at an immutable converted revision", async () => {
+    const immutableRevision = "a".repeat(40);
+    const fetchImplementation = testDouble.fn(async () => new Response(JSON.stringify({ sha: immutableRevision }), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+    const hubClient = createHubClientDouble();
     const adapter = createHuggingFaceArtifactRepoStorageAdapter({
-      hubClient: createHubClientDouble(),
+      hubClient,
       fetchImplementation,
     });
 
@@ -625,23 +689,29 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
     expect(result.value.files).toEqual([
       {
         repository: "OpenFinAL/financial-news",
-        path: "default/train/0.parquet",
-        revision: "refs/convert/parquet",
+        path: "default/train/0000.parquet",
+        revision: immutableRevision,
       },
       {
         repository: "OpenFinAL/financial-news",
-        path: "default/test/0.parquet",
-        revision: "refs/convert/parquet",
+        path: "default/test/0000.parquet",
+        revision: immutableRevision,
       },
     ]);
-    expect(result.value.revision).toBe("refs/convert/parquet");
+    expect(result.value.revision).toBe(immutableRevision);
     expect(fetchImplementation).toHaveBeenCalledWith(
-      "https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet",
+      "https://huggingface.co/api/datasets/OpenFinAL/financial-news/revision/refs%2Fconvert%2Fparquet",
       { headers: {} },
     );
+    expect(hubClient.listFiles).toHaveBeenCalledWith({
+      repo: { type: "dataset", name: "OpenFinAL/financial-news" },
+      recursive: true,
+      revision: immutableRevision,
+      accessToken: undefined,
+    });
   });
 
-  it("retrieves a listed converted parquet file through its logical API URL", async () => {
+  it("retrieves a listed converted parquet file through its immutable revision", async () => {
     const egress = createEgressBrokerDouble();
     const adapter = createHuggingFaceArtifactRepoStorageAdapter({
       hubClient: createHubClientDouble(),
@@ -652,24 +722,24 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
       createRetrieveArtifactFromRepoRequest({
         provider: "huggingface",
         repository: "OpenFinAL/financial-news",
-        path: "default/train/0.parquet",
-        revision: "refs/convert/parquet",
+        path: "default/train/0000.parquet",
+        revision: "a".repeat(40),
       }),
     );
 
     expect(result.ok).toBe(true);
     expect(egress.fetch.mock.calls[0]?.[0]).toBe(
-      "https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet/default/train/0.parquet",
+      `https://huggingface.co/datasets/OpenFinAL/financial-news/resolve/${"a".repeat(40)}/default/train/0000.parquet`,
     );
   });
 
-  it("rejects external logical file URLs and oversized parquet listings", async () => {
-    const externalFetch = testDouble.fn(async () => new Response(JSON.stringify({
-      default: { train: ["https://attacker.example/private.parquet"] },
-    }), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+  it("rejects unsafe file paths, oversized listings, and mutable revision responses", async () => {
+    const revisionFetch = testDouble.fn(async () => new Response(JSON.stringify({ sha: "a".repeat(40) }), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+    const unsafeHubClient = createHubClientDouble();
+    unsafeHubClient.listFiles = testDouble.fn(() => (async function* () { yield { type: "file" as const, size: 1, path: "../private.parquet" }; })());
     const externalAdapter = createHuggingFaceArtifactRepoStorageAdapter({
-      hubClient: createHubClientDouble(),
-      fetchImplementation: externalFetch,
+      hubClient: unsafeHubClient,
+      fetchImplementation: revisionFetch,
     });
     const external = await externalAdapter.listDatasetParquetFiles({
       repository: "OpenFinAL/financial-news",
@@ -678,17 +748,14 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
     if (external.ok) throw new Error("Expected external URL rejection.");
     expect(external.error.code).toBe("validation");
 
-    const oversizedFetch = testDouble.fn(async () => new Response(JSON.stringify({
-      default: {
-        train: [
-          "https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet/default/train/0.parquet",
-          "https://huggingface.co/api/datasets/OpenFinAL/financial-news/parquet/default/train/1.parquet",
-        ],
-      },
-    }), { status: 200 })) as unknown as HuggingFaceFetchImplementation;
+    const oversizedHubClient = createHubClientDouble();
+    oversizedHubClient.listFiles = testDouble.fn(() => (async function* () {
+      yield { type: "file" as const, size: 1, path: "default/train/0000.parquet" };
+      yield { type: "file" as const, size: 1, path: "default/train/0001.parquet" };
+    })());
     const oversizedAdapter = createHuggingFaceArtifactRepoStorageAdapter({
-      hubClient: createHubClientDouble(),
-      fetchImplementation: oversizedFetch,
+      hubClient: oversizedHubClient,
+      fetchImplementation: revisionFetch,
       maximumDatasetParquetFiles: 1,
     });
     const oversized = await oversizedAdapter.listDatasetParquetFiles({
@@ -697,6 +764,15 @@ describe("createHuggingFaceArtifactRepoStorageAdapter", () => {
     expect(oversized.ok).toBe(false);
     if (oversized.ok) throw new Error("Expected bounded listing rejection.");
     expect(oversized.error.code).toBe("validation");
+
+    const mutableAdapter = createHuggingFaceArtifactRepoStorageAdapter({
+      hubClient: createHubClientDouble(),
+      fetchImplementation: testDouble.fn(async () => new Response(JSON.stringify({ sha: "main" }), { status: 200 })) as unknown as HuggingFaceFetchImplementation,
+    });
+    const mutable = await mutableAdapter.listDatasetParquetFiles({ repository: "OpenFinAL/financial-news" });
+    expect(mutable.ok).toBe(false);
+    if (mutable.ok) throw new Error("Expected mutable revision rejection.");
+    expect(mutable.error.code).toBe("validation");
   });
 
   it("maps non-browser contract error codes to internal for repo-browser responses", async () => {

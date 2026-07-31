@@ -1,7 +1,8 @@
 # Testing Standards
 
 - Status: accepted
-- Verification: `npm test`
+- Verification: `npm run test:standardande2e`; use `npm run test:all` for
+  AI-related changes
 
 ## Purpose
 
@@ -16,10 +17,39 @@ They are not written to satisfy vanity coverage metrics or performative CI check
 - The canonical runner supplies its transpiled test files to Node's programmatic
   `run()` API with `isolation: "none"`; do not pre-import the same files and then
   invoke `run()`, which can double-register execution under Node 24.
-- Browser/renderer-focused test tooling is handled separately and is not the non-browser default path.
+- Vitest-owned renderer tests are selected by their explicit Vitest import and run
+  separately from Node-owned tests.
 - Canonical repo commands:
-  - `npm test` (root default alias for non-browser coverage)
-  - `npm run test:non-browser` (explicit non-browser command)
+  - `npm test` / `npm run test:standard` (standard unit and interaction coverage)
+  - `npm run test:e2e` (integration and end-to-end coverage)
+  - `npm run test:ai` (opt-in standard or E2E tests that load or run AI components)
+  - `npm run test:standardande2e` (combined standard and end-to-end coverage)
+  - `npm run test:all` (combined standard, end-to-end, and AI coverage)
+  - `npm run test:dataset-preparation:e2e` (opt-in physical dataset creation
+    matrix, only for Dataset Preparation changes or an explicit request)
+  - `npm run test:non-browser` / `npm run test:vitest` (runner-specific coverage)
+
+The standard suite is the default feedback loop. The E2E suite contains every
+`*.integration.test.*` and `*.e2e.test.*` file plus unusually slow legacy files
+marked with `// @test-duration long`. A JavaScript or TypeScript test belongs to
+the AI suite only when it has `// @test-suite ai`; that marker overrides its
+filename. The controlled Python AI list is explicit in
+`run-python-ai-tests.mjs`. Do not mark ordinary slow builds, typechecks, database
+tests, or browser flows as AI. Each runner writes a JSON report under
+`artifacts/test-reports/` with the slowest files and tests.
+
+`test:ai` and `test:all` are reserved for AI-related changes or explicit
+requests. Default CI runs the standard and E2E commands separately and does not
+download or run AI models. Controlled AI tests may require locally provisioned
+assets and must skip truthfully when those assets are absent. Packaged desktop and
+other controlled-environment qualifications remain named commands outside
+`test:all` and cannot be inferred from automated runs.
+The Dataset Preparation creation matrix is also a named exception outside
+`test:all`: it covers every supported task/material-division combination, uses
+only one or two bounded sources, and passes only after reopening a non-empty
+physical Parquet dataset with the expected task fields and source association.
+Keep model output deterministic at this boundary; live large-model quality and
+hardware remain controlled qualifications rather than 39 repeated inference runs.
 
 ## Testing strategy by layer
 
@@ -154,6 +184,11 @@ If no regression test is added, include explicit rationale in the PR.
   - `*.unit.test.ts`
   - `*.integration.test.ts`
   - `*.ui.test.tsx`
+  - `*.e2e.test.tsx`
+
+Use suffixes to describe test scope, not merely duration. Add
+`// @test-duration long` only when measured runtime shows a unit or interaction
+file does not belong in the fast feedback loop.
 
 Describe expected behavior and context in test titles; avoid vague names.
 

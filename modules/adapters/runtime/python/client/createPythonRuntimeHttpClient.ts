@@ -25,6 +25,7 @@ import {
   mapUnloadModelsResponseFromHttpPayload,
 } from "../protocol/pythonRuntimeHttpProtocol";
 import { normalizePythonRuntimeLoopbackBaseUrl } from "../config/pythonRuntimeEndpoint";
+import { PYTHON_RUNTIME_TASK_TIMEOUTS } from "../pythonRuntimeTaskTimeoutPolicy";
 
 export interface PythonRuntimeHttpClient {
   getHealthStatus(): Promise<PythonRuntimeHealthCheckResult>;
@@ -42,7 +43,9 @@ export interface PythonRuntimeHttpClient {
     fromCache: boolean;
     localPath?: string;
   }>;
-  resolveModelDownloadTaskResult(payload: unknown): Promise<CompletedModelDownload>;
+  resolveModelDownloadTaskResult(
+    payload: unknown,
+  ): Promise<CompletedModelDownload>;
   getModelStatus(): Promise<PythonRuntimeModelStatusResult>;
   unloadModels(): Promise<PythonRuntimeUnloadModelsResult>;
   startTask(
@@ -109,8 +112,7 @@ function resolveConfiguredModelCacheRoot(
   environment: NodeJS.ProcessEnv,
 ): string {
   const configured =
-    environment.HF_HUB_CACHE?.trim() ||
-    environment.TRANSFORMERS_CACHE?.trim();
+    environment.HF_HUB_CACHE?.trim() || environment.TRANSFORMERS_CACHE?.trim();
   if (configured) {
     if (!path.isAbsolute(configured)) {
       throw new TypeError("Python runtime model cache root must be absolute.");
@@ -136,7 +138,9 @@ async function resolveModelCacheHandle(
     modelHandle.includes("\\") ||
     path.posix.isAbsolute(modelHandle)
   ) {
-    throw new TypeError("Python runtime returned an invalid model cache handle.");
+    throw new TypeError(
+      "Python runtime returned an invalid model cache handle.",
+    );
   }
   const segments = modelHandle.split("/");
   if (
@@ -149,7 +153,9 @@ async function resolveModelCacheHandle(
         !/^[A-Za-z0-9._-]+$/.test(segment),
     )
   ) {
-    throw new TypeError("Python runtime returned an invalid model cache handle.");
+    throw new TypeError(
+      "Python runtime returned an invalid model cache handle.",
+    );
   }
   const rootStats = await lstat(cacheRoot);
   if (rootStats.isSymbolicLink() || !rootStats.isDirectory()) {
@@ -169,7 +175,9 @@ async function resolveModelCacheHandle(
       relativeCandidate.startsWith("..") ||
       path.isAbsolute(relativeCandidate)
     ) {
-      throw new TypeError("Python runtime model cache handle escaped its root.");
+      throw new TypeError(
+        "Python runtime model cache handle escaped its root.",
+      );
     }
   }
   return candidate;
@@ -292,8 +300,12 @@ export function createPythonRuntimeHttpClient(
     120_000,
   );
   const modelDownloadTimeoutMs = Math.min(
-    Math.max(options.modelDownloadTimeoutMs ?? 2 * 60 * 60 * 1_000, 1_000),
-    2 * 60 * 60 * 1_000,
+    Math.max(
+      options.modelDownloadTimeoutMs ??
+        PYTHON_RUNTIME_TASK_TIMEOUTS.modelDownload,
+      1_000,
+    ),
+    PYTHON_RUNTIME_TASK_TIMEOUTS.modelDownload,
   );
   const modelDownloadPollIntervalMs = Math.min(
     Math.max(options.modelDownloadPollIntervalMs ?? 2_000, 10),
@@ -418,7 +430,11 @@ export function createPythonRuntimeHttpClient(
     },
 
     async resolveModelDownloadTaskResult(payload) {
-      return mapModelDownloadPayload("/tasks/:requestId", payload, modelCacheRoot);
+      return mapModelDownloadPayload(
+        "/tasks/:requestId",
+        payload,
+        modelCacheRoot,
+      );
     },
 
     async getModelStatus() {

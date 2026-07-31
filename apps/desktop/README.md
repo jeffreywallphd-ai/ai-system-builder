@@ -18,6 +18,15 @@ From the repository root:
 - `npm run test:visual-composer -- --project packaged-desktop` after packaging,
   to run the isolated real preload/IPC System Composer workflow on Windows
 
+## Packaged Python worker
+
+Forge copies the managed Python worker into the desktop application's resources
+directory. The desktop host prefers that packaged entry point when it exists,
+honors an explicit `PYTHON_RUNTIME_WORKER_DIR` override, and otherwise uses the
+repository path during development. The resource includes the reviewed worker
+source and requirements file; dependency setup still probes exact versions and
+fails startup on an unexpected or mismatched dependency state.
+
 ## Local structured persistence
 
 Desktop startup opens `<userData>/persistence/ai-system-builder.sqlite3`, applies

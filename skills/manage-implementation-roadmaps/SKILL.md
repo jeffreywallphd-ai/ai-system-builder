@@ -133,6 +133,21 @@ let asking for approval discard the active working plan or its pending increment
 
 ## Execute each increment
 
+When the user explicitly requests implementation and approves the roadmap, default
+to continuous end-to-end execution through every approved increment. A successful
+increment boundary, research step, plan, report update, or focused verification is
+not another approval gate. Continue directly into the next increment until the
+roadmap is production-ready and complete.
+
+Pause only when approval becomes stale because scope or a high-level decision
+changed, the next action needs authority not granted by the roadmap, a destructive
+or production action needs confirmation, credentials or external coordination are
+required, a security policy choice is unresolved, controlled-environment evidence
+is genuinely unavailable, or the user explicitly requests an increment checkpoint.
+Continuous execution never infers initial implementation approval and never broadens
+the approved scope or authority. The explicit final overall approval remains
+required after `roadmap-completed`.
+
 For every approved increment, repeat this loop:
 
 1. Inspect all current uncommitted changes and reconcile them with the roadmap.
@@ -151,12 +166,18 @@ For every approved increment, repeat this loop:
 6. Add or update tests and documentation with the behavior. For security-relevant
    work, cover relevant denial, malformed-input, isolation, bounds,
    non-disclosure, and adapter-failure behavior as well as the happy path. Run only
-   the narrow tests for the current chunk while iterating. Never run a full suite while any
-   planned chunk in the increment remains unimplemented. After every planned chunk
-   is implemented and its focused tests pass, run the completion tests and costly
-   repository-wide gates once for the whole increment, immediately before recording
-   increment completion. Do not use risk or convenience as an exception to run the
-   full suite early; add a focused risk test instead.
+   the narrow tests for the current chunk while iterating. After every planned chunk
+   in an increment is implemented, run only the completion tests and gates relevant
+   to that increment's changes. Never run the complete standard suite, complete
+   end-to-end suite, AI suite, aggregate suite, or unrelated repository-wide gates
+   while roadmap increments remain. After all increments are implemented and their
+   relevant checks pass, run combined standard and end-to-end coverage plus
+   repository-wide completion gates once for a non-AI roadmap. For an AI-related
+   roadmap, run the repository all-suite command once so the AI suite is included.
+   Never run the AI or all-suite command for non-AI work unless the user explicitly
+   requests it.
+   Do not use risk or convenience as an exception to run broad suites early; add a
+   focused risk test instead.
 7. Record completed chunks and update the generated Markdown report in meaningful
    batches. Keep the report minimally verbose: status, increment progress, current
    or next work, recent chunks, unresolved feedback, and blockers only. Full history
@@ -216,7 +237,10 @@ Before claiming completion:
 
 1. Confirm every increment is complete and no controlled-environment evidence is
    pending.
-2. Run the applicable repository gates and validate generated artifacts.
+2. Run the repository's combined standard and end-to-end coverage and applicable
+   repository-wide gates once. For AI-related work, run the all-suite command instead
+   so standard, end-to-end, and AI coverage execute together. Then validate generated
+   artifacts.
 3. Reconcile documentation, feedback, blockers, assumptions, excluded work, the
    final security impact disposition, security evidence, residual risk, and any
    controlled-environment qualification.

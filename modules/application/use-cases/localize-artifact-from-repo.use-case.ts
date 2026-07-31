@@ -1,6 +1,8 @@
 import { createContractError } from "../../contracts/shared";
 import { createStoreArtifactRequest } from "../../contracts/storage";
+import { isWorkspaceId } from "../../contracts/workspace";
 import { Artifact, ArtifactBacking, ArtifactId } from "../../domain/artifact";
+import type { ApplicationRequestContext } from "../ports";
 import type {
   ArtifactObjectStoragePort,
   ArtifactRepoStoragePort,
@@ -41,31 +43,55 @@ export class LocalizeArtifactFromRepoUseCase {
   private readonly artifactStorage: ArtifactObjectStoragePort;
   private readonly now: () => string;
 
-  public constructor(dependencies: LocalizeArtifactFromRepoUseCaseDependencies) {
+  public constructor(
+    dependencies: LocalizeArtifactFromRepoUseCaseDependencies,
+  ) {
     this.artifactRepoStorage = dependencies.artifactRepoStorage;
     this.artifactBindingStorage = dependencies.artifactBindingStorage;
     this.artifactStorage = dependencies.artifactStorage;
     this.now = dependencies.now ?? (() => new Date().toISOString());
   }
 
-  public async execute(command: LocalizeArtifactFromRepoCommand) {
+  public async execute(
+    command: LocalizeArtifactFromRepoCommand,
+    context: ApplicationRequestContext = {},
+  ) {
+    if (!isWorkspaceId(context.workspaceId)) {
+      return {
+        ok: false as const,
+        error: createContractError(
+          "validation",
+          "workspaceId is required to localize an imported artifact.",
+        ),
+      };
+    }
+    const workspaceId = context.workspaceId;
     let artifactId: ArtifactId;
     try {
       artifactId = ArtifactId.from(command.artifactId);
     } catch (error) {
       return {
         ok: false as const,
-        error: createContractError("validation", "artifactId must be a non-empty string.", {
-          details: {
-            reason: error instanceof Error ? error.message : String(error),
+        error: createContractError(
+          "validation",
+          "artifactId must be a non-empty string.",
+          {
+            details: {
+              reason: error instanceof Error ? error.message : String(error),
+            },
           },
-        }),
+        ),
       };
     }
 
-    const readBindingsResult = await this.artifactBindingStorage.readArtifactStorageBindings({
-      artifactId: artifactId.toString(),
-    });
+    const readBindingsResult =
+      await this.artifactBindingStorage.readArtifactStorageBindings(
+        {
+          workspaceId,
+          artifactId: artifactId.toString(),
+        },
+        context,
+      );
     if (!readBindingsResult.ok) {
       return readBindingsResult;
     }
@@ -80,7 +106,10 @@ export class LocalizeArtifactFromRepoUseCase {
     if (!importedSource) {
       return {
         ok: false as const,
-        error: createContractError("not-found", "No imported source backing exists for this artifact."),
+        error: createContractError(
+          "not-found",
+          "No imported source backing exists for this artifact.",
+        ),
       };
     }
 
@@ -88,11 +117,18 @@ export class LocalizeArtifactFromRepoUseCase {
     if (!target) {
       return {
         ok: false as const,
-        error: createContractError("internal", "Imported source backing target could not be resolved."),
+        error: createContractError(
+          "internal",
+          "Imported source backing target could not be resolved.",
+        ),
       };
     }
 
-    const retrieveResult = await this.artifactRepoStorage.retrieveArtifactFromRepo({ target });
+    const retrieveResult =
+      await this.artifactRepoStorage.retrieveArtifactFromRepo(
+        { target },
+        context,
+      );
     if (!retrieveResult.ok) {
       if (retrieveResult.error.code === "unavailable") {
         return {
@@ -115,14 +151,17 @@ export class LocalizeArtifactFromRepoUseCase {
         descriptor: {
           key: artifactId.toString(),
           mediaType: retrieveResult.value.descriptor.mediaType,
+          metadata: { originalFileName: target.path },
         },
         overwrite: true,
       }),
+      context,
     );
     if (!storeResult.ok) {
       return storeResult;
     }
-    const localizedSizeBytes = storeResult.value.sizeBytes ?? retrieveResult.value.content.byteLength;
+    const localizedSizeBytes =
+      storeResult.value.sizeBytes ?? retrieveResult.value.content.byteLength;
 
     const updatedImported = importedSource.withVerification(
       {
@@ -145,7 +184,13 @@ export class LocalizeArtifactFromRepoUseCase {
     const upserts = artifact.toStorageBindings();
     for (const binding of upserts) {
       if (binding.role === "imported-source" || binding.role === "primary") {
-        const result = await this.artifactBindingStorage.upsertArtifactStorageBinding({ binding });
+        const result =
+          await this.artifactBindingStorage.upsertArtifactStorageBinding(
+            {
+              binding: { ...binding, workspaceId },
+            },
+            context,
+          );
         if (!result.ok) {
           return result;
         }

@@ -1,6 +1,7 @@
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { resolveArtifactFamily } from "../../../../application/shared/artifact-family-classifier";
 import type {
   ArtifactCatalogAppendPort,
   ArtifactCatalogDeletePort,
@@ -31,11 +32,13 @@ export interface LocalArtifactCatalogPersistenceAdapter
   extends ArtifactCatalogAppendPort, ArtifactCatalogReadPort, ArtifactCatalogDeletePort {}
 
 function normalizeRecord(record: ArtifactCatalogRecord): ArtifactCatalogRecord {
+  const storedFamily = normalizeArtifactFamily(record.artifactFamily);
+  const inferredFamily = resolveArtifactFamily({ mediaType: record.mediaType, fileName: record.originalName ?? record.storageKey });
   return {
     ...record,
     ...(record.workspaceId ? { workspaceId: createWorkspaceId(record.workspaceId) } : {}),
     storageKey: normalizeStorageArtifactKey(record.storageKey),
-    artifactFamily: normalizeArtifactFamily(record.artifactFamily),
+    artifactFamily: storedFamily === "binary" && inferredFamily === "structured-text" ? inferredFamily : storedFamily,
   };
 }
 
