@@ -283,6 +283,7 @@ export interface RegisterDesktopArtifactUploadIpcOptions {
   storageRootDirectory: string;
   runtimeRootDirectory?: string;
   systemRuntimeWindows?: DesktopPublishedSystemRuntimeWindowPort;
+  revealModelPath?: (localPath: string) => Promise<void> | void;
 }
 
 export interface DesktopHostComposition {
@@ -520,6 +521,7 @@ export function composeDesktopHost(
         schemaSupported: true,
         logicalProcessorCount: cpus().length,
         totalSystemMemoryBytes: totalmem(),
+        availableSystemMemoryBytes: freemem(),
       });
       if (!pythonRuntimeFoundationPromise) {
         const status = createUnavailablePythonRuntimeStatus({
@@ -886,6 +888,7 @@ export function composeDesktopHost(
               getArtifacts: getArtifactFeatures,
               getRuntimeTaskFeatures,
               getPythonRuntimeFoundation,
+              revealModelPath: registerOptions.revealModelPath,
             });
         },
       });

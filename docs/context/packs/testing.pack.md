@@ -22,13 +22,16 @@
 
 - Test observable behavior and boundary contracts, not implementation trivia.
 - Use Node's built-in test runner (`node:test`) as the default for non-browser tests.
-- Use `npm test` for short unit and interaction feedback, `npm run test:long`
-  for integration and end-to-end coverage, and `npm run test:all` for the
-  complete automated suite.
-- Classify `*.integration.test.*` and `*.e2e.test.*` as long. Keep UI interaction
-  tests short unless measured runtime justifies `// @test-duration long`.
+- Use `npm test` for standard unit and interaction feedback and
+  `npm run test:e2e` for integration and end-to-end coverage.
+- Use `npm run test:ai` or `npm run test:all` only for AI-related work or an
+  explicit request. Use `npm run test:standardande2e` for combined non-AI coverage.
+- Classify `*.integration.test.*` and `*.e2e.test.*` as E2E. Mark only tests
+  that load or run AI components with `// @test-suite ai`; the AI marker wins.
+  `// @test-duration long` remains a legacy E2E marker.
 - During roadmap work, run focused chunk tests and increment-relevant checks;
-  reserve the complete short and long suites until every increment is implemented.
+  reserve combined standard and end-to-end coverage until every increment is
+  implemented, and add the AI suite only for AI-related roadmaps.
 - Test domain logic directly and application use cases through controlled ports/test doubles.
 - Give adapters focused integration coverage for real translation and boundary behavior.
 - Add host/transport integration tests for wiring, composition, delegation, and safe error mapping.

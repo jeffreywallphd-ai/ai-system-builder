@@ -25,7 +25,7 @@ export function ModelsFeature(props: {
         tabs={[
           {
             id: "browse-models",
-            label: "Browse Models",
+            label: "Find Models",
             content: <BrowseModelsTab state={state} />,
           },
           {

@@ -10,6 +10,10 @@ from modules.adapters.runtime.python.worker.tasks.constrained_json_decoder impor
     compile_constrained_json_schema,
     get_constrained_json_decoder_runtime_status,
 )
+from modules.adapters.runtime.python.worker.tasks.example_generation import (
+    _remove_schema_property,
+    build_task_structured_output_schema,
+)
 
 
 class _TokenizerOnlyModel:
@@ -75,6 +79,19 @@ class ConstrainedJsonOutlinesIntegrationTests(unittest.TestCase):
                 },
                 {"example": {"answer": "yes", "tags": ["one", "two"]}},
             ),
+            (
+                self._instruction_generation_schema(),
+                {
+                    "schemaVersion": "1",
+                    "taskType": "llm-instruction",
+                    "status": "ok",
+                    "example": {
+                        "instruction": "Answer the input using only the provided context.",
+                        "input": "When are refund requests accepted?",
+                        "output": "Refund requests are accepted within 30 days.",
+                    },
+                },
+            ),
         )
 
         for schema, payload in cases:
@@ -100,6 +117,12 @@ class ConstrainedJsonOutlinesIntegrationTests(unittest.TestCase):
                 )
                 self.assertTrue(torch.isfinite(final_scores[0, tokenizer.eos_token_id]))
                 compiled.validate(payload)
+
+    @staticmethod
+    def _instruction_generation_schema() -> dict[str, object]:
+        schema = build_task_structured_output_schema("llm-instruction")
+        _remove_schema_property(schema, ("example", "context"))
+        return schema
 
 
 if __name__ == "__main__":

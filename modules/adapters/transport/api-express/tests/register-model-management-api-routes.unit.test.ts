@@ -43,6 +43,38 @@ describe("registerModelManagementApiRoutes",()=>{
     expect(deps.publishModelUseCase.execute).toHaveBeenCalledWith({workspaceId:'workspace-a',modelRecordId:'m1',repository:'owner/repo',owner:undefined,revision:undefined,private:undefined,pathPrefix:undefined,token:undefined,allowWarningValidation:undefined,allowInvalidValidation:undefined,allowInvalid:undefined,forceRevalidate:undefined});
   });
 
+  it("registers the optional server model-file route and requires workspace scope", async()=>{
+    const handlers=new Map<string,any>(); const app:ModelManagementExpressRoutePort={post:testDouble.fn((p,h)=>handlers.set(p,h))};
+    const listModelFilesUseCase={execute:testDouble.fn(async(x)=>({modelRecordId:x.modelRecordId,files:[],truncated:false}))};
+    const deps:any={browseModelsUseCase:{execute:testDouble.fn()},getModelDetailsUseCase:{execute:testDouble.fn()},listModelsUseCase:{execute:testDouble.fn()},listModelFilesUseCase,saveModelReferenceUseCase:{execute:testDouble.fn()},downloadModelUseCase:{execute:testDouble.fn()},updateModelRecordUseCase:{execute:testDouble.fn()},deleteModelRecordUseCase:{execute:testDouble.fn()}};
+    registerModelManagementApiRoutes({app,...deps});
+    expect([...handlers.keys()]).toContain('/api/model/files/list');
+    const missing=response(); await handlers.get('/api/model/files/list')({body:{modelRecordId:'m1'},headers:{}},missing.res);
+    expect(missing.status).toHaveBeenCalledWith(400);
+    await handlers.get('/api/model/files/list')({body:{workspaceId:'workspace-a',modelRecordId:'m1'},headers:{}},response().res);
+    expect(listModelFilesUseCase.execute).toHaveBeenCalledWith({workspaceId:'workspace-a',modelRecordId:'m1'});
+  });
+
+  it("keeps server model inventory responses path-free while reporting local availability", async()=>{
+    const handlers=new Map<string,any>(); const app:ModelManagementExpressRoutePort={post:testDouble.fn((p,h)=>handlers.set(p,h))};
+    const deps:any={browseModelsUseCase:{execute:testDouble.fn()},getModelDetailsUseCase:{execute:testDouble.fn()},listModelsUseCase:{execute:testDouble.fn(async()=>({models:[{modelRecordId:'m1',localPath:'C:\\private\\m1',validationReportPath:'C:\\private\\report.json'}]}))},saveModelReferenceUseCase:{execute:testDouble.fn()},downloadModelUseCase:{execute:testDouble.fn()},updateModelRecordUseCase:{execute:testDouble.fn()},deleteModelRecordUseCase:{execute:testDouble.fn()}};
+    registerModelManagementApiRoutes({app,...deps});
+    const output=response(); await handlers.get('/api/model/list')({body:{workspaceId:'workspace-a'},headers:{}},output.res);
+    const serialized=JSON.stringify(output.json.mock.calls[0]?.[0]);
+    expect(serialized.includes('C:\\\\private')).toBe(false);
+    expect(serialized.includes('localFilesAvailable')).toBe(true);
+  });
+
+  it("rejects attempts to replace a stored model path through the server API", async()=>{
+    const handlers=new Map<string,any>(); const app:ModelManagementExpressRoutePort={post:testDouble.fn((p,h)=>handlers.set(p,h))};
+    const updateModelRecordUseCase={execute:testDouble.fn()};
+    const deps:any={browseModelsUseCase:{execute:testDouble.fn()},getModelDetailsUseCase:{execute:testDouble.fn()},listModelsUseCase:{execute:testDouble.fn()},saveModelReferenceUseCase:{execute:testDouble.fn()},downloadModelUseCase:{execute:testDouble.fn()},updateModelRecordUseCase,deleteModelRecordUseCase:{execute:testDouble.fn()}};
+    registerModelManagementApiRoutes({app,...deps});
+    const output=response(); await handlers.get('/api/model/record/update')({body:{workspaceId:'workspace-a',modelRecordId:'m1',patch:{localPath:'C:\\private'}},headers:{}},output.res);
+    expect(output.status).toHaveBeenCalledWith(400);
+    expect(updateModelRecordUseCase.execute).not.toHaveBeenCalled();
+  });
+
   it("registers short model-download lifecycle routes and normalizes workspace task reads", async()=>{
     const handlers=new Map<string,any>(); const app:ModelManagementExpressRoutePort={post:testDouble.fn((p,h)=>handlers.set(p,h))};
     const tasks={start:testDouble.fn(async(x)=>({activity:{requestId:'download-1',...x,status:'queued'}})),read:testDouble.fn(async(x)=>({activity:{...x,status:'running'}})),list:testDouble.fn(async()=>({activities:[]})),cancel:testDouble.fn(async(x)=>({activity:{...x,status:'cancelled'},cancelled:true}))};

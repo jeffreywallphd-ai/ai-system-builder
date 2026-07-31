@@ -1,32 +1,24 @@
 # Context Pack: Data Management
 
 - Pack name: `data-management`
-
 ## Purpose
 
-- Route work involving ingestion, staged source artifacts, dataset
-  preparation, split integrity, curation, versioning, or dataset publication.
-- Summarize the implemented boundary without replacing canonical architecture,
-  ADR, security, storage, or runtime guidance.
+- Route work involving ingestion, staged source artifacts, dataset preparation, split integrity, curation, versioning, or dataset publication.
+- Summarize the implemented boundary without replacing canonical architecture, ADR, security, storage, or runtime guidance.
 
 ## Use When
 
 - Changing source format/task compatibility or Data Management UI choices.
 - Staging local or repository-backed artifacts for preparation.
-- Changing dataset normalization, generation, splits, results, warnings,
-  lifecycle, or publication.
-- Adding profiling, curation, quarantine, version history, dataset cards, or
-  governed source refresh.
+- Changing dataset normalization, generation, splits, results, warnings, lifecycle, or publication.
+- Adding profiling, curation, quarantine, version history, dataset cards, or governed source refresh.
 
 ## Core Guidance
 
-- Preserve ADR-0008 staged-artifact semantics and ADR-0009's separation of
-  internal artifact identity from local and remote backing.
-- `modules/contracts/runtime/dataset-preparation-capabilities.ts` is the
-  authority for advertised source/task support. Do not create host-specific
-  allowlists.
-- Reject unsupported or incompatible paths before runtime work with a
-  plain-language reason and corrective action.
+- Preserve ADR-0008 staged-artifact semantics and ADR-0009's separation of internal artifact identity from local and remote backing.
+- `modules/contracts/runtime/dataset-preparation-capabilities.ts` owns
+  advertised source/task support; do not create host-specific allowlists.
+- Reject unsupported or incompatible paths before runtime work with a plain-language reason and corrective action.
 - Carry workspace and managed organization context through transport,
   application, storage/provider, runtime-task, result, and publication
   boundaries. UI selection is not authorization.
@@ -47,11 +39,13 @@
   application organization scope; the host must add authoritative organization
   and principal context and reject missing or conflicting context before task
   creation.
-- Provider registration must persist the authoritative task workspace on both
-  the catalog record and imported-source binding before task success. Parquet
-  selections must remain tabular and use a Parquet media type even when the
-  provider listing omits one; workspace-filtered browsing is not relaxed to
+- Staging recovers omitted byte-descriptor names and media types from the
+  workspace-authorized catalog; it never guesses JSON. Provider registration
+  persists task workspace on catalog and imported-source records. Parquet
+  selections remain tabular even when provider media type is omitted; do not
   accommodate an unscoped write.
+- Parquet preparation requires the managed worker's patched PyArrow pin and
+  keeps bounded structured-read failures distinct from model readiness.
 - Hugging Face Step 2 may read or update only the host-owned token setting
   needed for private or gated datasets. Keep the token out of task commands,
   errors, logs, and roadmap evidence. The guided workflow is the sole mounted
@@ -92,7 +86,19 @@
   and untrusted source/task data. Require one versioned task-bound JSON envelope,
   reject unknown fields, labels, tasks, versions, oversized/nested values, and
   non-source passages, then map validated values to the task row contract before
-  JSON, CSV, or Parquet serialization.
+  JSON, CSV, or Parquet serialization. Unchecked mode may unwrap one exact
+  `json` fence around one bounded object before those validations; reject
+  surrounding prose, partial or multiple fences, and non-object JSON.
+- Treat generation `skip` as a data-only omission for an explicit no-candidate result or one section whose output remains invalid after bounded correction. Reject that output, record a warning/count, and continue; if no valid examples remain, fail the run. Never convert model-cache/load, decoder operation, inference, dependency, resource, or unexpected runtime failures into skipped examples. Validate complete model weights, indexed shards, and
+  tokenizer files before accepting a Transformers cache. Preparation readiness
+  is local-only; incomplete downloads stop with a distinct safe message and are
+  resumed only through Step 3's explicit model-download action. That task retries transient transfer or validation failures three times, preserves bounded partial files, and cleans cache only for containment or configured size/count violations.
+- Topic-aware division must enforce a minimum semantic section size before accepting a low-continuity boundary, retain the maximum token bound, and avoid one generation request per sentence. Progress must expose a safe model-loading phase globally until the first batch completes. Built-in model defaults use non-identifying capacity facts: desktop considers available memory and steps an untouched Quality 7B choice through Compact 3B to Lightweight 1.5B as needed; servers keep the total-memory reserve. Never override explicit/saved choices. Enforce only the contract-owned 0/1/4 GiB CPU overflow choices, deny CUDA overflow, reject larger live-memory shortfalls, warn globally when disk/swap is actually used, and keep model-status polling responsive during load.
+- Desktop runtime startup respects an explicit Python command. Otherwise, bounded fixed probes prefer installed Python 3.10 through 3.13 for the
+  decoder. With none, keep the baseline worker available, advertise decoder
+  capability as unavailable, disable constraints in both hosts, and return a
+  distinct safe unavailable reason for stale requests.
+- Preserve desired-example field order in decoder grammar serialization while keeping integrity fingerprints order-independent. On Windows, use the pinned Outlines mask kernel's eager callable to avoid Torch's optional compiler probe without changing masking or mandatory post-validation.
 - Example output layouts are edited through bounded visual fields and
   plain-language sample values, never raw schema. Compile one deterministic
   schema, schema-valid example envelope, and protected training-purpose map for
@@ -133,27 +139,23 @@
   dataset, Review and create sequence. Put parser/model/split/performance/file
   tuning under Advanced settings.
 - Every generated training task has a task-compatible default model JSON schema
-  and populated sample output shown through the visual output editor. Advanced
-  users edit plain-language fields and sample values rather than raw schema
-  keywords. Labels remain in Step 1 instead of being duplicated as field
-  choices. Protected training purposes cannot be removed or duplicated;
-  instruction-training includes a separate Context field by default and may add
-  an optional text-only Thought purpose.
-- Source attribution is opt-in and separate from model output. Show its locked
-  companion fields beside the example shape, then populate them only from
-  bounded trusted source metadata after validation. Never ask the model to
-  invent attribution, and omit the companion object when the choice is off.
+  and populated visual sample. Advanced users edit plain-language fields and
+  values, not raw schema. Labels remain in Step 1. Protected purposes cannot be
+  removed or duplicated; instruction training defaults to a separate Context
+  and may add an optional text-only Thought purpose.
+- Source attribution is opt-in and separate from model output. Show locked
+  companion fields beside the shape and populate them only from bounded trusted
+  metadata after validation. Never ask the model to invent attribution; omit
+  the companion object when the choice is off.
 - Keep reusable settings outside the numbered workflow, omit task-specific
   settings when there are no choices, and avoid nested review cards that only
   restate save or publication guidance.
-- Inline readiness and correction belong near the affected step. Use the
-  notification center only for cross-page outcomes and authoritative
-  long-running activity.
-- On acquisition success, clear the shared Add data form, return it to Files,
-  open the authoritative completed activity in the notification dropdown, and
-  scroll the page viewport to the top. Keep selections after failure or
-  cancellation so users can correct or retry them; never clear the host-owned
-  provider credential as part of this form reset.
+- Keep readiness and correction inline. Use notifications for authoritative
+  cross-page activity; accepted dataset preparation opens and updates there.
+- On acquisition success, clear Add data, return it to Files, open the completed
+  notification, and scroll to the top. Keep selections after failure or
+  cancellation for correction or retry; never clear the host-owned provider
+  credential during form reset.
 
 ## Canonical Sources
 
@@ -169,10 +171,9 @@
 ## Verification
 
 - Capability truth and unsupported early-denial tests.
-- For optional token constraints, test exact conditional dependency readiness,
-  flat and nested Qwen-token acceptance, processor attachment/reset and bounded
-  cache eviction, accepting EOS, truncation/dead-end denial, sanitized errors,
-  no checked-mode fallback, and retained unchecked-mode semantic validation.
+- For optional token constraints, test conditional dependency readiness,
+  Qwen-token acceptance, processor reset/bounded cache, EOS, a bounded same-mode
+  correction, safe terminal errors, no checked fallback, and semantic validation.
 - Malformed, oversized, unavailable-policy, wrong-scope, stale/replayed
   approval, cancellation, cleanup, and diagnostic non-disclosure tests.
 - Deterministic physical split counts, group/duplicate isolation, and output
@@ -183,13 +184,10 @@
 - Default-schema completeness for every generated task, schema-fingerprint and
   purpose-path mismatch denial, selected trusted attribution, sanitized public
   URLs, and absence of attribution when unselected.
-- Desktop/thin-client ordered-step, advanced-disclosure, actionable warning,
-  keyboard, reflow, and reduced-motion checks.
-- Applicable docs, architecture, agent-support, host build, package, and full
-  repository gates after an increment is complete.
+- Desktop/thin-client ordered-step, disclosure, warning, keyboard, reflow, and reduced-motion checks.
+- Applicable docs, architecture, agent-support, host build, package, and full repository gates after an increment.
 
 ## Adjacent Packs
-
 - `persistence-storage` for object/repository storage or source isolation.
 - `runtime` or `runtime-task-registry` for worker execution/lifecycle.
 - `desktop-implementation` for renderer and thin-client experience.

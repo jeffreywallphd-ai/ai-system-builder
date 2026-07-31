@@ -168,10 +168,14 @@ For every approved increment, repeat this loop:
    non-disclosure, and adapter-failure behavior as well as the happy path. Run only
    the narrow tests for the current chunk while iterating. After every planned chunk
    in an increment is implemented, run only the completion tests and gates relevant
-   to that increment's changes. Never run the complete short suite, complete long
-   suite, or unrelated repository-wide gates while roadmap increments remain. After
-   all increments are implemented and their relevant checks pass, run the complete
-   short and long suites plus repository-wide completion gates once for the roadmap.
+   to that increment's changes. Never run the complete standard suite, complete
+   end-to-end suite, AI suite, aggregate suite, or unrelated repository-wide gates
+   while roadmap increments remain. After all increments are implemented and their
+   relevant checks pass, run combined standard and end-to-end coverage plus
+   repository-wide completion gates once for a non-AI roadmap. For an AI-related
+   roadmap, run the repository all-suite command once so the AI suite is included.
+   Never run the AI or all-suite command for non-AI work unless the user explicitly
+   requests it.
    Do not use risk or convenience as an exception to run broad suites early; add a
    focused risk test instead.
 7. Record completed chunks and update the generated Markdown report in meaningful
@@ -233,8 +237,10 @@ Before claiming completion:
 
 1. Confirm every increment is complete and no controlled-environment evidence is
    pending.
-2. Run the repository's complete short test suite, complete long test suite, and
-   applicable repository-wide gates once, then validate generated artifacts.
+2. Run the repository's combined standard and end-to-end coverage and applicable
+   repository-wide gates once. For AI-related work, run the all-suite command instead
+   so standard, end-to-end, and AI coverage execute together. Then validate generated
+   artifacts.
 3. Reconcile documentation, feedback, blockers, assumptions, excluded work, the
    final security impact disposition, security evidence, residual risk, and any
    controlled-environment qualification.

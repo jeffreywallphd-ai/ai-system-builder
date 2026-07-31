@@ -362,6 +362,16 @@ describe("thin DatasetPreparationFeature", () => {
     expect(container.textContent).toContain(
       "Keep generated JSON well structured",
     );
+    const constrainedControl = Array.from(
+      container.querySelectorAll("label"),
+    ).find((label) =>
+      label.textContent?.includes("Keep generated JSON well structured"),
+    ) as HTMLLabelElement;
+    const constrainedCheckbox = constrainedControl.querySelector(
+      "input[type='checkbox']",
+    ) as HTMLInputElement;
+    expect(constrainedCheckbox.checked).toBe(false);
+    expect(constrainedCheckbox.disabled).toBe(true);
     const attributionLabel = Array.from(
       container.querySelectorAll("label"),
     ).find((label) =>

@@ -11,6 +11,7 @@ from modules.adapters.runtime.python.worker.tasks.example_generation import (
 from modules.adapters.runtime.python.worker.tasks.markdown_chunking import MarkdownChunk
 from modules.adapters.runtime.python.worker.tasks.structured_output_runtime import (
     StructuredOutputValidationError,
+    parse_model_json_object,
     resolve_runtime_structured_output,
     validate_json_schema_value,
 )
@@ -21,6 +22,26 @@ from modules.adapters.runtime.python.worker.tests.structured_output_test_fixture
 
 
 class StructuredOutputRuntimeTests(unittest.TestCase):
+    def test_accepts_only_one_exact_fenced_json_object_compatibility_wrapper(self) -> None:
+        payload = {"schemaVersion": "1", "status": "ok"}
+        serialized = json.dumps(payload)
+        self.assertEqual(
+            parse_model_json_object(f"```json\n{serialized}\n```"),
+            payload,
+        )
+        self.assertEqual(parse_model_json_object(serialized), payload)
+
+        invalid = (
+            f"Here is the result:\n{serialized}",
+            f"```json\n{serialized}\n```\nExtra text",
+            f"```json\n{serialized}\n```\n```json\n{serialized}\n```",
+            "[1, 2, 3]",
+        )
+        for candidate in invalid:
+            with self.subTest(candidate_kind=len(candidate)):
+                with self.assertRaises(StructuredOutputValidationError):
+                    parse_model_json_object(candidate)
+
     def test_verifies_fingerprint_and_rejects_tampering(self) -> None:
         runtime = runtime_structured_output_fixture(constrained=True)
         resolved = resolve_runtime_structured_output(runtime)

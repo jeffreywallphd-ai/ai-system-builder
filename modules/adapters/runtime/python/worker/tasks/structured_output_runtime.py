@@ -9,6 +9,7 @@ from typing import Any
 
 
 _MAX_CONFIG_BYTES = 64 * 1024
+_MAX_MODEL_OUTPUT_BYTES = 64 * 1024
 _MAX_SCHEMA_DEPTH = 20
 _MAX_SCHEMA_NODES = 1_024
 _MAX_PATH_DEPTH = 5
@@ -28,6 +29,10 @@ _PURPOSES = {
     "passage",
     "caption",
 }
+_SINGLE_JSON_FENCE_PATTERN = re.compile(
+    r"\A```(?:json)?[ \t]*\r?\n(?P<body>[\s\S]*?)\r?\n```[ \t]*\Z",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -42,6 +47,34 @@ class RuntimeStructuredOutput:
 
 class StructuredOutputValidationError(ValueError):
     pass
+
+
+def parse_model_json_object(value: str) -> dict[str, Any]:
+    """Parse one bounded JSON object, tolerating only one exact JSON fence.
+
+    Small local models sometimes wrap an otherwise exact object in a Markdown
+    fence despite an explicit JSON-only instruction. Compatibility mode may
+    remove that single wrapper, but surrounding prose, multiple fences, and
+    non-object JSON still fail before schema or semantic validation.
+    """
+
+    if not isinstance(value, str) or len(value.encode("utf-8")) > _MAX_MODEL_OUTPUT_BYTES:
+        raise StructuredOutputValidationError("Model output exceeded its structured-response limit.")
+    candidate = value.strip()
+    fenced = _SINGLE_JSON_FENCE_PATTERN.fullmatch(candidate)
+    if fenced is not None:
+        candidate = fenced.group("body").strip()
+    if not candidate or "```" in candidate:
+        raise StructuredOutputValidationError("Model output did not contain one JSON object.")
+    try:
+        parsed = json.loads(candidate)
+    except json.JSONDecodeError as error:
+        raise StructuredOutputValidationError(
+            "Model output did not contain one valid JSON object."
+        ) from error
+    if not isinstance(parsed, dict):
+        raise StructuredOutputValidationError("Model output did not contain a JSON object.")
+    return parsed
 
 
 def _canonical_json(value: Any) -> str:

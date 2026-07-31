@@ -7,6 +7,7 @@ import {
   readdirSync,
   rmSync,
   statSync,
+  writeFileSync,
 } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -79,8 +80,32 @@ for (const discoveryRoot of discoveryRoots) {
 
 discoveredFiles.sort((left, right) => left.localeCompare(right));
 if (discoveredFiles.length === 0) {
-  console.error(`No Vitest-owned ${suite} test files were discovered.`);
-  process.exitCode = 1;
+  if (suite !== "ai") {
+    console.error(`No Vitest-owned ${suite} test files were discovered.`);
+    process.exitCode = 1;
+  } else {
+    const report = {
+      suite,
+      success: true,
+      discoveredFiles: [],
+      numTotalTestSuites: 0,
+      numPassedTestSuites: 0,
+      numFailedTestSuites: 0,
+      numTotalTests: 0,
+      numPassedTests: 0,
+      numFailedTests: 0,
+      testResults: [],
+      slowestFiles: [],
+      slowestTests: [],
+    };
+    mkdirSync(path.dirname(reportPath), { recursive: true });
+    writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+    console.log(
+      "No explicitly marked Vitest AI tests were discovered; continuing with the controlled Python AI tests.",
+    );
+    console.log(`Timing report: ${reportRelativePath}`);
+    process.exitCode = 0;
+  }
 } else {
   mkdirSync(path.dirname(reportPath), { recursive: true });
   rmSync(reportPath, { force: true });

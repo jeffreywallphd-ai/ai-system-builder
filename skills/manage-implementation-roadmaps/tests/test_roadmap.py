@@ -368,7 +368,8 @@ class RoadmapEngineTest(unittest.TestCase):
         self.assertIn("Size increments economically", skill_text)
         self.assertIn("fewest increments", skill_text)
         self.assertIn("shared UI primitive", skill_text)
-        self.assertRegex(skill_text, r"complete\s+short and long suites")
+        self.assertRegex(skill_text, r"combined\s+standard and end-to-end coverage")
+        self.assertIn("AI-related", skill_text)
         self.assertIn("while roadmap increments remain", skill_text)
         self.assertIn("adjacent-increment cohesion audit", skill_text)
         self.assertIn("Define economically cohesive increments", workflow_text)
@@ -378,8 +379,9 @@ class RoadmapEngineTest(unittest.TestCase):
         self.assertIn("final-approval-recorded", workflow_text)
         self.assertIn("increment-relevant completion tests", workflow_text)
         self.assertRegex(
-            workflow_text, r"complete short suite\s+and complete long suite"
+            workflow_text, r"combined standard and end-to-end coverage"
         )
+        self.assertIn("AI-related", workflow_text)
         self.assertIn("temporary", diagnostics_text.lower())
         self.assertIn("docs/tmp/", gitignore_text)
 

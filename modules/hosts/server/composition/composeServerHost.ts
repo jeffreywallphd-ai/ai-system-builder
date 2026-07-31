@@ -26,7 +26,7 @@ import { createLocalApplicationSettingsAdapter } from "../../../adapters/persist
 import { createLocalModelRegistryAdapter } from "../../../adapters/persistence/model";
 import { createHuggingFaceModelBrowseDetailsAdapter } from "../../../adapters/model/huggingface";
 import { createLocalImageAssetRegistryAdapter } from "../../../adapters/persistence/image";
-import { createLocalModelCheckpointResolverAdapter } from "../../../adapters/model/local";
+import { createLocalModelCheckpointResolverAdapter, createLocalModelFileListerAdapter } from "../../../adapters/model/local";
 import {
   createLocalUserLibraryAssetRepositoryAdapter,
   createLocalWorkspaceUserLibraryLinkRepositoryAdapter,
@@ -94,6 +94,7 @@ import {
   GetModelDetailsUseCase,
   LocalizeExternalRepositoryObjectAsAssetUseCase,
   ListModelsUseCase,
+  ListModelFilesUseCase,
   SaveModelReferenceUseCase,
   DownloadModelUseCase,
   ModelDownloadTasksUseCase,
@@ -1765,6 +1766,12 @@ export function composeServerHost(
         providers: { huggingface: huggingFaceModelBrowseDetails },
       });
       const listModelsUseCase = new ListModelsUseCase({ modelRegistry });
+      const listModelFilesUseCase = new ListModelFilesUseCase({
+        modelRegistry,
+        modelFileLister: createLocalModelFileListerAdapter({
+          allowedRootDirectories: [hfHome, transformersCache],
+        }),
+      });
       const saveModelReferenceUseCase = new SaveModelReferenceUseCase({
         modelRegistry,
       });
@@ -2194,6 +2201,7 @@ export function composeServerHost(
         browseModelsUseCase,
         getModelDetailsUseCase,
         listModelsUseCase,
+        listModelFilesUseCase,
         saveModelReferenceUseCase,
         downloadModelUseCase,
         modelDownloadTasksUseCase,

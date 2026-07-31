@@ -16,6 +16,7 @@ import { type ModelValidationStatus, normalizeModelValidationStatus } from "./mo
 
 export const DEFAULT_LIST_MODELS_LIMIT = 50;
 export const MAX_LIST_MODELS_LIMIT = 500;
+export const MAX_LIST_MODEL_FILES = 500;
 
 export interface ListModelsRequest {
   workspaceId?: WorkspaceId;
@@ -213,6 +214,32 @@ export function normalizeListModelsRequest(request: ListModelsRequest): ListMode
   };
 }
 
+export interface RevealModelInFolderRequest {
+  workspaceId?: WorkspaceId;
+  modelRecordId: string;
+}
+
+export interface RevealModelInFolderResult {
+  modelRecordId: string;
+  revealed: true;
+}
+
+export interface ListModelFilesRequest {
+  workspaceId?: WorkspaceId;
+  modelRecordId: string;
+}
+
+export interface ModelFileListItem {
+  relativePath: string;
+  sizeBytes: number;
+}
+
+export interface ListModelFilesResult {
+  modelRecordId: string;
+  files: ModelFileListItem[];
+  truncated: boolean;
+}
+
 export function normalizeListModelsResult(result: ListModelsResult): ListModelsResult {
   return {
     models: result.models.map((model) => normalizeModelInventoryRecord(model)),
@@ -322,5 +349,53 @@ export function normalizeDeleteModelRecordRequest(request: DeleteModelRecordRequ
     modelRecordId: normalizeRequiredText(request.modelRecordId, "modelRecordId"),
     deleteLocalFiles: request.deleteLocalFiles === true,
     deleteBackingArtifacts: request.deleteBackingArtifacts === true,
+  };
+}
+
+export function normalizeRevealModelInFolderRequest(
+  request: RevealModelInFolderRequest,
+): RevealModelInFolderRequest {
+  return {
+    workspaceId: normalizeWorkspaceId(request.workspaceId),
+    modelRecordId: normalizeRequiredText(request.modelRecordId, "modelRecordId"),
+  };
+}
+
+export function normalizeListModelFilesRequest(
+  request: ListModelFilesRequest,
+): ListModelFilesRequest {
+  return {
+    workspaceId: normalizeWorkspaceId(request.workspaceId),
+    modelRecordId: normalizeRequiredText(request.modelRecordId, "modelRecordId"),
+  };
+}
+
+export function normalizeListModelFilesResult(
+  result: ListModelFilesResult,
+): ListModelFilesResult {
+  if (result.files.length > MAX_LIST_MODEL_FILES) {
+    throw new Error(`Model file lists cannot contain more than ${MAX_LIST_MODEL_FILES} files.`);
+  }
+
+  return {
+    modelRecordId: normalizeRequiredText(result.modelRecordId, "modelRecordId"),
+    files: result.files.map((file) => {
+      const relativePath = file.relativePath.trim().replace(/\\/g, "/");
+      const segments = relativePath.split("/");
+      if (
+        relativePath.length === 0
+        || relativePath.length > 1_024
+        || relativePath.startsWith("/")
+        || /^[A-Za-z]:/.test(relativePath)
+        || segments.some((segment) => !segment || segment === "." || segment === ".." || /[\u0000-\u001f\u007f]/.test(segment))
+      ) {
+        throw new Error("Model file paths must be safe repository-relative paths.");
+      }
+      if (!Number.isSafeInteger(file.sizeBytes) || file.sizeBytes < 0) {
+        throw new Error("Model file sizes must be non-negative safe integers.");
+      }
+      return { relativePath, sizeBytes: file.sizeBytes };
+    }),
+    truncated: result.truncated === true,
   };
 }

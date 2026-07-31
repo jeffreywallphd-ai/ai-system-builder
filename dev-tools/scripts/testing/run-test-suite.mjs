@@ -10,8 +10,13 @@ import { parseTestSuiteArgument } from "./non-browser-test-runner-core.mjs";
 
 const runnerDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(runnerDirectory, "../../..");
-const suite = parseTestSuiteArgument(process.argv.slice(2), "short");
-const suitesToRun = suite === "all" ? ["short", "long"] : [suite];
+const suite = parseTestSuiteArgument(process.argv.slice(2), "standard");
+const suitesToRun =
+  suite === "all"
+    ? ["standard", "e2e", "ai"]
+    : suite === "standardande2e"
+      ? ["standard", "e2e"]
+      : [suite];
 const runners = [
   {
     id: "node",
@@ -21,11 +26,19 @@ const runners = [
     id: "vitest",
     path: path.join(runnerDirectory, "run-vitest-tests.mjs"),
   },
+  {
+    id: "python-ai",
+    path: path.join(runnerDirectory, "run-python-ai-tests.mjs"),
+    suites: new Set(["ai"]),
+  },
 ];
 const results = [];
 
 for (const selectedSuite of suitesToRun) {
   for (const runner of runners) {
+    if (runner.suites && runner.suites.has(selectedSuite) === false) {
+      continue;
+    }
     const startedAt = performance.now();
     const result = spawnSync(
       process.execPath,

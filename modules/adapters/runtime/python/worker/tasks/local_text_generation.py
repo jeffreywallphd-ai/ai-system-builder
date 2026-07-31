@@ -8,6 +8,8 @@ import importlib.metadata as importlib_metadata
 import importlib.util
 import inspect
 import json
+import math
+import os
 from os import environ
 from pathlib import Path
 import re
@@ -25,10 +27,20 @@ from .constrained_json_decoder import (
 DEFAULT_MAX_NEW_TOKENS = 256
 DEFAULT_HUGGINGFACE_DOWNLOAD_TIMEOUT_SECONDS = "60"
 DEFAULT_HUGGINGFACE_ETAG_TIMEOUT_SECONDS = "30"
+DEFAULT_HUGGINGFACE_DOWNLOAD_ATTEMPTS = 3
+DEFAULT_HUGGINGFACE_DOWNLOAD_RETRY_DELAY_SECONDS = 1.0
 DEFAULT_HUGGINGFACE_CACHE_PROGRESS_INTERVAL_SECONDS = 5.0
+MIN_STRUCTURED_DOWNLOAD_PROGRESS_INTERVAL_SECONDS = 0.5
 DEFAULT_HUGGINGFACE_CHECKPOINT_MIN_BYTES = 100 * 1024 * 1024
 DEFAULT_HUGGINGFACE_MAX_MODEL_BYTES = 20 * 1024 * 1024 * 1024
 DEFAULT_HUGGINGFACE_MAX_CACHE_FILES = 100_000
+MAX_TRANSFORMERS_WEIGHT_INDEX_BYTES = 16 * 1024 * 1024
+GIBIBYTE = 1024 * 1024 * 1024
+MEMORY_OVERFLOW_POLICY_BYTES = {
+    "none": 0,
+    "limited": GIBIBYTE,
+    "extended": 4 * GIBIBYTE,
+}
 HUGGINGFACE_MODEL_ID_PATTERN = re.compile(
     r"^[A-Za-z0-9][A-Za-z0-9._-]{0,95}/[A-Za-z0-9][A-Za-z0-9._-]{0,95}$"
 )
@@ -53,6 +65,38 @@ class GenerationModelAvailability:
     from_cache: bool
     local_path: str | None = None
     cache_handle: str | None = None
+
+
+class GenerationRuntimeDependencyError(RuntimeError):
+    """Raised when managed components required to run a model are unavailable."""
+
+
+class GenerationModelDownloadIncompleteError(RuntimeError):
+    """Raised when a local model snapshot exists but is not complete."""
+
+
+class GenerationModelDownloadError(RuntimeError):
+    """Raised when a resumable model download cannot finish."""
+
+    error_code = "model_download_interrupted"
+    stage = "generation"
+    retryable = True
+
+
+class GenerationModelDownloadInvalidError(RuntimeError):
+    """Raised when downloaded files do not form a complete model snapshot."""
+
+    error_code = "model_download_invalid_snapshot"
+    stage = "generation"
+    retryable = True
+
+
+class GenerationModelLoadError(RuntimeError):
+    """Raised when a validated local model snapshot cannot be loaded."""
+
+
+class GenerationInsufficientResourcesError(RuntimeError):
+    '''Raised when loading a model exceeds the configured memory-overflow bound.'''
 
 
 @dataclass(frozen=True)
@@ -216,6 +260,7 @@ def _safe_download_diagnostic_data(data: Mapping[str, Any]) -> dict[str, Any]:
         "hfHomeConfigured", "hfHubCacheConfigured", "hfXetCacheConfigured",
         "transformersCacheConfigured", "hfHubDisableXet", "hfHubDownloadTimeoutSeconds",
         "hfHubEtagTimeoutSeconds", "huggingfaceHubVersion", "hfXetAvailable", "hfXetVersion",
+        "attemptNumber", "maximumAttempts", "cachePreserved",
     }
     return {key: value for key, value in data.items() if key in allowed_keys}
 
@@ -357,9 +402,13 @@ class _StructuredSnapshotTqdm:
         self._download_backend = kwargs.pop("_asb_download_backend", None)
         self._progress_unit = kwargs.get("unit")
         self._last_reported: tuple[int, int | None] | None = None
+        self._last_reported_at: float | None = None
         self._started_at = time.monotonic()
         from tqdm.auto import tqdm
 
+        # The worker emits structured progress. Suppress tqdm's stderr renderer so
+        # the desktop supervisor does not receive an unstructured line per update.
+        kwargs["disable"] = True
         self._inner = tqdm(*args, **kwargs)
         self._emit_progress()
 
@@ -374,13 +423,17 @@ class _StructuredSnapshotTqdm:
         return self
 
     def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any):
+        self._emit_progress(force=True)
         return self._inner.__exit__(exc_type, exc_value, traceback)
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._inner, name)
 
     def update(self, n: int = 1) -> Any:
+        previous = int(getattr(self._inner, "n", 0) or 0)
         result = self._inner.update(n)
+        if int(getattr(self._inner, "n", 0) or 0) == previous:
+            self._inner.n = previous + n
         self._emit_progress()
         return result
 
@@ -398,11 +451,22 @@ class _StructuredSnapshotTqdm:
         signature = (completed, total)
         if not force and signature == self._last_reported:
             return
+        now = time.monotonic()
+        is_complete = total is not None and completed >= total
+        if (
+            not force
+            and not is_complete
+            and self._last_reported_at is not None
+            and now - self._last_reported_at
+            < MIN_STRUCTURED_DOWNLOAD_PROGRESS_INTERVAL_SECONDS
+        ):
+            return
 
         self._last_reported = signature
+        self._last_reported_at = now
         data: dict[str, Any] = {
             "profile": self._profile_name,
-            "elapsedMs": round((time.monotonic() - self._started_at) * 1000),
+            "elapsedMs": round((now - self._started_at) * 1000),
         }
         if self._download_name:
             data["downloadName"] = self._download_name
@@ -663,6 +727,28 @@ def _cleanup_failed_huggingface_cache(model_id: str) -> None:
     shutil.rmtree(cache_directory, ignore_errors=True)
 
 
+def _is_huggingface_download_policy_failure(error: BaseException) -> bool:
+    """Return whether a failure requires removing bounded untrusted cache data."""
+
+    current: BaseException | None = error
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        message = str(current)
+        if any(
+            fragment in message
+            for fragment in (
+                "exceeded the configured byte limit",
+                "exceeded the configured file-count limit",
+                "outside the host-owned cache root",
+                "host-owned cache root is unavailable",
+            )
+        ):
+            return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
 def _is_auxiliary_checkpoint_file(file_name: str) -> bool:
     normalized = file_name.lower()
     return "lora" in normalized or "adapter" in normalized
@@ -673,8 +759,12 @@ def _validate_snapshot_profile_result(
     profile: HuggingFaceSnapshotDownloadProfile,
     local_path: str,
 ) -> None:
-    if profile.name != CHECKPOINT_SNAPSHOT_PROFILE.name:
+    if profile.name == GENERIC_TRANSFORMERS_SNAPSHOT_PROFILE.name:
+        _validate_transformers_snapshot_result(local_path)
         return
+
+    if profile.name != CHECKPOINT_SNAPSHOT_PROFILE.name:
+        raise RuntimeError("Hugging Face model download profile is unsupported.")
 
     checkpoint_files = _top_level_checkpoint_file_stats(local_path)
     minimum_size_bytes = _parse_checkpoint_min_bytes()
@@ -717,6 +807,71 @@ def _compose_non_chat_prompt(prompt: str, system_prompt: str | None) -> str:
         "User request:\n"
         f"{prompt}"
     )
+
+
+def _validate_transformers_snapshot_result(local_path: str) -> None:
+    root = Path(local_path).resolve(strict=True)
+    files = {
+        item.name: item
+        for item in root.iterdir()
+        if item.is_file() and item.stat().st_size > 0
+    }
+    if "config.json" not in files:
+        raise RuntimeError(
+            "Hugging Face model snapshot is incomplete: model configuration is missing."
+        )
+
+    weight_indexes = [
+        name
+        for name in ("model.safetensors.index.json", "pytorch_model.bin.index.json")
+        if name in files
+    ]
+    single_weight_files = [
+        name
+        for name in ("model.safetensors", "pytorch_model.bin")
+        if name in files
+    ]
+    if not weight_indexes and not single_weight_files:
+        raise RuntimeError(
+            "Hugging Face model snapshot is incomplete: complete model weights are missing."
+        )
+
+    for index_name in weight_indexes:
+        index_path = files[index_name]
+        if index_path.stat().st_size > MAX_TRANSFORMERS_WEIGHT_INDEX_BYTES:
+            raise RuntimeError(
+                "Hugging Face model snapshot is invalid: the model weight index is too large."
+            )
+        try:
+            index_payload = json.loads(index_path.read_text(encoding="utf-8"))
+            weight_map = index_payload.get("weight_map")
+            if not isinstance(weight_map, dict) or not weight_map:
+                raise ValueError("weight_map is missing")
+            referenced_files = {value for value in weight_map.values() if isinstance(value, str)}
+            if not referenced_files or len(referenced_files) > DEFAULT_HUGGINGFACE_MAX_CACHE_FILES:
+                raise ValueError("weight_map file set is invalid")
+            for relative_name in referenced_files:
+                candidate = (root / relative_name).resolve(strict=True)
+                candidate.relative_to(root)
+                if not candidate.is_file() or candidate.stat().st_size <= 0:
+                    raise ValueError("referenced weight shard is missing")
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as error:
+            raise RuntimeError(
+                "Hugging Face model snapshot is incomplete: one or more model weight shards are missing or invalid."
+            ) from error
+
+    has_tokenizer = (
+        "tokenizer.json" in files
+        or "tokenizer.model" in files
+        or "sentencepiece.bpe.model" in files
+        or "spiece.model" in files
+        or "vocab.txt" in files
+        or ("vocab.json" in files and "merges.txt" in files)
+    )
+    if not has_tokenizer:
+        raise RuntimeError(
+            "Hugging Face model snapshot is incomplete: tokenizer files are missing."
+        )
 
 
 class TransformersText2TextGenerator(LocalTextGenerator):
@@ -920,8 +1075,8 @@ def ensure_generation_model_downloaded(
             **snapshot_kwargs,
         )
         _validate_huggingface_snapshot_path(local_path)
-        _validate_snapshot_profile_result(model_config, download_profile, local_path)
         cache_candidate_path = local_path
+        _validate_snapshot_profile_result(model_config, download_profile, local_path)
         cache_stats = _snapshot_file_stats(local_path)
         _emit_model_download_event(
             "runtime.model_download.cache_check.succeeded",
@@ -963,6 +1118,7 @@ def ensure_generation_model_downloaded(
             profile=download_profile.name,
         )
 
+    download_failure_stage = "transfer"
     try:
         before_stats = _snapshot_file_stats(cache_candidate_path)
         _report_model_download_progress(
@@ -991,17 +1147,43 @@ def ensure_generation_model_downloaded(
             on_progress,
         )
         try:
-            with _structured_huggingface_file_progress(model_config.modelId, download_profile.name, on_progress):
-                local_path = snapshot_download(
-                    repo_id=model_config.modelId,
-                    local_files_only=False,
-                    tqdm_class=_create_structured_snapshot_tqdm(model_config.modelId, download_profile.name, on_progress),
-                    **snapshot_kwargs,
-                )
+            for attempt_number in range(1, DEFAULT_HUGGINGFACE_DOWNLOAD_ATTEMPTS + 1):
+                try:
+                    with _structured_huggingface_file_progress(model_config.modelId, download_profile.name, on_progress):
+                        local_path = snapshot_download(
+                            repo_id=model_config.modelId,
+                            local_files_only=False,
+                            tqdm_class=_create_structured_snapshot_tqdm(model_config.modelId, download_profile.name, on_progress),
+                            **snapshot_kwargs,
+                        )
+                    download_failure_stage = "validation"
+                    _validate_huggingface_snapshot_path(local_path)
+                    _validate_snapshot_profile_result(model_config, download_profile, local_path)
+                    download_failure_stage = "transfer"
+                    break
+                except Exception as error:
+                    if (
+                        _is_huggingface_download_policy_failure(error)
+                        or attempt_number >= DEFAULT_HUGGINGFACE_DOWNLOAD_ATTEMPTS
+                    ):
+                        raise
+                    _report_model_download_progress(
+                        model_config.modelId,
+                        on_progress,
+                        "snapshot-retry",
+                        "The download was interrupted. Retrying from saved files.",
+                        profile=download_profile.name,
+                        errorType=type(error).__name__,
+                        attemptNumber=attempt_number + 1,
+                        maximumAttempts=DEFAULT_HUGGINGFACE_DOWNLOAD_ATTEMPTS,
+                        cachePreserved=True,
+                    )
+                    time.sleep(
+                        DEFAULT_HUGGINGFACE_DOWNLOAD_RETRY_DELAY_SECONDS
+                        * attempt_number
+                    )
         finally:
             stop_cache_monitor()
-        _validate_huggingface_snapshot_path(local_path)
-        _validate_snapshot_profile_result(model_config, download_profile, local_path)
         after_stats = _snapshot_file_stats(local_path)
         downloaded_missing_files = after_stats["fileCount"] > before_stats["fileCount"] or after_stats["totalBytes"] > before_stats["totalBytes"]
         _emit_model_download_event(
@@ -1055,23 +1237,66 @@ def ensure_generation_model_downloaded(
             observedFileCount=failure_cache_stats["fileCount"],
             observedTotalBytes=failure_cache_stats["totalBytes"],
         )
-        if isinstance(error, RuntimeError) and str(error).startswith("Hugging Face model "):
-            if cache_candidate_path is None:
-                _cleanup_failed_huggingface_cache(model_config.modelId)
-            raise
-        if cache_candidate_path is None:
+        policy_failure = _is_huggingface_download_policy_failure(error)
+        if policy_failure:
             _cleanup_failed_huggingface_cache(model_config.modelId)
-        raise RuntimeError(
-            (
-                "Generation model is not available in the local Hugging Face cache. "
-                "Automatic download failed. "
-                "Verify network access and Hugging Face authentication/token configuration."
-            )
+            raise
+        if download_failure_stage == "validation":
+            raise GenerationModelDownloadInvalidError(
+                "Downloaded files did not form a complete model. Retry to resume and verify the saved files."
+            ) from error
+        raise GenerationModelDownloadError(
+            "Model download was interrupted. Retry to resume the saved partial download."
         ) from error
 
 
 def ensure_generation_model_is_available(config: ExampleGenerationConfig) -> GenerationModelAvailability:
-    return ensure_generation_model_downloaded(config.model)
+    if config.model.device == "auto" and not _is_module_available("accelerate"):
+        raise GenerationRuntimeDependencyError(
+            "Automatic model placement is unavailable because a required managed generation component is missing."
+        )
+    model_config = config.model
+    if model_config.provider != "transformers":
+        raise ValueError(f"Unsupported generation model provider: {model_config.provider}")
+    _assert_huggingface_model_id(model_config.modelId)
+    configure_huggingface_download_environment()
+    download_profile = _resolve_snapshot_download_profile(model_config, None)
+    snapshot_kwargs = _snapshot_download_kwargs(download_profile)
+    try:
+        from huggingface_hub import snapshot_download
+    except ImportError as error:
+        raise RuntimeError(
+            "The 'huggingface_hub' package is required to validate generation models."
+        ) from error
+
+    try:
+        local_path = snapshot_download(
+            repo_id=model_config.modelId,
+            local_files_only=True,
+            **snapshot_kwargs,
+        )
+    except Exception as error:
+        raise RuntimeError(
+            "The selected generation model is not available in the local cache. Download it and retry."
+        ) from error
+
+    try:
+        _validate_huggingface_snapshot_path(local_path)
+        _validate_snapshot_profile_result(model_config, download_profile, local_path)
+    except Exception as error:
+        raise GenerationModelDownloadIncompleteError(
+            "The selected generation model is not fully downloaded. Resume its download and retry."
+        ) from error
+
+    _RESOLVED_MODEL_REFERENCES[model_config.modelId] = local_path
+    return GenerationModelAvailability(
+        provider=model_config.provider,
+        model_id=model_config.modelId,
+        downloaded=False,
+        from_cache=True,
+        local_path=local_path,
+        cache_handle=_to_huggingface_snapshot_handle(local_path),
+    )
 
 
 _GENERATOR_CACHE: dict[tuple[str, str, str, str, str], LocalTextGenerator] = {}
@@ -1091,6 +1316,155 @@ def _generator_cache_key(model: LocalModelConfig) -> tuple[str, str, str, str, s
 
 def _resolved_model_reference_for(model_id: str) -> str:
     return _RESOLVED_MODEL_REFERENCES.get(model_id, model_id)
+
+
+@dataclass(frozen=True)
+class _SystemMemorySnapshot:
+    total_bytes: int
+    available_bytes: int
+
+
+def _read_system_memory_snapshot() -> _SystemMemorySnapshot | None:
+    try:
+        if os.name == 'nt':
+            import ctypes
+
+            class MemoryStatusEx(ctypes.Structure):
+                _fields_ = [
+                    ('length', ctypes.c_ulong),
+                    ('memory_load', ctypes.c_ulong),
+                    ('total_physical', ctypes.c_ulonglong),
+                    ('available_physical', ctypes.c_ulonglong),
+                    ('total_page_file', ctypes.c_ulonglong),
+                    ('available_page_file', ctypes.c_ulonglong),
+                    ('total_virtual', ctypes.c_ulonglong),
+                    ('available_virtual', ctypes.c_ulonglong),
+                    ('available_extended_virtual', ctypes.c_ulonglong),
+                ]
+
+            status = MemoryStatusEx()
+            status.length = ctypes.sizeof(MemoryStatusEx)
+            if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+                return None
+            return _SystemMemorySnapshot(
+                total_bytes=int(status.total_physical),
+                available_bytes=int(status.available_physical),
+            )
+
+        page_size = int(os.sysconf('SC_PAGE_SIZE'))
+        total_pages = int(os.sysconf('SC_PHYS_PAGES'))
+        available_pages = int(os.sysconf('SC_AVPHYS_PAGES'))
+        return _SystemMemorySnapshot(
+            total_bytes=page_size * total_pages,
+            available_bytes=page_size * available_pages,
+        )
+    except (AttributeError, OSError, TypeError, ValueError):
+        return None
+
+
+def _snapshot_model_weight_bytes(path: str | Path) -> int:
+    snapshot_path = Path(path)
+    safetensor_bytes = 0
+    binary_bytes = 0
+    file_count = 0
+    for child in snapshot_path.rglob('*'):
+        if not child.is_file():
+            continue
+        file_count += 1
+        if file_count > DEFAULT_HUGGINGFACE_MAX_CACHE_FILES:
+            return 0
+        try:
+            size = child.stat().st_size
+        except OSError:
+            continue
+        name = child.name.lower()
+        if name.endswith('.safetensors'):
+            safetensor_bytes += size
+        elif name.endswith(('.bin', '.pt', '.pth')):
+            binary_bytes += size
+    return safetensor_bytes or binary_bytes
+
+
+def _available_cuda_memory_bytes() -> int:
+    try:
+        import torch
+
+        if not torch.cuda.is_available():
+            return 0
+        free_bytes, _total_bytes = torch.cuda.mem_get_info()
+        return max(0, int(free_bytes))
+    except Exception:
+        return 0
+
+
+def _ensure_model_load_resources(model_config: LocalModelConfig) -> dict[str, int] | None:
+    resolved_reference = Path(_resolved_model_reference_for(model_config.modelId))
+    if not resolved_reference.is_absolute() or not resolved_reference.exists():
+        return
+
+    weight_bytes = _snapshot_model_weight_bytes(resolved_reference)
+    memory = _read_system_memory_snapshot()
+    if weight_bytes <= 0 or memory is None:
+        return
+
+    dtype_multiplier = 2.0 if model_config.torchDtype == 'float32' else 1.0
+    required_bytes = math.ceil(weight_bytes * dtype_multiplier * 1.25) + GIBIBYTE
+    device = model_config.device or 'auto'
+    cuda_available_bytes = _available_cuda_memory_bytes() if device != 'cpu' else 0
+    if device == 'cuda':
+        available_bytes = cuda_available_bytes
+    elif device == 'cpu':
+        available_bytes = memory.available_bytes
+    else:
+        available_bytes = memory.available_bytes + cuda_available_bytes
+
+    if available_bytes >= required_bytes:
+        return None
+
+    memory_shortfall_bytes = required_bytes - available_bytes
+    allowed_overflow_bytes = (
+        0
+        if device == 'cuda'
+        else MEMORY_OVERFLOW_POLICY_BYTES[model_config.memoryOverflowPolicy]
+    )
+    if memory_shortfall_bytes <= allowed_overflow_bytes:
+        overflow = {
+            'estimatedMemoryOverflowBytes': memory_shortfall_bytes,
+            'memoryOverflowLimitBytes': allowed_overflow_bytes,
+        }
+        print(
+            json.dumps(
+                {
+                    'event': 'runtime.generation_model.memory_overflow',
+                    **overflow,
+                    'acceleratorAvailable': cuda_available_bytes > 0,
+                }
+            ),
+            flush=True,
+        )
+        return overflow
+
+    print(
+        json.dumps(
+            {
+                'event': 'runtime.generation_model.resources_insufficient',
+                'requiredMemoryBytes': required_bytes,
+                'availableMemoryBytes': available_bytes,
+                'totalSystemMemoryBytes': memory.total_bytes,
+                'acceleratorAvailable': cuda_available_bytes > 0,
+                'estimatedMemoryShortfallBytes': memory_shortfall_bytes,
+                'allowedMemoryOverflowBytes': allowed_overflow_bytes,
+            }
+        ),
+        flush=True,
+    )
+    if device == 'cuda' and cuda_available_bytes <= 0:
+        raise GenerationInsufficientResourcesError(
+            'The selected model requires CUDA, but the local runtime does not have CUDA available.'
+        )
+    raise GenerationInsufficientResourcesError(
+        'The selected model cannot fit in the memory currently available to the local runtime.'
+    )
 
 
 def _resolve_auto_inference_mode(model_config: LocalModelConfig) -> str:
@@ -1215,7 +1589,9 @@ def _resolve_model_kwargs(model_config: LocalModelConfig) -> dict[str, Any]:
     if model_config.device == "auto":
         model_kwargs["device_map"] = "auto"
 
-    if model_config.torchDtype and model_config.torchDtype != "auto":
+    if not model_config.torchDtype or model_config.torchDtype == "auto":
+        model_kwargs["torch_dtype"] = "auto"
+    elif model_config.torchDtype:
         import torch
 
         dtype_mapping = {
@@ -1297,7 +1673,10 @@ def _move_tokenized_inputs_to_model_device(tokenized: dict[str, Any], model: Any
     return moved
 
 
-def get_or_create_local_text_generator(config: ExampleGenerationConfig) -> LocalTextGenerator:
+def get_or_create_local_text_generator(
+    config: ExampleGenerationConfig,
+    on_memory_overflow: Callable[[dict[str, int]], None] | None = None,
+) -> LocalTextGenerator:
     key = _generator_cache_key(config.model)
 
     with _GENERATOR_CACHE_LOCK:
@@ -1308,32 +1687,45 @@ def get_or_create_local_text_generator(config: ExampleGenerationConfig) -> Local
         if config.model.provider != "transformers":
             raise ValueError(f"Unsupported generation model provider: {config.model.provider}")
 
-        generation_params = _resolve_generation_params(config)
-        resolved_inference_mode = _resolve_auto_inference_mode(config.model)
-        resolved_model_config = config.model.model_copy(update={"inferenceMode": resolved_inference_mode})
-        key = _generator_cache_key(resolved_model_config)
-        existing_after_resolution = _GENERATOR_CACHE.get(key)
-        if existing_after_resolution:
-            return existing_after_resolution
+        try:
+            generation_params = _resolve_generation_params(config)
+            resolved_inference_mode = _resolve_auto_inference_mode(config.model)
+            resolved_model_config = config.model.model_copy(update={"inferenceMode": resolved_inference_mode})
+            key = _generator_cache_key(resolved_model_config)
+            existing_after_resolution = _GENERATOR_CACHE.get(key)
+            if existing_after_resolution:
+                return existing_after_resolution
 
-        print(
-            json.dumps(
-                {
-                    "event": "runtime.generation_model.loading",
-                    "provider": "transformers",
-                    "inferenceMode": resolved_inference_mode,
-                }
-            ),
-            flush=True,
-        )
-        if resolved_inference_mode == "text2text":
-            created: LocalTextGenerator = TransformersText2TextGenerator(resolved_model_config, generation_params)
-        elif resolved_inference_mode == "causal":
-            created = TransformersCausalGenerator(resolved_model_config, generation_params)
-        elif resolved_inference_mode == "chat":
-            created = TransformersChatGenerator(resolved_model_config, generation_params)
-        else:
-            raise ValueError(f"Unsupported inference mode: {resolved_inference_mode}")
+            memory_overflow = _ensure_model_load_resources(resolved_model_config)
+            if memory_overflow is not None and on_memory_overflow is not None:
+                on_memory_overflow(memory_overflow)
+            print(
+                json.dumps(
+                    {
+                        "event": "runtime.generation_model.loading",
+                        "provider": "transformers",
+                        "inferenceMode": resolved_inference_mode,
+                    }
+                ),
+                flush=True,
+            )
+            if resolved_inference_mode == "text2text":
+                created: LocalTextGenerator = TransformersText2TextGenerator(
+                    resolved_model_config,
+                    generation_params,
+                )
+            elif resolved_inference_mode == "causal":
+                created = TransformersCausalGenerator(resolved_model_config, generation_params)
+            elif resolved_inference_mode == "chat":
+                created = TransformersChatGenerator(resolved_model_config, generation_params)
+            else:
+                raise ValueError(f"Unsupported inference mode: {resolved_inference_mode}")
+        except (GenerationModelLoadError, GenerationInsufficientResourcesError):
+            raise
+        except Exception as error:
+            raise GenerationModelLoadError(
+                "The selected generation model could not be loaded by the local runtime."
+            ) from error
 
         _GENERATOR_CACHE[key] = created
         return created
@@ -1353,8 +1745,14 @@ def _describe_loaded_generation_models_unlocked() -> list[dict[str, str | None]]
 
 
 def describe_loaded_generation_models() -> list[dict[str, str | None]]:
-    with _GENERATOR_CACHE_LOCK:
+    if not _GENERATOR_CACHE_LOCK.acquire(blocking=False):
+        # Model construction holds this lock to prevent duplicate multi-gigabyte
+        # loads. Runtime status must remain responsive while that work proceeds.
+        return []
+    try:
         return _describe_loaded_generation_models_unlocked()
+    finally:
+        _GENERATOR_CACHE_LOCK.release()
 
 
 def unload_generation_models() -> list[dict[str, str | None]]:

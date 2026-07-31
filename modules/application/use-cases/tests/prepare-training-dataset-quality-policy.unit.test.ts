@@ -96,6 +96,52 @@ const managedQualityPolicyProvider = {
   })),
 };
 
+function createTopicAwareCommand() {
+  return {
+    ...qualityCommand,
+    preparation: {
+      schemaVersion: "1" as const,
+      inputIntent: "create-from-source-material" as const,
+      method: "topic-aware" as const,
+      sourceKinds: ["document" as const],
+      generationMode: "task-examples" as const,
+    },
+    recipe: {
+      normalization: { targetFormat: "markdown" as const },
+      generation: qualityCommand.recipe.generation,
+      task: {
+        taskType: "llm-instruction" as const,
+        textInputMode: "generate" as const,
+      },
+    },
+    advanced: {
+      preset: "topic-aware" as const,
+      content: {
+        strategy: "semantic" as const,
+        maxTokensPerChunk: 512,
+        maxSourceSpans: 8_000,
+        semanticBoundaryThreshold: 0.3,
+        ocrEnabled: false,
+      },
+      semantic: {
+        enabled: true,
+        embeddingAlgorithm: "hashed-token-v1" as const,
+        similarityThreshold: 0.86,
+        maxComparisonsPerRow: 96,
+        hardNegativeMining: true,
+      },
+      synthetic: {
+        enabled: true,
+        candidatesPerChunk: 3,
+        minimumGroundingScore: 0.5,
+        minimumCriticScore: 0.65,
+        minimumDiversityScore: 0.25,
+        requireReview: true,
+      },
+    },
+  };
+}
+
 describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
   it("preserves compatible topic-aware refinements and omits fixed chunk settings", async () => {
     let runtimePayload: any;
@@ -118,49 +164,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
         datasetQualityPolicyProvider: managedQualityPolicyProvider,
       }),
     );
-    const adaptiveCommand = {
-      ...qualityCommand,
-      preparation: {
-        schemaVersion: "1" as const,
-        inputIntent: "create-from-source-material" as const,
-        method: "topic-aware" as const,
-        sourceKinds: ["document" as const],
-        generationMode: "task-examples" as const,
-      },
-      recipe: {
-        normalization: { targetFormat: "markdown" as const },
-        generation: qualityCommand.recipe.generation,
-        task: {
-          taskType: "llm-instruction" as const,
-          textInputMode: "generate" as const,
-        },
-      },
-      advanced: {
-        preset: "topic-aware" as const,
-        content: {
-          strategy: "semantic" as const,
-          maxTokensPerChunk: 512,
-          maxSourceSpans: 8_000,
-          semanticBoundaryThreshold: 0.3,
-          ocrEnabled: false,
-        },
-        semantic: {
-          enabled: true,
-          embeddingAlgorithm: "hashed-token-v1" as const,
-          similarityThreshold: 0.86,
-          maxComparisonsPerRow: 96,
-          hardNegativeMining: true,
-        },
-        synthetic: {
-          enabled: true,
-          candidatesPerChunk: 3,
-          minimumGroundingScore: 0.5,
-          minimumCriticScore: 0.65,
-          minimumDiversityScore: 0.25,
-          requireReview: true,
-        },
-      },
-    };
+    const adaptiveCommand = createTopicAwareCommand();
 
     const result = await useCase.startPrepareTrainingDataset(adaptiveCommand, {
       workspaceId: "workspace-a",
@@ -171,6 +175,69 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
     expect(runtimePayload.recipe.chunking).toBeUndefined();
     expect(runtimePayload.advanced.content.maxTokensPerChunk).toBe(512);
     expect(runtimePayload.advanced.semantic.similarityThreshold).toBe(0.86);
+  });
+
+  it("uses catalog media type when filesystem retrieval omits PDF metadata", async () => {
+    let runtimePayload: any;
+    const useCase = new PrepareTrainingDatasetFromArtifactsUseCase(
+      createDependencies({
+        runtimeTaskRegistry: {
+          startTask: testDouble.fn(async (request: any) => {
+            runtimePayload = request.payload;
+            return {
+              requestId: "pdf-topic-aware-task",
+              taskType: "dataset-preparation",
+              accepted: true,
+              status: "queued",
+            };
+          }),
+          getTaskStatus: testDouble.fn(),
+          cancelTask: testDouble.fn(),
+          listTasks: testDouble.fn(async () => ({ tasks: [] })),
+        },
+        storage: {
+          retrieveArtifact: testDouble.fn(async () => ({
+            ok: true,
+            value: {
+              descriptor: { key: "source-a", sizeBytes: 8 },
+              content: new TextEncoder().encode("%PDF-1.4"),
+            },
+          })),
+          storeArtifact: testDouble.fn(),
+          hasArtifact: testDouble.fn(),
+          deleteArtifact: testDouble.fn(),
+        },
+        artifactCatalog: {
+          readArtifactCatalogRecord: testDouble.fn(async () => ({
+            ok: true,
+            value: {
+              record: {
+                storageKey: "source-a",
+                originalName: "source.pdf",
+                mediaType: "application/pdf",
+              },
+            },
+          })),
+        },
+        datasetQualityPolicyProvider: managedQualityPolicyProvider,
+      }),
+    );
+
+    const result = await useCase.startPrepareTrainingDataset(
+      createTopicAwareCommand(),
+      { workspaceId: "workspace-a" },
+    );
+
+    expect(result.ok).toBe(true);
+    expect(runtimePayload.preparation).toMatchObject({
+      method: "topic-aware",
+      sourceKinds: ["document"],
+    });
+    expect(runtimePayload.sourceInputs[0]).toMatchObject({
+      originalName: "source.pdf",
+      mediaType: "application/pdf",
+    });
+    expect(runtimePayload.sourceInputs[0].localPath).toMatch(/\.pdf$/);
   });
 
   it("rejects fixed size or overlap settings for topic-aware preparation", async () => {

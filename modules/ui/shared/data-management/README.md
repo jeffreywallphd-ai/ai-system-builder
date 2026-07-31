@@ -56,8 +56,42 @@ records. JSON Lines accepts one object per nonempty line. Fields must still
 match the selected training task. The UI directs users to convert legacy DOC to
 DOCX and Excel XLS/XLSX to CSV. TSV, RTF, and ODT are not currently accepted.
 
-Starting a model download from Dataset Preparation opens the global
-notification dropdown so authoritative download progress is visible while the
-user stays on the page or navigates elsewhere. The activity remains owned by
-the shared model-download task; the page must not publish a duplicate queued or
-progress message.
+The explicit model-download control appears in the main body of Step 3, outside
+Advanced settings. Starting it opens the global notification dropdown so
+authoritative progress is visible while the user stays on the page or navigates
+elsewhere. The activity remains owned by the shared model-download task; the page
+must not publish a duplicate queued or progress message. A transient transfer or
+late snapshot-validation failure is retried and retains the bounded partial cache
+for a later resume. Running preparation only validates the local snapshot and never
+starts or resumes a download. An incomplete snapshot clears the stale ready
+selection and directs the user to resume the explicit Step 3 download.
+
+Accepted dataset-preparation work also opens the global notification dropdown.
+An app-shell bridge continues reading the workspace-scoped task after the page
+unmounts, showing bounded section progress and a truthful terminal or
+review-required outcome. Inline validation and corrective guidance remain on
+the preparation page. Before any section completes, the notification explicitly
+shows that the selected model and first batch are loading; subsequent updates
+show completed sections. Topic-aware preparation groups small low-overlap
+sentences into bounded semantic sections instead of creating one model request
+per sentence.
+
+Built-in generation model selection is capacity-aware without exposing hardware
+identity. Desktop considers both total and currently available system memory: an
+untouched Quality (7B) selection steps down to Compact (3B), or to Lightweight
+(1.5B) when current memory pressure makes 3B unsafe. A user-selected or saved model
+is never replaced automatically; known oversized choices are stopped before task
+start, and every choice receives the worker's live-memory preflight. Resource
+guidance never recommends the preset that is already selected. Desktop generation
+defaults to allowing at most 1 GB of system-managed disk/swap overflow. Advanced
+settings can require memory-only loading or explicitly allow at most 4 GB. When
+the worker actually needs an allowed overflow, authoritative task progress opens
+a warning notification explaining that the model is using disk/swap and may run
+more slowly.
+
+The structured-JSON checkbox is enabled only after authoritative runtime
+capability confirms that the decoder is ready for the selected generation
+shape. Desktop startup prefers an installed decoder-compatible Python version
+when no operator command is configured. Desktop and thin client keep the
+control disabled when capability is unavailable, so a saved or stale checked
+preference cannot send a known-unsupported constrained request.

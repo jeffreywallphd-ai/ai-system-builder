@@ -203,8 +203,9 @@ Write an implementation plan with:
 - acceptance criteria covered by each chunk;
 - focused tests mapped to internal chunks;
 - completion tests and gates limited to the completed increment's changed surfaces;
-- complete short and long suites plus repository-wide gates reserved until every
-  roadmap increment is implemented;
+- combined standard and end-to-end coverage plus repository-wide gates reserved
+  until every roadmap increment is implemented, with the AI suite added only for
+  AI-related roadmaps or an explicit request;
 - documentation updates;
 - assumptions;
 - rollback.
@@ -233,8 +234,9 @@ defect, a host integration, a significant UI outcome, or a gate/review boundary.
 Batch minor internal chunks into the next such checkpoint. While any planned chunk
 remains unimplemented, run only the focused tests for the chunk being changed. Once
 an increment is implemented, run only tests and gates relevant to its changed
-surfaces. Do not run the complete short suite, complete long suite, or all-tests
-matrix while roadmap increments remain; add or run a focused regression instead.
+surfaces. Do not run the complete standard suite, complete end-to-end suite, AI
+suite, or aggregate matrix while roadmap increments remain; add or run a focused
+regression instead.
 
 ### 5. Verify and complete
 
@@ -258,9 +260,12 @@ residual risk, and any controlled-environment evidence without copying secrets,
 private content, provider-native payloads, paths, or exploitable production detail.
 
 After every increment is implemented and its relevant checks pass, run the
-repository-defined complete short suite and complete long suite, followed by the
-applicable repository-wide gates, once for the roadmap. Record these overall results
-before `roadmap-completed`; do not infer controlled-environment passes from them.
+repository-defined combined standard and end-to-end coverage, followed by the
+applicable repository-wide gates, once for a non-AI roadmap. For an AI-related
+roadmap, run the all-suite command instead so the AI suite is included. Do not run
+AI or all-suite coverage for non-AI work unless explicitly requested. Record these
+overall results before `roadmap-completed`; do not infer controlled-environment
+passes from them.
 
 An increment closes only when every planned chunk is recorded and every criterion
 has passing or explicitly permitted pending evidence. A roadmap closes only when all

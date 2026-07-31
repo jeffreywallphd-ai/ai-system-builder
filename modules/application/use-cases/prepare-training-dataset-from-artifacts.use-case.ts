@@ -525,6 +525,10 @@ function extensionForMediaType(mediaType: string): string {
     return ".csv";
   }
 
+  if (mediaType === "application/pdf") {
+    return ".pdf";
+  }
+
   if (
     mediaType === "application/x-parquet" ||
     mediaType === "application/vnd.apache.parquet"
@@ -2870,18 +2874,8 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
             return failAndCleanup(retrieveResult.error);
           }
         }
-        const mediaType =
-          retrieveResult.value.descriptor.mediaType ?? "application/json";
-        if (this.datasetVersionHasher) {
-          sourceVersionLineage.push({
-            sourceArtifactId: artifactId,
-            artifactKey: storageKey,
-            digest: this.datasetVersionHasher.digest(
-              retrieveResult.value.content as Uint8Array,
-            ),
-            mediaType,
-          });
-        }
+        const descriptorMediaType =
+          retrieveResult.value.descriptor.mediaType;
         const descriptorMetadata = retrieveResult.value.descriptor.metadata;
         const metadataOriginalName =
           descriptorMetadata &&
@@ -2892,21 +2886,23 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
             ? (descriptorMetadata as { originalName: string }).originalName
             : undefined;
         const artifactCatalog = this.artifactCatalog;
-        const catalogOriginalName = artifactCatalog
+        const catalogRecord = artifactCatalog
           ? await artifactCatalog
               .readArtifactCatalogRecord({ storageKey }, context)
               .then((result) =>
-                result.ok ? result.value.record.originalName : undefined,
+                result.ok ? result.value.record : undefined,
               )
           : undefined;
         const resolvedOriginalName =
-          metadataOriginalName ?? catalogOriginalName;
+          metadataOriginalName ?? catalogRecord?.originalName;
+        const sourceMediaType =
+          descriptorMediaType ?? catalogRecord?.mediaType;
         const taskType =
           command.recipe.task?.taskType ??
           DEFAULT_DATASET_PREPARATION_TASK_TYPE;
         const sourceReadiness = evaluateDatasetPreparationSourceReadiness({
           fileName: resolvedOriginalName ?? storageKey,
-          mediaType,
+          mediaType: sourceMediaType,
           taskType,
         });
         if (!sourceReadiness.ready) {
@@ -2925,6 +2921,20 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
               },
             ),
           );
+        }
+        const mediaType =
+          sourceMediaType ??
+          sourceReadiness.capability?.mediaTypes[0] ??
+          "application/octet-stream";
+        if (this.datasetVersionHasher) {
+          sourceVersionLineage.push({
+            sourceArtifactId: artifactId,
+            artifactKey: storageKey,
+            digest: this.datasetVersionHasher.digest(
+              retrieveResult.value.content as Uint8Array,
+            ),
+            mediaType,
+          });
         }
         const localPath = buildRuntimeSourceInputPath(
           runtimeWorkingDir,

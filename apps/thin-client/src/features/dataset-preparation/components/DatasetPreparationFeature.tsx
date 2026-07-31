@@ -656,7 +656,8 @@ export function DatasetPreparationFeature({
       preparationPlan.generationMode !== "none" &&
       generationModel?.inferenceMode !== "text2text" &&
       outputShapeCompilation.ok &&
-      outputShapeCompilation.value.decoderCompatible,
+      outputShapeCompilation.value.decoderCompatible &&
+      generationCapacity?.decoderAvailable === true,
   );
   const recommendationCapacity = useMemo(
     () =>

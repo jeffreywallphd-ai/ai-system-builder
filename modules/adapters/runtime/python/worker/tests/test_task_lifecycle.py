@@ -89,7 +89,16 @@ class TaskLifecycleTests(unittest.TestCase):
     def test_dataset_progress_updates_registry(self) -> None:
         def fake_prepare(_payload, on_generation_progress, output_directory=None):
             del output_directory
-            on_generation_progress({"totalChunkCount": 2, "processedChunkCount": 1, "generatedRowCount": 5})
+            on_generation_progress({
+                "phase": "memory-overflow",
+                "message": "The model is using system-managed disk/swap because available memory is low. Generation may run more slowly.",
+                "totalChunkCount": 2,
+                "processedChunkCount": 1,
+                "generatedRowCount": 5,
+                "memoryOverflowActive": True,
+                "estimatedMemoryOverflowBytes": 512 * 1024 ** 2,
+                "memoryOverflowLimitBytes": 1024 ** 3,
+            })
             time.sleep(0.1)
             return type("R", (), {"model_dump": lambda self, mode: {"summary": {"generatedExampleCount": 5}}})()
 
@@ -108,7 +117,11 @@ class TaskLifecycleTests(unittest.TestCase):
             status = worker_app.read_task_status("r4")
             self.assertIsNotNone(status.progress)
             self.assertEqual(status.progress["processedChunkCount"], 1)
-            self.assertEqual(status.progress["message"], "Processing chunk 2/2...")
+            self.assertEqual(status.progress["phase"], "memory-overflow")
+            self.assertTrue(status.progress["memoryOverflowActive"])
+            self.assertEqual(status.progress["estimatedMemoryOverflowBytes"], 512 * 1024 ** 2)
+            self.assertEqual(status.progress["memoryOverflowLimitBytes"], 1024 ** 3)
+            self.assertIn("may run more slowly", status.progress["message"])
 
     def test_duplicate_request_id_is_rejected(self) -> None:
         def slow_train(_payload, on_progress=None):

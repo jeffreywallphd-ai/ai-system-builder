@@ -461,6 +461,38 @@ function summarizeFetchUrl(input: HuggingFaceFetchInput): Record<string, unknown
   }
 }
 
+function toFetchUrl(input: HuggingFaceFetchInput): URL {
+  const rawUrl = typeof input === "string"
+    ? input
+    : input instanceof URL
+      ? input.toString()
+      : input.url;
+  return new URL(rawUrl);
+}
+
+function readNextHuggingFaceCursor(linkHeader: string | null): string | undefined {
+  if (!linkHeader) {
+    return undefined;
+  }
+
+  for (const link of linkHeader.split(",")) {
+    if (!/rel\s*=\s*["']?next["']?/i.test(link)) {
+      continue;
+    }
+    const target = /<([^>]+)>/.exec(link)?.[1];
+    if (!target) {
+      return undefined;
+    }
+    const url = new URL(target, DEFAULT_HUGGING_FACE_BASE_URL);
+    if (url.origin !== DEFAULT_HUGGING_FACE_BASE_URL || url.pathname !== "/api/models") {
+      return undefined;
+    }
+    return toOptionalText(url.searchParams.get("cursor"));
+  }
+
+  return undefined;
+}
+
 export function createHuggingFaceModelBrowseDetailsAdapter(
   options: CreateHuggingFaceModelBrowseDetailsAdapterOptions = {},
 ): ModelBrowsePort & ModelDetailsPort {
@@ -505,6 +537,35 @@ export function createHuggingFaceModelBrowseDetailsAdapter(
     };
   }
 
+  function createPagedBrowseFetch(cursor?: string): {
+    fetch: HuggingFaceFetch;
+    readNextCursor: () => string | undefined;
+  } {
+    const diagnosticFetch = createDiagnosticFetch("browseModels");
+    let firstRequest = true;
+    let nextCursor: string | undefined;
+
+    return {
+      async fetch(input, init) {
+        let requestInput = input;
+        if (firstRequest && cursor) {
+          const url = toFetchUrl(input);
+          if (url.origin !== DEFAULT_HUGGING_FACE_BASE_URL || url.pathname !== "/api/models") {
+            throw new Error("Hugging Face browse pagination target was invalid.");
+          }
+          url.searchParams.set("cursor", cursor);
+          requestInput = url;
+        }
+        firstRequest = false;
+
+        const response = await diagnosticFetch(requestInput, init);
+        nextCursor = readNextHuggingFaceCursor(response.headers.get("Link"));
+        return response;
+      },
+      readNextCursor: () => nextCursor,
+    };
+  }
+
   async function resolveHubClient(): Promise<HuggingFaceModelHubClient> {
     if (options.hubClient) {
       return assertHubClient(options.hubClient);
@@ -527,27 +588,27 @@ export function createHuggingFaceModelBrowseDetailsAdapter(
       try {
         const hubClient = await resolveHubClient();
         const accessToken = await resolveAccessToken();
+        const pagedBrowse = createPagedBrowseFetch(request.cursor);
         logger?.info("hf.adapter.browse.request",{query:request.query,owner:request.authorOrOrg,task:request.taskTags?.[0],limit:request.limit,hasToken:Boolean(accessToken)});
         const items = await collectListModels(await hubClient.listModels({
           search: {
             query: request.query,
             owner: request.authorOrOrg,
-            task: request.taskTags?.[0],
+            task: request.customTaskTag ?? request.taskTags?.[0],
             tags: request.taskTags && request.taskTags.length > 1 ? request.taskTags.slice(1) : undefined,
           },
           sort: request.sort,
           limit: request.limit,
           additionalFields: [...expandedModelFields],
           accessToken,
-          fetch: createDiagnosticFetch("browseModels"),
+          fetch: pagedBrowse.fetch,
         }));
 
         const models = items.map((entry) => toModelBrowseItem(entry));
         logger?.info("hf.adapter.browse.success",{resultCount:models.length});
         return normalizeBrowseModelsResult({
           models,
-          // @huggingface/hub listModels does not expose a stable cursor in this adapter slice.
-          nextCursor: undefined,
+          nextCursor: pagedBrowse.readNextCursor(),
         });
       } catch (error) {
         const mappedError = mapHuggingFaceError("browseModels", error);

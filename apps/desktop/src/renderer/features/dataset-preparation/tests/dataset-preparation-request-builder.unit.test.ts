@@ -53,6 +53,7 @@ describe("datasetPreparationRequestBuilder", () => {
       inferenceMode: "chat",
       device: "auto",
       torchDtype: "auto",
+      memoryOverflowPolicy: "limited",
     });
     expect(request.recipe.task).toMatchObject({
       taskType: "llm-instruction",

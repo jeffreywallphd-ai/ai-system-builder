@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   normalizeConstrainedJsonDecodingPreference,
   normalizeDatasetPreparationGenerationCapacitySnapshot,
+  resolveDatasetPreparationGenerationModelCapacity,
   resolveDatasetPreparationGenerationModelEstimatedBytes,
   resolveDatasetPreparationConstrainedJson,
   type DatasetPreparationGenerationCapacitySnapshot,
@@ -37,15 +38,128 @@ describe("dataset preparation constrained JSON recommendation", () => {
       resolveDatasetPreparationGenerationModelEstimatedBytes(
         "Qwen/Qwen2.5-3B-Instruct",
       ),
-      7 * 1024 ** 3,
+      5.75 * 1024 ** 3,
     );
     assert.equal(
       resolveDatasetPreparationGenerationModelEstimatedBytes(
-        "another/model",
+        "Qwen/Qwen2.5-1.5B-Instruct",
       ),
+      3 * 1024 ** 3,
+    );
+    assert.equal(
+      resolveDatasetPreparationGenerationModelEstimatedBytes("another/model"),
       undefined,
     );
   });
+
+  it("uses current available desktop memory to choose below 3B when needed", () => {
+    const busyMachine = capacity({
+      totalSystemMemoryBytes: 16 * GIBIBYTE,
+      availableSystemMemoryBytes: 5 * GIBIBYTE,
+      totalAcceleratorMemoryBytes: undefined,
+    });
+
+    assert.equal(
+      resolveDatasetPreparationGenerationModelCapacity({
+        selectedDevice: "auto",
+        estimatedModelBytes: 5.75 * GIBIBYTE,
+        capacity: busyMachine,
+      }).reason,
+      "capacity-insufficient",
+    );
+    assert.equal(
+      resolveDatasetPreparationGenerationModelCapacity({
+        selectedDevice: "auto",
+        estimatedModelBytes: 3 * GIBIBYTE,
+        capacity: busyMachine,
+      }).reason,
+      "capacity-sufficient-cpu",
+    );
+  });
+
+  it("marks 7B insufficient but allows the next 3B preset on a 16 GiB CPU-only machine", () => {
+    const constrainedMachine = capacity({
+      totalSystemMemoryBytes: 16 * GIBIBYTE,
+      totalAcceleratorMemoryBytes: undefined,
+    });
+
+    assert.equal(
+      resolveDatasetPreparationGenerationModelCapacity({
+        selectedDevice: "auto",
+        estimatedModelBytes: 15 * GIBIBYTE,
+        capacity: constrainedMachine,
+      }).reason,
+      "capacity-insufficient",
+    );
+    assert.equal(
+      resolveDatasetPreparationGenerationModelCapacity({
+        selectedDevice: "auto",
+        estimatedModelBytes: 5.75 * GIBIBYTE,
+        capacity: constrainedMachine,
+      }).reason,
+      "capacity-sufficient-cpu",
+    );
+  });
+
+  it("permits only the selected bounded CPU memory overflow", () => {
+    const moderatelyBusyMachine = capacity({
+      totalSystemMemoryBytes: 16 * GIBIBYTE,
+      availableSystemMemoryBytes: 7.5 * GIBIBYTE,
+      totalAcceleratorMemoryBytes: undefined,
+    });
+    const heavilyBusyMachine = capacity({
+      totalSystemMemoryBytes: 16 * GIBIBYTE,
+      availableSystemMemoryBytes: 5 * GIBIBYTE,
+      totalAcceleratorMemoryBytes: undefined,
+    });
+
+    assert.equal(
+      resolveDatasetPreparationGenerationModelCapacity({
+        selectedDevice: "auto",
+        estimatedModelBytes: 5.75 * GIBIBYTE,
+        memoryOverflowPolicy: "none",
+        capacity: moderatelyBusyMachine,
+      }).supported,
+      false,
+    );
+    const limited = resolveDatasetPreparationGenerationModelCapacity({
+      selectedDevice: "auto",
+      estimatedModelBytes: 5.75 * GIBIBYTE,
+      memoryOverflowPolicy: "limited",
+      capacity: moderatelyBusyMachine,
+    });
+    assert.equal(limited.supported, true);
+    assert.equal(limited.memoryOverflowRequired, true);
+    assert.equal(limited.allowedMemoryOverflowBytes, GIBIBYTE);
+    assert.equal(
+      resolveDatasetPreparationGenerationModelCapacity({
+        selectedDevice: "auto",
+        estimatedModelBytes: 5.75 * GIBIBYTE,
+        memoryOverflowPolicy: "limited",
+        capacity: heavilyBusyMachine,
+      }).supported,
+      false,
+    );
+    assert.equal(
+      resolveDatasetPreparationGenerationModelCapacity({
+        selectedDevice: "auto",
+        estimatedModelBytes: 5.75 * GIBIBYTE,
+        memoryOverflowPolicy: "extended",
+        capacity: heavilyBusyMachine,
+      }).supported,
+      true,
+    );
+    assert.equal(
+      resolveDatasetPreparationGenerationModelCapacity({
+        selectedDevice: "cuda",
+        estimatedModelBytes: 5.75 * GIBIBYTE,
+        memoryOverflowPolicy: "extended",
+        capacity: capacity({ totalAcceleratorMemoryBytes: GIBIBYTE }),
+      }).supported,
+      false,
+    );
+  });
+
   it("checks an untouched preference on a sufficient accelerator profile", () => {
     const resolution = resolveDatasetPreparationConstrainedJson({
       selectedDevice: "auto",
@@ -150,6 +264,7 @@ describe("dataset preparation constrained JSON recommendation", () => {
         schemaSupported: true,
         logicalProcessorCount: 8,
         totalSystemMemoryBytes: 16 * GIBIBYTE,
+        availableSystemMemoryBytes: 5 * GIBIBYTE,
         hardwareName: "must-not-cross-the-boundary",
       }),
       {
@@ -159,6 +274,7 @@ describe("dataset preparation constrained JSON recommendation", () => {
         schemaSupported: true,
         logicalProcessorCount: 8,
         totalSystemMemoryBytes: 16 * GIBIBYTE,
+        availableSystemMemoryBytes: 5 * GIBIBYTE,
       },
     );
     assert.equal(
@@ -170,7 +286,10 @@ describe("dataset preparation constrained JSON recommendation", () => {
       }),
       undefined,
     );
-    assert.equal(normalizeConstrainedJsonDecodingPreference(undefined), undefined);
+    assert.equal(
+      normalizeConstrainedJsonDecodingPreference(undefined),
+      undefined,
+    );
     assert.equal(normalizeConstrainedJsonDecodingPreference(false), false);
     assert.throws(() => normalizeConstrainedJsonDecodingPreference("yes"));
   });

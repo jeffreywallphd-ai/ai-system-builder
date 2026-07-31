@@ -412,6 +412,9 @@ import {
   DESKTOP_MODEL_RECORD_DELETE_OPERATION,
   DESKTOP_MODEL_RECORD_DELETE_REQUEST_CHANNEL,
   DESKTOP_MODEL_RECORD_DELETE_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_FOLDER_REVEAL_OPERATION,
+  DESKTOP_MODEL_FOLDER_REVEAL_REQUEST_CHANNEL,
+  DESKTOP_MODEL_FOLDER_REVEAL_RESPONSE_CHANNEL,
   createDesktopModelBrowseRequest,
   createDesktopModelDetailsReadRequest,
   createDesktopModelListRequest,
@@ -423,6 +426,7 @@ import {
   createDesktopModelDownloadCancelRequest,
   createDesktopModelRecordUpdateRequest,
   createDesktopModelRecordDeleteRequest,
+  createDesktopModelFolderRevealRequest,
   createDesktopModelTrainRequest,
   createDesktopModelTrainStatusRequest,
   createDesktopModelValidateRequest,
@@ -438,6 +442,7 @@ import {
   type DesktopModelDownloadCancelResponse,
   type DesktopModelRecordUpdateResponse,
   type DesktopModelRecordDeleteResponse,
+  type DesktopModelFolderRevealResponse,
   type DesktopModelTrainResponse,
   type DesktopModelTrainStatusResponse,
   type DesktopModelValidateResponse,
@@ -744,10 +749,12 @@ export interface DesktopPreloadApi {
     input: {
       workspaceId?: string;
       sourceArtifactIds: string[];
+      preparation?: DesktopPrepareTrainingDatasetStartRequest["payload"]["command"]["preparation"];
       recipe: DesktopPrepareTrainingDatasetStartRequest["payload"]["command"]["recipe"];
       split: DesktopPrepareTrainingDatasetStartRequest["payload"]["command"]["split"];
       output: DesktopPrepareTrainingDatasetStartRequest["payload"]["command"]["output"];
       quality?: DesktopPrepareTrainingDatasetStartRequest["payload"]["command"]["quality"];
+      advanced?: DesktopPrepareTrainingDatasetStartRequest["payload"]["command"]["advanced"];
     },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopPrepareTrainingDatasetStartResponse>;
@@ -1867,6 +1874,10 @@ export interface DesktopPreloadApi {
     input: Parameters<typeof createDesktopModelRecordDeleteRequest>[0],
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopModelRecordDeleteResponse>;
+  revealModelInFolder: (
+    input: Parameters<typeof createDesktopModelFolderRevealRequest>[0],
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopModelFolderRevealResponse>;
   trainModel: (
     input: Parameters<typeof createDesktopModelTrainRequest>[0],
     context?: DesktopArtifactUploadBridgeContext,
@@ -2276,10 +2287,12 @@ export function createDesktopPreloadApi(
           {
             command: {
               sourceArtifactIds: input.sourceArtifactIds,
+              preparation: input.preparation,
               recipe: input.recipe,
               split: input.split,
               output: input.output,
               quality: input.quality,
+              advanced: input.advanced,
             },
             boundary: {
               host: "desktop",
@@ -4757,6 +4770,22 @@ export function createDesktopPreloadApi(
           channel: DESKTOP_MODEL_RECORD_DELETE_RESPONSE_CHANNEL.value,
           message:
             "Received invalid desktop model record-delete IPC response envelope.",
+        },
+      );
+    },
+    async revealModelInFolder(input, context = {}) {
+      const request = createDesktopModelFolderRevealRequest(input, context);
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_MODEL_FOLDER_REVEAL_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopModelFolderRevealResponse>(
+        response,
+        {
+          operation: DESKTOP_MODEL_FOLDER_REVEAL_OPERATION,
+          channel: DESKTOP_MODEL_FOLDER_REVEAL_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop model folder-reveal IPC response envelope.",
         },
       );
     },

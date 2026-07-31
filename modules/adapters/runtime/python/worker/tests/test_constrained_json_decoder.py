@@ -12,6 +12,7 @@ from modules.adapters.runtime.python.worker.tasks.constrained_json_decoder impor
     ConstrainedJsonDecoder,
     ConstrainedJsonDecoderError,
     _CompiledConstraint,
+    _configure_windows_eager_outlines_torch_kernel,
     compile_constrained_json_schema,
     get_constrained_json_decoder_runtime_status,
 )
@@ -90,6 +91,29 @@ def _constraint_factory(
 
 
 class ConstrainedJsonSchemaTests(unittest.TestCase):
+    def test_uses_outlines_eager_mask_kernel_on_windows(self) -> None:
+        def eager_kernel(*_args):
+            return None
+
+        compiled_kernel = SimpleNamespace(_torchdynamo_orig_callable=eager_kernel)
+        kernels = SimpleNamespace(_apply_token_bitmask_inplace_kernel=compiled_kernel)
+        with (
+            patch.object(decoder_module.sys, "platform", "win32"),
+            patch.object(decoder_module.importlib, "import_module", return_value=kernels),
+        ):
+            _configure_windows_eager_outlines_torch_kernel()
+
+        self.assertIs(kernels._apply_token_bitmask_inplace_kernel, eager_kernel)
+
+    def test_leaves_outlines_mask_kernel_unchanged_off_windows(self) -> None:
+        with (
+            patch.object(decoder_module.sys, "platform", "linux"),
+            patch.object(decoder_module.importlib, "import_module") as import_module,
+        ):
+            _configure_windows_eager_outlines_torch_kernel()
+
+        import_module.assert_not_called()
+
     def test_reports_dependency_and_python_readiness_without_throwing(self) -> None:
         with patch.object(decoder_module.sys, "version_info", (3, 14, 1)):
             unsupported = get_constrained_json_decoder_runtime_status()
@@ -135,6 +159,19 @@ class ConstrainedJsonSchemaTests(unittest.TestCase):
         self.assertEqual(first.fingerprint, second.fingerprint)
         self.assertEqual(first.property_count, 1)
         self.assertGreater(first.node_count, 1)
+
+    def test_preserves_property_order_for_the_generation_grammar(self) -> None:
+        schema = _schema(field_name="firstField")
+        schema["required"] = ["firstField", "secondField"]
+        schema["properties"]["secondField"] = {"type": "string", "maxLength": 100}
+
+        plan = compile_constrained_json_schema(schema)
+
+        self.assertEqual(list(plan.schema["properties"]), ["firstField", "secondField"])
+        self.assertLess(
+            plan.constraint_schema.index('"firstField"'),
+            plan.constraint_schema.index('"secondField"'),
+        )
 
     def test_rejects_raw_references_unknown_rules_and_open_root_objects(self) -> None:
         reference = _schema()

@@ -9,7 +9,7 @@ export function ModelsPage({ workspaceId }: WorkspaceScopedPageProps) {
   return (
     <section className="ui-stack ui-stack--sm">
       <h1>Model Management</h1>
-      <p>Browse remote model references, manage model asset records, and prepare future training workflows.</p>
+      <p>Find remote model references, manage model asset records, and prepare future training workflows.</p>
       <ModelsFeature key={workspaceId} workspaceId={workspaceId} />
     </section>
   );

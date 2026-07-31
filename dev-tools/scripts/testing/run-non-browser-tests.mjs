@@ -492,15 +492,23 @@ try {
   let ignoredRunnerSpawnFailures = 0;
 
   if (discoveredRuntimeTestFiles.length === 0) {
-    throw new Error("No non-browser test files were discovered.");
+    if (suite !== "ai") {
+      throw new Error("No non-browser test files were discovered.");
+    }
+    console.log(
+      "No explicitly marked non-browser AI tests were discovered; continuing with the controlled Python AI tests.",
+    );
   }
 
-  const testsStream = run(
-    buildNonBrowserNodeTestRunOptions({
-      files: discoveredRuntimeTestFiles,
-      cwd: repoRoot,
-    }),
-  );
+  const testsStream =
+    discoveredRuntimeTestFiles.length === 0
+      ? []
+      : run(
+          buildNonBrowserNodeTestRunOptions({
+            files: discoveredRuntimeTestFiles,
+            cwd: repoRoot,
+          }),
+        );
 
   for await (const streamEvent of testsStream) {
     const eventType = streamEvent?.type;

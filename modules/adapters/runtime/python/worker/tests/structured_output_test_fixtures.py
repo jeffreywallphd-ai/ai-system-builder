@@ -55,6 +55,8 @@ def _example_from_schema(schema: dict[str, Any]) -> Any:
         additional = schema.get("additionalProperties")
         if isinstance(additional, dict):
             return {"field": _example_from_schema(additional)}
+        if int(schema.get("minProperties") or 0) > 0:
+            return {"field": "example"}
         return {}
     if schema_type == "array":
         return [_example_from_schema(schema.get("items") or {"type": "string"})]

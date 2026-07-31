@@ -81,9 +81,11 @@ architecture, compatibility, migration, security, operational, rollback, or
 controlled-qualification concern. Otherwise merge the work. Run only focused checks
 as internal chunks land and only change-relevant completion checks after an
 increment is implemented. Batch report updates around meaningful outcomes. Run the
-complete short suite, complete long suite, and costly repository-wide gates once
-after every roadmap increment is implemented. Use focused risk regressions instead
-of an early broad suite.
+combined standard and end-to-end coverage and costly repository-wide gates once
+after every roadmap increment is implemented. For AI-related work, use the all-suite
+command so the AI suite is included. Do not run AI or all-suite coverage for non-AI
+work unless explicitly requested. Use focused risk regressions instead of an early
+broad suite.
 
 If execution reveals that the pending roadmap is too fine-grained, record the
 feedback, preserve completed increments and their evidence, replace the pending
@@ -157,6 +159,8 @@ Run:
 python -m unittest discover -s skills/manage-implementation-roadmaps/tests -p "test_*.py" -v
 npm run docs:check
 npm run agent-support:check
+npm run test:standardande2e
+# For AI-related skill changes or an explicit request:
 npm run test:all
 ```
 

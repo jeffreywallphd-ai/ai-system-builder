@@ -165,6 +165,7 @@ export function DatasetPreparationFeature({
     modelInferenceMode,
     modelDevice,
     modelTorchDtype,
+    modelMemoryOverflowPolicy,
     maxExamplesPerChunk,
     batchSize,
     failurePolicy,
@@ -231,6 +232,7 @@ export function DatasetPreparationFeature({
     setModelInferenceMode,
     setModelDevice,
     setModelTorchDtype,
+    setModelMemoryOverflowPolicy,
     setMaxExamplesPerChunk,
     setBatchSize,
     setFailurePolicy,
@@ -996,6 +998,46 @@ export function DatasetPreparationFeature({
                     </p>
                   </div>
                 )}
+                {isModelTextGenerationEnabled && showGenerationModelDownload ? (
+                  <section className="dataset-preparation__quick-download ui-stack ui-stack--sm">
+                    <p className="ui-text-muted">
+                      The selected model is not downloaded for the current
+                      workspace yet. Download it before preparing the dataset.
+                    </p>
+                    <button
+                      className="ui-button"
+                      type="button"
+                      disabled={
+                        modelDownloadInFlight ||
+                        !workspaceId ||
+                        modelId.trim().length === 0
+                      }
+                      onClick={() => {
+                        notifications?.setPanelOpen(true);
+                        void onDownloadGenerationModel();
+                      }}
+                    >
+                      {modelDownloadInFlight
+                        ? "Downloading..."
+                        : "Download model"}
+                    </button>
+                    {modelDownloadStatus.message ? (
+                      <p
+                        role={
+                          modelDownloadStatus.kind === "error"
+                            ? "alert"
+                            : "status"
+                        }
+                      >
+                        {modelDownloadStatus.message}
+                      </p>
+                    ) : null}
+                  </section>
+                ) : isModelTextGenerationEnabled &&
+                  modelDownloadStatus.message &&
+                  modelDownloadStatus.kind === "success" ? (
+                  <p role="status">{modelDownloadStatus.message}</p>
+                ) : null}
                 <CollapsiblePanel
                   className="dataset-preparation__advanced-settings"
                   title="Advanced settings"
@@ -1241,52 +1283,12 @@ export function DatasetPreparationFeature({
                               </label>
                               <p className="ui-text-muted">
                                 When enabled, the local model follows the field
-                                layout while it writes each example. {" "}
+                                layout while it writes each example.{" "}
                                 {constrainedJsonRecommendationCopy(
                                   constrainedJsonResolution.recommendationReason,
                                 )}
                               </p>
                             </div>
-                            {showGenerationModelDownload ? (
-                              <section className="dataset-preparation__quick-download ui-stack ui-stack--sm">
-                                <p className="ui-text-muted">
-                                  This model is not downloaded for the current
-                                  workspace yet. Review the model ID below, then
-                                  download it for this workspace.
-                                </p>
-                                <button
-                                  className="ui-button"
-                                  type="button"
-                                  disabled={
-                                    modelDownloadInFlight ||
-                                    !workspaceId ||
-                                    modelId.trim().length === 0
-                                  }
-                                  onClick={() => {
-                                    notifications?.setPanelOpen(true);
-                                    void onDownloadGenerationModel();
-                                  }}
-                                >
-                                  {modelDownloadInFlight
-                                    ? "Downloading..."
-                                    : "Download model"}
-                                </button>
-                                {modelDownloadStatus.message ? (
-                                  <p
-                                    role={
-                                      modelDownloadStatus.kind === "error"
-                                        ? "alert"
-                                        : "status"
-                                    }
-                                  >
-                                    {modelDownloadStatus.message}
-                                  </p>
-                                ) : null}
-                              </section>
-                            ) : modelDownloadStatus.message &&
-                              modelDownloadStatus.kind === "success" ? (
-                              <p role="status">{modelDownloadStatus.message}</p>
-                            ) : null}
                             <div className="ui-grid ui-grid--two">
                               <label className="ui-stack ui-stack--sm">
                                 <span>
@@ -1392,6 +1394,35 @@ export function DatasetPreparationFeature({
                                   <option value="bfloat16">bfloat16</option>
                                   <option value="float32">float32</option>
                                 </select>
+                              </label>
+                              <label className="ui-stack ui-stack--sm">
+                                <span>When memory is full</span>
+                                <select
+                                  className="ui-input"
+                                  value={modelMemoryOverflowPolicy}
+                                  onChange={(event) =>
+                                    setModelMemoryOverflowPolicy(
+                                      event.target
+                                        .value as typeof modelMemoryOverflowPolicy,
+                                    )
+                                  }
+                                >
+                                  <option value="limited">
+                                    Use a little disk space (up to 1 GB)
+                                  </option>
+                                  <option value="none">
+                                    Keep everything in memory
+                                  </option>
+                                  <option value="extended">
+                                    Use more disk space (up to 4 GB)
+                                  </option>
+                                </select>
+                                <small className="ui-text-muted">
+                                  Disk/swap can keep a model running when free
+                                  memory is low, but generation may be slower.
+                                  The 4 GB option can also make the computer
+                                  less responsive.
+                                </small>
                               </label>
                               <label className="ui-stack ui-stack--sm">
                                 <span>

@@ -1,14 +1,24 @@
+import type { DatasetPreparationMemoryOverflowPolicy } from "./dataset-preparation";
+
 const GIBIBYTE = 1024 ** 3;
+
+export const DATASET_PREPARATION_MEMORY_OVERFLOW_BYTES: Readonly<
+  Record<DatasetPreparationMemoryOverflowPolicy, number>
+> = {
+  none: 0,
+  limited: GIBIBYTE,
+  extended: 4 * GIBIBYTE,
+};
 
 export const DATASET_PREPARATION_GENERATION_MODEL_ESTIMATED_BYTES: Readonly<
   Record<string, number>
 > = {
   "Qwen/Qwen2.5-7B-Instruct": 15 * GIBIBYTE,
-  "Qwen/Qwen2.5-3B-Instruct": 7 * GIBIBYTE,
+  "Qwen/Qwen2.5-3B-Instruct": 5.75 * GIBIBYTE,
+  "Qwen/Qwen2.5-1.5B-Instruct": 3 * GIBIBYTE,
 };
 
-export const DATASET_PREPARATION_CAPACITY_SNAPSHOT_MAX_AGE_MS =
-  5 * 60 * 1000;
+export const DATASET_PREPARATION_CAPACITY_SNAPSHOT_MAX_AGE_MS = 5 * 60 * 1000;
 export const DATASET_PREPARATION_MIN_CPU_LOGICAL_PROCESSORS = 8;
 
 export const DATASET_PREPARATION_CONSTRAINED_JSON_REASONS = [
@@ -32,6 +42,7 @@ export interface DatasetPreparationGenerationCapacitySnapshot {
   schemaSupported: boolean;
   logicalProcessorCount?: number;
   totalSystemMemoryBytes?: number;
+  availableSystemMemoryBytes?: number;
   totalAcceleratorMemoryBytes?: number;
 }
 
@@ -46,6 +57,7 @@ export interface DatasetPreparationConstrainedJsonResolutionInput {
   preference?: boolean;
   selectedDevice: "cpu" | "cuda" | "auto";
   estimatedModelBytes?: number;
+  memoryOverflowPolicy?: DatasetPreparationMemoryOverflowPolicy;
   capacity?: DatasetPreparationGenerationCapacitySnapshot;
   now?: string | number | Date;
 }
@@ -54,9 +66,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 const boundedPositiveInteger = (value: unknown): number | undefined =>
-  typeof value === "number" &&
-  Number.isSafeInteger(value) &&
-  value > 0
+  typeof value === "number" && Number.isSafeInteger(value) && value > 0
     ? value
     : undefined;
 
@@ -69,8 +79,9 @@ const normalizedTimestamp = (value: unknown): string | undefined => {
 };
 
 /**
- * Normalizes untrusted host facts without retaining hardware identity, paths, or
- * live utilization. Invalid snapshots intentionally become unavailable.
+ * Normalizes untrusted host facts without retaining hardware identity or paths.
+ * Desktop may provide current available memory; shared server hosts can omit it.
+ * Invalid snapshots intentionally become unavailable.
  */
 export function normalizeDatasetPreparationGenerationCapacitySnapshot(
   value: unknown,
@@ -91,6 +102,9 @@ export function normalizeDatasetPreparationGenerationCapacitySnapshot(
   const totalSystemMemoryBytes = boundedPositiveInteger(
     value.totalSystemMemoryBytes,
   );
+  const availableSystemMemoryBytes = boundedPositiveInteger(
+    value.availableSystemMemoryBytes,
+  );
   const totalAcceleratorMemoryBytes = boundedPositiveInteger(
     value.totalAcceleratorMemoryBytes,
   );
@@ -102,9 +116,8 @@ export function normalizeDatasetPreparationGenerationCapacitySnapshot(
     schemaSupported: value.schemaSupported,
     ...(logicalProcessorCount ? { logicalProcessorCount } : {}),
     ...(totalSystemMemoryBytes ? { totalSystemMemoryBytes } : {}),
-    ...(totalAcceleratorMemoryBytes
-      ? { totalAcceleratorMemoryBytes }
-      : {}),
+    ...(availableSystemMemoryBytes ? { availableSystemMemoryBytes } : {}),
+    ...(totalAcceleratorMemoryBytes ? { totalAcceleratorMemoryBytes } : {}),
   };
 }
 
@@ -129,6 +142,112 @@ export function resolveDatasetPreparationGenerationModelEstimatedBytes(
     : undefined;
 }
 
+export interface DatasetPreparationGenerationModelCapacityResolution {
+  supported: boolean;
+  reason:
+    | "capacity-sufficient-cuda"
+    | "capacity-sufficient-cpu"
+    | "capacity-insufficient"
+    | "capacity-unknown";
+  requiredMemoryBytes?: number;
+  availableMemoryBytes?: number;
+  estimatedMemoryShortfallBytes?: number;
+  allowedMemoryOverflowBytes?: number;
+  memoryOverflowRequired?: boolean;
+}
+
+export function resolveDatasetPreparationAllowedMemoryOverflowBytes(
+  policy: DatasetPreparationMemoryOverflowPolicy | undefined,
+): number {
+  return DATASET_PREPARATION_MEMORY_OVERFLOW_BYTES[policy ?? "none"];
+}
+
+export function resolveDatasetPreparationGenerationModelCapacity(input: {
+  selectedDevice: "cpu" | "cuda" | "auto";
+  estimatedModelBytes?: number;
+  capacity?: DatasetPreparationGenerationCapacitySnapshot;
+  memoryOverflowPolicy?: DatasetPreparationMemoryOverflowPolicy;
+}): DatasetPreparationGenerationModelCapacityResolution {
+  const estimatedModelBytes = boundedPositiveInteger(input.estimatedModelBytes);
+  if (!estimatedModelBytes || !input.capacity) {
+    return { supported: false, reason: "capacity-unknown" };
+  }
+
+  const requiredMemoryBytes = Math.ceil(estimatedModelBytes * 1.25) + GIBIBYTE;
+  const totalSystemMemoryBytes = boundedPositiveInteger(
+    input.capacity.totalSystemMemoryBytes,
+  );
+  const availableSystemMemoryBytes = boundedPositiveInteger(
+    input.capacity.availableSystemMemoryBytes,
+  );
+  const totalAcceleratorMemoryBytes = boundedPositiveInteger(
+    input.capacity.totalAcceleratorMemoryBytes,
+  );
+  const allowedMemoryOverflowBytes =
+    resolveDatasetPreparationAllowedMemoryOverflowBytes(
+      input.memoryOverflowPolicy,
+    );
+  if (
+    (input.selectedDevice === "cuda" || input.selectedDevice === "auto") &&
+    totalAcceleratorMemoryBytes !== undefined &&
+    totalAcceleratorMemoryBytes >= requiredMemoryBytes
+  ) {
+    return {
+      supported: true,
+      reason: "capacity-sufficient-cuda",
+      requiredMemoryBytes,
+      availableMemoryBytes: totalAcceleratorMemoryBytes,
+      estimatedMemoryShortfallBytes: 0,
+      allowedMemoryOverflowBytes: 0,
+      memoryOverflowRequired: false,
+    };
+  }
+
+  const availableCpuMemoryBytes =
+    availableSystemMemoryBytes ??
+    (totalSystemMemoryBytes !== undefined
+      ? totalSystemMemoryBytes - 4 * GIBIBYTE
+      : undefined);
+  const estimatedMemoryShortfallBytes =
+    availableCpuMemoryBytes === undefined
+      ? undefined
+      : Math.max(0, requiredMemoryBytes - availableCpuMemoryBytes);
+  if (
+    (input.selectedDevice === "cpu" || input.selectedDevice === "auto") &&
+    availableCpuMemoryBytes !== undefined &&
+    availableCpuMemoryBytes + allowedMemoryOverflowBytes >= requiredMemoryBytes
+  ) {
+    return {
+      supported: true,
+      reason: "capacity-sufficient-cpu",
+      requiredMemoryBytes,
+      availableMemoryBytes: availableCpuMemoryBytes,
+      estimatedMemoryShortfallBytes,
+      allowedMemoryOverflowBytes,
+      memoryOverflowRequired: (estimatedMemoryShortfallBytes ?? 0) > 0,
+    };
+  }
+
+  return {
+    supported: false,
+    reason:
+      totalSystemMemoryBytes === undefined &&
+      availableSystemMemoryBytes === undefined &&
+      totalAcceleratorMemoryBytes === undefined
+        ? "capacity-unknown"
+        : "capacity-insufficient",
+    requiredMemoryBytes,
+    availableMemoryBytes:
+      input.selectedDevice === "cuda"
+        ? totalAcceleratorMemoryBytes
+        : availableCpuMemoryBytes,
+    estimatedMemoryShortfallBytes,
+    allowedMemoryOverflowBytes:
+      input.selectedDevice === "cuda" ? 0 : allowedMemoryOverflowBytes,
+    memoryOverflowRequired: false,
+  };
+}
+
 const toNowMilliseconds = (
   value: DatasetPreparationConstrainedJsonResolutionInput["now"],
 ): number => {
@@ -141,6 +260,7 @@ const toNowMilliseconds = (
 function capacityRecommendation(input: {
   selectedDevice: DatasetPreparationConstrainedJsonResolutionInput["selectedDevice"];
   estimatedModelBytes?: number;
+  memoryOverflowPolicy?: DatasetPreparationMemoryOverflowPolicy;
   capacity?: DatasetPreparationGenerationCapacitySnapshot;
   nowMilliseconds: number;
 }): {
@@ -167,46 +287,29 @@ function capacityRecommendation(input: {
     return { recommended: false, reason: "schema-unsupported" };
   }
 
-  const estimatedModelBytes = boundedPositiveInteger(
-    input.estimatedModelBytes,
-  );
-  if (!estimatedModelBytes) {
+  if (!boundedPositiveInteger(input.estimatedModelBytes)) {
     return { recommended: false, reason: "model-size-unknown" };
   }
 
-  // Model bytes receive a 25% loading margin and the decoder receives a fixed
-  // 1 GiB reserve. Hosts provide total capacity rather than volatile free-memory
-  // readings so an untouched checkbox cannot oscillate with live utilization.
-  const requiredDeviceBytes =
-    Math.ceil(estimatedModelBytes * 1.25) + GIBIBYTE;
-  const totalSystemMemoryBytes = boundedPositiveInteger(
-    capacity.totalSystemMemoryBytes,
-  );
-  const totalAcceleratorMemoryBytes = boundedPositiveInteger(
-    capacity.totalAcceleratorMemoryBytes,
-  );
-
-  const cudaSufficient =
-    totalAcceleratorMemoryBytes !== undefined &&
-    totalAcceleratorMemoryBytes >= requiredDeviceBytes &&
-    totalSystemMemoryBytes !== undefined &&
-    totalSystemMemoryBytes >= 8 * GIBIBYTE;
+  const modelCapacity = resolveDatasetPreparationGenerationModelCapacity({
+    selectedDevice: input.selectedDevice,
+    estimatedModelBytes: input.estimatedModelBytes,
+    memoryOverflowPolicy: input.memoryOverflowPolicy,
+    capacity,
+  });
   if (
-    (input.selectedDevice === "cuda" || input.selectedDevice === "auto") &&
-    cudaSufficient
+    modelCapacity.reason === "capacity-sufficient-cuda" &&
+    boundedPositiveInteger(capacity.totalSystemMemoryBytes) !== undefined &&
+    capacity.totalSystemMemoryBytes! >= 8 * GIBIBYTE
   ) {
     return { recommended: true, reason: "recommended-cuda" };
   }
 
-  const cpuSufficient =
-    totalSystemMemoryBytes !== undefined &&
-    totalSystemMemoryBytes - 4 * GIBIBYTE >= requiredDeviceBytes &&
+  if (
+    modelCapacity.reason === "capacity-sufficient-cpu" &&
     boundedPositiveInteger(capacity.logicalProcessorCount) !== undefined &&
     capacity.logicalProcessorCount! >=
-      DATASET_PREPARATION_MIN_CPU_LOGICAL_PROCESSORS;
-  if (
-    (input.selectedDevice === "cpu" || input.selectedDevice === "auto") &&
-    cpuSufficient
+      DATASET_PREPARATION_MIN_CPU_LOGICAL_PROCESSORS
   ) {
     return { recommended: true, reason: "recommended-cpu" };
   }
@@ -224,6 +327,7 @@ export function resolveDatasetPreparationConstrainedJson(
   const recommendation = capacityRecommendation({
     selectedDevice: input.selectedDevice,
     estimatedModelBytes: input.estimatedModelBytes,
+    memoryOverflowPolicy: input.memoryOverflowPolicy,
     capacity: input.capacity,
     nowMilliseconds: toNowMilliseconds(input.now),
   });

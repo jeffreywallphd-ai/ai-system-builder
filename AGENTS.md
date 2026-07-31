@@ -67,8 +67,9 @@ Record unresolved code/documentation conflicts in `docs/docs-mismatch-register.m
 
 For implementation-roadmap work, run only focused tests for internal chunks and
 only change-relevant tests after each increment. After every increment is
-implemented, run the complete short and long suites plus repository-wide completion
-gates once for the roadmap, as required by
+implemented, run combined standard and end-to-end coverage plus repository-wide
+completion gates once for non-AI roadmaps. For AI-related roadmaps, run the all-suite
+command, which adds the opt-in AI suite, once at that boundary, as required by
 `skills/manage-implementation-roadmaps/SKILL.md`.
 
 Run the narrowest relevant tests while iterating, then run the applicable repository gates:
@@ -77,11 +78,12 @@ Run the narrowest relevant tests while iterating, then run the applicable reposi
 - `npm run architecture:check` for source changes that can affect module dependencies.
 - `npm run agent-support:check` for agent instructions, context routing, or evaluation changes.
 - `npm run security:dependencies` when manifests, lockfiles, dependency resolution, install/build scripts, workflow actions, container inputs, SBOM generation, or release dependency trees change.
-- `npm test` for the short unit and interaction suite.
-- `npm run test:long` for long-running integration and end-to-end coverage when
-  applicable.
-- `npm run test:all` once after every roadmap increment is implemented and before
-  final roadmap handoff.
+- `npm test` for the standard unit and interaction suite.
+- `npm run test:e2e` for integration and end-to-end coverage when applicable.
+- `npm run test:standardande2e` once after every non-AI roadmap increment is
+  implemented and before final roadmap handoff.
+- `npm run test:ai` and `npm run test:all` only for AI-related tasks or an
+  explicit user request; `test:all` combines standard, end-to-end, and AI suites.
 - `npm run build:server` when server build or wiring changes.
 - `npm run build:thin-client` when thin-client build or wiring changes.
 

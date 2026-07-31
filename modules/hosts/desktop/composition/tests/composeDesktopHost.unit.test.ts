@@ -930,6 +930,9 @@ describe("composeDesktopHost", () => {
     expect(
       secondRead.generationCapacity?.totalSystemMemoryBytes,
     ).toBeGreaterThan(0);
+    expect(
+      secondRead.generationCapacity?.availableSystemMemoryBytes,
+    ).toBeGreaterThan(0);
   });
 });
 

@@ -143,6 +143,32 @@ class MarkdownChunkingTests(unittest.TestCase):
                 ),
             )
 
+    def test_semantic_chunking_does_not_create_one_chunk_per_low_overlap_sentence(self) -> None:
+        text = " ".join(
+            f"Topic {index} contains distinct vocabulary item {index}."
+            for index in range(240)
+        )
+        document = NormalizedDocument(
+            "semantic-source",
+            text,
+            "text/plain",
+            "/tmp/semantic-source.txt",
+        )
+        chunks = chunk_markdown_documents(
+            [document],
+            None,
+            AdvancedContentProcessingConfig(
+                strategy="semantic",
+                maxTokensPerChunk=320,
+                maxSourceSpans=10_000,
+                semanticBoundaryThreshold=0.22,
+            ),
+        )
+
+        self.assertGreater(len(chunks), 1)
+        self.assertLess(len(chunks), 30)
+        self.assertTrue(all(chunk.token_count <= 320 for chunk in chunks))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -18,6 +18,7 @@ import type {
   DatasetPreparationExecutionPlan,
   DatasetPreparationConstrainedJsonResolution,
   DatasetPreparationGenerationCapacitySnapshot,
+  DatasetPreparationMemoryOverflowPolicy,
   DatasetPreparationMethodId,
   DatasetPreparationTextInputMode,
   DatasetQualityPreset,
@@ -39,6 +40,7 @@ import {
   resolveDefaultDatasetPreparationTextGenerationParameterDefaults,
   resolveDefaultDatasetPreparationTextGenerationModel,
   resolveDatasetPreparationConstrainedJson,
+  resolveDatasetPreparationGenerationModelCapacity,
   resolveDatasetPreparationGenerationModelEstimatedBytes,
 } from "../../../../../../../modules/contracts/runtime";
 import {
@@ -57,6 +59,7 @@ import {
   isTransientDatasetPreparationTransportError,
   resolveUserFacingDatasetPreparationErrorMessage,
 } from "./datasetPreparationTransport";
+import { announceDatasetPreparationStarted } from "./datasetPreparationNotificationEvents";
 import {
   createDesktopModelsClient,
   type DesktopModelsClient,
@@ -121,6 +124,7 @@ interface DatasetPreparationPageState {
   modelInferenceMode: ModelDefaultInferenceMode;
   modelDevice: "" | "auto" | "cpu" | "cuda";
   modelTorchDtype: "" | "auto" | "float16" | "bfloat16" | "float32";
+  modelMemoryOverflowPolicy: DatasetPreparationMemoryOverflowPolicy;
   maxExamplesPerChunk: string;
   batchSize: string;
   failurePolicy: "" | "fail" | "skip";
@@ -218,6 +222,7 @@ export interface UseDatasetPreparationFeatureResult {
   modelInferenceMode: ModelDefaultInferenceMode;
   modelDevice: "" | "auto" | "cpu" | "cuda";
   modelTorchDtype: "" | "auto" | "float16" | "bfloat16" | "float32";
+  modelMemoryOverflowPolicy: DatasetPreparationMemoryOverflowPolicy;
   maxExamplesPerChunk: string;
   batchSize: string;
   failurePolicy: "" | "fail" | "skip";
@@ -294,6 +299,9 @@ export interface UseDatasetPreparationFeatureResult {
   setModelDevice: (value: "" | "auto" | "cpu" | "cuda") => void;
   setModelTorchDtype: (
     value: "" | "auto" | "float16" | "bfloat16" | "float32",
+  ) => void;
+  setModelMemoryOverflowPolicy: (
+    value: DatasetPreparationMemoryOverflowPolicy,
   ) => void;
   setMaxExamplesPerChunk: (value: string) => void;
   setBatchSize: (value: string) => void;
@@ -402,6 +410,7 @@ const defaultDatasetPreparationPageState: DatasetPreparationPageState = {
   modelInferenceMode: defaultTaskGenerationModel?.inferenceMode ?? "auto",
   modelDevice: defaultTaskGenerationModel?.device ?? "auto",
   modelTorchDtype: defaultTaskGenerationModel?.torchDtype ?? "",
+  modelMemoryOverflowPolicy: "limited",
   maxExamplesPerChunk: defaultTaskGenerationParameters.maxExamplesPerChunk,
   batchSize: defaultTaskGenerationParameters.batchSize,
   failurePolicy: defaultTaskGenerationParameters.failurePolicy,
@@ -436,9 +445,11 @@ const defaultDatasetPreparationPageState: DatasetPreparationPageState = {
 let cachedDatasetPreparationPageState: DatasetPreparationPageState = {
   ...defaultDatasetPreparationPageState,
 };
+let cachedDatasetPreparationModelSelectionExplicit = false;
 
 export function resetDatasetPreparationPageStateForTests(): void {
   cachedDatasetPreparationPageState = { ...defaultDatasetPreparationPageState };
+  cachedDatasetPreparationModelSelectionExplicit = false;
   try {
     if (typeof window !== "undefined") {
       window.localStorage?.removeItem(
@@ -556,9 +567,8 @@ function createDefaultTrainingSettingsSnapshot(
     textInputMode: resolveDefaultTextInputMode(taskType),
     textGenerationPrompt:
       resolveDefaultDatasetPreparationPromptTemplate(taskType) ?? "",
-    visualOutputShape: createDefaultDatasetPreparationVisualOutputShape(
-      taskType,
-    ),
+    visualOutputShape:
+      createDefaultDatasetPreparationVisualOutputShape(taskType),
     constrainedDecodingPreference: undefined,
     unsupportedDocumentPolicy: "",
     normalizationMode: "",
@@ -575,6 +585,7 @@ function createDefaultTrainingSettingsSnapshot(
     modelInferenceMode: taskModelDefault?.inferenceMode ?? "auto",
     modelDevice: taskModelDefault?.device ?? "auto",
     modelTorchDtype: taskModelDefault?.torchDtype ?? "",
+    modelMemoryOverflowPolicy: "limited",
     maxExamplesPerChunk: generationParameters.maxExamplesPerChunk,
     batchSize: generationParameters.batchSize,
     failurePolicy: generationParameters.failurePolicy,
@@ -816,19 +827,58 @@ export function useDatasetPreparationFeature(
   const [similarityThreshold, setSimilarityThreshold] = useState(
     cachedDatasetPreparationPageState.similarityThreshold,
   );
-  const [modelId, setModelId] = useState(
+  const modelSelectionExplicitRef = useRef(
+    cachedDatasetPreparationModelSelectionExplicit,
+  );
+  const [modelId, setModelIdState] = useState(
     cachedDatasetPreparationPageState.modelId,
   );
-  const [modelInferenceMode, setModelInferenceMode] =
+  const [modelInferenceMode, setModelInferenceModeState] =
     useState<ModelDefaultInferenceMode>(
       cachedDatasetPreparationPageState.modelInferenceMode,
     );
-  const [modelDevice, setModelDevice] = useState<"" | "auto" | "cpu" | "cuda">(
-    cachedDatasetPreparationPageState.modelDevice,
-  );
-  const [modelTorchDtype, setModelTorchDtype] = useState<
+  const [modelDevice, setModelDeviceState] = useState<
+    "" | "auto" | "cpu" | "cuda"
+  >(cachedDatasetPreparationPageState.modelDevice);
+  const [modelTorchDtype, setModelTorchDtypeState] = useState<
     "" | "auto" | "float16" | "bfloat16" | "float32"
   >(cachedDatasetPreparationPageState.modelTorchDtype);
+  const [modelMemoryOverflowPolicy, setModelMemoryOverflowPolicy] =
+    useState<DatasetPreparationMemoryOverflowPolicy>(
+      cachedDatasetPreparationPageState.modelMemoryOverflowPolicy ?? "limited",
+    );
+  const markModelSelectionExplicit = useCallback(() => {
+    modelSelectionExplicitRef.current = true;
+    cachedDatasetPreparationModelSelectionExplicit = true;
+  }, []);
+  const setModelId = useCallback(
+    (value: string) => {
+      markModelSelectionExplicit();
+      setModelIdState(value);
+    },
+    [markModelSelectionExplicit],
+  );
+  const setModelInferenceMode = useCallback(
+    (value: ModelDefaultInferenceMode) => {
+      markModelSelectionExplicit();
+      setModelInferenceModeState(value);
+    },
+    [markModelSelectionExplicit],
+  );
+  const setModelDevice = useCallback(
+    (value: "" | "auto" | "cpu" | "cuda") => {
+      markModelSelectionExplicit();
+      setModelDeviceState(value);
+    },
+    [markModelSelectionExplicit],
+  );
+  const setModelTorchDtype = useCallback(
+    (value: "" | "auto" | "float16" | "bfloat16" | "float32") => {
+      markModelSelectionExplicit();
+      setModelTorchDtypeState(value);
+    },
+    [markModelSelectionExplicit],
+  );
   const [maxExamplesPerChunk, setMaxExamplesPerChunk] = useState(
     cachedDatasetPreparationPageState.maxExamplesPerChunk,
   );
@@ -981,6 +1031,7 @@ export function useDatasetPreparationFeature(
       modelInferenceMode,
       modelDevice,
       modelTorchDtype,
+      modelMemoryOverflowPolicy,
       maxExamplesPerChunk,
       batchSize,
       failurePolicy,
@@ -1042,6 +1093,7 @@ export function useDatasetPreparationFeature(
     modelInferenceMode,
     modelDevice,
     modelTorchDtype,
+    modelMemoryOverflowPolicy,
     maxExamplesPerChunk,
     batchSize,
     failurePolicy,
@@ -1092,10 +1144,12 @@ export function useDatasetPreparationFeature(
         multiLabel,
       }),
     );
-    setModelId(taskModelDefault?.modelId ?? "");
-    setModelInferenceMode(taskModelDefault?.inferenceMode ?? "auto");
-    setModelDevice(taskModelDefault?.device ?? "auto");
-    setModelTorchDtype(taskModelDefault?.torchDtype ?? "");
+    modelSelectionExplicitRef.current = false;
+    cachedDatasetPreparationModelSelectionExplicit = false;
+    setModelIdState(taskModelDefault?.modelId ?? "");
+    setModelInferenceModeState(taskModelDefault?.inferenceMode ?? "auto");
+    setModelDeviceState(taskModelDefault?.device ?? "auto");
+    setModelTorchDtypeState(taskModelDefault?.torchDtype ?? "");
     setMaxExamplesPerChunk(generationParameters.maxExamplesPerChunk);
     setBatchSize(generationParameters.batchSize);
     setFailurePolicy(generationParameters.failurePolicy);
@@ -1257,6 +1311,15 @@ export function useDatasetPreparationFeature(
               );
               if (!isPollingStillActive(requestId, pollingSessionId)) return;
               continue;
+            }
+            if (
+              pollResponse.error.code === "generation_model_not_available" ||
+              pollResponse.error.code ===
+                "generation_model_download_incomplete" ||
+              pollResponse.error.code === "generation_model_load_failed"
+            ) {
+              setGenerationModelRecords([]);
+              setGenerationModelAvailabilityChecked(true);
             }
             clearActiveTask();
             setStatus({
@@ -1572,13 +1635,13 @@ export function useDatasetPreparationFeature(
     preparationPlan.generationMode !== "none" &&
     modelInferenceMode !== "text2text" &&
     outputShapeCompilation.ok &&
-    outputShapeCompilation.value.decoderCompatible;
+    outputShapeCompilation.value.decoderCompatible &&
+    generationCapacity?.decoderAvailable === true;
   const recommendationCapacity = generationCapacity
     ? {
         ...generationCapacity,
         schemaSupported:
-          generationCapacity.schemaSupported &&
-          constrainedDecodingAvailable,
+          generationCapacity.schemaSupported && constrainedDecodingAvailable,
       }
     : undefined;
   const constrainedJsonResolution = useMemo(
@@ -1597,17 +1660,89 @@ export function useDatasetPreparationFeature(
                 ?.modelId,
           ),
         capacity: recommendationCapacity,
+        memoryOverflowPolicy: modelMemoryOverflowPolicy,
       }),
     [
       constrainedDecodingPreference,
       modelDevice,
       modelId,
+      modelMemoryOverflowPolicy,
       recommendationCapacity,
       taskType,
     ],
   );
   const constrainedDecodingEnabled =
     constrainedDecodingAvailable && constrainedJsonResolution.enabled;
+
+  useEffect(() => {
+    if (
+      modelSelectionExplicitRef.current ||
+      !generationCapacity ||
+      textInputMode !== "generate"
+    ) {
+      return;
+    }
+
+    const selectedPresetIndex =
+      DATASET_PREPARATION_TEXT_GENERATION_MODEL_PRESETS.findIndex(
+        (preset) => preset.model.modelId === modelId,
+      );
+    if (selectedPresetIndex < 0) {
+      return;
+    }
+    const selectedPreset =
+      DATASET_PREPARATION_TEXT_GENERATION_MODEL_PRESETS[selectedPresetIndex];
+    if (
+      !selectedPreset ||
+      resolveDatasetPreparationGenerationModelCapacity({
+        selectedDevice: selectedPreset.model.device ?? "auto",
+        estimatedModelBytes:
+          resolveDatasetPreparationGenerationModelEstimatedBytes(
+            selectedPreset.model.modelId,
+          ),
+        capacity: generationCapacity,
+        memoryOverflowPolicy: modelMemoryOverflowPolicy,
+      }).reason !== "capacity-insufficient"
+    ) {
+      return;
+    }
+
+    const compatiblePreset =
+      DATASET_PREPARATION_TEXT_GENERATION_MODEL_PRESETS.slice(
+        selectedPresetIndex + 1,
+      ).find(
+        (preset) =>
+          resolveDatasetPreparationGenerationModelCapacity({
+            selectedDevice: preset.model.device ?? "auto",
+            estimatedModelBytes:
+              resolveDatasetPreparationGenerationModelEstimatedBytes(
+                preset.model.modelId,
+              ),
+            capacity: generationCapacity,
+            memoryOverflowPolicy: modelMemoryOverflowPolicy,
+          }).supported,
+      );
+    if (!compatiblePreset) {
+      return;
+    }
+
+    setModelIdState(compatiblePreset.model.modelId);
+    setModelInferenceModeState(
+      compatiblePreset.model.inferenceMode === "text2text" ||
+        compatiblePreset.model.inferenceMode === "causal" ||
+        compatiblePreset.model.inferenceMode === "chat" ||
+        compatiblePreset.model.inferenceMode === "auto"
+        ? compatiblePreset.model.inferenceMode
+        : "auto",
+    );
+    setModelDeviceState(compatiblePreset.model.device ?? "auto");
+    setModelTorchDtypeState(compatiblePreset.model.torchDtype ?? "");
+  }, [
+    generationCapacity,
+    modelId,
+    modelMemoryOverflowPolicy,
+    textInputMode,
+  ]);
 
   const currentTrainingSettingsSnapshot =
     useMemo<DatasetPreparationTrainingSettingsSnapshot>(
@@ -1641,6 +1776,7 @@ export function useDatasetPreparationFeature(
         modelInferenceMode,
         modelDevice,
         modelTorchDtype,
+        modelMemoryOverflowPolicy,
         maxExamplesPerChunk,
         batchSize,
         failurePolicy,
@@ -1694,6 +1830,7 @@ export function useDatasetPreparationFeature(
         modelInferenceMode,
         modelDevice,
         modelTorchDtype,
+        modelMemoryOverflowPolicy,
         maxExamplesPerChunk,
         batchSize,
         failurePolicy,
@@ -1745,9 +1882,7 @@ export function useDatasetPreparationFeature(
       setTextInputMode(settings.textInputMode);
       setTextGenerationPrompt(settings.textGenerationPrompt);
       setVisualOutputShape(settings.visualOutputShape);
-      setConstrainedDecodingPreference(
-        settings.constrainedDecodingPreference,
-      );
+      setConstrainedDecodingPreference(settings.constrainedDecodingPreference);
       setUnsupportedDocumentPolicy(settings.unsupportedDocumentPolicy);
       setNormalizationMode(settings.normalizationMode);
       setChunkSize(settings.chunkSize);
@@ -1762,6 +1897,9 @@ export function useDatasetPreparationFeature(
       setModelInferenceMode(settings.modelInferenceMode);
       setModelDevice(settings.modelDevice);
       setModelTorchDtype(settings.modelTorchDtype);
+      setModelMemoryOverflowPolicy(
+        settings.modelMemoryOverflowPolicy ?? "limited",
+      );
       setMaxExamplesPerChunk(settings.maxExamplesPerChunk);
       setBatchSize(settings.batchSize);
       setFailurePolicy(settings.failurePolicy);
@@ -1907,9 +2045,7 @@ export function useDatasetPreparationFeature(
       if (reusedVisualShapeCompilation?.ok)
         setVisualOutputShape(reusedVisualShapeCompilation.value.shape);
       if (typeof structuredOutput.constrainedDecoding === "boolean")
-        setConstrainedDecodingPreference(
-          structuredOutput.constrainedDecoding,
-        );
+        setConstrainedDecodingPreference(structuredOutput.constrainedDecoding);
       if (["fail", "skip"].includes(normalization.unsupportedDocumentPolicy))
         setUnsupportedDocumentPolicy(normalization.unsupportedDocumentPolicy);
       if (["best-effort", "strict"].includes(normalization.normalizationMode))
@@ -2068,6 +2204,7 @@ export function useDatasetPreparationFeature(
         modelInferenceMode,
         modelDevice,
         modelTorchDtype,
+        modelMemoryOverflowPolicy,
         failurePolicy,
         shuffle,
         outputFormat,
@@ -2082,11 +2219,27 @@ export function useDatasetPreparationFeature(
         resolvedDefault,
       });
       const generationModelId = request.recipe.generation?.model.modelId;
+      if (generationModelId && generationCapacity) {
+        const modelCapacity = resolveDatasetPreparationGenerationModelCapacity({
+          selectedDevice: request.recipe.generation?.model.device ?? "auto",
+          estimatedModelBytes:
+            resolveDatasetPreparationGenerationModelEstimatedBytes(
+              generationModelId,
+            ),
+          capacity: generationCapacity,
+          memoryOverflowPolicy: modelMemoryOverflowPolicy,
+        });
+        if (modelCapacity.reason === "capacity-insufficient") {
+          setStatus({
+            kind: "error",
+            message:
+              "The selected model cannot fit in the memory currently available. Close memory-heavy applications or select a smaller built-in model, then retry.",
+          });
+          return;
+        }
+      }
       const requestId = createDatasetPreparationRequestId();
 
-      window.dispatchEvent(
-        new CustomEvent("dataset-preparation-training-started"),
-      );
       setStatus({
         kind: "loading",
         message: generationModelId
@@ -2132,6 +2285,7 @@ export function useDatasetPreparationFeature(
           isTransientPollReadFailure(message)
         ) {
           setActiveDatasetPreparationTask(requestId);
+          announceDatasetPreparationStarted({ requestId, workspaceId });
           setStatus({
             kind: "loading",
             message: "Reconnecting to dataset preparation task...",
@@ -2154,6 +2308,10 @@ export function useDatasetPreparationFeature(
       }
 
       setActiveDatasetPreparationTask(started.requestId);
+      announceDatasetPreparationStarted({
+        requestId: started.requestId,
+        workspaceId,
+      });
       await pollDatasetPreparationTask(started.requestId);
     },
     [
@@ -2189,6 +2347,7 @@ export function useDatasetPreparationFeature(
       modelInferenceMode,
       modelDevice,
       modelTorchDtype,
+      modelMemoryOverflowPolicy,
       maxExamplesPerChunk,
       batchSize,
       failurePolicy,
@@ -2213,6 +2372,7 @@ export function useDatasetPreparationFeature(
       requireConsentMetadata,
       includeSourceAttribution,
       datasetClient,
+      generationCapacity,
       workspaceId,
       pollDatasetPreparationTask,
       setActiveDatasetPreparationTask,
@@ -2503,6 +2663,7 @@ export function useDatasetPreparationFeature(
     modelInferenceMode,
     modelDevice,
     modelTorchDtype,
+    modelMemoryOverflowPolicy,
     maxExamplesPerChunk,
     batchSize,
     failurePolicy,
@@ -2572,6 +2733,7 @@ export function useDatasetPreparationFeature(
     setModelInferenceMode,
     setModelDevice,
     setModelTorchDtype,
+    setModelMemoryOverflowPolicy,
     setMaxExamplesPerChunk,
     setBatchSize,
     setFailurePolicy,

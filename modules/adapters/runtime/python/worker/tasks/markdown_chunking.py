@@ -147,20 +147,37 @@ def _semantic_spans(
     grouped: list[tuple[int, int, str, int | None]] = []
     current_start = sentences[0][0]
     current_end = sentences[0][1]
-    previous_tokens = set(token.lower() for token in _TOKEN_PATTERN.findall(text[current_start:current_end]))
-    current_token_count = len(previous_tokens)
+    first_tokens = [
+        token.lower()
+        for token in _TOKEN_PATTERN.findall(text[current_start:current_end])
+    ]
+    current_topic_tokens = set(first_tokens)
+    current_token_count = len(first_tokens)
+    minimum_topic_chunk_tokens = max(32, int(max_tokens * 0.35))
     for sentence in sentences[1:]:
-        sentence_tokens = set(token.lower() for token in _TOKEN_PATTERN.findall(text[sentence[0] : sentence[1]]))
-        union = previous_tokens | sentence_tokens
-        similarity = len(previous_tokens & sentence_tokens) / max(1, len(union))
-        would_exceed = sentence[1] - current_start > max_characters or current_token_count + len(sentence_tokens) > max_tokens
-        if similarity < boundary_threshold or would_exceed:
+        sentence_token_list = [
+            token.lower()
+            for token in _TOKEN_PATTERN.findall(text[sentence[0] : sentence[1]])
+        ]
+        sentence_tokens = set(sentence_token_list)
+        union = current_topic_tokens | sentence_tokens
+        similarity = len(current_topic_tokens & sentence_tokens) / max(1, len(union))
+        would_exceed = (
+            sentence[1] - current_start > max_characters
+            or current_token_count + len(sentence_token_list) > max_tokens
+        )
+        topic_changed = (
+            current_token_count >= minimum_topic_chunk_tokens
+            and similarity < boundary_threshold
+        )
+        if topic_changed or would_exceed:
             grouped.append((current_start, current_end, "paragraph", None))
             current_start = sentence[0]
             current_token_count = 0
+            current_topic_tokens = set()
         current_end = sentence[1]
-        current_token_count += len(sentence_tokens)
-        previous_tokens = sentence_tokens
+        current_token_count += len(sentence_token_list)
+        current_topic_tokens.update(sentence_tokens)
     grouped.append((current_start, current_end, "paragraph", None))
     return grouped
 

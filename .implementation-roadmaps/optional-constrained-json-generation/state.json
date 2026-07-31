@@ -885,6 +885,83 @@
       "outcome": "passed",
       "recordedAt": "2026-07-30T22:34:19Z",
       "summary": "Security-relevant review confirms host-owned envelope and purpose mappings, bounded schema and processor resources, no checked-mode fallback, sanitized diagnostics, exact dependency integrity, trusted post-generation attribution with public-URL sanitization, and documented residual risk for unchecked generation and user-added fields. Representative supported-host qualification remains separately pending."
+    },
+    {
+      "artifact": "artifacts/test-reports/test-suite-report.json",
+      "command": "npm run test:all && npm run test:dataset-preparation:e2e && npm run package",
+      "criterionId": "full-short-and-long-suites",
+      "id": "evidence-22",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-31T12:59:22Z",
+      "summary": "The combined Standard, E2E, and AI suite passed, the physical dataset-creation matrix passed, and Electron Forge packaged the desktop application successfully after the bounded memory-overflow and notification changes."
+    },
+    {
+      "artifact": null,
+      "command": "npm run docs:check && npm run architecture:check && npm run agent-support:check && npm run security:dependencies",
+      "criterionId": "documentation-and-dependency-gates",
+      "id": "evidence-23",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "documentation",
+      "outcome": "passed",
+      "recordedAt": "2026-07-31T12:59:25Z",
+      "summary": "Architecture, threat-model, runtime, UI, contract, context-pack, dependency, and test guidance now documents the closed 0/1/4 GiB CPU overflow policy, CUDA denial, fail-closed defaults, and actual-use slowdown notification."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-24",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-31T12:59:27Z",
+      "summary": "Final review confirmed contract-owned fixed overflow bounds, a memory-only default for omitted non-desktop requests, no CUDA overflow, live worker enforcement, sanitized progress, deduplicated notification history, and no arbitrary renderer-controlled byte allowance."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "representative-resource-and-usability-qualification",
+      "id": "evidence-25",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-07-31T12:59:29Z",
+      "summary": "Local constrained-CPU policy, live 3B preflight, overflow bounds, saved choice, notification, packaging, and automated accessibility behavior pass. A representative accelerator run and observed non-developer workflow remain controlled-environment evidence."
+    },
+    {
+      "artifact": "artifacts/test-reports/test-suite-report.json",
+      "command": "npm run test:all",
+      "criterionId": "full-short-and-long-suites",
+      "id": "evidence-26",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-07-31T14:24:20Z",
+      "summary": "The combined standard, E2E, and AI suites passed after the final fix, including 373 Vitest standard tests, three Vitest E2E tests, all non-browser phases, and the controlled Python AI test."
+    },
+    {
+      "artifact": null,
+      "command": "npm run docs:check; npm run architecture:check; npm run agent-support:check; npm run package; git diff --check",
+      "criterionId": "documentation-and-dependency-gates",
+      "id": "evidence-27",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "documentation",
+      "outcome": "passed",
+      "recordedAt": "2026-07-31T14:24:20Z",
+      "summary": "Worker, architecture, threat-model, and routed context guidance document field-order preservation, supported interpreter selection, strict correction, and the Windows eager-kernel integration."
+    },
+    {
+      "artifact": null,
+      "command": "focused denial tests and data-management threat-control review",
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-28",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-07-31T14:24:20Z",
+      "summary": "Security-relevant review confirmed bounded schemas and output, unchanged token masking and mandatory post-validation, no raw model data in diagnostics, no silent fallback, and a Windows resource fix that bypasses only optional compilation."
     }
   ],
   "feedback": [
@@ -907,6 +984,16 @@
       "recordedAt": "2026-07-30T19:32:08Z",
       "summary": "Clarify that an implementation-authorized and approved roadmap proceeds through every ordered increment by default without routine per-increment approval pauses, while preserving all scope, authority, security, blocker, and final-approval gates.",
       "targetIncrementId": "visual-output-schema-foundation"
+    },
+    {
+      "category": "defect",
+      "disposition": "accepted",
+      "id": "feedback-constrained-json-runtime-and-fence",
+      "impact": "within-increment",
+      "nextAction": "Prefer an installed supported Python interpreter for desktop runtime startup, fail safely when decoder readiness is absent, and normalize only an exact single fenced JSON object before mandatory schema and semantic validation.",
+      "recordedAt": "2026-07-31T13:15:55Z",
+      "summary": "A checked request reached an unsupported Python decoder runtime, and Qwen 1.5B returned one fenced JSON object that unchecked parsing rejected before schema validation.",
+      "targetIncrementId": "production-hardening-and-qualification"
     }
   ],
   "finalApproval": null,
@@ -1330,6 +1417,54 @@
       "recordedAt": "2026-07-30T22:34:19Z",
       "sequence": 70,
       "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "a51eb83aeb222764d6e5c653b343b1a6785919e6f719ff85562a6c9e8fc10c52",
+      "recordedAt": "2026-07-31T12:59:22Z",
+      "sequence": 71,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ce64526c2889c0e3b12d20f092eafbdb2342dc37caa5a306efe5ca29a4165ef5",
+      "recordedAt": "2026-07-31T12:59:25Z",
+      "sequence": 72,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "114b5c15d420d2c2bd4351095be8a22c452c2fec6fb3234064e0efc03e4e2852",
+      "recordedAt": "2026-07-31T12:59:27Z",
+      "sequence": 73,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1f7f9ac2b6999d7cfb8bf9fcbf251b2f19d7009c98cbe8d5f03b807e04df9f16",
+      "recordedAt": "2026-07-31T12:59:29Z",
+      "sequence": 74,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "302b22818312daa0bbecd282318a578b76fbd5daf08281d43baf36629d6b205b",
+      "recordedAt": "2026-07-31T13:15:55Z",
+      "sequence": 75,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "b9744e202caeaefa4858341171da162d1a422df0e502df131cb2ff6e7d4dac39",
+      "recordedAt": "2026-07-31T14:24:20Z",
+      "sequence": 76,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "669d0ee244c5ca2dbfffb606009b59bee44de1183ef7f99e5813a752c82d6189",
+      "recordedAt": "2026-07-31T14:24:20Z",
+      "sequence": 77,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f31f6a407a477b530aef2656100d7f87e913ccbfd87ebcbdae1953d9151d2f0a",
+      "recordedAt": "2026-07-31T14:24:20Z",
+      "sequence": 78,
+      "type": "evidence-recorded"
     }
   ],
   "increments": [
@@ -2311,5 +2446,5 @@
   "schemaVersion": 1,
   "slug": "optional-constrained-json-generation",
   "status": "implementation-complete-qualification-pending",
-  "updatedAt": "2026-07-30T22:34:19Z"
+  "updatedAt": "2026-07-31T14:24:20Z"
 }

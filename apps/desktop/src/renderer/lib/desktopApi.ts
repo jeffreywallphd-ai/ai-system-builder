@@ -36,6 +36,8 @@ import type {
   ModelInventoryRecord,
   DeleteModelRecordRequest,
   DeleteModelRecordResult,
+  RevealModelInFolderRequest,
+  RevealModelInFolderResult,
   DownloadModelRequest,
   DownloadModelResult,
   StartModelDownloadTaskResult,
@@ -1241,6 +1243,10 @@ interface DesktopApiBridge {
     input: DesktopDeleteModelRecordRequest,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
+  revealModelInFolder?: (
+    input: RevealModelInFolderRequest,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
   trainModel?: (
     input: DesktopModelTrainingRequest,
     context?: DesktopBridgeRequestContext,
@@ -1374,6 +1380,8 @@ export interface DesktopModelDetailsResult {
 }
 export type DesktopModelListRequest = ListModelsRequest;
 export type DesktopModelInventoryRecord = ModelInventoryRecord;
+export type DesktopRevealModelInFolderRequest = RevealModelInFolderRequest;
+export type DesktopRevealModelInFolderResult = RevealModelInFolderResult;
 export interface DesktopModelListResult {
   models: ModelInventoryRecord[];
   nextCursor?: string;

@@ -146,7 +146,7 @@ test("roadmap skill supports exact and natural-language routing", async () => {
   }
 });
 
-test("roadmap test guidance keeps broad suites at the overall completion boundary", async () => {
+test("roadmap test guidance keeps aggregate suites at the overall completion boundary", async () => {
   const sources = await Promise.all([
     readFile(path.join(roadmapSkillRoot, "SKILL.md"), "utf8"),
     readFile(path.join(roadmapSkillRoot, "references", "workflow.md"), "utf8"),
@@ -159,22 +159,25 @@ test("roadmap test guidance keeps broad suites at the overall completion boundar
     readFile("AGENTS.md", "utf8"),
   ]);
   for (const source of sources) {
+    assert.match(source, /standard[\s\S]{0,80}end-to-end/i);
+    assert.match(source, /AI-related/i);
     assert.match(
       source,
-      /short(?:\s+test)?(?:\s+suite)?[\s\S]{0,40}long\s+suites?/i,
-    );
-    assert.match(
-      source,
-      /after\s+(?:all|every)(?: roadmap)? increments? (?:are|is) implemented/i,
+      /after\s+(?:all|every)(?: roadmap)? increments?\s+(?:are|is)\s+implemented/i,
     );
   }
   assert.match(sources[0], /only the completion tests and gates relevant/);
 });
 
-test("root scripts expose short, long, and aggregate test commands", async () => {
+test("root scripts expose standard, end-to-end, AI, and aggregate test commands", async () => {
   const packageJson = JSON.parse(await readFile("package.json", "utf8"));
-  assert.match(packageJson.scripts.test, /test:short/);
-  assert.match(packageJson.scripts["test:long"], /--suite=long/);
+  assert.match(packageJson.scripts.test, /test:standard/);
+  assert.match(packageJson.scripts["test:e2e"], /--suite=e2e/);
+  assert.match(packageJson.scripts["test:ai"], /--suite=ai/);
+  assert.match(
+    packageJson.scripts["test:standardande2e"],
+    /--suite=standardande2e/,
+  );
   assert.match(packageJson.scripts["test:all"], /--suite=all/);
 });
 

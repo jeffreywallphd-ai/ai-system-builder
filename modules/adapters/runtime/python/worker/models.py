@@ -171,6 +171,7 @@ class LocalModelConfig(BaseModel):
     inferenceMode: Literal["auto", "text2text", "causal", "chat"] = "auto"
     device: Literal["cpu", "cuda", "auto"] | None = None
     torchDtype: Literal["auto", "float16", "bfloat16", "float32"] | None = None
+    memoryOverflowPolicy: Literal["none", "limited", "extended"] = "none"
 
 
 class ExampleGenerationConfig(BaseModel):

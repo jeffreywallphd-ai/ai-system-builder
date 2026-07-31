@@ -1,10 +1,11 @@
-import type { BrowseModelsUseCase, DeleteModelRecordUseCase, DownloadModelUseCase, GetModelDetailsUseCase, ListModelsUseCase, ModelDownloadTasksUseCase, PublishModelUseCase, SaveModelReferenceUseCase, UpdateModelRecordUseCase, ValidateModelUseCase } from "../../../../application/use-cases/model";
+import type { BrowseModelsUseCase, DeleteModelRecordUseCase, DownloadModelUseCase, GetModelDetailsUseCase, ListModelFilesUseCase, ListModelsUseCase, ModelDownloadTasksUseCase, PublishModelUseCase, SaveModelReferenceUseCase, UpdateModelRecordUseCase, ValidateModelUseCase } from "../../../../application/use-cases/model";
 import { createApiError, createApiFailureResponse, createApiSuccessResponse } from "../../../../contracts/api";
 import { isRuntimeCapabilityUnavailableError } from "../../../../application/services/runtime";
 import {
   normalizeBrowseModelsRequest,
   normalizeDeleteModelRecordRequest,
   normalizeDownloadModelRequest,
+  normalizeListModelFilesRequest,
   normalizeListModelDownloadTasksRequest,
   normalizeModelDownloadTaskIdentity,
   normalizeGetModelDetailsRequest,
@@ -16,6 +17,7 @@ import {
   type BrowseModelsRequest,
   type DeleteModelRecordRequest,
   type DownloadModelRequest,
+  type ListModelFilesRequest,
   type ListModelDownloadTasksRequest,
   type ReadModelDownloadTaskRequest,
   type GetModelDetailsRequest,
@@ -30,7 +32,7 @@ interface ExpressRequestLike { body?: unknown; headers?: Record<string, string |
 interface ExpressResponseLike { status: (code: number) => ExpressResponseLike; json: (body: unknown) => void; }
 export interface ModelManagementExpressRoutePort { post: (path: string, handler: (request: ExpressRequestLike, response: ExpressResponseLike) => Promise<void>) => void; }
 interface ModelRouteLogger { info: (event: string, data: Record<string, unknown>) => void; warn: (event: string, data: Record<string, unknown>) => void; }
-export interface RegisterModelManagementApiRoutesDependencies { app: ModelManagementExpressRoutePort; logger?: ModelRouteLogger; browseModelsUseCase: Pick<BrowseModelsUseCase, "execute">; getModelDetailsUseCase: Pick<GetModelDetailsUseCase, "execute">; listModelsUseCase: Pick<ListModelsUseCase, "execute">; saveModelReferenceUseCase: Pick<SaveModelReferenceUseCase, "execute">; downloadModelUseCase: Pick<DownloadModelUseCase, "execute">; modelDownloadTasksUseCase?: Pick<ModelDownloadTasksUseCase, "start" | "read" | "list" | "cancel">; updateModelRecordUseCase: Pick<UpdateModelRecordUseCase, "execute">; deleteModelRecordUseCase: Pick<DeleteModelRecordUseCase, "execute">; validateModelUseCase?: Pick<ValidateModelUseCase, "execute">; publishModelUseCase?: Pick<PublishModelUseCase, "execute">; }
+export interface RegisterModelManagementApiRoutesDependencies { app: ModelManagementExpressRoutePort; logger?: ModelRouteLogger; browseModelsUseCase: Pick<BrowseModelsUseCase, "execute">; getModelDetailsUseCase: Pick<GetModelDetailsUseCase, "execute">; listModelsUseCase: Pick<ListModelsUseCase, "execute">; listModelFilesUseCase?: Pick<ListModelFilesUseCase, "execute">; saveModelReferenceUseCase: Pick<SaveModelReferenceUseCase, "execute">; downloadModelUseCase: Pick<DownloadModelUseCase, "execute">; modelDownloadTasksUseCase?: Pick<ModelDownloadTasksUseCase, "start" | "read" | "list" | "cancel">; updateModelRecordUseCase: Pick<UpdateModelRecordUseCase, "execute">; deleteModelRecordUseCase: Pick<DeleteModelRecordUseCase, "execute">; validateModelUseCase?: Pick<ValidateModelUseCase, "execute">; publishModelUseCase?: Pick<PublishModelUseCase, "execute">; }
 
 class ModelManagementApiValidationError extends Error {}
 const getHeader = (h: ExpressRequestLike["headers"], k: string) => Array.isArray(h?.[k]) ? h?.[k][0] : h?.[k];
@@ -54,11 +56,26 @@ function mapWithContractNormalizer<T>(body: unknown, normalize: (request: T) => 
 const mapBrowseModelsApiRequestToCommand = (body: unknown): BrowseModelsRequest => mapWithContractNormalizer(body, normalizeBrowseModelsRequest);
 const mapGetModelDetailsApiRequestToCommand = (body: unknown): GetModelDetailsRequest => mapWithContractNormalizer(body, normalizeGetModelDetailsRequest);
 const mapListModelsApiRequestToCommand = (body: unknown): ListModelsRequest => mapWithContractNormalizer(body, normalizeListModelsRequest);
+const mapListModelFilesApiRequestToCommand = (body: unknown): ListModelFilesRequest => mapWithContractNormalizer(body, normalizeListModelFilesRequest);
 const mapSaveModelReferenceApiRequestToCommand = (body: unknown): SaveModelReferenceRequest => mapWithContractNormalizer(body, normalizeSaveModelReferenceRequest);
 const mapDownloadModelApiRequestToCommand = (body: unknown): DownloadModelRequest => mapWithContractNormalizer(body, normalizeDownloadModelRequest);
 const mapReadModelDownloadTaskRequest = (body: unknown): ReadModelDownloadTaskRequest => mapWithContractNormalizer(body, normalizeModelDownloadTaskIdentity);
 const mapListModelDownloadTasksRequest = (body: unknown): ListModelDownloadTasksRequest => mapWithContractNormalizer(body, normalizeListModelDownloadTasksRequest);
-const mapUpdateModelRecordApiRequestToCommand = (body: unknown): UpdateModelRecordRequest => mapWithContractNormalizer(body, normalizeUpdateModelRecordRequest);
+const SERVER_EDITABLE_MODEL_PATCH_FIELDS = new Set([
+  "displayName",
+  "inferenceMode",
+  "taskTags",
+  "artifactForm",
+  "metadata",
+]);
+const mapUpdateModelRecordApiRequestToCommand = (body: unknown): UpdateModelRecordRequest => {
+  const request = mapWithContractNormalizer(body, normalizeUpdateModelRecordRequest);
+  const unsupportedFields = Object.keys(request.patch).filter((field) => !SERVER_EDITABLE_MODEL_PATCH_FIELDS.has(field));
+  if (unsupportedFields.length > 0) {
+    throw new ModelManagementApiValidationError("Model record patch contains fields that cannot be changed through the server API.");
+  }
+  return request;
+};
 const mapDeleteModelRecordApiRequestToCommand = (body: unknown): DeleteModelRecordRequest => mapWithContractNormalizer(body, normalizeDeleteModelRecordRequest);
 const mapValidateModelApiRequestToCommand = (body: unknown): ValidateModelRequest => mapWithContractNormalizer(body, normalizeValidateModelRequest);
 const mapPublishModelApiRequestToCommand = (body: unknown): PublishModelRequest => mapWithContractNormalizer(body, normalizePublishModelRequest);
@@ -112,6 +129,42 @@ function summarizeResult(operation: string, value: unknown): Record<string, unkn
   };
 }
 
+function stripModelFilesystemFields(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stripModelFilesystemFields);
+  if (!isObjectRecord(value)) return value;
+  const output: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (key === "localPath" || key === "validationReportPath") continue;
+    output[key] = stripModelFilesystemFields(entry);
+  }
+  return output;
+}
+
+function sanitizeModelRecordForApi(value: unknown): unknown {
+  if (!isObjectRecord(value)) return value;
+  const localFilesAvailable = typeof value.localPath === "string" && value.localPath.trim().length > 0;
+  const validationReportAvailable = typeof value.validationReportPath === "string" && value.validationReportPath.trim().length > 0;
+  return {
+    ...(stripModelFilesystemFields(value) as Record<string, unknown>),
+    localFilesAvailable,
+    validationReportAvailable,
+  };
+}
+
+function sanitizeModelApiResult(operation: string, value: unknown): unknown {
+  if (!isObjectRecord(value)) return stripModelFilesystemFields(value);
+  if (operation === "model.list" && Array.isArray(value.models)) {
+    return { ...value, models: value.models.map(sanitizeModelRecordForApi) };
+  }
+  if ("model" in value) {
+    return {
+      ...(stripModelFilesystemFields(value) as Record<string, unknown>),
+      model: sanitizeModelRecordForApi(value.model),
+    };
+  }
+  return stripModelFilesystemFields(value);
+}
+
 function registerRoute(app: ModelManagementExpressRoutePort, logger: ModelRouteLogger | undefined, path: string, operation: `${Lowercase<string>}.${Lowercase<string>}`, execute: (body: unknown) => Promise<unknown>) {
   app.post(path, async (request, response) => {
     const startedAt = Date.now();
@@ -120,8 +173,9 @@ function registerRoute(app: ModelManagementExpressRoutePort, logger: ModelRouteL
     logger?.info("api.model.request.received", { operation, ...requestSummary, ...context });
     try {
       const value = await execute(request.body);
-      const apiResponse = createApiSuccessResponse(operation, value, context);
-      logger?.info("api.model.request.succeeded", { operation, ...summarizeResult(operation, value), elapsedMs: Date.now() - startedAt, ...context });
+      const publicValue = sanitizeModelApiResult(operation, value);
+      const apiResponse = createApiSuccessResponse(operation, publicValue, context);
+      logger?.info("api.model.request.succeeded", { operation, ...summarizeResult(operation, publicValue), elapsedMs: Date.now() - startedAt, ...context });
       response.status(statusCode(apiResponse)).json(apiResponse);
     } catch (error) {
       const code = mapFailureCode(error);
@@ -143,6 +197,9 @@ export function registerModelManagementApiRoutes(dependencies: RegisterModelMana
   registerRoute(dependencies.app, dependencies.logger, "/api/model/browse", "model.browse", async (body) => dependencies.browseModelsUseCase.execute(mapBrowseModelsApiRequestToCommand(body)));
   registerRoute(dependencies.app, dependencies.logger, "/api/model/details", "model.details", async (body) => dependencies.getModelDetailsUseCase.execute(mapGetModelDetailsApiRequestToCommand(body)));
   registerRoute(dependencies.app, dependencies.logger, "/api/model/list", "model.list", async (body) => dependencies.listModelsUseCase.execute(mapListModelsApiRequestToCommand(body)));
+  if (dependencies.listModelFilesUseCase) {
+    registerRoute(dependencies.app, dependencies.logger, "/api/model/files/list", "model.files-list", async (body) => dependencies.listModelFilesUseCase!.execute(mapListModelFilesApiRequestToCommand(body)));
+  }
   registerRoute(dependencies.app, dependencies.logger, "/api/model/reference/save", "model.reference.save", async (body) => dependencies.saveModelReferenceUseCase.execute(mapSaveModelReferenceApiRequestToCommand(body)));
   registerRoute(dependencies.app, dependencies.logger, "/api/model/download", "model.download", async (body) => dependencies.downloadModelUseCase.execute(mapDownloadModelApiRequestToCommand(body)));
   const modelDownloadTasksUseCase = dependencies.modelDownloadTasksUseCase;

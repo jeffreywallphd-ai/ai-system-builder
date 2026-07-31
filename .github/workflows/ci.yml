@@ -56,14 +56,18 @@ jobs:
         run: npm run architecture:check
       - name: Check asset and system qualification policy
         run: npm run asset-system:check
-      - name: Run tests
+      - name: Run standard tests
         run: npm test
+      - name: Run end-to-end tests
+        run: npm run test:e2e
       - name: Retain non-browser test report
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: non-browser-test-report
-          path: ${{ github.workspace }}/artifacts/test-reports/non-browser-test-report.json
+          path: |
+            ${{ github.workspace }}/artifacts/test-reports/non-browser-standard-test-report.json
+            ${{ github.workspace }}/artifacts/test-reports/non-browser-e2e-test-report.json
           if-no-files-found: warn
           retention-days: 14
 

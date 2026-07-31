@@ -46,6 +46,10 @@ describe("desktop models client", () => {
         ok: true,
         value: { deletedModelRecordId: "m1", deletedRegistryRecord: true, deletedLocalFiles: false, deletedBackingArtifactIds: [] },
       }),
+      revealModelInFolder: vi.fn().mockResolvedValue({
+        ok: true,
+        value: { modelRecordId: "m1", revealed: true },
+      }),
       trainModel: vi.fn().mockResolvedValue({ ok: true, value: { runId: "run-1", status: "succeeded" } }),
       readModelTrainingStatus: vi.fn().mockResolvedValue({ ok: true, value: { runId: "run-1", status: "running", progress: { batch: 1, totalBatches: 59 } } }),
       validateModel: vi.fn().mockResolvedValue({ ok: true, value: { modelRecordId: "m1", status: "valid" } }),
@@ -65,8 +69,15 @@ describe("desktop models client", () => {
     expect(JSON.stringify({ listed, download })).not.toContain("/models/org/model");
     expect("localPath" in download.model).toBe(false);
     expect("localPath" in download.download).toBe(false);
+    expect(listed[0]).toMatchObject({
+      localFilesAvailable: true,
+      validationReportAvailable: true,
+    });
+    expect("localPath" in listed[0]).toBe(false);
+    expect("validationReportPath" in listed[0]).toBe(false);
     await client.updateModelRecord({ modelRecordId: "m1", patch: { validationStatus: "valid" } });
     await client.deleteModelRecord({ workspaceId: "workspace-a", modelRecordId: "m1" });
+    await client.revealModelInFolder({ workspaceId: "workspace-a", modelRecordId: "m1" });
     await client.trainModel({
       baseModel: { modelRecordId: "m1" },
       datasets: [{ artifactId: "dataset-1", splitRole: "train" }],
@@ -78,17 +89,19 @@ describe("desktop models client", () => {
     await client.validateModel({ workspaceId: "workspace-a", modelRecordId: "m1" });
     await client.publishModel({ workspaceId: "workspace-a", modelRecordId: "m1", repository: "owner/repo" });
 
-    expect(window.desktopApi.browseModels).toHaveBeenCalled();
-    expect(window.desktopApi.getModelDetails).toHaveBeenCalledWith({ provider: "huggingface", modelId: "org/model" });
-    expect(window.desktopApi.saveModelReference).toHaveBeenCalledWith(expect.objectContaining({ provider: "huggingface", modelId: "org/model" }));
-    expect(window.desktopApi.downloadModel).not.toHaveBeenCalled();
-    expect(window.desktopApi.readModelDownload).toHaveBeenCalledWith({ workspaceId: "workspace-a", requestId: "download-1" });
-    expect(window.desktopApi.startModelDownload).toHaveBeenCalledWith(expect.objectContaining({ provider: "huggingface", modelId: "org/model" }));
-    expect(window.desktopApi.listModelDownloads).toHaveBeenCalledWith({ workspaceId: "workspace-a", includeCompleted: true });
-    expect(window.desktopApi.deleteModelRecord).toHaveBeenCalledWith({ workspaceId: "workspace-a", modelRecordId: "m1" });
-    expect(window.desktopApi.trainModel).toHaveBeenCalled();
-    expect(window.desktopApi.readModelTrainingStatus).toHaveBeenCalledWith({ runId: "run-1" });
-    expect(window.desktopApi.validateModel).toHaveBeenCalledWith({ workspaceId: "workspace-a", modelRecordId: "m1" });
-    expect(window.desktopApi.publishModel).toHaveBeenCalledWith({ workspaceId: "workspace-a", modelRecordId: "m1", repository: "owner/repo" });
+    const desktopApi = window.desktopApi as any;
+    expect(desktopApi.browseModels).toHaveBeenCalled();
+    expect(desktopApi.getModelDetails).toHaveBeenCalledWith({ provider: "huggingface", modelId: "org/model" });
+    expect(desktopApi.saveModelReference).toHaveBeenCalledWith(expect.objectContaining({ provider: "huggingface", modelId: "org/model" }));
+    expect(desktopApi.downloadModel).not.toHaveBeenCalled();
+    expect(desktopApi.readModelDownload).toHaveBeenCalledWith({ workspaceId: "workspace-a", requestId: "download-1" });
+    expect(desktopApi.startModelDownload).toHaveBeenCalledWith(expect.objectContaining({ provider: "huggingface", modelId: "org/model" }));
+    expect(desktopApi.listModelDownloads).toHaveBeenCalledWith({ workspaceId: "workspace-a", includeCompleted: true });
+    expect(desktopApi.deleteModelRecord).toHaveBeenCalledWith({ workspaceId: "workspace-a", modelRecordId: "m1" });
+    expect(desktopApi.revealModelInFolder).toHaveBeenCalledWith({ workspaceId: "workspace-a", modelRecordId: "m1" });
+    expect(desktopApi.trainModel).toHaveBeenCalled();
+    expect(desktopApi.readModelTrainingStatus).toHaveBeenCalledWith({ runId: "run-1" });
+    expect(desktopApi.validateModel).toHaveBeenCalledWith({ workspaceId: "workspace-a", modelRecordId: "m1" });
+    expect(desktopApi.publishModel).toHaveBeenCalledWith({ workspaceId: "workspace-a", modelRecordId: "m1", repository: "owner/repo" });
   });
 });

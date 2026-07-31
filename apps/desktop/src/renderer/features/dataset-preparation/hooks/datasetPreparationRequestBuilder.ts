@@ -12,6 +12,7 @@ import {
   type DatasetPreparationTaskRecipe,
   type DatasetPreparationAdvancedPreset,
   type DatasetPreparationExecutionPlan,
+  type DatasetPreparationMemoryOverflowPolicy,
   type DatasetPreparationTaskType,
   type DatasetPreparationTextInputMode,
   type DatasetPreparationVisualOutputShape,
@@ -58,6 +59,7 @@ export interface BuildDatasetPreparationRequestInput {
   modelInferenceMode: ModelDefaultInferenceMode;
   modelDevice: "" | "auto" | "cpu" | "cuda";
   modelTorchDtype: "" | "auto" | "float16" | "bfloat16" | "float32";
+  modelMemoryOverflowPolicy?: DatasetPreparationMemoryOverflowPolicy;
   failurePolicy: "" | "fail" | "skip";
   shuffle: boolean;
   outputFormat: "jsonl" | "json" | "csv" | "parquet";
@@ -354,6 +356,8 @@ export function buildDatasetPreparationRequest(
                 inferenceMode: effectiveInferenceMode,
                 device: effectiveDevice || undefined,
                 torchDtype: effectiveTorchDtype || undefined,
+                memoryOverflowPolicy:
+                  input.modelMemoryOverflowPolicy ?? "limited",
               },
               ...(!input.preparation && input.parsed.maxExamplesPerChunk
                 ? {

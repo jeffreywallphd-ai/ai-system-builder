@@ -12,8 +12,22 @@ from types import ModuleType
 from unittest.mock import patch
 
 from modules.adapters.runtime.python.worker.models import PrepareTrainingDatasetRequest
-from modules.adapters.runtime.python.worker.tasks.example_generation import GeneratedQaExample
+from modules.adapters.runtime.python.worker.tasks.constrained_json_decoder import (
+    ConstrainedJsonDecoderError,
+)
+from modules.adapters.runtime.python.worker.tasks.example_generation import (
+    GeneratedQaExample,
+    GenerationInferenceError,
+    GenerationOutputValidationError,
+)
+from modules.adapters.runtime.python.worker.tasks.local_text_generation import (
+    GenerationInsufficientResourcesError,
+    GenerationModelDownloadIncompleteError,
+    GenerationModelLoadError,
+    GenerationRuntimeDependencyError,
+)
 from modules.adapters.runtime.python.worker.tasks.prepare_training_dataset import (
+    _parse_generated_text_value,
     _partition_rows,
     _read_structured_source_rows,
     prepare_training_dataset,
@@ -24,6 +38,21 @@ from modules.adapters.runtime.python.worker.tests.structured_output_test_fixture
 
 
 class PrepareTrainingDatasetTaskTests(unittest.TestCase):
+    def test_image_text_generation_accepts_one_fenced_json_object(self) -> None:
+        payload = {
+            "schemaVersion": "1",
+            "taskType": "diffusion-lora",
+            "fieldKind": "caption",
+            "status": "ok",
+            "value": "A grounded caption.",
+        }
+        parsed = _parse_generated_text_value(
+            f"```json\n{json.dumps(payload)}\n```",
+            "diffusion-lora",
+            "caption",
+        )
+        self.assertEqual(parsed, ({"caption": "A grounded caption."}, "A grounded caption."))
+
     def _build_payload(self, output_format: str) -> PrepareTrainingDatasetRequest:
         return PrepareTrainingDatasetRequest.model_validate(
             {
@@ -107,6 +136,78 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         serialized_output = result.model_dump(mode="json")["outputs"][0]
         self.assertRegex(serialized_output["outputHandle"], r"^[A-Za-z0-9._-]+$")
         self.assertNotIn("tempPath", serialized_output)
+
+    def test_generation_progress_starts_with_a_model_loading_message(self) -> None:
+        payload = self._build_payload("jsonl")
+        progress: list[dict[str, object]] = []
+
+        prepare_training_dataset(
+            payload,
+            example_generator=lambda chunks, _config: [
+                GeneratedQaExample(
+                    artifact_id=chunk.artifact_id,
+                    chunk_index=chunk.chunk_index,
+                    question="What text is present?",
+                    answer=chunk.text,
+                )
+                for chunk in chunks
+            ],
+            on_generation_progress=progress.append,
+        )
+
+        self.assertEqual(progress[0]["phase"], "loading-model")
+        self.assertIn("Loading the selected model", str(progress[0]["message"]))
+        self.assertEqual(progress[0]["processedChunkCount"], 0)
+        self.assertEqual(progress[-1]["processedChunkCount"], 3)
+
+    def test_generation_progress_updates_after_each_chunk_within_a_batch(self) -> None:
+        payload = self._build_payload("jsonl")
+        payload.recipe.generation.batchSize = 4
+        progress: list[dict[str, object]] = []
+
+        def generate_with_chunk_progress(
+            chunks,
+            _config,
+            _task_type,
+            _task_recipe,
+            _structured_output,
+            **callbacks,
+        ):
+            examples: list[GeneratedQaExample] = []
+            on_chunk_complete = callbacks["on_chunk_complete"]
+            for processed_count, chunk in enumerate(chunks, start=1):
+                examples.append(
+                    GeneratedQaExample(
+                        artifact_id=chunk.artifact_id,
+                        chunk_index=chunk.chunk_index,
+                        question="What text is present?",
+                        answer=chunk.text,
+                    )
+                )
+                on_chunk_complete(
+                    {
+                        "processedChunkCount": processed_count,
+                        "generatedExampleCount": len(examples),
+                    }
+                )
+            return examples
+
+        with patch(
+            "modules.adapters.runtime.python.worker.tasks.prepare_training_dataset.generate_task_examples_for_chunks",
+            side_effect=generate_with_chunk_progress,
+        ):
+            prepare_training_dataset(
+                payload,
+                on_generation_progress=progress.append,
+            )
+
+        completed_counts = [
+            item["processedChunkCount"]
+            for item in progress
+            if item.get("phase") == "generating"
+            and int(item.get("processedChunkCount", 0)) > 0
+        ]
+        self.assertEqual(completed_counts, [1, 2, 3])
 
     def test_selected_source_attribution_is_added_from_trusted_metadata(self) -> None:
         payload = self._build_payload("jsonl")
@@ -302,6 +403,7 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
             task_type,
             task_recipe,
             structured_output,
+            **_callbacks,
         ):
             self.assertEqual(task_type, "llm-instruction")
             self.assertEqual(task_recipe["promptStyle"], "instruction-response")
@@ -488,6 +590,50 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         metadata = next(output for output in result.outputs if output.role == "dataset").metadata
         self.assertEqual(metadata["preparation"]["method"], "validate-and-split")
         self.assertNotIn("generationModel", metadata)
+
+    def test_structured_read_failure_does_not_request_generation_settings(self) -> None:
+        source_path = Path(self.temp_dir.name) / "invalid.parquet"
+        source_path.write_bytes(b"PAR1-invalid")
+        payload = PrepareTrainingDatasetRequest.model_validate(
+            {
+                "sourceInputs": [
+                    {
+                        "artifactId": "structured-source",
+                        "localPath": str(source_path),
+                        "mediaType": "application/vnd.apache.parquet",
+                        "originalName": "invalid.parquet",
+                    }
+                ],
+                "preparation": {
+                    "schemaVersion": "1",
+                    "inputIntent": "use-existing-dataset",
+                    "method": "validate-and-split",
+                    "sourceKinds": ["structured"],
+                    "generationMode": "none",
+                },
+                "recipe": {
+                    "task": {
+                        "taskType": "llm-classification",
+                        "textInputMode": "provided",
+                        "textField": "text",
+                        "labelField": "label",
+                    }
+                },
+                "split": {"trainRatio": 0.8, "testRatio": 0.2},
+                "output": {"format": "jsonl"},
+            }
+        )
+
+        with self.assertRaises(Exception) as context:
+            prepare_training_dataset(payload)
+
+        error = context.exception
+        self.assertEqual(
+            getattr(error, "error_code", None),
+            "structured_source_read_failed",
+        )
+        self.assertEqual(getattr(error, "stage", None), "normalization")
+        self.assertNotIn(str(source_path), json.dumps(getattr(error, "details", {})))
 
     def test_existing_instruction_dataset_preserves_separate_input_and_context(self) -> None:
         source_path = Path(self.temp_dir.name) / "instruction-ready.jsonl"
@@ -686,7 +832,7 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "must equal 1.0"):
             prepare_training_dataset(payload, example_generator=lambda chunks, _config: [])
 
-    def test_generation_failure_policy_skip_adds_warning_and_continues(self) -> None:
+    def test_generation_failure_policy_skip_does_not_hide_runtime_errors(self) -> None:
         payload = self._build_payload("jsonl")
         payload.recipe.generation.failurePolicy = "skip"
 
@@ -703,20 +849,20 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
                 )
             ]
 
-        result = prepare_training_dataset(payload, example_generator=flaky_generator)
+        with self.assertRaises(ValueError) as context:
+            prepare_training_dataset(payload, example_generator=flaky_generator)
 
-        warning_codes = [warning.code for warning in result.warnings or []]
-        self.assertIn("generation_example_skipped", warning_codes)
-        self.assertEqual(result.summary.generatedExampleCount, 2)
+        self.assertEqual(getattr(context.exception, "stage", None), "generation")
+        self.assertEqual(getattr(context.exception, "error_code", None), "generation_failed")
 
-    def test_generation_skip_merges_generation_warnings_with_normalization_warnings(self) -> None:
+    def test_generation_skip_merges_data_omission_warnings_with_normalization_warnings(self) -> None:
         payload = self._build_payload("jsonl")
         payload.recipe.generation.failurePolicy = "skip"
 
-        def flaky_generator(chunks, _config):
+        def data_aware_generator(chunks, _config):
             chunk = chunks[0]
             if chunk.chunk_index == 0:
-                raise RuntimeError("generation failed for first chunk")
+                return []
             return [
                 GeneratedQaExample(
                     artifact_id=chunk.artifact_id,
@@ -726,7 +872,7 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
                 )
             ]
 
-        result = prepare_training_dataset(payload, example_generator=flaky_generator)
+        result = prepare_training_dataset(payload, example_generator=data_aware_generator)
 
         warning_codes = [warning.code for warning in result.warnings or []]
         self.assertIn("document_normalization_skipped", warning_codes)
@@ -900,6 +1046,191 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         self.assertEqual(getattr(error, "error_code", None), "generation_model_not_available")
         self.assertEqual(getattr(error, "details", {}).get("modelId"), "test-model")
         self.assertIn("not available in the local Hugging Face cache", str(error))
+
+    def test_fails_early_with_distinct_code_when_model_download_is_incomplete(self) -> None:
+        payload = self._build_payload("jsonl")
+
+        with patch(
+            "modules.adapters.runtime.python.worker.tasks.prepare_training_dataset.ensure_generation_model_is_available",
+            side_effect=GenerationModelDownloadIncompleteError(
+                "The selected generation model is not fully downloaded."
+            ),
+        ):
+            with self.assertRaises(ValueError) as context:
+                prepare_training_dataset(payload, example_generator=lambda _chunks, _config: [])
+
+        error = context.exception
+        self.assertEqual(getattr(error, "stage", None), "generation")
+        self.assertEqual(
+            getattr(error, "error_code", None),
+            "generation_model_download_incomplete",
+        )
+        self.assertEqual(getattr(error, "details", {}).get("modelId"), "test-model")
+
+    def test_fails_early_with_repair_code_when_model_placement_dependency_is_missing(self) -> None:
+        payload = self._build_payload("jsonl")
+        generator_called = False
+
+        def generator(_chunks, _config):
+            nonlocal generator_called
+            generator_called = True
+            return []
+
+        with patch(
+            "modules.adapters.runtime.python.worker.tasks.prepare_training_dataset.ensure_generation_model_is_available",
+            side_effect=GenerationRuntimeDependencyError("managed component missing"),
+        ):
+            with self.assertRaises(ValueError) as context:
+                prepare_training_dataset(payload, example_generator=generator)
+
+        error = context.exception
+        self.assertFalse(generator_called)
+        self.assertEqual(getattr(error, "stage", None), "generation")
+        self.assertEqual(
+            getattr(error, "error_code", None),
+            "generation_runtime_dependency_unavailable",
+        )
+        self.assertEqual(getattr(error, "details", {}).get("modelId"), "test-model")
+
+    def test_model_load_failure_is_not_hidden_by_skip_policy(self) -> None:
+        payload = self._build_payload("jsonl")
+        payload.recipe.generation.failurePolicy = "skip"
+
+        with patch(
+            "modules.adapters.runtime.python.worker.tasks.example_generation.get_or_create_local_text_generator",
+            side_effect=GenerationModelLoadError(
+                "The selected generation model could not be loaded by the local runtime."
+            ),
+        ):
+            with self.assertRaises(ValueError) as context:
+                prepare_training_dataset(payload)
+
+        error = context.exception
+        self.assertEqual(getattr(error, "stage", None), "generation")
+        self.assertEqual(
+            getattr(error, "error_code", None),
+            "generation_model_load_failed",
+        )
+        self.assertEqual(getattr(error, "details", {}).get("modelId"), "test-model")
+
+    def test_insufficient_model_memory_is_not_hidden_by_skip_policy(self) -> None:
+        payload = self._build_payload("jsonl")
+        payload.recipe.generation.failurePolicy = "skip"
+
+        with patch(
+            "modules.adapters.runtime.python.worker.tasks.example_generation.get_or_create_local_text_generator",
+            side_effect=GenerationInsufficientResourcesError(
+                "The selected model cannot fit in available memory."
+            ),
+        ):
+            with self.assertRaises(ValueError) as context:
+                prepare_training_dataset(payload)
+
+        error = context.exception
+        self.assertEqual(getattr(error, "stage", None), "generation")
+        self.assertEqual(
+            getattr(error, "error_code", None),
+            "generation_insufficient_resources",
+        )
+        self.assertEqual(getattr(error, "details", {}).get("modelId"), "test-model")
+
+    def test_skip_policy_continues_after_a_batch_level_output_format_failure(self) -> None:
+        payload = self._build_payload("jsonl")
+        payload.recipe.generation.failurePolicy = "skip"
+        payload.recipe.generation.batchSize = 1
+
+        def partially_invalid_generator(chunks, _config):
+            chunk = chunks[0]
+            if chunk.chunk_index == 1:
+                raise GenerationOutputValidationError(
+                    "The model response did not match the required training output."
+                )
+            return [
+                GeneratedQaExample(
+                    artifact_id=chunk.artifact_id,
+                    chunk_index=chunk.chunk_index,
+                    question="Q",
+                    answer=chunk.text,
+                )
+            ]
+
+        result = prepare_training_dataset(
+            payload,
+            example_generator=partially_invalid_generator,
+        )
+
+        self.assertEqual(result.summary.generatedExampleCount, 2)
+        skipped_warnings = [
+            warning
+            for warning in result.warnings or []
+            if warning.code == "generation_example_skipped"
+            and "desired output format" in warning.message
+        ]
+        self.assertEqual(len(skipped_warnings), 1)
+
+    def test_skip_policy_surfaces_decoder_and_inference_failures(self) -> None:
+        cases = [
+            (
+                ConstrainedJsonDecoderError(
+                    "decoder-token-dead-end",
+                    "private decoder details",
+                ),
+                "generation_constrained_decoding_failed",
+            ),
+            (
+                GenerationInferenceError(
+                    "The selected generation model could not complete local inference."
+                ),
+                "generation_inference_failed",
+            ),
+        ]
+
+        for raised_error, expected_code in cases:
+            with self.subTest(expected_code=expected_code):
+                payload = self._build_payload("jsonl")
+                payload.recipe.generation.failurePolicy = "skip"
+
+                def failing_generator(_chunks, _config, error=raised_error):
+                    raise error
+
+                with self.assertRaises(ValueError) as context:
+                    prepare_training_dataset(
+                        payload,
+                        example_generator=failing_generator,
+                    )
+
+                error = context.exception
+                self.assertEqual(getattr(error, "stage", None), "generation")
+                self.assertEqual(
+                    getattr(error, "error_code", None),
+                    expected_code,
+                )
+                self.assertNotIn("private decoder details", str(error))
+
+    def test_decoder_unavailable_and_truncated_failures_have_distinct_safe_codes(self) -> None:
+        cases = (
+            ("decoder-unavailable", "generation_constrained_decoding_unavailable"),
+            ("decoder-output-truncated", "generation_constrained_decoding_truncated"),
+        )
+        for decoder_code, expected_code in cases:
+            with self.subTest(decoder_code=decoder_code):
+                payload = self._build_payload("jsonl")
+
+                def failing_generator(_chunks, _config):
+                    raise ConstrainedJsonDecoderError(
+                        decoder_code,
+                        "private runtime and output details",
+                    )
+
+                with self.assertRaises(ValueError) as context:
+                    prepare_training_dataset(
+                        payload,
+                        example_generator=failing_generator,
+                    )
+
+                error = context.exception
+                self.assertEqual(getattr(error, "error_code", None), expected_code)
+                self.assertNotIn("private runtime", str(error))
 
     def test_single_generated_row_writes_aggregate_and_train_outputs(self) -> None:
         payload = self._build_payload("jsonl")
@@ -1141,6 +1472,72 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         self.assertIn("asbwidget", prompts[0])
         self.assertIn("Configured output sample", prompts[0])
         self.assertIn("Do not output anything before or after", prompts[0])
+
+    def test_generated_image_text_skips_one_invalid_output_and_continues(self) -> None:
+        payload = self._build_payload("jsonl")
+        first_image = Path(self.temp_dir.name) / "first.png"
+        second_image = Path(self.temp_dir.name) / "second.png"
+        first_image.write_bytes(b"fake-png-1")
+        second_image.write_bytes(b"fake-png-2")
+        payload_dict = payload.model_dump(mode="json")
+        payload_dict["sourceInputs"] = [
+            {
+                "artifactId": "image-invalid",
+                "localPath": str(first_image),
+                "mediaType": "image/png",
+                "originalName": "first.png",
+            },
+            {
+                "artifactId": "image-valid",
+                "localPath": str(second_image),
+                "mediaType": "image/png",
+                "originalName": "second.png",
+            },
+        ]
+        payload_dict["recipe"]["generation"]["failurePolicy"] = "skip"
+        payload_dict["recipe"]["task"] = {
+            "taskType": "diffusion-lora",
+            "textInputMode": "generate",
+            "conceptKind": "subject",
+            "imageField": "image",
+            "captionField": "caption",
+            "triggerToken": "asbwidget",
+        }
+        payload_dict["runtime"] = runtime_structured_output_fixture(
+            "diffusion-lora",
+            payload_dict["recipe"]["task"],
+        )
+        payload = PrepareTrainingDatasetRequest.model_validate(payload_dict)
+        responses = [
+            "not-json",
+            json.dumps(
+                {
+                    "schemaVersion": "1",
+                    "taskType": "diffusion-lora",
+                    "fieldKind": "caption",
+                    "status": "ok",
+                    "value": {"caption": "a grounded second image caption"},
+                }
+            ),
+        ]
+
+        result = prepare_training_dataset(
+            payload,
+            text_value_generator=lambda _prompt, _config: responses.pop(0),
+        )
+
+        output = next(output for output in result.outputs if output.role == "dataset")
+        rows = [
+            json.loads(line)
+            for line in Path(output.tempPath).read_text(encoding="utf-8").splitlines()
+        ]
+        self.assertEqual([row["image"] for row in rows], ["image-valid"])
+        self.assertTrue(
+            any(
+                warning.code == "text_generation_invalid_skipped"
+                for warning in result.warnings or []
+            )
+        )
 
     def test_prepares_vision_classification_manifest_with_generated_allowed_label(self) -> None:
         payload = self._build_payload("jsonl")

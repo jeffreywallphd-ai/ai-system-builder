@@ -198,7 +198,9 @@ describe("DatasetPreparationFeature", () => {
     const attributionLabel = Array.from(
       container.querySelectorAll("label"),
     ).find((label) =>
-      label.textContent?.includes("Include source attribution with each example"),
+      label.textContent?.includes(
+        "Include source attribution with each example",
+      ),
     ) as HTMLLabelElement;
     await act(async () => {
       (attributionLabel.querySelector("input") as HTMLInputElement).click();
@@ -264,6 +266,7 @@ describe("DatasetPreparationFeature", () => {
               inferenceMode: "chat",
               device: "auto",
               torchDtype: "auto",
+              memoryOverflowPolicy: "limited",
             },
             batchSize: 4,
             failurePolicy: "skip",
@@ -520,6 +523,9 @@ describe("DatasetPreparationFeature", () => {
     const downloadButton = Array.from(
       container.querySelectorAll("button"),
     ).find((button) => button.textContent === "Download model");
+    expect(
+      downloadButton?.closest(".dataset-preparation__advanced-settings"),
+    ).toBeNull();
     await act(async () => {
       downloadButton?.click();
       await flushAsyncWork();
@@ -528,6 +534,81 @@ describe("DatasetPreparationFeature", () => {
     expect(downloadModel).toHaveBeenCalledTimes(1);
     expect(container.querySelector('[role="dialog"]')?.textContent).toContain(
       "Notifications",
+    );
+  });
+
+  it("offers model repair when a persisted downloaded record fails runtime validation", async () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        <DatasetPreparationFeatureComponent
+          workspaceId="workspace-a"
+          modelsClient={
+            {
+              listModels: async () => [
+                {
+                  modelRecordId: "model-record-1",
+                  workspaceId: "workspace-a",
+                  displayName: "Qwen 7B",
+                  source: "huggingface",
+                  lifecycleStatus: "downloaded",
+                  artifactForm: "full-model",
+                  provider: "huggingface",
+                  modelId: "Qwen/Qwen2.5-7B-Instruct",
+                  createdAt: "2026-07-31T00:00:00.000Z",
+                },
+              ],
+              downloadModel: vi.fn(),
+            } as any
+          }
+          client={{
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "artifact-1.md",
+                storageKey: "uploads/artifact-1.md",
+                mediaType: "text/markdown",
+              },
+            ],
+            startPrepareTrainingDataset: async () => ({
+              ok: true,
+              requestId: "request-model-repair",
+            }),
+            readPrepareTrainingDatasetTask: async () => ({
+              ok: false,
+              error: {
+                code: "generation_model_load_failed",
+                message:
+                  "The selected model files could not be loaded. Verify or download the model again, or choose the compact model, then retry.",
+              },
+            }),
+          }}
+        />,
+      );
+      await flushAsyncWork();
+    });
+
+    await act(async () => {
+      (
+        container?.querySelector("input[type='checkbox']") as HTMLInputElement
+      ).click();
+    });
+    expect(container.textContent).not.toContain("Download model");
+
+    await act(async () => {
+      (container.querySelector("form") as HTMLFormElement).dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
+      await flushAsyncWork();
+      await flushAsyncWork();
+    });
+
+    expect(container.textContent).toContain("Download model");
+    expect(container.textContent).toContain(
+      "The selected model files could not be loaded.",
     );
   });
 
@@ -733,6 +814,187 @@ describe("DatasetPreparationFeature", () => {
       startPrepareTrainingDataset.mock.calls[0]?.[0].output.destinations
         .huggingFace,
     ).toBeUndefined();
+  });
+
+  it("defaults to the next smaller model on a tightly constrained machine", async () => {
+    const runtimeStatusClient = {
+      readStatus: vi.fn().mockResolvedValue({
+        supervisorStatus: "ready",
+        healthy: true,
+        runtimeStatus: "ready",
+        capabilities: ["prepare-training-dataset"],
+        loadedModels: [],
+        activeTaskCount: 0,
+        generationCapacity: {
+          schemaVersion: "1",
+          capturedAt: new Date().toISOString(),
+          decoderAvailable: false,
+          schemaSupported: true,
+          logicalProcessorCount: 20,
+          totalSystemMemoryBytes: 16 * 1024 ** 3,
+        },
+        logs: [],
+      }),
+      controlRuntime: vi.fn(),
+    };
+
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        <DatasetPreparationFeature
+          settingsClient={settingsClient}
+          runtimeStatusClient={runtimeStatusClient}
+          client={{
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "source.pdf",
+                storageKey: "uploads/source.pdf",
+                mediaType: "application/pdf",
+              },
+            ],
+            startPrepareTrainingDataset: vi.fn(),
+            readPrepareTrainingDatasetTask: vi.fn(),
+            cancelPrepareTrainingDatasetTask: vi.fn(),
+            approvePreparedTrainingDataset: vi.fn(),
+          }}
+        />,
+      );
+      await flushAsyncWork();
+    });
+
+    const sourceCheckbox = container.querySelector(
+      "input[type='checkbox']",
+    ) as HTMLInputElement;
+    await act(async () => {
+      sourceCheckbox.click();
+      await flushAsyncWork();
+    });
+
+    const advancedToggle = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) => button.textContent?.includes("Advanced settings"));
+    await act(async () => {
+      advancedToggle?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    await vi.waitFor(() => {
+      const modelPreset = Array.from(
+        container?.querySelectorAll("select") ?? [],
+      ).find((select) =>
+        Array.from(select.options).some(
+          (option) => option.textContent === "Quality (7B)",
+        ),
+      );
+      expect(modelPreset?.value).toBe("compact-3b");
+      expect(
+        Array.from(container?.querySelectorAll("input") ?? []).some(
+          (input) => input.value === "Qwen/Qwen2.5-3B-Instruct",
+        ),
+      ).toBe(true);
+      const memoryOverflow = Array.from(
+        container?.querySelectorAll("select") ?? [],
+      ).find((select) =>
+        Array.from(select.options).some((option) =>
+          option.textContent?.includes("Use a little disk space"),
+        ),
+      );
+      expect(memoryOverflow?.value).toBe("limited");
+      expect(
+        Array.from(memoryOverflow?.options ?? []).map(
+          (option) => option.value,
+        ),
+      ).toEqual(["limited", "none", "extended"]);
+      const constrainedControl = Array.from(
+        container?.querySelectorAll("label") ?? [],
+      ).find((label) =>
+        label.textContent?.includes("Keep generated JSON well structured"),
+      );
+      const constrainedCheckbox = constrainedControl?.querySelector(
+        "input[type='checkbox']",
+      ) as HTMLInputElement | null;
+      expect(constrainedCheckbox?.checked).toBe(false);
+      expect(constrainedCheckbox?.disabled).toBe(true);
+    });
+  });
+
+  it("defaults below Compact when current available memory cannot fit 3B", async () => {
+    const runtimeStatusClient = {
+      readStatus: vi.fn().mockResolvedValue({
+        supervisorStatus: "ready",
+        healthy: true,
+        runtimeStatus: "ready",
+        capabilities: ["prepare-training-dataset"],
+        loadedModels: [],
+        activeTaskCount: 0,
+        generationCapacity: {
+          schemaVersion: "1",
+          capturedAt: new Date().toISOString(),
+          decoderAvailable: false,
+          schemaSupported: true,
+          logicalProcessorCount: 20,
+          totalSystemMemoryBytes: 16 * 1024 ** 3,
+          availableSystemMemoryBytes: 5 * 1024 ** 3,
+        },
+        logs: [],
+      }),
+      controlRuntime: vi.fn(),
+    };
+
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    await act(async () => {
+      root?.render(
+        <DatasetPreparationFeature
+          settingsClient={settingsClient}
+          runtimeStatusClient={runtimeStatusClient}
+          client={{
+            browseSourceArtifacts: async () => [
+              {
+                artifactId: "artifact-1",
+                label: "source.pdf",
+                storageKey: "uploads/source.pdf",
+                mediaType: "application/pdf",
+              },
+            ],
+            startPrepareTrainingDataset: vi.fn(),
+            readPrepareTrainingDatasetTask: vi.fn(),
+            cancelPrepareTrainingDatasetTask: vi.fn(),
+            approvePreparedTrainingDataset: vi.fn(),
+          }}
+        />,
+      );
+      await flushAsyncWork();
+    });
+
+    const sourceCheckbox = container.querySelector(
+      "input[type='checkbox']",
+    ) as HTMLInputElement;
+    await act(async () => {
+      sourceCheckbox.click();
+      await flushAsyncWork();
+    });
+
+    await vi.waitFor(() => {
+      const modelPreset = Array.from(
+        container?.querySelectorAll("select") ?? [],
+      ).find((select) =>
+        Array.from(select.options).some(
+          (option) => option.textContent === "Lightweight (1.5B)",
+        ),
+      );
+      expect(modelPreset?.value).toBe("lightweight-1-5b");
+      expect(
+        Array.from(container?.querySelectorAll("input") ?? []).some(
+          (input) => input.value === "Qwen/Qwen2.5-1.5B-Instruct",
+        ),
+      ).toBe(true);
+    });
   });
 
   it("shows model download progress reported by the active dataset task", async () => {

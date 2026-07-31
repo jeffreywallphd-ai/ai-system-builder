@@ -93,6 +93,7 @@ import {
   DESKTOP_MODEL_DOWNLOAD_REQUEST_CHANNEL,
   DESKTOP_MODEL_RECORD_UPDATE_REQUEST_CHANNEL,
   DESKTOP_MODEL_RECORD_DELETE_REQUEST_CHANNEL,
+  DESKTOP_MODEL_FOLDER_REVEAL_REQUEST_CHANNEL,
   DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL,
   createDesktopModelBrowseSuccessResponse,
   createDesktopModelDetailsReadSuccessResponse,
@@ -101,6 +102,7 @@ import {
   createDesktopModelDownloadSuccessResponse,
   createDesktopModelRecordUpdateSuccessResponse,
   createDesktopModelRecordDeleteSuccessResponse,
+  createDesktopModelFolderRevealSuccessResponse,
   createDesktopModelTrainSuccessResponse,
   createDesktopModelTrainStatusSuccessResponse,
   DESKTOP_CONVERSATION_EXECUTION_V2_CREATE_SESSION_REQUEST_CHANNEL,
@@ -1510,9 +1512,15 @@ it("maps training dataset preparation bridge calls to dedicated IPC request chan
 
   const startResponse = await api.startPrepareTrainingDataset({
     sourceArtifactIds: ["artifact-1"],
+    preparation: {
+      schemaVersion: "1",
+      inputIntent: "create-from-source-material",
+      method: "topic-aware",
+      sourceKinds: ["document"],
+      generationMode: "task-examples",
+    },
     recipe: {
       normalization: { targetFormat: "markdown" },
-      chunking: { strategy: "character", chunkSize: 1_000, chunkOverlap: 200 },
       generation: {
         mode: "qa",
         model: {
@@ -1524,6 +1532,31 @@ it("maps training dataset preparation bridge calls to dedicated IPC request chan
     },
     split: { trainRatio: 0.8, testRatio: 0.2, seed: 7, shuffle: true },
     output: { format: "jsonl" },
+    advanced: {
+      preset: "topic-aware",
+      content: {
+        strategy: "semantic",
+        maxTokensPerChunk: 320,
+        maxSourceSpans: 10_000,
+        semanticBoundaryThreshold: 0.22,
+        ocrEnabled: false,
+      },
+      semantic: {
+        enabled: true,
+        embeddingAlgorithm: "hashed-token-v1",
+        similarityThreshold: 0.9,
+        maxComparisonsPerRow: 128,
+        hardNegativeMining: true,
+      },
+      synthetic: {
+        enabled: true,
+        candidatesPerChunk: 2,
+        minimumGroundingScore: 0.45,
+        minimumCriticScore: 0.6,
+        minimumDiversityScore: 0.2,
+        requireReview: true,
+      },
+    },
   });
   const readResponse = await api.readPrepareTrainingDatasetTask({
     requestId: "req-1",
@@ -1534,6 +1567,25 @@ it("maps training dataset preparation bridge calls to dedicated IPC request chan
   expect(invoke.mock.calls[0]?.[0]).toBe(
     DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL.value,
   );
+  expect(invoke.mock.calls[0]?.[1]).toMatchObject({
+    payload: {
+      command: {
+        preparation: {
+          method: "topic-aware",
+          generationMode: "task-examples",
+        },
+        advanced: {
+          preset: "topic-aware",
+          content: { strategy: "semantic" },
+        },
+        recipe: {
+          generation: {
+            model: { modelId: "Qwen/Qwen2.5-1.5B-Instruct" },
+          },
+        },
+      },
+    },
+  });
   expect(invoke.mock.calls[1]?.[0]).toBe(
     DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL.value,
   );
@@ -1739,6 +1791,10 @@ it("maps model management bridge calls to dedicated model channels", async () =>
       deletedLocalFiles: false,
       deletedBackingArtifactIds: [],
     }),
+    createDesktopModelFolderRevealSuccessResponse({
+      modelRecordId: "m1",
+      revealed: true,
+    }),
     createDesktopModelTrainSuccessResponse({
       runId: "run-1",
       status: "queued",
@@ -1769,6 +1825,7 @@ it("maps model management bridge calls to dedicated model channels", async () =>
   await api.downloadModel({ provider: "huggingface", modelId: "org/model" });
   await api.updateModelRecord({ modelRecordId: "m1", patch: {} });
   await api.deleteModelRecord({ modelRecordId: "m1" });
+  await api.revealModelInFolder({ modelRecordId: "m1" });
   await api.trainModel({
     baseModel: { modelRecordId: "m1" },
     datasets: [{ artifactId: "dataset-1", splitRole: "train" }],
@@ -1802,8 +1859,11 @@ it("maps model management bridge calls to dedicated model channels", async () =>
   expect(invoke.mock.calls[6]?.[0]).toBe(
     DESKTOP_MODEL_RECORD_DELETE_REQUEST_CHANNEL.value,
   );
-  expect(invoke.mock.calls[7]?.[0]).toBe("ipc.model.train.request");
-  expect(invoke.mock.calls[8]?.[0]).toBe(
+  expect(invoke.mock.calls[7]?.[0]).toBe(
+    DESKTOP_MODEL_FOLDER_REVEAL_REQUEST_CHANNEL.value,
+  );
+  expect(invoke.mock.calls[8]?.[0]).toBe("ipc.model.train.request");
+  expect(invoke.mock.calls[9]?.[0]).toBe(
     DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL.value,
   );
 });

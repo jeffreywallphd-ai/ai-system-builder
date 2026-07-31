@@ -1,10 +1,16 @@
 const metricPattern =
   /^(?:\W+)?\s*(tests|suites|pass|fail|cancelled|skipped|todo|duration_ms)\s+(.+)$/;
 
-const supportedTestSuites = new Set(["all", "short", "long"]);
-const longRunningTestFilePattern =
-  /\.(?:e2e|integration)\.test\.[cm]?[jt]sx?$/i;
-const longRunningTestMarkerPattern = /^\s*\/\/\s*@test-duration\s+long\s*$/m;
+const supportedTestSuites = new Set([
+  "standard",
+  "e2e",
+  "ai",
+  "standardande2e",
+  "all",
+]);
+const endToEndTestFilePattern = /\.(?:e2e|integration)\.test\.[cm]?[jt]sx?$/i;
+const endToEndTestMarkerPattern = /^\s*\/\/\s*@test-duration\s+long\s*$/m;
+const aiTestMarkerPattern = /^\s*\/\/\s*@test-suite\s+ai\s*$/m;
 const vitestImportPattern = /\bfrom\s+["']vitest["']/m;
 const nonBrowserAssetSourcePattern = /\.(?:png|svg)$/i;
 
@@ -23,18 +29,25 @@ export const createNonBrowserAssetModule = (sourcePath) => {
   return `export default ${JSON.stringify(fileName)};\n`;
 };
 
-export const classifyTestFileDuration = (sourcePath, sourceText = "") =>
-  longRunningTestFilePattern.test(sourcePath) ||
-  longRunningTestMarkerPattern.test(sourceText)
-    ? "long"
-    : "short";
+export const classifyTestFileSuite = (sourcePath, sourceText = "") => {
+  if (aiTestMarkerPattern.test(sourceText)) {
+    return "ai";
+  }
+  return endToEndTestFilePattern.test(sourcePath) ||
+    endToEndTestMarkerPattern.test(sourceText)
+    ? "e2e"
+    : "standard";
+};
 
 export const shouldIncludeTestFileForSuite = ({
   sourcePath,
   sourceText,
   suite,
 }) =>
-  suite === "all" || classifyTestFileDuration(sourcePath, sourceText) === suite;
+  suite === "all" ||
+  (suite === "standardande2e" &&
+    classifyTestFileSuite(sourcePath, sourceText) !== "ai") ||
+  classifyTestFileSuite(sourcePath, sourceText) === suite;
 
 export const parseTestSuiteArgument = (args, fallback = "all") => {
   const explicitArgument = args.find((argument) =>
@@ -44,7 +57,9 @@ export const parseTestSuiteArgument = (args, fallback = "all") => {
     ? explicitArgument.slice("--suite=".length)
     : fallback;
   if (supportedTestSuites.has(suite) === false) {
-    throw new Error("Unsupported test suite. Expected short, long, or all.");
+    throw new Error(
+      "Unsupported test suite. Expected standard, e2e, ai, standardande2e, or all.",
+    );
   }
   return suite;
 };

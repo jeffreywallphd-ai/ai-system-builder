@@ -83,8 +83,9 @@ Before publishing or changing the skill:
    secrets, protected prompts, private payloads, personal data, or exploitable
    production details.
 10. Confirm increment execution runs only tests relevant to each change and that
-    overall roadmap completion runs the repository-defined complete short and long
-    suites once after every increment is implemented.
+    overall roadmap completion runs combined standard and end-to-end coverage once
+    after every increment is implemented. Confirm AI-related roadmaps add the AI
+    suite through the all-suite command, while non-AI roadmaps do not.
 11. Confirm that continuous execution carries an implementation-authorized approved
     roadmap through every increment without routine approval pauses, while changed scope, new
     authority, destructive or production actions, credentials, unresolved security

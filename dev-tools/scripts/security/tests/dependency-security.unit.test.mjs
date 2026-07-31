@@ -8,6 +8,8 @@ import test from "node:test";
 import {
   evaluateAuditReport,
   validatePythonDecoderDependencyInventory,
+  validatePythonModelPlacementDependencyInventory,
+  validatePythonParquetDependencyInventory,
   validateRuntimeSbom,
 } from "../check-dependency-security.mjs";
 
@@ -233,6 +235,55 @@ test("conditional Python decoder dependencies retain exact reviewed inventory", 
         ),
       ),
     /reviewed exact version|incomplete/,
+  );
+});
+
+test("Python Parquet support retains the patched reviewed inventory", async () => {
+  const requirements = await readFile(
+    "modules/adapters/runtime/python/worker/requirements.txt",
+    "utf8",
+  );
+  const inventory = validatePythonParquetDependencyInventory(requirements);
+  assert.equal(inventory.supportedPython, ">=3.10 <3.15");
+  assert.deepEqual(inventory.packages, [
+    {
+      name: "pyarrow",
+      version: "25.0.0",
+      license: "Apache-2.0",
+      purl: "pkg:pypi/pyarrow@25.0.0",
+    },
+  ]);
+  assert.throws(
+    () =>
+      validatePythonParquetDependencyInventory(
+        requirements.replace("pyarrow==25.0.0", "pyarrow==21.0.0"),
+      ),
+    /reviewed exact version/,
+  );
+});
+
+test("Python automatic model placement retains the reviewed inventory", async () => {
+  const requirements = await readFile(
+    "modules/adapters/runtime/python/worker/requirements.txt",
+    "utf8",
+  );
+  const inventory =
+    validatePythonModelPlacementDependencyInventory(requirements);
+  assert.equal(inventory.supportedPython, ">=3.10 <3.15");
+  assert.deepEqual(inventory.packages, [
+    {
+      name: "accelerate",
+      version: "1.14.0",
+      license: "Apache-2.0",
+      purl: "pkg:pypi/accelerate@1.14.0",
+    },
+  ]);
+  assert.throws(
+    () =>
+      validatePythonModelPlacementDependencyInventory(
+        requirements.replace("accelerate==1.14.0", "accelerate==1.13.0"),
+      ),
+    /reviewed exact version/,
   );
 });
 

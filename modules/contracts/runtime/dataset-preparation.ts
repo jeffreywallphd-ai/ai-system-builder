@@ -50,7 +50,7 @@ export type DatasetPreparationTextGenerationTaskType =
 export type DatasetPreparationTextInputMode = "provided" | "generate";
 
 export type DatasetPreparationTextGenerationModelPresetId =
-  "quality-7b" | "compact-3b";
+  "quality-7b" | "compact-3b" | "lightweight-1-5b";
 
 export interface DatasetPreparationTextGenerationModelPreset {
   id: DatasetPreparationTextGenerationModelPresetId;
@@ -90,6 +90,19 @@ export const DATASET_PREPARATION_TEXT_GENERATION_MODEL_PRESETS: readonly Dataset
       model: {
         provider: "transformers",
         modelId: "Qwen/Qwen2.5-3B-Instruct",
+        inferenceMode: "chat",
+        device: "auto",
+        torchDtype: "auto",
+      },
+    },
+    {
+      id: "lightweight-1-5b",
+      label: "Lightweight (1.5B)",
+      description:
+        "Smallest built-in option for computers with limited available memory.",
+      model: {
+        provider: "transformers",
+        modelId: "Qwen/Qwen2.5-1.5B-Instruct",
         inferenceMode: "chat",
         device: "auto",
         torchDtype: "auto",
@@ -673,6 +686,11 @@ export interface GenerationParams {
   maxNewTokens?: number;
 }
 
+export type DatasetPreparationMemoryOverflowPolicy =
+  | "none"
+  | "limited"
+  | "extended";
+
 export interface LocalModelConfig {
   provider: "transformers";
   modelId: string;
@@ -685,6 +703,8 @@ export interface LocalModelConfig {
     | "text-to-image";
   device?: "cpu" | "cuda" | "auto";
   torchDtype?: "auto" | "float16" | "bfloat16" | "float32";
+  /** Bounded permission for system-managed disk/swap when CPU memory is tight. */
+  memoryOverflowPolicy?: DatasetPreparationMemoryOverflowPolicy;
 }
 
 export interface ExampleGenerationConfig {

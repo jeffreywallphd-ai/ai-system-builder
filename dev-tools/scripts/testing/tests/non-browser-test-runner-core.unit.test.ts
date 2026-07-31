@@ -5,7 +5,7 @@ import {
   applyIgnoredFailureAdjustments,
   applyDiagnosticSummaryMetric,
   buildNonBrowserNodeTestRunOptions,
-  classifyTestFileDuration,
+  classifyTestFileSuite,
   createNonBrowserAssetModule,
   createTestTimingTracker,
   formatNonBrowserFailureSummary,
@@ -45,37 +45,59 @@ describe("non-browser test runner core helpers", () => {
     assert.equal("concurrency" in runOptions, false);
   });
 
-  it("classifies unit and interaction tests as short and integration or e2e tests as long", () => {
-    assert.equal(classifyTestFileDuration("feature.unit.test.ts"), "short");
-    assert.equal(classifyTestFileDuration("feature.ui.test.tsx"), "short");
+  it("classifies standard, end-to-end, and explicitly marked AI tests", () => {
+    assert.equal(classifyTestFileSuite("feature.unit.test.ts"), "standard");
+    assert.equal(classifyTestFileSuite("feature.ui.test.tsx"), "standard");
+    assert.equal(classifyTestFileSuite("feature.integration.test.ts"), "e2e");
+    assert.equal(classifyTestFileSuite("feature.e2e.test.tsx"), "e2e");
     assert.equal(
-      classifyTestFileDuration("feature.integration.test.ts"),
-      "long",
+      classifyTestFileSuite("legacy.unit.test.ts", "// @test-duration long"),
+      "e2e",
     );
-    assert.equal(classifyTestFileDuration("feature.e2e.test.tsx"), "long");
     assert.equal(
-      classifyTestFileDuration("legacy.unit.test.ts", "// @test-duration long"),
-      "long",
+      classifyTestFileSuite("model.integration.test.ts", "// @test-suite ai"),
+      "ai",
     );
     assert.equal(
       shouldIncludeTestFileForSuite({
         sourcePath: "feature.e2e.test.ts",
-        suite: "short",
+        suite: "standard",
       }),
       false,
     );
     assert.equal(
       shouldIncludeTestFileForSuite({
         sourcePath: "feature.e2e.test.ts",
-        suite: "long",
+        suite: "e2e",
+      }),
+      true,
+    );
+    assert.equal(
+      shouldIncludeTestFileForSuite({
+        sourcePath: "model.unit.test.ts",
+        sourceText: "// @test-suite ai",
+        suite: "standardande2e",
+      }),
+      false,
+    );
+    assert.equal(
+      shouldIncludeTestFileForSuite({
+        sourcePath: "model.unit.test.ts",
+        sourceText: "// @test-suite ai",
+        suite: "all",
       }),
       true,
     );
   });
 
   it("parses supported suite arguments and keeps Vitest-owned files out of the Node runner", () => {
-    assert.equal(parseTestSuiteArgument(["--suite=short"]), "short");
-    assert.equal(parseTestSuiteArgument([], "long"), "long");
+    assert.equal(parseTestSuiteArgument(["--suite=standard"]), "standard");
+    assert.equal(parseTestSuiteArgument([], "e2e"), "e2e");
+    assert.equal(parseTestSuiteArgument(["--suite=ai"]), "ai");
+    assert.equal(
+      parseTestSuiteArgument(["--suite=standardande2e"]),
+      "standardande2e",
+    );
     assert.equal(parseTestSuiteArgument(["--suite=all"]), "all");
     assert.throws(
       () => parseTestSuiteArgument(["--suite=unknown"]),

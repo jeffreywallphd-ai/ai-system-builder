@@ -55,6 +55,13 @@ reported CPU or accelerator capacity with a safety reserve. Missing, stale, or
 malformed facts resolve unchecked. The contract intentionally excludes hardware
 identity, local paths, and volatile utilization so an untouched control cannot
 oscillate while work is running.
+The same non-identifying capacity resolver governs built-in model defaults:
+when the quality preset cannot fit with its reserve, an untouched selection
+steps down once to the compact preset. Explicit and saved model choices always
+win and remain subject to the runtime's live-memory preflight. The model contract
+also owns a closed `none | limited | extended` system-memory overflow policy.
+Those values map to 0, 1 GiB, and 4 GiB respectively; renderers cannot submit an
+arbitrary byte allowance, and CUDA-only placement cannot use the allowance.
 
 `dataset-preparation-output-shape.ts` is the shared authority for the editable
 output layout used by the Generation prompt. It supplies task-compatible defaults,
@@ -92,12 +99,15 @@ and chat-capable models receive those rules through the tokenizer's system-messa
 exact task-bound JSON Schema envelope plus a configured sample. Fixed values are
 enforced by schema, runtime-supplied fields are attached outside model generation,
 and the model must return exactly one JSON object without prose,
-Markdown, code fences, or other pre/post output. The worker rejects malformed, mismatched, oversized, extra-field,
+Markdown, code fences, or other pre/post output. Unchecked compatibility parsing
+may remove one exact `json` fence containing one bounded object, but rejects
+surrounding prose, multiple blocks, malformed/non-object JSON, mismatched, oversized, extra-field,
 non-allowlisted, or non-source-span output before deterministically assembling the task profile's row fields for JSON,
 CSV, or Parquet.
 Detection and segmentation objectives may label existing reviewed annotations but never synthesize boxes or masks.
 Built-in model presets stay within the 7B limit: quality uses `Qwen/Qwen2.5-7B-Instruct`, while compact uses
-`Qwen/Qwen2.5-3B-Instruct`. Task-scoped generation parameter defaults also live here so UI and runtime request builders
+`Qwen/Qwen2.5-3B-Instruct`. Quality is the default only when reported capacity
+can support it; tightly constrained hosts default to compact. Task-scoped generation parameter defaults also live here so UI and runtime request builders
 do not drift into separate QA-generation, model-override, or duplicated-parameter systems.
 
 Model-training task requests may carry `trainingTask` so runtime adapters can validate task support and annotate

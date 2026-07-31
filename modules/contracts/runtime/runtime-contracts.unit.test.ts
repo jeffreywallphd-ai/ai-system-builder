@@ -812,7 +812,11 @@ describe("python sidecar runtime contracts", () => {
       DATASET_PREPARATION_TEXT_GENERATION_MODEL_PRESETS.map(
         (preset) => preset.model.modelId,
       ),
-    ).toEqual(["Qwen/Qwen2.5-7B-Instruct", "Qwen/Qwen2.5-3B-Instruct"]);
+    ).toEqual([
+      "Qwen/Qwen2.5-7B-Instruct",
+      "Qwen/Qwen2.5-3B-Instruct",
+      "Qwen/Qwen2.5-1.5B-Instruct",
+    ]);
   });
 
   it("restricts local model inference mode to explicit supported literals", () => {

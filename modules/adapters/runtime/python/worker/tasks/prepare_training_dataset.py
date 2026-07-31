@@ -21,10 +21,17 @@ from ..models import (
 from .document_normalization import normalize_sources_to_markdown
 from .example_generation import (
     GeneratedQaExample,
+    GenerationInferenceError,
+    GenerationInsufficientResourcesError,
+    GenerationModelDownloadIncompleteError,
+    GenerationModelLoadError,
+    GenerationOutputValidationError,
+    GenerationRuntimeDependencyError,
     ensure_generation_model_is_available,
     generate_task_examples_for_chunks,
     generate_text_value,
 )
+from .constrained_json_decoder import ConstrainedJsonDecoderError
 from .markdown_chunking import chunk_markdown_documents
 from .dataset_quality import curate_dataset_rows
 from .advanced_capabilities import build_advanced_content_report
@@ -32,6 +39,7 @@ from .semantic_curation import curate_semantic_rows
 from .synthetic_verification import SyntheticCandidateVerifier
 from .structured_output_runtime import (
     RuntimeStructuredOutput,
+    parse_model_json_object,
     read_purpose_value,
     resolve_runtime_structured_output,
     validate_json_schema_value,
@@ -89,6 +97,41 @@ class DatasetPreparationStageError(ValueError):
         self.stage = stage
         self.error_code = error_code
         self.details = details
+
+
+def _ensure_generation_model_ready(generation: Any) -> None:
+    try:
+        ensure_generation_model_is_available(generation)
+    except GenerationModelDownloadIncompleteError as error:
+        raise DatasetPreparationStageError(
+            "generation",
+            str(error),
+            "generation_model_download_incomplete",
+            details={
+                "provider": generation.model.provider,
+                "modelId": generation.model.modelId,
+            },
+        ) from error
+    except GenerationRuntimeDependencyError as error:
+        raise DatasetPreparationStageError(
+            "generation",
+            str(error),
+            "generation_runtime_dependency_unavailable",
+            details={
+                "provider": generation.model.provider,
+                "modelId": generation.model.modelId,
+            },
+        ) from error
+    except Exception as error:
+        raise DatasetPreparationStageError(
+            "generation",
+            str(error),
+            "generation_model_not_available",
+            details={
+                "provider": generation.model.provider,
+                "modelId": generation.model.modelId,
+            },
+        ) from error
 
 
 def _validate_split_config(
@@ -731,6 +774,27 @@ def _resolve_structured_output_for_generation(
         ) from error
 
 
+def _describe_constrained_decoder_failure(error: ConstrainedJsonDecoderError) -> tuple[str, str]:
+    if error.code in {
+        "decoder-unavailable",
+        "decoder-inference-mode-unsupported",
+        "decoder-tokenizer-unsupported",
+    }:
+        return (
+            "Token-level JSON formatting is not available with the current local model tools.",
+            "generation_constrained_decoding_unavailable",
+        )
+    if error.code == "decoder-output-truncated":
+        return (
+            "Token-level JSON formatting reached the generation length limit before the JSON object was complete.",
+            "generation_constrained_decoding_truncated",
+        )
+    return (
+        "Token-level JSON formatting could not complete for the selected model and desired output format.",
+        "generation_constrained_decoding_failed",
+    )
+
+
 def _label_set(task_recipe: dict[str, Any]) -> list[str]:
     raw_label_set = task_recipe.get("labelSet")
     if not isinstance(raw_label_set, list):
@@ -755,10 +819,7 @@ def _parse_generated_text_value(
     max_length: int = 500,
     structured_output: RuntimeStructuredOutput | None = None,
 ) -> tuple[dict[str, Any], str] | None:
-    try:
-        envelope = json.loads(value.strip())
-    except json.JSONDecodeError as error:
-        raise ValueError("Generated image metadata did not return one valid JSON object.") from error
+    envelope = parse_model_json_object(value)
     if not isinstance(envelope, dict) or set(envelope) != {
         "schemaVersion",
         "taskType",
@@ -977,25 +1038,60 @@ def _generate_text_field(
         if label_set := _label_set(task_recipe):
             if "label" in field_kind:
                 generated_value = _select_allowed_label(generated_value, label_set)
-    except Exception as error:
-        formatted_error = _format_generation_error(error)
+    except GenerationModelLoadError as error:
+        raise DatasetPreparationStageError(
+            "generation",
+            str(error),
+            "generation_model_load_failed",
+            details={
+                "provider": generation.model.provider,
+                "modelId": generation.model.modelId,
+                "taskType": task_type,
+                "fieldKind": field_kind,
+            },
+        ) from error
+    except ConstrainedJsonDecoderError as error:
+        message, reason_code = _describe_constrained_decoder_failure(error)
+        raise DatasetPreparationStageError(
+            "generation",
+            message,
+            reason_code,
+            details={
+                "decoderReasonCode": error.code,
+                "taskType": task_type,
+                "fieldKind": field_kind,
+            },
+        ) from error
+    except (ValueError, GenerationOutputValidationError) as error:
         if _resolve_generation_failure_policy(payload) == "skip":
             warnings.append(
                 DatasetPreparationWarning(
-                    code="text_generation_skipped",
-                    message=f"Skipped generated {field_kind} for source '{source.artifactId}': {formatted_error}",
+                    code="text_generation_invalid_skipped",
+                    message=(
+                        f"Skipped generated {field_kind} for one source because "
+                        "the model response did not match the desired output format."
+                    ),
                     sourceArtifactId=source.artifactId,
                 )
             )
             return None
         raise DatasetPreparationStageError(
             "generation",
-            formatted_error,
-            "text_generation_failed",
+            "The model response did not match the desired output format.",
+            "generation_output_invalid",
             details={
                 "taskType": task_type,
                 "fieldKind": field_kind,
-                "sourceArtifactId": source.artifactId,
+            },
+        ) from error
+    except Exception as error:
+        raise DatasetPreparationStageError(
+            "generation",
+            "The selected generation model could not complete local inference.",
+            "generation_inference_failed",
+            details={
+                "taskType": task_type,
+                "fieldKind": field_kind,
             },
         ) from error
 
@@ -1669,7 +1765,8 @@ def _build_generated_rows(
     generator: Callable[[list, object], list[GeneratedQaExample]] | None,
     text_value_generator: Callable[[str, object], str],
     structured_output: RuntimeStructuredOutput | None,
-    on_generation_progress: Callable[[dict[str, int]], None] | None = None,
+    preparation_plan: dict[str, object],
+    on_generation_progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> tuple[
     list[dict[str, object]],
     list[DatasetPreparationWarning],
@@ -1697,18 +1794,7 @@ def _build_generated_rows(
                     "Generation settings are missing for the selected preparation method.",
                     "generation_settings_missing",
                 )
-            try:
-                ensure_generation_model_is_available(generation)
-            except Exception as error:
-                raise DatasetPreparationStageError(
-                    "generation",
-                    str(error),
-                    "generation_model_not_available",
-                    details={
-                        "provider": generation.model.provider,
-                        "modelId": generation.model.modelId,
-                    },
-                ) from error
+            _ensure_generation_model_ready(generation)
         image_rows, image_warnings = _build_direct_image_rows(
             payload,
             task_type,
@@ -1759,6 +1845,27 @@ def _build_generated_rows(
             advanced_report,
         )
 
+    if preparation_plan.get("generationMode") == "none":
+        warning_codes = [warning.code for warning in structured_warnings]
+        read_failed = "structured_source_read_failed" in warning_codes
+        raise DatasetPreparationStageError(
+            "normalization",
+            (
+                "One or more structured sources could not be read."
+                if read_failed
+                else "The structured sources did not contain usable rows for the selected training goal."
+            ),
+            (
+                "structured_source_read_failed"
+                if read_failed
+                else "structured_source_no_usable_rows"
+            ),
+            details={
+                "sourceInputCount": len(payload.sourceInputs),
+                "warningCodes": warning_codes,
+            },
+        )
+
     generation = payload.recipe.generation
     normalization_config = payload.recipe.normalization
     if generation is None or normalization_config is None:
@@ -1772,18 +1879,7 @@ def _build_generated_rows(
         payload
     )
 
-    try:
-        ensure_generation_model_is_available(generation)
-    except Exception as error:
-        raise DatasetPreparationStageError(
-            "generation",
-            str(error),
-            "generation_model_not_available",
-            details={
-                "provider": generation.model.provider,
-                "modelId": generation.model.modelId,
-            },
-        ) from error
+    _ensure_generation_model_ready(generation)
 
     try:
         normalization = normalize_sources_to_markdown(
@@ -1847,6 +1943,7 @@ def _build_generated_rows(
     if not failure_policy:
         normalization_mode = normalization_config.normalizationMode or "strict"
         failure_policy = "skip" if normalization_mode == "best-effort" else "fail"
+    generation.failurePolicy = failure_policy
 
     batch_size = int(generation.batchSize or 1)
     synthetic_config = (
@@ -1886,11 +1983,53 @@ def _build_generated_rows(
     skipped_generation_chunk_count = 0
     processed_chunk_count = 0
     generated_row_count = 0
+    if on_generation_progress is not None:
+        on_generation_progress(
+            {
+                "phase": "loading-model",
+                "message": (
+                    "Loading the selected model and creating the first batch. "
+                    "The first batch can take longer."
+                ),
+                "totalChunkCount": len(chunks),
+                "processedChunkCount": 0,
+                "generatedRowCount": 0,
+            }
+        )
     for start in range(0, len(chunks), batch_size):
         chunk_batch = chunks[start : start + batch_size]
-        if on_generation_progress is not None:
+        granular_progress_emitted = False
+
+        def report_completed_chunk(chunk_progress: dict[str, int]) -> None:
+            nonlocal granular_progress_emitted
+            granular_progress_emitted = True
+            completed_count = min(
+                processed_chunk_count + chunk_progress["processedChunkCount"],
+                len(chunks),
+            )
             on_generation_progress(
                 {
+                    "phase": "generating",
+                    "message": (
+                        f"Created examples from {completed_count} "
+                        f"of {len(chunks)} sections."
+                    ),
+                    "totalChunkCount": len(chunks),
+                    "processedChunkCount": completed_count,
+                    "generatedRowCount": (
+                        generated_row_count
+                        + chunk_progress["generatedExampleCount"]
+                    ),
+                }
+            )
+        if on_generation_progress is not None and start > 0:
+            on_generation_progress(
+                {
+                    "phase": "generating",
+                    "message": (
+                        f"Creating examples from sections {start + 1}-"
+                        f"{min(start + len(chunk_batch), len(chunks))} of {len(chunks)}."
+                    ),
                     "totalChunkCount": len(chunks),
                     "processedChunkCount": processed_chunk_count,
                     "generatedRowCount": generated_row_count,
@@ -1908,6 +2047,47 @@ def _build_generated_rows(
                         task_type,
                         task_recipe,
                         structured_output,
+                        on_memory_overflow=(
+                            lambda overflow: on_generation_progress(
+                                {
+                                    "phase": "memory-overflow",
+                                    "message": (
+                                        "The model is using system-managed disk/swap because "
+                                        "available memory is low. Generation may run more slowly."
+                                    ),
+                                    "totalChunkCount": len(chunks),
+                                    "processedChunkCount": processed_chunk_count,
+                                    "generatedRowCount": generated_row_count,
+                                    "memoryOverflowActive": True,
+                                    **overflow,
+                                }
+                            )
+                            if on_generation_progress is not None
+                            else None
+                        ),
+                        on_output_repair=(
+                            lambda repair: on_generation_progress(
+                                {
+                                    "phase": "repairing-output",
+                                    "message": (
+                                        "Correcting the generated output format before "
+                                        "continuing dataset preparation."
+                                    ),
+                                    "totalChunkCount": len(chunks),
+                                    "processedChunkCount": processed_chunk_count,
+                                    "generatedRowCount": generated_row_count,
+                                    **repair,
+                                }
+                            )
+                            if on_generation_progress is not None
+                            else None
+                        ),
+                        on_chunk_complete=(
+                            report_completed_chunk
+                            if on_generation_progress is not None
+                            and candidate_index == 0
+                            else None
+                        ),
                     )
                 )
                 generated_examples.extend(
@@ -1973,40 +2153,103 @@ def _build_generated_rows(
                     )
             processed_chunk_count += len(chunk_batch)
             generated_row_count = len(rows)
-            if on_generation_progress is not None:
+            if on_generation_progress is not None and (
+                not granular_progress_emitted or candidates_per_chunk > 1
+            ):
                 on_generation_progress(
                     {
+                        "phase": "generating",
+                        "message": (
+                            f"Created examples from {processed_chunk_count} "
+                            f"of {len(chunks)} sections."
+                        ),
                         "totalChunkCount": len(chunks),
                         "processedChunkCount": processed_chunk_count,
                         "generatedRowCount": generated_row_count,
                     }
                 )
-        except Exception as error:
-            formatted_error = _format_generation_error(error)
-            if len(generation_error_samples) < 3:
-                generation_error_samples.append(formatted_error)
+        except GenerationInsufficientResourcesError as error:
+            raise DatasetPreparationStageError(
+                "generation",
+                str(error),
+                "generation_insufficient_resources",
+                details={
+                    "provider": generation.model.provider,
+                    "modelId": generation.model.modelId,
+                    "failedChunkCount": len(chunk_batch),
+                },
+            ) from error
+        except GenerationModelLoadError as error:
+            raise DatasetPreparationStageError(
+                "generation",
+                str(error),
+                "generation_model_load_failed",
+                details={
+                    "provider": generation.model.provider,
+                    "modelId": generation.model.modelId,
+                    "failedChunkCount": len(chunk_batch),
+                },
+            ) from error
+        except ConstrainedJsonDecoderError as error:
+            message, reason_code = _describe_constrained_decoder_failure(error)
+            raise DatasetPreparationStageError(
+                "generation",
+                message,
+                reason_code,
+                details={
+                    "decoderReasonCode": error.code,
+                    "failedChunkCount": len(chunk_batch),
+                },
+            ) from error
+        except GenerationOutputValidationError as error:
             if failure_policy == "skip":
-                skipped_generation_chunk_count += len(chunk_batch)
+                if len(generation_error_samples) < 3:
+                    generation_error_samples.append("generation_output_invalid")
                 for chunk in chunk_batch:
+                    skipped_generation_chunk_count += 1
+                    processed_chunk_count += 1
                     warnings.append(
                         DatasetPreparationWarning(
                             code="generation_example_skipped",
                             message=(
-                                f"Skipped chunk {chunk.chunk_index} from source '{chunk.artifact_id}' during generation: {formatted_error}"
+                                "Skipped one source section because the generated "
+                                "example did not match the desired output format "
+                                "after correction."
                             ),
                             sourceArtifactId=chunk.artifact_id,
                         )
                     )
-                processed_chunk_count += len(chunk_batch)
-                if on_generation_progress is not None:
-                    on_generation_progress(
-                        {
-                            "totalChunkCount": len(chunks),
-                            "processedChunkCount": processed_chunk_count,
-                            "generatedRowCount": generated_row_count,
-                        }
-                    )
+                    if on_generation_progress is not None:
+                        on_generation_progress(
+                            {
+                                "phase": "generating",
+                                "message": (
+                                    f"Created examples from {processed_chunk_count} "
+                                    f"of {len(chunks)} sections."
+                                ),
+                                "totalChunkCount": len(chunks),
+                                "processedChunkCount": processed_chunk_count,
+                                "generatedRowCount": generated_row_count,
+                            }
+                        )
                 continue
+            raise DatasetPreparationStageError(
+                "generation",
+                str(error),
+                "generation_output_invalid",
+                details={"failedChunkCount": len(chunk_batch)},
+            ) from error
+        except GenerationInferenceError as error:
+            raise DatasetPreparationStageError(
+                "generation",
+                str(error),
+                "generation_inference_failed",
+                details={"failedChunkCount": len(chunk_batch)},
+            ) from error
+        except Exception as error:
+            formatted_error = _format_generation_error(error)
+            if len(generation_error_samples) < 3:
+                generation_error_samples.append(formatted_error)
             raise DatasetPreparationStageError(
                 "generation",
                 formatted_error,
@@ -2014,8 +2257,6 @@ def _build_generated_rows(
                 details={
                     "failurePolicy": failure_policy,
                     "failedChunkCount": len(chunk_batch),
-                    "chunkIndices": [chunk.chunk_index for chunk in chunk_batch],
-                    "sourceArtifactIds": sorted({chunk.artifact_id for chunk in chunk_batch}),
                     "batchSize": batch_size,
                 },
             ) from error
@@ -2090,7 +2331,7 @@ def prepare_training_dataset(
     payload: PrepareTrainingDatasetRequest,
     example_generator: Callable[[list, object], list[GeneratedQaExample]] | None = None,
     text_value_generator: Callable[[str, object], str] = generate_text_value,
-    on_generation_progress: Callable[[dict[str, int]], None] | None = None,
+    on_generation_progress: Callable[[dict[str, Any]], None] | None = None,
     output_directory: Path | None = None,
 ) -> PrepareTrainingDatasetResult:
     task_type, task_recipe = _resolve_task_recipe(payload)
@@ -2134,6 +2375,7 @@ def prepare_training_dataset(
         example_generator,
         text_value_generator,
         structured_output,
+        preparation_plan,
         on_generation_progress,
     )
     if (

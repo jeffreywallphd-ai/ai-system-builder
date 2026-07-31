@@ -4,6 +4,7 @@ import { PYTHON_RUNTIME_DATASET_PREPARATION_REQUIRED_CAPABILITIES } from "../../
 import {
   resolvePythonRuntimeBaseUrl,
   resolvePythonRuntimeHostAndPort,
+  resolveDesktopPythonRuntimeCommand,
   resolveDesktopPythonRuntimeWorkerDirectory,
   classifyPythonRuntimeStdioLogLevel,
   shouldPreparePythonRuntimeWorkerDependencies,
@@ -50,9 +51,9 @@ export async function composeDesktopPythonRuntimeFeature(
     HF_HUB_DISABLE_SYMLINKS_WARNING:
       process.env.HF_HUB_DISABLE_SYMLINKS_WARNING ?? "1",
   };
-  const pythonRuntimeCommand =
-    process.env.PYTHON_RUNTIME_COMMAND ??
-    (process.platform === "win32" ? "python" : "python3");
+  const pythonRuntimeCommand = resolveDesktopPythonRuntimeCommand({
+    configuredCommand: process.env.PYTHON_RUNTIME_COMMAND,
+  });
 
   return createPythonRuntimeAdapterFoundation({
     client: { baseUrl: pythonRuntimeBaseUrl },

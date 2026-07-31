@@ -48,6 +48,7 @@ function createClientDouble() {
         artifactForm: "full-model",
         provider: "huggingface",
         modelId: "org/demo-model",
+        localFilesAvailable: true,
         createdAt: "2026-04-27T00:00:00.000Z",
       },
     ]),
@@ -87,6 +88,10 @@ function createClientDouble() {
       deletedRegistryRecord: true,
       deletedLocalFiles: false,
       deletedBackingArtifactIds: [],
+    }),
+    revealModelInFolder: vi.fn().mockResolvedValue({
+      modelRecordId: "saved-1",
+      revealed: true,
     }),
     trainModel: vi.fn().mockResolvedValue({
       runId: "run-1",
@@ -229,7 +234,7 @@ describe("ModelsFeature", () => {
       (button) => button.textContent === "Search Models",
     ) as HTMLButtonElement;
     await act(async () => {
-      searchButton.dispatchEvent(new Event("click", { bubbles: true }));
+      searchButton.click();
       await flushUi();
     });
 
@@ -273,15 +278,94 @@ describe("ModelsFeature", () => {
       (button) => button.textContent === "Search Models",
     ) as HTMLButtonElement;
     await act(async () => {
-      searchButton.dispatchEvent(new Event("click", { bubbles: true }));
+      searchButton.click();
       await flushUi();
     });
     await act(async () => {
-      searchButton.dispatchEvent(new Event("click", { bubbles: true }));
+      searchButton.click();
       await flushUi();
     });
 
     expect(client.browseModels).toHaveBeenCalledTimes(2);
+  });
+
+  it("submits the Find Models form, supports Other task tags, and enforces the selected page limit", async () => {
+    const client = createClientDouble();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoot = root;
+    mountedContainer = container;
+
+    await act(async () => {
+      root.render(<ModelsFeature client={client as never} workspaceId="workspace-a" />);
+      await flushUi();
+    });
+
+    expect(container.textContent).toContain("Find Models");
+    const taskSelect = Array.from(container.querySelectorAll("select")).find((select) =>
+      Array.from(select.options).some((option) => option.value === "other"),
+    ) as HTMLSelectElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set?.call(taskSelect, "other");
+      taskSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      await flushUi();
+    });
+
+    const otherInput = container.querySelector("input[placeholder='Enter a Hugging Face task tag']") as HTMLInputElement;
+    const limitSelect = Array.from(container.querySelectorAll("select")).find((select) =>
+      Array.from(select.options).some((option) => option.value === "50"),
+    ) as HTMLSelectElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(otherInput, "image-classification");
+      otherInput.dispatchEvent(new Event("input", { bubbles: true }));
+      otherInput.dispatchEvent(new Event("change", { bubbles: true }));
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set?.call(limitSelect, "50");
+      limitSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      (container.querySelector("form") as HTMLFormElement).requestSubmit();
+      await flushUi();
+    });
+
+    expect(client.browseModels).toHaveBeenCalledWith(expect.objectContaining({
+      provider: "huggingface",
+      customTaskTag: "image-classification",
+      limit: 50,
+    }));
+    expect(container.textContent).toContain("Results per page");
+  });
+
+  it("moves through cursor-backed model result pages", async () => {
+    const client = createClientDouble();
+    client.browseModels
+      .mockResolvedValueOnce({
+        models: [{ provider: "huggingface", modelId: "org/page-1", displayName: "Page 1" }],
+        nextCursor: "page-2",
+      })
+      .mockResolvedValueOnce({
+        models: [{ provider: "huggingface", modelId: "org/page-2", displayName: "Page 2" }],
+      });
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoot = root;
+    mountedContainer = container;
+
+    await act(async () => {
+      root.render(<ModelsFeature client={client as never} workspaceId="workspace-a" />);
+      await flushUi();
+    });
+    await act(async () => {
+      (container.querySelector("form") as HTMLFormElement).requestSubmit();
+      await flushUi();
+    });
+    const nextButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Next") as HTMLButtonElement;
+    await act(async () => {
+      nextButton.click();
+      await flushUi();
+    });
+
+    expect(client.browseModels.mock.calls[1]?.[0]).toMatchObject({ cursor: "page-2", limit: 25 });
+    expect(container.textContent).toContain("Page 2");
   });
 
   it("renders train form content through dedicated training flow", async () => {
@@ -361,11 +445,55 @@ describe("ModelsFeature", () => {
       await flushUi();
     });
 
-    expect(container.textContent).toContain("Validate");
-    const publishButton = Array.from(container.querySelectorAll("button")).find(
+    expect(document.body.textContent).toContain("Validate");
+    const publishButton = Array.from(document.body.querySelectorAll("button")).find(
       (button) => button.textContent === "Publish",
     ) as HTMLButtonElement;
     expect(publishButton.disabled).toBe(true);
+  });
+
+  it("opens model details and delete confirmation in modals and reveals local files by record id", async () => {
+    const client = createClientDouble();
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    mountedRoot = root;
+    mountedContainer = container;
+
+    await act(async () => {
+      root.render(<ModelsFeature client={client as never} workspaceId="workspace-a" />);
+      await flushUi();
+    });
+    const manageTab = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Manage Models") as HTMLButtonElement;
+    await act(async () => {
+      manageTab.click();
+      await flushUi();
+    });
+
+    expect(container.querySelector(".models-feature__card-grid")).toBeTruthy();
+    const detailsButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Details") as HTMLButtonElement;
+    await act(async () => {
+      detailsButton.click();
+      await flushUi();
+    });
+    expect(document.body.querySelector("[role='dialog']")?.textContent).toContain("Model details");
+    const openButton = Array.from(document.body.querySelectorAll("button")).find((button) => button.textContent === "Open in folder") as HTMLButtonElement;
+    await act(async () => {
+      openButton.click();
+      await flushUi();
+    });
+    expect(client.revealModelInFolder).toHaveBeenCalledWith({ workspaceId: "workspace-a", modelRecordId: "saved-1" });
+
+    await act(async () => {
+      (document.body.querySelector("button[aria-label='Close model details']") as HTMLButtonElement).click();
+      await flushUi();
+    });
+    const deleteButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Delete Record") as HTMLButtonElement;
+    await act(async () => {
+      deleteButton.click();
+      await flushUi();
+    });
+    expect(document.body.querySelector("[role='dialog']")?.textContent).toContain("Delete model record");
   });
 
   it("treats warning validation as not safely publishable", async () => {
@@ -399,10 +527,10 @@ describe("ModelsFeature", () => {
       await flushUi();
     });
 
-    expect(container.textContent).toContain(
+    expect(document.body.textContent).toContain(
       "Warning validation is not safely publishable by default.",
     );
-    const publishButton = Array.from(container.querySelectorAll("button")).find(
+    const publishButton = Array.from(document.body.querySelectorAll("button")).find(
       (button) => button.textContent === "Publish",
     ) as HTMLButtonElement;
     expect(publishButton.disabled).toBe(true);
@@ -439,7 +567,7 @@ describe("ModelsFeature", () => {
       await flushUi();
     });
 
-    const publishButton = Array.from(container.querySelectorAll("button")).find(
+    const publishButton = Array.from(document.body.querySelectorAll("button")).find(
       (button) => button.textContent === "Publish",
     ) as HTMLButtonElement;
     expect(publishButton.disabled).toBe(true);
@@ -475,7 +603,7 @@ describe("ModelsFeature", () => {
       await flushUi();
     });
     const validateButton = Array.from(
-      container.querySelectorAll("button"),
+      document.body.querySelectorAll("button"),
     ).find((button) => button.textContent === "Validate") as HTMLButtonElement;
     await act(async () => {
       validateButton.dispatchEvent(new Event("click", { bubbles: true }));
@@ -517,7 +645,7 @@ describe("ModelsFeature", () => {
       detailsButton.dispatchEvent(new Event("click", { bubbles: true }));
       await flushUi();
     });
-    const repositoryInput = container.querySelector(
+    const repositoryInput = document.body.querySelector(
       "input[placeholder='owner/model-name']",
     ) as HTMLInputElement;
     await act(async () => {
@@ -529,7 +657,7 @@ describe("ModelsFeature", () => {
       repositoryInput.dispatchEvent(new Event("change", { bubbles: true }));
       await flushUi();
     });
-    const publishButton = Array.from(container.querySelectorAll("button")).find(
+    const publishButton = Array.from(document.body.querySelectorAll("button")).find(
       (button) => button.textContent === "Publish",
     ) as HTMLButtonElement;
     await act(async () => {
@@ -575,10 +703,10 @@ describe("ModelsFeature", () => {
       await flushUi();
     });
 
-    const repositoryInput = container.querySelector(
+    const repositoryInput = document.body.querySelector(
       "input[placeholder='owner/model-name']",
     ) as HTMLInputElement;
-    const publishButton = Array.from(container.querySelectorAll("button")).find(
+    const publishButton = Array.from(document.body.querySelectorAll("button")).find(
       (button) => button.textContent === "Publish",
     ) as HTMLButtonElement;
     expect(

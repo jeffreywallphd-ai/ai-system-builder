@@ -10,6 +10,7 @@ import {
   GetModelDetailsUseCase,
   ListModelsUseCase,
   PublishModelUseCase,
+  RevealModelInFolderUseCase,
   SaveModelReferenceUseCase,
   TrainModelUseCase,
   UpdateModelRecordUseCase,
@@ -26,6 +27,7 @@ export interface ComposeDesktopModelFeatureOptions {
   getArtifacts: () => Promise<any>;
   getRuntimeTaskFeatures: () => Promise<any>;
   getPythonRuntimeFoundation: () => Promise<any>;
+  revealModelPath?: (localPath: string) => Promise<void> | void;
 }
 
 export function composeDesktopModelFeature(options: ComposeDesktopModelFeatureOptions): any {
@@ -65,6 +67,17 @@ export function composeDesktopModelFeature(options: ComposeDesktopModelFeatureOp
     }),
     updateModelRecordUseCase: new UpdateModelRecordUseCase({ modelRegistry }),
     deleteModelRecordUseCase: new DeleteModelRecordUseCase({ modelRegistry, artifactCatalogDeletePort: asyncLazyObject(async () => (await options.getArtifacts()).artifactCatalog) }),
+    revealModelInFolderUseCase: new RevealModelInFolderUseCase({
+      modelRegistry,
+      modelLocationRevealer: {
+        async revealPath(localPath) {
+          if (!options.revealModelPath) {
+            throw new Error("Model location reveal is unavailable in this host.");
+          }
+          await options.revealModelPath(localPath);
+        },
+      },
+    }),
     trainModelUseCase: new TrainModelUseCase({ runtimeTaskRegistry: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).runtimeTaskRegistry), modelRegistry, storageBindings: asyncLazyObject(async () => (await options.getArtifacts()).artifactBindings), storage: asyncLazyObject(async () => (await options.getArtifacts()).storage), generatedModelStorage: asyncLazyObject(async () => createLocalGeneratedModelStorageAdapter({ env: process.env })), modelPublisher, taskPowerLifecycle: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).taskPowerLifecycle), runtimeCapabilityGuard: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).runtimeCapabilityGuard) }),
     validateModelUseCase: new ValidateModelUseCase({ runtimeTaskRegistry: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).runtimeTaskRegistry), modelRegistry, runtimeCapabilityGuard: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).runtimeCapabilityGuard) }),
     publishModelUseCase: new PublishModelUseCase({ modelRegistry, runtimeTaskRegistry: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).runtimeTaskRegistry), runtimeCapabilityGuard: asyncLazyObject(async () => (await options.getRuntimeTaskFeatures()).runtimeCapabilityGuard) }),

@@ -4,6 +4,7 @@ from collections import OrderedDict
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from hashlib import sha256
+import importlib
 import importlib.metadata as importlib_metadata
 import importlib.util
 import json
@@ -71,6 +72,7 @@ class ConstrainedJsonDecoderRuntimeStatus:
 class ConstrainedJsonSchemaPlan:
     schema: dict[str, Any]
     canonical_schema: str
+    constraint_schema: str
     fingerprint: str
     byte_count: int
     node_count: int
@@ -349,6 +351,13 @@ def compile_constrained_json_schema(value: Any) -> ConstrainedJsonSchemaPlan:
             sort_keys=True,
             separators=(",", ":"),
         )
+        constraint_schema = json.dumps(
+            value,
+            ensure_ascii=False,
+            allow_nan=False,
+            sort_keys=False,
+            separators=(",", ":"),
+        )
     except (TypeError, ValueError) as error:
         raise _schema_error(
             "decoder-schema-invalid",
@@ -362,10 +371,11 @@ def compile_constrained_json_schema(value: Any) -> ConstrainedJsonSchemaPlan:
         )
     counters = _SchemaCounters()
     _validate_schema_node(value, depth=0, counters=counters)
-    normalized_schema = json.loads(canonical_schema)
+    normalized_schema = json.loads(constraint_schema)
     return ConstrainedJsonSchemaPlan(
         schema=normalized_schema,
         canonical_schema=canonical_schema,
+        constraint_schema=constraint_schema,
         fingerprint=sha256(canonical_schema.encode("utf-8")).hexdigest(),
         byte_count=byte_count,
         node_count=counters.nodes,
@@ -461,6 +471,25 @@ def _to_integer_token(value: Any) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) else None
 
 
+def _configure_windows_eager_outlines_torch_kernel() -> None:
+    """Avoid Outlines' optional Torch compiler path on Windows.
+
+    The pinned outlines-core kernel is decorated with ``torch.compile``. On a
+    normal end-user Windows installation, Torch may spend substantial memory
+    probing for an MSVC compiler before falling back to eager execution. The
+    original eager callable is retained by Torch, so use it directly on
+    Windows without changing the token mask or schema enforcement behavior.
+    """
+
+    if sys.platform != "win32":
+        return
+    torch_kernels = importlib.import_module("outlines_core.kernels.torch")
+    compiled_kernel = getattr(torch_kernels, "_apply_token_bitmask_inplace_kernel", None)
+    eager_kernel = getattr(compiled_kernel, "_torchdynamo_orig_callable", None)
+    if callable(eager_kernel):
+        setattr(torch_kernels, "_apply_token_bitmask_inplace_kernel", eager_kernel)
+
+
 class ConstrainedJsonDecoder:
     def __init__(
         self,
@@ -500,6 +529,7 @@ class ConstrainedJsonDecoder:
             from outlines.backends import get_json_schema_logits_processor
             from outlines.models.transformers import Transformers
 
+            _configure_windows_eager_outlines_torch_kernel()
             Draft202012Validator.check_schema(plan.schema)
             validator = Draft202012Validator(plan.schema)
             if self._outlines_model is None:
@@ -507,7 +537,7 @@ class ConstrainedJsonDecoder:
             processor = get_json_schema_logits_processor(
                 "outlines_core",
                 self._outlines_model,
-                plan.canonical_schema,
+                plan.constraint_schema,
             )
             return _CompiledConstraint(processor=processor, validate=validator.validate)
         except ConstrainedJsonDecoderError:

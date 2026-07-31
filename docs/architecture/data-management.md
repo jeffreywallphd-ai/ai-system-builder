@@ -24,11 +24,20 @@ publication guidance in the Review and create body instead of nested cards.
 
 ## Capability authority
 
-The shared dataset-preparation capability registry under modules/contracts/runtime is the authority for advertised source formats and task compatibility. UI selectors and the application guard consume the same registry. A format or task combination must not be shown as available merely because one adapter can recognize its extension.
+The shared dataset-preparation capability registry under modules/contracts/runtime is the authority for advertised source formats and task compatibility. UI selectors and the application guard consume the same registry. When filesystem byte retrieval omits descriptor metadata, staging reconciles the original name and media type from the workspace-authorized catalog record before capability resolution; it never guesses that an unknown object is JSON. A format or task combination must not be shown as available merely because one adapter can recognize its extension.
 
 The implemented source formats are CSV, JSON, JSON Lines, Parquet, text, Markdown, HTML, PDF, DOCX, and supported image formats. Text tasks accept the first nine formats. JSON readers accept one object, an array of objects, or records under `rows`, `data`, `items`, `examples`, or `annotations`; JSON Lines uses one object per nonempty line. The active task profile further limits that list. Legacy DOC, XLS, XLSX, TSV, RTF, ODT, AVIF, and HEIC paths are not advertised. Unsupported or incompatible sources fail before runtime work starts with a plain-language reason and action.
 
-Structured readers enforce bounded file and row limits. Remote Hugging Face selections retain their explicit revision and are localized through the repository and artifact-storage ports before runtime execution. Localization carries the authoritative workspace from the host boundary through binding reads, provider retrieval, local catalog/object storage, and binding updates; it also retains the provider filename for type classification. No renderer or transport performs ambient provider access.
+Structured readers enforce bounded file and row limits. The managed worker
+probes and repairs an exact patched PyArrow dependency before advertising
+runtime readiness so Parquet input and output do not depend on an uninstalled
+training-only package. A non-generating structured-data method reports a
+structured read or schema failure and never falls through to model-generation
+guidance. Automatic local-model placement likewise uses an exact managed
+Accelerate dependency that is probed and repaired during startup. Preparation
+preflights that component before source generation and returns a sanitized
+repair action if it is unavailable; a missing runtime component must not be
+collapsed into a misleading zero-example result. Remote Hugging Face selections retain their explicit revision and are localized through the repository and artifact-storage ports before runtime execution. Localization carries the authoritative workspace from the host boundary through binding reads, provider retrieval, local catalog/object storage, and binding updates; it also retains the provider filename for type classification. No renderer or transport performs ambient provider access.
 
 ## End-to-end path
 
@@ -236,7 +245,10 @@ the prompt, optional token-level decoder, parser, row mapper, and Parquet writer
 The compiler fingerprint binds both the schema and example so the host and worker
 cannot interpret separate templates. Every generation prompt requires exactly
 one JSON object that matches the runtime schema and forbids prose, Markdown,
-code fences, or other text before or after it. Nested output may be written as
+code fences, or other text before or after it. In unchecked compatibility mode,
+the worker may remove one exact `json` fence surrounding one bounded object
+before parsing; prose, partial or multiple fences, non-object JSON, and every
+schema or semantic mismatch still fail. Nested output may be written as
 JSON or Parquet but is rejected before generation when CSV is selected. Existing
 saved recipes without a layout receive the task's compatible defaults. Legacy
 extraction may continue to use a bounded free-form record for prompt-guided
@@ -260,10 +272,62 @@ It masks every next-token choice, requires EOS at an accepting state, and then
 parses and validates the same schema. Schema bytes, depth, nodes, properties,
 allowed choices, output bytes, and the model-local compiled-processor cache have
 hard limits. Any unavailable dependency, unsupported tokenizer or schema,
-compilation failure, token dead end, truncation, parse failure, or schema
-mismatch fails with a sanitized code and no unconstrained retry. When unchecked,
-prompt-guided generation remains available but all strict structural and
-semantic checks still run.
+compilation failure, unsupported runtime, or tokenizer mismatch fails with a
+sanitized code. A recoverable decoder/output failure may receive one bounded
+correction attempt that retains the same schema and constrained/unconstrained
+mode; checked generation never falls back. Every attempt runs the same strict
+structural and semantic checks. Grammar serialization preserves the desired
+example field order even though its integrity fingerprint remains
+order-independent. Windows workers use the pinned Outlines mask kernel's eager
+callable to avoid Torch's optional compiler probe; the mask and post-validation
+contract are unchanged.
+
+The desktop Python host respects an explicit `PYTHON_RUNTIME_COMMAND`.
+Without one, it uses bounded fixed version probes and prefers an installed
+Python 3.10 through 3.13 executable, matching the reviewed Outlines support
+range, instead of an unsupported platform-default Python. When no compatible
+interpreter exists, the baseline worker can still run, decoder capability stays
+false, both dataset-preparation hosts keep the checkbox unavailable, and a
+stale explicit request fails with a distinct sanitized unavailable code.
+
+Generation preflight validates the physical Transformers snapshot rather than
+trusting a persisted model lifecycle label. A usable text model requires its
+configuration, complete single or indexed weights, every referenced shard, and
+tokenizer files. An incomplete cache remains available for resumable download
+but cannot satisfy readiness or model loading. Preflight is local-only and
+cannot start or resume network acquisition; an incomplete snapshot stops with a
+distinct sanitized reason, and only the explicit model-download task may resume
+it. Dataset Preparation exposes that action in the main body of Step 3 rather
+than Advanced settings and opens the global notification activity immediately.
+The download worker makes three bounded attempts for transient transfer or late
+snapshot-validation failures and preserves bounded partial files for a later
+resume. Cache cleanup remains limited to containment or configured file/byte
+policy failures. Download progress is structured and rate-limited, and the
+redundant unstructured stderr progress renderer is disabled. Terminal download
+errors distinguish an interrupted transfer from an invalid completed snapshot
+without exposing provider exception text. The generation `skip` policy is
+limited to source sections for which the model explicitly returns no candidate
+or whose generated example remains structurally or semantically invalid after
+one bounded correction attempt. That output is rejected, the section is counted
+and warned as skipped, and later sections continue. Model loading, constrained
+decoder operation, inference, dependency, resource, and unexpected runtime
+errors fail the task with distinct sanitized codes and fixed corrective
+guidance. A run that produces no valid examples still fails.
+The renderer uses non-identifying capacity facts to step an untouched built-in
+selection down from Quality (7B) to Compact (3B), then Lightweight (1.5B) when
+necessary. Desktop includes currently available system memory so its default
+matches the worker's live preflight; server hosts may retain the conservative
+total-memory reserve without exposing shared-host utilization. Explicit and saved
+choices are preserved. Immediately before construction, the worker compares
+physical model weights with currently available CPU and accelerator memory. The
+closed model policy permits no system-memory overflow, at most 1 GiB, or at most
+4 GiB; desktop defaults to 1 GiB, while omitted non-desktop requests remain
+memory-only. The allowance applies only to CPU/automatic placement and never
+substitutes for CUDA memory. A larger shortfall fails with a sanitized resource
+code. When an allowed shortfall is actually present, the worker records a bounded
+`memory-overflow` progress phase and the app shell publishes a deduplicated warning
+that disk/swap use may slow generation. Model-status reads remain nonblocking
+during a valid load so resource telemetry and global progress continue to update.
 
 ## Review and approval boundary
 
@@ -286,7 +350,19 @@ cached materialized results are owned by the starting workspace and, in managed
 operation, organization. Status reads and cancellation fail as not found when
 the request does not carry the recorded scope.
 
-Progress, readiness, validation, and corrective actions remain inline. The global notification center receives only the completed cross-page outcome. Result summaries remain visible and include aggregate, training, validation, and test counts plus the saved destination and bounded warnings.
+Readiness, validation, and corrective actions remain inline. After the host accepts a dataset-preparation start (or the renderer begins bounded recovery of an uncertain accepted start), the app-shell notification bridge opens the workspace-scoped notification dropdown and polls the same authoritative task read by request id. Bounded progress and terminal success, review-required, failure, cancellation, or unknown status therefore remain visible after the user leaves the page. The bridge does not duplicate task state or expose raw runtime payloads. Result summaries remain visible on the preparation page and include aggregate, training, validation, and test counts plus the saved destination and bounded warnings.
+
+Topic-aware division applies a minimum semantic section size before treating
+low lexical continuity as a topic boundary. This prevents ordinary documents
+from degenerating into one generation request per sentence while preserving the
+configured maximum token limit and exact source spans. Before the first
+generation batch, authoritative task progress enters a `loading-model` phase;
+the global notification explains that model loading and the first batch can
+take longer. If the live preflight activates bounded system-memory overflow, a
+separate warning remains in notification history while ordinary task progress
+continues after every completed source section, even when generation retains a
+larger configured batch size. These updates expose only bounded counts and safe
+phase messages, not source or model output.
 
 ## Immutable dataset versions
 

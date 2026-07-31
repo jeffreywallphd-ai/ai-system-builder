@@ -12,6 +12,12 @@ const reviewedDecoderDependencies = [
   { name: "outlines-core", version: "0.2.14", license: "Apache-2.0" },
   { name: "jsonschema", version: "4.26.0", license: "MIT" },
 ];
+const reviewedParquetDependencies = [
+  { name: "pyarrow", version: "25.0.0", license: "Apache-2.0" },
+];
+const reviewedModelPlacementDependencies = [
+  { name: "accelerate", version: "1.14.0", license: "Apache-2.0" },
+];
 
 export function validatePythonDecoderDependencyInventory(requirementsText) {
   const lines = requirementsText
@@ -45,6 +51,70 @@ export function validatePythonDecoderDependencyInventory(requirementsText) {
   return {
     source: "modules/adapters/runtime/python/worker/requirements.txt",
     supportedPython: ">=3.10 <3.14",
+    packages,
+  };
+}
+
+export function validatePythonParquetDependencyInventory(requirementsText) {
+  const lines = requirementsText
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"));
+  const packages = reviewedParquetDependencies.map((dependency) => {
+    const expected = `${dependency.name}==${dependency.version}`;
+    if (lines.filter((line) => line.toLowerCase().startsWith(`${dependency.name}==`)).length !== 1) {
+      throw new Error(
+        `Python Parquet dependency '${dependency.name}' must appear exactly once.`,
+      );
+    }
+    if (!lines.includes(expected)) {
+      throw new Error(
+        `Python Parquet dependency '${dependency.name}' must use the reviewed exact version.`,
+      );
+    }
+    return {
+      ...dependency,
+      purl: `pkg:pypi/${dependency.name}@${dependency.version}`,
+    };
+  });
+
+  return {
+    source: "modules/adapters/runtime/python/worker/requirements.txt",
+    supportedPython: ">=3.10 <3.15",
+    packages,
+  };
+}
+
+export function validatePythonModelPlacementDependencyInventory(requirementsText) {
+  const lines = requirementsText
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"));
+  const packages = reviewedModelPlacementDependencies.map((dependency) => {
+    const expected = `${dependency.name}==${dependency.version}`;
+    if (
+      lines.filter((line) =>
+        line.toLowerCase().startsWith(`${dependency.name}==`),
+      ).length !== 1
+    ) {
+      throw new Error(
+        `Python model-placement dependency '${dependency.name}' must appear exactly once.`,
+      );
+    }
+    if (!lines.includes(expected)) {
+      throw new Error(
+        `Python model-placement dependency '${dependency.name}' must use the reviewed exact version.`,
+      );
+    }
+    return {
+      ...dependency,
+      purl: `pkg:pypi/${dependency.name}@${dependency.version}`,
+    };
+  });
+
+  return {
+    source: "modules/adapters/runtime/python/worker/requirements.txt",
+    supportedPython: ">=3.10 <3.15",
     packages,
   };
 }
@@ -139,9 +209,33 @@ export function runDependencySecurityCheck() {
       "utf8",
     ),
   );
+  const pythonParquet = validatePythonParquetDependencyInventory(
+    readFileSync(
+      "modules/adapters/runtime/python/worker/requirements.txt",
+      "utf8",
+    ),
+  );
+  const pythonModelPlacement =
+    validatePythonModelPlacementDependencyInventory(
+      readFileSync(
+        "modules/adapters/runtime/python/worker/requirements.txt",
+        "utf8",
+      ),
+    );
 
   console.log(
-    JSON.stringify({ runtime, toolchain, sbom, pythonDecoder }, null, 2),
+    JSON.stringify(
+      {
+        runtime,
+        toolchain,
+        sbom,
+        pythonDecoder,
+        pythonParquet,
+        pythonModelPlacement,
+      },
+      null,
+      2,
+    ),
   );
   if (runtime.blocking) {
     throw new Error("Runtime dependency audit contains known vulnerabilities.");
