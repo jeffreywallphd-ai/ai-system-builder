@@ -9,6 +9,8 @@ import { LoadingSpinner } from "../components/LoadingSpinner";
 import { TransientNotificationPublisher } from "../notifications/TransientNotificationPublisher";
 import type { SystemPublishedLifecycleClient } from "./SystemPublishedLifecycleClient";
 
+const RUNNING_STATUS_REFRESH_INTERVAL_MS = 1_000;
+
 export function SystemPublishedLifecycleCard({
   workspaceId,
   build,
@@ -31,14 +33,17 @@ export function SystemPublishedLifecycleCard({
   const requestGeneration = useRef(0);
   const actionInFlight = useRef(false);
 
-  async function refresh(expectedGeneration = requestGeneration.current) {
+  async function refresh(
+    expectedGeneration = requestGeneration.current,
+    background = false,
+  ) {
     if (!releaseId) {
       setLoading(false);
       setProjection(undefined);
       setError("This published build does not have a release reference.");
       return;
     }
-    setLoading(true);
+    if (!background) setLoading(true);
     setError(undefined);
     let result: Awaited<ReturnType<SystemPublishedLifecycleClient["read"]>>;
     try {
@@ -69,6 +74,20 @@ export function SystemPublishedLifecycleCard({
       requestGeneration.current += 1;
     };
   }, [client, releaseId, workspaceId]);
+
+  useEffect(() => {
+    if (projection?.state !== "running") return;
+    const expectedGeneration = requestGeneration.current;
+    const interval = globalThis.setInterval(() => {
+      if (
+        actionInFlight.current ||
+        requestGeneration.current !== expectedGeneration
+      )
+        return;
+      void refresh(expectedGeneration, true);
+    }, RUNNING_STATUS_REFRESH_INTERVAL_MS);
+    return () => globalThis.clearInterval(interval);
+  }, [client, projection?.revision, projection?.state, releaseId, workspaceId]);
 
   async function invoke(action: SystemPublishedLifecycleAction) {
     const current = projection;
@@ -181,7 +200,13 @@ export function SystemPublishedLifecycleCard({
           ) : null}
         </div>
       ) : null}
-      <TransientNotificationPublisher message={notice} title="Published system updated" tone="success" source="Published Systems" workspaceId={workspaceId} />
+      <TransientNotificationPublisher
+        message={notice}
+        title="Published system updated"
+        tone="success"
+        source="Published Systems"
+        workspaceId={workspaceId}
+      />
       {!error && diagnostic ? (
         <p
           className={`ui-status ui-status--${diagnostic.severity === "error" ? "error" : "warning"}`}

@@ -101,6 +101,7 @@ export interface DesktopPrepareTrainingDatasetTaskCancelRequestPayload {
 export interface DesktopPrepareTrainingDatasetApproveRequestPayload {
   requestId: string;
   reportFingerprint: string;
+  outputBaseName?: string;
   boundary: DesktopDatasetPreparationBoundaryContext;
 }
 export interface DesktopPrepareTrainingDatasetReviewPageRequestPayload {
@@ -385,6 +386,9 @@ export function createDesktopPrepareTrainingDatasetApproveRequest(
     {
       requestId: norm(payload.requestId, "requestId"),
       reportFingerprint: norm(payload.reportFingerprint, "reportFingerprint"),
+      ...(payload.outputBaseName !== undefined
+        ? { outputBaseName: payload.outputBaseName }
+        : {}),
       boundary: b(payload.boundary),
     },
     options,

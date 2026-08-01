@@ -59,44 +59,31 @@ describe("registerDatasetPreparationIpc", () => {
   });
 
   it("maps succeeded read status with materialized result", async () => {
-    const readPrepareTrainingDataset = testDouble
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        value: {
-          requestId: "r1",
-          taskType: "prepare-training-dataset",
-          status: "succeeded",
-          result: {
-            outputs: {},
-            provenance: {
-              sourceArtifactIds: [],
-              recipe: {
-                normalization: { targetFormat: "markdown" },
-                chunking: {
-                  strategy: "character",
-                  chunkSize: 1,
-                  chunkOverlap: 0,
-                },
-                generation: {
-                  mode: "qa",
-                  model: { provider: "transformers", modelId: "m" },
-                },
+    const readPrepareTrainingDataset = testDouble.fn().mockResolvedValue({
+      ok: true,
+      value: {
+        requestId: "r1",
+        taskType: "prepare-training-dataset",
+        status: "succeeded",
+        result: {
+          outputs: {},
+          provenance: {
+            sourceArtifactIds: [],
+            recipe: {
+              normalization: { targetFormat: "markdown" },
+              chunking: {
+                strategy: "character",
+                chunkSize: 1,
+                chunkOverlap: 0,
               },
-              split: { trainRatio: 0.8, testRatio: 0.2 },
-              output: { format: "jsonl" },
-              generationModelId: "m",
-              summary: {
-                sourceDocumentCount: 1,
-                normalizedDocumentCount: 1,
-                skippedDocumentCount: 0,
-                chunkCount: 1,
-                generatedExampleCount: 1,
-                datasetRowCount: 1,
-                trainRowCount: 1,
-                testRowCount: 0,
+              generation: {
+                mode: "qa",
+                model: { provider: "transformers", modelId: "m" },
               },
             },
+            split: { trainRatio: 0.8, testRatio: 0.2 },
+            output: { format: "jsonl" },
+            generationModelId: "m",
             summary: {
               sourceDocumentCount: 1,
               normalizedDocumentCount: 1,
@@ -108,8 +95,19 @@ describe("registerDatasetPreparationIpc", () => {
               testRowCount: 0,
             },
           },
+          summary: {
+            sourceDocumentCount: 1,
+            normalizedDocumentCount: 1,
+            skippedDocumentCount: 0,
+            chunkCount: 1,
+            generatedExampleCount: 1,
+            datasetRowCount: 1,
+            trainRowCount: 1,
+            testRowCount: 0,
+          },
         },
-      });
+      },
+    });
     const handler = createDesktopPrepareTrainingDatasetTaskReadIpcHandler({
       startPrepareTrainingDataset: testDouble.fn(),
       readPrepareTrainingDataset,
@@ -163,28 +161,24 @@ describe("registerDatasetPreparationIpc", () => {
         testRowCount: 0,
       },
     };
-    const readPrepareTrainingDataset = testDouble
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        value: {
-          requestId: "r1",
-          taskType: "prepare-training-dataset",
-          status: "review-required",
-          result,
-        },
-      });
-    const approvePreparedTrainingDataset = testDouble
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        value: {
-          requestId: "r1",
-          taskType: "prepare-training-dataset",
-          status: "succeeded",
-          result,
-        },
-      });
+    const readPrepareTrainingDataset = testDouble.fn().mockResolvedValue({
+      ok: true,
+      value: {
+        requestId: "r1",
+        taskType: "prepare-training-dataset",
+        status: "review-required",
+        result,
+      },
+    });
+    const approvePreparedTrainingDataset = testDouble.fn().mockResolvedValue({
+      ok: true,
+      value: {
+        requestId: "r1",
+        taskType: "prepare-training-dataset",
+        status: "succeeded",
+        result,
+      },
+    });
     const useCase = {
       startPrepareTrainingDataset: testDouble.fn(),
       readPrepareTrainingDataset,
@@ -210,6 +204,7 @@ describe("registerDatasetPreparationIpc", () => {
       createDesktopPrepareTrainingDatasetApproveRequest({
         requestId: "r1",
         reportFingerprint: "a".repeat(64),
+        outputBaseName: "support-tickets-2026",
         boundary: { host: "desktop", source: "x" },
       }),
     );
@@ -217,7 +212,11 @@ describe("registerDatasetPreparationIpc", () => {
     expect((read as any).value.status).toBe("review-required");
     expect((approval as any).value.status).toBe("succeeded");
     expect(approvePreparedTrainingDataset).toHaveBeenCalledWith(
-      { requestId: "r1", reportFingerprint: "a".repeat(64) },
+      {
+        requestId: "r1",
+        reportFingerprint: "a".repeat(64),
+        outputBaseName: "support-tickets-2026",
+      },
       expect.objectContaining({
         organizationId: "organization-a",
         principalId: "person-a",

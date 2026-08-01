@@ -34,6 +34,7 @@ Current scope:
 - settings page server restart control that calls `POST /api/server/restart`
 - token-first style baseline under `src/styles/`
 - Data Management tab content uses the shared sectioned panel header style for Data Artifact Ingester and Artifact Browser; panel headers stay title-only, with actions such as Artifact Browser refresh placed in the body.
+- Dataset Preparation colocates its optional meaningful save name with final approval; one approval saves the complete curated ready set and opens the exact saved dataset in Artifact Browser, without a post-save Saved versions section. Dataset Review persists rejections and approved edits as immutable minor versions.
 
 ## Hugging Face auth behavior
 

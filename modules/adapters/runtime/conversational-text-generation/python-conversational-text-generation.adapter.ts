@@ -9,8 +9,13 @@ import type {
 import type { PythonRuntimePort } from "../../../application/ports/runtime";
 import type { ModelRegistryPort } from "../../../application/ports/model";
 import { SystemBuilderModelAuthorityService } from "../../../application/services/system-builder";
+import type { ModelInventoryRecord } from "../../../contracts/model";
 import { createSystemBuilderModelBinding } from "../../../contracts/system-builder";
-import { createWorkspaceId } from "../../../contracts/workspace";
+import {
+  createWorkspaceId,
+  type WorkspaceId,
+} from "../../../contracts/workspace";
+import { PYTHON_RUNTIME_TASK_TIMEOUTS } from "../python/pythonRuntimeTaskTimeoutPolicy";
 
 export const PYTHON_CONVERSATIONAL_ADAPTER_ID =
   "python-runtime.conversation-text-generation.v1";
@@ -32,14 +37,9 @@ function toMessages(
 
 export function createPythonConversationalTextGenerationInvocationAdapter(
   runtimePort: PythonRuntimePort,
-  modelRegistry: Pick<ModelRegistryPort, "getModelRecord">,
+  modelRegistry: Pick<ModelRegistryPort, "getModelRecord" | "listModels">,
 ): ConversationTurnInvocationPort {
-  const modelAuthority = new SystemBuilderModelAuthorityService({
-    ...modelRegistry,
-    async listModels() {
-      return { models: [] };
-    },
-  });
+  const modelAuthority = new SystemBuilderModelAuthorityService(modelRegistry);
   return {
     async invokeConversationTurn(
       request,
@@ -64,13 +64,27 @@ export function createPythonConversationalTextGenerationInvocationAdapter(
           modelBinding,
         );
         if (resolution.status !== "ready") return { status: "blocked" };
+        const runtimeModel = await resolveRuntimeModel(
+          modelAuthority,
+          modelRegistry,
+          createWorkspaceId(request.source.workspaceId),
+          resolution.record,
+        );
+        if (!runtimeModel) return { status: "blocked" };
         await runtimePort.startTask({
           requestId,
           taskType: "conversation-text-generation",
+          timeoutMs: PYTHON_RUNTIME_TASK_TIMEOUTS.short,
           payload: {
             messages: toMessages(request),
             generation: request.context.generation,
-            selectedModelId: resolution.record.modelId,
+            selectedModelId: runtimeModel.selectedModelId,
+            ...(runtimeModel.baseModelId
+              ? { baseModelId: runtimeModel.baseModelId }
+              : {}),
+            ...(runtimeModel.adapterRevision
+              ? { adapterRevision: runtimeModel.adapterRevision }
+              : {}),
           },
           metadata: {
             operation: "conversation.turn.invoke",
@@ -78,7 +92,7 @@ export function createPythonConversationalTextGenerationInvocationAdapter(
             conversationSessionId: request.source.conversationSessionId,
           },
         });
-        const deadline = Date.now() + 30_000;
+        const deadline = Date.now() + PYTHON_RUNTIME_TASK_TIMEOUTS.short;
         while (Date.now() < deadline) {
           const status = await runtimePort.readTaskStatus(requestId);
           if (status.status === "succeeded") {
@@ -101,6 +115,77 @@ export function createPythonConversationalTextGenerationInvocationAdapter(
         return { status: "failed", code: "internal" };
       }
     },
+  };
+}
+
+interface ResolvedRuntimeModel {
+  readonly selectedModelId: string;
+  readonly baseModelId?: string;
+  readonly adapterRevision?: string;
+}
+
+async function resolveRuntimeModel(
+  authority: SystemBuilderModelAuthorityService,
+  registry: Pick<ModelRegistryPort, "getModelRecord" | "listModels">,
+  workspaceId: WorkspaceId,
+  selected: ModelInventoryRecord,
+): Promise<ResolvedRuntimeModel | undefined> {
+  if (!selected.modelId) return undefined;
+  if (selected.artifactForm !== "adapter") {
+    return { selectedModelId: selected.modelId };
+  }
+
+  const associatedBaseModelId = (
+    selected.adapterOfModelId ?? selected.baseModelId
+  )?.trim();
+  if (!associatedBaseModelId) return undefined;
+
+  const metadataBaseRecordId =
+    typeof selected.metadata?.["baseModelRecordId"] === "string"
+      ? selected.metadata["baseModelRecordId"].trim()
+      : undefined;
+  let baseRecordId: string | undefined;
+  if (metadataBaseRecordId) {
+    baseRecordId = metadataBaseRecordId;
+  } else {
+    const listed = await registry.listModels({
+      workspaceId,
+      limit: 500,
+      includeDiscovered: true,
+      includeSharedStorage: true,
+    });
+    const matches = listed.models.filter(
+      (candidate) =>
+        candidate.workspaceId === workspaceId &&
+        candidate.modelId === associatedBaseModelId &&
+        candidate.artifactForm !== "adapter",
+    );
+    if (matches.length !== 1) return undefined;
+    baseRecordId = matches[0]?.modelRecordId;
+  }
+
+  if (!baseRecordId) return undefined;
+  let binding;
+  try {
+    binding = createSystemBuilderModelBinding(baseRecordId);
+  } catch {
+    return undefined;
+  }
+  const baseResolution = await authority.resolve(workspaceId, binding);
+  if (
+    baseResolution.status !== "ready" ||
+    baseResolution.record.artifactForm === "adapter" ||
+    baseResolution.record.modelId !== associatedBaseModelId
+  ) {
+    return undefined;
+  }
+
+  return {
+    selectedModelId: selected.modelId,
+    baseModelId: baseResolution.record.modelId,
+    ...(selected.localPath && selected.generatedFromRunId
+      ? { adapterRevision: selected.generatedFromRunId }
+      : {}),
   };
 }
 

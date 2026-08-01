@@ -18,7 +18,7 @@ describe("datasetPreparationRequestBuilder", () => {
       failurePolicy: "skip",
       shuffle: true,
       outputFormat: "parquet",
-      outputBaseName: "",
+      outputBaseName: "support-tickets-2026",
       localDestinationEnabled: true,
       huggingFaceDestinationEnabled: false,
       huggingFaceRepository: "",
@@ -80,6 +80,9 @@ describe("datasetPreparationRequestBuilder", () => {
     });
     expect(request.split.seed).toBe(1234);
     expect(request.split).toMatchObject({ trainRatio: 0.8, testRatio: 0.2 });
+    expect(request.output.naming).toEqual({
+      baseName: "support-tickets-2026",
+    });
     expect(request.advanced).toMatchObject({
       preset: "generate-examples",
       content: { strategy: "semantic", ocrEnabled: false },

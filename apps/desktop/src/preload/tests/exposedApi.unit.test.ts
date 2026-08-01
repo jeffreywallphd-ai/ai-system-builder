@@ -95,6 +95,9 @@ import {
   DESKTOP_MODEL_RECORD_DELETE_REQUEST_CHANNEL,
   DESKTOP_MODEL_FOLDER_REVEAL_REQUEST_CHANNEL,
   DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_CANCEL_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_SAVE_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_DISCARD_REQUEST_CHANNEL,
   createDesktopModelBrowseSuccessResponse,
   createDesktopModelDetailsReadSuccessResponse,
   createDesktopModelListSuccessResponse,
@@ -105,6 +108,9 @@ import {
   createDesktopModelFolderRevealSuccessResponse,
   createDesktopModelTrainSuccessResponse,
   createDesktopModelTrainStatusSuccessResponse,
+  createDesktopModelTrainCancelSuccessResponse,
+  createDesktopModelTrainSaveSuccessResponse,
+  createDesktopModelTrainDiscardSuccessResponse,
   DESKTOP_CONVERSATION_EXECUTION_V2_CREATE_SESSION_REQUEST_CHANNEL,
   DESKTOP_CONVERSATION_EXECUTION_V2_APPROVE_SESSION_REQUEST_CHANNEL,
   DESKTOP_CONVERSATION_EXECUTION_V2_LIST_SESSIONS_REQUEST_CHANNEL,
@@ -1804,6 +1810,18 @@ it("maps model management bridge calls to dedicated model channels", async () =>
       status: "running",
       progress: { epoch: 0, totalEpochs: 1, batch: 0, totalBatches: 59 },
     }),
+    createDesktopModelTrainCancelSuccessResponse({
+      runId: "run-1",
+      status: "cancelled",
+    }),
+    createDesktopModelTrainSaveSuccessResponse({
+      runId: "run-1",
+      status: "succeeded",
+    }),
+    createDesktopModelTrainDiscardSuccessResponse({
+      runId: "run-2",
+      status: "cancelled",
+    }),
   ];
   let index = 0;
   const invoke = testDouble
@@ -1836,7 +1854,16 @@ it("maps model management bridge calls to dedicated model channels", async () =>
       destination: { local: { enabled: true } },
     },
   });
-  await api.readModelTrainingStatus({ runId: "run-1" });
+  await api.readModelTrainingStatus({
+    runId: "run-1",
+    workspaceId: "workspace-a" as never,
+  });
+  await api.cancelModelTraining({
+    runId: "run-1",
+    workspaceId: "workspace-a" as never,
+  });
+  await api.saveModelTraining({ runId: "run-1", workspaceId: "workspace-a" as never });
+  await api.discardModelTraining({ runId: "run-2", workspaceId: "workspace-a" as never });
 
   expect(invoke.mock.calls[0]?.[0]).toBe(
     DESKTOP_MODEL_BROWSE_REQUEST_CHANNEL.value,
@@ -1866,6 +1893,11 @@ it("maps model management bridge calls to dedicated model channels", async () =>
   expect(invoke.mock.calls[9]?.[0]).toBe(
     DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL.value,
   );
+  expect(invoke.mock.calls[10]?.[0]).toBe(
+    DESKTOP_MODEL_TRAIN_CANCEL_REQUEST_CHANNEL.value,
+  );
+  expect(invoke.mock.calls[11]?.[0]).toBe(DESKTOP_MODEL_TRAIN_SAVE_REQUEST_CHANNEL.value);
+  expect(invoke.mock.calls[12]?.[0]).toBe(DESKTOP_MODEL_TRAIN_DISCARD_REQUEST_CHANNEL.value);
 });
 
 describe("desktop preload user-library bridge", () => {

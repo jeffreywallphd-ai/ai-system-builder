@@ -470,6 +470,7 @@ export interface DesktopDatasetPreparationApi {
     input: {
       requestId: string;
       reportFingerprint: string;
+      outputBaseName?: string;
       workspaceId?: string;
     },
     context?: DesktopBridgeRequestContext,
@@ -642,6 +643,7 @@ interface DesktopApiBridge {
     input: {
       requestId: string;
       reportFingerprint: string;
+      outputBaseName?: string;
       workspaceId?: string;
     },
     context?: DesktopBridgeRequestContext,
@@ -1343,6 +1345,18 @@ interface DesktopApiBridge {
   ) => Promise<unknown>;
   readModelTrainingStatus?: (
     input: { runId: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  cancelModelTraining?: (
+    input: { runId: string; workspaceId: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  saveModelTraining?: (
+    input: { runId: string; workspaceId: string },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  discardModelTraining?: (
+    input: { runId: string; workspaceId: string },
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   validateModel?: (

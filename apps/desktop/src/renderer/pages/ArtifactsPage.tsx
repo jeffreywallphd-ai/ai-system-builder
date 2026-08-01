@@ -21,6 +21,13 @@ export function ArtifactsPage({
   onUploaded,
 }: ArtifactsPageProps) {
   const [activeTabId, setActiveTabId] = useState("ingestion");
+  const [preparedArtifactStorageKey, setPreparedArtifactStorageKey] =
+    useState<string>();
+  const onDatasetPrepared = (artifactStorageKey: string) => {
+    setPreparedArtifactStorageKey(artifactStorageKey);
+    setActiveTabId("browser");
+    onUploaded();
+  };
   const datasetReviewService = useMemo(() => {
     const client = createDesktopDatasetPreparationClient();
     return {
@@ -73,6 +80,7 @@ export function ArtifactsPage({
       </p>
       <TabbedPanel
         tabListAriaLabel="Artifact workspace panels"
+        activeTabId={activeTabId}
         defaultTabId="ingestion"
         onTabChange={setActiveTabId}
         tabs={[
@@ -95,6 +103,10 @@ export function ArtifactsPage({
                 key={`${workspaceId}-${refreshToken}`}
                 workspaceId={workspaceId}
                 readParquetPreview={parquetPreviewReader}
+                initialSelectedStorageKey={preparedArtifactStorageKey}
+                onInitialSelectionHandled={() =>
+                  setPreparedArtifactStorageKey(undefined)
+                }
               />
             ),
           },
@@ -105,7 +117,7 @@ export function ArtifactsPage({
               <DatasetPreparationFeature
                 key={`dataset-${workspaceId}`}
                 workspaceId={workspaceId}
-                onPrepared={onUploaded}
+                onPrepared={onDatasetPrepared}
               />
             ),
           },

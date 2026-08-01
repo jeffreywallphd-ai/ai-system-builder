@@ -241,6 +241,7 @@ describe("desktop webpack typecheck", () => {
       "apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx",
       "apps/desktop/src/renderer/features/artifact-browser/api/desktopArtifactBrowserClient.ts",
       "apps/desktop/src/renderer/features/artifact-browser/helpers/artifactMediaBytes.ts",
+      "modules/ui/shared/artifact-preview/pdf-worker-url.d.ts",
     ].map((relativePath) => path.resolve(repoRoot, relativePath));
 
     const configFile = ts.readConfigFile(configPath, ts.sys.readFile);

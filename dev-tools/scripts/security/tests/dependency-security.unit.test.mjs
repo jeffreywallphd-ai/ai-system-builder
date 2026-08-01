@@ -10,6 +10,7 @@ import {
   validatePythonDecoderDependencyInventory,
   validatePythonModelPlacementDependencyInventory,
   validatePythonParquetDependencyInventory,
+  validatePythonTextTrainingDependencyInventory,
   validateRuntimeSbom,
 } from "../check-dependency-security.mjs";
 
@@ -262,7 +263,7 @@ test("Python Parquet support retains the patched reviewed inventory", async () =
   );
 });
 
-test("Python automatic model placement retains the reviewed inventory", async () => {
+test("Python model loading retains the reviewed placement and LoRA inventory", async () => {
   const requirements = await readFile(
     "modules/adapters/runtime/python/worker/requirements.txt",
     "utf8",
@@ -277,6 +278,12 @@ test("Python automatic model placement retains the reviewed inventory", async ()
       license: "Apache-2.0",
       purl: "pkg:pypi/accelerate@1.14.0",
     },
+    {
+      name: "peft",
+      version: "0.15.2",
+      license: "Apache-2.0",
+      purl: "pkg:pypi/peft@0.15.2",
+    },
   ]);
   assert.throws(
     () =>
@@ -284,6 +291,50 @@ test("Python automatic model placement retains the reviewed inventory", async ()
         requirements.replace("accelerate==1.14.0", "accelerate==1.13.0"),
       ),
     /reviewed exact version/,
+  );
+  assert.throws(
+    () =>
+      validatePythonModelPlacementDependencyInventory(
+        requirements.replace("peft==0.15.2", "peft==0.15.1"),
+      ),
+    /reviewed exact version/,
+  );
+});
+
+test("Python text training retains the reviewed exact direct inventory", async () => {
+  const requirements = await readFile(
+    "modules/adapters/runtime/python/worker/requirements-training-text.txt",
+    "utf8",
+  );
+  const inventory = validatePythonTextTrainingDependencyInventory(requirements);
+  assert.equal(inventory.supportedPython, ">=3.10 <3.15");
+  assert.deepEqual(inventory.packages, [
+    {
+      name: "datasets",
+      version: "5.0.1",
+      license: "Apache-2.0",
+      purl: "pkg:pypi/datasets@5.0.1",
+    },
+    {
+      name: "peft",
+      version: "0.15.2",
+      license: "Apache-2.0",
+      purl: "pkg:pypi/peft@0.15.2",
+    },
+  ]);
+  assert.throws(
+    () =>
+      validatePythonTextTrainingDependencyInventory(
+        requirements.replace("peft==0.15.2", "peft>=0.15.2"),
+      ),
+    /reviewed exact version/,
+  );
+  assert.throws(
+    () =>
+      validatePythonTextTrainingDependencyInventory(
+        `${requirements}diffusers==0.39.0\n`,
+      ),
+    /unreviewed direct packages/,
   );
 });
 

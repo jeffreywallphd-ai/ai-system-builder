@@ -57,6 +57,8 @@ class LoadedModelDescriptor(BaseModel):
     inferenceMode: Literal["text2text", "causal", "chat"]
     device: Literal["cpu", "cuda", "auto"] | None = None
     torchDtype: Literal["auto", "float16", "bfloat16", "float32"] | None = None
+    adapterModelId: str | None = None
+    adapterRevision: str | None = None
     localPath: str | None = None
 
 
@@ -171,6 +173,8 @@ class LocalModelConfig(BaseModel):
     inferenceMode: Literal["auto", "text2text", "causal", "chat"] = "auto"
     device: Literal["cpu", "cuda", "auto"] | None = None
     torchDtype: Literal["auto", "float16", "bfloat16", "float32"] | None = None
+    adapterModelId: str | None = None
+    adapterRevision: str | None = None
     memoryOverflowPolicy: Literal["none", "limited", "extended"] = "none"
 
 

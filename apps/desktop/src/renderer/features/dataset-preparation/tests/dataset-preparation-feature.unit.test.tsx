@@ -800,8 +800,9 @@ describe("DatasetPreparationFeature", () => {
 
     expect(container.textContent).not.toContain("Publish to Hugging Face");
     expect(container.textContent).toContain(
-      "saved locally as a reusable version first",
+      "opens in Artifact Browser",
     );
+    expect(container.textContent).not.toContain("Saved versions");
 
     const form = container.querySelector("form") as HTMLFormElement;
     await act(async () => {
@@ -2830,6 +2831,7 @@ describe("DatasetPreparationFeature", () => {
 
     expect(startPrepareTrainingDataset).toHaveBeenCalledTimes(1);
     expect(onPrepared).toHaveBeenCalledTimes(1);
+    expect(onPrepared).toHaveBeenCalledWith("stored-dataset");
   });
 
   it("does not continue polling updates after unmount during in-flight task read", async () => {

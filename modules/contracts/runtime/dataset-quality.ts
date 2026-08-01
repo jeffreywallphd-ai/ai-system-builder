@@ -157,6 +157,7 @@ export type DatasetQualityReviewState =
 export interface DatasetQualityApprovalRequest {
   requestId: string;
   reportFingerprint: string;
+  outputBaseName?: string;
 }
 
 export type DatasetQualityReviewLineId =

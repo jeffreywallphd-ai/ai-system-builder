@@ -72,6 +72,7 @@ import {
   resolveDatasetPreparationTaskProfileDefinition,
   resolveDefaultDatasetPreparationPromptTemplate,
   resolveDefaultDatasetPreparationTextGenerationModel,
+  validateDatasetPreparationSaveName,
 } from "../../contracts/runtime";
 
 import type { ApplicationRequestContext } from "../ports";
@@ -313,6 +314,10 @@ function validateDatasetPreparationCommand(
   ) {
     return "Choose a supported saved file format.";
   }
+  const saveNameError = validateDatasetPreparationSaveName(
+    command.output.naming?.baseName,
+  );
+  if (saveNameError) return saveNameError;
   if (command.quality !== undefined) {
     if (
       !isRecord(command.quality) ||
@@ -638,6 +643,29 @@ function buildGeneratedDatasetStorageKey(
   const outputBaseName = safeOutputName.length > 0 ? safeOutputName : "dataset";
   const suffix = randomUUID().replaceAll("-", "");
   return `generated/${compactTimestamp}-${suffix}-${outputBaseName}.${outputFormat}`;
+}
+
+function applyApprovedDatasetSaveName(
+  runtimeResult: PrepareTrainingDatasetResult,
+  requestedBaseName: string,
+): PrepareTrainingDatasetResult {
+  const baseName = requestedBaseName.trim() || "training-dataset";
+  return {
+    ...runtimeResult,
+    outputs: runtimeResult.outputs.map((output) => {
+      const suffix =
+        output.role === "train" ||
+        output.role === "validation" ||
+        output.role === "test"
+          ? `-${output.role}`
+          : output.role === "dataset" || output.role === "artifact"
+            ? ""
+            : undefined;
+      return suffix === undefined
+        ? output
+        : { ...output, name: `${baseName}${suffix}` };
+    }),
+  };
 }
 
 function buildDatasetMetadata(
@@ -2382,6 +2410,15 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         context,
       );
     }
+    const saveNameError = validateDatasetPreparationSaveName(
+      approval.outputBaseName,
+    );
+    if (saveNameError) {
+      return createFailureResult(
+        createContractError("validation", saveNameError),
+        context,
+      );
+    }
     const pending = this.pendingQualityReviewsByRequestId.get(
       approval.requestId,
     );
@@ -2421,9 +2458,31 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     }
 
     try {
+      const outputNameWasProvided = approval.outputBaseName !== undefined;
+      const approvedOutputBaseName = outputNameWasProvided
+        ? approval.outputBaseName!.trim() || undefined
+        : pending.command.output.naming?.baseName;
+      const approvedCommand = outputNameWasProvided
+        ? {
+            ...pending.command,
+            output: {
+              ...pending.command.output,
+              naming: {
+                ...pending.command.output.naming,
+                baseName: approvedOutputBaseName,
+              },
+            },
+          }
+        : pending.command;
+      const approvedRuntimeResult = outputNameWasProvided
+        ? applyApprovedDatasetSaveName(
+            pending.runtimeResult,
+            approval.outputBaseName!,
+          )
+        : pending.runtimeResult;
       const materialized = await this.materializeRuntimeResult(
-        pending.command,
-        pending.runtimeResult,
+        approvedCommand,
+        approvedRuntimeResult,
         pending.runtimeWorkingDirectory,
         context,
       );
@@ -2445,8 +2504,8 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       };
       const finalized = await this.finalizeDatasetVersion(
         approval.requestId,
-        pending.command,
-        pending.runtimeResult,
+        approvedCommand,
+        approvedRuntimeResult,
         approved,
         context,
       );

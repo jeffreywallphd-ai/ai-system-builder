@@ -44,6 +44,10 @@ MEMORY_OVERFLOW_POLICY_BYTES = {
 HUGGINGFACE_MODEL_ID_PATTERN = re.compile(
     r"^[A-Za-z0-9][A-Za-z0-9._-]{0,95}/[A-Za-z0-9][A-Za-z0-9._-]{0,95}$"
 )
+HUGGINGFACE_SNAPSHOT_REVISION_PATTERN = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$"
+)
+MAX_ADAPTER_CONFIG_BYTES = 1024 * 1024
 
 
 def configure_huggingface_download_environment() -> None:
@@ -881,6 +885,10 @@ class TransformersText2TextGenerator(LocalTextGenerator):
 
     @staticmethod
     def _build_pipeline(model_config: LocalModelConfig):
+        if model_config.adapterModelId:
+            raise GenerationModelLoadError(
+                "LoRA conversation inference is supported only for causal or chat models."
+            )
         configure_huggingface_download_environment()
         try:
             from transformers import pipeline
@@ -939,6 +947,7 @@ class TransformersCausalGenerator(LocalTextGenerator):
         model_kwargs = _resolve_model_kwargs(model_config)
         tokenizer = AutoTokenizer.from_pretrained(resolved_model_reference)
         model = AutoModelForCausalLM.from_pretrained(resolved_model_reference, **model_kwargs)
+        model = _attach_lora_adapter(model, model_config)
 
         if getattr(tokenizer, "pad_token_id", None) is None:
             tokenizer.pad_token_id = getattr(tokenizer, "eos_token_id", None)
@@ -1299,18 +1308,122 @@ def ensure_generation_model_is_available(config: ExampleGenerationConfig) -> Gen
     )
 
 
-_GENERATOR_CACHE: dict[tuple[str, str, str, str, str], LocalTextGenerator] = {}
+def _validate_adapter_snapshot_result(
+    local_path: str,
+    expected_base_model_id: str,
+) -> None:
+    root = Path(local_path).resolve(strict=True)
+    _snapshot_file_stats(root)
+    config_path = (root / "adapter_config.json").resolve(strict=True)
+    try:
+        config_path.relative_to(root)
+    except ValueError as error:
+        raise RuntimeError("LoRA adapter configuration escaped its snapshot.") from error
+    if not config_path.is_file() or config_path.stat().st_size > MAX_ADAPTER_CONFIG_BYTES:
+        raise RuntimeError("LoRA adapter configuration is missing or invalid.")
+    try:
+        config_payload = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise RuntimeError("LoRA adapter configuration is unreadable.") from error
+    if not isinstance(config_payload, dict):
+        raise RuntimeError("LoRA adapter base-model association does not match.")
+    accepted_base_references = {expected_base_model_id}
+    resolved_base_reference = _RESOLVED_MODEL_REFERENCES.get(expected_base_model_id)
+    if resolved_base_reference:
+        accepted_base_references.add(resolved_base_reference)
+    if config_payload.get("base_model_name_or_path") not in accepted_base_references:
+        raise RuntimeError("LoRA adapter base-model association does not match.")
+
+    weight_names = ("adapter_model.safetensors", "adapter_model.bin")
+    valid_weights = False
+    for weight_name in weight_names:
+        weight_path = root / weight_name
+        if not weight_path.exists():
+            continue
+        resolved_weight = weight_path.resolve(strict=True)
+        try:
+            resolved_weight.relative_to(root)
+        except ValueError as error:
+            raise RuntimeError("LoRA adapter weights escaped their snapshot.") from error
+        if resolved_weight.is_file() and resolved_weight.stat().st_size > 0:
+            valid_weights = True
+            break
+    if not valid_weights:
+        raise RuntimeError("LoRA adapter weights are missing or invalid.")
+
+
+def ensure_generation_adapter_is_available(
+    config: ExampleGenerationConfig,
+) -> GenerationModelAvailability:
+    adapter_model_id = config.model.adapterModelId
+    if not adapter_model_id:
+        raise ValueError("LoRA adapter model identifier is required.")
+    _assert_huggingface_model_id(adapter_model_id)
+    _assert_huggingface_model_id(config.model.modelId)
+    configure_huggingface_download_environment()
+
+    revision = config.model.adapterRevision
+    if revision:
+        if not HUGGINGFACE_SNAPSHOT_REVISION_PATTERN.fullmatch(revision):
+            raise ValueError("LoRA adapter snapshot revision is invalid.")
+        repository_root = _resolve_huggingface_repo_cache_directory(adapter_model_id)
+        if repository_root is None:
+            raise RuntimeError("LoRA adapter cache root is unavailable.")
+        try:
+            canonical_repository_root = repository_root.resolve(strict=True)
+            resolved_snapshot = (
+                canonical_repository_root / "snapshots" / revision
+            ).resolve(strict=True)
+            resolved_snapshot.relative_to(canonical_repository_root)
+            local_path = str(resolved_snapshot)
+        except OSError as error:
+            raise RuntimeError("The selected LoRA adapter is not available locally.") from error
+        except ValueError as error:
+            raise RuntimeError("LoRA adapter snapshot escaped its repository cache.") from error
+    else:
+        try:
+            from huggingface_hub import snapshot_download
+
+            local_path = snapshot_download(
+                repo_id=adapter_model_id,
+                local_files_only=True,
+            )
+        except Exception as error:
+            raise RuntimeError(
+                "The selected LoRA adapter is not available locally."
+            ) from error
+
+    _validate_huggingface_snapshot_path(local_path)
+    _validate_adapter_snapshot_result(local_path, config.model.modelId)
+    _RESOLVED_MODEL_REFERENCES[adapter_model_id] = local_path
+    return GenerationModelAvailability(
+        provider=config.model.provider,
+        model_id=adapter_model_id,
+        downloaded=False,
+        from_cache=True,
+        local_path=local_path,
+        cache_handle=_to_huggingface_snapshot_handle(local_path),
+    )
+
+
+_GENERATOR_CACHE: dict[
+    tuple[str, str, str, str, str, str, str], LocalTextGenerator
+] = {}
 _GENERATOR_CACHE_LOCK = Lock()
 _RESOLVED_MODEL_REFERENCES: dict[str, str] = {}
 
 
-def _generator_cache_key(model: LocalModelConfig) -> tuple[str, str, str, str, str]:
+def _generator_cache_key(
+    model: LocalModelConfig,
+) -> tuple[str, str, str, str, str, str, str]:
     return (
         model.provider,
         model.modelId,
         model.inferenceMode,
         model.device or "auto",
         model.torchDtype or "auto",
+        model.adapterModelId or "no-adapter",
+        model.adapterRevision or "no-adapter-revision",
     )
 
 
@@ -1604,6 +1717,31 @@ def _resolve_model_kwargs(model_config: LocalModelConfig) -> dict[str, Any]:
     return model_kwargs
 
 
+def _attach_lora_adapter(model: Any, model_config: LocalModelConfig) -> Any:
+    adapter_model_id = model_config.adapterModelId
+    if not adapter_model_id:
+        return model
+    if not _is_module_available("peft"):
+        raise GenerationRuntimeDependencyError(
+            "LoRA inference is unavailable because the managed PEFT component is missing."
+        )
+    adapter_reference = _resolved_model_reference_for(adapter_model_id)
+    try:
+        from peft import PeftModel
+
+        return PeftModel.from_pretrained(
+            model,
+            adapter_reference,
+            is_trainable=False,
+        )
+    except GenerationRuntimeDependencyError:
+        raise
+    except Exception as error:
+        raise GenerationModelLoadError(
+            "The selected LoRA adapter could not be attached to its base model."
+        ) from error
+
+
 def _supports_manual_device_move(model: Any) -> bool:
     if getattr(model, "hf_device_map", None) is not None:
         return False
@@ -1720,7 +1858,11 @@ def get_or_create_local_text_generator(
                 created = TransformersChatGenerator(resolved_model_config, generation_params)
             else:
                 raise ValueError(f"Unsupported inference mode: {resolved_inference_mode}")
-        except (GenerationModelLoadError, GenerationInsufficientResourcesError):
+        except (
+            GenerationModelLoadError,
+            GenerationInsufficientResourcesError,
+            GenerationRuntimeDependencyError,
+        ):
             raise
         except Exception as error:
             raise GenerationModelLoadError(
@@ -1739,8 +1881,18 @@ def _describe_loaded_generation_models_unlocked() -> list[dict[str, str | None]]
             "inferenceMode": inference_mode,
             "device": device,
             "torchDtype": torch_dtype,
+            "adapterModelId": adapter_model_id,
+            "adapterRevision": adapter_revision,
         }
-        for provider, model_id, inference_mode, device, torch_dtype in _GENERATOR_CACHE.keys()
+        for (
+            provider,
+            model_id,
+            inference_mode,
+            device,
+            torch_dtype,
+            adapter_model_id,
+            adapter_revision,
+        ) in _GENERATOR_CACHE.keys()
     ]
 
 

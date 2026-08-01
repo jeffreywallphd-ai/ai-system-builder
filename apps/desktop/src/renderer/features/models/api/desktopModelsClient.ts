@@ -72,7 +72,10 @@ export interface DesktopModelsClient {
   deleteModelRecord: (input: { modelRecordId: string; deleteLocalFiles?: boolean; deleteBackingArtifacts?: boolean; workspaceId: string }) => Promise<DesktopDeleteModelRecordResult>;
   revealModelInFolder: (input: { modelRecordId: string; workspaceId: string }) => Promise<DesktopRevealModelInFolderResult>;
   trainModel: (input: DesktopModelTrainingRequest) => Promise<DesktopModelTrainingResult>;
-  readModelTrainingStatus: (input: { runId: string }) => Promise<DesktopModelTrainingResult>;
+  readModelTrainingStatus: (input: { runId: string; workspaceId: string }) => Promise<DesktopModelTrainingResult>;
+  cancelModelTraining: (input: { runId: string; workspaceId: string }) => Promise<DesktopModelTrainingResult>;
+  saveModelTraining: (input: { runId: string; workspaceId: string }) => Promise<DesktopModelTrainingResult>;
+  discardModelTraining: (input: { runId: string; workspaceId: string }) => Promise<DesktopModelTrainingResult>;
   validateModel: (input: { workspaceId: string; modelRecordId: string; modelPath?: string; expectedLoRA?: boolean }) => Promise<DesktopValidateModelResult>;
   publishModel: (input: {
     workspaceId: string;
@@ -261,6 +264,39 @@ export function createDesktopModelsClient(): DesktopModelsClient {
         await desktopApi.readModelTrainingStatus(input),
         (value) => value as DesktopModelTrainingResult,
         "Failed to read model training status.",
+      );
+    },
+    async cancelModelTraining(input) {
+      if (!desktopApi.cancelModelTraining) {
+        throw new Error("Desktop preload model training cancellation bridge is unavailable.");
+      }
+      return ensureSuccess(
+        await desktopApi.cancelModelTraining({
+          ...input,
+          workspaceId: createWorkspaceId(input.workspaceId),
+        }),
+        (value) => value as DesktopModelTrainingResult,
+        "Failed to stop model training.",
+      );
+    },
+    async saveModelTraining(input) {
+      if (!desktopApi.saveModelTraining) {
+        throw new Error("Desktop preload model training save bridge is unavailable.");
+      }
+      return ensureSuccess(
+        await desktopApi.saveModelTraining({ ...input, workspaceId: createWorkspaceId(input.workspaceId) }),
+        (value) => value as DesktopModelTrainingResult,
+        "Failed to save trained model.",
+      );
+    },
+    async discardModelTraining(input) {
+      if (!desktopApi.discardModelTraining) {
+        throw new Error("Desktop preload model training discard bridge is unavailable.");
+      }
+      return ensureSuccess(
+        await desktopApi.discardModelTraining({ ...input, workspaceId: createWorkspaceId(input.workspaceId) }),
+        (value) => value as DesktopModelTrainingResult,
+        "Failed to discard trained model.",
       );
     },
     async validateModel(input) {

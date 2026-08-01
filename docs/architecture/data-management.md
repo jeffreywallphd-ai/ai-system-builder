@@ -15,12 +15,15 @@ Data Management turns workspace-owned source artifacts into training datasets wi
 1. **Add data** chooses the exact training goal, then shows only compatible workspace artifacts.
 2. **Check data** explains the checks that apply to that goal and source kind, including which content surfaces were not inspected.
 3. **Prepare dataset** infers whether the user is using one ready dataset, combining compatible datasets, or creating examples from source material. It then offers only meaningful preparation methods and shows only the Advanced settings used by the selected method.
-4. **Review and create** presents bounded, task-specific quality evidence and requires explicit approval before the final dataset and splits are saved.
+4. **Review and create** presents bounded, task-specific quality evidence, colocates an optional meaningful dataset save name with the final actions, and requires one explicit approval before the complete curated ready set and its splits are saved.
 
 The primary UI uses goal and outcome language. Adapter names, schemas, prompt payloads, local paths, and provider response details do not belong in the default experience.
 Desktop places reusable workflow settings in an unnumbered section before the
-four steps. It omits empty task-specific settings and keeps save and
-publication guidance in the Review and create body instead of nested cards.
+four steps. It omits empty task-specific settings. Both hosts keep the save-name
+control in Review and create. After successful approval they switch to Artifact
+Browser, select the exact saved dataset, and open its detail view for inspection
+or optional Hugging Face publication. Dataset Preparation does not embed version
+history after save.
 
 The shared Artifact Browser uses the same card presentation for uploaded and
 generated artifacts. User data remains previewable without exposing active
@@ -262,7 +265,12 @@ The shared compiler turns the saved visual layout into deterministic training-
 purpose paths, one exact schema, and one schema-valid example envelope used by
 the prompt, optional token-level decoder, parser, row mapper, and Parquet writer.
 The compiler fingerprint binds both the schema and example so the host and worker
-cannot interpret separate templates. Every generation prompt requires exactly
+cannot interpret separate templates. The worker retains that fingerprint-validated
+purpose-path map through generation, quality admission, reporting, and output
+writing; a compiled layout never falls back to legacy literal field names during
+quality checks. Pre-quality synthetic or semantic quarantine findings do not make
+the schema mapping incomplete unless purpose resolution or required values are
+also missing. Every generation prompt requires exactly
 one JSON object that matches the runtime schema and forbids prose, Markdown,
 code fences, or other text before or after it. In unchecked compatibility mode,
 the worker may remove one exact `json` fence surrounding one bounded object
@@ -435,14 +443,15 @@ outputs; repository-only entries must be localized before review. Cards expose
 separate Review rows and View table actions, the table shows 10 rows per page,
 and the modal traverses rows continuously without exposing page controls. Row
 values never enter structured persistence.
-Editing a row requires an authenticated write scope and the exact
+Rejecting or editing a row requires an authenticated write scope and the exact
 index-and-SHA-256 fingerprint last returned to the caller. A stale fingerprint
-fails closed. The revised Parquet artifact is written and verified before an
-immutable child version becomes visible; the parent remains unchanged. The
-first approved edit to an unversioned artifact creates an imported 1.0 baseline
-followed by a 1.1 child, while each later edit advances the minor label. The
-editor preserves the original columns and value types, and version lineage
-stores only the replacement fingerprint rather than row content.
+fails closed. Rejection removes the exact row; editing preserves the columns and
+value types while replacing its values. The revised Parquet artifact is written
+and verified before an immutable child version becomes visible, and the parent
+remains unchanged. The first persisted rejection or approved edit to an
+unversioned artifact creates an imported 1.0 baseline followed by a 1.1 child;
+each later persisted row change advances the minor label. Version lineage stores
+only bounded operation and fingerprint evidence rather than row content.
 
 Final dataset output handles remain in their private runtime working directory
 until approval either finalizes successfully or is explicitly discarded. The

@@ -733,6 +733,21 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
     }
     expect(storedRoles).toEqual(["report", "quarantine", "review"]);
 
+    const invalidSaveName = await useCase.approvePreparedTrainingDataset(
+      {
+        requestId: "quality-review-task",
+        reportFingerprint: fingerprint,
+        outputBaseName: "../unsafe",
+      },
+      { workspaceId: "workspace-a" },
+    );
+    expect(invalidSaveName.ok).toBe(false);
+    if (!invalidSaveName.ok) {
+      expect(invalidSaveName.error.code).toBe("validation");
+    }
+    expect(storedRoles).toEqual(["report", "quarantine", "review"]);
+    await expect(access(runtimeWorkingDirectory)).resolves.toBeUndefined();
+
     const transientFailure = await useCase.approvePreparedTrainingDataset(
       {
         requestId: "quality-review-task",
@@ -747,6 +762,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
       {
         requestId: "quality-review-task",
         reportFingerprint: fingerprint,
+        outputBaseName: "support-tickets-2026",
       },
       { workspaceId: "workspace-a" },
     );
@@ -756,6 +772,21 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
       expect(approved.value.result.outputs.local?.report).toBeDefined();
       expect(approved.value.result.review?.state).toBe("approved");
     }
+    const savedDataset = [...storedArtifacts.values()].find(
+      (artifact) => artifact.descriptor.metadata.runtimeRole === "dataset",
+    );
+    const savedTrainSplit = [...storedArtifacts.values()].find(
+      (artifact) => artifact.descriptor.metadata.runtimeRole === "train",
+    );
+    expect(savedDataset?.descriptor.metadata.originalFileName).toBe(
+      "support-tickets-2026.jsonl",
+    );
+    expect(savedDataset?.descriptor.key).toContain(
+      "support-tickets-2026.jsonl",
+    );
+    expect(savedTrainSplit?.descriptor.metadata.originalFileName).toBe(
+      "support-tickets-2026-train.jsonl",
+    );
     expect(storedRoles).toEqual([
       "report",
       "quarantine",

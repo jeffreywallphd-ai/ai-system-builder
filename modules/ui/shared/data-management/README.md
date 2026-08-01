@@ -57,7 +57,11 @@ They show a method selector only when more than one meaningful option exists,
 and Advanced settings contain only controls used by the selected method.
 Desktop keeps saved workflow settings in an unnumbered section before Step 1,
 omits Task settings when the selected task has no additional choices, and
-places save and publication guidance directly in Review and create.
+places the optional dataset save name beside the final approval and discard
+actions in Review and create. One explicit approval saves the complete curated
+ready set. After success, both hosts switch to Artifact Browser, select the
+exact saved dataset, and open its detail view. Dataset Preparation does not
+render a post-save Saved versions section.
 
 Review and create turns each actionable quality-report line into a link to the
 actual ready, set-aside, or reason-matched records behind that count. The
@@ -73,14 +77,15 @@ the modal; View table opens the 10-row paginated table below the cards. On wide
 screens, that table includes Approve, Reject, and Edit
 actions in its rightmost column.
 
-Approving or rejecting without version creation is a local review decision.
-Edit verifies the exact row fingerprint and changes the read-only row into a
-bounded editor. Approve changes preserves the selected version, writes the
-revised Parquet artifact, and creates the next immutable minor version. Reject
-remains available while editing so the reviewer can reject the row instead of
-saving an edit. Cancel exits the editor without saving or changing the review
-decision. An original workspace Parquet artifact is displayed as 1.0;
-its first immutable revision is 1.1.
+Existing dataset rows are already approved, so Approve is locked. Reject verifies
+the exact row fingerprint, removes that row, preserves the selected version, and
+creates the next immutable minor version. Edit changes the read-only row into a
+bounded editor; Approve changes performs the same exact-row verification, writes
+the revised Parquet artifact, and creates the next immutable minor version.
+Reject remains available while editing so the reviewer can reject the row
+instead of saving an edit. Cancel exits without persistence. An original
+workspace Parquet artifact is displayed as 1.0; its first immutable rejection or
+approved edit is 1.1.
 
 Dataset Preparation presents one selectable artifact list. Its All, Uploaded,
 and Generated filter controls that list; generated or runtime-produced results

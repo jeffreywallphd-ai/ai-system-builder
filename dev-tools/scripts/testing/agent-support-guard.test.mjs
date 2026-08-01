@@ -169,8 +169,14 @@ test("roadmap test guidance keeps aggregate suites at the overall completion bou
   assert.match(sources[0], /only the completion tests and gates relevant/);
 });
 
-test("root scripts expose standard, end-to-end, AI, and aggregate test commands", async () => {
-  const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+test("root scripts expose aggregate commands and keep physical training suites explicit", async () => {
+  const [packageSource, modelTrainingRunner, controlledAiRunner] =
+    await Promise.all([
+      readFile("package.json", "utf8"),
+      readFile("dev-tools/scripts/testing/run-model-training-e2e.mjs", "utf8"),
+      readFile("dev-tools/scripts/testing/run-python-ai-tests.mjs", "utf8"),
+    ]);
+  const packageJson = JSON.parse(packageSource);
   assert.match(packageJson.scripts.test, /test:standard/);
   assert.match(packageJson.scripts["test:e2e"], /--suite=e2e/);
   assert.match(packageJson.scripts["test:ai"], /--suite=ai/);
@@ -179,6 +185,15 @@ test("root scripts expose standard, end-to-end, AI, and aggregate test commands"
     /--suite=standardande2e/,
   );
   assert.match(packageJson.scripts["test:all"], /--suite=all/);
+  assert.equal(
+    packageJson.scripts["test:model-training:e2e"],
+    "node dev-tools/scripts/testing/run-model-training-e2e.mjs",
+  );
+  assert.match(modelTrainingRunner, /test_model_training_task_matrix_e2e/);
+  assert.doesNotMatch(
+    controlledAiRunner,
+    /test_model_training_task_matrix_e2e/,
+  );
 });
 
 test("security-by-design guidance and roadmap evidence stay synchronized", async () => {

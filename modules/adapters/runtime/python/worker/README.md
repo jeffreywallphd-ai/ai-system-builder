@@ -36,10 +36,18 @@ Dependency files:
   Parquet data. Accelerate is pinned to `1.14.0` for automatic model placement,
   and PyArrow is pinned to `25.0.0`, which supports the worker's Python 3.10
   through 3.14 range and includes the fixes required for untrusted Parquet
-  input. Startup repairs either missing or mismatched core pin before the
-  worker is ready.
-- `requirements-training.txt` contains the remaining heavier model-training
-  dependencies that are not required for worker startup.
+  input. PEFT is pinned to `0.15.2` in the baseline worker so a saved LoRA can be
+  attached to its validated base model during conversation inference. Startup
+  repairs any missing or mismatched core pin before the worker is ready.
+- `requirements-training-text.txt` contains exact reviewed Datasets and PEFT
+  pins for causal text training. The baseline already provides the same PEFT
+  pin for inference; the desktop training boundary additionally probes both
+  packages and installs the text-training set only when that probe needs repair.
+  A successful install is re-probed before the task may start.
+- `requirements-training.txt` retains the broader optional multimodal training
+  dependency declaration, including SciPy for object-detection assignment;
+  those packages are not part of ordinary worker startup or the bounded
+  text-training repair path.
 
 Optional token-constrained JSON generation uses exact, conditionally installed
 pins in `requirements.txt`: Outlines `1.3.2`, Outlines Core `0.2.14`, and
@@ -158,15 +166,46 @@ Implemented task:
   - emits only bounded aggregate diagnostic fields; controlled preparation failures preserve a stable snake-case reason code and one of the four public stage names so the host can show actionable guidance, while source text, prompts, model output, provider payloads, runtime-local paths, and raw exception messages remain excluded
 - `train-model`
   - supports causal language model training over text-like datasets
+  - emits structured training progress after every completed microbatch,
+    including gradient-accumulation substeps, so task status and notifications
+    do not wait for multiple batches
+  - cooperatively stops a running training task at the next batch progress
+    boundary and removes worker-owned staged output before reporting cancellation
   - accepts the LLM instruction, classification, extraction, embedding-pair, and reranker training tasks
-  - formats those row schemas into causal-LM training text when present
+  - formats those row schemas into causal-LM training text when present,
+    including the conventional `question`/`answer` aliases used by prepared
+    instruction datasets when exact purpose metadata is unavailable
   - formats separate Input and Context blocks and includes an optional text-only
     Thought block only when those purposes exist in the prepared schema
-  - resolves custom fields only through prepared artifact purpose paths with a
-    matching exact schema fingerprint; missing, malformed, or mixed layout
-    metadata fails before model loading
+  - resolves custom fields through prepared artifact purpose paths with a
+    matching exact schema fingerprint; legacy artifacts without that metadata
+    may use only established task-schema aliases, while malformed or mixed
+    layout metadata fails before model loading
   - supports diffusion LoRA training from image-caption manifests using Diffusers and PEFT LoRA adapter output
   - supports vision classification, object detection, and segmentation training from image manifests using Transformers vision model classes
   - supports vision LoRA adapter output and full fine-tuning; LoRA keeps recognized task heads trainable through PEFT `modules_to_save`
   - resolves image manifest artifact IDs through runtime-only staged source path metadata supplied by the application use case
   - records selected training task metadata and task tags on generated model candidates
+  - rewrites saved PEFT adapter configuration to the authority-owned base model
+    id so generated LoRAs retain an exact portable association without a local
+    snapshot path
+  - has a named physical qualification command,
+    `npm run test:model-training:e2e`, that trains all nine task types with two
+    synthetic rows and one epoch against fixed tiny model revisions, verifies
+    the staged Save/Discard candidate, and deliberately does not save or
+    register it; the command is excluded from ordinary, E2E, AI, and aggregate
+    test suites
+- `conversation-text-generation`
+  - accepts only the application-authorized runtime model id and bounded
+    protected conversation messages
+  - validates the exact complete snapshot in the host-owned local Hugging Face
+    cache, without network acquisition, before a cold first-turn load
+  - reuses a resident generator only when its model id matches exactly and does
+    not depend on another feature having loaded a model earlier
+  - resolves a selected LoRA as its exact same-workspace full base model plus
+    adapter, validates the contained local adapter snapshot and declared base
+    association, accepts only the exact worker-resolved local base reference for
+    legacy adapters, attaches it with PEFT, and matches its revision for warm reuse
+  - returns bounded assistant text through the task result while failures and
+    lifecycle diagnostics remain free of model ids, prompts, paths, and raw
+    provider/runtime errors

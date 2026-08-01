@@ -95,7 +95,11 @@ export interface PrepareTrainingDatasetFromArtifactsUseCasePort {
     context?: DatasetPreparationRequestContext,
   ) => Promise<ContractResult<CancelResultValue>>;
   approvePreparedTrainingDataset?: (
-    approval: { requestId: string; reportFingerprint: string },
+    approval: {
+      requestId: string;
+      reportFingerprint: string;
+      outputBaseName?: string;
+    },
     context?: DatasetPreparationRequestContext,
   ) => Promise<
     ContractResult<DesktopPrepareTrainingDatasetApproveSuccessValue>
@@ -390,6 +394,9 @@ export const createDesktopPrepareTrainingDatasetApproveIpcHandler =
       {
         requestId: request.payload.requestId,
         reportFingerprint: request.payload.reportFingerprint,
+        ...(request.payload.outputBaseName !== undefined
+          ? { outputBaseName: request.payload.outputBaseName }
+          : {}),
       },
       createRequestContext(request, getAuthoritativeRequestContext),
     );

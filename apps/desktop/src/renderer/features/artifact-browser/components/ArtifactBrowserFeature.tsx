@@ -1,4 +1,11 @@
-import { Fragment, useCallback, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   deriveArtifactBackingState,
@@ -37,6 +44,8 @@ export interface ArtifactBrowserFeatureProps {
     totalRows: number;
     rows: readonly { values: Readonly<Record<string, unknown>> }[];
   }>;
+  initialSelectedStorageKey?: string;
+  onInitialSelectionHandled?: () => void;
 }
 
 const HUGGING_FACE_SETTINGS_KEYS = ["huggingface.token", "huggingface.defaultNamespace"] as const;
@@ -73,7 +82,13 @@ function PublishedBackingPanel(
   );
 }
 
-export function ArtifactBrowserFeature({ client, workspaceId, readParquetPreview }: ArtifactBrowserFeatureProps) {
+export function ArtifactBrowserFeature({
+  client,
+  workspaceId,
+  readParquetPreview,
+  initialSelectedStorageKey,
+  onInitialSelectionHandled,
+}: ArtifactBrowserFeatureProps) {
   const settings = useApplicationSettings({ keys: useMemo(() => ["huggingface.defaultNamespace"], []) });
   const [downloadState, setDownloadState] = useState<{ status: "idle" | "error"; message?: string }>({
     status: "idle",
@@ -82,6 +97,7 @@ export function ArtifactBrowserFeature({ client, workspaceId, readParquetPreview
   const [isDetailPopupOpen, setDetailPopupOpen] = useState(false);
   const [parquetPreview, setParquetPreview] = useState<ArtifactPreviewView>();
   const previewRequestId = useRef(0);
+  const initialSelectionHandledRef = useRef<string | undefined>(undefined);
   const {
     uploadedItems,
     generatedItems,
@@ -209,6 +225,32 @@ export function ArtifactBrowserFeature({ client, workspaceId, readParquetPreview
       );
     }
   }, [generatedItems, otherItems, readParquetPreview, selectArtifact, uploadedItems, workspaceId]);
+
+  useEffect(() => {
+    if (!initialSelectedStorageKey) {
+      initialSelectionHandledRef.current = undefined;
+      return;
+    }
+    if (
+      initialSelectionHandledRef.current === initialSelectedStorageKey ||
+      ![...uploadedItems, ...generatedItems, ...otherItems].some(
+        (item) => item.storageKey === initialSelectedStorageKey,
+      )
+    ) {
+      return;
+    }
+    initialSelectionHandledRef.current = initialSelectedStorageKey;
+    void openArtifactDetails(initialSelectedStorageKey).finally(() => {
+      onInitialSelectionHandled?.();
+    });
+  }, [
+    generatedItems,
+    initialSelectedStorageKey,
+    onInitialSelectionHandled,
+    openArtifactDetails,
+    otherItems,
+    uploadedItems,
+  ]);
 
   const closeDetailPopup = useCallback(() => {
     previewRequestId.current += 1;

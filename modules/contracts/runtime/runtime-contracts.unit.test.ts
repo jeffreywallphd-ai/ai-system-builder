@@ -6,6 +6,7 @@ import {
   DATASET_PREPARATION_TASK_TYPES,
   DEFAULT_DATASET_PREPARATION_TASK_TYPE,
   createDefaultDatasetPreparationTaskRecipe,
+  validateDatasetPreparationSaveName,
   type DatasetOutputConfig,
   type DatasetPreparationRecipe,
   type DatasetPreparationSourceInput,
@@ -729,6 +730,22 @@ describe("python sidecar runtime contracts", () => {
       runtimeSupport: "supported",
       compatibleTrainingMethods: ["lora", "full-finetune"],
     });
+  });
+
+  it("validates dataset save names at the shared storage boundary", () => {
+    expect(validateDatasetPreparationSaveName("support-tickets-2026")).toBe(
+      undefined,
+    );
+    expect(validateDatasetPreparationSaveName("")).toBe(undefined);
+    expect(validateDatasetPreparationSaveName("../support-tickets")).toBe(
+      "Dataset save name cannot contain file path characters or end with a period.",
+    );
+    expect(validateDatasetPreparationSaveName("support-tickets.")).toBe(
+      "Dataset save name cannot contain file path characters or end with a period.",
+    );
+    expect(validateDatasetPreparationSaveName("a".repeat(129))).toBe(
+      "Dataset save name must be 128 characters or fewer.",
+    );
   });
 
   it("creates default task-specific dataset preparation recipe fragments", () => {

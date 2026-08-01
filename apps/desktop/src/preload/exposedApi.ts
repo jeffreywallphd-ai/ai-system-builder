@@ -455,6 +455,9 @@ import {
   createDesktopModelFolderRevealRequest,
   createDesktopModelTrainRequest,
   createDesktopModelTrainStatusRequest,
+  createDesktopModelTrainCancelRequest,
+  createDesktopModelTrainSaveRequest,
+  createDesktopModelTrainDiscardRequest,
   createDesktopModelValidateRequest,
   createDesktopModelPublishRequest,
   type DesktopModelBrowseResponse,
@@ -471,6 +474,9 @@ import {
   type DesktopModelFolderRevealResponse,
   type DesktopModelTrainResponse,
   type DesktopModelTrainStatusResponse,
+  type DesktopModelTrainCancelResponse,
+  type DesktopModelTrainSaveResponse,
+  type DesktopModelTrainDiscardResponse,
   type DesktopModelValidateResponse,
   type DesktopModelPublishResponse,
   DESKTOP_MODEL_TRAIN_OPERATION,
@@ -479,6 +485,15 @@ import {
   DESKTOP_MODEL_TRAIN_STATUS_OPERATION,
   DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL,
   DESKTOP_MODEL_TRAIN_STATUS_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_TRAIN_CANCEL_OPERATION,
+  DESKTOP_MODEL_TRAIN_CANCEL_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_CANCEL_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_TRAIN_SAVE_OPERATION,
+  DESKTOP_MODEL_TRAIN_SAVE_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_SAVE_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_TRAIN_DISCARD_OPERATION,
+  DESKTOP_MODEL_TRAIN_DISCARD_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_DISCARD_RESPONSE_CHANNEL,
   DESKTOP_MODEL_VALIDATE_OPERATION,
   DESKTOP_MODEL_VALIDATE_REQUEST_CHANNEL,
   DESKTOP_MODEL_VALIDATE_RESPONSE_CHANNEL,
@@ -796,6 +811,7 @@ export interface DesktopPreloadApi {
     input: {
       requestId: string;
       reportFingerprint: string;
+      outputBaseName?: string;
       workspaceId?: string;
     },
     context?: DesktopArtifactUploadBridgeContext,
@@ -1957,6 +1973,18 @@ export interface DesktopPreloadApi {
     input: Parameters<typeof createDesktopModelTrainStatusRequest>[0],
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopModelTrainStatusResponse>;
+  cancelModelTraining: (
+    input: Parameters<typeof createDesktopModelTrainCancelRequest>[0],
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopModelTrainCancelResponse>;
+  saveModelTraining: (
+    input: Parameters<typeof createDesktopModelTrainSaveRequest>[0],
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopModelTrainSaveResponse>;
+  discardModelTraining: (
+    input: Parameters<typeof createDesktopModelTrainDiscardRequest>[0],
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopModelTrainDiscardResponse>;
   validateModel: (
     input: Parameters<typeof createDesktopModelValidateRequest>[0],
     context?: DesktopArtifactUploadBridgeContext,
@@ -2455,6 +2483,9 @@ export function createDesktopPreloadApi(
           {
             requestId: input.requestId,
             reportFingerprint: input.reportFingerprint,
+            ...(input.outputBaseName !== undefined
+              ? { outputBaseName: input.outputBaseName }
+              : {}),
             boundary: {
               host: "desktop",
               source: "desktop.renderer.dataset-preparation",
@@ -5039,6 +5070,46 @@ export function createDesktopPreloadApi(
             "Received invalid desktop model training status IPC response envelope.",
         },
       );
+    },
+    async cancelModelTraining(input, context = {}) {
+      const request = createDesktopModelTrainCancelRequest(input, context);
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_MODEL_TRAIN_CANCEL_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopModelTrainCancelResponse>(
+        response,
+        {
+          operation: DESKTOP_MODEL_TRAIN_CANCEL_OPERATION,
+          channel: DESKTOP_MODEL_TRAIN_CANCEL_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop model training cancellation IPC response envelope.",
+        },
+      );
+    },
+    async saveModelTraining(input, context = {}) {
+      const request = createDesktopModelTrainSaveRequest(input, context);
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_MODEL_TRAIN_SAVE_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopModelTrainSaveResponse>(response, {
+        operation: DESKTOP_MODEL_TRAIN_SAVE_OPERATION,
+        channel: DESKTOP_MODEL_TRAIN_SAVE_RESPONSE_CHANNEL.value,
+        message: "Received invalid desktop model training save IPC response envelope.",
+      });
+    },
+    async discardModelTraining(input, context = {}) {
+      const request = createDesktopModelTrainDiscardRequest(input, context);
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_MODEL_TRAIN_DISCARD_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopModelTrainDiscardResponse>(response, {
+        operation: DESKTOP_MODEL_TRAIN_DISCARD_OPERATION,
+        channel: DESKTOP_MODEL_TRAIN_DISCARD_RESPONSE_CHANNEL.value,
+        message: "Received invalid desktop model training discard IPC response envelope.",
+      });
     },
     async validateModel(input, context = {}) {
       const request = createDesktopModelValidateRequest(input, context);

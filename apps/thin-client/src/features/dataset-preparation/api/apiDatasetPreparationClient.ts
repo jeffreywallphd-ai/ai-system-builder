@@ -48,6 +48,7 @@ export interface ApiDatasetPreparationClient {
     workspaceId: string;
     requestId: string;
     reportFingerprint: string;
+    outputBaseName?: string;
   }): Promise<ApiDatasetPreparationApproveValue>;
   readPreparedReviewPage(input: {
     workspaceId: string;
@@ -173,6 +174,9 @@ export function createApiDatasetPreparationClient(
           body: JSON.stringify({
             workspaceId: input.workspaceId,
             reportFingerprint: input.reportFingerprint,
+            ...(input.outputBaseName !== undefined
+              ? { outputBaseName: input.outputBaseName }
+              : {}),
           }),
         },
       ),

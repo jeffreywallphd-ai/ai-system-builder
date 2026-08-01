@@ -64,6 +64,69 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     vi.unstubAllGlobals();
   });
 
+  it("opens the requested saved artifact in the detail dialog", async () => {
+    const storageKey = "datasets/support-tickets-2026.parquet";
+    const onInitialSelectionHandled = vi.fn();
+    const client = {
+      browseArtifacts: vi.fn().mockResolvedValue([
+        {
+          storageKey,
+          originalName: "support-tickets-2026.parquet",
+          artifactFamily: "tabular" as const,
+          mediaType: "application/vnd.apache.parquet",
+          sourceKind: "runtime",
+        },
+      ]),
+      readArtifactDetail: vi.fn().mockResolvedValue({
+        locator: { storageKey },
+        originalName: "support-tickets-2026.parquet",
+        artifactFamily: "tabular" as const,
+        mediaType: "application/vnd.apache.parquet",
+        sizeBytes: 4,
+      }),
+      readArtifactContent: vi.fn().mockResolvedValue({
+        locator: { storageKey },
+        mediaType: "application/vnd.apache.parquet",
+        sizeBytes: 4,
+        availability: "available" as const,
+        retrieval: "deferred" as const,
+      }),
+      createArtifactMediaViewUrl: vi.fn().mockResolvedValue(""),
+      readArtifactMedia: vi.fn(),
+      getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
+      setHuggingFaceToken: vi.fn(),
+      clearHuggingFaceToken: vi.fn(),
+      publishArtifactToHuggingFace: vi.fn(),
+      verifyPublishedArtifactBacking: vi.fn(),
+      registerArtifactFromRepo: vi.fn(),
+      localizeArtifactFromRepo: vi.fn(),
+    };
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    mountedContainer = container;
+    mountedRoot = createRoot(container);
+
+    await act(async () => {
+      mountedRoot?.render(
+        <ArtifactBrowserFeature
+          client={client}
+          workspaceId="workspace-a"
+          initialSelectedStorageKey={storageKey}
+          onInitialSelectionHandled={onInitialSelectionHandled}
+        />,
+      );
+    });
+
+    await vi.waitFor(() =>
+      expect(client.readArtifactDetail).toHaveBeenCalledWith(
+        { storageKey },
+        { workspaceId: "workspace-a" },
+      ),
+    );
+    expect(document.body.textContent).toContain(storageKey);
+    expect(onInitialSelectionHandled).toHaveBeenCalledOnce();
+  });
+
   it("publishes a selected artifact and shows published backing details", async () => {
     const client = {
       browseArtifacts: vi.fn().mockResolvedValue([

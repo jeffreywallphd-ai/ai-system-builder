@@ -10,6 +10,9 @@ import {
   DESKTOP_MODEL_REFERENCE_SAVE_REQUEST_CHANNEL,
   DESKTOP_MODEL_TRAIN_REQUEST_CHANNEL,
   DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_CANCEL_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_SAVE_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_DISCARD_REQUEST_CHANNEL,
   DESKTOP_MODEL_VALIDATE_REQUEST_CHANNEL,
   DESKTOP_MODEL_PUBLISH_REQUEST_CHANNEL,
   createDesktopModelListRequest,
@@ -27,6 +30,9 @@ describe("desktop model management ipc contract", () => {
     expect(DESKTOP_MODEL_RECORD_DELETE_REQUEST_CHANNEL.value).toBe("ipc.model.record-delete.request");
     expect(DESKTOP_MODEL_TRAIN_REQUEST_CHANNEL.value).toBe("ipc.model.train.request");
     expect(DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL.value).toBe("ipc.model.train-status.request");
+    expect(DESKTOP_MODEL_TRAIN_CANCEL_REQUEST_CHANNEL.value).toBe("ipc.model.train-cancel.request");
+    expect(DESKTOP_MODEL_TRAIN_SAVE_REQUEST_CHANNEL.value).toBe("ipc.model.train-save.request");
+    expect(DESKTOP_MODEL_TRAIN_DISCARD_REQUEST_CHANNEL.value).toBe("ipc.model.train-discard.request");
     expect(DESKTOP_MODEL_VALIDATE_REQUEST_CHANNEL.value).toBe("ipc.model.validate.request");
     expect(DESKTOP_MODEL_PUBLISH_REQUEST_CHANNEL.value).toBe("ipc.model.publish.request");
   });

@@ -2335,7 +2335,12 @@ def prepare_training_dataset(
     output_directory: Path | None = None,
 ) -> PrepareTrainingDatasetResult:
     task_type, task_recipe = _resolve_task_recipe(payload)
-    structured_output: RuntimeStructuredOutput | None = None
+    structured_output = (
+        _resolve_structured_output_for_generation(payload)
+        if isinstance(payload.runtime, dict)
+        and isinstance(payload.runtime.get("structuredOutput"), dict)
+        else None
+    )
     preparation_plan = _resolve_and_validate_preparation_plan(
         payload,
         task_type,

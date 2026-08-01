@@ -168,3 +168,55 @@ test("fails safely and compensates with Stop when the visual window cannot open"
   }
   assert.deepEqual(actions, ["start", "stop"]);
 });
+
+test("stops the exact started revision when the published window closes", async () => {
+  const commands: Array<{ action: string; expectedRevision: string }> = [];
+  let onWindowClosed: (() => Promise<void>) | undefined;
+  const lifecycle = {
+    async execute(input: typeof command) {
+      commands.push({
+        action: input.action,
+        expectedRevision: input.expectedRevision,
+      });
+      return systemDeploymentSuccess({
+        schemaVersion: "1.0" as const,
+        releaseId: input.releaseId,
+        state:
+          input.action === "start"
+            ? ("running" as const)
+            : ("active-stopped" as const),
+        revision: input.action === "start" ? "revision-2" : "revision-3",
+        eligibleActions:
+          input.action === "start" ? ["stop" as const] : ["start" as const],
+        health:
+          input.action === "start" ? ("ready" as const) : ("stopped" as const),
+        runtimeKind: "visual" as const,
+        launchDescriptor: {
+          schemaVersion: "1.0",
+          kind: "trusted-declarative",
+        } as never,
+        diagnostics: [],
+      });
+    },
+  };
+  const wrapped = createDesktopPublishedSystemRuntimeLifecycle({
+    lifecycle: lifecycle as never,
+    controller: { open: async () => ({}) as never },
+    prepareRuntime: async () => undefined,
+    windows: {
+      async open(_query, _controller, closeHandler) {
+        onWindowClosed = closeHandler;
+      },
+      async close() {},
+    },
+  });
+
+  assert.equal((await wrapped.execute(command)).ok, true);
+  assert.ok(onWindowClosed);
+  await onWindowClosed();
+
+  assert.deepEqual(commands, [
+    { action: "start", expectedRevision: "revision-1" },
+    { action: "stop", expectedRevision: "revision-2" },
+  ]);
+});

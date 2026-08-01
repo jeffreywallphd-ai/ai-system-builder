@@ -155,7 +155,7 @@ function mapProgress(
 }
 
 export interface CreatePythonRuntimeTaskRegistryAdapterOptions {
-  ensureRuntimeReady?: () => Promise<void>;
+  ensureRuntimeReady?: (request: StartRuntimeTaskRequest) => Promise<void>;
 }
 
 export type PythonRuntimeTaskRegistryAdapter = RuntimeTaskRegistryPort &
@@ -191,7 +191,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
         throw new Error("model publishing runtime task is not implemented");
       }
       try {
-        await options.ensureRuntimeReady?.();
+        await options.ensureRuntimeReady?.(request);
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         throw new Error(

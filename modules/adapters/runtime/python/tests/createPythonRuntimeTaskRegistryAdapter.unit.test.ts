@@ -57,6 +57,12 @@ describe("createPythonRuntimeTaskRegistryAdapter", () => {
     });
 
     expect(callOrder).toEqual(["ensureRuntimeReady", "startTask"]);
+    expect(ensureRuntimeReady).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: "req-ensure",
+        taskType: TaskType.DATASET_PREPARATION,
+      }),
+    );
   });
 
   it("does not start task when ensureRuntimeReady fails", async () => {

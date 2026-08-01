@@ -98,6 +98,7 @@ export interface DesktopDatasetPreparationClient {
     requestId: string,
     reportFingerprint: string,
     workspaceId?: string,
+    outputBaseName?: string,
   ) => Promise<DesktopDatasetPreparationResult>;
   readPreparedReviewPage?: (input: {
     requestId: string;
@@ -580,6 +581,7 @@ export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparati
       requestId: string,
       reportFingerprint: string,
       workspaceId?: string,
+      outputBaseName?: string,
     ) {
       if (!desktopApi.approvePreparedTrainingDataset) {
         return {
@@ -595,6 +597,7 @@ export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparati
           requestId,
           reportFingerprint,
           workspaceId,
+          outputBaseName,
         });
         if (!isPreloadResponseEnvelope(response)) {
           return {

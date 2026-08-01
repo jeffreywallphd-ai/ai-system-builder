@@ -7,6 +7,7 @@ import type {
 import {
   createDefaultDatasetPreparationTaskRecipe,
   createDefaultDatasetPreparationVisualOutputShape,
+  DATASET_PREPARATION_SAVE_NAME_MAX_LENGTH,
   createDatasetPreparationAdvancedConfigForMethod,
   compileDatasetPreparationVisualOutputShape,
   createDatasetPreparationExecutionPlan,
@@ -18,6 +19,7 @@ import {
   resolveDefaultDatasetPreparationTextGenerationModel,
   resolveDatasetPreparationConstrainedJson,
   resolveDatasetPreparationGenerationModelEstimatedBytes,
+  validateDatasetPreparationSaveName,
   type DatasetPreparationAdvancedReport,
   type DatasetPreparationExecutionPlan,
   type DatasetPreparationMethodId,
@@ -34,7 +36,6 @@ import {
 import {
   DATASET_PREPARATION_TASK_OPTIONS,
   TransientNotificationPublisher,
-  DatasetVersionPanel,
   DatasetPreparationOutputShapeEditor,
   WorkflowSequence,
   WorkflowStep,
@@ -62,6 +63,7 @@ export interface DatasetPreparationFeatureProps {
   workspaceId: string;
   artifactClient?: ArtifactBrowserApiClient;
   preparationClient?: ApiDatasetPreparationClient;
+  onPrepared?: (artifactStorageKey: string) => void;
 }
 
 type Status =
@@ -310,6 +312,7 @@ function buildCommand(
   },
   split: { trainRatio: number; validationRatio: number; testRatio: number },
   outputFormat: "parquet" | "jsonl",
+  outputBaseName: string,
   quality: {
     preset: DatasetQualityPreset;
     requireLicenseMetadata: boolean;
@@ -417,6 +420,7 @@ function buildCommand(
     },
     output: {
       format: outputFormat,
+      naming: { baseName: outputBaseName.trim() || undefined },
       destinations: { local: { enabled: true } },
     },
     quality: {
@@ -436,6 +440,7 @@ export function DatasetPreparationFeature({
   workspaceId,
   artifactClient,
   preparationClient,
+  onPrepared,
 }: DatasetPreparationFeatureProps) {
   const browser = useMemo(
     () => artifactClient ?? createApiArtifactBrowserClient(),
@@ -448,57 +453,6 @@ export function DatasetPreparationFeature({
   const initialStructuredOutputSettings = useMemo(
     () => readPersistedStructuredOutputSettings(workspaceId),
     [workspaceId],
-  );
-  const versionService = useMemo(
-    () => ({
-      list: async (targetWorkspaceId: string, datasetId?: string) =>
-        preparation.listVersions
-          ? (
-              await preparation.listVersions({
-                workspaceId: targetWorkspaceId,
-                datasetId,
-              })
-            ).versions
-          : [],
-      compare: async (
-        targetWorkspaceId: string,
-        fromVersionId: string,
-        toVersionId: string,
-      ) => {
-        if (!preparation.compareVersions)
-          throw new Error("Dataset version comparison is unavailable.");
-        return (
-          await preparation.compareVersions({
-            workspaceId: targetWorkspaceId,
-            fromVersionId,
-            toVersionId,
-          })
-        ).comparison;
-      },
-      reproduce: async (targetWorkspaceId: string, versionId: string) => {
-        if (!preparation.readReproduction)
-          throw new Error("Saved dataset setup is unavailable.");
-        return (
-          await preparation.readReproduction({
-            workspaceId: targetWorkspaceId,
-            versionId,
-          })
-        ).reproduction;
-      },
-      publish: async (input: {
-        workspaceId: string;
-        versionId: string;
-        repositoryId: string;
-        visibility: "private" | "public";
-        createRepository?: boolean;
-        publicAccessConfirmed?: true;
-      }) => {
-        if (!preparation.publishVersion)
-          throw new Error("Dataset publishing is unavailable.");
-        return (await preparation.publishVersion(input)).publication;
-      },
-    }),
-    [preparation],
   );
   const mounted = useRef(true);
   const suppressNextTaskOutputReset = useRef(false);
@@ -653,6 +607,7 @@ export function DatasetPreparationFeature({
   const [outputFormat, setOutputFormat] = useState<"parquet" | "jsonl">(
     "parquet",
   );
+  const [outputBaseName, setOutputBaseName] = useState("");
   const taskOption = getDatasetPreparationTaskOption(taskType);
   const inspectionCopy = getDatasetInspectionCopy(taskType);
   const availableArtifacts = useMemo(
@@ -866,75 +821,6 @@ export function DatasetPreparationFeature({
       },
     });
   }, [constrainedDecodingPreference, taskType, visualOutputShape, workspaceId]);
-  const reuseVersionSetup = (
-    reproduction: import("../../../../../../modules/contracts/dataset").DatasetVersionReproduction,
-  ) => {
-    const snapshot = reproduction.recipeSnapshot as any;
-    const split = snapshot.split ?? {};
-    const output = snapshot.output ?? {};
-    const policy = snapshot.effectiveQualityPolicy ?? {};
-    const savedTaskType = snapshot.recipe?.task?.taskType;
-    const savedStructuredOutput =
-      snapshot.recipe?.generation?.structuredOutput ?? {};
-    const savedPromptTemplate = snapshot.recipe?.generation?.promptTemplate;
-    const savedMethod = snapshot.preparation?.method;
-    setSelectedArtifactIds([...reproduction.sourceArtifactIds]);
-    if (
-      DATASET_PREPARATION_TASK_OPTIONS.some(
-        (option) => option.taskType === savedTaskType,
-      )
-    ) {
-      suppressNextTaskOutputReset.current = savedTaskType !== taskType;
-      setTaskType(savedTaskType);
-    }
-    if (
-      savedStructuredOutput.visualShape &&
-      typeof savedStructuredOutput.visualShape === "object" &&
-      DATASET_PREPARATION_TASK_OPTIONS.some(
-        (option) => option.taskType === savedTaskType,
-      )
-    ) {
-      const compiled = compileDatasetPreparationVisualOutputShape(
-        savedStructuredOutput.visualShape,
-        {
-          taskType: savedTaskType,
-          outputFormat: ["parquet", "jsonl"].includes(output.format)
-            ? output.format
-            : outputFormat,
-          multiLabel,
-          allowedLabels: splitLabels(labelSet),
-        },
-      );
-      if (compiled.ok) setVisualOutputShape(compiled.value.shape);
-    }
-    if (typeof savedStructuredOutput.constrainedDecoding === "boolean")
-      setConstrainedDecodingPreference(
-        savedStructuredOutput.constrainedDecoding,
-      );
-    if (typeof savedPromptTemplate === "string")
-      setTextGenerationPrompt(savedPromptTemplate);
-    if (typeof savedMethod === "string") {
-      setPreparationMethodId(savedMethod as DatasetPreparationMethodId);
-    }
-    if (typeof split.trainRatio === "number")
-      setTrainRatio(String(split.trainRatio));
-    if (typeof split.validationRatio === "number")
-      setValidationRatio(String(split.validationRatio));
-    if (typeof split.testRatio === "number")
-      setTestRatio(String(split.testRatio));
-    if (["parquet", "jsonl"].includes(output.format))
-      setOutputFormat(output.format);
-    if (["recommended", "strict", "minimal"].includes(policy.preset))
-      setQualityPreset(policy.preset);
-    if (typeof policy.requireLicenseMetadata === "boolean")
-      setRequireLicenseMetadata(policy.requireLicenseMetadata);
-    if (typeof policy.requireConsentMetadata === "boolean")
-      setRequireConsentMetadata(policy.requireConsentMetadata);
-    if (typeof policy.includeSourceAttribution === "boolean")
-      setIncludeSourceAttribution(policy.includeSourceAttribution);
-    setStatus({ kind: "idle" });
-  };
-
   useEffect(() => {
     mounted.current = true;
     void browser
@@ -996,6 +882,9 @@ export function DatasetPreparationFeature({
       if (task.status === "succeeded") {
         setResult(task.result);
         setStatus({ kind: "success", message: "Training dataset is ready." });
+        const artifactStorageKey =
+          task.result.outputs.local?.dataset?.storage.key;
+        if (artifactStorageKey) onPrepared?.(artifactStorageKey);
         return;
       }
       if (task.status === "cancelled") {
@@ -1015,6 +904,11 @@ export function DatasetPreparationFeature({
 
   const start = async () => {
     const parsed = [trainRatio, validationRatio, testRatio].map(Number);
+    const saveNameError = validateDatasetPreparationSaveName(outputBaseName);
+    if (saveNameError) {
+      setStatus({ kind: "error", message: saveNameError });
+      return;
+    }
     if (!preparationPlan) {
       setStatus({
         kind: "error",
@@ -1116,6 +1010,7 @@ export function DatasetPreparationFeature({
             testRatio: parsed[2],
           },
           outputFormat,
+          outputBaseName,
           {
             preset: qualityPreset,
             requireLicenseMetadata,
@@ -1162,16 +1057,25 @@ export function DatasetPreparationFeature({
 
   const approveReview = async () => {
     if (!qualityReview || reviewActionInFlight) return;
+    const saveNameError = validateDatasetPreparationSaveName(outputBaseName);
+    if (saveNameError) {
+      setStatus({ kind: "error", message: saveNameError });
+      return;
+    }
     setReviewActionInFlight(true);
     try {
       const approved = await preparation.approve({
         workspaceId,
         requestId: qualityReview.requestId,
         reportFingerprint: qualityReview.report.reportFingerprint,
+        outputBaseName,
       });
       setResult(approved.result);
       setQualityReview(undefined);
       setStatus({ kind: "success", message: "Training dataset is ready." });
+      const artifactStorageKey =
+        approved.result.outputs.local?.dataset?.storage.key;
+      if (artifactStorageKey) onPrepared?.(artifactStorageKey);
     } catch (error) {
       setStatus({
         kind: "error",
@@ -1945,33 +1849,49 @@ export function DatasetPreparationFeature({
                     </ul>
                   </details>
                 ) : null}
-                <button
-                  className="ui-button"
-                  type="button"
-                  disabled={
-                    reviewActionInFlight ||
-                    !qualityReview.report.approvalAllowed
-                  }
-                  onClick={() => void approveReview()}
-                >
-                  {reviewActionInFlight
-                    ? "Saving..."
-                    : "Approve and save dataset"}
-                </button>
-                <button
-                  className="ui-button"
-                  type="button"
-                  disabled={reviewActionInFlight}
-                  onClick={() => void discardReview()}
-                >
-                  Discard review
-                </button>
-                {!qualityReview.report.approvalAllowed ? (
-                  <p role="alert">
-                    This dataset cannot be saved. Adjust the source data or
-                    rules, then run the checks again.
+                <div className="dataset-preparation__approval-controls ui-stack ui-stack--sm">
+                  <label className="ui-stack ui-stack--sm">
+                    <span>Dataset save name (optional)</span>
+                    <input
+                      className="ui-input"
+                      value={outputBaseName}
+                      maxLength={DATASET_PREPARATION_SAVE_NAME_MAX_LENGTH}
+                      disabled={reviewActionInFlight}
+                      placeholder="customer-support-training"
+                      onChange={(event) =>
+                        setOutputBaseName(event.target.value)
+                      }
+                    />
+                    <span className="ui-text-muted">
+                      Choose a meaningful file name. The selected format adds
+                      the file extension automatically.
+                    </span>
+                  </label>
+                  <p className="ui-text-muted">
+                    Approve and save includes the complete set of ready
+                    examples.
                   </p>
-                ) : null}
+                  <div className="dataset-preparation__actions ui-workflow__actions">
+                    <button
+                      className="ui-button"
+                      type="button"
+                      disabled={reviewActionInFlight}
+                      onClick={() => void approveReview()}
+                    >
+                      {reviewActionInFlight
+                        ? "Saving..."
+                        : "Approve and save dataset"}
+                    </button>
+                    <button
+                      className="ui-button"
+                      type="button"
+                      disabled={reviewActionInFlight}
+                      onClick={() => void discardReview()}
+                    >
+                      Discard dataset
+                    </button>
+                  </div>
+                </div>
               </section>
             ) : null}
             <button
@@ -2044,15 +1964,6 @@ export function DatasetPreparationFeature({
               </>
             ) : null}
           </div>
-        ) : null}
-        {preparation.listVersions ? (
-          <DatasetVersionPanel
-            workspaceId={workspaceId}
-            currentVersionId={result?.datasetVersion?.versionId}
-            datasetId={result?.datasetVersion?.datasetId}
-            service={versionService}
-            onReuse={reuseVersionSetup}
-          />
         ) : null}
         <DatasetReviewModal
           open={qualityReviewModalOpen}

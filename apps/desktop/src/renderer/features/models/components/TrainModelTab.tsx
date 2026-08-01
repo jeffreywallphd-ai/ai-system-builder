@@ -4,6 +4,7 @@ import {
   ApplicationIcon,
   PanelHeading,
   TermWithHint,
+  TypeBadge,
   WorkflowSequence,
   WorkflowStep,
 } from "../../../../../../../modules/ui/shared";
@@ -67,34 +68,68 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
               </select>
             </label>
 
-            <label className="ui-stack ui-stack--sm">
+            <div className="ui-stack ui-stack--sm">
               <span>
                 <TermWithHint termId="trainingDataset">
                   Training datasets (Parquet artifacts)
                 </TermWithHint>
               </span>
-              <select
-                className="ui-input model-training-workflow__datasets"
-                multiple
-                value={s.selectedDatasetArtifactIds}
-                onChange={(event) => {
-                  const selectedOptions = Array.from(
-                    event.target.selectedOptions,
-                  ).map((option) => option.value);
-                  s.setSelectedDatasetArtifactIds(selectedOptions);
-                }}
-              >
-                {s.datasetArtifacts.map((artifact) => (
-                  <option key={artifact.artifactId} value={artifact.artifactId}>
-                    {toDatasetOptionLabel(
-                      artifact.storageKey,
-                      artifact.originalName,
-                    )}{" "}
-                    ({artifact.artifactId})
-                  </option>
-                ))}
-              </select>
-            </label>
+              <div className="dataset-preparation__artifact-groups model-training-workflow__datasets">
+                <section className="dataset-preparation__artifact-group ui-stack ui-stack--sm">
+                  <h4 className="dataset-preparation__group-title">
+                    Available datasets
+                  </h4>
+                  {s.datasetArtifacts.length === 0 ? (
+                    <p className="ui-text-muted">
+                      No compatible training datasets are available in this
+                      workspace.
+                    </p>
+                  ) : (
+                    s.datasetArtifacts.map((artifact) => {
+                      const checked = s.selectedDatasetArtifactIds.includes(
+                        artifact.artifactId,
+                      );
+                      return (
+                        <label
+                          className="dataset-preparation__checkbox-row"
+                          key={artifact.artifactId}
+                        >
+                          <input
+                            type="checkbox"
+                            name="training-dataset"
+                            value={artifact.artifactId}
+                            checked={checked}
+                            onChange={() =>
+                              s.setSelectedDatasetArtifactIds((current) =>
+                                current.includes(artifact.artifactId)
+                                  ? current.filter(
+                                      (artifactId) =>
+                                        artifactId !== artifact.artifactId,
+                                    )
+                                  : [...current, artifact.artifactId],
+                              )
+                            }
+                          />
+                          <TypeBadge
+                            value={
+                              artifact.mediaType
+                              ?? artifact.originalName
+                              ?? artifact.storageKey
+                            }
+                          />
+                          <span>
+                            {toDatasetOptionLabel(
+                              artifact.storageKey,
+                              artifact.originalName,
+                            )}
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
+                </section>
+              </div>
+            </div>
           </WorkflowStep>
 
           <WorkflowStep
@@ -152,7 +187,7 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
             <div className="ui-workflow__field-grid">
               <label className="ui-stack ui-stack--sm">
                 <span>
-                  <TermWithHint termId="epoch">Epochs</TermWithHint>
+                  <TermWithHint termId="modelTrainingEpochs">Epochs</TermWithHint>
                 </span>
                 <input
                   className="ui-input"
@@ -162,7 +197,7 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
               </label>
               <label className="ui-stack ui-stack--sm">
                 <span>
-                  <TermWithHint termId="trainingStepLimit">
+                  <TermWithHint termId="modelTrainingMaxSteps">
                     Max steps
                   </TermWithHint>
                 </span>
@@ -174,7 +209,7 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
               </label>
               <label className="ui-stack ui-stack--sm">
                 <span>
-                  <TermWithHint termId="batchSize">Batch size</TermWithHint>
+                  <TermWithHint termId="modelTrainingBatchSize">Batch size</TermWithHint>
                 </span>
                 <input
                   className="ui-input"
@@ -184,7 +219,7 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
               </label>
               <label className="ui-stack ui-stack--sm">
                 <span>
-                  <TermWithHint termId="learningRate">
+                  <TermWithHint termId="modelTrainingLearningRate">
                     Learning rate
                   </TermWithHint>
                 </span>
@@ -196,7 +231,7 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
               </label>
               <label className="ui-stack ui-stack--sm">
                 <span>
-                  <TermWithHint termId="sequenceLength">
+                  <TermWithHint termId="modelTrainingSequenceLength">
                     Sequence length
                   </TermWithHint>
                 </span>
@@ -210,7 +245,7 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
               </label>
               <label className="ui-stack ui-stack--sm">
                 <span>
-                  <TermWithHint termId="seed">Seed</TermWithHint>
+                  <TermWithHint termId="modelTrainingSeed">Seed</TermWithHint>
                 </span>
                 <input
                   className="ui-input"
@@ -228,7 +263,7 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
               <div className="ui-workflow__field-grid">
                 <label className="ui-stack ui-stack--sm">
                   <span>
-                    <TermWithHint termId="loraRank">LoRA rank</TermWithHint>
+                    <TermWithHint termId="modelTrainingLoraRank">LoRA rank</TermWithHint>
                   </span>
                   <input
                     className="ui-input"
@@ -238,7 +273,7 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
                 </label>
                 <label className="ui-stack ui-stack--sm">
                   <span>
-                    <TermWithHint termId="loraAlpha">LoRA alpha</TermWithHint>
+                    <TermWithHint termId="modelTrainingLoraAlpha">LoRA alpha</TermWithHint>
                   </span>
                   <input
                     className="ui-input"
@@ -248,7 +283,7 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
                 </label>
                 <label className="ui-stack ui-stack--sm">
                   <span>
-                    <TermWithHint termId="loraDropout">
+                    <TermWithHint termId="modelTrainingLoraDropout">
                       LoRA dropout
                     </TermWithHint>
                   </span>
@@ -260,7 +295,7 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
                 </label>
                 <label className="ui-stack ui-stack--sm">
                   <span>
-                    <TermWithHint termId="targetModules">
+                    <TermWithHint termId="modelTrainingTargetModules">
                       Target modules
                     </TermWithHint>
                   </span>
@@ -274,7 +309,7 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
                 </label>
                 <label className="ui-stack ui-stack--sm">
                   <span>
-                    <TermWithHint termId="gradientAccumulation">
+                    <TermWithHint termId="modelTrainingGradientAccumulation">
                       Grad accumulation
                     </TermWithHint>
                   </span>
@@ -288,7 +323,7 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
                 </label>
                 <label className="ui-stack ui-stack--sm">
                   <span>
-                    <TermWithHint termId="checkpointInterval">
+                    <TermWithHint termId="modelTrainingCheckpointInterval">
                       Checkpoint interval
                     </TermWithHint>
                   </span>
@@ -302,7 +337,7 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
                 </label>
                 <label className="ui-stack ui-stack--sm">
                   <span>
-                    <TermWithHint termId="evalInterval">
+                    <TermWithHint termId="modelTrainingEvalInterval">
                       Eval interval
                     </TermWithHint>
                   </span>
@@ -494,7 +529,47 @@ export function TrainModelTab({ state: s }: { state: ModelTrainingState }) {
                 <ApplicationIcon name="play" />
                 <span className="ui-button__label">Start Training</span>
               </button>
+              {s.canStopTraining ? (
+                <button
+                  className="ui-button"
+                  type="button"
+                  onClick={() => void s.stopTraining()}
+                  disabled={s.stopTrainingInFlight}
+                >
+                  {s.stopTrainingInFlight ? "Stopping training..." : "Stop training"}
+                </button>
+              ) : null}
+              {s.canUnloadModel ? (
+                <button
+                  className="ui-button"
+                  type="button"
+                  onClick={() => void s.unloadModel()}
+                  disabled={s.unloadModelInFlight}
+                >
+                  {s.unloadModelInFlight ? "Unloading model..." : "Unload model"}
+                </button>
+              ) : null}
             </div>
+            {s.result?.reviewPending ? (
+              <div className="ui-workflow__actions" aria-label="Trained model review actions">
+                <button
+                  className="ui-button"
+                  type="button"
+                  onClick={() => void s.saveTrainedModel()}
+                  disabled={Boolean(s.reviewActionInFlight)}
+                >
+                  {s.reviewActionInFlight === "save" ? "Saving model..." : "Save model"}
+                </button>
+                <button
+                  className="ui-button"
+                  type="button"
+                  onClick={() => void s.discardTrainedModel()}
+                  disabled={Boolean(s.reviewActionInFlight)}
+                >
+                  {s.reviewActionInFlight === "discard" ? "Discarding model..." : "Discard model"}
+                </button>
+              </div>
+            ) : null}
             {s.message ? (
               <p
                 className="ui-workflow__status"

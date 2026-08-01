@@ -14,7 +14,6 @@ import {
   TransientNotificationPublisher,
   TypeBadge,
   useOptionalNotificationCenter,
-  DatasetVersionPanel,
   DatasetPreparationOutputShapeEditor,
   WorkflowSequence,
   WorkflowStep,
@@ -30,6 +29,7 @@ import {
 import { CollapsiblePanel } from "../../../components/ui/CollapsiblePanel";
 import { useDatasetPreparationFeature } from "../hooks/useDatasetPreparationFeature";
 import {
+  DATASET_PREPARATION_SAVE_NAME_MAX_LENGTH,
   DATASET_PREPARATION_TEXT_GENERATION_MODEL_PRESETS,
   type DatasetPreparationMethodId,
   type DatasetQualityReviewLineId,
@@ -41,7 +41,7 @@ import {
 } from "../profiles/datasetPreparationTaskProfiles";
 
 export interface DatasetPreparationFeatureProps {
-  onPrepared?: () => void;
+  onPrepared?: (artifactStorageKey: string) => void;
   client?: DesktopDatasetPreparationClient;
   settingsClient?: DesktopApplicationSettingsClient;
   modelsClient?: DesktopModelsClient;
@@ -268,7 +268,6 @@ export function DatasetPreparationFeature({
     onDownloadGenerationModel,
     onSaveTrainingSettings,
     onLoadTrainingSettings,
-    onReuseDatasetVersion,
   } = useDatasetPreparationFeature({
     client,
     settingsClient,
@@ -296,35 +295,6 @@ export function DatasetPreparationFeature({
   const versionClient = useMemo(
     () => client ?? createDesktopDatasetPreparationClient(),
     [client],
-  );
-  const versionService = useMemo(
-    () => ({
-      list: (targetWorkspaceId: string, targetDatasetId?: string) =>
-        versionClient.listVersions?.(targetWorkspaceId, targetDatasetId) ??
-        Promise.resolve([]),
-      compare: (
-        targetWorkspaceId: string,
-        fromVersionId: string,
-        toVersionId: string,
-      ) =>
-        versionClient.compareVersions?.(
-          targetWorkspaceId,
-          fromVersionId,
-          toVersionId,
-        ) ??
-        Promise.reject(new Error("Dataset version comparison is unavailable.")),
-      reproduce: (targetWorkspaceId: string, versionId: string) =>
-        versionClient.readReproduction?.(targetWorkspaceId, versionId) ??
-        Promise.reject(new Error("Saved dataset setup is unavailable.")),
-      publish: (
-        input: Parameters<
-          NonNullable<DesktopDatasetPreparationClient["publishVersion"]>
-        >[0],
-      ) =>
-        versionClient.publishVersion?.(input) ??
-        Promise.reject(new Error("Dataset publishing is unavailable.")),
-    }),
-    [versionClient],
   );
   const qualityReviewLines = useMemo(
     () =>
@@ -1683,21 +1653,6 @@ export function DatasetPreparationFeature({
                               <option value="csv">CSV</option>
                             </select>
                           </label>
-                          <label className="ui-stack ui-stack--sm">
-                            <span>
-                              <TermWithHint termId="outputBaseName">
-                                Output base name
-                              </TermWithHint>{" "}
-                              (optional)
-                            </span>
-                            <input
-                              className="ui-input"
-                              value={outputBaseName}
-                              onChange={(event) =>
-                                setOutputBaseName(event.target.value)
-                              }
-                            />
-                          </label>
                         </div>
                       </>,
                     )}
@@ -1932,45 +1887,60 @@ export function DatasetPreparationFeature({
                         </ul>
                       </details>
                     ) : null}
-                    <div className="dataset-preparation__actions ui-workflow__actions">
-                      <button
-                        className="ui-button"
-                        type="button"
-                        disabled={
-                          reviewActionInFlight ||
-                          !qualityReview.report.approvalAllowed
-                        }
-                        onClick={() => void onApproveReview()}
-                      >
-                        {reviewActionInFlight
-                          ? "Saving..."
-                          : "Approve and save dataset"}
-                      </button>
-                      <button
-                        className="ui-button"
-                        type="button"
-                        disabled={reviewActionInFlight}
-                        onClick={() => void onDiscardReview()}
-                      >
-                        Discard review
-                      </button>
-                    </div>
-                    {!qualityReview.report.approvalAllowed ? (
-                      <p role="alert">
-                        This dataset cannot be saved. Adjust the source data or
-                        rules, then run the checks again.
+                    <div className="dataset-preparation__approval-controls ui-stack ui-stack--sm">
+                      <label className="ui-stack ui-stack--sm">
+                        <span>
+                          <TermWithHint termId="outputBaseName">
+                            Dataset save name
+                          </TermWithHint>{" "}
+                          (optional)
+                        </span>
+                        <input
+                          className="ui-input"
+                          value={outputBaseName}
+                          maxLength={DATASET_PREPARATION_SAVE_NAME_MAX_LENGTH}
+                          disabled={reviewActionInFlight}
+                          placeholder="customer-support-training"
+                          onChange={(event) =>
+                            setOutputBaseName(event.target.value)
+                          }
+                        />
+                        <span className="ui-text-muted">
+                          Choose a meaningful file name. The selected format
+                          adds the file extension automatically.
+                        </span>
+                      </label>
+                      <p className="ui-text-muted">
+                        Approve and save includes the complete set of ready
+                        examples.
                       </p>
-                    ) : null}
+                      <div className="dataset-preparation__actions ui-workflow__actions">
+                        <button
+                          className="ui-button"
+                          type="button"
+                          disabled={reviewActionInFlight}
+                          onClick={() => void onApproveReview()}
+                        >
+                          {reviewActionInFlight
+                            ? "Saving..."
+                            : "Approve and save dataset"}
+                        </button>
+                        <button
+                          className="ui-button"
+                          type="button"
+                          disabled={reviewActionInFlight}
+                          onClick={() => void onDiscardReview()}
+                        >
+                          Discard dataset
+                        </button>
+                      </div>
+                    </div>
                   </section>
                 ) : null}
 
                 <p className="dataset-preparation__section-description ui-text-muted">
-                  The prepared dataset is saved locally as a reusable version
-                  first.
-                </p>
-                <p>
-                  After it is saved, use <strong>Saved versions</strong> to
-                  publish it privately or publicly.
+                  After approval, the saved dataset opens in Artifact Browser,
+                  where you can inspect it or publish it to Hugging Face.
                 </p>
 
                 <div className="dataset-preparation__actions ui-workflow__actions">
@@ -2055,15 +2025,6 @@ export function DatasetPreparationFeature({
             <dt>Test rows</dt>
             <dd>{resultSummary.testRows}</dd>
           </dl>
-        ) : null}
-        {workspaceId && versionClient.listVersions ? (
-          <DatasetVersionPanel
-            workspaceId={workspaceId}
-            currentVersionId={resultSummary?.datasetVersion?.versionId}
-            datasetId={resultSummary?.datasetVersion?.datasetId}
-            service={versionService}
-            onReuse={onReuseDatasetVersion}
-          />
         ) : null}
         {resultSummary?.warnings.length ? (
           <div className="dataset-preparation__warnings" role="status">

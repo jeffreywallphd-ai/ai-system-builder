@@ -446,9 +446,21 @@ export function registerDatasetPreparationApiRoutes(
           body.reportFingerprint,
           "reportFingerprint",
         );
+        if (
+          body.outputBaseName !== undefined &&
+          typeof body.outputBaseName !== "string"
+        ) {
+          throw new Error("outputBaseName must be text.");
+        }
         const result =
           await dependencies.prepareTrainingDatasetUseCase.approvePreparedTrainingDataset(
-            { requestId, reportFingerprint },
+            {
+              requestId,
+              reportFingerprint,
+              ...(body.outputBaseName !== undefined
+                ? { outputBaseName: body.outputBaseName }
+                : {}),
+            },
             requestContext(request, workspaceId),
           );
         if (!result.ok) {

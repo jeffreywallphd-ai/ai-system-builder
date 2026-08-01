@@ -126,6 +126,7 @@ export interface DesktopPythonRuntimeFeature {
     getStatus: () => string;
   };
   runtimePort: any;
+  prepareModelTrainingEnvironment?: () => void;
 }
 
 export function classifyPythonRuntimeStdioLogLevel(

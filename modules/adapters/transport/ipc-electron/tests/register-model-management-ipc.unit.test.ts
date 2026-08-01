@@ -19,12 +19,18 @@ import {
   DESKTOP_MODEL_TRAIN_REQUEST_CHANNEL,
   DESKTOP_MODEL_TRAIN_RESPONSE_CHANNEL,
   DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_CANCEL_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_SAVE_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_DISCARD_REQUEST_CHANNEL,
   DESKTOP_MODEL_VALIDATE_REQUEST_CHANNEL,
   DESKTOP_MODEL_PUBLISH_REQUEST_CHANNEL,
   DESKTOP_MODEL_PUBLISH_RESPONSE_CHANNEL,
   createDesktopModelBrowseRequest,
   createDesktopModelTrainRequest,
   createDesktopModelTrainStatusRequest,
+  createDesktopModelTrainCancelRequest,
+  createDesktopModelTrainSaveRequest,
+  createDesktopModelTrainDiscardRequest,
   createDesktopModelPublishRequest,
   createDesktopModelDownloadListRequest,
   createDesktopModelFolderRevealRequest,
@@ -33,6 +39,9 @@ import {
   createBrowseModelsIpcHandler,
   createListModelsIpcHandler,
   createReadModelTrainingStatusIpcHandler,
+  createCancelModelTrainingIpcHandler,
+  createSaveModelTrainingIpcHandler,
+  createDiscardModelTrainingIpcHandler,
   createTrainModelIpcHandler,
   createPublishModelIpcHandler,
   createListModelDownloadsIpcHandler,
@@ -53,7 +62,7 @@ describe("registerModelManagementIpc", () => {
       updateModelRecordUseCase: { execute: testDouble.fn() },
       deleteModelRecordUseCase: { execute: testDouble.fn() },
       revealModelInFolderUseCase: { execute: testDouble.fn() },
-      trainModelUseCase: { execute: testDouble.fn(), read: testDouble.fn() },
+      trainModelUseCase: { execute: testDouble.fn(), read: testDouble.fn(), cancel: testDouble.fn(), save: testDouble.fn(), discard: testDouble.fn() },
       validateModelUseCase: { execute: testDouble.fn() },
       publishModelUseCase: { execute: testDouble.fn() },
     });
@@ -69,6 +78,9 @@ describe("registerModelManagementIpc", () => {
       DESKTOP_MODEL_FOLDER_REVEAL_REQUEST_CHANNEL.value,
       DESKTOP_MODEL_TRAIN_REQUEST_CHANNEL.value,
       DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL.value,
+      DESKTOP_MODEL_TRAIN_CANCEL_REQUEST_CHANNEL.value,
+      DESKTOP_MODEL_TRAIN_SAVE_REQUEST_CHANNEL.value,
+      DESKTOP_MODEL_TRAIN_DISCARD_REQUEST_CHANNEL.value,
       DESKTOP_MODEL_VALIDATE_REQUEST_CHANNEL.value,
       DESKTOP_MODEL_PUBLISH_REQUEST_CHANNEL.value,
     ]);
@@ -111,7 +123,7 @@ describe("registerModelManagementIpc", () => {
     const tasks = { start: testDouble.fn(), read: testDouble.fn(), list: testDouble.fn(async () => ({ activities: [] })), cancel: testDouble.fn() };
     registerModelManagementIpc({
       ipcMain: { handle: testDouble.fn((channel: string) => channels.push(channel)) },
-      browseModelsUseCase: { execute: testDouble.fn() }, getModelDetailsUseCase: { execute: testDouble.fn() }, listModelsUseCase: { execute: testDouble.fn() }, saveModelReferenceUseCase: { execute: testDouble.fn() }, downloadModelUseCase: { execute: testDouble.fn() }, modelDownloadTasksUseCase: tasks, updateModelRecordUseCase: { execute: testDouble.fn() }, deleteModelRecordUseCase: { execute: testDouble.fn() }, revealModelInFolderUseCase: { execute: testDouble.fn() }, trainModelUseCase: { execute: testDouble.fn(), read: testDouble.fn() }, validateModelUseCase: { execute: testDouble.fn() }, publishModelUseCase: { execute: testDouble.fn() },
+      browseModelsUseCase: { execute: testDouble.fn() }, getModelDetailsUseCase: { execute: testDouble.fn() }, listModelsUseCase: { execute: testDouble.fn() }, saveModelReferenceUseCase: { execute: testDouble.fn() }, downloadModelUseCase: { execute: testDouble.fn() }, modelDownloadTasksUseCase: tasks, updateModelRecordUseCase: { execute: testDouble.fn() }, deleteModelRecordUseCase: { execute: testDouble.fn() }, revealModelInFolderUseCase: { execute: testDouble.fn() }, trainModelUseCase: { execute: testDouble.fn(), read: testDouble.fn(), cancel: testDouble.fn(), save: testDouble.fn(), discard: testDouble.fn() }, validateModelUseCase: { execute: testDouble.fn() }, publishModelUseCase: { execute: testDouble.fn() },
     });
     expect(channels).toContain(DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL.value);
     expect(channels).toContain(DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL.value);
@@ -191,10 +203,114 @@ it("maps train status handler to use case read", async () => {
     progress: { epoch: 0, totalEpochs: 1, batch: 0, totalBatches: 59 },
   });
   const handler = createReadModelTrainingStatusIpcHandler({ read });
-  const response = await handler({}, createDesktopModelTrainStatusRequest({ runId: "run-1" }));
+  const response = await handler({}, createDesktopModelTrainStatusRequest({
+    runId: "run-1",
+    workspaceId: "workspace-a" as never,
+  }));
 
-  expect(read).toHaveBeenCalledWith("run-1");
+  expect(read).toHaveBeenCalledWith("run-1", "workspace-a");
   expect(response.ok).toBe(true);
+});
+
+it("maps train cancellation to the workspace-scoped use case", async () => {
+  const cancel = testDouble.fn().mockResolvedValue({
+    runId: "run-1",
+    status: "cancelled",
+  });
+  const handler = createCancelModelTrainingIpcHandler({ cancel });
+  const response = await handler(
+    {},
+    createDesktopModelTrainCancelRequest({
+      runId: "run-1",
+      workspaceId: "workspace-a" as never,
+    }),
+  );
+
+  expect(cancel).toHaveBeenCalledWith("run-1", "workspace-a");
+  expect(response).toMatchObject({
+    ok: true,
+    value: { runId: "run-1", status: "cancelled" },
+  });
+});
+
+it("maps trained-model save and discard reviews to the active workspace", async () => {
+  const save = testDouble.fn().mockResolvedValue({ runId: "run-1", status: "succeeded" });
+  const discard = testDouble.fn().mockResolvedValue({ runId: "run-2", status: "cancelled" });
+  const saveResponse = await createSaveModelTrainingIpcHandler({ save })(
+    {},
+    createDesktopModelTrainSaveRequest({ runId: "run-1", workspaceId: "workspace-a" as never }),
+  );
+  const discardResponse = await createDiscardModelTrainingIpcHandler({ discard })(
+    {},
+    createDesktopModelTrainDiscardRequest({ runId: "run-2", workspaceId: "workspace-a" as never }),
+  );
+
+  expect(save).toHaveBeenCalledWith("run-1", "workspace-a");
+  expect(discard).toHaveBeenCalledWith("run-2", "workspace-a");
+  expect(saveResponse.ok).toBe(true);
+  expect(discardResponse.ok).toBe(true);
+});
+
+it("reports model-training start failures without exposing details in the response", async () => {
+  const failure = new Error(
+    "Failed to install datasets at C:\\private\\python-runtime",
+  );
+  const reporter = testDouble.fn(async () => undefined);
+  const handler = createTrainModelIpcHandler(
+    {
+      execute: testDouble.fn(async () => {
+        throw failure;
+      }),
+    },
+    reporter,
+  );
+
+  const response = await handler({}, createDesktopModelTrainRequest({
+    baseModel: { modelRecordId: "base-1" },
+    datasets: [{ artifactId: "dataset-1", splitRole: "train" }],
+    method: "lora",
+    commonParameters: {},
+    output: {
+      outputModelName: "demo-adapter",
+      destination: { local: { enabled: true } },
+    },
+  }));
+
+  expect(reporter).toHaveBeenCalledWith("trainModel.execute", failure);
+  expect(response).toMatchObject({
+    ok: false,
+    error: { code: "internal", message: "Model management request failed." },
+  });
+  expect(JSON.stringify(response)).not.toContain("private");
+  expect(JSON.stringify(response)).not.toContain("datasets");
+});
+
+it("reports model-training status failures without changing the sanitized response", async () => {
+  const failure = new Error("runtime status failed at C:\\private\\task.json");
+  const reporter = testDouble.fn(async () => undefined);
+  const handler = createReadModelTrainingStatusIpcHandler(
+    {
+      read: testDouble.fn(async () => {
+        throw failure;
+      }),
+    },
+    reporter,
+  );
+
+  const response = await handler(
+    {},
+    createDesktopModelTrainStatusRequest({
+      runId: "run-1",
+      workspaceId: "workspace-a" as never,
+    }),
+  );
+
+  expect(reporter).toHaveBeenCalledWith("trainModel.read", failure);
+  expect(response).toMatchObject({
+    ok: false,
+    error: { code: "internal", message: "Model management request failed." },
+  });
+  expect(JSON.stringify(response)).not.toContain("private");
 });
 
 it("maps model runtime capability unavailable errors to sanitized IPC unavailable responses", async () => {

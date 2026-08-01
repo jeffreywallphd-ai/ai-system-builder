@@ -3,4 +3,5 @@ diffusers>=0.30.0
 numpy>=1.26.0
 peft>=0.11.0
 pillow>=10.0.0
+scipy>=1.13.0
 torch>=2.3.0

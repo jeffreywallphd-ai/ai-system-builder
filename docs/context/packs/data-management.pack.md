@@ -1,6 +1,7 @@
 # Context Pack: Data Management
 
 - Pack name: `data-management`
+
 ## Purpose
 
 - Route work involving ingestion, staged source artifacts, dataset preparation, split integrity, curation, versioning, or dataset publication.
@@ -131,7 +132,7 @@
   Reproduction returns a recipe only after exact digest verification and uses
   stable source artifact ids to restore the ordered preparation workflow.
 - Group immutable versions by dataset identity, select the newest by default, and derive major/minor display labels from lineage; preparation report lines page actual ready or quarantined rows under the exact task scope and report fingerprint.
-- Dataset Review lists only locally readable Parquet artifacts, presents a continuous row-by-row modal plus a 10-row paginated table, requires exact row fingerprints, requires localization for repository-only files, and creates a 1.0 baseline plus 1.1 child on the first approved edit. Edit changes read-only values into a bounded typed form; Approve changes writes a new immutable minor version, Reject remains available, and Cancel exits without a decision change.
+- Dataset Review lists only locally readable Parquet artifacts, presents a continuous row-by-row modal plus a 10-row paginated table, requires exact row fingerprints, and requires localization for repository-only files. Reject removes the exact row and writes a new immutable minor version; Edit changes read-only values into a bounded typed form and Approve changes does the same. The first persisted rejection or approved edit creates a 1.0 baseline plus 1.1 child. Existing rows are already approved, and Cancel exits without persistence.
 - Store accepted generated review rows as a bounded, integrity-checked workspace-local temporary artifact so previews survive runtime-directory cleanup. Retain final private runtime outputs so failed approval remains retryable; clean preview and final artifacts after their terminal approval, cancellation, or discard boundary.
 - Use bounded input counts, bytes, rows, document extraction, chunk counts,
   generated rows, warning counts, runtime duration, previews, and reports.
@@ -150,11 +151,9 @@
   companion fields beside the shape and populate them only from bounded trusted
   metadata after validation. Never ask the model to invent attribution; omit
   the companion object when the choice is off.
-- Keep reusable settings outside the numbered workflow, omit task-specific
-  settings when there are no choices, and avoid nested review cards that only
-  restate save or publication guidance.
-- Keep readiness and correction inline. Use notifications for authoritative
-  cross-page activity; accepted dataset preparation opens and updates there.
+- Keep reusable settings outside the numbered workflow, omit task-specific settings when there are no choices, and avoid nested review cards that only restate save or publication guidance.
+- Keep the optional dataset save name beside the final approval and discard actions in Review and create. One explicit approval saves the complete curated ready set. After success, switch to Artifact Browser with the exact saved dataset selected and its detail view open; do not embed post-save version history in preparation.
+- Keep readiness and correction inline. Use notifications for authoritative cross-page activity; accepted dataset preparation opens and updates there.
 - On acquisition success, clear Add data, return it to Files, open the completed
   notification, and scroll to the top. Keep selections after failure or
   cancellation for correction or retry; never clear the host-owned provider
@@ -185,12 +184,13 @@
   mixing invariants, synthetic schema/citation/grounding/critic/safety/diversity
   denial paths, and aggregate-only evidence tests.
 - Default-schema completeness for every generated task, schema-fingerprint and
-  purpose-path mismatch denial, selected trusted attribution, sanitized public
-  URLs, and absence of attribution when unselected.
+  purpose-path mismatch denial, custom-purpose mapping through quality admission
+  and reporting, trusted attribution, sanitized URLs, and unselected absence.
 - Desktop/thin-client ordered-step, disclosure, warning, keyboard, reflow, and reduced-motion checks.
 - Applicable docs, architecture, agent-support, host build, package, and full repository gates after an increment.
 
 ## Adjacent Packs
+
 - `persistence-storage` for object/repository storage or source isolation.
 - `runtime` or `runtime-task-registry` for worker execution/lifecycle.
 - `desktop-implementation` for renderer and thin-client experience.

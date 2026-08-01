@@ -18,6 +18,7 @@ function createValidInput() {
     trainRatio: "0.8",
     testRatio: "0.2",
     seed: "",
+    outputBaseName: "",
     localDestinationEnabled: true,
     huggingFaceDestinationEnabled: false,
     huggingFaceRepository: "",
@@ -56,6 +57,19 @@ describe("datasetPreparationRequestValidation", () => {
     ).toEqual({
       ok: false,
       error: "Chunk size must be a positive integer.",
+    });
+  });
+
+  it("rejects a dataset save name containing path characters", () => {
+    expect(
+      validateAndParseDatasetPreparationInputs({
+        ...createValidInput(),
+        outputBaseName: "../customer-support",
+      }),
+    ).toEqual({
+      ok: false,
+      error:
+        "Dataset save name cannot contain file path characters or end with a period.",
     });
   });
 

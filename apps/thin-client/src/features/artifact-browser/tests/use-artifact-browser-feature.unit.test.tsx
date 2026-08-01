@@ -34,6 +34,69 @@ describe("ArtifactBrowserFeature", () => {
     mountedContainer = undefined;
   });
 
+  it("selects the requested saved artifact and opens its inline detail", async () => {
+    const storageKey = "datasets/support-tickets-2026.parquet";
+    const onInitialSelectionHandled = vi.fn();
+    const client = {
+      browseArtifacts: vi.fn().mockResolvedValue([
+        {
+          storageKey,
+          originalName: "support-tickets-2026.parquet",
+          artifactFamily: "tabular" as const,
+          mediaType: "application/vnd.apache.parquet",
+        },
+      ]),
+      readArtifactDetail: vi.fn().mockResolvedValue({
+        locator: { storageKey },
+        originalName: "support-tickets-2026.parquet",
+        artifactFamily: "tabular" as const,
+        mediaType: "application/vnd.apache.parquet",
+        sizeBytes: 4,
+      }),
+      readArtifactContent: vi.fn().mockResolvedValue({
+        locator: { storageKey },
+        mediaType: "application/vnd.apache.parquet",
+        sizeBytes: 4,
+        availability: "available" as const,
+        retrieval: "deferred" as const,
+      }),
+      createArtifactMediaViewUrl: vi.fn().mockReturnValue(""),
+      deleteRegisteredArtifact: vi.fn(),
+      getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
+      setHuggingFaceToken: vi.fn(),
+      clearHuggingFaceToken: vi.fn(),
+      publishArtifactToHuggingFace: vi.fn(),
+      verifyPublishedArtifactBacking: vi.fn(),
+      registerArtifactFromRepo: vi.fn(),
+      localizeArtifactFromRepo: vi.fn(),
+    };
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    mountedContainer = container;
+    mountedRoot = createRoot(container);
+
+    await act(async () => {
+      mountedRoot?.render(
+        <ArtifactBrowserFeature
+          client={client}
+          workspaceId="workspace-a"
+          initialSelectedStorageKey={storageKey}
+          onInitialSelectionHandled={onInitialSelectionHandled}
+        />,
+      );
+    });
+
+    await vi.waitFor(() =>
+      expect(client.readArtifactDetail).toHaveBeenCalledWith(
+        { storageKey },
+        { workspaceId: "workspace-a" },
+      ),
+    );
+    expect(container.textContent).toContain("Selected key");
+    expect(container.textContent).toContain(storageKey);
+    expect(onInitialSelectionHandled).toHaveBeenCalledOnce();
+  });
+
   it("hides token and publish controls while showing published backing details", async () => {
     const client = {
       browseArtifacts: vi.fn().mockResolvedValue([

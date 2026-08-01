@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from modules.adapters.runtime.python.worker.tasks.model_serialization import save_adapter_pretrained, save_full_model_pretrained
@@ -23,7 +24,10 @@ class _FakeAdapterModel:
         out = Path(output)
         out.mkdir(parents=True, exist_ok=True)
         (out / "adapter_model.safetensors").write_bytes(b"adapter")
-        (out / "adapter_config.json").write_text("{}", encoding="utf-8")
+        (out / "adapter_config.json").write_text(
+            '{"base_model_name_or_path":"C:/private/cache/snapshot"}',
+            encoding="utf-8",
+        )
 
 
 class _FakeTokenizer:
@@ -40,7 +44,15 @@ def test_save_full_model_writes_sharded_index(tmp_path: Path) -> None:
 
 
 def test_save_adapter_writes_adapter_files(tmp_path: Path) -> None:
-    result = save_adapter_pretrained(_FakeAdapterModel(), _FakeTokenizer(), tmp_path)
+    result = save_adapter_pretrained(
+        _FakeAdapterModel(),
+        _FakeTokenizer(),
+        tmp_path,
+        base_model_id="org/base",
+    )
     assert result["serializationFormat"] == "adapter-safetensors"
     assert (tmp_path / "adapter_model.safetensors").exists()
     assert (tmp_path / "adapter_config.json").exists()
+    config = json.loads((tmp_path / "adapter_config.json").read_text(encoding="utf-8"))
+    assert config["base_model_name_or_path"] == "org/base"
+    assert "private" not in json.dumps(config)

@@ -1,6 +1,7 @@
 import { createLocalModelRegistryAdapter } from "../../../adapters/persistence/model";
 import { createHuggingFaceModelBrowseDetailsAdapter, createHuggingFaceModelPublisherAdapter } from "../../../adapters/model/huggingface";
-import { createLocalGeneratedModelStorageAdapter, resolveLocalGeneratedModelStorageRoot } from "../../../adapters/model/local";
+import { createLocalGeneratedModelStorageAdapter, createLocalModelFilesDeleteAdapter, resolveLocalGeneratedModelStorageRoot } from "../../../adapters/model/local";
+import { resolveConfiguredModelCacheRoot } from "../../../adapters/runtime/python";
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import {
   BrowseModelsUseCase,
@@ -66,7 +67,20 @@ export function composeDesktopModelFeature(options: ComposeDesktopModelFeatureOp
       now: options.now,
     }),
     updateModelRecordUseCase: new UpdateModelRecordUseCase({ modelRegistry }),
-    deleteModelRecordUseCase: new DeleteModelRecordUseCase({ modelRegistry, artifactCatalogDeletePort: asyncLazyObject(async () => (await options.getArtifacts()).artifactCatalog) }),
+    deleteModelRecordUseCase: new DeleteModelRecordUseCase({
+      modelRegistry,
+      artifactCatalogDeletePort: asyncLazyObject(async () => (await options.getArtifacts()).artifactCatalog),
+      modelLocalFilesDeletePort: createLocalModelFilesDeleteAdapter({
+        approvedRoots: async () => {
+          const sharedRoot = await options.readSharedModelStorageDirectory?.();
+          return Array.from(new Set([
+            resolveLocalGeneratedModelStorageRoot({ env: process.env }),
+            resolveConfiguredModelCacheRoot(process.env),
+            ...(sharedRoot ? [sharedRoot] : []),
+          ]));
+        },
+      }),
+    }),
     revealModelInFolderUseCase: new RevealModelInFolderUseCase({
       modelRegistry,
       modelLocationRevealer: {

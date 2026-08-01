@@ -757,6 +757,33 @@ export interface DatasetOutputConfig {
   };
 }
 
+export const DATASET_PREPARATION_SAVE_NAME_MAX_LENGTH = 128;
+
+export function validateDatasetPreparationSaveName(
+  value: unknown,
+): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") {
+    return "Dataset save name must be text.";
+  }
+
+  const normalized = value.trim();
+  if (normalized.length === 0) return undefined;
+  if (normalized.length > DATASET_PREPARATION_SAVE_NAME_MAX_LENGTH) {
+    return `Dataset save name must be ${DATASET_PREPARATION_SAVE_NAME_MAX_LENGTH} characters or fewer.`;
+  }
+  if (
+    normalized === "." ||
+    normalized === ".." ||
+    /[<>:"/\\|?*\u0000-\u001f]/u.test(normalized) ||
+    /[. ]$/u.test(normalized)
+  ) {
+    return "Dataset save name cannot contain file path characters or end with a period.";
+  }
+
+  return undefined;
+}
+
 export interface DatasetPreparationSummary {
   sourceDocumentCount: number;
   normalizedDocumentCount: number;

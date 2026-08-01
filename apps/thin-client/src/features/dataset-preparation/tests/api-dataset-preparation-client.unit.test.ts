@@ -100,6 +100,7 @@ describe("api dataset preparation client", () => {
       workspaceId: "workspace a",
       requestId: "task/1",
       reportFingerprint: "a".repeat(64),
+      outputBaseName: "support-tickets-2026",
     });
     await client.cancel({ workspaceId: "workspace a", requestId: "task/1" });
 
@@ -117,6 +118,7 @@ describe("api dataset preparation client", () => {
     expect(JSON.parse(String(fetchMock.mock.calls[2][1].body))).toEqual({
       workspaceId: "workspace a",
       reportFingerprint: "a".repeat(64),
+      outputBaseName: "support-tickets-2026",
     });
     expect(fetchMock.mock.calls[3][0]).toBe(
       "/api/dataset-preparation/tasks/task%2F1/cancel",

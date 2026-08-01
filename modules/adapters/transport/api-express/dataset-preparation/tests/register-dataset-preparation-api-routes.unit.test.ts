@@ -116,7 +116,7 @@ describe("registerDatasetPreparationApiRoutes", () => {
     );
   });
 
-  it("binds approval to the authenticated workspace and fingerprint", async () => {
+  it("binds approval and its final save name to the authenticated workspace and fingerprint", async () => {
     const post = new Map<string, any>();
     const approvePreparedTrainingDataset = testDouble.fn(async () => ({
       ok: false,
@@ -145,6 +145,7 @@ describe("registerDatasetPreparationApiRoutes", () => {
         body: {
           workspaceId: "workspace-a",
           reportFingerprint: "a".repeat(64),
+          outputBaseName: "support-tickets-2026",
         },
       }),
       response,
@@ -154,6 +155,7 @@ describe("registerDatasetPreparationApiRoutes", () => {
       {
         requestId: "task-1",
         reportFingerprint: "a".repeat(64),
+        outputBaseName: "support-tickets-2026",
       },
       expect.objectContaining({
         workspaceId: "workspace-a",

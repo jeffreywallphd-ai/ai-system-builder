@@ -34,6 +34,7 @@ from modules.adapters.runtime.python.worker.tasks.prepare_training_dataset impor
 )
 from modules.adapters.runtime.python.worker.tests.structured_output_test_fixtures import (
     runtime_structured_output_fixture,
+    runtime_structured_output_from_schema,
 )
 
 
@@ -443,6 +444,113 @@ class PrepareTrainingDatasetTaskTests(unittest.TestCase):
         )
         self.assertEqual(row["input"], "Which sequence is shown?")
         self.assertEqual(row["context"], "abcdefghij")
+
+    def test_quality_uses_renamed_question_and_answer_purpose_paths(self) -> None:
+        payload = self._build_payload("jsonl")
+        payload.sourceInputs = payload.sourceInputs[:1]
+        payload.recipe.chunking.chunkSize = 100
+        payload.recipe.chunking.chunkOverlap = 0
+
+        def rename_fields(value):
+            if isinstance(value, dict):
+                return {
+                    (
+                        "question"
+                        if key == "input"
+                        else "answer"
+                        if key == "output"
+                        else key
+                    ): rename_fields(item)
+                    for key, item in value.items()
+                }
+            if isinstance(value, list):
+                return [rename_fields(item) for item in value]
+            if value == "input":
+                return "question"
+            if value == "output":
+                return "answer"
+            return value
+
+        default_compiled = runtime_structured_output_fixture()["structuredOutput"]
+        payload.runtime = runtime_structured_output_from_schema(
+            rename_fields(default_compiled["schema"]),
+            "example",
+            {
+                "instruction": ["instruction"],
+                "input": ["question"],
+                "context": ["context"],
+                "output": ["answer"],
+            },
+            example=rename_fields(default_compiled["example"]),
+        )
+        quality = {
+            "requestedPolicy": {"preset": "recommended"},
+            "effectivePolicy": {
+                "policyId": "policy",
+                "revision": "1",
+                "scope": "workspace",
+                "preset": "recommended",
+                "allowedLanguages": ["en"],
+                "requireLicenseMetadata": False,
+                "requireConsentMetadata": False,
+                "excludedBenchmarkIds": [],
+                "maxRowsPerSource": 100,
+                "minimumTextCharacters": 1,
+                "maximumTextCharacters": 10000,
+                "fuzzyDuplicateSimilarity": 0.95,
+                "maxFuzzyCandidatesPerRow": 16,
+                "maxReportSamplesPerReason": 3,
+                "mandatoryChecks": {
+                    "sourceAssociation": True,
+                    "schema": True,
+                    "exactDuplicates": True,
+                    "fuzzyDuplicates": True,
+                    "sensitivePersonalData": True,
+                    "secretLikeContent": True,
+                    "splitLeakage": True,
+                },
+            },
+            "reviewRequired": True,
+        }
+        payload = PrepareTrainingDatasetRequest.model_validate(
+            {**payload.model_dump(mode="json"), "quality": quality}
+        )
+
+        result = prepare_training_dataset(
+            payload,
+            example_generator=lambda chunks, _config: [
+                GeneratedQaExample(
+                    artifact_id=chunk.artifact_id,
+                    chunk_index=chunk.chunk_index,
+                    question="Which sequence is shown?",
+                    answer="The sequence runs from a through j.",
+                    generation_mode="structured-json-v1",
+                    structured_fields={
+                        "instruction": "Answer the question using the context.",
+                        "question": "Which sequence is shown?",
+                        "context": chunk.text,
+                        "answer": "The sequence runs from a through j.",
+                    },
+                )
+                for chunk in chunks
+            ],
+        )
+
+        self.assertIsNotNone(result.qualityReport)
+        self.assertEqual(result.qualityReport["status"], "ready")
+        self.assertTrue(result.qualityReport["approvalAllowed"])
+        self.assertEqual(
+            result.qualityReport["mapping"]["missingRequiredFields"], []
+        )
+        self.assertEqual(result.qualityReport["counts"]["acceptedRows"], 1)
+        aggregate = next(output for output in result.outputs if output.role == "dataset")
+        row = json.loads(
+            Path(aggregate.tempPath).read_text(encoding="utf-8").splitlines()[0]
+        )
+        self.assertEqual(row["question"], "Which sequence is shown?")
+        self.assertEqual(row["answer"], "The sequence runs from a through j.")
+        self.assertNotIn("input", row)
+        self.assertNotIn("output", row)
 
     def test_explicit_topic_aware_plan_omits_fixed_size_and_overlap(self) -> None:
         payload = self._build_payload("jsonl")

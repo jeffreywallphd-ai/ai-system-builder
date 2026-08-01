@@ -171,6 +171,10 @@ function extractSourceArtifactIds(metadata: Record<string, unknown> | undefined)
 
 export class TrainModelUseCase {
   private readonly registeredResultsByRequestId = new Map<string, ModelTrainingResult>();
+  private readonly pendingResultsByRequestId = new Map<string, ModelTrainingResult>();
+  private readonly approvedRequestIds = new Set<string>();
+  private readonly reviewActionRequestIds = new Set<string>();
+  private readonly workspaceIdByRequestId = new Map<string, string>();
   private readonly requestContextByRequestId = new Map<string, { normalizedRequest: ModelTrainingRequest; baseModelRecordId?: string }>();
   private readonly runtimeDatasetDirsByRequestId = new Map<string, string>();
 
@@ -189,6 +193,9 @@ export class TrainModelUseCase {
 
   public async execute(request: ModelTrainingRequest): Promise<ModelTrainingResult> {
     const normalizedRequest = normalizeModelTrainingRequest(request);
+    if (!isWorkspaceId(normalizedRequest.workspaceId)) {
+      throw new Error("workspaceId must be provided for workspace-scoped model training.");
+    }
     ensureBaseModelSelection(normalizedRequest);
     ensureDatasetSelections(normalizedRequest);
     ensureOutputDestinationSelection(normalizedRequest);
@@ -225,6 +232,7 @@ export class TrainModelUseCase {
       }
 
       const started = await this.dependencies.runtimeTaskRegistry.startTask({
+        workspaceId: normalizedRequest.workspaceId,
         taskType: TaskType.MODEL_TRAINING,
         payload: {
           ...normalizedRequest,
@@ -241,6 +249,7 @@ export class TrainModelUseCase {
       }
 
       this.requestContextByRequestId.set(started.requestId, { normalizedRequest, baseModelRecordId });
+      this.workspaceIdByRequestId.set(started.requestId, normalizedRequest.workspaceId);
       if (runtimeDatasetDir) {
         this.runtimeDatasetDirsByRequestId.set(started.requestId, runtimeDatasetDir);
       }
@@ -262,10 +271,20 @@ export class TrainModelUseCase {
     }
   }
 
-  public async read(requestId: string): Promise<ModelTrainingResult> {
+  public async read(requestId: string, workspaceId: string): Promise<ModelTrainingResult> {
+    if (
+      !isWorkspaceId(workspaceId)
+      || this.workspaceIdByRequestId.get(requestId) !== workspaceId
+    ) {
+      throw new Error("Model training run was not found in this workspace.");
+    }
     const cached = this.registeredResultsByRequestId.get(requestId);
     if (cached) {
       return cached;
+    }
+    const pending = this.pendingResultsByRequestId.get(requestId);
+    if (pending) {
+      return this.toPendingReviewResult(pending);
     }
 
     const statusRecord = await this.dependencies.runtimeTaskRegistry.getTaskStatus(requestId);
@@ -290,12 +309,109 @@ export class TrainModelUseCase {
     });
   }
 
+  public async cancel(requestId: string, workspaceId: string): Promise<ModelTrainingResult> {
+    if (!isWorkspaceId(workspaceId)) {
+      throw new Error("A valid workspace is required to stop model training.");
+    }
+
+    const requestContext = this.requestContextByRequestId.get(requestId);
+    if (!requestContext || requestContext.normalizedRequest.workspaceId !== workspaceId) {
+      throw new Error("Model training run was not found in this workspace.");
+    }
+
+    const statusRecord = await this.dependencies.runtimeTaskRegistry.getTaskStatus(requestId);
+    if ("recordType" in statusRecord) {
+      throw new Error("Model training run was not found in this workspace.");
+    }
+    if (statusRecord.status === "succeeded" || statusRecord.status === "failed" || statusRecord.status === "cancelled") {
+      return this.read(requestId, workspaceId);
+    }
+
+    const cancellation = await this.dependencies.runtimeTaskRegistry.cancelTask(requestId);
+    const status = cancellation.cancelled || cancellation.status === "cancelled"
+      ? "cancelled"
+      : cancellation.status === "queued" || cancellation.status === "running"
+        ? cancellation.status
+        : "failed";
+
+    if (status === "cancelled") {
+      await this.completePowerLifecycle(requestId, "cancelled");
+      await this.cleanupRuntimeDatasetDir(requestId);
+    }
+
+    return normalizeModelTrainingResult({
+      runId: requestId,
+      status,
+      progress: status === "running" || status === "queued"
+        ? this.mapTrainingProgress(statusRecord)
+        : undefined,
+    });
+  }
+
+  public async save(requestId: string, workspaceId: string): Promise<ModelTrainingResult> {
+    const pending = this.requireOwnedPendingResult(requestId, workspaceId);
+    if (this.reviewActionRequestIds.has(requestId)) {
+      throw new Error("A model training review action is already in progress.");
+    }
+
+    this.reviewActionRequestIds.add(requestId);
+    this.approvedRequestIds.add(requestId);
+    try {
+      return await this.resolveSucceededResult({
+        requestId,
+        workspaceId: this.requestContextByRequestId.get(requestId)?.normalizedRequest.workspaceId,
+        taskType: TaskType.MODEL_TRAINING,
+        status: "succeeded",
+        concurrencyClass: "unknown",
+        data: pending,
+      });
+    } finally {
+      this.approvedRequestIds.delete(requestId);
+      this.reviewActionRequestIds.delete(requestId);
+    }
+  }
+
+  public async discard(requestId: string, workspaceId: string): Promise<ModelTrainingResult> {
+    const pending = this.requireOwnedPendingResult(requestId, workspaceId);
+    if (this.reviewActionRequestIds.has(requestId)) {
+      throw new Error("A model training review action is already in progress.");
+    }
+
+    this.reviewActionRequestIds.add(requestId);
+    try {
+      await this.cleanupRuntimeOutputDirectory(
+        pending.generatedModelCandidate?.localPath,
+        undefined,
+      );
+      const discarded = normalizeModelTrainingResult({
+        runId: requestId,
+        status: "cancelled",
+      });
+      this.pendingResultsByRequestId.delete(requestId);
+      this.requestContextByRequestId.delete(requestId);
+      this.registeredResultsByRequestId.set(requestId, discarded);
+      return discarded;
+    } finally {
+      this.reviewActionRequestIds.delete(requestId);
+    }
+  }
+
   private async resolveSucceededResult(statusRecord: RuntimeTaskRecord): Promise<ModelTrainingResult> {
     if (!statusRecord.data || typeof statusRecord.data !== "object") {
       throw new Error(`Model training runtime result missing for request '${statusRecord.requestId}'.`);
     }
 
-    const trainingResult = normalizeModelTrainingResult(statusRecord.data as ModelTrainingResult);
+    const runtimeTrainingResult = statusRecord.data as ModelTrainingResult;
+    const trainingResult = normalizeModelTrainingResult({
+      ...runtimeTrainingResult,
+      runId: statusRecord.requestId,
+      generatedModelCandidate: runtimeTrainingResult.generatedModelCandidate
+        ? {
+            ...runtimeTrainingResult.generatedModelCandidate,
+            generatedFromRunId: statusRecord.requestId,
+          }
+        : undefined,
+    });
 
     if (trainingResult.status !== "succeeded" || !trainingResult.generatedModelCandidate) {
       await this.completePowerLifecycle(statusRecord.requestId, "unknown");
@@ -306,6 +422,13 @@ export class TrainModelUseCase {
     const requestContext = this.requestContextByRequestId.get(statusRecord.requestId);
     if (!requestContext) {
       throw new Error(`Model training request context missing for request '${statusRecord.requestId}'.`);
+    }
+
+    if (!this.approvedRequestIds.has(statusRecord.requestId)) {
+      this.pendingResultsByRequestId.set(statusRecord.requestId, trainingResult);
+      await this.completePowerLifecycle(statusRecord.requestId, "succeeded");
+      await this.cleanupRuntimeDatasetDir(statusRecord.requestId);
+      return this.toPendingReviewResult(trainingResult);
     }
 
     const { normalizedRequest, baseModelRecordId } = requestContext;
@@ -401,10 +524,44 @@ export class TrainModelUseCase {
       outputModel,
     };
     this.registeredResultsByRequestId.set(statusRecord.requestId, result);
+    this.pendingResultsByRequestId.delete(statusRecord.requestId);
+    this.requestContextByRequestId.delete(statusRecord.requestId);
     await this.completePowerLifecycle(statusRecord.requestId, "succeeded");
     await this.cleanupRuntimeDatasetDir(statusRecord.requestId);
     await this.cleanupRuntimeOutputDirectory(generated.localPath, localStorageResult?.localPath);
     return result;
+  }
+
+  private requireOwnedPendingResult(requestId: string, workspaceId: string): ModelTrainingResult {
+    if (!isWorkspaceId(workspaceId)) {
+      throw new Error("A valid workspace is required to review model training output.");
+    }
+    const context = this.requestContextByRequestId.get(requestId);
+    const pending = this.pendingResultsByRequestId.get(requestId);
+    if (!context || context.normalizedRequest.workspaceId !== workspaceId || !pending) {
+      throw new Error("Model training review was not found in this workspace.");
+    }
+    return pending;
+  }
+
+  private toPendingReviewResult(result: ModelTrainingResult): ModelTrainingResult {
+    return normalizeModelTrainingResult({
+      ...result,
+      reviewPending: true,
+      outputDirectory: undefined,
+      checkpoints: undefined,
+      logs: undefined,
+      validationReportPath: undefined,
+      generatedModelCandidate: result.generatedModelCandidate
+        ? {
+            ...result.generatedModelCandidate,
+            localPath: undefined,
+            metadata: this.removeGeneratedMetadataOutputPaths(
+              result.generatedModelCandidate.metadata,
+            ),
+          }
+        : undefined,
+    });
   }
 
   private async storeGeneratedModelLocally(

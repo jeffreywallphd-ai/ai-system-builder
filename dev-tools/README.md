@@ -32,3 +32,11 @@ columns plus source association. It uses
 deterministic valid generation at the model boundary so it qualifies dataset
 creation without repeating large-model inference for every combination. It is
 intentionally outside `test:e2e` and `test:all`.
+
+The named command `npm run test:model-training:e2e` is the opt-in physical
+model-training matrix. Run it only when Model Training changes or when
+explicitly requested. It trains every supported task with two synthetic rows,
+one epoch, and fixed tiny Hugging Face snapshots at immutable revisions. Each
+case must reach the staged generated-model candidate used by Save/Discard; the
+suite never invokes model save or registration. It is intentionally outside
+`test:e2e`, `test:ai`, and `test:all`.

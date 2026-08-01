@@ -16,12 +16,18 @@ export function ModelsFeature(props: {
 }) {
   const state = useModelsFeature(props.client, props.workspaceId);
   const [activeTabId, setActiveTabId] = useState("browse-models");
+  const handleTabChange = (tabId: string) => {
+    setActiveTabId(tabId);
+    if (tabId === "manage-models") {
+      void state.refreshModels();
+    }
+  };
   return (
     <section className="models-feature ui-stack ui-stack--sm">
       <TabbedPanel
         tabListAriaLabel="Model workspace panels"
         defaultTabId="browse-models"
-        onTabChange={setActiveTabId}
+        onTabChange={handleTabChange}
         tabs={[
           {
             id: "browse-models",

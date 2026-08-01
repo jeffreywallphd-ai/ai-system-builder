@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ArtifactBrowserFeature } from "../features/artifact-browser";
 import { ArtifactIngestionFeature } from "../features/artifact-upload";
 import { DatasetPreparationFeature } from "../features/dataset-preparation";
@@ -11,6 +11,13 @@ export interface WorkspaceScopedPageProps {
   workspaceName: string;
 }
 export function ArtifactsPage({ workspaceId }: WorkspaceScopedPageProps) {
+  const [activeTabId, setActiveTabId] = useState("ingestion");
+  const [preparedArtifactStorageKey, setPreparedArtifactStorageKey] =
+    useState<string>();
+  const onDatasetPrepared = (artifactStorageKey: string) => {
+    setPreparedArtifactStorageKey(artifactStorageKey);
+    setActiveTabId("browser");
+  };
   const datasetReviewService = useMemo(() => {
     const client = createApiDatasetPreparationClient();
     return {
@@ -59,7 +66,9 @@ export function ArtifactsPage({ workspaceId }: WorkspaceScopedPageProps) {
       <h1>Data Management</h1>
       <TabbedPanel
         tabListAriaLabel="Artifact workspace panels"
+        activeTabId={activeTabId}
         defaultTabId="ingestion"
+        onTabChange={setActiveTabId}
         tabs={[
           {
             id: "ingestion",
@@ -79,6 +88,10 @@ export function ArtifactsPage({ workspaceId }: WorkspaceScopedPageProps) {
                 key={`browser-${workspaceId}`}
                 workspaceId={workspaceId}
                 readParquetPreview={parquetPreviewReader}
+                initialSelectedStorageKey={preparedArtifactStorageKey}
+                onInitialSelectionHandled={() =>
+                  setPreparedArtifactStorageKey(undefined)
+                }
               />
             ),
           },
@@ -89,6 +102,7 @@ export function ArtifactsPage({ workspaceId }: WorkspaceScopedPageProps) {
               <DatasetPreparationFeature
                 key={`dataset-${workspaceId}`}
                 workspaceId={workspaceId}
+                onPrepared={onDatasetPrepared}
               />
             ),
           },

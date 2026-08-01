@@ -2,7 +2,7 @@ import { describe, expect, it, testDouble } from "../../../testing/node-test";
 import { createWorkspaceId } from "../../../contracts/workspace";
 
 import type { ArtifactCatalogDeletePort } from "../../ports/artifact-catalog";
-import type { ModelRegistryPort } from "../../ports/model";
+import type { ModelLocalFilesDeletePort, ModelRegistryPort } from "../../ports/model";
 import {
   DeleteModelRecordUseCase,
   DownloadModelUseCase,
@@ -273,5 +273,93 @@ describe("model management use cases", () => {
     const withArtifacts = await useCase.execute({ workspaceId, modelRecordId: "model-1", deleteBackingArtifacts: true });
     expect(deleteArtifactCatalogRecord).toHaveBeenCalledTimes(1);
     expect(withArtifacts.deletedBackingArtifactIds).toEqual(["art-1"]);
+  });
+
+  it("deletes approved local files before removing the model registry record", async () => {
+    const deletionOrder: string[] = [];
+    const deleteLocalModelFiles = testDouble.fn<ModelLocalFilesDeletePort["deleteLocalModelFiles"]>(async () => {
+      deletionOrder.push("files");
+      return { deleted: true };
+    });
+    const deleteModelRecord = testDouble.fn<ModelRegistryPort["deleteModelRecord"]>(async (request) => {
+      deletionOrder.push("record");
+      return {
+        deletedModelRecordId: request.modelRecordId,
+        deletedRegistryRecord: true,
+        deletedLocalFiles: false,
+        deletedBackingArtifactIds: [],
+      };
+    });
+    const useCase = new DeleteModelRecordUseCase({
+      modelRegistry: {
+        listModels: async () => ({ models: [] }),
+        getModelRecord: async () => ({
+          modelRecordId: "model-1",
+          displayName: "Model 1",
+          source: "local",
+          lifecycleStatus: "downloaded",
+          artifactForm: "checkpoint",
+          provider: "unknown",
+          createdAt: "2026-04-27T00:00:00.000Z",
+          localPath: "C:\\cache\\models",
+          metadata: { checkpointFile: "model.safetensors" },
+        }),
+        saveModelReference: async () => { throw new Error("not used"); },
+        registerDownloadedModel: async () => { throw new Error("not used"); },
+        registerGeneratedModel: async () => { throw new Error("not used"); },
+        updateModelRecord: async () => { throw new Error("not used"); },
+        deleteModelRecord,
+      },
+      modelLocalFilesDeletePort: { deleteLocalModelFiles },
+    });
+
+    const result = await useCase.execute({
+      workspaceId,
+      modelRecordId: "model-1",
+      deleteLocalFiles: true,
+    });
+
+    expect(deleteLocalModelFiles).toHaveBeenCalledWith({
+      localPath: "C:\\cache\\models",
+      relativeFilePath: "model.safetensors",
+    });
+    expect(deletionOrder).toEqual(["files", "record"]);
+    expect(result.deletedLocalFiles).toBe(true);
+  });
+
+  it("keeps the registry record when local file deletion fails", async () => {
+    const deleteModelRecord = testDouble.fn<ModelRegistryPort["deleteModelRecord"]>();
+    const useCase = new DeleteModelRecordUseCase({
+      modelRegistry: {
+        listModels: async () => ({ models: [] }),
+        getModelRecord: async () => ({
+          modelRecordId: "model-1",
+          displayName: "Model 1",
+          source: "local",
+          lifecycleStatus: "downloaded",
+          artifactForm: "full-model",
+          provider: "unknown",
+          createdAt: "2026-04-27T00:00:00.000Z",
+          localPath: "C:\\outside\\model",
+        }),
+        saveModelReference: async () => { throw new Error("not used"); },
+        registerDownloadedModel: async () => { throw new Error("not used"); },
+        registerGeneratedModel: async () => { throw new Error("not used"); },
+        updateModelRecord: async () => { throw new Error("not used"); },
+        deleteModelRecord,
+      },
+      modelLocalFilesDeletePort: {
+        deleteLocalModelFiles: async () => {
+          throw new TypeError("Local model files are outside the approved cache roots.");
+        },
+      },
+    });
+
+    await expect(useCase.execute({
+      workspaceId,
+      modelRecordId: "model-1",
+      deleteLocalFiles: true,
+    })).rejects.toThrow("outside the approved cache roots");
+    expect(deleteModelRecord).not.toHaveBeenCalled();
   });
 });

@@ -128,6 +128,18 @@ describe("DatasetReviewWorkspace", () => {
       "button[aria-label='Close dialog']",
     );
     await act(async () => closeReview?.click());
+    const reject = [
+      ...container.querySelectorAll<HTMLButtonElement>("button"),
+    ].find((button) => button.textContent === "Reject");
+    await act(async () => reject?.click());
+    await settle();
+    expect(rejectRow).toHaveBeenCalledWith({
+      workspaceId: "workspace-review",
+      artifactKey: "datasets/v2.parquet",
+      versionId: "support:v2",
+      rowIndex: 0,
+      rowFingerprint: fingerprint,
+    });
     const edit = [
       ...container.querySelectorAll<HTMLButtonElement>("button"),
     ].find((button) => button.textContent === "Edit");
@@ -175,6 +187,6 @@ describe("DatasetReviewWorkspace", () => {
       rowFingerprint: fingerprint,
       values: { instruction: "Be clear and concise." },
     });
-    expect(rejectRow).not.toHaveBeenCalled();
+    expect(rejectRow).toHaveBeenCalledTimes(1);
   });
 });

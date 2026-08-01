@@ -1,4 +1,4 @@
-import { Fragment, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 
 import {
   deriveArtifactBackingState,
@@ -33,6 +33,8 @@ export interface ArtifactBrowserFeatureProps {
     totalRows: number;
     rows: readonly { values: Readonly<Record<string, unknown>> }[];
   }>;
+  initialSelectedStorageKey?: string;
+  onInitialSelectionHandled?: () => void;
 }
 
 function PublishedBackingPanel(
@@ -67,9 +69,16 @@ function PublishedBackingPanel(
   );
 }
 
-export function ArtifactBrowserFeature({ client, workspaceId, readParquetPreview }: ArtifactBrowserFeatureProps) {
+export function ArtifactBrowserFeature({
+  client,
+  workspaceId,
+  readParquetPreview,
+  initialSelectedStorageKey,
+  onInitialSelectionHandled,
+}: ArtifactBrowserFeatureProps) {
   const [parquetPreview, setParquetPreview] = useState<ArtifactPreviewView>();
   const previewRequestId = useRef(0);
+  const initialSelectionHandledRef = useRef<string | undefined>(undefined);
   const {
     items,
     selectedStorageKey,
@@ -129,7 +138,7 @@ export function ArtifactBrowserFeature({ client, workspaceId, readParquetPreview
 
   const backingState = deriveArtifactBackingState(detail, content);
 
-  const selectArtifactWithPreview = async (item: (typeof items)[number]) => {
+  const selectArtifactWithPreview = useCallback(async (item: (typeof items)[number]) => {
     const requestId = ++previewRequestId.current;
     const source = {
       storageKey: item.storageKey,
@@ -172,7 +181,30 @@ export function ArtifactBrowserFeature({ client, workspaceId, readParquetPreview
         ),
       );
     }
-  };
+  }, [readParquetPreview, selectArtifact, workspaceId]);
+
+  useEffect(() => {
+    if (!initialSelectedStorageKey) {
+      initialSelectionHandledRef.current = undefined;
+      return;
+    }
+    if (initialSelectionHandledRef.current === initialSelectedStorageKey) {
+      return;
+    }
+    const item = items.find(
+      (candidate) => candidate.storageKey === initialSelectedStorageKey,
+    );
+    if (!item) return;
+    initialSelectionHandledRef.current = initialSelectedStorageKey;
+    void selectArtifactWithPreview(item).finally(() => {
+      onInitialSelectionHandled?.();
+    });
+  }, [
+    initialSelectedStorageKey,
+    items,
+    onInitialSelectionHandled,
+    selectArtifactWithPreview,
+  ]);
 
   return (
     <section className="ui-panel ui-panel--elevated ui-panel--sectioned">

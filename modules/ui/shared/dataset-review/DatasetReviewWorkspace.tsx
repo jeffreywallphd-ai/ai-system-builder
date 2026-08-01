@@ -215,11 +215,52 @@ export function DatasetReviewWorkspace({
   };
 
   const reject = async (item: ReviewNavigatorItem) => {
-    if (editingItemId === item.id) {
+    const row = page?.rows.find(
+      (candidate) =>
+        item.id === `${page.artifactKey}:${candidate.rowFingerprint}`,
+    );
+    if (!row || !selectedVersion) return;
+    setBusy("save");
+    setError(undefined);
+    try {
+      const result = await service.rejectRow({
+        workspaceId,
+        artifactKey: selectedVersion.artifactKey,
+        ...(selectedVersion.versionId
+          ? { versionId: String(selectedVersion.versionId) }
+          : {}),
+        rowIndex: row.rowIndex,
+        rowFingerprint: row.rowFingerprint,
+      });
+      setDecisions((current) => ({ ...current, [item.id]: "rejected" }));
       setEditingItemId(undefined);
       setEditDraft({});
+      setNotice(
+        `Row rejected. Dataset version ${result.versionLabel} was created.`,
+      );
+      const nextGroups = await service.listTargets(workspaceId);
+      setGroups(nextGroups);
+      const nextGroup = nextGroups.find((group) =>
+        group.versions.some(
+          (version) => version.versionId === result.version.versionId,
+        ),
+      );
+      if (nextGroup) {
+        setSelectedGroupId(nextGroup.groupId);
+        setSelectedVersionId(String(result.version.versionId));
+      }
+      modalPageEntry.current = "first";
+      setPageNumber(0);
+      setCurrentIndex(0);
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "The selected row could not be rejected.",
+      );
+    } finally {
+      setBusy(undefined);
     }
-    advance(item, "rejected");
   };
 
   const beginEdit = (item: ReviewNavigatorItem) => {
@@ -374,8 +415,8 @@ export function DatasetReviewWorkspace({
       <header className="ui-stack ui-stack--sm">
         <h2 id="dataset-review-title">Dataset Review</h2>
         <p className="ui-text-muted">
-          Review every row in a local workspace Parquet dataset. Editing and
-          approving changes preserves the original and creates the next minor
+          Review every row in a local workspace Parquet dataset. Rejecting or
+          editing a row preserves the original and creates the next minor
           version.
         </p>
       </header>
