@@ -132,6 +132,12 @@ import {
   createDesktopIngestionTaskExecuteRequest,
   type DesktopIngestionTaskExecuteRequest,
   type DesktopIngestionTaskExecuteResponse,
+  DESKTOP_CONTEXT_MANAGEMENT_EXECUTE_OPERATION,
+  DESKTOP_CONTEXT_MANAGEMENT_EXECUTE_REQUEST_CHANNEL,
+  DESKTOP_CONTEXT_MANAGEMENT_EXECUTE_RESPONSE_CHANNEL,
+  createDesktopContextManagementExecuteRequest,
+  type DesktopContextManagementExecuteRequest,
+  type DesktopContextManagementExecuteResponse,
   DESKTOP_DATASET_PREPARE_TRAINING_START_OPERATION,
   DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL,
   DESKTOP_DATASET_PREPARE_TRAINING_START_RESPONSE_CHANNEL,
@@ -786,6 +792,13 @@ export interface DesktopPreloadApi {
     input: { workspaceId: string; command: IngestionTaskTransportCommand },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopIngestionTaskExecuteResponse>;
+  executeContextManagement: (
+    input: {
+      workspaceId: string;
+      command: import("../../../../modules/contracts/context-management").ContextManagementTransportCommand;
+    },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopContextManagementExecuteResponse>;
   startPrepareTrainingDataset: (
     input: {
       workspaceId?: string;
@@ -2376,6 +2389,35 @@ export function createDesktopPreloadApi(
           channel: DESKTOP_INGESTION_TASK_EXECUTE_RESPONSE_CHANNEL.value,
           message:
             "Received invalid desktop ingestion task IPC response envelope.",
+        },
+      );
+    },
+
+    async executeContextManagement(input, context = {}) {
+      const request: DesktopContextManagementExecuteRequest =
+        createDesktopContextManagementExecuteRequest(
+          {
+            command: input.command,
+            boundary: {
+              host: "desktop",
+              source: "desktop.renderer.context-management",
+              workspaceId: input.workspaceId,
+            },
+          },
+          context,
+        );
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_CONTEXT_MANAGEMENT_EXECUTE_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopContextManagementExecuteResponse>(
+        response,
+        {
+          operation: DESKTOP_CONTEXT_MANAGEMENT_EXECUTE_OPERATION,
+          channel:
+            DESKTOP_CONTEXT_MANAGEMENT_EXECUTE_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop Context Management IPC response envelope.",
         },
       );
     },

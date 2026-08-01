@@ -2,7 +2,7 @@
 
 ## Scope
 
-This model covers workspace source selection, local and Hugging Face staging, structured and document parsing, optional local-model generation, quality policy resolution, curation and quarantine, split creation, human approval, task lifecycle transport, result materialization, immutable dataset versions, publication evidence, warnings, and diagnostics.
+This model covers workspace source selection, local and Hugging Face staging, structured and document parsing, optional local-model generation, quality policy resolution, curation and quarantine, split creation, human approval, task lifecycle transport, result materialization, immutable dataset versions, publication evidence, warnings, and diagnostics. Artifact Browser handoffs into Context Management are additionally governed by `docs/security/context-management-threat-model.md`.
 
 ## Protected assets
 
@@ -75,6 +75,11 @@ This model covers workspace source selection, local and Hugging Face staging, st
   state, and the form reset neither exposes nor clears the host-owned provider
   credential.
 - Runtime output handles containing absolute paths or traversal are rejected.
+- A `Convert to RAG database` navigation handoff carries only an artifact
+  identifier and is not authorization. Context Management repeats the
+  authenticated workspace read, shared capability check, digest verification,
+  and contained staging. Chunk boundaries are trusted as already processed
+  only when every row has valid chunk index and source lineage metadata.
 - A missing quality-policy provider, malformed report, policy mismatch, blocked report, wrong-scope approval, stale fingerprint, or replayed approval fails closed.
 - Aggregate review reads expose bounded sanitized summaries and descriptors.
   Exact report-line row reads are separately authorized, fixed to 10 rows,

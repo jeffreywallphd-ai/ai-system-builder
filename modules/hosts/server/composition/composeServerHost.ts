@@ -18,6 +18,7 @@ import {
   createPythonRuntimeAdapterFoundation,
   createPythonRuntimeTaskRegistryAdapter,
   createPythonParquetDatasetReviewAdapter,
+  createPythonContextArtifactRuntimeAdapter,
   ensurePythonRuntimeWorkerDependencies,
   resolvePythonRuntimeLoopbackEndpoint,
 } from "../../../adapters/runtime/python";
@@ -133,6 +134,9 @@ import {
   RejectDatasetReviewRowUseCase,
   EditDatasetReviewRowUseCase,
   PrepareTrainingDatasetFromArtifactsUseCase,
+  ContextBrowserUseCases,
+  ContextGenerationUseCase,
+  ContextManagementCommandUseCase,
   PublishDatasetVersionUseCase,
   ReadDatasetVersionReproductionUseCase,
 } from "../../../application/use-cases";
@@ -2070,6 +2074,39 @@ export function composeServerHost(
             : {}),
           now: options.now,
         });
+      const contextGenerationUseCase = new ContextGenerationUseCase({
+        runtimeTaskRegistry,
+        storageBindings: artifactBindings,
+        storage,
+        artifactCatalog,
+        taskPowerLifecycle: {
+          async startTask() {},
+          async completeTask() {},
+        },
+        workspaceRepository:
+          workspaceFoundation.workspaceRepositories.workspaceRepository,
+        workspaceAuthorization,
+        now: options.now,
+      });
+      const contextBrowserUseCases = new ContextBrowserUseCases({
+        catalog: artifactCatalog,
+        storageBindings: artifactBindings,
+        storage,
+        runtime: createPythonContextArtifactRuntimeAdapter(runtimeTaskRegistry),
+        generation: contextGenerationUseCase,
+        deleteArtifact: deleteRegisteredArtifact,
+        workspaceRepository:
+          workspaceFoundation.workspaceRepositories.workspaceRepository,
+        workspaceAuthorization,
+      });
+      const contextManagement = new ContextManagementCommandUseCase({
+        generation: contextGenerationUseCase,
+        browser: contextBrowserUseCases,
+        runtimeTaskRegistry,
+        workspaceRepository:
+          workspaceFoundation.workspaceRepositories.workspaceRepository,
+        workspaceAuthorization,
+      });
       const localModelCheckpointResolver =
         createLocalModelCheckpointResolverAdapter({
           modelRegistry,
@@ -2283,6 +2320,7 @@ export function composeServerHost(
         restartServer: options.restartServer,
         runtimeReadiness,
         prepareTrainingDatasetUseCase,
+        contextManagement,
         readDatasetPreparationGenerationCapacity: async () => {
           let decoderAvailable = false;
           if (pythonRuntimeFoundation.supervisor.getStatus() === "ready") {

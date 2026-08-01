@@ -43,6 +43,10 @@ import {
   type RegisterDatasetPreparationApiRoutesDependencies,
 } from "./dataset-preparation/registerDatasetPreparationApiRoutes";
 import {
+  registerContextManagementApiRoutes,
+  type RegisterContextManagementApiRoutesDependencies,
+} from "./context-management/registerContextManagementApiRoutes";
+import {
   registerDatasetVersionApiRoutes,
   type RegisterDatasetVersionApiRoutesDependencies,
 } from "./dataset-version/registerDatasetVersionApiRoutes";
@@ -131,6 +135,7 @@ export interface RegisterExpressApiDependencies {
     RegisterServerControlApiRoutesDependencies["app"] &
     RegisterRuntimeReadinessApiRoutesDependencies["app"] &
     RegisterDatasetPreparationApiRoutesDependencies["app"] &
+    RegisterContextManagementApiRoutesDependencies["app"] &
     RegisterDatasetVersionApiRoutesDependencies["app"] &
     RegisterAssetRegistryApiRoutesDependencies["app"] &
     RegisterAssetMutationApiRoutesDependencies["app"] &
@@ -190,6 +195,7 @@ export interface RegisterExpressApiDependencies {
   restartServer?: RegisterServerControlApiRoutesDependencies["restartServer"];
   runtimeReadiness?: RegisterRuntimeReadinessApiRoutesDependencies["runtimeReadiness"];
   prepareTrainingDatasetUseCase?: RegisterDatasetPreparationApiRoutesDependencies["prepareTrainingDatasetUseCase"];
+  contextManagement?: RegisterContextManagementApiRoutesDependencies["contextManagement"];
   readDatasetPreparationGenerationCapacity?: RegisterDatasetPreparationApiRoutesDependencies["readGenerationCapacity"];
   datasetVersionUseCases?: Omit<RegisterDatasetVersionApiRoutesDependencies, "app">;
   assetRegistryRead?: RegisterAssetRegistryApiRoutesDependencies["assetRegistryRead"];
@@ -468,6 +474,13 @@ export function registerExpressApi(
       prepareTrainingDatasetUseCase: dependencies.prepareTrainingDatasetUseCase,
       readGenerationCapacity:
         dependencies.readDatasetPreparationGenerationCapacity,
+    });
+  }
+
+  if (dependencies.contextManagement) {
+    registerContextManagementApiRoutes({
+      app: dependencies.app,
+      contextManagement: dependencies.contextManagement,
     });
   }
 

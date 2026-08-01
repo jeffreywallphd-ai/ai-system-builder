@@ -6,3 +6,4 @@ export * from "./createPythonRuntimePort";
 export * from "./ensurePythonRuntimeWorkerDependencies";
 export * from "./createPythonRuntimeTaskRegistryAdapter";
 export * from "./createPythonParquetDatasetReviewAdapter";
+export * from "./context-management/createPythonContextArtifactRuntimeAdapter";

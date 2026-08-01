@@ -1,9 +1,12 @@
+import { isArtifactBrowserVisible } from "../artifact-preview/artifactPreviewModel";
+
 export type PageDashboardKind =
   | "home"
   | "systems"
   | "models"
   | "image-generation"
   | "artifacts"
+  | "context"
   | "assets"
   | "settings";
 
@@ -202,6 +205,30 @@ export async function loadPageDashboardMetrics(
     ];
   }
 
+  if (kind === "context") {
+    const artifacts = (await source.listArtifacts(workspaceId)).filter(
+      isArtifactBrowserVisible,
+    );
+    return [
+      {
+        label: "RAG Databases",
+        value: artifacts.filter(
+          (artifact) =>
+            artifact.mediaType ===
+            "application/vnd.ai-system-builder.rag-database+sqlite3",
+        ).length,
+      },
+      {
+        label: "Markdown Context Packs",
+        value: artifacts.filter(
+          (artifact) =>
+            artifact.mediaType ===
+            "application/vnd.ai-system-builder.markdown-context-pack+zip",
+        ).length,
+      },
+    ];
+  }
+
   if (kind === "assets") {
     const [releases, customAssetIds] = await Promise.all([
       source.listReleases(workspaceId),
@@ -238,4 +265,3 @@ export async function loadPageDashboardMetrics(
     { label: "Custom Assets Created", value: new Set(customAssetIds).size },
   ];
 }
-import { isArtifactBrowserVisible } from "../artifact-preview/artifactPreviewModel";

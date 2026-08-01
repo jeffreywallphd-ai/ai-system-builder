@@ -48,6 +48,14 @@ download or run AI models. Controlled AI tests may require locally provisioned
 assets and must skip truthfully when those assets are absent. Packaged desktop and
 other controlled-environment qualifications remain named commands outside
 `test:all` and cannot be inferred from automated runs.
+The controlled Python AI list includes three compact Context generation E2E
+cases: raw-source and persisted-chunk RAG database creation through a generated
+tiny local embedding model, plus source-material Context Pack creation with
+a generated tiny constrained local summary model and structurally validated
+Markdown output. These cases generate all fixtures locally, use only a few
+source records, and never download or save registered artifacts. The
+model-assisted case skips truthfully outside the supported constrained-decoder
+Python range.
 The Dataset Preparation creation matrix is also a named exception outside
 `test:all`: it covers every supported task/material-division combination, uses
 only one or two bounded sources, and passes only after reopening a non-empty

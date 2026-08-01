@@ -19,6 +19,13 @@ lifecycle. Its public progress uses message/current/total/percent/unit only;
 worker-specific progress details and completion cache handles stay behind the
 runtime adapter boundary.
 
+`TaskType.CONTEXT_GENERATION` uses the same lifecycle for bounded RAG database
+or Markdown context-pack candidates. Its request records exact source digests,
+lineage-aware chunk settings, optional bounded manual context, and local-only
+model settings. Its result exposes review evidence and a contained output
+descriptor, never source content, prompts, embeddings, model output, or runtime
+paths.
+
 Dataset preparation contracts include a shared task-profile vocabulary for first-tier training dataset shapes:
 LLM instruction tuning, classification, extraction, embedding tuning, reranking, diffusion LoRA, vision classification,
 vision detection, and vision segmentation. The Python dataset-preparation worker supports these profiles as dataset

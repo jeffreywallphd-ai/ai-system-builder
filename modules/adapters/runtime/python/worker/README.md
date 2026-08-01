@@ -12,7 +12,7 @@ includes health and capabilities. The token is private launch state and must not
 be logged or returned.
 
 The host supplies a bounded deadline for every task. The common policy allows
-short work two minutes, validation two hours, dataset preparation eight hours,
+short work two minutes, validation two hours, dataset preparation and context generation eight hours,
 model downloads twelve hours, and model training twenty-four hours. Model
 Management and Dataset Preparation therefore use the same long-running download
 behavior. The worker continues to report structured progress and honor task
@@ -71,6 +71,36 @@ their normal generated SBOM and image scan.
 
 Implemented task:
 
+- `generate-context-artifact`
+  - accepts bounded workspace-staged text, Markdown, HTML, PDF, DOCX, CSV,
+    JSON, JSON Lines, or Parquet sources plus bounded manual context;
+  - reuses already-chunked structured rows only when each row has valid
+    `chunkIndex` and `sourceLineage`, preserving exact row/source lineage;
+  - otherwise performs bounded fixed, sentence, section, or structure-aware
+    extraction and reports progress after every completed chunk;
+  - emits either a local SQLite retrieval database with float32 embeddings or a
+    fixed-member Markdown context-pack ZIP;
+  - validates and preserves manual Markdown exactly, or semantically chunks,
+    groups, and applies Standard/Strict cleaning to source material before No
+    Summarization preservation or selected local-model summarization;
+  - treats source content as untrusted model data, validates local-model topic
+    output and maximum lines against a strict allowlist, and keeps source text,
+    prompts, vectors, model output, and runtime paths out of public task state.
+  - has opt-in AI E2E coverage for raw-source and persisted-chunk RAG database
+    creation with a generated tiny local embedding model, plus model-assisted
+    source-material Context Pack creation with a generated tiny constrained
+    local model and structural Markdown validation.
+- `context-artifact-operation`
+  - inspects bounded staged sources using the same extraction and persisted
+    chunk-lineage rules as generation;
+  - opens RAG SQLite in read-only mode, verifies integrity, schema, manifest,
+    counts, and digest, and parses context-pack ZIPs only through the fixed
+    entry allowlist and aggregate byte/count ceilings;
+  - embeds a bounded test query with the exact manifest-recorded local model,
+    ranks cosine similarity inside the worker, and returns only bounded
+    excerpts, scores, and citations; stored vectors never leave the worker;
+  - cooperatively observes cancellation between validation, embedding, and
+    ranking phases and reports only sanitized task failures.
 - `prepare-training-dataset`
   - validates three-way split consistency (`trainRatio > 0`, non-negative validation/test shares, at least one holdout share, and ratios sum to `1.0`)
   - normalizes bounded supported source docs to markdown (`.txt`, `.md`, `.markdown`, `.html`, `.pdf`, `.docx`, `.csv`, `.json`, `.jsonl`) with file, extracted-text, PDF-page, and DOCX-expansion ceilings

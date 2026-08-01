@@ -183,14 +183,13 @@
 - Exact normalized-span lineage, bounded semantic comparison, source-cap and
   mixing invariants, synthetic schema/citation/grounding/critic/safety/diversity
   denial paths, and aggregate-only evidence tests.
-- Default-schema completeness for every generated task, schema-fingerprint and
-  purpose-path mismatch denial, custom-purpose mapping through quality admission
-  and reporting, trusted attribution, sanitized URLs, and unselected absence.
-- Desktop/thin-client ordered-step, disclosure, warning, keyboard, reflow, and reduced-motion checks.
-- Applicable docs, architecture, agent-support, host build, package, and full repository gates after an increment.
+- Default-schema completeness, fingerprint/purpose-path denial, custom mappings,
+  trusted attribution, sanitized URLs, and unselected absence.
+- Desktop/thin-client UX checks plus applicable repository gates.
 
 ## Adjacent Packs
 
+- `context-management` for RAG databases, context packs, and browser handoffs.
 - `persistence-storage` for object/repository storage or source isolation.
 - `runtime` or `runtime-task-registry` for worker execution/lifecycle.
 - `desktop-implementation` for renderer and thin-client experience.

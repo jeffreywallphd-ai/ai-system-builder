@@ -36,6 +36,10 @@
 - Give adapters focused integration coverage for real translation and boundary behavior.
 - Add host/transport integration tests for wiring, composition, delegation, and safe error mapping.
 - Keep tests deterministic, CI-suitable, and non-flaky.
+- Keep Context generation AI E2E coverage download-free: generate a tiny local
+  embedding model, use bounded source fixtures, validate RAG SQLite integrity
+  and lineage, then use a generated tiny constrained local summary model to
+  validate fixed-member Context Pack Markdown structure on supported Python.
 - Add regression tests for bug fixes when practical in the layer where the defect should be caught.
 - If regression coverage is not added, document the reason.
 

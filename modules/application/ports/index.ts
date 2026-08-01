@@ -10,6 +10,7 @@ export * from "./desktop";
 export * from "./artifact-browser";
 export * from "./artifact-catalog";
 export * from "./artifact-content";
+export * from "./context-management";
 export * from "./ingestion";
 export * from "./settings";
 

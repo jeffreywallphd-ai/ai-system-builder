@@ -53,7 +53,7 @@ export function AppShell({
     {
       id: "manage",
       label: "Manage",
-      keys: ["artifacts", "assets"],
+      keys: ["artifacts", "context", "assets"],
     },
   ];
 
@@ -231,9 +231,7 @@ export function AppShell({
         </aside>
         <div className="ui-shell__main">
           <NotificationViewport />
-          <div className="ui-shell__content">
-            {children}
-          </div>
+          <div className="ui-shell__content">{children}</div>
         </div>
       </div>
     </main>
@@ -246,6 +244,8 @@ function thinClientPageIcon(page: ThinClientPageKey): ApplicationIconName {
       return "home";
     case "artifacts":
       return "artifacts";
+    case "context":
+      return "context";
     case "systems":
       return "systems";
     case "assets":

@@ -27,6 +27,7 @@ export * from "./desktop-website-ingestion-contract";
 export * from "./desktop-dataset-preparation-contract";
 export * from "./desktop-dataset-version-contract";
 export * from "./desktop-dataset-review-contract";
+export * from "./desktop-context-management-contract";
 export * from "./desktop-python-runtime-contract";
 export * from "./desktop-runtime-readiness-contract";
 export * from "./desktop-feature-lifecycle-contract";

@@ -1,0 +1,173 @@
+.context-studio,
+.context-studio__source-section,
+.context-studio__artifact-group,
+.context-studio__checkbox-row {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.context-studio__section-title,
+.context-studio__group-title {
+  margin: 0;
+  line-height: var(--line-height-tight);
+}
+.context-studio__group-title {
+  font-size: var(--font-size-md);
+}
+.context-studio__artifact-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-md);
+  min-width: 0;
+}
+.context-studio__artifact-group {
+  min-block-size: 10rem;
+  padding: var(--space-md);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  background:
+    radial-gradient(circle at 50% 100%, rgb(37 92 181 / 12%), transparent 65%),
+    rgb(7 20 36 / 55%);
+  box-shadow: inset 0 1px rgb(255 255 255 / 3%);
+}
+.context-studio__checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.context-studio__checkbox-row input[type="checkbox"] {
+  flex: 0 0 auto;
+}
+.context-studio__checkbox-row > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.context-studio__manual-source {
+  margin-top: var(--space-md);
+  background: var(--color-input-bg);
+}
+.context-studio__mode-selector {
+  padding: var(--space-md);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  background: rgb(7 20 36 / 42%);
+}
+.context-studio__mode-selector h3 {
+  margin: 0;
+}
+.context-studio__mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+.context-studio__mode-card {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--color-input-bg);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.context-studio__mode-card:hover:not(:disabled),
+.context-studio__mode-card--selected {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
+.context-studio__mode-card span {
+  color: var(--color-text-muted);
+}
+.context-studio__readiness {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.context-studio__advanced {
+  margin-block: var(--space-3);
+}
+.context-studio__advanced summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.context-studio__advanced[open] summary {
+  margin-bottom: var(--space-3);
+}
+.context-studio__advanced-rules summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.context-studio__advanced-rules[open] summary {
+  margin-bottom: var(--space-sm);
+}
+.context-studio__advanced-rules small {
+  padding-inline-start: calc(1rem + var(--space-sm));
+}
+.context-studio__preview-list,
+.context-browser__list {
+  display: grid;
+  gap: var(--space-3);
+  list-style: none;
+  padding: 0;
+}
+.context-studio__preview-list li {
+  border-inline-start: 3px solid var(--color-accent);
+  padding-inline-start: var(--space-3);
+  overflow-wrap: anywhere;
+}
+.context-studio__message {
+  position: sticky;
+  bottom: var(--space-3);
+  z-index: 2;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+.context-browser-layout {
+  display: grid;
+  grid-template-columns: minmax(14rem, 20rem) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+.context-browser__heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+}
+.context-browser__item {
+  width: 100%;
+  display: grid;
+  gap: var(--space-1);
+  text-align: left;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: inherit;
+}
+.context-browser__item--selected {
+  border-color: var(--color-accent);
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+}
+.context-browser-layout li {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 52rem) {
+  .context-studio__mode-grid {
+    grid-template-columns: 1fr;
+  }
+  .context-browser-layout {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .context-studio *,
+  .context-studio *::before,
+  .context-studio *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

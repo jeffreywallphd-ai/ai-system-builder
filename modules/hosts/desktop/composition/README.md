@@ -43,7 +43,12 @@ The managed ComfyUI workflow prepares selected image artifacts into the runtime 
 
 ## Feature lifecycle disposal policy
 
-Desktop host composition keeps core startup services resident and treats feature disposal as an explicit lifecycle concern of host-owned lazy providers. Local foundations such as artifact storage, model registries, asset definitions, settings, workspace shell, logging, diagnostics, and runtime readiness remain resident or warm after first use. Clearly transient features such as artifact remote/Hugging Face adapters, website ingestion, dataset preparation without active tasks, and image generation without active tasks may be disposed by explicit developer action or scoped idle timeout.
+Desktop host composition keeps core startup services resident and treats feature disposal as an explicit lifecycle concern of host-owned lazy providers. Local foundations such as artifact storage, model registries, asset definitions, settings, workspace shell, logging, diagnostics, and runtime readiness remain resident or warm after first use. Clearly transient features such as artifact remote/Hugging Face adapters, website ingestion, dataset preparation without active tasks, Context Management without active generation/retrieval tasks, and image generation without active tasks may be disposed by explicit developer action or scoped idle timeout.
+
+Context Management is composed lazily over the retained artifact and runtime
+foundations. Its generation, browser, retrieval, deletion, and task-list
+operations share one application facade, and active context tasks block generic
+feature disposal.
 
 Generic disposal must not delete persisted records or files, must not stop Python or ComfyUI, and must not cancel active runtime work. Python process stop, Python model unload, and ComfyUI process/runtime unload remain explicit user/runtime-control paths.
 

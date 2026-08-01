@@ -153,4 +153,43 @@ describe("page dashboard metrics", () => {
       { label: "Custom Assets Created", value: 2 },
     ]);
   });
+
+  it("counts only browser-visible saved Context artifacts", async () => {
+    const source: PageDashboardDataSource = {
+      listSystems: async () => [],
+      listReleases: async () => [],
+      listDatasetIds: async () => [],
+      listArtifacts: async () => [
+        {
+          artifactFamily: "structured-data",
+          storageKey: "generated/context/support.sqlite3",
+          mediaType: "application/vnd.ai-system-builder.rag-database+sqlite3",
+        },
+        {
+          artifactFamily: "archive",
+          storageKey: "generated/context/support.zip",
+          mediaType:
+            "application/vnd.ai-system-builder.markdown-context-pack+zip",
+        },
+        {
+          artifactFamily: "metadata",
+          storageKey: "generated/context/hidden+json",
+          mediaType: "application/vnd.ai-system-builder.rag-database+json",
+        },
+      ],
+      listModels: async () => [],
+      listCustomAssetIds: async () => [],
+      readSettingsDefaults: async () => ({
+        runtimeDevice: "cpu",
+        globalModel: "none",
+      }),
+    };
+
+    await expect(
+      loadPageDashboardMetrics("context", source, "workspace-one"),
+    ).resolves.toEqual([
+      { label: "RAG Databases", value: 1 },
+      { label: "Markdown Context Packs", value: 1 },
+    ]);
+  });
 });

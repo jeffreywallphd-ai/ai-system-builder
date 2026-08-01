@@ -12,6 +12,15 @@ export interface WorkspaceScopedPageProps {
 export interface ArtifactsLazyPageProps extends WorkspaceScopedPageProps {
   readonly refreshToken: number;
   readonly onUploaded: () => void;
+  readonly initialSelectedStorageKey?: string;
+  readonly onInitialSelectionHandled?: () => void;
+  readonly onConvertToRag?: (artifactId: string) => void;
+}
+
+export interface ContextLazyPageProps extends WorkspaceScopedPageProps {
+  readonly initialArtifactId?: string;
+  readonly onInitialArtifactHandled?: () => void;
+  readonly onViewSource?: (artifactId: string) => void;
 }
 
 export interface HomeLazyPageProps {
@@ -21,6 +30,7 @@ export interface HomeLazyPageProps {
 export type DesktopLazyPagePropsByKey = {
   readonly home: HomeLazyPageProps;
   readonly artifacts: ArtifactsLazyPageProps;
+  readonly context: ContextLazyPageProps;
   readonly assets: WorkspaceScopedPageProps;
   readonly models: WorkspaceScopedPageProps;
   readonly "image-generation": WorkspaceScopedPageProps;
@@ -35,15 +45,20 @@ export type DesktopLazyPageDiagnosticContext = {
   readonly routeRequiresWorkspace?: boolean;
 };
 
-export type DesktopLazyPageComponent<TKey extends DesktopPageKey> = ComponentType<
-  DesktopLazyPagePropsByKey[TKey] & { readonly __lazyLoadContext?: DesktopLazyPageDiagnosticContext }
->;
+export type DesktopLazyPageComponent<TKey extends DesktopPageKey> =
+  ComponentType<
+    DesktopLazyPagePropsByKey[TKey] & {
+      readonly __lazyLoadContext?: DesktopLazyPageDiagnosticContext;
+    }
+  >;
 
 export type DesktopLazyPageModule<TKey extends DesktopPageKey> = {
   readonly default: ComponentType<DesktopLazyPagePropsByKey[TKey]>;
 };
 
-export type DesktopLazyPageLoader<TKey extends DesktopPageKey> = () => Promise<DesktopLazyPageModule<TKey>>;
+export type DesktopLazyPageLoader<TKey extends DesktopPageKey> = () => Promise<
+  DesktopLazyPageModule<TKey>
+>;
 
 export type DesktopLazyPageRegistry = {
   readonly [TKey in DesktopPageKey]: DesktopLazyPageComponent<TKey>;
@@ -69,7 +84,11 @@ function lazyDesktopPage<TKey extends DesktopPageKey>(
   let loadError: unknown;
   let loadPromise: Promise<void> | undefined;
 
-  return function DesktopLazyPage(props: DesktopLazyPagePropsByKey[TKey] & { readonly __lazyLoadContext?: DesktopLazyPageDiagnosticContext }) {
+  return function DesktopLazyPage(
+    props: DesktopLazyPagePropsByKey[TKey] & {
+      readonly __lazyLoadContext?: DesktopLazyPageDiagnosticContext;
+    },
+  ) {
     if (loadError) {
       throw loadError;
     }
@@ -104,7 +123,10 @@ function lazyDesktopPage<TKey extends DesktopPageKey>(
             component: "desktop-renderer",
             detail: {
               ...createLazyPageDiagnosticDetail(pageKey, context),
-              error: error instanceof Error ? error.message : "unknown lazy page load failure",
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "unknown lazy page load failure",
             },
           });
           throw error;
@@ -115,15 +137,19 @@ function lazyDesktopPage<TKey extends DesktopPageKey>(
   };
 }
 
-export function createLazyDesktopPageRegistry(
-  loaders: { readonly [TKey in DesktopPageKey]: DesktopLazyPageLoader<TKey> },
-): DesktopLazyPageRegistry {
+export function createLazyDesktopPageRegistry(loaders: {
+  readonly [TKey in DesktopPageKey]: DesktopLazyPageLoader<TKey>;
+}): DesktopLazyPageRegistry {
   return {
     home: lazyDesktopPage("home", loaders.home),
     artifacts: lazyDesktopPage("artifacts", loaders.artifacts),
+    context: lazyDesktopPage("context", loaders.context),
     assets: lazyDesktopPage("assets", loaders.assets),
     models: lazyDesktopPage("models", loaders.models),
-    "image-generation": lazyDesktopPage("image-generation", loaders["image-generation"]),
+    "image-generation": lazyDesktopPage(
+      "image-generation",
+      loaders["image-generation"],
+    ),
     settings: lazyDesktopPage("settings", loaders.settings),
     systems: lazyDesktopPage("systems", loaders.systems),
   };
@@ -157,5 +183,9 @@ export const desktopLazyPages = createLazyDesktopPageRegistry({
   systems: async () => {
     const module = await import("../pages/SystemBuilderPage");
     return { default: module.SystemBuilderPage };
+  },
+  context: async () => {
+    const module = await import("../pages/ContextPage");
+    return { default: module.ContextPage };
   },
 });

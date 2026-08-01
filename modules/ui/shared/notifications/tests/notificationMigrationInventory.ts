@@ -34,6 +34,7 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
     "modules/ui/shared/asset-package/AssetPackageManager.tsx",
     "modules/ui/shared/asset-studio/AssetStudioManager.tsx",
     "modules/ui/shared/asset-studio/UnifiedAssetStudio.tsx",
+    "modules/ui/shared/context-management/ContextStudio.tsx",
     "modules/ui/shared/system-builder/SystemBuilderWorkspace.tsx",
     "modules/ui/shared/system-builder/SystemManagementWorkspace.tsx",
     "modules/ui/shared/system-builder/SystemPublishedLifecycleCard.tsx",

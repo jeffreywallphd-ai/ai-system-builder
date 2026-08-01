@@ -351,6 +351,124 @@ class ReviewDatasetRequest(BaseModel):
     runtime: dict[str, Any]
 
 
+class ContextSourceInformation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    author: str | None = Field(default=None, max_length=512)
+    license: str | None = Field(default=None, max_length=512)
+    consent: str | None = Field(default=None, max_length=512)
+    sourceUrl: str | None = Field(default=None, max_length=2_048)
+    language: str | None = Field(default=None, max_length=16)
+
+
+class ContextSourceCheckSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    preset: Literal["recommended", "strict"]
+    allowedLanguages: list[str] = Field(min_length=1, max_length=16)
+    requireLicenseMetadata: bool
+    requireConsentMetadata: bool
+    includeSourceAttribution: bool
+
+
+class ContextGenerationSourceInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    artifactId: str = Field(min_length=1, max_length=512)
+    localPath: str = Field(min_length=1)
+    mediaType: str = Field(min_length=1, max_length=200)
+    originalName: str | None = Field(default=None, max_length=512)
+    sourceDigest: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
+    sizeBytes: int = Field(ge=0, le=64 * 1024 * 1024)
+    sourceInformation: ContextSourceInformation | None = None
+
+
+class ContextGenerationManualInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str = Field(min_length=1, max_length=128)
+    title: str = Field(min_length=1, max_length=200)
+    content: str = Field(min_length=1, max_length=200_000)
+    digest: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
+
+
+class ContextChunkingSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    strategy: Literal[
+        "fixed-length",
+        "topic-aware",
+        "sentence",
+        "section",
+        "structure-aware",
+    ]
+    chunkCharacters: int = Field(ge=64, le=32_000)
+    overlapCharacters: int = Field(ge=0, le=8_000)
+    maximumTokensPerChunk: int | None = Field(default=None, ge=32, le=4_096)
+    topicBoundarySensitivity: float | None = Field(default=None, ge=0.0, le=1.0)
+    textFields: list[str] | None = Field(default=None, max_length=32)
+    maximumChunks: int | None = Field(default=None, ge=1, le=100_000)
+
+
+class ContextEmbeddingSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    provider: Literal["transformers"]
+    modelId: str = Field(min_length=3, max_length=193)
+    dimensions: int | None = Field(default=None, ge=1, le=8_192)
+    batchSize: int = Field(default=16, ge=1, le=128)
+
+
+class ContextPackLocalModelSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    provider: Literal["transformers"]
+    modelId: str = Field(min_length=3, max_length=193)
+    inferenceMode: Literal["auto", "causal", "chat"] = "auto"
+    device: Literal["auto", "cpu", "cuda"] = "auto"
+    torchDtype: Literal["auto", "float16", "bfloat16", "float32"] = "auto"
+    maximumOutputTokens: int = Field(default=1_024, ge=64, le=8_192)
+
+
+class ContextPackSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    inputMode: Literal["manual", "source-materials"]
+    method: Literal["none", "local-model"]
+    cleaningPreset: Literal["standard", "strict"] | None = None
+    maximumSummaryLines: int | None = Field(default=None, ge=1, le=1_000)
+    model: ContextPackLocalModelSettings | None = None
+
+
+class ContextGenerationRuntimeSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    runtimeWorkingDirectory: str = Field(min_length=1)
+
+
+class ContextGenerationTaskRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    workspaceId: str = Field(min_length=1, max_length=128)
+    kind: Literal["rag-database", "markdown-context-pack"]
+    name: str = Field(min_length=1, max_length=120)
+    sources: list[ContextGenerationSourceInput] = Field(max_length=32)
+    manualEntries: list[ContextGenerationManualInput] = Field(max_length=32)
+    chunking: ContextChunkingSettings
+    sourceChecks: ContextSourceCheckSettings | None = None
+    embedding: ContextEmbeddingSettings | None = None
+    contextPack: ContextPackSettings | None = None
+    runtime: ContextGenerationRuntimeSettings
+
+
+class ContextArtifactOperationTaskRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    workspaceId: str = Field(min_length=1, max_length=128)
+    operation: Literal["inspect-source", "inspect-artifact", "query"]
+    artifactId: str = Field(min_length=1, max_length=512)
+    localPath: str = Field(min_length=1)
+    mediaType: str = Field(min_length=1, max_length=200)
+    digest: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
+    sizeBytes: int = Field(ge=1, le=64 * 1024 * 1024)
+    originalName: str | None = Field(default=None, max_length=512)
+    chunking: ContextChunkingSettings | None = None
+    sourceInformation: ContextSourceInformation | None = None
+    sourceChecks: ContextSourceCheckSettings | None = None
+    query: str | None = Field(default=None, min_length=1, max_length=4_000)
+    maximumResults: int | None = Field(default=None, ge=1, le=20)
+    runtime: ContextGenerationRuntimeSettings
+
+
 class PythonRuntimeOutputDescriptor(BaseModel):
     name: str
     role: Literal["dataset", "train", "validation", "test", "metrics", "report", "quarantine", "review", "artifact"] | None = None

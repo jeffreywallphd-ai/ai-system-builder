@@ -30,6 +30,7 @@ export * from "./ingest-website-pages-batch.use-case";
 export * from "./prepare-training-dataset-from-artifacts.use-case";
 export * from "./dataset-version";
 export * from "./dataset-review";
+export * from "./context-management";
 export * from "./ingestion-acquisition";
 export * from "./settings";
 

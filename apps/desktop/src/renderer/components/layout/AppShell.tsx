@@ -51,7 +51,7 @@ export function AppShell({
     {
       id: "manage",
       label: "Manage",
-      keys: ["artifacts", "assets"],
+      keys: ["artifacts", "context", "assets"],
     },
   ];
 
@@ -226,9 +226,7 @@ export function AppShell({
         </aside>
         <div className="ui-shell__main">
           <NotificationViewport />
-          <div className="ui-shell__content">
-            {children}
-          </div>
+          <div className="ui-shell__content">{children}</div>
         </div>
       </div>
     </main>
@@ -243,6 +241,8 @@ function desktopPageIcon(page: DesktopPageKey): ApplicationIconName {
       return "systems";
     case "artifacts":
       return "artifacts";
+    case "context":
+      return "context";
     case "assets":
       return "assets";
     case "models":

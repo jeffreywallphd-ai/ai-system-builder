@@ -1,0 +1,2030 @@
+{
+  "blockers": [],
+  "chunks": [
+    {
+      "areas": [
+        "Context Management contracts",
+        "Runtime contracts",
+        "Source capability authority"
+      ],
+      "chunkId": "context-contracts-capabilities",
+      "completedAt": "2026-08-01T20:07:36Z",
+      "criteriaIds": [
+        "context-contracts-and-limits",
+        "shared-data-context-extraction",
+        "security-source-and-generation-denials"
+      ],
+      "documentation": [
+        "Context Management contracts README"
+      ],
+      "feedbackAddressed": [],
+      "id": "bounded-context-generation-context-contracts-capabilities",
+      "incrementId": "bounded-context-generation",
+      "summary": "Added provider-neutral Context Management contracts, bounded source capability reuse, exact chunk lineage validation, safe save and launch intent normalization, context artifact media types, and the additive runtime task type.",
+      "tests": [
+        "Focused Context Management and runtime contract tests passed"
+      ],
+      "title": "Context contracts and bounded source capability"
+    },
+    {
+      "areas": [
+        "Python runtime task registry adapter",
+        "Python worker dispatch and lifecycle",
+        "RAG database generation",
+        "Markdown context-pack generation"
+      ],
+      "chunkId": "context-worker-generation",
+      "completedAt": "2026-08-01T20:15:05Z",
+      "criteriaIds": [
+        "shared-data-context-extraction",
+        "rag-generation-runtime",
+        "context-pack-generation-runtime",
+        "context-model-runtime-qualification",
+        "security-source-and-generation-denials"
+      ],
+      "documentation": [],
+      "feedbackAddressed": [],
+      "id": "bounded-context-generation-context-worker-generation",
+      "incrementId": "bounded-context-generation",
+      "summary": "Added the bounded Python Context generation task with exact source digest verification, persisted-chunk reuse, document and structured extraction, local-only embeddings, SQLite RAG materialization, deterministic or local-model Markdown packs, bounded previews, per-chunk progress, and cooperative cancellation.",
+      "tests": [
+        "Focused Context worker generation and security denial tests passed",
+        "Focused Python runtime adapter tests passed",
+        "Worker dispatch and task lifecycle regressions passed"
+      ],
+      "title": "Managed RAG and context-pack generation"
+    },
+    {
+      "areas": [
+        "Context Management application use cases",
+        "Artifact staging and ownership",
+        "Review, save, discard, and cancellation",
+        "Storage/catalog compensation"
+      ],
+      "chunkId": "context-application-lifecycle",
+      "completedAt": "2026-08-01T20:27:59Z",
+      "criteriaIds": [
+        "context-contracts-and-limits",
+        "context-save-discard-lifecycle",
+        "security-source-and-generation-denials"
+      ],
+      "documentation": [
+        "Context Management application use-case README"
+      ],
+      "feedbackAddressed": [],
+      "id": "bounded-context-generation-context-application-lifecycle",
+      "incrementId": "bounded-context-generation",
+      "summary": "Added the authorized Context generation application lifecycle with exact workspace source staging, task ownership and digest checks, bounded review state, explicit Save or Discard, catalog-last visibility, local binding finalization, and compensation for partial failures.",
+      "tests": [
+        "Focused Context application lifecycle and authorization tests passed",
+        "Catalog and binding failure compensation tests passed",
+        "Output digest mismatch denial and cleanup test passed"
+      ],
+      "title": "Authorized staging, review, Save, and Discard"
+    },
+    {
+      "areas": [
+        "Context Management ADR and architecture",
+        "Context and Data Management threat models",
+        "Context pack catalog and prompt routing",
+        "Application and runtime documentation"
+      ],
+      "chunkId": "context-foundation-documentation",
+      "completedAt": "2026-08-01T20:28:03Z",
+      "criteriaIds": [
+        "context-contracts-and-limits",
+        "shared-data-context-extraction",
+        "rag-generation-runtime",
+        "context-pack-generation-runtime",
+        "context-save-discard-lifecycle",
+        "context-model-runtime-qualification",
+        "security-source-and-generation-denials"
+      ],
+      "documentation": [
+        "ADR-0041",
+        "Context Management architecture",
+        "Context Management threat model",
+        "Context Management context pack",
+        "Data Management architecture and threat model"
+      ],
+      "feedbackAddressed": [
+        "context-data-management-linkage",
+        "already-processed-means-already-chunked"
+      ],
+      "id": "bounded-context-generation-context-foundation-documentation",
+      "incrementId": "bounded-context-generation",
+      "summary": "Recorded the accepted Context boundary in ADR-0041, canonical architecture and threat-model guidance, Data Management linkage semantics, context routing metadata, affected module READMEs, and a focused agent-routing scenario; documentation, architecture, and agent-support gates pass.",
+      "tests": [
+        "Documentation drift checks passed",
+        "Architecture dependency checks passed",
+        "Agent-support routing checks passed"
+      ],
+      "title": "Architecture, threat model, and increment qualification"
+    },
+    {
+      "areas": [
+        "Context source contracts",
+        "Data Management linkage",
+        "Workspace artifact inspection"
+      ],
+      "chunkId": "data-context-linkage",
+      "completedAt": "2026-08-01T20:49:35Z",
+      "criteriaIds": [
+        "data-context-linkage-contracts",
+        "security-context-browser-and-handoff-denials"
+      ],
+      "documentation": [
+        "Context Management architecture",
+        "Data Management linkage threat controls"
+      ],
+      "feedbackAddressed": [],
+      "id": "authorized-context-browser-data-context-linkage",
+      "incrementId": "authorized-context-browser",
+      "summary": "Added identifier-only Context source inspection contracts and an authorized exact-byte application path that derives compatible format, text fields, digest, local availability, and authoritative persisted-chunk readiness.",
+      "tests": [
+        "Focused source readiness, persisted-lineage, digest, and cross-workspace tests passed"
+      ],
+      "title": "Data Management linkage semantics"
+    },
+    {
+      "areas": [
+        "Context Browser application use cases",
+        "Artifact lifecycle",
+        "Source freshness and rebuild"
+      ],
+      "chunkId": "context-browser-use-cases",
+      "completedAt": "2026-08-01T20:49:40Z",
+      "criteriaIds": [
+        "context-browser-lifecycle",
+        "security-context-browser-and-handoff-denials"
+      ],
+      "documentation": [
+        "Context application README",
+        "Context Management architecture and threat model"
+      ],
+      "feedbackAddressed": [],
+      "id": "authorized-context-browser-context-browser-use-cases",
+      "incrementId": "authorized-context-browser",
+      "summary": "Implemented authorized Context Browser list, verified detail, source freshness, safe source-only rebuild, and registered-artifact deletion for fixed RAG and Markdown context media types.",
+      "tests": [
+        "Focused list/detail/freshness/rebuild/delete and malformed-artifact tests passed"
+      ],
+      "title": "Context Browser application lifecycle"
+    },
+    {
+      "areas": [
+        "Context artifact runtime port",
+        "Python artifact inspection",
+        "Bounded RAG query"
+      ],
+      "chunkId": "context-retrieval-test",
+      "completedAt": "2026-08-01T20:49:44Z",
+      "criteriaIds": [
+        "context-query-citations",
+        "security-context-browser-and-handoff-denials"
+      ],
+      "documentation": [
+        "Python adapter and worker READMEs",
+        "Context security threat model"
+      ],
+      "feedbackAddressed": [],
+      "id": "authorized-context-browser-context-retrieval-test",
+      "incrementId": "authorized-context-browser",
+      "summary": "Added a managed runtime artifact operation that verifies bounded SQLite/ZIP artifacts, embeds one query with the manifest-recorded local model, ranks inside the worker, and returns only bounded excerpts, scores, and exact citations.",
+      "tests": [
+        "Focused TypeScript adapter and Python SQLite/ZIP/query/cancellation denial tests passed"
+      ],
+      "title": "Bounded retrieval testing"
+    },
+    {
+      "areas": [
+        "Desktop IPC and preload",
+        "Server API and thin client",
+        "Host composition",
+        "Task observability"
+      ],
+      "chunkId": "context-host-transports",
+      "completedAt": "2026-08-01T20:49:49Z",
+      "criteriaIds": [
+        "context-transport-parity",
+        "context-task-observability",
+        "security-context-browser-and-handoff-denials"
+      ],
+      "documentation": [
+        "IPC/API READMEs",
+        "Desktop/server host composition READMEs"
+      ],
+      "feedbackAddressed": [],
+      "id": "authorized-context-browser-context-host-transports",
+      "incrementId": "authorized-context-browser",
+      "summary": "Composed the shared Context facade into desktop and server hosts, added trusted typed IPC/preload and authenticated scoped API/thin-client clients, bounded task observability, lazy lifecycle protection, and sanitized transport parity.",
+      "tests": [
+        "Transport parity, sender/auth denial, route separation, preload/client, lifecycle, server build, and thin-client build tests passed"
+      ],
+      "title": "Desktop and server transport parity"
+    },
+    {
+      "areas": [
+        "Desktop Artifact Browser",
+        "Thin-client Artifact Browser",
+        "Workspace-bound launch intents",
+        "Context source readiness"
+      ],
+      "chunkId": "artifact-browser-conversion",
+      "completedAt": "2026-08-01T22:27:40Z",
+      "criteriaIds": [
+        "artifact-browser-rag-conversion",
+        "security-context-ui-isolation-and-inert-content"
+      ],
+      "documentation": [
+        "Context Management architecture",
+        "Context Management threat model",
+        "Data Management architecture"
+      ],
+      "feedbackAddressed": [
+        "already-processed-means-already-chunked"
+      ],
+      "id": "shared-context-studio-experience-artifact-browser-conversion",
+      "incrementId": "shared-context-studio-experience",
+      "summary": "Added authoritative Context conversion readiness to desktop and thin-client Artifact Browser details, forwarding only the exact active-workspace artifact identifier into the RAG workflow and keeping unsupported or unverified sources blocked.",
+      "tests": [
+        "Desktop and thin-client Artifact Browser conversion interaction tests passed",
+        "Source readiness, persisted-lineage, and cross-workspace denial tests passed"
+      ],
+      "title": "Artifact Browser conversion handoff"
+    },
+    {
+      "areas": [
+        "Shared Context Studio",
+        "RAG preparation",
+        "Context Pack preparation",
+        "Safe Markdown review",
+        "Workspace notifications"
+      ],
+      "chunkId": "ordered-context-workflows",
+      "completedAt": "2026-08-01T22:27:46Z",
+      "criteriaIds": [
+        "ordered-rag-pipeline",
+        "ordered-context-pack-pipeline",
+        "context-accessibility-responsive",
+        "security-context-ui-isolation-and-inert-content"
+      ],
+      "documentation": [
+        "Shared UI README",
+        "Context Management architecture",
+        "Context Management threat model",
+        "Python worker README"
+      ],
+      "feedbackAddressed": [
+        "context-studio-ux-refinements"
+      ],
+      "id": "shared-context-studio-experience-ordered-context-workflows",
+      "incrementId": "shared-context-studio-experience",
+      "summary": "Implemented shared ordered RAG and Context Pack workflows with filtered artifact selection, automatic checks, reusable chunking, advanced source rules, exclusive manual or source modes, No Summarization or selected local-model summaries, safe review, per-chunk progress, Stop, Save, Discard, notifications, and line-based manual authoring feedback.",
+      "tests": [
+        "Five focused Context Studio interaction workflows passed",
+        "Context contracts and transport parity tests passed",
+        "Python RAG, context-pack, model, integrity, and cancellation tests passed"
+      ],
+      "title": "Shared ordered Context workflows"
+    },
+    {
+      "areas": [
+        "Context Browser",
+        "Desktop navigation and Home",
+        "Thin-client navigation and Home",
+        "Dashboard metrics",
+        "Workspace isolation"
+      ],
+      "chunkId": "context-browser-page",
+      "completedAt": "2026-08-01T22:27:54Z",
+      "criteriaIds": [
+        "context-browser-and-data-backlinks",
+        "context-navigation-home-and-dashboard",
+        "context-accessibility-responsive",
+        "security-context-ui-isolation-and-inert-content"
+      ],
+      "documentation": [
+        "Context Management architecture",
+        "Shared UI README",
+        "Context Management context pack"
+      ],
+      "feedbackAddressed": [
+        "context-data-management-linkage",
+        "context-studio-ux-refinements"
+      ],
+      "id": "shared-context-studio-experience-context-browser-page",
+      "incrementId": "shared-context-studio-experience",
+      "summary": "Integrated Context under Manage and Home on both hosts with scoped dashboard counts, Artifact Browser-style Context cards and details, post-save selection, safe previews, cited retrieval, rebuild/delete actions, exact Data Management backlinks, and validated-workspace notification polling.",
+      "tests": [
+        "Context Browser lifecycle and citation tests passed",
+        "Desktop and thin-client routing, workspace boundary, dashboard, and client tests passed",
+        "Save, discard, detail, and source backlink interaction tests passed"
+      ],
+      "title": "Context Browser and page integration"
+    },
+    {
+      "areas": [
+        "Cross-host Context workflows",
+        "Python Context generation runtime",
+        "Controlled AI test suite",
+        "Workspace isolation and safe rendering",
+        "Repository completion gates"
+      ],
+      "chunkId": "context-experience-qualification",
+      "completedAt": "2026-08-01T22:55:39Z",
+      "criteriaIds": [
+        "context-end-to-end-workflows",
+        "artifact-browser-rag-conversion",
+        "ordered-rag-pipeline",
+        "ordered-context-pack-pipeline",
+        "context-browser-and-data-backlinks",
+        "context-navigation-home-and-dashboard",
+        "context-accessibility-responsive",
+        "security-context-ui-isolation-and-inert-content"
+      ],
+      "documentation": [
+        "Testing standards",
+        "Testing context pack",
+        "Python worker README",
+        "Context implementation report"
+      ],
+      "feedbackAddressed": [
+        "context-generation-ai-e2e"
+      ],
+      "id": "shared-context-studio-experience-context-experience-qualification",
+      "incrementId": "shared-context-studio-experience",
+      "summary": "Qualified the complete desktop and thin-client Context experience with focused workflow, transport, runtime, workspace-isolation, notification, safe-rendering, build, standard, E2E, and AI coverage. Added three compact download-free Context generation E2E cases: raw-source RAG creation, persisted-chunk RAG creation with lineage, and source-material Context Pack creation with structural Markdown validation.",
+      "tests": [
+        "Three focused Context generation AI E2E tests passed",
+        "npm run test:ai passed with the controlled Python Context cases",
+        "npm test and npm run test:e2e passed",
+        "npm run test:all passed across standard, E2E, and AI suites",
+        "Documentation, architecture, agent-support, server, and thin-client gates passed"
+      ],
+      "title": "Cross-host end-to-end qualification"
+    }
+  ],
+  "completion": {
+    "completedAt": "2026-08-01T23:00:14Z",
+    "summary": "Delivered a production-ready workspace-scoped Context Management solution across desktop and thin client, including authorized source inspection and materialization, portable RAG databases, Markdown Context Packs, Context Browser lifecycle and retrieval, Data Management linkage, responsive navigation and metrics, notifications, security controls, documentation, and complete standard, E2E, and AI verification."
+  },
+  "createdAt": "2026-08-01T19:12:06Z",
+  "currentIncrementId": null,
+  "decisions": [
+    {
+      "approvalNote": "User retained Option 1 and explicitly expanded it with Context Browser naming, Data Management conversion handoffs, Dataset Preparation-style ordered extraction and chunking, source-grounded topic and summary generation, and manual context entry. The user clarified that already processed means already chunked, so chunk reuse requires authoritative persisted chunk records and lineage rather than generic prepared-dataset status.",
+      "approvedAt": "2026-08-01T19:57:12Z",
+      "approvedFingerprint": "33ea99b02dfecc4d492d307ed1113e05224171fb37d323b70cd33188ab9c45fe",
+      "context": "The repository has workspace-scoped artifacts, reusable Dataset Preparation parsing and chunking modules, managed local text-generation and embedding runtimes, and shared ordered workflow components, but no context-management domain or vector-store dependency. The selection must preserve clean Data Management handoffs, bounded source-grounded generation, cross-host parity, and portable saved context without silently broadening trust or credential boundaries.",
+      "id": "context-product-scope-and-rag-backing",
+      "options": [
+        {
+          "consequences": [
+            "The Manage navigation gains Context and Home gains a Context card on desktop and thin client.",
+            "Data Management artifact details expose Convert to RAG database only for locally readable supported textual, structured-text, tabular, or document artifacts, and pass only a one-time workspace-bound artifact reference rather than content.",
+            "RAG and context-pack tabs mirror Dataset Preparation with Add data, Check data, Prepare context, and Review and create steps using shared workflow and source-selection presentation.",
+            "Textual datasets open with their artifact selected. Persisted chunks are reused only after the application boundary validates their source digest and exact row, field, page, or region lineage; prepared datasets without those records still show compatible fields for confirmation and proceed through RAG chunk extraction.",
+            "Context packs can combine authorized sources and manual context, preview extracted topics and source-grounded summaries with citations, and require explicit review before materialization.",
+            "Context Browser manages saved outputs, source freshness, exact Data Management source links, rebuild/delete actions, and bounded retrieval testing; Artifact Browser still lists the underlying materialized artifacts.",
+            "Vectors, raw chunks, manual text, prompts, and model payloads remain out of general artifact metadata and AssetAiContext."
+          ],
+          "id": "embedded-context-studio",
+          "label": "Data-linked Embedded Context Studio",
+          "recommended": true,
+          "summary": "Build a shared workspace-scoped Context page with RAG Databases, Markdown Context Packs, and Context Browser tabs. Both generators use the Dataset Preparation four-step ordered pipeline and shared source-processing capabilities. Eligible textual artifact detail dialogs open the RAG tab with the exact artifact preselected and recognize it as already chunked only when persisted chunk records and exact lineage are authoritatively validated. RAG creates a portable SQLite database artifact. Context packs accept artifacts and/or bounded manual context, then perform source-grounded core-topic extraction and constrained summarization with explicit model/method selection, citations, review, Save, and Discard.",
+          "tradeoffs": [
+            "Delivers a coherent two-way Data Management and Context experience without a separately operated vector service or new production credential boundary.",
+            "Requires shared handoff contracts, authoritative chunk-record inspection, reusable normalization/chunking boundaries, constrained topic/summary generation, exact lineage, host transports, and cross-host workflow UI rather than a page-only change.",
+            "Uses existing SQLite, transformer, constrained-output, artifact, and workflow capabilities; no vector-database dependency is planned.",
+            "Bounded cosine retrieval is appropriate for local and small-to-medium collections; a later adapter is needed for very large corpora.",
+            "Model-assisted summaries require explicit readiness, prompt-injection controls, citations, and review; deterministic extractive processing remains available and a selected unavailable AI mode never silently falls back."
+          ]
+        },
+        {
+          "consequences": [
+            "Data Management and Context UX remains linked, but saved RAG context is a local manifest plus a remote collection rather than a self-contained artifact.",
+            "The roadmap requires a separate provider choice, secure credential configuration, operations documentation, cross-tenant denial testing, and controlled-environment qualification.",
+            "The first delivery is larger and unavailable when the vector service cannot be reached."
+          ],
+          "id": "external-vector-service-studio",
+          "label": "Data-linked external service",
+          "recommended": false,
+          "summary": "Build the same Data Management handoffs, ordered generation workflows, source/manual context-pack generation, and Context Browser, but use a managed external vector service as the first RAG backing while retaining only a local manifest artifact.",
+          "tradeoffs": [
+            "Scales indexing and retrieval beyond an embedded bounded scan.",
+            "Adds deployment, health, network egress, credentials, tenancy, retention, deletion, backup, provider versioning, and offline behavior before the basic workflow can work.",
+            "Reduces portability and makes local desktop development dependent on external infrastructure unless a second embedded adapter is also implemented."
+          ]
+        },
+        {
+          "consequences": [
+            "Manage navigation and Home still gain Context, but the page contains only RAG Databases and Markdown Context Packs tabs.",
+            "Saved outputs and their source linkage are visible only through generic Artifact Browser details.",
+            "A later roadmap is required for context-specific browsing, stale-source detection, rebuilding, and retrieval testing."
+          ],
+          "id": "generation-only-artifacts",
+          "label": "Linked generation-only artifacts",
+          "recommended": false,
+          "summary": "Add the two ordered generators and Data Management Convert to RAG database handoff, save embedded RAG and Markdown artifacts, and use the existing Artifact Browser for all post-save management.",
+          "tradeoffs": [
+            "Smaller initial Context-specific management surface while preserving the requested source handoff and generation capabilities.",
+            "Avoids Context Browser freshness, rebuild, deletion, and retrieval-test reads in the first implementation.",
+            "Leaves users without a context-specific way to validate retrieval quality, inspect source-grounded summaries, or manage stale context."
+          ]
+        }
+      ],
+      "proposalFingerprint": "33ea99b02dfecc4d492d307ed1113e05224171fb37d323b70cd33188ab9c45fe",
+      "question": "What should the first Context page own, how should it connect to Data Management, and where should its RAG database live?",
+      "selectedOptionId": "embedded-context-studio",
+      "status": "approved",
+      "title": "Context product scope and RAG database backing"
+    }
+  ],
+  "discovery": {
+    "constraints": [
+      "Add a workspace-required Context page to desktop and thin-client Manage navigation and add a Context card to both Home surfaces.",
+      "Provide RAG Databases, Markdown Context Packs, and Context Browser tabs with shared host-neutral behavior and host-specific desktop IPC/preload and thin-client API clients.",
+      "Use the same four-step ordered pipeline and shared WorkflowSequence/WorkflowStep, sectioned panel, readable checkbox, status, advanced-setting, and final-action presentation conventions as Dataset Preparation without importing feature-local host code across boundaries.",
+      "Add Convert to RAG database to eligible Artifact Browser View Details modals, pass only a one-time active-workspace artifact identifier, and validate local availability, source type, fields, version, digest, and any persisted chunk records and lineage authoritatively after navigation.",
+      "Provide reverse links from Context Browser source citations to exact Data Management artifact details and clear stale handoffs or selections when workspace scope changes.",
+      "Reuse Dataset Preparation media capability, document normalization, tabular/structured extraction, and chunking semantics through a neutral shared boundary; do not fork parsers or weaken existing Dataset Preparation behavior.",
+      "Allow context-pack input from authorized artifacts, bounded manual context, or both; distinguish authored, extracted, and generated content and retain exact digests and citations.",
+      "Support deterministic extractive and explicitly selected constrained local-model core-topic and summary generation; fail closed when the selected method or model is unavailable or malformed and never silently substitute methods.",
+      "Treat saved RAG databases and Markdown packs as materialized workspace artifacts with bounded safe manifests and catalog visibility; keep vectors, raw chunks, manual text, source payloads, prompts, and provider/model payloads out of general metadata and AssetAiContext.",
+      "Use readable source selection, field confirmation, explicit configuration, per-chunk authoritative progress and cancellation, bounded preview/review, and explicit Save or Discard.",
+      "Propagate authoritative workspace and optional organization scope through navigation state, UI, transport, application, runtime, storage, catalog, retrieval, deletion, and source-backlink boundaries; fail closed when scope or authority is missing.",
+      "Bound source count and bytes, manual text, fields, parsed records, chunks, overlap, topics, summaries, prompts, model output, embedding dimensions, output size, query size, results, duration, polling, and retained tasks.",
+      "Treat all artifact/manual content as untrusted data rather than instructions; constrain and cite model output, render Markdown/topics/summaries/excerpts inertly, and preserve human review before save.",
+      "Expose only sanitized public diagnostics and aggregate progress; never return or log local paths, raw embeddings, protected prompts, manual/source payloads, secrets, stack traces, or raw provider/model errors.",
+      "Preserve existing dirty worktree changes and avoid coupling this roadmap to unrelated dashboard test cleanup.",
+      "Update the context ADR, architecture and threat-model docs, Data Management and security context packs/routing, affected host and module READMEs, and all cross-host linkage and regression tests in the same change.",
+      "Run focused tests while iterating, then documentation, architecture, agent-support, server/thin-client build, standard, end-to-end, AI, and all-suite gates at each completed increment boundary."
+    ],
+    "decisionRequired": true,
+    "recordedAt": "2026-08-01T19:57:16Z",
+    "securityImpact": {
+      "abuseCases": [
+        "A forged or stale launch intent marks an unchunked, deleted, remote-only, stale-digest, or cross-workspace artifact as already chunked.",
+        "A caller reads, embeds, summarizes, saves, queries, rebuilds, links, or deletes sources or outputs from another workspace or organization.",
+        "Instructions embedded in source or manual content override generation policy, trigger tool/network behavior, or induce disclosure of unrelated content.",
+        "A malformed or hallucinated model response is accepted as a source-grounded topic or summary without schema validation, citations, or review.",
+        "Manual text, source content, prompts, model output, vectors, paths, secrets, or stack traces leak through navigation state, metadata, diagnostics, notifications, logs, or browser detail.",
+        "Oversized artifacts, manual input, fields, chunks, overlap, topic counts, summary length, prompts, vectors, polling, or queries exhaust memory, disk, CPU, GPU, transport, model context, or renderer resources.",
+        "A stale, substituted, or partially written source/output is presented as current because exact version/digest lineage, atomic materialization, or compensation is missing.",
+        "Crafted names, storage keys, archive members, Markdown, links, citations, or retrieval excerpts escape approved boundaries or execute active content.",
+        "Cancelled, discarded, failed, or workspace-switched generation leaves orphaned databases, ZIPs, vectors, manual drafts, tasks, catalog records, or stale selection state."
+      ],
+      "assets": [
+        "Workspace-owned source artifacts, dataset versions, fields, persisted chunk records, exact chunk lineage, and immutable digests",
+        "User-authored manual context and its exact digest",
+        "Generated topics, summaries, Markdown packs, chunks, embeddings, RAG databases, manifests, and citations",
+        "Authoritative workspace and organization ownership plus one-time cross-page launch intent",
+        "Installed embedding and text-generation model identity and configuration",
+        "Secrets, local paths, protected prompts, manual/source payloads, raw model output, vectors, stack traces, and provider details that must not enter public metadata, navigation state, logs, or diagnostics",
+        "Accurate already-chunked source, generation, save, discard, freshness, source-link, and retrieval state",
+        "Bounded runtime, memory, disk, storage, model, polling, query, and renderer resources"
+      ],
+      "controls": [
+        "Carry identifiers only in one-time navigation intent, bind them to the active workspace, consume them once, and re-authorize exact artifact/version ownership and local availability before processing; reuse chunks only when persisted records match the authoritative source digest and exact row, field, page, region, and chunk lineage, and never trust a renderer or route already-chunked hint.",
+        "Require authoritative workspace and optional organization context for source inspection, generation, task listing, materialization, browsing, source links, queries, rebuilds, and deletion.",
+        "Reuse allowlisted Data Management media capabilities and bounded neutral parsers/chunkers, normalize safe names, confirm text fields for any source without valid persisted chunks, use artifact-owned keys, and accept no caller-controlled physical paths.",
+        "Treat artifact and manual content as inert untrusted data; offer deterministic extractive processing or explicit constrained local-model processing, disable tools/network access, require bounded schema-valid output and exact citations, and never silently fall back between methods.",
+        "Keep manual/source text, prompts, raw model output, vectors, and chunks inside staged or artifact-owned content; expose only bounded safe manifests, attributed previews, topics, summaries, citations, and retrieval excerpts through dedicated authorized reads.",
+        "Apply explicit limits before expensive work to sources, bytes, manual text, fields, records, chunks, overlap, topics, summaries, prompt/model context, embeddings, outputs, queries, results, concurrency, duration, polling, and retained records.",
+        "Materialize atomically, verify source/output digests, write catalog records last, compensate partial output, and clear staged/manual/navigation state on cancellation, discard, failure, deletion, or workspace change.",
+        "Sanitize typed diagnostics and notifications and never transport or log raw runtime/model exceptions, provider payloads, paths, prompts, vectors, manual content, source rows, or arbitrary metadata.",
+        "Render names, Markdown, topics, summaries, links, citations, and excerpts as inert escaped content with constrained links, and make generated versus authored versus extracted provenance visible.",
+        "Make field confirmation, method/model choice, review, Save, Discard, rebuild, query, and delete explicit user actions with truthful readiness and stale-source indicators."
+      ],
+      "disposition": "security-relevant",
+      "residualRisks": [
+        "Embedding, topic-extraction, and summarization models can produce weak, biased, incomplete, or misleading results despite schema, citation, and review controls.",
+        "A citation proves source association, not semantic correctness; users must review generated topics and summaries before saving or using a pack.",
+        "Exported RAG databases and context packs may permit semantic inference about source or manual content and must be protected according to source sensitivity.",
+        "The embedded database option is optimized for bounded local and small-to-medium collections; very large corpora may require a future external adapter and controlled performance qualification.",
+        "Physical GPU, CPU, memory, disk, accessibility, and large-document qualification remains environment-dependent even with synthetic automated coverage."
+      ],
+      "summary": "The feature sends untrusted artifact and manually entered content through parsers, chunkers, embedding and text-generation models, creates vector and prompt-oriented artifacts, introduces identifier handoffs between Data Management and Context, and exposes retrieval and generated summaries. It affects confidentiality, authorization, integrity, prompt injection, hallucination/citation trust, resource exhaustion, data lineage, and cross-workspace UI state.",
+      "trustBoundaries": [
+        "Artifact Browser detail and active workspace state to a one-time Context launch intent",
+        "Context Browser source citations back to exact Data Management artifact selection",
+        "Untrusted artifact and manual content to parser, field extractor, chunker, Markdown renderer, embedding model, and constrained text-generation model",
+        "Desktop renderer through preload and IPC to desktop host application use cases",
+        "Thin-client browser through authenticated API routes to server host application use cases",
+        "Application orchestration to runtime-task, model, artifact-storage, and catalog adapters",
+        "Saved context databases and packages back to bounded browser detail, summary, and retrieval presentation",
+        "Active workspace changes to handoffs, sources, manual drafts, tasks, saved outputs, notifications, and visible records"
+      ],
+      "verification": [
+        "Contract and normalization tests for identifier-only handoffs, workspace binding, bounds, safe names, media types, fields, manual input, topic/summary schemas, manifests, digests, lineage, citations, and rejection of raw vectors, paths, prompts, arbitrary metadata, or oversized values.",
+        "Use-case denial tests for forged/stale/cross-workspace handoffs, false already-chunked claims, absent or invalid chunk lineage, inaccessible sources, remote-only bytes, stale digests, unsupported formats, invalid fields, unavailable selected models, malformed constrained output, partial storage failure, cancellation, discard, deletion, and compensation.",
+        "Prompt-injection tests proving source/manual instructions remain data, no tools or network are invoked, schema/citation failures block review, generated provenance stays visible, and no silent model-method fallback occurs.",
+        "Runtime tests using tiny synthetic raw, prepared, and manual inputs for shared parsing, field extraction, chunking, embeddings, topics, summaries, per-chunk progress, cancellation, and sanitized failures.",
+        "Transport tests proving desktop IPC/preload and server API validation, authority propagation, bounded responses, identifier-only handoffs, and safe errors.",
+        "Cross-host UI tests for detail-modal conversion eligibility, exact preselection, authoritative already-chunked state, unchunked dataset extraction, ordered workflows, manual editor, method/model readiness, review, Save/Discard, Context Browser source backlinks, workspace switching, inert rendering, and stale handoff cleanup.",
+        "Artifact integration tests for atomic database/package persistence, catalog visibility, digest verification, exact artifact/manual lineage, selected detail, and orphan-free discard/failure/delete behavior.",
+        "AI-related all-suite verification plus controlled local qualification for representative supported sources and compatible installed embedding and text-generation models."
+      ]
+    },
+    "sources": [
+      {
+        "note": "Requires the smallest coherent change, dependency-direction review, security screening, documentation updates, and change-relevant verification.",
+        "title": "Repository agent guide",
+        "url": "AGENTS.md"
+      },
+      {
+        "note": "Routes feature work through canonical architecture, standards, context packs, and nearest-area documentation.",
+        "title": "Repository orientation",
+        "url": "docs/README.md"
+      },
+      {
+        "note": "Requires workspace-scoped artifact-first flows, bounded parsing, safe diagnostics, exact lineage, and explicit runtime task behavior.",
+        "title": "Data management architecture context",
+        "url": "docs/context/packs/data-management.pack.md"
+      },
+      {
+        "note": "Requires explicit authority propagation, fail-closed boundaries, bounded resources, sanitized diagnostics, and denial-path verification.",
+        "title": "Security architecture context",
+        "url": "docs/context/packs/security.pack.md"
+      },
+      {
+        "note": "Treats source content and generated artifacts as untrusted workspace-owned data crossing parser, runtime, storage, and presentation boundaries.",
+        "title": "Data management threat model",
+        "url": "docs/security/data-management-threat-model.md"
+      },
+      {
+        "note": "Provides lifecycle, provenance, typed reference, and safe metadata semantics above storage operations.",
+        "title": "Artifact contracts",
+        "url": "modules/contracts/artifact/README.md"
+      },
+      {
+        "note": "Dataset preparation demonstrates bounded source selection, runtime orchestration, review, compensation, immutable lineage, and workspace authorization.",
+        "title": "Application use-case guidance",
+        "url": "modules/application/use-cases/README.md"
+      },
+      {
+        "note": "Defines the existing supported textual, structured, tabular, document, and media-type capability model that Context should reuse rather than duplicate.",
+        "title": "Dataset Preparation source capabilities",
+        "url": "modules/contracts/runtime/dataset-preparation-capabilities.ts"
+      },
+      {
+        "note": "Provides bounded document extraction behavior already used by Dataset Preparation.",
+        "title": "Shared document normalization",
+        "url": "modules/adapters/runtime/python/worker/tasks/document_normalization.py"
+      },
+      {
+        "note": "Provides fixed-length and structure-aware chunk semantics and lineage used by Dataset Preparation.",
+        "title": "Shared Markdown chunking",
+        "url": "modules/adapters/runtime/python/worker/tasks/markdown_chunking.py"
+      },
+      {
+        "note": "Uses the four-step Add data, Check data, Prepare dataset, Review and create sequence, shared WorkflowSequence components, collapsible advanced settings, and final action container requested as Context styling guidance.",
+        "title": "Dataset Preparation ordered workflow",
+        "url": "apps/desktop/src/renderer/features/dataset-preparation/components/DatasetPreparationFeature.tsx"
+      },
+      {
+        "note": "Owns View Details modal actions and is the desktop launch point for Convert to RAG database.",
+        "title": "Desktop Artifact Browser detail modal",
+        "url": "apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx"
+      },
+      {
+        "note": "Provides the parallel browser-host modal that must preserve cross-host conversion behavior.",
+        "title": "Thin-client Artifact Browser detail modal",
+        "url": "apps/thin-client/src/features/artifact-browser/components/ArtifactBrowserFeature.tsx"
+      },
+      {
+        "note": "The existing registry supports workspace-scoped start, read, cancel, list, progress, and terminal state, but has no context task family.",
+        "title": "Runtime task contracts",
+        "url": "modules/contracts/runtime/task-type.ts"
+      },
+      {
+        "note": "AssetAiContext may support retrieval and prompt assembly but must not contain raw source/manual payloads, paths, file bytes, prompts, or embedding vectors.",
+        "title": "Asset AI-readable context boundary",
+        "url": "docs/architecture/asset-kernel.md"
+      }
+    ],
+    "summary": "The repository already provides workspace-scoped artifact storage and detail modals, Dataset Preparation source-format capability contracts, reusable Python document normalization and Markdown chunking modules, constrained local text generation, generic cancellable runtime tasks, shared four-step WorkflowSequence presentation, and parallel desktop/thin-client routing. It does not yet have a context-management product boundary, a vector database dependency, a cross-page launch-intent contract, or a generic prepared-dataset flag that proves chunk materialization. The revised Context Studio should therefore share neutral source-processing semantics with Data Management, accept exact artifact references or bounded manual context, recognize sources as already chunked only through authoritative persisted chunk records and lineage, generate portable context artifacts with citations and review, and link Artifact Browser and Context Browser through identifier-only workspace-bound navigation state."
+  },
+  "evidence": [
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/contracts/context-management/tests/context-management-contracts.unit.test.ts modules/application/use-cases/context-management/tests/context-generation.use-case.unit.test.ts",
+      "criterionId": "context-contracts-and-limits",
+      "id": "evidence-1",
+      "incrementId": "bounded-context-generation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T20:28:06Z",
+      "summary": "Focused contract and application tests passed for bounded requests, safe names, media types, exact identity and lineage, save intent, and source/result digest enforcement."
+    },
+    {
+      "artifact": null,
+      "command": "python -m unittest modules.adapters.runtime.python.worker.tests.test_context_generation modules.adapters.runtime.python.worker.tests.test_worker_app modules.adapters.runtime.python.worker.tests.test_task_lifecycle",
+      "criterionId": "shared-data-context-extraction",
+      "id": "evidence-2",
+      "incrementId": "bounded-context-generation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T20:28:11Z",
+      "summary": "Focused worker tests passed for document and structured extraction, exact source digest validation, persisted-chunk reuse, and unchanged worker lifecycle regressions."
+    },
+    {
+      "artifact": null,
+      "command": "python -m unittest modules.adapters.runtime.python.worker.tests.test_context_generation",
+      "criterionId": "rag-generation-runtime",
+      "id": "evidence-3",
+      "incrementId": "bounded-context-generation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T20:28:15Z",
+      "summary": "Synthetic already-chunked sources produced a valid bounded SQLite database with exact lineage, deterministic metadata, per-chunk progress, cancellation, and safe failures."
+    },
+    {
+      "artifact": null,
+      "command": "python -m unittest modules.adapters.runtime.python.worker.tests.test_context_generation",
+      "criterionId": "context-pack-generation-runtime",
+      "id": "evidence-4",
+      "incrementId": "bounded-context-generation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T20:28:21Z",
+      "summary": "Synthetic artifact/manual inputs produced a deterministic Markdown context-pack ZIP, while the constrained-model double retained untrusted-source separation and bounded cited output."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/application/use-cases/context-management/tests/context-generation.use-case.unit.test.ts",
+      "criterionId": "context-save-discard-lifecycle",
+      "id": "evidence-5",
+      "incrementId": "bounded-context-generation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T20:28:25Z",
+      "summary": "Application tests passed for staged review, explicit save, discard without persistence, task ownership, digest denial, cleanup, and catalog/binding failure compensation."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "context-model-runtime-qualification",
+      "id": "evidence-6",
+      "incrementId": "bounded-context-generation",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-08-01T20:28:30Z",
+      "summary": "Automated model-boundary coverage passes with controlled doubles; physical managed-runtime qualification with compatible installed embedding and text-generation models remains pending and is required before roadmap completion."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/contracts/context-management/tests/context-management-contracts.unit.test.ts modules/application/use-cases/context-management/tests/context-generation.use-case.unit.test.ts modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts && python -m unittest modules.adapters.runtime.python.worker.tests.test_context_generation",
+      "criterionId": "security-source-and-generation-denials",
+      "id": "evidence-7",
+      "incrementId": "bounded-context-generation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T20:28:35Z",
+      "summary": "Focused contract, worker, and application tests deny digest mismatch, cross-workspace access, unsafe source/model behavior, cancellation, malformed output, and partial storage failures without exposing protected payloads or paths."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/contracts/context-management/tests/context-management-contracts.unit.test.ts modules/application/use-cases/context-management/tests/context-browser.use-cases.unit.test.ts",
+      "criterionId": "data-context-linkage-contracts",
+      "id": "evidence-8",
+      "incrementId": "authorized-context-browser",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T20:49:54Z",
+      "summary": "Source inspection resolves authorized local bytes and reports exact digest, fields, capability, local availability, and persisted-lineage readiness; identifier-only transport contracts are independently normalized."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/application/use-cases/context-management/tests/context-browser.use-cases.unit.test.ts",
+      "criterionId": "context-browser-lifecycle",
+      "id": "evidence-9",
+      "incrementId": "authorized-context-browser",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T20:49:59Z",
+      "summary": "Context Browser lists only valid workspace context artifacts and verifies detail, freshness, rebuild eligibility, manual-entry blockers, safe failures, and registered-artifact deletion."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/adapters/runtime/python/context-management/tests/createPythonContextArtifactRuntimeAdapter.unit.test.ts && python -m unittest modules.adapters.runtime.python.worker.tests.test_context_artifact_operation",
+      "criterionId": "context-query-citations",
+      "id": "evidence-10",
+      "incrementId": "authorized-context-browser",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T20:50:05Z",
+      "summary": "The managed runtime verifies RAG SQLite schema and digest, ranks bounded query results with the recorded model, preserves authoritative persisted citations, and returns no vectors or physical paths."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/adapters/transport/api-express/context-management/tests/context-management-transport-parity.unit.test.ts apps/desktop/src/preload/tests/context-management-bridge.unit.test.ts apps/thin-client/src/features/context-management/tests/api-context-management-client.unit.test.ts && npm run build:server && npm run build:thin-client",
+      "criterionId": "context-transport-parity",
+      "id": "evidence-11",
+      "incrementId": "authorized-context-browser",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T20:50:09Z",
+      "summary": "Desktop IPC/preload and server API/thin-client clients carry the same typed Context command union and authoritative workspace semantics through one application facade; both production builds pass."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts modules/hosts/desktop/composition/tests/featureLifecycle.unit.test.ts",
+      "criterionId": "context-task-observability",
+      "id": "evidence-12",
+      "incrementId": "authorized-context-browser",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T20:50:14Z",
+      "summary": "The shared facade lists bounded workspace generation/retrieval task records, the runtime maps both task families, and desktop disposal is blocked while context work is active."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/application/use-cases/context-management/tests/context-browser.use-cases.unit.test.ts modules/adapters/runtime/python/context-management/tests/createPythonContextArtifactRuntimeAdapter.unit.test.ts modules/adapters/transport/api-express/context-management/tests/context-management-transport-parity.unit.test.ts && python -m unittest modules.adapters.runtime.python.worker.tests.test_context_artifact_operation",
+      "criterionId": "security-context-browser-and-handoff-denials",
+      "id": "evidence-13",
+      "incrementId": "authorized-context-browser",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T20:50:20Z",
+      "summary": "Focused tests deny cross-workspace reads, digest/media substitution, malformed SQLite/ZIP, untrusted IPC senders, unauthenticated API calls, read/write route confusion, and unsafe diagnostics while keeping vectors and paths private."
+    },
+    {
+      "artifact": "artifacts/test-reports/test-suite-report.json",
+      "command": "npm run test:all",
+      "criterionId": "artifact-browser-rag-conversion",
+      "id": "evidence-14",
+      "incrementId": "shared-context-studio-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T22:55:41Z",
+      "summary": "Desktop and thin-client detail interactions, authoritative readiness, exact active-workspace handoff, unsupported-source blockers, and valid persisted-chunk reuse passed in the combined suite."
+    },
+    {
+      "artifact": "artifacts/test-reports/test-suite-report.json",
+      "command": "npm run test:all",
+      "criterionId": "ordered-rag-pipeline",
+      "id": "evidence-15",
+      "incrementId": "shared-context-studio-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T22:55:43Z",
+      "summary": "The ordered RAG workflow, automatic source checks, reusable chunk settings, review/save/discard, per-chunk progress, cancellation, and real tiny-model creation of valid raw-source and persisted-chunk SQLite databases all passed."
+    },
+    {
+      "artifact": "artifacts/test-reports/test-suite-report.json",
+      "command": "npm run test:all",
+      "criterionId": "ordered-context-pack-pipeline",
+      "id": "evidence-16",
+      "incrementId": "shared-context-studio-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T22:55:45Z",
+      "summary": "Exclusive manual and source-material modes, Markdown validation, Standard/Strict cleaning, No Summarization or selected local-model configuration, inert HTML review, Save/Discard, and a physically generated fixed-member source Context Pack with valid Markdown all passed."
+    },
+    {
+      "artifact": "artifacts/test-reports/test-suite-report.json",
+      "command": "npm run test:all",
+      "criterionId": "context-browser-and-data-backlinks",
+      "id": "evidence-17",
+      "incrementId": "shared-context-studio-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T22:55:47Z",
+      "summary": "Context Browser selection, safe details, freshness, query citations, rebuild/delete, post-save selection, and exact Data Management source backlinks passed across desktop and thin-client coverage."
+    },
+    {
+      "artifact": "artifacts/test-reports/test-suite-report.json",
+      "command": "npm run test:all",
+      "criterionId": "context-navigation-home-and-dashboard",
+      "id": "evidence-18",
+      "incrementId": "shared-context-studio-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T22:55:48Z",
+      "summary": "Workspace-gated Context routes, unique Manage navigation, Home cards, active-workspace media-type counts, fixed dashboard sizing, and small-screen suppression passed on both hosts."
+    },
+    {
+      "artifact": "artifacts/test-reports/test-suite-report.json",
+      "command": "npm run test:all",
+      "criterionId": "context-accessibility-responsive",
+      "id": "evidence-19",
+      "incrementId": "shared-context-studio-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T22:55:50Z",
+      "summary": "Automated interaction coverage passed for labelled controls, readable checkboxes, ordered steps, dialogs, status announcements, safe Markdown review, responsive layout, workspace resets, and small-screen dashboard behavior."
+    },
+    {
+      "artifact": "artifacts/test-reports/test-suite-report.json",
+      "command": "npm run test:all",
+      "criterionId": "context-end-to-end-workflows",
+      "id": "evidence-20",
+      "incrementId": "shared-context-studio-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T22:55:52Z",
+      "summary": "Compact workflows passed for conversion, extracted and persisted-chunk RAG creation, manual and source Context Packs, review/save/discard, browser/query/rebuild/delete/backlinks/cancel, and desktop/thin-client parity. The controlled AI suite physically reopened valid RAG SQLite outputs and structurally validated generated Markdown."
+    },
+    {
+      "artifact": "artifacts/test-reports/test-suite-report.json",
+      "command": "npm run test:all",
+      "criterionId": "security-context-ui-isolation-and-inert-content",
+      "id": "evidence-21",
+      "incrementId": "shared-context-studio-experience",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T22:55:54Z",
+      "summary": "Cross-workspace denial, validated-workspace notification and dashboard reads, digest/lineage failures, bounded runtime errors, cancellation, inert Markdown, fixed archive members, and private-payload exclusion passed in focused and combined coverage."
+    },
+    {
+      "artifact": null,
+      "command": "C:\\Users\\jeffr\\AppData\\Local\\Programs\\Python\\Python312\\python.exe -m unittest modules.adapters.runtime.python.worker.tests.test_context_generation_ai_e2e",
+      "criterionId": "context-model-runtime-qualification",
+      "id": "evidence-22",
+      "incrementId": "bounded-context-generation",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-01T23:00:11Z",
+      "summary": "A supported Python 3.12 controlled run generated and reopened two valid tiny-model RAG SQLite databases, then used a generated tiny causal model through the real constrained decoder to create a model-assisted source Context Pack with valid fixed-member Markdown and exact citation lineage."
+    }
+  ],
+  "feedback": [
+    {
+      "category": "scope",
+      "disposition": "accepted",
+      "id": "context-data-management-linkage",
+      "impact": "scope-change",
+      "nextAction": "Update the selected embedded Context Studio decision and redefine all still-pending increments with shared Data Management handoffs, ordered preparation pipelines, reusable source processing, manual context input, constrained topic extraction and summarization, security controls, and cross-host regression coverage; then obtain renewed roadmap approval.",
+      "recordedAt": "2026-08-01T19:48:48Z",
+      "summary": "Expand the Context Studio so Data Management and Context have explicit two-way linkage: eligible textual artifact detail dialogs offer Convert to RAG database and open the RAG workflow with the exact artifact preselected and recognized as processed when authoritative metadata supports it; RAG generation reuses Dataset Preparation source extraction and chunking capabilities; both Context generators use the same four-step ordered workflow styling; and Markdown context packs can extract bounded core topics and source-grounded summaries from artifacts or bounded manual context entry.",
+      "targetIncrementId": null
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "already-processed-means-already-chunked",
+      "impact": "within-increment",
+      "nextAction": "Revise the decision, discovery, security controls, roadmap deliverables, acceptance criteria, and tests so chunk reuse is permitted only after application-side validation of persisted chunk records, source digest, and exact lineage; never infer it from a file name, route flag, renderer claim, or generic prepared-dataset status.",
+      "recordedAt": "2026-08-01T19:57:02Z",
+      "summary": "Clarify the Data Management to RAG handoff: already processed means the source already has persisted chunks with authoritative chunk lineage. A normalized, renamed, transformed, or prepared dataset without saved chunk records is not already processed and must still go through chunk extraction.",
+      "targetIncrementId": "bounded-context-generation"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "context-studio-ux-refinements",
+      "impact": "within-increment",
+      "nextAction": "Implement and qualify the refined behavior; treat earlier references to combined input, deterministic naming, character-based summary limits, or character-count editor feedback as superseded.",
+      "recordedAt": "2026-08-01T22:27:34Z",
+      "summary": "The active Context Studio increment was refined to use exclusive manual-entry or source-material modes, No Summarization or a selected local summary model, automated source chunking and cleaning, line-bounded summaries, safe rendered Markdown review, workspace notifications, valid hash-leading plain Markdown, and a line-based manual editor indicator.",
+      "targetIncrementId": "shared-context-studio-experience"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "context-generation-ai-e2e",
+      "impact": "within-increment",
+      "nextAction": "Add two download-free RAG creation cases using a generated tiny local embedding model and one source-material Context Pack case with structural Markdown validation to the controlled Python AI suite, then include the cases in test:ai and test:all qualification evidence.",
+      "recordedAt": "2026-08-01T22:37:35Z",
+      "summary": "Add three opt-in AI end-to-end cases covering successful RAG database creation and source-material Context Pack creation with valid Markdown output.",
+      "targetIncrementId": "shared-context-studio-experience"
+    }
+  ],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "31f6c87b8e2cfa7db76c554fb0c195e968f7eb712397818daf60ba82c02ae86e",
+      "recordedAt": "2026-08-01T19:12:14Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "56d4da741aca52897a1676e66b71aad6142487117619d5bdea0a8a9b609a41f8",
+      "recordedAt": "2026-08-01T19:12:24Z",
+      "sequence": 2,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "c4a7a1835304bee5c570e9e04a37832daf524eeac1003a22c9953d9c7c4ad741",
+      "recordedAt": "2026-08-01T19:27:15Z",
+      "sequence": 3,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "bea5d6697dab0edfaba729b715beb429710960fbeee8d9c7d5c397beac961cc2",
+      "recordedAt": "2026-08-01T19:28:33Z",
+      "sequence": 4,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "fc9d0504e4bd83aa59f6df57104f777a9e0b0c22fbdac4f8c6945ea3a5f91292",
+      "recordedAt": "2026-08-01T19:48:48Z",
+      "sequence": 5,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "09e52a132e01d6f7e06082ec1dc9968d97e280e6eba85752383a787c8d4af330",
+      "recordedAt": "2026-08-01T19:48:57Z",
+      "sequence": 6,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "8639841894208c181bf889adaf0758a634b54bab78dfa4a1a39c6e7fcceb6506",
+      "recordedAt": "2026-08-01T19:49:06Z",
+      "sequence": 7,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "fed64ce6d6e0bf6ec80198c6178b8a66e95479fff366939704853d002c765526",
+      "recordedAt": "2026-08-01T19:50:29Z",
+      "sequence": 8,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "09e52a132e01d6f7e06082ec1dc9968d97e280e6eba85752383a787c8d4af330",
+      "recordedAt": "2026-08-01T19:51:55Z",
+      "sequence": 9,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "3d916a7a69d9ec6a70f9493c8bef6c2788debc6563817c3cf5a6c19e276de519",
+      "recordedAt": "2026-08-01T19:57:02Z",
+      "sequence": 10,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "ff89aa5c67e7531b31298f7ddc8a3a0f19c95be4d64683fac94f5674f8ac96d6",
+      "recordedAt": "2026-08-01T19:57:09Z",
+      "sequence": 11,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "f82d1cbdbf413bf7cafa616a1f3e8fefa4be3610bcc08b7803e8ac2af861d881",
+      "recordedAt": "2026-08-01T19:57:12Z",
+      "sequence": 12,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "3335190cff264bd7940da29dcfa1b38552771bac5c5544ea99a72c285ed43b4b",
+      "recordedAt": "2026-08-01T19:57:16Z",
+      "sequence": 13,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "abf7a93215d3bb06f727ff99b0bd3d7e286eb3ddb9f162641ce0f57712d80657",
+      "recordedAt": "2026-08-01T19:57:19Z",
+      "sequence": 14,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "5e3443bdf920b920f5fe3c8e02382f7dce63ff9c06e4c315f1c3ed9c24f5a803",
+      "recordedAt": "2026-08-01T19:59:43Z",
+      "sequence": 15,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "9944007eb98923a601ffccb44403bb8856d8419af9dcbe4954b2a628418426e2",
+      "recordedAt": "2026-08-01T19:59:57Z",
+      "sequence": 16,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "b1ba9a5c52fcecd700a5ef37d6cf9e844546eb062de6ffba2cb02aea7f63d40b",
+      "recordedAt": "2026-08-01T20:03:02Z",
+      "sequence": 17,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "51d777a31c5b54bfb931e42b6ebfbe383b160b7cf2399b6f859837fec732d173",
+      "recordedAt": "2026-08-01T20:03:06Z",
+      "sequence": 18,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "ed5931d1595d78863e12e321fc4dc7f7d27628b5545fb9947fee66e34f598e44",
+      "recordedAt": "2026-08-01T20:07:36Z",
+      "sequence": 19,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "206d7e92b0072372714643c02f6c8d08557841367f967b2a58f27b832c6e3ee2",
+      "recordedAt": "2026-08-01T20:15:05Z",
+      "sequence": 20,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "f0c01d7301fff61d1c3ea325bdc90ba7516e6c69ae1a2b202ad82e981707256f",
+      "recordedAt": "2026-08-01T20:27:59Z",
+      "sequence": 21,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "fc714f45f785f0f8fc12dc78630fbf23e601b4296b8a6ce46af8e2e3a066a263",
+      "recordedAt": "2026-08-01T20:28:03Z",
+      "sequence": 22,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "38e3c6d938e6b9ef3d5dd327768fa261486fecb181ea6bfce6d5fe343b4fab52",
+      "recordedAt": "2026-08-01T20:28:06Z",
+      "sequence": 23,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "6f688eef485b64f29582497e3cd969018e0ca65dcd2a8a0313a2b675d864c233",
+      "recordedAt": "2026-08-01T20:28:11Z",
+      "sequence": 24,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3db884cd1f4063c3dd8d3d4c91523f94a900c9e82aa6597e487084063ec1403f",
+      "recordedAt": "2026-08-01T20:28:15Z",
+      "sequence": 25,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "eff898248d5d82f61b9a2837b8bf90b255f430a0ecfa0ff10cff6fc5429d4d18",
+      "recordedAt": "2026-08-01T20:28:21Z",
+      "sequence": 26,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9459d0e12af6951e7a51d787ee1111398a0170364b31600ede956a853807ad64",
+      "recordedAt": "2026-08-01T20:28:25Z",
+      "sequence": 27,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b3d7c9117572bd0c3ede56e1222988f23af63b8f29a64958b18379dea755d3b2",
+      "recordedAt": "2026-08-01T20:28:30Z",
+      "sequence": 28,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "aa8a72da18261d66dc6ce451164de54fc71c805d81b00a781501b45a1a284923",
+      "recordedAt": "2026-08-01T20:28:35Z",
+      "sequence": 29,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "6b2c60d9dcfad7fb821aa1c06b637ad4c9931bdbca6cf553abf06acb30005241",
+      "recordedAt": "2026-08-01T20:28:42Z",
+      "sequence": 30,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "87167d775046851686ffe70bed61a04ac013df0fd98a8a0677e07c290b0802df",
+      "recordedAt": "2026-08-01T20:29:03Z",
+      "sequence": 31,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "d829837d006681a6152933c699439ff43596be474ec0c356f5c6474dc537d0f6",
+      "recordedAt": "2026-08-01T20:30:46Z",
+      "sequence": 32,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "16e3ad003f34deaf729471503b3c7bbb9b3cc5fbf9a60658b4ef44bed17d9047",
+      "recordedAt": "2026-08-01T20:30:50Z",
+      "sequence": 33,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "1bc7a8a41288db0bb5f0af7bc6deb8c487d6724561cba1a9564883a00870e1d2",
+      "recordedAt": "2026-08-01T20:49:35Z",
+      "sequence": 34,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "0106a6df5d045128534ddfa5e10b706c6c15b2b5c4e51e23a1de2d46e22f0534",
+      "recordedAt": "2026-08-01T20:49:40Z",
+      "sequence": 35,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "a8ac553658d9c3173a10ba8237a231ded8f62377a4ea03c1ae61a9ecdc49bc63",
+      "recordedAt": "2026-08-01T20:49:44Z",
+      "sequence": 36,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "fa594f83327129da28392a90a973615dad3e535b4651d9665959e06214145cd0",
+      "recordedAt": "2026-08-01T20:49:49Z",
+      "sequence": 37,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "9484a05e510b6b767c7ae59c6f842a7cc02aa619596ed51b13369d139a74d4aa",
+      "recordedAt": "2026-08-01T20:49:54Z",
+      "sequence": 38,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "4ce9f6c958042bb705d4f47f09f87e2e1a0a1edfd3f2a2fd262ac17f2f527e33",
+      "recordedAt": "2026-08-01T20:49:59Z",
+      "sequence": 39,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b86d292383bf6f03a7c9efc95952776b17a316fdf339a7c5a18239d6cf88a366",
+      "recordedAt": "2026-08-01T20:50:05Z",
+      "sequence": 40,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "11e909eaf18f35becf5f3a8f95acfe632e43fc0f4df1e218d8bb823508680a1a",
+      "recordedAt": "2026-08-01T20:50:09Z",
+      "sequence": 41,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "dc26eae7eabbc48ddebf982fe8264f83a86f4b0c9c48385715a1eb4aa4a2331a",
+      "recordedAt": "2026-08-01T20:50:14Z",
+      "sequence": 42,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "164c09d4be3d4a7c410dca14eabbe3ff9f8cdf107db04ece610e7bda0ceb5185",
+      "recordedAt": "2026-08-01T20:50:20Z",
+      "sequence": 43,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c9d0468d189ec19550935079a562d8b821baf6162133c5ccbc5d9d34d6df0f6b",
+      "recordedAt": "2026-08-01T20:50:24Z",
+      "sequence": 44,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "a17a1a001e16cdf576efff0dd503f1689349cc49219233a3c25192fd36623221",
+      "recordedAt": "2026-08-01T20:50:55Z",
+      "sequence": 45,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "ce526900b4b2ba84ac4127176a243a5706ce732d6ad316056146284c89c2f0d4",
+      "recordedAt": "2026-08-01T20:52:45Z",
+      "sequence": 46,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "f4faa092c354c8b724cf98648a00ae17f33f93a9987b88c386ebf02fb3e53ad8",
+      "recordedAt": "2026-08-01T20:52:50Z",
+      "sequence": 47,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "fc7e18d23be707ccd1d26b2722582082a832d0fe0e4398f6db7fe4ff5e636f70",
+      "recordedAt": "2026-08-01T22:27:34Z",
+      "sequence": 48,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "0c34fe891861794082ea3c7ffaaef6ef28320284c7cce850b1e2210e950aea5d",
+      "recordedAt": "2026-08-01T22:27:40Z",
+      "sequence": 49,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "11dd2ece602b75d421b11e101b5d15ed8f67ed00f4e5f30b1aa66c0472f24823",
+      "recordedAt": "2026-08-01T22:27:46Z",
+      "sequence": 50,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "b761855f707bf5a9192077b73fc8bb368a676d013e008d2ba191fc778d315757",
+      "recordedAt": "2026-08-01T22:27:54Z",
+      "sequence": 51,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "959cd7d3f25e4ef2bffa573485e578d948af4fc45842858423b4397a7e354208",
+      "recordedAt": "2026-08-01T22:37:35Z",
+      "sequence": 52,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "8f33e939f4b79037a3c29051b9565beb609f047cfc1607e5d94bbb0f7126b5f6",
+      "recordedAt": "2026-08-01T22:55:39Z",
+      "sequence": 53,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "8ac7ef7b43d28c4d9eba2866dad483f4a206aa12786ba62cb321cc46aa6e7e32",
+      "recordedAt": "2026-08-01T22:55:41Z",
+      "sequence": 54,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "cf42ba012967d98307034b8283360a930bb194f89ed63965aa85987e24905c66",
+      "recordedAt": "2026-08-01T22:55:43Z",
+      "sequence": 55,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "12ff74ae85b557eb7e938cf765ef2f16da4b22cadb6e61f1936e4c81cb44d085",
+      "recordedAt": "2026-08-01T22:55:45Z",
+      "sequence": 56,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "cba8cbad1bcdcec5d84c111cb2a0e255f14fcb4df732cc0e8d4d880aa5c5b7e1",
+      "recordedAt": "2026-08-01T22:55:47Z",
+      "sequence": 57,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3f9be5de9f3c84e1e46988b44ce6db4996bd0f5c48b41066e5648c9f73299a93",
+      "recordedAt": "2026-08-01T22:55:48Z",
+      "sequence": 58,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d601abf4e90ae3855995f16138f7b53047206046dc3b401c9ac1c0821bedfa99",
+      "recordedAt": "2026-08-01T22:55:50Z",
+      "sequence": 59,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "7f2b54ce02ae2705852eca3ce949b0cd605d71601082bcdb9270c3cccbd06c18",
+      "recordedAt": "2026-08-01T22:55:52Z",
+      "sequence": 60,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5d956cb35ef0b26d9211de4d4a2ee4d355f68e1d6b12aac41ca206f7cc5c9078",
+      "recordedAt": "2026-08-01T22:55:54Z",
+      "sequence": 61,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5185b2ba6ca304f770b7a50bd1d5a2c9e707d94d52b993082e35edbd4177c7c0",
+      "recordedAt": "2026-08-01T22:55:55Z",
+      "sequence": 62,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "4cbc52c2e6397c213dd9ef2b2ecb83621b93dd09d51f846b10c5e0d1306315c4",
+      "recordedAt": "2026-08-01T23:00:11Z",
+      "sequence": 63,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9fe4448b25ed40179a4407e388c95d2cf81f85d702e6993c51c9f7100674a530",
+      "recordedAt": "2026-08-01T23:00:14Z",
+      "sequence": 64,
+      "type": "roadmap-completed"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Contracts normalize safe names and media types, distinguish artifact and manual sources, bind handoffs to one workspace and exact artifact identity, validate persisted chunk records, source digest, and exact lineage at the application boundary before reuse, and enforce explicit bounds for source bytes, fields, manual text, chunks, overlap, topics, summaries, prompts, model output, previews, embedding dimensions, and artifact size.",
+          "id": "context-contracts-and-limits",
+          "qualification": "local"
+        },
+        {
+          "description": "RAG and context-pack generation accept the same supported textual, structured-text, tabular, and text-extractable document formats as Dataset Preparation, reuse neutral normalization/chunking code, preserve source/row/field/page lineage, reuse only authoritatively valid saved chunks, infer compatible text fields for unchunked datasets, and leave Dataset Preparation output unchanged under regression tests.",
+          "id": "shared-data-context-extraction",
+          "qualification": "local"
+        },
+        {
+          "description": "One-to-four synthetic raw, unchunked dataset, and already-chunked sources generate a valid bounded SQLite RAG database with stable chunks, exact citations, recorded embedding configuration, progress after every completed chunk, cancellation, and sanitized failure behavior; valid chunks are reused and all other sources are chunked.",
+          "id": "rag-generation-runtime",
+          "qualification": "local"
+        },
+        {
+          "description": "Artifact sources, bounded manual context, and their combination generate a valid Markdown context-pack ZIP whose manifest distinguishes authored, extracted, and generated content and whose preview contains bounded core topics and source-grounded summaries with exact citations; deterministic and explicitly selected constrained-model methods never silently substitute for one another.",
+          "id": "context-pack-generation-runtime",
+          "qualification": "local"
+        },
+        {
+          "description": "Successful generation remains staged until explicit Save or Discard; Save atomically verifies and catalogs the selected output under the authorized workspace, while Discard, cancellation, workspace change, and injected partial failures leave no staged bytes or catalog orphans.",
+          "id": "context-save-discard-lifecycle",
+          "qualification": "local"
+        },
+        {
+          "description": "Configured compatible embedding and local text-generation models complete one tiny RAG build and one tiny topic/summary context-pack build through the managed runtime without exposing cache paths, manual content, prompts, vectors, or raw model/runtime payloads.",
+          "id": "context-model-runtime-qualification",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Missing or mismatched workspace/organization scope, forged handoffs, inaccessible or stale sources, false already-chunked hints, absent or invalid chunk lineage, unsupported formats, unsafe names, excessive manual text or source sizes, invalid field/chunk settings, source prompt injection, malformed constrained model output, unavailable selected models, cancellation races, and storage failures fail closed with bounded sanitized diagnostics and no silent fallback.",
+          "id": "security-source-and-generation-denials",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": true,
+      "completedAt": "2026-08-01T20:28:42Z",
+      "completedChunks": [
+        "context-contracts-capabilities",
+        "context-worker-generation",
+        "context-application-lifecycle",
+        "context-foundation-documentation"
+      ],
+      "completionSummary": "Increment 1 delivers bounded Context contracts and source capabilities, SQLite RAG and Markdown context-pack generation, exact lineage and digest validation, per-chunk progress and cancellation, explicit review/save/discard with compensation, canonical security and architecture guidance, and passing focused gates. Physical local-model runtime qualification remains explicitly pending under the controlled-environment allowance.",
+      "deliverables": [
+        "Provider-neutral context generation, source-input, persisted-chunk inspection, field-mapping, manual-entry, topic/summary, manifest, citation, preview, handoff, and artifact-reference contracts with explicit limits",
+        "A shared context-source capability/readiness presenter aligned to Dataset Preparation supported formats and local-availability rules",
+        "Neutral worker source-normalization and chunking modules reused by Dataset Preparation and Context, preserving existing dataset behavior and lineage",
+        "Additive context runtime task types, progress mapping, timeout/readiness policy, constrained-output policy, and embedding/text-generation model-selection boundaries",
+        "Application ports and use cases for inspect, start, read, cancel, save, and discard with authoritative workspace and organization propagation",
+        "Python generation tasks for portable SQLite RAG databases and Markdown context-pack ZIPs containing bounded topics, summaries, authored manual sections, manifests, and citations",
+        "Atomic staged-output materialization, exact source/manual digests, context-specific artifact media types, catalog visibility, and orphan-free compensation",
+        "An accepted context-management ADR, architecture document, dedicated threat model, context-pack routing updates, and nearest contract/runtime/use-case READMEs"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "External vector database services or credentials",
+        "Context Browser reads, retrieval testing, rebuilding, or deletion",
+        "Desktop or thin-client page composition",
+        "Unconstrained or citation-free model synthesis",
+        "Automatic scheduling or source refresh",
+        "System-build attachment or production prompt consumption"
+      ],
+      "id": "bounded-context-generation",
+      "number": 1,
+      "objective": "Establish provider-neutral context contracts and a reusable source-processing boundary shared with Data Management, then safely generate portable embedded RAG databases and source-grounded Markdown context packs from authorized artifacts and bounded manual context.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "No new package or structured-persistence migration is required; SQLite and ZIP generation use Python standard-library facilities.",
+          "Existing artifact object storage, bindings, and catalog ports remain the authority for workspace-owned bytes and visibility.",
+          "A dataset is already chunked only when its persisted rows carry bounded chunk indices and exact lineage and the inspected artifact digest matches the application-authorized bytes.",
+          "External vector services, automatic refresh, system attachment, and production prompt consumption remain excluded."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "context-contracts-and-limits",
+              "shared-data-context-extraction",
+              "security-source-and-generation-denials"
+            ],
+            "id": "context-contracts-capabilities",
+            "outcome": "Provider-neutral contracts define safe names, media types, exact source/chunk lineage, manual input, configuration, previews, manifests, handoffs, bounds, and additive runtime task identity while sharing Data Management source capability truth.",
+            "title": "Context contracts and bounded source capability"
+          },
+          {
+            "criteriaIds": [
+              "shared-data-context-extraction",
+              "rag-generation-runtime",
+              "context-pack-generation-runtime",
+              "context-model-runtime-qualification",
+              "security-source-and-generation-denials"
+            ],
+            "id": "context-worker-generation",
+            "outcome": "The worker validates authoritative staged digests, reuses only valid persisted chunks, extracts all other sources, creates portable SQLite RAG and Markdown ZIP outputs, reports every chunk, supports cancellation, and keeps deterministic and constrained-model methods explicit.",
+            "title": "Managed RAG and context-pack generation"
+          },
+          {
+            "criteriaIds": [
+              "context-contracts-and-limits",
+              "context-save-discard-lifecycle",
+              "security-source-and-generation-denials"
+            ],
+            "id": "context-application-lifecycle",
+            "outcome": "Application use cases resolve exact workspace-owned sources, start/read/cancel tasks, retain bounded review state, and explicitly Save or Discard with checksum verification, catalog-last visibility, and failure compensation.",
+            "title": "Authorized staging, review, Save, and Discard"
+          },
+          {
+            "criteriaIds": [
+              "context-contracts-and-limits",
+              "shared-data-context-extraction",
+              "rag-generation-runtime",
+              "context-pack-generation-runtime",
+              "context-save-discard-lifecycle",
+              "context-model-runtime-qualification",
+              "security-source-and-generation-denials"
+            ],
+            "id": "context-foundation-documentation",
+            "outcome": "Canonical documentation records the accepted boundary and focused tests prove contract, extraction, generation, lifecycle, security, and behavior-preserving Dataset Preparation integration.",
+            "title": "Architecture, threat model, and increment qualification"
+          }
+        ],
+        "completionTests": [
+          "Focused TypeScript contract, application, runtime-adapter, and storage/catalog integration tests changed by increment 1",
+          "Focused Python worker context generation plus existing Dataset Preparation normalization/chunking tests",
+          "Documentation, architecture, and agent-support gates because canonical architecture and context routing change",
+          "Server build only if shared composition imports are affected during this increment",
+          "One tiny managed-runtime Transformer embedding build and one constrained local-model context-pack build when compatible local snapshots are available; otherwise record the allowed controlled-environment qualification accurately"
+        ],
+        "documentation": [
+          "New accepted Context Management ADR",
+          "Context Management architecture document",
+          "Context Management threat model",
+          "Data Management architecture and threat-model linkage",
+          "Context pack catalog/routing",
+          "Contract, application use-case, runtime adapter, and worker READMEs"
+        ],
+        "fingerprint": "9746912e95241e1ef989e31b466d5b61f0e11e8c1ff80ce0e3179b06b3820394",
+        "focusedTests": [
+          "Context contract normalization, bounds, media-type, handoff, and capability unit tests",
+          "Runtime task mapping, timeout, progress, list, and cancellation tests",
+          "Python source inspection, raw/structured/already-chunked extraction, SQLite schema/content, ZIP layout, deterministic/model-double summaries, citation, cancellation, and sanitized failure tests",
+          "Application workspace isolation, stale digest, forged chunk hint, Save/Discard, catalog-last, checksum, partial-failure compensation, and non-disclosure tests",
+          "Existing document normalization, Markdown chunking, and Dataset Preparation regressions"
+        ],
+        "recordedAt": "2026-08-01T20:03:06Z",
+        "rollback": "Remove the additive context contracts, task mappings, worker task, use cases, adapters, media types, and canonical documentation. Restore only the shared Dataset Preparation import seam if introduced; leave existing artifacts and datasets unchanged and delete only uncommitted staged context outputs.",
+        "steps": [
+          "Add the context-management contract family, media types, source/chunk lineage, handoff, generation, preview, manifest, bounds, and runtime task mappings.",
+          "Add shared worker source inspection and generation for portable SQLite RAG databases and Markdown context-pack ZIPs, with deterministic and constrained-model modes, progress, cancellation, and sanitized results.",
+          "Add workspace-authorized application start/read/cancel/save/discard orchestration with exact source digests, contained staging, catalog-last materialization, checksum verification, and compensation.",
+          "Update the accepted ADR, architecture, threat model, context routing, and nearest READMEs; run focused and increment-relevant qualification."
+        ],
+        "summary": "Implement the bounded Context generation foundation as four coherent chunks: stable contracts/capabilities, worker generation, application lifecycle, and canonical documentation/qualification."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-08-01T20:03:02Z",
+          "risks": [
+            "Security impact remains relevant: untrusted source and manual content crosses artifact, parser, chunker, embedding, model, staging, storage, catalog, and preview boundaries.",
+            "False already-chunked claims or stale source digests could skip extraction or bind citations to substituted content unless chunk records and exact lineage are derived from the staged authoritative bytes.",
+            "Model-assisted topic and summary generation can follow source instructions, hallucinate unsupported claims, or return malformed output unless it uses a fixed higher-priority policy, a bounded strict schema, exact citations, and explicit no-fallback method selection.",
+            "Runtime, storage, catalog, cancellation, or cleanup failure could leave staged or orphaned data unless Save is artifact-first and catalog-last with compensation and Discard/cancel are idempotent.",
+            "Public records, progress, notifications, errors, and catalog metadata must not expose content, prompts, vectors, model payloads, cache paths, runtime paths, or raw exceptions.",
+            "The existing runtime topology is constrained; this increment adds task types inside the implemented worker and task-registry pattern but does not broaden topology, installation guarantees, or external vector-service support."
+          ],
+          "sources": [
+            {
+              "title": "Data Management architecture",
+              "url": "docs/architecture/data-management.md"
+            },
+            {
+              "title": "Data Management threat model",
+              "url": "docs/security/data-management-threat-model.md"
+            },
+            {
+              "title": "Runtime contracts",
+              "url": "modules/contracts/runtime/README.md"
+            },
+            {
+              "title": "Application use cases",
+              "url": "modules/application/use-cases/README.md"
+            },
+            {
+              "title": "Python runtime adapter",
+              "url": "modules/adapters/runtime/python/README.md"
+            },
+            {
+              "title": "Python worker",
+              "url": "modules/adapters/runtime/python/worker/README.md"
+            },
+            {
+              "title": "Document normalization",
+              "url": "modules/adapters/runtime/python/worker/tasks/document_normalization.py"
+            },
+            {
+              "title": "Markdown chunking",
+              "url": "modules/adapters/runtime/python/worker/tasks/markdown_chunking.py"
+            },
+            {
+              "title": "Immutable dataset versions",
+              "url": "docs/adr/ADR-0040-immutable-dataset-versions-lineage-and-publication.md"
+            }
+          ],
+          "summary": "Increment 1 can extend established boundaries without a dependency or persistence migration. The runtime contracts and task registry provide bounded workspace-scoped start/read/cancel lifecycle; the managed Python worker already owns document normalization, Markdown/fixed-length and structure-aware chunking, local Transformers generation, contained output paths, and sanitized failures; artifact object storage, bindings, and catalog ports support record-last materialization and compensation. Dataset-prepared rows can be treated as already chunked only when persisted row records contain a bounded chunk index plus exact source lineage and the staged artifact digest matches the application-authorized bytes. Generic prepared status, file names, route state, and renderer claims remain non-authoritative."
+        }
+      ],
+      "rollback": "Remove the additive context contracts, shared source boundary consumers, task mappings, use cases, runtime handlers, media types, and documentation; restore Dataset Preparation to its behavior-preserving pre-refactor imports; discard staged test outputs and leave existing artifacts and datasets unchanged. No structured-persistence migration or new dependency is planned.",
+      "startedAt": "2026-08-01T19:59:57Z",
+      "status": "completed",
+      "title": "Shared source processing and bounded context generation",
+      "verification": [
+        "Run focused TypeScript contract, normalization, capability, source-inspection, use-case, runtime-registry, timeout, and artifact-lifecycle tests including mapped cross-workspace, stale-source, prompt-injection, malformed-output, and compensation paths.",
+        "Run Dataset Preparation source-capability and worker regression tests before and after extracting the neutral normalization/chunking boundary.",
+        "Run focused Python unit and task tests with one-to-four synthetic raw, prepared tabular, Markdown, document, and manual inputs for field extraction, chunking, SQLite schema/content, ZIP layout, topics, summaries, manifests, citations, progress, cancellation, deterministic methods, constrained model doubles, and public-error sanitization.",
+        "Run artifact storage/catalog integration tests that inject conflicts and partial failures and verify exact ownership, checksums, catalog-last behavior, staged cleanup, and no manual/source content in catalog metadata.",
+        "Qualify one tiny managed-runtime RAG build and one tiny model-assisted context-pack build with compatible installed models and record sanitized controlled-environment evidence.",
+        "Run npm run docs:check, npm run architecture:check, npm run agent-support:check, npm run build:server, npm test, npm run test:e2e, and npm run test:all once after all increment chunks are implemented; run npm run security:dependencies if any dependency or packaging input changes."
+      ],
+      "workPackages": [
+        {
+          "id": "context-source-contracts",
+          "outcome": "Stable bounded contracts define context kinds, artifact and manual sources, one-time navigation handoffs, authoritative persisted-chunk inspection, compatible text-field mapping, extraction/chunking configuration, model-assisted topic/summary settings, safe manifests, previews, citations, and custom media types without placing raw content or vectors in public metadata.",
+          "title": "Context and Data Management source contracts"
+        },
+        {
+          "id": "shared-source-processing",
+          "outcome": "Context generation reuses the same source-format capabilities, document normalization, tabular/structured text extraction, and Markdown/fixed-length chunking semantics as Dataset Preparation through a neutral shared boundary rather than duplicating feature logic; authoritatively persisted chunks can be reused with exact row/field/page/region lineage, while every source without valid chunk records still passes through chunk extraction.",
+          "title": "Reusable source normalization and chunking"
+        },
+        {
+          "id": "rag-and-context-pack-runtime",
+          "outcome": "The managed runtime creates transformer embeddings and a portable SQLite RAG database, or extracts bounded core topics and source-grounded summaries into a Markdown ZIP using deterministic extractive or explicitly selected constrained local-model methods, with citations, per-chunk progress, cancellation, review data, and sanitized failures.",
+          "title": "RAG and context-pack runtime generation"
+        },
+        {
+          "id": "context-artifact-lifecycle",
+          "outcome": "Application use cases authorize exact sources and digests, stage bounded previews, explicitly save outputs as catalog-visible workspace artifacts or discard them, verify materialized checksums, append catalog state last, and compensate partial or cancelled writes.",
+          "title": "Review, save, discard, and cleanup"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Conversion eligibility is true only for supported locally readable textual, structured-text, tabular, or text-extractable document artifacts; remote-only and unsupported artifacts return actionable readiness without conversion; already-chunked status requires authoritative persisted chunk records whose source digest and exact lineage validate, while compatible fields are inspected for every unchunked dataset; file names, generic prepared status, route flags, and renderer hints are never trusted; all handoffs and backlinks carry only workspace-bound identifiers.",
+          "id": "data-context-linkage-contracts",
+          "qualification": "local"
+        },
+        {
+          "description": "Context Browser lists only saved RAG database and Markdown context-pack media types in the active workspace, reads bounded safe detail including topics and summaries, identifies fresh or stale sources by exact digest, provides exact source locators for Data Management, rebuilds from the saved manifest, deletes exact outputs, and returns newly saved or rebuilt items for selection.",
+          "id": "context-browser-lifecycle",
+          "qualification": "local"
+        },
+        {
+          "description": "A bounded synthetic query against a tiny saved RAG database returns stable ranked excerpts, similarity scores, and exact source/row/field/page/chunk citations using the recorded embedding configuration without returning vectors, unrestricted chunks, paths, manual content outside selected excerpts, or unrelated artifacts.",
+          "id": "context-query-citations",
+          "qualification": "local"
+        },
+        {
+          "description": "Desktop IPC/preload and server API validate the same typed source-inspection, generation, browser, and query operations, propagate authoritative context, invoke common application semantics, cap responses, and expose equivalent safe results and errors.",
+          "id": "context-transport-parity",
+          "qualification": "local"
+        },
+        {
+          "description": "Context generation and retrieval tasks can be listed, resumed for polling, cancelled, and projected into bounded workspace-scoped notifications with monotonic terminal status and per-chunk truthful progress or an explicit indeterminate state.",
+          "id": "context-task-observability",
+          "qualification": "local"
+        },
+        {
+          "description": "Cross-workspace or cross-organization handoff/list/detail/query/rebuild/delete attempts, forged storage keys or already-chunked claims, missing or invalid chunk lineage, unsafe databases, stale manifests, excessive queries/results, cancellation races, and adapter failures are denied or fail closed without leaking source/manual payloads, prompts, model output, vectors, paths, stack traces, or runtime details.",
+          "id": "security-context-browser-and-handoff-denials",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-08-01T20:50:24Z",
+      "completedChunks": [
+        "data-context-linkage",
+        "context-browser-use-cases",
+        "context-retrieval-test",
+        "context-host-transports"
+      ],
+      "completionSummary": "Increment 2 delivers authoritative Data Management linkage inspection, the verified Context Browser lifecycle, bounded local RAG query testing with exact citations, equivalent trusted desktop and authenticated server transports, thin clients, task observability, active-task lifecycle protection, and passing focused/build/documentation gates. Physical local-model qualification remains pending for the final roadmap boundary.",
+      "deliverables": [
+        "Application use cases and ports for conversion eligibility, source inspection, Context Browser list/detail, source freshness, bounded retrieval test, rebuild, and delete",
+        "Safe browser detail models for RAG chunks/configuration and context-pack topics/summaries/manual-section provenance/package structure",
+        "Exact Data Management source locators and one-time Context launch-intent normalization that carry identifiers only",
+        "Adapter-owned SQLite manifest/query behavior and staged/saved context artifact resolution",
+        "Typed context API contracts, Express routes, server composition, and sanitized public error mapping",
+        "Typed desktop IPC contracts, registration, host composition, preload bridge methods, and feature-local desktop client",
+        "Thin-client API client and shared host-neutral client interfaces",
+        "Context generation/retrieval task observability through workspace-scoped runtime-task and notification boundaries",
+        "Focused transport, host composition, adapter, authorization, handoff, query, failure, and recovery tests plus updated host documentation"
+      ],
+      "dependsOn": [
+        "bounded-context-generation"
+      ],
+      "excluded": [
+        "Renderer page and modal composition",
+        "External vector-store providers",
+        "Unbounded or production retrieval APIs",
+        "Reranking, answer generation, or retrieval-quality scoring",
+        "Automatic rebuild schedules",
+        "System attachment or published runtime consumption"
+      ],
+      "id": "authorized-context-browser",
+      "number": 2,
+      "objective": "Provide authorized application and host boundaries for Data Management conversion eligibility and handoff support plus Context Browser listing, detail, source backlinks, freshness, retrieval testing, rebuilding, and deletion across desktop and server hosts.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "The two fixed Context media types are the catalog discovery authority; details still verify exact artifact bytes and manifests.",
+          "Existing artifact storage, binding, catalog, workspace authorization, runtime-task, and delete semantics remain authoritative.",
+          "Retrieval is local and bounded; external vector services, answer generation, reranking, scheduled rebuild, and system attachment remain excluded.",
+          "Renderer work is deferred to Increment 3; Increment 2 may expose host-neutral clients and contracts without mounting a page."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "data-context-linkage-contracts",
+              "security-context-browser-and-handoff-denials"
+            ],
+            "id": "data-context-linkage",
+            "outcome": "A shared application inspection derives conversion readiness, exact field information, and authoritative already-chunked state from local workspace-owned bytes while identifier-only launch intents and source backlinks preserve scope.",
+            "title": "Data Management linkage semantics"
+          },
+          {
+            "criteriaIds": [
+              "context-browser-lifecycle",
+              "security-context-browser-and-handoff-denials"
+            ],
+            "id": "context-browser-use-cases",
+            "outcome": "Workspace-authorized list/detail/freshness/rebuild/delete use cases parse only fixed bounded context artifacts, return safe provenance and source locators, and reuse established artifact cleanup semantics.",
+            "title": "Context Browser application lifecycle"
+          },
+          {
+            "criteriaIds": [
+              "context-query-citations",
+              "security-context-browser-and-handoff-denials"
+            ],
+            "id": "context-retrieval-test",
+            "outcome": "An adapter-owned runtime query validates one saved SQLite RAG database, embeds a bounded query with its recorded model, returns stable ranked excerpts and exact citations, and never exposes vectors or physical paths.",
+            "title": "Bounded retrieval testing"
+          },
+          {
+            "criteriaIds": [
+              "context-transport-parity",
+              "context-task-observability",
+              "security-context-browser-and-handoff-denials"
+            ],
+            "id": "context-host-transports",
+            "outcome": "Typed IPC/preload and authenticated Express operations expose equivalent inspection, generation, browser, query, rebuild, delete, progress, and cancellation behavior through common application semantics and sanitized envelopes.",
+            "title": "Desktop and server transport parity"
+          }
+        ],
+        "completionTests": [
+          "Focused Context contract, application, runtime adapter, transport, and host-composition tests",
+          "Focused Python retrieval and worker lifecycle regressions",
+          "Documentation, architecture, agent-support, server build, and thin-client build gates affected by this increment"
+        ],
+        "documentation": [
+          "Context Management architecture and threat model",
+          "Application use-case and port READMEs",
+          "Python runtime adapter and worker READMEs",
+          "IPC, API, desktop host, and server host READMEs"
+        ],
+        "fingerprint": "4c693067038fc028659e98aa870297897092af10cf1a1fe46ffc7f3174d53aec",
+        "focusedTests": [
+          "Conversion eligibility, locally readable source, exact digest, persisted-lineage, inferred-field, unsupported, stale, and cross-workspace tests",
+          "Context Browser list/detail/freshness/rebuild/delete tests for RAG databases and Markdown packs, including malformed/oversized artifacts and compensation",
+          "Managed-runtime retrieval schema, embedding, ranking, citation, query/result bound, cancellation, and diagnostic non-disclosure tests",
+          "IPC/preload and API route contract, authentication, workspace/organization propagation, host composition, safe response, and task progress tests"
+        ],
+        "recordedAt": "2026-08-01T20:30:50Z",
+        "rollback": "Remove the additive Context inspection/browser/retrieval contracts, ports, use cases, runtime operation, transport handlers, preload methods, and host composition. Leave saved context artifacts as ordinary cataloged artifacts and preserve the Increment 1 generation lifecycle.",
+        "steps": [
+          "Add bounded conversion-readiness, browser summary/detail, freshness, source locator, retrieval, and lifecycle contracts plus application ports.",
+          "Implement workspace-authorized source inspection and Context Browser list/detail/freshness/rebuild/delete use cases over exact catalog, binding, and object-storage evidence.",
+          "Implement a bounded managed-runtime retrieval adapter that validates the fixed SQLite artifact, embeds one bounded query with the recorded local model, ranks without returning vectors, and emits exact citations.",
+          "Add typed API and IPC contracts, authenticated Express and sender-verified Electron handlers, preload/client surfaces, host composition, runtime-task observability, and nearest documentation."
+        ],
+        "summary": "Implement the authorized Context Browser and host transport foundation in four chunks: governed Data Management linkage inspection, browser lifecycle, bounded retrieval, and equivalent desktop/server transports with task observability."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-08-01T20:30:46Z",
+          "risks": [
+            "Security remains relevant because browser detail, freshness, retrieval, rebuild, and delete traverse workspace authorization, untrusted artifact bytes, SQLite/ZIP parsing, embedding models, storage, and transports.",
+            "Catalog media type is necessary for listing but insufficient for trust; detail and query must verify exact bytes, checksum, fixed schema/manifest values, bounds, and contained storage identity.",
+            "Renderer-supplied already-chunked or conversion eligibility state could bypass extraction unless application inspection derives readiness from exact workspace-owned bytes and valid persisted lineage.",
+            "Opening arbitrary SQLite files in TypeScript or returning vectors would broaden dependencies and exposure; query must use a bounded adapter-owned runtime operation that returns only ranked excerpts and exact citations.",
+            "Delete, rebuild, task cancellation, and stale source handling can orphan state or expose cross-workspace existence unless all operations authorize first, use opaque not-found denial, and follow storage/binding/catalog cleanup semantics.",
+            "IPC and HTTP transports can drift or leak implementation errors unless they share contracts, authoritative principal/organization context, bounded payloads, deny-by-default route registration, and sanitized error mapping."
+          ],
+          "sources": [
+            {
+              "title": "Context Management architecture",
+              "url": "docs/architecture/context-management.md"
+            },
+            {
+              "title": "Context Management threat model",
+              "url": "docs/security/context-management-threat-model.md"
+            },
+            {
+              "title": "Artifact catalog port",
+              "url": "modules/application/ports/artifact-catalog/artifact-catalog.port.ts"
+            },
+            {
+              "title": "Artifact storage and binding ports",
+              "url": "modules/application/ports/storage/README.md"
+            },
+            {
+              "title": "Registered artifact deletion",
+              "url": "modules/application/use-cases/delete-registered-artifact.use-case.ts"
+            },
+            {
+              "title": "Context generation lifecycle",
+              "url": "modules/application/use-cases/context-management/context-generation.use-case.ts"
+            },
+            {
+              "title": "Dataset Preparation IPC adapter",
+              "url": "modules/adapters/transport/ipc-electron/dataset-preparation/registerDatasetPreparationIpc.ts"
+            },
+            {
+              "title": "Dataset Preparation API adapter",
+              "url": "modules/adapters/transport/api-express/dataset-preparation/registerDatasetPreparationApiRoutes.ts"
+            },
+            {
+              "title": "Desktop host composition",
+              "url": "modules/hosts/desktop/composition/composeDesktopDatasetPreparationFeature.ts"
+            },
+            {
+              "title": "Server host composition",
+              "url": "modules/hosts/server/composition/composeServerHost.ts"
+            }
+          ],
+          "summary": "Increment 2 can remain additive within existing artifact, runtime-task, and host-composition boundaries. Context artifacts are discoverable by their two fixed media types in workspace-scoped catalog records; local bindings and object storage provide exact bytes; existing artifact detail/delete use cases establish authorization and cleanup order; Dataset Preparation transport adapters establish authenticated IPC and Express lifecycle patterns. Context-specific application models must inspect bytes rather than trusting renderer state, parse fixed SQLite/ZIP manifests with explicit structural and size limits, compare source digests for freshness, and expose only bounded excerpts and citations. Retrieval belongs behind an application port implemented by the managed Python runtime adapter so TypeScript hosts never parse vectors or physical SQLite paths."
+        }
+      ],
+      "rollback": "Remove additive conversion/source-inspection and Context Browser/query use cases, adapters, task-list support, API routes, IPC channels, preload methods, and clients while retaining increment 1 generated artifacts as ordinary Artifact Browser entries; no existing Data Management behavior or stored dataset is changed.",
+      "startedAt": "2026-08-01T20:29:03Z",
+      "status": "completed",
+      "title": "Data-linked Context Browser and host transports",
+      "verification": [
+        "Run focused source-eligibility and persisted-chunk inspection tests for supported raw sources, unchunked prepared datasets, valid already-chunked datasets, field inference, remote-only items, unsupported formats, stale digests, missing or forged chunk lineage, forged hints, and exact identifier-only handoffs.",
+        "Run Context Browser use-case and adapter tests for list, RAG/context-pack detail, topic/summary provenance, source backlinks, freshness, query ranking/citations, rebuild, delete, selected identity, and exact manifest behavior.",
+        "Run negative tests for workspace/organization mismatch, forged keys, malformed or oversized databases/manifests/queries, stale sources, missing bytes, cancellation races, and partial adapter failures.",
+        "Run desktop IPC/preload/client and server API/client contract, validation, authorization, bounded-response, host-composition, and sanitized-error tests for every source, generation, and browser operation.",
+        "Run runtime-task router, Python adapter, list/recovery, notification projection, per-chunk progress, cancellation, and terminal-state tests for new task families.",
+        "Run npm run docs:check, npm run architecture:check, npm run agent-support:check, npm run build:server, npm run build:thin-client, npm test, npm run test:e2e, and npm run test:all once after all increment chunks are implemented; run npm run security:dependencies only if dependency or packaging inputs changed."
+      ],
+      "workPackages": [
+        {
+          "id": "data-context-linkage",
+          "outcome": "A shared eligibility/readiness policy identifies locally readable RAG-compatible artifacts, validates dataset identity and field information plus any persisted chunk records, source digest, and lineage authoritatively, and returns safe artifact references that UI handoffs and Context Browser source backlinks can use without transporting content or trusting renderer claims.",
+          "title": "Data Management linkage semantics"
+        },
+        {
+          "id": "context-browser-use-cases",
+          "outcome": "Context-specific media types and safe manifests drive bounded list/detail views for RAG and context-pack artifacts, exact source-digest freshness, topic/summary and package-structure inspection, explicit rebuild and deletion, and stable source locators back to Data Management.",
+          "title": "Context Browser application lifecycle"
+        },
+        {
+          "id": "context-retrieval-test",
+          "outcome": "An authorized query uses the saved database's exact embedding configuration, performs bounded cosine retrieval through an adapter-owned SQLite/runtime boundary, and returns escaped excerpts with scores and exact artifact/row/field/page/chunk citations but no raw vectors or physical paths.",
+          "title": "Bounded retrieval testing"
+        },
+        {
+          "id": "context-host-transports",
+          "outcome": "Typed API and IPC operations, validation, host composition, preload exposure, feature clients, and authoritative task-list integration expose equivalent source inspection, generation, Context Browser, and retrieval behavior without moving business logic into transports.",
+          "title": "Desktop and server transport parity"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Eligible locally readable text-bearing artifact and dataset detail modals display Convert to RAG database; activation closes the modal and opens the RAG tab with the exact active-workspace artifact preselected; datasets show application-confirmed already-chunked state only when persisted chunk records, source digest, and lineage validate, while prepared datasets without valid chunks show inferred text fields and proceed through extraction; remote-only, unsupported, deleted, stale, or cross-workspace sources show truthful blockers and cannot be converted.",
+          "id": "artifact-browser-rag-conversion",
+          "qualification": "local"
+        },
+        {
+          "description": "The RAG tab follows the Dataset Preparation visual and interaction conventions in four ordered steps\u2014Add data, Check data, Prepare RAG database, Review and create\u2014reuses only authoritatively validated already-chunked sources and performs chunk extraction for unchunked datasets and raw sources, shows readable source checkboxes and field/chunk/model settings, reports per-chunk progress and Stop, and requires explicit Save or Discard before selecting the saved item in Context Browser.",
+          "id": "ordered-rag-pipeline",
+          "qualification": "local"
+        },
+        {
+          "description": "The Markdown Context Packs tab uses the same four-step ordered presentation for artifact sources, bounded manual entry, or both; validates content, offers explicit deterministic or compatible local-model topic/summary processing, shows source-grounded topics and summaries with citations for review, never silently falls back, and requires Save or Discard.",
+          "id": "ordered-context-pack-pipeline",
+          "qualification": "local"
+        },
+        {
+          "description": "Context Browser provides accessible saved-item selection and safe detail, freshness, rebuild/delete, context-pack topic/summary provenance, RAG retrieval citations, and View source in Data Management actions that open the exact source artifact detail without losing workspace scope.",
+          "id": "context-browser-and-data-backlinks",
+          "qualification": "local"
+        },
+        {
+          "description": "Desktop and thin client expose Context under Manage, protect it with the workspace boundary, provide a Context Home card, preserve existing navigation behavior, and display fixed-size responsive counts derived only from saved context artifact media types in the active workspace, hidden on small screens.",
+          "id": "context-navigation-home-and-dashboard",
+          "qualification": "local"
+        },
+        {
+          "description": "Ordered steps, checkboxes, manual editor, model controls, progress, dialogs, list/detail selection, dashboard, notifications, citations, and previews support keyboard and screen-reader semantics, restrained announcements, reduced motion, zoom/reflow, escaped content, and small-screen behavior consistent with Dataset Preparation.",
+          "id": "context-accessibility-responsive",
+          "qualification": "local"
+        },
+        {
+          "description": "Isolated one-to-four-record workflows cover Artifact Browser conversion with valid already-chunked reuse, prepared-but-unchunked dataset extraction, raw-source RAG extraction, manual-only and source-assisted context packs, deterministic and constrained-model topics/summaries, Save and Discard, exact post-save selection, source backlinks, cited query, stale-source rebuild, delete, cancellation, and desktop/thin-client parity without an external vector service.",
+          "id": "context-end-to-end-workflows",
+          "qualification": "local"
+        },
+        {
+          "description": "Workspace switches clear or refetch launch intents, selected sources, manual text, staged work, browser selection, query results, notifications, and metrics; crafted names, source instructions, manual text, Markdown, links, topics, summaries, citations, excerpts, and public errors render inertly and remain bounded without exposing private payloads, prompts, model output internals, vectors, paths, or diagnostics.",
+          "id": "security-context-ui-isolation-and-inert-content",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-08-01T22:55:55Z",
+      "completedChunks": [
+        "artifact-browser-conversion",
+        "ordered-context-workflows",
+        "context-browser-page",
+        "context-experience-qualification"
+      ],
+      "completionSummary": "Completed the ordered cross-host Context Studio experience with linked Data Management conversion and backlinks, reusable RAG/context-pack pipelines, Context Browser, navigation and metrics, notifications, safe review, workspace isolation, and full standard, E2E, and AI qualification.",
+      "deliverables": [
+        "Shared Context Studio state/presenters, accessible ordered workflow components, icons, styles, glossary/help hints, and inert preview presenters aligned with Dataset Preparation",
+        "Desktop and thin-client Artifact Browser View Details conversion actions plus eligible/disabled readiness copy and exact-source modal tests",
+        "Workspace-bound cross-page navigation state that opens Context/RAG from Data Management and opens exact Artifact Browser details from Context Browser citations",
+        "RAG four-step pipeline: Add data, Check data, Prepare RAG database, Review and create",
+        "Dataset handoff that preselects the source, marks it already chunked only after authoritative persisted chunk, source-digest, and lineage validation, reuses those chunks directly, and otherwise shows inferred text fields for confirmation before chunk extraction",
+        "Raw-source RAG flow that extracts normalized text and chunks using Dataset Preparation capabilities before embedding",
+        "Markdown context-pack four-step pipeline: Add context, Check context, Prepare context pack, Review and create",
+        "Context-pack inputs for source artifacts, bounded manual text, or both; deterministic and constrained-model topic/summary modes; compact/quality model selection and download/readiness guidance; cited review; Save/Discard",
+        "Context Browser list/detail with kind, freshness, chunk/topic/summary/manual provenance, package structure, retrieval smoke test, rebuild/delete, selected post-save output, and exact source backlinks",
+        "Context page under Manage, Context Home card, two-card page dashboard for saved RAG databases and Markdown packs, and small-screen dashboard suppression",
+        "Global per-chunk progress and Stop behavior that survives page navigation plus contextual validation/readiness blockers that remain inline",
+        "Cross-host route, unit, interaction, responsive/accessibility, linkage, security, and isolated end-to-end tests plus updated desktop/thin-client and context documentation"
+      ],
+      "dependsOn": [
+        "authorized-context-browser"
+      ],
+      "excluded": [
+        "External vector services and provider credentials",
+        "Scheduled or background source refresh",
+        "Automatic rebuild without explicit user action",
+        "Unconstrained, citation-free, or tool-using context synthesis",
+        "Context attachment to system builds or conversational runtime prompts",
+        "Publishing context packages to external providers",
+        "Reranking, answer generation, automated semantic evaluation, or large-corpus optimization"
+      ],
+      "id": "shared-context-studio-experience",
+      "number": 3,
+      "objective": "Deliver the complete responsive desktop and thin-client experience with Data Management conversion and source backlinks, Dataset Preparation-style four-step RAG and context-pack pipelines, Context Browser, page metrics, navigation, Home card, and end-to-end qualification.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "The shared Context command client from Increment 2 is the sole browser/generation authority.",
+          "The two fixed context media types are sufficient for page metrics after Artifact Browser visibility filtering.",
+          "Local embedding and optional local text models must already be installed; Context generation never downloads or silently substitutes a model.",
+          "External vector services, system attachment, scheduled rebuild, publishing, reranking, answer generation, and raw Markdown rendering remain excluded."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "artifact-browser-rag-conversion",
+              "security-context-ui-isolation-and-inert-content"
+            ],
+            "id": "artifact-browser-conversion",
+            "outcome": "Both Artifact Browser detail modals show application-confirmed RAG readiness, truthful local/compatibility blockers, and one-time active-workspace navigation with only the exact artifact identifier.",
+            "title": "Artifact Browser conversion handoff"
+          },
+          {
+            "criteriaIds": [
+              "ordered-rag-pipeline",
+              "ordered-context-pack-pipeline",
+              "context-accessibility-responsive",
+              "security-context-ui-isolation-and-inert-content"
+            ],
+            "id": "ordered-context-workflows",
+            "outcome": "One accessible host-neutral component delivers four-step RAG and context-pack workflows with exact source checks, persisted-chunk truth, manual context, explicit methods/models, per-chunk progress, Stop, review, Save, and Discard.",
+            "title": "Shared ordered Context workflows"
+          },
+          {
+            "criteriaIds": [
+              "context-browser-and-data-backlinks",
+              "context-navigation-home-and-dashboard",
+              "context-accessibility-responsive",
+              "security-context-ui-isolation-and-inert-content"
+            ],
+            "id": "context-browser-page",
+            "outcome": "Desktop and thin client expose Context under Manage and Home with scoped dashboard counts, post-save browser selection, safe detail/query/rebuild/delete, and exact Data Management source backlinks.",
+            "title": "Context Browser and page integration"
+          },
+          {
+            "criteriaIds": [
+              "context-end-to-end-workflows",
+              "artifact-browser-rag-conversion",
+              "ordered-rag-pipeline",
+              "ordered-context-pack-pipeline",
+              "context-browser-and-data-backlinks",
+              "context-navigation-home-and-dashboard",
+              "context-accessibility-responsive",
+              "security-context-ui-isolation-and-inert-content"
+            ],
+            "id": "context-experience-qualification",
+            "outcome": "Isolated compact workflows and negative tests qualify conversion, extraction and persisted reuse, both pack modes, Save/Discard, query, backlinks, stale/rebuild/delete/cancel, parity, responsiveness, and workspace isolation.",
+            "title": "Cross-host end-to-end qualification"
+          }
+        ],
+        "completionTests": [
+          "Focused shared, desktop, thin-client, transport, runtime, and host tests",
+          "npm run docs:check, npm run architecture:check, npm run agent-support:check",
+          "npm run build:server and npm run build:thin-client",
+          "npm test, npm run test:e2e, and npm run test:all once at the completed AI-related roadmap boundary"
+        ],
+        "documentation": [
+          "Shared UI and style READMEs",
+          "Desktop and thin-client renderer/page READMEs",
+          "Context architecture, threat model, context pack, and implementation report"
+        ],
+        "fingerprint": "13c20eb0598797ca9a10a81aa04593fc6d181ca3d02265d6b6f702fc2da412f1",
+        "focusedTests": [
+          "Shared Context Studio presenter tests for workflows, validation, progress/cancel, review/save/discard, browser/query/actions, inert text, and workspace reset",
+          "Desktop and thin Artifact Browser conversion/modal/one-time-handoff tests",
+          "Desktop and thin route/sidebar/Home/dashboard/client/notification tests",
+          "Isolated one-to-four-record Context lifecycle tests using deterministic runtime/model doubles"
+        ],
+        "recordedAt": "2026-08-01T20:52:50Z",
+        "rollback": "Remove additive Context page/routes/cards/dashboard metrics, shared presenter/styles/clients/notification bridge, and Artifact Browser conversion/backlink props while retaining the fully authorized backend and ordinary artifact behavior from Increment 2.",
+        "steps": [
+          "Add workspace-bound conversion/backlink intents and authoritative readiness actions to both Artifact Browser detail modals.",
+          "Build one shared four-step RAG and Markdown context-pack presenter with readable source selection, manual context, settings, progress/Stop, inert review, explicit Save/Discard, notification activity, and workspace reset.",
+          "Add Context Browser list/detail/query/rebuild/delete and source backlinks, then integrate desktop/thin routes, Manage navigation, Home card, fixed-size dashboard counts, lazy clients, and post-save selection.",
+          "Add shared, desktop, thin-client, linkage, responsive/accessibility, isolation, and isolated lifecycle tests; update docs and run all required completion gates including the AI suite."
+        ],
+        "summary": "Deliver the final cross-host Context experience in four bounded chunks: identifier-only Artifact Browser conversion, a shared ordered Context Studio, Context Browser/page/navigation integration, and isolated end-to-end/security qualification."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-08-01T20:52:45Z",
+          "risks": [
+            "Security remains relevant because source names, manual text, topics, summaries, citations, query excerpts, transport errors, and launch intents are untrusted UI content and workspace switches must clear all sensitive presentation state.",
+            "Artifact conversion buttons can become misleading unless they use current application-derived readiness, local byte availability, persisted lineage, and workspace scope rather than file extension alone.",
+            "Long-running tasks can become undiscoverable across page navigation unless the app-level notification bridge polls bounded task summaries and the page retains only an opaque request id for review recovery.",
+            "Duplicating desktop and thin-client state machines would cause behavior drift; one shared component and narrow host clients are required.",
+            "RAG model defaults may not be installed; generation must show the explicit local-only model requirement and surface the backend blocker without silent download or fallback.",
+            "Context-pack model output and Markdown must remain inert text; the shared presenter must not use raw HTML or execute links from generated content."
+          ],
+          "sources": [
+            {
+              "title": "Shared UI guidance",
+              "url": "modules/ui/shared/README.md"
+            },
+            {
+              "title": "Shared workflow primitive",
+              "url": "modules/ui/shared/components/WorkflowSequence.tsx"
+            },
+            {
+              "title": "Shared notification center",
+              "url": "modules/ui/shared/notifications/NotificationProvider.tsx"
+            },
+            {
+              "title": "Page dashboard metrics",
+              "url": "modules/ui/shared/page-dashboard/dashboardMetrics.ts"
+            },
+            {
+              "title": "Desktop Artifact Browser",
+              "url": "apps/desktop/src/renderer/features/artifact-browser/components/ArtifactBrowserFeature.tsx"
+            },
+            {
+              "title": "Thin-client Artifact Browser",
+              "url": "apps/thin-client/src/features/artifact-browser/components/ArtifactBrowserFeature.tsx"
+            },
+            {
+              "title": "Desktop routing and lazy pages",
+              "url": "apps/desktop/src/renderer/routes/lazyDesktopPages.tsx"
+            },
+            {
+              "title": "Thin-client routing",
+              "url": "apps/thin-client/src/routes/thinClientPages.ts"
+            },
+            {
+              "title": "Context transport contract",
+              "url": "modules/contracts/context-management/context-transport.ts"
+            }
+          ],
+          "summary": "The final Context experience can be implemented as one host-neutral shared Context Studio over the Increment 2 command client. Existing WorkflowSequence, TabbedPanel, notification center, page dashboard, workspace gates, lazy desktop pages, and Artifact Browser detail modals already provide the required presentation and lifecycle seams. Cross-page handoffs should remain app-owned workspace-bound identifiers: Artifact Browser asks the authoritative source-inspection command for readiness, then closes and passes one artifact id to Context; Context source backlinks pass one artifact id back to the Data page. Generation request ids may be retained in session storage, while source/manual/review/query content stays component memory and is cleared on workspace change. Dashboard counts derive from the two fixed context media types in the same Artifact Browser-visible catalog projection."
+        }
+      ],
+      "rollback": "Remove additive Context routes, pages, navigation, Home cards, metrics, shared Context Studio components, clients, styles, and Artifact Browser conversion/source-link actions; retain backend artifacts and operations from prior increments for later reuse and leave all existing Data Management workflows unchanged.",
+      "startedAt": "2026-08-01T20:50:55Z",
+      "status": "completed",
+      "title": "Ordered cross-host Context Studio experience",
+      "verification": [
+        "Run shared presenter/component tests for conversion eligibility/readiness, one-time handoff consumption, source grouping/readable names, already-chunked confirmation, invalid-lineage fallback to field confirmation and extraction, raw extraction, manual entry, method/model settings, topics/summaries/citations, progress/cancel, review, Save/Discard, selected output, source backlinks, freshness/actions, query citations, and inert rendering.",
+        "Run desktop and thin-client Artifact Browser modal, route, workspace-boundary, AppShell Manage-group, Home card, page dashboard, lazy-page/client, notification, ordered-step, responsive, and workspace-switch tests.",
+        "Run isolated end-to-end workflows with one-to-four synthetic data points and deterministic model doubles for Data-to-RAG conversion, raw RAG extraction, source/manual context packs, constrained topics/summaries, Save/Discard, Context Browser selection/detail/query/rebuild/delete, source backlink reopening, cancellation, and negative authorization paths.",
+        "Perform focused accessibility checks for labels, names, keyboard order, modal focus restoration, step/status announcements, reduced motion, zoom/reflow, and inert Markdown/retrieval rendering; record physical-device qualification that remains pending as residual risk.",
+        "Run npm run docs:check, npm run architecture:check, npm run agent-support:check, npm run build:server, npm run build:thin-client, npm test, npm run test:e2e, and npm run test:all once after all increment chunks are implemented; run npm run security:dependencies only if dependency or packaging inputs changed."
+      ],
+      "workPackages": [
+        {
+          "id": "artifact-browser-conversion",
+          "outcome": "Desktop and thin-client View Details modals show Convert to RAG database for eligible local text-bearing artifacts and datasets, explain localization or compatibility blockers otherwise, close cleanly, navigate to Context/RAG, and consume one workspace-bound launch intent that preselects the exact source without carrying content.",
+          "title": "Artifact Browser conversion handoff"
+        },
+        {
+          "id": "ordered-context-workflows",
+          "outcome": "Shared host-neutral components use WorkflowSequence, WorkflowStep, sectioned panels, readable artifact checkboxes, status cards, collapsible advanced settings, and final action containers to present four ordered steps for RAG and context packs without importing host-specific Dataset Preparation code or duplicating its CSS.",
+          "title": "Dataset Preparation-style ordered pipelines"
+        },
+        {
+          "id": "context-browser-page",
+          "outcome": "The Context page exposes RAG Databases, Markdown Context Packs, and Context Browser tabs; saved outputs open selected in Context Browser; source citations reopen exact Data Management artifact details; navigation, Home card, and fixed-size responsive metrics integrate consistently across hosts.",
+          "title": "Context Browser and page integration"
+        },
+        {
+          "id": "context-experience-qualification",
+          "outcome": "Automated desktop and thin-client workflows reuse valid already-chunked data, chunk unchunked prepared data and raw sources, create source/manual context packs with topics and summaries, review/save/discard, browse/query/rebuild/delete, and verify source backlinks and isolation.",
+          "title": "Cross-host end-to-end qualification"
+        }
+      ]
+    }
+  ],
+  "name": "Context Management",
+  "objective": "Deliver a workspace-scoped Context page for generating, reviewing, saving, and managing RAG databases and Markdown context packs across desktop and thin-client hosts.",
+  "paths": {
+    "report": "docs/tmp/context-management-implementation-report.md",
+    "roadmap": "docs/context-management-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/context-management/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": {
+    "approvedAt": "2026-08-01T19:59:43Z",
+    "fingerprint": "d566f568c960ce6b769cee4c7611e3f53824369eb7c3010af561438a13378a05",
+    "note": "User explicitly approved implementing the validated Context Management roadmap increment by increment through a production-ready end-to-end solution."
+  },
+  "schemaVersion": 1,
+  "slug": "context-management",
+  "status": "completed",
+  "updatedAt": "2026-08-01T23:00:14Z"
+}

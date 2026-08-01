@@ -9,6 +9,7 @@ import {
 describe("thin-client page workspace metadata", () => {
   it("marks resource-backed pages as workspace-required and keeps global pages open", () => {
     expect(thinClientPageRequiresWorkspace("artifacts")).toBe(true);
+    expect(thinClientPageRequiresWorkspace("context")).toBe(true);
     expect(thinClientPageRequiresWorkspace("assets")).toBe(true);
     expect(thinClientPageRequiresWorkspace("systems")).toBe(true);
     expect(thinClientPageRequiresWorkspace("models")).toBe(true);
@@ -19,6 +20,7 @@ describe("thin-client page workspace metadata", () => {
     expect(thinClientPageDefinitions.filter((page) => page.requiresWorkspace).map((page) => page.key)).toEqual([
       "systems",
       "artifacts",
+      "context",
       "assets",
       "image-generation",
       "models",

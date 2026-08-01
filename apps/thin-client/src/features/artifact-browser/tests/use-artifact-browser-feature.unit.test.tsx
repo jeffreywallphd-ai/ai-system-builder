@@ -97,6 +97,83 @@ describe("ArtifactBrowserFeature", () => {
     expect(onInitialSelectionHandled).toHaveBeenCalledOnce();
   });
 
+  it("enables Convert to RAG only after authoritative readiness and forwards the artifact id", async () => {
+    const storageKey = "datasets/chunked-support.parquet";
+    const onConvertToRag = vi.fn();
+    const readContextConversionReadiness = vi.fn().mockResolvedValue({
+      artifactId: storageKey,
+      ready: true,
+      locallyReadable: true,
+      textFields: ["question", "answer"],
+      alreadyChunked: true,
+      chunkCount: 4,
+    });
+    const client = {
+      browseArtifacts: vi.fn().mockResolvedValue([
+        {
+          storageKey,
+          originalName: "chunked-support.parquet",
+          artifactFamily: "tabular" as const,
+          mediaType: "application/vnd.apache.parquet",
+        },
+      ]),
+      readArtifactDetail: vi.fn().mockResolvedValue({
+        locator: { storageKey },
+        originalName: "chunked-support.parquet",
+        artifactFamily: "tabular" as const,
+        mediaType: "application/vnd.apache.parquet",
+        sizeBytes: 4,
+      }),
+      readArtifactContent: vi.fn().mockResolvedValue({
+        locator: { storageKey },
+        mediaType: "application/vnd.apache.parquet",
+        sizeBytes: 4,
+        availability: "available" as const,
+        retrieval: "deferred" as const,
+      }),
+      createArtifactMediaViewUrl: vi.fn().mockReturnValue(""),
+      deleteRegisteredArtifact: vi.fn(),
+      getHuggingFaceTokenStatus: vi
+        .fn()
+        .mockResolvedValue({ configured: false }),
+      setHuggingFaceToken: vi.fn(),
+      clearHuggingFaceToken: vi.fn(),
+      publishArtifactToHuggingFace: vi.fn(),
+      verifyPublishedArtifactBacking: vi.fn(),
+      registerArtifactFromRepo: vi.fn(),
+      localizeArtifactFromRepo: vi.fn(),
+    };
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    mountedContainer = container;
+    mountedRoot = createRoot(container);
+
+    await act(async () => {
+      mountedRoot?.render(
+        <ArtifactBrowserFeature
+          client={client}
+          workspaceId="workspace-a"
+          initialSelectedStorageKey={storageKey}
+          readContextConversionReadiness={readContextConversionReadiness}
+          onConvertToRag={onConvertToRag}
+        />,
+      );
+    });
+
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain(
+        "4 persisted chunks are ready to reuse.",
+      ),
+    );
+    const convert = [
+      ...document.body.querySelectorAll<HTMLButtonElement>("button"),
+    ].find((candidate) => candidate.textContent === "Convert to RAG database")!;
+    expect(convert.disabled).toBe(false);
+    await act(async () => convert.click());
+    expect(readContextConversionReadiness).toHaveBeenCalledWith(storageKey);
+    expect(onConvertToRag).toHaveBeenCalledWith(storageKey);
+  });
+
   it("hides token and publish controls while showing published backing details", async () => {
     const client = {
       browseArtifacts: vi.fn().mockResolvedValue([

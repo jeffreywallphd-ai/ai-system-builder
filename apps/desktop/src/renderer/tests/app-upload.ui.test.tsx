@@ -396,7 +396,7 @@ describe("desktop renderer artifact workflow page", () => {
         await new Promise((resolve) => window.setTimeout(resolve, 5));
       });
     }
-    expect(browseArtifacts).toHaveBeenCalledTimes(1);
+    expect(browseArtifacts).toHaveBeenCalledTimes(2);
     expect(container.textContent).toContain("train.csv");
   });
 });

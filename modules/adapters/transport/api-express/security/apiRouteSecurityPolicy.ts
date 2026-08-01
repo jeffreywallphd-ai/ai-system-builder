@@ -223,6 +223,14 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
     "POST /api/dataset-preparation/tasks/:requestId/cancel",
     { public: false, scopes: ["artifact:write"] },
   ],
+  [
+    "POST /api/context-management/read",
+    { public: false, scopes: ["artifact:read"] },
+  ],
+  [
+    "POST /api/context-management/write",
+    { public: false, scopes: ["artifact:write"] },
+  ],
   ["GET /api/dataset-reviews", { public: false, scopes: ["artifact:read"] }],
   [
     "GET /api/dataset-reviews/page",

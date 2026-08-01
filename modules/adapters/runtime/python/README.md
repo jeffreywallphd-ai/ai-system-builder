@@ -27,6 +27,12 @@ Foundation for the managed Python sidecar runtime adapter:
   handles are resolved to host-local paths only through the private
   `ModelDownloadCompletionPort`; public task/API/IPC records never contain the
   handle or resolved path.
+- Context generation maps to `generate-context-artifact`; saved-source
+  inspection, read-only SQLite/ZIP verification, and bounded RAG test queries
+  map to `context-artifact-operation`. Exact bytes are privately staged and
+  hashed by the host. The adapter returns only safe manifests, topic summaries,
+  source readiness, excerpts, scores, and citations; it never returns stored
+  embedding vectors or runtime-local paths.
 - Dataset-preparation mapping preserves the bounded optional advanced recipe and
   returns aggregate capability, structure, semantic, and synthetic-verification
   evidence. It never exposes embeddings, normalized source text, generated
@@ -49,11 +55,15 @@ Foundation for the managed Python sidecar runtime adapter:
   semantic validation.
 - The task registry assigns an explicit bounded deadline by work class: two
   minutes for short/unknown work, two hours for validation and Parquet dataset
-  review, eight hours for dataset preparation, twelve hours for model
+  review, eight hours for dataset preparation and context generation, twelve hours for model
   downloads, and twenty-four hours for model training. This shared policy
   applies to Dataset Preparation, Dataset Review, Model Management, desktop,
   thin client, and the direct model-download fallback.
   Callers cannot replace these caps with unbounded renderer values.
+- Context generation maps to the worker's `generate-context-artifact` task and
+  returns only bounded manifests, summaries, lineage, and output evidence.
+  Source text, prompts, embedding vectors, model output, and runtime paths stay
+  behind the adapter boundary.
 - Parquet dataset review binds every runtime task to the authenticated
   workspace, stages bytes only in a private temporary directory, returns at
   most 50 sanitized row values per read, and requires the exact canonical row

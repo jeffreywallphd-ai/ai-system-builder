@@ -12,6 +12,17 @@ scopes respectively, including artifact write for approval. Handlers derive prin
 security middleware, normalize workspace context, return sanitized envelopes,
 and delegate ownership and business rules to the application use case.
 
+Context Management uses two authenticated command routes:
+
+- `POST /api/context-management/read` for source inspection, generation start
+  and status, browser list/detail/query/rebuild, and task list;
+- `POST /api/context-management/write` for save, discard, cancel, and delete.
+
+The central policy requires `artifact:read` and `artifact:write` respectively.
+Each route also rejects actions belonging to the other route, reconstructs the
+shared command contract, injects authenticated actor/workspace context, and
+returns sanitized envelopes from the shared application facade.
+
 Governed Add data tasks use `POST /api/ingestion/tasks/execute`. The body carries
 an explicit workspace id plus one normalized acquisition command. The central
 route policy requires authenticated artifact read/write scope as appropriate,

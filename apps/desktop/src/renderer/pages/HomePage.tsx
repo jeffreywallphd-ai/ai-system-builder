@@ -14,7 +14,12 @@ export interface HomePageProps {
 type HomeAreaCard = {
   readonly key: Extract<
     DesktopPageKey,
-    "systems" | "artifacts" | "assets" | "models" | "image-generation"
+    | "systems"
+    | "artifacts"
+    | "context"
+    | "assets"
+    | "models"
+    | "image-generation"
   >;
   readonly title: string;
   readonly eyebrow: string;
@@ -24,7 +29,7 @@ type HomeAreaCard = {
 };
 
 type HomeCardIllustrationKind =
-  "system" | "data" | "assets" | "models" | "image-generation";
+  "system" | "data" | "context" | "assets" | "models" | "image-generation";
 
 const homeAreaCards: readonly HomeAreaCard[] = [
   {
@@ -43,6 +48,15 @@ const homeAreaCards: readonly HomeAreaCard[] = [
     description:
       "Upload files, inspect stored artifacts, and keep workspace source material organized.",
     buttonLabel: "Manage Data & Build Datasets",
+    illustration: "context",
+  },
+  {
+    key: "context",
+    title: "Context",
+    eyebrow: "Retrieval and knowledge",
+    description:
+      "Build portable RAG databases and Markdown context packs from workspace data.",
+    buttonLabel: "Manage Context",
     illustration: "data",
   },
   {
@@ -128,6 +142,23 @@ function HomeCardIllustration({
     );
   }
 
+  if (kind === "context") {
+    return (
+      <svg
+        className="home-card-illustration"
+        viewBox="0 0 96 72"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <ellipse cx="36" cy="18" rx="19" ry="8" />
+        <path d="M17 18v28c0 4 9 8 19 8s19-4 19-8V18M17 32c0 4 9 8 19 8s19-4 19-8" />
+        <circle cx="72" cy="24" r="7" />
+        <circle cx="72" cy="50" r="7" />
+        <path d="M55 28h10M55 44h10M72 31v12" />
+      </svg>
+    );
+  }
+
   if (kind === "models") {
     return (
       <svg
@@ -189,7 +220,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
             <DesktopPageDashboard
               kind="home"
               size="large"
-              workspaceId={workspace.activeWorkspaceId}
+              workspaceId={workspace.activeWorkspace?.id}
             />
           }
         />

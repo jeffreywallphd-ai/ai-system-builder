@@ -6,6 +6,8 @@ export const PYTHON_RUNTIME_TASK_TIMEOUTS = Object.freeze({
   validation: 2 * HOUR_MS,
   datasetReview: 2 * HOUR_MS,
   datasetPreparation: 8 * HOUR_MS,
+  contextGeneration: 8 * HOUR_MS,
+  contextRetrieval: 2 * HOUR_MS,
   modelDownload: 12 * HOUR_MS,
   modelTraining: 24 * HOUR_MS,
 });
@@ -20,6 +22,10 @@ export function resolvePythonRuntimeTaskTimeoutMs(
       return PYTHON_RUNTIME_TASK_TIMEOUTS.modelTraining;
     case "prepare-training-dataset":
       return PYTHON_RUNTIME_TASK_TIMEOUTS.datasetPreparation;
+    case "generate-context-artifact":
+      return PYTHON_RUNTIME_TASK_TIMEOUTS.contextGeneration;
+    case "context-artifact-operation":
+      return PYTHON_RUNTIME_TASK_TIMEOUTS.contextRetrieval;
     case "review-dataset":
       return PYTHON_RUNTIME_TASK_TIMEOUTS.datasetReview;
     case "validate-model":

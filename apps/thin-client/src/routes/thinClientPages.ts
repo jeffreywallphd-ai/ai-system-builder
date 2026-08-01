@@ -1,4 +1,13 @@
-export type ThinClientPageKey = "home" | "systems" | "artifacts" | "assets" | "image-generation" | "models" | "security" | "settings";
+export type ThinClientPageKey =
+  | "home"
+  | "systems"
+  | "artifacts"
+  | "context"
+  | "assets"
+  | "image-generation"
+  | "models"
+  | "security"
+  | "settings";
 
 export interface ThinClientPageDefinition {
   key: ThinClientPageKey;
@@ -9,22 +18,48 @@ export interface ThinClientPageDefinition {
 
 export const thinClientPageDefinitions: readonly ThinClientPageDefinition[] = [
   { key: "home", label: "Home", path: "/" },
-  { key: "systems", label: "Systems", path: "/systems", requiresWorkspace: true },
-  { key: "artifacts", label: "Artifacts", path: "/artifacts", requiresWorkspace: true },
+  {
+    key: "systems",
+    label: "Systems",
+    path: "/systems",
+    requiresWorkspace: true,
+  },
+  {
+    key: "artifacts",
+    label: "Artifacts",
+    path: "/artifacts",
+    requiresWorkspace: true,
+  },
+  {
+    key: "context",
+    label: "Context",
+    path: "/context",
+    requiresWorkspace: true,
+  },
   { key: "assets", label: "Assets", path: "/assets", requiresWorkspace: true },
-  { key: "image-generation", label: "Image Generation", path: "/image-generation", requiresWorkspace: true },
+  {
+    key: "image-generation",
+    label: "Image Generation",
+    path: "/image-generation",
+    requiresWorkspace: true,
+  },
   { key: "models", label: "Models", path: "/models", requiresWorkspace: true },
   { key: "security", label: "Security", path: "/security" },
   { key: "settings", label: "Settings", path: "/settings" },
 ];
 
-export function thinClientPageRequiresWorkspace(pageKey: ThinClientPageKey): boolean {
-  return thinClientPageDefinitions.some((page) => page.key === pageKey && page.requiresWorkspace === true);
+export function thinClientPageRequiresWorkspace(
+  pageKey: ThinClientPageKey,
+): boolean {
+  return thinClientPageDefinitions.some(
+    (page) => page.key === pageKey && page.requiresWorkspace === true,
+  );
 }
 
 export function resolveThinClientPage(pathname: string): ThinClientPageKey {
   if (pathname === "/systems") return "systems";
   if (pathname === "/artifacts") return "artifacts";
+  if (pathname === "/context") return "context";
   if (pathname === "/assets") return "assets";
   if (pathname === "/asset-authoring") return "assets";
   if (pathname === "/image-generation") return "image-generation";

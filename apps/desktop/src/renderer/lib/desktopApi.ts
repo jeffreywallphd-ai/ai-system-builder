@@ -7,6 +7,10 @@ import type {
   IngestionTaskTransportValue,
   StagedArtifactDescriptor,
 } from "../../../../../modules/contracts/ingestion";
+import type {
+  ContextManagementTransportCommand,
+  ContextManagementTransportValue,
+} from "../../../../../modules/contracts/context-management";
 import type { DatasetPublicationVisibility } from "../../../../../modules/contracts/dataset";
 import type {
   DatasetPreparationAdvancedReport,
@@ -625,6 +629,16 @@ interface DesktopApiBridge {
     context?: DesktopBridgeRequestContext,
   ) => Promise<
     | { ok: true; value: IngestionTaskTransportValue }
+    | { ok: false; error: { message: string } }
+  >;
+  executeContextManagement?: (
+    input: {
+      workspaceId: string;
+      command: ContextManagementTransportCommand;
+    },
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<
+    | { ok: true; value: ContextManagementTransportValue }
     | { ok: false; error: { message: string } }
   >;
   startPrepareTrainingDataset?: (

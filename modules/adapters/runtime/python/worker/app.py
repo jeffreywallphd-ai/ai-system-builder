@@ -19,6 +19,8 @@ from fastapi.responses import JSONResponse
 
 from .models import (
     CancelPythonRuntimeTaskResult,
+    ContextArtifactOperationTaskRequest,
+    ContextGenerationTaskRequest,
     EnsureModelDownloadRequest,
     EnsureModelDownloadResult,
     LocalModelConfig,
@@ -50,6 +52,14 @@ from .tasks.local_text_generation import (
     unload_generation_models,
 )
 from .tasks.model_validation import validate_model_output
+from .tasks.context_generation import (
+    ContextGenerationCancellationRequested,
+    generate_context_artifact,
+)
+from .tasks.context_artifact_operation import (
+    ContextArtifactOperationCancellationRequested,
+    operate_on_context_artifact,
+)
 from .tasks.prepare_training_dataset import prepare_training_dataset
 from .tasks.review_dataset import review_dataset
 from .tasks.train_model import TrainingCancellationRequested, train_model
@@ -332,6 +342,55 @@ def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
             output_directory=_runtime_output_directory(payload),
         ).model_dump(mode="json")
 
+    if request.taskType == "generate-context-artifact":
+        payload = ContextGenerationTaskRequest.model_validate(request.payload)
+
+        def check_context_cancellation() -> None:
+            with TASK_REGISTRY_LOCK:
+                cancellation_requested = TASK_REGISTRY.get(
+                    request.requestId,
+                    {},
+                ).get("cancellationRequested") is True
+            if cancellation_requested:
+                raise ContextGenerationCancellationRequested(
+                    "Context generation cancellation requested."
+                )
+
+        def on_context_progress(progress: dict[str, Any]) -> None:
+            check_context_cancellation()
+            _update_task(request.requestId, progress=progress)
+            print(
+                json.dumps({"event": "runtime.context_generation.progress"}),
+                flush=True,
+            )
+
+        return generate_context_artifact(
+            payload,
+            on_progress=on_context_progress,
+            cancellation_check=check_context_cancellation,
+        )
+
+    if request.taskType == "context-artifact-operation":
+        payload = ContextArtifactOperationTaskRequest.model_validate(
+            request.payload
+        )
+
+        def check_context_operation_cancellation() -> None:
+            with TASK_REGISTRY_LOCK:
+                cancellation_requested = TASK_REGISTRY.get(
+                    request.requestId,
+                    {},
+                ).get("cancellationRequested") is True
+            if cancellation_requested:
+                raise ContextArtifactOperationCancellationRequested(
+                    "Context artifact operation cancellation requested."
+                )
+
+        return operate_on_context_artifact(
+            payload,
+            cancellation_check=check_context_operation_cancellation,
+        )
+
     if request.taskType == "review-dataset":
         payload = ReviewDatasetRequest.model_validate(request.payload)
         return review_dataset(payload)
@@ -521,7 +580,11 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
                     data=data,
                     completedAt=_now_iso(),
                 )
-        except TrainingCancellationRequested:
+        except (
+            TrainingCancellationRequested,
+            ContextGenerationCancellationRequested,
+            ContextArtifactOperationCancellationRequested,
+        ):
             _update_task(
                 request.requestId,
                 status="cancelled",
@@ -584,6 +647,8 @@ def capabilities() -> PythonRuntimeCapabilitiesResult:
     supported = [
         "prepare-training-dataset",
         "review-dataset",
+        "generate-context-artifact",
+        "context-artifact-operation",
         "ensure-model-download",
         "model-status",
         "unload-model",
@@ -624,17 +689,34 @@ def cancel_task(request_id: str) -> CancelPythonRuntimeTaskResult:
     if record["status"] == "cancelled":
         return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status="cancelled", cancelled=True, message="Task is already cancelled.", metadata=record.get("metadata"))
     if record["status"] == "running":
-        if record.get("taskType") == "train-model":
+        if record.get("taskType") in {
+            "train-model",
+            "generate-context-artifact",
+            "context-artifact-operation",
+        }:
             with TASK_REGISTRY_LOCK:
                 current = TASK_REGISTRY.get(request_id)
                 if current is not None:
                     current["cancellationRequested"] = True
                     current["progress"] = {
                         "stage": "cancelling",
-                        "message": "Stopping model training after the current batch.",
+                        "message": (
+                            "Stopping context generation after the current chunk."
+                            if record.get("taskType") == "generate-context-artifact"
+                            else "Stopping context retrieval."
+                            if record.get("taskType") == "context-artifact-operation"
+                            else "Stopping model training after the current batch."
+                        ),
                     }
                     current["updatedAt"] = _now_iso()
-            return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status="running", cancelled=False, message="Model training cancellation requested.", metadata=record.get("metadata"))
+            message = (
+                "Context generation cancellation requested."
+                if record.get("taskType") == "generate-context-artifact"
+                else "Context retrieval cancellation requested."
+                if record.get("taskType") == "context-artifact-operation"
+                else "Model training cancellation requested."
+            )
+            return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status="running", cancelled=False, message=message, metadata=record.get("metadata"))
         return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status="running", cancelled=False, message="Task is already running and cannot be force-cancelled.", metadata=record.get("metadata"))
     return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status=record["status"], cancelled=False, message="Task is no longer cancellable.", metadata=record.get("metadata"))
 

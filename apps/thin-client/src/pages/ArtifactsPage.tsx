@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArtifactBrowserFeature } from "../features/artifact-browser";
 import { ArtifactIngestionFeature } from "../features/artifact-upload";
 import { DatasetPreparationFeature } from "../features/dataset-preparation";
@@ -7,12 +7,21 @@ import { DatasetReviewWorkspace } from "../../../../modules/ui/shared/dataset-re
 import { PageDashboardHeader } from "../../../../modules/ui/shared";
 import { createApiDatasetPreparationClient } from "../features/dataset-preparation";
 import { ThinClientPageDashboard } from "../features/page-dashboard/ThinClientPageDashboard";
+import { createContextManagementPageClient } from "../features/context-management/api/contextManagementPageClient";
 
 export interface WorkspaceScopedPageProps {
   workspaceId: string;
   workspaceName: string;
+  initialSelectedStorageKey?: string;
+  onInitialSelectionHandled?: () => void;
+  onConvertToRag?: (artifactId: string) => void;
 }
-export function ArtifactsPage({ workspaceId }: WorkspaceScopedPageProps) {
+export function ArtifactsPage({
+  workspaceId,
+  initialSelectedStorageKey,
+  onInitialSelectionHandled,
+  onConvertToRag,
+}: WorkspaceScopedPageProps) {
   const [activeTabId, setActiveTabId] = useState("ingestion");
   const [preparedArtifactStorageKey, setPreparedArtifactStorageKey] =
     useState<string>();
@@ -58,11 +67,37 @@ export function ArtifactsPage({ workspaceId }: WorkspaceScopedPageProps) {
     return async (input: { workspaceId: string; artifactKey: string }) => {
       if (!client.readReviewPage)
         throw new Error("Parquet preview is unavailable.");
-      return (
-        await client.readReviewPage({ ...input, page: 0, pageSize: 10 })
-      ).page;
+      return (await client.readReviewPage({ ...input, page: 0, pageSize: 10 }))
+        .page;
     };
   }, []);
+  const contextClient = useMemo(() => createContextManagementPageClient(), []);
+  const readContextConversionReadiness = useMemo(
+    () => async (artifactId: string) => {
+      const result = await contextClient.execute({
+        workspaceId,
+        command: {
+          action: "source-inspect",
+          artifactId,
+          chunking: {
+            strategy: "structure-aware",
+            chunkCharacters: 1200,
+            overlapCharacters: 120,
+            maximumChunks: 10000,
+          },
+        },
+      });
+      if (result.action !== "source-inspect") {
+        throw new Error("Context readiness response was invalid.");
+      }
+      return result.readiness;
+    },
+    [contextClient, workspaceId],
+  );
+
+  useEffect(() => {
+    if (initialSelectedStorageKey) setActiveTabId("browser");
+  }, [initialSelectedStorageKey]);
   return (
     <section className="ui-stack ui-stack--sm">
       <PageDashboardHeader
@@ -96,10 +131,18 @@ export function ArtifactsPage({ workspaceId }: WorkspaceScopedPageProps) {
                 key={`browser-${workspaceId}`}
                 workspaceId={workspaceId}
                 readParquetPreview={parquetPreviewReader}
-                initialSelectedStorageKey={preparedArtifactStorageKey}
-                onInitialSelectionHandled={() =>
-                  setPreparedArtifactStorageKey(undefined)
+                initialSelectedStorageKey={
+                  preparedArtifactStorageKey ?? initialSelectedStorageKey
                 }
+                onInitialSelectionHandled={() => {
+                  if (preparedArtifactStorageKey) {
+                    setPreparedArtifactStorageKey(undefined);
+                  } else {
+                    onInitialSelectionHandled?.();
+                  }
+                }}
+                readContextConversionReadiness={readContextConversionReadiness}
+                onConvertToRag={onConvertToRag}
               />
             ),
           },

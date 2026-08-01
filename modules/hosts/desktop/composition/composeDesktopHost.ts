@@ -240,6 +240,7 @@ export const DESKTOP_FEATURE_LIFECYCLE_POLICIES = {
   "image-generation": "disposable",
   "website-ingestion": "disposable",
   "dataset-preparation": "disposable",
+  "context-management": "disposable",
 } as const satisfies Record<string, DesktopFeatureLifecyclePolicy>;
 
 export type DesktopFeatureLifecycleKey =
@@ -957,6 +958,25 @@ export function composeDesktopHost(
               });
           },
         });
+      const getContextManagementFeatures =
+        featureLifecycle.registerAsyncFeature({
+          featureKey: "context-management",
+          policy: DESKTOP_FEATURE_LIFECYCLE_POLICIES["context-management"],
+          milestoneBase: "desktop.host.context-management-features",
+          importFeature: async () => {
+            const module =
+              await import("./composeDesktopContextManagementFeature");
+            return async () =>
+              module.composeDesktopContextManagementFeature({
+                artifacts: await getArtifactFeatures(),
+                runtime: await getRuntimeTaskFeatures(),
+                workspaceRepository:
+                  startupWorkspaceShell.workspaceRepository,
+                workspaceAuthorization,
+                now: options.now,
+              });
+          },
+        });
       const structuredRepositoryOptions = {
         rootDir: registerOptions.storageRootDirectory,
         now: options.now,
@@ -1573,6 +1593,18 @@ export function composeDesktopHost(
           ipcMain: registerOptions.ipcMain,
           getDatasetPreparationFeature: getDatasetPreparationFeatures,
           lifecycle: markDisposableFeatureReleased("dataset-preparation"),
+          getAuthoritativeRequestContext: options.localIdentity
+            ? () => ({
+                organizationId: options.localIdentity!.organizationId,
+                principalId: options.localIdentity!.principalId,
+              })
+            : undefined,
+        },
+        contextManagement: {
+          ipcMain: registerOptions.ipcMain,
+          senderTrust: registerOptions.senderTrust,
+          getContextManagementFeature: getContextManagementFeatures,
+          lifecycle: markDisposableFeatureReleased("context-management"),
           getAuthoritativeRequestContext: options.localIdentity
             ? () => ({
                 organizationId: options.localIdentity!.organizationId,

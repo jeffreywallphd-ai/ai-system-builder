@@ -87,7 +87,7 @@ describe("desktop WorkspaceGate", () => {
   it("does not render child feature content before a workspace is active", async () => {
     const childRenderer = await render(client());
     expect(container!.textContent).toContain(
-      "Create a workspace to use Systems, Assets, Artifacts, Data, Models, and Images.",
+      "Create a workspace to use Systems, Assets, Artifacts, Data, Context, Models, and Images.",
     );
     expect(container!.textContent).toContain(
       "Include System Foundation assets",

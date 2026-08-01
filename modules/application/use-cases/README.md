@@ -67,6 +67,17 @@ Use cases in this folder own application orchestration and remain adapter-agnost
     reproduction can restore the selected preparation style without silently
     substituting a currently unavailable capability.
 
+- `ContextGenerationUseCase`
+  - validates bounded RAG or Markdown context-pack requests and reauthorizes
+    every selected workspace artifact before private staging;
+  - owns asynchronous start/read/cancel orchestration, task ownership, exact
+    source/result digest verification, and contained runtime-output validation;
+  - returns successful generation as a review-required candidate and writes
+    nothing to durable artifact storage until the user explicitly saves;
+  - saves with artifact-first catalog and local-binding finalization, compensates
+    partial failures, and lets discard remove the staged candidate without
+    creating an artifact.
+
 - Dataset-version read use cases
   - authorize the exact workspace before listing, comparing, or reproducing;
   - compare two versions of the same dataset using bounded source, row,

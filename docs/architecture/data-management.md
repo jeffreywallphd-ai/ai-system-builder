@@ -1,7 +1,7 @@
 # Data Management
 
 - Status: current
-- Related decisions: `docs/adr/ADR-0008-ingestion-and-staged-artifact-semantic-model.md`, `docs/adr/ADR-0009-artifact-identity-and-backing-domain-model.md`, `docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md`, `docs/adr/ADR-0040-immutable-dataset-versions-lineage-and-publication.md`
+- Related decisions: `docs/adr/ADR-0008-ingestion-and-staged-artifact-semantic-model.md`, `docs/adr/ADR-0009-artifact-identity-and-backing-domain-model.md`, `docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md`, `docs/adr/ADR-0040-immutable-dataset-versions-lineage-and-publication.md`, `docs/adr/ADR-0041-context-management-and-portable-context-artifacts.md`
 - Verification: `docs/architecture/architecture-verification.md`
 
 This document defines the implemented ingestion-to-dataset preparation
@@ -38,6 +38,16 @@ traceability but are excluded from both registered and unregistered
 user-facing Artifact Browser lists. More generally, any filename or media type
 ending in `+json` is treated as internal metadata and omitted. Only ordinary
 `.json`, `.jsonl`, and `.ndjson` JSON-family files are user-facing.
+
+For compatible textual datasets, the detail view also exposes **Convert to RAG
+database**. That action navigates to Context Management with only the selected
+artifact identifier; the Context application boundary repeats workspace
+authorization, capability resolution, digest verification, and private
+staging. “Already chunked” has a strict meaning: every structured row includes
+a valid `chunkIndex` and `sourceLineage` object. Context generation then
+preserves those row boundaries and exact lineage instead of rechunking. Other
+compatible sources enter the same bounded extraction pipeline used by Dataset
+Preparation. See `docs/architecture/context-management.md`.
 
 ## Capability authority
 

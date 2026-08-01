@@ -46,6 +46,13 @@
   `notifications/tests/notificationMigrationInventory.ts`; its guard permits
   necessary contextual feedback while preventing removed page-level patterns
   from returning.
+- Context Management UI lives in `modules/ui/shared/context-management`. Keep
+  RAG Databases, Context Packs, and Context Browser host-neutral. Manual and
+  source-derived packs share the same safe formatted Markdown review. Context
+  Browser follows Artifact Browser cards and View Details modal conventions.
+  The shell bridge owns authoritative generation/retrieval task progress;
+  save, discard, and delete publish terminal outcomes, while validation,
+  blocking diagnostics, loading, empty results, and routine reads stay inline.
 - Keep glossary hint buttons off broad page headings and descriptive home-area cards. Use them beside form labels, filters, and compact detail rows where users need help understanding what to enter or read.
 - Shared buttons use the centralized controls stylesheet. Keep primary and
   outline buttons flat and rounded. Outline actions must include both `ui-button`

@@ -24,6 +24,10 @@ Route composition now includes:
   use case, runtime task registry, artifact storage/repository ports, and server
   runtime-readiness guard; the host also composes the default quality-policy
   provider so a requested review cannot fall back to an absent authority.
+- Context Management read/write routes backed by the same generation, browser,
+  retrieval, delete, task-registry, artifact, and authorization composition as
+  desktop. SQLite/ZIP parsing and vector ranking remain in the managed Python
+  runtime rather than the API process or thin client.
 
 Current artifact-repo provider registration is Hugging Face only.
 

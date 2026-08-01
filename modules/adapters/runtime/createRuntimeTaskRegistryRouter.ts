@@ -24,6 +24,8 @@ export function createRuntimeTaskRegistryRouter(delegates: {
     [TaskType.IMAGE_GENERATION]: delegates.image,
     [TaskType.DATASET_PREPARATION]: delegates.python,
     [TaskType.DATASET_REVIEW]: delegates.python,
+    [TaskType.CONTEXT_GENERATION]: delegates.python,
+    [TaskType.CONTEXT_RETRIEVAL]: delegates.python,
     [TaskType.MODEL_DOWNLOAD]: delegates.python,
     [TaskType.MODEL_TRAINING]: delegates.python,
     [TaskType.MODEL_VALIDATION]: delegates.python,
@@ -59,6 +61,8 @@ export function createRuntimeTaskRegistryRouter(delegates: {
   const pythonTaskTypes = new Set<TaskType>([
     TaskType.DATASET_PREPARATION,
     TaskType.DATASET_REVIEW,
+    TaskType.CONTEXT_GENERATION,
+    TaskType.CONTEXT_RETRIEVAL,
     TaskType.MODEL_DOWNLOAD,
     TaskType.MODEL_TRAINING,
     TaskType.MODEL_VALIDATION,

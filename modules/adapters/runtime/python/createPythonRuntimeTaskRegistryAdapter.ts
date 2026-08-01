@@ -22,6 +22,8 @@ import { resolvePythonRuntimeTaskTimeoutMs } from "./pythonRuntimeTaskTimeoutPol
 const genericToPythonTaskTypeMap: Partial<Record<TaskType, string>> = {
   [TaskType.DATASET_PREPARATION]: "prepare-training-dataset",
   [TaskType.DATASET_REVIEW]: "review-dataset",
+  [TaskType.CONTEXT_GENERATION]: "generate-context-artifact",
+  [TaskType.CONTEXT_RETRIEVAL]: "context-artifact-operation",
   [TaskType.MODEL_DOWNLOAD]: "ensure-model-download",
   [TaskType.MODEL_TRAINING]: "train-model",
   [TaskType.MODEL_VALIDATION]: "validate-model",
@@ -44,6 +46,12 @@ function toGenericTaskType(
   }
   if (taskType === "review-dataset") {
     return TaskType.DATASET_REVIEW;
+  }
+  if (taskType === "generate-context-artifact") {
+    return TaskType.CONTEXT_GENERATION;
+  }
+  if (taskType === "context-artifact-operation") {
+    return TaskType.CONTEXT_RETRIEVAL;
   }
   if (taskType === "ensure-model-download") {
     return TaskType.MODEL_DOWNLOAD;
@@ -326,6 +334,9 @@ export function createPythonRuntimeTaskRegistryAdapter(
         };
       const supported = new Set([
         TaskType.DATASET_PREPARATION,
+        TaskType.DATASET_REVIEW,
+        TaskType.CONTEXT_GENERATION,
+        TaskType.CONTEXT_RETRIEVAL,
         TaskType.MODEL_DOWNLOAD,
         TaskType.MODEL_TRAINING,
         TaskType.MODEL_VALIDATION,

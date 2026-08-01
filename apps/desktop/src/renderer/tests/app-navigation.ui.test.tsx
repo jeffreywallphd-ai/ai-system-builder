@@ -360,7 +360,7 @@ describe("desktop renderer page composition", () => {
     });
 
     expect(container.textContent).toContain(
-      "Create a workspace to use Systems, Assets, Artifacts, Data, Models, and Images.",
+      "Create a workspace to use Systems, Assets, Artifacts, Data, Context, Models, and Images.",
     );
     expect(container.textContent).toContain("Create workspace");
     expect(container.textContent).not.toContain("Data Artifact Ingester");

@@ -5,6 +5,7 @@ import { desktopPageDefinitions, desktopPageRequiresWorkspace } from "../routes/
 describe("desktop page workspace metadata", () => {
   it("marks workspace product pages including Systems as workspace-required and keeps Settings global", () => {
     expect(desktopPageRequiresWorkspace("artifacts")).toBe(true);
+    expect(desktopPageRequiresWorkspace("context")).toBe(true);
     expect(desktopPageRequiresWorkspace("assets")).toBe(true);
     expect(desktopPageRequiresWorkspace("models")).toBe(true);
     expect(desktopPageRequiresWorkspace("image-generation")).toBe(true);
@@ -12,6 +13,7 @@ describe("desktop page workspace metadata", () => {
     expect(desktopPageRequiresWorkspace("settings")).toBe(false);
     expect(desktopPageDefinitions.filter((page) => page.requiresWorkspace).map((page) => page.key)).toEqual([
       "artifacts",
+      "context",
       "assets",
       "models",
       "image-generation",

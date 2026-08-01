@@ -70,7 +70,13 @@ describe("thin-client AssetLibraryPage", () => {
         .querySelector<HTMLElement>("[role='tab'][aria-selected='true']")
         ?.getAttribute("aria-controls"),
     ).toBe(activePanel?.id);
-    const [url, init] = fetchMock.mock.calls[0];
+    const definitionCall = fetchMock.mock.calls.find(
+      ([requestUrl]) =>
+        String(requestUrl) ===
+        "/api/assets/definitions?limit=50&workspaceId=w1",
+    );
+    expect(definitionCall).toBeDefined();
+    const [url, init] = definitionCall!;
     expect(url).toBe("/api/assets/definitions?limit=50&workspaceId=w1");
     expect((init as RequestInit).method).toBe("GET");
     expect(

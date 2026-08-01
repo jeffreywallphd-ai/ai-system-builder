@@ -93,7 +93,9 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       }),
       createArtifactMediaViewUrl: vi.fn().mockResolvedValue(""),
       readArtifactMedia: vi.fn(),
-      getHuggingFaceTokenStatus: vi.fn().mockResolvedValue({ configured: false }),
+      getHuggingFaceTokenStatus: vi
+        .fn()
+        .mockResolvedValue({ configured: false }),
       setHuggingFaceToken: vi.fn(),
       clearHuggingFaceToken: vi.fn(),
       publishArtifactToHuggingFace: vi.fn(),
@@ -125,6 +127,84 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     );
     expect(document.body.textContent).toContain(storageKey);
     expect(onInitialSelectionHandled).toHaveBeenCalledOnce();
+  });
+
+  it("enables Convert to RAG only after authoritative readiness and forwards the artifact id", async () => {
+    const storageKey = "datasets/chunked-support.parquet";
+    const onConvertToRag = vi.fn();
+    const readContextConversionReadiness = vi.fn().mockResolvedValue({
+      artifactId: storageKey,
+      ready: true,
+      locallyReadable: true,
+      textFields: ["question", "answer"],
+      alreadyChunked: true,
+      chunkCount: 4,
+    });
+    const client = {
+      browseArtifacts: vi.fn().mockResolvedValue([
+        {
+          storageKey,
+          originalName: "chunked-support.parquet",
+          artifactFamily: "tabular" as const,
+          mediaType: "application/vnd.apache.parquet",
+          sourceKind: "runtime",
+        },
+      ]),
+      readArtifactDetail: vi.fn().mockResolvedValue({
+        locator: { storageKey },
+        originalName: "chunked-support.parquet",
+        artifactFamily: "tabular" as const,
+        mediaType: "application/vnd.apache.parquet",
+        sizeBytes: 4,
+      }),
+      readArtifactContent: vi.fn().mockResolvedValue({
+        locator: { storageKey },
+        mediaType: "application/vnd.apache.parquet",
+        sizeBytes: 4,
+        availability: "available" as const,
+        retrieval: "deferred" as const,
+      }),
+      createArtifactMediaViewUrl: vi.fn().mockResolvedValue(""),
+      readArtifactMedia: vi.fn(),
+      getHuggingFaceTokenStatus: vi
+        .fn()
+        .mockResolvedValue({ configured: false }),
+      setHuggingFaceToken: vi.fn(),
+      clearHuggingFaceToken: vi.fn(),
+      publishArtifactToHuggingFace: vi.fn(),
+      verifyPublishedArtifactBacking: vi.fn(),
+      registerArtifactFromRepo: vi.fn(),
+      localizeArtifactFromRepo: vi.fn(),
+    };
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    mountedContainer = container;
+    mountedRoot = createRoot(container);
+
+    await act(async () => {
+      mountedRoot?.render(
+        <ArtifactBrowserFeature
+          client={client}
+          workspaceId="workspace-a"
+          initialSelectedStorageKey={storageKey}
+          readContextConversionReadiness={readContextConversionReadiness}
+          onConvertToRag={onConvertToRag}
+        />,
+      );
+    });
+
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain(
+        "4 persisted chunks are ready to reuse.",
+      ),
+    );
+    const convert = [
+      ...document.body.querySelectorAll<HTMLButtonElement>("button"),
+    ].find((candidate) => candidate.textContent === "Convert to RAG database")!;
+    expect(convert.disabled).toBe(false);
+    await act(async () => convert.click());
+    expect(readContextConversionReadiness).toHaveBeenCalledWith(storageKey);
+    expect(onConvertToRag).toHaveBeenCalledWith(storageKey);
   });
 
   it("publishes a selected artifact and shows published backing details", async () => {
@@ -166,12 +246,10 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       createArtifactMediaViewUrl: vi
         .fn()
         .mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi
-        .fn()
-        .mockResolvedValue({
-          mediaType: "text/plain",
-          bytes: new Uint8Array([97]),
-        }),
+      readArtifactMedia: vi.fn().mockResolvedValue({
+        mediaType: "text/plain",
+        bytes: new Uint8Array([97]),
+      }),
       getHuggingFaceTokenStatus: vi
         .fn()
         .mockResolvedValue({ configured: false }),
@@ -251,9 +329,9 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     });
     expect(document.body.textContent).toContain("Private (recommended)");
 
-    const publishButton = Array.from(document.body.querySelectorAll("button")).find(
-      (button) => button.textContent === "Publish",
-    ) as HTMLButtonElement;
+    const publishButton = Array.from(
+      document.body.querySelectorAll("button"),
+    ).find((button) => button.textContent === "Publish") as HTMLButtonElement;
     await act(async () => {
       publishButton.click();
     });
@@ -292,12 +370,10 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       createArtifactMediaViewUrl: vi
         .fn()
         .mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi
-        .fn()
-        .mockResolvedValue({
-          mediaType: "text/plain",
-          bytes: new Uint8Array([97]),
-        }),
+      readArtifactMedia: vi.fn().mockResolvedValue({
+        mediaType: "text/plain",
+        bytes: new Uint8Array([97]),
+      }),
       getHuggingFaceTokenStatus: vi
         .fn()
         .mockResolvedValue({ configured: false }),
@@ -347,20 +423,26 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     setInputValue(inputs[0] as HTMLInputElement, "openai/demo");
     setInputValue(inputs[2] as HTMLInputElement, "images");
 
-    const publishButton = Array.from(document.body.querySelectorAll("button")).find(
-      (button) => button.textContent === "Publish",
-    ) as HTMLButtonElement;
+    const publishButton = Array.from(
+      document.body.querySelectorAll("button"),
+    ).find((button) => button.textContent === "Publish") as HTMLButtonElement;
     await act(async () => {
       publishButton.click();
     });
 
     const notificationMessages = readNotificationMessages(container);
-    expect(notificationMessages.some((message) =>
-      message.includes("Missing Hugging Face token."),
-    )).toBe(true);
-    expect(notificationMessages.some((message) =>
-      message.includes("This Hugging Face repository may require an access token."),
-    )).toBe(true);
+    expect(
+      notificationMessages.some((message) =>
+        message.includes("Missing Hugging Face token."),
+      ),
+    ).toBe(true);
+    expect(
+      notificationMessages.some((message) =>
+        message.includes(
+          "This Hugging Face repository may require an access token.",
+        ),
+      ),
+    ).toBe(true);
   });
 
   it("renders Hugging Face defaults collapsed by default", async () => {
@@ -383,12 +465,10 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       createArtifactMediaViewUrl: vi
         .fn()
         .mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi
-        .fn()
-        .mockResolvedValue({
-          mediaType: "text/plain",
-          bytes: new Uint8Array([97]),
-        }),
+      readArtifactMedia: vi.fn().mockResolvedValue({
+        mediaType: "text/plain",
+        bytes: new Uint8Array([97]),
+      }),
       getHuggingFaceTokenStatus: vi
         .fn()
         .mockResolvedValue({ configured: false }),
@@ -437,12 +517,10 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       createArtifactMediaViewUrl: vi
         .fn()
         .mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi
-        .fn()
-        .mockResolvedValue({
-          mediaType: "text/plain",
-          bytes: new Uint8Array([97]),
-        }),
+      readArtifactMedia: vi.fn().mockResolvedValue({
+        mediaType: "text/plain",
+        bytes: new Uint8Array([97]),
+      }),
       getHuggingFaceTokenStatus: vi
         .fn()
         .mockResolvedValue({ configured: false }),
@@ -474,7 +552,9 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     expect(document.body.textContent).toContain(
       "There are currently no generated artifacts in the workspace.",
     );
-    expect(document.body.textContent).not.toContain("Register from Hugging Face");
+    expect(document.body.textContent).not.toContain(
+      "Register from Hugging Face",
+    );
   });
 
   it("lists non-image artifacts and only renders image preview for image media types", async () => {
@@ -522,12 +602,10 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       createArtifactMediaViewUrl: vi
         .fn()
         .mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi
-        .fn()
-        .mockResolvedValue({
-          mediaType: "text/plain",
-          bytes: new Uint8Array([97]),
-        }),
+      readArtifactMedia: vi.fn().mockResolvedValue({
+        mediaType: "text/plain",
+        bytes: new Uint8Array([97]),
+      }),
       getHuggingFaceTokenStatus: vi
         .fn()
         .mockResolvedValue({ configured: false }),
@@ -562,7 +640,9 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     const generatedCard = generatedSection?.querySelector<HTMLElement>(
       ".artifact-browser__artifact-card",
     );
-    expect(generatedSection?.classList.contains("artifact-browser__uploaded-grid")).toBe(true);
+    expect(
+      generatedSection?.classList.contains("artifact-browser__uploaded-grid"),
+    ).toBe(true);
     expect(generatedCard?.querySelector("h4")?.textContent).toBe("train.json");
     expect(generatedCard?.textContent).toContain("generated/train.json");
     expect(generatedCard?.textContent).toContain("Status: generated");
@@ -584,7 +664,9 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       workspaceId: "workspace-a",
       artifactKey: "uploads/train.parquet",
     });
-    expect(document.body.textContent).toContain("Showing the first 10 of 12 rows.");
+    expect(document.body.textContent).toContain(
+      "Showing the first 10 of 12 rows.",
+    );
     expect(document.body.textContent).toContain("Instruction 1");
     expect(document.body.textContent).toContain("Instruction 10");
     expect(document.body.textContent).not.toContain("Instruction 11");
@@ -640,9 +722,9 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     const registerButton = Array.from(
       document.body.querySelectorAll("button"),
     ).find((button) => button.textContent === "Register") as HTMLButtonElement;
-    const deleteButton = Array.from(document.body.querySelectorAll("button")).find(
-      (button) => button.textContent === "Delete",
-    ) as HTMLButtonElement;
+    const deleteButton = Array.from(
+      document.body.querySelectorAll("button"),
+    ).find((button) => button.textContent === "Delete") as HTMLButtonElement;
 
     await act(async () => {
       registerButton.click();
@@ -724,9 +806,9 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       );
     });
 
-    const deleteButton = Array.from(document.body.querySelectorAll("button")).find(
-      (button) => button.textContent === "Delete",
-    ) as HTMLButtonElement;
+    const deleteButton = Array.from(
+      document.body.querySelectorAll("button"),
+    ).find((button) => button.textContent === "Delete") as HTMLButtonElement;
 
     await act(async () => {
       deleteButton.click();
@@ -753,9 +835,9 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       "Type Delete to confirm this destructive action.",
     );
 
-    const cancelButton = Array.from(document.body.querySelectorAll("button")).find(
-      (button) => button.textContent === "Cancel",
-    ) as HTMLButtonElement;
+    const cancelButton = Array.from(
+      document.body.querySelectorAll("button"),
+    ).find((button) => button.textContent === "Cancel") as HTMLButtonElement;
     await act(async () => {
       cancelButton.click();
     });
@@ -779,22 +861,18 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
         locator: { storageKey: "uploads/cat.png" },
         artifactFamily: "image" as const,
       }),
-      readArtifactContent: vi
-        .fn()
-        .mockResolvedValue({
-          locator: { storageKey: "uploads/cat.png" },
-          availability: "available" as const,
-          retrieval: "deferred" as const,
-        }),
+      readArtifactContent: vi.fn().mockResolvedValue({
+        locator: { storageKey: "uploads/cat.png" },
+        availability: "available" as const,
+        retrieval: "deferred" as const,
+      }),
       createArtifactMediaViewUrl: vi
         .fn()
         .mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi
-        .fn()
-        .mockResolvedValue({
-          mediaType: "text/plain",
-          bytes: new Uint8Array([97]),
-        }),
+      readArtifactMedia: vi.fn().mockResolvedValue({
+        mediaType: "text/plain",
+        bytes: new Uint8Array([97]),
+      }),
       getHuggingFaceTokenStatus: vi
         .fn()
         .mockResolvedValue({ configured: false }),
@@ -826,7 +904,9 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       artifactButton.click();
     });
 
-    const deleteButton = Array.from(document.body.querySelectorAll("button")).find(
+    const deleteButton = Array.from(
+      document.body.querySelectorAll("button"),
+    ).find(
       (button) => button.textContent === "Delete registered artifact",
     ) as HTMLButtonElement;
 
@@ -871,22 +951,18 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
         locator: { storageKey: "uploads/cat.png" },
         artifactFamily: "image" as const,
       }),
-      readArtifactContent: vi
-        .fn()
-        .mockResolvedValue({
-          locator: { storageKey: "uploads/cat.png" },
-          availability: "available" as const,
-          retrieval: "deferred" as const,
-        }),
+      readArtifactContent: vi.fn().mockResolvedValue({
+        locator: { storageKey: "uploads/cat.png" },
+        availability: "available" as const,
+        retrieval: "deferred" as const,
+      }),
       createArtifactMediaViewUrl: vi
         .fn()
         .mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi
-        .fn()
-        .mockResolvedValue({
-          mediaType: "text/plain",
-          bytes: new Uint8Array([97]),
-        }),
+      readArtifactMedia: vi.fn().mockResolvedValue({
+        mediaType: "text/plain",
+        bytes: new Uint8Array([97]),
+      }),
       getHuggingFaceTokenStatus: vi
         .fn()
         .mockResolvedValue({ configured: false }),
@@ -918,7 +994,9 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       artifactButton.click();
     });
 
-    const deleteButton = Array.from(document.body.querySelectorAll("button")).find(
+    const deleteButton = Array.from(
+      document.body.querySelectorAll("button"),
+    ).find(
       (button) => button.textContent === "Delete registered artifact",
     ) as HTMLButtonElement;
     await act(async () => {
@@ -978,7 +1056,9 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     });
 
     expect(document.body.textContent).toContain("Artifact family");
-    const familySelect = document.body.querySelector("select") as HTMLSelectElement;
+    const familySelect = document.body.querySelector(
+      "select",
+    ) as HTMLSelectElement;
     expect(familySelect).toBeTruthy();
     expect(
       Array.from(familySelect.options).map((option) => option.value),
@@ -1027,12 +1107,10 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       createArtifactMediaViewUrl: vi
         .fn()
         .mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi
-        .fn()
-        .mockResolvedValue({
-          mediaType: "text/plain",
-          bytes: new Uint8Array([97]),
-        }),
+      readArtifactMedia: vi.fn().mockResolvedValue({
+        mediaType: "text/plain",
+        bytes: new Uint8Array([97]),
+      }),
       getHuggingFaceTokenStatus: vi
         .fn()
         .mockResolvedValue({ configured: false }),
@@ -1077,7 +1155,9 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       artifactButton.click();
     });
 
-    const recheckButton = Array.from(document.body.querySelectorAll("button")).find(
+    const recheckButton = Array.from(
+      document.body.querySelectorAll("button"),
+    ).find(
       (button) => button.textContent === "Re-check published backing",
     ) as HTMLButtonElement;
     await act(async () => {
@@ -1092,14 +1172,12 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
 
   it("localizes imported artifact bytes from the artifact panel", async () => {
     const client = {
-      browseArtifacts: vi
-        .fn()
-        .mockResolvedValue([
-          {
-            storageKey: "artifacts/20260418000000-local01",
-            artifactFamily: "image" as const,
-          },
-        ]),
+      browseArtifacts: vi.fn().mockResolvedValue([
+        {
+          storageKey: "artifacts/20260418000000-local01",
+          artifactFamily: "image" as const,
+        },
+      ]),
       readArtifactDetail: vi.fn().mockResolvedValue({
         locator: { storageKey: "artifacts/20260418000000-local01" },
         artifactFamily: "image" as const,
@@ -1130,12 +1208,10 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       createArtifactMediaViewUrl: vi
         .fn()
         .mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi
-        .fn()
-        .mockResolvedValue({
-          mediaType: "text/plain",
-          bytes: new Uint8Array([97]),
-        }),
+      readArtifactMedia: vi.fn().mockResolvedValue({
+        mediaType: "text/plain",
+        bytes: new Uint8Array([97]),
+      }),
       getHuggingFaceTokenStatus: vi
         .fn()
         .mockResolvedValue({ configured: false }),
@@ -1254,12 +1330,10 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
         retrieval: "deferred" as const,
       }),
       createArtifactMediaViewUrl: vi.fn().mockResolvedValue(""),
-      readArtifactMedia: vi
-        .fn()
-        .mockResolvedValue({
-          mediaType: "text/plain",
-          bytes: new Uint8Array([97]),
-        }),
+      readArtifactMedia: vi.fn().mockResolvedValue({
+        mediaType: "text/plain",
+        bytes: new Uint8Array([97]),
+      }),
       getHuggingFaceTokenStatus: vi
         .fn()
         .mockResolvedValue({ configured: false }),
@@ -1315,15 +1389,13 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
 
 it("renders website capture metadata and HTML source preview for website-ingested artifacts", async () => {
   const client = {
-    browseArtifacts: vi
-      .fn()
-      .mockResolvedValue([
-        {
-          storageKey: "staged/website/example.com/index.html",
-          artifactFamily: "structured-text" as const,
-          mediaType: "text/html",
-        },
-      ]),
+    browseArtifacts: vi.fn().mockResolvedValue([
+      {
+        storageKey: "staged/website/example.com/index.html",
+        artifactFamily: "structured-text" as const,
+        mediaType: "text/html",
+      },
+    ]),
     readArtifactDetail: vi.fn().mockResolvedValue({
       locator: { storageKey: "staged/website/example.com/index.html" },
       artifactFamily: "structured-text" as const,

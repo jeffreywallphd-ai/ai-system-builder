@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ArtifactBrowserFeature } from "../features/artifact-browser";
 import { ArtifactIngestionFeature } from "../features/artifact-upload/components/ArtifactIngestionFeature";
@@ -9,18 +9,25 @@ import { DatasetReviewWorkspace } from "../../../../../modules/ui/shared/dataset
 import { PageDashboardHeader } from "../../../../../modules/ui/shared";
 import { createDesktopDatasetPreparationClient } from "../features/dataset-preparation/api/desktopDatasetPreparationClient";
 import { DesktopPageDashboard } from "../features/page-dashboard/DesktopPageDashboard";
+import { createDesktopContextManagementClient } from "../features/context-management/api/desktopContextManagementClient";
 
 export interface ArtifactsPageProps {
   workspaceId: string;
   workspaceName: string;
   refreshToken: number;
   onUploaded: () => void;
+  initialSelectedStorageKey?: string;
+  onInitialSelectionHandled?: () => void;
+  onConvertToRag?: (artifactId: string) => void;
 }
 
 export function ArtifactsPage({
   workspaceId,
   refreshToken,
   onUploaded,
+  initialSelectedStorageKey,
+  onInitialSelectionHandled,
+  onConvertToRag,
 }: ArtifactsPageProps) {
   const [activeTabId, setActiveTabId] = useState("ingestion");
   const [preparedArtifactStorageKey, setPreparedArtifactStorageKey] =
@@ -69,6 +76,36 @@ export function ArtifactsPage({
       return client.readReviewPage({ ...input, page: 0, pageSize: 10 });
     };
   }, []);
+  const contextClient = useMemo(
+    () => createDesktopContextManagementClient(),
+    [],
+  );
+  const readContextConversionReadiness = useMemo(
+    () => async (artifactId: string) => {
+      const result = await contextClient.execute({
+        workspaceId,
+        command: {
+          action: "source-inspect",
+          artifactId,
+          chunking: {
+            strategy: "structure-aware",
+            chunkCharacters: 1200,
+            overlapCharacters: 120,
+            maximumChunks: 10000,
+          },
+        },
+      });
+      if (result.action !== "source-inspect") {
+        throw new Error("Context readiness response was invalid.");
+      }
+      return result.readiness;
+    },
+    [contextClient, workspaceId],
+  );
+
+  useEffect(() => {
+    if (initialSelectedStorageKey) setActiveTabId("browser");
+  }, [initialSelectedStorageKey]);
 
   return (
     <section
@@ -107,10 +144,18 @@ export function ArtifactsPage({
                 key={`${workspaceId}-${refreshToken}`}
                 workspaceId={workspaceId}
                 readParquetPreview={parquetPreviewReader}
-                initialSelectedStorageKey={preparedArtifactStorageKey}
-                onInitialSelectionHandled={() =>
-                  setPreparedArtifactStorageKey(undefined)
+                initialSelectedStorageKey={
+                  preparedArtifactStorageKey ?? initialSelectedStorageKey
                 }
+                onInitialSelectionHandled={() => {
+                  if (preparedArtifactStorageKey) {
+                    setPreparedArtifactStorageKey(undefined);
+                  } else {
+                    onInitialSelectionHandled?.();
+                  }
+                }}
+                readContextConversionReadiness={readContextConversionReadiness}
+                onConvertToRag={onConvertToRag}
               />
             ),
           },

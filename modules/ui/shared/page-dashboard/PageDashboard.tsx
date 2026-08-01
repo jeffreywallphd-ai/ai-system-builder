@@ -91,6 +91,7 @@ function placeholderMetrics(
     models: ["Models Installed", "Models Trained"],
     "image-generation": ["Images Generated"],
     artifacts: ["Artifacts Uploaded", "Datasets Created"],
+    context: ["RAG Databases", "Markdown Context Packs"],
     assets: ["Assets Used", "Custom Assets"],
     settings: ["Default Runtime Device", "Default Global Model"],
   };

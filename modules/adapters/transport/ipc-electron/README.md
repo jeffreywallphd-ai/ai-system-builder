@@ -56,6 +56,11 @@ conversation session before the instance database and platform database.
   supplies workspace/organization authority. Renderers receive opaque task,
   progress, snapshot-result, and sanitized error data, never checkpoint paths,
   credentials, or raw provider responses.
+- Context Management uses one allowlisted typed execute channel. Preload and
+  main independently normalize identifier-only source/browser commands and
+  bounded generation/query settings. Main denies untrusted senders before lazy
+  feature resolution, injects the authoritative local actor, and delegates to
+  the same application facade used by the server host.
 
 Current test coverage for this slice:
 

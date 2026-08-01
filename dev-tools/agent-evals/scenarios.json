@@ -233,6 +233,33 @@
       "acceptanceSignals": ["Progress remains lifecycle-owned and diagnostics expose no sensitive task payloads."]
     },
     {
+      "id": "context-management-artifact-handoff",
+      "task": "Convert a textual Artifact Browser dataset into a RAG database while preserving valid existing chunk boundaries and source lineage.",
+      "affectedPaths": [
+        "docs/architecture/data-management.md",
+        "docs/architecture/context-management.md",
+        "modules/application/use-cases/context-management/",
+        "modules/adapters/runtime/python/worker/tasks/context_generation.py"
+      ],
+      "expectedPacks": ["context-management", "data-management"],
+      "forbiddenPacks": ["image-generation", "user-library"],
+      "requiredSources": [
+        "docs/adr/ADR-0041-context-management-and-portable-context-artifacts.md",
+        "docs/architecture/context-management.md",
+        "docs/security/context-management-threat-model.md"
+      ],
+      "requiredChecks": [
+        "npm run docs:check",
+        "npm run architecture:check",
+        "npm run agent-support:check",
+        "npm test"
+      ],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": [
+        "The navigation handoff is identifier-only, workspace authorization is repeated, and valid persisted chunk lineage is preserved without rechunking."
+      ]
+    },
+    {
       "id": "agent-governance-change",
       "task": "Change agent governance and context evaluation rules while keeping documentation and CI aligned.",
       "affectedPaths": ["docs/standards/ai-agent-development-standards.md", "dev-tools/agent-evals/scenarios.json"],

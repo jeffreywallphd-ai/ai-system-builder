@@ -230,6 +230,37 @@
       ]
     },
     {
+      "id": "context-management",
+      "path": "docs/context/packs/context-management.pack.md",
+      "description": "Workspace context browsing, RAG database generation, chunk lineage, and portable Markdown context packs.",
+      "taskSignals": [
+        "context management",
+        "context browser",
+        "RAG database",
+        "retrieval context",
+        "context pack",
+        "chunk extraction",
+        "topic extraction"
+      ],
+      "pathSignals": [
+        "docs/architecture/context-management.md",
+        "modules/contracts/context-management/",
+        "modules/contracts/runtime/context-generation.ts",
+        "modules/application/use-cases/context-management/",
+        "modules/adapters/runtime/python/worker/tasks/context_generation.py",
+        "apps/desktop/src/renderer/features/context-management/",
+        "apps/thin-client/src/features/context-management/"
+      ],
+      "verification": [
+        "npm run docs:check",
+        "npm run architecture:check",
+        "npm run agent-support:check",
+        "npm test",
+        "npm run test:e2e",
+        "npm run build:thin-client"
+      ]
+    },
+    {
       "id": "runtime",
       "path": "docs/context/packs/runtime.pack.md",
       "description": "Runtime contracts, adapters, execution, supervisors, and capability guards.",

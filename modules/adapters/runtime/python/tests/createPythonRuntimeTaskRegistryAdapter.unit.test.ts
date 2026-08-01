@@ -203,6 +203,35 @@ describe("createPythonRuntimeTaskRegistryAdapter", () => {
     });
   });
 
+  it("maps CONTEXT_GENERATION to bounded context artifact work", async () => {
+    const runtimePort: any = {
+      startTask: testDouble.fn(async (request) => ({
+        requestId: request.requestId,
+      })),
+      readTaskStatus: testDouble.fn(),
+      cancelTask: testDouble.fn(),
+      getHealthStatus: testDouble.fn(),
+      getCapabilities: testDouble.fn(),
+      ensureModelDownloaded: testDouble.fn(),
+      getModelStatus: testDouble.fn(),
+      unloadModels: testDouble.fn(),
+    };
+    const adapter = createPythonRuntimeTaskRegistryAdapter(runtimePort);
+    await adapter.startTask({
+      workspaceId,
+      requestId: "context-1",
+      taskType: TaskType.CONTEXT_GENERATION,
+      payload: { kind: "rag-database" },
+    });
+    expect(runtimePort.startTask).toHaveBeenCalledWith({
+      requestId: "context-1",
+      taskType: "generate-context-artifact",
+      payload: { kind: "rag-database" },
+      metadata: { workspaceId },
+      timeoutMs: PYTHON_RUNTIME_TASK_TIMEOUTS.contextGeneration,
+    });
+  });
+
   it("maps MODEL_TRAINING startTask to train-model", async () => {
     const runtimePort: any = {
       startTask: testDouble.fn(async (request) => ({

@@ -287,6 +287,7 @@ describe("desktop feature lifecycle safety policy map", () => {
     expect("python-runtime" in DESKTOP_FEATURE_LIFECYCLE_POLICIES).toBe(false);
     expect(DESKTOP_FEATURE_LIFECYCLE_POLICIES["image-generation"]).toBe("disposable");
     expect(DESKTOP_FEATURE_LIFECYCLE_POLICIES["dataset-preparation"]).toBe("disposable");
+    expect(DESKTOP_FEATURE_LIFECYCLE_POLICIES["context-management"]).toBe("disposable");
     expect(DESKTOP_FEATURE_LIFECYCLE_POLICIES["artifact-remote"]).toBe("disposable");
     expect(DESKTOP_FEATURE_LIFECYCLE_POLICIES["website-ingestion"]).toBe("disposable");
     expect(imageSource).toContain("async canDispose()");
