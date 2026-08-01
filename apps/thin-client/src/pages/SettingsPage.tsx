@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { TermWithHint, TransientNotificationPublisher } from "../../../../modules/ui/shared";
+import {
+  PageDashboardHeader,
+  TermWithHint,
+  TransientNotificationPublisher,
+} from "../../../../modules/ui/shared";
 import type {
   ApplicationSettingDefinition,
   ApplicationSettingPrimitiveValue,
   ApplicationSettingValue,
 } from "../../../../modules/contracts/settings";
 import { createApiApplicationSettingsClient } from "../features/settings/api/apiApplicationSettingsClient";
+import { ThinClientPageDashboard } from "../features/page-dashboard/ThinClientPageDashboard";
 
 export function SettingsPage() {
   const client = useMemo(() => createApiApplicationSettingsClient(), []);
@@ -93,9 +98,11 @@ export function SettingsPage() {
 
   return (
     <section className="ui-panel ui-stack ui-stack--md settings-page">
-      <header className="ui-stack ui-stack--sm">
-        <h1>Settings</h1>
-      </header>
+      <PageDashboardHeader
+        title="Settings"
+        description="Manage global defaults and server settings."
+        dashboard={<ThinClientPageDashboard kind="settings" />}
+      />
       {loading ? <p className="ui-text-muted">Loading settings...</p> : null}
       <TransientNotificationPublisher message={statusMessage} title="Settings updated" tone="success" source="Settings" />
       <TransientNotificationPublisher message={errorMessage} title="Settings need attention" tone="error" source="Settings" />

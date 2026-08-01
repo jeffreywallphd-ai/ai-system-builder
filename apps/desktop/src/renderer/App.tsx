@@ -14,7 +14,7 @@ import { createDesktopDatasetPreparationClient } from "./features/dataset-prepar
 import { DatasetPreparationNotificationBridge } from "./features/dataset-preparation/components/DatasetPreparationNotificationBridge";
 import { ModelTrainingNotificationBridge } from "./features/models/components/ModelTrainingNotificationBridge";
 
-type DesktopWorkspacePageKey = Extract<DesktopPageKey, "artifacts" | "assets" | "user-library" | "models" | "image-generation" | "systems">;
+type DesktopWorkspacePageKey = Extract<DesktopPageKey, "artifacts" | "assets" | "models" | "image-generation" | "systems">;
 const desktopModelDownloadNotificationClient = {
   listModelDownloads: (input: Parameters<ReturnType<typeof createDesktopModelsClient>["listModelDownloads"]>[0]) =>
     createDesktopModelsClient().listModelDownloads(input),
@@ -104,10 +104,6 @@ export function WorkspaceAwareDesktopApp({ lazyPages = desktopLazyPages }: Works
       case "assets": {
         const AssetLibraryPage = lazyPages.assets;
         return <AssetLibraryPage __lazyLoadContext={lazyLoadContext} workspaceId={activeWorkspace.id} workspaceName={activeWorkspace.displayName} />;
-      }
-      case "user-library": {
-        const UserLibraryPage = lazyPages["user-library"];
-        return <UserLibraryPage __lazyLoadContext={lazyLoadContext} workspaceId={activeWorkspace.id} workspaceName={activeWorkspace.displayName} />;
       }
       case "models": {
         const ModelsPage = lazyPages.models;

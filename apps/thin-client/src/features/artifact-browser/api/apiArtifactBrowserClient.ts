@@ -16,6 +16,7 @@ export interface ThinClientArtifactBrowseItem {
   artifactId: string;
   storageKey: string;
   artifactFamily: ThinClientArtifactFamily;
+  sourceKind?: ArtifactBrowseContractItem["sourceKind"];
   mediaType?: string;
   sizeBytes?: number;
   originalName?: string;

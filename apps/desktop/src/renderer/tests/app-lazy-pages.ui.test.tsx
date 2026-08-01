@@ -93,7 +93,6 @@ function createControlledRegistry() {
       home: loaderFor("home"),
       artifacts: loaderFor("artifacts"),
       assets: loaderFor("assets"),
-      "user-library": loaderFor("user-library"),
       models: loaderFor("models"),
       "image-generation": loaderFor("image-generation"),
       settings: loaderFor("settings"),

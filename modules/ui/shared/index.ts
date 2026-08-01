@@ -14,6 +14,7 @@ export * from "./dataset-version";
 export * from "./dataset-review";
 export * from "./data-management";
 export * from "./notifications";
+export * from "./page-dashboard";
 export * from "./components/ApplicationIcon";
 export * from "./components/EmptyState";
 export * from "./components/LoadingSpinner";

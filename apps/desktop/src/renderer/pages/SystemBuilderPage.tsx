@@ -5,6 +5,7 @@ import {
   SystemBuildTestModal,
   SystemPublishWorkspace,
 } from "../../../../../modules/ui/shared/system-builder";
+import { PageDashboardHeader } from "../../../../../modules/ui/shared";
 import type {
   SystemBuilderRecord,
   SystemBuilderRevision,
@@ -13,6 +14,7 @@ import { TabbedPanel } from "../components/ui/TabbedPanel";
 import { createDesktopSystemBuilderClient } from "../features/system-builder/api/desktopSystemBuilderClient";
 import { createDesktopSystemBuildClient } from "../features/system-builder/api/desktopSystemBuildClient";
 import { createDesktopSystemPublishedLifecycleClient } from "../features/system-builder/api/desktopSystemPublishedLifecycleClient";
+import { DesktopPageDashboard } from "../features/page-dashboard/DesktopPageDashboard";
 export interface SystemBuilderPageProps {
   readonly workspaceId: string;
   readonly workspaceName: string;
@@ -36,12 +38,14 @@ export function SystemBuilderPage({
   }>();
   return (
     <section className="ui-stack ui-stack--sm" aria-labelledby="systems-title">
-      <header className="ui-stack ui-stack--sm">
-        <h1 id="systems-title">Systems</h1>
-        <p className="ui-text-muted">
-          Build systems in {workspaceName} from reusable, versioned assets.
-        </p>
-      </header>
+      <PageDashboardHeader
+        title="Systems"
+        titleId="systems-title"
+        description={`Build systems in ${workspaceName} from reusable, versioned assets.`}
+        dashboard={
+          <DesktopPageDashboard kind="systems" workspaceId={workspaceId} />
+        }
+      />
       <TabbedPanel
         activeTabId={activeTabId}
         onTabChange={setActiveTabId}

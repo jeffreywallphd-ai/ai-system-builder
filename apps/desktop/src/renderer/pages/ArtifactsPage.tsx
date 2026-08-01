@@ -6,7 +6,9 @@ import { DatasetPreparationFeature } from "../features/dataset-preparation/compo
 import { PythonRuntimeFooter } from "../features/python-runtime/components/PythonRuntimeFooter";
 import { TabbedPanel } from "../components/ui/TabbedPanel";
 import { DatasetReviewWorkspace } from "../../../../../modules/ui/shared/dataset-review";
+import { PageDashboardHeader } from "../../../../../modules/ui/shared";
 import { createDesktopDatasetPreparationClient } from "../features/dataset-preparation/api/desktopDatasetPreparationClient";
+import { DesktopPageDashboard } from "../features/page-dashboard/DesktopPageDashboard";
 
 export interface ArtifactsPageProps {
   workspaceId: string;
@@ -73,11 +75,13 @@ export function ArtifactsPage({
       className="ui-stack ui-stack--sm"
       data-refresh-token={refreshToken}
     >
-      <h1>Data Management</h1>
-      <p>
-        Add source data, prepare and review training datasets, and manage
-        workspace artifacts.
-      </p>
+      <PageDashboardHeader
+        title="Data Management"
+        description="Add source data, prepare and review training datasets, and manage workspace artifacts."
+        dashboard={
+          <DesktopPageDashboard kind="artifacts" workspaceId={workspaceId} />
+        }
+      />
       <TabbedPanel
         tabListAriaLabel="Artifact workspace panels"
         activeTabId={activeTabId}

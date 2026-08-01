@@ -14,14 +14,6 @@ import type {
   ThinClientPageKey,
 } from "../../routes/thinClientPages";
 import appLogoSrc from "../../../../../modules/ui/shared/assets/branding/logo.svg";
-import dataOrbitSrc from "../../../../../modules/ui/shared/assets/illustrations/data-orbit.svg";
-import assetsOrbitSrc from "../../../../../modules/ui/shared/assets/illustrations/assets-orbit.png";
-import libraryOrbitSrc from "../../../../../modules/ui/shared/assets/illustrations/library-orbit.png";
-import modelsOrbitSrc from "../../../../../modules/ui/shared/assets/illustrations/models-orbit.png";
-import imageGenerationOrbitSrc from "../../../../../modules/ui/shared/assets/illustrations/image-generation-orbit.png";
-import settingsOrbitSrc from "../../../../../modules/ui/shared/assets/illustrations/settings-orbit.png";
-import securityOrbitSrc from "../../../../../modules/ui/shared/assets/illustrations/security-orbit.png";
-import systemsOrbitSrc from "../../../../../modules/ui/shared/assets/illustrations/systems-orbit.png";
 import { WorkspaceSwitcher } from "../../features/workspace";
 
 export interface AppShellProps {
@@ -53,11 +45,15 @@ export function AppShell({
     readonly label: string;
     readonly keys: readonly ThinClientPageKey[];
   }[] = [
-    { id: "build", label: "Build", keys: ["systems", "models", "image-generation"] },
+    {
+      id: "build",
+      label: "Build",
+      keys: ["systems", "models", "image-generation"],
+    },
     {
       id: "manage",
       label: "Manage",
-      keys: ["artifacts", "assets", "user-library"],
+      keys: ["artifacts", "assets"],
     },
   ];
 
@@ -103,8 +99,6 @@ export function AppShell({
       document.removeEventListener("touchstart", closeMenuOnOutsideClick);
     };
   }, []);
-
-  const pageArtwork = resolveThinClientPageArtwork(activePage);
 
   return (
     <main
@@ -237,58 +231,13 @@ export function AppShell({
         </aside>
         <div className="ui-shell__main">
           <NotificationViewport />
-          {pageArtwork ? (
-            <div
-              className={`ui-shell__page-art ui-shell__page-art--${pageArtwork.tone}`}
-              aria-hidden="true"
-            >
-              <img src={pageArtwork.src} alt="" />
-            </div>
-          ) : null}
-          <div
-            className={`ui-shell__content${pageArtwork ? " ui-shell__content--with-art" : ""}`}
-          >
+          <div className="ui-shell__content">
             {children}
           </div>
         </div>
       </div>
     </main>
   );
-}
-
-function resolveThinClientPageArtwork(activePage?: ThinClientPageKey) {
-  if (!activePage || activePage === "home") {
-    return undefined;
-  }
-
-  if (activePage === "artifacts") {
-    return { src: dataOrbitSrc, tone: "data" } as const;
-  }
-  if (activePage === "systems") {
-    return { src: systemsOrbitSrc, tone: "systems" } as const;
-  }
-
-  if (activePage === "assets") {
-    return { src: assetsOrbitSrc, tone: "assets" } as const;
-  }
-
-  if (activePage === "user-library") {
-    return { src: libraryOrbitSrc, tone: "user-library" } as const;
-  }
-
-  if (activePage === "models") {
-    return { src: modelsOrbitSrc, tone: "models" } as const;
-  }
-
-  if (activePage === "image-generation") {
-    return { src: imageGenerationOrbitSrc, tone: "image-generation" } as const;
-  }
-
-  if (activePage === "security") {
-    return { src: securityOrbitSrc, tone: "security" } as const;
-  }
-
-  return { src: settingsOrbitSrc, tone: "settings" } as const;
 }
 
 function thinClientPageIcon(page: ThinClientPageKey): ApplicationIconName {
@@ -301,8 +250,6 @@ function thinClientPageIcon(page: ThinClientPageKey): ApplicationIconName {
       return "systems";
     case "assets":
       return "assets";
-    case "user-library":
-      return "library";
     case "models":
       return "models";
     case "image-generation":

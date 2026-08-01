@@ -2,6 +2,8 @@ import { useState } from "react";
 
 import { CollapsiblePanel } from "../components/ui/CollapsiblePanel";
 import { SettingsPanel, SoftwareStatusSection } from "../features/settings";
+import { PageDashboardHeader } from "../../../../../modules/ui/shared";
+import { DesktopPageDashboard } from "../features/page-dashboard/DesktopPageDashboard";
 
 export function SettingsPage() {
   const [runtimeExpanded, setRuntimeExpanded] = useState(false);
@@ -11,8 +13,11 @@ export function SettingsPage() {
 
   return (
     <section className="ui-stack ui-stack--sm">
-      <h1>Settings</h1>
-      <p className="ui-text-muted">Manage global desktop defaults and inspect operational software status.</p>
+      <PageDashboardHeader
+        title="Settings"
+        description="Manage global desktop defaults and inspect operational software status."
+        dashboard={<DesktopPageDashboard kind="settings" />}
+      />
       <SettingsPanel title="Hugging Face" category="huggingface" />
       <SettingsPanel title="Models" category="models" />
       <CollapsiblePanel

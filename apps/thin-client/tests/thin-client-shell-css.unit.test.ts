@@ -51,23 +51,14 @@ describe("shared application shell styling", () => {
     expect(css).toContain(".ui-shell__menu");
   });
 
-  it("supports shared sidebar collapse and contextual page artwork", () => {
+  it("supports shared sidebar collapse without contextual page artwork", () => {
     const css = readShellCss();
 
     expect(css).toContain(".ui-shell--sidebar-collapsed .ui-shell__body");
     expect(css).toContain("var(--shell-sidebar-collapsed-width)");
     expect(css).toContain(".ui-shell__collapse-button");
-    expect(css).toContain(".ui-shell__page-art");
-    expect(css).toContain(
-      ".ui-shell__main:has(.ui-page-loading-surface) .ui-shell__page-art",
-    );
-    expect(
-      getRule(
-        css,
-        ".ui-shell__main:has(.ui-page-loading-surface) .ui-shell__page-art",
-      ),
-    ).toContain("visibility: hidden");
-    expect(css).toContain(".ui-shell__content--with-art");
+    expect(css).not.toContain(".ui-shell__page-art");
+    expect(css).not.toContain(".ui-shell__content--with-art");
     expect(css).toContain(".ui-shell--sidebar-collapsed .ui-shell__content");
     expect(
       getRule(css, ".ui-shell--sidebar-collapsed .ui-shell__content"),

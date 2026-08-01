@@ -13,7 +13,6 @@ describe("desktop page workspace metadata", () => {
     expect(desktopPageDefinitions.filter((page) => page.requiresWorkspace).map((page) => page.key)).toEqual([
       "artifacts",
       "assets",
-      "user-library",
       "models",
       "image-generation",
       "systems",

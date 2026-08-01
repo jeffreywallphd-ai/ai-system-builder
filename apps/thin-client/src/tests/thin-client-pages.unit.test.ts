@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { thinClientPageDefinitions, thinClientPageRequiresWorkspace } from "../routes/thinClientPages";
+import {
+  resolveThinClientPage,
+  thinClientPageDefinitions,
+  thinClientPageRequiresWorkspace,
+} from "../routes/thinClientPages";
 
 describe("thin-client page workspace metadata", () => {
   it("marks resource-backed pages as workspace-required and keeps global pages open", () => {
@@ -16,9 +20,12 @@ describe("thin-client page workspace metadata", () => {
       "systems",
       "artifacts",
       "assets",
-      "user-library",
       "image-generation",
       "models",
     ]);
+  });
+
+  it("falls back to Home for the removed reusable-library route", () => {
+    expect(resolveThinClientPage("/user-library")).toBe("home");
   });
 });

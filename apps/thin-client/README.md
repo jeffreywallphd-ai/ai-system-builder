@@ -19,7 +19,13 @@ Current scope:
   beside the feature that the user must inspect or act on
 - short secured model-download API calls at `/api/model/download/start`,
   `/read`, `/list`, and `/cancel`; the browser never receives host-local paths
-- Home page workspace card with a compact responsive equal-width two-column layout: change-workspace controls on the left and create-workspace controls on the right
+- Home page workspace card with a responsive four-metric dashboard to the right
+  of the heading and workspace controls
+- shared mini dashboards instead of decorative page-header artwork on Systems,
+  Data, Assets, Models, Image Generation, and Settings; all workspace metrics
+  use existing scoped API clients and fail softly when a summary is unavailable
+- no dedicated Reusable Library route or Home card; underlying cross-workspace
+  reuse APIs remain available to asset workflows
 - feature-local artifact upload workflow under `src/features/artifact-upload/`, including multi-file selection, independent per-file results, and cancelation for selected or queued uploads
 - feature-local artifact browser workflow under `src/features/artifact-browser/`
 - fetch-based HTTP artifact-upload client that calls the server API route (`/api/artifact/upload`)

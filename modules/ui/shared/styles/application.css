@@ -14,6 +14,7 @@
 @import "./components/tabs.css";
 @import "./components/workflow.css";
 @import "./components/home.css";
+@import "./components/page-dashboard.css";
 @import "./components/feature-surfaces.css";
 @import "./components/system-composer.css";
 @import "./components/system-composition-preview.css";

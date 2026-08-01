@@ -1,5 +1,15 @@
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.
 
+- Page summary UI lives in `modules/ui/shared/page-dashboard`. Keep metric
+  derivation host-neutral and use host adapters only to compose existing scoped
+  clients. Home and Systems count active systems with at least one published
+  release; unpublished builds do not count. Home also counts active dataset
+  groups, generated models, and active published/customized assets. Assets Used
+  sums resolved asset instances from the latest published release per system.
+  Artifacts Uploaded applies the same visibility and source grouping as the
+  Artifact Browser, excluding its hidden internal sidecars and system builds.
+  Loading and unavailable summaries show
+  bounded placeholders and never surface raw transport failures.
 - User-facing glossary hints live in `modules/ui/shared/glossary`; add or update entries when introducing novel form-field or detail-label terms. Expanded collapsible panels must allow hint bubbles to extend beyond the card boundary instead of clipping their definitions.
 - Dataset Preparation output fields live in
   `modules/ui/shared/data-management`. Keep the editor task-aware and usable

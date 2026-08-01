@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { AssetPackageManager } from "../../../../../modules/ui/shared/asset-package";
+import { PageDashboardHeader } from "../../../../../modules/ui/shared";
 import {
   AssetStudioWorkspace,
   SavedAssetDrafts,
@@ -11,6 +12,7 @@ import { createDesktopAssetAuthoringClient } from "../features/asset-authoring/a
 import { AssetLibraryFeature } from "../features/asset-library";
 import { createDesktopAssetPackageClient } from "../features/asset-package/api/desktopAssetPackageClient";
 import { createDesktopAssetStudioClient } from "../features/asset-studio/api/desktopAssetStudioClient";
+import { DesktopPageDashboard } from "../features/page-dashboard/DesktopPageDashboard";
 
 export interface WorkspaceScopedPageProps {
   workspaceId: string;
@@ -26,7 +28,12 @@ export function AssetLibraryPage({ workspaceId }: WorkspaceScopedPageProps) {
   }>();
   return (
     <section className="ui-stack ui-stack--sm">
-      <h1>Assets</h1>
+      <PageDashboardHeader
+        title="Assets"
+        dashboard={
+          <DesktopPageDashboard kind="assets" workspaceId={workspaceId} />
+        }
+      />
       <TabbedPanel
         activeTabId={activeTabId}
         defaultTabId="browse"

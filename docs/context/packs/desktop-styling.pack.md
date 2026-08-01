@@ -51,7 +51,13 @@
 - Keep wide-screen navigation sections as semantic, independently collapsible disclosure groups. Global collapse must let the page content consume the reclaimed width without changing route availability.
 - Reuse shared action icons, feature-panel headings, bordered tab states, and colored artifact type badges. Keep visible text and source metadata alongside visual designators.
 - Reuse `WorkflowSequence` and `WorkflowStep` for ordered, multi-stage task surfaces. Keep each feature's behavior and state local while sharing numbered cards, connecting rails, field grids, and review/action presentation.
-- Keep decorative page illustrations shared, text-free, responsive, and hidden from assistive technology. Do not encode state or feature behavior in artwork.
+- Use the shared mini-dashboard surface for core page headers and the Home
+  workspace summary. Keep metrics text-labeled, responsive, and derived from
+  authoritative scoped reads. Core-page and Home summaries remain in the
+  right header column beside page context and workspace controls. Keep their
+  metric cards consistently fixed-width rather than stretched. Hide dashboard
+  summaries on small screens; do not restore decorative shell or Home hero
+  artwork in those locations.
 
 ## Key Constraints
 

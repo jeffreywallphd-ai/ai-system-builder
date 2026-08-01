@@ -71,6 +71,7 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
     "modules/ui/shared/foundation-assets/FoundationAssetPreview.tsx",
     "modules/ui/shared/foundation-assets/FoundationAssetSurface.tsx",
     "modules/ui/shared/data-management/GuidedIngestionTaskPanel.tsx",
+    "modules/ui/shared/page-dashboard/PageDashboard.tsx",
     "modules/ui/shared/system-builder/SystemBuildTestModal.tsx",
     "modules/ui/shared/system-builder/SystemComposerClickEditor.tsx",
     "modules/ui/shared/system-builder/SystemComposerInspector.tsx",

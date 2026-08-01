@@ -4,7 +4,9 @@ import { ArtifactIngestionFeature } from "../features/artifact-upload";
 import { DatasetPreparationFeature } from "../features/dataset-preparation";
 import { TabbedPanel } from "../components/ui/TabbedPanel";
 import { DatasetReviewWorkspace } from "../../../../modules/ui/shared/dataset-review";
+import { PageDashboardHeader } from "../../../../modules/ui/shared";
 import { createApiDatasetPreparationClient } from "../features/dataset-preparation";
+import { ThinClientPageDashboard } from "../features/page-dashboard/ThinClientPageDashboard";
 
 export interface WorkspaceScopedPageProps {
   workspaceId: string;
@@ -63,7 +65,13 @@ export function ArtifactsPage({ workspaceId }: WorkspaceScopedPageProps) {
   }, []);
   return (
     <section className="ui-stack ui-stack--sm">
-      <h1>Data Management</h1>
+      <PageDashboardHeader
+        title="Data Management"
+        description="Add source data, prepare and review training datasets, and manage workspace artifacts."
+        dashboard={
+          <ThinClientPageDashboard kind="artifacts" workspaceId={workspaceId} />
+        }
+      />
       <TabbedPanel
         tabListAriaLabel="Artifact workspace panels"
         activeTabId={activeTabId}

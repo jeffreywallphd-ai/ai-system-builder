@@ -1,9 +1,10 @@
 import {
   ApplicationIcon,
+  PageDashboardHeader,
   WorkspaceContextHint,
 } from "../../../../modules/ui/shared";
-import workspaceOrbitSrc from "../../../../modules/ui/shared/assets/illustrations/workspace-orbit.png";
 import { useActiveWorkspace, WorkspaceSwitcher } from "../features/workspace";
+import { ThinClientPageDashboard } from "../features/page-dashboard/ThinClientPageDashboard";
 import type { ThinClientPageKey } from "../routes/thinClientPages";
 
 export interface HomePageProps {
@@ -13,9 +14,9 @@ export interface HomePageProps {
 type HomeAreaCard = {
   readonly key: Extract<
     ThinClientPageKey,
+    | "systems"
     | "artifacts"
     | "assets"
-    | "user-library"
     | "models"
     | "image-generation"
     | "security"
@@ -28,16 +29,25 @@ type HomeAreaCard = {
 };
 
 type HomeCardIllustrationKind =
-  "data" | "assets" | "library" | "models" | "image-generation" | "security";
+  "system" | "data" | "assets" | "models" | "image-generation" | "security";
 
 const homeAreaCards: readonly HomeAreaCard[] = [
+  {
+    key: "systems",
+    title: "Systems",
+    eyebrow: "Compose and build",
+    description:
+      "Construct workspace systems from reusable assets, workflows, pages, tools, models, data, and subsystems.",
+    buttonLabel: "Build & Run Systems",
+    illustration: "system",
+  },
   {
     key: "artifacts",
     title: "Data",
     eyebrow: "Inputs and artifacts",
     description:
       "Upload files, scrape web pages, inspect stored artifacts, and keep workspace source material organized.",
-    buttonLabel: "Open Data",
+    buttonLabel: "Manage Data & Build Datasets",
     illustration: "data",
   },
   {
@@ -46,17 +56,8 @@ const homeAreaCards: readonly HomeAreaCard[] = [
     eyebrow: "Workspace library",
     description:
       "Browse system defaults, shared resources, and workspace-visible asset definitions.",
-    buttonLabel: "Open Assets",
+    buttonLabel: "Manage System Assets",
     illustration: "assets",
-  },
-  {
-    key: "user-library",
-    title: "Reusable Library",
-    eyebrow: "Cross-workspace reuse",
-    description:
-      "Review reusable assets and workspace links without duplicating shared source material.",
-    buttonLabel: "Open Library",
-    illustration: "library",
   },
   {
     key: "models",
@@ -64,7 +65,7 @@ const homeAreaCards: readonly HomeAreaCard[] = [
     eyebrow: "Model inventory",
     description:
       "Manage saved model references from workspace storage and shared model locations.",
-    buttonLabel: "Open Models",
+    buttonLabel: "Manage and Train Models",
     illustration: "models",
   },
   {
@@ -73,7 +74,7 @@ const homeAreaCards: readonly HomeAreaCard[] = [
     eyebrow: "Generate visual outputs",
     description:
       "Create image outputs from prompts and route finished work into the asset pipeline.",
-    buttonLabel: "Open Image Generation",
+    buttonLabel: "Generate Images",
     illustration: "image-generation",
   },
   {
@@ -92,6 +93,23 @@ function HomeCardIllustration({
 }: {
   readonly kind: HomeCardIllustrationKind;
 }) {
+  if (kind === "system") {
+    return (
+      <svg
+        className="home-card-illustration"
+        viewBox="0 0 96 72"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <rect x="35" y="8" width="26" height="16" rx="4" />
+        <rect x="8" y="48" width="22" height="16" rx="4" />
+        <rect x="37" y="48" width="22" height="16" rx="4" />
+        <rect x="66" y="48" width="22" height="16" rx="4" />
+        <path d="M48 24v12M19 36h58M19 36v12M48 36v12M77 36v12" />
+      </svg>
+    );
+  }
+
   if (kind === "data") {
     return (
       <svg
@@ -120,21 +138,6 @@ function HomeCardIllustration({
         <rect x="52" y="14" width="24" height="20" rx="5" />
         <rect x="36" y="40" width="24" height="20" rx="5" />
         <path d="M44 24h8M48 34v6M32 34l8 8M64 34l-8 8" />
-      </svg>
-    );
-  }
-
-  if (kind === "library") {
-    return (
-      <svg
-        className="home-card-illustration"
-        viewBox="0 0 96 72"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <rect x="20" y="14" width="56" height="42" rx="6" />
-        <path d="M32 24h32M32 34h24M32 44h30" />
-        <path d="M24 18v-4h44v4M28 56v4h44v-4" />
       </svg>
     );
   }
@@ -200,28 +203,24 @@ export function HomePage({ onNavigate }: HomePageProps) {
       aria-labelledby="home-title"
     >
       <div className="home-workspace-card ui-stack">
-        <div className="home-card__header">
-          <div className="ui-stack ui-stack--sm">
-            <p className="home-card__eyebrow">Welcome back</p>
-            <h1 id="home-title" className="ui-panel__title">
-              {heroTitle}
-            </h1>
-            <p className="ui-text-muted">
-              {workspaceName
-                ? "This is your current workspace. All resources and activities are scoped to this context."
-                : "Create or select a workspace to begin building and managing AI systems."}
-            </p>
-          </div>
-          {workspace.loading ? null : (
-            <img
-              className="home-workspace-card__art"
-              src={workspaceOrbitSrc}
-              alt=""
-              aria-hidden="true"
+        <PageDashboardHeader
+          eyebrow={<p className="home-card__eyebrow">Welcome back</p>}
+          title={heroTitle}
+          titleId="home-title"
+          description={
+            workspaceName
+              ? "This is your current workspace. All resources and activities are scoped to this context."
+              : "Create or select a workspace to begin building and managing AI systems."
+          }
+          controls={<WorkspaceSwitcher />}
+          dashboard={
+            <ThinClientPageDashboard
+              kind="home"
+              size="large"
+              workspaceId={workspace.activeWorkspaceId}
             />
-          )}
-        </div>
-        <WorkspaceSwitcher />
+          }
+        />
       </div>
 
       <WorkspaceContextHint />

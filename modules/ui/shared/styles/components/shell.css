@@ -451,54 +451,6 @@
   pointer-events: none;
 }
 
-.ui-shell__page-art {
-  position: absolute;
-  z-index: -1;
-  inset-block-start: 0;
-  inset-inline-end: clamp(0.75rem, 3vw, 3rem);
-  inline-size: clamp(22rem, 38vw, 38rem);
-  block-size: 10rem;
-  overflow: hidden;
-  pointer-events: none;
-  opacity: 0.88;
-  transition:
-    opacity var(--transition-fast),
-    visibility var(--transition-fast);
-  mask-image:
-    linear-gradient(90deg, transparent, black 25% 78%, transparent),
-    linear-gradient(180deg, black 65%, transparent);
-  mask-composite: intersect;
-  -webkit-mask-image:
-    linear-gradient(90deg, transparent, black 25% 78%, transparent),
-    linear-gradient(180deg, black 65%, transparent);
-  -webkit-mask-composite: source-in;
-}
-
-.ui-shell__main:has(.ui-page-loading-surface) .ui-shell__page-art {
-  visibility: hidden;
-  opacity: 0;
-}
-
-.ui-shell__page-art img {
-  inline-size: 100%;
-  block-size: 100%;
-  max-inline-size: none;
-  object-fit: contain;
-  border: 0;
-  border-radius: 0;
-}
-
-.ui-shell__page-art--assets,
-.ui-shell__page-art--user-library {
-  opacity: 0.96;
-}
-
-.ui-shell__page-art--models,
-.ui-shell__page-art--settings,
-.ui-shell__page-art--security {
-  opacity: 0.96;
-}
-
 .ui-shell__content {
   position: relative;
   z-index: 1;
@@ -508,11 +460,6 @@
 
 .ui-shell--sidebar-collapsed .ui-shell__content {
   inline-size: 100%;
-}
-
-.ui-shell__content--with-art > :is(section, div) > h1,
-.ui-shell__content--with-art > :is(section, div) > header:first-child h1 {
-  max-inline-size: min(55%, 46rem);
 }
 
 .ui-shell__content > :is(section, div) > h1,
@@ -643,12 +590,6 @@
 
   .ui-shell__main {
     padding: var(--space-md);
-  }
-
-  .ui-shell__page-art {
-    inline-size: 19rem;
-    block-size: 8rem;
-    opacity: 0.48;
   }
 
   .workspace-switcher--header {

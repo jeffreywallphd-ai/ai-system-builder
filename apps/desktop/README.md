@@ -152,6 +152,15 @@ Renderer constraints for this slice:
 
 ## Renderer Shell And Workspace UI
 
+- Shared mini dashboards replace decorative page-header artwork. Home shows the
+  larger workspace summary for published systems, active datasets, trained models,
+  and active custom assets. Systems, Data, Assets, Models, Image Generation,
+  and Settings show their task-specific summaries from existing
+  workspace-scoped read clients; unavailable summaries fail softly without
+  exposing transport details.
+- The dedicated Reusable Library renderer route is not part of primary
+  navigation. Cross-workspace reuse contracts and host operations remain
+  available to asset workflows without a standalone page.
 - A dedicated published-system window is lifecycle-bound to its exact release.
   Explicit **Stop** closes the window without a duplicate lifecycle mutation;
   closing that window directly closes its conversation session and invokes
@@ -170,7 +179,8 @@ Renderer constraints for this slice:
   security blockers, retry context, and active task controls remain inline.
 - Desktop primary navigation is exposed through a plain hamburger menu in the right side of the header, directly before the themed settings gear.
 - The header centers a compact **Current Workspace** selector with an explicit **Change** action between the brand area and the right-side menu/settings actions.
-- The Home page keeps the fuller workspace card in a compact responsive equal-width two-column layout, with change-workspace controls on the left and create-workspace controls on the right.
+- The Home page keeps the fuller workspace card with its responsive four-metric
+  dashboard to the right of the heading and workspace controls.
 - Workspace-required pages should rely on the header for current workspace display and should not repeat current workspace labels in each feature panel.
 - Data Management tab content uses the shared sectioned panel header style for Data Artifact Ingester, Artifact Browser, and Dataset Preparation; panel headers stay title-only, body content uses grouped sections and card/list controls, and actions such as Artifact Browser refresh belong in the body.
 - Artifact Browser and Dataset Preparation source lists classify uploaded/generated artifacts by storage path segments and `sourceKind`, so workspace-prefixed keys such as `workspaces/.../artifacts/files/uploads/...` still appear in the uploaded group.

@@ -1,0 +1,103 @@
+.page-dashboard {
+  --page-dashboard-card-inline-size: 15rem;
+  position: relative;
+  z-index: 1;
+  margin-block-end: var(--space-lg);
+}
+
+.page-dashboard__grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    var(--page-dashboard-card-inline-size)
+  );
+  justify-content: end;
+  gap: var(--space-sm);
+  margin: 0;
+}
+
+.page-dashboard--large {
+  inline-size: 100%;
+}
+
+.page-dashboard--large .page-dashboard__grid {
+  grid-template-columns: repeat(2, var(--page-dashboard-card-inline-size));
+}
+
+.page-dashboard-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(31rem, 44rem);
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+.page-dashboard-header__copy {
+  min-width: 0;
+  padding-block-start: var(--space-xs);
+}
+
+.page-dashboard-header__summary {
+  min-width: 0;
+}
+
+.page-dashboard-header__summary .page-dashboard {
+  inline-size: 100%;
+  margin: 0;
+}
+
+.page-dashboard__metric {
+  inline-size: var(--page-dashboard-card-inline-size);
+  block-size: 6rem;
+  min-width: 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid
+    color-mix(in srgb, var(--color-border) 78%, var(--color-accent));
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(135deg, rgb(76 145 255 / 14%), transparent 66%),
+    var(--color-bg-elevated);
+  box-shadow: var(--shadow-sm);
+}
+
+.page-dashboard__metric dt {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.page-dashboard__metric dd {
+  margin: var(--space-xs) 0 0;
+  color: var(--color-text-primary);
+  font-size: 1.6rem;
+  font-weight: 720;
+  line-height: 1.05;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-dashboard__detail {
+  display: block;
+  margin-block-start: var(--space-xs);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.page-dashboard__status {
+  margin: var(--space-xs) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+@media (max-width: 56rem) {
+  .page-dashboard {
+    display: none;
+  }
+
+  .page-dashboard-header {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+}

@@ -8,7 +8,16 @@ Keep the import order token-first. Add a rule here only when both application su
 
 Do not recreate app-local copies of a shared stylesheet. Both app entrypoints should import `application.css`, and changes to shared rules should be verified in both builds and viewport shapes.
 
-Shared decorative artwork belongs in `modules/ui/shared/assets/illustrations/` as responsive, text-free SVG or transparent PNG assets. Shell and Home illustrations must remain `aria-hidden`, must not carry feature meaning, and must never become a substitute for labels, state, or data. Full-page loading surfaces use `ui-page-loading-surface` so the shell keeps page artwork hidden until page content is ready. Color variants should reuse the shared visual vocabulary so desktop and thin-client pages do not drift.
+Page headers and the Home workspace card use the shared `page-dashboard`
+surface instead of decorative artwork. Keep metric cards responsive,
+text-labeled, and based on authoritative scoped reads. Page dashboards stay in
+the right header column, including Home beside its workspace controls. Metric
+cards use one fixed width based on the longest label rather than stretching to
+fill the column, and Home keeps its four metrics in an explicit two-by-two
+grid. Do not reintroduce
+The summaries are hidden at small-screen widths so primary page controls retain
+the viewport. Do not reintroduce shell-level or Home hero images as a substitute
+for current workspace state.
 
 Unselected tabs retain a visible border so the complete tab set reads as interactive. Wide-screen navigation groups use semantic disclosure controls, and collapsing the global sidebar must allow the content container to use the reclaimed width. Colored type badges and action icons are shared primitives: use them alongside text, not as unlabeled substitutes.
 

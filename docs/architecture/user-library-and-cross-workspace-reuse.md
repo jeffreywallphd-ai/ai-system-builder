@@ -154,12 +154,14 @@ This transport exposure does not add desktop or thin-client UI, propagation exec
 - Local persistence adapters are implemented for user-library records and workspace-scoped link/copy/import relationship records.
 - Effective-source read summaries are integrated through workspace asset resolver/read-facade seams with workspace isolation preserved.
 - Transport exposure exists for API + Electron IPC + desktop preload with explicit workspace identifiers and sanitized error mapping.
-- Minimal desktop and thin-client User Library UI/client surfaces exist for list/read and explicit link actions that require workspace context.
+- No dedicated desktop or thin-client User Library page is routed. The narrow
+  clients and transport operations remain available for integration through
+  asset-owned workflows, with explicit workspace context.
 
 ### Implemented but transport/UI unavailable
 
 - Promote, detached copy, and workspace import operations are transport-exposed with typed unavailable behavior when host composition does not wire those use cases.
-- Detached copy actions are unavailable in User Library reuse minimal UI (UI does not offer copy execution).
+- Detached copy actions are not offered through a dedicated User Library UI.
 - No live workspace-to-workspace links. Workspace import remains detached copy semantics.
 - No automatic propagation execution or hidden latest-follow behavior.
 - No broad asset authoring, customization editing, override editing, or composition authoring in User Library reuse.

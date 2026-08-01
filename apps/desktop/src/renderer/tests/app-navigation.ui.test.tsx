@@ -267,7 +267,11 @@ describe("desktop renderer page composition", () => {
     expect(container.querySelector("header")?.textContent).toContain(
       "AI System Builder",
     );
-    expect(container.textContent).toContain("Open Systems");
+    expect(container.textContent).toContain("Build & Run Systems");
+    expect(container.textContent).toContain("Manage Data & Build Datasets");
+    expect(container.textContent).toContain("Manage System Assets");
+    expect(container.textContent).toContain("Manage and Train Models");
+    expect(container.textContent).toContain("Generate Images");
     expect(container.querySelector("header")?.textContent).not.toContain(
       "Create workspace",
     );
@@ -381,9 +385,8 @@ describe("desktop renderer page composition", () => {
     });
     await waitForText(container, "Search assets");
     expect(container.textContent).toContain("Search assets");
-    expect(
-      Boolean(container.querySelector(".ui-shell__page-art--assets img")),
-    ).toBe(true);
+    expect(container.textContent).toContain("Assets Used");
+    expect(container.querySelector(".ui-shell__page-art")).toBe(null);
     expect(
       container.querySelector("button[aria-current='page']")?.textContent,
     ).toBe("Assets");

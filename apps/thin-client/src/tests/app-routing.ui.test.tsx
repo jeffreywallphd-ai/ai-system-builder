@@ -53,6 +53,7 @@ describe("thin-client routing and page composition", () => {
     });
 
     expect(container.textContent).toContain("Build and manage");
+    expect(container.textContent).toContain("Manage and Train Models");
 
     const imageButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Image Generation");
     expect(imageButton).toBeDefined();

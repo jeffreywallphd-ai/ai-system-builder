@@ -1,9 +1,10 @@
 import {
   ApplicationIcon,
+  PageDashboardHeader,
   WorkspaceContextHint,
 } from "../../../../../modules/ui/shared";
-import workspaceOrbitSrc from "../../../../../modules/ui/shared/assets/illustrations/workspace-orbit.png";
 import { useActiveWorkspace, WorkspaceSwitcher } from "../features/workspace";
+import { DesktopPageDashboard } from "../features/page-dashboard/DesktopPageDashboard";
 import type { DesktopPageKey } from "../routes/desktopPages";
 
 export interface HomePageProps {
@@ -32,7 +33,7 @@ const homeAreaCards: readonly HomeAreaCard[] = [
     eyebrow: "Compose and build",
     description:
       "Construct workspace systems from reusable assets, workflows, pages, tools, models, data, and subsystems.",
-    buttonLabel: "Open Systems",
+    buttonLabel: "Build & Run Systems",
     illustration: "system",
   },
   {
@@ -41,7 +42,7 @@ const homeAreaCards: readonly HomeAreaCard[] = [
     eyebrow: "Inputs and artifacts",
     description:
       "Upload files, inspect stored artifacts, and keep workspace source material organized.",
-    buttonLabel: "Open Data",
+    buttonLabel: "Manage Data & Build Datasets",
     illustration: "data",
   },
   {
@@ -50,7 +51,7 @@ const homeAreaCards: readonly HomeAreaCard[] = [
     eyebrow: "Workspace library",
     description:
       "Browse system defaults, resource-backed views, and workspace-visible asset definitions.",
-    buttonLabel: "Open Assets",
+    buttonLabel: "Manage System Assets",
     illustration: "assets",
   },
   {
@@ -59,7 +60,7 @@ const homeAreaCards: readonly HomeAreaCard[] = [
     eyebrow: "Model inventory",
     description:
       "Manage saved model references and prepare model records for workspace workflows.",
-    buttonLabel: "Open Models",
+    buttonLabel: "Manage and Train Models",
     illustration: "models",
   },
   {
@@ -68,7 +69,7 @@ const homeAreaCards: readonly HomeAreaCard[] = [
     eyebrow: "Generate visual outputs",
     description:
       "Create image outputs from prompts and route finished work into the asset pipeline.",
-    buttonLabel: "Open Image Generation",
+    buttonLabel: "Generate Images",
     illustration: "image-generation",
   },
 ];
@@ -174,28 +175,24 @@ export function HomePage({ onNavigate }: HomePageProps) {
       aria-labelledby="home-title"
     >
       <div className="home-workspace-card ui-stack">
-        <div className="home-card__header">
-          <div className="ui-stack ui-stack--sm">
-            <p className="home-card__eyebrow">Welcome back</p>
-            <h1 id="home-title" className="ui-panel__title">
-              {heroTitle}
-            </h1>
-            <p className="ui-text-muted">
-              {workspaceName
-                ? "This is your current workspace. All resources and activities are scoped to this context."
-                : "Create or select a workspace to begin building and managing AI systems."}
-            </p>
-          </div>
-          {workspace.loading ? null : (
-            <img
-              className="home-workspace-card__art"
-              src={workspaceOrbitSrc}
-              alt=""
-              aria-hidden="true"
+        <PageDashboardHeader
+          eyebrow={<p className="home-card__eyebrow">Welcome back</p>}
+          title={heroTitle}
+          titleId="home-title"
+          description={
+            workspaceName
+              ? "This is your current workspace. All resources and activities are scoped to this context."
+              : "Create or select a workspace to begin building and managing AI systems."
+          }
+          controls={<WorkspaceSwitcher />}
+          dashboard={
+            <DesktopPageDashboard
+              kind="home"
+              size="large"
+              workspaceId={workspace.activeWorkspaceId}
             />
-          )}
-        </div>
-        <WorkspaceSwitcher />
+          }
+        />
       </div>
 
       <WorkspaceContextHint />
