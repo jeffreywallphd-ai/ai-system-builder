@@ -57,6 +57,8 @@ class LoadedModelDescriptor(BaseModel):
     inferenceMode: Literal["text2text", "causal", "chat"]
     device: Literal["cpu", "cuda", "auto"] | None = None
     torchDtype: Literal["auto", "float16", "bfloat16", "float32"] | None = None
+    adapterModelId: str | None = None
+    adapterRevision: str | None = None
     localPath: str | None = None
 
 
@@ -171,6 +173,8 @@ class LocalModelConfig(BaseModel):
     inferenceMode: Literal["auto", "text2text", "causal", "chat"] = "auto"
     device: Literal["cpu", "cuda", "auto"] | None = None
     torchDtype: Literal["auto", "float16", "bfloat16", "float32"] | None = None
+    adapterModelId: str | None = None
+    adapterRevision: str | None = None
     memoryOverflowPolicy: Literal["none", "limited", "extended"] = "none"
 
 
@@ -331,9 +335,25 @@ class PrepareTrainingDatasetRequest(BaseModel):
     runtime: dict[str, Any] | None = None
 
 
+class ReviewDatasetRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    operation: Literal["read", "reject", "replace"]
+    inputPath: str
+    outputHandle: str = "reviewed.parquet"
+    page: int = Field(default=0, ge=0)
+    pageSize: Literal[10, 25, 50] = 10
+    rowIndex: int = Field(default=0, ge=0)
+    rowFingerprint: str = Field(
+        default="sha256:" + ("0" * 64),
+        pattern=r"^sha256:[a-f0-9]{64}$",
+    )
+    replacementRow: dict[str, Any] | None = None
+    runtime: dict[str, Any]
+
+
 class PythonRuntimeOutputDescriptor(BaseModel):
     name: str
-    role: Literal["dataset", "train", "validation", "test", "metrics", "report", "quarantine", "artifact"] | None = None
+    role: Literal["dataset", "train", "validation", "test", "metrics", "report", "quarantine", "review", "artifact"] | None = None
     outputHandle: str
     tempPath: str = Field(exclude=True)
     mediaType: str

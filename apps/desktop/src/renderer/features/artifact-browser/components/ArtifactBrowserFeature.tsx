@@ -1,4 +1,11 @@
-import { Fragment, useCallback, useMemo, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   deriveArtifactBackingState,
@@ -7,10 +14,15 @@ import {
   derivePublishedBackingVerificationPresentation,
   ApplicationIcon,
   ArtifactPreviewPanel,
+  createLoadingArtifactPreview,
+  createParquetArtifactPreview,
+  createUnavailableArtifactPreview,
+  describeArtifactPreview,
   PanelHeading,
   TermWithHint,
   TransientNotificationPublisher,
   TypeBadge,
+  type ArtifactPreviewView,
   type PublishedBackingView,
 } from "../../../../../../../modules/ui/shared";
 import type { DesktopArtifactBrowserClient } from "../api/desktopArtifactBrowserClient";
@@ -19,11 +31,21 @@ import { useArtifactBrowserFeature } from "../hooks/useArtifactBrowserFeature";
 import { SettingsPanel, useApplicationSettings } from "../../settings";
 import { CollapsiblePanel } from "../../../components/ui/CollapsiblePanel";
 import { copyArtifactMediaBytesToArrayBuffer } from "../helpers/artifactMediaBytes";
+import { ModalDialog } from "../../../../../../../modules/ui/shared/components/ModalDialog";
 
 export interface ArtifactBrowserFeatureProps {
   client?: DesktopArtifactBrowserClient;
   workspaceId?: string;
   workspaceName?: string;
+  readParquetPreview?: (input: {
+    workspaceId: string;
+    artifactKey: string;
+  }) => Promise<{
+    totalRows: number;
+    rows: readonly { values: Readonly<Record<string, unknown>> }[];
+  }>;
+  initialSelectedStorageKey?: string;
+  onInitialSelectionHandled?: () => void;
 }
 
 const HUGGING_FACE_SETTINGS_KEYS = ["huggingface.token", "huggingface.defaultNamespace"] as const;
@@ -60,13 +82,22 @@ function PublishedBackingPanel(
   );
 }
 
-export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserFeatureProps) {
+export function ArtifactBrowserFeature({
+  client,
+  workspaceId,
+  readParquetPreview,
+  initialSelectedStorageKey,
+  onInitialSelectionHandled,
+}: ArtifactBrowserFeatureProps) {
   const settings = useApplicationSettings({ keys: useMemo(() => ["huggingface.defaultNamespace"], []) });
   const [downloadState, setDownloadState] = useState<{ status: "idle" | "error"; message?: string }>({
     status: "idle",
   });
   const [showHuggingFaceDefaults, setShowHuggingFaceDefaults] = useState(false);
   const [isDetailPopupOpen, setDetailPopupOpen] = useState(false);
+  const [parquetPreview, setParquetPreview] = useState<ArtifactPreviewView>();
+  const previewRequestId = useRef(0);
+  const initialSelectionHandledRef = useRef<string | undefined>(undefined);
   const {
     uploadedItems,
     generatedItems,
@@ -149,12 +180,82 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
   const publishPathPreview = resolvePublishPath();
 
   const openArtifactDetails = useCallback(async (storageKey: string) => {
+    const requestId = ++previewRequestId.current;
+    const item = [...uploadedItems, ...generatedItems, ...otherItems].find(
+      (candidate) => candidate.storageKey === storageKey,
+    );
+    const source = {
+      storageKey,
+      originalName: item?.originalName,
+      mediaType: item?.mediaType,
+      artifactFamily: item?.artifactFamily,
+    };
+    const isParquet = describeArtifactPreview(source).kind === "parquet";
+    setParquetPreview(isParquet ? createLoadingArtifactPreview(source) : undefined);
     await selectArtifact(storageKey);
+    if (requestId !== previewRequestId.current) return;
     setDetailPopupOpen(true);
-  }, [selectArtifact]);
+    if (!isParquet) return;
+    if (!workspaceId || !readParquetPreview) {
+      setParquetPreview(
+        createUnavailableArtifactPreview(
+          source,
+          "Parquet preview is unavailable in this session.",
+        ),
+      );
+      return;
+    }
+    try {
+      const page = await readParquetPreview({ workspaceId, artifactKey: storageKey });
+      if (requestId !== previewRequestId.current) return;
+      setParquetPreview(
+        createParquetArtifactPreview(
+          source,
+          page.rows.map((row) => row.values),
+          page.totalRows,
+        ),
+      );
+    } catch {
+      if (requestId !== previewRequestId.current) return;
+      setParquetPreview(
+        createUnavailableArtifactPreview(
+          source,
+          "The first rows of this Parquet file could not be read.",
+        ),
+      );
+    }
+  }, [generatedItems, otherItems, readParquetPreview, selectArtifact, uploadedItems, workspaceId]);
+
+  useEffect(() => {
+    if (!initialSelectedStorageKey) {
+      initialSelectionHandledRef.current = undefined;
+      return;
+    }
+    if (
+      initialSelectionHandledRef.current === initialSelectedStorageKey ||
+      ![...uploadedItems, ...generatedItems, ...otherItems].some(
+        (item) => item.storageKey === initialSelectedStorageKey,
+      )
+    ) {
+      return;
+    }
+    initialSelectionHandledRef.current = initialSelectedStorageKey;
+    void openArtifactDetails(initialSelectedStorageKey).finally(() => {
+      onInitialSelectionHandled?.();
+    });
+  }, [
+    generatedItems,
+    initialSelectedStorageKey,
+    onInitialSelectionHandled,
+    openArtifactDetails,
+    otherItems,
+    uploadedItems,
+  ]);
 
   const closeDetailPopup = useCallback(() => {
+    previewRequestId.current += 1;
     setDetailPopupOpen(false);
+    setParquetPreview(undefined);
   }, []);
 
   const onDownloadSelectedArtifact = useCallback(async () => {
@@ -234,40 +335,36 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
           <span className="ui-button__label">Refresh</span>
         </button>
       </div>
-      {pendingDeleteConfirmation ? (
-        <div className={`ui-modal-overlay${isDetailPopupOpen ? " ui-modal-overlay--stacked" : ""}`} role="presentation">
-          <section className="ui-panel ui-modal-dialog ui-stack ui-stack--sm" role="dialog" aria-label="Delete confirmation" aria-modal="true">
-            <header className="ui-modal-header">
-              <h3>Delete artifact</h3>
-              <button className="ui-modal-close" type="button" aria-label="Close delete confirmation" onClick={cancelPendingDelete}>x</button>
-            </header>
-            <div className="ui-modal-body ui-stack ui-stack--sm">
-              <p>Type <strong>Delete</strong> to confirm this destructive action.</p>
-              <p className="ui-text-muted">Artifact: {pendingDeleteConfirmation.storageKey}</p>
-              <label className="ui-stack ui-stack--sm">
-                <span><TermWithHint termId="deleteConfirmation">Confirmation</TermWithHint></span>
-                <input
-                  className="ui-input"
-                  value={deleteConfirmationInput}
-                  onChange={(event) => setDeleteConfirmationInput(event.target.value)}
-                  placeholder="Delete"
-                />
-              </label>
-              <div className="ui-grid ui-grid--two">
-                <button
-                  className="ui-button ui-button--destructive"
-                  type="button"
-                  onClick={() => void confirmPendingDelete()}
-                  disabled={deleteConfirmationInput !== "Delete"}
-                >
-                  Confirm delete
-                </button>
-                <button className="ui-button" type="button" onClick={cancelPendingDelete}>Cancel</button>
-              </div>
-            </div>
-          </section>
+      <ModalDialog
+        open={Boolean(pendingDeleteConfirmation)}
+        title="Delete artifact"
+        closeLabel="Close delete confirmation"
+        stacked={isDetailPopupOpen}
+        onClose={cancelPendingDelete}
+      >
+        <p>Type <strong>Delete</strong> to confirm this destructive action.</p>
+        <p className="ui-text-muted">Artifact: {pendingDeleteConfirmation?.storageKey}</p>
+        <label className="ui-stack ui-stack--sm">
+          <span><TermWithHint termId="deleteConfirmation">Confirmation</TermWithHint></span>
+          <input
+            className="ui-input"
+            value={deleteConfirmationInput}
+            onChange={(event) => setDeleteConfirmationInput(event.target.value)}
+            placeholder="Delete"
+          />
+        </label>
+        <div className="ui-grid ui-grid--two">
+          <button
+            className="ui-button ui-button--destructive"
+            type="button"
+            onClick={() => void confirmPendingDelete()}
+            disabled={deleteConfirmationInput !== "Delete"}
+          >
+            Confirm delete
+          </button>
+          <button className="ui-button" type="button" onClick={cancelPendingDelete}>Cancel</button>
         </div>
-      ) : null}
+      </ModalDialog>
       <div className="ui-stack ui-stack--sm">
         <div className="ui-stack ui-stack--sm">
           <h3>Uploaded Artifacts</h3>
@@ -292,22 +389,24 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
             ))}
           </section>
           <h3>Generated Artifacts</h3>
-          <section className="ui-stack ui-stack--sm artifact-browser__list-section">
+          <section className="artifact-browser__uploaded-grid" aria-label="Generated artifacts">
             {generatedItems.length === 0 ? (
-              <p className="ui-text-muted">There are currently no generated artifacts in the workspace.</p>
+              <p className="ui-text-muted artifact-browser__empty-note">There are currently no generated artifacts in the workspace.</p>
             ) : null}
             {generatedItems.map((item) => (
-              <section key={item.storageKey}>
-                <p className="ui-type-label"><TypeBadge value={item.mediaType ?? item.originalName ?? item.storageKey} /><span>{item.originalName ?? item.storageKey}</span></p>
-                <p>Status: {item.metadata?.backingState ? (
-                  <small>{deriveArtifactListStatusLabels(item.metadata.backingState).join(" · ")}</small>
-                ) : null}
+              <article className="artifact-browser__artifact-card ui-stack ui-stack--sm" key={item.storageKey}>
+                <div className="ui-stack ui-stack--sm">
+                  <div className="ui-type-label"><TypeBadge value={item.mediaType ?? item.originalName ?? item.storageKey} /><h4 className="artifact-browser__artifact-card-title">{item.originalName ?? item.storageKey}</h4></div>
+                  <p className="artifact-browser__artifact-card-key">{item.storageKey}</p>
+                </div>
+                <p className="artifact-browser__artifact-card-status">
+                  Status: {item.metadata?.backingState ? deriveArtifactListStatusLabels(item.metadata.backingState).join(" | ") : "generated"}
                 </p>
                 <button className="ui-button" type="button" onClick={() => void openArtifactDetails(item.storageKey)} disabled={viewState.status === "loading" && selectedStorageKey === item.storageKey}>
                   <ApplicationIcon name="browse" />
                   <span className="ui-button__label">View Details</span>
                 </button>
-              </section>
+              </article>
             ))}
           </section>
           <h3>Other Registered Artifacts</h3>
@@ -363,14 +462,13 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
           </section>
         </div>
 
-        {isDetailPopupOpen ? (
-          <div className="ui-modal-overlay" role="presentation">
-            <section className="ui-panel ui-modal-dialog artifact-browser__detail-dialog ui-stack ui-stack--sm" role="dialog" aria-label="Detail and preview" aria-modal="true">
-              <header className="ui-modal-header">
-                <h3>Detail & preview</h3>
-                <button className="ui-modal-close" type="button" aria-label="Close detail and preview" onClick={closeDetailPopup}>x</button>
-              </header>
-              <div className="ui-modal-body ui-stack ui-stack--sm">
+        <ModalDialog
+          open={isDetailPopupOpen}
+          title="Detail & preview"
+          closeLabel="Close detail and preview"
+          onClose={closeDetailPopup}
+          dialogClassName="artifact-browser__detail-dialog"
+        >
           {detail ? (
             <dl className="ui-grid ui-grid--two">
               <dt><TermWithHint termId="storedKey">Selected key</TermWithHint></dt>
@@ -440,7 +538,7 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
                 <dt><TermWithHint termId="localization">Localization state</TermWithHint></dt>
                 <dd>{backingState.isLocalized ? "localized" : backingState.isRemoteOnly ? "not localized" : "n/a"}</dd>
               </dl>
-              <ArtifactPreviewPanel preview={artifactPreview} />
+              <ArtifactPreviewPanel preview={parquetPreview ?? artifactPreview} />
               {backingState.isRemoteOnly ? (
                 <p role="status">Remote-only artifact. Local preview is unavailable until localization.</p>
               ) : null}
@@ -590,10 +688,7 @@ export function ArtifactBrowserFeature({ client, workspaceId }: ArtifactBrowserF
               onRecheck={() => void recheckPublishedBacking()}
             />
           ) : null}
-              </div>
-            </section>
-          </div>
-        ) : null}
+        </ModalDialog>
       </div>
       </div>
     </section>

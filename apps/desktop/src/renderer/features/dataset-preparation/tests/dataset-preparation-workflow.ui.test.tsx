@@ -49,9 +49,9 @@ describe("desktop dataset preparation workflow", () => {
     expect(markup).toContain("Review and create");
     expect(markup).not.toContain("Task settings");
     expect(markup).not.toContain("Save and publish");
-    expect(markup).toContain(
-      "The prepared dataset is saved locally as a reusable version",
-    );
+    expect(markup).not.toContain("Dataset save name");
+    expect(markup).toContain("opens in Artifact Browser");
+    expect(markup).not.toContain("Saved versions");
     expect(markup).toContain(
       "Accepted text sources: .csv, .json, .jsonl/.ndjson",
     );

@@ -22,6 +22,7 @@ describe("thin DatasetPreparationFeature", () => {
   });
 
   it("uses four ordered steps and creates a three-way dataset without advanced changes", async () => {
+    const onPrepared = vi.fn();
     const start = vi.fn(async () => ({
       requestId: "task-1",
       taskType: "prepare-training-dataset",
@@ -92,7 +93,7 @@ describe("thin DatasetPreparationFeature", () => {
       reasonCounts: { "exact-duplicate": 1 },
       samples: [],
       reviewRequired: true,
-      approvalAllowed: true,
+      approvalAllowed: false,
     };
     const read = vi.fn(async () => ({
       requestId: "task-1",
@@ -136,7 +137,7 @@ describe("thin DatasetPreparationFeature", () => {
         review: {
           state: "review-required" as const,
           reportFingerprint: qualityReport.reportFingerprint,
-          approvalAllowed: true,
+          approvalAllowed: false,
         },
         warnings: [],
       },
@@ -146,6 +147,23 @@ describe("thin DatasetPreparationFeature", () => {
       taskType: "prepare-training-dataset" as const,
       status: "succeeded" as const,
       result: approvedResult,
+    }));
+    const readPreparedReviewPage = vi.fn(async () => ({
+      lineId: "reason:exact-duplicate" as const,
+      page: 0,
+      pageSize: 10 as const,
+      totalRows: 1,
+      rows: [
+        {
+          rowIndex: 3,
+          rowFingerprint: `sha256:${"b".repeat(64)}` as const,
+          values: {
+            instruction: "Summarize the policy.",
+            output: "The duplicate prepared response.",
+            reasonCodes: ["exact-duplicate"],
+          },
+        },
+      ],
     }));
 
     container = document.createElement("div");
@@ -175,7 +193,16 @@ describe("thin DatasetPreparationFeature", () => {
               ],
             } as any
           }
-          preparationClient={{ start, read, cancel: vi.fn(), approve } as any}
+          preparationClient={
+            {
+              start,
+              read,
+              cancel: vi.fn(),
+              approve,
+              readPreparedReviewPage,
+            } as any
+          }
+          onPrepared={onPrepared}
         />,
       );
       await Promise.resolve();
@@ -196,6 +223,7 @@ describe("thin DatasetPreparationFeature", () => {
     expect(container.textContent).not.toContain(
       "Scanned-image text recognition is not included",
     );
+    expect(container.textContent).not.toContain("Saved versions");
 
     await act(async () => {
       (
@@ -231,6 +259,9 @@ describe("thin DatasetPreparationFeature", () => {
             testRatio: 0.1,
             shuffle: true,
           },
+          output: expect.objectContaining({
+            naming: { baseName: undefined },
+          }),
           quality: {
             policy: expect.objectContaining({ preset: "recommended" }),
             reviewRequired: true,
@@ -243,15 +274,58 @@ describe("thin DatasetPreparationFeature", () => {
     expect(start.mock.calls[0][0].command.recipe.chunking).toBeUndefined();
     expect(start.mock.calls[0][0].command.recipe.generation).toBeUndefined();
     expect(container.textContent).toContain("Check results");
-    expect(container.textContent).toContain("Exact duplicates: 1");
+    expect(container.textContent).toContain("Exact duplicates");
     expect(container.textContent).toContain("Preparation checks");
     expect(container.textContent).toContain("Source sections kept");
     expect(container.textContent).toContain("Source coverage");
     expect(container.textContent).not.toContain("Dataset ready");
 
+    const reviewButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Exact duplicates"),
+    ) as HTMLButtonElement;
+    await act(async () => {
+      reviewButton.click();
+      await Promise.resolve();
+    });
+    expect(readPreparedReviewPage).toHaveBeenCalledWith({
+      workspaceId: "workspace-a",
+      requestId: "task-1",
+      reportFingerprint: qualityReport.reportFingerprint,
+      lineId: "reason:exact-duplicate",
+      page: 0,
+    });
+    expect(document.body.textContent).toContain(
+      "The duplicate prepared response.",
+    );
+
+    const approvalControls = container.querySelector(
+      ".dataset-preparation__approval-controls",
+    ) as HTMLDivElement;
+    expect(approvalControls.textContent).toContain(
+      "Dataset save name (optional)",
+    );
+    expect(approvalControls.textContent).toContain(
+      "complete set of ready examples",
+    );
+    expect(approvalControls.textContent).toContain("Discard dataset");
+    expect(container.textContent).not.toContain("Discard review");
+    expect(container.textContent).not.toContain("This dataset cannot be saved");
+
+    const saveNameInput = approvalControls.querySelector(
+      'input[placeholder="customer-support-training"]',
+    ) as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        "value",
+      )?.set?.call(saveNameInput, "support-tickets-2026");
+      saveNameInput.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
     const approveButton = Array.from(container.querySelectorAll("button")).find(
       (button) => button.textContent === "Approve and save dataset",
     ) as HTMLButtonElement;
+    expect(approveButton.disabled).toBe(false);
     await act(async () => {
       approveButton.click();
       await Promise.resolve();
@@ -262,9 +336,11 @@ describe("thin DatasetPreparationFeature", () => {
       workspaceId: "workspace-a",
       requestId: "task-1",
       reportFingerprint: qualityReport.reportFingerprint,
+      outputBaseName: "support-tickets-2026",
     });
     expect(container.textContent).toContain("Dataset ready");
     expect(container.textContent).toContain("datasets/prepared.parquet");
+    expect(onPrepared).toHaveBeenCalledWith("datasets/prepared.parquet");
   });
 
   it("infers source material, uses the topic-aware default, and locks controls while starting", async () => {
@@ -355,9 +431,8 @@ describe("thin DatasetPreparationFeature", () => {
     expect(container.textContent).toContain("JSON output preview");
     expect(container.textContent).toContain("Advanced structure preview");
     expect(
-      container.querySelector(
-        'pre[aria-label="Generated JSON schema preview"]',
-      )?.textContent,
+      container.querySelector('pre[aria-label="Generated JSON schema preview"]')
+        ?.textContent,
     ).toContain('"const": "llm-instruction"');
     expect(container.textContent).toContain(
       "Keep generated JSON well structured",
@@ -375,7 +450,9 @@ describe("thin DatasetPreparationFeature", () => {
     const attributionLabel = Array.from(
       container.querySelectorAll("label"),
     ).find((label) =>
-      label.textContent?.includes("Include source attribution with each example"),
+      label.textContent?.includes(
+        "Include source attribution with each example",
+      ),
     ) as HTMLLabelElement;
     await act(async () => {
       (attributionLabel.querySelector("input") as HTMLInputElement).click();

@@ -1,11 +1,8 @@
 import type { ArtifactPreviewView } from "./artifactPreviewModel";
+import { SafeMarkdownPreview } from "./SafeMarkdownPreview";
 
 export interface ArtifactPreviewPanelProps {
   readonly preview?: ArtifactPreviewView;
-}
-
-function appendPdfFirstPageFragment(mediaUrl: string): string {
-  return mediaUrl.includes("#") ? mediaUrl : `${mediaUrl}#page=1&toolbar=0`;
 }
 
 export function ArtifactPreviewPanel({ preview }: ArtifactPreviewPanelProps) {
@@ -63,9 +60,18 @@ export function ArtifactPreviewPanel({ preview }: ArtifactPreviewPanelProps) {
           </table>
         </div>
       ) : null}
-      {activePreview.text ? (
+      {activePreview.text && descriptor?.kind === "markdown" ? (
         <div className="artifact-preview__viewport" tabIndex={0}>
-          <pre className="artifact-preview__text">{activePreview.text}</pre>
+          <SafeMarkdownPreview markdown={activePreview.text} />
+        </div>
+      ) : null}
+      {activePreview.text && descriptor?.kind !== "markdown" ? (
+        <div className="artifact-preview__viewport" tabIndex={0}>
+          <pre
+            className={`artifact-preview__text${descriptor?.kind === "json" || descriptor?.kind === "jsonl" ? " artifact-preview__text--json" : ""}`}
+          >
+            {activePreview.text}
+          </pre>
         </div>
       ) : null}
       {descriptor?.kind === "image" && activePreview.mediaUrl ? (
@@ -91,12 +97,10 @@ export function ArtifactPreviewPanel({ preview }: ArtifactPreviewPanelProps) {
       ) : null}
       {descriptor?.kind === "pdf" && activePreview.mediaUrl ? (
         <div className="artifact-preview__viewport artifact-preview__viewport--document">
-          <iframe
-            className="artifact-preview__pdf"
-            title={`PDF preview for ${descriptor.originalName ?? descriptor.storageKey}`}
-            src={appendPdfFirstPageFragment(activePreview.mediaUrl)}
-            sandbox=""
-            referrerPolicy="no-referrer"
+          <img
+            className="artifact-preview__pdf-page"
+            src={activePreview.mediaUrl}
+            alt={`First page of ${descriptor.originalName ?? descriptor.storageKey}`}
           />
         </div>
       ) : null}

@@ -222,6 +222,146 @@ class WorkerAppTests(unittest.TestCase):
         self.assertIn("Retry to resume", status.error.message)
         self.assertNotIn("private", status.error.message)
 
+    def test_conversation_task_loads_the_approved_cached_model_on_first_turn(self) -> None:
+        request = StartPythonRuntimeTaskRequest(
+            requestId="conversation-cold-load-1",
+            taskType="conversation-text-generation",
+            payload={
+                "selectedModelId": "owner/chat-model",
+                "messages": [{"role": "user", "content": "Hello"}],
+            },
+        )
+        generator = SimpleNamespace(generate_text=lambda _prompt: "Hello back")
+
+        with (
+            patch(
+                "modules.adapters.runtime.python.worker.app.describe_loaded_generation_models",
+                return_value=[],
+            ),
+            patch(
+                "modules.adapters.runtime.python.worker.app.ensure_generation_model_is_available"
+            ) as ensure_available,
+            patch(
+                "modules.adapters.runtime.python.worker.app.get_or_create_local_text_generator",
+                return_value=generator,
+            ) as get_generator,
+        ):
+            result = _run_task(request)
+
+        self.assertEqual(result, {"assistantResponseText": "Hello back"})
+        config = ensure_available.call_args.args[0]
+        self.assertEqual(config.model.modelId, "owner/chat-model")
+        self.assertEqual(config.model.device, "auto")
+        self.assertEqual(get_generator.call_args.args[0], config)
+
+    def test_conversation_task_reuses_the_exact_loaded_model_descriptor(self) -> None:
+        request = StartPythonRuntimeTaskRequest(
+            requestId="conversation-warm-load-1",
+            taskType="conversation-text-generation",
+            payload={
+                "selectedModelId": "owner/chat-model",
+                "messages": [{"role": "user", "content": "Hello"}],
+            },
+        )
+        generator = SimpleNamespace(generate_text=lambda _prompt: "Hello again")
+
+        with (
+            patch(
+                "modules.adapters.runtime.python.worker.app.describe_loaded_generation_models",
+                return_value=[
+                    {
+                        "provider": "transformers",
+                        "modelId": "owner/chat-model",
+                        "inferenceMode": "chat",
+                        "device": "cpu",
+                        "torchDtype": "float32",
+                    }
+                ],
+            ),
+            patch(
+                "modules.adapters.runtime.python.worker.app.ensure_generation_model_is_available"
+            ) as ensure_available,
+            patch(
+                "modules.adapters.runtime.python.worker.app.get_or_create_local_text_generator",
+                return_value=generator,
+            ) as get_generator,
+        ):
+            result = _run_task(request)
+
+        self.assertEqual(result, {"assistantResponseText": "Hello again"})
+        ensure_available.assert_not_called()
+        config = get_generator.call_args.args[0]
+        self.assertEqual(config.model.inferenceMode, "chat")
+        self.assertEqual(config.model.device, "cpu")
+
+    def test_conversation_task_loads_the_associated_base_model_and_lora(self) -> None:
+        request = StartPythonRuntimeTaskRequest(
+            requestId="conversation-lora-load-1",
+            taskType="conversation-text-generation",
+            payload={
+                "selectedModelId": "generated/chat-lora",
+                "baseModelId": "owner/base-chat",
+                "adapterRevision": "training-run-1",
+                "messages": [{"role": "user", "content": "Hello"}],
+            },
+        )
+        generator = SimpleNamespace(generate_text=lambda _prompt: "Adapted hello")
+
+        with (
+            patch(
+                "modules.adapters.runtime.python.worker.app.describe_loaded_generation_models",
+                return_value=[],
+            ),
+            patch(
+                "modules.adapters.runtime.python.worker.app.ensure_generation_model_is_available"
+            ) as ensure_base,
+            patch(
+                "modules.adapters.runtime.python.worker.app.ensure_generation_adapter_is_available"
+            ) as ensure_adapter,
+            patch(
+                "modules.adapters.runtime.python.worker.app.get_or_create_local_text_generator",
+                return_value=generator,
+            ) as get_generator,
+        ):
+            result = _run_task(request)
+
+        self.assertEqual(result, {"assistantResponseText": "Adapted hello"})
+        config = ensure_base.call_args.args[0]
+        self.assertEqual(config.model.modelId, "owner/base-chat")
+        self.assertEqual(config.model.adapterModelId, "generated/chat-lora")
+        self.assertEqual(config.model.adapterRevision, "training-run-1")
+        ensure_adapter.assert_called_once_with(config)
+        self.assertEqual(get_generator.call_args.args[0], config)
+
+    def test_conversation_task_reports_a_sanitized_failure_for_a_missing_snapshot(self) -> None:
+        request = StartPythonRuntimeTaskRequest(
+            requestId="conversation-missing-model-1",
+            taskType="conversation-text-generation",
+            payload={
+                "selectedModelId": "owner/missing-model",
+                "messages": [{"role": "user", "content": "Hello"}],
+            },
+        )
+
+        with (
+            patch(
+                "modules.adapters.runtime.python.worker.app.describe_loaded_generation_models",
+                return_value=[],
+            ),
+            patch(
+                "modules.adapters.runtime.python.worker.app.ensure_generation_model_is_available",
+                side_effect=RuntimeError("C:\\private\\cache snapshot is missing"),
+            ),
+        ):
+            worker_app._start_async_task(request)
+            worker_app.TASK_REGISTRY[request.requestId]["future"].result(timeout=2)
+
+        status = worker_app.read_task_status(request.requestId)
+        self.assertEqual(status.status, "failed")
+        self.assertEqual(status.error.code, "task_failed")
+        self.assertNotIn("private", status.error.message)
+        self.assertNotIn("missing-model", status.error.message)
+
     def test_validate_model_returns_opaque_report_references(self) -> None:
         request = StartPythonRuntimeTaskRequest(
             requestId="validate-1",

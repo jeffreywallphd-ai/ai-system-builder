@@ -12,6 +12,7 @@ import { recordRendererMemorySnapshot } from "./diagnostics/rendererMemoryDiagno
 import { createDesktopModelsClient } from "./features/models/api/desktopModelsClient";
 import { createDesktopDatasetPreparationClient } from "./features/dataset-preparation/api/desktopDatasetPreparationClient";
 import { DatasetPreparationNotificationBridge } from "./features/dataset-preparation/components/DatasetPreparationNotificationBridge";
+import { ModelTrainingNotificationBridge } from "./features/models/components/ModelTrainingNotificationBridge";
 
 type DesktopWorkspacePageKey = Extract<DesktopPageKey, "artifacts" | "assets" | "user-library" | "models" | "image-generation" | "systems">;
 const desktopModelDownloadNotificationClient = {
@@ -27,6 +28,10 @@ const desktopDatasetPreparationNotificationClient = {
       requestId,
       workspaceId,
     ),
+};
+const desktopModelTrainingNotificationClient = {
+  readModelTrainingStatus: (input: { runId: string; workspaceId: string }) =>
+    createDesktopModelsClient().readModelTrainingStatus(input),
 };
 
 export function App() {
@@ -159,6 +164,10 @@ export function WorkspaceAwareDesktopApp({ lazyPages = desktopLazyPages }: Works
       <ModelDownloadNotificationBridge client={desktopModelDownloadNotificationClient} workspaceId={workspace.activeWorkspaceId} />
       <DatasetPreparationNotificationBridge
         client={desktopDatasetPreparationNotificationClient}
+        workspaceId={workspace.activeWorkspaceId}
+      />
+      <ModelTrainingNotificationBridge
+        client={desktopModelTrainingNotificationClient}
         workspaceId={workspace.activeWorkspaceId}
       />
       <AppShell

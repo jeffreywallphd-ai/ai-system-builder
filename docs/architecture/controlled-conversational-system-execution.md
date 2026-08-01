@@ -165,6 +165,13 @@ Stop closes the window and its application conversation session before closing
 runtime database handles. Restart reopens the same retained conversation. The
 builder's preview remains inert, and the published runtime never falls back to
 the former in-page modal.
+Closing the dedicated published-system window is also an authoritative Stop
+signal for that exact release and started revision. Main removes the window and
+conversation session first, then invokes the host lifecycle Stop callback; a
+programmatic close caused by Stop does not invoke Stop a second time. While a
+published release is running, its lifecycle card periodically re-reads the
+authoritative projection so this host-originated transition replaces the stale
+running presentation without requiring a manual refresh.
 
 ## Approval and eligibility boundary
 
@@ -221,6 +228,24 @@ only its normalized model-record identity; the Python adapter resolves it again
 and sends only the authority-owned runtime `modelId` to the worker. A missing,
 malformed, stale, incompatible, or cross-workspace record blocks before worker
 submission and does not persist an accepted turn.
+
+The worker resolves that exact model identifier only through its host-owned
+local Hugging Face cache. A first turn after runtime startup validates the
+complete local snapshot and loads it on demand; it never requires unrelated
+Dataset Preparation activity to have left the model in process memory and does
+not acquire a missing model from the network. Warm turns reuse only an exact
+loaded-model match. Conversation polling uses the worker's bounded short-task
+deadline so initial model construction cannot outlive the application caller.
+When the approved record is a LoRA adapter, the adapter also re-resolves its
+exact associated full base-model record in the same workspace and sends the
+worker only both authority-owned model ids plus an opaque generated revision
+when available. The worker validates the complete local base snapshot, confines
+the adapter snapshot to its cache repository, verifies the adapter configuration
+names that same base model or the exact already-resolved legacy local reference,
+and attaches the reviewed PEFT adapter. The legacy comparison is worker-local
+and does not admit or transmit a caller-selected path. Missing,
+ambiguous, mismatched, or escaped associations fail closed before generation;
+host paths never cross the runtime request boundary.
 
 This adapter path is a supported implementation of the first conversational slice, not a general runtime execution permission. It still requires reviewed execution-plan identity, source verification, approval validity, runtime readiness/runtime guard success, and host submit support before a turn may run. The adapter does not currently advertise progress or cancellation capability; cancel, retry, and streaming remain unsupported unless an application/runtime path genuinely supports them.
 

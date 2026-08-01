@@ -120,6 +120,8 @@ describe("ModalDialog", () => {
     const opener = mounted.querySelector<HTMLButtonElement>("button");
     opener?.focus();
     await act(async () => opener?.click());
+    expect(document.documentElement.style.overflow).toBe("hidden");
+    expect(document.body.style.overflow).toBe("hidden");
     const parentChildOpener = Array.from(
       document.body.querySelectorAll<HTMLButtonElement>("button"),
     ).find((button) => button.textContent === "Open child");
@@ -137,6 +139,8 @@ describe("ModalDialog", () => {
     });
     expect(document.body.querySelectorAll("[role='dialog']").length).toBe(1);
     expect(document.activeElement).toBe(parentChildOpener);
+    expect(document.documentElement.style.overflow).toBe("hidden");
+    expect(document.body.style.overflow).toBe("hidden");
 
     await act(async () => {
       document.dispatchEvent(
@@ -148,6 +152,35 @@ describe("ModalDialog", () => {
     });
     expect(document.body.querySelectorAll("[role='dialog']").length).toBe(0);
     expect(document.activeElement).toBe(opener);
+    expect(document.documentElement.style.overflow).toBe("");
+    expect(document.body.style.overflow).toBe("");
+  });
+
+  it("restores pre-existing page scroll styles after the final modal closes", async () => {
+    document.documentElement.style.overflow = "auto";
+    document.body.style.overflow = "scroll";
+    const mounted = await render(
+      <ModalDialog open title="Review" onClose={() => undefined}>
+        <button type="button">Review action</button>
+      </ModalDialog>,
+    );
+
+    expect(document.documentElement.style.overflow).toBe("hidden");
+    expect(document.body.style.overflow).toBe("hidden");
+
+    await act(async () =>
+      root?.render(
+        <ModalDialog open={false} title="Review" onClose={() => undefined}>
+          <button type="button">Review action</button>
+        </ModalDialog>,
+      ),
+    );
+
+    expect(mounted.querySelector("[role='dialog']")).toBe(null);
+    expect(document.documentElement.style.overflow).toBe("auto");
+    expect(document.body.style.overflow).toBe("scroll");
+    document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
   });
 
   it("keeps focus inside the dialog when the preferred action is disabled", async () => {

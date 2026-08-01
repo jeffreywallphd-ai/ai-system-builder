@@ -104,8 +104,10 @@ Tools/function-calling, retrieval/RAG, memory, multimodal IO, image generation/C
   retains data pending a separately confirmed deletion.
 - Desktop published interaction uses a dedicated sandboxed window and minimal
   read/submit preload. Main derives authority from the exact registered main
-  frame; Stop closes the session/window, and restart reopens the retained
-  conversation from the same runtime-instance database.
+  frame; Stop closes the session/window, and a user window close invokes Stop
+  for the exact release and started revision without double-stopping an explicit
+  lifecycle close. Restart reopens the retained conversation from the same
+  runtime-instance database.
 - Transcript is the intentional full visible-content read surface. Operational read models, activity, capability summaries, cancel/retry results, diagnostics, and errors stay content-safe.
 - Desktop and server hosts may expose only capabilities they actually compose. Cancel, retry, and streaming remain unsupported/deferred unless an application/runtime path genuinely supports them.
 - Systems Run & Test uses the shared desktop/thin presenter, real execution-plan
@@ -132,3 +134,13 @@ The protected context request carries the approved execution-plan, composition-p
   session approval requirements. It contains one typed persisted-only
   composer/history interaction, no example transcript, and no default model.
 - No fake response generator is allowed in production host composition. Hosts may expose only capabilities they actually compose; cancel, retry, and streaming stay unsupported unless implemented end to end.
+- The Python adapter resolves the approved model record to one runtime model id.
+  A cold first turn validates and loads only that complete host-cached snapshot;
+  it does not require a previous feature to have loaded the model and never
+  downloads during conversation execution. The adapter and worker share the
+  bounded short-task deadline, while failures remain path- and payload-free.
+- A selected LoRA adapter also requires its exact same-workspace full base-model
+  record. The worker receives only both model ids and an optional opaque
+  generated revision, validates local containment and the adapter-declared base
+  association, and attaches the exact adapter with PEFT. Ambiguous, missing, or
+  mismatched associations block before generation; warm reuse matches revision.

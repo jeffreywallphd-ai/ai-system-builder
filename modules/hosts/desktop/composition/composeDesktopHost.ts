@@ -1281,6 +1281,10 @@ export function composeDesktopHost(
               return createPythonConversationalTextGenerationInvocationAdapter(
                 (await getPythonRuntimeFoundation()).runtimePort,
                 {
+                  listModels: (request) =>
+                    getModelFeatures().then((features) =>
+                      features.modelRegistry.listModels(request),
+                    ),
                   getModelRecord: (workspaceId, modelRecordId) =>
                     getModelFeatures().then((features) =>
                       features.modelRegistry.getModelRecord(
@@ -1319,6 +1323,10 @@ export function composeDesktopHost(
                   return createPythonConversationalTextGenerationInvocationAdapter(
                     (await getPythonRuntimeFoundation()).runtimePort,
                     {
+                      listModels: (listRequest) =>
+                        getModelFeatures().then((features) =>
+                          features.modelRegistry.listModels(listRequest),
+                        ),
                       getModelRecord: (workspaceId, modelRecordId) =>
                         getModelFeatures().then((features) =>
                           features.modelRegistry.getModelRecord(
@@ -1565,6 +1573,12 @@ export function composeDesktopHost(
           ipcMain: registerOptions.ipcMain,
           getDatasetPreparationFeature: getDatasetPreparationFeatures,
           lifecycle: markDisposableFeatureReleased("dataset-preparation"),
+          getAuthoritativeRequestContext: options.localIdentity
+            ? () => ({
+                organizationId: options.localIdentity!.organizationId,
+                principalId: options.localIdentity!.principalId,
+              })
+            : undefined,
         },
         assetAuthoring: {
           ipcMain: registerOptions.ipcMain,

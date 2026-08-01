@@ -404,6 +404,58 @@ export const glossaryEntries = {
     term: "Model Management",
     definition: "The area for finding, saving, validating, downloading, publishing, and organizing model records.",
   },
+  modelTrainingBatchSize: {
+    term: "Training batch size",
+    definition: "How many training examples each device processes at once. Type a whole number. Recommended range: 1 to 8.",
+  },
+  modelTrainingCheckpointInterval: {
+    term: "Training checkpoint interval",
+    definition: "How many training steps occur between saved checkpoints. Type a whole number. Recommended range: 50 to 1000.",
+  },
+  modelTrainingEpochs: {
+    term: "Training epochs",
+    definition: "How many complete passes training makes through the dataset. Type a whole number. Recommended range: 1 to 5.",
+  },
+  modelTrainingEvalInterval: {
+    term: "Training evaluation interval",
+    definition: "How many training steps occur between evaluation runs. Type a whole number. Recommended range: 50 to 1000.",
+  },
+  modelTrainingGradientAccumulation: {
+    term: "Training gradient accumulation",
+    definition: "How many small batches are combined before an optimizer update. Type a whole number. Recommended range: 1 to 32.",
+  },
+  modelTrainingLearningRate: {
+    term: "Training learning rate",
+    definition: "How large each training adjustment is. Type a decimal number. Recommended range: 0.00001 to 0.0005.",
+  },
+  modelTrainingLoraAlpha: {
+    term: "Training LoRA alpha",
+    definition: "How strongly the LoRA adapter changes the base model relative to its rank. Type a whole number. Recommended range: 8 to 128.",
+  },
+  modelTrainingLoraDropout: {
+    term: "Training LoRA dropout",
+    definition: "The fraction of LoRA updates randomly omitted during training. Type a decimal number. Recommended range: 0.0 to 0.1.",
+  },
+  modelTrainingLoraRank: {
+    term: "Training LoRA rank",
+    definition: "The capacity of the LoRA adapter. Type a whole number. Recommended range: 4 to 64.",
+  },
+  modelTrainingMaxSteps: {
+    term: "Training max steps",
+    definition: "The maximum optimizer steps to run. Type a whole number, or leave it blank to use epochs. Recommended range when set: 100 to 5000.",
+  },
+  modelTrainingSeed: {
+    term: "Training seed",
+    definition: "The repeatability seed for the training run. Type a whole number. Recommended range: 0 to 2147483647; 42 is a common starting value.",
+  },
+  modelTrainingSequenceLength: {
+    term: "Training sequence length",
+    definition: "The maximum number of text tokens in each training example. Type a whole number. Recommended range: 512 to 4096, without exceeding the model context window.",
+  },
+  modelTrainingTargetModules: {
+    term: "Training target modules",
+    definition: "Type comma-separated module names without brackets. Recommended starting value for common Qwen-like models: q_proj,v_proj. Leave blank to let the training library infer compatible modules.",
+  },
   namespace: {
     term: "Namespace",
     definition: "A user or organization name on a provider such as Hugging Face, used to find that owner's datasets or models.",
@@ -437,8 +489,8 @@ export const glossaryEntries = {
     definition: "The file name the item had before the system saved it in workspace storage.",
   },
   outputBaseName: {
-    term: "Output base name",
-    definition: "Optionally enter the beginning of the saved dataset file name.",
+    term: "Dataset save name",
+    definition: "Optionally enter a meaningful name for the saved dataset file. The selected format adds the file extension.",
   },
   outputFormat: {
     term: "Output format",

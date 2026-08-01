@@ -7,6 +7,7 @@ export type PythonRuntimeOutputRole =
   | "metrics"
   | "report"
   | "quarantine"
+  | "review"
   | "artifact";
 
 export interface PythonRuntimeOutputDescriptor {

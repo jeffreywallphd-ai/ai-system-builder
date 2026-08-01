@@ -8,6 +8,7 @@
 @import "./components/notifications.css";
 @import "./components/controls.css";
 @import "./components/dataset-output-shape-editor.css";
+@import "./components/dataset-review.css";
 @import "./components/badges.css";
 @import "./components/surfaces.css";
 @import "./components/tabs.css";

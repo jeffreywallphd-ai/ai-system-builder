@@ -2,14 +2,17 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   ARTIFACT_PREVIEW_MAX_BYTES,
+  ARTIFACT_PDF_PREVIEW_MAX_BYTES,
   createCompressedImagePreviewObjectUrl,
   createIdleArtifactPreview,
   createLoadingArtifactPreview,
   createMediaArtifactPreview,
+  createPdfFirstPagePreviewObjectUrl,
   createTextArtifactPreview,
   createUnavailableArtifactPreview,
   createUnsupportedArtifactPreview,
   describeArtifactPreview,
+  isArtifactBrowserVisible,
   isMediaArtifactPreviewKind,
   isTextArtifactPreviewKind,
   useArtifactBrowserPublishLogic,
@@ -260,7 +263,9 @@ export function useArtifactBrowserFeature(
         });
         return;
       }
-      const browseItems = await artifactClient.browseArtifacts({ workspaceId });
+      const browseItems = (
+        await artifactClient.browseArtifacts({ workspaceId })
+      ).filter(isArtifactBrowserVisible);
       setItems(browseItems);
       setSelectedStorageKey((current) =>
         browseItems.some((item) => item.storageKey === current)
@@ -372,6 +377,30 @@ export function useArtifactBrowserFeature(
               setUnmanagedImagePreviewUrl(mediaUrl);
               setArtifactPreview(
                 createMediaArtifactPreview(previewSource, mediaUrl),
+              );
+            }
+          } else if (previewDescriptor.kind === "pdf") {
+            if (!artifactClient.readArtifactMedia) {
+              setUnmanagedImagePreviewUrl(undefined);
+              setArtifactPreview(
+                createUnavailableArtifactPreview(
+                  previewSource,
+                  "PDF preview bytes are unavailable in this connection.",
+                ),
+              );
+            } else {
+              const media = await artifactClient.readArtifactMedia(locator, {
+                workspaceId,
+                maximumBytes: ARTIFACT_PDF_PREVIEW_MAX_BYTES,
+              });
+              const firstPageUrl =
+                await createPdfFirstPagePreviewObjectUrl(media.bytes);
+              setManagedImagePreviewUrl(firstPageUrl);
+              setArtifactPreview(
+                createMediaArtifactPreview(
+                  { ...previewSource, mediaType: "application/pdf" },
+                  firstPageUrl,
+                ),
               );
             }
           } else {

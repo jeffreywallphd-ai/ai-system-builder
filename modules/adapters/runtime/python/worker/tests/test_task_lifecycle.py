@@ -135,11 +135,12 @@ class TaskLifecycleTests(unittest.TestCase):
                 worker_app.start_task(StartPythonRuntimeTaskRequest(requestId="dup", taskType="train-model", payload={"baseModel": {}, "datasets": [], "method": "lora", "output": {}}))
             time.sleep(0.3)
 
-    def test_cancel_running_does_not_claim_killed(self) -> None:
+    def test_cancel_running_training_requests_cooperative_stop(self) -> None:
         def slow_train(_payload, on_progress=None):
-            del on_progress
-            time.sleep(0.4)
-            return type("R", (), {"model_dump": lambda self, mode: {"runId": "r5"}})()
+            while True:
+                if on_progress is not None:
+                    on_progress({"stage": "training", "batch": 1, "totalBatches": 2})
+                time.sleep(0.01)
 
         with patch("modules.adapters.runtime.python.worker.app.train_model", side_effect=slow_train):
             worker_app.start_task(StartPythonRuntimeTaskRequest(requestId="r5", taskType="train-model", payload={"baseModel": {}, "datasets": [], "method": "lora", "output": {}}))
@@ -147,7 +148,12 @@ class TaskLifecycleTests(unittest.TestCase):
             cancel = worker_app.cancel_task("r5")
             self.assertFalse(cancel.cancelled)
             self.assertEqual(cancel.status, "running")
-            time.sleep(0.5)
+            self.assertIn("requested", cancel.message)
+            worker_app.TASK_REGISTRY["r5"]["future"].result(timeout=2)
+            status = worker_app.read_task_status("r5")
+            self.assertEqual(status.status, "cancelled")
+            self.assertIsNone(status.data)
+            self.assertIsNone(status.error)
 
     def test_active_task_count_tracks_running_only(self) -> None:
         def slow_train(_payload, on_progress=None):

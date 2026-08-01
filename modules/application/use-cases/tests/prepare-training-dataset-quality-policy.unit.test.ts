@@ -2,6 +2,7 @@ import { describe, expect, it, testDouble } from "../../../testing/node-test";
 import { access, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PrepareTrainingDatasetFromArtifactsUseCase } from "../prepare-training-dataset-from-artifacts.use-case";
+import { createContractError } from "../../../contracts/shared";
 
 const qualityCommand = {
   sourceArtifactIds: ["source-a"],
@@ -454,6 +455,12 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
     };
     let runtimeWorkingDirectory = "";
     const storedRoles: string[] = [];
+    const storedArtifacts = new Map<
+      string,
+      { content: Uint8Array; descriptor: Record<string, any> }
+    >();
+    let reviewStorageKey = "";
+    let failTrainMaterializationOnce = true;
     const runtimeResult = {
       outputs: [
         {
@@ -474,6 +481,13 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
           role: "report",
           outputHandle: "report.json",
           mediaType: "application/json",
+        },
+        {
+          name: "training-dataset-review",
+          role: "review",
+          outputHandle: "review.jsonl",
+          mediaType: "application/x-ndjson",
+          metadata: { rowCount: 1, reportFingerprint: fingerprint },
         },
         {
           name: "training-dataset-quarantine",
@@ -516,6 +530,10 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
               JSON.stringify(qualityReport),
             );
             await writeFile(
+              join(runtimeWorkingDirectory, "review.jsonl"),
+              '{"instruction":"synthetic","output":"accepted","sourceArtifactId":"source-a"}\n',
+            );
+            await writeFile(
               join(runtimeWorkingDirectory, "quarantine.jsonl"),
               JSON.stringify({
                 sourceArtifactId: "source-a",
@@ -549,26 +567,49 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
           ),
         },
         storage: {
-          retrieveArtifact: testDouble.fn(async () => ({
-            ok: true,
-            value: {
-              descriptor: {
-                key: "source-a",
-                mediaType: "text/markdown",
-                metadata: {},
+          retrieveArtifact: testDouble.fn(async (request: any) => {
+            const stored = storedArtifacts.get(String(request.key));
+            if (stored) {
+              return { ok: true, value: stored };
+            }
+            return {
+              ok: true,
+              value: {
+                descriptor: {
+                  key: "source-a",
+                  mediaType: "text/markdown",
+                  metadata: {},
+                },
+                content: new TextEncoder().encode("synthetic source"),
               },
-              content: new TextEncoder().encode("synthetic source"),
-            },
-          })),
+            };
+          }),
           storeArtifact: testDouble.fn(async (request: any) => {
-            storedRoles.push(String(request.descriptor.metadata.runtimeRole));
+            const role = String(request.descriptor.metadata.runtimeRole);
+            if (role === "train" && failTrainMaterializationOnce) {
+              failTrainMaterializationOnce = false;
+              return {
+                ok: false,
+                error: createContractError(
+                  "unavailable",
+                  "Temporary storage failure.",
+                ),
+              };
+            }
+            storedRoles.push(role);
+            const key = String(request.descriptor.key);
+            storedArtifacts.set(key, {
+              descriptor: request.descriptor,
+              content: new Uint8Array(request.content),
+            });
+            if (role === "review") reviewStorageKey = key;
             return { ok: true, value: request.descriptor };
           }),
           hasArtifact: testDouble.fn(),
-          deleteArtifact: testDouble.fn(async () => ({
-            ok: true,
-            value: { deleted: true },
-          })),
+          deleteArtifact: testDouble.fn(async (request: any) => {
+            storedArtifacts.delete(String(request.key));
+            return { ok: true, value: { deleted: true } };
+          }),
         },
       }),
     );
@@ -595,7 +636,89 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
       expect(review.value.result.outputs.local?.report).toBeDefined();
       expect(review.value.result.outputs.local?.quarantine).toBeDefined();
     }
-    expect(storedRoles).toEqual(["report", "quarantine"]);
+    expect(storedRoles).toEqual(["report", "quarantine", "review"]);
+    expect(reviewStorageKey).not.toBe("");
+    await expect(
+      access(join(runtimeWorkingDirectory, "review.jsonl")),
+    ).rejects.toThrow();
+
+    const readyPage = await useCase.readPreparedDatasetQualityReviewPage(
+      {
+        requestId: "quality-review-task",
+        reportFingerprint: fingerprint,
+        lineId: "ready",
+        page: 0,
+      },
+      { workspaceId: "workspace-a" },
+    );
+    expect(readyPage.ok).toBe(true);
+    if (readyPage.ok) {
+      expect(readyPage.value.totalRows).toBe(1);
+      expect(readyPage.value.rows[0]?.values.instruction).toBe("synthetic");
+    }
+    const originalReview = storedArtifacts.get(reviewStorageKey)!;
+    storedArtifacts.set(reviewStorageKey, {
+      ...originalReview,
+      content: new TextEncoder().encode('{"instruction":"tampered"}\n'),
+    });
+    const tamperedPage = await useCase.readPreparedDatasetQualityReviewPage(
+      {
+        requestId: "quality-review-task",
+        reportFingerprint: fingerprint,
+        lineId: "ready",
+        page: 0,
+      },
+      { workspaceId: "workspace-a" },
+    );
+    expect(tamperedPage.ok).toBe(false);
+    storedArtifacts.set(reviewStorageKey, originalReview);
+    const findingPage = await useCase.readPreparedDatasetQualityReviewPage(
+      {
+        requestId: "quality-review-task",
+        reportFingerprint: fingerprint,
+        lineId: "reason:schema-invalid",
+        page: 0,
+      },
+      { workspaceId: "workspace-a" },
+    );
+    expect(findingPage.ok).toBe(true);
+    if (findingPage.ok) {
+      expect(findingPage.value.totalRows).toBe(1);
+      expect(findingPage.value.rows[0]?.values.reasonCodes).toEqual([
+        "schema-invalid",
+      ]);
+    }
+    const quarantineEntry = [...storedArtifacts.entries()].find(
+      ([, value]) => value.descriptor.metadata.runtimeRole === "quarantine",
+    );
+    expect(quarantineEntry).toBeDefined();
+    const [quarantineKey, originalQuarantine] = quarantineEntry!;
+    storedArtifacts.set(quarantineKey, {
+      ...originalQuarantine,
+      content: new TextEncoder().encode('{"reasonCodes":[]}\n'),
+    });
+    const tamperedFindingPage =
+      await useCase.readPreparedDatasetQualityReviewPage(
+        {
+          requestId: "quality-review-task",
+          reportFingerprint: fingerprint,
+          lineId: "reason:schema-invalid",
+          page: 0,
+        },
+        { workspaceId: "workspace-a" },
+      );
+    expect(tamperedFindingPage.ok).toBe(false);
+    storedArtifacts.set(quarantineKey, originalQuarantine);
+    const deniedPage = await useCase.readPreparedDatasetQualityReviewPage(
+      {
+        requestId: "quality-review-task",
+        reportFingerprint: fingerprint,
+        lineId: "ready",
+        page: 0,
+      },
+      { workspaceId: "workspace-b" },
+    );
+    expect(deniedPage.ok).toBe(false);
 
     const staleApproval = await useCase.approvePreparedTrainingDataset(
       {
@@ -608,12 +731,38 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
     if (!staleApproval.ok) {
       expect(staleApproval.error.code).toBe("conflict");
     }
-    expect(storedRoles).toEqual(["report", "quarantine"]);
+    expect(storedRoles).toEqual(["report", "quarantine", "review"]);
+
+    const invalidSaveName = await useCase.approvePreparedTrainingDataset(
+      {
+        requestId: "quality-review-task",
+        reportFingerprint: fingerprint,
+        outputBaseName: "../unsafe",
+      },
+      { workspaceId: "workspace-a" },
+    );
+    expect(invalidSaveName.ok).toBe(false);
+    if (!invalidSaveName.ok) {
+      expect(invalidSaveName.error.code).toBe("validation");
+    }
+    expect(storedRoles).toEqual(["report", "quarantine", "review"]);
+    await expect(access(runtimeWorkingDirectory)).resolves.toBeUndefined();
+
+    const transientFailure = await useCase.approvePreparedTrainingDataset(
+      {
+        requestId: "quality-review-task",
+        reportFingerprint: fingerprint,
+      },
+      { workspaceId: "workspace-a" },
+    );
+    expect(transientFailure.ok).toBe(false);
+    await expect(access(runtimeWorkingDirectory)).resolves.toBeUndefined();
 
     const approved = await useCase.approvePreparedTrainingDataset(
       {
         requestId: "quality-review-task",
         reportFingerprint: fingerprint,
+        outputBaseName: "support-tickets-2026",
       },
       { workspaceId: "workspace-a" },
     );
@@ -623,12 +772,30 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase quality policy", () => {
       expect(approved.value.result.outputs.local?.report).toBeDefined();
       expect(approved.value.result.review?.state).toBe("approved");
     }
+    const savedDataset = [...storedArtifacts.values()].find(
+      (artifact) => artifact.descriptor.metadata.runtimeRole === "dataset",
+    );
+    const savedTrainSplit = [...storedArtifacts.values()].find(
+      (artifact) => artifact.descriptor.metadata.runtimeRole === "train",
+    );
+    expect(savedDataset?.descriptor.metadata.originalFileName).toBe(
+      "support-tickets-2026.jsonl",
+    );
+    expect(savedDataset?.descriptor.key).toContain(
+      "support-tickets-2026.jsonl",
+    );
+    expect(savedTrainSplit?.descriptor.metadata.originalFileName).toBe(
+      "support-tickets-2026-train.jsonl",
+    );
     expect(storedRoles).toEqual([
       "report",
       "quarantine",
+      "review",
+      "dataset",
       "dataset",
       "train",
     ]);
+    expect(storedArtifacts.has(reviewStorageKey)).toBe(false);
     await expect(access(runtimeWorkingDirectory)).rejects.toThrow();
 
     const replay = await useCase.approvePreparedTrainingDataset(

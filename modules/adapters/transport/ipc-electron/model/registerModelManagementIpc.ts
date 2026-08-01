@@ -31,6 +31,12 @@ import {
   DESKTOP_MODEL_TRAIN_RESPONSE_CHANNEL,
   DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL,
   DESKTOP_MODEL_TRAIN_STATUS_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_TRAIN_CANCEL_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_CANCEL_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_TRAIN_SAVE_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_SAVE_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_TRAIN_DISCARD_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_DISCARD_RESPONSE_CHANNEL,
   DESKTOP_MODEL_RECORD_UPDATE_RESPONSE_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_RESPONSE_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL,
@@ -53,6 +59,9 @@ import {
   createDesktopModelFolderRevealSuccessResponse,
   createDesktopModelTrainSuccessResponse,
   createDesktopModelTrainStatusSuccessResponse,
+  createDesktopModelTrainCancelSuccessResponse,
+  createDesktopModelTrainSaveSuccessResponse,
+  createDesktopModelTrainDiscardSuccessResponse,
   createDesktopModelRecordUpdateSuccessResponse,
   createDesktopModelDownloadSuccessResponse,
   createDesktopModelDownloadStartSuccessResponse,
@@ -82,6 +91,12 @@ import {
   type DesktopModelTrainResponse,
   type DesktopModelTrainStatusRequest,
   type DesktopModelTrainStatusResponse,
+  type DesktopModelTrainCancelRequest,
+  type DesktopModelTrainCancelResponse,
+  type DesktopModelTrainSaveRequest,
+  type DesktopModelTrainSaveResponse,
+  type DesktopModelTrainDiscardRequest,
+  type DesktopModelTrainDiscardResponse,
   type DesktopModelRecordUpdateResponse,
   type DesktopModelDownloadRequest,
   type DesktopModelDownloadResponse,
@@ -115,7 +130,7 @@ export interface RegisterModelManagementIpcDependencies {
   updateModelRecordUseCase: Pick<UpdateModelRecordUseCase, "execute">;
   deleteModelRecordUseCase: Pick<DeleteModelRecordUseCase, "execute">;
   revealModelInFolderUseCase: Pick<RevealModelInFolderUseCase, "execute">;
-  trainModelUseCase: Pick<TrainModelUseCase, "execute" | "read">;
+  trainModelUseCase: Pick<TrainModelUseCase, "execute" | "read" | "cancel" | "save" | "discard">;
   validateModelUseCase: Pick<ValidateModelUseCase, "execute">;
   publishModelUseCase: Pick<PublishModelUseCase, "execute">;
 }
@@ -418,6 +433,7 @@ export function createRevealModelInFolderIpcHandler(
 
 export function createTrainModelIpcHandler(
   useCase: Pick<TrainModelUseCase, "execute">,
+  reporter?: ModelOperationFailureReporter,
 ) {
   return async (
     _event: unknown,
@@ -430,6 +446,7 @@ export function createTrainModelIpcHandler(
         correlationId: request.correlationId,
       });
     } catch (error) {
+      await reportOperationFailure(reporter, "trainModel.execute", error);
       return toFailureResponse<DesktopModelTrainResponse>(
         DESKTOP_MODEL_TRAIN_RESPONSE_CHANNEL,
         error,
@@ -441,23 +458,92 @@ export function createTrainModelIpcHandler(
 
 export function createReadModelTrainingStatusIpcHandler(
   useCase: Pick<TrainModelUseCase, "read">,
+  reporter?: ModelOperationFailureReporter,
 ) {
   return async (
     _event: unknown,
     request: DesktopModelTrainStatusRequest,
   ): Promise<DesktopModelTrainStatusResponse> => {
     try {
-      const result = await useCase.read(request.payload.runId);
+      const result = await useCase.read(
+        request.payload.runId,
+        request.payload.workspaceId,
+      );
       return createDesktopModelTrainStatusSuccessResponse(result, {
         requestId: request.requestId,
         correlationId: request.correlationId,
       });
     } catch (error) {
+      await reportOperationFailure(reporter, "trainModel.read", error);
       return toFailureResponse<DesktopModelTrainStatusResponse>(
         DESKTOP_MODEL_TRAIN_STATUS_RESPONSE_CHANNEL,
         error,
         request,
       );
+    }
+  };
+}
+
+export function createCancelModelTrainingIpcHandler(
+  useCase: Pick<TrainModelUseCase, "cancel">,
+  reporter?: ModelOperationFailureReporter,
+) {
+  return async (
+    _event: unknown,
+    request: DesktopModelTrainCancelRequest,
+  ): Promise<DesktopModelTrainCancelResponse> => {
+    try {
+      const result = await useCase.cancel(
+        request.payload.runId,
+        request.payload.workspaceId,
+      );
+      return createDesktopModelTrainCancelSuccessResponse(result, {
+        requestId: request.requestId,
+        correlationId: request.correlationId,
+      });
+    } catch (error) {
+      await reportOperationFailure(reporter, "trainModel.cancel", error);
+      return toFailureResponse<DesktopModelTrainCancelResponse>(
+        DESKTOP_MODEL_TRAIN_CANCEL_RESPONSE_CHANNEL,
+        error,
+        request,
+      );
+    }
+  };
+}
+
+export function createSaveModelTrainingIpcHandler(
+  useCase: Pick<TrainModelUseCase, "save">,
+  reporter?: ModelOperationFailureReporter,
+) {
+  return async (_event: unknown, request: DesktopModelTrainSaveRequest): Promise<DesktopModelTrainSaveResponse> => {
+    try {
+      const result = await useCase.save(request.payload.runId, request.payload.workspaceId);
+      return createDesktopModelTrainSaveSuccessResponse(result, {
+        requestId: request.requestId,
+        correlationId: request.correlationId,
+      });
+    } catch (error) {
+      await reportOperationFailure(reporter, "trainModel.save", error);
+      return toFailureResponse<DesktopModelTrainSaveResponse>(DESKTOP_MODEL_TRAIN_SAVE_RESPONSE_CHANNEL, error, request);
+    }
+  };
+}
+
+export function createDiscardModelTrainingIpcHandler(
+  useCase: Pick<TrainModelUseCase, "discard">,
+  reporter?: ModelOperationFailureReporter,
+) {
+  return async (_event: unknown, request: DesktopModelTrainDiscardRequest): Promise<DesktopModelTrainDiscardResponse> => {
+    try {
+      const result = await useCase.discard(request.payload.runId, request.payload.workspaceId);
+      return createDesktopModelTrainDiscardSuccessResponse(result, {
+        requestId: request.requestId,
+        correlationId: request.correlationId,
+      });
+    } catch (error) {
+      await reportOperationFailure(reporter, "trainModel.discard", error);
+      return toFailureResponse<DesktopModelTrainDiscardResponse>(DESKTOP_MODEL_TRAIN_DISCARD_RESPONSE_CHANNEL, error, request);
     }
   };
 }
@@ -554,11 +640,32 @@ export function registerModelManagementIpc(
   );
   dependencies.ipcMain.handle(
     DESKTOP_MODEL_TRAIN_REQUEST_CHANNEL.value,
-    createTrainModelIpcHandler(dependencies.trainModelUseCase),
+    createTrainModelIpcHandler(
+      dependencies.trainModelUseCase,
+      dependencies.reportOperationFailure,
+    ),
   );
   dependencies.ipcMain.handle(
     DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL.value,
-    createReadModelTrainingStatusIpcHandler(dependencies.trainModelUseCase),
+    createReadModelTrainingStatusIpcHandler(
+      dependencies.trainModelUseCase,
+      dependencies.reportOperationFailure,
+    ),
+  );
+  dependencies.ipcMain.handle(
+    DESKTOP_MODEL_TRAIN_CANCEL_REQUEST_CHANNEL.value,
+    createCancelModelTrainingIpcHandler(
+      dependencies.trainModelUseCase,
+      dependencies.reportOperationFailure,
+    ),
+  );
+  dependencies.ipcMain.handle(
+    DESKTOP_MODEL_TRAIN_SAVE_REQUEST_CHANNEL.value,
+    createSaveModelTrainingIpcHandler(dependencies.trainModelUseCase, dependencies.reportOperationFailure),
+  );
+  dependencies.ipcMain.handle(
+    DESKTOP_MODEL_TRAIN_DISCARD_REQUEST_CHANNEL.value,
+    createDiscardModelTrainingIpcHandler(dependencies.trainModelUseCase, dependencies.reportOperationFailure),
   );
   dependencies.ipcMain.handle(
     DESKTOP_MODEL_VALIDATE_REQUEST_CHANNEL.value,

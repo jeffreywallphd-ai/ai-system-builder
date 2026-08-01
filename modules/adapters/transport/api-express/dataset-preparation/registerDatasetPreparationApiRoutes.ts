@@ -9,6 +9,7 @@ import {
   API_DATASET_PREPARATION_CANCEL_OPERATION,
   API_DATASET_PREPARATION_CAPACITY_READ_OPERATION,
   API_DATASET_PREPARATION_APPROVE_OPERATION,
+  API_DATASET_PREPARATION_REVIEW_PAGE_OPERATION,
   API_DATASET_PREPARATION_READ_OPERATION,
   API_DATASET_PREPARATION_START_OPERATION,
   createApiError,
@@ -56,7 +57,13 @@ export interface RegisterDatasetPreparationApiRoutesDependencies {
     | "readPrepareTrainingDataset"
     | "cancelPrepareTrainingDataset"
     | "approvePreparedTrainingDataset"
-  >;
+  > &
+    Partial<
+      Pick<
+        PrepareTrainingDatasetFromArtifactsUseCase,
+        "readPreparedDatasetQualityReviewPage"
+      >
+    >;
   readGenerationCapacity?: () => Promise<DatasetPreparationGenerationCapacitySnapshot>;
 }
 
@@ -74,10 +81,7 @@ const record = (value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>;
 };
 
-const requestContext = (
-  request: RequestLike,
-  workspaceId: string,
-) => {
+const requestContext = (request: RequestLike, workspaceId: string) => {
   const auth = getExpressAuthContext(request as Request);
   const organization = getExpressOrganizationContext(request as Request);
   return {
@@ -141,8 +145,7 @@ const mapTaskStatus = (
       },
 ): ApiDatasetPreparationTaskReadValue => {
   if (
-    (value.status === "succeeded" ||
-      value.status === "review-required") &&
+    (value.status === "succeeded" || value.status === "review-required") &&
     "result" in value
   ) {
     return {
@@ -287,6 +290,88 @@ export function registerDatasetPreparationApiRoutes(
   );
 
   dependencies.app.get(
+    "/api/dataset-preparation/tasks/:requestId/review-page",
+    async (request, response) => {
+      try {
+        requireAuthenticated(request);
+        const workspaceId = requiredString(
+          request.query?.workspaceId,
+          "workspaceId",
+        );
+        const requestId = requiredString(
+          request.params?.requestId,
+          "requestId",
+        );
+        const reportFingerprint = requiredString(
+          request.query?.reportFingerprint,
+          "reportFingerprint",
+        );
+        const lineId = requiredString(request.query?.lineId, "lineId");
+        const page = Number(request.query?.page ?? 0);
+        const readReviewPage =
+          dependencies.prepareTrainingDatasetUseCase
+            .readPreparedDatasetQualityReviewPage;
+        if (!readReviewPage) {
+          response
+            .status(503)
+            .json(
+              createApiFailureResponse(
+                createApiError(
+                  API_DATASET_PREPARATION_REVIEW_PAGE_OPERATION,
+                  "unavailable",
+                  "Dataset preparation row review is unavailable.",
+                ),
+              ),
+            );
+          return;
+        }
+        const result = await readReviewPage.call(
+          dependencies.prepareTrainingDatasetUseCase,
+          { requestId, reportFingerprint, lineId: lineId as never, page },
+          requestContext(request, workspaceId),
+        );
+        if (!result.ok) {
+          response
+            .status(failureStatus(result.error.code))
+            .json(
+              createApiFailureResponse(
+                createApiError(
+                  API_DATASET_PREPARATION_REVIEW_PAGE_OPERATION,
+                  result.error.code,
+                  result.error.message,
+                ),
+              ),
+            );
+          return;
+        }
+        response
+          .status(200)
+          .json(
+            createApiSuccessResponse(
+              API_DATASET_PREPARATION_REVIEW_PAGE_OPERATION,
+              result.value,
+            ),
+          );
+      } catch (error) {
+        const authenticated = !(error instanceof AuthenticationRequiredError);
+        response
+          .status(authenticated ? 400 : 401)
+          .json(
+            createApiFailureResponse(
+              createApiError(
+                API_DATASET_PREPARATION_REVIEW_PAGE_OPERATION,
+                authenticated ? "validation" : "unauthorized",
+                authenticated
+                  ? "The dataset review page request is invalid."
+                  : "Authentication is required.",
+              ),
+            ),
+          );
+      }
+    },
+  );
+
+  dependencies.app.get(
     "/api/dataset-preparation/tasks/:requestId",
     async (request, response) => {
       try {
@@ -361,9 +446,21 @@ export function registerDatasetPreparationApiRoutes(
           body.reportFingerprint,
           "reportFingerprint",
         );
+        if (
+          body.outputBaseName !== undefined &&
+          typeof body.outputBaseName !== "string"
+        ) {
+          throw new Error("outputBaseName must be text.");
+        }
         const result =
           await dependencies.prepareTrainingDatasetUseCase.approvePreparedTrainingDataset(
-            { requestId, reportFingerprint },
+            {
+              requestId,
+              reportFingerprint,
+              ...(body.outputBaseName !== undefined
+                ? { outputBaseName: body.outputBaseName }
+                : {}),
+            },
             requestContext(request, workspaceId),
           );
         if (!result.ok) {

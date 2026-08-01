@@ -46,9 +46,11 @@ data plane, provisioner to runtime role, and backup platform to restore target.
   content security policy, context isolation, no Node integration, a minimal
   read/submit preload, and deny navigation, popups, permissions, subframes,
   foreign/destroyed senders, and stale sessions. Stop closes the window/session;
-  failed preparation or launch compensates by stopping the deployment.
+  a user window close invokes host-owned Stop for the exact started revision,
+  while an explicit Stop close cannot trigger a duplicate mutation. Failed
+  preparation or launch compensates by stopping the deployment.
 - Focused tests cover traversal, binding substitution, cross-instance records,
-  missing databases, quotas, stop/reopen, migration, backup/restore, retention,
+  missing databases, quotas, user-close/stop/reopen, migration, backup/restore, retention,
   confirmation, and sanitized failures. Live PostgreSQL 18 qualification proves
   foreign-database, `CREATE DATABASE`, `CREATE ROLE`, and schema-DDL denial.
   Packaged desktop qualification additionally proves a separate runtime window,

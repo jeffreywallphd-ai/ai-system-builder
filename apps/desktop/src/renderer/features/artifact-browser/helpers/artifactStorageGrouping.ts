@@ -8,9 +8,19 @@ function storageKeyHasSegment(storageKey: string, segment: string): boolean {
 }
 
 export function isUploadedArtifact(item: ArtifactStorageGroupingItem): boolean {
-  return item.sourceKind === "upload" || storageKeyHasSegment(item.storageKey, "uploads");
+  if (isGeneratedArtifact(item)) return false;
+  return (
+    item.sourceKind === "upload" ||
+    storageKeyHasSegment(item.storageKey, "uploads")
+  );
 }
 
-export function isGeneratedArtifact(item: ArtifactStorageGroupingItem): boolean {
-  return item.sourceKind === "generated" || storageKeyHasSegment(item.storageKey, "generated");
+export function isGeneratedArtifact(
+  item: ArtifactStorageGroupingItem,
+): boolean {
+  return (
+    item.sourceKind === "generated" ||
+    item.sourceKind === "runtime" ||
+    storageKeyHasSegment(item.storageKey, "generated")
+  );
 }

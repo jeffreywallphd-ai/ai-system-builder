@@ -1,5 +1,6 @@
 import {
   resolveDatasetPreparationTaskProfileDefinition,
+  validateDatasetPreparationSaveName,
   type DatasetPreparationExecutionPlan,
   type DatasetPreparationTaskType,
 } from "../../../../../../../modules/contracts/runtime";
@@ -46,6 +47,7 @@ export interface DatasetPreparationValidationInput {
   validationRatio?: string;
   testRatio: string;
   seed: string;
+  outputBaseName?: string;
   localDestinationEnabled: boolean;
   huggingFaceDestinationEnabled: boolean;
   huggingFaceRepository: string;
@@ -302,6 +304,11 @@ export function validateAndParseDatasetPreparationInputs(
   if (typeof parsedSeed === "number" && Number.isNaN(parsedSeed)) {
     return { ok: false, error: "Seed must be numeric when provided." };
   }
+
+  const saveNameError = validateDatasetPreparationSaveName(
+    input.outputBaseName,
+  );
+  if (saveNameError) return { ok: false, error: saveNameError };
 
   if (!input.localDestinationEnabled && !input.huggingFaceDestinationEnabled) {
     return { ok: false, error: "Enable at least one output destination." };

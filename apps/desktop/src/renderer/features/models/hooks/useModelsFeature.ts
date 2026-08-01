@@ -282,7 +282,7 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
     }
     if (!workspaceId) { setManageState({ status: "error", message: "Select a workspace before deleting model records." }); return; }
     try {
-      await modelClient.deleteModelRecord({ workspaceId, modelRecordId: pendingDeleteModelRecordId, deleteBackingArtifacts: false, deleteLocalFiles: false });
+      await modelClient.deleteModelRecord({ workspaceId, modelRecordId: pendingDeleteModelRecordId, deleteBackingArtifacts: false, deleteLocalFiles: true });
       setPendingDeleteModelRecordId(undefined);
       setDeleteConfirmationInput("");
       await refreshModels();

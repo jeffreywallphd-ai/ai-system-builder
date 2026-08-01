@@ -2335,7 +2335,12 @@ def prepare_training_dataset(
     output_directory: Path | None = None,
 ) -> PrepareTrainingDatasetResult:
     task_type, task_recipe = _resolve_task_recipe(payload)
-    structured_output: RuntimeStructuredOutput | None = None
+    structured_output = (
+        _resolve_structured_output_for_generation(payload)
+        if isinstance(payload.runtime, dict)
+        and isinstance(payload.runtime.get("structuredOutput"), dict)
+        else None
+    )
     preparation_plan = _resolve_and_validate_preparation_plan(
         payload,
         task_type,
@@ -2543,6 +2548,23 @@ def prepare_training_dataset(
             )
         )
     if quality_report is not None:
+        if rows:
+            outputs.append(
+                _emit_rows(
+                    rows,
+                    "jsonl",
+                    "review",
+                    base_name,
+                    {
+                        "rowCount": len(rows),
+                        "reportFingerprint": quality_report[
+                            "reportFingerprint"
+                        ],
+                    },
+                    task_type,
+                    output_directory,
+                )
+            )
         outputs.append(
             _emit_json_document(
                 quality_report,

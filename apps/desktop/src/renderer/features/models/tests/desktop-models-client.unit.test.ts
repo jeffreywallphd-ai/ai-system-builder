@@ -52,6 +52,9 @@ describe("desktop models client", () => {
       }),
       trainModel: vi.fn().mockResolvedValue({ ok: true, value: { runId: "run-1", status: "succeeded" } }),
       readModelTrainingStatus: vi.fn().mockResolvedValue({ ok: true, value: { runId: "run-1", status: "running", progress: { batch: 1, totalBatches: 59 } } }),
+      cancelModelTraining: vi.fn().mockResolvedValue({ ok: true, value: { runId: "run-1", status: "cancelled" } }),
+      saveModelTraining: vi.fn().mockResolvedValue({ ok: true, value: { runId: "run-1", status: "succeeded", outputModel: { modelRecordId: "m-trained" } } }),
+      discardModelTraining: vi.fn().mockResolvedValue({ ok: true, value: { runId: "run-1", status: "cancelled" } }),
       validateModel: vi.fn().mockResolvedValue({ ok: true, value: { modelRecordId: "m1", status: "valid" } }),
       publishModel: vi.fn().mockResolvedValue({ ok: true, value: { modelRecordId: "m1", published: true, provider: "huggingface", repository: "owner/repo" } }),
     } as never;
@@ -85,7 +88,10 @@ describe("desktop models client", () => {
       commonParameters: {},
       output: { outputModelName: "demo-adapter", destination: { local: { enabled: true } } },
     });
-    await client.readModelTrainingStatus({ runId: "run-1" });
+    await client.readModelTrainingStatus({ runId: "run-1", workspaceId: "workspace-a" });
+    await client.cancelModelTraining({ runId: "run-1", workspaceId: "workspace-a" });
+    await client.saveModelTraining({ runId: "run-1", workspaceId: "workspace-a" });
+    await client.discardModelTraining({ runId: "run-1", workspaceId: "workspace-a" });
     await client.validateModel({ workspaceId: "workspace-a", modelRecordId: "m1" });
     await client.publishModel({ workspaceId: "workspace-a", modelRecordId: "m1", repository: "owner/repo" });
 
@@ -100,7 +106,10 @@ describe("desktop models client", () => {
     expect(desktopApi.deleteModelRecord).toHaveBeenCalledWith({ workspaceId: "workspace-a", modelRecordId: "m1" });
     expect(desktopApi.revealModelInFolder).toHaveBeenCalledWith({ workspaceId: "workspace-a", modelRecordId: "m1" });
     expect(desktopApi.trainModel).toHaveBeenCalled();
-    expect(desktopApi.readModelTrainingStatus).toHaveBeenCalledWith({ runId: "run-1" });
+    expect(desktopApi.readModelTrainingStatus).toHaveBeenCalledWith({ runId: "run-1", workspaceId: "workspace-a" });
+    expect(desktopApi.cancelModelTraining).toHaveBeenCalledWith({ runId: "run-1", workspaceId: "workspace-a" });
+    expect(desktopApi.saveModelTraining).toHaveBeenCalledWith({ runId: "run-1", workspaceId: "workspace-a" });
+    expect(desktopApi.discardModelTraining).toHaveBeenCalledWith({ runId: "run-1", workspaceId: "workspace-a" });
     expect(desktopApi.validateModel).toHaveBeenCalledWith({ workspaceId: "workspace-a", modelRecordId: "m1" });
     expect(desktopApi.publishModel).toHaveBeenCalledWith({ workspaceId: "workspace-a", modelRecordId: "m1", repository: "owner/repo" });
   });

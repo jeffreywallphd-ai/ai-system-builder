@@ -40,6 +40,20 @@ describe("dataset preparation artifact grouping", () => {
     expect(filterUploadedDatasetPreparationArtifacts(artifacts)).toEqual([]);
   });
 
+  it("keeps runtime-generated results out of the uploaded filter", () => {
+    const artifact: DatasetPreparationSourceArtifact = {
+      artifactId: "generated-parquet",
+      label: "training-data.parquet",
+      storageKey: "generated/training-data.parquet",
+      sourceKind: "runtime",
+    };
+
+    expect(filterGeneratedDatasetPreparationArtifacts([artifact])).toEqual([
+      artifact,
+    ]);
+    expect(filterUploadedDatasetPreparationArtifacts([artifact])).toEqual([]);
+  });
+
   it("keeps image artifacts out of LLM source lists", () => {
     const artifacts: DatasetPreparationSourceArtifact[] = [
       {

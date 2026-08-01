@@ -25,6 +25,7 @@ from .models import (
     LoadedModelDescriptor,
     ModelStatusResult,
     PrepareTrainingDatasetRequest,
+    ReviewDatasetRequest,
     PythonRuntimeCapabilitiesResult,
     PythonRuntimeError,
     PythonRuntimeHealthCheckResult,
@@ -41,10 +42,17 @@ from .models import (
 )
 from .tasks.example_generation import ensure_generation_model_downloaded
 from .tasks.constrained_json_decoder import get_constrained_json_decoder_runtime_status
-from .tasks.local_text_generation import describe_loaded_generation_models, get_or_create_local_text_generator, unload_generation_models
+from .tasks.local_text_generation import (
+    describe_loaded_generation_models,
+    ensure_generation_adapter_is_available,
+    ensure_generation_model_is_available,
+    get_or_create_local_text_generator,
+    unload_generation_models,
+)
 from .tasks.model_validation import validate_model_output
 from .tasks.prepare_training_dataset import prepare_training_dataset
-from .tasks.train_model import train_model
+from .tasks.review_dataset import review_dataset
+from .tasks.train_model import TrainingCancellationRequested, train_model
 
 RUNTIME_ID = getenv("PYTHON_RUNTIME_ID", "python-sidecar")
 WORKER_VERSION = getenv("PYTHON_RUNTIME_WORKER_VERSION", "0.1.0")
@@ -203,6 +211,7 @@ def _create_task_record(request_id: str, task_type: str, metadata: dict[str, Any
         "completedAt": None,
         "metadata": _safe_task_metadata(metadata),
         "future": None,
+        "cancellationRequested": False,
     }
 
 
@@ -241,6 +250,15 @@ def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
     if request.taskType == "train-model":
         payload = TrainModelTaskRequest.model_validate(request.payload)
         def on_training_progress(progress: dict[str, Any]) -> None:
+            with TASK_REGISTRY_LOCK:
+                cancellation_requested = TASK_REGISTRY.get(
+                    request.requestId,
+                    {},
+                ).get("cancellationRequested") is True
+            if cancellation_requested:
+                raise TrainingCancellationRequested(
+                    "Model training cancellation requested."
+                )
             _update_task(request.requestId, progress=progress)
             print(json.dumps({"event": "runtime.train_model.progress"}), flush=True)
 
@@ -314,6 +332,10 @@ def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
             output_directory=_runtime_output_directory(payload),
         ).model_dump(mode="json")
 
+    if request.taskType == "review-dataset":
+        payload = ReviewDatasetRequest.model_validate(request.payload)
+        return review_dataset(payload)
+
 
     if request.taskType == "conversation-text-generation":
         payload = request.payload if isinstance(request.payload, dict) else {}
@@ -323,12 +345,31 @@ def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
         selected_model_id = payload.get("selectedModelId")
         if not isinstance(selected_model_id, str) or not selected_model_id.strip():
             raise RuntimeError("Conversation text generation requires an approved selected model reference.")
-        loaded_models = describe_loaded_generation_models()
-        if not loaded_models:
-            raise RuntimeError("Conversation text generation requires a loaded local generation model.")
-        selected_model = next((model for model in loaded_models if model.modelId == selected_model_id), None)
-        if selected_model is None:
-            raise RuntimeError("Conversation text generation selected model is unavailable.")
+        base_model_id = payload.get("baseModelId")
+        if base_model_id is not None and (
+            not isinstance(base_model_id, str) or not base_model_id.strip()
+        ):
+            raise RuntimeError("Conversation text generation base model reference is invalid.")
+        adapter_revision = payload.get("adapterRevision")
+        if adapter_revision is not None and not isinstance(adapter_revision, str):
+            raise RuntimeError("Conversation text generation adapter revision is invalid.")
+        runtime_model_id = base_model_id.strip() if base_model_id else selected_model_id
+        adapter_model_id = selected_model_id if base_model_id else None
+        loaded_model_data = next(
+            (
+                model
+                for model in describe_loaded_generation_models()
+                if model.get("modelId") == runtime_model_id
+                and model.get("adapterModelId") == adapter_model_id
+                and model.get("adapterRevision") == adapter_revision
+            ),
+            None,
+        )
+        selected_model = (
+            LoadedModelDescriptor.model_validate(loaded_model_data)
+            if loaded_model_data is not None
+            else None
+        )
         generation_payload = payload.get("generation") if isinstance(payload.get("generation"), dict) else {}
         params = GenerationParams(
             temperature=generation_payload.get("temperature") if isinstance(generation_payload.get("temperature"), (int, float)) else None,
@@ -336,9 +377,23 @@ def _run_task(request: StartPythonRuntimeTaskRequest) -> Any:
         )
         config = ExampleGenerationConfig(
             mode="qa",
-            model=LocalModelConfig(provider="transformers", modelId=selected_model.modelId, inferenceMode=selected_model.inferenceMode, device=selected_model.device, torchDtype=selected_model.torchDtype),
+            model=LocalModelConfig(
+                provider="transformers",
+                modelId=runtime_model_id,
+                inferenceMode=(
+                    selected_model.inferenceMode if selected_model else "auto"
+                ),
+                device=selected_model.device if selected_model else "auto",
+                torchDtype=selected_model.torchDtype if selected_model else "auto",
+                adapterModelId=adapter_model_id,
+                adapterRevision=adapter_revision,
+            ),
             generationParams=params,
         )
+        if selected_model is None:
+            ensure_generation_model_is_available(config)
+            if adapter_model_id:
+                ensure_generation_adapter_is_available(config)
         generator = get_or_create_local_text_generator(config)
         prompt = _build_conversation_prompt(messages)
         assistant_response_text = generator.generate_text(prompt).strip()
@@ -447,7 +502,33 @@ def _start_async_task(request: StartPythonRuntimeTaskRequest) -> StartPythonRunt
         _update_task(request.requestId, status="running")
         try:
             data = _run_task(request)
-            _update_task(request.requestId, status="succeeded", data=data, completedAt=_now_iso())
+            with TASK_REGISTRY_LOCK:
+                cancellation_requested = TASK_REGISTRY.get(
+                    request.requestId,
+                    {},
+                ).get("cancellationRequested") is True
+            if cancellation_requested:
+                _update_task(
+                    request.requestId,
+                    status="cancelled",
+                    data=None,
+                    completedAt=_now_iso(),
+                )
+            else:
+                _update_task(
+                    request.requestId,
+                    status="succeeded",
+                    data=data,
+                    completedAt=_now_iso(),
+                )
+        except TrainingCancellationRequested:
+            _update_task(
+                request.requestId,
+                status="cancelled",
+                data=None,
+                error=None,
+                completedAt=_now_iso(),
+            )
         except Exception as error:
             error_code = _safe_task_error_code(error)
             error_stage = _safe_task_error_stage(error)
@@ -502,6 +583,7 @@ def health() -> PythonRuntimeHealthCheckResult:
 def capabilities() -> PythonRuntimeCapabilitiesResult:
     supported = [
         "prepare-training-dataset",
+        "review-dataset",
         "ensure-model-download",
         "model-status",
         "unload-model",
@@ -542,6 +624,17 @@ def cancel_task(request_id: str) -> CancelPythonRuntimeTaskResult:
     if record["status"] == "cancelled":
         return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status="cancelled", cancelled=True, message="Task is already cancelled.", metadata=record.get("metadata"))
     if record["status"] == "running":
+        if record.get("taskType") == "train-model":
+            with TASK_REGISTRY_LOCK:
+                current = TASK_REGISTRY.get(request_id)
+                if current is not None:
+                    current["cancellationRequested"] = True
+                    current["progress"] = {
+                        "stage": "cancelling",
+                        "message": "Stopping model training after the current batch.",
+                    }
+                    current["updatedAt"] = _now_iso()
+            return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status="running", cancelled=False, message="Model training cancellation requested.", metadata=record.get("metadata"))
         return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status="running", cancelled=False, message="Task is already running and cannot be force-cancelled.", metadata=record.get("metadata"))
     return CancelPythonRuntimeTaskResult(requestId=request_id, taskType=record.get("taskType"), status=record["status"], cancelled=False, message="Task is no longer cancellable.", metadata=record.get("metadata"))
 

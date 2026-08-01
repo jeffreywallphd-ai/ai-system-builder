@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { isGeneratedArtifact, isUploadedArtifact } from "../helpers/artifactStorageGrouping";
+import {
+  isGeneratedArtifact,
+  isUploadedArtifact,
+} from "../helpers/artifactStorageGrouping";
 
 describe("artifact storage grouping", () => {
   it("treats workspace-prefixed uploaded markdown artifacts as uploaded items", () => {
     const item = {
-      artifactId: "workspaces/workspace.d64c780b4ce34f62a65fb0b0ae4f80ca/artifacts/files/uploads/20260605133238388-9976fe6a4c5b4f4784aad3df0c5b37bd.md",
-      storageKey: "workspaces/workspace.d64c780b4ce34f62a65fb0b0ae4f80ca/artifacts/files/uploads/20260605133238388-9976fe6a4c5b4f4784aad3df0c5b37bd.md",
+      artifactId:
+        "workspaces/workspace.d64c780b4ce34f62a65fb0b0ae4f80ca/artifacts/files/uploads/20260605133238388-9976fe6a4c5b4f4784aad3df0c5b37bd.md",
+      storageKey:
+        "workspaces/workspace.d64c780b4ce34f62a65fb0b0ae4f80ca/artifacts/files/uploads/20260605133238388-9976fe6a4c5b4f4784aad3df0c5b37bd.md",
       originalName: "host-model.md",
       artifactFamily: "text" as const,
       mediaType: "text/markdown",
@@ -16,5 +21,22 @@ describe("artifact storage grouping", () => {
 
     expect(isUploadedArtifact(item)).toBe(true);
     expect(isGeneratedArtifact(item)).toBe(false);
+  });
+
+  it("gives generated identity precedence over upload-like metadata or paths", () => {
+    const generatedKey = {
+      storageKey:
+        "workspaces/workspace-1/artifacts/files/generated/data.parquet",
+      sourceKind: "upload",
+    };
+    const runtimeOutput = {
+      storageKey: "workspaces/workspace-1/artifacts/files/uploads/data.parquet",
+      sourceKind: "runtime",
+    };
+
+    expect(isGeneratedArtifact(generatedKey)).toBe(true);
+    expect(isUploadedArtifact(generatedKey)).toBe(false);
+    expect(isGeneratedArtifact(runtimeOutput)).toBe(true);
+    expect(isUploadedArtifact(runtimeOutput)).toBe(false);
   });
 });

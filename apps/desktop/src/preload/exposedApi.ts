@@ -146,10 +146,16 @@ import {
   DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_RESPONSE_CHANNEL,
   createDesktopPrepareTrainingDatasetTaskCancelRequest,
   createDesktopPrepareTrainingDatasetApproveRequest,
+  DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_OPERATION,
+  DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_REQUEST_CHANNEL,
+  DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_RESPONSE_CHANNEL,
+  createDesktopPrepareTrainingDatasetReviewPageRequest,
   type DesktopPrepareTrainingDatasetTaskCancelRequest,
   type DesktopPrepareTrainingDatasetTaskCancelResponse,
   type DesktopPrepareTrainingDatasetApproveRequest,
   type DesktopPrepareTrainingDatasetApproveResponse,
+  type DesktopPrepareTrainingDatasetReviewPageRequest,
+  type DesktopPrepareTrainingDatasetReviewPageResponse,
   DESKTOP_DATASET_VERSION_LIST_OPERATION,
   DESKTOP_DATASET_VERSION_LIST_REQUEST_CHANNEL,
   DESKTOP_DATASET_VERSION_LIST_RESPONSE_CHANNEL,
@@ -170,6 +176,26 @@ import {
   type DesktopDatasetVersionCompareResponse,
   type DesktopDatasetVersionReproduceResponse,
   type DesktopDatasetVersionPublishResponse,
+  DESKTOP_DATASET_REVIEW_TARGETS_OPERATION,
+  DESKTOP_DATASET_REVIEW_TARGETS_REQUEST_CHANNEL,
+  DESKTOP_DATASET_REVIEW_TARGETS_RESPONSE_CHANNEL,
+  DESKTOP_DATASET_REVIEW_PAGE_OPERATION,
+  DESKTOP_DATASET_REVIEW_PAGE_REQUEST_CHANNEL,
+  DESKTOP_DATASET_REVIEW_PAGE_RESPONSE_CHANNEL,
+  DESKTOP_DATASET_REVIEW_REJECT_OPERATION,
+  DESKTOP_DATASET_REVIEW_REJECT_REQUEST_CHANNEL,
+  DESKTOP_DATASET_REVIEW_REJECT_RESPONSE_CHANNEL,
+  DESKTOP_DATASET_REVIEW_EDIT_OPERATION,
+  DESKTOP_DATASET_REVIEW_EDIT_REQUEST_CHANNEL,
+  DESKTOP_DATASET_REVIEW_EDIT_RESPONSE_CHANNEL,
+  createDesktopDatasetReviewTargetsRequest,
+  createDesktopDatasetReviewPageRequest,
+  createDesktopDatasetReviewRejectRequest,
+  createDesktopDatasetReviewEditRequest,
+  type DesktopDatasetReviewTargetsResponse,
+  type DesktopDatasetReviewPageResponse,
+  type DesktopDatasetReviewRejectResponse,
+  type DesktopDatasetReviewEditResponse,
   DESKTOP_PYTHON_RUNTIME_CONTROL_OPERATION,
   DESKTOP_PYTHON_RUNTIME_CONTROL_REQUEST_CHANNEL,
   DESKTOP_PYTHON_RUNTIME_CONTROL_RESPONSE_CHANNEL,
@@ -429,6 +455,9 @@ import {
   createDesktopModelFolderRevealRequest,
   createDesktopModelTrainRequest,
   createDesktopModelTrainStatusRequest,
+  createDesktopModelTrainCancelRequest,
+  createDesktopModelTrainSaveRequest,
+  createDesktopModelTrainDiscardRequest,
   createDesktopModelValidateRequest,
   createDesktopModelPublishRequest,
   type DesktopModelBrowseResponse,
@@ -445,6 +474,9 @@ import {
   type DesktopModelFolderRevealResponse,
   type DesktopModelTrainResponse,
   type DesktopModelTrainStatusResponse,
+  type DesktopModelTrainCancelResponse,
+  type DesktopModelTrainSaveResponse,
+  type DesktopModelTrainDiscardResponse,
   type DesktopModelValidateResponse,
   type DesktopModelPublishResponse,
   DESKTOP_MODEL_TRAIN_OPERATION,
@@ -453,6 +485,15 @@ import {
   DESKTOP_MODEL_TRAIN_STATUS_OPERATION,
   DESKTOP_MODEL_TRAIN_STATUS_REQUEST_CHANNEL,
   DESKTOP_MODEL_TRAIN_STATUS_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_TRAIN_CANCEL_OPERATION,
+  DESKTOP_MODEL_TRAIN_CANCEL_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_CANCEL_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_TRAIN_SAVE_OPERATION,
+  DESKTOP_MODEL_TRAIN_SAVE_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_SAVE_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_TRAIN_DISCARD_OPERATION,
+  DESKTOP_MODEL_TRAIN_DISCARD_REQUEST_CHANNEL,
+  DESKTOP_MODEL_TRAIN_DISCARD_RESPONSE_CHANNEL,
   DESKTOP_MODEL_VALIDATE_OPERATION,
   DESKTOP_MODEL_VALIDATE_REQUEST_CHANNEL,
   DESKTOP_MODEL_VALIDATE_RESPONSE_CHANNEL,
@@ -770,10 +811,21 @@ export interface DesktopPreloadApi {
     input: {
       requestId: string;
       reportFingerprint: string;
+      outputBaseName?: string;
       workspaceId?: string;
     },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopPrepareTrainingDatasetApproveResponse>;
+  readPreparedDatasetQualityReviewPage: (
+    input: {
+      requestId: string;
+      reportFingerprint: string;
+      lineId: import("../../../../modules/contracts/runtime").DatasetQualityReviewLineId;
+      page: number;
+      workspaceId?: string;
+    },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopPrepareTrainingDatasetReviewPageResponse>;
   listDatasetVersions: (
     input: { workspaceId: string; datasetId?: string },
     context?: DesktopArtifactUploadBridgeContext,
@@ -797,6 +849,41 @@ export interface DesktopPreloadApi {
     },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopDatasetVersionPublishResponse>;
+  listDatasetReviewTargets: (
+    input: { workspaceId: string },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopDatasetReviewTargetsResponse>;
+  readDatasetReviewPage: (
+    input: {
+      workspaceId: string;
+      artifactKey: string;
+      versionId?: string;
+      page: number;
+      pageSize: 10 | 25 | 50;
+    },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopDatasetReviewPageResponse>;
+  rejectDatasetReviewRow: (
+    input: {
+      workspaceId: string;
+      artifactKey: string;
+      versionId?: string;
+      rowIndex: number;
+      rowFingerprint: `sha256:${string}`;
+    },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopDatasetReviewRejectResponse>;
+  editDatasetReviewRow: (
+    input: {
+      workspaceId: string;
+      artifactKey: string;
+      versionId?: string;
+      rowIndex: number;
+      rowFingerprint: `sha256:${string}`;
+      values: Readonly<Record<string, unknown>>;
+    },
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopDatasetReviewEditResponse>;
   readRuntimeReadiness: (
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopRuntimeReadinessReadResponse>;
@@ -1886,6 +1973,18 @@ export interface DesktopPreloadApi {
     input: Parameters<typeof createDesktopModelTrainStatusRequest>[0],
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopModelTrainStatusResponse>;
+  cancelModelTraining: (
+    input: Parameters<typeof createDesktopModelTrainCancelRequest>[0],
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopModelTrainCancelResponse>;
+  saveModelTraining: (
+    input: Parameters<typeof createDesktopModelTrainSaveRequest>[0],
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopModelTrainSaveResponse>;
+  discardModelTraining: (
+    input: Parameters<typeof createDesktopModelTrainDiscardRequest>[0],
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopModelTrainDiscardResponse>;
   validateModel: (
     input: Parameters<typeof createDesktopModelValidateRequest>[0],
     context?: DesktopArtifactUploadBridgeContext,
@@ -2384,6 +2483,9 @@ export function createDesktopPreloadApi(
           {
             requestId: input.requestId,
             reportFingerprint: input.reportFingerprint,
+            ...(input.outputBaseName !== undefined
+              ? { outputBaseName: input.outputBaseName }
+              : {}),
             boundary: {
               host: "desktop",
               source: "desktop.renderer.dataset-preparation",
@@ -2404,6 +2506,38 @@ export function createDesktopPreloadApi(
             DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_RESPONSE_CHANNEL.value,
           message:
             "Received invalid desktop dataset preparation approval IPC response envelope.",
+        },
+      );
+    },
+
+    async readPreparedDatasetQualityReviewPage(input, context = {}) {
+      const request: DesktopPrepareTrainingDatasetReviewPageRequest =
+        createDesktopPrepareTrainingDatasetReviewPageRequest(
+          {
+            requestId: input.requestId,
+            reportFingerprint: input.reportFingerprint,
+            lineId: input.lineId,
+            page: input.page,
+            boundary: {
+              host: "desktop",
+              source: "desktop.renderer.dataset-preparation",
+              workspaceId: input.workspaceId,
+            },
+          },
+          context,
+        );
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopPrepareTrainingDatasetReviewPageResponse>(
+        response,
+        {
+          operation: DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_OPERATION,
+          channel:
+            DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop dataset preparation review-page IPC response envelope.",
         },
       );
     },
@@ -2431,6 +2565,122 @@ export function createDesktopPreloadApi(
           channel: DESKTOP_DATASET_VERSION_LIST_RESPONSE_CHANNEL.value,
           message:
             "Received invalid desktop dataset version history IPC response envelope.",
+        },
+      );
+    },
+
+    async listDatasetReviewTargets(input, context = {}) {
+      const request = createDesktopDatasetReviewTargetsRequest(
+        {
+          boundary: {
+            host: "desktop",
+            source: "desktop.renderer.dataset-review",
+            workspaceId: input.workspaceId,
+          },
+        },
+        context,
+      );
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_DATASET_REVIEW_TARGETS_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopDatasetReviewTargetsResponse>(
+        response,
+        {
+          operation: DESKTOP_DATASET_REVIEW_TARGETS_OPERATION,
+          channel: DESKTOP_DATASET_REVIEW_TARGETS_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop dataset review targets IPC response envelope.",
+        },
+      );
+    },
+
+    async readDatasetReviewPage(input, context = {}) {
+      const request = createDesktopDatasetReviewPageRequest(
+        {
+          artifactKey: input.artifactKey,
+          versionId: input.versionId,
+          page: input.page,
+          pageSize: input.pageSize,
+          boundary: {
+            host: "desktop",
+            source: "desktop.renderer.dataset-review",
+            workspaceId: input.workspaceId,
+          },
+        },
+        context,
+      );
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_DATASET_REVIEW_PAGE_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopDatasetReviewPageResponse>(
+        response,
+        {
+          operation: DESKTOP_DATASET_REVIEW_PAGE_OPERATION,
+          channel: DESKTOP_DATASET_REVIEW_PAGE_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop dataset review page IPC response envelope.",
+        },
+      );
+    },
+
+    async rejectDatasetReviewRow(input, context = {}) {
+      const request = createDesktopDatasetReviewRejectRequest(
+        {
+          artifactKey: input.artifactKey,
+          versionId: input.versionId,
+          rowIndex: input.rowIndex,
+          rowFingerprint: input.rowFingerprint,
+          boundary: {
+            host: "desktop",
+            source: "desktop.renderer.dataset-review",
+            workspaceId: input.workspaceId,
+          },
+        },
+        context,
+      );
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_DATASET_REVIEW_REJECT_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopDatasetReviewRejectResponse>(
+        response,
+        {
+          operation: DESKTOP_DATASET_REVIEW_REJECT_OPERATION,
+          channel: DESKTOP_DATASET_REVIEW_REJECT_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop dataset review rejection IPC response envelope.",
+        },
+      );
+    },
+    async editDatasetReviewRow(input, context = {}) {
+      const request = createDesktopDatasetReviewEditRequest(
+        {
+          artifactKey: input.artifactKey,
+          versionId: input.versionId,
+          rowIndex: input.rowIndex,
+          rowFingerprint: input.rowFingerprint,
+          values: input.values,
+          boundary: {
+            host: "desktop",
+            source: "desktop.renderer.dataset-review",
+            workspaceId: input.workspaceId,
+          },
+        },
+        context,
+      );
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_DATASET_REVIEW_EDIT_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopDatasetReviewEditResponse>(
+        response,
+        {
+          operation: DESKTOP_DATASET_REVIEW_EDIT_OPERATION,
+          channel: DESKTOP_DATASET_REVIEW_EDIT_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop dataset review edit IPC response envelope.",
         },
       );
     },
@@ -4820,6 +5070,46 @@ export function createDesktopPreloadApi(
             "Received invalid desktop model training status IPC response envelope.",
         },
       );
+    },
+    async cancelModelTraining(input, context = {}) {
+      const request = createDesktopModelTrainCancelRequest(input, context);
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_MODEL_TRAIN_CANCEL_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopModelTrainCancelResponse>(
+        response,
+        {
+          operation: DESKTOP_MODEL_TRAIN_CANCEL_OPERATION,
+          channel: DESKTOP_MODEL_TRAIN_CANCEL_RESPONSE_CHANNEL.value,
+          message:
+            "Received invalid desktop model training cancellation IPC response envelope.",
+        },
+      );
+    },
+    async saveModelTraining(input, context = {}) {
+      const request = createDesktopModelTrainSaveRequest(input, context);
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_MODEL_TRAIN_SAVE_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopModelTrainSaveResponse>(response, {
+        operation: DESKTOP_MODEL_TRAIN_SAVE_OPERATION,
+        channel: DESKTOP_MODEL_TRAIN_SAVE_RESPONSE_CHANNEL.value,
+        message: "Received invalid desktop model training save IPC response envelope.",
+      });
+    },
+    async discardModelTraining(input, context = {}) {
+      const request = createDesktopModelTrainDiscardRequest(input, context);
+      const response = await dependencies.ipcRenderer.invoke(
+        DESKTOP_MODEL_TRAIN_DISCARD_REQUEST_CHANNEL.value,
+        request,
+      );
+      return assertDesktopEnvelopeResponse<DesktopModelTrainDiscardResponse>(response, {
+        operation: DESKTOP_MODEL_TRAIN_DISCARD_OPERATION,
+        channel: DESKTOP_MODEL_TRAIN_DISCARD_RESPONSE_CHANNEL.value,
+        message: "Received invalid desktop model training discard IPC response envelope.",
+      });
     },
     async validateModel(input, context = {}) {
       const request = createDesktopModelValidateRequest(input, context);

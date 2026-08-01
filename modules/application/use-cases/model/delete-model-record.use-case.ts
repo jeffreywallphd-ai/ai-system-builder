@@ -5,11 +5,11 @@ import {
 } from "../../../contracts/model";
 import { isWorkspaceId } from "../../../contracts/workspace";
 import type { ArtifactCatalogDeletePort } from "../../ports/artifact-catalog";
-import type { ModelRegistryPort } from "../../ports/model";
+import type { ModelLocalFilesDeletePort, ModelRegistryPort } from "../../ports/model";
 
 export class DeleteModelRecordUseCase {
   public constructor(
-    private readonly dependencies: { modelRegistry: ModelRegistryPort; artifactCatalogDeletePort?: ArtifactCatalogDeletePort },
+    private readonly dependencies: { modelRegistry: ModelRegistryPort; artifactCatalogDeletePort?: ArtifactCatalogDeletePort; modelLocalFilesDeletePort?: ModelLocalFilesDeletePort },
   ) {}
 
   public async execute(request: DeleteModelRecordRequest): Promise<DeleteModelRecordResult> {
@@ -21,6 +21,21 @@ export class DeleteModelRecordUseCase {
 
     const current = await this.dependencies.modelRegistry.getModelRecord(normalizedRequest.workspaceId, normalizedRequest.modelRecordId);
     const deletedBackingArtifactIds: string[] = [];
+    let deletedLocalFiles = false;
+
+    if (normalizedRequest.deleteLocalFiles && current?.localPath) {
+      if (!this.dependencies.modelLocalFilesDeletePort) {
+        throw new Error("Local model file deletion is unavailable.");
+      }
+      deletedLocalFiles = (
+        await this.dependencies.modelLocalFilesDeletePort.deleteLocalModelFiles({
+          localPath: current.localPath,
+          relativeFilePath: typeof current.metadata?.["checkpointFile"] === "string"
+            ? current.metadata["checkpointFile"]
+            : undefined,
+        })
+      ).deleted;
+    }
 
     if (normalizedRequest.deleteBackingArtifacts && current?.backingArtifactIds?.length) {
       for (const storageKey of current.backingArtifactIds) {
@@ -36,7 +51,7 @@ export class DeleteModelRecordUseCase {
     return {
       deletedModelRecordId: normalizedRequest.modelRecordId,
       deletedRegistryRecord: true,
-      deletedLocalFiles: false,
+      deletedLocalFiles,
       deletedBackingArtifactIds,
     };
   }

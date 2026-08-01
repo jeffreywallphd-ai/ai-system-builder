@@ -49,6 +49,9 @@ Use cases in this folder own application orchestration and remain adapter-agnost
     outputs through storage/provider ports without exposing runtime paths.
   - returns bounded advanced readiness and aggregate review evidence without
     exposing source text, embeddings, prompts, or generated candidate text;
+  - reads separately contained accepted or quarantined records only through
+    fixed 10-row, scope- and report-fingerprint-bound pages, with byte, line,
+    field, depth, and display-value limits and no runtime-path disclosure;
   - resolves requested quality presets through a host-owned policy provider and
     fails closed when policy authority is unavailable;
   - validates bounded quality reports and reversible quarantine evidence,
@@ -71,6 +74,17 @@ Use cases in this folder own application orchestration and remain adapter-agnost
   - retrieve the bounded immutable recipe artifact, verify its exact digest,
     and return the saved setup plus stable source artifact ids without exposing
     source rows.
+
+- Dataset-review use cases
+  - list only locally readable workspace Parquet artifacts and locally readable
+    immutable version outputs; repository-only or stale catalog records remain
+    unavailable until localization restores workspace-owned bytes;
+  - read bounded row pages without placing row values in structured persistence
+    and bind rejection or editing to the exact version, artifact key, row index,
+    and returned row fingerprint;
+  - preserve the parent artifact, create an imported 1.0 baseline when needed,
+    and make each approved edit a new immutable minor version; replacement row
+    content stays out of version records.
 
 - `PublishDatasetVersionUseCase`
   - authorizes the exact workspace operation and relevant provider scopes;

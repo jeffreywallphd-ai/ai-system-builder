@@ -1,6 +1,9 @@
 import { useCallback, useState } from "react";
 
-import type { ArtifactBrowserViewState } from "../../../../../../../modules/ui/shared";
+import {
+  isArtifactBrowserVisible,
+  type ArtifactBrowserViewState,
+} from "../../../../../../../modules/ui/shared";
 import type {
   DesktopArtifactBrowseItem,
   DesktopArtifactFamily,
@@ -46,7 +49,9 @@ export function useArtifactBrowserArtifacts({
         workspaceId ? (client.browseUnregisteredArtifacts?.({ workspaceId }) ?? Promise.resolve([])) : Promise.resolve([]),
       ]);
 
-      const filteredByStorage = browseItems.filter((item) => {
+      const visibleItems = browseItems.filter(isArtifactBrowserVisible);
+      const visibleUnregistered = unregistered.filter(isArtifactBrowserVisible);
+      const filteredByStorage = visibleItems.filter((item) => {
         if (selectedStorageFilter === "uploaded") {
           return isUploadedArtifact(item);
         }
@@ -56,10 +61,10 @@ export function useArtifactBrowserArtifacts({
         return true;
       });
       setItems(filteredByStorage);
-      setUnregisteredItems(unregistered);
+      setUnregisteredItems(visibleUnregistered);
       setViewState({
         status: "success",
-        ...((filteredByStorage.length + unregistered.length) > 0
+        ...((filteredByStorage.length + visibleUnregistered.length) > 0
           ? {}
           : { message: "No artifacts found yet." }),
       });

@@ -916,10 +916,11 @@ async function openArtifactDetail(
     details.click();
     await new Promise((resolve) => window.setTimeout(resolve, 0));
   });
-  await waitForText(container, "Detail & preview");
-  const dialog = container.querySelector<HTMLElement>(
-    '[role="dialog"][aria-label="Detail and preview"]',
-  );
+  const modalRoot = container.ownerDocument.body;
+  await waitForText(modalRoot, "Detail & preview");
+  const dialog = Array.from(
+    modalRoot.querySelectorAll<HTMLElement>('[role="dialog"]'),
+  ).find((candidate) => candidate.textContent?.includes("Detail & preview"));
   if (!dialog) throw new Error("Artifact detail dialog did not open.");
   return dialog.textContent ?? "";
 }
@@ -1053,9 +1054,10 @@ describe("desktop Data Management functional UI journeys", () => {
     const importedArtifact = harness.artifacts.find(
       (artifact) => artifact.originalName.endsWith("0000.parquet"),
     )!;
-    await clickButton(container, "Localize artifact");
+    const modalRoot = container.ownerDocument.body;
+    await clickButton(modalRoot, "Localize artifact");
     await waitForText(
-      container,
+      modalRoot,
       `Localized bytes key: ${importedArtifact.storageKey}`,
     );
     expect(harness.localizations).toEqual([importedArtifact.storageKey]);

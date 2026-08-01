@@ -118,6 +118,7 @@ def curate_dataset_rows(
     accepted: list[dict[str, object]] = []
     quarantine: list[dict[str, object]] = []
     reason_counts: Counter[str] = Counter()
+    mapping_incomplete = False
     for record in mapping_quarantine:
         requested_reasons = record.get("reasonCodes")
         reasons = (
@@ -131,6 +132,8 @@ def curate_dataset_rows(
         )
         if not reasons:
             reasons = ["mapping-required-fields-missing"]
+        if "mapping-required-fields-missing" in reasons:
+            mapping_incomplete = True
         reason_counts.update(reasons)
         quarantine.append(
             {
@@ -257,7 +260,10 @@ def curate_dataset_rows(
     missing_required_fields = [
         label
         for label, path in required_field_paths
-        if not any(not _is_missing(_row_path_value(row, path)) for row in rows)
+        if not any(
+            not _is_missing(_row_path_value(row, path))
+            for row in profile_rows
+        )
     ]
     status = (
         "blocked"
@@ -273,7 +279,11 @@ def curate_dataset_rows(
         "policy": policy.model_dump(mode="json", by_alias=True),
         "mapping": {
             "taskType": task_type,
-            "status": "incomplete" if mapping_quarantine else "complete",
+            "status": (
+                "incomplete"
+                if mapping_incomplete or missing_required_fields
+                else "complete"
+            ),
             "mappedFields": sorted(
                 {
                     field

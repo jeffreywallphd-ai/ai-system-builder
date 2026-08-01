@@ -771,6 +771,25 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
       error: { code: "validation" },
     });
 
+    const unsafeSaveName = await useCase.startPrepareTrainingDataset(
+      {
+        ...command,
+        output: {
+          ...command.output,
+          naming: { baseName: "../support-tickets" },
+        },
+      },
+      { workspaceId: "workspace-a" },
+    );
+    expect(unsafeSaveName).toMatchObject({
+      ok: false,
+      error: {
+        code: "validation",
+        message:
+          "Dataset save name cannot contain file path characters or end with a period.",
+      },
+    });
+
     const oversizedBatch = await useCase.startPrepareTrainingDataset(
       {
         ...command,
