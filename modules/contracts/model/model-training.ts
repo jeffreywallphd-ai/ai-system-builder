@@ -118,6 +118,17 @@ export interface ModelTrainingRequest {
 
 export interface ModelTrainingStatusRequest {
   runId: string;
+  workspaceId: WorkspaceId;
+}
+
+export interface ModelTrainingCancelRequest {
+  runId: string;
+  workspaceId: WorkspaceId;
+}
+
+export interface ModelTrainingReviewRequest {
+  runId: string;
+  workspaceId: WorkspaceId;
 }
 
 export interface ModelTrainingProgress {
@@ -155,6 +166,7 @@ export interface ModelTrainingCheckpointSummary {
 export interface ModelTrainingResult {
   runId: string;
   status: ModelTrainingStatus;
+  reviewPending?: boolean;
   progress?: ModelTrainingProgress;
   outputDirectory?: string;
   outputModelName?: string;
@@ -359,6 +371,7 @@ export function normalizeModelTrainingResult(result: ModelTrainingResult): Model
     ...result,
     runId: normalizeRequiredText(result.runId, "runId"),
     status: normalizeTrainingStatus(result.status),
+    reviewPending: result.reviewPending === true,
     progress: result.progress
       ? {
           stage: normalizeOptionalText(result.progress.stage),

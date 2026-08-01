@@ -618,4 +618,98 @@ describe("desktop dataset preparation client", () => {
     expect(JSON.stringify(result)).not.toContain("private");
     expect(JSON.stringify(result)).not.toContain("secret");
   });
+
+  it("maps workspace-bound dataset review bridge responses", async () => {
+    const hostWindow = globalThis as typeof globalThis & {
+      window?: Window & typeof globalThis;
+    };
+    hostWindow.window ??= {} as Window & typeof globalThis;
+    const fingerprint = `sha256:${"c".repeat(64)}` as `sha256:${string}`;
+    const listDatasetReviewTargets = vi.fn(async () => ({
+      ok: true,
+      value: { groups: [] },
+    }));
+    const readDatasetReviewPage = vi.fn(async () => ({
+      ok: true,
+      value: {
+        page: {
+          artifactKey: "dataset.parquet",
+          page: 0,
+          pageSize: 10,
+          totalRows: 1,
+          rows: [],
+        },
+      },
+    }));
+    const rejectDatasetReviewRow = vi.fn(async () => ({
+      ok: true,
+      value: {
+        version: { versionId: "dataset:v2" },
+        versionLabel: "1.1",
+        rejectedRowIndex: 0,
+      },
+    }));
+    const editDatasetReviewRow = vi.fn(async () => ({
+      ok: true,
+      value: {
+        version: { versionId: "dataset:v3" },
+        versionLabel: "1.2",
+        editedRowIndex: 0,
+      },
+    }));
+    hostWindow.window.desktopApi = {
+      uploadArtifact: async () => ({ ok: false }),
+      getArtifactUploadPolicy: async () => ({ ok: false }),
+      browseArtifacts: async () => ({ ok: true, value: { items: [] } }),
+      readArtifactDetail: async () => ({ ok: false }),
+      readArtifactContentDescriptor: async () => ({ ok: false }),
+      readArtifactViewerMedia: async () => ({ ok: false }),
+      publishArtifactToRepo: async () => ({ ok: false }),
+      verifyPublishedArtifactBacking: async () => ({ ok: false }),
+      registerArtifactFromRepo: async () => ({ ok: false }),
+      localizeArtifactFromRepo: async () => ({ ok: false }),
+      listDatasetReviewTargets,
+      readDatasetReviewPage,
+      rejectDatasetReviewRow,
+      editDatasetReviewRow,
+    } as never;
+    const client = createDesktopDatasetPreparationClient();
+
+    await client.listReviewTargets!("workspace-review");
+    await client.readReviewPage!({
+      workspaceId: "workspace-review",
+      artifactKey: "dataset.parquet",
+      page: 0,
+      pageSize: 10,
+    });
+    await client.rejectReviewRow!({
+      workspaceId: "workspace-review",
+      artifactKey: "dataset.parquet",
+      rowIndex: 0,
+      rowFingerprint: fingerprint,
+    });
+    await client.editReviewRow!({
+      workspaceId: "workspace-review",
+      artifactKey: "dataset.parquet",
+      rowIndex: 0,
+      rowFingerprint: fingerprint,
+      values: { instruction: "Answer clearly." },
+    });
+
+    expect(listDatasetReviewTargets).toHaveBeenCalledWith({
+      workspaceId: "workspace-review",
+    });
+    expect(readDatasetReviewPage).toHaveBeenCalledWith(
+      expect.objectContaining({ pageSize: 10 }),
+    );
+    expect(rejectDatasetReviewRow).toHaveBeenCalledWith(
+      expect.objectContaining({ rowFingerprint: fingerprint }),
+    );
+    expect(editDatasetReviewRow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rowFingerprint: fingerprint,
+        values: { instruction: "Answer clearly." },
+      }),
+    );
+  });
 });

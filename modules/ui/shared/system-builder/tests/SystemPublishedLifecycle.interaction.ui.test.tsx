@@ -181,6 +181,36 @@ describe("published build lifecycle controls", () => {
     expect(button("Start")).toBeDefined();
   });
 
+  it("refreshes a running card after its host window stops the build", async () => {
+    let current = projection("running", "r2", ["stop"], "visual");
+    const client = {
+      read: vi.fn(async () => deploymentSuccess(current)),
+      invoke: vi.fn(),
+    } as unknown as SystemPublishedLifecycleClient;
+    await mount(
+      <SystemPublishedLifecycleCard
+        workspaceId="workspace-a"
+        build={build}
+        client={client}
+      />,
+    );
+    await vi.waitFor(() => expect(button("Stop")).toBeDefined());
+
+    current = projection(
+      "active-stopped",
+      "r3",
+      ["start", "deactivate", "uninstall"],
+      "visual",
+    );
+
+    await act(async () => {
+      await new Promise((resolve) => globalThis.setTimeout(resolve, 1_050));
+    });
+
+    expect(client.read).toHaveBeenCalledTimes(2);
+    expect(button("Start")).toBeDefined();
+  });
+
   it("discards a late Start response after the selected published build changes", async () => {
     const pendingStart =
       deferred<

@@ -21,6 +21,7 @@ import { resolvePythonRuntimeTaskTimeoutMs } from "./pythonRuntimeTaskTimeoutPol
 
 const genericToPythonTaskTypeMap: Partial<Record<TaskType, string>> = {
   [TaskType.DATASET_PREPARATION]: "prepare-training-dataset",
+  [TaskType.DATASET_REVIEW]: "review-dataset",
   [TaskType.MODEL_DOWNLOAD]: "ensure-model-download",
   [TaskType.MODEL_TRAINING]: "train-model",
   [TaskType.MODEL_VALIDATION]: "validate-model",
@@ -40,6 +41,9 @@ function toGenericTaskType(
 ): RuntimeTaskRecord["taskType"] {
   if (taskType === "prepare-training-dataset") {
     return TaskType.DATASET_PREPARATION;
+  }
+  if (taskType === "review-dataset") {
+    return TaskType.DATASET_REVIEW;
   }
   if (taskType === "ensure-model-download") {
     return TaskType.MODEL_DOWNLOAD;
@@ -151,7 +155,7 @@ function mapProgress(
 }
 
 export interface CreatePythonRuntimeTaskRegistryAdapterOptions {
-  ensureRuntimeReady?: () => Promise<void>;
+  ensureRuntimeReady?: (request: StartRuntimeTaskRequest) => Promise<void>;
 }
 
 export type PythonRuntimeTaskRegistryAdapter = RuntimeTaskRegistryPort &
@@ -187,7 +191,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
         throw new Error("model publishing runtime task is not implemented");
       }
       try {
-        await options.ensureRuntimeReady?.();
+        await options.ensureRuntimeReady?.(request);
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         throw new Error(

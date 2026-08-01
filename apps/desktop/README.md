@@ -109,7 +109,39 @@ Design constraints:
 - exposes Dataset Preparation training-task profiles from shared runtime contracts and submits executable first-tier dataset-preparation profiles to the local runtime, including LLM text rows and diffusion/vision image manifest rows
 - lets Dataset Preparation choose provided source text or generated text fields in the Automated Data Formatting card, with editable prompts, task-scoped generation parameters, quality/compact local model presets, and an inline model download action that still records downloads through model management
 - filters Dataset Preparation source artifacts by selected task family and lets users save/load changed training settings without preserving stale source-artifact selections
-- exposes the selected training task in Train Model requests; LLM text tasks run through causal-LM training, diffusion image-caption manifests run through LoRA adapter training, and vision manifests run through LoRA adapter or full-finetune classification, detection, or segmentation training
+- colocates the optional dataset save name with the final approval actions; one explicit approval saves the complete curated ready set, then opens the exact saved dataset in Artifact Browser without rendering post-save version history in Dataset Preparation
+- persists Dataset Review row rejection or approved edits as immutable minor versions and selects the resulting version
+- exposes the selected training task in Train Model requests; Step 1 lists only
+  active-workspace dataset artifacts and recognizes prepared Parquet outputs by
+  canonical media type or file name; datasets use the same readable-name
+  checkbox presentation as Dataset Preparation; the task boundary prepares
+  exact reviewed text-training dependencies before dispatch, and LLM text tasks
+  run through causal-LM training; diffusion image-caption manifests run through LoRA adapter
+  training, and vision manifests run through LoRA adapter or full-finetune
+  classification, detection, or segmentation training
+- reports model-training progress to the global notification center after every
+  completed batch, keeps **Stop training** available while a run is active, and
+  shows **Unload model** once for each terminal training run even when the
+  generation-model inventory is empty; the unload request clears cached models
+  and asks the runtime to release device memory
+- presents recommended Step 3 model-training parameter ranges in the existing
+  help hints using the same integer, decimal, or comma-separated format accepted
+  by each input
+- qualifies all nine Train Model task types through the explicit
+  `npm run test:model-training:e2e` suite, which uses two synthetic rows, one
+  epoch, fixed tiny model revisions, and stops at the Save/Discard review state
+  without saving the generated model
+- holds successful training output for explicit review under the active
+  workspace. **Save model** uses the configured Output model name and performs
+  registration/local storage or publication; **Discard model** removes the
+  staged output without registering it
+- requires typed confirmation before deleting a model. Desktop deletion removes
+  both the registry record and its approved local cache files, including the
+  canonical runtime Hugging Face cache root; Hugging Face snapshot records
+  remove the owning repository directory, including blobs, while root, linked,
+  traversal, and outside-cache targets fail closed
+- refreshes the workspace-scoped model inventory whenever **Manage Models** is
+  opened, while retaining the explicit **Refresh Models** action
 - reuses shared cross-host publish/re-check hook logic from `modules/ui/shared`
 
 Renderer constraints for this slice:
@@ -120,10 +152,17 @@ Renderer constraints for this slice:
 
 ## Renderer Shell And Workspace UI
 
+- A dedicated published-system window is lifecycle-bound to its exact release.
+  Explicit **Stop** closes the window without a duplicate lifecycle mutation;
+  closing that window directly closes its conversation session and invokes
+  **Stop** for the exact started revision so Publish does not retain a phantom
+  running build. A lifecycle card refreshes authoritative status while running,
+  so the host-side window close is reflected without a manual refresh.
 - The sticky top bar places a Notifications bell immediately before Settings.
   Its fixed dropdown is available from every page; page messages display for
-  five seconds and then fade, while model-download activities remain in bounded
-  workspace-scoped history and update from authoritative runtime task progress.
+  five seconds and then fade, while model-download, dataset-preparation, and
+  model-training activities remain in bounded workspace-scoped history and
+  update from authoritative runtime task progress.
 - Terminal save, create, update, delete/archive, upload/import/localize/publish,
   build/run, settings, image, model, and similar action outcomes publish to this
   center instead of rendering duplicative page-level banners. Field validation,

@@ -8,6 +8,8 @@ const result = spawnSync(
   [
     "-m",
     "unittest",
+    "-v",
+    "modules.adapters.runtime.python.worker.tests.test_dataset_preparation_training_material_matrix_e2e",
     "modules.adapters.runtime.python.worker.tests.test_dataset_preparation_creation_matrix_e2e",
   ],
   {

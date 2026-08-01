@@ -29,6 +29,7 @@ export async function composeDesktopPythonRuntimeFeature(
 ): Promise<DesktopPythonRuntimeFeature> {
   const {
     createPythonRuntimeAdapterFoundation,
+    ensurePythonRuntimeModelTrainingDependencies,
     ensurePythonRuntimeWorkerDependencies,
   } = await import("../../../adapters/runtime/python");
   const pythonRuntimeEndpoint = resolvePythonRuntimeHostAndPort();
@@ -55,23 +56,27 @@ export async function composeDesktopPythonRuntimeFeature(
     configuredCommand: process.env.PYTHON_RUNTIME_COMMAND,
   });
 
-  return createPythonRuntimeAdapterFoundation({
+  const pythonRuntimeWorkerDirectory =
+    resolveDesktopPythonRuntimeWorkerDirectory({
+      configuredWorkerDirectory: process.env.PYTHON_RUNTIME_WORKER_DIR,
+      resourcesPath: (process as NodeJS.Process & { resourcesPath?: string })
+        .resourcesPath,
+    });
+  const shouldPrepareDependencies =
+    shouldPreparePythonRuntimeWorkerDependencies(pythonRuntimeCommand);
+  const foundation = createPythonRuntimeAdapterFoundation({
     client: { baseUrl: pythonRuntimeBaseUrl },
     supervisor: {
       command: pythonRuntimeCommand,
       args: process.env.PYTHON_RUNTIME_ARGS?.split(" ").filter(Boolean) ?? [
         "main.py",
       ],
-      cwd: resolveDesktopPythonRuntimeWorkerDirectory({
-        configuredWorkerDirectory: process.env.PYTHON_RUNTIME_WORKER_DIR,
-        resourcesPath: (process as NodeJS.Process & { resourcesPath?: string })
-          .resourcesPath,
-      }),
+      cwd: pythonRuntimeWorkerDirectory,
       env: pythonRuntimeEnvironment,
       startupTimeoutMs: pythonRuntimeStartupTimeoutMs,
       requiredCapabilities:
         PYTHON_RUNTIME_DATASET_PREPARATION_REQUIRED_CAPABILITIES,
-      ...(shouldPreparePythonRuntimeWorkerDependencies(pythonRuntimeCommand)
+      ...(shouldPrepareDependencies
         ? {
             prepareRuntimeEnvironment(context: {
               command: string;
@@ -110,4 +115,18 @@ export async function composeDesktopPythonRuntimeFeature(
       },
     },
   });
+  return {
+    ...foundation,
+    ...(shouldPrepareDependencies
+      ? {
+          prepareModelTrainingEnvironment() {
+            ensurePythonRuntimeModelTrainingDependencies({
+              command: pythonRuntimeCommand,
+              cwd: pythonRuntimeWorkerDirectory,
+              env: pythonRuntimeEnvironment,
+            });
+          },
+        }
+      : {}),
+  };
 }

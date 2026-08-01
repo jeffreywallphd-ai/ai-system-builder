@@ -7,7 +7,10 @@ import {
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { createPythonRuntimeHttpClient } from "../client/createPythonRuntimeHttpClient";
+import {
+  createPythonRuntimeHttpClient,
+  resolveConfiguredModelCacheRoot,
+} from "../client/createPythonRuntimeHttpClient";
 import { PYTHON_RUNTIME_TASK_TIMEOUTS } from "../pythonRuntimeTaskTimeoutPolicy";
 
 const RUNTIME_TOKEN = "runtime-test-token-0123456789abcdef";
@@ -18,6 +21,15 @@ function fetchCalls(fetcher: unknown): Array<[string, RequestInit]> {
 }
 
 describe("createPythonRuntimeHttpClient", () => {
+  it("resolves the same configured Hugging Face cache root used for downloaded models", () => {
+    expect(
+      resolveConfiguredModelCacheRoot({ HF_HUB_CACHE: "C:\\model-cache" }),
+    ).toBe(path.resolve("C:\\model-cache"));
+    expect(
+      resolveConfiguredModelCacheRoot({ HF_HOME: "C:\\hugging-face" }),
+    ).toBe(path.resolve("C:\\hugging-face", "hub"));
+  });
+
   it("calls POST /tasks/start", async () => {
     const fetcher = testDouble.fn().mockResolvedValue({
       ok: true,

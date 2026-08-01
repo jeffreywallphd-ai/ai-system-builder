@@ -52,11 +52,13 @@ producing a false pass.
 - The dependency security check generates and validates a production SPDX 2.3
   SBOM from the locked tree. Release automation may retain or attest that output;
   local validation does not write it into source control.
-- The same gate validates the direct conditional Python decoder inventory from
-  the worker requirements file, including exact versions, supported Python
-  marker, Package URLs, and reviewed license identifiers. Dependabot monitors
-  that requirements directory. This direct inventory does not claim to replace
-  a deployment-generated full Python environment SBOM or image scan.
+- The same gate validates the direct conditional Python decoder inventory and
+  the baseline model-loading and lazily installed text-training inventories from
+  the worker requirements files, including the exact PEFT version shared by
+  LoRA inference and training, supported Python ranges or markers, Package URLs,
+  and reviewed license identifiers. Dependabot monitors that requirements
+  directory. These direct inventories do not claim to replace a
+  deployment-generated full Python environment SBOM or image scan.
 - Third-party GitHub Actions are pinned to full commit SHAs.
 - Production and qualification container base images are pinned to full OCI
   digests. Tags remain alongside the digest for review clarity; automated Docker

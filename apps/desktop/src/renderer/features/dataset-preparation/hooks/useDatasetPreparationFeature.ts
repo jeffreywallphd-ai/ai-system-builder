@@ -42,6 +42,7 @@ import {
   resolveDatasetPreparationConstrainedJson,
   resolveDatasetPreparationGenerationModelCapacity,
   resolveDatasetPreparationGenerationModelEstimatedBytes,
+  validateDatasetPreparationSaveName,
 } from "../../../../../../../modules/contracts/runtime";
 import {
   createDesktopApplicationSettingsClient,
@@ -345,7 +346,7 @@ export interface UseDatasetPreparationFeatureOptions {
     DesktopPythonRuntimeClient,
     "readStatus" | "controlRuntime"
   >;
-  onPrepared?: () => void;
+  onPrepared?: (artifactStorageKey: string) => void;
   workspaceId?: string;
 }
 
@@ -1421,7 +1422,9 @@ export function useDatasetPreparationFeature(
             ) {
               return;
             }
-            onPrepared?.();
+            const artifactStorageKey =
+              pollResponse.value.outputs.local?.dataset?.storage.key;
+            if (artifactStorageKey) onPrepared?.(artifactStorageKey);
             return;
           }
           clearActiveTask();
@@ -1737,12 +1740,7 @@ export function useDatasetPreparationFeature(
     );
     setModelDeviceState(compatiblePreset.model.device ?? "auto");
     setModelTorchDtypeState(compatiblePreset.model.torchDtype ?? "");
-  }, [
-    generationCapacity,
-    modelId,
-    modelMemoryOverflowPolicy,
-    textInputMode,
-  ]);
+  }, [generationCapacity, modelId, modelMemoryOverflowPolicy, textInputMode]);
 
   const currentTrainingSettingsSnapshot =
     useMemo<DatasetPreparationTrainingSettingsSnapshot>(
@@ -2146,6 +2144,7 @@ export function useDatasetPreparationFeature(
         validationRatio,
         testRatio,
         seed,
+        outputBaseName,
         localDestinationEnabled: true,
         huggingFaceDestinationEnabled: false,
         huggingFaceRepository: "",
@@ -2427,12 +2426,18 @@ export function useDatasetPreparationFeature(
     if (!qualityReview || !workspaceId || reviewActionInFlight) {
       return;
     }
+    const saveNameError = validateDatasetPreparationSaveName(outputBaseName);
+    if (saveNameError) {
+      setStatus({ kind: "error", message: saveNameError });
+      return;
+    }
     setReviewActionInFlight(true);
     try {
       const response = await datasetClient.approvePreparedTrainingDataset(
         qualityReview.requestId,
         qualityReview.report.reportFingerprint,
         workspaceId,
+        outputBaseName,
       );
       if (!response.ok) {
         setStatus({
@@ -2460,7 +2465,8 @@ export function useDatasetPreparationFeature(
       setStatus({ kind: "success", message: "Training dataset is ready." });
       await refreshArtifacts();
       await refreshRuntimeModelStatus();
-      onPrepared?.();
+      const artifactStorageKey = value.outputs.local?.dataset?.storage.key;
+      if (artifactStorageKey) onPrepared?.(artifactStorageKey);
     } catch (error) {
       setStatus({
         kind: "error",
@@ -2475,6 +2481,7 @@ export function useDatasetPreparationFeature(
   }, [
     datasetClient,
     onPrepared,
+    outputBaseName,
     qualityReview,
     refreshArtifacts,
     refreshRuntimeModelStatus,

@@ -1,8 +1,34 @@
-import { describe, expect, it, testDouble } from "../../../../testing/node-test";
-import { DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL, DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL, DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL, DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_REQUEST_CHANNEL, createDesktopPrepareTrainingDatasetStartRequest, createDesktopPrepareTrainingDatasetTaskReadRequest, createDesktopPrepareTrainingDatasetTaskCancelRequest, createDesktopPrepareTrainingDatasetApproveRequest } from "../../../../contracts/ipc";
-import type { RuntimeTaskRecord, RuntimeTaskStatusRecord } from "../../../../contracts/runtime";
+import {
+  describe,
+  expect,
+  it,
+  testDouble,
+} from "../../../../testing/node-test";
+import {
+  DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL,
+  DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL,
+  DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL,
+  DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_REQUEST_CHANNEL,
+  DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_REQUEST_CHANNEL,
+  createDesktopPrepareTrainingDatasetStartRequest,
+  createDesktopPrepareTrainingDatasetTaskReadRequest,
+  createDesktopPrepareTrainingDatasetTaskCancelRequest,
+  createDesktopPrepareTrainingDatasetApproveRequest,
+  createDesktopPrepareTrainingDatasetReviewPageRequest,
+} from "../../../../contracts/ipc";
+import type {
+  RuntimeTaskRecord,
+  RuntimeTaskStatusRecord,
+} from "../../../../contracts/runtime";
 import { TaskType } from "../../../../contracts/runtime";
-import { createDesktopPrepareTrainingDatasetStartIpcHandler, createDesktopPrepareTrainingDatasetTaskReadIpcHandler, createDesktopPrepareTrainingDatasetTaskCancelIpcHandler, createDesktopPrepareTrainingDatasetApproveIpcHandler, registerDatasetPreparationIpc } from "../dataset-preparation/registerDatasetPreparationIpc";
+import {
+  createDesktopPrepareTrainingDatasetStartIpcHandler,
+  createDesktopPrepareTrainingDatasetTaskReadIpcHandler,
+  createDesktopPrepareTrainingDatasetTaskCancelIpcHandler,
+  createDesktopPrepareTrainingDatasetApproveIpcHandler,
+  createDesktopPrepareTrainingDatasetReviewPageIpcHandler,
+  registerDatasetPreparationIpc,
+} from "../dataset-preparation/registerDatasetPreparationIpc";
 
 describe("registerDatasetPreparationIpc", () => {
   it("maps running read status", async () => {
@@ -13,35 +39,234 @@ describe("registerDatasetPreparationIpc", () => {
       concurrencyClass: "unknown",
       progress: { current: 1, total: 3 },
     };
-    const readPrepareTrainingDataset = testDouble.fn().mockResolvedValue({ ok: true, value: runtimeTaskRecord });
-    const handler = createDesktopPrepareTrainingDatasetTaskReadIpcHandler({ startPrepareTrainingDataset: testDouble.fn(), readPrepareTrainingDataset });
-    const response = await handler({}, createDesktopPrepareTrainingDatasetTaskReadRequest({ requestId: "r1", boundary: { host: "desktop", source: "x" } }));
-    expect(response.ok).toBe(true); expect((response as any).value.result).toBeUndefined(); expect((response as any).value.progress.processed).toBe(1);
+    const readPrepareTrainingDataset = testDouble
+      .fn()
+      .mockResolvedValue({ ok: true, value: runtimeTaskRecord });
+    const handler = createDesktopPrepareTrainingDatasetTaskReadIpcHandler({
+      startPrepareTrainingDataset: testDouble.fn(),
+      readPrepareTrainingDataset,
+    });
+    const response = await handler(
+      {},
+      createDesktopPrepareTrainingDatasetTaskReadRequest({
+        requestId: "r1",
+        boundary: { host: "desktop", source: "x" },
+      }),
+    );
+    expect(response.ok).toBe(true);
+    expect((response as any).value.result).toBeUndefined();
+    expect((response as any).value.progress.processed).toBe(1);
   });
 
   it("maps succeeded read status with materialized result", async () => {
-    const readPrepareTrainingDataset = testDouble.fn().mockResolvedValue({ ok: true, value: { requestId: "r1", taskType: "prepare-training-dataset", status: "succeeded", result: { outputs: {}, provenance: { sourceArtifactIds: [], recipe: { normalization: { targetFormat: "markdown" }, chunking: { strategy: "character", chunkSize: 1, chunkOverlap: 0 }, generation: { mode: "qa", model: { provider: "transformers", modelId: "m" } } }, split: { trainRatio: 0.8, testRatio: 0.2 }, output: { format: "jsonl" }, generationModelId: "m", summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 } }, summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 } } } });
-    const handler = createDesktopPrepareTrainingDatasetTaskReadIpcHandler({ startPrepareTrainingDataset: testDouble.fn(), readPrepareTrainingDataset });
-    const response = await handler({}, createDesktopPrepareTrainingDatasetTaskReadRequest({ requestId: "r1", boundary: { host: "desktop", source: "x" } }));
-    expect((response as any).value.status).toBe("succeeded"); expect((response as any).value.result).toBeDefined();
+    const readPrepareTrainingDataset = testDouble.fn().mockResolvedValue({
+      ok: true,
+      value: {
+        requestId: "r1",
+        taskType: "prepare-training-dataset",
+        status: "succeeded",
+        result: {
+          outputs: {},
+          provenance: {
+            sourceArtifactIds: [],
+            recipe: {
+              normalization: { targetFormat: "markdown" },
+              chunking: {
+                strategy: "character",
+                chunkSize: 1,
+                chunkOverlap: 0,
+              },
+              generation: {
+                mode: "qa",
+                model: { provider: "transformers", modelId: "m" },
+              },
+            },
+            split: { trainRatio: 0.8, testRatio: 0.2 },
+            output: { format: "jsonl" },
+            generationModelId: "m",
+            summary: {
+              sourceDocumentCount: 1,
+              normalizedDocumentCount: 1,
+              skippedDocumentCount: 0,
+              chunkCount: 1,
+              generatedExampleCount: 1,
+              datasetRowCount: 1,
+              trainRowCount: 1,
+              testRowCount: 0,
+            },
+          },
+          summary: {
+            sourceDocumentCount: 1,
+            normalizedDocumentCount: 1,
+            skippedDocumentCount: 0,
+            chunkCount: 1,
+            generatedExampleCount: 1,
+            datasetRowCount: 1,
+            trainRowCount: 1,
+            testRowCount: 0,
+          },
+        },
+      },
+    });
+    const handler = createDesktopPrepareTrainingDatasetTaskReadIpcHandler({
+      startPrepareTrainingDataset: testDouble.fn(),
+      readPrepareTrainingDataset,
+    });
+    const response = await handler(
+      {},
+      createDesktopPrepareTrainingDatasetTaskReadRequest({
+        requestId: "r1",
+        boundary: { host: "desktop", source: "x" },
+      }),
+    );
+    expect((response as any).value.status).toBe("succeeded");
+    expect((response as any).value.result).toBeDefined();
   });
 
   it("maps review-required reads and exact approval requests", async () => {
-    const result = { outputs: {}, provenance: { sourceArtifactIds: [], recipe: { normalization: { targetFormat: "markdown" }, chunking: { strategy: "character", chunkSize: 1, chunkOverlap: 0 }, generation: { mode: "qa", model: { provider: "transformers", modelId: "m" } } }, split: { trainRatio: 0.8, testRatio: 0.2 }, output: { format: "jsonl" }, generationModelId: "m", summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 } }, summary: { sourceDocumentCount: 1, normalizedDocumentCount: 1, skippedDocumentCount: 0, chunkCount: 1, generatedExampleCount: 1, datasetRowCount: 1, trainRowCount: 1, testRowCount: 0 } };
-    const readPrepareTrainingDataset = testDouble.fn().mockResolvedValue({ ok: true, value: { requestId: "r1", taskType: "prepare-training-dataset", status: "review-required", result } });
-    const approvePreparedTrainingDataset = testDouble.fn().mockResolvedValue({ ok: true, value: { requestId: "r1", taskType: "prepare-training-dataset", status: "succeeded", result } });
-    const useCase = { startPrepareTrainingDataset: testDouble.fn(), readPrepareTrainingDataset, approvePreparedTrainingDataset };
-    const readHandler = createDesktopPrepareTrainingDatasetTaskReadIpcHandler(useCase);
-    const approvalHandler = createDesktopPrepareTrainingDatasetApproveIpcHandler(useCase);
+    const result = {
+      outputs: {},
+      provenance: {
+        sourceArtifactIds: [],
+        recipe: {
+          normalization: { targetFormat: "markdown" },
+          chunking: { strategy: "character", chunkSize: 1, chunkOverlap: 0 },
+          generation: {
+            mode: "qa",
+            model: { provider: "transformers", modelId: "m" },
+          },
+        },
+        split: { trainRatio: 0.8, testRatio: 0.2 },
+        output: { format: "jsonl" },
+        generationModelId: "m",
+        summary: {
+          sourceDocumentCount: 1,
+          normalizedDocumentCount: 1,
+          skippedDocumentCount: 0,
+          chunkCount: 1,
+          generatedExampleCount: 1,
+          datasetRowCount: 1,
+          trainRowCount: 1,
+          testRowCount: 0,
+        },
+      },
+      summary: {
+        sourceDocumentCount: 1,
+        normalizedDocumentCount: 1,
+        skippedDocumentCount: 0,
+        chunkCount: 1,
+        generatedExampleCount: 1,
+        datasetRowCount: 1,
+        trainRowCount: 1,
+        testRowCount: 0,
+      },
+    };
+    const readPrepareTrainingDataset = testDouble.fn().mockResolvedValue({
+      ok: true,
+      value: {
+        requestId: "r1",
+        taskType: "prepare-training-dataset",
+        status: "review-required",
+        result,
+      },
+    });
+    const approvePreparedTrainingDataset = testDouble.fn().mockResolvedValue({
+      ok: true,
+      value: {
+        requestId: "r1",
+        taskType: "prepare-training-dataset",
+        status: "succeeded",
+        result,
+      },
+    });
+    const useCase = {
+      startPrepareTrainingDataset: testDouble.fn(),
+      readPrepareTrainingDataset,
+      approvePreparedTrainingDataset,
+    };
+    const readHandler =
+      createDesktopPrepareTrainingDatasetTaskReadIpcHandler(useCase);
+    const approvalHandler =
+      createDesktopPrepareTrainingDatasetApproveIpcHandler(useCase, () => ({
+        organizationId: "organization-a",
+        principalId: "person-a",
+      }));
 
-    const read = await readHandler({}, createDesktopPrepareTrainingDatasetTaskReadRequest({ requestId: "r1", boundary: { host: "desktop", source: "x" } }));
-    const approval = await approvalHandler({}, createDesktopPrepareTrainingDatasetApproveRequest({ requestId: "r1", reportFingerprint: "a".repeat(64), boundary: { host: "desktop", source: "x" } }));
+    const read = await readHandler(
+      {},
+      createDesktopPrepareTrainingDatasetTaskReadRequest({
+        requestId: "r1",
+        boundary: { host: "desktop", source: "x" },
+      }),
+    );
+    const approval = await approvalHandler(
+      {},
+      createDesktopPrepareTrainingDatasetApproveRequest({
+        requestId: "r1",
+        reportFingerprint: "a".repeat(64),
+        outputBaseName: "support-tickets-2026",
+        boundary: { host: "desktop", source: "x" },
+      }),
+    );
 
     expect((read as any).value.status).toBe("review-required");
     expect((approval as any).value.status).toBe("succeeded");
     expect(approvePreparedTrainingDataset).toHaveBeenCalledWith(
-      { requestId: "r1", reportFingerprint: "a".repeat(64) },
-      expect.any(Object),
+      {
+        requestId: "r1",
+        reportFingerprint: "a".repeat(64),
+        outputBaseName: "support-tickets-2026",
+      },
+      expect.objectContaining({
+        organizationId: "organization-a",
+        principalId: "person-a",
+      }),
+    );
+  });
+
+  it("maps exact prepared-row review requests with authoritative identity", async () => {
+    const readPreparedDatasetQualityReviewPage = testDouble.fn(async () => ({
+      ok: true,
+      value: {
+        lineId: "ready" as const,
+        page: 0,
+        pageSize: 10 as const,
+        totalRows: 1,
+        rows: [],
+      },
+    }));
+    const useCase = {
+      startPrepareTrainingDataset: testDouble.fn(),
+      readPrepareTrainingDataset: testDouble.fn(),
+      readPreparedDatasetQualityReviewPage,
+    };
+    const handler = createDesktopPrepareTrainingDatasetReviewPageIpcHandler(
+      useCase,
+      () => ({ organizationId: "organization-a", principalId: "person-a" }),
+    );
+    const response = await handler(
+      {},
+      createDesktopPrepareTrainingDatasetReviewPageRequest({
+        requestId: "r1",
+        reportFingerprint: "a".repeat(64),
+        lineId: "ready",
+        page: 0,
+        boundary: { host: "desktop", source: "x", workspaceId: "workspace-a" },
+      }),
+    );
+    expect(response.ok).toBe(true);
+    expect(readPreparedDatasetQualityReviewPage).toHaveBeenCalledWith(
+      {
+        requestId: "r1",
+        reportFingerprint: "a".repeat(64),
+        lineId: "ready",
+        page: 0,
+      },
+      expect.objectContaining({
+        workspaceId: "workspace-a",
+        organizationId: "organization-a",
+        principalId: "person-a",
+      }),
     );
   });
 
@@ -50,13 +275,47 @@ describe("registerDatasetPreparationIpc", () => {
     const readPrepareTrainingDataset = testDouble.fn(async () => {
       call += 1;
       return call === 1
-        ? { ok: true as const, value: { requestId: "r1", taskType: TaskType.DATASET_PREPARATION, status: "failed" as const, concurrencyClass: "unknown" as const, error: { code: "runtime", message: "boom" } } }
-        : { ok: true as const, value: { requestId: "r1", taskType: TaskType.DATASET_PREPARATION, status: "unknown" as const, concurrencyClass: "unknown" as const, message: "not found" } };
+        ? {
+            ok: true as const,
+            value: {
+              requestId: "r1",
+              taskType: TaskType.DATASET_PREPARATION,
+              status: "failed" as const,
+              concurrencyClass: "unknown" as const,
+              error: { code: "runtime", message: "boom" },
+            },
+          }
+        : {
+            ok: true as const,
+            value: {
+              requestId: "r1",
+              taskType: TaskType.DATASET_PREPARATION,
+              status: "unknown" as const,
+              concurrencyClass: "unknown" as const,
+              message: "not found",
+            },
+          };
     });
-    const handler = createDesktopPrepareTrainingDatasetTaskReadIpcHandler({ startPrepareTrainingDataset: testDouble.fn(), readPrepareTrainingDataset });
-    const failed = await handler({}, createDesktopPrepareTrainingDatasetTaskReadRequest({ requestId: "r1", boundary: { host: "desktop", source: "x" } }));
-    const unknown = await handler({}, createDesktopPrepareTrainingDatasetTaskReadRequest({ requestId: "r1", boundary: { host: "desktop", source: "x" } }));
-    expect((failed as any).value.error.message).toBe("boom"); expect((unknown as any).value.status).toBe("unknown");
+    const handler = createDesktopPrepareTrainingDatasetTaskReadIpcHandler({
+      startPrepareTrainingDataset: testDouble.fn(),
+      readPrepareTrainingDataset,
+    });
+    const failed = await handler(
+      {},
+      createDesktopPrepareTrainingDatasetTaskReadRequest({
+        requestId: "r1",
+        boundary: { host: "desktop", source: "x" },
+      }),
+    );
+    const unknown = await handler(
+      {},
+      createDesktopPrepareTrainingDatasetTaskReadRequest({
+        requestId: "r1",
+        boundary: { host: "desktop", source: "x" },
+      }),
+    );
+    expect((failed as any).value.error.message).toBe("boom");
+    expect((unknown as any).value.status).toBe("unknown");
   });
 
   it("maps not-found runtime task reads without assuming full task fields", async () => {
@@ -72,10 +331,21 @@ describe("registerDatasetPreparationIpc", () => {
       },
       updatedAt: "2026-05-08T12:00:00.000Z",
     };
-    const readPrepareTrainingDataset = testDouble.fn().mockResolvedValue({ ok: true, value: notFoundRecord });
-    const handler = createDesktopPrepareTrainingDatasetTaskReadIpcHandler({ startPrepareTrainingDataset: testDouble.fn(), readPrepareTrainingDataset });
+    const readPrepareTrainingDataset = testDouble
+      .fn()
+      .mockResolvedValue({ ok: true, value: notFoundRecord });
+    const handler = createDesktopPrepareTrainingDatasetTaskReadIpcHandler({
+      startPrepareTrainingDataset: testDouble.fn(),
+      readPrepareTrainingDataset,
+    });
 
-    const response = await handler({}, createDesktopPrepareTrainingDatasetTaskReadRequest({ requestId: "missing-request", boundary: { host: "desktop", source: "x" } }));
+    const response = await handler(
+      {},
+      createDesktopPrepareTrainingDatasetTaskReadRequest({
+        requestId: "missing-request",
+        boundary: { host: "desktop", source: "x" },
+      }),
+    );
 
     expect((response as any).value).toMatchObject({
       requestId: "missing-request",
@@ -99,16 +369,44 @@ describe("registerDatasetPreparationIpc", () => {
         completedAt: "2026-04-29T12:00:00.000Z",
       },
     });
-    const handler = createDesktopPrepareTrainingDatasetTaskReadIpcHandler({ startPrepareTrainingDataset: testDouble.fn(), readPrepareTrainingDataset });
-    const response = await handler({}, createDesktopPrepareTrainingDatasetTaskReadRequest({ requestId: "r1", boundary: { host: "desktop", source: "x" } }));
+    const handler = createDesktopPrepareTrainingDatasetTaskReadIpcHandler({
+      startPrepareTrainingDataset: testDouble.fn(),
+      readPrepareTrainingDataset,
+    });
+    const response = await handler(
+      {},
+      createDesktopPrepareTrainingDatasetTaskReadRequest({
+        requestId: "r1",
+        boundary: { host: "desktop", source: "x" },
+      }),
+    );
 
     expect((response as any).value.status).toBe("failed");
-    expect((response as any).value.error.message).toBe("Dataset preparation task failed.");
-    expect((response as any).value.completedAt).toBe("2026-04-29T12:00:00.000Z");
+    expect((response as any).value.error.message).toBe(
+      "Dataset preparation task failed.",
+    );
+    expect((response as any).value.completedAt).toBe(
+      "2026-04-29T12:00:00.000Z",
+    );
   });
 
   it("registers start/read/cancel/approve channels", () => {
-    const channels: string[] = []; registerDatasetPreparationIpc({ ipcMain: { handle: testDouble.fn((c: string) => channels.push(c)) }, prepareTrainingDatasetUseCase: { startPrepareTrainingDataset: testDouble.fn(), readPrepareTrainingDataset: testDouble.fn(), cancelPrepareTrainingDataset: testDouble.fn(), approvePreparedTrainingDataset: testDouble.fn() } });
-    expect(channels).toEqual([DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL.value, DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL.value, DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL.value, DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_REQUEST_CHANNEL.value]);
+    const channels: string[] = [];
+    registerDatasetPreparationIpc({
+      ipcMain: { handle: testDouble.fn((c: string) => channels.push(c)) },
+      prepareTrainingDatasetUseCase: {
+        startPrepareTrainingDataset: testDouble.fn(),
+        readPrepareTrainingDataset: testDouble.fn(),
+        cancelPrepareTrainingDataset: testDouble.fn(),
+        approvePreparedTrainingDataset: testDouble.fn(),
+      },
+    });
+    expect(channels).toEqual([
+      DESKTOP_DATASET_PREPARE_TRAINING_START_REQUEST_CHANNEL.value,
+      DESKTOP_DATASET_PREPARE_TRAINING_TASK_READ_REQUEST_CHANNEL.value,
+      DESKTOP_DATASET_PREPARE_TRAINING_TASK_CANCEL_REQUEST_CHANNEL.value,
+      DESKTOP_DATASET_PREPARE_TRAINING_APPROVE_REQUEST_CHANNEL.value,
+      DESKTOP_DATASET_PREPARE_TRAINING_REVIEW_PAGE_REQUEST_CHANNEL.value,
+    ]);
   });
 });

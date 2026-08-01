@@ -108,7 +108,7 @@ function mapRuntimeResponsePayload<T>(
   }
 }
 
-function resolveConfiguredModelCacheRoot(
+export function resolveConfiguredModelCacheRoot(
   environment: NodeJS.ProcessEnv,
 ): string {
   const configured =

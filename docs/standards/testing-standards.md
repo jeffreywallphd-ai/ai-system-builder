@@ -26,7 +26,11 @@ They are not written to satisfy vanity coverage metrics or performative CI check
   - `npm run test:standardande2e` (combined standard and end-to-end coverage)
   - `npm run test:all` (combined standard, end-to-end, and AI coverage)
   - `npm run test:dataset-preparation:e2e` (opt-in physical dataset creation
-    matrix, only for Dataset Preparation changes or an explicit request)
+    matrix with 27 explicit training-goal/material-division cases plus detailed
+    method coverage, only for Dataset Preparation changes or an explicit request)
+  - `npm run test:model-training:e2e` (opt-in physical one-epoch model-training
+    matrix for all nine task types, only for Model Training changes or an
+    explicit request)
   - `npm run test:non-browser` / `npm run test:vitest` (runner-specific coverage)
 
 The standard suite is the default feedback loop. The E2E suite contains every
@@ -50,6 +54,14 @@ only one or two bounded sources, and passes only after reopening a non-empty
 physical Parquet dataset with the expected task fields and source association.
 Keep model output deterministic at this boundary; live large-model quality and
 hardware remain controlled qualifications rather than 39 repeated inference runs.
+The Model Training matrix is another named exception outside `test:all`. It uses
+two synthetic rows per task, fixed tiny public model snapshots at immutable
+revisions, one epoch, bounded snapshot-size checks, and temporary staged output.
+Every executable weight file is verified against its reviewed SHA-256 digest
+before model loading.
+Passing means every supported task reaches the generated-model review candidate
+consumed by Save/Discard. The suite does not invoke save, registration, or
+publication.
 
 ## Testing strategy by layer
 

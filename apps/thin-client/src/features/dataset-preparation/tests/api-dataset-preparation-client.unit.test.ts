@@ -100,6 +100,7 @@ describe("api dataset preparation client", () => {
       workspaceId: "workspace a",
       requestId: "task/1",
       reportFingerprint: "a".repeat(64),
+      outputBaseName: "support-tickets-2026",
     });
     await client.cancel({ workspaceId: "workspace a", requestId: "task/1" });
 
@@ -117,6 +118,7 @@ describe("api dataset preparation client", () => {
     expect(JSON.parse(String(fetchMock.mock.calls[2][1].body))).toEqual({
       workspaceId: "workspace a",
       reportFingerprint: "a".repeat(64),
+      outputBaseName: "support-tickets-2026",
     });
     expect(fetchMock.mock.calls[3][0]).toBe(
       "/api/dataset-preparation/tasks/task%2F1/cancel",
@@ -152,21 +154,177 @@ describe("api dataset preparation client", () => {
     });
   });
 
+  it("reads the exact prepared-review line and page", async () => {
+    const reportFingerprint = "c".repeat(64);
+    const fetchMock = vi.fn().mockResolvedValue(
+      response(200, {
+        ok: true,
+        value: {
+          requestId: "task/1",
+          reportFingerprint,
+          lineId: "reason:duplicate-exact",
+          page: 2,
+          pageSize: 10,
+          totalRows: 21,
+          rows: [],
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      createApiDatasetPreparationClient("/api/").readPreparedReviewPage({
+        workspaceId: "workspace a",
+        requestId: "task/1",
+        reportFingerprint,
+        lineId: "reason:duplicate-exact",
+        page: 2,
+      }),
+    ).resolves.toMatchObject({
+      requestId: "task/1",
+      lineId: "reason:duplicate-exact",
+      page: 2,
+      pageSize: 10,
+    });
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/dataset-preparation/tasks/task%2F1/review-page" +
+        "?workspaceId=workspace%20a" +
+        `&reportFingerprint=${reportFingerprint}` +
+        "&lineId=reason%3Aduplicate-exact&page=2",
+    );
+  });
+
   it("uses encoded dataset-version routes and sends explicit publication choices", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(response(200, { ok: true, value: { versions: [] } }))
-      .mockResolvedValueOnce(response(200, { ok: true, value: { comparison: {} } }))
-      .mockResolvedValueOnce(response(200, { ok: true, value: { reproduction: {} } }))
-      .mockResolvedValueOnce(response(200, { ok: true, value: { publication: {} } }));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        response(200, { ok: true, value: { versions: [] } }),
+      )
+      .mockResolvedValueOnce(
+        response(200, { ok: true, value: { comparison: {} } }),
+      )
+      .mockResolvedValueOnce(
+        response(200, { ok: true, value: { reproduction: {} } }),
+      )
+      .mockResolvedValueOnce(
+        response(200, { ok: true, value: { publication: {} } }),
+      );
     vi.stubGlobal("fetch", fetchMock);
     const client = createApiDatasetPreparationClient("/api/");
-    await client.listVersions!({ workspaceId: "workspace a", datasetId: "data/one" });
-    await client.compareVersions!({ workspaceId: "workspace a", fromVersionId: "version/1", toVersionId: "version/2" });
-    await client.readReproduction!({ workspaceId: "workspace a", versionId: "version/2" });
-    await client.publishVersion!({ workspaceId: "workspace a", versionId: "version/2", repositoryId: "owner/data", visibility: "public", publicAccessConfirmed: true });
-    expect(fetchMock.mock.calls[0][0]).toBe("/api/dataset-versions?workspaceId=workspace%20a&datasetId=data%2Fone");
-    expect(fetchMock.mock.calls[1][0]).toContain("fromVersionId=version%2F1&toVersionId=version%2F2");
-    expect(fetchMock.mock.calls[2][0]).toBe("/api/dataset-versions/version%2F2/reproduction?workspaceId=workspace%20a");
-    expect(JSON.parse(String(fetchMock.mock.calls[3][1].body))).toMatchObject({ repositoryId: "owner/data", visibility: "public", publicAccessConfirmed: true });
+    await client.listVersions!({
+      workspaceId: "workspace a",
+      datasetId: "data/one",
+    });
+    await client.compareVersions!({
+      workspaceId: "workspace a",
+      fromVersionId: "version/1",
+      toVersionId: "version/2",
+    });
+    await client.readReproduction!({
+      workspaceId: "workspace a",
+      versionId: "version/2",
+    });
+    await client.publishVersion!({
+      workspaceId: "workspace a",
+      versionId: "version/2",
+      repositoryId: "owner/data",
+      visibility: "public",
+      publicAccessConfirmed: true,
+    });
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/dataset-versions?workspaceId=workspace%20a&datasetId=data%2Fone",
+    );
+    expect(fetchMock.mock.calls[1][0]).toContain(
+      "fromVersionId=version%2F1&toVersionId=version%2F2",
+    );
+    expect(fetchMock.mock.calls[2][0]).toBe(
+      "/api/dataset-versions/version%2F2/reproduction?workspaceId=workspace%20a",
+    );
+    expect(JSON.parse(String(fetchMock.mock.calls[3][1].body))).toMatchObject({
+      repositoryId: "owner/data",
+      visibility: "public",
+      publicAccessConfirmed: true,
+    });
+  });
+
+  it("uses bounded dataset-review routes and sends the exact row fingerprint", async () => {
+    const fingerprint = `sha256:${"b".repeat(64)}`;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(response(200, { ok: true, value: { groups: [] } }))
+      .mockResolvedValueOnce(
+        response(200, { ok: true, value: { page: { rows: [] } } }),
+      )
+      .mockResolvedValueOnce(
+        response(200, {
+          ok: true,
+          value: {
+            version: { versionId: "v2" },
+            versionLabel: "1.1",
+            rejectedRowIndex: 7,
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        response(200, {
+          ok: true,
+          value: {
+            version: { versionId: "v3" },
+            versionLabel: "1.2",
+            editedRowIndex: 7,
+          },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createApiDatasetPreparationClient("/api/");
+
+    await client.listReviewTargets!({ workspaceId: "workspace a" });
+    await client.readReviewPage!({
+      workspaceId: "workspace a",
+      artifactKey: "folder/data.parquet",
+      versionId: "dataset/v1",
+      page: 2,
+      pageSize: 25,
+    });
+    await client.rejectReviewRow!({
+      workspaceId: "workspace a",
+      artifactKey: "folder/data.parquet",
+      versionId: "dataset/v1",
+      rowIndex: 7,
+      rowFingerprint: fingerprint as `sha256:${string}`,
+    });
+    await client.editReviewRow!({
+      workspaceId: "workspace a",
+      artifactKey: "folder/data.parquet",
+      versionId: "dataset/v1",
+      rowIndex: 7,
+      rowFingerprint: fingerprint as `sha256:${string}`,
+      values: { instruction: "Answer clearly." },
+    });
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "/api/dataset-reviews?workspaceId=workspace%20a",
+    );
+    expect(fetchMock.mock.calls[1][0]).toContain(
+      "artifactKey=folder%2Fdata.parquet",
+    );
+    expect(fetchMock.mock.calls[1][0]).toContain("versionId=dataset%2Fv1");
+    expect(fetchMock.mock.calls[1][0]).toContain("page=2&pageSize=25");
+    expect(JSON.parse(String(fetchMock.mock.calls[2][1].body))).toEqual({
+      workspaceId: "workspace a",
+      artifactKey: "folder/data.parquet",
+      versionId: "dataset/v1",
+      rowIndex: 7,
+      rowFingerprint: fingerprint,
+    });
+    expect(fetchMock.mock.calls[3][0]).toBe("/api/dataset-reviews/edits");
+    expect(JSON.parse(String(fetchMock.mock.calls[3][1].body))).toEqual({
+      workspaceId: "workspace a",
+      artifactKey: "folder/data.parquet",
+      versionId: "dataset/v1",
+      rowIndex: 7,
+      rowFingerprint: fingerprint,
+      values: { instruction: "Answer clearly." },
+    });
   });
 });

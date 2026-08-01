@@ -50,6 +50,10 @@
   organization context. Platform/legacy records are a separate partition and
   are never an implicit fallback.
 - Shared model storage is an additional configured model source, not a replacement for workspace model storage.
+- Explicit desktop model deletion removes local files only through a canonical,
+  approved-root adapter. Hugging Face snapshots delete their owning cache
+  repository, standalone checkpoints delete only their recorded file, and
+  root, link, traversal, or outside-root targets fail before registry deletion.
 
 ## Key Constraints
 

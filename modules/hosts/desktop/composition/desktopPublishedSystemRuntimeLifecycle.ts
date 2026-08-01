@@ -16,6 +16,7 @@ export interface DesktopPublishedSystemRuntimeWindowPort {
   open(
     query: SystemPublishedConversationRuntimeQuery,
     controller: PublishedConversationRuntimeControllerPort,
+    onWindowClosed: () => Promise<void>,
   ): Promise<void>;
   close(query: SystemPublishedConversationRuntimeQuery): Promise<void>;
 }
@@ -49,7 +50,9 @@ export function createDesktopPublishedSystemRuntimeLifecycle(options: {
         }
         try {
           await options.prepareRuntime();
-          await options.windows.open(query, options.controller);
+          await options.windows.open(query, options.controller, () =>
+            compensateStop(options.lifecycle, command, result.value.revision),
+          );
         } catch {
           await compensateStop(
             options.lifecycle,

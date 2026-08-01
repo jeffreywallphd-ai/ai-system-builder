@@ -134,12 +134,41 @@ The model schema contains only fields the model may generate. If source
 attribution is selected, the UI displays its locked companion fields, and the
 worker appends them after generation from trusted selected-source metadata.
 Training consumes the prepared artifact's exact schema fingerprint and
-training-purpose paths; selected datasets with missing, malformed, or different
-layout metadata fail before model loading.
+training-purpose paths when available. Legacy artifacts without retained
+descriptor metadata may use only established task-schema aliases such as
+`instruction`/`question`/`answer`; malformed or mixed layout metadata still
+fails before model loading. The desktop task boundary keeps text-training
+dependencies out of ordinary worker startup, then probes exact reviewed
+Datasets and PEFT pins and performs a bounded install/re-probe before admitting
+a text-training task.
+The desktop Train Model workflow enumerates candidate dataset artifacts only
+through the active workspace-scoped artifact browser. Prepared Parquet outputs
+remain selectable when their opaque storage key has no extension because the
+canonical Parquet media type and bounded original file name are both recognized;
+the workflow presents those bounded readable names in an explicit checkbox list.
+The eventual training use case remains authoritative for artifact ownership,
+local backing, schema, and fingerprint validation.
 
 Dataset preparation UI should present task choices before lower-level settings, keep nonessential settings collapsed by default, and group prompt/model/parameter controls under automated data-formatting language rather than a hardcoded QA-generation or model-override concept. Saved training settings are a renderer convenience for reloading preparation choices such as task, formatting, model, split, and output options; they must not silently preserve selected source artifacts or replace runtime contracts. Source artifact lists should be filtered by the selected task family so LLM tasks show text/document/structured sources and diffusion/vision tasks show image sources plus structured manifests.
 
 Current Python model training support includes causal language model training over text-like dataset files using LoRA, QLoRA, or full fine-tuning through Transformers. The text training path accepts the LLM instruction, classification, extraction, embedding-pair, and reranker training tasks, formats those row schemas into causal-LM training text, and records task tags/metadata on generated model candidates. The multimodal training path accepts diffusion LoRA, vision classification, vision detection, and vision segmentation manifests. Diffusion training supports LoRA adapter output for Diffusers-compatible text-to-image models. Vision training supports LoRA adapter output and full fine-tuning for image classification, object detection, and semantic segmentation models through Transformers image processors and task-specific model classes. Vision LoRA uses PEFT adapter serialization and preserves recognized task heads as trainable modules when the selected model exposes them. For image manifests generated from workspace artifacts, the application model-training use case stages referenced source artifact bytes into runtime-local files and passes runtime-only source path metadata to the Python worker.
+
+Model training reports structured progress after every completed microbatch and
+remains cancellable through the shared task lifecycle. Every desktop status,
+cancel, save, and discard request is bound to the workspace recorded at start.
+After a training run reaches any terminal state, the desktop may offer one
+runtime unload action for that run. Its visibility must not depend on the
+generation-model cache inventory because training models are task-local and do
+not appear in that inventory; the existing unload boundary still rejects active
+tasks, clears cached generators, and requests Python/CUDA memory reclamation.
+Runtime success produces a staged, path-sanitized review result rather than an
+automatically registered model. Explicit save finalizes the configured local or
+Hugging Face destination using the request's output model name; discard removes
+the staged runtime output. Runtime paths, checkpoints, logs, and validation
+report paths stay out of IPC, preload, renderer, and notification state.
+Saved PEFT adapter configuration replaces any runtime-local base snapshot
+reference with the authority-owned base model id before validation and staging;
+the generated model record also retains that base id and its model-record id.
 
 ## Resource-Backed Asset Registry Boundary
 
@@ -196,7 +225,7 @@ contained ComfyUI input root. Randomized staging names are deleted after
 terminal task status and after preparation, submission, or runtime-read
 failures; callers cannot supply host paths or staging filenames.
 
-Configured shared model storage is host-owned runtime-adjacent input, not a runtime install root and not workspace persistence. The model registry/checkpoint resolver may scan the configured host-local folder for Hugging Face cache directories and checkpoint files, then resolve selected shared models for the executing host's ComfyUI/Python runtime. Desktop uses the desktop machine's configured folder; server/thin-client mode uses a folder readable by the server process. Thin clients must not assume the browser's local filesystem path is usable by the server.
+Configured shared model storage is host-owned runtime-adjacent input, not a runtime install root and not workspace persistence. The model registry/checkpoint resolver may scan the configured host-local folder for Hugging Face cache directories and checkpoint files, then resolve selected shared models for the executing host's ComfyUI/Python runtime. Desktop uses the desktop machine's configured folder; server/thin-client mode uses a folder readable by the server process. Thin clients must not assume the browser's local filesystem path is usable by the server. An explicitly confirmed desktop model deletion may remove the stored model's local files only through an adapter that canonicalizes the target beneath the generated-model cache or configured shared model root, rejects links and root/outside/traversal targets, and fails before removing the registry record when file deletion is unsafe or unsuccessful. Hugging Face snapshot deletion removes the owning models cache repository directory so unreferenced snapshot blobs are not left behind; a standalone checkpoint record deletes only its recorded checkpoint file.
 
 `SERVER_RUNTIME_ROOT` and `SERVER_STORAGE_ROOT` should be separate. Remote execution placement should be implemented in host composition through adapter/client substitution, not by changing application/domain logic.
 
@@ -246,3 +275,12 @@ Execution plan preparation introduces a non-executing planning layer that depend
 ## Controlled Conversational Execution
 
 Controlled conversational execution is gated by explicit approval and supported text-generation adapters; execution plan preparation remains non-executing.
+The approved model is validated in the host-owned local cache and loaded on the
+first turn after Python startup when it is not already resident. This cold-load
+path is local-only, preserves exact model-record authority, and shares the
+bounded two-minute short-task deadline between the Python task and its caller.
+A selected LoRA record is not treated as a standalone generation model. Runtime
+resolution requires its exact same-workspace full base-model record, submits the
+base and adapter identities together, validates the adapter's declared base
+association and contained local snapshot, and attaches it with the exact
+reviewed PEFT runtime dependency. Warm reuse also matches the adapter revision.

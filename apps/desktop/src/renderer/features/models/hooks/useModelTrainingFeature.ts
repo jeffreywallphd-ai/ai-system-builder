@@ -1,17 +1,32 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { DesktopArtifactBrowseItem } from "../../../lib/desktopApi";
 import type { DesktopModelInventoryRecord, DesktopModelTrainingResult } from "../../../lib/desktopApi";
 import { createDesktopApplicationSettingsClient } from "../../settings";
+import { createDesktopPythonRuntimeClient } from "../../python-runtime/api/desktopPythonRuntimeClient";
 import type { DesktopModelsClient } from "../api/desktopModelsClient";
+import { announceModelTrainingStarted } from "./modelTrainingNotificationEvents";
 import { useModelsClient } from "./useModelsClient";
 import { createWorkspaceId } from "../../../../../../../modules/contracts/workspace";
 import type { DatasetPreparationTaskType } from "../../../../../../../modules/contracts/runtime";
 
-type TrainingStatus = "idle" | "running" | "succeeded" | "failed";
+type TrainingStatus = "idle" | "running" | "succeeded" | "failed" | "cancelled";
 type PollableTrainingStatus = DesktopModelTrainingResult["status"];
 
-const TRAINING_STATUS_POLL_INTERVAL_MS = 2000;
+const TRAINING_STATUS_POLL_INTERVAL_MS = 500;
+const TRAINING_DATASET_MEDIA_TYPES = new Set([
+  "application/x-parquet",
+  "application/vnd.apache.parquet",
+  "application/x-ndjson",
+  "application/json",
+  "text/csv",
+]);
+const TRAINING_DATASET_FILE_EXTENSIONS = [
+  ".parquet",
+  ".jsonl",
+  ".json",
+  ".csv",
+];
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -59,8 +74,92 @@ function isVisionTrainingTask(trainingTask: DatasetPreparationTaskType): boolean
     || trainingTask === "vision-segmentation";
 }
 
+function isTrainingDatasetArtifact(
+  artifact: DesktopArtifactBrowseItem,
+): boolean {
+  const mediaType = artifact.mediaType?.trim().toLowerCase() ?? "";
+  const candidateNames = [
+    artifact.storageKey,
+    artifact.originalName ?? "",
+  ].map((value) => value.trim().toLowerCase());
+
+  return TRAINING_DATASET_MEDIA_TYPES.has(mediaType)
+    || candidateNames.some((candidate) =>
+      TRAINING_DATASET_FILE_EXTENSIONS.some((extension) =>
+        candidate.endsWith(extension),
+      ),
+    );
+}
+
+function isLocalTextTrainingBaseModel(
+  model: DesktopModelInventoryRecord,
+): boolean {
+  const isTextModel = model.inferenceMode === "causal"
+    || model.inferenceMode === "chat"
+    || model.inferenceMode === "text2text"
+    || model.taskTags?.includes("text-generation");
+  const isTrainableForm = model.artifactForm === "full-model"
+    || model.artifactForm === "merged-model";
+  return Boolean(model.localPath && isTextModel && isTrainableForm);
+}
+
+function isDatasetPreparationGenerationModel(
+  model: DesktopModelInventoryRecord,
+): boolean {
+  return model.metadata?.["source"] === "dataset-preparation"
+    || model.metadata?.["usage"] === "text-field-generation";
+}
+
+function selectDefaultTrainingBaseModel(
+  models: readonly DesktopModelInventoryRecord[],
+): DesktopModelInventoryRecord | undefined {
+  const localTrainableModels = models.filter((model) =>
+    Boolean(model.localPath)
+    && (
+      model.artifactForm === "full-model"
+      || model.artifactForm === "merged-model"
+    ),
+  );
+  const textCandidates = localTrainableModels.filter(
+    isLocalTextTrainingBaseModel,
+  );
+  const candidates =
+    textCandidates.length > 0 ? textCandidates : localTrainableModels;
+  return candidates.sort((left, right) => {
+    const preparationPreference = Number(
+      isDatasetPreparationGenerationModel(right),
+    ) - Number(isDatasetPreparationGenerationModel(left));
+    if (preparationPreference !== 0) return preparationPreference;
+    return right.createdAt.localeCompare(left.createdAt);
+  })[0];
+}
+
+function resolveTrainingDatasetFormat(
+  artifact: DesktopArtifactBrowseItem | undefined,
+): "parquet" | "jsonl" | "json" | "csv" | undefined {
+  if (!artifact) return undefined;
+  const mediaType = artifact.mediaType?.trim().toLowerCase();
+  if (mediaType === "application/x-parquet"
+    || mediaType === "application/vnd.apache.parquet") return "parquet";
+  if (mediaType === "application/x-ndjson"
+    || mediaType === "application/jsonl") return "jsonl";
+  if (mediaType === "application/json") return "json";
+  if (mediaType === "text/csv" || mediaType === "application/csv") return "csv";
+
+  const name = (artifact.originalName || artifact.storageKey).toLowerCase();
+  if (name.endsWith(".parquet")) return "parquet";
+  if (name.endsWith(".jsonl")) return "jsonl";
+  if (name.endsWith(".json")) return "json";
+  if (name.endsWith(".csv")) return "csv";
+  return undefined;
+}
+
 export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceId?: string) {
   const modelClient = useModelsClient(client);
+  const runtimeStatusClient = useMemo(
+    () => createDesktopPythonRuntimeClient(),
+    [],
+  );
 
   const [models, setModels] = useState<DesktopModelInventoryRecord[]>([]);
   const [datasetArtifacts, setDatasetArtifacts] = useState<DesktopArtifactBrowseItem[]>([]);
@@ -97,6 +196,25 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
   const [status, setStatus] = useState<TrainingStatus>("idle");
   const [message, setMessage] = useState<string>();
   const [result, setResult] = useState<DesktopModelTrainingResult>();
+  const [activeRunId, setActiveRunId] = useState<string>();
+  const [stopTrainingInFlight, setStopTrainingInFlight] = useState(false);
+  const [unloadModelInFlight, setUnloadModelInFlight] = useState(false);
+  const [unloadedRunId, setUnloadedRunId] = useState<string>();
+  const [reviewActionInFlight, setReviewActionInFlight] = useState<"save" | "discard">();
+  const [runtimeActiveTaskCount, setRuntimeActiveTaskCount] = useState(0);
+
+  const refreshRuntimeModelStatus = useCallback(async () => {
+    try {
+      const snapshot = await runtimeStatusClient.readStatus();
+      setRuntimeActiveTaskCount(snapshot.activeTaskCount);
+    } catch {
+      // Runtime status is best-effort for model lifecycle controls.
+    }
+  }, [runtimeStatusClient]);
+
+  useEffect(() => {
+    void refreshRuntimeModelStatus();
+  }, [refreshRuntimeModelStatus]);
 
   const isMethodSupported = trainingTask === "diffusion-lora"
     ? method === "lora"
@@ -110,28 +228,22 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
     const load = async () => {
       const listed = workspaceId ? await modelClient.listModels({ workspaceId: createWorkspaceId(workspaceId) }) : [];
       let artifacts: DesktopArtifactBrowseItem[] = [];
-      try {
-        const { createDesktopArtifactBrowserClient } = await import("../../artifact-browser/api/desktopArtifactBrowserClient");
-        artifacts = await createDesktopArtifactBrowserClient().browseArtifacts({});
-      } catch {
-        artifacts = [];
+      if (workspaceId) {
+        try {
+          const { createDesktopArtifactBrowserClient } = await import("../../artifact-browser/api/desktopArtifactBrowserClient");
+          artifacts = await createDesktopArtifactBrowserClient().browseArtifacts({
+            workspaceId: createWorkspaceId(workspaceId),
+          });
+        } catch {
+          artifacts = [];
+        }
       }
       setModels(listed);
-      setDatasetArtifacts(
-        artifacts.filter((artifact) => {
-          const key = artifact.storageKey.toLowerCase();
-          return artifact.mediaType === "application/x-parquet"
-            || artifact.mediaType === "application/x-ndjson"
-            || artifact.mediaType === "application/json"
-            || artifact.mediaType === "text/csv"
-            || key.endsWith(".parquet")
-            || key.endsWith(".jsonl")
-            || key.endsWith(".json")
-            || key.endsWith(".csv");
-        }),
-      );
+      setDatasetArtifacts(artifacts.filter(isTrainingDatasetArtifact));
       if (!baseModelRecordId && listed.length > 0) {
-        setBaseModelRecordId(listed[0]?.modelRecordId ?? "");
+        setBaseModelRecordId(
+          selectDefaultTrainingBaseModel(listed)?.modelRecordId ?? "",
+        );
       }
     };
     void load();
@@ -171,7 +283,8 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
     && outputModelName.trim().length > 0
     && hasOutputDestination
     && isMethodSupported
-    && status !== "running";
+    && status !== "running"
+    && result?.reviewPending !== true;
 
   const submitTraining = async () => {
     if (!canSubmit) {
@@ -207,7 +320,16 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
         workspaceId: createWorkspaceId(workspaceId),
         trainingTask,
         baseModel: { modelRecordId: baseModelRecordId },
-        datasets: datasetArtifactIds.map((artifactId, index) => ({ artifactId, splitRole: index === 0 ? "train" : "validation" })),
+        datasets: datasetArtifactIds.map((artifactId, index) => {
+          const artifact = datasetArtifacts.find(
+            (candidate) => candidate.artifactId === artifactId,
+          );
+          return {
+            artifactId,
+            splitRole: index === 0 ? "train" : "validation",
+            format: resolveTrainingDatasetFormat(artifact),
+          };
+        }),
         method,
         commonParameters: {
           numEpochs: Number.parseInt(numEpochs, 10) || undefined,
@@ -252,8 +374,15 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
         validation: { enabled: validateAfterTraining, expectedLoRA: method !== "full-finetune" },
         runtimeMetadata: { trainingTask },
       });
+      announceModelTrainingStarted({
+        runId: trainingResult.runId,
+        workspaceId,
+      });
 
       setResult(trainingResult);
+      if (!isTerminalTrainingStatus(trainingResult.status)) {
+        setActiveRunId(trainingResult.runId);
+      }
       let latestResult = trainingResult;
       let consecutivePollFailures = 0;
 
@@ -262,7 +391,10 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
         setMessage(toTrainingMessage(latestResult));
         await delay(TRAINING_STATUS_POLL_INTERVAL_MS);
         try {
-          latestResult = await modelClient.readModelTrainingStatus({ runId: latestResult.runId });
+          latestResult = await modelClient.readModelTrainingStatus({
+            runId: latestResult.runId,
+            workspaceId,
+          });
           consecutivePollFailures = 0;
         } catch (error) {
           consecutivePollFailures += 1;
@@ -277,18 +409,133 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
 
       if (latestResult.status === "succeeded") {
         setStatus("succeeded");
-        setMessage("Training completed.");
-        const refreshed = workspaceId ? await modelClient.listModels({ workspaceId: createWorkspaceId(workspaceId) }) : [];
-        setModels(refreshed);
+        if (latestResult.reviewPending) {
+          setMessage("Training completed. Save or discard the trained model.");
+        } else {
+          setMessage("Training completed.");
+          const refreshed = workspaceId ? await modelClient.listModels({ workspaceId: createWorkspaceId(workspaceId) }) : [];
+          setModels(refreshed);
+        }
       } else {
-        setStatus("failed");
+        setStatus(latestResult.status === "cancelled" ? "cancelled" : "failed");
         setMessage(latestResult.error?.message ?? (latestResult.status === "cancelled" ? "Training cancelled." : "Training failed."));
       }
+      setActiveRunId(undefined);
+      void refreshRuntimeModelStatus();
     } catch (error) {
+      setActiveRunId(undefined);
       setStatus("failed");
       setMessage(error instanceof Error ? error.message : "Training failed.");
+      void refreshRuntimeModelStatus();
     }
   };
+
+  const stopTraining = async () => {
+    if (!activeRunId || !workspaceId || stopTrainingInFlight) {
+      return;
+    }
+
+    setStopTrainingInFlight(true);
+    setMessage("Stopping training...");
+    try {
+      const stopped = await modelClient.cancelModelTraining({
+        runId: activeRunId,
+        workspaceId,
+      });
+      setResult(stopped);
+      if (stopped.status === "cancelled") {
+        setStatus("cancelled");
+        setMessage("Training cancelled.");
+        setActiveRunId(undefined);
+      } else {
+        setMessage("Stop requested. Waiting for the current batch to finish.");
+      }
+    } catch (error) {
+      setStatus("running");
+      setMessage(error instanceof Error ? error.message : "Failed to stop model training.");
+    } finally {
+      setStopTrainingInFlight(false);
+      void refreshRuntimeModelStatus();
+    }
+  };
+
+  const unloadModel = async () => {
+    if (
+      unloadModelInFlight
+      || activeRunId
+      || runtimeActiveTaskCount > 0
+      || !result
+      || !isTerminalTrainingStatus(result.status)
+      || unloadedRunId === result.runId
+    ) {
+      return;
+    }
+
+    setUnloadModelInFlight(true);
+    try {
+      const snapshot = await runtimeStatusClient.controlRuntime("unload-model");
+      setRuntimeActiveTaskCount(snapshot.activeTaskCount);
+      setUnloadedRunId(result.runId);
+      setMessage("Model unloaded from memory.");
+    } catch (error) {
+      setStatus("failed");
+      setMessage(error instanceof Error ? error.message : "Failed to unload model.");
+    } finally {
+      setUnloadModelInFlight(false);
+      void refreshRuntimeModelStatus();
+    }
+  };
+
+  const saveTrainedModel = async () => {
+    if (!workspaceId || !result?.reviewPending || reviewActionInFlight) {
+      return;
+    }
+    setReviewActionInFlight("save");
+    try {
+      const saved = await modelClient.saveModelTraining({
+        runId: result.runId,
+        workspaceId,
+      });
+      setResult(saved);
+      setStatus("succeeded");
+      setMessage("Trained model saved.");
+      setModels(await modelClient.listModels({ workspaceId: createWorkspaceId(workspaceId) }));
+    } catch (error) {
+      setStatus("failed");
+      setMessage(error instanceof Error ? error.message : "Failed to save trained model.");
+    } finally {
+      setReviewActionInFlight(undefined);
+      void refreshRuntimeModelStatus();
+    }
+  };
+
+  const discardTrainedModel = async () => {
+    if (!workspaceId || !result?.reviewPending || reviewActionInFlight) {
+      return;
+    }
+    setReviewActionInFlight("discard");
+    try {
+      const discarded = await modelClient.discardModelTraining({
+        runId: result.runId,
+        workspaceId,
+      });
+      setResult(discarded);
+      setStatus("cancelled");
+      setMessage("Trained model discarded.");
+    } catch (error) {
+      setStatus("failed");
+      setMessage(error instanceof Error ? error.message : "Failed to discard trained model.");
+    } finally {
+      setReviewActionInFlight(undefined);
+      void refreshRuntimeModelStatus();
+    }
+  };
+
+  const canStopTraining = Boolean(activeRunId) && status === "running";
+  const canUnloadModel = runtimeActiveTaskCount === 0
+    && !activeRunId
+    && Boolean(result && isTerminalTrainingStatus(result.status))
+    && unloadedRunId !== result?.runId;
 
   return {
     models,
@@ -354,6 +601,15 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
     message,
     result,
     canSubmit,
+    canStopTraining,
+    stopTrainingInFlight,
+    stopTraining,
+    canUnloadModel,
+    unloadModelInFlight,
+    unloadModel,
+    reviewActionInFlight,
+    saveTrainedModel,
+    discardTrainedModel,
     isMethodSupported,
     submitTraining,
   };

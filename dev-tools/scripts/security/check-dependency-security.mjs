@@ -17,6 +17,11 @@ const reviewedParquetDependencies = [
 ];
 const reviewedModelPlacementDependencies = [
   { name: "accelerate", version: "1.14.0", license: "Apache-2.0" },
+  { name: "peft", version: "0.15.2", license: "Apache-2.0" },
+];
+const reviewedTextTrainingDependencies = [
+  { name: "datasets", version: "5.0.1", license: "Apache-2.0" },
+  { name: "peft", version: "0.15.2", license: "Apache-2.0" },
 ];
 
 export function validatePythonDecoderDependencyInventory(requirementsText) {
@@ -62,7 +67,11 @@ export function validatePythonParquetDependencyInventory(requirementsText) {
     .filter((line) => line.length > 0 && !line.startsWith("#"));
   const packages = reviewedParquetDependencies.map((dependency) => {
     const expected = `${dependency.name}==${dependency.version}`;
-    if (lines.filter((line) => line.toLowerCase().startsWith(`${dependency.name}==`)).length !== 1) {
+    if (
+      lines.filter((line) =>
+        line.toLowerCase().startsWith(`${dependency.name}==`),
+      ).length !== 1
+    ) {
       throw new Error(
         `Python Parquet dependency '${dependency.name}' must appear exactly once.`,
       );
@@ -85,7 +94,9 @@ export function validatePythonParquetDependencyInventory(requirementsText) {
   };
 }
 
-export function validatePythonModelPlacementDependencyInventory(requirementsText) {
+export function validatePythonModelPlacementDependencyInventory(
+  requirementsText,
+) {
   const lines = requirementsText
     .split(/\r?\n/u)
     .map((line) => line.trim())
@@ -114,6 +125,43 @@ export function validatePythonModelPlacementDependencyInventory(requirementsText
 
   return {
     source: "modules/adapters/runtime/python/worker/requirements.txt",
+    supportedPython: ">=3.10 <3.15",
+    packages,
+  };
+}
+
+export function validatePythonTextTrainingDependencyInventory(
+  requirementsText,
+) {
+  const lines = requirementsText
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"));
+  if (lines.length !== reviewedTextTrainingDependencies.length) {
+    throw new Error(
+      "Python text-training dependency inventory is incomplete or contains unreviewed direct packages.",
+    );
+  }
+  const packages = reviewedTextTrainingDependencies.map((dependency) => {
+    const expected = `${dependency.name}==${dependency.version}`;
+    if (
+      lines.filter((line) =>
+        line.toLowerCase().startsWith(`${dependency.name}==`),
+      ).length !== 1 ||
+      !lines.includes(expected)
+    ) {
+      throw new Error(
+        `Python text-training dependency '${dependency.name}' must use the reviewed exact version.`,
+      );
+    }
+    return {
+      ...dependency,
+      purl: `pkg:pypi/${dependency.name}@${dependency.version}`,
+    };
+  });
+  return {
+    source:
+      "modules/adapters/runtime/python/worker/requirements-training-text.txt",
     supportedPython: ">=3.10 <3.15",
     packages,
   };
@@ -215,13 +263,18 @@ export function runDependencySecurityCheck() {
       "utf8",
     ),
   );
-  const pythonModelPlacement =
-    validatePythonModelPlacementDependencyInventory(
-      readFileSync(
-        "modules/adapters/runtime/python/worker/requirements.txt",
-        "utf8",
-      ),
-    );
+  const pythonModelPlacement = validatePythonModelPlacementDependencyInventory(
+    readFileSync(
+      "modules/adapters/runtime/python/worker/requirements.txt",
+      "utf8",
+    ),
+  );
+  const pythonTextTraining = validatePythonTextTrainingDependencyInventory(
+    readFileSync(
+      "modules/adapters/runtime/python/worker/requirements-training-text.txt",
+      "utf8",
+    ),
+  );
 
   console.log(
     JSON.stringify(
@@ -232,6 +285,7 @@ export function runDependencySecurityCheck() {
         pythonDecoder,
         pythonParquet,
         pythonModelPlacement,
+        pythonTextTraining,
       },
       null,
       2,

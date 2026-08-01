@@ -20,6 +20,11 @@ module.exports = {
         use: ['style-loader', 'css-loader'],
       },
       {
+        test: /pdf\.worker\.min\.mjs$/i,
+        resourceQuery: /url/,
+        type: "asset/resource",
+      },
+      {
         test: /\.(png|svg)$/i,
         type: "asset/resource",
       },

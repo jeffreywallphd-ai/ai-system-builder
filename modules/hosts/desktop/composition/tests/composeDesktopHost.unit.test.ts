@@ -717,6 +717,53 @@ describe("composeDesktopHost", () => {
     });
   });
 
+  it("prepares text-training dependencies after runtime startup and before dispatch", async () => {
+    const { composeDesktopRuntimeTaskFeature } =
+      await import("../composeDesktopRuntimeTaskFeature");
+    const callOrder: string[] = [];
+    const feature = await composeDesktopRuntimeTaskFeature({
+      pythonRuntimeFoundation: {
+        supervisor: {
+          start: testDouble.fn(async () => {
+            callOrder.push("start-runtime");
+          }),
+        },
+        prepareModelTrainingEnvironment: testDouble.fn(() => {
+          callOrder.push("prepare-training");
+        }),
+        runtimePort: {
+          startTask: testDouble.fn(async (request: { requestId: string }) => {
+            callOrder.push("dispatch-training");
+            return { requestId: request.requestId, status: "queued" };
+          }),
+        },
+      },
+      imageRuntimeTaskRegistry: {
+        startTask: testDouble.fn(),
+        readTask: testDouble.fn(),
+        cancelTask: testDouble.fn(),
+        listTasks: testDouble.fn(),
+      },
+      runtimeReadiness: {
+        getCapabilityStatus: testDouble.fn(),
+        getReadinessSnapshot: testDouble.fn(),
+      },
+    });
+
+    await feature.runtimeTaskRegistry.startTask({
+      workspaceId: "workspace.test" as never,
+      requestId: "training-1",
+      taskType: TaskType.MODEL_TRAINING,
+      payload: {},
+    });
+
+    expect(callOrder).toEqual([
+      "start-runtime",
+      "prepare-training",
+      "dispatch-training",
+    ]);
+  });
+
   it("reports the resolved Python supervisor state through desktop readiness", () => {
     const source = readFileSync(
       resolve("modules/hosts/desktop/composition/composeDesktopHost.ts"),

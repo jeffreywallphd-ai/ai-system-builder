@@ -27,6 +27,10 @@
 - Model downloads use `TaskType.MODEL_DOWNLOAD`; completion cache handles and
   resolved local paths stay behind the host-internal completion port while the
   application finalizes the model registry exactly once.
+- Model training status, cancellation, save, and discard are all checked
+  against the workspace recorded at start. Successful runtime completion is a
+  review state: it must not finalize model registration or publication until
+  explicit save, and discard must clean staged output.
 
 ## Shared Vs Feature-Specific Responsibilities
 

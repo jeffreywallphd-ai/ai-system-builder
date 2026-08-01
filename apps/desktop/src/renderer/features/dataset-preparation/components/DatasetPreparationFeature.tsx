@@ -9,25 +9,31 @@ import type { DesktopModelsClient } from "../../models/api/desktopModelsClient";
 import type { DesktopApplicationSettingsClient } from "../../settings";
 import {
   ApplicationIcon,
-  EmptyState,
   PanelHeading,
   TermWithHint,
   TransientNotificationPublisher,
   TypeBadge,
   useOptionalNotificationCenter,
-  DatasetVersionPanel,
   DatasetPreparationOutputShapeEditor,
   WorkflowSequence,
   WorkflowStep,
   getDatasetInspectionCopy,
   getDatasetPreparationIntentCopy,
   getDatasetPreparationMethodCopy,
+  DatasetReviewModal,
+  createDatasetQualityReviewLines,
+  createDatasetQualityReviewRowItems,
+  type DatasetQualityReviewLine,
+  type ReviewDecision,
 } from "../../../../../../../modules/ui/shared";
 import { CollapsiblePanel } from "../../../components/ui/CollapsiblePanel";
 import { useDatasetPreparationFeature } from "../hooks/useDatasetPreparationFeature";
 import {
+  DATASET_PREPARATION_SAVE_NAME_MAX_LENGTH,
   DATASET_PREPARATION_TEXT_GENERATION_MODEL_PRESETS,
   type DatasetPreparationMethodId,
+  type DatasetQualityReviewLineId,
+  type DatasetQualityReviewPage,
 } from "../../../../../../../modules/contracts/runtime";
 import {
   DATASET_PREPARATION_TASK_PROFILE_OPTIONS,
@@ -35,7 +41,7 @@ import {
 } from "../profiles/datasetPreparationTaskProfiles";
 
 export interface DatasetPreparationFeatureProps {
-  onPrepared?: () => void;
+  onPrepared?: (artifactStorageKey: string) => void;
   client?: DesktopDatasetPreparationClient;
   settingsClient?: DesktopApplicationSettingsClient;
   modelsClient?: DesktopModelsClient;
@@ -130,8 +136,6 @@ export function DatasetPreparationFeature({
     artifacts,
     allArtifactCount,
     filteredArtifacts,
-    uploadedArtifacts,
-    generatedArtifacts,
     selectedArtifactStorageFilter,
     selectedArtifactIds,
     preparationResolution,
@@ -264,7 +268,6 @@ export function DatasetPreparationFeature({
     onDownloadGenerationModel,
     onSaveTrainingSettings,
     onLoadTrainingSettings,
-    onReuseDatasetVersion,
   } = useDatasetPreparationFeature({
     client,
     settingsClient,
@@ -276,39 +279,90 @@ export function DatasetPreparationFeature({
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>(
     {},
   );
+  const [qualityReviewModalOpen, setQualityReviewModalOpen] = useState(false);
+  const [qualityReviewIndex, setQualityReviewIndex] = useState(0);
+  const [qualityReviewDecisions, setQualityReviewDecisions] = useState<
+    Record<string, ReviewDecision>
+  >({});
+  const [qualityReviewLine, setQualityReviewLine] =
+    useState<DatasetQualityReviewLine>();
+  const [qualityReviewPage, setQualityReviewPage] =
+    useState<DatasetQualityReviewPage>();
+  const [qualityReviewPageLoading, setQualityReviewPageLoading] =
+    useState(false);
+  const [qualityReviewPageError, setQualityReviewPageError] =
+    useState<string>();
   const versionClient = useMemo(
     () => client ?? createDesktopDatasetPreparationClient(),
     [client],
   );
-  const versionService = useMemo(
-    () => ({
-      list: (targetWorkspaceId: string, targetDatasetId?: string) =>
-        versionClient.listVersions?.(targetWorkspaceId, targetDatasetId) ??
-        Promise.resolve([]),
-      compare: (
-        targetWorkspaceId: string,
-        fromVersionId: string,
-        toVersionId: string,
-      ) =>
-        versionClient.compareVersions?.(
-          targetWorkspaceId,
-          fromVersionId,
-          toVersionId,
-        ) ??
-        Promise.reject(new Error("Dataset version comparison is unavailable.")),
-      reproduce: (targetWorkspaceId: string, versionId: string) =>
-        versionClient.readReproduction?.(targetWorkspaceId, versionId) ??
-        Promise.reject(new Error("Saved dataset setup is unavailable.")),
-      publish: (
-        input: Parameters<
-          NonNullable<DesktopDatasetPreparationClient["publishVersion"]>
-        >[0],
-      ) =>
-        versionClient.publishVersion?.(input) ??
-        Promise.reject(new Error("Dataset publishing is unavailable.")),
-    }),
-    [versionClient],
+  const qualityReviewLines = useMemo(
+    () =>
+      qualityReview
+        ? createDatasetQualityReviewLines(
+            qualityReview.report,
+            QUALITY_REASON_LABELS,
+          )
+        : [],
+    [qualityReview],
   );
+  const qualityReviewItems = useMemo(
+    () =>
+      createDatasetQualityReviewRowItems(
+        qualityReviewPage,
+        qualityReviewLine?.label ?? "Prepared",
+      ),
+    [qualityReviewLine?.label, qualityReviewPage],
+  );
+  const reviewSection = (
+    item: (typeof qualityReviewItems)[number],
+    decision: ReviewDecision,
+  ) => {
+    setQualityReviewDecisions((current) => ({
+      ...current,
+      [item.id]: decision,
+    }));
+    setQualityReviewIndex((index) =>
+      Math.min(index + 1, Math.max(0, qualityReviewItems.length - 1)),
+    );
+  };
+  const openQualityReviewLine = async (
+    line: DatasetQualityReviewLine,
+    page = 0,
+    entry: "first" | "last" = "first",
+  ) => {
+    if (!qualityReview || !workspaceId || line.count === 0) return;
+    setQualityReviewLine(line);
+    setQualityReviewIndex(0);
+    setQualityReviewPageLoading(true);
+    setQualityReviewPageError(undefined);
+    setQualityReviewModalOpen(true);
+    try {
+      if (!versionClient.readPreparedReviewPage) {
+        throw new Error("Dataset preparation row review is unavailable.");
+      }
+      const next = await versionClient.readPreparedReviewPage({
+        workspaceId,
+        requestId: qualityReview.requestId,
+        reportFingerprint: qualityReview.report.reportFingerprint,
+        lineId: line.id as DatasetQualityReviewLineId,
+        page,
+      });
+      setQualityReviewPage(next);
+      setQualityReviewIndex(
+        entry === "last" ? Math.max(0, next.rows.length - 1) : 0,
+      );
+    } catch (reason) {
+      setQualityReviewPage(undefined);
+      setQualityReviewPageError(
+        reason instanceof Error
+          ? reason.message
+          : "Prepared records could not be loaded.",
+      );
+    } finally {
+      setQualityReviewPageLoading(false);
+    }
+  };
   const transientStatusMessage = [
     "Training settings saved.",
     "Model unloaded from memory.",
@@ -321,8 +375,6 @@ export function DatasetPreparationFeature({
       .filter(Boolean);
     return labels.length > 0 ? labels : undefined;
   }, [labelSet]);
-  const showUploadedArtifacts = selectedArtifactStorageFilter !== "generated";
-  const showGeneratedArtifacts = selectedArtifactStorageFilter !== "uploaded";
   const selectedTaskProfile = getDatasetPreparationTaskProfileOption(taskType);
   const isSelectedTaskAvailable =
     selectedTaskProfile.runtimeSupport === "supported";
@@ -741,50 +793,18 @@ export function DatasetPreparationFeature({
                       <div className="dataset-preparation__artifact-groups">
                         <section className="dataset-preparation__artifact-group ui-stack ui-stack--sm">
                           <h4 className="dataset-preparation__group-title">
-                            Uploaded Artifacts
+                            Available artifacts
                           </h4>
-                          {!showUploadedArtifacts ? (
-                            <p className="ui-text-muted">Filtered out.</p>
-                          ) : uploadedArtifacts.length === 0 ? (
-                            <p>No uploaded artifacts available.</p>
+                          {filteredArtifacts.length === 0 ? (
+                            <p className="ui-text-muted">
+                              {selectedArtifactStorageFilter === "uploaded"
+                                ? "No uploaded artifacts available."
+                                : selectedArtifactStorageFilter === "generated"
+                                  ? "No generated artifacts available."
+                                  : "No artifacts are available for this training task."}
+                            </p>
                           ) : (
-                            uploadedArtifacts.map((artifact) => (
-                              <label
-                                className="dataset-preparation__checkbox-row"
-                                key={artifact.artifactId}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={selectedArtifactIds.includes(
-                                    artifact.artifactId,
-                                  )}
-                                  onChange={() =>
-                                    onToggleArtifact(artifact.artifactId)
-                                  }
-                                />
-                                <TypeBadge
-                                  value={artifact.mediaType ?? artifact.label}
-                                />
-                                <span>{artifact.label}</span>
-                              </label>
-                            ))
-                          )}
-                        </section>
-                        <section className="dataset-preparation__artifact-group ui-stack ui-stack--sm">
-                          <h4 className="dataset-preparation__group-title">
-                            Generated Artifacts
-                          </h4>
-                          {!showGeneratedArtifacts ? (
-                            <p className="ui-text-muted">Filtered out.</p>
-                          ) : generatedArtifacts.length === 0 ? (
-                            <EmptyState
-                              compact
-                              icon="dataset"
-                              title="No generated artifacts yet"
-                              description="Run dataset preparation to generate artifacts for reuse."
-                            />
-                          ) : (
-                            generatedArtifacts.map((artifact) => (
+                            filteredArtifacts.map((artifact) => (
                               <label
                                 className="dataset-preparation__checkbox-row"
                                 key={artifact.artifactId}
@@ -1633,21 +1653,6 @@ export function DatasetPreparationFeature({
                               <option value="csv">CSV</option>
                             </select>
                           </label>
-                          <label className="ui-stack ui-stack--sm">
-                            <span>
-                              <TermWithHint termId="outputBaseName">
-                                Output base name
-                              </TermWithHint>{" "}
-                              (optional)
-                            </span>
-                            <input
-                              className="ui-input"
-                              value={outputBaseName}
-                              onChange={(event) =>
-                                setOutputBaseName(event.target.value)
-                              }
-                            />
-                          </label>
                         </div>
                       </>,
                     )}
@@ -1679,9 +1684,47 @@ export function DatasetPreparationFeature({
                       <dt>Examples checked</dt>
                       <dd>{qualityReview.report.counts.inputRows}</dd>
                       <dt>Examples ready</dt>
-                      <dd>{qualityReview.report.counts.acceptedRows}</dd>
+                      <dd>
+                        <button
+                          className="dataset-review__report-line"
+                          type="button"
+                          disabled={
+                            qualityReview.report.counts.acceptedRows === 0
+                          }
+                          onClick={() => {
+                            const line = qualityReviewLines.find(
+                              (item) => item.id === "ready",
+                            );
+                            if (line) void openQualityReviewLine(line);
+                          }}
+                        >
+                          <span>Open ready examples</span>
+                          <span>
+                            {qualityReview.report.counts.acceptedRows}
+                          </span>
+                        </button>
+                      </dd>
                       <dt>Examples set aside</dt>
-                      <dd>{qualityReview.report.counts.quarantinedRows}</dd>
+                      <dd>
+                        <button
+                          className="dataset-review__report-line"
+                          type="button"
+                          disabled={
+                            qualityReview.report.counts.quarantinedRows === 0
+                          }
+                          onClick={() => {
+                            const line = qualityReviewLines.find(
+                              (item) => item.id === "set-aside",
+                            );
+                            if (line) void openQualityReviewLine(line);
+                          }}
+                        >
+                          <span>Open set-aside examples</span>
+                          <span>
+                            {qualityReview.report.counts.quarantinedRows}
+                          </span>
+                        </button>
+                      </dd>
                     </dl>
                     {qualityReview.report.inspection ? (
                       <div className="dataset-preparation__readiness">
@@ -1801,9 +1844,22 @@ export function DatasetPreparationFeature({
                             qualityReview.report.reasonCounts,
                           ).map(([reason, count]) => (
                             <li key={reason}>
-                              {QUALITY_REASON_LABELS[reason] ??
-                                "Other data issue"}
-                              : {count}
+                              <button
+                                className="dataset-review__report-line"
+                                type="button"
+                                onClick={() => {
+                                  const line = qualityReviewLines.find(
+                                    (item) => item.id === `reason:${reason}`,
+                                  );
+                                  if (line) void openQualityReviewLine(line);
+                                }}
+                              >
+                                <span>
+                                  {QUALITY_REASON_LABELS[reason] ??
+                                    "Other data issue"}
+                                </span>
+                                <span>{count}</span>
+                              </button>
                             </li>
                           ))}
                         </ul>
@@ -1831,45 +1887,60 @@ export function DatasetPreparationFeature({
                         </ul>
                       </details>
                     ) : null}
-                    <div className="dataset-preparation__actions ui-workflow__actions">
-                      <button
-                        className="ui-button"
-                        type="button"
-                        disabled={
-                          reviewActionInFlight ||
-                          !qualityReview.report.approvalAllowed
-                        }
-                        onClick={() => void onApproveReview()}
-                      >
-                        {reviewActionInFlight
-                          ? "Saving..."
-                          : "Approve and save dataset"}
-                      </button>
-                      <button
-                        className="ui-button"
-                        type="button"
-                        disabled={reviewActionInFlight}
-                        onClick={() => void onDiscardReview()}
-                      >
-                        Discard review
-                      </button>
-                    </div>
-                    {!qualityReview.report.approvalAllowed ? (
-                      <p role="alert">
-                        This dataset cannot be saved. Adjust the source data or
-                        rules, then run the checks again.
+                    <div className="dataset-preparation__approval-controls ui-stack ui-stack--sm">
+                      <label className="ui-stack ui-stack--sm">
+                        <span>
+                          <TermWithHint termId="outputBaseName">
+                            Dataset save name
+                          </TermWithHint>{" "}
+                          (optional)
+                        </span>
+                        <input
+                          className="ui-input"
+                          value={outputBaseName}
+                          maxLength={DATASET_PREPARATION_SAVE_NAME_MAX_LENGTH}
+                          disabled={reviewActionInFlight}
+                          placeholder="customer-support-training"
+                          onChange={(event) =>
+                            setOutputBaseName(event.target.value)
+                          }
+                        />
+                        <span className="ui-text-muted">
+                          Choose a meaningful file name. The selected format
+                          adds the file extension automatically.
+                        </span>
+                      </label>
+                      <p className="ui-text-muted">
+                        Approve and save includes the complete set of ready
+                        examples.
                       </p>
-                    ) : null}
+                      <div className="dataset-preparation__actions ui-workflow__actions">
+                        <button
+                          className="ui-button"
+                          type="button"
+                          disabled={reviewActionInFlight}
+                          onClick={() => void onApproveReview()}
+                        >
+                          {reviewActionInFlight
+                            ? "Saving..."
+                            : "Approve and save dataset"}
+                        </button>
+                        <button
+                          className="ui-button"
+                          type="button"
+                          disabled={reviewActionInFlight}
+                          onClick={() => void onDiscardReview()}
+                        >
+                          Discard dataset
+                        </button>
+                      </div>
+                    </div>
                   </section>
                 ) : null}
 
                 <p className="dataset-preparation__section-description ui-text-muted">
-                  The prepared dataset is saved locally as a reusable version
-                  first.
-                </p>
-                <p>
-                  After it is saved, use <strong>Saved versions</strong> to
-                  publish it privately or publicly.
+                  After approval, the saved dataset opens in Artifact Browser,
+                  where you can inspect it or publish it to Hugging Face.
                 </p>
 
                 <div className="dataset-preparation__actions ui-workflow__actions">
@@ -1955,15 +2026,6 @@ export function DatasetPreparationFeature({
             <dd>{resultSummary.testRows}</dd>
           </dl>
         ) : null}
-        {workspaceId && versionClient.listVersions ? (
-          <DatasetVersionPanel
-            workspaceId={workspaceId}
-            currentVersionId={resultSummary?.datasetVersion?.versionId}
-            datasetId={resultSummary?.datasetVersion?.datasetId}
-            service={versionService}
-            onReuse={onReuseDatasetVersion}
-          />
-        ) : null}
         {resultSummary?.warnings.length ? (
           <div className="dataset-preparation__warnings" role="status">
             <h3>Needs attention</h3>
@@ -1974,6 +2036,77 @@ export function DatasetPreparationFeature({
             </ul>
           </div>
         ) : null}
+        <DatasetReviewModal
+          open={qualityReviewModalOpen}
+          title={
+            qualityReviewLine
+              ? `Review ${qualityReviewLine.label.toLowerCase()}`
+              : "Review prepared records"
+          }
+          onClose={() => setQualityReviewModalOpen(false)}
+          items={qualityReviewItems}
+          currentIndex={qualityReviewIndex}
+          decisions={qualityReviewDecisions}
+          busy={reviewActionInFlight || qualityReviewPageLoading}
+          approveLabel="Approve"
+          rejectLabel="Reject"
+          absoluteIndex={
+            qualityReviewPage
+              ? qualityReviewPage.page * qualityReviewPage.pageSize +
+                qualityReviewIndex
+              : qualityReviewIndex
+          }
+          totalItems={qualityReviewPage?.totalRows ?? qualityReviewItems.length}
+          previousDisabled={
+            !qualityReviewPage ||
+            qualityReviewPage.page * qualityReviewPage.pageSize +
+              qualityReviewIndex ===
+              0
+          }
+          nextDisabled={
+            !qualityReviewPage ||
+            qualityReviewPage.page * qualityReviewPage.pageSize +
+              qualityReviewIndex >=
+              qualityReviewPage.totalRows - 1
+          }
+          onPrevious={() => {
+            if (qualityReviewIndex > 0) {
+              setQualityReviewIndex((value) => value - 1);
+            } else if (qualityReviewLine && qualityReviewPage?.page) {
+              void openQualityReviewLine(
+                qualityReviewLine,
+                qualityReviewPage.page - 1,
+                "last",
+              );
+            }
+          }}
+          onNext={() => {
+            if (qualityReviewIndex < qualityReviewItems.length - 1) {
+              setQualityReviewIndex((value) => value + 1);
+            } else if (
+              qualityReviewLine &&
+              qualityReviewPage &&
+              (qualityReviewPage.page + 1) * qualityReviewPage.pageSize <
+                qualityReviewPage.totalRows
+            ) {
+              void openQualityReviewLine(
+                qualityReviewLine,
+                qualityReviewPage.page + 1,
+                "first",
+              );
+            }
+          }}
+          onCurrentIndexChange={setQualityReviewIndex}
+          onApprove={(item) => reviewSection(item, "approved")}
+          onReject={(item) => reviewSection(item, "rejected")}
+        />
+        <TransientNotificationPublisher
+          message={qualityReviewPageError}
+          title="Prepared records need attention"
+          tone="error"
+          source="Dataset Preparation"
+          workspaceId={workspaceId}
+        />
       </div>
     </section>
   );

@@ -1,9 +1,5 @@
-import type {
-  SystemPublishedConversationRuntimeQuery,
-} from "../../../../modules/application/services/system-deployment";
-import type {
-  SystemPublishedConversationRuntimeSession,
-} from "../../../../modules/hosts/shared/composition/composeSystemPublishedConversationRuntime";
+import type { SystemPublishedConversationRuntimeQuery } from "../../../../modules/application/services/system-deployment";
+import type { SystemPublishedConversationRuntimeSession } from "../../../../modules/hosts/shared/composition/composeSystemPublishedConversationRuntime";
 import type { PublishedConversationRuntimeControllerPort } from "../../../../modules/hosts/desktop/composition/desktopPublishedSystemRuntimeLifecycle";
 
 const DEFAULT_MAXIMUM_WINDOWS = 4;
@@ -42,7 +38,9 @@ interface RuntimeSessionLike {
     onHeadersReceived(
       listener: (
         details: { responseHeaders?: Record<string, string[]> },
-        callback: (response: { responseHeaders: Record<string, string[]> }) => void,
+        callback: (response: {
+          responseHeaders: Record<string, string[]>;
+        }) => void,
       ) => void,
     ): void;
   };
@@ -77,10 +75,13 @@ export interface SystemRuntimeWindowManager {
   open(
     query: SystemPublishedConversationRuntimeQuery,
     controller: PublishedConversationRuntimeControllerPort,
+    onWindowClosed: () => Promise<void>,
   ): Promise<void>;
   close(query: SystemPublishedConversationRuntimeQuery): Promise<void>;
   closeAll(): Promise<void>;
-  resolveSession(event: unknown): SystemPublishedConversationRuntimeSession | undefined;
+  resolveSession(
+    event: unknown,
+  ): SystemPublishedConversationRuntimeSession | undefined;
   getActiveWindowCount(): number;
 }
 
@@ -88,6 +89,7 @@ interface RuntimeWindowRecord {
   readonly key: string;
   readonly window: RuntimeBrowserWindowLike;
   readonly session: SystemPublishedConversationRuntimeSession;
+  readonly onWindowClosed: () => Promise<void>;
   disposed: boolean;
 }
 
@@ -106,21 +108,24 @@ export function createSystemRuntimeWindowManager(options: {
   const maximumWindows = options.maximumWindows ?? DEFAULT_MAXIMUM_WINDOWS;
   let partitionSequence = 0;
   const nextPartitionId =
-    options.nextPartitionId ?? (() => `${Date.now()}-${partitionSequence += 1}`);
+    options.nextPartitionId ??
+    (() => `${Date.now()}-${(partitionSequence += 1)}`);
 
   const dispose = async (
     record: RuntimeWindowRecord,
     closeWindow: boolean,
+    stopBuild: boolean,
   ): Promise<void> => {
     if (record.disposed) return;
     record.disposed = true;
     records.delete(record.key);
     await record.session.close().catch(() => undefined);
+    if (stopBuild) await record.onWindowClosed().catch(() => undefined);
     if (closeWindow && !record.window.isDestroyed()) record.window.close();
   };
 
   const manager: SystemRuntimeWindowManager = {
-    async open(query, controller) {
+    async open(query, controller, onWindowClosed) {
       const key = runtimeWindowKey(query);
       const existing = records.get(key);
       if (existing && !existing.disposed && !existing.window.isDestroyed()) {
@@ -178,12 +183,13 @@ export function createSystemRuntimeWindowManager(options: {
           key,
           window: runtimeWindow,
           session: runtimeSession,
+          onWindowClosed,
           disposed: false,
         };
         configureRuntimeWindow(runtimeWindow, options.developmentMode === true);
         records.set(key, record);
         runtimeWindow.on("closed", () => {
-          void dispose(record, false);
+          void dispose(record, false, true);
         });
         try {
           await runtimeWindow.loadURL(options.entryUrl);
@@ -191,7 +197,7 @@ export function createSystemRuntimeWindowManager(options: {
           runtimeWindow.show();
           runtimeWindow.focus();
         } catch {
-          await dispose(record, true);
+          await dispose(record, true, false);
           throw safeWindowError(
             "system-runtime-window.load-failed",
             "The published system window could not be opened.",
@@ -209,11 +215,13 @@ export function createSystemRuntimeWindowManager(options: {
       const key = runtimeWindowKey(query);
       await pending.get(key)?.catch(() => undefined);
       const record = records.get(key);
-      if (record) await dispose(record, true);
+      if (record) await dispose(record, true, false);
     },
     async closeAll() {
       await Promise.allSettled([...pending.values()]);
-      await Promise.all([...records.values()].map((record) => dispose(record, true)));
+      await Promise.all(
+        [...records.values()].map((record) => dispose(record, true, false)),
+      );
     },
     resolveSession(event) {
       const candidate = optionalEvent(event);
@@ -242,13 +250,15 @@ function configureRuntimeWindow(
   developmentMode: boolean,
 ): void {
   runtimeWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
-  runtimeWindow.webContents.on("will-navigate", (event) => event.preventDefault());
+  runtimeWindow.webContents.on("will-navigate", (event) =>
+    event.preventDefault(),
+  );
   runtimeWindow.webContents.on("will-attach-webview", (event) =>
     event.preventDefault(),
   );
   const runtimeSession = runtimeWindow.webContents.session;
-  runtimeSession.setPermissionRequestHandler((_contents, _permission, callback) =>
-    callback(false),
+  runtimeSession.setPermissionRequestHandler(
+    (_contents, _permission, callback) => callback(false),
   );
   runtimeSession.setPermissionCheckHandler(() => false);
   runtimeSession.on("will-download", (event) => event.preventDefault());
@@ -265,7 +275,9 @@ function configureRuntimeWindow(
   });
 }
 
-function runtimeWindowKey(query: SystemPublishedConversationRuntimeQuery): string {
+function runtimeWindowKey(
+  query: SystemPublishedConversationRuntimeQuery,
+): string {
   return `${query.organizationId}\u0000${query.workspaceId}\u0000${query.releaseId}`;
 }
 
@@ -277,7 +289,10 @@ function optionalEvent(
     : undefined;
 }
 
-function safeWindowError(code: string, message: string): Error & { code: string } {
+function safeWindowError(
+  code: string,
+  message: string,
+): Error & { code: string } {
   const error = new Error(message) as Error & { code: string };
   error.name = "SystemRuntimeWindowError";
   error.code = code;

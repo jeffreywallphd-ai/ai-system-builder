@@ -152,7 +152,7 @@ export function ManageModelsTab(props: { state: ModelsState }) {
             closeLabel="Close delete confirmation"
             onClose={() => s.setPendingDeleteModelRecordId(undefined)}
           >
-            <p>Type <strong>Delete</strong> to remove this record from the registry. Local model files will not be deleted.</p>
+            <p>Type <strong>Delete</strong> to remove this record and its local model files from the shared desktop cache.</p>
             <label className="ui-stack ui-stack--sm">
               <span><TermWithHint termId="deleteConfirmation">Confirmation</TermWithHint></span>
               <input
@@ -165,7 +165,7 @@ export function ManageModelsTab(props: { state: ModelsState }) {
             </label>
             <div className="ui-cluster">
               <button className="ui-button ui-button--destructive" type="button" onClick={() => void s.confirmDeleteModelRecord()} disabled={s.deleteConfirmationInput !== "Delete"}>
-                Delete record
+                Delete model
               </button>
               <button className="ui-button" type="button" onClick={() => s.setPendingDeleteModelRecordId(undefined)}>Cancel</button>
             </div>

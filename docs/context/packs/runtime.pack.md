@@ -46,6 +46,13 @@
   to explicit source no-candidate results; load, decoder, output, inference,
   dependency, and unexpected runtime failures stop with sanitized reason codes.
 - Desktop IPC and authenticated server HTTP expose the same asynchronous start/read/cancel lifecycle. Workspace ownership is recorded at start and every status read or cancellation must fail closed for another workspace.
+- Model training emits progress for every completed microbatch. Runtime success
+  remains staged until an explicit workspace-scoped save or discard action;
+  pending-review responses are path-free, save performs registration/storage or
+  publication once, and discard removes staged runtime output. Desktop offers
+  one unload action after each terminal training run without depending on the
+  generation-model inventory, because task-local training models are not listed
+  there; the existing active-task denial remains authoritative.
 - Dataset preparation task profiles are shared contract metadata and executable dataset-output profiles in the Python worker. Text-bearing profiles choose provided source text or local-model-generated text through `task.textInputMode` and `generation.promptTemplate`; built-in generation presets are quality 7B (`Qwen/Qwen2.5-7B-Instruct`) and compact 3B (`Qwen/Qwen2.5-3B-Instruct`). Task-scoped generation parameter defaults live in runtime contracts; UI may expose them in an automated formatting section but must not hardcode QA-generation settings keys or duplicate model parameter fields. LLM profiles can emit structured/generated text rows; diffusion and vision profiles emit image manifest rows from metadata or structured manifests. Model training requests carry the selected training task. Executable Python training supports causal-LM text training for LLM instruction/classification/extraction/embedding/reranker tasks, diffusion LoRA adapter training for image-caption manifests, and vision LoRA or full-finetune training for classification, detection, and segmentation manifests. Image-manifest text generation uses metadata/annotations rather than pixel understanding; image-manifest model training must receive runtime-local source file paths through dataset metadata instead of making the Python worker read artifact storage directly.
 - Capacity-aware model defaults step an untouched 7B preset down to 3B on a
   constrained host. Explicit/saved choices remain authoritative, but live

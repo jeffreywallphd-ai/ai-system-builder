@@ -22,8 +22,10 @@ from modules.adapters.runtime.python.worker.tasks.local_text_generation import (
     GenerationModelDownloadInvalidError,
     GenerationModelLoadError,
     GenerationRuntimeDependencyError,
+    _attach_lora_adapter,
     _GENERATOR_CACHE,
     _GENERATOR_CACHE_LOCK,
+    _RESOLVED_MODEL_REFERENCES,
     _SystemMemorySnapshot,
     _create_structured_snapshot_tqdm,
     _ensure_model_load_resources,
@@ -38,6 +40,7 @@ from modules.adapters.runtime.python.worker.tasks.local_text_generation import (
     configure_huggingface_download_environment,
     describe_loaded_generation_models,
     ensure_generation_model_downloaded,
+    ensure_generation_adapter_is_available,
     ensure_generation_model_is_available,
     get_or_create_local_text_generator,
 )
@@ -255,6 +258,138 @@ class LocalTextGenerationTests(unittest.TestCase):
 
         self.assertEqual(len(calls), 1)
         self.assertTrue(calls[0]["local_files_only"])
+
+    def test_lora_adapter_availability_uses_exact_local_revision_and_base_association(self) -> None:
+        with TemporaryDirectory() as directory:
+            snapshot = (
+                Path(directory)
+                / "models--generated--chat-lora"
+                / "snapshots"
+                / "training-run-1"
+            )
+            snapshot.mkdir(parents=True)
+            (snapshot / "adapter_config.json").write_text(
+                json.dumps({"base_model_name_or_path": "owner/base-chat"}),
+                encoding="utf-8",
+            )
+            (snapshot / "adapter_model.safetensors").write_bytes(b"adapter")
+            config = ExampleGenerationConfig(
+                mode="qa",
+                model=LocalModelConfig(
+                    provider="transformers",
+                    modelId="owner/base-chat",
+                    adapterModelId="generated/chat-lora",
+                    adapterRevision="training-run-1",
+                ),
+            )
+
+            with patch.dict(environ, {"HF_HUB_CACHE": directory}):
+                availability = ensure_generation_adapter_is_available(config)
+
+            self.assertTrue(availability.from_cache)
+            self.assertEqual(availability.model_id, "generated/chat-lora")
+            self.assertEqual(Path(availability.local_path or ""), snapshot)
+
+    def test_lora_adapter_availability_rejects_a_different_base_association(self) -> None:
+        with TemporaryDirectory() as directory:
+            snapshot = (
+                Path(directory)
+                / "models--generated--chat-lora"
+                / "snapshots"
+                / "training-run-1"
+            )
+            snapshot.mkdir(parents=True)
+            (snapshot / "adapter_config.json").write_text(
+                json.dumps({"base_model_name_or_path": "owner/other-base"}),
+                encoding="utf-8",
+            )
+            (snapshot / "adapter_model.safetensors").write_bytes(b"adapter")
+            config = ExampleGenerationConfig(
+                mode="qa",
+                model=LocalModelConfig(
+                    provider="transformers",
+                    modelId="owner/base-chat",
+                    adapterModelId="generated/chat-lora",
+                    adapterRevision="training-run-1",
+                ),
+            )
+
+            with (
+                patch.dict(environ, {"HF_HUB_CACHE": directory}),
+                self.assertRaisesRegex(RuntimeError, "association does not match"),
+            ):
+                ensure_generation_adapter_is_available(config)
+
+    def test_lora_adapter_availability_accepts_only_the_resolved_legacy_base_reference(self) -> None:
+        with TemporaryDirectory() as directory:
+            base_snapshot = Path(directory) / "models--owner--base-chat" / "snapshots" / "base-revision"
+            adapter_snapshot = (
+                Path(directory)
+                / "models--generated--chat-lora"
+                / "snapshots"
+                / "training-run-1"
+            )
+            base_snapshot.mkdir(parents=True)
+            adapter_snapshot.mkdir(parents=True)
+            (adapter_snapshot / "adapter_config.json").write_text(
+                json.dumps({"base_model_name_or_path": str(base_snapshot)}),
+                encoding="utf-8",
+            )
+            (adapter_snapshot / "adapter_model.safetensors").write_bytes(b"adapter")
+            config = ExampleGenerationConfig(
+                mode="qa",
+                model=LocalModelConfig(
+                    provider="transformers",
+                    modelId="owner/base-chat",
+                    adapterModelId="generated/chat-lora",
+                    adapterRevision="training-run-1",
+                ),
+            )
+
+            with (
+                patch.dict(environ, {"HF_HUB_CACHE": directory}),
+                patch.dict(
+                    _RESOLVED_MODEL_REFERENCES,
+                    {"owner/base-chat": str(base_snapshot)},
+                ),
+            ):
+                availability = ensure_generation_adapter_is_available(config)
+
+            self.assertTrue(availability.from_cache)
+
+    def test_lora_attachment_uses_the_validated_local_adapter_reference(self) -> None:
+        calls: list[tuple[object, str, bool]] = []
+
+        class FakePeftModel:
+            @staticmethod
+            def from_pretrained(model, adapter_reference, is_trainable=False):
+                calls.append((model, adapter_reference, is_trainable))
+                return "attached-model"
+
+        base_model = object()
+        config = LocalModelConfig(
+            provider="transformers",
+            modelId="owner/base-chat",
+            adapterModelId="generated/chat-lora",
+        )
+        with (
+            patch(
+                "modules.adapters.runtime.python.worker.tasks.local_text_generation._is_module_available",
+                return_value=True,
+            ),
+            patch(
+                "modules.adapters.runtime.python.worker.tasks.local_text_generation._resolved_model_reference_for",
+                return_value="C:/host-cache/adapter-snapshot",
+            ),
+            patch.dict(sys.modules, {"peft": SimpleNamespace(PeftModel=FakePeftModel)}),
+        ):
+            attached = _attach_lora_adapter(base_model, config)
+
+        self.assertEqual(attached, "attached-model")
+        self.assertEqual(
+            calls,
+            [(base_model, "C:/host-cache/adapter-snapshot", False)],
+        )
 
     def test_configures_huggingface_downloads_with_http_default_and_explicit_xet_override(self) -> None:
         previous_xet = environ.pop("HF_HUB_DISABLE_XET", None)

@@ -5,6 +5,8 @@ import type {
   DatasetPreparationWarning,
   DatasetQualityApprovalRequest,
   DatasetQualityReport,
+  DatasetQualityReviewLineId,
+  DatasetQualityReviewPage,
   DatasetQualityRequestedConfig,
   PrepareTrainingDatasetRequest,
 } from "../runtime";
@@ -23,6 +25,8 @@ export const API_DATASET_PREPARATION_CANCEL_OPERATION =
   createTransportOperation("dataset-preparation", "cancel");
 export const API_DATASET_PREPARATION_APPROVE_OPERATION =
   createTransportOperation("dataset-preparation", "approve");
+export const API_DATASET_PREPARATION_REVIEW_PAGE_OPERATION =
+  createTransportOperation("dataset-preparation", "review-page");
 export const API_DATASET_PREPARATION_CAPACITY_READ_OPERATION =
   createTransportOperation("dataset-preparation", "generation-capacity-read");
 
@@ -143,6 +147,14 @@ export interface ApiDatasetPreparationApproveCommand extends DatasetQualityAppro
   workspaceId: string;
 }
 
+export interface ApiDatasetPreparationReviewPageCommand {
+  workspaceId: string;
+  requestId: string;
+  reportFingerprint: string;
+  lineId: DatasetQualityReviewLineId;
+  page: number;
+}
+
 export type ApiDatasetPreparationStartResponse = ApiResponse<
   ApiDatasetPreparationStartValue,
   Record<string, unknown>,
@@ -165,6 +177,12 @@ export type ApiDatasetPreparationApproveResponse = ApiResponse<
   ApiDatasetPreparationApproveValue,
   Record<string, unknown>,
   typeof API_DATASET_PREPARATION_APPROVE_OPERATION
+>;
+
+export type ApiDatasetPreparationReviewPageResponse = ApiResponse<
+  DatasetQualityReviewPage,
+  Record<string, unknown>,
+  typeof API_DATASET_PREPARATION_REVIEW_PAGE_OPERATION
 >;
 
 export type ApiDatasetPreparationCapacityReadResponse = ApiResponse<

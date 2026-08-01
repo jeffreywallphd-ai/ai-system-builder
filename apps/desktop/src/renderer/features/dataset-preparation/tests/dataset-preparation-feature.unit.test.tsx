@@ -176,6 +176,12 @@ describe("DatasetPreparationFeature", () => {
     expect(container.textContent).not.toContain(
       "models.tasks.qaGeneration.default",
     );
+    expect(container.textContent).toContain("Available artifacts");
+    expect(container.textContent).not.toContain("Uploaded Artifacts");
+    expect(container.textContent).not.toContain("Generated Artifacts");
+    expect(
+      container.querySelectorAll(".dataset-preparation__artifact-group"),
+    ).toHaveLength(1);
     const checkbox = container.querySelector(
       "input[type='checkbox']",
     ) as HTMLInputElement;
@@ -794,8 +800,9 @@ describe("DatasetPreparationFeature", () => {
 
     expect(container.textContent).not.toContain("Publish to Hugging Face");
     expect(container.textContent).toContain(
-      "saved locally as a reusable version first",
+      "opens in Artifact Browser",
     );
+    expect(container.textContent).not.toContain("Saved versions");
 
     const form = container.querySelector("form") as HTMLFormElement;
     await act(async () => {
@@ -904,9 +911,7 @@ describe("DatasetPreparationFeature", () => {
       );
       expect(memoryOverflow?.value).toBe("limited");
       expect(
-        Array.from(memoryOverflow?.options ?? []).map(
-          (option) => option.value,
-        ),
+        Array.from(memoryOverflow?.options ?? []).map((option) => option.value),
       ).toEqual(["limited", "none", "extended"]);
       const constrainedControl = Array.from(
         container?.querySelectorAll("label") ?? [],
@@ -2826,6 +2831,7 @@ describe("DatasetPreparationFeature", () => {
 
     expect(startPrepareTrainingDataset).toHaveBeenCalledTimes(1);
     expect(onPrepared).toHaveBeenCalledTimes(1);
+    expect(onPrepared).toHaveBeenCalledWith("stored-dataset");
   });
 
   it("does not continue polling updates after unmount during in-flight task read", async () => {

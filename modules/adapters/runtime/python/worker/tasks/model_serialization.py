@@ -39,7 +39,33 @@ def save_full_model_pretrained(model: Any, tokenizer: Any, output_dir: Path, max
     }
 
 
-def save_adapter_pretrained(peft_model: Any, tokenizer: Any, output_dir: Path) -> dict[str, Any]:
+def _write_adapter_base_model_association(
+    output_dir: Path,
+    base_model_id: str,
+) -> None:
+    root = output_dir.resolve(strict=True)
+    config_path = (root / "adapter_config.json").resolve(strict=True)
+    try:
+        config_path.relative_to(root)
+    except ValueError as error:
+        raise RuntimeError("Adapter configuration escaped its output directory.") from error
+    config_payload = json.loads(config_path.read_text(encoding="utf-8"))
+    if not isinstance(config_payload, dict):
+        raise RuntimeError("Adapter configuration must be a JSON object.")
+    config_payload["base_model_name_or_path"] = base_model_id
+    config_path.write_text(
+        json.dumps(config_payload, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def save_adapter_pretrained(
+    peft_model: Any,
+    tokenizer: Any,
+    output_dir: Path,
+    *,
+    base_model_id: str | None = None,
+) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     peft_model.save_pretrained(str(output_dir), safe_serialization=True)
     if tokenizer is not None:
@@ -47,6 +73,8 @@ def save_adapter_pretrained(peft_model: Any, tokenizer: Any, output_dir: Path) -
 
     _copy_if_exists(output_dir, output_dir, "adapter_config.json")
     _copy_if_exists(output_dir, output_dir, "adapter_model.safetensors")
+    if base_model_id:
+        _write_adapter_base_model_association(output_dir, base_model_id)
 
     return {
         "serializationFormat": "adapter-safetensors",

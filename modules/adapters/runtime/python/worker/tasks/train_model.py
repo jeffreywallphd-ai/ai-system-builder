@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import tempfile
+from shutil import rmtree
 from datetime import datetime, timezone
 from math import ceil
 from pathlib import Path
@@ -44,6 +45,10 @@ _TRAINING_TASK_REQUIRED_PURPOSES = {
     "vision-detection": ("label",),
     "vision-segmentation": ("label",),
 }
+
+
+class TrainingCancellationRequested(RuntimeError):
+    pass
 
 
 def _require_non_empty(value: str | None, field: str) -> str:
@@ -131,8 +136,10 @@ def _resolve_training_purpose_paths(
     for dataset in payload.datasets:
         metadata = _to_dict(dataset.metadata)
         artifact_metadata = _to_dict(metadata.get("artifactMetadata"))
+        runtime_metadata = _to_dict(artifact_metadata.get("runtime"))
         structured_output = _to_dict(
             artifact_metadata.get("structuredOutput")
+            or runtime_metadata.get("structuredOutput")
             or metadata.get("structuredOutput")
         )
         raw_paths = structured_output.get("purposePaths")
@@ -413,12 +420,25 @@ def _tokenize_dataset(
             negative_block = f"\nNegative passage:\n{negative}" if negative else ""
             return f"Query:\n{purpose_value('query')}\nPassage:\n{purpose_value('passage')}\nRelevance:\n{value('relevance')}{negative_block}"
 
-        if {"instruction", "output"}.issubset(column_names):
+        instruction_output_column = (
+            "output"
+            if "output" in column_names
+            else "answer"
+            if "answer" in column_names
+            else None
+        )
+        if "instruction" in column_names and instruction_output_column is not None:
             instruction = value("instruction")
-            input_value = value("input")
+            input_value = (
+                value("input")
+                if "input" in column_names
+                else value("question")
+                if "question" in column_names
+                else ""
+            )
             context = value("context")
             thought = value("thought")
-            output = value("output")
+            output = value(instruction_output_column)
             input_block = f"\nInput:\n{input_value}" if input_value else ""
             context_block = f"\nContext:\n{context}" if context else ""
             thought_block = f"\nThought:\n{thought}" if thought else ""
@@ -485,7 +505,7 @@ def _build_training_args(payload: TrainModelTaskRequest, output_dir: Path) -> An
         warmup_ratio=float(advanced.get("warmupRatio", 0.0)),
         save_steps=int(advanced.get("checkpointIntervalSteps", 50)),
         eval_steps=int(advanced.get("evalIntervalSteps", 0)) if int(advanced.get("evalIntervalSteps", 0)) > 0 else None,
-        logging_steps=10,
+        logging_steps=1,
         save_total_limit=int(advanced.get("saveTotalLimit", 2)),
         label_names=["labels"],
         dataloader_pin_memory=dataloader_pin_memory,
@@ -553,19 +573,28 @@ def _run_trainer(
         return max(ceil(train_rows / per_device_batch_size), 1) * epochs
 
     class _TrainingProgressCallback(TrainerCallback):
-        def on_step_end(self, _args: Any, state: Any, _control: Any, **_kwargs: Any) -> None:
+        def __init__(self) -> None:
+            self.completed_batches = 0
+
+        def _report_completed_batch(self, _args: Any, state: Any) -> None:
             if on_progress is None:
                 return
-            total_steps = estimate_total_batches()
-            current_step = int(state.global_step) if isinstance(state.global_step, int) else 0
+            total_batches = estimate_total_batches()
+            self.completed_batches = min(self.completed_batches + 1, total_batches)
             total_epochs = int(_args.num_train_epochs) if isinstance(_args.num_train_epochs, (int, float)) else 0
             current_epoch = int(state.epoch) + 1 if isinstance(state.epoch, (int, float)) else 1
             on_progress({
                 "epoch": max(current_epoch, 1),
                 "totalEpochs": max(total_epochs, 1),
-                "batch": min(max(current_step * gradient_accumulation_steps(), 0), total_steps),
-                "totalBatches": max(total_steps, 0),
+                "batch": self.completed_batches,
+                "totalBatches": max(total_batches, 0),
             })
+
+        def on_substep_end(self, _args: Any, state: Any, _control: Any, **_kwargs: Any) -> None:
+            self._report_completed_batch(_args, state)
+
+        def on_step_end(self, _args: Any, state: Any, _control: Any, **_kwargs: Any) -> None:
+            self._report_completed_batch(_args, state)
 
     trainer = Trainer(
         model=model,
@@ -613,7 +642,8 @@ def train_model(
 
     run_id = f"train-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
     output_model_name = payload.output.get("outputModelName")
-    output_directory = payload.output.get("outputDirectory") or tempfile.mkdtemp(prefix=f"{output_model_name}-")
+    configured_output_directory = payload.output.get("outputDirectory")
+    output_directory = configured_output_directory or tempfile.mkdtemp(prefix=f"{output_model_name}-")
 
     output_path = Path(output_directory)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -716,7 +746,12 @@ def train_model(
 
         max_shard_size = _parse_max_shard_size(payload)
         if payload.method in {"lora", "qlora"}:
-            serialization = save_adapter_pretrained(model, tokenizer, output_path)
+            serialization = save_adapter_pretrained(
+                model,
+                tokenizer,
+                output_path,
+                base_model_id=payload.baseModel.modelId,
+            )
             artifact_form = "adapter"
         else:
             serialization = save_full_model_pretrained(model, tokenizer, output_path, max_shard_size=max_shard_size)
@@ -822,6 +857,10 @@ def train_model(
                 else None
             ),
         )
+    except TrainingCancellationRequested:
+        if not configured_output_directory:
+            rmtree(output_path, ignore_errors=True)
+        raise
     except Exception as error:
         if on_progress is not None:
             on_progress({"stage": "failed", "message": f"Training failed: {error}"})

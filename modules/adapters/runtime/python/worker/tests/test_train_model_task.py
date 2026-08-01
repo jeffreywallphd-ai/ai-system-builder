@@ -174,6 +174,93 @@ def test_tokenize_dataset_uses_nested_purpose_paths_for_custom_instruction_field
     ]
 
 
+def test_training_cancellation_removes_worker_owned_output(monkeypatch, tmp_path: Path) -> None:
+    payload = _request(tmp_path)
+    payload.output.pop("outputDirectory", None)
+    output_path = tmp_path / "cancelled-output"
+    monkeypatch.setattr(
+        train_model_module.tempfile,
+        "mkdtemp",
+        lambda prefix: str(output_path),
+    )
+
+    def cancel(_progress) -> None:
+        raise train_model_module.TrainingCancellationRequested(
+            "Model training cancellation requested."
+        )
+
+    try:
+        train_model_module.train_model(payload, on_progress=cancel)
+    except train_model_module.TrainingCancellationRequested:
+        pass
+    else:
+        raise AssertionError("Expected cooperative training cancellation.")
+
+    assert not output_path.exists()
+
+
+def test_tokenize_dataset_maps_question_and_answer_instruction_aliases() -> None:
+    class _Split:
+        column_names = ["instruction", "question", "context", "answer"]
+
+    class _DatasetDict(dict):
+        def __init__(self):
+            super().__init__({"train": _Split()})
+
+        def map(self, callback, *, batched: bool, remove_columns: list[str]):
+            assert batched is True
+            assert remove_columns == ["instruction", "question", "context", "answer"]
+            return callback(
+                {
+                    "instruction": ["Answer using only the supplied context."],
+                    "question": ["What changed?"],
+                    "context": ["The policy changed yesterday."],
+                    "answer": ["The policy changed yesterday."],
+                }
+            )
+
+    class _Tokenizer:
+        captured_texts: list[str] | None = None
+
+        def __call__(self, texts, **_kwargs):
+            self.captured_texts = texts
+            return {"input_ids": [[1, 2, 3]]}
+
+    tokenizer = _Tokenizer()
+    train_model_module._tokenize_dataset(
+        _DatasetDict(),
+        tokenizer,
+        128,
+        training_task="llm-instruction",
+    )
+
+    assert tokenizer.captured_texts == [
+        "Instruction:\nAnswer using only the supplied context.\nInput:\nWhat changed?\nContext:\nThe policy changed yesterday.\nResponse:\nThe policy changed yesterday."
+    ]
+
+
+def test_resolve_training_purpose_paths_reads_runtime_artifact_metadata(tmp_path: Path) -> None:
+    payload = _request(tmp_path)
+    payload.datasets[0].metadata = {
+        "artifactMetadata": {
+            "runtime": {
+                "structuredOutput": {
+                    "schemaFingerprint": "a" * 64,
+                    "purposePaths": {
+                        "instruction": ["question"],
+                        "output": ["answer"],
+                    },
+                }
+            }
+        }
+    }
+
+    assert train_model_module._resolve_training_purpose_paths(payload) == {
+        "instruction": ("question",),
+        "output": ("answer",),
+    }
+
+
 def test_resolve_training_purpose_paths_requires_matching_dataset_layouts(tmp_path: Path) -> None:
     payload = _request(tmp_path)
     payload.datasets[0].metadata = {
@@ -310,6 +397,8 @@ def test_train_model_lora_path_returns_real_result_with_mocks(monkeypatch, tmp_p
     assert result.status == "succeeded"
     assert result.generatedModelCandidate is not None
     assert result.generatedModelCandidate["artifactForm"] == "adapter"
+    assert result.generatedModelCandidate["baseModelId"] == "org/base"
+    assert result.generatedModelCandidate["adapterOfModelId"] == "org/base"
     assert "provider" not in result.generatedModelCandidate
     assert result.generatedModelCandidate["taskTags"] == ["text-classification"]
     assert result.generatedModelCandidate["metadata"]["trainingTask"] == "llm-classification"
@@ -431,12 +520,16 @@ def test_run_trainer_reports_estimated_total_batches_before_training(monkeypatch
             pass
 
     class _FakeTrainer:
-        state = SimpleNamespace(log_history=[])
-
-        def __init__(self, **_kwargs):
-            pass
+        def __init__(self, **kwargs):
+            self.args = kwargs["args"]
+            self.callbacks = kwargs["callbacks"]
+            self.state = SimpleNamespace(log_history=[], global_step=0, epoch=0.0)
 
         def train(self):
+            callback = self.callbacks[0]
+            callback.on_substep_end(self.args, self.state, None)
+            self.state.global_step = 1
+            callback.on_step_end(self.args, self.state, None)
             return SimpleNamespace(metrics={})
 
     monkeypatch.setitem(
@@ -459,10 +552,14 @@ def test_run_trainer_reports_estimated_total_batches_before_training(monkeypatch
             output_dir="/tmp/checkpoints",
             max_steps=-1,
             per_device_train_batch_size=2,
-            gradient_accumulation_steps=1,
+            gradient_accumulation_steps=2,
             num_train_epochs=1,
         ),
         on_progress=progress_events.append,
     )
 
-    assert progress_events[0] == {"epoch": 0, "totalEpochs": 1, "batch": 0, "totalBatches": 59}
+    assert progress_events[:3] == [
+        {"epoch": 0, "totalEpochs": 1, "batch": 0, "totalBatches": 59},
+        {"epoch": 1, "totalEpochs": 1, "batch": 1, "totalBatches": 59},
+        {"epoch": 1, "totalEpochs": 1, "batch": 2, "totalBatches": 59},
+    ]

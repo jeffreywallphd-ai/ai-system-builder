@@ -848,7 +848,12 @@ def train_vision_model(
             on_progress({"stage": "serializing", "message": "Serializing trained vision adapter..." if payload.method == "lora" else "Serializing trained vision model..."})
 
         if payload.method == "lora":
-            serialization = save_adapter_pretrained(model, processor, output_path)
+            serialization = save_adapter_pretrained(
+                model,
+                processor,
+                output_path,
+                base_model_id=payload.baseModel.modelId,
+            )
             artifact_form = "adapter"
         else:
             max_shard_size = str(_to_dict(payload.output).get("maxShardSize") or DEFAULT_MAX_SHARD_SIZE)

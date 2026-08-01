@@ -57,6 +57,12 @@ describe("createPythonRuntimeTaskRegistryAdapter", () => {
     });
 
     expect(callOrder).toEqual(["ensureRuntimeReady", "startTask"]);
+    expect(ensureRuntimeReady).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: "req-ensure",
+        taskType: TaskType.DATASET_PREPARATION,
+      }),
+    );
   });
 
   it("does not start task when ensureRuntimeReady fails", async () => {
@@ -165,6 +171,35 @@ describe("createPythonRuntimeTaskRegistryAdapter", () => {
       payload: { a: 1 },
       metadata: { workspaceId },
       timeoutMs: PYTHON_RUNTIME_TASK_TIMEOUTS.datasetPreparation,
+    });
+  });
+
+  it("maps DATASET_REVIEW to bounded long-running parquet work", async () => {
+    const runtimePort: any = {
+      startTask: testDouble.fn(async (request) => ({
+        requestId: request.requestId,
+      })),
+      readTaskStatus: testDouble.fn(),
+      cancelTask: testDouble.fn(),
+      getHealthStatus: testDouble.fn(),
+      getCapabilities: testDouble.fn(),
+      ensureModelDownloaded: testDouble.fn(),
+      getModelStatus: testDouble.fn(),
+      unloadModels: testDouble.fn(),
+    };
+    const adapter = createPythonRuntimeTaskRegistryAdapter(runtimePort);
+    await adapter.startTask({
+      workspaceId,
+      requestId: "review-1",
+      taskType: TaskType.DATASET_REVIEW,
+      payload: { operation: "read" },
+    });
+    expect(runtimePort.startTask).toHaveBeenCalledWith({
+      requestId: "review-1",
+      taskType: "review-dataset",
+      payload: { operation: "read" },
+      metadata: { workspaceId },
+      timeoutMs: PYTHON_RUNTIME_TASK_TIMEOUTS.datasetReview,
     });
   });
 

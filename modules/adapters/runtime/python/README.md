@@ -48,11 +48,17 @@ Foundation for the managed Python sidecar runtime adapter:
   remains a separate compatibility mode and still uses strict parsing and
   semantic validation.
 - The task registry assigns an explicit bounded deadline by work class: two
-  minutes for short/unknown work, two hours for validation, eight hours for
-  dataset preparation, twelve hours for model downloads, and twenty-four hours
-  for model training. This shared policy applies to Dataset Preparation, Model
-  Management, desktop, thin client, and the direct model-download fallback.
+  minutes for short/unknown work, two hours for validation and Parquet dataset
+  review, eight hours for dataset preparation, twelve hours for model
+  downloads, and twenty-four hours for model training. This shared policy
+  applies to Dataset Preparation, Dataset Review, Model Management, desktop,
+  thin client, and the direct model-download fallback.
   Callers cannot replace these caps with unbounded renderer values.
+- Parquet dataset review binds every runtime task to the authenticated
+  workspace, stages bytes only in a private temporary directory, returns at
+  most 50 sanitized row values per read, and requires the exact canonical row
+  fingerprint before streaming a rejected-row copy. The adapter always removes
+  its temporary directory and never returns runtime paths.
 - Cancellation ends the selected task but does not stop the shared Python
   runtime or unrelated tasks. Long deadlines reduce false failures; they do not
   remove task progress, cancellation, terminal cleanup, or hard resource bounds.

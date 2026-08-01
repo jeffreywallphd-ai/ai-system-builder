@@ -87,6 +87,7 @@ export const NOTIFICATION_MESSAGE_INVENTORY: readonly NotificationMessageInvento
     "apps/desktop/src/renderer/components/ui/SectionErrorState.tsx",
     "apps/desktop/src/renderer/components/ui/SectionLoadingState.tsx",
     "apps/desktop/src/renderer/features/dataset-preparation/components/DatasetPreparationNotificationBridge.tsx",
+    "apps/desktop/src/renderer/features/models/components/ModelTrainingNotificationBridge.tsx",
     "apps/thin-client/src/components/ui/LoadingSpinner.tsx",
     "modules/ui/shared/components/LoadingSpinner.tsx",
     "modules/ui/shared/notifications/NotificationCenter.tsx",

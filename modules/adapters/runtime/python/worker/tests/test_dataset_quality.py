@@ -95,6 +95,98 @@ class DatasetQualityTests(unittest.TestCase):
             [{"label": "billing", "count": 1}],
         )
 
+    def test_accepts_renamed_question_and_answer_instruction_fields(self) -> None:
+        result = curate_dataset_rows(
+            [
+                {
+                    "sourceArtifactId": "source-a",
+                    "instruction": "Answer the question using the source context.",
+                    "question": "What is the billing review process?",
+                    "context": (
+                        "Billing specialists review the invoice total and account details."
+                    ),
+                    "answer": (
+                        "Billing specialists review the invoice total and account details."
+                    ),
+                }
+            ],
+            [
+                {
+                    "sourceArtifactId": "source-a",
+                    "sourceRowIndex": 1,
+                    "reasonCodes": ["synthetic-diversity-low"],
+                    "row": {
+                        "instruction": "Answer using the source context.",
+                        "question": "What duplicate question was generated?",
+                        "context": "A duplicate generated example.",
+                        "answer": "A duplicate generated example.",
+                    },
+                }
+            ],
+            [
+                SimpleNamespace(
+                    artifactId="source-a", metadata={"language": "en"}
+                )
+            ],
+            "llm-instruction",
+            {"taskType": "llm-instruction"},
+            _quality_config(),
+            {
+                "instruction": ("instruction",),
+                "input": ("question",),
+                "context": ("context",),
+                "output": ("answer",),
+            },
+        )
+
+        self.assertEqual(len(result.accepted_rows), 1)
+        self.assertEqual(len(result.quarantine_records), 1)
+        self.assertEqual(result.report["status"], "needs-attention")
+        self.assertTrue(result.report["approvalAllowed"])
+        self.assertEqual(result.report["mapping"]["status"], "complete")
+        self.assertEqual(result.report["mapping"]["missingRequiredFields"], [])
+
+    def test_prequality_rejection_does_not_make_custom_mapping_incomplete(
+        self,
+    ) -> None:
+        result = curate_dataset_rows(
+            [],
+            [
+                {
+                    "sourceArtifactId": "source-a",
+                    "sourceRowIndex": 0,
+                    "reasonCodes": ["synthetic-diversity-low"],
+                    "row": {
+                        "instruction": "Answer using the source context.",
+                        "question": "What duplicate question was generated?",
+                        "context": "A duplicate generated example.",
+                        "answer": "A duplicate generated example.",
+                    },
+                }
+            ],
+            [
+                SimpleNamespace(
+                    artifactId="source-a", metadata={"language": "en"}
+                )
+            ],
+            "llm-instruction",
+            {"taskType": "llm-instruction"},
+            _quality_config(),
+            {
+                "instruction": ("instruction",),
+                "input": ("question",),
+                "context": ("context",),
+                "output": ("answer",),
+            },
+        )
+
+        self.assertEqual(result.accepted_rows, [])
+        self.assertEqual(len(result.quarantine_records), 1)
+        self.assertEqual(result.report["status"], "blocked")
+        self.assertFalse(result.report["approvalAllowed"])
+        self.assertEqual(result.report["mapping"]["status"], "complete")
+        self.assertEqual(result.report["mapping"]["missingRequiredFields"], [])
+
     def test_rejects_missing_or_unselected_source_associations(self) -> None:
         selected_sources = [SimpleNamespace(artifactId="source-a")]
 
@@ -463,6 +555,9 @@ class DatasetQualityTests(unittest.TestCase):
             quarantine_output = next(
                 output for output in result.outputs if output.role == "quarantine"
             )
+            review_output = next(
+                output for output in result.outputs if output.role == "review"
+            )
             report_text = Path(report_output.tempPath).read_text(encoding="utf-8")
             self.assertNotIn("private@example.com", report_text)
             quarantine_rows = [
@@ -472,6 +567,17 @@ class DatasetQualityTests(unittest.TestCase):
                 .splitlines()
             ]
             self.assertEqual(len(quarantine_rows), 3)
+            review_rows = [
+                json.loads(line)
+                for line in Path(review_output.tempPath)
+                .read_text(encoding="utf-8")
+                .splitlines()
+            ]
+            self.assertEqual(len(review_rows), result.summary.acceptedRowCount)
+            self.assertEqual(
+                review_output.metadata["reportFingerprint"],
+                result.qualityReport["reportFingerprint"],
+            )
             self.assertTrue(
                 any(
                     row["reasonCodes"]

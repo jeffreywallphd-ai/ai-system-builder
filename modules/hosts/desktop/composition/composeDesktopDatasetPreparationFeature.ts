@@ -1,6 +1,10 @@
 import {
   CompareDatasetVersionsUseCase,
   ListDatasetVersionsUseCase,
+  ListDatasetReviewTargetsUseCase,
+  ReadDatasetReviewPageUseCase,
+  RejectDatasetReviewRowUseCase,
+  EditDatasetReviewRowUseCase,
   PrepareTrainingDatasetFromArtifactsUseCase,
   PublishDatasetVersionUseCase,
   ReadDatasetVersionReproductionUseCase,
@@ -11,6 +15,7 @@ import { createStructuredDatasetVersionRepository } from "../../../adapters/pers
 import type { StructuredDocumentStore } from "../../../adapters/persistence/shared";
 import { createSha256DatasetVersionHasher } from "../../../adapters/storage/dataset-version";
 import { TaskType } from "../../../contracts/runtime";
+import { createPythonParquetDatasetReviewAdapter } from "../../../adapters/runtime/python";
 import { asyncLazyObject } from "./lazyProxy";
 
 export interface ComposeDesktopDatasetPreparationFeatureOptions {
@@ -23,31 +28,107 @@ export interface ComposeDesktopDatasetPreparationFeatureOptions {
   now?: () => string;
 }
 
-export function composeDesktopDatasetPreparationFeature(options: ComposeDesktopDatasetPreparationFeatureOptions): any {
+export function composeDesktopDatasetPreparationFeature(
+  options: ComposeDesktopDatasetPreparationFeatureOptions,
+): any {
   let disposed = false;
   const datasetVersionHasher = createSha256DatasetVersionHasher();
   const datasetVersionRepository = options.documents
     ? createStructuredDatasetVersionRepository(options.documents)
     : undefined;
+  const datasetVersionFinalizer = datasetVersionRepository
+    ? new DatasetVersionFinalizationService({
+        repository: datasetVersionRepository,
+        artifacts: options.artifacts.storage,
+        hasher: datasetVersionHasher,
+      })
+    : undefined;
   const datasetVersioning = datasetVersionRepository
     ? {
         hasher: datasetVersionHasher,
-        finalizer: new DatasetVersionFinalizationService({
-          repository: datasetVersionRepository,
-          artifacts: options.artifacts.storage,
-          hasher: datasetVersionHasher,
-        }),
+        finalizer: datasetVersionFinalizer!,
       }
     : undefined;
   const datasetVersionUseCases = datasetVersionRepository
     ? {
-        listDatasetVersionsUseCase: new ListDatasetVersionsUseCase({ repository: datasetVersionRepository, workspaceRepository: options.workspaceRepository, workspaceAuthorization: options.workspaceAuthorization }),
-        compareDatasetVersionsUseCase: new CompareDatasetVersionsUseCase({ repository: datasetVersionRepository, workspaceRepository: options.workspaceRepository, workspaceAuthorization: options.workspaceAuthorization }),
-        readDatasetVersionReproductionUseCase: new ReadDatasetVersionReproductionUseCase({ repository: datasetVersionRepository, artifacts: options.artifacts.storage, hasher: datasetVersionHasher, workspaceRepository: options.workspaceRepository, workspaceAuthorization: options.workspaceAuthorization }),
+        listDatasetVersionsUseCase: new ListDatasetVersionsUseCase({
+          repository: datasetVersionRepository,
+          workspaceRepository: options.workspaceRepository,
+          workspaceAuthorization: options.workspaceAuthorization,
+        }),
+        compareDatasetVersionsUseCase: new CompareDatasetVersionsUseCase({
+          repository: datasetVersionRepository,
+          workspaceRepository: options.workspaceRepository,
+          workspaceAuthorization: options.workspaceAuthorization,
+        }),
+        readDatasetVersionReproductionUseCase:
+          new ReadDatasetVersionReproductionUseCase({
+            repository: datasetVersionRepository,
+            artifacts: options.artifacts.storage,
+            hasher: datasetVersionHasher,
+            workspaceRepository: options.workspaceRepository,
+            workspaceAuthorization: options.workspaceAuthorization,
+          }),
         publishDatasetVersionUseCase: new PublishDatasetVersionUseCase({
           repository: datasetVersionRepository,
           artifacts: options.artifacts.storage,
-          publisher: asyncLazyObject(async () => (await options.getArtifactRemoteFeatures()).huggingFaceArtifactRepoStorage),
+          publisher: asyncLazyObject(
+            async () =>
+              (await options.getArtifactRemoteFeatures())
+                .huggingFaceArtifactRepoStorage,
+          ),
+          hasher: datasetVersionHasher,
+          workspaceRepository: options.workspaceRepository,
+          workspaceAuthorization: options.workspaceAuthorization,
+          now: options.now,
+        }),
+        listDatasetReviewTargetsUseCase: new ListDatasetReviewTargetsUseCase({
+          repository: datasetVersionRepository,
+          catalog: options.artifacts.artifactCatalog,
+          artifacts: options.artifacts.storage,
+          parquet: createPythonParquetDatasetReviewAdapter(
+            options.runtime.runtimeTaskRegistry,
+          ),
+          finalizer: datasetVersionFinalizer!,
+          hasher: datasetVersionHasher,
+          workspaceRepository: options.workspaceRepository,
+          workspaceAuthorization: options.workspaceAuthorization,
+          now: options.now,
+        }),
+        readDatasetReviewPageUseCase: new ReadDatasetReviewPageUseCase({
+          repository: datasetVersionRepository,
+          catalog: options.artifacts.artifactCatalog,
+          artifacts: options.artifacts.storage,
+          parquet: createPythonParquetDatasetReviewAdapter(
+            options.runtime.runtimeTaskRegistry,
+          ),
+          finalizer: datasetVersionFinalizer!,
+          hasher: datasetVersionHasher,
+          workspaceRepository: options.workspaceRepository,
+          workspaceAuthorization: options.workspaceAuthorization,
+          now: options.now,
+        }),
+        rejectDatasetReviewRowUseCase: new RejectDatasetReviewRowUseCase({
+          repository: datasetVersionRepository,
+          catalog: options.artifacts.artifactCatalog,
+          artifacts: options.artifacts.storage,
+          parquet: createPythonParquetDatasetReviewAdapter(
+            options.runtime.runtimeTaskRegistry,
+          ),
+          finalizer: datasetVersionFinalizer!,
+          hasher: datasetVersionHasher,
+          workspaceRepository: options.workspaceRepository,
+          workspaceAuthorization: options.workspaceAuthorization,
+          now: options.now,
+        }),
+        editDatasetReviewRowUseCase: new EditDatasetReviewRowUseCase({
+          repository: datasetVersionRepository,
+          catalog: options.artifacts.artifactCatalog,
+          artifacts: options.artifacts.storage,
+          parquet: createPythonParquetDatasetReviewAdapter(
+            options.runtime.runtimeTaskRegistry,
+          ),
+          finalizer: datasetVersionFinalizer!,
           hasher: datasetVersionHasher,
           workspaceRepository: options.workspaceRepository,
           workspaceAuthorization: options.workspaceAuthorization,
@@ -56,30 +137,43 @@ export function composeDesktopDatasetPreparationFeature(options: ComposeDesktopD
       }
     : {};
   return {
-    dispose() { disposed = true; },
-    get disposed() { return disposed; },
+    dispose() {
+      disposed = true;
+    },
+    get disposed() {
+      return disposed;
+    },
     async canDispose() {
       try {
-        const active = await options.runtime.runtimeTaskRegistry.listTasks({ taskTypes: [TaskType.DATASET_PREPARATION], statuses: ["queued", "running", "unknown"] });
+        const active = await options.runtime.runtimeTaskRegistry.listTasks({
+          taskTypes: [TaskType.DATASET_PREPARATION],
+          statuses: ["queued", "running", "unknown"],
+        });
         const activeTaskCount = active.tasks.length;
-        return activeTaskCount > 0 ? { blockedReason: "active-runtime-tasks", activeTaskCount } : undefined;
+        return activeTaskCount > 0
+          ? { blockedReason: "active-runtime-tasks", activeTaskCount }
+          : undefined;
       } catch {
         return { blockedReason: "active-task-status-unavailable" };
       }
     },
-    prepareTrainingDatasetUseCase: new PrepareTrainingDatasetFromArtifactsUseCase({
-      runtimeTaskRegistry: options.runtime.runtimeTaskRegistry,
-      storageBindings: options.artifacts.artifactBindings,
-      storage: options.artifacts.storage,
-      artifactRepoStorage: asyncLazyObject(async () => (await options.getArtifactRemoteFeatures()).artifactRepoStorage),
-      artifactCatalog: options.artifacts.artifactCatalog,
-      now: options.now,
-      taskPowerLifecycle: options.runtime.taskPowerLifecycle,
-      runtimeCapabilityGuard: options.runtime.runtimeCapabilityGuard,
-      datasetQualityPolicyProvider:
-        createDefaultDatasetQualityPolicyProvider(),
-      datasetVersioning,
-    }),
+    prepareTrainingDatasetUseCase:
+      new PrepareTrainingDatasetFromArtifactsUseCase({
+        runtimeTaskRegistry: options.runtime.runtimeTaskRegistry,
+        storageBindings: options.artifacts.artifactBindings,
+        storage: options.artifacts.storage,
+        artifactRepoStorage: asyncLazyObject(
+          async () =>
+            (await options.getArtifactRemoteFeatures()).artifactRepoStorage,
+        ),
+        artifactCatalog: options.artifacts.artifactCatalog,
+        now: options.now,
+        taskPowerLifecycle: options.runtime.taskPowerLifecycle,
+        runtimeCapabilityGuard: options.runtime.runtimeCapabilityGuard,
+        datasetQualityPolicyProvider:
+          createDefaultDatasetQualityPolicyProvider(),
+        datasetVersioning,
+      }),
     ...datasetVersionUseCases,
   };
 }
