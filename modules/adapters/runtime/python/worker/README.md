@@ -48,6 +48,11 @@ Dependency files:
   dependency declaration, including SciPy for object-detection assignment;
   those packages are not part of ordinary worker startup or the bounded
   text-training repair path.
+- `requirements-context.txt` contains the exact reviewed LanceDB `0.34.0`
+  and PyArrow `25.0.0` pins. Baseline `requirements.txt` includes this file so
+  normal managed-runtime setup installs the vector database by default. The host
+  also uses a context-specific asynchronous probe/install/re-probe before
+  explicit RAG create, inspect, or query work. The worker itself never runs pip.
 
 Optional token-constrained JSON generation uses exact, conditionally installed
 pins in `requirements.txt`: Outlines `1.3.2`, Outlines Core `0.2.14`, and
@@ -78,8 +83,9 @@ Implemented task:
     `chunkIndex` and `sourceLineage`, preserving exact row/source lineage;
   - otherwise performs bounded fixed, sentence, section, or structure-aware
     extraction and reports progress after every completed chunk;
-  - emits either a local SQLite retrieval database with float32 embeddings or a
-    fixed-member Markdown context-pack ZIP;
+  - emits either one portable LanceDB ZIP with a manifest, exact-schema chunks
+    table, and fixed-size float32 embeddings, or a fixed-member Markdown
+    context-pack ZIP;
   - validates and preserves manual Markdown exactly, or semantically chunks,
     groups, and applies Standard/Strict cleaning to source material before No
     Summarization preservation or selected local-model summarization;
@@ -93,11 +99,14 @@ Implemented task:
 - `context-artifact-operation`
   - inspects bounded staged sources using the same extraction and persisted
     chunk-lineage rules as generation;
-  - opens RAG SQLite in read-only mode, verifies integrity, schema, manifest,
-    counts, and digest, and parses context-pack ZIPs only through the fixed
-    entry allowlist and aggregate byte/count ceilings;
+  - manually materializes a RAG LanceDB package only after rejecting traversal,
+    links, duplicate/unknown entries, and expansion-limit violations; then
+    verifies the manifest, one-table exact schema, counts, ordinals, ids,
+    finite vector dimensions, citations, source lineage, and digest;
+  - parses context-pack ZIPs only through the fixed entry allowlist and
+    aggregate byte/count ceilings;
   - embeds a bounded test query with the exact manifest-recorded local model,
-    ranks cosine similarity inside the worker, and returns only bounded
+    runs exact cosine search in embedded LanceDB inside the worker, and returns only bounded
     excerpts, scores, and citations; stored vectors never leave the worker;
   - cooperatively observes cancellation between validation, embedding, and
     ranking phases and reports only sanitized task failures.

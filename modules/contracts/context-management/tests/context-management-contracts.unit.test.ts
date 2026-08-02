@@ -185,7 +185,7 @@ describe("context management contracts", () => {
   });
 
   it("uses context-specific materialized media types", () => {
-    expect(CONTEXT_RAG_DATABASE_MEDIA_TYPE).toContain("sqlite3");
+    expect(CONTEXT_RAG_DATABASE_MEDIA_TYPE).toContain("lancedb+zip");
     expect(CONTEXT_MARKDOWN_PACK_MEDIA_TYPE).toContain("zip");
   });
 

@@ -29,6 +29,7 @@ export async function composeDesktopPythonRuntimeFeature(
 ): Promise<DesktopPythonRuntimeFeature> {
   const {
     createPythonRuntimeAdapterFoundation,
+    ensurePythonRuntimeContextDependencies,
     ensurePythonRuntimeModelTrainingDependencies,
     ensurePythonRuntimeWorkerDependencies,
   } = await import("../../../adapters/runtime/python");
@@ -78,12 +79,17 @@ export async function composeDesktopPythonRuntimeFeature(
         PYTHON_RUNTIME_DATASET_PREPARATION_REQUIRED_CAPABILITIES,
       ...(shouldPrepareDependencies
         ? {
-            prepareRuntimeEnvironment(context: {
+            async prepareRuntimeEnvironment(context: {
               command: string;
               args: readonly string[];
               cwd?: string;
               env?: NodeJS.ProcessEnv;
             }) {
+              await ensurePythonRuntimeContextDependencies({
+                command: context.command,
+                cwd: context.cwd,
+                env: context.env,
+              });
               ensurePythonRuntimeWorkerDependencies({
                 command: context.command,
                 cwd: context.cwd,
@@ -119,6 +125,19 @@ export async function composeDesktopPythonRuntimeFeature(
     ...foundation,
     ...(shouldPrepareDependencies
       ? {
+          prepareContextEnvironment(
+            onProgress?: (progress: {
+              readonly phase: "installing" | "installed";
+              readonly message: string;
+            }) => void,
+          ) {
+            return ensurePythonRuntimeContextDependencies({
+              command: pythonRuntimeCommand,
+              cwd: pythonRuntimeWorkerDirectory,
+              env: pythonRuntimeEnvironment,
+              onProgress,
+            }).then(() => undefined);
+          },
           prepareModelTrainingEnvironment() {
             ensurePythonRuntimeModelTrainingDependencies({
               command: pythonRuntimeCommand,

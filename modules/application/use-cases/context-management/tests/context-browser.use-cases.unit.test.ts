@@ -24,11 +24,11 @@ function harness(options?: {
 }) {
   const workspaceId = createWorkspaceId("workspace.context");
   const source = new TextEncoder().encode("Authoritative source text.");
-  const rag = new TextEncoder().encode("sqlite bytes");
+  const rag = new TextEncoder().encode("lancedb package bytes");
   const pack = new TextEncoder().encode("zip bytes");
   const bytes = new Map([
     ["artifact.source", source],
-    ["generated/context/rag/release.sqlite3", rag],
+    ["generated/context/rag/release.lancedb.zip", rag],
     ["generated/context/pack/release.zip", pack],
   ]);
   const records = [
@@ -47,12 +47,12 @@ function harness(options?: {
     },
     {
       workspaceId,
-      storageKey: "generated/context/rag/release.sqlite3",
+      storageKey: "generated/context/rag/release.lancedb.zip",
       artifactFamily: "binary",
       mediaType: CONTEXT_RAG_DATABASE_MEDIA_TYPE,
       sizeBytes: rag.byteLength,
       sourceKind: "generated",
-      originalName: "Release knowledge.sqlite3",
+      originalName: "Release knowledge.lancedb.zip",
       createdAt: "2026-08-01T12:00:00.000Z",
       checksum: {
         algorithm: "sha256",
@@ -315,7 +315,7 @@ describe("ContextBrowserUseCases", () => {
 
     const query = await test.useCases.query(
       {
-        artifactId: "generated/context/rag/release.sqlite3",
+        artifactId: "generated/context/rag/release.lancedb.zip",
         query: "release policy",
         maximumResults: 3,
       },
@@ -332,7 +332,7 @@ describe("ContextBrowserUseCases", () => {
   it("rebuilds source-only artifacts and requires manual context to be re-entered", async () => {
     const sourceOnly = harness();
     const rebuilt = await sourceOnly.useCases.rebuild(
-      "generated/context/rag/release.sqlite3",
+      "generated/context/rag/release.lancedb.zip",
       sourceOnly.context,
     );
     expect(rebuilt.ok).toBe(true);
@@ -351,7 +351,7 @@ describe("ContextBrowserUseCases", () => {
   it("deletes only context artifacts and sanitizes runtime inspection failure", async () => {
     const test = harness({ runtimeFailure: true });
     const failed = await test.useCases.detail(
-      "generated/context/rag/release.sqlite3",
+      "generated/context/rag/release.lancedb.zip",
       test.context,
     );
     expect(failed.ok).toBe(false);
@@ -361,19 +361,19 @@ describe("ContextBrowserUseCases", () => {
     const ordinary = await test.useCases.delete("ordinary.json", test.context);
     expect(ordinary.ok).toBe(false);
     const deleted = await test.useCases.delete(
-      "generated/context/rag/release.sqlite3",
+      "generated/context/rag/release.lancedb.zip",
       test.context,
     );
     expect(deleted.ok).toBe(true);
     expect(test.deleted).toEqual([
-      "generated/context/rag/release.sqlite3",
+      "generated/context/rag/release.lancedb.zip",
     ]);
   });
 
   it("returns opaque not found across workspace scope", async () => {
     const test = harness();
     const result = await test.useCases.detail(
-      "generated/context/rag/release.sqlite3",
+      "generated/context/rag/release.lancedb.zip",
       { workspaceId: createWorkspaceId("workspace.other") },
     );
     expect(result.ok).toBe(false);

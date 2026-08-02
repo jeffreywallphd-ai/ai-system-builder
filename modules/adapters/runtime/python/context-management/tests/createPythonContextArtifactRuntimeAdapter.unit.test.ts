@@ -40,7 +40,7 @@ function registryFor(result: Record<string, unknown>) {
 }
 
 describe("createPythonContextArtifactRuntimeAdapter", () => {
-  it("stages exact bytes and maps source inspection through the retrieval task family", async () => {
+  it("stages exact bytes and maps a checked source inspection through the retrieval task family", async () => {
     const content = new TextEncoder().encode("source text");
     const test = registryFor({
       operation: "inspect-source",
@@ -50,12 +50,30 @@ describe("createPythonContextArtifactRuntimeAdapter", () => {
         mediaType: "text/plain",
         originalName: "source.txt",
         sizeBytes: content.byteLength,
-        ready: true,
+        ready: false,
         sourceKind: "document",
         format: "text",
         textFields: [],
         alreadyChunked: false,
         chunkCount: 1,
+        checks: {
+          status: "blocked",
+          checkedChunkCount: 1,
+          issueCounts: {
+            exactDuplicate: 0,
+            fuzzyDuplicate: 0,
+            textTooShort: 1,
+            textTooLong: 0,
+            languageNotAllowed: 0,
+            languageUncertain: 0,
+            sensitivePersonalData: 0,
+            secretLikeContent: 0,
+            licenseMetadataMissing: 0,
+            consentMetadataMissing: 0,
+          },
+          checkedSurfaces: ["text length and language"],
+          limitations: ["Automated checks remain bounded."],
+        },
       },
     });
     const adapter = createPythonContextArtifactRuntimeAdapter(test.registry);
@@ -73,6 +91,8 @@ describe("createPythonContextArtifactRuntimeAdapter", () => {
       },
     });
     expect(result.alreadyChunked).toBe(false);
+    expect(result.ready).toBe(false);
+    expect(result.checks?.status).toBe("blocked");
     expect(test.request()).toMatchObject({
       taskType: TaskType.CONTEXT_RETRIEVAL,
       payload: {
@@ -91,14 +111,16 @@ describe("createPythonContextArtifactRuntimeAdapter", () => {
       name: "Release",
       mediaType: CONTEXT_RAG_DATABASE_MEDIA_TYPE,
       createdAt: "2026-08-01T00:00:00.000Z",
-      sources: [{
-        artifactId: "artifact.source",
-        digest: "sha256:" + "1".repeat(64),
-        mediaType: "text/plain",
-        sizeBytes: 10,
-        chunkCount: 1,
-        chunkingMode: "extracted",
-      }],
+      sources: [
+        {
+          artifactId: "artifact.source",
+          digest: "sha256:" + "1".repeat(64),
+          mediaType: "text/plain",
+          sizeBytes: 10,
+          chunkCount: 1,
+          chunkingMode: "extracted",
+        },
+      ],
       manualEntries: [],
       chunking: {
         strategy: "fixed-length",
@@ -134,16 +156,18 @@ describe("createPythonContextArtifactRuntimeAdapter", () => {
 
     const queryRegistry = registryFor({
       operation: "query",
-      matches: [{
-        id: "chunk-0",
-        excerpt: "bounded excerpt",
-        score: 0.8,
-        citation: {
-          sourceArtifactId: "artifact.source",
-          sourceDigest: "sha256:" + "1".repeat(64),
-          chunkIndex: 0,
+      matches: [
+        {
+          id: "chunk-0",
+          excerpt: "bounded excerpt",
+          score: 0.8,
+          citation: {
+            sourceArtifactId: "artifact.source",
+            sourceDigest: "sha256:" + "1".repeat(64),
+            chunkIndex: 0,
+          },
         },
-      }],
+      ],
     });
     const queryAdapter = createPythonContextArtifactRuntimeAdapter(
       queryRegistry.registry,
@@ -187,14 +211,16 @@ describe("createPythonContextArtifactRuntimeAdapter", () => {
       name: "Release pack",
       mediaType: CONTEXT_MARKDOWN_PACK_MEDIA_TYPE,
       createdAt: "2026-08-01T00:00:00.000Z",
-      sources: [{
-        artifactId: "artifact.source",
-        digest: "sha256:" + "1".repeat(64),
-        mediaType: "text/plain",
-        sizeBytes: 10,
-        chunkCount: 1,
-        chunkingMode: "extracted",
-      }],
+      sources: [
+        {
+          artifactId: "artifact.source",
+          digest: "sha256:" + "1".repeat(64),
+          mediaType: "text/plain",
+          sizeBytes: 10,
+          chunkCount: 1,
+          chunkingMode: "extracted",
+        },
+      ],
       manualEntries: [],
       chunking: {
         strategy: "topic-aware",
@@ -215,7 +241,12 @@ describe("createPythonContextArtifactRuntimeAdapter", () => {
       inspection: {
         manifest,
         chunkCount: 1,
-        packageEntries: ["manifest.json", "README.md", "topics.md", "sources.md"],
+        packageEntries: [
+          "manifest.json",
+          "README.md",
+          "topics.md",
+          "sources.md",
+        ],
         topics: [],
       },
     });

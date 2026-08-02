@@ -34,6 +34,11 @@
 - The worker startup dependency probe includes the exact patched PyArrow pin
   required for bounded Parquet input/output; Parquet support must not depend on
   an uninstalled training-only requirements file.
+- Managed Python setup includes the exact Context LanceDB requirements by
+  default. Explicit RAG create/inspect/query starts repeat an asynchronous
+  one-flight exact-version/import probe and bounded install/re-probe before
+  dispatch, reporting only fixed task progress. Readiness/capability/status/list
+  reads remain no-install operations.
 - Automatic model placement uses the exact managed Accelerate pin. Startup
   repairs it before readiness, and generation preflight reports a sanitized
   repair code instead of degrading a missing component into zero examples.

@@ -1,14 +1,17 @@
 from __future__ import annotations
 
-from array import array
+from contextlib import contextmanager
+import gc
 import hashlib
 import json
 import math
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
-import sqlite3
-from typing import Any, Callable
-from zipfile import BadZipFile, ZipFile
+import shutil
+import stat
+import tempfile
+from typing import Any, Callable, Iterator
+from zipfile import BadZipFile, ZIP_DEFLATED, ZIP_STORED, ZipFile
 
 from ..models import (
     ContextArtifactOperationTaskRequest,
@@ -24,8 +27,10 @@ from .context_generation import (
 )
 
 
-RAG_MEDIA_TYPE = "application/vnd.ai-system-builder.rag-database+sqlite3"
+RAG_MEDIA_TYPE = "application/vnd.ai-system-builder.rag-database+lancedb+zip"
 PACK_MEDIA_TYPE = "application/vnd.ai-system-builder.markdown-context-pack+zip"
+RAG_TABLE_NAME = "chunks"
+RAG_DATABASE_PREFIX = "database/"
 SOURCE_PACK_ENTRIES = {
     "manifest.json",
     "README.md",
@@ -38,6 +43,9 @@ MAX_TOPICS_BYTES = 8 * 1024 * 1024
 MAX_TOPIC_SUMMARY_CHARACTERS = 64_000
 MAX_PACKAGE_ENTRY_BYTES = 1024 * 1024 * 1024
 MAX_PACKAGE_TOTAL_BYTES = 64 * 1024 * 1024
+MAX_RAG_PACKAGE_FILES = 4_096
+MAX_RAG_PACKAGE_ENTRY_BYTES = 128 * 1024 * 1024
+MAX_RAG_PACKAGE_EXPANDED_BYTES = 256 * 1024 * 1024
 MAX_CHUNKS = 100_000
 MAX_EXCERPT_CHARACTERS = 2_000
 DIGEST_PATTERN = re.compile(r"^sha256:[a-f0-9]{64}$")
@@ -429,45 +437,266 @@ def _validated_manifest(
     return safe
 
 
-def _open_rag(path: Path) -> sqlite3.Connection:
-    connection = sqlite3.connect(f"{path.as_uri()}?mode=ro", uri=True)
-    connection.execute("PRAGMA query_only=ON")
-    connection.execute("PRAGMA trusted_schema=OFF")
-    integrity = connection.execute("PRAGMA integrity_check(1)").fetchone()
-    if not integrity or integrity[0] != "ok":
-        connection.close()
-        raise ValueError("Context database integrity check failed.")
-    tables = {
-        row[0]
-        for row in connection.execute(
-            "SELECT name FROM sqlite_schema WHERE type='table'"
+def _validated_rag_archive_entry(info: Any) -> PurePosixPath:
+    name = info.filename
+    path = PurePosixPath(name)
+    mode = (info.external_attr >> 16) & 0xFFFF
+    if (
+        not isinstance(name, str)
+        or not name
+        or "\\" in name
+        or path.is_absolute()
+        or path.as_posix() != name
+        or any(part in {"", ".", ".."} or ":" in part for part in path.parts)
+        or info.is_dir()
+        or info.flag_bits & 0x1
+        or info.compress_type not in {ZIP_STORED, ZIP_DEFLATED}
+        or (mode != 0 and not stat.S_ISREG(mode))
+        or info.file_size < 0
+        or info.file_size > MAX_RAG_PACKAGE_ENTRY_BYTES
+        or info.compress_size < 0
+        or (
+            name != "manifest.json"
+            and (
+                not name.startswith(RAG_DATABASE_PREFIX)
+                or len(path.parts) < 2
+            )
         )
+    ):
+        raise ValueError("Context database package structure is invalid.")
+    return path
+
+
+def _extract_rag_package(path: Path, staging: Path) -> dict[str, Any]:
+    if path.stat().st_size > MAX_PACKAGE_TOTAL_BYTES:
+        raise ValueError("Context database package exceeds the safe limit.")
+    try:
+        with ZipFile(path, "r") as archive:
+            infos = archive.infolist()
+            names = [info.filename for info in infos]
+            if (
+                not 2 <= len(infos) <= MAX_RAG_PACKAGE_FILES
+                or len(names) != len(set(names))
+                or "manifest.json" not in names
+            ):
+                raise ValueError("Context database package structure is invalid.")
+            validated = [
+                (info, _validated_rag_archive_entry(info))
+                for info in infos
+            ]
+            if not any(
+                info.filename.startswith(RAG_DATABASE_PREFIX)
+                for info, _relative in validated
+            ):
+                raise ValueError("Context database package contains no database.")
+            expanded_bytes = sum(info.file_size for info, _relative in validated)
+            if expanded_bytes > MAX_RAG_PACKAGE_EXPANDED_BYTES:
+                raise ValueError("Context database package exceeds the safe limit.")
+            manifest_info = archive.getinfo("manifest.json")
+            if manifest_info.file_size > MAX_MANIFEST_BYTES:
+                raise ValueError("Context database manifest exceeds the safe limit.")
+            manifest = _validated_manifest(
+                json.loads(archive.read(manifest_info).decode("utf-8")),
+                RAG_MEDIA_TYPE,
+            )
+            staging_root = staging.resolve(strict=True)
+            for info, relative in validated:
+                if info.filename == "manifest.json":
+                    continue
+                target = staging.joinpath(*relative.parts)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                resolved_parent = target.parent.resolve(strict=True)
+                if (
+                    resolved_parent != staging_root
+                    and staging_root not in resolved_parent.parents
+                ):
+                    raise ValueError("Context database package path is invalid.")
+                written = 0
+                with archive.open(info, "r") as source, target.open("xb") as output:
+                    while True:
+                        block = source.read(1024 * 1024)
+                        if not block:
+                            break
+                        written += len(block)
+                        if written > info.file_size:
+                            raise ValueError(
+                                "Context database package entry is invalid."
+                            )
+                        output.write(block)
+                if written != info.file_size:
+                    raise ValueError("Context database package entry is invalid.")
+            return manifest
+    except (BadZipFile, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError("Context database package could not be inspected.") from error
+
+
+@contextmanager
+def _materialized_rag(
+    path: Path,
+) -> Iterator[tuple[Path, dict[str, Any]]]:
+    staging = Path(
+        tempfile.mkdtemp(prefix=".rag-lancedb-read-", dir=path.parent)
+    )
+    try:
+        manifest = _extract_rag_package(path, staging)
+        yield staging / "database", manifest
+    finally:
+        gc.collect()
+        if staging.exists():
+            shutil.rmtree(staging)
+
+
+def _load_lancedb_modules() -> tuple[Any, Any]:
+    try:
+        import lancedb
+        import pyarrow as pa
+    except ImportError as error:
+        raise RuntimeError(
+            "The LanceDB runtime dependency is unavailable."
+        ) from error
+    return lancedb, pa
+
+
+def _validated_rag_table(
+    database_path: Path,
+    manifest: dict[str, Any],
+) -> tuple[Any, Any, list[dict[str, Any]], int]:
+    lancedb, pa = _load_lancedb_modules()
+    embedding = manifest.get("embedding")
+    dimensions = (
+        embedding.get("dimensions") if isinstance(embedding, dict) else None
+    )
+    if (
+        not isinstance(dimensions, int)
+        or isinstance(dimensions, bool)
+        or not 1 <= dimensions <= 8_192
+    ):
+        raise ValueError("Context database embedding dimensions are invalid.")
+    try:
+        database = lancedb.connect(database_path)
+        listing = database.list_tables()
+        tables = getattr(listing, "tables", None)
+        page_token = getattr(listing, "page_token", None)
+        if tables != [RAG_TABLE_NAME] or page_token is not None:
+            raise ValueError("Context database table set is invalid.")
+        table = database.open_table(RAG_TABLE_NAME)
+        schema = table.schema
+        expected_types = [
+            pa.string(),
+            pa.int64(),
+            pa.string(),
+            pa.string(),
+            pa.list_(pa.float32(), dimensions),
+        ]
+        if (
+            schema.names
+            != ["id", "ordinal", "text", "citation_json", "vector"]
+            or len(schema) != len(expected_types)
+            or any(field.nullable for field in schema)
+            or any(
+                field.type != expected
+                for field, expected in zip(schema, expected_types, strict=True)
+            )
+        ):
+            raise ValueError("Context database table schema is invalid.")
+        count = _required_count(table.count_rows(), "chunk count", MAX_CHUNKS)
+        if count < 1:
+            raise ValueError("Context database chunk count is invalid.")
+        arrow_table = table.to_arrow()
+        rows = arrow_table.to_pylist()
+    except ValueError:
+        raise
+    except Exception as error:
+        raise ValueError("Context database could not be opened.") from error
+
+    source_total = sum(source["chunkCount"] for source in manifest["sources"])
+    if count != len(rows) or count < source_total:
+        raise ValueError("Context database chunk count is invalid.")
+    sources = {source["artifactId"]: source for source in manifest["sources"]}
+    manual_entries = {
+        entry["id"]: entry for entry in manifest["manualEntries"]
     }
-    if tables != {"manifest", "sources", "chunks"}:
-        connection.close()
-        raise ValueError("Context database schema is invalid.")
-    return connection
+    seen_ids: set[str] = set()
+    seen_ordinals: set[int] = set()
+    safe_rows: list[dict[str, Any]] = []
+    for row in rows:
+        chunk_id = row.get("id")
+        ordinal = row.get("ordinal")
+        text = row.get("text")
+        citation_json = row.get("citation_json")
+        vector = row.get("vector")
+        if (
+            set(row) != {"id", "ordinal", "text", "citation_json", "vector"}
+            or not isinstance(chunk_id, str)
+            or not chunk_id
+            or len(chunk_id) > 640
+            or chunk_id in seen_ids
+            or not isinstance(ordinal, int)
+            or isinstance(ordinal, bool)
+            or not 0 <= ordinal < count
+            or ordinal in seen_ordinals
+            or not isinstance(text, str)
+            or not text
+            or len(text) > 32_000
+            or not isinstance(citation_json, str)
+            or len(citation_json) > 8_000
+            or not isinstance(vector, list)
+            or len(vector) != dimensions
+            or any(
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(float(value))
+                for value in vector
+            )
+        ):
+            raise ValueError("Context database chunk is invalid.")
+        try:
+            citation = _citation(json.loads(citation_json))
+        except json.JSONDecodeError as error:
+            raise ValueError("Context database citation is invalid.") from error
+        source_id = citation["sourceArtifactId"]
+        source = sources.get(source_id)
+        manual_id = (
+            source_id[len("manual:"):]
+            if source_id.startswith("manual:")
+            else None
+        )
+        if source is not None:
+            if citation["sourceDigest"] != source["digest"]:
+                raise ValueError("Context database citation source is invalid.")
+        elif (
+            manual_id is None
+            or manual_id not in manual_entries
+            or citation["sourceDigest"] != manual_entries[manual_id]["digest"]
+        ):
+            raise ValueError("Context database citation source is invalid.")
+        seen_ids.add(chunk_id)
+        seen_ordinals.add(ordinal)
+        safe_rows.append(
+            {
+                "id": chunk_id,
+                "ordinal": ordinal,
+                "text": text,
+                "citation_json": citation_json,
+                "citation": citation,
+            }
+        )
+    if seen_ordinals != set(range(count)):
+        raise ValueError("Context database chunk order is invalid.")
+    return database, table, safe_rows, dimensions
 
 
 def _inspect_rag(path: Path) -> tuple[dict[str, Any], int]:
-    connection = _open_rag(path)
-    try:
-        row = connection.execute(
-            "SELECT value FROM manifest WHERE key = 'artifact'"
-        ).fetchone()
-        if not row or not isinstance(row[0], str) or len(row[0]) > MAX_MANIFEST_BYTES:
-            raise ValueError("Context database manifest is invalid.")
-        manifest = _validated_manifest(json.loads(row[0]), RAG_MEDIA_TYPE)
-        count_row = connection.execute("SELECT COUNT(*) FROM chunks").fetchone()
-        count = _required_count(count_row[0] if count_row else None, "chunk count", MAX_CHUNKS)
-        if count < 1 or count != sum(source["chunkCount"] for source in manifest["sources"]) + len(manifest["manualEntries"]):
-            # Manual entries may produce multiple chunks, so only reject impossible source totals.
-            source_total = sum(source["chunkCount"] for source in manifest["sources"])
-            if count < source_total:
-                raise ValueError("Context database chunk count is invalid.")
+    with _materialized_rag(path) as (database_path, manifest):
+        database, table, rows, _dimensions = _validated_rag_table(
+            database_path, manifest
+        )
+        count = len(rows)
+        del rows
+        del table
+        del database
+        gc.collect()
         return manifest, count
-    finally:
-        connection.close()
 
 
 def _parse_topics(
@@ -662,18 +891,6 @@ def _citation(value: Any) -> dict[str, Any]:
     return safe
 
 
-def _cosine(left: list[float], right: array[float]) -> float:
-    if len(left) != len(right) or not left:
-        raise ValueError("Context embedding dimensions do not match.")
-    left_norm = math.sqrt(sum(value * value for value in left))
-    right_norm = math.sqrt(sum(value * value for value in right))
-    if left_norm <= 0 or right_norm <= 0:
-        raise ValueError("Context embedding vector is invalid.")
-    return sum(a * b for a, b in zip(left, right, strict=True)) / (
-        left_norm * right_norm
-    )
-
-
 def _query_rag(
     payload: ContextArtifactOperationTaskRequest,
     path: Path,
@@ -696,65 +913,102 @@ def _query_rag(
         or payload.sourceChecks is not None
     ):
         raise ValueError("Context retrieval request is invalid.")
-    manifest, expected_count = _inspect_rag(path)
-    settings = ContextEmbeddingSettings.model_validate({
-        **manifest["embedding"],
-        "batchSize": 1,
-    })
-    query_vectors = (embedding_provider or _embed_with_transformers)(
-        [query], settings
-    )
-    if len(query_vectors) != 1:
-        raise ValueError("Context query embedding is invalid.")
-    query_vector = query_vectors[0]
-    connection = _open_rag(path)
-    scored: list[tuple[float, int, dict[str, Any]]] = []
-    try:
-        rows = connection.execute(
-            "SELECT id, ordinal, text, citation_json, embedding, "
-            "embedding_dimensions FROM chunks ORDER BY ordinal"
-        )
-        seen = 0
-        for chunk_id, ordinal, text, citation_json, blob, dimensions in rows:
+    with _materialized_rag(path) as (database_path, manifest):
+        database = None
+        table = None
+        try:
+            database, table, rows, dimensions = _validated_rag_table(
+                database_path, manifest
+            )
+            settings = ContextEmbeddingSettings.model_validate({
+                **manifest["embedding"],
+                "batchSize": 1,
+            })
             cancellation_check()
-            seen += 1
+            query_vectors = (embedding_provider or _embed_with_transformers)(
+                [query], settings
+            )
             if (
-                not isinstance(chunk_id, str)
-                or not chunk_id
-                or not isinstance(ordinal, int)
-                or not isinstance(text, str)
-                or not text
-                or len(text) > 32_000
-                or not isinstance(citation_json, str)
-                or len(citation_json) > 8_000
-                or not isinstance(blob, bytes)
-                or not isinstance(dimensions, int)
-                or dimensions < 1
-                or dimensions > 8_192
-                or len(blob) != dimensions * 4
+                len(query_vectors) != 1
+                or len(query_vectors[0]) != dimensions
+                or any(
+                    isinstance(value, bool)
+                    or not isinstance(value, (int, float))
+                    or not math.isfinite(float(value))
+                    for value in query_vectors[0]
+                )
             ):
-                raise ValueError("Context database chunk is invalid.")
-            vector = array("f")
-            vector.frombytes(blob)
-            score = _cosine(query_vector, vector)
-            if not math.isfinite(score):
-                raise ValueError("Context retrieval score is invalid.")
-            citation = _citation(json.loads(citation_json))
-            item = {
-                "id": chunk_id,
-                "excerpt": text[:MAX_EXCERPT_CHARACTERS],
-                "score": max(-1.0, min(1.0, float(score))),
-                "citation": citation,
-            }
-            scored.append((score, ordinal, item))
-        if seen != expected_count:
-            raise ValueError("Context database chunk count changed.")
-    except json.JSONDecodeError as error:
-        raise ValueError("Context database citation is invalid.") from error
-    finally:
-        connection.close()
-    scored.sort(key=lambda item: (-item[0], item[1]))
-    return [item for _score, _ordinal, item in scored[:maximum_results]]
+                raise ValueError("Context query embedding is invalid.")
+            cancellation_check()
+            try:
+                result_rows = (
+                    table.search(
+                        [float(value) for value in query_vectors[0]],
+                        vector_column_name="vector",
+                        query_type="vector",
+                    )
+                    .distance_type("cosine")
+                    .bypass_vector_index()
+                    .select(
+                        [
+                            "id",
+                            "ordinal",
+                            "text",
+                            "citation_json",
+                            "_distance",
+                        ]
+                    )
+                    .limit(maximum_results)
+                    .to_arrow()
+                    .to_pylist()
+                )
+            except Exception as error:
+                raise ValueError("Context database query failed.") from error
+            by_id = {row["id"]: row for row in rows}
+            scored: list[tuple[float, int, dict[str, Any]]] = []
+            seen_result_ids: set[str] = set()
+            for row in result_rows:
+                cancellation_check()
+                chunk_id = row.get("id")
+                ordinal = row.get("ordinal")
+                text = row.get("text")
+                citation_json = row.get("citation_json")
+                distance = row.get("_distance")
+                stored = by_id.get(chunk_id)
+                if (
+                    not isinstance(chunk_id, str)
+                    or chunk_id in seen_result_ids
+                    or stored is None
+                    or ordinal != stored["ordinal"]
+                    or text != stored["text"]
+                    or citation_json != stored["citation_json"]
+                    or isinstance(distance, bool)
+                    or not isinstance(distance, (int, float))
+                    or not math.isfinite(float(distance))
+                ):
+                    raise ValueError("Context retrieval result is invalid.")
+                score = max(-1.0, min(1.0, 1.0 - float(distance)))
+                scored.append(
+                    (
+                        score,
+                        ordinal,
+                        {
+                            "id": chunk_id,
+                            "excerpt": text[:MAX_EXCERPT_CHARACTERS],
+                            "score": score,
+                            "citation": stored["citation"],
+                        },
+                    )
+                )
+                seen_result_ids.add(chunk_id)
+            scored.sort(key=lambda item: (-item[0], item[1]))
+            return [item for _score, _ordinal, item in scored]
+        finally:
+            if table is not None:
+                del table
+            if database is not None:
+                del database
+            gc.collect()
 
 
 def operate_on_context_artifact(

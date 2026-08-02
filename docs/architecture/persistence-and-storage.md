@@ -529,6 +529,14 @@ Runtime roots are neither persistence nor artifact-object storage roots. Runtime
 
 Artifact storage roots contain durable artifacts and catalog-backed content. ComfyUI `output/` should be treated as runtime/temp staging until generated outputs are finalized into artifact storage.
 
+Context RAG databases follow the artifact boundary rather than the structured
+persistence boundary. Each saved database is one catalog-backed LanceDB ZIP
+blob; its embedded `database/` directory is package content, not a persistence
+root or shared service. The managed Python runtime may materialize a verified
+package into a private temporary directory for one bounded operation, then must
+remove it. Application SQLite, system-runtime SQLite, and Markdown context packs
+are unaffected by the Context RAG storage engine.
+
 Shared model storage is a configured host-local storage source for model discovery and reuse across workspaces. It is intentionally separate from workspace model inventory persistence: discovery produces read-only shared inventory entries at list/read time, while workspace downloads and generated models remain persisted workspace records. Model registry files must not persist discovered shared entries just because a workspace listed them. Explicit desktop model deletion keeps record mutation separate from filesystem authority: the application requests deletion through a narrow port, and the host-local adapter accepts only canonical descendants of the generated-model cache or configured shared model root. It deletes a Hugging Face model repository as one cache unit (snapshots plus blobs) or an exact discovered checkpoint file, rejects cache-root, link, traversal, and outside-root targets, and leaves the registry record intact when local deletion fails.
 
 Server defaults should keep `SERVER_STORAGE_ROOT` and `SERVER_RUNTIME_ROOT` distinct. Desktop local mode should use desktop-owned runtime roots and desktop-owned artifact storage roots. Server/thin-client mode should use server-owned runtime roots and server-owned artifact storage roots. Future desktop-remote mode should not assume remote artifacts are local files.

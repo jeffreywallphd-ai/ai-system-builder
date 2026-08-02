@@ -764,6 +764,64 @@ describe("composeDesktopHost", () => {
     ]);
   });
 
+  it("prepares Context dependencies with progress before runtime startup and dispatch", async () => {
+    const { composeDesktopRuntimeTaskFeature } =
+      await import("../composeDesktopRuntimeTaskFeature");
+    const callOrder: string[] = [];
+    const feature = await composeDesktopRuntimeTaskFeature({
+      pythonRuntimeFoundation: {
+        supervisor: {
+          start: testDouble.fn(async () => {
+            callOrder.push("start-runtime");
+          }),
+        },
+        prepareContextEnvironment: testDouble.fn(
+          async (
+            onProgress?: (progress: {
+              phase: "installing" | "installed";
+              message: string;
+            }) => void,
+          ) => {
+            callOrder.push("prepare-context");
+            onProgress?.({
+              phase: "installing",
+              message: "Installing the local vector database.",
+            });
+          },
+        ),
+        runtimePort: {
+          startTask: testDouble.fn(async (request: { requestId: string }) => {
+            callOrder.push("dispatch-context");
+            return { requestId: request.requestId, status: "queued" };
+          }),
+        },
+      },
+      imageRuntimeTaskRegistry: {
+        startTask: testDouble.fn(),
+        readTask: testDouble.fn(),
+        cancelTask: testDouble.fn(),
+        listTasks: testDouble.fn(),
+      },
+      runtimeReadiness: {
+        getCapabilityStatus: testDouble.fn(),
+        getReadinessSnapshot: testDouble.fn(),
+      },
+    });
+
+    await feature.runtimeTaskRegistry.startTask({
+      workspaceId: "workspace.test" as never,
+      requestId: "context-setup-1",
+      taskType: TaskType.CONTEXT_GENERATION,
+      payload: { kind: "rag-database" },
+    });
+
+    expect(callOrder).toEqual([
+      "prepare-context",
+      "start-runtime",
+      "dispatch-context",
+    ]);
+  });
+
   it("reports the resolved Python supervisor state through desktop readiness", () => {
     const source = readFileSync(
       resolve("modules/hosts/desktop/composition/composeDesktopHost.ts"),

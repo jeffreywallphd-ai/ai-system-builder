@@ -34,6 +34,10 @@ test("desktop packaging includes the managed Python worker as a resource", () =>
     true,
   );
   assert.equal(
+    existsSync(path.join(resources[0] ?? "", "requirements-context.txt")),
+    true,
+  );
+  assert.equal(
     existsSync(
       path.join(resources[0] ?? "", "tasks", "constrained_json_decoder.py"),
     ),

@@ -1,0 +1,1211 @@
+{
+  "blockers": [],
+  "chunks": [
+    {
+      "areas": [
+        "Context media contracts",
+        "Python LanceDB writer",
+        "Artifact naming and dashboard media mapping"
+      ],
+      "chunkId": "lancedb-contract-and-writer",
+      "completedAt": "2026-08-02T12:07:16Z",
+      "criteriaIds": [
+        "lancedb-artifact-contract",
+        "lancedb-generation-inspection-query"
+      ],
+      "documentation": [
+        "ADR-0041",
+        "Context Management architecture",
+        "Python worker README"
+      ],
+      "feedbackAddressed": [
+        "per-artifact-runtime-isolation"
+      ],
+      "id": "lancedb-artifact-runtime-lancedb-contract-and-writer",
+      "incrementId": "lancedb-artifact-runtime",
+      "summary": "Replaced the RAG media contract and SQLite writer with one deterministic portable LanceDB package containing a manifest and exact-schema chunks table.",
+      "tests": [
+        "Focused worker generation tests passed",
+        "Focused TypeScript contract and use-case tests passed"
+      ],
+      "title": "LanceDB contract and package writer"
+    },
+    {
+      "areas": [
+        "Python context artifact inspection",
+        "LanceDB query execution",
+        "Manifest, lineage, citation, and vector validation"
+      ],
+      "chunkId": "lancedb-inspection-and-query",
+      "completedAt": "2026-08-02T12:07:18Z",
+      "criteriaIds": [
+        "lancedb-generation-inspection-query",
+        "security-lancedb-artifact-denials"
+      ],
+      "documentation": [
+        "Context Management architecture",
+        "Context Management threat model"
+      ],
+      "feedbackAddressed": [
+        "per-artifact-runtime-isolation"
+      ],
+      "id": "lancedb-artifact-runtime-lancedb-inspection-and-query",
+      "incrementId": "lancedb-artifact-runtime",
+      "summary": "Added safe private package materialization, exact LanceDB table validation, and embedded exact cosine retrieval without returning vectors.",
+      "tests": [
+        "Focused generation and artifact-operation worker suite passed 17 tests"
+      ],
+      "title": "Safe package inspection and retrieval"
+    },
+    {
+      "areas": [
+        "Context Browser application use cases",
+        "Shared Context UI fixtures",
+        "Dashboard metrics"
+      ],
+      "chunkId": "context-artifact-lifecycle",
+      "completedAt": "2026-08-02T12:07:21Z",
+      "criteriaIds": [
+        "lancedb-artifact-contract",
+        "lancedb-artifact-lifecycle"
+      ],
+      "documentation": [
+        "Context application README",
+        "Persistence and storage architecture"
+      ],
+      "feedbackAddressed": [
+        "per-artifact-runtime-isolation"
+      ],
+      "id": "lancedb-artifact-runtime-context-artifact-lifecycle",
+      "incrementId": "lancedb-artifact-runtime",
+      "summary": "Kept RAG review, save, discard, detail, rebuild, delete, digest, binding, and display flows on one workspace-scoped artifact with the new LanceDB media type and suffix.",
+      "tests": [
+        "Focused application and contract suite passed 27 tests",
+        "Context Studio interaction suite passed 5 tests"
+      ],
+      "title": "Context artifact lifecycle integration"
+    },
+    {
+      "areas": [
+        "LanceDB archive security",
+        "Legacy SQLite RAG rejection",
+        "Canonical Context documentation"
+      ],
+      "chunkId": "lancedb-security-and-docs",
+      "completedAt": "2026-08-02T12:07:22Z",
+      "criteriaIds": [
+        "security-lancedb-artifact-denials",
+        "lancedb-core-documentation"
+      ],
+      "documentation": [
+        "ADR-0041",
+        "Context Management architecture",
+        "Persistence architecture",
+        "Context threat model",
+        "Context and testing packs",
+        "Runtime and application READMEs"
+      ],
+      "feedbackAddressed": [],
+      "id": "lancedb-artifact-runtime-lancedb-security-and-docs",
+      "incrementId": "lancedb-artifact-runtime",
+      "summary": "Added fail-closed package entry, expansion, schema, vector, citation, digest, and legacy-format denial coverage and updated canonical guidance.",
+      "tests": [
+        "Traversal, symlink, expansion, manifest-dimension, and legacy-media denial tests passed",
+        "Documentation, architecture, and agent-support checks passed"
+      ],
+      "title": "Security denials and canonical documentation"
+    },
+    {
+      "areas": [
+        "Managed Python Context dependency adapter",
+        "Exact worker Context requirements",
+        "Default runtime setup"
+      ],
+      "chunkId": "managed-context-dependency",
+      "completedAt": "2026-08-02T12:48:28Z",
+      "criteriaIds": [
+        "managed-lancedb-install",
+        "security-managed-dependency-denials",
+        "side-effect-free-runtime-reads"
+      ],
+      "documentation": [
+        "Runtime installer ADR",
+        "Python adapter and worker READMEs",
+        "Dependency supply-chain standard"
+      ],
+      "feedbackAddressed": [],
+      "id": "managed-install-product-integration-managed-context-dependency",
+      "incrementId": "managed-install-product-integration",
+      "summary": "Added an exact asynchronous managed Context dependency ensure that probes, installs, re-verifies, deduplicates concurrent calls, bounds execution and output, and fails with sanitized errors.",
+      "tests": [
+        "Managed dependency adapter suite passed 7 focused tests",
+        "Fresh isolated managed-runtime install and second-call no-op qualification passed",
+        "Dependency inventory and denial tests passed"
+      ],
+      "title": "Managed LanceDB dependency"
+    },
+    {
+      "areas": [
+        "Runtime task registry preflight state",
+        "Desktop and server composition",
+        "Context notification projection"
+      ],
+      "chunkId": "context-install-progress-host-wiring",
+      "completedAt": "2026-08-02T12:48:28Z",
+      "criteriaIds": [
+        "lancedb-install-notifications",
+        "cross-host-lancedb-workflows",
+        "side-effect-free-runtime-reads"
+      ],
+      "documentation": [
+        "Runtime and Context architecture",
+        "Context threat model",
+        "Desktop and server READMEs"
+      ],
+      "feedbackAddressed": [],
+      "id": "managed-install-product-integration-context-install-progress-host-wiring",
+      "incrementId": "managed-install-product-integration",
+      "summary": "Wired desktop and server Context starts through the managed dependency preflight and projected fixed install, completion, and retryable failure activity through the existing workspace task and notification surfaces.",
+      "tests": [
+        "Focused runtime adapter suites passed 30 tests",
+        "Desktop/server composition and packaging tests passed",
+        "Context Studio notification suite passed 5 tests"
+      ],
+      "title": "Context install progress and host wiring"
+    },
+    {
+      "areas": [
+        "Dependency security and packaging",
+        "Context AI end-to-end qualification",
+        "Cross-host release documentation and gates"
+      ],
+      "chunkId": "release-qualification-documentation",
+      "completedAt": "2026-08-02T12:48:29Z",
+      "criteriaIds": [
+        "lancedb-ai-e2e-qualification",
+        "lancedb-completion-gates",
+        "cross-host-lancedb-workflows"
+      ],
+      "documentation": [
+        "Context, runtime, persistence, testing, and security guidance",
+        "Desktop and server host READMEs",
+        "LanceDB replacement roadmap and report"
+      ],
+      "feedbackAddressed": [],
+      "id": "managed-install-product-integration-release-qualification-documentation",
+      "incrementId": "managed-install-product-integration",
+      "summary": "Completed exact dependency inventory, packaged-worker coverage, canonical guidance, tiny physical AI scenarios, host builds, and repository completion qualification for the LanceDB RAG replacement.",
+      "tests": [
+        "All three controlled Context AI scenarios passed on supported Python 3.12",
+        "Server and thin-client production builds passed",
+        "Documentation, architecture, agent-support, dependency-security, standard, E2E, and AI-inclusive aggregate gates passed"
+      ],
+      "title": "Release qualification and documentation"
+    }
+  ],
+  "completion": {
+    "completedAt": "2026-08-02T12:48:30Z",
+    "summary": "Both approved increments are complete: Context RAG artifacts now use portable embedded LanceDB packages, and the exact dependency is automatically managed with safe notifications and production-qualified cross-host workflows."
+  },
+  "createdAt": "2026-08-02T11:40:01Z",
+  "currentIncrementId": null,
+  "decisions": [
+    {
+      "approvalNote": "User approved Option 1 in the recommended manner: an isolated portable LanceDB artifact package plus automatic managed dependency setup and first-RAG-use repair with notifications.",
+      "approvedAt": "2026-08-02T11:48:12Z",
+      "approvedFingerprint": "6ec674aefc72f6098ab3dcdcd3188be3c70be52070b2519a61396caa4e88d8d4",
+      "context": "LanceDB is an embedded Python library whose local database is a directory, while the existing Context save/discard, object-store, publish, download, binding, and digest lifecycle operates on one atomic file. The selected option also determines offline behavior, installer size, storage contract scope, and security testing.",
+      "id": "lancedb-delivery-shape",
+      "options": [
+        {
+          "consequences": [
+            "Use a new LanceDB package media type and file suffix and explicitly reject the old SQLite RAG media type",
+            "Add a context-specific exact dependency probe/install/verify path invoked during default runtime setup and before RAG create/inspect/query when needed",
+            "Extend task/install status so the notification center reports installation, completion, and sanitized failure",
+            "Add fixed-entry, traversal/link/duplicate/size, schema, digest, vector, citation, and workspace denial tests"
+          ],
+          "id": "portable-package-managed-download",
+          "label": "Portable package with managed download",
+          "recommended": true,
+          "summary": "Create a deterministic fixed-layout LanceDB package as one saved artifact and install an exact reviewed LanceDB Python dependency automatically through the existing managed runtime setup, with an idempotent first-RAG-use repair and notification flow.",
+          "tradeoffs": [
+            "Preserves the existing single-blob atomic save, publish, delete, backup, digest, and workspace-binding lifecycle",
+            "Adds bounded package creation/extraction before saved-artifact inspection and query",
+            "Keeps desktop installer growth small, but the first dependency installation or repair requires access to the approved Python package source"
+          ]
+        },
+        {
+          "consequences": [
+            "Packaging and release pipelines become responsible for carrying and verifying the correct wheelhouse per OS and architecture",
+            "Development and thin-server deployments still need a documented wheelhouse acquisition/update workflow",
+            "The RAG artifact and query implementation remains the same as the recommended option"
+          ],
+          "id": "portable-package-bundled-wheel",
+          "label": "Portable package with bundled wheel",
+          "recommended": false,
+          "summary": "Use the same deterministic single-file LanceDB package, but bundle a reviewed platform-specific LanceDB wheel and its required dependency set with each desktop/server distribution for offline installation.",
+          "tradeoffs": [
+            "Works without network access during setup and first use",
+            "Increases every supported platform package by the native wheel and dependency payload",
+            "Requires platform-specific wheel acquisition, hash verification, release inventory, installer testing, and coordinated updates"
+          ]
+        },
+        {
+          "consequences": [
+            "Requires new structured-storage contracts, prefix authorization, atomic commit metadata, recursive delete/compensation, and publisher support",
+            "Makes rollback and partial-failure handling materially more complex",
+            "Still requires either managed network installation or bundled wheels for the Python dependency"
+          ],
+          "id": "native-directory-multi-object",
+          "label": "Native directory storage",
+          "recommended": false,
+          "summary": "Store every LanceDB directory member as a workspace-scoped multi-object artifact prefix and teach catalog, binding, publish, download, delete, and query flows to treat that prefix atomically.",
+          "tradeoffs": [
+            "Avoids packaging and extraction for local queries",
+            "Broadens the artifact store from single blobs to transactional multi-object collections",
+            "Creates the largest change and failure surface across persistence, publication, compensation, and cross-host storage"
+          ]
+        }
+      ],
+      "proposalFingerprint": "6ec674aefc72f6098ab3dcdcd3188be3c70be52070b2519a61396caa4e88d8d4",
+      "question": "How should the embedded LanceDB directory be saved as an application artifact and made available without manual user installation?",
+      "selectedOptionId": "portable-package-managed-download",
+      "status": "approved",
+      "title": "LanceDB artifact and dependency delivery"
+    }
+  ],
+  "discovery": {
+    "constraints": [
+      "Replace only RAG database artifact creation, inspection, and query storage; do not change unrelated SQLite use or Markdown Context Pack ZIP/Markdown behavior.",
+      "Do not implement SQLite RAG migration or compatibility because the software has no deployed users; old SQLite RAG media types must fail clearly rather than being silently interpreted or migrated.",
+      "Preserve existing chunking, source checks, embeddings, exact lineage and citations, review/save/discard lifecycle, Context Browser behavior, workspace authorization, cancellation, bounded progress, and desktop/server/thin-client parity.",
+      "Keep LanceDB embedded and local; do not add a remote vector service or require a separate process.",
+      "The user must not manually install LanceDB: the managed dependency path installs it by default with the other runtime libraries and ensures or repairs it before first RAG use if absent.",
+      "Notify the user with bounded, path-free status while LanceDB is being installed and report actionable sanitized failure without exposing package-manager output or local paths.",
+      "Capability or readiness reads must remain side-effect free and must not install packages.",
+      "Use exact reviewed dependency versions and update dependency inventory, license, provenance, SBOM guidance, packaging inputs, and security checks in the same change.",
+      "Retain a single atomic saved-artifact lifecycle unless an explicitly approved option changes the object-storage contract.",
+      "Run focused denial and failure-path tests while iterating, then the AI roadmap all-suite and required architecture, documentation, dependency-security, server, and thin-client gates once after all increments."
+    ],
+    "decisionRequired": true,
+    "recordedAt": "2026-08-02T11:40:40Z",
+    "securityImpact": {
+      "abuseCases": [
+        "A substituted, unpinned, unsupported, or partially installed dependency executes in the managed runtime",
+        "Concurrent startup and first-use checks race, repeat installation, or leave inconsistent dependency state",
+        "A crafted LanceDB package uses path traversal, links, duplicate entries, oversized expansion, malformed schema, or unexpected files to escape staging or exhaust resources",
+        "A malformed or mislabeled artifact bypasses manifest, digest, dimension, count, lineage, or workspace checks",
+        "A partial directory/package save leaves catalog-visible corrupt data or orphaned storage",
+        "Package-manager output, runtime paths, source text, vectors, prompts, or provider errors leak through logs, notifications, or transport",
+        "A passive readiness read triggers network or installation side effects",
+        "A RAG query crosses workspace ownership or returns raw vectors or unbounded source content"
+      ],
+      "assets": [
+        "Workspace-owned source chunks, embeddings, citations, manifests, and saved RAG artifacts",
+        "Managed Python runtime and dependency integrity",
+        "Artifact catalog, object storage, bindings, and save/discard atomicity",
+        "User-facing notification and diagnostic confidentiality"
+      ],
+      "controls": [
+        "Use one exact reviewed LanceDB package version with explicit supported Python/platform probes, license and Package URL inventory, provenance review, and dependency-security tests.",
+        "Keep install commands fixed inside a bounded host-owned adapter, use a managed environment only, serialize concurrent ensure operations, verify imports and exact versions after install, and fail closed.",
+        "Attempt installation during normal runtime setup and repeat the same idempotent ensure before RAG use; never install on status, capability, list, or readiness reads.",
+        "Publish only fixed bounded install states and sanitized failures to notifications; keep package output and filesystem paths in protected local diagnostics.",
+        "Use private staging, fixed package layout and allowlists, duplicate/path/link rejection, compressed and expanded byte ceilings, bounded entry counts, deterministic manifest/digest verification, and cleanup on success, failure, or cancellation.",
+        "Validate the exact LanceDB table schema, row counts, chunk IDs, text bounds, vector dimensions, finite values, citations, source digests, and manifest media type before inspection or query.",
+        "Preserve application workspace authorization and object-binding checks before staging saved bytes; return bounded excerpts and citations only and never transport raw vectors.",
+        "Materialize one complete candidate before catalog publication and preserve existing compensation and discard behavior so partial results are not visible."
+      ],
+      "disposition": "security-relevant",
+      "residualRisks": [
+        "A network-backed first installation can still fail when no compatible reviewed wheel is reachable unless the selected delivery option includes a bundled platform wheel.",
+        "Native LanceDB behavior and performance require physical qualification on every supported installer platform and managed Python version.",
+        "Any archive representation adds bounded extraction cost before inspection/query unless the storage contract is broadened to native multi-object directories."
+      ],
+      "summary": "The change crosses dependency supply-chain, managed-runtime, archive/storage, workspace authorization, and untrusted vector-artifact parsing boundaries.",
+      "trustBoundaries": [
+        "Reviewed repository dependency declarations to external Python package distribution and the managed runtime environment",
+        "Host-owned dependency provisioning to Python worker startup and RAG task execution",
+        "Untrusted source content to LanceDB rows and vector indexes",
+        "Worker staging output to application-controlled artifact materialization and workspace-scoped object storage",
+        "Saved artifact bytes to bounded inspection, extraction, validation, and query execution",
+        "Runtime installer/task state to renderer notifications and public diagnostics"
+      ],
+      "verification": [
+        "Dependency probe/install/verify, unsupported platform, offline failure, partial install, repeated ensure, concurrent ensure, and sanitized notification tests",
+        "LanceDB generation, schema, manifest, lineage, citation, vector dimension, retrieval ranking, cancellation, and no-vector-transport tests",
+        "Crafted package denial tests for traversal, links, duplicates, unknown entries, decompression limits, malformed tables, mislabeled media types, and digest/count mismatch",
+        "Workspace denial, cross-workspace lookup, save/discard compensation, delete, rebuild, and old SQLite media-type rejection tests",
+        "Desktop/server/thin-client contract parity, notification integration, build, architecture, documentation, dependency-security, standard, E2E, and AI suite evidence"
+      ]
+    },
+    "sources": [
+      {
+        "note": "Defines the current RAG artifact boundary, portability, review/save lifecycle, and runtime ownership that the successor decision must supersede narrowly.",
+        "title": "Context Management ADR",
+        "url": "docs/adr/ADR-0041-context-management-and-portable-context-artifacts.md"
+      },
+      {
+        "note": "Defines workspace-scoped artifact creation, inspection, query, transport parity, and notification behavior.",
+        "title": "Context Management architecture",
+        "url": "docs/architecture/context-management.md"
+      },
+      {
+        "note": "Defines protected source, vector, citation, artifact, workspace, and diagnostic boundaries.",
+        "title": "Context Management threat model",
+        "url": "docs/security/context-management-threat-model.md"
+      },
+      {
+        "note": "Requires dependency installation to remain outside UI code and behind host/runtime adapter boundaries.",
+        "title": "Runtime installer ADR",
+        "url": "docs/adr/ADR-0014-runtime-installer.md"
+      },
+      {
+        "note": "Provides the existing exact-probe, install, verify, diagnostics, and supported-platform seam for managed Python dependencies.",
+        "title": "Managed Python dependency setup",
+        "url": "modules/adapters/runtime/python/ensurePythonRuntimeWorkerDependencies.ts"
+      },
+      {
+        "note": "Shows the reviewed baseline dependency inventory and pinning convention.",
+        "title": "Python runtime worker requirements",
+        "url": "modules/adapters/runtime/python/worker/requirements.txt"
+      },
+      {
+        "note": "Contains the current SQLite-only RAG writer and existing bounded chunk, embedding, manifest, progress, and cancellation logic to preserve.",
+        "title": "Context generation worker",
+        "url": "modules/adapters/runtime/python/worker/tasks/context_generation.py"
+      },
+      {
+        "note": "Contains current read-only inspection and bounded retrieval semantics that must move to LanceDB without exposing vectors.",
+        "title": "Context artifact operations worker",
+        "url": "modules/adapters/runtime/python/worker/tasks/context_artifact_operation.py"
+      },
+      {
+        "note": "Documents embedded in-process local database use through a filesystem directory and the Python package.",
+        "title": "LanceDB OSS quickstart",
+        "url": "https://docs.lancedb.com/quickstart"
+      },
+      {
+        "note": "Provides the current Python distribution, supported wheel shapes, package provenance, and install surface to review and pin.",
+        "title": "LanceDB Python package",
+        "url": "https://pypi.org/project/lancedb/"
+      },
+      {
+        "note": "Provides the Apache-2.0 source, release history, and implementation provenance.",
+        "title": "LanceDB OSS source",
+        "url": "https://github.com/lancedb/lancedb"
+      }
+    ],
+    "summary": "The existing Context Management RAG path is intentionally isolated behind fixed media-type contracts and the managed Python runtime, but its saved candidate lifecycle is a single-file blob while native LanceDB storage is directory-backed. The existing Python dependency setup already probes and repairs reviewed packages in the managed environment, and Context generation already publishes authoritative task progress to notifications. A production replacement therefore needs an explicit portable artifact representation plus a bounded, host-owned LanceDB dependency ensure path; it must not alter unrelated SQLite usage or Markdown Context Pack storage."
+  },
+  "evidence": [
+    {
+      "artifact": null,
+      "command": "python focused context generation/artifact-operation suite; node --import tsx --test focused Context contracts/use cases",
+      "criterionId": "lancedb-artifact-contract",
+      "id": "evidence-1",
+      "incrementId": "lancedb-artifact-runtime",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-02T12:07:24Z",
+      "summary": "Focused Python and TypeScript contract tests confirm only the new LanceDB ZIP media/suffix is emitted, deterministic package members are produced, and legacy SQLite RAG media is rejected."
+    },
+    {
+      "artifact": null,
+      "command": "python focused context generation/artifact-operation suite with isolated lancedb==0.34.0 dependencies",
+      "criterionId": "lancedb-generation-inspection-query",
+      "id": "evidence-2",
+      "incrementId": "lancedb-artifact-runtime",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-02T12:07:27Z",
+      "summary": "A physical LanceDB 0.34.0 package was generated, inspected, schema-validated, and queried with exact cosine ranking; lineage and citations remain exact and vectors do not cross the worker boundary."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test focused Context contracts/application/dashboard; npx vitest run ContextStudio.interaction.ui.test.tsx",
+      "criterionId": "lancedb-artifact-lifecycle",
+      "id": "evidence-3",
+      "incrementId": "lancedb-artifact-runtime",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-02T12:07:33Z",
+      "summary": "Focused application, contract, dashboard, and Context Studio tests preserve the one-blob workspace lifecycle and readable LanceDB artifact selection across save/browser surfaces."
+    },
+    {
+      "artifact": null,
+      "command": "python focused context generation/artifact-operation suite",
+      "criterionId": "security-lancedb-artifact-denials",
+      "id": "evidence-4",
+      "incrementId": "lancedb-artifact-runtime",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-02T12:07:35Z",
+      "summary": "Security-relevant denial tests reject traversal, symlink, expansion, malformed dimension, and legacy media inputs with cleanup. Controls also validate exact table schema, finite vectors, citations, digests, and contained package members; residual native-platform qualification is assigned to Increment 2."
+    },
+    {
+      "artifact": null,
+      "command": "npm run docs:check; npm run architecture:check; npm run agent-support:check",
+      "criterionId": "lancedb-core-documentation",
+      "id": "evidence-5",
+      "incrementId": "lancedb-artifact-runtime",
+      "kind": "documentation",
+      "outcome": "passed",
+      "recordedAt": "2026-08-02T12:07:38Z",
+      "summary": "Canonical ADR, architecture, persistence, threat model, context/testing packs, and nearest runtime/application READMEs describe the LanceDB-only RAG boundary and explicitly exclude unrelated SQLite, Context Packs, remote services, and migration."
+    },
+    {
+      "artifact": null,
+      "command": "npx tsx artifacts/tmp/lancedb-managed-install-qualification.ts",
+      "criterionId": "managed-lancedb-install",
+      "id": "evidence-6",
+      "incrementId": "managed-install-product-integration",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-02T12:48:29Z",
+      "summary": "A fresh isolated managed Python environment automatically installed and re-verified LanceDB 0.34.0 and PyArrow 25.0.0, emitted installing and installed phases, and the second ensure completed without installation or progress."
+    },
+    {
+      "artifact": null,
+      "command": "npx vitest run modules/ui/shared/context-management/tests/ContextStudio.interaction.ui.test.tsx",
+      "criterionId": "lancedb-install-notifications",
+      "id": "evidence-7",
+      "incrementId": "managed-install-product-integration",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-02T12:48:29Z",
+      "summary": "Focused task-registry and Context UI tests proved workspace-scoped sanitized install activity, deduplicated observers, actionable retryable failure, and normal subsequent embedding progress."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/adapters/runtime/python/tests/ensurePythonRuntimeContextDependencies.unit.test.ts dev-tools/scripts/security/tests/dependency-security.unit.test.mjs",
+      "criterionId": "security-managed-dependency-denials",
+      "id": "evidence-8",
+      "incrementId": "managed-install-product-integration",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-02T12:48:29Z",
+      "summary": "Exact-inventory, unsupported-host, malformed probe, timeout, failed or mismatched install, concurrent ensure, unexpected output, path and token sanitation, and fixed-command tests passed without exposing package output."
+    },
+    {
+      "artifact": null,
+      "command": "node --import tsx --test modules/adapters/runtime/python/tests/createPythonRuntimeTaskRegistryAdapter.unit.test.ts modules/hosts/desktop/composition/tests/composeDesktopHost.unit.test.ts modules/hosts/server/composition/tests/composeServerHost.unit.test.ts",
+      "criterionId": "side-effect-free-runtime-reads",
+      "id": "evidence-9",
+      "incrementId": "managed-install-product-integration",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-02T12:48:29Z",
+      "summary": "Runtime adapter and host composition tests proved dependency setup occurs only during default managed setup or explicit Context task starts; status, list, browser, readiness, and notification polling remain read-only."
+    },
+    {
+      "artifact": "artifacts/test-reports/test-e2e-suite-report.json",
+      "command": "npm run build:server; npm run build:thin-client; npm run test:e2e",
+      "criterionId": "cross-host-lancedb-workflows",
+      "id": "evidence-10",
+      "incrementId": "managed-install-product-integration",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-02T12:48:30Z",
+      "summary": "Desktop/server composition, packaged-worker resources, shared Context UI, server and thin-client builds, and the full E2E suite passed while preserving per-artifact and workspace isolation in one embedded runtime."
+    },
+    {
+      "artifact": null,
+      "command": "artifacts/tmp/lancedb-python312-ai-runtime/Scripts/python.exe -m unittest -v modules.adapters.runtime.python.worker.tests.test_context_generation_ai_e2e",
+      "criterionId": "lancedb-ai-e2e-qualification",
+      "id": "evidence-11",
+      "incrementId": "managed-install-product-integration",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-02T12:48:30Z",
+      "summary": "On an isolated supported Python 3.12 managed runtime, all three tiny Context AI scenarios passed: raw-source LanceDB creation, pre-chunked LanceDB creation with preserved lineage, and model-assisted well-formed Markdown Context Pack creation."
+    },
+    {
+      "artifact": "artifacts/test-reports/test-suite-report.json",
+      "command": "npm run docs:check; npm run agent-support:check; npm run architecture:check; npm run security:dependencies; npm run build:server; npm run build:thin-client; npm test; npm run test:e2e; npm run test:all",
+      "criterionId": "lancedb-completion-gates",
+      "id": "evidence-12",
+      "incrementId": "managed-install-product-integration",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-08-02T12:48:30Z",
+      "summary": "Documentation, agent support, architecture, dependency security, server and thin-client builds, standard, E2E, and AI-inclusive aggregate gates passed. An initial aggregate attempt used an unconfigured bare Python and correctly failed for missing LanceDB; configuring the isolated managed Python through the application preflight resolved the environment and the focused AI plus aggregate suites passed."
+    }
+  ],
+  "feedback": [
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "per-artifact-runtime-isolation",
+      "impact": "within-increment",
+      "nextAction": "Define per-artifact storage, connection ownership, bounded connection/cache lifetime, concurrent read behavior, and tests so a future system runtime can share the Python worker without sharing tenant data or requiring a process per database.",
+      "recordedAt": "2026-08-02T11:46:36Z",
+      "summary": "Future user-built systems may use different RAG databases concurrently. The LanceDB replacement must not create one global mutable database or singleton connection; every saved RAG artifact remains an isolated workspace-authorized database identity that can be opened independently by the shared Python runtime.",
+      "targetIncrementId": null
+    }
+  ],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "eb358519a443362cfa362f5af28d1c2cba486a6bbbf4e21a4df2c96ee90b6406",
+      "recordedAt": "2026-08-02T11:40:40Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "baa93e6ff5327360d6f3f1d40252e66860ab1277c324fcb9c1d20c43a2f01c4f",
+      "recordedAt": "2026-08-02T11:41:08Z",
+      "sequence": 2,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "2a102076d35d6a967b882cf2707ffba41cdca03870f72a1e68b604b0ab79438b",
+      "recordedAt": "2026-08-02T11:46:36Z",
+      "sequence": 3,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "24ee2ece433547c69c486f6dfbed1b3224ef0b4e966e90f108f597b5657294d2",
+      "recordedAt": "2026-08-02T11:48:12Z",
+      "sequence": 4,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "ed9c0056e46c22b0c0859430d391b2e3acfab2e5ddef4b6a8c7046088bda458f",
+      "recordedAt": "2026-08-02T11:49:29Z",
+      "sequence": 5,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "4da7eb954fa8e0d9dd21f0af26ef5d9a360a3b3deb0deb799d58ba2225880c59",
+      "recordedAt": "2026-08-02T11:51:12Z",
+      "sequence": 6,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "e0398cb582f186a8a5ac690c7673d027b29e41bdb079a0368e2d82bc92c830b6",
+      "recordedAt": "2026-08-02T11:51:53Z",
+      "sequence": 7,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "272712a7caf3d204bc2123b512b34a78d3147e628e3efac09a4f4cd77c8ffa19",
+      "recordedAt": "2026-08-02T11:51:55Z",
+      "sequence": 8,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "fb92b8294fdeb8722c269576cf65134105f7220f8e6f35f8683de0669ba8582a",
+      "recordedAt": "2026-08-02T11:51:58Z",
+      "sequence": 9,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "8c9bc28dcc683275f7030504aad5c879b4b5b1528097f8be2c45e452f7836619",
+      "recordedAt": "2026-08-02T12:07:16Z",
+      "sequence": 10,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "3fb39d40b6b918ff0c3eac61274a4a8ba70c92be58f644ec1cefc8300ccd3e87",
+      "recordedAt": "2026-08-02T12:07:18Z",
+      "sequence": 11,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "04ee6d4aa477f539789f73b9e6b50b4a9611f5433deaeaa14359453cd60810f9",
+      "recordedAt": "2026-08-02T12:07:21Z",
+      "sequence": 12,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "b28bc3fab4fc45f01a4f6b368fad4a05f7911a554c3e7b0b43d70d156d8b47bd",
+      "recordedAt": "2026-08-02T12:07:22Z",
+      "sequence": 13,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "69b30764835cb4addeeb7879d1465541049d8ea84eacc13ae9c00a3970f1cc32",
+      "recordedAt": "2026-08-02T12:07:24Z",
+      "sequence": 14,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3dfa13fd0c75d721693648424383804c33f6b6c4d52af8315206a5b63e184c69",
+      "recordedAt": "2026-08-02T12:07:27Z",
+      "sequence": 15,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "4d798ba156e0b4fe42fb26170d1ace021a010123b85818073e858270e7c7de1e",
+      "recordedAt": "2026-08-02T12:07:33Z",
+      "sequence": 16,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "2eb5b68c924ef775769dc51c65598818a128acab4c1766936c1fac7cdd0b5184",
+      "recordedAt": "2026-08-02T12:07:35Z",
+      "sequence": 17,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5619212416f9a748cc0efa7b84a7f71493def76b824efd42ac3d2b80f92ae0ed",
+      "recordedAt": "2026-08-02T12:07:38Z",
+      "sequence": 18,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9767888caeddf3b78d7ffa7bee12fa2bfa816ca3d3cb5af8e87dce91b97bf254",
+      "recordedAt": "2026-08-02T12:07:41Z",
+      "sequence": 19,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "cc977f641c8a12ee3b8dd86170116043526d797e10eee21709c4872cf09356af",
+      "recordedAt": "2026-08-02T12:08:03Z",
+      "sequence": 20,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "bc4c2688b12b20ec666666d0830f32d26c07b68ee35e4cfcd352824a58b73285",
+      "recordedAt": "2026-08-02T12:10:32Z",
+      "sequence": 21,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "947b23b99d57601e301dcfb044baed6420b2cee487ee4e0cb63a2ba9389a0151",
+      "recordedAt": "2026-08-02T12:10:35Z",
+      "sequence": 22,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "b961d022586530196e9ab9b2340317ea0fa7026bdd01d907d50fc181ffbcc453",
+      "recordedAt": "2026-08-02T12:48:28Z",
+      "sequence": 23,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "f13481a26527d66c32c43afcffd1393be113b294057c174b6b824e990bda48d2",
+      "recordedAt": "2026-08-02T12:48:28Z",
+      "sequence": 24,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "5b10c31f969ddbe64bdbf71b2994d91b8aa44acbfacd32d5f3ead1bd294be84e",
+      "recordedAt": "2026-08-02T12:48:29Z",
+      "sequence": 25,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "45ee7d43b2937fb5c740d3db9cb201a916dcaf4d6bed8108d3756c3ef6212509",
+      "recordedAt": "2026-08-02T12:48:29Z",
+      "sequence": 26,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b562c132e6615a4eb8e1d711741f710373b6b842cdb16bbaaaa37e3413dd748e",
+      "recordedAt": "2026-08-02T12:48:29Z",
+      "sequence": 27,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "10ae1e5c80ae7f151282653b5522794abcfbbe26c00776262226026a5e083fc0",
+      "recordedAt": "2026-08-02T12:48:29Z",
+      "sequence": 28,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c3f5464bc4e6f714bede099f5946f6b24bedab1eee0715c15c0f6ef353f9f203",
+      "recordedAt": "2026-08-02T12:48:29Z",
+      "sequence": 29,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b1e3560b2c3273dcbf1ead621b8cc92d355cb5018dafedf3b08536ccbee9a763",
+      "recordedAt": "2026-08-02T12:48:30Z",
+      "sequence": 30,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "69d7211aa2fc77a48ab310d2404557f9fe7a8273be59a818c51fbe80c4231b38",
+      "recordedAt": "2026-08-02T12:48:30Z",
+      "sequence": 31,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a35df29021007855de9ebb3c7e47a82ba8f21a2ec71d37d9900e4d90f28d9848",
+      "recordedAt": "2026-08-02T12:48:30Z",
+      "sequence": 32,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a63824c3402fe21d33abbf23c6ca0b8264150bf0d3be5745bbe764597d2b0942",
+      "recordedAt": "2026-08-02T12:48:30Z",
+      "sequence": 33,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "9a4e244f517b15d26cbf8546196a21e93c09be440ed3ac16da45981e8298eafb",
+      "recordedAt": "2026-08-02T12:48:30Z",
+      "sequence": 34,
+      "type": "roadmap-completed"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "RAG creation emits only the new portable LanceDB artifact media type and deterministic package shape; Context Packs and every unrelated SQLite surface remain behaviorally unchanged, and legacy SQLite RAG artifacts receive a clear unsupported-format result.",
+          "id": "lancedb-artifact-contract",
+          "qualification": "local"
+        },
+        {
+          "description": "Existing raw and pre-chunked sources produce validated LanceDB rows with exact manifest, source lineage, citations, chunk counts, finite fixed-dimension vectors, and deterministic top-k retrieval through the selected embedding model without transporting raw vectors.",
+          "id": "lancedb-generation-inspection-query",
+          "qualification": "local"
+        },
+        {
+          "description": "Review, save, discard, detail, rebuild, query, delete, publish/download-compatible storage, digests, bindings, compensation, and cleanup operate on one complete workspace-scoped artifact; independent artifacts never share a mutable database or connection identity.",
+          "id": "lancedb-artifact-lifecycle",
+          "qualification": "local"
+        },
+        {
+          "description": "Traversal, absolute paths, links, duplicate or unknown members, entry/count/expanded-size overflow, malformed manifests or tables, mismatched media types/digests/counts/dimensions, non-finite vectors, cross-workspace access, cancellation, and partial-output paths fail closed with sanitized results and cleanup.",
+          "id": "security-lancedb-artifact-denials",
+          "qualification": "local"
+        },
+        {
+          "description": "Canonical ADR, architecture, persistence, security threat model, context routing/pack, and nearest runtime/application README guidance accurately describe the LanceDB-only RAG boundary and explicitly exclude unrelated SQLite, Context Pack, remote service, and legacy migration scope.",
+          "id": "lancedb-core-documentation",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": false,
+      "completedAt": "2026-08-02T12:07:41Z",
+      "completedChunks": [
+        "lancedb-contract-and-writer",
+        "lancedb-inspection-and-query",
+        "context-artifact-lifecycle",
+        "lancedb-security-and-docs"
+      ],
+      "completionSummary": "The LanceDB artifact contract, physical writer/inspection/query path, one-blob lifecycle, security denials, and canonical documentation are implemented and locally verified.",
+      "deliverables": [
+        "New LanceDB RAG artifact media type, extension, manifest/schema, package layout, and normalized contract tests",
+        "Python worker LanceDB writer, package materializer, inspector, nearest-neighbor query path, bounded connection ownership, cancellation, progress, and sanitized failures",
+        "Application and adapter updates for single-file review/save/discard, Context Browser details, rebuild/query/delete, object-store integrity, and old SQLite RAG rejection",
+        "Unit, worker integration, application lifecycle, malformed-package, workspace-denial, ranking, lineage, vector, cancellation, and regression tests",
+        "Updated Context ADR, architecture, threat model, context pack, runtime worker README, persistence guidance, and docs mismatch handling if implementation authority differs"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "Unrelated SQLite persistence or caches",
+        "Markdown Context Pack format or behavior",
+        "Legacy SQLite RAG migration or compatibility",
+        "Remote LanceDB, LanceDB Enterprise, or a separate vector service/process",
+        "User-built system runtime consumption beyond preserving per-artifact isolation and a reusable authorized query boundary",
+        "Automatic dependency installation and end-user installation notifications, which are completed in Increment 2"
+      ],
+      "id": "lancedb-artifact-runtime",
+      "number": 1,
+      "objective": "Replace the SQLite-specific RAG artifact contract and Python create/inspect/query implementation with an isolated, portable, bounded LanceDB package while preserving existing Context behavior.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "No deployed SQLite RAG artifacts require compatibility or migration.",
+          "The saved artifact remains one immutable blob; native LanceDB directories are implementation details inside a fixed package.",
+          "Saved RAG artifacts are read-only during inspection and system retrieval; rebuild creates a new artifact instead of mutating the saved package.",
+          "Each workspace/artifact identity maps to an independent materialization and connection lifetime; one shared Python worker does not imply shared tenant data.",
+          "Automatic dependency installation, first-use repair, notifications, and cross-host release qualification are completed in Increment 2."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "lancedb-artifact-contract",
+              "lancedb-generation-inspection-query"
+            ],
+            "id": "lancedb-contract-and-writer",
+            "outcome": "RAG generation creates one atomic deterministic LanceDB ZIP artifact with the new media type, exact manifest/table schema, chunks, vectors, citations, progress, and cancellation while Context Packs and unrelated SQLite remain unchanged.",
+            "title": "LanceDB contract and package writer"
+          },
+          {
+            "criteriaIds": [
+              "lancedb-generation-inspection-query",
+              "security-lancedb-artifact-denials"
+            ],
+            "id": "lancedb-inspection-and-query",
+            "outcome": "Saved packages are safely materialized into private staging, fully validated, queried through LanceDB with bounded results, and cleaned without global mutable database state.",
+            "title": "Safe package inspection and retrieval"
+          },
+          {
+            "criteriaIds": [
+              "lancedb-artifact-contract",
+              "lancedb-artifact-lifecycle"
+            ],
+            "id": "context-artifact-lifecycle",
+            "outcome": "Application, adapter, browser, rebuild, save/discard, delete, publication-compatible storage, and tests use the new single-file artifact and clearly reject legacy SQLite RAG artifacts.",
+            "title": "Context artifact lifecycle integration"
+          },
+          {
+            "criteriaIds": [
+              "security-lancedb-artifact-denials",
+              "lancedb-core-documentation"
+            ],
+            "id": "lancedb-security-and-docs",
+            "outcome": "Crafted packages and workspace violations fail closed, cleanup and isolation are evidenced, and every affected canonical/nearest document describes the LanceDB-only RAG boundary accurately.",
+            "title": "Security denials and canonical documentation"
+          }
+        ],
+        "completionTests": [
+          "Run the focused Increment 1 contract, worker, application, browser, UI, security, documentation, and architecture tests after all four chunks are implemented",
+          "Defer the repository-wide standard/E2E/AI aggregate boundary to Increment 2 as required by the approved AI roadmap"
+        ],
+        "documentation": [
+          "ADR-0041 Context Management",
+          "Context Management architecture and threat model",
+          "Persistence and storage architecture",
+          "Context, security, persistence, and runtime context packs/routing",
+          "Python worker, adapter, Context application, host, and UI nearest README files",
+          "Roadmap state and temporary implementation report"
+        ],
+        "fingerprint": "35b815c20922d96bbe7b44713db7cab6a1c4607c61f558c06c159e8fb4a42da3",
+        "focusedTests": [
+          "Context media-type and validation unit tests",
+          "Python worker context generation and artifact operation tests using physical tiny LanceDB tables when the dependency is available",
+          "Malformed ZIP, containment, size, schema, vector, digest, lineage, cancellation, and legacy SQLite rejection tests",
+          "Context generation application lifecycle, browser, query, rebuild, delete, and workspace-authorization tests",
+          "Affected shared Context UI tests where labels, suffixes, or details change"
+        ],
+        "recordedAt": "2026-08-02T11:51:58Z",
+        "rollback": "Revert the media type, worker writer/reader/query, application/adapters, tests, and docs as one unreleased vertical slice; remove only worker-owned uncommitted LanceDB staging packages and preserve all sources, Context Packs, unrelated SQLite stores, and other user artifacts.",
+        "steps": [
+          "Introduce the new LanceDB RAG contract and deterministic package writer around the existing chunk and embedding pipeline.",
+          "Implement safe materialization, structural inspection, and LanceDB vector retrieval with per-artifact connection ownership.",
+          "Update the application lifecycle, browser/rebuild/query/delete behavior, adapters, names, fixtures, and focused interaction tests.",
+          "Complete denial coverage and update canonical architecture, ADR, threat model, context pack, persistence, and runtime documentation."
+        ],
+        "summary": "Replace the isolated RAG artifact vertical slice in four bounded chunks, preserving existing Context lifecycle semantics and proving the new package against malformed-input and workspace-denial paths."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-08-02T11:51:55Z",
+          "risks": [
+            "LanceDB directory members are library-version-shaped rather than an exact static filename set, so the archive boundary must validate a fixed root, normalized regular files, entry/count/size ceilings, manifest/table schema, and extracted containment rather than trusting names or ZIP metadata.",
+            "Native LanceDB imports may be unavailable in the current development environment until Increment 2 provisions the reviewed dependency; test seams must remain honest and physical LanceDB qualification cannot be replaced by mocks.",
+            "Opening a packaged artifact requires private extraction or a digest-keyed bounded cache; cancellation, cleanup, concurrent queries, Windows file handles, and partial failures must not leave mutable shared state.",
+            "The current application validates a runtime output as a single regular file, so directory output would break save compensation; packaging must complete atomically before exposing the candidate.",
+            "Security impact remains relevant: crafted archives, malformed LanceDB tables, mismatched vectors/citations/manifests, and cross-workspace references must fail closed without leaking paths, source text, vectors, or native errors.",
+            "No legacy migration is desired; old SQLite RAG media types and files must be rejected clearly while unrelated SQLite remains untouched."
+          ],
+          "sources": [
+            {
+              "title": "Context media types",
+              "url": "modules/contracts/context-management/context-media-types.ts"
+            },
+            {
+              "title": "Context generation use case",
+              "url": "modules/application/use-cases/context-management/context-generation.use-case.ts"
+            },
+            {
+              "title": "Context generation worker",
+              "url": "modules/adapters/runtime/python/worker/tasks/context_generation.py"
+            },
+            {
+              "title": "Context artifact operation worker",
+              "url": "modules/adapters/runtime/python/worker/tasks/context_artifact_operation.py"
+            },
+            {
+              "title": "Context generation tests",
+              "url": "modules/adapters/runtime/python/worker/tests/test_context_generation.py"
+            },
+            {
+              "title": "Context artifact operation tests",
+              "url": "modules/adapters/runtime/python/worker/tests/test_context_artifact_operation.py"
+            },
+            {
+              "title": "Context application tests",
+              "url": "modules/application/use-cases/context-management/tests/context-generation.use-case.unit.test.ts"
+            },
+            {
+              "title": "LanceDB OSS quickstart",
+              "url": "https://docs.lancedb.com/quickstart"
+            },
+            {
+              "title": "LanceDB tables and namespaces",
+              "url": "https://docs.lancedb.com/tables-and-namespaces"
+            },
+            {
+              "title": "LanceDB OSS concurrency guidance",
+              "url": "https://docs.lancedb.com/faq/faq-oss"
+            }
+          ],
+          "summary": "The RAG media type is centralized, worker generation and artifact operations are isolated from Context Pack code, and the application already materializes one runtime output file into the existing review/save/discard and object-store lifecycle. LanceDB OSS is embedded and directory-backed, so the coherent replacement is a deterministic ZIP artifact containing a bounded manifest plus one private LanceDB directory, with temporary safe extraction for inspect/query. Connections remain per materialized artifact rather than global. The existing Context tests already cover raw and persisted chunks, retrieval, lifecycle, security, UI, and three opt-in AI scenarios that can be converted rather than duplicated."
+        }
+      ],
+      "rollback": "Revert the new RAG media type and LanceDB worker/application path together, restore the pre-change SQLite RAG implementation and its tests/docs only in the development branch, and remove only uncommitted worker-owned staging outputs. Do not alter saved non-RAG artifacts, unrelated SQLite files, or user source artifacts.",
+      "startedAt": "2026-08-02T11:51:53Z",
+      "status": "completed",
+      "title": "LanceDB artifact and retrieval runtime",
+      "verification": [
+        "Run focused Context media-type, validation, application lifecycle, Python worker generation, artifact-operation, malformed-package, security denial, and Context Browser tests.",
+        "Run focused documentation and dependency-direction checks for the changed contracts, application, adapter, and worker boundaries.",
+        "Physically generate, inspect, and query a tiny LanceDB RAG package with exact lineage and ranking, then verify discard/delete cleanup and old SQLite rejection."
+      ],
+      "workPackages": [
+        {
+          "id": "artifact-contract",
+          "outcome": "A new LanceDB RAG media type, suffix, manifest/schema version, and deterministic single-blob package layout replace the SQLite RAG format without changing Markdown Context Packs or unrelated SQLite use.",
+          "title": "Portable LanceDB artifact contract"
+        },
+        {
+          "id": "worker-generation-retrieval",
+          "outcome": "The managed Python worker writes isolated LanceDB tables from the existing chunks and embeddings, packages them atomically, validates and materializes saved packages privately, and queries through LanceDB while returning only bounded excerpts and citations.",
+          "title": "LanceDB generation, inspection, and retrieval"
+        },
+        {
+          "id": "artifact-lifecycle",
+          "outcome": "Review, save, discard, browser detail, rebuild, query, delete, digest, binding, and publication behavior continue to use one workspace-authorized artifact with compensation and no global database singleton.",
+          "title": "Application artifact lifecycle integration"
+        },
+        {
+          "id": "security-and-documentation",
+          "outcome": "Package extraction, table validation, legacy rejection, per-artifact isolation, threat controls, ADR supersession, architecture guidance, and focused denial coverage are explicit and current.",
+          "title": "Format security and canonical guidance"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "A clean managed runtime installs the exact reviewed LanceDB dependency automatically during normal setup, and an absent or mismatched dependency is idempotently repaired and re-verified before RAG use without manual commands or a separate runtime process.",
+          "id": "managed-lancedb-install",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Users receive deduplicated workspace-appropriate notification activity while LanceDB installs and a clear completion or actionable retryable failure outcome; subsequent Context generation/retrieval progress remains authoritative and resumes normally.",
+          "id": "lancedb-install-notifications",
+          "qualification": "local"
+        },
+        {
+          "description": "Unsupported Python/platform, unavailable package source, timeout, partial/mismatched install, concurrent ensure, unexpected probe failure, unmanaged environment, and malicious output paths fail closed; no arbitrary package/URL input is accepted and public logs/transports/notifications contain no package output or local paths.",
+          "id": "security-managed-dependency-denials",
+          "qualification": "local"
+        },
+        {
+          "description": "Capability, readiness, status, browser list/detail, and notification polling remain side-effect free; only default setup and explicit RAG create/inspect/query execution may invoke the managed dependency ensure path.",
+          "id": "side-effect-free-runtime-reads",
+          "qualification": "local"
+        },
+        {
+          "description": "Desktop and thin client complete RAG creation to review, save or discard, Context Browser detail, retrieval, rebuild, delete, and notification flows against the same server/application semantics; multiple workspace/artifact databases remain isolated in one managed Python runtime.",
+          "id": "cross-host-lancedb-workflows",
+          "qualification": "local"
+        },
+        {
+          "description": "The existing three Context AI E2E scenarios use minimal sources/models to create valid LanceDB artifacts from raw and pre-chunked data and validate source-material Context Pack output; only affected tests are rerun while iterating, then the all-suite boundary runs once.",
+          "id": "lancedb-ai-e2e-qualification",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Documentation, agent support, architecture, dependency security, server/thin-client builds, standard, E2E, and AI aggregate gates pass once at the final roadmap boundary, with commands, failures, assumptions, and any controlled-environment limitation reported.",
+          "id": "lancedb-completion-gates",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": true,
+      "completedAt": "2026-08-02T12:48:30Z",
+      "completedChunks": [
+        "managed-context-dependency",
+        "context-install-progress-host-wiring",
+        "release-qualification-documentation"
+      ],
+      "completionSummary": "Managed LanceDB installation, first-use repair, notifications, host wiring, dependency security, documentation, physical Context AI scenarios, and repository completion gates are implemented and verified.",
+      "deliverables": [
+        "Exact LanceDB requirement and supported Python/platform/version probe with reviewed license, provenance, Package URL, dependency inventory, packaging inclusion, and security checks",
+        "One-flight managed dependency ensure/repair adapter with fixed commands, bounded timeouts/retries, protected diagnostics, setup integration, and pre-RAG-use integration",
+        "Transport-neutral bounded install status mapped into existing Context task/activity notifications for desktop and thin client with actionable sanitized failure and retry behavior",
+        "Desktop and server host composition plus packaged-worker resource coverage, without a new process, remote service, UI package-manager command, or passive-read side effect",
+        "Focused install/failure/concurrency/notification tests, updated existing three Context AI E2E tests, physical tiny-model/tiny-source LanceDB creation and query qualification, cross-host E2E coverage, and required repository completion gates",
+        "Updated runtime installer ADR/guidance, Python runtime and host READMEs, Context architecture/threat model/context packs, dependency supply-chain documentation, and installation troubleshooting"
+      ],
+      "dependsOn": [
+        "lancedb-artifact-runtime"
+      ],
+      "excluded": [
+        "Bundled or vendored LanceDB wheels",
+        "User-selectable package indexes, versions, URLs, or install commands",
+        "A separate LanceDB daemon, per-system process, remote service, or Enterprise deployment",
+        "Cross-device or multi-host shared live database serving",
+        "Legacy SQLite RAG migration or compatibility",
+        "Changes to model-training, image-generation, or unrelated runtime dependencies beyond regression verification of shared setup behavior"
+      ],
+      "id": "managed-install-product-integration",
+      "number": 2,
+      "objective": "Make LanceDB available without user intervention during normal runtime setup and first RAG use, expose safe installation notifications, and qualify the replacement across desktop, server, thin client, packaging, security, and AI workflows.",
+      "pendingCriteria": [],
+      "plan": {
+        "assumptions": [
+          "lancedb==0.34.0 remains the approved exact direct dependency and Apache-2.0 package.",
+          "The existing managed Python command/environment is the only installation target; custom external runtime commands are never mutated by new UI or passive-read behavior.",
+          "No SQLite RAG compatibility or migration is required."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "managed-lancedb-install",
+              "security-managed-dependency-denials",
+              "side-effect-free-runtime-reads"
+            ],
+            "id": "managed-context-dependency",
+            "outcome": "The managed Python environment installs and exactly re-verifies LanceDB during default setup or explicit Context preflight with bounded asynchronous one-flight behavior and sanitized fail-closed errors.",
+            "title": "Managed LanceDB dependency"
+          },
+          {
+            "criteriaIds": [
+              "lancedb-install-notifications",
+              "cross-host-lancedb-workflows",
+              "side-effect-free-runtime-reads"
+            ],
+            "id": "context-install-progress-host-wiring",
+            "outcome": "Desktop and server start Context work through the same dependency preflight and existing task activity surface reports installing, completion, and retryable failure without UI package-manager logic or sensitive output.",
+            "title": "Context install progress and host wiring"
+          },
+          {
+            "criteriaIds": [
+              "lancedb-ai-e2e-qualification",
+              "lancedb-completion-gates",
+              "cross-host-lancedb-workflows"
+            ],
+            "id": "release-qualification-documentation",
+            "outcome": "Dependency security inventory, packaging, runtime/Context guidance, tiny physical LanceDB AI scenarios, builds, and final repository gates establish production-ready cross-host behavior.",
+            "title": "Release qualification and documentation"
+          }
+        ],
+        "completionTests": [
+          "Once all chunks are implemented: docs, agent-support, architecture, dependency-security, server/thin builds, standard, E2E, and the AI-inclusive all-suite exactly once"
+        ],
+        "documentation": [
+          "ADR-0014 runtime installer",
+          "Runtime model and Python adapter/worker READMEs",
+          "Context architecture and threat model",
+          "Context/runtime/testing packs",
+          "Desktop/server READMEs and dependency supply-chain evidence"
+        ],
+        "fingerprint": "dba585c266045253ac41e593610bae1bcc22cbde9df82954e114c09eafae11df",
+        "focusedTests": [
+          "Managed context dependency probe/install/verify, exact-version, unsupported-host, timeout, mismatched post-install, concurrency, sanitation, and no-install fast-path tests",
+          "Runtime task adapter preflight progress/failure/listing plus desktop/server composition and Context notification projection tests",
+          "Changed worker, Context application/UI, dependency-security, packaging-resource, and three tiny Context AI E2E scenarios only"
+        ],
+        "recordedAt": "2026-08-02T12:10:35Z",
+        "rollback": "Remove the context requirement and ensure adapter, host preflight/progress wiring, and dependency inventory together; if necessary revert the unreleased LanceDB RAG replacement as one unit while preserving all user artifacts and unrelated runtime dependencies.",
+        "steps": [
+          "Declare and inventory the exact LanceDB requirement, add fail-closed asynchronous probe/install/verify behavior, and include it in default managed runtime setup.",
+          "Wire desktop and server Context task starts through the one-flight ensure and project sanitized installation progress/failure through existing task lists and notifications.",
+          "Verify passive reads remain side-effect free, update canonical runtime/security guidance, run the changed Context AI E2E scenarios, then run the one final all-suite and repository completion boundary."
+        ],
+        "summary": "Add an exact context dependency package, asynchronous one-flight probe/install/verify adapter, host-owned default and explicit Context preflight wiring, task-registry installation progress, supply-chain inventory, documentation, and focused plus final cross-host/AI qualification."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-08-02T12:10:32Z",
+          "risks": [
+            "A synchronous package-manager call would block desktop/server event loops and prevent live notifications, so the first-use ensure must be asynchronous and bounded.",
+            "Concurrent Context requests could repeat installation or observe partial state, so one managed command/cwd identity must share one in-flight ensure and progress broadcast.",
+            "The baseline worker setup must verify LanceDB after installation and the explicit Context preflight must re-probe exact import/version state before task execution.",
+            "Task-list polling must not query an unstarted Python task in a way that erases preflight progress; the adapter must retain authoritative host-side preflight state until worker acceptance.",
+            "Dependency/package-manager output and local paths must remain out of public task errors, transports, notifications, and normal logs.",
+            "LanceDB native wheels and transitive resolution still require final controlled-environment qualification on supported Python/platform profiles."
+          ],
+          "sources": [
+            {
+              "title": "Managed Python dependency setup",
+              "url": "modules/adapters/runtime/python/ensurePythonRuntimeWorkerDependencies.ts"
+            },
+            {
+              "title": "Python runtime task registry adapter",
+              "url": "modules/adapters/runtime/python/createPythonRuntimeTaskRegistryAdapter.ts"
+            },
+            {
+              "title": "Desktop Python and task composition",
+              "url": "modules/hosts/desktop/composition/composeDesktopPythonRuntimeFeature.ts"
+            },
+            {
+              "title": "Server Python composition",
+              "url": "modules/hosts/server/composition/composeServerHost.ts"
+            },
+            {
+              "title": "Context notification bridge",
+              "url": "modules/ui/shared/context-management/ContextStudio.tsx"
+            },
+            {
+              "title": "Runtime installer ADR",
+              "url": "docs/adr/ADR-0014-runtime-installer.md"
+            },
+            {
+              "title": "Runtime architecture",
+              "url": "docs/architecture/runtime-model.md"
+            },
+            {
+              "title": "Dependency supply-chain standard",
+              "url": "docs/standards/dependency-supply-chain-standards.md"
+            },
+            {
+              "title": "LanceDB Python metadata and OSS provenance",
+              "url": "https://pypi.org/project/lancedb/"
+            }
+          ],
+          "summary": "The host-owned Python dependency setup, supervisor pre-start hook, and Runtime Task Registry provide the existing architecture needed for LanceDB. Default setup can include a context-specific exact requirements file through the baseline worker requirements, while an asynchronous one-flight context ensure can run before explicit Context generation/retrieval and publish sanitized progress through the already polled task registry. Readiness/status/list/detail reads remain unchanged and side-effect free."
+        }
+      ],
+      "rollback": "Disable the LanceDB dependency ensure and notification integration, remove its reviewed requirement/inventory and packaged resource changes, and revert the LanceDB RAG runtime as one unreleased change if necessary. Remove only managed test environments or worker-owned staging/cache material created by qualification; preserve user source artifacts and every unrelated runtime dependency, model, image runtime, Context Pack, and SQLite store.",
+      "startedAt": "2026-08-02T12:08:03Z",
+      "status": "completed",
+      "title": "Managed installation and production integration",
+      "verification": [
+        "Run focused managed-dependency probe/install/verify, exact-version, concurrency, retry, timeout, unsupported-host, sanitation, passive-read, composition, packaging, and notification tests.",
+        "Run only the changed Context worker/application/UI/E2E and three Context AI E2E tests during implementation, using tiny fixtures and local models.",
+        "Physically remove or isolate LanceDB from a test managed environment, observe automatic setup/first-use installation and notification state, generate/query independent tiny RAG artifacts, and verify subsequent offline use.",
+        "After both increments are implemented, run npm run docs:check, npm run agent-support:check, npm run architecture:check, npm run security:dependencies, npm run build:server, npm run build:thin-client, npm test, npm run test:e2e, and npm run test:all exactly once at the roadmap completion boundary."
+      ],
+      "workPackages": [
+        {
+          "id": "managed-dependency",
+          "outcome": "An exact reviewed LanceDB dependency and inventory are probed, installed, re-verified, and diagnosed only inside the managed Python environment using a serialized, idempotent, bounded host-owned ensure path.",
+          "title": "Reviewed managed LanceDB dependency"
+        },
+        {
+          "id": "setup-and-first-use",
+          "outcome": "Normal Python runtime setup installs LanceDB with the other applicable runtime libraries, while RAG create/inspect/query safely repairs an absent or mismatched install before use without making passive reads mutate the environment.",
+          "title": "Default setup and first-use repair"
+        },
+        {
+          "id": "installation-notifications",
+          "outcome": "Desktop and thin-client notification centers show bounded installation, completion, retry/failure, and subsequent RAG task state without package output, paths, prompts, source content, or vectors.",
+          "title": "Installation status and notifications"
+        },
+        {
+          "id": "cross-host-qualification",
+          "outcome": "Desktop/server composition, IPC/API clients, worker packaging, installer inputs, Context workflows, dependency security, builds, standard/E2E/AI suites, and canonical documentation demonstrate one production-ready behavior.",
+          "title": "Cross-host and release qualification"
+        }
+      ]
+    }
+  ],
+  "name": "LanceDB RAG Store Replacement",
+  "objective": "Replace only the Context Management RAG artifact store and create/inspect/query path from SQLite with a seamless, production-ready local LanceDB OSS integration.",
+  "paths": {
+    "report": "docs/tmp/lancedb-rag-replacement-implementation-report.md",
+    "roadmap": "docs/lancedb-rag-replacement-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/lancedb-rag-replacement/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": {
+    "approvedAt": "2026-08-02T11:51:12Z",
+    "fingerprint": "23530f07096de9267c12ba0d10bb7b4854365e754c16121e0591043bf7852cf2",
+    "note": "User explicitly approved the complete two-increment roadmap and requested continuous implementation increment by increment through production-ready end-to-end completion."
+  },
+  "schemaVersion": 1,
+  "slug": "lancedb-rag-replacement",
+  "status": "completed",
+  "updatedAt": "2026-08-02T12:48:30Z"
+}

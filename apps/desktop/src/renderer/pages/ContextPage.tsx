@@ -6,6 +6,7 @@ import {
 } from "../../../../../modules/ui/shared";
 import { createDesktopContextManagementClient } from "../features/context-management/api/desktopContextManagementClient";
 import { DesktopPageDashboard } from "../features/page-dashboard/DesktopPageDashboard";
+import { PythonRuntimeFooter } from "../features/python-runtime/components/PythonRuntimeFooter";
 
 export interface ContextPageProps {
   readonly workspaceId: string;
@@ -37,6 +38,7 @@ export function ContextPage(props: ContextPageProps) {
         onInitialArtifactHandled={props.onInitialArtifactHandled}
         onViewSource={props.onViewSource}
       />
+      <PythonRuntimeFooter enabled />
     </section>
   );
 }

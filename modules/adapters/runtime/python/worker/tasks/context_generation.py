@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-from array import array
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import gc
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
-import sqlite3
+import shutil
+import stat
+import tempfile
 from typing import Any, Callable
-from zipfile import ZIP_DEFLATED, ZipFile
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from ..models import (
     AdvancedContentProcessingConfig,
@@ -42,8 +45,12 @@ from .prepare_training_dataset import _is_structured_source, _read_structured_so
 from .markdown_chunking import chunk_markdown_documents
 from .structured_output_runtime import parse_model_json_object, validate_json_schema_value
 
-RAG_MEDIA_TYPE = "application/vnd.ai-system-builder.rag-database+sqlite3"
+RAG_MEDIA_TYPE = "application/vnd.ai-system-builder.rag-database+lancedb+zip"
 PACK_MEDIA_TYPE = "application/vnd.ai-system-builder.markdown-context-pack+zip"
+RAG_TABLE_NAME = "chunks"
+MAX_RAG_PACKAGE_FILES = 4_096
+MAX_RAG_PACKAGE_ENTRY_BYTES = 128 * 1024 * 1024
+MAX_RAG_PACKAGE_EXPANDED_BYTES = 256 * 1024 * 1024
 MAX_CHUNKS = 100_000
 MAX_PREVIEW_ITEMS = 100
 MAX_PREVIEW_CHARACTERS = 8_000
@@ -664,7 +671,7 @@ def _collect_chunks(
                 Path(source.originalName or source.localPath).suffix.lower().lstrip(".")
                 or "text"
             ),
-            **({"textFields": fields} if fields else {}),
+            "textFields": fields,
             "alreadyChunked": already_chunked,
             "chunkCount": len(source_chunks),
             **({"sourceInformation": source_information} if source_information else {}),
@@ -815,61 +822,166 @@ def _write_rag_database(
 ) -> None:
     if len(chunks) != len(vectors) or not vectors:
         raise ValueError("RAG embeddings do not match context chunks.")
-    temporary = path.with_suffix(path.suffix + ".partial")
-    connection = sqlite3.connect(temporary)
-    try:
-        connection.executescript(
-            """
-            PRAGMA journal_mode=DELETE;
-            PRAGMA synchronous=FULL;
-            CREATE TABLE manifest (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-            CREATE TABLE sources (
-              artifact_id TEXT PRIMARY KEY, digest TEXT NOT NULL,
-              media_type TEXT NOT NULL, original_name TEXT,
-              size_bytes INTEGER NOT NULL, chunk_count INTEGER NOT NULL,
-              chunking_mode TEXT NOT NULL
-            );
-            CREATE TABLE chunks (
-              id TEXT PRIMARY KEY, ordinal INTEGER NOT NULL UNIQUE,
-              text TEXT NOT NULL, citation_json TEXT NOT NULL,
-              embedding BLOB NOT NULL, embedding_dimensions INTEGER NOT NULL
-            );
-            CREATE INDEX chunks_ordinal_idx ON chunks(ordinal);
-            """
-        )
-        connection.execute(
-            "INSERT INTO manifest(key, value) VALUES (?, ?)",
-            (
-                "artifact",
-                json.dumps(manifest, ensure_ascii=False, sort_keys=True),
-            ),
-        )
-        for source in manifest["sources"]:
-            connection.execute(
-                "INSERT INTO sources VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (
-                    source["artifactId"], source["digest"], source["mediaType"],
-                    source.get("originalName"), source["sizeBytes"],
-                    source["chunkCount"], source["chunkingMode"],
-                ),
+    dimensions = len(vectors[0])
+    if not 1 <= dimensions <= 8_192:
+        raise ValueError("RAG embedding dimensions are invalid.")
+    if len({chunk.id for chunk in chunks}) != len(chunks):
+        raise ValueError("RAG chunk identifiers are not unique.")
+    for vector in vectors:
+        if (
+            len(vector) != dimensions
+            or any(
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(float(value))
+                for value in vector
             )
-        for ordinal, (chunk, vector) in enumerate(
-            zip(chunks, vectors, strict=True)
         ):
-            connection.execute(
-                "INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?)",
-                (
-                    chunk.id, ordinal, chunk.text,
-                    json.dumps(
-                        chunk.citation, ensure_ascii=False, sort_keys=True
-                    ),
-                    array("f", vector).tobytes(), len(vector),
+            raise ValueError("RAG embedding vectors are invalid.")
+
+    try:
+        import lancedb
+        import pyarrow as pa
+    except ImportError as error:
+        raise RuntimeError(
+            "The LanceDB runtime dependency is unavailable."
+        ) from error
+
+    staging = Path(
+        tempfile.mkdtemp(prefix=".rag-lancedb-build-", dir=path.parent)
+    )
+    database_path = staging / "database"
+    archive_path = staging / "artifact.partial"
+    table = None
+    database = None
+    try:
+        schema = pa.schema(
+            [
+                pa.field("id", pa.string(), nullable=False),
+                pa.field("ordinal", pa.int64(), nullable=False),
+                pa.field("text", pa.string(), nullable=False),
+                pa.field("citation_json", pa.string(), nullable=False),
+                pa.field(
+                    "vector",
+                    pa.list_(pa.float32(), dimensions),
+                    nullable=False,
                 ),
+            ]
+        )
+        records = [
+            {
+                "id": chunk.id,
+                "ordinal": ordinal,
+                "text": chunk.text,
+                "citation_json": json.dumps(
+                    chunk.citation, ensure_ascii=False, sort_keys=True
+                ),
+                "vector": [float(value) for value in vector],
+            }
+            for ordinal, (chunk, vector) in enumerate(
+                zip(chunks, vectors, strict=True)
             )
-        connection.commit()
+        ]
+        arrow_table = pa.Table.from_pylist(records, schema=schema)
+        database = lancedb.connect(database_path)
+        table = database.create_table(
+            RAG_TABLE_NAME,
+            data=arrow_table,
+            mode="create",
+        )
+        if table.count_rows() != len(chunks):
+            raise ValueError("RAG database chunk count is invalid.")
+
+        manifest_embedding = manifest.get("embedding")
+        if not isinstance(manifest_embedding, dict):
+            raise ValueError("RAG embedding manifest is invalid.")
+        manifest_embedding["dimensions"] = dimensions
+
+        del arrow_table
+        del records
+        del table
+        table = None
+        del database
+        database = None
+        gc.collect()
+
+        database_files = sorted(
+            candidate
+            for candidate in database_path.rglob("*")
+            if candidate.is_file()
+        )
+        database_sizes = [candidate.stat().st_size for candidate in database_files]
+        if (
+            not database_files
+            or len(database_files) > MAX_RAG_PACKAGE_FILES
+            or any(
+                size < 0 or size > MAX_RAG_PACKAGE_ENTRY_BYTES
+                for size in database_sizes
+            )
+            or sum(database_sizes) > MAX_RAG_PACKAGE_EXPANDED_BYTES
+        ):
+            raise ValueError("RAG database files exceed the safe limit.")
+        with ZipFile(
+            archive_path,
+            "w",
+            compression=ZIP_DEFLATED,
+            compresslevel=9,
+        ) as archive:
+            _write_deterministic_zip_bytes(
+                archive,
+                "manifest.json",
+                json.dumps(
+                    manifest,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8"),
+            )
+            for database_file in database_files:
+                if database_file.is_symlink():
+                    raise ValueError("RAG database contains an invalid link.")
+                relative = database_file.relative_to(database_path).as_posix()
+                _write_deterministic_zip_file(
+                    archive,
+                    f"database/{relative}",
+                    database_file,
+                )
+        archive_path.replace(path)
     finally:
-        connection.close()
-    temporary.replace(path)
+        if table is not None:
+            del table
+        if database is not None:
+            del database
+        gc.collect()
+        if staging.exists():
+            shutil.rmtree(staging)
+
+
+def _zip_file_info(name: str) -> ZipInfo:
+    info = ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = ZIP_DEFLATED
+    info.create_system = 3
+    info.external_attr = (stat.S_IFREG | 0o600) << 16
+    return info
+
+
+def _write_deterministic_zip_bytes(
+    archive: ZipFile,
+    name: str,
+    content: bytes,
+) -> None:
+    archive.writestr(_zip_file_info(name), content)
+
+
+def _write_deterministic_zip_file(
+    archive: ZipFile,
+    name: str,
+    source: Path,
+) -> None:
+    with source.open("rb") as input_handle, archive.open(
+        _zip_file_info(name), "w"
+    ) as output_handle:
+        shutil.copyfileobj(input_handle, output_handle, length=1024 * 1024)
 
 
 def _topic_stop_words() -> set[str]:
@@ -1412,7 +1524,7 @@ def generate_context_artifact(
                     ),
                     "phase": "embedding",
                 })
-        output_path = runtime_directory / f"{safe_stem}.sqlite3"
+        output_path = runtime_directory / f"{safe_stem}.lancedb.zip"
         _write_rag_database(output_path, chunks, vectors, manifest)
         topics = None
         media_type = RAG_MEDIA_TYPE

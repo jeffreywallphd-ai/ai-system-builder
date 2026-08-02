@@ -23,6 +23,10 @@ const reviewedTextTrainingDependencies = [
   { name: "datasets", version: "5.0.1", license: "Apache-2.0" },
   { name: "peft", version: "0.15.2", license: "Apache-2.0" },
 ];
+const reviewedContextDependencies = [
+  { name: "lancedb", version: "0.34.0", license: "Apache-2.0" },
+  { name: "pyarrow", version: "25.0.0", license: "Apache-2.0" },
+];
 
 export function validatePythonDecoderDependencyInventory(requirementsText) {
   const lines = requirementsText
@@ -167,6 +171,40 @@ export function validatePythonTextTrainingDependencyInventory(
   };
 }
 
+export function validatePythonContextDependencyInventory(requirementsText) {
+  const lines = requirementsText
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"));
+  if (lines.length !== reviewedContextDependencies.length) {
+    throw new Error(
+      "Python Context dependency inventory is incomplete or contains unreviewed direct packages.",
+    );
+  }
+  const packages = reviewedContextDependencies.map((dependency) => {
+    const expected = `${dependency.name}==${dependency.version}`;
+    if (
+      lines.filter((line) =>
+        line.toLowerCase().startsWith(`${dependency.name}==`),
+      ).length !== 1 ||
+      !lines.includes(expected)
+    ) {
+      throw new Error(
+        `Python Context dependency '${dependency.name}' must use the reviewed exact version.`,
+      );
+    }
+    return {
+      ...dependency,
+      purl: `pkg:pypi/${dependency.name}@${dependency.version}`,
+    };
+  });
+  return {
+    source: "modules/adapters/runtime/python/worker/requirements-context.txt",
+    supportedPython: ">=3.10 <3.15",
+    packages,
+  };
+}
+
 export function evaluateAuditReport(report, scope) {
   const vulnerabilities = report?.metadata?.vulnerabilities;
   if (!vulnerabilities || typeof vulnerabilities !== "object") {
@@ -275,6 +313,12 @@ export function runDependencySecurityCheck() {
       "utf8",
     ),
   );
+  const pythonContext = validatePythonContextDependencyInventory(
+    readFileSync(
+      "modules/adapters/runtime/python/worker/requirements-context.txt",
+      "utf8",
+    ),
+  );
 
   console.log(
     JSON.stringify(
@@ -286,6 +330,7 @@ export function runDependencySecurityCheck() {
         pythonParquet,
         pythonModelPlacement,
         pythonTextTraining,
+        pythonContext,
       },
       null,
       2,

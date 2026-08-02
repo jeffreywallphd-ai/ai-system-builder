@@ -534,6 +534,17 @@ describe("composeServerHost", () => {
     expect(source).toContain("classifyPythonRuntimeSupervisorLogLevel");
   });
 
+  it("wires the exact LanceDB ensure into default setup and explicit Context starts", () => {
+    const source = readFileSync(
+      resolve("modules/hosts/server/composition/composeServerHost.ts"),
+      "utf8",
+    );
+    expect(source).toContain("ensurePythonRuntimeContextDependencies");
+    expect(source).toContain("TaskType.CONTEXT_GENERATION");
+    expect(source).toContain("TaskType.CONTEXT_RETRIEVAL");
+    expect(source).toContain("control.reportProgress");
+  });
+
   it("resolves the server Python runtime worker directory from the repository root when launched from app workspace", () => {
     const workerDirectory = resolveServerPythonRuntimeWorkerDirectory({
       cwd: resolve("apps/server"),

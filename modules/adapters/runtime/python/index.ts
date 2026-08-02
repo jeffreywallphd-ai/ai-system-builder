@@ -4,6 +4,7 @@ export * from "./supervisor/createPythonRuntimeSupervisor";
 export * from "./protocol/pythonRuntimeHttpProtocol";
 export * from "./createPythonRuntimePort";
 export * from "./ensurePythonRuntimeWorkerDependencies";
+export * from "./ensurePythonRuntimeContextDependencies";
 export * from "./createPythonRuntimeTaskRegistryAdapter";
 export * from "./createPythonParquetDatasetReviewAdapter";
 export * from "./context-management/createPythonContextArtifactRuntimeAdapter";

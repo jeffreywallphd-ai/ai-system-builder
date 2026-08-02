@@ -20,6 +20,12 @@ Introduce a generic **Runtime Installer** abstraction.
 - Shared runtime readiness contracts and the application readiness service may expose host-owned capability availability derived partly from installer status, but installer contracts remain the source of truth for install/discovery/repair/update status.
 - The current Git installer adapter implements clone/fetch/checkout/update/status/repair-safe behavior for Git-backed runtime installs.
 - The current ComfyUI installer adapter composes the generic Git installer, applies ComfyUI defaults, and manages Python dependency/finalization checks outside UI code and image-generation contracts.
+- The managed Python adapter owns one bounded package-manager dependency stage
+  for Context LanceDB. It uses a repository-owned exact requirements file,
+  fixed arguments, supported-host checks, an asynchronous one-flight
+  probe/install/re-probe, and sanitized task progress. Normal runtime setup and
+  explicit Context starts may invoke it; passive readiness and task reads may
+  not. This does not add a user-configurable generic package-manager source.
 
 ## Layering
 
@@ -85,6 +91,9 @@ Installer request/result/status flows may include:
 - Repair/update behavior must be explicit (opt-in), not implicit.
 - Force-repair for unmanaged non-empty directories must remain non-destructive and may fail safely until an explicit safe strategy is designed.
 - CUDA torch dependency installation may use a user-configured PyTorch wheel index URL, but it must stay inside the managed Python dependency stage and must not require UI code to run installer commands directly.
+- LanceDB installation accepts no caller-supplied package, version, index, URL,
+  or command arguments. It runs only against the host-selected managed Python
+  command and packaged `requirements-context.txt`.
 - DirectML dependency repair is scoped to managed Python dependencies; it should not implicitly mutate repository refs or delete runtime/model files.
 
 ## ComfyUI DirectML Startup Repair Behavior
@@ -101,7 +110,11 @@ Installer request/result/status flows may include:
 - ComfyUI install/status/repair behavior is implemented as runtime-specific adapter composition over the generic Git installer.
 - Desktop and server host composition may expose ComfyUI install status, explicit repair, and installer-before-start behavior through host-owned runtime wiring.
 - UI and feature use cases must not run installer commands directly; they may only call application/transport/host seams that preserve installer boundaries.
-- Archive, local-path, package-manager, marketplace/package registry, public runtime distribution, and destructive unmanaged-directory repair remain outside the current implemented source set.
+- Archive, local-path, generic/user-configurable package-manager,
+  marketplace/package registry, public runtime distribution, and destructive
+  unmanaged-directory repair remain outside the current implemented source set.
+  The fixed Context dependency stage above is adapter-specific and is not a new
+  generic installer source.
 
 ## Metadata Persistence
 

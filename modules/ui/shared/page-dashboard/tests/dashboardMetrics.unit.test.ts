@@ -162,8 +162,8 @@ describe("page dashboard metrics", () => {
       listArtifacts: async () => [
         {
           artifactFamily: "structured-data",
-          storageKey: "generated/context/support.sqlite3",
-          mediaType: "application/vnd.ai-system-builder.rag-database+sqlite3",
+          storageKey: "generated/context/support.lancedb.zip",
+          mediaType: "application/vnd.ai-system-builder.rag-database+lancedb+zip",
         },
         {
           artifactFamily: "archive",

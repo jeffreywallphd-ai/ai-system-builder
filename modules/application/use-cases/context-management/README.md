@@ -24,6 +24,12 @@ cancellation, or terminal validation failure.
 `ContextBrowserUseCases` owns the saved lifecycle: workspace catalog listing,
 exact-byte and digest verification, safe runtime inspection, source freshness,
 bounded RAG test queries, source-only rebuild, and registered-artifact deletion.
+Each RAG database remains one cataloged artifact blob with media type
+`application/vnd.ai-system-builder.rag-database+lancedb+zip`; its embedded
+database directory is internal package structure, never a storage root or
+global singleton. The pre-release SQLite RAG format is rejected and is not
+migrated. Unrelated application and system-runtime SQLite persistence is outside
+this feature boundary.
 `ContextManagementCommandUseCase` is the single typed facade used by desktop
 IPC and server API clients, including bounded generation/retrieval task lists.
 

@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-import sqlite3
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -334,20 +333,21 @@ class ContextGenerationTests(unittest.TestCase):
             self.assertTrue(result["sourceInspections"][0]["alreadyChunked"])
             self.assertEqual(result["manifest"]["sources"][0]["chunkingMode"], "persisted")
             database = root / result["output"]["outputHandle"]
-            connection = sqlite3.connect(database)
-            try:
-                stored = connection.execute(
-                    "SELECT ordinal, citation_json, embedding_dimensions "
-                    "FROM chunks ORDER BY ordinal"
-                ).fetchall()
-            finally:
-                connection.close()
-            self.assertEqual(len(stored), 2)
-            first_citation = json.loads(stored[0][1])
-            self.assertEqual(first_citation["sourceArtifactId"], "artifact.prepared")
-            self.assertEqual(first_citation["sourceDigest"], _digest(source_bytes))
-            self.assertEqual(first_citation["chunkIndex"], 7)
-            self.assertEqual(stored[0][2], 3)
+            self.assertTrue(database.name.endswith(".lancedb.zip"))
+            with ZipFile(database) as archive:
+                names = archive.namelist()
+                self.assertIn("manifest.json", names)
+                self.assertTrue(
+                    any(name.startswith("database/") for name in names)
+                )
+                self.assertEqual(len(names), len(set(names)))
+                self.assertTrue(
+                    all(info.date_time == (1980, 1, 1, 0, 0, 0)
+                        for info in archive.infolist())
+                )
+                manifest = json.loads(archive.read("manifest.json"))
+            self.assertEqual(manifest["embedding"]["dimensions"], 3)
+            self.assertEqual(manifest, result["manifest"])
             embedding_updates = [
                 item for item in progress if item.get("phase") == "embedding"
             ]

@@ -14,6 +14,7 @@ import type {
   StartRuntimeTaskResult,
   RuntimeTaskListRequest,
   RuntimeTaskListResult,
+  RuntimeTaskProgress,
 } from "../../../contracts/runtime";
 import { isWorkspaceId } from "../../../contracts/workspace";
 import { TaskType } from "../../../contracts/runtime";
@@ -163,7 +164,12 @@ function mapProgress(
 }
 
 export interface CreatePythonRuntimeTaskRegistryAdapterOptions {
-  ensureRuntimeReady?: (request: StartRuntimeTaskRequest) => Promise<void>;
+  ensureRuntimeReady?: (
+    request: StartRuntimeTaskRequest,
+    control: {
+      reportProgress(progress: RuntimeTaskProgress): void;
+    },
+  ) => Promise<void>;
 }
 
 export type PythonRuntimeTaskRegistryAdapter = RuntimeTaskRegistryPort &
@@ -175,6 +181,7 @@ export function createPythonRuntimeTaskRegistryAdapter(
 ): PythonRuntimeTaskRegistryAdapter {
   const trackedTasks = new Map<string, RuntimeTaskRecord>();
   const completedDownloads = new Map<string, CompletedModelDownload>();
+  const preparingTasks = new Set<string>();
   const maximumTrackedTasks = 256;
   const rememberTask = (record: RuntimeTaskRecord): RuntimeTaskRecord => {
     trackedTasks.delete(record.requestId);
@@ -198,26 +205,118 @@ export function createPythonRuntimeTaskRegistryAdapter(
       if (request.taskType === TaskType.MODEL_PUBLISHING) {
         throw new Error("model publishing runtime task is not implemented");
       }
+      const requestId = request.requestId ?? randomUUID();
+      const isContextTask =
+        request.taskType === TaskType.CONTEXT_GENERATION ||
+        request.taskType === TaskType.CONTEXT_RETRIEVAL;
       try {
-        await options.ensureRuntimeReady?.(request);
+        await options.ensureRuntimeReady?.(
+          { ...request, requestId },
+          {
+            reportProgress(progress) {
+              preparingTasks.add(requestId);
+              const previous = trackedTasks.get(requestId);
+              const now = new Date().toISOString();
+              rememberTask({
+                requestId,
+                workspaceId: request.workspaceId,
+                taskType: request.taskType,
+                status: "running",
+                concurrencyClass: "io",
+                progress: {
+                  message: sanitizePublicText(progress.message),
+                  current: finiteNonNegative(progress.current),
+                  total: finiteNonNegative(progress.total),
+                  unit: sanitizePublicText(progress.unit, 32),
+                  percent:
+                    progress.percent === undefined
+                      ? undefined
+                      : Math.min(finiteNonNegative(progress.percent) ?? 0, 100),
+                },
+                metadata: request.metadata,
+                queuedAt: previous?.queuedAt ?? now,
+                startedAt: previous?.startedAt ?? now,
+                updatedAt: now,
+              });
+            },
+          },
+        );
       } catch (error) {
+        preparingTasks.delete(requestId);
+        if (isContextTask) {
+          const now = new Date().toISOString();
+          const previous = trackedTasks.get(requestId);
+          rememberTask({
+            requestId,
+            workspaceId: request.workspaceId,
+            taskType: request.taskType,
+            status: "failed",
+            concurrencyClass: previous?.concurrencyClass ?? "io",
+            progress: previous?.progress,
+            error: {
+              code: "python_runtime_context_setup_failed",
+              message:
+                "The local vector database could not be prepared. Check runtime setup and retry.",
+              retryable: true,
+            },
+            metadata: request.metadata,
+            queuedAt: previous?.queuedAt ?? now,
+            startedAt: previous?.startedAt,
+            updatedAt: now,
+            completedAt: now,
+          });
+          throw new Error(
+            "Python runtime failed to prepare Context dependencies before starting task.",
+          );
+        }
         const reason = error instanceof Error ? error.message : String(error);
         throw new Error(
           `Python runtime failed to start or become ready before starting task: ${reason}`,
         );
       }
-      const requestId = request.requestId ?? randomUUID();
       const pythonTaskType = toPythonTaskType(request.taskType);
-      const result = await runtimePort.startTask({
-        requestId,
-        taskType: pythonTaskType,
-        payload: request.payload,
-        metadata: {
-          ...(request.metadata ?? {}),
-          workspaceId: request.workspaceId,
-        },
-        timeoutMs: resolvePythonRuntimeTaskTimeoutMs(pythonTaskType),
-      });
+      let result: StartRuntimeTaskResult;
+      try {
+        result = await runtimePort.startTask({
+          requestId,
+          taskType: pythonTaskType,
+          payload: request.payload,
+          metadata: {
+            ...(request.metadata ?? {}),
+            workspaceId: request.workspaceId,
+          },
+          timeoutMs: resolvePythonRuntimeTaskTimeoutMs(pythonTaskType),
+        });
+      } catch {
+        preparingTasks.delete(requestId);
+        if (isContextTask) {
+          const now = new Date().toISOString();
+          const previous = trackedTasks.get(requestId);
+          rememberTask({
+            requestId,
+            workspaceId: request.workspaceId,
+            taskType: request.taskType,
+            status: "failed",
+            concurrencyClass: previous?.concurrencyClass ?? "io",
+            progress: previous?.progress,
+            error: {
+              code: "python_runtime_context_start_failed",
+              message:
+                "Context work could not be started after runtime setup. Retry the operation.",
+              retryable: true,
+            },
+            metadata: request.metadata,
+            queuedAt: previous?.queuedAt ?? now,
+            startedAt: previous?.startedAt,
+            updatedAt: now,
+            completedAt: now,
+          });
+          throw new Error("Python runtime could not start Context work.");
+        }
+        throw new Error("Python runtime task could not be started.");
+      }
+      preparingTasks.delete(requestId);
+      const preflight = trackedTasks.get(requestId);
       rememberTask({
         requestId: result.requestId,
         workspaceId: request.workspaceId,
@@ -227,11 +326,14 @@ export function createPythonRuntimeTaskRegistryAdapter(
           request.concurrencyClass ??
           (request.taskType === TaskType.MODEL_DOWNLOAD ? "io" : "unknown"),
         metadata: result.metadata,
-        queuedAt: new Date().toISOString(),
+        progress: preflight?.progress,
+        queuedAt: preflight?.queuedAt ?? new Date().toISOString(),
       });
       return result;
     },
     async getTaskStatus(requestId: string): Promise<RuntimeTaskStatusRecord> {
+      const preparing = trackedTasks.get(requestId);
+      if (preparingTasks.has(requestId) && preparing) return preparing;
       const status = await runtimePort.readTaskStatus(requestId);
       if (status.status === "unknown" && !status.taskType) {
         return {

@@ -1,5 +1,5 @@
 export const CONTEXT_RAG_DATABASE_MEDIA_TYPE =
-  "application/vnd.ai-system-builder.rag-database+sqlite3";
+  "application/vnd.ai-system-builder.rag-database+lancedb+zip";
 
 export const CONTEXT_MARKDOWN_PACK_MEDIA_TYPE =
   "application/vnd.ai-system-builder.markdown-context-pack+zip";

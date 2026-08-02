@@ -19,20 +19,19 @@ const PYTHON_RUNTIME_DECODER_MAX_VERSION_EXCLUSIVE = [3, 14] as const;
 const PYTHON_RUNTIME_VERSION_PROBE =
   'import json,sys; print(json.dumps({"major":sys.version_info[0],"minor":sys.version_info[1],"executable":sys.executable}))';
 
-type PythonProbeResult = Pick<
-  SpawnSyncReturns<string>,
-  "status" | "stdout"
->;
+type PythonProbeResult = Pick<SpawnSyncReturns<string>, "status" | "stdout">;
 
-function isSupportedDecoderPythonVersion(major: number, minor: number): boolean {
+function isSupportedDecoderPythonVersion(
+  major: number,
+  minor: number,
+): boolean {
   const [minimumMajor, minimumMinor] = PYTHON_RUNTIME_DECODER_MIN_VERSION;
   const [maximumMajor, maximumMinor] =
     PYTHON_RUNTIME_DECODER_MAX_VERSION_EXCLUSIVE;
   return (
     (major > minimumMajor ||
       (major === minimumMajor && minor >= minimumMinor)) &&
-    (major < maximumMajor ||
-      (major === maximumMajor && minor < maximumMinor))
+    (major < maximumMajor || (major === maximumMajor && minor < maximumMinor))
   );
 }
 
@@ -40,7 +39,8 @@ function resolveSupportedPythonExecutable(
   result: PythonProbeResult,
   exists: (path: string) => boolean,
 ): string | undefined {
-  if (result.status !== 0 || typeof result.stdout !== "string") return undefined;
+  if (result.status !== 0 || typeof result.stdout !== "string")
+    return undefined;
   try {
     const value = JSON.parse(result.stdout.trim()) as Record<string, unknown>;
     const executable =
@@ -127,6 +127,12 @@ export interface DesktopPythonRuntimeFeature {
   };
   runtimePort: any;
   prepareModelTrainingEnvironment?: () => void;
+  prepareContextEnvironment?: (
+    onProgress?: (progress: {
+      readonly phase: "installing" | "installed";
+      readonly message: string;
+    }) => void,
+  ) => Promise<void>;
 }
 
 export function classifyPythonRuntimeStdioLogLevel(

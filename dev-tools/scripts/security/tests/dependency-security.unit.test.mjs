@@ -7,6 +7,7 @@ import test from "node:test";
 
 import {
   evaluateAuditReport,
+  validatePythonContextDependencyInventory,
   validatePythonDecoderDependencyInventory,
   validatePythonModelPlacementDependencyInventory,
   validatePythonParquetDependencyInventory,
@@ -333,6 +334,43 @@ test("Python text training retains the reviewed exact direct inventory", async (
     () =>
       validatePythonTextTrainingDependencyInventory(
         `${requirements}diffusers==0.39.0\n`,
+      ),
+    /unreviewed direct packages/,
+  );
+});
+
+test("Python Context retains the reviewed exact LanceDB inventory", async () => {
+  const requirements = await readFile(
+    "modules/adapters/runtime/python/worker/requirements-context.txt",
+    "utf8",
+  );
+  const inventory = validatePythonContextDependencyInventory(requirements);
+  assert.equal(inventory.supportedPython, ">=3.10 <3.15");
+  assert.deepEqual(inventory.packages, [
+    {
+      name: "lancedb",
+      version: "0.34.0",
+      license: "Apache-2.0",
+      purl: "pkg:pypi/lancedb@0.34.0",
+    },
+    {
+      name: "pyarrow",
+      version: "25.0.0",
+      license: "Apache-2.0",
+      purl: "pkg:pypi/pyarrow@25.0.0",
+    },
+  ]);
+  assert.throws(
+    () =>
+      validatePythonContextDependencyInventory(
+        requirements.replace("lancedb==0.34.0", "lancedb>=0.34.0"),
+      ),
+    /reviewed exact version/,
+  );
+  assert.throws(
+    () =>
+      validatePythonContextDependencyInventory(
+        `${requirements}requests==2.32.5\n`,
       ),
     /unreviewed direct packages/,
   );

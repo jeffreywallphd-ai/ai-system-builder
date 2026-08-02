@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,6 +16,10 @@ from modules.adapters.runtime.python.worker.tasks.context_generation import (
     PACK_MEDIA_TYPE,
     RAG_MEDIA_TYPE,
     generate_context_artifact,
+)
+from modules.adapters.runtime.python.worker.tasks.context_artifact_operation import (
+    _materialized_rag,
+    _validated_rag_table,
 )
 from modules.adapters.runtime.python.worker.tasks.constrained_json_decoder import (
     get_constrained_json_decoder_runtime_status,
@@ -196,7 +199,7 @@ class ContextGenerationAiEndToEndTests(unittest.TestCase):
         *,
         expected_chunking_mode: str,
         expected_chunk_count: int | None = None,
-    ) -> tuple[dict[str, object], list[tuple[object, ...]]]:
+    ) -> tuple[dict[str, object], list[dict[str, object]]]:
         output = result["output"]
         self.assertIsInstance(output, dict)
         assert isinstance(output, dict)
@@ -206,38 +209,27 @@ class ContextGenerationAiEndToEndTests(unittest.TestCase):
         self.assertGreater(database.stat().st_size, 0)
         self.assertEqual(output["digest"], _digest(database.read_bytes()))
 
-        connection = sqlite3.connect(database)
-        try:
-            self.assertEqual(
-                connection.execute("PRAGMA integrity_check").fetchone(),
-                ("ok",),
+        with _materialized_rag(database) as (database_path, manifest):
+            connection, table, chunks, dimensions = _validated_rag_table(
+                database_path, manifest
             )
-            manifest = json.loads(connection.execute(
-                "SELECT value FROM manifest WHERE key = 'artifact'"
-            ).fetchone()[0])
-            source_rows = connection.execute(
-                "SELECT chunk_count, chunking_mode FROM sources"
-            ).fetchall()
-            chunks = connection.execute(
-                "SELECT ordinal, text, citation_json, embedding, "
-                "embedding_dimensions FROM chunks ORDER BY ordinal"
-            ).fetchall()
-        finally:
-            connection.close()
+            del table
+            del connection
 
         self.assertEqual(manifest["kind"], "rag-database")
         self.assertEqual(manifest["embedding"]["modelId"], MODEL_ID)
-        self.assertEqual(source_rows[0][1], expected_chunking_mode)
-        self.assertEqual(source_rows[0][0], len(chunks))
+        self.assertEqual(
+            manifest["sources"][0]["chunkingMode"], expected_chunking_mode
+        )
+        self.assertEqual(manifest["sources"][0]["chunkCount"], len(chunks))
         self.assertGreater(len(chunks), 0)
         if expected_chunk_count is not None:
             self.assertEqual(len(chunks), expected_chunk_count)
-        for ordinal, text, citation_json, embedding, dimensions in chunks:
-            self.assertIsInstance(ordinal, int)
-            self.assertTrue(str(text).strip())
-            self.assertIsInstance(json.loads(citation_json), dict)
-            self.assertEqual(dimensions, 8)
-            self.assertEqual(len(embedding), dimensions * 4)
+        self.assertEqual(dimensions, 8)
+        for chunk in chunks:
+            self.assertIsInstance(chunk["ordinal"], int)
+            self.assertTrue(str(chunk["text"]).strip())
+            self.assertIsInstance(json.loads(chunk["citation_json"]), dict)
         return manifest, chunks
 
     def test_raw_markdown_creates_valid_rag_database_with_tiny_local_model(
@@ -288,7 +280,8 @@ class ContextGenerationAiEndToEndTests(unittest.TestCase):
             )
             self.assertEqual(manifest["sources"][0]["artifactId"], "artifact.release")
             self.assertTrue(any(
-                json.loads(chunk[2])["sourceArtifactId"] == "artifact.release"
+                json.loads(chunk["citation_json"])["sourceArtifactId"]
+                == "artifact.release"
                 for chunk in chunks
             ))
 
@@ -359,7 +352,7 @@ class ContextGenerationAiEndToEndTests(unittest.TestCase):
                 expected_chunk_count=2,
             )
             self.assertEqual(manifest["sources"][0]["artifactId"], "artifact.prepared")
-            citations = [json.loads(chunk[2]) for chunk in chunks]
+            citations = [json.loads(chunk["citation_json"]) for chunk in chunks]
             self.assertEqual(
                 [citation["chunkIndex"] for citation in citations],
                 [7, 8],

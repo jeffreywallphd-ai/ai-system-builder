@@ -57,12 +57,11 @@ describe("createPythonRuntimeTaskRegistryAdapter", () => {
     });
 
     expect(callOrder).toEqual(["ensureRuntimeReady", "startTask"]);
-    expect(ensureRuntimeReady).toHaveBeenCalledWith(
-      expect.objectContaining({
-        requestId: "req-ensure",
-        taskType: TaskType.DATASET_PREPARATION,
-      }),
-    );
+    expect(ensureRuntimeReady).toHaveBeenCalledTimes(1);
+    expect(ensureRuntimeReady.mock.calls[0]?.[0]).toMatchObject({
+      requestId: "req-ensure",
+      taskType: TaskType.DATASET_PREPARATION,
+    });
   });
 
   it("does not start task when ensureRuntimeReady fails", async () => {
@@ -94,6 +93,94 @@ describe("createPythonRuntimeTaskRegistryAdapter", () => {
       }),
     ).rejects.toThrow("Python runtime failed to start or become ready");
     expect(runtimePort.startTask).not.toHaveBeenCalled();
+  });
+
+  it("lists sanitized Context dependency installation progress before worker acceptance", async () => {
+    let releaseEnsure!: () => void;
+    const ensureGate = new Promise<void>((resolve) => {
+      releaseEnsure = resolve;
+    });
+    const runtimePort: any = {
+      startTask: testDouble.fn(async (request) => ({
+        requestId: request.requestId,
+        status: "queued",
+      })),
+      readTaskStatus: testDouble.fn(),
+      cancelTask: testDouble.fn(),
+    };
+    const adapter = createPythonRuntimeTaskRegistryAdapter(runtimePort, {
+      async ensureRuntimeReady(_request, control) {
+        control.reportProgress({
+          message: "Installing C:\\Users\\private\\lancedb token=secret",
+        });
+        await ensureGate;
+      },
+    });
+
+    const start = adapter.startTask({
+      workspaceId,
+      requestId: "context-install",
+      taskType: TaskType.CONTEXT_GENERATION,
+      payload: { kind: "rag-database" },
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    const listed = await adapter.listTasks({
+      workspaceId,
+      taskTypes: [TaskType.CONTEXT_GENERATION],
+      includeCompleted: true,
+    });
+
+    expect(listed.tasks.length).toBe(1);
+    expect(listed.tasks[0]).toMatchObject({
+      requestId: "context-install",
+      status: "running",
+      progress: { message: expect.stringMatching(/\[local path\]/u) },
+    });
+    expect(JSON.stringify(listed)).not.toContain("secret");
+    expect(runtimePort.startTask).not.toHaveBeenCalled();
+    releaseEnsure();
+    await start;
+    expect(runtimePort.startTask).toHaveBeenCalledTimes(1);
+  });
+
+  it("retains a sanitized retryable Context setup failure for notifications", async () => {
+    const runtimePort: any = {
+      startTask: testDouble.fn(),
+      readTaskStatus: testDouble.fn(),
+      cancelTask: testDouble.fn(),
+    };
+    const adapter = createPythonRuntimeTaskRegistryAdapter(runtimePort, {
+      async ensureRuntimeReady(_request, control) {
+        control.reportProgress({
+          message: "Installing local vector database.",
+        });
+        throw new Error("C:\\private\\runtime token=secret");
+      },
+    });
+
+    await expect(
+      adapter.startTask({
+        workspaceId,
+        requestId: "context-install-failed",
+        taskType: TaskType.CONTEXT_GENERATION,
+        payload: { kind: "rag-database" },
+      }),
+    ).rejects.toThrow("Python runtime failed to prepare Context dependencies");
+    const listed = await adapter.listTasks({
+      workspaceId,
+      taskTypes: [TaskType.CONTEXT_GENERATION],
+      includeCompleted: true,
+    });
+    expect(listed.tasks[0]).toMatchObject({
+      requestId: "context-install-failed",
+      status: "failed",
+      error: {
+        code: "python_runtime_context_setup_failed",
+        retryable: true,
+      },
+    });
+    expect(JSON.stringify(listed)).not.toContain("private");
+    expect(JSON.stringify(listed)).not.toContain("secret");
   });
 
   it("does not call ensureRuntimeReady when reading task status", async () => {

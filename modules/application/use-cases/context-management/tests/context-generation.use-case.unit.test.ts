@@ -48,7 +48,7 @@ function createHarness(options?: {
   const sourceBytes = new TextEncoder().encode(
     "# Releases\n\nEvery release requires verification.",
   );
-  const outputBytes = new TextEncoder().encode("bounded sqlite artifact");
+  const outputBytes = new TextEncoder().encode("bounded lancedb artifact");
   let runtimeRequest: ContextGenerationTaskRequest | undefined;
   let runtimeDirectory: string | undefined;
   const stored: Array<any> = [];
@@ -63,7 +63,7 @@ function createHarness(options?: {
       runtimeRequest = request.payload;
       runtimeDirectory = runtimeRequest!.runtime.runtimeWorkingDirectory;
       await writeFile(
-        join(runtimeDirectory, "Release-knowledge.sqlite3"),
+        join(runtimeDirectory, "Release-knowledge.lancedb.zip"),
         outputBytes,
       );
       return {
@@ -84,8 +84,8 @@ function createHarness(options?: {
         concurrencyClass: "cpu-heavy",
         data: {
           output: {
-            name: "Release-knowledge.sqlite3",
-            outputHandle: "Release-knowledge.sqlite3",
+            name: "Release-knowledge.lancedb.zip",
+            outputHandle: "Release-knowledge.lancedb.zip",
             mediaType: CONTEXT_RAG_DATABASE_MEDIA_TYPE,
             sizeBytes: outputBytes.byteLength,
             digest: outputDigest,
@@ -298,7 +298,7 @@ describe("ContextGenerationUseCase", () => {
         state: "saved",
         savedArtifact: {
           artifactId:
-            "generated/context/context-artifact-1/Release-knowledge.sqlite3",
+            "generated/context/context-artifact-1/Release-knowledge.lancedb.zip",
           name: "Release knowledge",
           mediaType: CONTEXT_RAG_DATABASE_MEDIA_TYPE,
         },
@@ -369,7 +369,7 @@ describe("ContextGenerationUseCase", () => {
       error: { code: "internal", message: "catalog unavailable" },
     });
     expect(harness.deleted).toEqual([
-      "generated/context/context-artifact-1/Release-knowledge.sqlite3",
+      "generated/context/context-artifact-1/Release-knowledge.lancedb.zip",
     ]);
   });
 
@@ -388,10 +388,10 @@ describe("ContextGenerationUseCase", () => {
       error: { code: "internal", message: "binding unavailable" },
     });
     expect(harness.deletedCatalogRecords).toEqual([
-      "generated/context/context-artifact-1/Release-knowledge.sqlite3",
+      "generated/context/context-artifact-1/Release-knowledge.lancedb.zip",
     ]);
     expect(harness.deleted).toEqual([
-      "generated/context/context-artifact-1/Release-knowledge.sqlite3",
+      "generated/context/context-artifact-1/Release-knowledge.lancedb.zip",
     ]);
   });
 

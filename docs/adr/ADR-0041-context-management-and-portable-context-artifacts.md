@@ -53,9 +53,11 @@ credentials, or local paths.
   row, field, source span, page, and original chunk index are preserved where
   present. Missing or inconsistent evidence uses normal bounded extraction
   instead of claiming persisted lineage.
-- RAG generation materializes a SQLite artifact containing manifest, source,
-  chunk, citation, and float-vector records. Embedding models use the managed
-  local Transformers runtime with network access disabled during generation.
+- RAG generation materializes one portable LanceDB package. The ZIP package
+  contains a schema-versioned `manifest.json` and one embedded `database/`
+  directory with a single `chunks` table containing ordered text, citation JSON,
+  and fixed-size float32 vectors. Embedding models use the managed local
+  Transformers runtime with network access disabled during generation.
 - Markdown context packs are ZIP artifacts with fixed members. Manual mode
   validates and preserves exact Markdown in `context.md`. Source mode
   semantically chunks, groups, and cleans selected material, then either keeps
@@ -93,8 +95,10 @@ credentials, or local paths.
 ### Negative
 
 - Source and output bytes are hashed more than once at trust-boundary changes.
-- SQLite vectors and Markdown source chunks duplicate selected source content by
-  design and therefore inherit its access and retention requirements.
+- LanceDB vectors and Markdown source chunks duplicate selected source content
+  by design and therefore inherit its access and retention requirements.
+- A portable LanceDB package adds bounded packaging and private extraction work,
+  and the embedded database requires an exact managed native Python dependency.
 - Record-last compensation cannot provide a distributed transaction if a
   backing store is externally unavailable; failed cleanup remains an
   operational reconciliation concern.
@@ -103,11 +107,13 @@ credentials, or local paths.
 
 ## Compatibility and recovery
 
-The change is additive. Existing artifacts and datasets are unchanged. Rollback
-may stop advertising the Context task and remove the Context navigation without
-rewriting saved artifacts. Private staged output is always disposable. Saved
-context artifacts remain ordinary catalog objects and can be deleted through
-the existing artifact lifecycle.
+Unrelated application SQLite persistence, system-runtime SQLite databases,
+datasets, and Markdown context packs are unchanged. The pre-release SQLite RAG
+format is intentionally unsupported and has no migration path because there are
+no deployed users. Rollback may stop advertising the Context task and remove
+the Context navigation without rewriting saved LanceDB packages. Private staged
+output is always disposable. Saved context artifacts remain ordinary catalog
+objects and can be deleted through the existing artifact lifecycle.
 
 > AI documentation reminder: when behavior in this area changes, update the
 > related ADRs, architecture docs, context packs, threat model, and README files

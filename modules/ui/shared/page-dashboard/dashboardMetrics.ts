@@ -215,7 +215,7 @@ export async function loadPageDashboardMetrics(
         value: artifacts.filter(
           (artifact) =>
             artifact.mediaType ===
-            "application/vnd.ai-system-builder.rag-database+sqlite3",
+            "application/vnd.ai-system-builder.rag-database+lancedb+zip",
         ).length,
       },
       {

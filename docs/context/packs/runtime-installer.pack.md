@@ -9,6 +9,7 @@ Include this pack when prompts involve:
 - runtime installer contracts/ports/adapters
 - ComfyUI install planning as an adapter concern
 - Git-based runtime install source modeling
+- fixed managed Python dependency installation before explicit Context work
 
 ## Installer Architecture
 
@@ -37,6 +38,9 @@ Include this pack when prompts involve:
 - Do not embed installer logic in feature use cases beyond port orchestration.
 - Do not hardcode ComfyUI-specific logic into generic installer contracts/ports.
 - Keep installation strategy details in adapter layer.
+- The Context LanceDB stage is adapter-specific: it accepts no caller package,
+  version, index, URL, or command arguments; normal setup and explicit Context
+  starts may run it, while passive reads may not.
 
 ## Canonical References
 
@@ -53,6 +57,9 @@ Include this pack when prompts involve:
 ## Implemented Installer Surfaces
 
 - A generic Git runtime installer adapter exists in the adapter layer.
+- The managed Python adapter has a separate fixed package-manager stage for
+  exact `lancedb==0.34.0` and `pyarrow==25.0.0`. It is asynchronous,
+  one-flight, bounded, and re-verifies imports and versions after installation.
 - The Git installer is generic and not ComfyUI-specific.
 - The installer writes managed install metadata (`.ai-system-builder-runtime-install.json` by default).
 - The installer refuses to mutate non-empty unmanaged install directories.

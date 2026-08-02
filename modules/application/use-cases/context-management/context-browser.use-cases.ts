@@ -606,7 +606,7 @@ function toBrowserItem(
   ) {
     return undefined;
   }
-  const extension = kind === "rag-database" ? ".sqlite3" : ".zip";
+  const extension = kind === "rag-database" ? ".lancedb.zip" : ".zip";
   const originalName = record.originalName ?? record.storageKey;
   const name = originalName.toLowerCase().endsWith(extension)
     ? originalName.slice(0, -extension.length)

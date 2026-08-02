@@ -4,10 +4,7 @@ import {
   TaskPowerLifecycleService,
 } from "../../../application/services/runtime";
 import { createElectronPowerSuspensionBlocker } from "../../../adapters/runtime/electron";
-import {
-  TaskType,
-  type RuntimeCapabilityId,
-} from "../../../contracts/runtime";
+import { TaskType, type RuntimeCapabilityId } from "../../../contracts/runtime";
 import { createDesktopRuntimeTaskRegistry } from "./composeDesktopRuntimeTaskRegistry";
 
 export interface ComposeDesktopRuntimeTaskFeatureOptions {
@@ -50,7 +47,16 @@ export async function composeDesktopRuntimeTaskFeature(
   const pythonRuntimeTaskRegistry = createPythonRuntimeTaskRegistryAdapter(
     { ...options.pythonRuntimeFoundation.runtimePort },
     {
-      async ensureRuntimeReady(request) {
+      async ensureRuntimeReady(request, control) {
+        if (
+          request.taskType === TaskType.CONTEXT_GENERATION ||
+          request.taskType === TaskType.CONTEXT_RETRIEVAL
+        ) {
+          await options.pythonRuntimeFoundation.prepareContextEnvironment?.(
+            (progress: { readonly message: string }) =>
+              control.reportProgress({ message: progress.message }),
+          );
+        }
         await options.pythonRuntimeFoundation.supervisor.start();
         if (request.taskType === TaskType.MODEL_TRAINING) {
           options.pythonRuntimeFoundation.prepareModelTrainingEnvironment?.();

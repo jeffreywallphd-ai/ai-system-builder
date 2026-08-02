@@ -28,7 +28,7 @@ Foundation for the managed Python sidecar runtime adapter:
   `ModelDownloadCompletionPort`; public task/API/IPC records never contain the
   handle or resolved path.
 - Context generation maps to `generate-context-artifact`; saved-source
-  inspection, read-only SQLite/ZIP verification, and bounded RAG test queries
+  inspection, bounded LanceDB/context-pack verification, and RAG test queries
   map to `context-artifact-operation`. Exact bytes are privately staged and
   hashed by the host. The adapter returns only safe manifests, topic summaries,
   source readiness, excerpts, scores, and citations; it never returns stored
@@ -64,6 +64,15 @@ Foundation for the managed Python sidecar runtime adapter:
   returns only bounded manifests, summaries, lineage, and output evidence.
   Source text, prompts, embedding vectors, model output, and runtime paths stay
   behind the adapter boundary.
+- LanceDB is an exact managed Context dependency, not a UI or worker-owned
+  installer. Normal managed-runtime setup ensures it before process startup.
+  Explicit Context generation, artifact inspection, and query starts repeat the
+  same idempotent asynchronous probe/install/re-probe so a removed or mismatched
+  install is repaired before dispatch. Concurrent calls share one in-flight
+  ensure. Only explicit starts can install; readiness, capability, task status,
+  task list, and Context Browser reads remain no-install operations. Installation
+  activity is projected through the existing workspace task list with fixed
+  path-free messages; package-manager output remains private.
 - Parquet dataset review binds every runtime task to the authenticated
   workspace, stages bytes only in a private temporary directory, returns at
   most 50 sanitized row values per read, and requires the exact canonical row

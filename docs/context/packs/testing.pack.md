@@ -37,7 +37,8 @@
 - Add host/transport integration tests for wiring, composition, delegation, and safe error mapping.
 - Keep tests deterministic, CI-suitable, and non-flaky.
 - Keep Context generation AI E2E coverage download-free: generate a tiny local
-  embedding model, use bounded source fixtures, validate RAG SQLite integrity
+  embedding model, use bounded source fixtures, validate LanceDB package,
+  exact table schema, vector/citation lineage, and query integrity
   and lineage, then use a generated tiny constrained local summary model to
   validate fixed-member Context Pack Markdown structure on supported Python.
 - Add regression tests for bug fixes when practical in the layer where the defect should be caught.

@@ -19,10 +19,14 @@ import {
   createPythonRuntimeTaskRegistryAdapter,
   createPythonParquetDatasetReviewAdapter,
   createPythonContextArtifactRuntimeAdapter,
+  ensurePythonRuntimeContextDependencies,
   ensurePythonRuntimeWorkerDependencies,
   resolvePythonRuntimeLoopbackEndpoint,
 } from "../../../adapters/runtime/python";
-import { PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON } from "../../../contracts/runtime";
+import {
+  PYTHON_RUNTIME_CAPABILITY_DATASET_PREPARATION_CONSTRAINED_JSON,
+  TaskType,
+} from "../../../contracts/runtime";
 import { createGitRuntimeInstallerAdapter } from "../../../adapters/runtime/installer/git/createGitRuntimeInstallerAdapter";
 import { createLocalApplicationSettingsAdapter } from "../../../adapters/persistence/settings";
 import { createLocalModelRegistryAdapter } from "../../../adapters/persistence/model";
@@ -1808,7 +1812,12 @@ export function composeServerHost(
           args: pythonRuntimeArgs,
           cwd: pythonRuntimeWorkerDirectory,
           env: pythonRuntimeEnvironment,
-          prepareRuntimeEnvironment(context) {
+          async prepareRuntimeEnvironment(context) {
+            await ensurePythonRuntimeContextDependencies({
+              command: context.command,
+              cwd: context.cwd,
+              env: context.env,
+            });
             ensurePythonRuntimeWorkerDependencies({
               command: context.command,
               cwd: context.cwd,
@@ -1845,7 +1854,21 @@ export function composeServerHost(
       const pythonRuntimeTaskRegistry = createPythonRuntimeTaskRegistryAdapter(
         pythonRuntimeFoundation.runtimePort,
         {
-          ensureRuntimeReady: () => pythonRuntimeFoundation.supervisor.start(),
+          async ensureRuntimeReady(request, control) {
+            if (
+              request.taskType === TaskType.CONTEXT_GENERATION ||
+              request.taskType === TaskType.CONTEXT_RETRIEVAL
+            ) {
+              await ensurePythonRuntimeContextDependencies({
+                command: pythonRuntimeCommand,
+                cwd: pythonRuntimeWorkerDirectory,
+                env: pythonRuntimeEnvironment,
+                onProgress: (progress) =>
+                  control.reportProgress({ message: progress.message }),
+              });
+            }
+            await pythonRuntimeFoundation.supervisor.start();
+          },
         },
       );
       const runtimeTaskRegistry = createRuntimeTaskRegistryRouter({

@@ -80,6 +80,13 @@ drain the database pool idempotently. Deployment templates live under
 - Server composition generates and rotates the worker bearer credential for
   every spawn. Operators must not set, persist, or expose
   `PYTHON_RUNTIME_AUTH_TOKEN`; it is child-only launch state.
+- The packaged Python worker owns the exact Context dependency declaration in
+  `requirements-context.txt`. Normal managed-runtime setup installs it, and an
+  explicit RAG create or query request performs the same asynchronous,
+  one-flight check before starting work.
+- Context dependency installation runs outside the server event loop and
+  reports fixed, sanitized task progress such as local vector-database
+  installation. Passive task and runtime status reads never install packages.
 
 ## Security modes and HTTPS startup
 
@@ -147,7 +154,6 @@ npm run dev:server
 
 If you generate certs inside this repo, keep them out of git (for example under an ignored `certs/` directory).
 
-
 ### Dev HTTPS in `disabled-dev` (restart required)
 
 Default `npm run dev:server` starts in `disabled-dev` with HTTP and no auth.
@@ -178,7 +184,6 @@ npm run dev:server
 
 Detailed checklist: `docs/security/manual-smoke-test.md`.
 
-
 ### `SERVER_TOKEN_HASH_SECRET`
 
 - Used to derive stable token hashes for credential lookup; this value is sensitive.
@@ -207,8 +212,6 @@ $bytes = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Fi
 - It does **not** switch a running listener between HTTP and HTTPS.
 - Do not use this toggle as production security.
 
-
 - Never commit generated private keys or token hash secrets; do not print secret values in logs.
-
 
 No automatic trust-store installation is performed. Trust installation is manual; browser/mobile trust limitations apply. Do not commit private keys or SERVER_TOKEN_HASH_SECRET.

@@ -93,17 +93,27 @@ publishes authoritative bounded task progress while the tabs are open or
 closed. Save, discard, and delete publish terminal outcomes; validation,
 blocking diagnostics, loading, empty results, and routine reads remain inline.
 
+LanceDB is supplied by the host-owned managed Python dependency boundary.
+Normal runtime setup installs the exact reviewed package by default. Before an
+explicit RAG generation, saved-artifact inspection, or query, desktop and server
+repeat one asynchronous idempotent probe/install/re-probe. Concurrent requests
+share one in-flight ensure. If installation is required, the same workspace task
+activity reports a fixed **Installing the local vector database** message,
+completion, or a sanitized retryable failure before normal Context progress
+continues. Context list, passive detail metadata, readiness, capability, task
+status, and notification polling never install or repair dependencies.
+
 Saved artifacts are accessed through `ContextBrowserUseCases`. List is derived
 only from the authorized workspace artifact catalog and the two context media
 types. Detail re-retrieves exact bounded bytes, verifies the catalog digest,
-and asks the managed runtime to parse the SQLite or ZIP into a safe bounded
-projection. Rebuild reconstructs a generation command only when every source
+and asks the managed runtime to parse the LanceDB package or context-pack ZIP
+into a safe bounded projection. Rebuild reconstructs a generation command only when every source
 remains available and no manual text would be lost. Delete delegates to the
 registered-artifact deletion lifecycle.
 
 RAG test queries use the embedding model recorded in the verified manifest,
 rank vectors inside the managed runtime, and return only bounded excerpts,
-scores, and exact citations. Stored vectors and arbitrary SQLite rows never
+scores, and exact citations. Stored vectors and arbitrary LanceDB columns never
 cross the runtime boundary.
 
 Desktop and server hosts compose the same application facade. Electron exposes
@@ -112,16 +122,36 @@ The server exposes authenticated read and write routes with `artifact:read`
 and `artifact:write` policy scopes. Both transports inject authoritative actor
 context and preserve opaque cross-workspace not-found behavior.
 
+The desktop Context page renders the shared sanitized Python runtime monitor
+beneath RAG Databases, Context Packs, and Context Browser. It loads bounded
+runtime status and activity with the page and keeps start, stop, restart,
+refresh, and clear as explicit user actions. Source-inspection projections
+always include `textFields`; document sources use an empty array so the typed
+runtime boundary does not reject an otherwise valid inspection result.
+
 ## Materialized artifacts
 
-### RAG SQLite
+### RAG LanceDB package
 
 The RAG media type is
-`application/vnd.ai-system-builder.rag-database+sqlite3`. The database has a
-schema-versioned manifest, exact sources, ordered chunks, JSON citations,
-float32 embedding bytes, and explicit embedding dimensions. Embedding vectors
-are not returned in previews, task metadata, catalog records, or diagnostics.
-Generation uses a selected local Transformers model with
+`application/vnd.ai-system-builder.rag-database+lancedb+zip`. One saved artifact
+contains `manifest.json` and a `database/` subtree with exactly one `chunks`
+table. Its non-null schema is `id`, `ordinal`, `text`, `citation_json`, and a
+fixed-size float32 `vector`; the manifest records the exact vector dimension,
+embedding model, sources, counts, and digests. The package is a portable blob,
+not a registered directory or a global database singleton. Workspace and
+artifact identity therefore isolate each database while the shared managed
+Python worker may open many packages independently without a process per
+database.
+
+Generation writes into private staging and packages only regular contained
+files. Inspection and queries verify the catalog digest, ZIP layout, duplicate
+entries, link/file type, compressed and expanded bounds, manifest, table name,
+exact Arrow schema, row count, unique ids and ordinals, finite vector values and
+dimensions, citation digests, and source lineage before using the database.
+Materialization uses a private temporary directory and never `extractall`.
+Embedding vectors are not returned in previews, task metadata, catalog records,
+or diagnostics. Generation uses a selected local Transformers model with
 `local_files_only=true`; it never downloads a model as a side effect.
 
 ### Markdown context pack
@@ -171,6 +201,9 @@ the power-suspension blocker and private staging.
   aggregate preview characters.
 - Model prompts and outputs are separately bounded; every source and saved
   context artifact is at most 64 MiB, matching verified object retrieval.
+- A RAG package contains at most 4,096 database files, no entry larger than
+  128 MiB, and no more than 256 MiB of expanded bytes. Only `manifest.json` and
+  regular files beneath `database/` are accepted.
 
 ## Failure and recovery
 

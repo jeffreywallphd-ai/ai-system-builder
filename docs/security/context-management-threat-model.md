@@ -30,7 +30,9 @@
 5. Untrusted source/manual text to no-summary or model-assisted generation
 6. Runtime output back to application review state
 7. Reviewed private output to object storage, catalog, and binding persistence
-8. Saved SQLite/ZIP bytes to runtime inspection and RAG query projections
+8. Saved LanceDB/ZIP bytes to runtime inspection and RAG query projections
+9. Reviewed exact dependency declarations to package distribution and the
+   host-selected managed Python environment
 
 Renderer selections, filenames, media types, “already chunked” claims, model
 output, citations, output handles, and source content are untrusted. Host
@@ -54,8 +56,11 @@ model installation state are authoritative at their owning boundaries.
 | Embedding or protected-content disclosure | Vectors and complete source content stay inside the saved artifact; previews are bounded; catalog, task metadata, logs, and errors omit embeddings, prompts, model output, manual content, and local paths. |
 | Partial or misleading saved artifact | Runtime completion remains private and review-required; Save verifies bytes and uses object-then-catalog-then-binding ordering; failures compensate earlier writes. |
 | Runtime task denial of service | One managed executor, bounded deadlines, per-chunk progress, cooperative cancellation, task retention limits, and hard generation bounds. |
-| Archive entry traversal | Context-pack member names are fixed by code; no source-provided member path is used. |
-| Malicious saved SQLite or ZIP | Exact workspace bytes and catalog digest are verified before read-only runtime parsing; SQLite integrity/schema and fixed ZIP members are checked under entry/count/size limits. |
+| Substituted, partial, or raced LanceDB installation | Exact repository-owned pins and Package URLs, fixed pip arguments, supported-host checks, bounded timeout/output, asynchronous one-flight ensure, post-install import/version verification, and fail-closed task dispatch. No caller package, version, index, URL, or command argument is accepted. |
+| Installer diagnostic disclosure | Public task progress uses fixed bounded messages and sanitized retryable codes. Package-manager output, environment, command lines, local paths, source content, prompts, and vectors are excluded from transports, notifications, and normal logs. |
+| Passive read causes environment mutation | Only normal managed-runtime setup and explicit Context generation/inspection/query starts invoke the ensure. Readiness, capabilities, status/list, Context Browser reads, and notification polling are no-install operations. |
+| Archive entry traversal | Context-pack member names are fixed by code. LanceDB packages allow only `manifest.json` and contained regular files beneath `database/`; absolute, traversal, backslash, drive-like, duplicate, link, encrypted, unsupported-compression, and unknown entries are rejected before manual private extraction. |
+| Malicious saved LanceDB or ZIP | Exact workspace bytes and catalog digest are verified before runtime parsing. Package compressed/expanded bytes, entry count, file type, manifest, one-table name, exact non-null Arrow schema, row/count/id/ordinal/vector/citation integrity, and source lineage are validated before inspection or query. |
 | Retrieval leaks vectors or unrelated rows | Query uses the manifest-recorded local embedding model; only top bounded excerpts, scores, and validated citations return to the host. Vectors never cross the runtime boundary. |
 | Transport scope confusion | Electron requires a trusted owned-window sender and independently reconstructs the typed request; API read/write routes are separately allowlisted and centrally scoped. Both inject authoritative principal/workspace context. |
 | Unsafe diagnostics | Worker logs event class, task type, bounded error code/stage only; public status maps to bounded generic messages. |
@@ -75,14 +80,18 @@ Focused tests cover:
 - binding-write compensation,
 - output cleanup on failure and discard,
 - runtime task dispatch and progress mapping.
-- malformed SQLite/ZIP, digest/media mismatch, untrusted IPC sender,
+- exact dependency fast-path/install/re-probe, timeout, unsupported Python,
+  unexpected probe, partial/mismatched install, concurrent one-flight behavior,
+  sanitized task failure, and passive-read no-install behavior.
+- malformed LanceDB/ZIP, archive traversal/link/duplicate/expansion attempts,
+  schema/vector/citation mismatch, digest/media mismatch, untrusted IPC sender,
   unauthenticated API request, and read/write route confusion.
 - malformed manual/generated Markdown, safe formatted review, Standard/Strict
   cleaning, No Summarization preservation, and notification task projection.
 
 ## Residual risk and qualification
 
-- SQLite and ZIP artifacts intentionally contain derived source content and must
+- LanceDB and context-pack ZIP artifacts intentionally contain derived source content and must
   retain the same workspace access and deletion posture as their sources.
 - Compensation is best effort across independent object, catalog, and binding
   stores. Operators still need orphan reconciliation when a backing service is
@@ -92,6 +101,9 @@ Focused tests cover:
   providers and do not prove every third-party model's numerical quality.
 - Existing document parsers and local model libraries remain dependency
   supply-chain inputs covered by the repository dependency and SBOM controls.
+- A first managed installation requires the approved package source and can
+  fail offline. Exact native-wheel behavior still requires release-platform
+  qualification; a successful install is always re-probed before Context work.
 
 > AI documentation reminder: changes to Context inputs, models, output formats,
 > publication, system use, or public transports require this threat model to be

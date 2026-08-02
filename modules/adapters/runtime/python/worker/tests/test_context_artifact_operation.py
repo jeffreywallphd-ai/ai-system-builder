@@ -3,9 +3,11 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import stat
 import tempfile
 import unittest
-from zipfile import ZipFile
+from unittest.mock import patch
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from modules.adapters.runtime.python.worker.models import (
     ContextArtifactOperationTaskRequest,
@@ -15,6 +17,7 @@ from modules.adapters.runtime.python.worker.tasks.context_artifact_operation imp
     operate_on_context_artifact,
 )
 from modules.adapters.runtime.python.worker.tasks.context_generation import (
+    RAG_MEDIA_TYPE,
     generate_context_artifact,
 )
 
@@ -128,7 +131,7 @@ class ContextArtifactOperationTests(unittest.TestCase):
                 self._operation(
                     root,
                     path,
-                    "application/vnd.ai-system-builder.rag-database+sqlite3",
+                    RAG_MEDIA_TYPE,
                     "inspect-artifact",
                 )
             )
@@ -161,7 +164,7 @@ class ContextArtifactOperationTests(unittest.TestCase):
                 self._operation(
                     root,
                     path,
-                    "application/vnd.ai-system-builder.rag-database+sqlite3",
+                    RAG_MEDIA_TYPE,
                     "query",
                     query="What is the release policy?",
                     maximumResults=3,
@@ -319,6 +322,7 @@ class ContextArtifactOperationTests(unittest.TestCase):
             )
             result = inspected["inspection"]
             self.assertFalse(result["ready"])
+            self.assertEqual(result["textFields"], [])
             self.assertEqual(result["checks"]["status"], "blocked")
             self.assertEqual(
                 result["checks"]["issueCounts"]["licenseMetadataMissing"],
@@ -342,6 +346,118 @@ class ContextArtifactOperationTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ValueError, "descriptor"):
                 operate_on_context_artifact(invalid)
+
+    def test_rejects_legacy_sqlite_rag_media_type(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            path, _result = self._generate(root, "rag-database")
+            with self.assertRaisesRegex(ValueError, "supported context"):
+                operate_on_context_artifact(
+                    self._operation(
+                        root,
+                        path,
+                        "application/vnd.ai-system-builder.rag-database+sqlite3",
+                        "inspect-artifact",
+                    )
+                )
+
+    def test_rejects_rag_package_traversal_and_links_without_writing_outside(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            path, _result = self._generate(root, "rag-database")
+            with ZipFile(path) as archive:
+                entries = {
+                    name: archive.read(name) for name in archive.namelist()
+                }
+
+            traversal = root / "traversal.lancedb.zip"
+            with ZipFile(
+                traversal, "w", compression=ZIP_DEFLATED
+            ) as archive:
+                for name, content in entries.items():
+                    archive.writestr(name, content)
+                archive.writestr("database/../../outside.txt", b"escape")
+            with self.assertRaisesRegex(ValueError, "package structure"):
+                operate_on_context_artifact(
+                    self._operation(
+                        root,
+                        traversal,
+                        RAG_MEDIA_TYPE,
+                        "inspect-artifact",
+                    )
+                )
+            self.assertFalse((root / "outside.txt").exists())
+
+            linked = root / "linked.lancedb.zip"
+            with ZipFile(linked, "w", compression=ZIP_DEFLATED) as archive:
+                for name, content in entries.items():
+                    archive.writestr(name, content)
+                info = ZipInfo("database/link")
+                info.create_system = 3
+                info.external_attr = (stat.S_IFLNK | 0o777) << 16
+                archive.writestr(info, b"target")
+            with self.assertRaisesRegex(ValueError, "package structure"):
+                operate_on_context_artifact(
+                    self._operation(
+                        root,
+                        linked,
+                        RAG_MEDIA_TYPE,
+                        "inspect-artifact",
+                    )
+                )
+            self.assertEqual(
+                list(root.glob(".rag-lancedb-read-*")), []
+            )
+
+    def test_rejects_rag_manifest_dimension_mismatch_and_expansion_limit(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            path, _result = self._generate(root, "rag-database")
+            with ZipFile(path) as archive:
+                entries = {
+                    name: archive.read(name) for name in archive.namelist()
+                }
+                entry_infos = {
+                    name: archive.getinfo(name) for name in archive.namelist()
+                }
+            manifest = json.loads(entries["manifest.json"])
+            manifest["embedding"]["dimensions"] = 3
+            entries["manifest.json"] = json.dumps(manifest).encode("utf-8")
+            tampered = root / "dimension-mismatch.lancedb.zip"
+            with ZipFile(
+                tampered, "w", compression=ZIP_DEFLATED
+            ) as archive:
+                for name, content in entries.items():
+                    archive.writestr(entry_infos[name], content)
+            with self.assertRaisesRegex(ValueError, "table schema"):
+                operate_on_context_artifact(
+                    self._operation(
+                        root,
+                        tampered,
+                        RAG_MEDIA_TYPE,
+                        "inspect-artifact",
+                    )
+                )
+
+            with patch(
+                "modules.adapters.runtime.python.worker.tasks."
+                "context_artifact_operation.MAX_RAG_PACKAGE_EXPANDED_BYTES",
+                1,
+            ):
+                with self.assertRaisesRegex(ValueError, "safe limit"):
+                    operate_on_context_artifact(
+                        self._operation(
+                            root,
+                            path,
+                            RAG_MEDIA_TYPE,
+                            "inspect-artifact",
+                        )
+                    )
+            self.assertEqual(list(root.glob(".rag-lancedb-read-*")), [])
 
 
 if __name__ == "__main__":

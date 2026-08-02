@@ -26,6 +26,12 @@ honors an explicit `PYTHON_RUNTIME_WORKER_DIR` override, and otherwise uses the
 repository path during development. The resource includes the reviewed worker
 source and requirements file; dependency setup still probes exact versions and
 fails startup on an unexpected or mismatched dependency state.
+The packaged resource also includes `requirements-context.txt`. Normal managed
+Python setup installs and re-verifies the exact LanceDB dependency. Explicit RAG
+create/inspect/query starts repeat the idempotent check so a missing install is
+repaired without user commands, and the existing Context activity notification
+shows fixed installation progress. Passive runtime and Context reads do not
+install packages.
 
 ## Local structured persistence
 
@@ -172,6 +178,10 @@ Renderer constraints for this slice:
   five seconds and then fade, while model-download, dataset-preparation, and
   model-training activities remain in bounded workspace-scoped history and
   update from authoritative runtime task progress.
+- The Context page keeps the shared sanitized Python runtime monitor visible
+  beneath RAG Databases, Context Packs, and Context Browser so runtime health,
+  bounded activity, and explicit recovery controls remain available wherever
+  Context work is performed.
 - Terminal save, create, update, delete/archive, upload/import/localize/publish,
   build/run, settings, image, model, and similar action outcomes publish to this
   center instead of rendering duplicative page-level banners. Field validation,

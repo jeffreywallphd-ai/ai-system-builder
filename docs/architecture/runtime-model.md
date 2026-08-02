@@ -91,6 +91,20 @@ Readiness does not replace `RuntimeTaskRegistryPort`. Readiness answers whether 
 
 Runtime Task Registry reads are read-side lifecycle operations, not readiness checks. `getTaskStatus`, `cancelTask`, and `listTasks` must not start Python, start ComfyUI, install, repair, or perform heavy sidecar probes. Router-level task correlation may use current-process `requestId` indexes and safe delegate reads to recover missing correlation, but missing tasks must produce explicit unknown/not-found status (including `recordType: "not-found"` when no task family is known) or structured task errors rather than synthetic records that imply accepted work. Unknown/not-found task status must not fake an invalid `TaskType`; use the explicit `recordType: "not-found"` status contract when the task family is genuinely unknown, or a valid task family when a delegate knows it. `listTasks` is best-effort across task families: adapters that track current-process records should return them, and adapters without a safe list endpoint or delegates that fail during listing should report sanitized unsupported task-family metadata or warnings without breaking unrelated delegate listings. Delegate warning details may include delegate name, requested task types, and `failureKind`, but not raw exception messages or environment/path/protocol details. Readiness-guard-rejected starts happen before task creation; transports should return unavailable start failures and no pollable task id, and later status reads for that caller correlation id should remain unknown/not-found unless a task was actually accepted.
 
+Managed Context execution has one narrower pre-dispatch dependency stage.
+`lancedb==0.34.0` and `pyarrow==25.0.0` are installed from the packaged exact
+`requirements-context.txt` during normal Python runtime setup. An explicit RAG
+generation, saved-artifact inspection, or query start repeats an asynchronous
+idempotent probe/install/re-probe before worker acceptance; concurrent requests
+for the same managed command and worker directory share one in-flight ensure.
+When installation is needed, the host-side task record exposes only fixed
+installing/completed or sanitized retryable-failure progress so workspace
+notifications remain live while the event loop continues serving reads.
+Package-manager output, commands, environment, and paths stay adapter-private.
+This exception applies only to an explicit state-changing Context start:
+readiness, capability, task status/list, Context list, and ordinary detail
+metadata reads never invoke the ensure.
+
 Model downloads use `TaskType.MODEL_DOWNLOAD` and the same start/read/list/cancel
 lifecycle in desktop and server hosts. Start requests return promptly; UI and
 compatibility clients poll through short requests. The application-owned model

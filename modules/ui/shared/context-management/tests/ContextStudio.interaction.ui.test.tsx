@@ -25,7 +25,11 @@ import {
 let root: Root | undefined;
 let container: HTMLDivElement | undefined;
 
-function NotificationRecordProbe({ workspaceId }: { readonly workspaceId: string }) {
+function NotificationRecordProbe({
+  workspaceId,
+}: {
+  readonly workspaceId: string;
+}) {
   const notifications = useNotificationCenter();
   useEffect(
     () => notifications.setActiveWorkspaceId(workspaceId),
@@ -49,11 +53,12 @@ afterEach(() => {
 });
 
 const savedItem = {
-  artifactId: "generated/context/support-rag.sqlite3",
-  storageKey: "generated/context/support-rag.sqlite3",
+  artifactId: "generated/context/support-rag.lancedb.zip",
+  storageKey: "generated/context/support-rag.lancedb.zip",
   kind: "rag-database" as const,
   name: "support-rag",
-  mediaType: "application/vnd.ai-system-builder.rag-database+sqlite3" as const,
+  mediaType:
+    "application/vnd.ai-system-builder.rag-database+lancedb+zip" as const,
   sizeBytes: 2048,
   digest: `sha256:${"a".repeat(64)}` as const,
 };
@@ -62,7 +67,7 @@ const manifest: ContextArtifactManifest = {
   schemaVersion: "1",
   kind: "rag-database",
   name: "support-rag",
-  mediaType: "application/vnd.ai-system-builder.rag-database+sqlite3",
+  mediaType: "application/vnd.ai-system-builder.rag-database+lancedb+zip",
   createdAt: "2026-08-01T12:00:00.000Z",
   sources: [
     {
@@ -145,7 +150,9 @@ async function renderStudio(
           client={client}
           onViewSource={props.onViewSource}
         />
-        <NotificationRecordProbe workspaceId={props.workspaceId ?? "workspace-a"} />
+        <NotificationRecordProbe
+          workspaceId={props.workspaceId ?? "workspace-a"}
+        />
       </NotificationProvider>,
     );
   });
@@ -651,9 +658,9 @@ describe("ContextStudio", () => {
       expect(mounted.textContent).toContain("Discard context pack"),
     );
     await act(async () => button("Review prepared Markdown").click());
-    expect(document.querySelector(".dataset-review__modal h1")?.textContent).toBe(
-      "Release policy",
-    );
+    expect(
+      document.querySelector(".dataset-review__modal h1")?.textContent,
+    ).toBe("Release policy");
     expect(
       document.querySelector(
         ".dataset-review__modal .artifact-preview__markdown strong",
@@ -739,22 +746,22 @@ describe("ContextStudio", () => {
                 kind: "markdown-context-pack",
                 name: "handbook-pack",
                 sourceCount: 1,
-                  manualEntryCount: 0,
-                  chunkCount: 3,
-                  items: [
-                    {
-                      id: "topic:0",
-                      kind: "topic",
-                      title: "Release policy",
-                      text: "## Release policy\n\nUse **passing** reviews.",
-                      citations: [
-                        {
-                          sourceArtifactId: "uploads/handbook.md",
-                          chunkIndex: 0,
-                        },
-                      ],
-                    },
-                  ],
+                manualEntryCount: 0,
+                chunkCount: 3,
+                items: [
+                  {
+                    id: "topic:0",
+                    kind: "topic",
+                    title: "Release policy",
+                    text: "## Release policy\n\nUse **passing** reviews.",
+                    citations: [
+                      {
+                        sourceArtifactId: "uploads/handbook.md",
+                        chunkIndex: 0,
+                      },
+                    ],
+                  },
+                ],
               },
             },
           };
@@ -875,7 +882,9 @@ describe("ContextStudio", () => {
       select.parentElement?.textContent?.includes("Local summary model"),
     )!;
     const lineLimit = [
-      ...visiblePanel.querySelectorAll<HTMLInputElement>("input[type='number']"),
+      ...visiblePanel.querySelectorAll<HTMLInputElement>(
+        "input[type='number']",
+      ),
     ].find((input) =>
       input.parentElement?.textContent?.includes("Maximum summary lines"),
     )!;
@@ -929,6 +938,16 @@ describe("ContextStudio", () => {
             action: "task-list",
             tasks: [
               {
+                requestId: "context-task-install",
+                taskType: "context-generation",
+                status: "running",
+                progress: {
+                  message:
+                    "Installing the local vector database. This runs once for the managed Python runtime.",
+                  percent: 0,
+                },
+              },
+              {
                 requestId: "context-task-1",
                 taskType: "context-generation",
                 status: "running",
@@ -959,6 +978,11 @@ describe("ContextStudio", () => {
         </NotificationProvider>,
       );
     });
+    await vi.waitFor(() =>
+      expect(container?.textContent).toContain(
+        "Context preparation:Installing the local vector database. This runs once for the managed Python runtime.:0",
+      ),
+    );
     await vi.waitFor(() =>
       expect(container?.textContent).toContain(
         "Context preparation:Embedding chunk 2 of 4.:50",
