@@ -24,6 +24,7 @@ import {
   createRetrieveArtifactRequest,
   createStoreArtifactRequest,
   normalizeStorageArtifactKey,
+  RETRIEVE_ARTIFACT_MAXIMUM_BYTES,
   type StorageArtifactKey,
 } from "../../../contracts/storage";
 import {
@@ -48,6 +49,30 @@ interface DatasetReviewTargetInput {
   readonly workspaceId: WorkspaceId;
   readonly artifactKey: string;
   readonly versionId?: string;
+}
+
+export class CountDatasetReviewTargetsUseCase {
+  public constructor(private readonly dependencies: Pick<DatasetReviewDependencies, "repository" | "workspaceRepository" | "workspaceAuthorization"> & {readonly artifacts: Pick<ArtifactObjectStoragePort, "hasArtifact">}) {}
+  public async execute(input: {readonly workspaceId: WorkspaceId}, context: ApplicationRequestContext = {}): Promise<number> {
+    await requireWorkspaceAccess(this.dependencies, input.workspaceId, context, "dataset-review.read");
+    const groups = groupDatasetVersionsForDisplay(await this.dependencies.repository.listVersions(input.workspaceId));
+    const availability = new Map<string, boolean>();
+    let count = 0;
+    for (const group of groups) {
+      for (const {version} of group.versions) {
+        const artifact = selectReviewArtifact(version);
+        if (!artifact) continue;
+        const key = String(artifact.artifactKey);
+        if (!availability.has(key)) {
+          const local = await this.dependencies.artifacts.hasArtifact(createHasArtifactRequest(artifact.artifactKey), context);
+          if (!local.ok) throw new Error("Dataset availability is unavailable.");
+          availability.set(key, local.value.exists);
+        }
+        if (availability.get(key)) { count++; break; }
+      }
+    }
+    return count;
+  }
 }
 
 export class ListDatasetReviewTargetsUseCase {
@@ -313,6 +338,9 @@ async function reviseDatasetReviewRow(
           rowIndex: input.rowIndex,
           rowFingerprint: input.rowFingerprint,
         });
+  if (!(reviewed.content instanceof Uint8Array) || reviewed.content.byteLength === 0 ||
+      reviewed.content.byteLength > RETRIEVE_ARTIFACT_MAXIMUM_BYTES)
+    throw new Error('Revised dataset exceeds the review byte limit.');
   const digest = dependencies.hasher.digest(reviewed.content);
   const reviewedKey = normalizeStorageArtifactKey(
     `dataset-versions/reviews/${digest.slice("sha256:".length)}.parquet`,
@@ -656,7 +684,7 @@ async function retrieveBytes(
   context: ApplicationRequestContext,
 ): Promise<Uint8Array> {
   const result = await artifacts.retrieveArtifact<Uint8Array>(
-    createRetrieveArtifactRequest(artifactKey),
+    createRetrieveArtifactRequest(artifactKey, {maximumBytes: RETRIEVE_ARTIFACT_MAXIMUM_BYTES}),
     context,
   );
   if (
@@ -668,11 +696,13 @@ async function retrieveBytes(
       "This Parquet dataset is not available in local storage. Localize or import it again, then retry.",
     );
   }
+  if (result.value.content.byteLength > RETRIEVE_ARTIFACT_MAXIMUM_BYTES)
+    throw new Error('Dataset review source exceeds the artifact byte limit.');
   return result.value.content;
 }
 
 async function requireWorkspaceAccess(
-  dependencies: DatasetReviewDependencies,
+  dependencies: Pick<DatasetReviewDependencies, "workspaceRepository" | "workspaceAuthorization">,
   workspaceId: WorkspaceId,
   context: ApplicationRequestContext,
   operation: string,

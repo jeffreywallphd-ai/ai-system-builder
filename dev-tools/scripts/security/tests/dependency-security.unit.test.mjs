@@ -59,17 +59,17 @@ test("root manifest and lock retain the reviewed patched toolchain boundary", as
   ]);
 
   assert.equal(manifest.engines.node, ">=24 <25");
-  assert.equal(manifest.devDependencies.electron, "41.10.2");
+  assert.equal(manifest.devDependencies.electron, "41.10.7");
   assert.equal(manifest.dependencies.selfsigned, "5.5.0");
   assert.deepEqual(manifest.overrides, {
     "brace-expansion": "$brace-expansion",
-    "fast-uri": "3.1.4",
+    "fast-uri": "3.1.8",
     tar: "7.5.22",
     tmp: "0.2.7",
-    "webpack-dev-server": "5.2.6",
+    "webpack-dev-server": "5.2.7",
     sockjs: { uuid: "11.1.1" },
   });
-  assert.equal(lockfile.packages["node_modules/electron"].version, "41.10.2");
+  assert.equal(lockfile.packages["node_modules/electron"].version, "41.10.7");
   assert.equal(lockfile.packages["node_modules/selfsigned"].version, "5.5.0");
 
   const lockedPackages = Object.entries(lockfile.packages);
@@ -85,17 +85,17 @@ test("root manifest and lock retain the reviewed patched toolchain boundary", as
   });
   assert.equal(
     lockfile.packages["dev-tools/vendor/brace-expansion-compat"].version,
-    "5.0.8",
+    "5.0.12",
   );
-  assert.equal(
-    lockfile.packages["node_modules/brace-expansion-upstream"].version,
-    "5.0.8",
-  );
-  assert.deepEqual([...new Set(versionsFor("fast-uri"))], ["3.1.4"]);
+  // npm may place the exact upstream alias beneath its local file consumer.
+  // Check all locked instances instead of assuming a hoisted physical layout.
+  assert.deepEqual([...new Set(versionsFor("brace-expansion-upstream"))], ["5.0.12"]);
+  assert.deepEqual([...new Set(versionsFor("fast-uri"))], ["3.1.8"]);
   assert.deepEqual([...new Set(versionsFor("tar"))], ["7.5.22"]);
-  assert.deepEqual([...new Set(versionsFor("tmp"))], ["0.2.7"]);
+  // The supported Forge migration removes the old tmp consumer entirely.
+  assert.deepEqual(versionsFor("tmp"), []);
   assert.deepEqual([...new Set(versionsFor("uuid"))], ["11.1.1"]);
-  assert.deepEqual([...new Set(versionsFor("webpack-dev-server"))], ["5.2.6"]);
+  assert.deepEqual([...new Set(versionsFor("webpack-dev-server"))], ["5.2.7"]);
 });
 
 test("reviewed overrides retain the APIs used by the Electron Forge toolchain", () => {
@@ -104,7 +104,6 @@ test("reviewed overrides retain the APIs used by the Electron Forge toolchain", 
   const fastUri = require("fast-uri");
   const glob = require("glob");
   const tar = require("tar");
-  const tmp = require("tmp");
   const uuid = require("uuid");
   const WebpackDevServer = require("webpack-dev-server");
 
@@ -125,13 +124,36 @@ test("reviewed overrides retain the APIs used by the Electron Forge toolchain", 
   );
   assert.equal(fastUri.parse("https://example.com/path").host, "example.com");
   assert.equal(typeof tar.extract, "function");
-  assert.match(tmp.tmpNameSync({ postfix: ".txt" }), /\.txt$/);
   assert.match(
     uuid.v4(),
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
   );
   assert.equal(typeof WebpackDevServer, "function");
   assert.equal(typeof WebpackDevServer.prototype.start, "function");
+});
+
+test("brace expansion compatibility supports both ESM named and CommonJS callable consumers", async () => {
+  const namespace = await import("brace-expansion");
+  assert.equal(typeof namespace.expand, "function");
+  assert.equal(namespace.expand, namespace.default);
+  assert.deepEqual(namespace.expand("file-{a,b}.txt"), ["file-a.txt", "file-b.txt"]);
+});
+
+test("patched proxy subnet matching denies unrelated IPv4 identities", () => {
+  // GHSA-jqcg-44mw-7w3h; synthetic addresses, no external requests.
+  const require = createRequire(import.meta.url);
+  const proxyaddr = require("proxy-addr");
+  for (const subnet of ["::ffff:10.0.0.0/8", "::/1"]) {
+    const trust = proxyaddr.compile([subnet]);
+    assert.equal(trust("203.0.113.20", 0), false);
+    assert.equal(proxyaddr({ socket: { remoteAddress: "203.0.113.20" },
+      headers: { "x-forwarded-for": "10.1.2.3" } }, trust), "203.0.113.20");
+  }
+  for (const subnet of ["10.0.0.0/8", "::ffff:10.0.0.0/104"]) {
+    const trust = proxyaddr.compile([subnet]);
+    assert.equal(trust("10.1.2.3", 0), true);
+    assert.equal(trust("203.0.113.20", 0), false);
+  }
 });
 
 test("patched webpack dev server supports the Forge lifecycle and same-origin response policy", async (t) => {

@@ -1,3 +1,4 @@
+import { useTaskObservationManager } from "../../../../../../../modules/ui/shared/notifications/TaskObservationProvider";
 import {
   useCallback,
   useEffect,
@@ -443,14 +444,10 @@ const defaultDatasetPreparationPageState: DatasetPreparationPageState = {
   activeTaskStartedAt: undefined,
 };
 
-let cachedDatasetPreparationPageState: DatasetPreparationPageState = {
-  ...defaultDatasetPreparationPageState,
-};
-let cachedDatasetPreparationModelSelectionExplicit = false;
-
+const workspaceDrafts = new Map<string, { state: DatasetPreparationPageState; modelSelectionExplicit: boolean }>();
 export function resetDatasetPreparationPageStateForTests(): void {
-  cachedDatasetPreparationPageState = { ...defaultDatasetPreparationPageState };
-  cachedDatasetPreparationModelSelectionExplicit = false;
+  workspaceDrafts.clear();
+  try { for (const key of Object.keys(window.sessionStorage)) if (key.startsWith("ai-system-builder.preparation-task.v1:")) window.sessionStorage.removeItem(key); } catch { /* Restricted test storage. */ }
   try {
     if (typeof window !== "undefined") {
       window.localStorage?.removeItem(
@@ -703,9 +700,25 @@ function isTransientPollReadFailure(
 export function useDatasetPreparationFeature(
   options: UseDatasetPreparationFeatureOptions = {},
 ): UseDatasetPreparationFeatureResult {
+  const observer = useTaskObservationManager();
   const pollingRecoveryGraceWindowMs = 30_000;
   const onPrepared = options.onPrepared;
   const workspaceId = options.workspaceId;
+  const taskStorageKey = `ai-system-builder.preparation-task.v1:${workspaceId ?? "none"}`;
+  const hadCachedDraft = workspaceDrafts.has(workspaceId ?? "none");
+  let cachedWorkspace = workspaceDrafts.get(workspaceId ?? "none");
+  if (!cachedWorkspace) {
+    const state = structuredClone(defaultDatasetPreparationPageState);
+    try {
+      const requestId = sessionStorage.getItem(taskStorageKey);
+      if (requestId && requestId.length <= 512) { state.activeTaskRequestId = requestId; state.activeTaskType = "dataset-preparation"; state.status = { kind: "loading", message: "Restoring dataset progress..." }; }
+    } catch { /* Opaque recovery IDs are optional in restricted sessions. */ }
+    cachedWorkspace = { state, modelSelectionExplicit: false };
+    workspaceDrafts.set(workspaceId ?? "none", cachedWorkspace);
+    if (workspaceDrafts.size > 64) workspaceDrafts.delete(workspaceDrafts.keys().next().value!);
+  }
+  const cachedDatasetPreparationPageState = cachedWorkspace.state;
+
   const datasetClient = useDatasetPreparationClient(options.client);
   const modelClient = useMemo<DesktopModelsClient | undefined>(() => {
     if (options.modelsClient) {
@@ -740,6 +753,7 @@ export function useDatasetPreparationFeature(
   const [artifacts, setArtifacts] = useState<
     DatasetPreparationSourceArtifact[]
   >([]);
+  const [artifactsLoaded, setArtifactsLoaded] = useState(false);
   const [selectedArtifactStorageFilter, setSelectedArtifactStorageFilter] =
     useState<DatasetPreparationArtifactStorageFilter>(
       cachedDatasetPreparationPageState.selectedArtifactStorageFilter,
@@ -829,7 +843,7 @@ export function useDatasetPreparationFeature(
     cachedDatasetPreparationPageState.similarityThreshold,
   );
   const modelSelectionExplicitRef = useRef(
-    cachedDatasetPreparationModelSelectionExplicit,
+    cachedWorkspace.modelSelectionExplicit,
   );
   const [modelId, setModelIdState] = useState(
     cachedDatasetPreparationPageState.modelId,
@@ -850,7 +864,7 @@ export function useDatasetPreparationFeature(
     );
   const markModelSelectionExplicit = useCallback(() => {
     modelSelectionExplicitRef.current = true;
-    cachedDatasetPreparationModelSelectionExplicit = true;
+    cachedWorkspace.modelSelectionExplicit = true;
   }, []);
   const setModelId = useCallback(
     (value: string) => {
@@ -984,23 +998,27 @@ export function useDatasetPreparationFeature(
   >(() => readSavedTrainingSettingsFromStorage());
   const [selectedSavedTrainingSettingsId, setSelectedSavedTrainingSettingsId] =
     useState("");
-  const stopTrainingRequestedRef = useRef(false);
+  const cancellationMessageRef = useRef<string | undefined>(undefined);
+  const cancelRequestRef = useRef<object | undefined>(undefined);
   const activePollingRequestIdRef = useRef<string | undefined>(undefined);
   const pollingSessionIdRef = useRef(0);
   const isMountedRef = useRef(false);
-  const suppressNextTaskDefaultResetRef = useRef(false);
+  const suppressNextTaskDefaultResetRef = useRef(hadCachedDraft);
 
   useEffect(() => {
     isMountedRef.current = true;
+    cancelRequestRef.current = undefined;
+    cancellationMessageRef.current = undefined;
+    setStopTrainingInFlight(false);
     return () => {
       isMountedRef.current = false;
       activePollingRequestIdRef.current = undefined;
       pollingSessionIdRef.current += 1;
     };
-  }, []);
+  }, [workspaceId]);
 
   useEffect(() => {
-    cachedDatasetPreparationPageState = {
+    Object.assign(cachedDatasetPreparationPageState, {
       selectedArtifactStorageFilter,
       selectedArtifactIds,
       advancedPreset,
@@ -1061,7 +1079,7 @@ export function useDatasetPreparationFeature(
       activeTaskRequestId,
       activeTaskType: activeTaskRequestId ? "dataset-preparation" : undefined,
       activeTaskStartedAt,
-    };
+    });
   }, [
     selectedArtifactStorageFilter,
     selectedArtifactIds,
@@ -1146,7 +1164,7 @@ export function useDatasetPreparationFeature(
       }),
     );
     modelSelectionExplicitRef.current = false;
-    cachedDatasetPreparationModelSelectionExplicit = false;
+    cachedWorkspace.modelSelectionExplicit = false;
     setModelIdState(taskModelDefault?.modelId ?? "");
     setModelInferenceModeState(taskModelDefault?.inferenceMode ?? "auto");
     setModelDeviceState(taskModelDefault?.device ?? "auto");
@@ -1187,6 +1205,9 @@ export function useDatasetPreparationFeature(
   }, []);
 
   const clearActiveTask = useCallback(() => {
+    cancellationMessageRef.current = undefined;
+    cancelRequestRef.current = undefined;
+    setStopTrainingInFlight(false);
     setActiveTaskRequestId(undefined);
     setActiveTaskStartedAt(undefined);
     activePollingRequestIdRef.current = undefined;
@@ -1199,6 +1220,7 @@ export function useDatasetPreparationFeature(
     const startedAt = new Date().toISOString();
     setActiveTaskRequestId(requestId);
     setActiveTaskStartedAt(startedAt);
+    try { sessionStorage.setItem(taskStorageKey, requestId); } catch { /* Accepted work remains observable in this session. */ }
     cachedDatasetPreparationPageState.activeTaskRequestId = requestId;
     cachedDatasetPreparationPageState.activeTaskType = "dataset-preparation";
     cachedDatasetPreparationPageState.activeTaskStartedAt = startedAt;
@@ -1207,7 +1229,8 @@ export function useDatasetPreparationFeature(
   const refreshArtifacts = useCallback(async () => {
     const sourceArtifacts =
       await datasetClient.browseSourceArtifacts(workspaceId);
-    setArtifacts(sourceArtifacts);
+    if (!isMountedRef.current) return;
+    setArtifacts(sourceArtifacts); setArtifactsLoaded(true);
     setSelectedArtifactIds((current) => {
       const validArtifactIds = new Set(
         sourceArtifacts.map((artifact) => artifact.artifactId),
@@ -1272,8 +1295,7 @@ export function useDatasetPreparationFeature(
       return (
         isMountedRef.current &&
         activePollingRequestIdRef.current === requestId &&
-        pollingSessionIdRef.current === sessionId &&
-        !stopTrainingRequestedRef.current
+        pollingSessionIdRef.current === sessionId
       );
     },
     [],
@@ -1288,10 +1310,10 @@ export function useDatasetPreparationFeature(
       while (isPollingStillActive(requestId, pollingSessionId)) {
         try {
           const pollResponse =
-            await datasetClient.readPrepareTrainingDatasetTask(
-              requestId,
-              workspaceId,
-            );
+            await observer.readOnce({ workspaceId: workspaceId!, family: "dataset-preparation", requestId }, async () => {
+              const value = await datasetClient.readPrepareTrainingDatasetTask(requestId, workspaceId);
+              return { value, activity: value.ok && (value.status === "pending" || value.status === "running") ? "active" : "terminal" };
+            });
           if (!isPollingStillActive(requestId, pollingSessionId)) return;
           if (pollResponse.ok === false) {
             if (!pollRecoveryStartedAtMs) pollRecoveryStartedAtMs = Date.now();
@@ -1344,7 +1366,7 @@ export function useDatasetPreparationFeature(
                 : "";
             setStatus({
               kind: "loading",
-              message: `${pollResponse.progress?.message ?? "Preparing training dataset..."}${suffix}`,
+              message: `${cancellationMessageRef.current ?? pollResponse.progress?.message ?? "Preparing training dataset..."}${suffix}`,
             });
             await new Promise<void>((resolve) =>
               window.setTimeout(resolve, 750),
@@ -1464,14 +1486,12 @@ export function useDatasetPreparationFeature(
       ) {
         return;
       }
-      if (stopTrainingRequestedRef.current) {
-        clearActiveTask();
-        setStatus({ kind: "idle", message: "Training stopped." });
-      }
+
     },
     [
       clearActiveTask,
       datasetClient,
+      observer,
       isPollingStillActive,
       onPrepared,
       pollingRecoveryGraceWindowMs,
@@ -1562,6 +1582,7 @@ export function useDatasetPreparationFeature(
   ]);
 
   useEffect(() => {
+    if (!artifactsLoaded) return;
     setSelectedArtifactIds((current) => {
       const relevantArtifactIds = new Set(
         taskRelevantArtifacts.map((artifact) => artifact.artifactId),
@@ -1570,7 +1591,7 @@ export function useDatasetPreparationFeature(
         relevantArtifactIds.has(artifactId),
       );
     });
-  }, [taskRelevantArtifacts]);
+  }, [artifactsLoaded, taskRelevantArtifacts]);
 
   const selectedSourceCapabilities = useMemo(
     () =>
@@ -2156,7 +2177,7 @@ export function useDatasetPreparationFeature(
         return;
       }
 
-      stopTrainingRequestedRef.current = false;
+      cancellationMessageRef.current = undefined;
       setStatus({
         kind: "loading",
         message: "Preparing training dataset request...",
@@ -2379,48 +2400,34 @@ export function useDatasetPreparationFeature(
   );
 
   const onStopTraining = useCallback(async () => {
-    if (!activeTaskRequestId || status.kind !== "loading") {
-      return;
-    }
-
-    stopTrainingRequestedRef.current = true;
+    if (!activeTaskRequestId || status.kind !== "loading" || cancelRequestRef.current) return;
+    const requestId = activeTaskRequestId;
+    const session = pollingSessionIdRef.current;
+    const current = () => isMountedRef.current && pollingSessionIdRef.current === session && activePollingRequestIdRef.current === requestId;
+    const token = {};
+    cancelRequestRef.current = token;
     setStopTrainingInFlight(true);
-    setStatus({ kind: "loading", message: "Stopping dataset preparation..." });
+    cancellationMessageRef.current = "Requesting cancellation; dataset preparation is still being observed...";
+    setStatus({ kind: "loading", message: cancellationMessageRef.current });
     try {
-      const response = await datasetClient.cancelPrepareTrainingDatasetTask(
-        activeTaskRequestId,
-        workspaceId,
-      );
-      if (response.ok === false) {
-        setStatus({
-          kind: "error",
-          message: appendErrorDetailsMessage(
-            response.error.message,
-            response.error.details,
-          ),
-        });
-      } else {
-        clearActiveTask();
-        setStatus({ kind: "idle", message: "Training stopped." });
-      }
-    } catch (error) {
-      setStatus({
-        kind: "error",
-        message:
-          error instanceof Error ? error.message : "Failed to stop training.",
-      });
+      const response = await datasetClient.cancelPrepareTrainingDatasetTask(requestId, workspaceId);
+      if (!current()) return;
+      cancellationMessageRef.current = response.ok && response.value?.requestId === requestId && response.value.cancelled && response.value.status === "cancelled"
+        ? "Cancellation acknowledged; waiting for final task state..."
+        : "Cancellation is not confirmed. Dataset preparation is still being observed.";
+      setStatus({ kind: "loading", message: cancellationMessageRef.current });
+      observer.invalidate({ workspaceId: workspaceId!, family: "dataset-preparation" });
+    } catch {
+      if (!current()) return;
+      cancellationMessageRef.current = "Cancellation could not be confirmed. Dataset preparation is still being observed.";
+      setStatus({ kind: "loading", message: cancellationMessageRef.current });
     } finally {
-      setStopTrainingInFlight(false);
-      void refreshRuntimeModelStatus();
+      if (cancelRequestRef.current === token) {
+        cancelRequestRef.current = undefined;
+        if (isMountedRef.current && pollingSessionIdRef.current === session) setStopTrainingInFlight(false);
+      }
     }
-  }, [
-    activeTaskRequestId,
-    clearActiveTask,
-    datasetClient,
-    refreshRuntimeModelStatus,
-    status.kind,
-    workspaceId,
-  ]);
+  }, [activeTaskRequestId, datasetClient, observer, status.kind, workspaceId]);
 
   const onApproveReview = useCallback(async () => {
     if (!qualityReview || !workspaceId || reviewActionInFlight) {
@@ -2507,6 +2514,10 @@ export function useDatasetPreparationFeature(
             response.error.details,
           ),
         });
+        return;
+      }
+      if (!response.ok || response.value?.requestId !== qualityReview.requestId || !response.value.cancelled || response.value.status !== "cancelled") {
+        setStatus({ kind: "error", message: "Discard could not be confirmed. The quality review is retained." });
         return;
       }
       setQualityReview(undefined);

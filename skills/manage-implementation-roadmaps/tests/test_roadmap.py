@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -17,6 +18,30 @@ if SPEC is None or SPEC.loader is None:
     raise RuntimeError("Unable to load roadmap engine.")
 roadmap = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(roadmap)
+
+
+class PublicationSecurityTest(unittest.TestCase):
+    def test_precreated_predictable_entry_is_never_written_or_removed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "state.json"
+            target.write_text("old", encoding="utf-8")
+            predictable = target.with_name(f".{target.name}.{roadmap.os.getpid()}.tmp")
+            predictable.write_text("unowned", encoding="utf-8")
+            roadmap.atomic_write(target, "new\n")
+            self.assertEqual(target.read_text(), "new\n")
+            self.assertEqual(predictable.read_text(), "unowned")
+            self.assertEqual(set(Path(directory).iterdir()), {target, predictable})
+
+    def test_replace_and_write_failures_preserve_old_target_and_remove_only_owned_temp(self):
+        for operation in ("replace", "fsync"):
+            with self.subTest(operation=operation), tempfile.TemporaryDirectory() as directory:
+                target = Path(directory) / "state.json"
+                target.write_text("old", encoding="utf-8")
+                with mock.patch.object(roadmap.os, operation, side_effect=OSError("injected")):
+                    with self.assertRaises(roadmap.RoadmapError):
+                        roadmap.atomic_write(target, "new")
+                self.assertEqual(target.read_text(), "old")
+                self.assertEqual(list(Path(directory).iterdir()), [target])
 
 
 def security_impact() -> dict:
@@ -969,6 +994,37 @@ class RoadmapEngineTest(unittest.TestCase):
             self.repo / self.state["paths"]["state"],
         )
         self.assertEqual(len(writes), 3)
+
+    def test_interrupted_cli_publication_recovers_without_lost_event(self) -> None:
+        roadmap.write_project_files(self.repo, self.state)
+        event = self.repo / "event.json"
+        event.write_text(json.dumps({"type": "discovery-recorded", "summary": "Publication recovery fixture", "sources": [], "constraints": [], "securityImpact": security_impact(), "decisionRequired": False}))
+        args = argparse.Namespace(repo=str(self.repo), state=self.state["paths"]["state"], event_file=str(event), dry_run=False)
+        original = roadmap.atomic_write
+        def interrupted(path, content):
+            if path == self.repo / self.state["paths"]["roadmap"]:
+                raise OSError("injected projection failure")
+            original(path, content)
+        try:
+            roadmap.atomic_write = interrupted
+            with self.assertRaises(OSError):
+                roadmap.command_apply(args)
+        finally:
+            roadmap.atomic_write = original
+        roadmap.command_render(args)
+        _, recovered = roadmap.load_state(self.repo, args.state)
+        self.assertEqual(recovered["discovery"]["summary"], "Publication recovery fixture")
+        roadmap.ensure_documents_match(self.repo, recovered)
+        self.assertEqual(len(recovered["history"]), 1)
+
+    def test_new_repository_policy_cannot_close_with_declarations_alone(self) -> None:
+        helper = self.repo / "dev-tools/helpers/development_control_plane.py"
+        helper.parent.mkdir(parents=True)
+        helper.write_text("# fixture marker\n")
+        new = roadmap.initial_state(self.repo, {"name": "Governed", "slug": "governed", "objective": "Qualified completion"})
+        self.assertEqual(new["evidencePolicy"], "control-plane-v1")
+        with self.assertRaises(roadmap.RoadmapError):
+            roadmap.require_control_completion(self.repo, new)
 
     def test_empty_and_completed_roadmaps_reject_completion_events(self) -> None:
         with self.assertRaisesRegex(roadmap.RoadmapError, "at least one increment"):

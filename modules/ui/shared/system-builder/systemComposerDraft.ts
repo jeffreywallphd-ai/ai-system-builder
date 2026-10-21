@@ -168,6 +168,7 @@ export function removeSystemComposerSubtree(
     }
   }
   return success({
+    ...draft,
     instances: draft.instances.filter(
       (instance) => !removedIds.has(String(instance.instanceId)),
     ),

@@ -1,49 +1,66 @@
 import type { ImageGenerationOutput } from "../../../contracts/image-generation";
 import { isWorkspaceId } from "../../../contracts/workspace";
-import type { RuntimeTaskRecord } from "../../../contracts/runtime";
+import { createHash } from "node:crypto";
+import { TaskType, type RuntimeTaskRecord } from "../../../contracts/runtime";
+import type { OrganizationRequestContextProviderPort } from "../../ports/organization";
+import type { PersistGeneratedImageResult } from "../../ports/image/generated-image-persistence.port";
 import type { ImageAssetRegistryPort, GeneratedImagePersistencePort } from "../../ports/image";
 
 interface FinalizedAssetRef { assetId: string; artifactId: string; storageKey: string; mediaType: string; source: "generated"; }
 
 export class FinalizeImageGenerationService {
-  private readonly finalizedByRequestId = new Map<string, FinalizedAssetRef[]>();
+  // Receipts are never evicted into a replayable state. A full host refuses new
+  // finalizations; durable crash recovery requires a separate storage protocol.
+  private readonly receipts = new Map<string, { signature: string; outputs: Array<{ assetId: string; persisted?: PersistGeneratedImageResult; asset?: FinalizedAssetRef }> }>();
+  private readonly inFlight = new Map<string, Promise<{ assets: FinalizedAssetRef[] }>>();
 
-  public constructor(private readonly dependencies: { imageAssetRegistry: ImageAssetRegistryPort; generatedImagePersistence: GeneratedImagePersistencePort; createAssetId?: () => string; now?: () => string; }) {}
+  public constructor(private readonly dependencies: { imageAssetRegistry: ImageAssetRegistryPort; generatedImagePersistence: GeneratedImagePersistencePort; createAssetId?: () => string; now?: () => string; organizationContextProvider?: OrganizationRequestContextProviderPort; }) {}
 
   public async finalizeCompletedTask(task: RuntimeTaskRecord): Promise<{ assets: FinalizedAssetRef[] }> {
-    const existing = this.finalizedByRequestId.get(task.requestId);
-    if (existing) return { assets: existing };
     if (!isWorkspaceId(task.workspaceId)) throw new Error("Image generation finalization requires a workspace-owned runtime task.");
-    if (task.status !== "succeeded") throw new Error("Image generation finalization requires a succeeded runtime task.");
-
+    if (task.status !== "succeeded" || task.taskType !== TaskType.IMAGE_GENERATION) throw new Error("Image generation finalization requires a succeeded runtime task.");
+    if (typeof task.requestId !== "string" || !task.requestId.trim() || task.requestId.length > 256) throw new Error("Image generation request identity is invalid.");
+    const context = this.dependencies.organizationContextProvider?.getCurrentOrganizationContext();
+    if (this.dependencies.organizationContextProvider && !context) throw new Error("Organization request context is required for image finalization.");
+    const key = JSON.stringify([context?.organizationId ?? null, task.workspaceId, task.requestId]);
     const outputs = this.getOutputs(task.data);
-    if (outputs.length === 0) throw new Error("Image generation finalization requires at least one generated image output.");
-    const assets: FinalizedAssetRef[] = [];
-    for (const output of outputs) {
-      const persisted = await this.dependencies.generatedImagePersistence.persistGeneratedImage({
-        workspaceId: task.workspaceId,
-        output,
-        requestId: task.requestId,
-      });
-      const requestedAssetId = this.dependencies.createAssetId?.() ?? `img-${task.requestId}-${assets.length + 1}`;
-      const registered = await this.dependencies.imageAssetRegistry.registerImageAsset({
-        workspaceId: task.workspaceId,
-        assetId: requestedAssetId,
-        artifactId: persisted.artifactId,
-        source: "generated",
-        metadata: {
-          ...(this.readMetadata(task)?.request ?? {}),
-          engine: output.engine,
-          requestId: task.requestId,
-          originalFileName: persisted.originalFileName,
-          createdAt: this.dependencies.now?.() ?? new Date().toISOString(),
-        },
-      });
-      assets.push({ assetId: registered.assetId, artifactId: persisted.artifactId, storageKey: persisted.storageKey, mediaType: persisted.mediaType, source: "generated" });
+    if (outputs.length === 0 || outputs.length > 8) throw new Error("Image generation finalization requires at least one generated image output and at most eight.");
+    const signature = createHash("sha256").update(JSON.stringify(outputs)).digest("hex");
+    let receipt = this.receipts.get(key);
+    if (receipt && receipt.signature !== signature) throw new Error("Image generation completion changed after finalization began.");
+    if (!receipt) {
+      if (this.receipts.size >= 1024) throw new Error("Image generation finalization capacity is unavailable.");
+      const scopedIdentity = createHash("sha256").update(key).digest("hex");
+      receipt = { signature, outputs: outputs.map((_, index) => ({ assetId: this.dependencies.createAssetId?.() ?? `img-${scopedIdentity}-${index + 1}` })) };
+      this.receipts.set(key, receipt);
     }
+    const existing = this.inFlight.get(key);
+    if (existing) return this.copyResult(await existing);
+    const currentReceipt = receipt;
+    const operation = (async () => {
+      for (const [index, output] of outputs.entries()) {
+        const progress = currentReceipt.outputs[index]!;
+        if (progress.asset) continue;
+        // Save persistence success BEFORE asset registration. A registration
+        // retry must not recopy a consumed runtime output or reserve another file.
+        progress.persisted ??= await this.dependencies.generatedImagePersistence.persistGeneratedImage({ workspaceId: task.workspaceId!, output, requestId: task.requestId });
+        const persisted = progress.persisted;
+        const registered = await this.dependencies.imageAssetRegistry.registerImageAsset({
+          workspaceId: task.workspaceId!, assetId: progress.assetId,
+          artifactId: persisted.artifactId, source: "generated",
+          metadata: { ...(this.readMetadata(task)?.request ?? {}), engine: output.engine, requestId: task.requestId, originalFileName: persisted.originalFileName, createdAt: this.dependencies.now?.() ?? new Date().toISOString() },
+        });
+        progress.asset = { assetId: registered.assetId, artifactId: persisted.artifactId, storageKey: persisted.storageKey, mediaType: persisted.mediaType, source: "generated" };
+      }
+      return { assets: currentReceipt.outputs.map((output) => output.asset!) };
+    })();
+    this.inFlight.set(key, operation);
+    try { return this.copyResult(await operation); }
+    finally { this.inFlight.delete(key); }
+  }
 
-    this.finalizedByRequestId.set(task.requestId, assets);
-    return { assets };
+  private copyResult(result: { assets: FinalizedAssetRef[] }): { assets: FinalizedAssetRef[] } {
+    return { assets: result.assets.map((asset) => ({ ...asset })) };
   }
 
   private readMetadata(task: RuntimeTaskRecord): { request?: Record<string, unknown> } | undefined {

@@ -193,3 +193,13 @@ describe("page dashboard metrics", () => {
     ]);
   });
 });
+
+it("uses one scalar summary request and preserves independently available counts", async () => {
+ let summaryRequests=0; let legacyCalls=0;
+ const legacy=async()=>{legacyCalls++;throw new Error("Full catalog must not be requested.");};
+ const source:PageDashboardDataSource={listSystems:legacy,listReleases:legacy,listDatasetIds:legacy,listArtifacts:legacy,listModels:legacy,listCustomAssetIds:legacy,readSettingsDefaults:legacy,
+ async readWorkspaceSummary(workspaceId,page){summaryRequests++;return {schemaVersion:"workspace-summary-v1",workspaceId:workspaceId as never,page,metrics:{systemsPublished:{status:"available",value:1000},datasetsCreated:{status:"unavailable"},modelsTrained:{status:"available",value:2500},customAssets:{status:"available",value:10000}}};}};
+ const metrics=await loadPageDashboardMetrics("home",source,"workspace.a");
+ expect(summaryRequests).toBe(1); expect(legacyCalls).toBe(0);
+ expect(metrics.map(metric=>metric.value)).toEqual([1000,"—",2500,10000]);expect(metrics[1].unavailable).toBe(true);
+});

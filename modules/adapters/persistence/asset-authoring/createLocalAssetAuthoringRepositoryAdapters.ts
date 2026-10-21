@@ -26,6 +26,19 @@ export function createLocalAuthoredAssetRepositoryAdapter(
 ): AuthoredAssetRepositoryPort {
   const s = new LocalAssetAuthoringRecordStore(o);
   return {
+    async findAuthoredAssetsByBaseReferences(workspaceId, references) {
+      if (!Array.isArray(references) || references.length > 250) throw new Error("Invalid bounded authored references.");
+      if (!references.length) return [];
+      const records = (await s.readCollection<AuthoredAssetRecord>("authoredAssets")).filter(record => record.workspaceId === workspaceId).map(normalizeAuthoredAssetRecord);
+      const index = new Map<string, AuthoredAssetRecord>();
+      const key = (ref: AuthoredAssetRecord["assetReference"]) => JSON.stringify([ref.kind, ref.id, ref.version ?? ""]);
+      for (const record of records) if (!index.has(key(record.assetReference))) index.set(key(record.assetReference), record);
+      return references.map(reference => index.get(key(reference)));
+    },
+    async readPublishedAssetReferences(workspaceId) {
+      return (await s.readCollection<AuthoredAssetRecord>("authoredAssets")).filter(record => record.workspaceId === workspaceId).map(normalizeAuthoredAssetRecord)
+        .filter(record => record.status === "published").map(record => ({...record.assetReference}));
+    },
     async saveAuthoredAssetRecord(r) {
       const x = normalizeAuthoredAssetRecord(r);
       await s.mutateCollection<AuthoredAssetRecord, void>("authoredAssets", (records) => ({
@@ -109,12 +122,22 @@ export function createLocalAssetRevisionRepositoryAdapter(
 ): AssetRevisionRepositoryPort {
   const s = new LocalAssetAuthoringRecordStore(o);
   return {
+    async readAssetRevisionRecords(workspaceId, references) {
+      if (!Array.isArray(references) || references.length > 250) throw new Error("Invalid bounded revision references.");
+      if (!references.length) return [];
+      const records = (await s.readCollection<AuthoredAssetRevisionRecord>("revisions")).filter(record => record.workspaceId === workspaceId).map(normalizeAuthoredAssetRevisionRecord);
+      const index = new Map<string, AuthoredAssetRevisionRecord>();
+      const key = (ref: {authoredAssetId: unknown; revisionId: unknown}) => JSON.stringify([ref.authoredAssetId, ref.revisionId]);
+      for (const record of records) if (!index.has(key(record))) index.set(key(record), record);
+      return references.map(reference => index.get(key(reference)));
+    },
     async saveAssetRevisionRecord(r) {
       const x = normalizeAuthoredAssetRevisionRecord(r);
       await s.mutateCollection<AuthoredAssetRevisionRecord, void>("revisions", (records) => ({
         records: [...records.filter(
           (v) =>
             !(
+              v.workspaceId === x.workspaceId &&
               v.authoredAssetId === x.authoredAssetId &&
               v.revisionId === x.revisionId
             ),
@@ -165,6 +188,10 @@ export function createLocalAssetOverrideRepositoryAdapter(
 ): AssetOverrideRepositoryPort {
   const s = new LocalAssetAuthoringRecordStore(o);
   return {
+    async readPublishedAssetReferences(workspaceId) {
+      return (await s.readCollection<AssetOverrideRecord>("overrides")).filter(record => record.targetWorkspaceId === workspaceId).map(normalizeAssetOverrideRecord)
+        .filter(record => record.status === "active").map(record => ({...record.customizationTarget.effectiveAssetReference}));
+    },
     async saveAssetOverrideRecord(r) {
       const x = normalizeAssetOverrideRecord(r);
       await s.mutateCollection<AssetOverrideRecord, void>("overrides", (records) => ({

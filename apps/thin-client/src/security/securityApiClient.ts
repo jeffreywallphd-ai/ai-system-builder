@@ -36,7 +36,7 @@ export function createSecurityApiClient(options: { apiBaseUrl?: string } = {}) {
       return value as DevSecurityModeResult;
     },
     setDevSecurityMode: async (mode: "disabled-dev" | "lan-token-enforced"): Promise<DevSecurityModeResult> => {
-      const value = await send(apiBaseUrl, "/security/dev-mode", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ mode }) }, false);
+      const value = await send(apiBaseUrl, "/security/dev-mode", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ mode }) }, true);
       return value as DevSecurityModeResult;
     },
     completePairing: async (request: CompletePairingRequest): Promise<CompletePairingResult> => {

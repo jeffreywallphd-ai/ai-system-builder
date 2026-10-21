@@ -16,15 +16,24 @@ export function createLocalAssetDefinitionRepositoryAdapter(options: LocalAssetR
     },
 
     async getDefinition(reference: AssetReference): Promise<AssetDefinition | undefined> {
-      if (reference.kind !== "asset-definition" && reference.kind !== "asset-definition-version") return undefined;
+      if (!reference || !["asset-definition", "asset-definition-version"].includes(reference.kind)) return undefined;
+      return (await this.getDefinitions!([reference]))[0];
+    },
+
+    async getDefinitions(references: readonly AssetReference[]) {
+      if (!Array.isArray(references) || references.length > 250 || references.some(ref => !ref || typeof ref.id !== "string" || !["asset-definition", "asset-definition-version"].includes(ref.kind))) throw new Error("Invalid bounded definition references.");
+      if (!references.length) return [];
       const definitions = await store.readCollection("definitions");
-      if (reference.kind === "asset-definition-version") {
-        const exact = definitions.find((definition) => definition.definitionId === reference.id && definition.version === reference.version);
-        return exact ? cloneJson(exact) : undefined;
+      const exact = new Map(definitions.map(definition => [definitionStorageKey(definition), definition]));
+      const current = new Map<string, AssetDefinition>();
+      for (const definition of definitions) {
+        const prior = current.get(String(definition.definitionId));
+        if (!prior || String(definition.version).localeCompare(String(prior.version)) > 0) current.set(String(definition.definitionId), definition);
       }
-      const sorted = sortDefinitions(definitions.filter((definition) => definition.definitionId === reference.id));
-      const latest = [...sorted].sort((left, right) => String(right.version).localeCompare(String(left.version)))[0];
-      return latest ? cloneJson(latest) : undefined;
+      return references.map(reference => {
+        const value = reference.kind === "asset-definition-version" ? exact.get(`${reference.id}@${reference.version ?? ""}`) : current.get(String(reference.id));
+        return value ? cloneJson(value) : undefined;
+      });
     },
 
     async listDefinitions(query: AssetDefinitionListQuery = {}) {

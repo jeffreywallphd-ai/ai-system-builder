@@ -163,6 +163,8 @@ export function assessAssetSystemQualification(config, evidence) {
       throw new Error("Qualification evidence check is invalid.");
     if (check.id === "performance" && check.status === "passed") {
       validateAssetSystemPerformanceReport(config, check.performanceReport);
+      if (check.performanceReport.sourceRevision !== evidence.sourceRevision)
+        throw new Error("Performance evidence belongs to a different source revision.");
       if (check.performanceReport.status !== "passed")
         throw new Error("Passed performance evidence exceeds a budget.");
     }

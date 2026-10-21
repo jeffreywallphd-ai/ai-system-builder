@@ -12,6 +12,13 @@ or resumed without depending on one AI task's conversation state.
 
 ## Automatic routing
 
+The repository's contributor control plane extends this workflow through
+`docs/diagnostics/ai-development-control-plane.md`. For workflow work requests,
+start or reuse its local JSON review site and provide the verified URL. New
+roadmaps require current candidate-bound helper completion; pre-existing
+roadmap history stays explicitly declarative. The planning engine never executes
+commands from an evidence string.
+
 Agents must route to the skill by intent, not only by exact name. Use it when a
 user:
 

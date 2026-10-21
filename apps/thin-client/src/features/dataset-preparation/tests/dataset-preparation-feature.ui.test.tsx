@@ -21,6 +21,63 @@ describe("thin DatasetPreparationFeature", () => {
     container = undefined;
   });
 
+  it.each(["running", "unknown", "error", "delayed"])("keeps observing when cancellation is %s", async (mode) => {
+    vi.useFakeTimers();
+    try {
+      let terminal = false;
+      let starts = 0;
+      let finishCancel: ((value: unknown) => void) | undefined;
+      const read = vi.fn(async () => ({ requestId: "cancel-task", status: terminal ? "cancelled" : "running" }));
+      const cancel = vi.fn(async () => {
+        if (mode === "error") throw new Error("private runtime failure");
+        if (mode === "delayed") return new Promise((resolve) => { finishCancel = resolve; });
+        return { requestId: "cancel-task", cancelled: false, status: mode };
+      });
+      container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+      await act(async () => {
+        root?.render(<DatasetPreparationFeature workspaceId="workspace-a" artifactClient={{ browseArtifacts: async () => [{
+          artifactId: "a", storageKey: "uploads/a.jsonl", originalName: "a.jsonl", artifactFamily: "dataset", mediaType: "application/x-ndjson",
+        }] } as any} preparationClient={{ start: async () => ({ requestId: ++starts === 1 ? "cancel-task" : "cancel-task-2" }), read, cancel } as any} />);
+        await Promise.resolve(); await Promise.resolve();
+      });
+      await act(async () => { (container!.querySelector('input[type="checkbox"]') as HTMLInputElement).click(); });
+      await act(async () => {
+        (Array.from(container!.querySelectorAll("button")).find((b) => b.textContent === "Run checks and prepare") as HTMLButtonElement).click();
+        await Promise.resolve(); await Promise.resolve();
+      });
+      const stop = () => Array.from(container!.querySelectorAll("button")).find((b) => b.textContent?.includes("Stop")) as HTMLButtonElement;
+      expect(stop()).toBeTruthy();
+      await act(async () => { stop().click(); await Promise.resolve(); await Promise.resolve(); });
+      expect(cancel).toHaveBeenCalledWith({ requestId: "cancel-task", workspaceId: "workspace-a" });
+      expect(container!.textContent).not.toContain("Dataset preparation stopped.");
+      expect(container!.textContent).not.toContain("private runtime failure");
+      const before = read.mock.calls.length;
+      await act(async () => { await vi.advanceTimersByTimeAsync(1600); });
+      expect(read.mock.calls.length).toBeGreaterThan(before);
+      expect(stop()).toBeTruthy();
+      terminal = true;
+      await act(async () => { await vi.advanceTimersByTimeAsync(1600); });
+      expect(container!.textContent).toContain("Dataset preparation stopped.");
+      if (mode === "delayed") {
+        const oldCancel = finishCancel;
+        terminal = false;
+        await act(async () => {
+          (Array.from(container!.querySelectorAll("button")).find((b) => b.textContent === "Run checks and prepare") as HTMLButtonElement).click();
+          await Promise.resolve(); await Promise.resolve();
+        });
+        expect(stop().disabled).toBe(false);
+        await act(async () => { stop().click(); await Promise.resolve(); await Promise.resolve(); });
+        expect(cancel).toHaveBeenLastCalledWith({ requestId: "cancel-task-2", workspaceId: "workspace-a" });
+        await act(async () => { oldCancel?.({ requestId: "cancel-task", cancelled: false, status: "running" }); await Promise.resolve(); });
+        expect(stop().disabled).toBe(true);
+        terminal = true;
+        await act(async () => { await vi.advanceTimersByTimeAsync(1600); });
+      }
+      await act(async () => { finishCancel?.({ requestId: "cancel-task-2", cancelled: false, status: "running" }); await Promise.resolve(); });
+      expect(container!.textContent).toContain("Dataset preparation stopped.");
+    } finally { vi.useRealTimers(); }
+  });
+
   it("uses four ordered steps and creates a three-way dataset without advanced changes", async () => {
     const onPrepared = vi.fn();
     const start = vi.fn(async () => ({

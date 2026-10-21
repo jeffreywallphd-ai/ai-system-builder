@@ -65,6 +65,23 @@ record its canonical source and version and add an automated parity check.
 
 ## Publishing checks
 
+The target repository's `AGENTS.md` may integrate this skill with a bounded
+contributor control plane. Preserve that routing, the JSON review-site startup
+requirement and receipt-backed completion tests. Installing the portable skill
+alone does not install repository helpers or grant execution/review authority.
+Legacy repositories continue to use declarative state; the current repository
+creates new roadmaps with `evidencePolicy: control-plane-v1`.
+Its state path must be `.implementation-roadmaps/<slug>/state.json`. Configure
+`completionSuite: all` for AI-related work (otherwise `standardande2e`), and
+qualify the final candidate through the guide's reviewed `overall` work binding
+before `roadmap-completed`. Portable repositories without the adapter retain
+their declarative workflow.
+Preserve implementation-boundary tests: final verifying work can qualify only
+when every implementation chunk and predecessor is done, approval is current and
+no blocker is open. Pending external criteria still prevent final closure.
+Keep exclusive unpredictable temporary publication and failure-cleanup tests;
+portable installation does not attest OS-native ACL/reparse race qualification.
+
 Before publishing or changing the skill:
 
 1. Run the skill unit tests.

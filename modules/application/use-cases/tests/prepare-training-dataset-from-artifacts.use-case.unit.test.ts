@@ -6,6 +6,7 @@ import { describe, expect, it, testDouble } from "../../../testing/node-test";
 import { createOrganizationId } from "../../../contracts/organization";
 import type { TaskPowerLifecyclePort } from "../../services/runtime";
 import { PrepareTrainingDatasetFromArtifactsUseCase } from "../prepare-training-dataset-from-artifacts.use-case";
+import { OwnedTaskReconcilerService } from "../../services/runtime/owned-task-reconciler.service";
 
 async function exists(path: string) {
   try {
@@ -44,8 +45,9 @@ const createRegistry = (overrides?: {
 });
 
 describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
-  it("uses runtime task registry for start/read and materializes", async () => {
+  it("materializes once without a renderer and retries owed staging cleanup before releasing lifecycle ownership", async () => {
     const lifecycle = createLifecycleFake();
+    const reconciler = new OwnedTaskReconcilerService();
     let runtimeStartRequest: any;
     const runtimeStart = testDouble.fn(async (request: any) => {
       runtimeStartRequest = request;
@@ -88,6 +90,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
     }));
     let storedDatasetRequest: any;
     const useCase = new PrepareTrainingDatasetFromArtifactsUseCase({
+      taskReconciler: reconciler,
       runtimeTaskRegistry: createRegistry({
         startTask: runtimeStart,
         getTaskStatus: runtimeStatus,
@@ -95,7 +98,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
       storageBindings: {
         readArtifactStorageBindings: testDouble.fn(async () => ({
           ok: true,
-          value: { bindings: [] },
+          value: { bindings: [{ workspaceId: "workspace-a", artifactId: "a1", role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: "a1" } }] },
         })),
         upsertArtifactStorageBinding: testDouble.fn(),
         deleteArtifactStorageBindings: testDouble.fn(),
@@ -117,10 +120,16 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
       },
       taskPowerLifecycle: lifecycle,
     });
+    const cleanup = (useCase as any).cleanupRuntimeWorkingDir.bind(useCase); let cleanupCalls = 0;
+    (useCase as any).cleanupRuntimeWorkingDir = async (id: string) => { if (++cleanupCalls === 1) throw new Error("temporary cleanup failure"); await cleanup(id); };
     const started = await useCase.startPrepareTrainingDataset(command, {
       workspaceId: "workspace-a",
     });
     expect(started.ok).toBe(true);
+    await reconciler.reconcileNow(); expect(reconciler.status.pending).toBe(1);
+    await reconciler.reconcileNow(); expect(reconciler.status.pending).toBe(0);
+    expect(cleanupCalls).toBe(2); expect(runtimeStatus).toHaveBeenCalledTimes(1);
+    expect(await exists(runtimeStartRequest.payload.runtime.runtimeWorkingDirectory)).toBe(false);
     const status = await useCase.readPrepareTrainingDataset("r1", {
       workspaceId: "workspace-a",
     });
@@ -238,7 +247,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
       storageBindings: {
         readArtifactStorageBindings: testDouble.fn(async () => ({
           ok: true,
-          value: { bindings: [] },
+          value: { bindings: [{ workspaceId: "workspace-a", artifactId: "a1", role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: "a1" } }] },
         })),
         upsertArtifactStorageBinding: testDouble.fn(),
         deleteArtifactStorageBindings: testDouble.fn(),
@@ -333,7 +342,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
       storageBindings: {
         readArtifactStorageBindings: testDouble.fn(async () => ({
           ok: true,
-          value: { bindings: [] },
+          value: { bindings: [{ workspaceId: "workspace-a", artifactId: "a1", role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: "a1" } }] },
         })),
         upsertArtifactStorageBinding: testDouble.fn(),
         deleteArtifactStorageBindings: testDouble.fn(),
@@ -407,7 +416,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
       storageBindings: {
         readArtifactStorageBindings: testDouble.fn(async () => ({
           ok: true,
-          value: { bindings: [] },
+          value: { bindings: [{ workspaceId: "workspace-a", artifactId: "a1", role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: "a1" } }] },
         })),
         upsertArtifactStorageBinding: testDouble.fn(),
         deleteArtifactStorageBindings: testDouble.fn(),
@@ -463,7 +472,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
       storageBindings: {
         readArtifactStorageBindings: testDouble.fn(async () => ({
           ok: true,
-          value: { bindings: [] },
+          value: { bindings: [{ workspaceId: "workspace-a", artifactId: "a1", role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: "a1" } }] },
         })),
         upsertArtifactStorageBinding: testDouble.fn(),
         deleteArtifactStorageBindings: testDouble.fn(),
@@ -505,7 +514,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
       storageBindings: {
         readArtifactStorageBindings: testDouble.fn(async () => ({
           ok: true,
-          value: { bindings: [] },
+          value: { bindings: [{ workspaceId: "workspace-a", artifactId: "a1", role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: "a1" } }] },
         })) as any,
         upsertArtifactStorageBinding: testDouble.fn(),
         deleteArtifactStorageBindings: testDouble.fn(),
@@ -571,7 +580,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
       storageBindings: {
         readArtifactStorageBindings: testDouble.fn(async () => ({
           ok: true,
-          value: { bindings: [] },
+          value: { bindings: [{ workspaceId: "workspace-a", artifactId: "a1", role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: "a1" } }] },
         })) as any,
         upsertArtifactStorageBinding: testDouble.fn(),
         deleteArtifactStorageBindings: testDouble.fn(),
@@ -637,7 +646,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
       storageBindings: {
         readArtifactStorageBindings: testDouble.fn(async () => ({
           ok: true,
-          value: { bindings: [] },
+          value: { bindings: [{ workspaceId: "workspace-a", artifactId: "a1", role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: "a1" } }] },
         })),
         upsertArtifactStorageBinding: testDouble.fn(),
         deleteArtifactStorageBindings: testDouble.fn(),
@@ -699,7 +708,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
       storageBindings: {
         readArtifactStorageBindings: testDouble.fn(async () => ({
           ok: true,
-          value: { bindings: [] },
+          value: { bindings: [{ workspaceId: "workspace-a", artifactId: "a1", role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: "a1" } }] },
         })),
         upsertArtifactStorageBinding: testDouble.fn(),
         deleteArtifactStorageBindings: testDouble.fn(),
@@ -864,10 +873,6 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
     const retrieveArtifact = testDouble
       .fn()
       .mockResolvedValueOnce({
-        ok: false,
-        error: { code: "not-found", message: "not local" },
-      })
-      .mockResolvedValueOnce({
         ok: true,
         value: {
           descriptor: {
@@ -883,7 +888,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
       }) as any;
     const storeArtifact = testDouble.fn(async (request: any) => ({
       ok: true,
-      value: request.descriptor,
+      value: { ...request.descriptor, key: "localized-source" },
     })) as any;
     const upsertArtifactStorageBinding = testDouble.fn(
       async (request: any) => ({
@@ -916,6 +921,7 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
             bindings: [
               {
                 artifactId: "a1",
+                workspaceId: "workspace-a",
                 role: "imported-source",
                 backing: {
                   kind: "artifact-repo",
@@ -967,6 +973,8 @@ describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
     );
 
     expect(result.ok).toBe(true);
+    expect(storeArtifact.mock.calls[0][0].descriptor.key).toBeUndefined();
+    expect(storeArtifact.mock.calls[0][0].overwrite).toBe(false);
     expect(retrieveArtifactFromRepo).toHaveBeenCalledTimes(1);
     expect(storeArtifact).toHaveBeenCalledTimes(1);
     expect(upsertArtifactStorageBinding).toHaveBeenCalledTimes(1);
@@ -1022,4 +1030,27 @@ it("rejects dataset preparation start when runtime capability is not ready", asy
     },
   });
   expect(startTask).not.toHaveBeenCalled();
+});
+
+
+it("denies unbound or conflicting dataset source authority before storage or provider I/O", async () => {
+  for (const bindings of [[], [{ workspaceId: "workspace-b", artifactId: "a1", role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: "foreign" } }],
+    [{ workspaceId: "workspace-a", artifactId: "other", role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: "foreign" } }]]) {
+    const retrieveArtifact = testDouble.fn();
+    const retrieveArtifactFromRepo = testDouble.fn();
+    const startTask = testDouble.fn();
+    const readArtifactStorageBindings = testDouble.fn(async () => ({ ok: true, value: { bindings } }));
+    const useCase = new PrepareTrainingDatasetFromArtifactsUseCase({
+      runtimeTaskRegistry: createRegistry({ startTask }), taskPowerLifecycle: createLifecycleFake(),
+      storageBindings: { readArtifactStorageBindings, upsertArtifactStorageBinding: testDouble.fn(), deleteArtifactStorageBindings: testDouble.fn() } as any,
+      storage: { retrieveArtifact, storeArtifact: testDouble.fn(), hasArtifact: testDouble.fn(), deleteArtifact: testDouble.fn() } as any,
+      artifactRepoStorage: { retrieveArtifactFromRepo, storeArtifactInRepo: testDouble.fn(), hasArtifactInRepo: testDouble.fn() } as any,
+    });
+    const result = await useCase.startPrepareTrainingDataset(command, { workspaceId: "workspace-a" });
+    expect(result.ok).toBe(false);
+    expect(retrieveArtifact).toHaveBeenCalledTimes(0);
+    expect(retrieveArtifactFromRepo).toHaveBeenCalledTimes(0);
+    expect(startTask).toHaveBeenCalledTimes(0);
+    expect(readArtifactStorageBindings).toHaveBeenCalledWith({ artifactId: "a1", workspaceId: "workspace-a" }, { workspaceId: "workspace-a" });
+  }
 });

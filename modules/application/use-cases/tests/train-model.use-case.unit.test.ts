@@ -1,3 +1,4 @@
+import { OwnedTaskReconcilerService } from "../../services/runtime/owned-task-reconciler.service";
 import { access, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -77,6 +78,7 @@ describe("TrainModelUseCase", () => {
     getTaskStatus: testDouble.fn(async () => ({
       requestId: "train-req-1",
       taskType: TaskType.MODEL_TRAINING,
+      workspaceId: "workspace-a" as never,
       status: "running",
       concurrencyClass: "unknown",
     })),
@@ -97,11 +99,12 @@ describe("TrainModelUseCase", () => {
         bindings: [
           {
             artifactId: "dataset-1",
+            workspaceId: "workspace-a" as never,
             role: "primary",
             backing: {
               kind: "artifact-object",
               provider: "local-filesystem",
-              locator: "/tmp/dataset-1.parquet",
+              locator: "datasets/dataset-1.parquet",
             },
           },
         ],
@@ -139,6 +142,18 @@ describe("TrainModelUseCase", () => {
     })),
   });
 
+  for (const data of [undefined, { runId: "train-req-1", status: "invalid" }]) it("settles malformed successful training output without a renderer", async () => {
+    const lifecycle = createLifecycleFake(); const reconciler = new OwnedTaskReconcilerService();
+    const runtime = createRuntimeTaskRegistryFake();
+    (runtime.getTaskStatus as ReturnType<typeof testDouble.fn>).mockResolvedValue({ requestId: "train-req-1", workspaceId: "workspace-a", taskType: TaskType.MODEL_TRAINING, status: "succeeded", data });
+    const registration = testDouble.fn();
+    const useCase = new TrainModelUseCase({ runtimeTaskRegistry: runtime, taskReconciler: reconciler, modelRegistry: { ...baseRegistry, registerGeneratedModel: registration }, storageBindings: createStorageBindingsFake(), storage: createStorageFake(), taskPowerLifecycle: lifecycle });
+    await useCase.execute(baseRequest); await reconciler.reconcileNow();
+    expect(reconciler.status.pending).toBe(0);
+    expect(await useCase.read("train-req-1", "workspace-a")).toMatchObject({ status: "failed", error: { code: "invalid_runtime_result" } });
+    expect(lifecycle.completeTask).toHaveBeenCalledWith("train-req-1", "failed"); expect(registration).not.toHaveBeenCalled();
+  });
+
   it("starts training with runtime task registry", async () => {
     const lifecycle = createLifecycleFake();
     const runtimeTaskRegistry = createRuntimeTaskRegistryFake();
@@ -168,8 +183,9 @@ describe("TrainModelUseCase", () => {
     );
     expect(startRequest.payload.datasets[0]).toMatchObject({
       artifactId: "dataset-1",
-      path: "/tmp/dataset-1.parquet",
     });
+    expect(startRequest.payload.datasets[0].path).toContain("dataset-1.parquet");
+    expect(startRequest.payload.datasets[0].path.startsWith("/tmp/dataset")).toBe(false);
     expect(lifecycle.startTask).toHaveBeenCalledWith(
       "train-req-1",
       TaskType.MODEL_TRAINING,
@@ -264,6 +280,7 @@ describe("TrainModelUseCase", () => {
     ).mockResolvedValue({
       requestId: "train-req-1",
       taskType: TaskType.MODEL_TRAINING,
+      workspaceId: "workspace-a" as never,
       status: "running",
       concurrencyClass: "unknown",
       progress: {
@@ -307,12 +324,14 @@ describe("TrainModelUseCase", () => {
 
   it("registers generated model on succeeded status only once", async () => {
     const lifecycle = createLifecycleFake();
+    const reconciler = new OwnedTaskReconcilerService();
     const runtimeTaskRegistry = createRuntimeTaskRegistryFake();
     (
       runtimeTaskRegistry.getTaskStatus as ReturnType<typeof testDouble.fn>
     ).mockResolvedValue({
       requestId: "train-req-1",
       taskType: TaskType.MODEL_TRAINING,
+      workspaceId: "workspace-a" as never,
       status: "succeeded",
       concurrencyClass: "unknown",
       data: {
@@ -342,6 +361,7 @@ describe("TrainModelUseCase", () => {
         },
       });
     const useCase = new TrainModelUseCase({
+      taskReconciler: reconciler,
       runtimeTaskRegistry,
       modelRegistry: { ...baseRegistry, registerGeneratedModel },
       storageBindings: createStorageBindingsFake(),
@@ -350,7 +370,13 @@ describe("TrainModelUseCase", () => {
       taskPowerLifecycle: lifecycle,
     });
 
+    const cleanup = (useCase as any).cleanupRuntimeDatasetDir.bind(useCase); let cleanupCalls = 0;
+    (useCase as any).cleanupRuntimeDatasetDir = async (id: string) => { if (++cleanupCalls === 1) throw new Error("temporary cleanup failure"); await cleanup(id); };
     await useCase.execute(baseRequest);
+    await reconciler.reconcileNow(); expect(reconciler.status.pending).toBe(1);
+    await Promise.all([reconciler.reconcileNow(), reconciler.reconcileNow()]);
+    expect(cleanupCalls).toBe(2);
+    expect(reconciler.status.pending).toBe(0);
     const pending = await useCase.read("train-req-1", "workspace-a");
     expect(pending).toMatchObject({
       runId: "train-req-1",
@@ -393,6 +419,7 @@ describe("TrainModelUseCase", () => {
     ).mockResolvedValue({
       requestId: "train-req-1",
       taskType: TaskType.MODEL_TRAINING,
+      workspaceId: "workspace-a" as never,
       status: "succeeded",
       concurrencyClass: "unknown",
       data: {
@@ -576,6 +603,7 @@ describe("TrainModelUseCase", () => {
       ).mockResolvedValue({
         requestId: "train-req-1",
         taskType: TaskType.MODEL_TRAINING,
+      workspaceId: "workspace-a" as never,
         status: terminalStatus,
         concurrencyClass: "unknown",
         error:
@@ -618,6 +646,7 @@ describe("TrainModelUseCase", () => {
           bindings: [
             {
               artifactId: "dataset-1",
+              workspaceId: "workspace-a" as never,
               role: "primary",
               backing: {
                 kind: "artifact-object",
@@ -653,69 +682,11 @@ describe("TrainModelUseCase", () => {
     );
   });
 
-  it("stages a generated local artifact-object storage key when no binding row exists", async () => {
-    const lifecycle = createLifecycleFake();
-    const runtimeTaskRegistry = createRuntimeTaskRegistryFake();
-    const storageBindings: Pick<
-      ArtifactStorageBindingPort,
-      "readArtifactStorageBindings"
-    > = {
-      readArtifactStorageBindings: testDouble.fn(async () => ({
-        ok: true as const,
-        value: { bindings: [] },
-      })),
-    };
-    const storage = createStorageFake();
-    const generatedDatasetRequest = {
-      ...baseRequest,
-      datasets: [
-        {
-          artifactId:
-            "generated/20260429160945623-2e7fe0660f46449f9ce819d011eb13f9-training-dataset.parquet",
-          splitRole: "train" as const,
-        },
-      ],
-    };
-    const useCase = new TrainModelUseCase({
-      runtimeTaskRegistry,
-      modelRegistry: {
-        ...baseRegistry,
-        registerGeneratedModel:
-          testDouble.fn<ModelRegistryPort["registerGeneratedModel"]>(),
-      },
-      storageBindings,
-      storage,
-      taskPowerLifecycle: lifecycle,
-    });
-
-    await useCase.execute(generatedDatasetRequest);
-
-    expect(storage.retrieveArtifact).toHaveBeenCalledWith({
-      key: "generated/20260429160945623-2e7fe0660f46449f9ce819d011eb13f9-training-dataset.parquet",
-      requestId: undefined,
-      correlationId: undefined,
-    });
-    const startRequest = (
-      runtimeTaskRegistry.startTask as ReturnType<typeof testDouble.fn>
-    ).mock.calls[0]?.[0];
-    expect(startRequest.taskType).toBe(TaskType.MODEL_TRAINING);
-    expect(startRequest.payload.datasets[0].artifactId).toBe(
-      "generated/20260429160945623-2e7fe0660f46449f9ce819d011eb13f9-training-dataset.parquet",
-    );
-    expect(startRequest.payload.datasets[0].path).toContain(
-      "training-dataset.parquet",
-    );
-    expect(startRequest.payload.datasets[0].format).toBe("parquet");
-    expect(
-      startRequest.payload.datasets[0].metadata.artifactMetadata
-        .structuredOutput,
-    ).toEqual({
-      schemaFingerprint: "a".repeat(64),
-      purposePaths: {
-        text: ["result", "body"],
-        label: ["result", "category"],
-      },
-    });
+  it("denies unbound artifacts and caller-provided training paths before retrieval or dispatch", async () => {
+    const runtimeTaskRegistry = createRuntimeTaskRegistryFake(); const storage = createStorageFake();
+    const useCase = new TrainModelUseCase({ runtimeTaskRegistry, modelRegistry: baseRegistry, storageBindings: { readArtifactStorageBindings: async () => ({ ok: true, value: { bindings: [] } }) } as never, storage, taskPowerLifecycle: createLifecycleFake() });
+    await expect(useCase.execute({ ...baseRequest, datasets: [{ ...baseRequest.datasets[0], path: "C:/private/foreign.parquet" }] })).rejects.toThrow("workspace-owned local training artifact binding");
+    expect(storage.retrieveArtifact).not.toHaveBeenCalled(); expect(runtimeTaskRegistry.startTask).not.toHaveBeenCalled();
   });
 
   it("stages source artifact paths for image training datasets", async () => {
@@ -729,20 +700,7 @@ describe("TrainModelUseCase", () => {
         async ({ artifactId }: { artifactId: string }) => ({
           ok: true as const,
           value: {
-            bindings:
-              artifactId === "source-image-1"
-                ? [
-                    {
-                      artifactId,
-                      role: "primary",
-                      backing: {
-                        kind: "artifact-object" as const,
-                        provider: "local" as const,
-                        locator: "uploads/source-image-1.png",
-                      },
-                    },
-                  ]
-                : [],
+            bindings: [{ artifactId, workspaceId: "workspace-a" as never, role: "primary", backing: { kind: "artifact-object" as const, provider: "local" as const, locator: artifactId === "source-image-1" ? "uploads/source-image-1.png" : artifactId } }],
           },
         }),
       ),

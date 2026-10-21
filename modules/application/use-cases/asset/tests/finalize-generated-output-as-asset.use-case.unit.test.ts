@@ -553,3 +553,18 @@ function definitionRef(definition: AssetDefinition): AssetReference {
 function key(reference: AssetReference): string {
   return `${reference.id}@${reference.version ?? ""}`;
 }
+
+it("uses canonical source identity for slash-bearing artifact IDs without repeating finalization", async () => {
+  const read = new FakeReadPort(); read.details.set("view.generated", { view: generatedView() });
+  const finalizer = new FakeFinalizer(); const original = finalizedResult();
+  assert.equal(original.ok, true);
+  if (!original.ok) throw new Error("fixture");
+  finalizer.result = { ...original, finalizedImage: { ...original.finalizedImage, backingArtifactId: "generated/images/nested-output.png" } };
+  const h = makeUseCase(read, new FakeDefinitionRepository(), new FakeInstanceRepository(), finalizer);
+  const first = await h.useCase.execute(command());
+  assert.equal(first.ok, true); assert.equal(first.status, "created");
+  assert.equal(first.assetInstance?.resourceRefs?.some((ref) => String(ref.id).includes("/")), false);
+  h.instances.instances = [...h.instances.saved];
+  const repeated = await h.useCase.execute(command());
+  assert.equal(repeated.ok, true); assert.equal(repeated.status, "existing"); assert.equal(finalizer.calls.length, 1);
+});

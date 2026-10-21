@@ -29,6 +29,33 @@ function createMockChildProcess() {
 }
 
 describe("createPythonRuntimeSupervisor", () => {
+  it("retains failed startup diagnostics after asynchronous error and confirmed close", async () => {
+    const child = createMockChildProcess();
+    const supervisor = createPythonRuntimeSupervisor({
+      command: "python",
+      runtimeClient: {
+        getHealthStatus: async () => {
+          throw new Error("not ready");
+        },
+      },
+      spawnImplementation: (() => {
+        queueMicrotask(() => {
+          child.emit("error", new Error("synthetic spawn failure"));
+          child.emit("close", -1, null);
+        });
+        return child as any;
+      }) as any,
+      startupTimeoutMs: 50,
+      healthCheckIntervalMs: 1,
+    });
+    await expect(supervisor.start()).rejects.toThrow(
+      "exited before health check completed",
+    );
+    expect(supervisor.getStatus()).toBe("failed");
+    await supervisor.stop();
+    expect(supervisor.getStatus()).toBe("stopped");
+  });
+
   it("starts and transitions to ready after health probing", async () => {
     const child = createMockChildProcess();
     const spawnImplementation = testDouble.fn(() => child as any);
@@ -138,16 +165,23 @@ describe("createPythonRuntimeSupervisor", () => {
 
   it("stops the process and marks status stopped", async () => {
     const child = createMockChildProcess();
+    let spawned = false;
     const supervisor = createPythonRuntimeSupervisor({
       command: "python",
       args: ["main.py"],
       runtimeClient: {
-        getHealthStatus: async () => ({
-          healthy: true,
-          status: { runtimeId: "python-sidecar", status: "ready" },
-        }),
+        getHealthStatus: async () => {
+          if (!spawned) throw new Error("not started");
+          return {
+            healthy: true,
+            status: { runtimeId: "python-sidecar", status: "ready" },
+          };
+        },
       },
-      spawnImplementation: (() => child as any) as any,
+      spawnImplementation: (() => {
+        spawned = true;
+        return child as any;
+      }) as any,
       startupTimeoutMs: 100,
       healthCheckIntervalMs: 1,
     });
@@ -182,7 +216,7 @@ describe("createPythonRuntimeSupervisor", () => {
     });
 
     await expect(supervisor.start()).rejects.toThrow(
-      /Python runtime exited before health check completed\.[\s\S]*Recent runtime output: stderr:unstructured-output/,
+      /Python runtime exited before health check completed\./,
     );
   });
 

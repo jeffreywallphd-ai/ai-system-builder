@@ -39,6 +39,7 @@ type ThinClientWorkspacePageKey = Extract<
 >;
 const modelDownloadNotificationClient = createApiModelManagementClient();
 const thinClientDownloadNotificationBridgeClient = {
+  completeModelDownload: modelDownloadNotificationClient.completeModelDownload!,
   listModelDownloads: modelDownloadNotificationClient.listModelDownloads!,
 };
 const thinClientContextNotificationClient = createContextManagementPageClient();

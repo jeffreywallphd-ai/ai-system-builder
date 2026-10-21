@@ -93,6 +93,16 @@ describe("server app artifact upload route", () => {
       });
       expect(enableResponse.status).toBe(200);
 
+      for(const body of ['{"malformed":',JSON.stringify({mode:"disabled-dev"})]) {
+        const downgrade=await fetch(`${baseUrl}/api/security/dev-mode`,{method:"POST",headers:{"content-type":"application/json"},body});
+        expect(downgrade.status).toBe(401);
+        expect(await downgrade.json()).toMatchObject({error:{operation:"security.unauthenticated"}});
+      }
+      const stillEnforced=await fetch(`${baseUrl}/api/security/dev-mode`);
+      expect(stillEnforced.status).toBe(200);
+      expect(await stillEnforced.json()).toMatchObject({ok:true,value:{mode:"lan-token-enforced"}});
+
+
       for (const routePath of [
         "/api/model/download",
         "/api/image-generation/start",

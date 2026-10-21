@@ -28,7 +28,8 @@
 - Bearer tokens authenticate clients; HTTPS/TLS provides confidentiality and integrity.
 - Route policy is centralized; unknown `/api/*` routes are denied with `security.route-policy-missing`.
 - Unexpected internal errors at API/IPC/preload/UI boundaries must stay generic and sanitized.
-- Security mode and listener transport posture are startup-owned; runtime toggles must not imply live HTTP/HTTPS conversion.
+- Listener/TLS posture is startup-owned; opt-in dev-mode POST uses nonpublic `security:admin` and client `secureFetch`.
+- Enforced mode forbids unauthenticated downgrade; explicit disabled-dev bootstrap remains insecure.
 
 ## Current Implementation Snapshot
 
@@ -143,7 +144,7 @@
 
 - Default `dev:server` is `disabled-dev` over HTTP with no auth.
 - Dev HTTPS can be enabled with `AI_SYSTEM_BUILDER_HTTPS_ENABLED=true` and `AI_SYSTEM_BUILDER_TLS_CERT_MODE=auto-self-signed`.
-- Thin-client HTTPS is separate from server API HTTPS and can use explicit cert/key paths or dev-generated cert material.
+- Thin-client defaults to loopback; explicit LAN mode requires frontend/proxy HTTPS, final CLI guards and verified remote TLS.
 - `auto-self-signed` may produce browser trust warnings.
 - `auto-local-ca` supports local/dev/LAN testing with manual trust installation.
 - No automatic trust-store installation is performed.

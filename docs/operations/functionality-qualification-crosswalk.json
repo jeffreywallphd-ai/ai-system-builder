@@ -1,0 +1,267 @@
+{
+  "schema_version": "functionality-qualification-crosswalk-v1",
+  "scope": "ownership-and-qualification-readiness",
+  "owners": [
+    {
+      "slug": "asset-experience-layered-customization",
+      "criteria": [
+        {
+          "increment_id": "production-qualification",
+          "criterion_id": "desktop-thin-accessibility",
+          "environment_requirements": [
+            "manual-assistive-technology"
+          ],
+          "procedures": [
+            "docs/operations/functionality-outcome-qualification.md"
+          ],
+          "supporting_harnesses": [
+            "dev-tools/scripts/qualification/check-asset-system-qualification.mjs"
+          ]
+        },
+        {
+          "increment_id": "production-qualification",
+          "criterion_id": "security-review",
+          "environment_requirements": [
+            "controlled-security-target"
+          ],
+          "procedures": [
+            "docs/operations/functionality-outcome-qualification.md"
+          ],
+          "supporting_harnesses": [
+            "dev-tools/scripts/qualification/check-asset-system-qualification.mjs"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "data-management-quality-and-usability",
+      "criteria": [
+        {
+          "increment_id": "guided-trustworthy-foundation",
+          "criterion_id": "guided-usability-is-qualified",
+          "environment_requirements": [
+            "representative-participants",
+            "manual-assistive-technology"
+          ],
+          "procedures": [
+            "docs/operations/functionality-outcome-qualification.md"
+          ],
+          "supporting_harnesses": [
+            "dev-tools/scripts/testing/run-dataset-preparation-e2e.mjs"
+          ]
+        },
+        {
+          "increment_id": "quality-curation-and-review",
+          "criterion_id": "quality-review-usability-is-qualified",
+          "environment_requirements": [
+            "representative-participants",
+            "manual-assistive-technology"
+          ],
+          "procedures": [
+            "docs/operations/functionality-outcome-qualification.md"
+          ],
+          "supporting_harnesses": [
+            "dev-tools/scripts/testing/run-dataset-preparation-e2e.mjs"
+          ]
+        },
+        {
+          "increment_id": "versioned-dataset-lineage-and-publishing",
+          "criterion_id": "controlled-provider-publication-is-qualified",
+          "environment_requirements": [
+            "private-provider-credentials"
+          ],
+          "procedures": [
+            "docs/operations/functionality-outcome-qualification.md"
+          ],
+          "supporting_harnesses": [
+            "dev-tools/scripts/testing/run-dataset-preparation-e2e.mjs"
+          ]
+        },
+        {
+          "increment_id": "governed-scalable-ingestion",
+          "criterion_id": "controlled-ingestion-scale-is-qualified",
+          "environment_requirements": [
+            "representative-scale-fixtures",
+            "private-provider-credentials"
+          ],
+          "procedures": [
+            "docs/operations/functionality-outcome-qualification.md"
+          ],
+          "supporting_harnesses": [
+            "dev-tools/scripts/testing/run-dataset-preparation-e2e.mjs"
+          ]
+        },
+        {
+          "increment_id": "advanced-preparation-and-synthetic-quality",
+          "criterion_id": "controlled-advanced-capabilities-are-qualified",
+          "environment_requirements": [
+            "installed-models-and-hardware",
+            "representative-participants",
+            "ocr-supported-runtime"
+          ],
+          "procedures": [
+            "docs/operations/functionality-outcome-qualification.md"
+          ],
+          "supporting_harnesses": [
+            "modules/adapters/runtime/python/worker/tests/test_dataset_preparation_training_material_matrix_e2e.py"
+          ]
+        },
+        {
+          "increment_id": "exact-task-adaptive-quality-and-preparation",
+          "criterion_id": "exact-task-usability-is-qualified",
+          "environment_requirements": [
+            "representative-participants",
+            "manual-assistive-technology"
+          ],
+          "procedures": [
+            "docs/operations/functionality-outcome-qualification.md"
+          ],
+          "supporting_harnesses": [
+            "dev-tools/scripts/testing/run-dataset-preparation-e2e.mjs"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "optional-constrained-json-generation",
+      "criteria": [
+        {
+          "increment_id": "production-hardening-and-qualification",
+          "criterion_id": "representative-resource-and-usability-qualification",
+          "environment_requirements": [
+            "installed-models-and-hardware"
+          ],
+          "procedures": [
+            "docs/operations/functionality-outcome-qualification.md"
+          ],
+          "supporting_harnesses": [
+            "modules/adapters/runtime/python/worker/tests/test_model_training_task_matrix_e2e.py",
+            "dev-tools/scripts/qualification/run_context_efficiency_qualification.py"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "functionality-optimization",
+      "criteria": [
+        {
+          "increment_id": "responsive-workspace-browse",
+          "criterion_id": "browse-performance-qualified",
+          "environment_requirements": [
+            "reference-performance-profiles"
+          ],
+          "procedures": [
+            "docs/operations/functionality-outcome-qualification.md"
+          ],
+          "supporting_harnesses": [
+            "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-browse.e2e.spec.ts",
+            "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-browse.e2e.spec.ts"
+          ]
+        },
+        {
+          "increment_id": "efficient-reliable-task-journeys",
+          "criterion_id": "task-host-qualification",
+          "environment_requirements": [
+            "whole-host-runtime-profiles"
+          ],
+          "procedures": [
+            "docs/operations/functionality-outcome-qualification.md"
+          ],
+          "supporting_harnesses": [
+            "dev-tools/scripts/testing/run-model-training-e2e.mjs",
+            "modules/application/services/runtime/tests/owned-task-reconciler.service.unit.test.ts",
+            "apps/desktop/src/main/tests/shutdownDesktopRuntimeResources.unit.test.ts",
+            "apps/server/src/tests/shutdownServerResources.unit.test.ts",
+            "modules/adapters/runtime/python/tests/runtime-start-shutdown-races.unit.test.ts",
+            "modules/adapters/runtime/comfyui/tests/comfyui-owned-lifecycle.unit.test.ts"
+          ]
+        },
+        {
+          "increment_id": "quality-preserving-context-efficiency",
+          "criterion_id": "context-runtime-qualified",
+          "environment_requirements": [
+            "installed-models-and-hardware"
+          ],
+          "procedures": [
+            "docs/operations/functionality-outcome-qualification.md"
+          ],
+          "supporting_harnesses": [
+            "dev-tools/scripts/qualification/run_context_efficiency_qualification.py",
+            "modules/adapters/runtime/python/worker/tests/test_context_generation.py",
+            "modules/adapters/runtime/python/worker/tests/test_context_artifact_operation.py"
+          ]
+        },
+        {
+          "increment_id": "qualified-user-and-model-outcomes",
+          "criterion_id": "user-task-outcome-targets",
+          "environment_requirements": [
+            "representative-participants",
+            "manual-assistive-technology"
+          ],
+          "procedures": [
+            "docs/operations/functionality-outcome-qualification.md"
+          ],
+          "supporting_harnesses": [
+            "dev-tools/scripts/testing/run-dataset-preparation-e2e.mjs"
+          ]
+        },
+        {
+          "increment_id": "qualified-user-and-model-outcomes",
+          "criterion_id": "accessibility-outcomes-qualified",
+          "environment_requirements": [
+            "manual-assistive-technology"
+          ],
+          "procedures": [
+            "docs/operations/functionality-outcome-qualification.md"
+          ],
+          "supporting_harnesses": [
+            "dev-tools/scripts/qualification/check-asset-system-qualification.mjs"
+          ]
+        },
+        {
+          "increment_id": "qualified-user-and-model-outcomes",
+          "criterion_id": "model-quality-resource-outcomes",
+          "environment_requirements": [
+            "installed-models-and-hardware"
+          ],
+          "procedures": [
+            "docs/operations/functionality-outcome-qualification.md"
+          ],
+          "supporting_harnesses": [
+            "modules/adapters/runtime/python/worker/tests/test_model_training_task_matrix_e2e.py",
+            "dev-tools/scripts/qualification/run_context_efficiency_qualification.py"
+          ]
+        }
+      ]
+    }
+  ],
+  "separate_owners": [
+    {
+      "slug": "security-findings-refresh",
+      "role": "Security successor retains independent criteria and blocker."
+    },
+    {
+      "slug": "systems-run-workflow-active-source",
+      "role": "Proposal retains its own approval gate; this ledger grants no implementation authority."
+    }
+  ],
+  "environments": {
+    "representative-participants": "At least five representative nondeveloper participants, consent and synthetic task scripts; no participant records or session content in repository evidence.",
+    "manual-assistive-technology": "Named supported desktop and thin-client profiles, actual keyboard and screen-reader operators, 320 CSS-pixel reflow, focus/contrast/noncolor/reduced-motion checks.",
+    "private-provider-credentials": "Separately authorized private provider test repository and credentials; real commit/render/retry/denial/cleanup evidence without retained credentials.",
+    "representative-scale-fixtures": "Approved multi-gigabyte synthetic sources and test website/provider; measured bytes, RSS, resume/cancel and cleanup.",
+    "installed-models-and-hardware": "Authorized already-installed model identities and representative CPU/accelerator/constrained-memory cohorts; held-out quality and actual RAM/VRAM/throughput measurements.",
+    "reference-performance-profiles": "Named reference desktop and managed-server/thin-client performance environments; cold/warm and transport effects declared.",
+    "whole-host-runtime-profiles": "Controlled desktop and server/thin-client runtime leave/reopen/disconnect/cancel/failure/shutdown measurements with physical worker cleanup evidence.",
+    "controlled-security-target": "Authorized disposable target-environment security assessment; source review alone is insufficient.",
+    "ocr-supported-runtime": "OCR remains explicitly unavailable; do not declare advanced qualification passed from hardware availability alone."
+  },
+  "targets": {
+    "participants": 5,
+    "critical_journey_success_minimum": 4,
+    "critical_data_loss_or_authority_confusion": 0,
+    "median_task_ease_minimum_out_of_7": 5,
+    "accepted_output_throughput_improvement_minimum_percent": 20,
+    "quality": "Predeclare held-out metric and statistical tolerance per task; no material quality regression. CPU/accelerator and constrained/unchecked cohorts remain separate."
+  }
+}

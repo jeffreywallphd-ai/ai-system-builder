@@ -13,7 +13,6 @@ import { run } from "node:test";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import {
-  applyIgnoredFailureAdjustments,
   applyDiagnosticSummaryMetric,
   buildNonBrowserNodeTestRunOptions,
   createNonBrowserAssetModule,
@@ -21,7 +20,7 @@ import {
   formatNonBrowserFailureSummary,
   isNonBrowserAssetSource,
   isVitestOwnedTestSource,
-  isIgnorableRunnerSpawnFailure,
+  isSuccessfulNonBrowserRun,
   parseTestSuiteArgument,
   shouldIncludeTestFileForSuite,
 } from "./non-browser-test-runner-core.mjs";
@@ -40,8 +39,6 @@ const runtimeRoot = path.resolve(
   repoRoot,
   "artifacts/test-runtime/non-browser",
 );
-const runnerRelativePath =
-  "dev-tools/scripts/testing/run-non-browser-tests.mjs";
 
 const discoveryRoots = [
   "modules",
@@ -489,7 +486,6 @@ const resolveSourcePath = (maybeRuntimeFile) => {
 try {
   assertNoSourceTreeJavaScriptArtifacts(repoRoot);
   discoverAndPrepareRuntime();
-  let ignoredRunnerSpawnFailures = 0;
 
   if (discoveredRuntimeTestFiles.length === 0) {
     if (suite !== "ai") {
@@ -536,17 +532,6 @@ try {
 
     if (eventType === "test:fail") {
       const sourceFile = resolveSourcePath(event.file);
-      if (
-        isIgnorableRunnerSpawnFailure({
-          event,
-          sourceFile,
-          runnerRelativePath,
-        })
-      ) {
-        ignoredRunnerSpawnFailures += 1;
-        continue;
-      }
-
       report.failures.push({
         name: event.name,
         file: sourceFile,
@@ -564,8 +549,12 @@ try {
     }
   }
 
-  applyIgnoredFailureAdjustments(report.summary, ignoredRunnerSpawnFailures);
-  report.summary.success = report.failures.length === 0;
+  report.summary.success = isSuccessfulNonBrowserRun({
+    summary: report.summary,
+    failures: report.failures,
+    discoveredCount: discoveredRuntimeTestFiles.length,
+    delegatedEmpty: suite === "ai",
+  });
   const didFail = report.summary.success === false;
   report.status = didFail ? "failed" : "passed";
   report.exitCode = didFail ? 1 : 0;

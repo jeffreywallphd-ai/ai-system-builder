@@ -246,13 +246,17 @@ app.whenReady().then(async () => {
     shutdownStarted = true;
     void shutdownDesktopRuntimeResources({
       closeRuntimeWindows: () => systemRuntimeWindows.closeAll(),
+      shutdownBackgroundTasks: () => desktopHost.shutdownBackgroundTasks(),
       stopPythonRuntime: () => desktopHost.stopPythonRuntime(),
       closeRuntimeDatabases: () =>
         desktopHost.systemRuntimeDatabases?.closeAll() ?? Promise.resolve(),
       closePlatformDatabase: () => sqliteDatabase.close(),
-    }).finally(() => {
+    }).then(() => {
       shutdownComplete = true;
       app.quit();
+    }).catch(() => {
+      shutdownStarted = false;
+      console.warn("Background shutdown remains pending; closing can be retried.");
     });
   });
 });

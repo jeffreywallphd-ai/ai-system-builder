@@ -1,3 +1,5 @@
+import { normalizeReadWorkspaceSummaryRequest, normalizeWorkspaceSummary } from "../../../../../../modules/contracts/workspace";
+import { getDesktopApi } from "../../lib/desktopApi";
 import type {
   DashboardSettingsDefaults,
   PageDashboardDataSource,
@@ -15,6 +17,14 @@ import { createDesktopSystemBuilderClient } from "../system-builder/api/desktopS
 const PAGE_LIMIT = 100;
 
 export const desktopPageDashboardSource: PageDashboardDataSource = {
+  async readWorkspaceSummary(workspaceId, page) {
+    const read = getDesktopApi().readWorkspaceSummary;
+    if (!read) throw new Error("Workspace summary unavailable.");
+    const request = normalizeReadWorkspaceSummaryRequest({workspaceId, page});
+    const result = await read(request) as {ok?: boolean; value?: unknown};
+    if (!result?.ok) throw new Error("Workspace summary unavailable.");
+    return normalizeWorkspaceSummary(result.value, request);
+  },
   async listSystems(workspaceId) {
     const result = await createDesktopSystemBuilderClient().list({
       workspaceId,

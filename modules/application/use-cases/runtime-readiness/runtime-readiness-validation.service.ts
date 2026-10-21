@@ -4,7 +4,8 @@ const statusPriority: RuntimeReadinessStatus[] = [
   "invalid", "blocked", "missing-requirements", "provider-unavailable", "provider-unsupported", "configuration-required", "permission-required", "stale", "ready-for-setup", "draft",
 ];
 
-const pushBlocker = (list: RuntimeReadinessBlocker[], code: RuntimeReadinessBlocker["code"], message: string, safeDetails?: Record<string, string>) => {
+const pushBlocker = (list: RuntimeReadinessBlocker[], code: RuntimeReadinessBlocker["code"], message: string, safeDetails?: RuntimeReadinessBlocker["safeDetails"]) => {
+  if (list.some((item) => item.code === code && item.message === message && JSON.stringify(item.safeDetails ?? {}) === JSON.stringify(safeDetails ?? {}))) return;
   list.push({ code, message, ...(safeDetails ? { safeDetails } : {}) });
 };
 const pushDiagnostic = (list: RuntimeReadinessDiagnostic[], code: RuntimeReadinessDiagnostic["code"], severity: RuntimeReadinessDiagnostic["severity"], message: string) => {
@@ -34,6 +35,7 @@ const toBindingStatus = (status: RuntimeReadinessStatus): RuntimeBindingStatus =
 export class RuntimeReadinessValidationService {
   public validate(binding: RuntimeReadinessBinding, targetWorkspaceId: string): { status: RuntimeReadinessStatus; blockers: RuntimeReadinessBlocker[]; diagnostics: RuntimeReadinessDiagnostic[]; bindings: readonly RuntimeBinding[] } {
     const blockers: RuntimeReadinessBlocker[] = [];
+    for (const blocker of binding.blockers) pushBlocker(blockers, blocker.code, blocker.message, blocker.safeDetails);
     const diagnostics: RuntimeReadinessDiagnostic[] = [];
 
     if (binding.targetWorkspaceId !== targetWorkspaceId) pushBlocker(blockers, "runtime-readiness-workspace-invalid", "Readiness binding workspace mismatch.");
@@ -77,14 +79,17 @@ export class RuntimeReadinessValidationService {
       if (!provider) { pushBlocker(blockers, "runtime-readiness-provider-missing", "Selected binding references unknown provider candidate."); status = "invalid"; }
       if (item.selectedCapabilityId && !capability) { pushBlocker(blockers, "runtime-readiness-capability-missing", "Selected binding references unknown capability."); status = "invalid"; }
       if (!selectedCandidate) { pushBlocker(blockers, "runtime-readiness-binding-candidate-missing", "Selected binding does not map to a known binding candidate."); status = "invalid"; }
+      if (selectedCandidate && (selectedCandidate.matchStatus !== "matched" || selectedCandidate.blockers.length > 0)) { pushBlocker(blockers, "runtime-readiness-binding-candidate-missing", "Selected binding candidate is not safely matched."); status = "invalid"; }
 
       if (requirement && provider) {
         evaluateAvailability(requirement.requirementId, requirement.isRequired, "provider", provider.availabilityStatus);
         if (capability) evaluateAvailability(requirement.requirementId, requirement.isRequired, "capability", capability.availabilityStatus);
         const providerStatus = requiredStatusMap[provider.availabilityStatus].status;
         const capabilityStatus = capability ? requiredStatusMap[capability.availabilityStatus].status : "provider-unavailable";
-        if (providerStatus !== "ready-for-setup") status = toBindingStatus(providerStatus);
+        if (["candidate", "blocked", "missing-requirement", "invalid"].includes(item.status)) status = item.status;
+        else if (providerStatus !== "ready-for-setup") status = toBindingStatus(providerStatus);
         else if (capabilityStatus !== "ready-for-setup") status = toBindingStatus(capabilityStatus);
+        else if (selectedCandidate?.matchStatus === "matched" && selectedCandidate.blockers.length === 0 && ["selected", "bound", "provider-unavailable", "configuration-required", "permission-required", "unsupported", "stale"].includes(item.status)) status = item.status === "bound" ? "bound" : "selected";
       }
       return { ...item, status };
     });
@@ -108,7 +113,7 @@ export class RuntimeReadinessValidationService {
 
     const hasCode = (...codes: string[]) => blockers.some((entry) => codes.includes(entry.code));
     const has = (status: RuntimeReadinessStatus) => ({
-      invalid: hasCode("runtime-readiness-workspace-invalid", "runtime-readiness-requirement-missing", "runtime-readiness-provider-missing"),
+      invalid: hasCode("runtime-readiness-workspace-invalid", "runtime-readiness-requirement-missing", "runtime-readiness-provider-missing", "runtime-readiness-binding-candidate-missing"),
       blocked: hasCode("runtime-readiness-composition-plan-not-valid", "runtime-readiness-composition-plan-missing", "runtime-readiness-composition-plan-required"),
       "missing-requirements": hasCode("runtime-readiness-capability-missing", "runtime-readiness-model-missing"),
       "provider-unavailable": hasCode("runtime-readiness-provider-unavailable", "runtime-readiness-provider-not-installed", "runtime-readiness-service-unavailable"),

@@ -91,6 +91,12 @@ Focused tests cover:
 
 ## Residual risk and qualification
 
+Host reconciliation retains only accepted task callbacks and immutable scope,
+preserving organization context across asynchronous observation. It does not
+discover tasks or save review output. A transient read failure cannot delete
+inputs still owned by a worker. Public reads reauthorize before using the same
+single-flight completion path; cleanup retains ownership until removal succeeds.
+
 - LanceDB and context-pack ZIP artifacts intentionally contain derived source content and must
   retain the same workspace access and deletion posture as their sources.
 - Compensation is best effort across independent object, catalog, and binding
@@ -108,3 +114,23 @@ Focused tests cover:
 > AI documentation reminder: changes to Context inputs, models, output formats,
 > publication, system use, or public transports require this threat model to be
 > revisited.
+
+Task lifecycle delta: status reads and explicit review actions serialize per
+accepted scope, preventing concurrent save/discard from publishing duplicate
+artifacts. Reconciliation preserves accepting organization context and does not
+grant renderer write authority. Transient status failures retain staging;
+confirmed terminal results or worker stop permit cleanup. Failed worker stops
+or cleanup retain ownership and persistence for retry. Local deterministic
+denial, duplicate-save and no-renderer lifecycle tests cover these controls;
+physical worker shutdown and unavailable hardware qualification remain pending.
+
+Allocation delta: all table vectors remain mandatory validation inputs. Native
+Arrow finite/null/dimension checks run in batches of at most 256 rows, followed
+by the existing per-row identity, ordinal, text and citation checks. Only
+validated metadata is retained for exact result verification. Cancellation
+interrupts scanning before embedding/search, closes the native reader and
+removes private materialization; it cannot leave a reusable partially validated
+database. Package ceilings, catalog digests and exact index-bypassed search are
+unchanged. Late-batch corruption and cancellation/retry regressions exercise
+this boundary. Synthetic RSS/timing evidence cannot substitute for representative
+local-model CPU/accelerator and retrieval-quality qualification.

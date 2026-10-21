@@ -30,3 +30,10 @@ the global JSON ceiling bounds the request, and append commands are additionally
 limited to the recommended 1 MiB transport chunk. Byte arrays are reconstructed
 as `Uint8Array` by the shared contract. Task/source ownership, progress,
 cancellation, refresh, and cleanup remain application responsibilities.
+
+
+`GET /api/workspaces/summary?workspaceId=<id>&page=<finite-page-kind>` requires
+workspace read scope and delegates to the application workspace/group authorizer.
+Unknown request fields/pages are rejected; missing authority or service wiring
+returns a sanitized unavailable envelope. Responses contain fixed scalar metrics
+with independent availability, never catalogs, model paths or release locks.

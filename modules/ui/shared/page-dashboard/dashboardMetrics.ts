@@ -1,3 +1,5 @@
+import { isUploadedBrowserArtifact } from "../../../contracts/artifact";
+import { normalizeWorkspaceSummary, type WorkspaceSummary, type WorkspaceSummaryPage, type WorkspaceSummaryMetric } from "../../../contracts/workspace";
 import { isArtifactBrowserVisible } from "../artifact-preview/artifactPreviewModel";
 
 export type PageDashboardKind =
@@ -14,6 +16,7 @@ export interface PageDashboardMetric {
   readonly label: string;
   readonly value: string | number;
   readonly detail?: string;
+  readonly unavailable?: boolean;
 }
 
 export interface DashboardSystemRecord {
@@ -46,6 +49,7 @@ export interface DashboardSettingsDefaults {
 }
 
 export interface PageDashboardDataSource {
+  readWorkspaceSummary?(workspaceId: string, page: WorkspaceSummaryPage): Promise<WorkspaceSummary>;
   listSystems(workspaceId: string): Promise<readonly DashboardSystemRecord[]>;
   listReleases(workspaceId: string): Promise<readonly DashboardReleaseRecord[]>;
   listDatasetIds(workspaceId: string): Promise<readonly string[]>;
@@ -93,7 +97,7 @@ export function countModels(models: readonly DashboardModelRecord[]) {
 export function countArtifacts(artifacts: readonly DashboardArtifactRecord[]) {
   const browserArtifacts = artifacts.filter(isArtifactBrowserVisible);
   return {
-    uploaded: browserArtifacts.filter(isUploadedArtifact).length,
+    uploaded: browserArtifacts.filter(isUploadedBrowserArtifact).length,
     imagesGenerated: artifacts.filter(
       (artifact) =>
         artifact.artifactFamily === "image" &&
@@ -101,24 +105,6 @@ export function countArtifacts(artifacts: readonly DashboardArtifactRecord[]) {
           artifact.storageKey.includes("/generated/images/")),
     ).length,
   };
-}
-
-function isUploadedArtifact(artifact: DashboardArtifactRecord): boolean {
-  if (
-    artifact.sourceKind === "generated" ||
-    artifact.sourceKind === "runtime" ||
-    storageKeyHasSegment(artifact.storageKey, "generated")
-  ) {
-    return false;
-  }
-  return (
-    artifact.sourceKind === "upload" ||
-    storageKeyHasSegment(artifact.storageKey, "uploads")
-  );
-}
-
-function storageKeyHasSegment(storageKey: string, segment: string): boolean {
-  return storageKey.replace(/\\/g, "/").split("/").includes(segment);
 }
 
 export function countAssetsUsed(
@@ -161,6 +147,26 @@ export async function loadPageDashboardMetrics(
   }
 
   if (!workspaceId) return [];
+  if (source.readWorkspaceSummary) {
+    const summary = normalizeWorkspaceSummary(await source.readWorkspaceSummary(workspaceId, kind), {workspaceId: workspaceId as never, page: kind});
+    const fields: Record<WorkspaceSummaryPage, readonly [WorkspaceSummaryMetric, string][]> = {
+      home: [["systemsPublished", "Systems Published"], ["datasetsCreated", "Training Datasets Created"], ["modelsTrained", "Custom Models Trained"], ["customAssets", "Custom Assets Created"]],
+      systems: [["systemsComposed", "Systems Composed"], ["systemsPublished", "Systems Published"]],
+      models: [["modelsInstalled", "Models Installed"], ["modelsTrained", "Models Trained"]],
+      "image-generation": [["imagesGenerated", "Images Generated"]],
+      artifacts: [["artifactsUploaded", "Artifacts Uploaded"], ["datasetsCreated", "Datasets Created"]],
+      context: [["ragDatabases", "RAG Databases"], ["markdownContextPacks", "Markdown Context Packs"]],
+      assets: [["assetsUsed", "Assets Used"], ["customAssets", "Custom Assets"]],
+    };
+    return fields[kind].map(([key, label]) => {
+      const metric = summary.metrics[key];
+      const published = summary.metrics.systemsPublished; const unpublished = summary.metrics.systemsUnpublished;
+      return {label, value: metric?.status === "available" ? metric.value : "—", unavailable: metric?.status !== "available",
+        ...(key === "systemsComposed" && published?.status === "available" && unpublished?.status === "available" ? {detail: `${published.value} published · ${unpublished.value} unpublished`} : {}),
+        ...(key === "assetsUsed" ? {detail: "Across latest published system builds"} : {}),
+      };
+    });
+  }
 
   if (kind === "systems") {
     const [systems, releases] = await Promise.all([

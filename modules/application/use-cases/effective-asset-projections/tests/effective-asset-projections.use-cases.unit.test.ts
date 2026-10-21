@@ -4,6 +4,17 @@ import { CreateAuthoredAssetEffectiveProjectionUseCase, PreviewDraftEffectiveAss
 
 const ws = "workspace.main" as any;
 
+test('denies mismatched target workspace before source reads or projection writes',async()=>{
+ let reads=0,writes=0;
+ const uc=new CreateAuthoredAssetEffectiveProjectionUseCase({
+  projectionRepository:{saveEffectiveAssetProjectionRecord:async()=>{writes++;throw new Error('must not write');}} as any,
+  authoredAssetRepository:{readAuthoredAssetRecordByWorkspace:async()=>{reads++;return {status:'published',editableValues:{'display-name':'Name'}};}} as any,
+  assetRevisionRepository:{} as any,generateEffectiveAssetProjectionId:()=> 'projection.test',
+ });
+ const result=await uc.execute({targetWorkspaceId:ws,source:{sourceKind:'workspace-authored',targetWorkspaceId:ws,authoredAssetId:'authored.1'},target:{targetWorkspaceId:'workspace.other',effectiveAssetReference:{kind:'asset-instance',id:'asset.1'},intendedPolicy:'safe-fields-only'},policy:'safe-fields-only'} as any);
+ assert.equal(result.status,'failure');assert.equal(reads,0);assert.equal(writes,0);
+});
+
 test("create authored projection ready", async ()=>{
   let saved:any;
   const uc = new CreateAuthoredAssetEffectiveProjectionUseCase({projectionRepository:{saveEffectiveAssetProjectionRecord:async(r:any)=>{saved=r;return r;},updateEffectiveAssetProjectionRecord:async(r:any)=>r,readEffectiveAssetProjectionRecord:async()=>undefined,readEffectiveAssetProjectionRecordByEffectiveAssetReference:async()=>undefined,listEffectiveAssetProjectionRecords:async()=>({records:[]}),listBlockedConflictedOrStaleEffectiveAssetProjectionRecords:async()=>[]},authoredAssetRepository:{readAuthoredAssetRecordByWorkspace:async()=>({status:"published",editableValues:{"display-name":"N"}} as any)} as any,assetRevisionRepository:{} as any,generateEffectiveAssetProjectionId:()=>"eap.main.1",now:()=>"2026-01-01T00:00:00.000Z"});

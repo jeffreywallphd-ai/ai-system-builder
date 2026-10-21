@@ -442,6 +442,18 @@ export function createLocalModelRegistryAdapter(
   }
 
   return {
+    async readModelSummary(workspaceId: WorkspaceId) {
+      assertWorkspaceId(workspaceId);
+      const document = await readDocument();
+      let modelsInstalled = 0; let modelsTrained = 0;
+      for (const raw of document.models ?? []) {
+        if (raw.workspaceId !== workspaceId) continue;
+        const model = normalizeModelInventoryRecord(raw);
+        if (model.source === "generated") modelsTrained++;
+        else if (typeof model.localPath === "string" && model.localPath.trim()) modelsInstalled++;
+      }
+      return {modelsInstalled, modelsTrained};
+    },
     async listModels(request: ListModelsRequest): Promise<ListModelsResult> {
       assertWorkspaceId(request.workspaceId);
       const document = await readDocument();
@@ -659,6 +671,9 @@ export function createLocalModelRegistryAdapter(
               ...normalized,
               ...request.patch,
               modelRecordId: normalized.modelRecordId,
+              workspaceId: normalized.workspaceId,
+              localPath: normalized.localPath,
+              storageScope: normalized.storageScope,
               createdAt: normalized.createdAt,
               updatedAt,
             });

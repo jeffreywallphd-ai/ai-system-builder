@@ -60,7 +60,7 @@ describe("security services", () => {
 
   it("verify auth delegates token verification", async () => {
     let called = false;
-    const service = new VerifyTransportAuthenticationService({ verifyToken: async () => { called = true; return { ...ANONYMOUS_AUTH_CONTEXT, authenticated: true }; } }, { authRequired: true });
+    const service = new VerifyTransportAuthenticationService({ verifyToken: async () => { called = true; return { authenticated: true, authMethod: "bearer-token", principal: { principalId: "device.valid", kind: "device", roles: [], scopes: [] } }; } }, { authRequired: true });
     await service.execute({ now: new Date(), bearerToken: "abc" });
     expect(called).toBe(true);
   });

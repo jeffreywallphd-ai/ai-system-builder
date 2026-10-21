@@ -112,7 +112,7 @@ describe("dataset preparation version finalization", () => {
         listTasks: testDouble.fn(async () => ({ tasks: [] })),
       },
       storageBindings: {
-        readArtifactStorageBindings: testDouble.fn(async () => ({ ok: true, value: { bindings: [] } })),
+        readArtifactStorageBindings: testDouble.fn(async () => ({ ok: true, value: { bindings: [{ workspaceId: "workspace-a", artifactId: "source-1", role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: "source-1" } }] } })),
         upsertArtifactStorageBinding: testDouble.fn(),
         deleteArtifactStorageBindings: testDouble.fn(),
       },

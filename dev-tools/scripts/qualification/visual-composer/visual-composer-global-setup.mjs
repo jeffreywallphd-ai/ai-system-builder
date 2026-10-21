@@ -7,13 +7,14 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { sanitizeVisualComposerQualificationDiagnostic } from "./visual-composer-qualification-core.mjs";
+import { readAssetSystemSourceIdentity, assertAssetSystemSourceIdentity } from "../asset-system-source-identity.mjs";
 
 export default async function visualComposerGlobalSetup(config) {
   const launchPlan = createVisualComposerHostLaunchPlan();
   process.env.VISUAL_COMPOSER_QUALIFICATION_RUN_ID = launchPlan.runId;
   process.env.VISUAL_COMPOSER_QUALIFICATION_ENVIRONMENT_ID = `local-${process.platform}-${process.arch}`;
-  process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION =
-    process.env.GITHUB_SHA?.trim() || "worktree";
+  const sourceRevision = await readAssetSystemSourceIdentity(launchPlan.repoRoot);
+  process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION = sourceRevision;
   process.env.VISUAL_COMPOSER_DESKTOP_EXECUTABLE =
     launchPlan.desktop.executablePath;
   process.env.VISUAL_COMPOSER_DESKTOP_DATA_ROOT =
@@ -39,7 +40,7 @@ export default async function visualComposerGlobalSetup(config) {
     buildPackagedDesktopFromCurrentWorktree(launchPlan);
     preparePackagedDesktop(launchPlan);
   }
-  if (!projects.has("thin-chrome")) return undefined;
+  if (!projects.has("thin-chrome")) return async () => assertAssetSystemSourceIdentity(launchPlan.repoRoot, sourceRevision);
 
   const qualificationIdentity =
     prepareThinClientQualificationIdentity(launchPlan);
@@ -53,6 +54,7 @@ export default async function visualComposerGlobalSetup(config) {
     await lifecycle.stop();
     rmSync(qualificationIdentity.credentialPath, { force: true });
     delete process.env.VISUAL_COMPOSER_THIN_CLIENT_BEARER_TOKEN;
+    await assertAssetSystemSourceIdentity(launchPlan.repoRoot, sourceRevision);
   };
 }
 

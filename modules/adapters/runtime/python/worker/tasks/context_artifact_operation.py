@@ -560,8 +560,11 @@ def _load_lancedb_modules() -> tuple[Any, Any]:
 def _validated_rag_table(
     database_path: Path,
     manifest: dict[str, Any],
+    cancellation_check: Callable[[], None] = lambda: None,
 ) -> tuple[Any, Any, list[dict[str, Any]], int]:
+    cancellation_check()
     lancedb, pa = _load_lancedb_modules()
+    from pyarrow import compute as pc
     embedding = manifest.get("embedding")
     dimensions = (
         embedding.get("dimensions") if isinstance(embedding, dict) else None
@@ -602,15 +605,13 @@ def _validated_rag_table(
         count = _required_count(table.count_rows(), "chunk count", MAX_CHUNKS)
         if count < 1:
             raise ValueError("Context database chunk count is invalid.")
-        arrow_table = table.to_arrow()
-        rows = arrow_table.to_pylist()
     except ValueError:
         raise
     except Exception as error:
         raise ValueError("Context database could not be opened.") from error
 
     source_total = sum(source["chunkCount"] for source in manifest["sources"])
-    if count != len(rows) or count < source_total:
+    if count < source_total:
         raise ValueError("Context database chunk count is invalid.")
     sources = {source["artifactId"]: source for source in manifest["sources"]}
     manual_entries = {
@@ -619,77 +620,94 @@ def _validated_rag_table(
     seen_ids: set[str] = set()
     seen_ordinals: set[int] = set()
     safe_rows: list[dict[str, Any]] = []
-    for row in rows:
-        chunk_id = row.get("id")
-        ordinal = row.get("ordinal")
-        text = row.get("text")
-        citation_json = row.get("citation_json")
-        vector = row.get("vector")
-        if (
-            set(row) != {"id", "ordinal", "text", "citation_json", "vector"}
-            or not isinstance(chunk_id, str)
-            or not chunk_id
-            or len(chunk_id) > 640
-            or chunk_id in seen_ids
-            or not isinstance(ordinal, int)
-            or isinstance(ordinal, bool)
-            or not 0 <= ordinal < count
-            or ordinal in seen_ordinals
-            or not isinstance(text, str)
-            or not text
-            or len(text) > 32_000
-            or not isinstance(citation_json, str)
-            or len(citation_json) > 8_000
-            or not isinstance(vector, list)
-            or len(vector) != dimensions
-            or any(
-                isinstance(value, bool)
-                or not isinstance(value, (int, float))
-                or not math.isfinite(float(value))
-                for value in vector
-            )
-        ):
-            raise ValueError("Context database chunk is invalid.")
-        try:
-            citation = _citation(json.loads(citation_json))
-        except json.JSONDecodeError as error:
-            raise ValueError("Context database citation is invalid.") from error
-        source_id = citation["sourceArtifactId"]
-        source = sources.get(source_id)
-        manual_id = (
-            source_id[len("manual:"):]
-            if source_id.startswith("manual:")
-            else None
-        )
-        if source is not None:
-            if citation["sourceDigest"] != source["digest"]:
-                raise ValueError("Context database citation source is invalid.")
-        elif (
-            manual_id is None
-            or manual_id not in manual_entries
-            or citation["sourceDigest"] != manual_entries[manual_id]["digest"]
-        ):
-            raise ValueError("Context database citation source is invalid.")
-        seen_ids.add(chunk_id)
-        seen_ordinals.add(ordinal)
-        safe_rows.append(
-            {
-                "id": chunk_id,
-                "ordinal": ordinal,
-                "text": text,
-                "citation_json": citation_json,
-                "citation": citation,
-            }
-        )
-    if seen_ordinals != set(range(count)):
+    try:
+        reader = table.search().limit(count + 1).to_batches(batch_size=256)
+    except Exception as error:
+        raise ValueError("Context database could not be read.") from error
+    try:
+        for batch in reader:
+            cancellation_check()
+            if batch.num_rows == 0:
+                continue
+            if batch.num_rows > 256 or batch.schema != schema:
+                raise ValueError("Context database batch is invalid.")
+            vector = batch.column("vector")
+            values = pc.list_flatten(vector)
+            if (
+                vector.null_count
+                or values.null_count
+                or len(values) != batch.num_rows * dimensions
+                or not pc.all(pc.is_finite(values)).as_py()
+            ):
+                raise ValueError("Context database chunk is invalid.")
+            # Validate every vector natively; never create a Python float graph.
+            for row in batch.select(["id", "ordinal", "text", "citation_json"]).to_pylist():
+                cancellation_check()
+                chunk_id = row.get("id")
+                ordinal = row.get("ordinal")
+                text = row.get("text")
+                citation_json = row.get("citation_json")
+                if (
+                    set(row) != {"id", "ordinal", "text", "citation_json"}
+                    or not isinstance(chunk_id, str)
+                    or not chunk_id
+                    or len(chunk_id) > 640
+                    or chunk_id in seen_ids
+                    or not isinstance(ordinal, int)
+                    or isinstance(ordinal, bool)
+                    or not 0 <= ordinal < count
+                    or ordinal in seen_ordinals
+                    or not isinstance(text, str)
+                    or not text
+                    or len(text) > 32_000
+                    or not isinstance(citation_json, str)
+                    or len(citation_json) > 8_000
+                ):
+                    raise ValueError("Context database chunk is invalid.")
+                try:
+                    citation = _citation(json.loads(citation_json))
+                except json.JSONDecodeError as error:
+                    raise ValueError("Context database citation is invalid.") from error
+                source_id = citation["sourceArtifactId"]
+                source = sources.get(source_id)
+                manual_id = (
+                    source_id[len("manual:"):]
+                    if source_id.startswith("manual:")
+                    else None
+                )
+                if source is not None:
+                    if citation["sourceDigest"] != source["digest"]:
+                        raise ValueError("Context database citation source is invalid.")
+                elif (
+                    manual_id is None
+                    or manual_id not in manual_entries
+                    or citation["sourceDigest"] != manual_entries[manual_id]["digest"]
+                ):
+                    raise ValueError("Context database citation source is invalid.")
+                seen_ids.add(chunk_id)
+                seen_ordinals.add(ordinal)
+                safe_rows.append(
+                    {
+                        "id": chunk_id,
+                        "ordinal": ordinal,
+                        "text": text,
+                        "citation_json": citation_json,
+                        "citation": citation,
+                    }
+                )
+                if len(safe_rows) > count:
+                    raise ValueError("Context database chunk count is invalid.")
+    finally:
+        reader.close()
+    if len(safe_rows) != count or seen_ordinals != set(range(count)):
         raise ValueError("Context database chunk order is invalid.")
     return database, table, safe_rows, dimensions
 
 
-def _inspect_rag(path: Path) -> tuple[dict[str, Any], int]:
+def _inspect_rag(path: Path, cancellation_check: Callable[[], None] = lambda: None) -> tuple[dict[str, Any], int]:
     with _materialized_rag(path) as (database_path, manifest):
         database, table, rows, _dimensions = _validated_rag_table(
-            database_path, manifest
+            database_path, manifest, cancellation_check
         )
         count = len(rows)
         del rows
@@ -918,7 +936,7 @@ def _query_rag(
         table = None
         try:
             database, table, rows, dimensions = _validated_rag_table(
-                database_path, manifest
+                database_path, manifest, cancellation_check
             )
             settings = ContextEmbeddingSettings.model_validate({
                 **manifest["embedding"],
@@ -1038,7 +1056,7 @@ def operate_on_context_artifact(
         ):
             raise ValueError("Context artifact inspection request is invalid.")
         if payload.mediaType == RAG_MEDIA_TYPE:
-            manifest, count = _inspect_rag(path)
+            manifest, count = _inspect_rag(path, check_cancelled)
             return {
                 "operation": "inspect-artifact",
                 "inspection": {

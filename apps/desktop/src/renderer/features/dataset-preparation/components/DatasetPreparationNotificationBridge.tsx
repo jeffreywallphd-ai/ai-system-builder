@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useTaskObservationManager } from "../../../../../../../modules/ui/shared/notifications/TaskObservationProvider";
+import { useEffect } from "react";
 
 import { useNotificationCenter } from "../../../../../../../modules/ui/shared";
 import type { DesktopDatasetPreparationTaskReadResult } from "../api/desktopDatasetPreparationClient";
@@ -24,117 +25,41 @@ export function DatasetPreparationNotificationBridge({
   readonly workspaceId?: string;
 }) {
   const notifications = useNotificationCenter();
-  const activeRequestIdsRef = useRef(new Set<string>());
-  const overflowNotifiedRequestIdsRef = useRef(new Set<string>());
-  const pollingRef = useRef(false);
-
+  const observer = useTaskObservationManager();
   useEffect(() => {
-    activeRequestIdsRef.current.clear();
-    overflowNotifiedRequestIdsRef.current.clear();
     if (!workspaceId) return;
-
     let disposed = false;
-    const upsert = (
-      requestId: string,
-      response: DesktopDatasetPreparationTaskReadResult,
-    ) => {
-      if (
-        response.ok &&
-        (response.status === "pending" || response.status === "running") &&
-        response.progress?.memoryOverflowActive === true &&
-        !overflowNotifiedRequestIdsRef.current.has(requestId)
-      ) {
-        overflowNotifiedRequestIdsRef.current.add(requestId);
-        notifications.publish({
-          title: "Model is using disk space",
-          message:
-            "Available memory is too low for the selected model, so it is using system-managed disk/swap space. Generation may run more slowly.",
-          tone: "warning",
-          source: "Dataset Preparation",
-          workspaceId,
-          dedupeKey: `dataset-preparation-memory-overflow:${requestId}`,
-        });
-        notifications.setPanelOpen(true);
+    const subscriptions = new Map<string, () => void>();
+    const overflow = new Set<string>();
+    const upsert = (id: string, value: DesktopDatasetPreparationTaskReadResult) => {
+      if (disposed) return false;
+      if (value.ok && (value.status === "pending" || value.status === "running") && value.progress?.memoryOverflowActive && !overflow.has(id)) {
+        overflow.add(id); if (overflow.size > 100) overflow.delete(overflow.values().next().value!);
+        notifications.publish({ title: "Model is using disk space", message: "Available memory is too low for the selected model, so it is using system-managed disk/swap space. Generation may run more slowly.", tone: "warning", source: "Dataset Preparation", workspaceId, dedupeKey: `dataset-preparation-memory-overflow:${workspaceId}:${id}` });
       }
-      const activity = toDatasetPreparationActivity(
-        requestId,
-        workspaceId,
-        response,
-      );
-      notifications.upsertActivity(activity);
-      if (activity.terminal) activeRequestIdsRef.current.delete(requestId);
-    };
-    const poll = async () => {
-      if (disposed || pollingRef.current) return;
-      pollingRef.current = true;
-      try {
-        for (const requestId of [...activeRequestIdsRef.current]) {
-          try {
-            upsert(
-              requestId,
-              await client.readPrepareTrainingDatasetTask(
-                requestId,
-                workspaceId,
-              ),
-            );
-          } catch {
-            notifications.upsertActivity({
-              id: `dataset-preparation:${requestId}`,
-              title: "Preparing training dataset",
-              message:
-                "Progress is temporarily unavailable and will retry automatically.",
-              status: "running",
-              source: "Dataset Preparation",
-              workspaceId,
-            });
-          }
-        }
-      } finally {
-        pollingRef.current = false;
-      }
+      const activity = toDatasetPreparationActivity(id, workspaceId, value); notifications.upsertActivity(activity); return activity.terminal;
     };
     const onStarted = (event: Event) => {
-      const detail = (event as CustomEvent<DatasetPreparationStartedEventDetail>)
-        .detail;
-      if (
-        !detail ||
-        detail.workspaceId !== workspaceId ||
-        typeof detail.requestId !== "string" ||
-        !detail.requestId.trim()
-      ) {
-        return;
-      }
-      activeRequestIdsRef.current.add(detail.requestId);
-      notifications.upsertActivity({
-        id: `dataset-preparation:${detail.requestId}`,
-        title: "Preparing training dataset",
-        message: "Starting dataset checks.",
-        status: "queued",
-        source: "Dataset Preparation",
-        workspaceId,
-      });
+      const detail = (event as CustomEvent<DatasetPreparationStartedEventDetail>).detail;
+      if (!detail || detail.workspaceId !== workspaceId || typeof detail.requestId !== "string" || !detail.requestId.trim() || detail.requestId.length > 512) return;
+      const id = detail.requestId; const scope = { workspaceId, family: "dataset-preparation", requestId: id };
+      if (subscriptions.has(id)) { observer.invalidate(scope); return; }
+      if (subscriptions.size >= 100) return;
+      notifications.upsertActivity({ id: `dataset-preparation:${workspaceId}:${id}`, title: "Preparing training dataset", message: "Starting dataset checks.", status: "queued", source: "Dataset Preparation", workspaceId });
       notifications.setPanelOpen(true);
-      void poll();
+      const stop = observer.subscribe(scope, async () => {
+        const value = await client.readPrepareTrainingDatasetTask(id, workspaceId);
+        return { value, activity: value.ok && (value.status === "pending" || value.status === "running") ? "active" : "terminal" };
+      }, (result) => {
+        if (disposed) return;
+        if (!result) { notifications.upsertActivity({ id: `dataset-preparation:${workspaceId}:${id}`, title: "Preparing training dataset", message: "Progress is temporarily unavailable and will retry automatically.", status: "running", source: "Dataset Preparation", workspaceId }); return; }
+        if (upsert(id, result.value)) queueMicrotask(() => { subscriptions.get(id)?.(); subscriptions.delete(id); });
+      });
+      subscriptions.set(id, stop);
     };
-
     window.addEventListener(DATASET_PREPARATION_STARTED_EVENT, onStarted);
-    const timer = window.setInterval(
-      () => void poll(),
-      DATASET_PREPARATION_NOTIFICATION_POLL_MS,
-    );
-    return () => {
-      disposed = true;
-      window.removeEventListener(DATASET_PREPARATION_STARTED_EVENT, onStarted);
-      window.clearInterval(timer);
-    };
-  }, [
-    client,
-    notifications.publish,
-    notifications.setPanelOpen,
-    notifications.upsertActivity,
-    workspaceId,
-  ]);
-
+    return () => { disposed = true; window.removeEventListener(DATASET_PREPARATION_STARTED_EVENT, onStarted); for (const stop of subscriptions.values()) stop(); subscriptions.clear(); };
+  }, [client, observer, notifications.publish, notifications.setPanelOpen, notifications.upsertActivity, workspaceId]);
   return null;
 }
 
@@ -144,7 +69,7 @@ function toDatasetPreparationActivity(
   response: DesktopDatasetPreparationTaskReadResult,
 ) {
   const base = {
-    id: `dataset-preparation:${requestId}`,
+    id: `dataset-preparation:${workspaceId}:${requestId}`,
     title: "Preparing training dataset",
     source: "Dataset Preparation",
     workspaceId,

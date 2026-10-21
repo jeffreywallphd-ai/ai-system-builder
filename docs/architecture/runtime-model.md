@@ -10,6 +10,79 @@ Assets may declare runtime requirements, but they must not create a parallel run
 
 ## Runtime posture
 
+Accepted downloads, Context, dataset preparation, training and image work register a bounded
+host-owned lifecycle lease. Reconciliation runs without renderer polling, is
+single-flight per owned request, and retains transient failures for retry. Host
+callbacks preserve the accepting organization context. Review-required data stays
+available for explicit save/discard while active power releases. Preparation
+review staging remains owned until its explicit review action; training input
+staging can release while its separate generated candidate stays available.
+Shutdown closes admission before cancellation, stops the workers, then settles
+owned cleanup before persistence closes. A confirmed worker stop is required for
+forced terminal cleanup; network errors and historical log text are insufficient.
+Each worker stop is attempted independently. Failed stops, delayed admissions
+and cleanup failures retain ownership and keep persistence open for retry.
+Supervisor starts share one preparation flight and reject launch after a stop
+changes the lifecycle generation. Server shutdown starts its task fence before
+waiting for active HTTP requests to close.
+
+Owned Python/ComfyUI termination waits at most five seconds for exit/close or
+existing terminal process properties. A signal request, generic error, refused
+signal or timeout cannot release process/task ownership. Shared stop flights
+retain failures for explicit retry; late health, capability, preparation and old
+process callbacks cannot change a replacement's status. Failed spawn ownership
+can retire on close. ComfyUI startup timeout also preserves an unconfirmed child.
+An externally attached Python worker cannot be reported stopped without owned
+termination authority; even idle attachment can leave host shutdown pending for
+external coordination. This local contract proves only the direct owned child;
+descendant/launcher-tree and physical runtime qualification remain pending.
+Failed external health/capability reads retain the attachment classification and
+cannot authorize spawning a replacement. A later healthy attachment may recover
+readiness while termination remains an external obligation.
+
+Image start reserves persisted workspace and organization ownership before
+dispatch. Read, cancel and finalize recheck workspace authorization and the
+accepted task owner before runtime I/O or cached completion. Caller correlation
+IDs cannot select the runtime task identity. Finalization serializes concurrent
+calls and preserves each successful persistence/registration step across partial
+retries. Its 1024-request session receipt bound refuses new work at capacity;
+receipts are never evicted into a replayable state. This is session recovery,
+not a durable crash-recovery protocol. Artifact-backed output arrays must be
+complete and unchanged; raw and artifact-backed completions share evidence rules.
+
+The shell's session-owned observer coalesces equal task reads and serializes
+families within a workspace. Downloads, Context, training, dataset preparation
+and images share scoped observation with one-second active reads,
+bounded idle/error backoff, immediate explicit invalidation and hidden-window
+suspension. Unsubscription and reader replacement reject late results. Neither
+observer state nor cached completion grants resource authority. Training,
+preparation and image pages retain opaque session recovery IDs; thin-client
+image drafts and desktop preparation drafts are bounded per workspace. Image
+finalization has an explicit retry action that preserves the generation ID.
+
+ComfyUI queue deletion acknowledges a request even when a prompt is running.
+Cancellation is confirmed only for removal of a previously queued prompt, with
+no remaining queue or history entry. Running cancellation remains pending; no
+global interruption is used. The adapter's default 30-minute execution deadline
+requests cancellation and retains inputs if termination cannot be confirmed.
+A lost submission reply retains potentially consumed inputs at the bounded
+active-task limit until confirmed worker stop. Known safe failed cleanup retries
+without a renderer. See the upstream [queue endpoint](https://github.com/Comfy-Org/ComfyUI/blob/master/server.py)
+and [queue implementation](https://github.com/Comfy-Org/ComfyUI/blob/master/execution.py).
+
+Context save/discard/cancel serialize with status reconciliation. Duplicate saves
+return the saved session receipt. Dataset approvals coalesce only identical
+scope-bound review decisions; changed fingerprints or names conflict. Training
+retains successful storage, publication and registration steps through supported
+session retries, and retries outstanding cleanup before lifecycle completion.
+These session receipts do not qualify durable multi-store crash recovery or
+unavailable physical runtime environments.
+
+Standalone model publishing remains explicitly unavailable because no publishing
+worker is implemented. A readiness hint cannot admit that unsupported task.
+The supported explicit training save workflow retains its existing publishing
+port and approval semantics.
+
 `ai-system-builder` is **TypeScript-first**.
 
 - Node.js + TypeScript is the native/default runtime path.
@@ -163,7 +236,7 @@ the workflow presents those bounded readable names in an explicit checkbox list.
 The eventual training use case remains authoritative for artifact ownership,
 local backing, schema, and fingerprint validation.
 
-Dataset preparation UI should present task choices before lower-level settings, keep nonessential settings collapsed by default, and group prompt/model/parameter controls under automated data-formatting language rather than a hardcoded QA-generation or model-override concept. Saved training settings are a renderer convenience for reloading preparation choices such as task, formatting, model, split, and output options; they must not silently preserve selected source artifacts or replace runtime contracts. Source artifact lists should be filtered by the selected task family so LLM tasks show text/document/structured sources and diffusion/vision tasks show image sources plus structured manifests.
+Dataset preparation UI should present task choices before lower-level settings, keep nonessential settings collapsed by default, and group prompt/model/parameter controls under automated data-formatting language rather than a hardcoded QA-generation or model-override concept. Saved training settings are a renderer convenience for reloading preparation choices such as task, formatting, model, split, and output options; they may retain selected artifact identities only in a bounded, per-workspace in-memory session draft. Restored identities must be revalidated against the current authorized catalog before use; drafts must not persist artifact payloads, grant authority, cross workspace boundaries, or replace runtime contracts. Source artifact lists should be filtered by the selected task family so LLM tasks show text/document/structured sources and diffusion/vision tasks show image sources plus structured manifests.
 
 Current Python model training support includes causal language model training over text-like dataset files using LoRA, QLoRA, or full fine-tuning through Transformers. The text training path accepts the LLM instruction, classification, extraction, embedding-pair, and reranker training tasks, formats those row schemas into causal-LM training text, and records task tags/metadata on generated model candidates. The multimodal training path accepts diffusion LoRA, vision classification, vision detection, and vision segmentation manifests. Diffusion training supports LoRA adapter output for Diffusers-compatible text-to-image models. Vision training supports LoRA adapter output and full fine-tuning for image classification, object detection, and semantic segmentation models through Transformers image processors and task-specific model classes. Vision LoRA uses PEFT adapter serialization and preserves recognized task heads as trainable modules when the selected model exposes them. For image manifests generated from workspace artifacts, the application model-training use case stages referenced source artifact bytes into runtime-local files and passes runtime-only source path metadata to the Python worker.
 
@@ -265,6 +338,25 @@ ADR-0013 is the canonical cross-host runtime ownership ADR.
 
 ## Runtime security guidance
 
+Dataset cancellation transport success is not terminal lifecycle evidence.
+Desktop preserves the exact cancel identity, flag and status; both UIs retain
+the active task and continue observing after requested, refused, unknown or
+failed cancellation. Only a terminal task read determines the final UI outcome;
+late cancellation replies cannot overwrite it or another workspace/session.
+Pending quality reviews remain owned until discard is explicitly confirmed.
+Running dataset preparation currently cannot be force-cancelled through the
+worker contract; the UI must not stop its shared Python worker as a workaround.
+
+ComfyUI and Git repair require explicit host `allowUpdate: true` before status,
+filesystem, Git or dependency commands. Missing permission and `false` fail with
+`update-not-authorized`; `forceRepair` expresses intent and cannot grant update
+authority. Every targeted, missing-install and full repair fallback preserves
+the normalized host request. Desktop repair approval also requires its configured
+pinned ref. Automatic supervisor repair carries no update approval and therefore
+fails closed with operator recovery required. Initial `ensureInstalled` remains a
+distinct installation operation; this repair control does not qualify unmanaged
+checkout provenance, dependency reproducibility or physical runtime behavior.
+
 Runtime adapters must harden process invocation against command injection, control/redact runtime environment variables, and avoid exposing runtime temp paths to clients. Python/ComfyUI runtime logs must redact secrets. Model/plugin/download flows are supply-chain inputs and need explicit risk controls. Runtime security is part of the system security architecture, but runtime code remains in runtime adapters rather than being moved into a monolithic security module. See ADR-0015.
 
 ## Server runtime readiness API
@@ -298,3 +390,66 @@ resolution requires its exact same-workspace full base-model record, submits the
 base and adapter identities together, validates the adapter's declared base
 association and contained local snapshot, and attaches it with the exact
 reviewed PEFT runtime dependency. Warm reuse also matches the adapter revision.
+
+An asynchronous Python spawn error followed by exit/close retires the owned child
+without converting its failed startup outcome into a successful stopped state.
+The diagnostic failure remains observable until explicit stop or a valid retry;
+explicit stop still requires and records confirmed termination separately.
+
+Desktop task controllers for image generation, dataset preparation and Context are
+lazy retained for the host lifetime. Their private reviews, in-flight starts,
+partial finalization and completed receipts remain available after runtime
+completion and navigation. Workspace-required public task listings cannot prove
+host-wide disposal eligibility. Heavy runtime owners retain explicit stop/unload
+controls. Other disposable features serialize disposal with provider reuse and
+retain the same owner on guard or cleanup uncertainty.
+
+Nonempty unmanaged Git install roots are never adopted from editable origin
+configuration. Managed reuse requires matching target, normalized install root
+and requested canonical repository URL. ComfyUI repair checks installed/missing
+status and exact target/root before fallback or targeted Python/pip effects;
+unknown or failed authority denies. Explicit update approval remains necessary.
+Missing/empty roots can use the separate initial installation operation.
+These marker consistency checks are not proof of current tree bytes, immutable
+source provenance or native filesystem identity; those qualifications remain
+pending. Recovery must not relabel or overwrite an unmanaged tree in place.
+
+Only ENOENT establishes a missing filesystem entry. Permission, I/O, invalid
+directory and indeterminate read failures return unavailable/failed authority
+and cannot enter initial clone, directory creation or metadata-write effects.
+Repair preflight also requires the canonical repository identity returned by
+the installer; absent or substituted source identity denies before execution.
+
+Image-generation request bounds are pure shared contracts used by the application
+and ComfyUI runtime/mapper. Effective selected host defaults are checked before
+supervisor startup, reference preparation or prompt submission. Existing limits
+remain:10000-character positive/negative text,64..4096 dimensions,16777216 pixels,
+1..200 steps,1..8 images, finite CFG(0,50] and denoise[0,1], at most3 face references.
+Invalid batches are rejected rather than floored. Primitive/descriptor checks reject
+coercion and accessors; engine hints are bounded JSON data, and seeds are safe
+integers. Workspace authority, queue/history limits, deadlines and truthful
+cancellation remain intact. These caps do not prove combined workload GPU capacity,
+per-actor fairness or physical model qualification; those remain pending.
+Admission consumes one detached descriptor-safe request snapshot before authority,
+model, runtime-start or reference-preparation awaits. Nested reference collections,
+reference identities and hint data cannot change through caller-owned aliases after
+validation. Prompts retain their exact allowed content; display sanitization is not
+used to construct runtime input.
+
+Python dependency setup diagnostics use the explicit `python-dependency-outcomes-v1`
+projection: finite operation/platform/backend/stage outcomes, safe exit codes,
+grouped retry/failure counts and explicit overall success. They retain no command,
+argument, path, index URL, environment inspection, output or exception transcript.
+Repeated stages are grouped by their finite stage/backend identities. Raw results
+remain local to existing operational parsing/retry/failure paths; diagnostic I/O
+is best effort and cannot change the setup outcome. Shared temporary directory
+ownership/ACLs, native link-safe publication, retention and physical qualification
+remain pending; content minimization does not establish private storage.
+
+Model download task reads and explicit completion require returned registry records
+to match the exact requested task id, task type and workspace before projection or
+registration. Listing independently filters task type instead of relying on the
+adapter filter alone. Cancellation confirms only an acknowledgement for the exact
+requested id; substituted acknowledgements fail without reporting cancellation
+success. These checks supplement frozen organization/principal/workspace and
+current write authority, and do not qualify native provenance or durable recovery.

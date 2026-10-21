@@ -89,7 +89,7 @@ describe("assetRegistryReadInputMapper", () => {
     }, "ipc-payload");
 
     expect(toAssetRegistryDefinitionReference(input)).toEqual({
-      kind: "asset-definition",
+      kind: "asset-definition-version",
       id: "builtin.workflow",
       version: "1.0.0",
     });

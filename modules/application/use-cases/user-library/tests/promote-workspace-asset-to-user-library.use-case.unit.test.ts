@@ -5,6 +5,7 @@ import { normalizeAssetId, type AssetReference } from "../../../../contracts/ass
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { createUserLibraryAssetId, type UserLibraryAssetRecord } from "../../../../contracts/user-library";
 import type { UserLibraryAssetRepositoryPort, WorkspaceAssetForUserLibraryDescriptor } from "../../../../ports/user-library";
+import { UserLibraryAssetConflictError } from "../../../ports/user-library";
 import { PromoteWorkspaceAssetToUserLibraryUseCase } from "../promote-workspace-asset-to-user-library.use-case";
 
 const workspaceId = createWorkspaceId("workspace.alpha");
@@ -74,4 +75,16 @@ describe("PromoteWorkspaceAssetToUserLibraryUseCase", () => {
     assert.equal(conflict.ok, false);
     assert.equal(conflict.failure.code, "conflict");
   });
+});
+
+
+it("maps atomic persistence collisions to a safe promotion conflict", async () => {
+  const repository = createRepo();
+  repository.saveUserLibraryAssetRecord = async () => { throw new UserLibraryAssetConflictError(); };
+  const result = await new PromoteWorkspaceAssetToUserLibraryUseCase({
+    sourceAssetReader: { async readWorkspaceAssetForUserLibrary() { return source(); } }, repository,
+    generateUserLibraryAssetId: () => "library.colliding",
+  }).execute({ sourceWorkspaceId: workspaceId, sourceAssetReference: assetRef, originWorkspaceBehavior: "keep-independent-workspace-copy" });
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.equal(result.failure.code, "conflict");
 });

@@ -1,5 +1,6 @@
 import type { SpawnSyncReturns } from "node:child_process";
-import { mkdtempSync, readFileSync } from "node:fs";
+import assert from "node:assert/strict";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -50,6 +51,140 @@ function createEnvironmentInspectionJson(version = "3.11.9"): string {
     pythonExecutable: "/usr/bin/python3",
   });
 }
+
+const privateMarker = "synthetic-private-install-marker";
+
+function outcomeFixture(failure?: "inspect" | "worker" | "training" | "malformed", fallback = false) {
+  let installAttempts = 0;
+  return createSpawnSyncImplementation((command, args) => {
+    const script = args[1] ?? "";
+    if (script.includes("asb:python-env-inspect")) {
+      return createSpawnSyncResult({
+        status: failure === "inspect" ? null : 0,
+        error: failure === "inspect" ? new Error(privateMarker) : undefined,
+        stdout: failure === "malformed" ? privateMarker : createEnvironmentInspectionJson(),
+        stderr: privateMarker,
+      });
+    }
+    if (command === "nvidia-smi") return createSpawnSyncResult({ status: fallback ? 0 : 1, stdout: privateMarker });
+    if (command === "rocminfo") return createSpawnSyncResult({ status: 1, stderr: privateMarker });
+    if ((script.includes("asb:worker-dependency-probe") && failure === "worker") ||
+        (script.includes("asb:model-training-dependency-probe") && failure === "training")) {
+      return createSpawnSyncResult({ status: 1, stderr: privateMarker });
+    }
+    if (script.includes("asb:torch-install-probe")) {
+      return createSpawnSyncResult({ stdout: JSON.stringify({ installed: !fallback, cudaVersion: null, hipVersion: null, cudaAvailable: false, importError: privateMarker }) });
+    }
+    if (args[0] === "-m" && args.includes("install") && args.includes("--upgrade")) {
+      installAttempts += 1;
+      return createSpawnSyncResult({ status: installAttempts <= 4 ? 1 : 0, stderr: `Connection reset ${privateMarker}` });
+    }
+    return createSpawnSyncResult({ stdout: script.includes("os.access") ? "1" : privateMarker, stderr: privateMarker });
+  });
+}
+
+function assertMinimalOutcomes(value: any) {
+  const allowed = ["schemaVersion", "operation", "platform", "success", "detectedBackend", "selectedBackend", "verificationResult", "stages"];
+  assert.ok(Object.keys(value).every(key => allowed.includes(key)));
+  assert.equal(value.schemaVersion, "python-dependency-outcomes-v1");
+  assert.ok(["worker", "model-training"].includes(value.operation));
+  assert.ok(["win32", "linux", "darwin", "other"].includes(value.platform));
+  assert.equal(typeof value.success, "boolean");
+  for (const backend of [value.detectedBackend, value.selectedBackend]) {
+    assert.ok(backend === undefined || ["cpu", "cuda", "rocm"].includes(backend));
+  }
+  if (value.verificationResult) {
+    assert.deepEqual(Object.keys(value.verificationResult).sort(), ["backend", "success"]);
+    assert.ok(["cpu", "cuda", "rocm"].includes(value.verificationResult.backend));
+    assert.equal(typeof value.verificationResult.success, "boolean");
+  }
+  const stages = new Set();
+  for (const stage of value.stages) {
+    assert.ok(Object.keys(stage).every(key => ["stage", "backend", "exitCode", "success", "attempts", "failedAttempts"].includes(key)));
+    assert.ok(["inspect-environment", "probe-pip", "probe-write-access", "detect-accelerator-nvidia", "detect-accelerator-rocm", "probe-torch", "probe-network", "probe-worker-dependencies", "install-worker-dependencies", "probe-model-training-dependencies", "install-model-training-dependencies", "verify-model-training-dependencies", "install-torch", "verify-torch", "other"].includes(stage.stage));
+    assert.ok(stage.backend === undefined || ["cpu", "cuda", "rocm"].includes(stage.backend));
+    assert.ok(stage.exitCode === null || Number.isSafeInteger(stage.exitCode) && stage.exitCode >= 0);
+    assert.equal(typeof stage.success, "boolean");
+    assert.ok(Number.isSafeInteger(stage.attempts) && stage.attempts >= 1);
+    assert.ok(Number.isSafeInteger(stage.failedAttempts) && stage.failedAttempts >= 0 && stage.failedAttempts <= stage.attempts);
+    const key = `${stage.stage}/${stage.backend}`;
+    assert.ok(!stages.has(key), "repeated stages must be grouped");
+    stages.add(key);
+  }
+  assert.ok(!JSON.stringify(value).includes(privateMarker));
+}
+
+describe("minimal dependency outcome persistence", () => {
+  it("reports successful training setup and normalizes unsupported platform values", () => {
+    const root = mkdtempSync(join(tmpdir(), "minimal-training-outcome-"));
+    try {
+      const diagnosticsFile = join(root, "outcome.json");
+      ensurePythonRuntimeModelTrainingDependencies({ command: "python", diagnosticsFile, spawnSyncImplementation: outcomeFixture() as any });
+      const value = JSON.parse(readFileSync(diagnosticsFile, "utf8"));
+      assertMinimalOutcomes(value);
+      assert.equal(value.success, true);
+      assert.equal(value.operation, "model-training");
+      assert.throws(() => ensurePythonRuntimeWorkerDependencies({ command: "python", diagnosticsFile, platform: privateMarker as any, spawnSyncImplementation: outcomeFixture() as any }), /Unsupported host platform/);
+      const denied = JSON.parse(readFileSync(diagnosticsFile, "utf8"));
+      assertMinimalOutcomes(denied);
+      assert.equal(denied.success, false);
+      assert.equal(denied.platform, "other");
+      assert.deepEqual(denied.stages, []);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+
+  for (const failure of [undefined, "inspect", "worker", "training", "malformed"] as const) {
+    it(`persists only declared outcomes for ${failure ?? "early success"}`, () => {
+      const root = mkdtempSync(join(tmpdir(), "minimal-install-outcome-"));
+      try {
+        const diagnosticsFile = join(root, "outcome.json");
+        const run = () => (failure === "training" ? ensurePythonRuntimeModelTrainingDependencies : ensurePythonRuntimeWorkerDependencies)({
+          command: `/synthetic/${privateMarker}/python`, cwd: `/synthetic/${privateMarker}`,
+          env: { SYNTHETIC_PRIVATE_VALUE: privateMarker }, diagnosticsFile,
+          spawnSyncImplementation: outcomeFixture(failure) as any,
+        });
+        if (failure) assert.throws(run);
+        else run();
+        const value = JSON.parse(readFileSync(diagnosticsFile, "utf8"));
+        assertMinimalOutcomes(value);
+        assert.equal(value.success, !failure);
+        assert.equal(value.operation, failure === "training" ? "model-training" : "worker");
+        if (!failure) assert.deepEqual(value.verificationResult, { success: true, backend: "cpu" });
+      } finally { rmSync(root, { recursive: true, force: true }); }
+    });
+  }
+
+  it("groups retry outcomes and preserves CUDA failure followed by CPU success", () => {
+    const root = mkdtempSync(join(tmpdir(), "minimal-install-retry-"));
+    try {
+      const diagnosticsFile = join(root, "outcome.json");
+      ensurePythonRuntimeWorkerDependencies({ command: "python", retryCount: 3, diagnosticsFile,
+        torchIndexesByBackend: { cpu: `https://${privateMarker}.invalid/cpu`, cuda: `https://${privateMarker}.invalid/cuda` },
+        spawnSyncImplementation: outcomeFixture(undefined, true) as any });
+      const value = JSON.parse(readFileSync(diagnosticsFile, "utf8"));
+      assertMinimalOutcomes(value);
+      assert.equal(value.success, true);
+      assert.equal(value.detectedBackend, "cuda");
+      assert.equal(value.selectedBackend, "cpu");
+      assert.deepEqual(value.stages.find((s: any) => s.stage === "install-torch" && s.backend === "cuda"),
+        { stage: "install-torch", backend: "cuda", exitCode: 1, success: false, attempts: 4, failedAttempts: 4 });
+      assert.equal(value.stages.find((s: any) => s.stage === "install-torch" && s.backend === "cpu").attempts, 1);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it("diagnostic I/O failure cannot replace setup success or its original failure", () => {
+    const root = mkdtempSync(join(tmpdir(), "minimal-install-io-"));
+    try {
+      const parent = join(root, "regular-file");
+      writeFileSync(parent, "fixture");
+      for (const failure of [undefined, "inspect"] as const) {
+        const run = () => ensurePythonRuntimeWorkerDependencies({ command: "python", diagnosticsFile: join(parent, "outcome.json"), spawnSyncImplementation: outcomeFixture(failure) as any });
+        if (failure) assert.throws(run, /Failed to inspect Python runtime environment/);
+        else assert.doesNotThrow(run);
+      }
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+});
 
 const workerDependencyProbeScript = `
 # asb:worker-dependency-probe

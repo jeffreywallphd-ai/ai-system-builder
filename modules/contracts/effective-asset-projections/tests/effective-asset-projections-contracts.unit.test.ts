@@ -74,3 +74,63 @@ describe("effective-asset-projection contracts", () => {
     assert.equal(typeof root.effectiveAssetProjections.normalizeEffectiveAssetProjectionId, "function");
   });
 });
+
+describe('strict complete projection records',()=>{
+ const at='2026-05-20T00:00:00.000Z';
+ const ref={kind:'asset-definition-version',id:'asset.alpha',version:'1.0.0',label:'Prompt template',metadata:{count:0}};
+ const base:any={projectionId:'projection.alpha',targetWorkspaceId:'ws-1',source:{sourceKind:'workspace-local',targetWorkspaceId:'ws-1',effectiveAssetReference:ref},target:{targetWorkspaceId:'ws-1',effectiveAssetReference:ref,intendedPolicy:'safe-fields-only'},effectiveAssetReference:ref,sourceKind:'workspace-local',status:'ready',policy:'safe-fields-only',projectedFields:{'display-name':'Prompt template','safe-metadata':{count:0,enabled:false,items:[null,'Ready']}},diagnostics:[],blockers:[],provenance:{kind:'projected-from-workspace-local-asset',targetWorkspaceId:'ws-1',operationAt:at},sourceGraphSummary:{sourceCount:0,hasOverrides:false,hasMissingSource:false,hasConflict:false},createdAt:at,updatedAt:at};
+ it('preserves declared references, labels, zero/false metadata and required snapshot identity',()=>{
+  assert.deepEqual(contracts.normalizeEffectiveAssetProjectionRecord(base),base);
+  assert.throws(()=>contracts.normalizeEffectiveAssetProjectionSnapshotRecord(base));
+  const snapshot={...base,projectionSnapshotId:'snapshot.alpha'};
+  assert.deepEqual(contracts.normalizeEffectiveAssetProjectionSnapshotRecord(snapshot),snapshot);
+ });
+ it('rejects undeclared nested fields, unsafe reference labels/metadata and invalid scalar/provenance shapes',()=>{
+  for(const value of [
+   {...base,payload:'private'}, {...base,createdAt:'2026-02-30T00:00:00.000Z'},
+   {...base,projectionRevisionId:'../private'}, {...base,sourceGraphSummary:{...base.sourceGraphSummary,sourceCount:NaN}},
+   {...base,sourceGraphSummary:{...base.sourceGraphSummary,hasConflict:'false'}},
+   {...base,provenance:{...base.provenance,kind:'invented'}}, {...base,provenance:{...base.provenance,rawPayload:'private'}},
+   {...base,effectiveAssetReference:{...ref,label:'https://private.test'}},
+   {...base,effectiveAssetReference:{...ref,metadata:{accessToken:'private'}}},
+   {...base,source:{...base.source,command:'private'}},
+   {...base,target:{...base.target,command:'private'}},
+   {...base,diagnostics:[{code:'effective-projection-source-missing',message:'Failed',payload:'private'}]},
+  ]) assert.throws(()=>contracts.normalizeEffectiveAssetProjectionRecord(value));
+ });
+ it('rejects accessors/cycles and exhausted metadata bounds without evaluation or echo',()=>{
+  let calls=0;
+  const reference={...ref};Object.defineProperty(reference,'label',{enumerable:true,get(){calls++;return'private';}});
+  assert.throws(()=>contracts.normalizeEffectiveAssetProjectionRecord({...base,effectiveAssetReference:reference}));
+  const cycle:any={};cycle.self=cycle;
+  for(const metadata of [cycle,{value:Infinity},{refreshToken:'private'},{value:'C: private'},new Array(129).fill(false),{value:'ghp_'+'syntheticvalue'.repeat(3)}])
+   assert.throws(()=>contracts.normalizeSafeEffectiveAssetProjectedFieldPatch({'safe-metadata':metadata}));
+  assert.equal(calls,0);
+  assert.throws(()=>contracts.normalizeSafeEffectiveAssetProjectedFieldPatch({'display-name':'A',' DISPLAY-NAME ':'B'}));
+  assert.throws(()=>contracts.normalizeListEffectiveAssetProjectionsCommand({targetWorkspaceId:'ws-1',limit:'25'} as any));
+ });
+ it('retains projection-family metadata restrictions in diagnostics, blockers and references',()=>{
+  const metadata={detail:'echo synthetic; bash'};
+  const diagnostic={code:'effective-projection-source-missing',message:'Failed',metadata} as const;
+  assert.throws(()=>contracts.normalizeSafeEffectiveAssetProjectedFieldPatch({'safe-metadata':metadata}));
+  assert.throws(()=>contracts.normalizeEffectiveAssetProjectionDiagnostic(diagnostic));
+  assert.throws(()=>contracts.normalizeEffectiveAssetProjectionBlocker(diagnostic));
+  assert.throws(()=>contracts.normalizeEffectiveAssetProjectionRecord({...base,diagnostics:[diagnostic]}));
+  assert.throws(()=>contracts.normalizeEffectiveAssetProjectionRecord({...base,effectiveAssetReference:{...ref,metadata}}));
+ });
+ it('requires duplicated target workspace and effective identities to agree, preserving cross-workspace source provenance',()=>{
+  for(const value of [
+   {...base,source:{...base.source,targetWorkspaceId:'ws-other'}},
+   {...base,target:{...base.target,targetWorkspaceId:'ws-other'}},
+   {...base,provenance:{...base.provenance,targetWorkspaceId:'ws-other'}},
+   {...base,target:{...base.target,effectiveAssetReference:{...ref,id:'asset.other'}}},
+   {...base,target:{...base.target,effectiveAssetReference:{...ref,version:'2.0.0'}}},
+   {...base,target:{...base.target,projectionId:'projection.other'}},
+  ]){
+   assert.throws(()=>contracts.normalizeEffectiveAssetProjectionRecord(value));
+   assert.throws(()=>contracts.normalizeEffectiveAssetProjectionSnapshotRecord({...value,projectionSnapshotId:'snapshot.alpha'}));
+  }
+  const crossSource={...base,status:'blocked',policy:'blocked',source:{...base.source,sourceWorkspaceId:'ws-library'},provenance:{...base.provenance,sourceWorkspaceId:'ws-library'}};
+  assert.equal(contracts.normalizeEffectiveAssetProjectionRecord(crossSource).source.sourceWorkspaceId,'ws-library');
+ });
+});

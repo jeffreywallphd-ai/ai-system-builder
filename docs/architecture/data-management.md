@@ -495,3 +495,31 @@ isolation, generated-candidate rejection, workspace denial, provider revision
 behavior, cancellation and cleanup, diagnostic non-disclosure, desktop and
 thin-client ordered-step semantics, keyboard behavior, and actionable review
 results.
+
+Parquet dataset review propagates the existing64MiB artifact retrieval maximum and
+checks actual returned source bytes before runtime admission. The Python adapter
+rejects oversized source before staging, the worker checks staged size before
+Parquet parsing, and revised output uses one bounded file-handle read with a growth
+probe instead of unbounded readFile. Application output bounds precede hashing
+or storage. Output I/O failures have static outward messages. Worker Parquet
+handles close explicitly. Footer row counts select only overlapping row groups;
+preceding batches use num_rows, and only page slices convert to Python rows.
+Exact row fingerprints, curation semantics and workspace authorization remain.
+Small installed-PyArrow fixtures qualify these local controls. Compressed-source
+limits and display budgets do not bound decoded-cell memory; adversarial decode
+memory, host admission fairness, private-stage filesystem identity and physical
+resource qualification remain pending. Existing worker queue/deadline controls
+remain in force, including the two-hour dataset-review deadline. No new expanded
+memory budget, model/provider download or runtime authority is introduced.
+
+Dataset preparation output names are validated in the Python model and again at
+task entry, before planning/source/model/generation/output effects. The worker
+mirrors the existing host save-name rule: ECMAScript whitespace trimming,128
+UTF-16 code units, no path punctuation/control characters, dot/dot-dot or trailing
+period. Blank names keep the existing default; safe spaces/Unicode remain valid.
+A captured primitive name feeds both row and JSON-report emitters even if a
+callback mutates the request. Rejections use static text. The worker's canonical
+absolute/non-symlink output-directory check remains in force. These controls do
+not qualify source-path authority, parent substitution, identity-preserving native
+file operations or controlled resource behavior; those R30 gaps remain pending.
+Rollback retains stronger naming denial.

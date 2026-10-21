@@ -2,6 +2,11 @@
 
 # Contributor helper loops
 
+For governed AI-assisted work, use the integrated
+`docs/diagnostics/ai-development-control-plane.md` entry. Its bounded CLI owns
+outcomes, claims, executed verification, review, recovery and the JSON review
+site. The helpers below remain useful lower-level operations.
+
 The portable helpers in `dev-tools/helpers/` group recurring repository work
 into bounded processes. They are intended to reduce repeated approval prompts
 without weakening the approval boundary or creating a general command runner.
@@ -56,6 +61,16 @@ Do not persistently approve a mutable local wrapper as though it were an
 immutable executable.
 
 ## Maintenance and extension
+
+Configured verification paths cross the fixed-tool argument boundary. Planning
+rejects option-like paths after normalization, absolute/drive-relative paths and
+unsupported Node test targets before any tool executes. Node and Prettier receive
+an explicit `--` option terminator before positional paths; containment remains
+mandatory. Negative fixtures are inert and exercise planning only. Repository
+test code still executes with the contributor's existing authority.
+Prettier runs through the fixed installed Node CLI rather than a Windows command
+script, so filename metacharacters remain literal arguments. Missing local
+Prettier fails normally; the helper never fetches an implicit package.
 
 When the same secure action causes repeated approvals or duplicated orchestration,
 first determine whether it fits an existing bounded loop. Improve that loop when

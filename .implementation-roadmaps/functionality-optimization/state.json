@@ -1,0 +1,2409 @@
+{
+  "blockers": [],
+  "chunks": [
+    {
+      "areas": [
+        "Desktop and thin workspace providers",
+        "Shared Composer draft"
+      ],
+      "chunkId": "workspace-and-draft-continuity",
+      "completedAt": "2026-10-21T03:56:40Z",
+      "criteriaIds": [
+        "transferred-asset-functional-rows",
+        "browse-journey-preserved"
+      ],
+      "documentation": [
+        "modules/ui/shared/README.md",
+        "docs/context/packs/system-builder.pack.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "responsive-workspace-browse-workspace-and-draft-continuity",
+      "incrementId": "responsive-workspace-browse",
+      "summary": "Preserved confirmed workspace after failed switch/clear while authoritative reload failure remains gated; subtree removal retains layout and undo/redo history. Dedicated/manual qualification is pending.",
+      "tests": [
+        "Desktop workspace gate: 6 passed; thin direct readiness regression: 1 passed.",
+        "Composer draft regressions passed, including structure through remove/undo/redo/serialization."
+      ],
+      "title": "Preserve usable workspace and Composer structure"
+    },
+    {
+      "areas": [
+        "Asset contracts/use cases",
+        "API/IPC source projections"
+      ],
+      "chunkId": "asset-read-validation-parity",
+      "completedAt": "2026-10-21T04:08:07Z",
+      "criteriaIds": [
+        "transferred-asset-functional-rows",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/architecture/asset-kernel.md",
+        "docs/architecture/asset-composition-planning.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "responsive-workspace-browse-asset-read-validation-parity",
+      "incrementId": "responsive-workspace-browse",
+      "summary": "Corrected immutable version mapping, malformed shape rejection and typed canonical authoring summary/list envelopes. Workspace-wide effective-summary list remains explicitly unavailable rather than attempting an invalid single-reference read.",
+      "tests": [
+        "Exact-version real repository regression and malformed-input denial tests passed.",
+        "Projection sanitizer, mapper, capability contract and IPC list regressions passed."
+      ],
+      "title": "Restore exact reads and safe validation"
+    },
+    {
+      "areas": [
+        "Workspace contracts/use case",
+        "Owning repository projections",
+        "API/IPC/preload",
+        "Shared dashboard"
+      ],
+      "chunkId": "bounded-summary-projections",
+      "completedAt": "2026-10-21T04:08:08Z",
+      "criteriaIds": [
+        "summary-cost-and-truth",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/architecture/workspace-model.md",
+        "modules/hosts/README.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "responsive-workspace-browse-bounded-summary-projections",
+      "incrementId": "responsive-workspace-browse",
+      "summary": "Wired one authorized scalar summary request in both hosts and clients with independent metric availability. Large real-repository fixture proves exact counts, one owning-collection read and bounded response; controlled latency remains pending.",
+      "tests": [
+        "Large fixture:1000systems/10000releases/models/assets passed against reference reducers.",
+        "21 boundary/dataset/reducer checks passed; host-client one-request Vitest passed.",
+        "Server/desktop/thin type checks passed."
+      ],
+      "title": "Bound workspace dashboard summaries"
+    },
+    {
+      "areas": [
+        "Owned qualification probes",
+        "Build resolution and authority"
+      ],
+      "chunkId": "production-probes-and-baseline",
+      "completedAt": "2026-10-21T04:25:43Z",
+      "criteriaIds": [
+        "owned-performance-probes",
+        "browse-performance-qualified"
+      ],
+      "documentation": [
+        "docs/operations/asset-system-support-qualification.md",
+        "docs/architecture/asset-kernel.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "responsive-workspace-browse-production-probes-and-baseline",
+      "incrementId": "responsive-workspace-browse",
+      "summary": "Implemented all six real asserted workload probes with source identity, five warmups and30 measured local samples. Retained failed3066ms build baseline and passing129ms candidate; controlled desktop/server qualification remains pending.",
+      "tests": [
+        "All6 local p95 budgets passed with exact configured workloads;16 focused probe/build/qualification tests passed.",
+        "Separate version/policy/cache/cancellation regressions and strict probe type check passed."
+      ],
+      "title": "Own production-path workload probes"
+    },
+    {
+      "areas": [
+        "Composition use cases/read model",
+        "Host guards",
+        "Finite route policy"
+      ],
+      "chunkId": "composition-transport-parity",
+      "completedAt": "2026-10-21T04:29:45Z",
+      "criteriaIds": [
+        "transferred-asset-functional-rows",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/architecture/asset-composition-planning.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "responsive-workspace-browse-composition-transport-parity",
+      "incrementId": "responsive-workspace-browse",
+      "summary": "Corrected command/route contracts and required resource authority for composition below both transports. Eight existing exact server operations admitted; uncomposed projections and owner-unscoped library remain explicitly deferred.",
+      "tests": [
+        "Real policy fixture denies missing/foreign/archived authority before protected I/O; every15entry guard checked.",
+        "Focused composition, read-model, route and security middleware regressions passed; server type check passed."
+      ],
+      "title": "Align supported composition operations and authorization"
+    },
+    {
+      "areas": [
+        "Composer query/cursors",
+        "Owning batch projections",
+        "Shared UI and host clients"
+      ],
+      "chunkId": "composer-query-and-journey",
+      "completedAt": "2026-10-21T04:32:19Z",
+      "criteriaIds": [
+        "composer-search-cost",
+        "browse-journey-preserved",
+        "browse-performance-qualified",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/architecture/asset-kernel.md",
+        "docs/operations/functionality-local-performance.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "responsive-workspace-browse-composer-query-and-journey",
+      "incrementId": "responsive-workspace-browse",
+      "summary": "Bounded complete sparse traversal, lazy exact details and ordered definition/authoring batches reduce measured collection reads1006to153with identical results/bytes. Late replies cannot change a new destination; focused shared editing/workspace journeys pass. Controlled/browser/manual qualification remains separate.",
+      "tests": [
+        "Real1000candidate sparse fixture:100compatible matches, no duplicate/skipped results;84690bytes unchanged;84.8percent fewer detail collection reads.",
+        "16shared Composer/workspace interaction tests and5thin workspace gate tests passed.",
+        "Four authoring repository tests passed including bounded batches, ordered misses and foreign-workspace isolation."
+      ],
+      "title": "Reduce Composer reads and qualify editing journeys"
+    },
+    {
+      "areas": [
+        "Application image finalization and task authority",
+        "Desktop/server composition",
+        "Asset generated-output registration"
+      ],
+      "chunkId": "retry-safe-output-finalization",
+      "completedAt": "2026-10-21T05:26:35Z",
+      "criteriaIds": [
+        "retry-and-output-integrity",
+        "transferred-runtime-functional-rows",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/architecture/runtime-model.md",
+        "modules/application/README.md",
+        "modules/hosts/README.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "efficient-reliable-task-journeys-retry-safe-output-finalization",
+      "incrementId": "efficient-reliable-task-journeys",
+      "summary": "Image completion now checks accepted organization/workspace authority before cache or runtime access, preserves per-output persistence and registration receipts, rejects changed/malformed completion evidence and uses scoped image IDs. Canonical Asset source identity handles slash-bearing artifact IDs. Session and durable recovery limitations remain explicit.",
+      "tests": [
+        "Focused image finalizer/orchestrator/authority tests passed, including concurrent/partial failure and actual registry workspace isolation.",
+        "Generated-output asset use case:19 tests passed, including slash-bearing identity retry.",
+        "Desktop TypeScript check passed after host and IPC changes."
+      ],
+      "title": "Make completion retry safe"
+    },
+    {
+      "areas": [
+        "Application, adapter, IPC and host contracts",
+        "Functionality findings JSON"
+      ],
+      "chunkId": "runtime-functional-contracts",
+      "completedAt": "2026-10-21T06:01:43Z",
+      "criteriaIds": [
+        "transferred-runtime-functional-rows",
+        "retry-and-output-integrity",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/architecture/runtime-model.md",
+        "docs/context/packs/runtime-task-registry.pack.md",
+        "docs/security/context-management-threat-model.md",
+        "docs/functionality-optimization-review.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "efficient-reliable-task-journeys-runtime-functional-contracts",
+      "incrementId": "efficient-reliable-task-journeys",
+      "summary": "Replayed all12 runtime/data/generation findings: corrected logger, footer freshness, unsupported publish dispatch, private dataset staging, readiness preload and lazy source wiring, scoped image IPC/finalization, and canonical artifact identity. Four uncomposed API families retain explicit unavailable dispositions and route denial evidence.",
+      "tests": [
+        "Focused logger/footer/publish/training/IPC/image tests passed.",
+        "Exact registered unsupported API templates and method/resource substitutions remain denied."
+      ],
+      "title": "Replay typed task and runtime journeys"
+    },
+    {
+      "areas": [
+        "Shared task observation and shell bridges",
+        "Desktop and thin-client task pages"
+      ],
+      "chunkId": "scoped-task-observation",
+      "completedAt": "2026-10-21T06:01:43Z",
+      "criteriaIds": [
+        "idle-observer-budget",
+        "active-progress-budget",
+        "retry-and-output-integrity",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/architecture/runtime-model.md",
+        "docs/context/packs/runtime-task-registry.pack.md",
+        "docs/security/context-management-threat-model.md",
+        "docs/functionality-optimization-review.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "efficient-reliable-task-journeys-scoped-task-observation",
+      "incrementId": "efficient-reliable-task-journeys",
+      "summary": "Shared session/workspace/family observation coalesces reads, suspends hidden polling, bounds retention and invalidates explicit actions. Desktop training/preparation and both image pages retain scoped recovery identity; thin image drafts are workspace-separated and expose same-generation finalization retry.",
+      "tests": [
+        "10-minute clock measurement:24requests versus401 baseline for idle observers; healthy-transport p95 progress1100ms.",
+        "Thin image hook17tests passed, including finalization retry and workspace navigation; desktop image15tests passed.",
+        "Training reopen and stale-workspace tests, dataset source draft continuity and observation disposal regressions passed."
+      ],
+      "title": "Bound and coalesce task observation"
+    },
+    {
+      "areas": [
+        "Host lifecycle reconciliation",
+        "Owning Context, preparation, training, download and image services",
+        "Python and ComfyUI process supervision"
+      ],
+      "chunkId": "host-owned-terminal-reconciliation",
+      "completedAt": "2026-10-21T06:01:44Z",
+      "criteriaIds": [
+        "terminal-cleanup-independent",
+        "retry-and-output-integrity",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/architecture/runtime-model.md",
+        "docs/context/packs/runtime-task-registry.pack.md",
+        "docs/security/context-management-threat-model.md",
+        "docs/functionality-optimization-review.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "efficient-reliable-task-journeys-host-owned-terminal-reconciliation",
+      "incrementId": "efficient-reliable-task-journeys",
+      "summary": "Accepted tasks reserve lifecycle ownership before asynchronous preparation. Owning cleanup runs without feature pages; retries preserve training/dataset receipts and owed cleanup. Shutdown independently stops workers, retains unconfirmed ownership/persistence, and fences delayed starts. ComfyUI handles queue deletion truthfully, retains ambiguous submissions and settles late completion history before timeout cancellation.",
+      "tests": [
+        "No-renderer malformed training, staging cleanup retry, duplicate save/approval and task terminal tests passed.",
+        "Runtime preparation/start-stop races passed for Python and ComfyUI.",
+        "Server fence-before-listener drain and desktop persistence-retention regressions passed.",
+        "Real HTTP-client plus ComfyUI adapter proves running cancellation remains pending and late terminal history cleans once."
+      ],
+      "title": "Reconcile resources without feature polling"
+    },
+    {
+      "areas": [
+        "Bounded task qualification",
+        "Current independent technical review"
+      ],
+      "chunkId": "task-journey-qualification",
+      "completedAt": "2026-10-21T06:15:44Z",
+      "criteriaIds": [
+        "idle-observer-budget",
+        "active-progress-budget",
+        "terminal-cleanup-independent",
+        "retry-and-output-integrity",
+        "task-host-qualification",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/architecture/runtime-model.md",
+        "docs/security/context-management-threat-model.md"
+      ],
+      "feedbackAddressed": [],
+      "id": "efficient-reliable-task-journeys-task-journey-qualification",
+      "incrementId": "efficient-reliable-task-journeys",
+      "summary": "Current candidate passed44 explicit test files and documentation, architecture and agent-support gates, with desktop TypeScript and both host builds. Separate actual review accepted the implementation/local scope. Controlled whole-host and physical worker measurements remain pending; no durable crash or hardware pass is inferred.",
+      "tests": [
+        "Current receipt4f44d26e0df1df4aca053bc69b48d0ad5b3c4ac9d7f792447196347f96dfda2f passed all4 registered checks.",
+        "Independent review22c25dfece330fda5dffd12c7298508d66a54c180eb6282606c6d7daa53dd41e accepted all7criteria with controlled qualification pending.",
+        "Server/thin builds and desktop TypeScript checks passed."
+      ],
+      "title": "Measure local task journeys and retain external gaps"
+    },
+    {
+      "areas": [
+        "Context worker",
+        "Synthetic qualification"
+      ],
+      "chunkId": "rag-stage-baseline",
+      "completedAt": "2026-10-21T06:27:49Z",
+      "criteriaIds": [
+        "context-stage-baseline",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Context architecture, threat model, context pack and worker README updated."
+      ],
+      "feedbackAddressed": [],
+      "id": "quality-preserving-context-efficiency-rag-stage-baseline",
+      "incrementId": "quality-preserving-context-efficiency",
+      "summary": "Added isolated native-process comparison of hash-verified baseline and current exact Context operation, retaining per-stage timings, RSS, corpus identity and unavailable attempts. The original100k/384D fixture exceeded the unchanged128MiB file limit; a declared128D cohort remains within that boundary.",
+      "tests": [
+        "Focused native Context and qualification tests:17passed; full supported benchmark still running."
+      ],
+      "title": "Measure complete Context stages"
+    },
+    {
+      "areas": [
+        "Context worker",
+        "Synthetic qualification"
+      ],
+      "chunkId": "bounded-validation-allocation",
+      "completedAt": "2026-10-21T06:27:50Z",
+      "criteriaIds": [
+        "context-allocation-target",
+        "context-integrity-and-cancel",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "Context architecture, threat model, context pack and worker README updated."
+      ],
+      "feedbackAddressed": [],
+      "id": "quality-preserving-context-efficiency-bounded-validation-allocation",
+      "incrementId": "quality-preserving-context-efficiency",
+      "summary": "All vectors now validate natively in at most256-row Arrow batches with only validated metadata retained. Every row still passes identity/ordinal/text/citation checks before exact search; no package limit, cache or indexing policy changed.",
+      "tests": [
+        "Focused native Context and qualification tests:17passed; full supported benchmark still running."
+      ],
+      "title": "Reduce validated query allocation"
+    },
+    {
+      "areas": [
+        "Context worker",
+        "Synthetic qualification"
+      ],
+      "chunkId": "quality-and-determinism-oracle",
+      "completedAt": "2026-10-21T06:27:50Z",
+      "criteriaIds": [
+        "context-quality-invariant",
+        "context-integrity-and-cancel"
+      ],
+      "documentation": [
+        "Context architecture, threat model, context pack and worker README updated."
+      ],
+      "feedbackAddressed": [],
+      "id": "quality-preserving-context-efficiency-quality-and-determinism-oracle",
+      "incrementId": "quality-preserving-context-efficiency",
+      "summary": "Added deterministic exact identity/order/citation/score comparison, positive RSS qualification guards, late-batch malformed-vector/citation denials and actual package cancellation/cleanup/retry evidence.17focused tests passed with pinned native packages.",
+      "tests": [
+        "Focused native Context and qualification tests:17passed; full supported benchmark still running."
+      ],
+      "title": "Protect exact retrieval and citations"
+    },
+    {
+      "areas": [
+        "Context native qualification",
+        "Source-bound measurement evidence"
+      ],
+      "chunkId": "context-candidate-qualification",
+      "completedAt": "2026-10-21T06:31:25Z",
+      "criteriaIds": [
+        "context-stage-baseline",
+        "context-allocation-target",
+        "context-quality-invariant",
+        "context-runtime-qualified",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/operations/context-efficiency-qualification.json",
+        "Context canonical guidance and worker README"
+      ],
+      "feedbackAddressed": [],
+      "id": "quality-preserving-context-efficiency-context-candidate-qualification",
+      "incrementId": "quality-preserving-context-efficiency",
+      "summary": "Executed unchanged-baseline/current-source native comparisons with5warmups,20timing samples and3isolated RSS runs per variant at1000/10000/100000rows. Supported10k384D and100k128D cohorts pass memory and latency targets with identical IDs/order/citations and zero score delta. Retained earlier pilot and unsupported100k384D attempt. Rechecked candidate/probe hashes before publishing sanitized JSON; real-model CPU/accelerator and host artifact retrieval measurements remain pending.",
+      "tests": [
+        "17focused native integrity/cancellation/oracle tests passed; bounded increment verification is running."
+      ],
+      "title": "Qualify measured Context candidate"
+    },
+    {
+      "areas": [
+        "Versioned qualification requirements",
+        "Bounded read-only assessment",
+        "User/model qualification procedures"
+      ],
+      "chunkId": "qualification-owner-reconciliation",
+      "completedAt": "2026-10-21T07:24:32Z",
+      "criteriaIds": [
+        "existing-qualification-preserved",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/operations/functionality-outcome-qualification.md",
+        "docs/operations/functionality-qualification-crosswalk.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "qualified-user-and-model-outcomes-qualification-owner-reconciliation",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "summary": "Versioned JSON maps every known pending criterion to the canonical owner, required environment, actual procedure and existing harness. Implementation is recorded; unavailable controlled executions and aggregate verification are not declared passed.",
+      "tests": [
+        "Five focused assessment/ownership/source-denial tests passed; current functionality-outcomes/docs/agent-support receipt b88e8020854dd3d371b405e34a4518d696ccf5e2d0f40e21bf7104ab46f3e390."
+      ],
+      "title": "Preserve qualification owners"
+    },
+    {
+      "areas": [
+        "Versioned qualification requirements",
+        "Bounded read-only assessment",
+        "User/model qualification procedures"
+      ],
+      "chunkId": "qualification-assessment",
+      "completedAt": "2026-10-21T07:24:32Z",
+      "criteriaIds": [
+        "existing-qualification-preserved",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/operations/functionality-outcome-qualification.md",
+        "docs/operations/functionality-qualification-crosswalk.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "qualified-user-and-model-outcomes-qualification-assessment",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "summary": "Bounded read-only CLI emits source/owner-bound sanitized JSON, detects ownership drift and distinguishes declarations, local evidence and unavailable controlled qualification. Implementation is recorded; unavailable controlled executions and aggregate verification are not declared passed.",
+      "tests": [
+        "Five focused assessment/ownership/source-denial tests passed; current functionality-outcomes/docs/agent-support receipt b88e8020854dd3d371b405e34a4518d696ccf5e2d0f40e21bf7104ab46f3e390."
+      ],
+      "title": "Assess current evidence safely"
+    },
+    {
+      "areas": [
+        "Versioned qualification requirements",
+        "Bounded read-only assessment",
+        "User/model qualification procedures"
+      ],
+      "chunkId": "qualification-task-procedures",
+      "completedAt": "2026-10-21T07:24:32Z",
+      "criteriaIds": [
+        "user-task-outcome-targets",
+        "accessibility-outcomes-qualified",
+        "model-quality-resource-outcomes",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/operations/functionality-outcome-qualification.md",
+        "docs/operations/functionality-qualification-crosswalk.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "qualified-user-and-model-outcomes-qualification-task-procedures",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "summary": "Task scripts, predeclared approved targets, accessibility profiles and separate CPU/accelerator cohorts are ready; unavailable executions remain pending. Implementation is recorded; unavailable controlled executions and aggregate verification are not declared passed.",
+      "tests": [
+        "Five focused assessment/ownership/source-denial tests passed; current functionality-outcomes/docs/agent-support receipt b88e8020854dd3d371b405e34a4518d696ccf5e2d0f40e21bf7104ab46f3e390."
+      ],
+      "title": "Specify reproducible user and model outcomes"
+    },
+    {
+      "areas": [
+        "Versioned qualification requirements",
+        "Bounded read-only assessment",
+        "User/model qualification procedures"
+      ],
+      "chunkId": "release-evidence-and-gap-repairs",
+      "completedAt": "2026-10-21T07:24:32Z",
+      "criteriaIds": [
+        "full-current-qualification",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "docs/operations/functionality-outcome-qualification.md",
+        "docs/operations/functionality-qualification-crosswalk.json"
+      ],
+      "feedbackAddressed": [],
+      "id": "qualified-user-and-model-outcomes-release-evidence-and-gap-repairs",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "summary": "Reconcile implemented functionality and observed fixes, generate current pending ledger, and prepare aggregate qualification after implementation without declaring unavailable checks passed. Implementation is recorded; unavailable controlled executions and aggregate verification are not declared passed.",
+      "tests": [
+        "Five focused assessment/ownership/source-denial tests passed; current functionality-outcomes/docs/agent-support receipt b88e8020854dd3d371b405e34a4518d696ccf5e2d0f40e21bf7104ab46f3e390."
+      ],
+      "title": "Prepare honest release assessment"
+    }
+  ],
+  "completion": null,
+  "completionSuite": "all",
+  "createdAt": "2026-10-21T02:26:54Z",
+  "currentIncrementId": "qualified-user-and-model-outcomes",
+  "decisions": [],
+  "discovery": {
+    "constraints": [
+      "The user requested assessment and a roadmap only. No implementation, roadmap approval, completion evidence or reviewer identity is inferred.",
+      "Use existing accepted contracts, application ports, shared UI and host ownership. No new deployment topology, streaming protocol, vector index, model provider or cache-retention policy is selected.",
+      "All new numerical targets are proposals for roadmap approval, not observed baselines or production service-level commitments. Measure unchanged baseline and candidate on the same named controlled environment.",
+      "Existing six asset/system p95 budgets remain authoritative. Owned probes must call real production paths and assert results rather than timing no-op doubles.",
+      "The current all-suite report is failed: standard Node has 3030 passes, 36 failures and 1 skip; standard Vitest has 407 passes, E2E Node has 91 passes and 2 skips, and E2E Vitest has 3 passes. Triage unrelated failures separately before final qualification; these counts alone do not establish product defects.",
+      "Security remediation owns renderer-editable model deletion roots, workspace staging/raw-key fallback, read/list registration mutations, Git adoption and helper path integrity. Optimize only after applicable controls are reconciled; never restore an insecure fallback for performance.",
+      "Preserve legacy roadmap approvals and pending qualification. New evidence must be current and explicitly linked; no old pass becomes a control-plane receipt."
+    ],
+    "decisionRequired": false,
+    "recordedAt": "2026-10-21T02:26:54Z",
+    "securityImpact": {
+      "abuseCases": [
+        "A fast summary crosses workspace or organization boundaries",
+        "Cancellation or navigation loses terminal cleanup or permits duplicate work",
+        "Allocation optimization skips digest, vector or citation validation",
+        "A benchmark reports no-op timing or silently omits failures",
+        "Telemetry retains protected content or implicit model/network authority"
+      ],
+      "assets": [
+        "Workspace and organization data isolation",
+        "Immutable asset/release and dataset lineage",
+        "Source content, embeddings and model references",
+        "Runtime resource ownership and sanitized evidence"
+      ],
+      "controls": [
+        "Authoritative actor/workspace context and scoped read ports",
+        "Idempotent lifecycle cleanup independent of UI observation where supported",
+        "Exact integrity/schema/lineage validation before query results",
+        "Bounded counts, concurrency, retries, memory and sanitized projections",
+        "No persistent content/model cache or new retrieval policy without a separate decision"
+      ],
+      "disposition": "security-relevant",
+      "residualRisks": [
+        "Physical model, dedicated hardware, assistive-technology and managed-service qualification was not run",
+        "Host-owned cleanup and memory behavior must be measured before claiming reliability or performance gains",
+        "Unfinished security and legacy qualification roadmaps may block deployment qualification"
+      ],
+      "summary": "Planning artifact changes are inert, but the proposed implementation crosses authorized read projections, runtime task lifecycle, model/resource handling and untrusted Context data. Existing controls remain acceptance constraints.",
+      "trustBoundaries": [
+        "Renderer/API/IPC to authorized application read models",
+        "Task observations to host-owned runtime lifecycle",
+        "Saved context bytes to private managed-runtime validation",
+        "Controlled measurements to read-only review evidence"
+      ],
+      "verification": [
+        "Cross-workspace/organization, stale-revision and unauthorized-read denial tests",
+        "Fake-clock task observation plus real host terminal/cancel/shutdown failure paths",
+        "Corrupt package/vector/citation denial under optimized Context processing",
+        "Production-path workload assertions and controlled before/after memory/latency evidence",
+        "Existing security remediation evidence and manual reviews remain separately owned"
+      ]
+    },
+    "sources": [
+      {
+        "note": "Implemented routes and shared feature surfaces, not inferred capabilities.",
+        "title": "Feature map and workspace host wiring",
+        "url": "apps/thin-client/src/App.tsx"
+      },
+      {
+        "note": "Six accepted budgets; no current source-bound measured pass established in this assessment.",
+        "title": "Existing qualification workloads and p95 budgets",
+        "url": "dev-tools/config/asset-system-qualification.json"
+      },
+      {
+        "note": "Requires an externally supplied trusted probe module; no repository-owned production-path probe set was located.",
+        "title": "Performance runner",
+        "url": "dev-tools/scripts/qualification/run-asset-system-performance-qualification.mjs"
+      },
+      {
+        "note": "Counts fetch full releases, model pages and four custom-asset lists.",
+        "title": "Dashboard fan-out",
+        "url": "apps/thin-client/src/features/page-dashboard/thinClientPageDashboardSource.ts"
+      },
+      {
+        "note": "Reads exact detail for each page candidate before compatibility filtering.",
+        "title": "Composer catalog candidate reads",
+        "url": "modules/application/use-cases/system-builder/list-system-builder-composer-assets.use-case.ts"
+      },
+      {
+        "note": "Persistent 1500 ms model-download polling while a workspace is selected.",
+        "title": "Task observation",
+        "url": "modules/ui/shared/notifications/ModelDownloadNotificationBridge.tsx"
+      },
+      {
+        "note": "500 ms active generation observation and a separate 1500 ms shell task list.",
+        "title": "Context observation",
+        "url": "modules/ui/shared/context-management/ContextStudio.tsx"
+      },
+      {
+        "note": "Terminal reads call lifecycle cleanup; do not infer that every idle-page task leaks.",
+        "title": "Runtime terminal lifecycle",
+        "url": "modules/application/services/runtime/runtime-task-registry.service.ts"
+      },
+      {
+        "note": "Every query privately materializes the package, reads the table into Python rows, validates and performs exact search.",
+        "title": "Context query allocation",
+        "url": "modules/adapters/runtime/python/worker/tasks/context_artifact_operation.py"
+      },
+      {
+        "note": "The embedding helper loads local tokenizer/model on each helper invocation; its actual cold/warm cost is unmeasured.",
+        "title": "Embedding load",
+        "url": "modules/adapters/runtime/python/worker/tasks/context_generation.py"
+      },
+      {
+        "note": "Full integrity, lineage, workspace isolation, no implicit downloads and bounded private staging are mandatory.",
+        "title": "Context security",
+        "url": "docs/security/context-management-threat-model.md"
+      },
+      {
+        "note": "Separate repository, physical model, performance, manual security and accessibility evidence.",
+        "title": "Qualification procedure",
+        "url": "docs/operations/asset-system-support-qualification.md"
+      },
+      {
+        "note": "Six implemented increments retain controlled qualification obligations.",
+        "title": "Existing data workflow qualification",
+        "url": ".implementation-roadmaps/data-management-quality-and-usability/state.json"
+      },
+      {
+        "note": "Representative CPU/accelerator and non-developer usability evidence remains pending.",
+        "title": "Existing constrained generation qualification",
+        "url": ".implementation-roadmaps/optional-constrained-json-generation/state.json"
+      },
+      {
+        "note": "Production qualification remains pending; preserve owning roadmap.",
+        "title": "Existing asset experience qualification",
+        "url": ".implementation-roadmaps/asset-experience-layered-customization/state.json"
+      },
+      {
+        "note": "Unapproved independent proposal; do not silently implement it here.",
+        "title": "Existing active-source workflow proposal",
+        "url": ".implementation-roadmaps/systems-run-workflow-active-source/state.json"
+      },
+      {
+        "note": "Existing all-suite run failed standard Node; other runner groups passed. Skipped live AI tests do not qualify models.",
+        "title": "Current aggregate runner report",
+        "url": "artifacts/test-reports/test-suite-report.json"
+      }
+    ],
+    "summary": "Static review confirms substantial implemented shared workflows and deterministic tests, but current performance and user/model qualification are not established. Prioritize bounded navigation/read projections, task observation and cleanup, and quality-preserving Context allocation improvements; use existing roadmap owners for unfinished qualifications. No optimization or product behavior was changed during this assessment."
+  },
+  "evidence": [
+    {
+      "artifact": "docs/operations/functionality-local-performance.json",
+      "command": null,
+      "criterionId": "browse-journey-preserved",
+      "id": "evidence-1",
+      "incrementId": "responsive-workspace-browse",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T04:59:35Z",
+      "summary": "Current source-bound paired thin/packaged-desktop browser run passes search, exact detail identity, insertion/place, undo/redo, rendered preview, save, fresh renderer reload/reopen preserving instance/reference, keyboard/tree/modal focus and real320CSSpixel reachable-control geometry. Manual assistive-technology/participant checks remain separate and pending."
+    },
+    {
+      "artifact": "docs/operations/functionality-local-performance.json",
+      "command": null,
+      "criterionId": "browse-performance-qualified",
+      "id": "evidence-2",
+      "incrementId": "responsive-workspace-browse",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T04:59:35Z",
+      "summary": "Pending: unavailable named reference desktop/managed-server page-level performance environments. All6configured operation budgets pass on the explicitly local fixture, which does not qualify those controlled profiles."
+    },
+    {
+      "artifact": "docs/operations/functionality-local-performance.json",
+      "command": null,
+      "criterionId": "composer-search-cost",
+      "id": "evidence-3",
+      "incrementId": "responsive-workspace-browse",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T04:59:35Z",
+      "summary": "Real1000candidate sparse complete traversal yields identical100compatible results and84690response bytes with1006individual-mode versus153batched-mode detail collection reads. Cursor, query/workspace binding and late-result denial regressions passed."
+    },
+    {
+      "artifact": "docs/operations/functionality-local-performance.json",
+      "command": null,
+      "criterionId": "owned-performance-probes",
+      "id": "evidence-4",
+      "incrementId": "responsive-workspace-browse",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T04:59:35Z",
+      "summary": "All6owned probes assert actual configured production-path outputs and denials. Current source-stable local run has5warmups/30measurements per operation; preview reads actual2MiB and runtime handoff uses35separate active fixtures. Native/model hardware qualification is not inferred."
+    },
+    {
+      "artifact": "docs/operations/functionality-local-performance.json",
+      "command": null,
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-5",
+      "incrementId": "responsive-workspace-browse",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T04:59:36Z",
+      "summary": "Required persisted active workspace and organization membership precede protected composition I/O in both hosts; finite exact routes, malformed/ref/cursor bounds, scoped summaries and group-denial/sender failures pass. Reused build choices receive uncached locked authority and cancellation checks before materialization; model authority remains uncached. Rollback preserves these denials. Unavailable native and controlled qualification remains explicit."
+    },
+    {
+      "artifact": "docs/operations/functionality-local-performance.json",
+      "command": null,
+      "criterionId": "summary-cost-and-truth",
+      "id": "evidence-6",
+      "incrementId": "responsive-workspace-browse",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T04:59:36Z",
+      "summary": "Real owning repositories match reference reducers for1000systems/10000releases/models/custom-assets; one owning collection read, bounded scalar response, one client summary request, independent metric failures and real organization-policy denial evidence passed."
+    },
+    {
+      "artifact": "docs/functionality-optimization-review.json",
+      "command": null,
+      "criterionId": "transferred-asset-functional-rows",
+      "id": "evidence-7",
+      "incrementId": "responsive-workspace-browse",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T04:59:36Z",
+      "summary": "All13 rows have current replay dispositions. Exact immutable reads, malformed shape denial, relationship/route contracts, canonical projections, workspace recovery and draft structure have focused evidence. Eight existing composition routes are admitted only after required application authority; uncomposed projection services, workspace-wide effective-summary list and user-owned library exposure remain explicitly deferred."
+    },
+    {
+      "artifact": ".local-codex/functionality-execution/verification-i2-reviewed-candidate.json",
+      "command": "python -B dev-tools/helpers/development_control_plane.py verify functionality-task-journeys-cross-host-qualification",
+      "criterionId": "transferred-runtime-functional-rows",
+      "id": "evidence-8",
+      "incrementId": "efficient-reliable-task-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T06:15:44Z",
+      "summary": "Source-stable44-file task profile and required gates passed. Actual independent review accepted this criterion for implemented/local scope; current authority, failure, retry, observation and cleanup evidence is recorded in the qualifying work item."
+    },
+    {
+      "artifact": ".local-codex/functionality-execution/verification-i2-reviewed-candidate.json",
+      "command": "python -B dev-tools/helpers/development_control_plane.py verify functionality-task-journeys-cross-host-qualification",
+      "criterionId": "idle-observer-budget",
+      "id": "evidence-9",
+      "incrementId": "efficient-reliable-task-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T06:15:44Z",
+      "summary": "Source-stable44-file task profile and required gates passed. Actual independent review accepted this criterion for implemented/local scope; current authority, failure, retry, observation and cleanup evidence is recorded in the qualifying work item."
+    },
+    {
+      "artifact": ".local-codex/functionality-execution/verification-i2-reviewed-candidate.json",
+      "command": "python -B dev-tools/helpers/development_control_plane.py verify functionality-task-journeys-cross-host-qualification",
+      "criterionId": "active-progress-budget",
+      "id": "evidence-10",
+      "incrementId": "efficient-reliable-task-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T06:15:44Z",
+      "summary": "Source-stable44-file task profile and required gates passed. Actual independent review accepted this criterion for implemented/local scope; current authority, failure, retry, observation and cleanup evidence is recorded in the qualifying work item."
+    },
+    {
+      "artifact": ".local-codex/functionality-execution/verification-i2-reviewed-candidate.json",
+      "command": "python -B dev-tools/helpers/development_control_plane.py verify functionality-task-journeys-cross-host-qualification",
+      "criterionId": "terminal-cleanup-independent",
+      "id": "evidence-11",
+      "incrementId": "efficient-reliable-task-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T06:15:45Z",
+      "summary": "Source-stable44-file task profile and required gates passed. Actual independent review accepted this criterion for implemented/local scope; current authority, failure, retry, observation and cleanup evidence is recorded in the qualifying work item."
+    },
+    {
+      "artifact": ".local-codex/functionality-execution/verification-i2-reviewed-candidate.json",
+      "command": "python -B dev-tools/helpers/development_control_plane.py verify functionality-task-journeys-cross-host-qualification",
+      "criterionId": "retry-and-output-integrity",
+      "id": "evidence-12",
+      "incrementId": "efficient-reliable-task-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T06:15:45Z",
+      "summary": "Source-stable44-file task profile and required gates passed. Actual independent review accepted this criterion for implemented/local scope; current authority, failure, retry, observation and cleanup evidence is recorded in the qualifying work item."
+    },
+    {
+      "artifact": ".local-codex/functionality-execution/verification-i2-reviewed-candidate.json",
+      "command": "python -B dev-tools/helpers/development_control_plane.py verify functionality-task-journeys-cross-host-qualification",
+      "criterionId": "task-host-qualification",
+      "id": "evidence-13",
+      "incrementId": "efficient-reliable-task-journeys",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T06:15:45Z",
+      "summary": "Controlled whole-host leave/reopen/disconnect/cancel/failure/shutdown and representative physical worker progress/cleanup measurement remain pending; deterministic local fixtures passed and do not substitute for these checks."
+    },
+    {
+      "artifact": ".local-codex/functionality-execution/verification-i2-reviewed-candidate.json",
+      "command": "python -B dev-tools/helpers/development_control_plane.py verify functionality-task-journeys-cross-host-qualification",
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-14",
+      "incrementId": "efficient-reliable-task-journeys",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T06:15:45Z",
+      "summary": "Source-stable44-file task profile and required gates passed. Actual independent review accepted this criterion for implemented/local scope; current authority, failure, retry, observation and cleanup evidence is recorded in the qualifying work item."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "context-runtime-qualified",
+      "id": "evidence-15",
+      "incrementId": "quality-preserving-context-efficiency",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T06:29:37Z",
+      "summary": "Representative installed local embedding-model CPU/accelerator environments are unavailable, as confirmed by the user. Deterministic native LanceDB/PyArrow comparison is local conformance/performance evidence only; real model load latency, recall and physical hardware memory/cleanup remain pending. No model was downloaded and no qualification waiver is inferred."
+    },
+    {
+      "artifact": "docs/operations/context-efficiency-qualification.json",
+      "command": null,
+      "criterionId": "context-stage-baseline",
+      "id": "evidence-16",
+      "incrementId": "quality-preserving-context-efficiency",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T06:32:43Z",
+      "summary": "Executed source-bound native comparisons at1000/10000/100000rows with declared dimensions, cold timing,20warm samples, per-stage timing and3isolated RSS processes/variant. Unavailable100k384D preserved; final100k128D fits unchanged limits. Storage retrieval/model loading are explicitly outside this deterministic worker-local boundary."
+    },
+    {
+      "artifact": "docs/operations/context-efficiency-qualification.json",
+      "command": null,
+      "criterionId": "context-allocation-target",
+      "id": "evidence-17",
+      "incrementId": "quality-preserving-context-efficiency",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T06:32:43Z",
+      "summary": "Supported10k384D and100k128D comparisons pass: incremental RSS falls74.32percent/69.62percent, p95 ratios0.1462/0.1802 against unchanged baseline. No safe-limit increase or approximate/cache behavior. Exact workload dimensions remain part of the result."
+    },
+    {
+      "artifact": "docs/operations/context-efficiency-qualification.json",
+      "command": null,
+      "criterionId": "context-quality-invariant",
+      "id": "evidence-18",
+      "incrementId": "quality-preserving-context-efficiency",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T06:32:43Z",
+      "summary": "All three deterministic cohorts retain exact IDs/order/citations and zero observed score delta with native exact search. Negative oracle rejects changed citations/identity/nonfinite scores. Real embedding recall is unqualified and remains covered by pending runtime criterion."
+    },
+    {
+      "artifact": "docs/operations/context-efficiency-qualification.json",
+      "command": null,
+      "criterionId": "context-integrity-and-cancel",
+      "id": "evidence-19",
+      "incrementId": "quality-preserving-context-efficiency",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T06:32:43Z",
+      "summary": "Bounded full-vector validation denies late nonfinite/null vectors, duplicate identities/ordinals, missing text and foreign citations. Actual package cancellation prevents embedding/search, removes private materialization and permits a clean retry. Relevant Context generation/browser/contract tests and native worker checks passed under the exact7-file profile."
+    },
+    {
+      "artifact": "docs/operations/context-efficiency-qualification.json",
+      "command": null,
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-20",
+      "incrementId": "quality-preserving-context-efficiency",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T06:32:44Z",
+      "summary": "Threat/control delta preserves every archive/schema/vector/citation/digest check and bounded exact search; no cache, model download or shared retained source content. Canonical docs, architecture and agent-support gates passed. Separate actual reviewer accepted all6criteria against receipt99c9b46fef419743a90a4b1006007c4caebd8610cf28f729fd4fe6061e21c320, explicitly retaining physical-model qualification pending."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "user-task-outcome-targets",
+      "id": "evidence-21",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T07:24:48Z",
+      "summary": "Pending: no representative nondeveloper participants are available. The approved five-participant study, completion/error/ease targets and synthetic task scripts are documented; no study or user-success pass is claimed."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "accessibility-outcomes-qualified",
+      "id": "evidence-22",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T07:24:48Z",
+      "summary": "Pending: actual supported screen-reader/manual keyboard and exact desktop/thin-client qualification profiles are unavailable. Automated UI tests supplement but cannot replace them."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "model-quality-resource-outcomes",
+      "id": "evidence-23",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T07:24:48Z",
+      "summary": "Pending: no authorized representative installed-model CPU/accelerator qualification environment is available. Fixed cohort/held-out quality/resource procedures are documented; deterministic fixtures do not establish model throughput or quality."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "full-current-qualification",
+      "id": "evidence-24",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-21T07:46:38Z",
+      "summary": "First current aggregate receipt aa37c43ada61777d779281cb54779c9985006fd5e1afe540c46cc17ca1c85bf5 retained: Node standard37failed/3145passed/2skipped; Vitest standard1failed/430passed; E2E95passed/2skipped. AI commands completed but controlled models/environments remain pending. Observed root causes corrected and independently reviewed in work functionality-final-qualification-regressions; fresh aggregate verification still required."
+    },
+    {
+      "artifact": ".local-codex/functionality-execution/overall-attempt-20261021T075247/test-suite-report.json",
+      "command": null,
+      "criterionId": "full-current-qualification",
+      "id": "evidence-25",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-21T07:53:12Z",
+      "summary": "Corrected current aggregate passed in receipt 46edc0f668fdd3e27249c494d798558c14a6923610f57766de31f3aec2256433 and completed independent overall review 057090313c85fd9d763937f24b4fd07c7d8b701c7060bb813594c51f9d17e01f. Standard3632passed2skipped; E2E95passed2skipped; offline AI command stages passed, without inferring controlled model evidence. Server/thin-client builds passed. This full criterion remains unsatisfied because applicable dependency-network audit is unavailable pending specific authorization after automatic approval rejection; user/manual/model/native controlled criteria remain separately pending. Earlier failed aggregate remains retained."
+    },
+    {
+      "artifact": "docs/security/security-findings-refresh-assessment.json",
+      "command": "npm run security:dependencies",
+      "criterionId": "full-current-qualification",
+      "id": "evidence-26",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-21T09:52:55Z",
+      "summary": "Current required dependency gate failed after compatible patch refresh:0runtime/31full-tree affected packages. Other current focused tooling/docs/agent/architecture checks and server/thin builds passed. Historical corrected aggregate remains retained, but later source edits and this local audit failure prevent full-current qualification. Controlled environments remain separately pending."
+    },
+    {
+      "artifact": ".local-codex/security-execution/r40-verification.json",
+      "command": "npm run security:dependencies",
+      "criterionId": "full-current-qualification",
+      "id": "evidence-27",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-21T10:23:01Z",
+      "summary": "Authorized dependency audit after official toolchain migration reports0runtime affected package entries and7high full-tree/toolchain affected package entries through retained original braces. User kept supplier and left tooling qualification pending. Required zero-advisory gate still fails; no fork, waiver or final qualification pass. Historical52/31-entry reports remain retained."
+    },
+    {
+      "artifact": ".local-codex/final-local-evidence-corrected-review-note.json",
+      "command": null,
+      "criterionId": "existing-qualification-preserved",
+      "id": "evidence-28",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T10:36:24Z",
+      "summary": "Independent current inspection preserves4canonical owners and15controlled criteria (2asset,6data,1constrainedJSON,6functionality), all pending. Corrected current-owner reconciliation is accepted on efb85bfd... and all25transferred rows retain planning history/current owner disposition. Security native and unapproved active-source ownership remain separate; no approval or qualification transfers."
+    },
+    {
+      "artifact": ".local-codex/security-execution/existing-authority-controls-observations.json",
+      "command": null,
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-29",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T10:36:24Z",
+      "summary": "Current independent authority review accepts7bounded local criteria on receipt532890f88015990f338b0cb30534d1433d1c8e92e1a057f125f5c35e2b8ff91d/reviewc9e34a9c2995fd4fdf3e0a42854baf294a1c75866fb8e4ba78346789ec362ee4 after reproduced R27 identity defect was repaired and independently accepted. No native positive, durable recovery, library-owner policy, controlled user/model/accessibility or tooling qualification inferred. Failed7high original-supplier audit remains failed."
+    },
+    {
+      "artifact": ".local-codex/functionality-execution/corrected-final-source-local-review.json",
+      "command": "npm run test:all; governed completion gates",
+      "criterionId": "full-current-qualification",
+      "id": "evidence-30",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-21T10:56:19Z",
+      "summary": "Current source-stable receipt079a16a3c8eef412d8530306a8e154aaab2dfe976ad873483b60db1657245336: completion-all/outcomes/docs/agent/control-plane/roadmap/architecture pass. Standard Node3282pass2skip/Vitest433pass; E2E Node92pass2skip/Vitest3pass; opt-in offline AI command exits0, no real-model qualification. Only required dependency gate fails: exact matched audit output0runtime/7high affected toolchain entries. Original supplier retained as directed. Actual independent local review confirms scope/freshness but cannot grant technical acceptance. Fifteen controlled criteria remain pending; no formal roadmap completion."
+    }
+  ],
+  "evidencePolicy": "control-plane-v1",
+  "feedback": [
+    {
+      "category": "scope",
+      "disposition": "accepted",
+      "id": "security-assessment-functional-transfer",
+      "impact": "scope-change",
+      "nextAction": "Review the revised unapproved roadmap and durable JSON row crosswalk. Before future optimization, replay current contracts/hosts, retain finite default-denied route policy, classify stale reports, and fix only approved demonstrated gaps. Unsupported model publishing stays explicitly unavailable.",
+      "recordedAt": "2026-10-21T02:28:28Z",
+      "summary": "Reconciled all25 functional/partial-functional ai-system-builder rows from docs/security/security-findings-refresh-assessment.json into explicit replay work:13 asset/composition/workspace rows in increment1 and12 runtime/data/generation rows in increment2. No finding closure or independent dynamic pass is claimed. Other-repository rows and retained security findings remain outside this functional scope.",
+      "targetIncrementId": null
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "authorized-dependency-audit-vulnerabilities",
+      "impact": "within-increment",
+      "nextAction": "Continue independent available work and triage smallest compatible locked dependency repairs. Re-run required audit and focused affected-tool checks; source/owner-bound final qualification must include the actual outcome.",
+      "recordedAt": "2026-10-21T09:36:13Z",
+      "summary": "Explicit registry payload authorization received. Required read-only audit now executed and failed:2runtime advisories(1critical/1moderate),52full-tree advisories(4critical/37high/11moderate). Previous pending transmission reason is resolved; dependency remediation/current re-audit is required. No gate suppressed and unavailable controlled qualification remains pending.",
+      "targetIncrementId": "qualified-user-and-model-outcomes"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "compatible-dependency-patch-audit-result",
+      "impact": "within-increment",
+      "nextAction": "Continue supported Vitest/Forge compatibility migrations; keep unpatched matcher supplier choice pending explicit direction. Re-run unchanged audit/SBOM and affected compatibility checks, then current final owner evidence.",
+      "recordedAt": "2026-10-21T09:52:55Z",
+      "summary": "Compatible official patch refresh and focused tooling/architecture/docs/agent gates pass; server and thin-client builds pass. Actual authorized audit now reports0runtime advisories and31full-tree affected packages(2critical/24high/5moderate). Failed baseline retained. Full dependency gate remains failed, not an unavailable controlled check.",
+      "targetIncrementId": "qualified-user-and-model-outcomes"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "retain-original-matcher-supplier",
+      "impact": "within-increment",
+      "nextAction": "Preserve original supplier and unchanged zero-advisory gate. Implement and verify official toolchain migrations; report actual residual failed audit separately from unavailable controlled qualification.",
+      "recordedAt": "2026-10-21T09:55:16Z",
+      "summary": "User explicitly retained the original matcher supplier and directed that tooling qualification remain pending. Do not adopt the reviewed third-party derivative or suppress the advisory. Continue official compatible patches/migrations and other independent work.",
+      "targetIncrementId": "qualified-user-and-model-outcomes"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "official-toolchain-integration-result",
+      "impact": "within-increment",
+      "nextAction": "Keep matcher qualification pending as directed, preserve the failing zero-advisory gate and independent local review. Continue diagnostics minimization and remaining available functionality/security evidence; no unavailable controlled or native qualification becomes a pass.",
+      "recordedAt": "2026-10-21T10:07:41Z",
+      "summary": "Official Forge8/Vitest4 integration and explicit CJS/ESM adapter export correction pass focused tooling, documentation, architecture and agent checks. Current Windows packaged desktop browse/save/reopen smoke passes1of1. Failed resolver, stale tmp expectations and initial ESM package attempt remain retained. Actual audit reports0runtime advisories,7high full-tree affected package entries,0critical/moderate; all remaining advisories are through the retained original matcher chain.",
+      "targetIncrementId": "qualified-user-and-model-outcomes"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "reviewed-runtime-outcomes-and-smoke-binding",
+      "impact": "within-increment",
+      "nextAction": "Retain original supplier per explicit user decision, failed dependency gate, private-directory/native/retention and all15controlled qualification gaps. Continue current evidence reconciliation, bounded authority-control review and final functionality aggregate; no scanner or roadmap closure.",
+      "recordedAt": "2026-10-21T10:23:01Z",
+      "summary": "Bounded R40 persisted-outcome minimization passes22focused tests,28independent synthetic persistence probes and desktop types. Runtime/docs/agent/architecture checks pass, but receipt05a9b6261642c490e2ca14de86be1fc763898d2959fbc81a65612c5f58cca3e4 remains unqualified on7high original-matcher entries. Independent review found and corrected root dependency omission in smoke identity; fresh desktop1of1 smoke passed, bounded identity work completed with actual independent review. Earlier failures and observations remain retained. Subsequent runtime edits make that smoke a historical observation.",
+      "targetIncrementId": "qualified-user-and-model-outcomes"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "current-authority-review-and-paired-host-replay",
+      "impact": "within-increment",
+      "nextAction": "Run final functionality all-suite and repository gates against frozen source. Retain original supplier, failed7high toolchain entries, native/durable/owner policy and15controlled gaps; no parent/security/scanner or final roadmap closure.",
+      "recordedAt": "2026-10-21T10:36:24Z",
+      "summary": "Current authority work independently accepts7explicit local criteria on532890f8.../c9e34a9c...; parentI1native qualification remains blocked. Review reproduced a same-workspace different download task id causing projection/registration. Bounded exact-ID/type/workspace/list/cancel correction is completed on28d8f188.../e61d8036..., with retained red probe and14passing regressions. Current two-host synthetic browse/save/reopen replay passes2of2; evidence artifacts/qualification/visual-composer/runs/2026-10-21t10-31-32-600z-7bfd9df7/evidence.json, digest a405ee5d2ca3cc1deabfd74248fba02138eca6862342dd0b44bb807e0457e479, source source.5c7fcd761c168bfcaf81cde51b0bd24c66157e0bbdc1f1399837d030a2c87869.",
+      "targetIncrementId": "qualified-user-and-model-outcomes"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "reviewed-final-source-checkpoint-readiness",
+      "impact": "within-increment",
+      "nextAction": "Preserve reviewed implementation as a rebuild checkpoint, original supplier and failed zero-advisory gate. Keep native/durable/policy-owner gaps and15controlled criteria pending; both roadmaps remain open and completion-conditioned main promotion remains pending. Earlier paired-host2of2 observation is historical after test/profile edits. Released precursor work and failed qualification records remain historical; use newest canonical overall binding and actual freshness for current evidence.",
+      "recordedAt": "2026-10-21T10:56:20Z",
+      "summary": "Corrected final all-suite and7nondependency gates pass on source-stable receipt079a16a3c8eef412d8530306a8e154aaab2dfe976ad873483b60db1657245336 with actual independent nonqualifying local review. Standard3282Node+433Vitest and E2E92Node+3Vitest pass;4Node skips retained. AI command0 under offline settings does not qualify real models. Previous6fixture failures and all older failed/passing history remain preserved; exact17test fixture correction independently accepted without weakening actions or changing runtime/global APIs. Exact final audit observation matches receipt:0runtime and7high toolchain affected entries.",
+      "targetIncrementId": "qualified-user-and-model-outcomes"
+    }
+  ],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "fccb0f7a0506e0cbb80eeb71f59eead6f1b9b1950bff7e7aaec0c6d9019009e6",
+      "recordedAt": "2026-10-21T02:26:54Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "352a053442d99e0e35d4824c353e8389e30d3600c82d9ccba46eda094c529935",
+      "recordedAt": "2026-10-21T02:26:55Z",
+      "sequence": 2,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "b335e86d1215d7f75dc62390c9dc0f74e9c49d019b743f78dbcacb176a476e72",
+      "recordedAt": "2026-10-21T02:27:48Z",
+      "sequence": 3,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "b9ee76315978a5802cd7e401b256261c97fc02dc5370075c03ef2b3f39b5f889",
+      "recordedAt": "2026-10-21T02:28:28Z",
+      "sequence": 4,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "b8bef417d7dfcfad48b736ae1c9e7dcbddb12bb927a792350758160947978269",
+      "recordedAt": "2026-10-21T02:34:11Z",
+      "sequence": 5,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "04e3962dea320c225b54dab79a8b1712f9b0b3708c6c5890308b06d50b62af0a",
+      "recordedAt": "2026-10-21T03:35:01Z",
+      "sequence": 6,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "5d2d37fff18ce033f68119a70a504021b50098e3f5b8d10d2c7d0b00d5d21e81",
+      "recordedAt": "2026-10-21T03:35:01Z",
+      "sequence": 7,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "4b32813aeee3de429f9b1e5214b36dc670082d6766dab6846a0f455009d85961",
+      "recordedAt": "2026-10-21T03:35:01Z",
+      "sequence": 8,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "e1541161edd01899a160d82a16a50330c5895e9007cd4933e31bc051fd2533bd",
+      "recordedAt": "2026-10-21T03:56:40Z",
+      "sequence": 9,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "fda0633737dac71d5a38a3f4948b7843214ee752c16cef4b55669f7c873ba3aa",
+      "recordedAt": "2026-10-21T04:08:07Z",
+      "sequence": 10,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "ed865a902cd6ac767c1c9517ac4d059bf70f634a0c23d81a556c7f0614eb882f",
+      "recordedAt": "2026-10-21T04:08:08Z",
+      "sequence": 11,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "12af4bcd5ea5b0db4e362acad3f11d83b68900e47fe8d3c58fdf71e9c91d4fb1",
+      "recordedAt": "2026-10-21T04:25:43Z",
+      "sequence": 12,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "6c6eb55d92be4b76107e30a2a87205fc0505f9ce5fd010f565ef84fd158f53e3",
+      "recordedAt": "2026-10-21T04:29:45Z",
+      "sequence": 13,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "b503885d52bec8d7dbbbd3af12eda3e62b0ffde73f35bd8f0c7eb3b67ed5b623",
+      "recordedAt": "2026-10-21T04:32:19Z",
+      "sequence": 14,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "9e4533bfa477be690fb049171b7e41625cc32d02d69ffa533c82081846043d29",
+      "recordedAt": "2026-10-21T04:59:35Z",
+      "sequence": 15,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "945c61e8ae385c767926fe5633675f234b55c5b7d617b148ee91424c4090b48c",
+      "recordedAt": "2026-10-21T04:59:35Z",
+      "sequence": 16,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "70498e93573ffc38eb03ed7ea737078584575477043d9de0fe1cac400e1c4dc6",
+      "recordedAt": "2026-10-21T04:59:35Z",
+      "sequence": 17,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "7af610fcf928a8b02309badf6eac43792c9943eb5229f620f1b9091f31f6db4e",
+      "recordedAt": "2026-10-21T04:59:35Z",
+      "sequence": 18,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "39e4de509e3657e448f39f3b400b7a087a86633d24f11573dc80e33edc9a0ed5",
+      "recordedAt": "2026-10-21T04:59:36Z",
+      "sequence": 19,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "2464003f51d7ede1d9338b2f31e8c981f06898cac4587f1fe32a3945d7063ef7",
+      "recordedAt": "2026-10-21T04:59:36Z",
+      "sequence": 20,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "81eaea97c62060853066a7a827e7d3cb71b9918b6d60960ffa03109992904239",
+      "recordedAt": "2026-10-21T04:59:36Z",
+      "sequence": 21,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "13074ea2fd75b75a10065d33521865a0649810ae00a8673fdf453da1a89de6a7",
+      "recordedAt": "2026-10-21T04:59:40Z",
+      "sequence": 22,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "ba3d206b1faa1f8dadc658bfad4723625e8dfd0106f2635ce90271857fd6522e",
+      "recordedAt": "2026-10-21T05:01:51Z",
+      "sequence": 23,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "9ff0d3c293109c6871c6af3fda5c32a8da3a37568501d922a1552869e60e2980",
+      "recordedAt": "2026-10-21T05:01:51Z",
+      "sequence": 24,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "74ef27ea2cbfc7e0362f2f99b8247c81b0919d56edb4c7c1bc830185a0c0604c",
+      "recordedAt": "2026-10-21T05:01:51Z",
+      "sequence": 25,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "0d3f6fa97dac10627927d5fe5d3adeaf35231534d7eb92135a7b15f012621231",
+      "recordedAt": "2026-10-21T05:26:35Z",
+      "sequence": 26,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "73a4e9bd98b776982b2533b29864dace50caba1205104afb9d7c048ff9a4b036",
+      "recordedAt": "2026-10-21T06:01:43Z",
+      "sequence": 27,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "b9406e2ca96ce51c1240eb2158bcad814595c8be74d0fe720cda1b27684c8ea3",
+      "recordedAt": "2026-10-21T06:01:43Z",
+      "sequence": 28,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "0336cb60e7557cff02645a0f2245bfa0375613c4fff3d542af819cffbe01c014",
+      "recordedAt": "2026-10-21T06:01:44Z",
+      "sequence": 29,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "bfe50ab12d8499a19e60ba6c3212197dc6064c5451e73b16d564a51373bb5406",
+      "recordedAt": "2026-10-21T06:15:44Z",
+      "sequence": 30,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "cbef73894a572db580a329df1bacd653b7c2a2710e5ee6b68845887466a3db68",
+      "recordedAt": "2026-10-21T06:15:44Z",
+      "sequence": 31,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ab46c8fbbc33a3ea4b84992ddf6af6edc0909cff88e2e490bedc38cc34c8a19c",
+      "recordedAt": "2026-10-21T06:15:44Z",
+      "sequence": 32,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "77e2446c4c6a52e4c698031a7abda1dc301fa2c9c5a1c0ca509c8253add01e16",
+      "recordedAt": "2026-10-21T06:15:44Z",
+      "sequence": 33,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "3e97a6c6a174e7e14ac732de0fdf862fd3166b4577c0a78beaa5968b52e5e85c",
+      "recordedAt": "2026-10-21T06:15:45Z",
+      "sequence": 34,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "bfc0dce64d82c5388060e0fcb3689bfe2048ee70c20a200a2081058768b12273",
+      "recordedAt": "2026-10-21T06:15:45Z",
+      "sequence": 35,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "6604de7fdd777f57e4bd7a1d51a6b405237b140e6f348ee91c3c8a92a98bbd53",
+      "recordedAt": "2026-10-21T06:15:45Z",
+      "sequence": 36,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e1077057f1a46dada9ff35a3c70dbff14e32b2599ce7a70c909366007295e054",
+      "recordedAt": "2026-10-21T06:15:45Z",
+      "sequence": 37,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "af383ad8d46d69a82aeeeb198ac378c183badfed1488f381219ac6a3aade6ac6",
+      "recordedAt": "2026-10-21T06:15:49Z",
+      "sequence": 38,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "20dcb4ce2024f31d98f6856bb60965b145da756cf731f010ee7e158754b8127e",
+      "recordedAt": "2026-10-21T06:15:49Z",
+      "sequence": 39,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "cc69d0a10cffb7420afa762b0495abd1e8169414fcb63004f8a727f77790f6b9",
+      "recordedAt": "2026-10-21T06:15:49Z",
+      "sequence": 40,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "d6b1fdc4543f7e32ed75c7de02550b92e8555a73001ba353eda825a4f50f0d1a",
+      "recordedAt": "2026-10-21T06:15:49Z",
+      "sequence": 41,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "28ea22898deff376c2e6b505f0cb1335341176a60b481b9205bef2cbb2ae9b09",
+      "recordedAt": "2026-10-21T06:27:49Z",
+      "sequence": 42,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "40b37f1b01673c0d79f6c941c71266643865fc722ffe66574ba7e06563f4fe0e",
+      "recordedAt": "2026-10-21T06:27:50Z",
+      "sequence": 43,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "fd258c2c7b941d7c28e42c250dac7276109b78fafcccfd5437e34413f222f702",
+      "recordedAt": "2026-10-21T06:27:50Z",
+      "sequence": 44,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "6a0f1abacca1db5aa6d32dee99e8a03d486ef188865c817c97f52117043f76d3",
+      "recordedAt": "2026-10-21T06:29:37Z",
+      "sequence": 45,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a49a38b2d122d4a7e5b6f5e842e44c439974571fae3db2e1e2331d3cd597d332",
+      "recordedAt": "2026-10-21T06:31:25Z",
+      "sequence": 46,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "e24b58e56e6560e23ce300278de108bc17f4e66aa9b9ac98ac0f0ea233bce39b",
+      "recordedAt": "2026-10-21T06:32:43Z",
+      "sequence": 47,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9417c018dae4c0e7c7a0eb7daf120d8b85a9cd6717a19a8eb837b52a33a58462",
+      "recordedAt": "2026-10-21T06:32:43Z",
+      "sequence": 48,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c0cf4f4c2ce0bb2c685db4bae5716321759b45cd1dd882b495a74a930ca776ae",
+      "recordedAt": "2026-10-21T06:32:43Z",
+      "sequence": 49,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e01104f9acfb6a889b142accb0f6975505bfae80ad294ce91a0b5a22906d4dbd",
+      "recordedAt": "2026-10-21T06:32:43Z",
+      "sequence": 50,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e74d451e7153711da2f64628324b44637f9baab148d516c7adf6185a523a9b32",
+      "recordedAt": "2026-10-21T06:32:44Z",
+      "sequence": 51,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "68e712c758dd5adb3304f7183b50fd4e36db1422daf96fd2eb43558f465a01d3",
+      "recordedAt": "2026-10-21T06:32:48Z",
+      "sequence": 52,
+      "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "909ab47c6894ea702ef6a07a251f43bf75661e1abe0977c1362e4e3b3faa7ed7",
+      "recordedAt": "2026-10-21T07:18:12Z",
+      "sequence": 53,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "6a45a6e736758cd8b7b2ecb29ab77ef36ef6114ab8c1e5adafe5150258317983",
+      "recordedAt": "2026-10-21T07:18:12Z",
+      "sequence": 54,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "a1136a91219dba313261a8a83720d4741b27a069cfa38e7a9789309bbeb77db8",
+      "recordedAt": "2026-10-21T07:18:13Z",
+      "sequence": 55,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "b2019dedcd7ec8cfba56255321797364297b274538f95c94b39bd0facaedded5",
+      "recordedAt": "2026-10-21T07:24:32Z",
+      "sequence": 56,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "3bcfe348018af023d9fbe700c018879478a4cebcd0443eac752f18f8fd2a8b93",
+      "recordedAt": "2026-10-21T07:24:32Z",
+      "sequence": 57,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "d2e5bdd0e5ec9b0389aa3afbe8be77ffec0d6d075ef4622e178db2d6d62bbb22",
+      "recordedAt": "2026-10-21T07:24:32Z",
+      "sequence": 58,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "936372f3bd9049902d5f255aeb32434e95ce6585e17bf6c2e148f2d30d7eb894",
+      "recordedAt": "2026-10-21T07:24:32Z",
+      "sequence": 59,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "f454b5435374df1d80d29638f0c89d8e60786398d1d5ff1b409cb16a05c6a3e7",
+      "recordedAt": "2026-10-21T07:24:48Z",
+      "sequence": 60,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e487a606cb66306330ce7fbdf7dc4bc578c8c2bf665630367c4cffa272a572f9",
+      "recordedAt": "2026-10-21T07:24:48Z",
+      "sequence": 61,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "24746af37da6da85e59667a4808e0c27f9970bddf95da6e58b5ae87a235cbe71",
+      "recordedAt": "2026-10-21T07:24:48Z",
+      "sequence": 62,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "4b104b4a0b091a3a018f0150411f85e0384c4144d4d0b8dea873001f0f9d61ff",
+      "recordedAt": "2026-10-21T07:46:38Z",
+      "sequence": 63,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "abf8f8a5e53f0fae4b553a15bfc043a64ec5cc01c1a7385a55bb3380f10bec84",
+      "recordedAt": "2026-10-21T07:53:12Z",
+      "sequence": 64,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d665080fa5f6de9e28c4053cd0a4a8e4e6519ed70aebf398dbc6621bd408c1ce",
+      "recordedAt": "2026-10-21T09:36:13Z",
+      "sequence": 65,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "d438d429a3abe5aa41206942207182de4ba4a70830de2e81e48bb306666c72a5",
+      "recordedAt": "2026-10-21T09:52:55Z",
+      "sequence": 66,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "6b1e4037b7c8418aa61cd871fa1f0fcfc041d1fd46097aeba5b6cde1366a7533",
+      "recordedAt": "2026-10-21T09:52:55Z",
+      "sequence": 67,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "bd253b8c89992139fae53a0ae3b07eb5e56fb414203ef4f900d03774db025c21",
+      "recordedAt": "2026-10-21T09:55:16Z",
+      "sequence": 68,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "5e28df21d051973f45da33c56723706bee30bf5e5943704537a88ebb79e4b854",
+      "recordedAt": "2026-10-21T10:07:41Z",
+      "sequence": 69,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "8b65036f866562a8c46ab895513c5052a194fd9eff173ecb7a92fd7dafabef61",
+      "recordedAt": "2026-10-21T10:23:01Z",
+      "sequence": 70,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "b9e70042afbfe2c8c5fd3da3f71332f6e957ab3fb954a9298013fc41b9a89dc3",
+      "recordedAt": "2026-10-21T10:23:01Z",
+      "sequence": 71,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "26c010fc39f187f14e554d67397a27fbdad60a3e8ac11131573ef751b75303da",
+      "recordedAt": "2026-10-21T10:36:24Z",
+      "sequence": 72,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "eec020b40fb266fc475fdd7a0aa2607caf22268888e2f55b209519db56c1ac83",
+      "recordedAt": "2026-10-21T10:36:24Z",
+      "sequence": 73,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "53ba010b0b1d66285fe6110aa10cf3f8e97c3034506b4d553b454a0280b29547",
+      "recordedAt": "2026-10-21T10:36:24Z",
+      "sequence": 74,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "d0602a826ab289da954fd4a0a8fdf602e57e412b9521d3ace0c16c8dd9ee6489",
+      "recordedAt": "2026-10-21T10:56:19Z",
+      "sequence": 75,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e0ee91452eca85fa9f6d9d82be0774cb555bc7b9d46866a4435d52304bba0fd5",
+      "recordedAt": "2026-10-21T10:56:20Z",
+      "sequence": 76,
+      "type": "feedback-recorded"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "All13 transferred asset/composition/workspace rows are replayed against the current source and classified with exact regression evidence or an explicit stale/deferred reason. Prove requested immutable versions, safe malformed-ref rejection, valid relationship and route/body contracts, non-shadowed projection routes, safe authoring summary/list shapes, current active-workspace recovery and structure-preserving subtree removal. Route admission remains finite, exact, authenticated and resource-authorized; unauthorized/unknown variants remain denied. No closure is inferred from the scanner report.",
+          "id": "transferred-asset-functional-rows",
+          "qualification": "local"
+        },
+        {
+          "description": "All six configured operation/workload pairs have repository-owned probes that assert real outputs and negative failures. Record five warmups and at least thirty measured iterations on the same named environment; a no-op, mock-only or wrong-workload pass is rejected.",
+          "id": "owned-performance-probes",
+          "qualification": "local"
+        },
+        {
+          "description": "For a fixture of 1000 active systems, 10000 releases, 10000 model records and 10000 custom-asset records, desktop/thin summary values exactly match the reference reducer. Proposed target: one bounded summary request per page and no transfer of full release locks or model/asset catalogs solely for counts; one unrelated metric failure does not hide already available independent metrics.",
+          "id": "summary-cost-and-truth",
+          "qualification": "local"
+        },
+        {
+          "description": "For 1000 authorized candidate definitions with sparse compatible matches and page size 25, candidate pages have no duplicates/skipped matches/repeated cursor loops; collect exact detail-read counts and payload bytes. Proposed target: at least 50 percent fewer detail-store round trips than unchanged baseline for the same complete compatible results; if no amplification exists, document the measured result instead of adding a speculative cache.",
+          "id": "composer-search-cost",
+          "qualification": "local"
+        },
+        {
+          "description": "All six existing p95 budgets pass with exact declared workloads: browse200ms, validate350ms, resolve150ms, build2500ms, preview750ms and handoff500ms. Proposed page-level target: summary and first compatible candidate page each usable within p95 1000ms on the named reference desktop and managed-server/thin-client profiles, excluding deliberate network impairment.",
+          "id": "browse-performance-qualified",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Search, Add element, selected exact detail, add/place, undo/redo, preview, save and reopen remain correct in both hosts; keyboard, focus restoration and 320 CSS-pixel reflow retain access to all controls.",
+          "id": "browse-journey-preserved",
+          "qualification": "local"
+        },
+        {
+          "description": "Refresh the threat/control delta, prove isolation, failure bounds and non-disclosure for this increment, and preserve a rollback at least as secure as the forward path. Coordinate with the security remediation owner rather than duplicating its controls.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": true,
+      "completedAt": "2026-10-21T04:59:40Z",
+      "completedChunks": [
+        "workspace-and-draft-continuity",
+        "asset-read-validation-parity",
+        "bounded-summary-projections",
+        "production-probes-and-baseline",
+        "composition-transport-parity",
+        "composer-query-and-journey"
+      ],
+      "completionSummary": "All6implementation chunks and6local criteria verified with independent review; named controlled performance remains pending. Both real-host browser journeys and all6source-bound local operation probes passed.",
+      "deliverables": [
+        "Repository-owned trusted production probe set using existing performance runner",
+        "Baseline and candidate latency, I/O count and response-byte reports with source/environment identities",
+        "Scoped summary use case/port/contract with API/IPC parity if needed",
+        "Bounded Composer candidate path and focused regressions",
+        "Updated architecture, owning README/context and qualification instructions",
+        "Current replay and disposition of13 transferred functional findings, with focused contract/draft regressions before performance tuning"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "Public marketplace, generalized search service or new deployment topology",
+        "Cross-user or persistent content caching",
+        "Security-owned read/list registration side effects",
+        "Changing accepted Catalog/Studio/build performance budgets to accommodate a failure"
+      ],
+      "id": "responsive-workspace-browse",
+      "number": 1,
+      "objective": "Make Home, feature summaries and Add element useful at representative catalog scale without transferring or re-reading entire collections for counts or one candidate page.",
+      "pendingCriteria": [
+        "browse-performance-qualified"
+      ],
+      "plan": {
+        "assumptions": [
+          "Dedicated performance profiles, real-model cohorts and real user/accessibility qualification are unavailable, per the user.",
+          "Existing supported operation families may be repaired, but previously unapproved product/provider features remain excluded."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "transferred-asset-functional-rows",
+              "security-impact-reviewed"
+            ],
+            "id": "asset-read-validation-parity",
+            "outcome": "Exact-version reads, malformed-input denials and typed authoring projections work.",
+            "title": "Restore exact reads and safe validation"
+          },
+          {
+            "criteriaIds": [
+              "transferred-asset-functional-rows",
+              "security-impact-reviewed"
+            ],
+            "id": "composition-transport-parity",
+            "outcome": "Existing operations use correct relationship/route shapes and finite resource-authorized admission.",
+            "title": "Align supported composition operations and authorization"
+          },
+          {
+            "criteriaIds": [
+              "transferred-asset-functional-rows",
+              "browse-journey-preserved"
+            ],
+            "id": "workspace-and-draft-continuity",
+            "outcome": "Recoverable action errors retain a valid workspace; subtree removal retains layout and history.",
+            "title": "Preserve usable workspace and Composer structure"
+          },
+          {
+            "criteriaIds": [
+              "owned-performance-probes",
+              "browse-performance-qualified"
+            ],
+            "id": "production-probes-and-baseline",
+            "outcome": "Six real operation probes assert outputs and denials with source/environment-identified local baseline.",
+            "title": "Own production-path workload probes"
+          },
+          {
+            "criteriaIds": [
+              "summary-cost-and-truth",
+              "security-impact-reviewed"
+            ],
+            "id": "bounded-summary-projections",
+            "outcome": "One summary request returns exact scalar metrics with independent availability.",
+            "title": "Bound workspace dashboard summaries"
+          },
+          {
+            "criteriaIds": [
+              "composer-search-cost",
+              "browse-journey-preserved",
+              "browse-performance-qualified",
+              "security-impact-reviewed"
+            ],
+            "id": "composer-query-and-journey",
+            "outcome": "Complete compatible cursor traversal, measured detail I/O and focused user journey evidence.",
+            "title": "Reduce Composer reads and qualify editing journeys"
+          }
+        ],
+        "completionTests": [
+          "Documentation and architecture checks for changed boundaries; agent-support when contributor helpers change.",
+          "Affected server/thin-client builds and desktop type checks after I1 implementation.",
+          "Current control-plane receipt and separate technical review for all criteria.",
+          "Reserve the all-suite boundary until all four functionality increments are implemented."
+        ],
+        "documentation": [
+          "Owning architecture and README/context updates",
+          "Structured finding replay dispositions and sanitized local performance evidence",
+          "Qualification instructions with unavailable environments visibly pending"
+        ],
+        "fingerprint": "2f147593a5476c07257807215ac30ccf094a4992726311b63747c68bda12be55",
+        "focusedTests": [
+          "Mapper/use-case reference and malformed input regressions with no denied side effects.",
+          "Real Express static route dispatch, route/body mismatch and resource-authorization parity tests.",
+          "Workspace recovery and Composer remove/undo/redo/save/reopen tests.",
+          "Exact large-fixture count reducers, single-request summary and independent metric failures.",
+          "Sparse compatible candidate traversal, Foundation overlays, repeated cursor and detail-read counters.",
+          "Six production workload probe conformance and denial tests; local timing is labeled separately from controlled qualification."
+        ],
+        "recordedAt": "2026-10-21T03:35:01Z",
+        "rollback": "Revert each bounded projection/query optimization while preserving exact-version, authorization, input denial and regression fixes. Do not restore unscoped data or broaden route admission.",
+        "steps": [
+          "Replay all thirteen transferred findings with focused red regressions.",
+          "Correct reference validation, authoring projections, relationships and route parity while retaining deny-by-default until owning authorization is proved.",
+          "Preserve workspace recovery and Composer structure across edits and undo/save/reopen.",
+          "Build real output-asserting production probes and capture current baseline before tuning.",
+          "Implement scoped bounded summary projections and complete cursor traversal, measuring exact requests/bytes/detail reads.",
+          "Run only changed-surface completion checks and obtain independent technical review; leave unavailable controlled qualification pending."
+        ],
+        "summary": "Restore demonstrated correctness before measuring and reducing full-catalog transfers and candidate amplification."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-10-21T03:35:01Z",
+          "risks": [
+            "Security-relevant: finite route admission requires owning workspace/resource authorization before exposure; unknown and noncanonical requests stay denied.",
+            "Summary and candidate optimizations must retain exact versions, complete pagination, tenant isolation and unavailable metric semantics.",
+            "The user has no dedicated qualification environments or participants; controlled profile, hardware, accessibility and user studies remain pending.",
+            "No persistent cache, new search service, provider capability or relaxed security fallback is authorized."
+          ],
+          "sources": [
+            {
+              "title": "Approved functionality matrix",
+              "url": "docs/functionality-optimization-review.json"
+            },
+            {
+              "title": "Asset registry mapper",
+              "url": "modules/adapters/transport/asset-registry/assetRegistryReadInputMapper.ts"
+            },
+            {
+              "title": "Composition API routes",
+              "url": "modules/adapters/transport/api-express/asset-composition/registerAssetCompositionApiRoutes.ts"
+            },
+            {
+              "title": "Composer draft",
+              "url": "modules/ui/shared/system-builder/systemComposerDraft.ts"
+            },
+            {
+              "title": "Dashboard reducer",
+              "url": "modules/ui/shared/page-dashboard/dashboardMetrics.ts"
+            }
+          ],
+          "summary": "Current source replay identifies exact-version mapping, malformed reference dereferences, composition relationship and route parity, static route shadowing, authoring list shape/safe summary filtering, workspace recovery and structure-loss defects. Dashboard counts transfer full collections and desktop undercounts a single model page. Composer filtering and Foundation merging can repeat or omit candidates. Existing qualification runner has budgets but lacks repository-owned real probes. User authorizes continued independent functionality work while security file effects remain pending."
+        }
+      ],
+      "rollback": "Revert the summary/candidate optimization as one slice while retaining fixture reports and isolation regressions. Restore the prior bounded authorized read path, never a raw-key fallback or removed security control. No persisted record migration is planned.",
+      "startedAt": "2026-10-21T03:35:01Z",
+      "status": "implemented-pending-qualification",
+      "title": "Responsive workspace navigation and composition",
+      "verification": [
+        "While chunks remain, run dashboard reducer/client tests, Composer catalog/use-case tests, exact-version and cursor denial tests, and focused shared UI tests only.",
+        "Measure counts/bytes with deterministic fixtures independently of timing; then run existing asset-system:performance against real production probes on controlled hardware.",
+        "Run docs:check, architecture:check, agent-support:check when affected, and affected builds after the completed increment. Reserve test:all until every increment is implemented.",
+        "Do not claim controlled performance from ordinary unit-test duration or a shared workstation visual run."
+      ],
+      "workPackages": [
+        {
+          "id": "functional-contract-and-draft-replay",
+          "outcome": "Replay R62,R63,R64,R69,R70,R71,R72,R73,R75,R76,R78,R82,R88 against real typed clients/transports. Repair reproduced exact-version, malformed input, relationship/route parity, safe summary and Composer structure issues before counting a faster journey as success.",
+          "title": "Restore demonstrated asset/workspace journey correctness before tuning"
+        },
+        {
+          "id": "production-probes-and-baseline",
+          "outcome": "Extend the existing qualification harness with reproducible fixtures and real Catalog, Studio, resolver, build, preview and handoff paths; capture unchanged baseline before selecting repairs.",
+          "title": "Own representative production-path probes"
+        },
+        {
+          "id": "bounded-summary-projections",
+          "outcome": "Use application-owned authorized summary projections and shared clients rather than renderer full-list aggregation; preserve exact existing counting and unavailable semantics.",
+          "title": "Bound dashboard summary reads"
+        },
+        {
+          "id": "composer-candidate-efficiency",
+          "outcome": "Measure and bound exact-detail reads, compatibility filtering and cursor traversal; reduce redundant reads or use an adapter batch seam without exposing incompatible assets or skipping exact-version checks.",
+          "title": "Reduce Composer candidate amplification"
+        },
+        {
+          "id": "browse-journey-evidence",
+          "outcome": "Prove browse/search/add/save/reopen with current JSON evidence, keyboard and narrow layout behavior, and before/after workload results.",
+          "title": "Verify navigation and composition outcomes"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "All12 transferred runtime/data/generation rows receive current contract-to-host replay and an evidence-backed fix or explicit unsupported/stale/deferred disposition. Preserve default-denied route policy and add only finite supported operation templates with authentication/resource authorization and negative variants. Logger normalization/serialization failure cannot break owning work, resource polls cannot consume log freshness, model publish cannot dispatch an unsupported task, dataset paths are privately materialized, image start/read/cancel carry workspace context and finalization is retry-safe. No unsupported provider capability or global fallback is introduced.",
+          "id": "transferred-runtime-functional-rows",
+          "qualification": "local"
+        },
+        {
+          "description": "Record unchanged and candidate idle request counts for ten minutes with one selected workspace. Proposed target: at least 80 percent fewer idle task-status requests than fixed1500ms bridges, at most one in-flight request per observer family/workspace, bounded terminal-ID retention, and no hidden-window polling that is unnecessary for cleanup.",
+          "id": "idle-observer-budget",
+          "qualification": "local"
+        },
+        {
+          "description": "Under a local healthy test transport, active task progress and terminal state appear within two seconds at p95; explicit start/cancel/refresh invalidates idle backoff immediately. Navigation/reopen and workspace changes never publish stale or cross-workspace state. Separate transport delay from UI delay.",
+          "id": "active-progress-budget",
+          "qualification": "local"
+        },
+        {
+          "description": "A task that completes, fails, is cancelled or times out releases owned power/staging/process resources exactly once even when no feature page polls it; worker/host shutdown denies new work and reconciles existing records. Demonstrate this per supported lifecycle path; a TODO alone is not failure evidence.",
+          "id": "terminal-cleanup-independent",
+          "qualification": "local"
+        },
+        {
+          "description": "A retryable failure retains correct user inputs or task identity, retries only when explicitly supported, and cannot duplicate model registration, artifact finalization, dataset publication or terminal notifications. Unsupported cancel/retry remains clearly unavailable.",
+          "id": "retry-and-output-integrity",
+          "qualification": "local"
+        },
+        {
+          "description": "Controlled desktop and server/thin-client tests cover leave/reopen, disconnect, cancellation, worker failure and shutdown while tasks run, with measured progress delay and cleanup latency; no real credentials or provider traffic is required for deterministic host fixtures.",
+          "id": "task-host-qualification",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Refresh the threat/control delta, prove isolation, failure bounds and non-disclosure for this increment, and preserve a rollback at least as secure as the forward path. Coordinate with the security remediation owner rather than duplicating its controls.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": true,
+      "completedAt": "2026-10-21T06:15:49Z",
+      "completedChunks": [
+        "retry-safe-output-finalization",
+        "runtime-functional-contracts",
+        "scoped-task-observation",
+        "host-owned-terminal-reconciliation",
+        "task-journey-qualification"
+      ],
+      "completionSummary": "Task journeys implemented and independently reviewed with current passing local verification; controlled whole-host and physical worker qualification remains pending.",
+      "deliverables": [
+        "Measured observer/lifecycle inventory",
+        "Shared bounded polling/observation helper with deterministic clock tests",
+        "Host-owned terminal cleanup and task recovery improvements where the baseline demonstrates gaps",
+        "Focused desktop/thin task journey regressions and sanitized diagnostics",
+        "Updated runtime, notifications and affected feature guidance",
+        "Current replay and disposition of12 transferred functional findings, including explicit unsupported publishing rather than a speculative new worker"
+      ],
+      "dependsOn": [
+        "responsive-workspace-browse"
+      ],
+      "excluded": [
+        "WebSocket/SSE/public push protocol or new runtime topology",
+        "New cancellation/retry promises for unsupported conversational runtime paths",
+        "Security-owned authorization, staging and read/list registration remediation",
+        "Provider-specific retry or automatic spend policies"
+      ],
+      "id": "efficient-reliable-task-journeys",
+      "number": 2,
+      "objective": "Make downloads, preparation, Context generation, training and image generation remain understandable and release resources correctly when users navigate, disconnect, cancel or encounter a failure, while reducing idle polling.",
+      "pendingCriteria": [
+        "task-host-qualification"
+      ],
+      "plan": {
+        "assumptions": [
+          "No new queue, protocol, model provider or persistent content cache is authorized.",
+          "Participants, real model hardware and controlled external host qualification are unavailable per user."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "transferred-runtime-functional-rows",
+              "retry-and-output-integrity",
+              "security-impact-reviewed"
+            ],
+            "id": "runtime-functional-contracts",
+            "outcome": "Twelve findings have actual scoped contract-to-host evidence or explicit unsupported/deferred reasons.",
+            "title": "Replay typed task and runtime journeys"
+          },
+          {
+            "criteriaIds": [
+              "idle-observer-budget",
+              "active-progress-budget",
+              "retry-and-output-integrity",
+              "security-impact-reviewed"
+            ],
+            "id": "scoped-task-observation",
+            "outcome": "Idle backoff, single flight, explicit invalidation, visibility and stale-session guards preserve active progress and bounded terminal notifications.",
+            "title": "Bound and coalesce task observation"
+          },
+          {
+            "criteriaIds": [
+              "terminal-cleanup-independent",
+              "retry-and-output-integrity",
+              "security-impact-reviewed"
+            ],
+            "id": "host-owned-terminal-reconciliation",
+            "outcome": "Accepted owned task lifecycle releases active resources exactly once, preserves explicit review data, and shuts down safely.",
+            "title": "Reconcile resources without feature polling"
+          },
+          {
+            "criteriaIds": [
+              "retry-and-output-integrity",
+              "transferred-runtime-functional-rows",
+              "security-impact-reviewed"
+            ],
+            "id": "retry-safe-output-finalization",
+            "outcome": "Scoped in-flight work and per-output receipts prevent concurrent or partial retries from duplicating publication.",
+            "title": "Make completion retry safe"
+          },
+          {
+            "criteriaIds": [
+              "idle-observer-budget",
+              "active-progress-budget",
+              "terminal-cleanup-independent",
+              "retry-and-output-integrity",
+              "task-host-qualification",
+              "security-impact-reviewed"
+            ],
+            "id": "task-journey-qualification",
+            "outcome": "Fake-clock request/progress measurements and no-renderer lifecycle fixtures have exact evidence; unavailable controlled hosts remain pending.",
+            "title": "Measure local task journeys and retain external gaps"
+          }
+        ],
+        "completionTests": [
+          "Only I2-relevant unit/integration/UI checks, affected builds and docs/architecture/agent gates after all chunks.",
+          "Current source-bound control-plane receipt and real independent review.",
+          "Reserve all-suite until every functionality increment is implemented."
+        ],
+        "documentation": [
+          "docs/architecture/runtime-model.md",
+          "docs/context/packs/runtime-task-registry.pack.md",
+          "Owning Context/image/use-case/host/shared UI README sources",
+          "docs/functionality-optimization-review.json"
+        ],
+        "fingerprint": "348145def7e2496ad57f46675111799074b930c35ba05e73697f7434ef8290e6",
+        "focusedTests": [
+          "Fake-clock ten-minute idle counts, active/terminal p95 and explicit refresh; two subscribers, slow transport, hidden/visible, unmount/workspace generation and bounded history.",
+          "Real use-case fixtures with no renderer: complete/fail/cancel/timeout, concurrent reconciliation, cleanup retry and explicit review retention.",
+          "Concurrent/partial image finalization, foreign-scope cache denial and retry unfinished outputs only.",
+          "Exact IPC/API workspace propagation and route denial, logger failure containment and independent resource/log freshness."
+        ],
+        "recordedAt": "2026-10-21T05:01:51Z",
+        "rollback": "Revert observation optimization while retaining resource authority, denial, generation guards and idempotent completion; do not restore destructive cleanup on transient transport errors.",
+        "steps": [
+          "Replay the twelve transferred task/runtime findings and relevant failure paths.",
+          "Add bounded session/workspace observation and immediate invalidation, measuring actual ten-minute request counts and healthy-transport progress.",
+          "Separate transient transport failure from terminal evidence and make owning reconciliation independent of renderer navigation.",
+          "Make finalization single-flight and preserve successful per-output receipts across supported retries.",
+          "Qualify changed boundaries and update canonical documentation, with controlled gaps pending."
+        ],
+        "summary": "Preserve scoped task correctness and owned cleanup while reducing redundant observation through existing contracts."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-10-21T05:01:51Z",
+          "risks": [
+            "Security-relevant: task observation must bind session/transport, organization, workspace, family and request; late or foreign replies cannot publish state.",
+            "Host cleanup may reconcile only accepted owned tasks; transient read failure is not terminal. Never start/install/repair a runtime from polling.",
+            "Retain review-required outputs for explicit save/discard while releasing active power, process and input staging; never auto-publish protected outputs.",
+            "Use only existing supported operations and finite resource-authorized routes. Unsupported capabilities remain unavailable.",
+            "Keep unavailable controlled host, hardware, participant and manual qualification pending; no new persistent cache, queue or provider."
+          ],
+          "sources": [
+            {
+              "title": "Runtime task lifecycle canon",
+              "url": "docs/architecture/runtime-model.md"
+            },
+            {
+              "title": "Registry lifecycle and power owner",
+              "url": "modules/application/services/runtime/runtime-task-registry.service.ts"
+            },
+            {
+              "title": "Context lifecycle",
+              "url": "modules/application/use-cases/context-management/context-generation.use-case.ts"
+            },
+            {
+              "title": "Image finalization",
+              "url": "modules/application/services/image/image-generation-finalization-orchestrator.service.ts"
+            },
+            {
+              "title": "Approved current functional replays",
+              "url": "docs/functionality-optimization-review.json"
+            }
+          ],
+          "summary": "Source replay and independent planning identify duplicate fixed polling, stale workspace publications, transient Context transport failure deleting active staging, renderer-dependent terminal cleanup, and concurrent/partial image finalization gaps. Reuse shared registry contracts, owning use cases and bounded notification history. No live provider or model measurements are inferred."
+        }
+      ],
+      "rollback": "Revert observation scheduling/UI changes independently from host cleanup controls. Retain security/lifecycle fixes and regressions; restore only the previous bounded observer through the same authorized APIs. Never roll back to cleanup that depends solely on an open UI.",
+      "startedAt": "2026-10-21T05:01:51Z",
+      "status": "implemented-pending-qualification",
+      "title": "Efficient and reliable background task journeys",
+      "verification": [
+        "Use focused fake-clock ModelDownloadNotificationBridge, ContextStudio and training/image-generation observer tests while iterating.",
+        "Add terminal-with-no-UI, adapter-failure, duplicate-terminal, cross-workspace and bounded-retention tests at the lifecycle owner.",
+        "Run applicable host lifecycle integration, renderer tests and changed builds at increment completion; keep cancellation that is unimplemented explicitly unsupported.",
+        "Coordinate with security medium-runtime-and-process-hardening and the fresh security residual roadmap; do not parallelize changes to the same ownership/bounds path."
+      ],
+      "workPackages": [
+        {
+          "id": "runtime-transport-and-result-replay",
+          "outcome": "Replay R55,R56,R58,R59,R61,R65,R67,R80,R83,R84,R85,R86. Verify API/preload/client parity, live readiness, workspace propagation, safe training materialization and generated-output identity, log freshness and logger failure containment. Unsupported model publishing is rejected before task dispatch.",
+          "title": "Restore supported runtime/data paths before optimizing their observers"
+        },
+        {
+          "id": "task-observation-baseline",
+          "outcome": "Inventory page and shell observers, active/idle requests, duplicate notifications and terminal lifecycle ownership; use fake clocks and real host fakes to distinguish potential risks from observed failures.",
+          "title": "Measure actual observer fan-out"
+        },
+        {
+          "id": "bounded-shared-observation",
+          "outcome": "Use an internal workspace-scoped single-flight observation layer over existing APIs, adaptive idle/error backoff and immediate refresh after explicit actions; preserve useful progress and truthful failures without new public streaming.",
+          "title": "Share bounded task observation"
+        },
+        {
+          "id": "terminal-lifecycle-and-recovery",
+          "outcome": "Use existing host/runtime seams for idempotent terminal cleanup and task rediscovery; UI polling must not be the only release mechanism. Preserve cancellation and compensate failures without duplicate finalization.",
+          "title": "Prove terminal cleanup and recoverability"
+        },
+        {
+          "id": "cross-feature-task-validation",
+          "outcome": "Demonstrate coherent task state and one terminal notification through leave/reopen, workspace switch, cancel, timeout, retry and host shutdown across supported task types.",
+          "title": "Qualify active, idle and interrupted journeys"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Capture cold and repeated query timings, stage durations, peak RSS and cleanup results at1000/10000/100000 chunks with declared384-dimensional embeddings where package bounds permit. Record unavailable workloads explicitly, not as passes; distinguish OS file-cache warmth from model reuse.",
+          "id": "context-stage-baseline",
+          "qualification": "local"
+        },
+        {
+          "description": "Proposed target: at10000 and100000 chunks, reduce incremental query peak RSS by at least25 percent against unchanged baseline without increasing p95 latency by more than5 percent, or demonstrate that the measured baseline already meets an explicitly approved environment budget. Keep source and package ceilings unchanged.",
+          "id": "context-allocation-target",
+          "qualification": "local"
+        },
+        {
+          "description": "For deterministic embeddings, top-k identities/order, scores within the fixed numerical tolerance and exact citations match unchanged exact-search results. For separately authorized local embedding runs, proposed recall@5 is at least0.90 on the labeled synthetic corpus with no regression greater than0.02; invalid/cross-workspace citations remain zero. Quality failures cannot be offset by a cheaper/faster result.",
+          "id": "context-quality-invariant",
+          "qualification": "local"
+        },
+        {
+          "description": "Every archive/table/vector/citation/digest denial remains enforced; cancellation and failure remove private materialization and produce sanitized bounded state. No optimization bypasses full required validation, downloads a model, retains query/source content or introduces a cross-request cache.",
+          "id": "context-integrity-and-cancel",
+          "qualification": "local"
+        },
+        {
+          "description": "Representative CPU and sufficient accelerator profiles report actual local model identity, warm/cold p95, RSS, retrieval quality and cleanup; observed results remain distinct from deterministic conformance and from production guarantees.",
+          "id": "context-runtime-qualified",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Refresh the threat/control delta, prove isolation, failure bounds and non-disclosure for this increment, and preserve a rollback at least as secure as the forward path. Coordinate with the security remediation owner rather than duplicating its controls.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": true,
+      "completedAt": "2026-10-21T06:32:48Z",
+      "completedChunks": [
+        "rag-stage-baseline",
+        "bounded-validation-allocation",
+        "quality-and-determinism-oracle",
+        "context-candidate-qualification"
+      ],
+      "completionSummary": "Implemented and independently reviewed exact Context allocation/quality improvements with current passing bounded verification. Real embedding-model CPU/accelerator qualification remains explicitly pending; no controlled pass or overall completion is claimed.",
+      "deliverables": [
+        "Sanitized stage-level timing and peak-memory probe with versioned corpus/model/environment identities",
+        "Bounded validation/query implementation only where profiling supports it",
+        "Synthetic retrieval/citation/chunking quality oracle",
+        "Before/after quality-adjusted cost/latency/memory report",
+        "Updated Context threat model, architecture, tests and profile evidence"
+      ],
+      "dependsOn": [
+        "efficient-reliable-task-journeys"
+      ],
+      "excluded": [
+        "Approximate vector index, hybrid retrieval, rerankers or new embedding providers",
+        "Persistent extracted-package cache, cross-request embedding-model cache or altered retention policy",
+        "RAG integration into currently unsupported conversational retrieval/tools/memory",
+        "Weakening exact package/schema/vector/citation validation for speed"
+      ],
+      "id": "quality-preserving-context-efficiency",
+      "number": 3,
+      "objective": "Reduce measured query allocation and repeated work in the existing portable LanceDB/Context workflow while preserving exact validation, citations and retrieval correctness.",
+      "pendingCriteria": [
+        "context-runtime-qualified"
+      ],
+      "plan": {
+        "assumptions": [
+          "Pinned LanceDB0.34.0 and PyArrow25.0.0 are locally available in an ignored qualification environment.",
+          "No real provider credentials, model download, accelerator or participant qualification is available."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "context-stage-baseline",
+              "security-impact-reviewed"
+            ],
+            "id": "rag-stage-baseline",
+            "outcome": "Versioned1000/10000/100000-chunk workloads record actual stage timing, isolated RSS, package bounds and unavailable cases.",
+            "title": "Measure complete Context stages"
+          },
+          {
+            "criteriaIds": [
+              "context-allocation-target",
+              "context-integrity-and-cancel",
+              "security-impact-reviewed"
+            ],
+            "id": "bounded-validation-allocation",
+            "outcome": "Bounded Arrow batches replace the full Python vector graph while validating every row and preserving exact search.",
+            "title": "Reduce validated query allocation"
+          },
+          {
+            "criteriaIds": [
+              "context-quality-invariant",
+              "context-integrity-and-cancel"
+            ],
+            "id": "quality-and-determinism-oracle",
+            "outcome": "Deterministic baseline and candidate match identities/order/scores/citations; malformed late rows and cancellation retain denial/cleanup.",
+            "title": "Protect exact retrieval and citations"
+          },
+          {
+            "criteriaIds": [
+              "context-stage-baseline",
+              "context-allocation-target",
+              "context-quality-invariant",
+              "context-runtime-qualified",
+              "security-impact-reviewed"
+            ],
+            "id": "context-candidate-qualification",
+            "outcome": "Compare current source against unchanged baseline; preserve actual timing/RSS/quality evidence and pending physical-model checks.",
+            "title": "Qualify measured Context candidate"
+          }
+        ],
+        "completionTests": [
+          "Bounded functionality-context profile plus documentation, architecture and agent-support gates.",
+          "Actual isolated-process memory and timing comparison; no aggregate suite before all increments are implemented."
+        ],
+        "documentation": [
+          "Runtime model",
+          "Context threat model",
+          "Worker README",
+          "JSON qualification evidence"
+        ],
+        "fingerprint": "8d330d1c18c0ae727591c6de2d7331a0a5704c6cd4cb291f07eab72e92f695e6",
+        "focusedTests": [
+          "Exact Context worker tests with deterministic embeddings and real pinned LanceDB/PyArrow.",
+          "Late batch/vector/citation denial, cancellation cleanup and exact result oracle."
+        ],
+        "recordedAt": "2026-10-21T06:15:49Z",
+        "rollback": "Restore the unchanged exact validator/query source and retain integrity regressions; no package/schema/cache migration.",
+        "steps": [
+          "Capture unchanged worker source and source/package-bound baseline with deterministic embeddings.",
+          "Scan every row and vector in bounded Arrow batches; retain validated metadata only and check cancellation throughout.",
+          "Compare exact result identity/order/score/citations and denial/cleanup behavior.",
+          "Measure current candidate in isolated subprocesses against the unchanged baseline and retain failed attempts.",
+          "Run focused Context tests and applicable gates, documenting unavailable real-model qualification as pending."
+        ],
+        "summary": "Measure and reduce exact Context query allocation using bounded Arrow scanning without weakening any integrity or citation check."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-10-21T06:15:49Z",
+          "risks": [
+            "Security-relevant: validate every row, nullable/vector element and citation before returning any query result; no early top-k validation shortcut.",
+            "Preserve archive/path/digest/source ceilings and exact native search/tie behavior; no approximate index or persistent cache.",
+            "Use actual isolated-process RSS sampling and versioned synthetic corpus; do not claim object counts or OS cache warmth are memory/model qualification.",
+            "Use deterministic embedding fixtures locally; real local-model identity, CPU/accelerator measurements and labeled real-model quality remain pending.",
+            "Bound scan batches and check cancellation during validation; close reader/materialization on success, denial and cancellation."
+          ],
+          "sources": [
+            {
+              "title": "Exact Context validation and query",
+              "url": "modules/adapters/runtime/python/worker/tasks/context_artifact_operation.py"
+            },
+            {
+              "title": "Pinned native Context packages",
+              "url": "modules/adapters/runtime/python/worker/requirements-context.txt"
+            },
+            {
+              "title": "Context integrity and retention boundaries",
+              "url": "docs/security/context-management-threat-model.md"
+            }
+          ],
+          "summary": "Current exact LanceDB reads materialize every vector into Python floats via full-table to_pylist and retain a second validated metadata graph; query then builds another identity map. The pinned LanceDB0.34.0 empty-query builder supports bounded RecordBatchReader iteration. Reuse exact search and all package/schema/vector/citation checks while replacing only transient vector materialization."
+        }
+      ],
+      "rollback": "Restore the exact validated query implementation and package format without changing stored artifacts. Retain integrity/citation regressions and measured baselines. Cleanup remains private, bounded and fail-closed; no cache migration is introduced.",
+      "startedAt": "2026-10-21T06:15:49Z",
+      "status": "implemented-pending-qualification",
+      "title": "Quality-preserving Context and RAG efficiency",
+      "verification": [
+        "Run focused Context application/worker tests with injected deterministic embeddings; add bounded Arrow iteration, malformed vector/citation, cancellation and memory-accounting assertions.",
+        "Use controlled isolated subprocess RSS measurements and existing managed runtime boundaries; do not infer memory wins from object-count assertions alone.",
+        "Do not enable approximate indexing or a persistent extracted-package/model cache to meet the target. If profiling shows such a change is necessary, stop for a separate cache/retention/trust or retrieval-quality decision with concrete evidence.",
+        "After the whole increment, run affected Context lifecycle integrations, policy/docs/architecture gates and host builds; reserve final test:all for the overall boundary."
+      ],
+      "workPackages": [
+        {
+          "id": "rag-stage-baseline",
+          "outcome": "Measure retrieve/hash/materialize/table validation/model load/embed/search/cleanup separately, plus peak RSS, at 1000/10000/100000 chunks within existing package bounds.",
+          "title": "Profile complete Context operations"
+        },
+        {
+          "id": "bounded-validation-allocation",
+          "outcome": "Use bounded Arrow iteration and minimal validated metadata rather than materializing a second full Python vector/text object graph, while checking every required vector/citation/schema invariant before returning results.",
+          "title": "Bound validation and query allocations"
+        },
+        {
+          "id": "quality-and-determinism-oracle",
+          "outcome": "Create a synthetic labeled corpus and query/citation oracle, retain exact search and tie semantics, test cleaning/chunking/source lineage, and retain all failed attempts in measurement evidence.",
+          "title": "Protect retrieval and generation quality"
+        },
+        {
+          "id": "context-candidate-qualification",
+          "outcome": "Run current candidate against unchanged environment/model/corpus and report p50/p95, RSS, quality, failed/timeout/cancelled counts and bytes; choose further optimizations only from measured dominant stages.",
+          "title": "Compare exact baseline and optimized candidates"
+        }
+      ]
+    },
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "Each existing pending criterion has an owning roadmap and evidence reference or explicit pending reason. New evidence never silently rewrites historical approvals; the active-source Run & Test proposal and security remediation remain separately approval-gated.",
+          "id": "existing-qualification-preserved",
+          "qualification": "local"
+        },
+        {
+          "description": "Proposed study target: at least5 representative non-developer participants, at least4 of5 completing each assigned critical journey without facilitator intervention, zero critical data-loss/authority confusion, and median task ease at least5/7. Record sample size and limitations; do not infer population success or accessibility conformance from this small study.",
+          "id": "user-task-outcome-targets",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Keyboard-only, screen-reader, focus return,320 CSS-pixel reflow, contrast, non-color status and reduced-motion checks pass on the exact supported desktop/thin-client profiles. Automated axe/semantic passes supplement manual evidence; unresolved critical exceptions block qualification.",
+          "id": "accessibility-outcomes-qualified",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "For authorized installed-model trials, retain held-out task quality, invalid-output rate, retry count, accepted examples per minute, peak RAM/VRAM and elapsed time. A candidate requires no statistically material quality regression under a predeclared task metric/tolerance and at least20 percent better accepted-output throughput or demonstrated adherence to the approved resource budget. CPU/accelerator and constrained/unchecked modes are separate cohorts; unavailable runs remain pending.",
+          "id": "model-quality-resource-outcomes",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "After every increment is implemented, triage the existing standard-Node failures without treating skips as passes, run test:all once plus relevant repository gates/builds, obtain separate-invocation current candidate review and complete the overall-validation work item. Every required controlled criterion must pass before final roadmap completion.",
+          "id": "full-current-qualification",
+          "qualification": "local"
+        },
+        {
+          "description": "Refresh the threat/control delta, prove isolation, failure bounds and non-disclosure for this increment, and preserve a rollback at least as secure as the forward path. Coordinate with the security remediation owner rather than duplicating its controls.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": true,
+      "completedAt": null,
+      "completedChunks": [
+        "qualification-owner-reconciliation",
+        "qualification-assessment",
+        "qualification-task-procedures",
+        "release-evidence-and-gap-repairs"
+      ],
+      "deliverables": [
+        "Qualification-owner crosswalk and no-duplication dependency ledger",
+        "Task-level user outcomes and accessibility evidence for exact desktop/thin-client profiles",
+        "Quality/resource comparison for installed local models without storing prompts or outputs",
+        "Targeted repairs backed by observed failed journeys if approved",
+        "Current aggregate qualification and independent review with a truthful release readiness decision"
+      ],
+      "dependsOn": [
+        "quality-preserving-context-efficiency"
+      ],
+      "excluded": [
+        "Inventing RPO/RTO, retention, encryption or availability objectives owned by operators",
+        "New provider/model downloads or paid benchmark runs without authorization",
+        "Implementing unapproved active-source or security successor roadmaps",
+        "Broad UI redesign, new feature families, unsupported arbitrary code execution or production rollout"
+      ],
+      "id": "qualified-user-and-model-outcomes",
+      "number": 4,
+      "objective": "Turn the implemented feature set into a truthful release decision through representative accessibility/usability, dataset/model and operational outcome evidence, fixing only measured in-scope gaps and preserving existing roadmap owners.",
+      "plan": {
+        "assumptions": [
+          "Participants and physical qualification environments are unavailable; external criteria remain pending.",
+          "No new model download, provider traffic, credential or production mutation is authorized."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "existing-qualification-preserved",
+              "security-impact-reviewed"
+            ],
+            "id": "qualification-owner-reconciliation",
+            "outcome": "Versioned JSON maps every known pending criterion to the canonical owner, required environment, actual procedure and existing harness.",
+            "title": "Preserve qualification owners"
+          },
+          {
+            "criteriaIds": [
+              "existing-qualification-preserved",
+              "security-impact-reviewed"
+            ],
+            "id": "qualification-assessment",
+            "outcome": "Bounded read-only CLI emits source/owner-bound sanitized JSON, detects ownership drift and distinguishes declarations, local evidence and unavailable controlled qualification.",
+            "title": "Assess current evidence safely"
+          },
+          {
+            "criteriaIds": [
+              "user-task-outcome-targets",
+              "accessibility-outcomes-qualified",
+              "model-quality-resource-outcomes",
+              "security-impact-reviewed"
+            ],
+            "id": "qualification-task-procedures",
+            "outcome": "Task scripts, predeclared approved targets, accessibility profiles and separate CPU/accelerator cohorts are ready; unavailable executions remain pending.",
+            "title": "Specify reproducible user and model outcomes"
+          },
+          {
+            "criteriaIds": [
+              "full-current-qualification",
+              "security-impact-reviewed"
+            ],
+            "id": "release-evidence-and-gap-repairs",
+            "outcome": "Reconcile implemented functionality and observed fixes, generate current pending ledger, and prepare aggregate qualification after implementation without declaring unavailable checks passed.",
+            "title": "Prepare honest release assessment"
+          }
+        ],
+        "completionTests": [
+          "functionality-outcomes, documentation, agent-support and required build gates.",
+          "Configured test:all only after implementation; do not treat failed/skipped/unavailable checks as passes."
+        ],
+        "documentation": [
+          "Qualification JSON crosswalk and task/environment procedure",
+          "Functionality review JSON",
+          "Owning control-plane and operations guidance"
+        ],
+        "fingerprint": "a8a12a2298a496de164541eb8e5cdc975862c874d2745b4fcc59afbd19d1e8c1",
+        "focusedTests": [
+          "Exact functionality qualification assessment/CLI tests with synthetic owner states, malformed input, missing evidence and source drift."
+        ],
+        "recordedAt": "2026-10-21T07:18:13Z",
+        "rollback": "Withdraw unqualified assessment and restore last verified source without changing historical evidence or restoring weaker security controls.",
+        "steps": [
+          "Map nine legacy and six current controlled criteria without changing owners or approvals.",
+          "Implement bounded source-bound JSON assessment and denial tests.",
+          "Document exact user, accessibility and model/resource task procedures with approved thresholds and pending environments.",
+          "Reconcile current implemented work and execute final aggregate checks/review at the implementation boundary; pending controlled evidence prevents final closure."
+        ],
+        "summary": "Implement honest qualification ownership and read-only assessment; prepare approved task/model procedures and run current aggregate verification only after every implementation chunk is recorded."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-10-21T07:18:12Z",
+          "risks": [
+            "Security-relevant: protected evidence/approval across structured requirement and state inputs to public sanitized assessment. Use canonical owner identities, bounded read-only inputs, no arbitrary commands or raw evidence payloads.",
+            "Bind output to actual source and owner-state identities, fail closed on missing/malformed/unknown ownership; do not mutate states/approvals or turn historical declarations into receipts.",
+            "No user study, screen reader, model/provider/hardware run or production qualification can be manufactured from deterministic tests. Retain unavailable environments pending.",
+            "Security successor and active-source proposal remain independent owners; no approval or qualification transfer."
+          ],
+          "sources": [
+            {
+              "title": "Approved functionality owner",
+              "url": "docs/functionality-optimization-implementation-roadmap.md"
+            },
+            {
+              "title": "Asset qualification procedure",
+              "url": "docs/operations/asset-system-support-qualification.md"
+            },
+            {
+              "title": "Current runtime authority",
+              "url": "docs/architecture/runtime-model.md"
+            },
+            {
+              "title": "Context measured conformance",
+              "url": "docs/operations/context-efficiency-qualification.json"
+            }
+          ],
+          "summary": "Existing owners retain nine pending criteria; functionality adds six controlled criteria across browse, task-host, Context, user, accessibility and model outcomes. No participants or representative qualification environments are available. Implement a read-only source-bound ownership assessment and explicit task/environment procedures; no local pass becomes controlled evidence."
+        }
+      ],
+      "rollback": "Withdraw or mark the candidate unqualified and return to the last secure qualified release. Revert only a measured UX repair that causes regression, retaining evidence and stronger security controls. Never declare a missing accessibility/model/provider qualification passed to preserve release timing.",
+      "startedAt": "2026-10-21T07:18:12Z",
+      "status": "verifying",
+      "title": "Qualify complete user and model outcomes",
+      "verification": [
+        "Use only the focused regressions for an actually observed gap during this increment; do not turn ordinary tests into timing gates or add speculative feature changes.",
+        "Use existing controlled asset-experience, visual-composer, data-management, model-training and Context procedures with synthetic data, explicit operator authorization and installed runtimes.",
+        "No provider calls, downloads, credentials, physical hardware qualification or participant study was performed during planning; these require their actual authorized controlled environment.",
+        "At the final overall boundary, execute current all-suite and docs/architecture/agent-support/security-dependency/build gates as applicable, then independent technical review and final user approval. Pending external evidence blocks completion."
+      ],
+      "workPackages": [
+        {
+          "id": "qualification-owner-reconciliation",
+          "outcome": "Map each unfinished Assets, Data Management and constrained-JSON criterion to its owning roadmap, source/product digest, actual evidence and operator needs. Link results without rewriting legacy approval or fabricating passes.",
+          "title": "Reconcile existing qualification owners"
+        },
+        {
+          "id": "complete-feature-task-study",
+          "outcome": "Use synthetic inputs and task scripts for acquire/review/save/find data, customize/publish an asset, compose/build/publish/run a supported system, Context retrieve/cite and download/train/find a model.",
+          "title": "Measure representative user journeys"
+        },
+        {
+          "id": "model-quality-cost-comparison",
+          "outcome": "Use existing nine-task training and27-case preparation harnesses where applicable, fixed installed models and labeled synthetic held-out data; retain failures/retries and compare accepted examples or accepted task outcomes per second and resource use.",
+          "title": "Measure quality-adjusted model efficiency"
+        },
+        {
+          "id": "release-evidence-and-gap-repairs",
+          "outcome": "Repair only approved measured usability/reliability gaps, refresh obsolete manual task names, retest with real users/assistive technology and produce current source-bound overall verification/review. Leave credentials/platform gaps visibly pending.",
+          "title": "Close measured gaps and issue an honest release decision"
+        }
+      ]
+    }
+  ],
+  "name": "Functionality and Quality-Adjusted Optimization",
+  "objective": "Improve the responsiveness, reliability, resource efficiency and demonstrated user outcomes of implemented features while preserving current authorization, immutable evidence and supported runtime boundaries. Planning only; implementation requires explicit approval.",
+  "paths": {
+    "report": "docs/tmp/functionality-optimization-implementation-report.md",
+    "roadmap": "docs/functionality-optimization-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/functionality-optimization/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": {
+    "approvedAt": "2026-10-21T02:34:11Z",
+    "fingerprint": "ba62c99c105717a86eded871b803acbd2a27e3ae4b357feef8d5c67531cedcc9",
+    "note": "The user explicitly requested approval of the two recently created roadmaps, including Functionality and Quality-Adjusted Optimization. This records roadmap approval only; the earlier instruction not to implement yet remains in force. No increment is started."
+  },
+  "schemaVersion": 1,
+  "slug": "functionality-optimization",
+  "status": "executing",
+  "updatedAt": "2026-10-21T10:56:20Z"
+}

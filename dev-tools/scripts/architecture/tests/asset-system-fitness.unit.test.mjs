@@ -7,6 +7,7 @@ import {
   findAssetSystemFitnessViolations,
   findExecutableMetadataViolations,
   findRendererBoundaryViolations,
+  findRequiredAnchorViolations,
   findRoutePolicyViolations,
 } from "../check-asset-system-fitness.mjs";
 import { readAssetSystemQualificationConfig } from "../../qualification/asset-system-qualification-core.mjs";
@@ -18,6 +19,14 @@ const config = readAssetSystemQualificationConfig(
 
 test("asset/system architecture fitness passes the current production tree", () => {
   assert.deepEqual(findAssetSystemFitnessViolations({ repoRoot }), []);
+});
+
+test("multiline admission anchors accept Windows line endings while detecting value drift", () => {
+  const target = "modules/application/services/system-review/release-bound-system-review-definition.service.ts";
+  const files = new Map([[target, "1,\r\n        200\r\n1_024,\r\n        8_388_608"]]);
+  assert.deepEqual(findRequiredAnchorViolations(files).filter(item => item.path === target), []);
+  files.set(target, "1,\r\n        201\r\n1_024,\r\n        8_388_608");
+  assert.equal(findRequiredAnchorViolations(files).filter(item => item.path === target).length, 1);
 });
 
 test("fitness rules detect executable metadata and renderer access to privileged layers", () => {

@@ -1,3 +1,4 @@
+import type { WorkspaceSummary } from "../workspace";
 import type {
   ActiveWorkspaceSelection,
   CreateWorkspaceCommand,
@@ -18,7 +19,9 @@ export const API_WORKSPACE_SELECTION_READ_OPERATION = createTransportOperation("
 export const API_WORKSPACE_SELECTION_SAVE_OPERATION = createTransportOperation("workspace", "selection-save") as "workspace.selection-save";
 export const API_WORKSPACE_SELECTION_CLEAR_OPERATION = createTransportOperation("workspace", "selection-clear") as "workspace.selection-clear";
 
+export const API_WORKSPACE_SUMMARY_OPERATION = "workspace.summary" as const;
 export type ApiWorkspaceOperation =
+  | typeof API_WORKSPACE_SUMMARY_OPERATION
   | typeof API_WORKSPACE_LIST_OPERATION
   | typeof API_WORKSPACE_CREATE_OPERATION
   | typeof API_WORKSPACE_SELECTION_READ_OPERATION
@@ -121,4 +124,8 @@ export function createApiWorkspaceFailureResponse(
   options?: { requestId?: string; correlationId?: string; details?: Record<string, unknown> },
 ): ApiResponse<unknown, Record<string, unknown>, ApiWorkspaceOperation, Record<string, never>> {
   return createApiFailureResponse(createApiError(operation, code, message, options), options);
+}
+
+export function createApiWorkspaceSummarySuccessResponse(value: WorkspaceSummary, options?: {requestId?: string; correlationId?: string}) {
+  return createApiSuccessResponse(API_WORKSPACE_SUMMARY_OPERATION, value, options);
 }

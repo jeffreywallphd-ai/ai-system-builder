@@ -150,6 +150,12 @@ entries, link/file type, compressed and expanded bounds, manifest, table name,
 exact Arrow schema, row count, unique ids and ordinals, finite vector values and
 dimensions, citation digests, and source lineage before using the database.
 Materialization uses a private temporary directory and never `extractall`.
+Table validation scans at most 256 rows per Arrow batch, checking every vector
+natively for nulls, dimensions and finite values before retaining validated
+metadata. It never materializes the full vector table as Python floats.
+Cancellation is checked between batches and metadata rows; the reader closes
+on success, denial or cancellation. Query ranking remains exact with the vector
+index bypassed. No cross-request package, vector or embedding cache is added.
 Embedding vectors are not returned in previews, task metadata, catalog records,
 or diagnostics. Generation uses a selected local Transformers model with
 `local_files_only=true`; it never downloads a model as a side effect.

@@ -462,6 +462,11 @@ export function DatasetPreparationFeature({
   const [selectedArtifactIds, setSelectedArtifactIds] = useState<string[]>([]);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [activeRequestId, setActiveRequestId] = useState<string>();
+  const [cancelPending, setCancelPending] = useState(false);
+  const activeRequestRef = useRef<string | undefined>(undefined);
+  const pollingSession = useRef(0);
+  const cancellationNotice = useRef<string | undefined>(undefined);
+  const cancelRequest = useRef<object | undefined>(undefined);
   const [result, setResult] = useState<ApiPreparedTrainingDatasetResult>();
   const [qualityReview, setQualityReview] = useState<{
     requestId: string;
@@ -823,6 +828,8 @@ export function DatasetPreparationFeature({
   }, [constrainedDecodingPreference, taskType, visualOutputShape, workspaceId]);
   useEffect(() => {
     mounted.current = true;
+    cancelRequest.current = undefined;
+    setCancelPending(false);
     void browser
       .browseArtifacts({ workspaceId })
       .then((items) => {
@@ -840,13 +847,19 @@ export function DatasetPreparationFeature({
       });
     return () => {
       mounted.current = false;
+      pollingSession.current += 1;
+      activeRequestRef.current = undefined;
+      cancellationNotice.current = undefined;
+      cancelRequest.current = undefined;
     };
   }, [browser, workspaceId]);
 
   const poll = async (requestId: string) => {
-    while (mounted.current) {
+    const session = pollingSession.current;
+    const current = () => mounted.current && pollingSession.current === session && activeRequestRef.current === requestId;
+    while (current()) {
       const task = await preparation.read({ workspaceId, requestId });
-      if (!mounted.current) return;
+      if (!current()) return;
       if (task.status === "queued" || task.status === "running") {
         const progress =
           typeof task.progress?.processed === "number" &&
@@ -856,11 +869,15 @@ export function DatasetPreparationFeature({
         setStatus({
           kind: "loading",
           message:
-            (task.progress?.message ?? "Preparing dataset...") + progress,
+            (cancellationNotice.current ?? task.progress?.message ?? "Preparing dataset...") + progress,
         });
         await waitForNextPoll();
         continue;
       }
+      activeRequestRef.current = undefined;
+      cancellationNotice.current = undefined;
+      cancelRequest.current = undefined;
+      setCancelPending(false);
       setActiveRequestId(undefined);
       if (task.status === "review-required") {
         if (!task.result.qualityReport || !task.result.review) {
@@ -903,6 +920,7 @@ export function DatasetPreparationFeature({
   };
 
   const start = async () => {
+    const session = pollingSession.current;
     const parsed = [trainRatio, validationRatio, testRatio].map(Number);
     const saveNameError = validateDatasetPreparationSaveName(outputBaseName);
     if (saveNameError) {
@@ -1025,10 +1043,16 @@ export function DatasetPreparationFeature({
           adaptiveValues,
         ),
       });
+      if (!mounted.current || pollingSession.current !== session) return;
+      cancelRequest.current = undefined;
+      setCancelPending(false);
+      activeRequestRef.current = started.requestId;
+      cancellationNotice.current = undefined;
       setActiveRequestId(started.requestId);
       await poll(started.requestId);
     } catch (error) {
-      if (mounted.current) {
+      if (mounted.current && pollingSession.current === session) {
+        activeRequestRef.current = undefined;
         setActiveRequestId(undefined);
         setStatus({
           kind: "error",
@@ -1042,16 +1066,31 @@ export function DatasetPreparationFeature({
   };
 
   const cancel = async () => {
-    if (!activeRequestId) return;
+    if (!activeRequestId || cancelRequest.current) return;
+    const requestId = activeRequestId;
+    const session = pollingSession.current;
+    const current = () => mounted.current && pollingSession.current === session && activeRequestRef.current === requestId;
+    const token = {};
+    cancelRequest.current = token;
+    setCancelPending(true);
+    cancellationNotice.current = "Requesting cancellation; dataset preparation is still being observed...";
+    setStatus({ kind: "loading", message: cancellationNotice.current });
     try {
-      await preparation.cancel({ workspaceId, requestId: activeRequestId });
-      setActiveRequestId(undefined);
-      setStatus({ kind: "idle", message: "Dataset preparation stopped." });
+      const response = await preparation.cancel({ workspaceId, requestId });
+      if (!current()) return;
+      cancellationNotice.current = response?.requestId === requestId && response.cancelled === true && response.status === "cancelled"
+        ? "Cancellation acknowledged; waiting for final task state..."
+        : "Cancellation is not confirmed. Dataset preparation is still being observed.";
+      setStatus({ kind: "loading", message: cancellationNotice.current });
     } catch {
-      setStatus({
-        kind: "error",
-        message: "Dataset preparation could not be stopped. Try again.",
-      });
+      if (!current()) return;
+      cancellationNotice.current = "Cancellation could not be confirmed. Dataset preparation is still being observed.";
+      setStatus({ kind: "loading", message: cancellationNotice.current });
+    } finally {
+      if (cancelRequest.current === token) {
+        cancelRequest.current = undefined;
+        if (mounted.current && pollingSession.current === session) setCancelPending(false);
+      }
     }
   };
 
@@ -1093,10 +1132,14 @@ export function DatasetPreparationFeature({
     if (!qualityReview || reviewActionInFlight) return;
     setReviewActionInFlight(true);
     try {
-      await preparation.cancel({
+      const response = await preparation.cancel({
         workspaceId,
         requestId: qualityReview.requestId,
       });
+      if (response?.requestId !== qualityReview.requestId || response.cancelled !== true || response.status !== "cancelled") {
+        setStatus({ kind: "error", message: "Discard could not be confirmed. The quality review is retained." });
+        return;
+      }
       setQualityReview(undefined);
       setStatus({ kind: "idle" });
     } catch {
@@ -1913,6 +1956,7 @@ export function DatasetPreparationFeature({
               <button
                 className="ui-button"
                 type="button"
+                disabled={cancelPending}
                 onClick={() => void cancel()}
               >
                 Stop preparation

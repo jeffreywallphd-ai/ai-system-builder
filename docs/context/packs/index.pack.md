@@ -19,6 +19,9 @@
 
 ## Core Guidance
 
+- For contributor workflow work requests, follow the JSON-backed review-site
+  startup and unified control-plane guide linked from `AGENTS.md`.
+
 - Preserve clean architecture boundaries: domain/application stay free of host, transport, UI, runtime, filesystem, and infrastructure leakage.
 - Prefer the smallest useful context set. Do not include packs or canonical docs "just in case."
 - Apply the mandatory security impact screen in `docs/standards/security-by-design-standards.md` to every task. Record `not-security-relevant` with a concrete rationale or route `security-relevant` work to the security pack and applicable canonical threat-model sources.

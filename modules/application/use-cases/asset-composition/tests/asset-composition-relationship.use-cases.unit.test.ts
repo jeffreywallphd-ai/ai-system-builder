@@ -13,19 +13,19 @@ describe("composition relationship connect/disconnect", () => {
   it("connects and disconnects nodes with conservative status", async () => {
     const plan = mkPlan();
     const r = repo(plan);
-    const connect = new ConnectCompositionNodesUseCase({ repository: r, generateRelationshipId: () => "rel.1", now: () => now });
+    const connect = new ConnectCompositionNodesUseCase({ workspaceAccess: {async authorize() {}}, repository: r, generateRelationshipId: () => "rel.1", now: () => now });
     const added = await connect.execute({ targetWorkspaceId: ws, planId: plan.planId, sourceNodeId: "n1" as never, targetNodeId: "n2" as never, relationshipKind: "depends-on" });
     assert.equal(added.status, "success");
     if (added.status === "success") { assert.equal(added.value.relationships.length, 1); assert.equal(added.value.relationships[0]?.compatibilityStatus, "unknown"); assert.equal(added.value.planningSummary.totalRelationships, 1); }
 
-    const disconnect = new DisconnectCompositionNodesUseCase({ repository: repo(added.status === "success" ? added.value : plan), now: () => "2026-05-20T00:01:00.000Z" });
+    const disconnect = new DisconnectCompositionNodesUseCase({ workspaceAccess: {async authorize() {}}, repository: repo(added.status === "success" ? added.value : plan), now: () => "2026-05-20T00:01:00.000Z" });
     const removed = await disconnect.execute({ targetWorkspaceId: ws, planId: plan.planId, relationshipId: "rel.1" as never });
     assert.equal(removed.status, "success");
   });
 
   it("fails on missing/invalid states safely", async () => {
     const plan = mkPlan();
-    const connect = new ConnectCompositionNodesUseCase({ repository: repo({ ...plan, status: "archived", archivedAt: now }), generateRelationshipId: () => "rel.1", now: () => now });
+    const connect = new ConnectCompositionNodesUseCase({ workspaceAccess: {async authorize() {}}, repository: repo({ ...plan, status: "archived", archivedAt: now }), generateRelationshipId: () => "rel.1", now: () => now });
     const out = await connect.execute({ targetWorkspaceId: ws, planId: plan.planId, sourceNodeId: "n1" as never, targetNodeId: "n1" as never, relationshipKind: "depends-on" });
     assert.equal(out.status, "failure");
   });

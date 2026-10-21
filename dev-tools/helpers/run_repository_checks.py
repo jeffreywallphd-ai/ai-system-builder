@@ -6,8 +6,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 from helper_config import (
     configured_bool,
@@ -18,6 +19,13 @@ from helper_config import (
 
 
 def safe_existing_path(repo: Path, value: str) -> str:
+    if (
+        value.startswith("-")
+        or Path(value).is_absolute()
+        or PureWindowsPath(value).drive
+        or PureWindowsPath(value).root
+    ):
+        raise ValueError("Configured paths must be repository-relative positional paths")
     candidate = (repo / value).resolve()
     try:
         relative = candidate.relative_to(repo).as_posix()
@@ -25,6 +33,15 @@ def safe_existing_path(repo: Path, value: str) -> str:
         raise ValueError(f"Path must stay inside the repository: {value}") from error
     if not candidate.exists():
         raise ValueError(f"Configured repository path does not exist: {value}")
+    if relative.startswith("-"):
+        raise ValueError("Configured paths must remain positional after normalization")
+    return relative
+
+
+def safe_node_test(repo: Path, value: str) -> str:
+    relative = safe_existing_path(repo, value)
+    if not (repo / relative).is_file() or not re.search(r"\.test\.(?:ts|tsx|js|mjs|cjs)$", relative):
+        raise ValueError("Focused targets must be an existing Node test file")
     return relative
 
 
@@ -53,15 +70,14 @@ def build_commands(
     full_suite: bool,
 ) -> list[tuple[str, list[str]]]:
     npm = "npm.cmd" if os.name == "nt" else "npm"
-    npx = "npx.cmd" if os.name == "nt" else "npx"
     commands: list[tuple[str, list[str]]] = []
     if format_paths:
-        commands.append(("format", [npx, "prettier", "--check", *format_paths]))
+        commands.append(("format", ["node", "node_modules/prettier/bin/prettier.cjs", "--check", "--", *format_paths]))
     if focused_tests:
         commands.append(
             (
                 "focused tests",
-                ["node", "--import", "tsx", "--test", *focused_tests],
+                ["node", "--import", "tsx", "--test", "--", *focused_tests],
             )
         )
     if install_electron:
@@ -156,7 +172,7 @@ def main() -> int:
         )
         format_paths = [safe_existing_path(repo, path) for path in format_values]
         focused_tests = [
-            safe_existing_path(repo, path) for path in focused_values
+            safe_node_test(repo, path) for path in focused_values
         ]
         commands = build_commands(
             format_paths=format_paths,

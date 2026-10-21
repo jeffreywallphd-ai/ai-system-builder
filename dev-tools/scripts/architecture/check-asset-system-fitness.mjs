@@ -239,7 +239,7 @@ export function findRoutePolicyViolations(files) {
 
 export function findRequiredAnchorViolations(files) {
   return requiredAnchors.flatMap((anchor) => {
-    const contents = files.get(anchor.path) ?? "";
+    const contents = (files.get(anchor.path) ?? "").replaceAll("\r\n", "\n");
     return anchor.tokens
       .filter((token) => !contents.includes(token))
       .map((token) => ({

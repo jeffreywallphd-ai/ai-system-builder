@@ -66,6 +66,7 @@ export interface DesktopModelsClient {
   downloadModel: (input: { modelId: string; displayName?: string; inferenceMode?: "text2text" | "causal" | "chat" | "text-to-image"; taskTags?: ModelTaskTag[]; artifactForm?: "full-model" | "adapter" | "merged-model" | "checkpoint"; metadata?: Record<string, unknown>; workspaceId: string }) => Promise<DesktopDownloadModelResult>;
   startModelDownload: (input: { modelId: string; displayName?: string; inferenceMode?: "text2text" | "causal" | "chat" | "text-to-image"; taskTags?: ModelTaskTag[]; artifactForm?: "full-model" | "adapter" | "merged-model" | "checkpoint"; metadata?: Record<string, unknown>; workspaceId: string }) => Promise<DesktopStartModelDownloadResult>;
   readModelDownload: (input: { requestId: string; workspaceId: string }) => Promise<DesktopReadModelDownloadResult>;
+  completeModelDownload: (input: { requestId: string; workspaceId: string }) => Promise<DesktopReadModelDownloadResult>;
   listModelDownloads: (input: { workspaceId: string; includeCompleted?: boolean; limit?: number }) => Promise<DesktopListModelDownloadsResult>;
   cancelModelDownload: (input: { requestId: string; workspaceId: string }) => Promise<DesktopCancelModelDownloadResult>;
   updateModelRecord: (input: { modelRecordId: string; patch: Record<string, unknown> }) => Promise<DesktopModelInventoryRecord>;
@@ -155,6 +156,10 @@ export function createDesktopModelsClient(): DesktopModelsClient {
             "Failed to read model download.",
           );
         }
+        if (activity.status === "succeeded" && !activity.model && desktopApi.completeModelDownload) {
+          activity = ensureSuccess(await desktopApi.completeModelDownload({ workspaceId: createWorkspaceId(input.workspaceId), requestId: activity.requestId }),
+            (value) => (value as DesktopReadModelDownloadResult).activity, "Failed to complete model download.");
+        }
         if (activity.status !== "succeeded" || !activity.model) {
           throw new Error(activity.error?.message ?? `Model download ended with status ${activity.status}.`);
         }
@@ -195,6 +200,14 @@ export function createDesktopModelsClient(): DesktopModelsClient {
         await desktopApi.readModelDownload({ ...input, workspaceId: createWorkspaceId(input.workspaceId) }),
         (value) => value as DesktopReadModelDownloadResult,
         "Failed to read model download.",
+      );
+    },
+    async completeModelDownload(input) {
+      if (!desktopApi.completeModelDownload) throw new Error("Desktop preload model download-complete bridge is unavailable.");
+      return ensureSuccess(
+        await desktopApi.completeModelDownload({ ...input, workspaceId: createWorkspaceId(input.workspaceId) }),
+        (value) => value as DesktopReadModelDownloadResult,
+        "Failed to complete model download.",
       );
     },
     async listModelDownloads(input) {

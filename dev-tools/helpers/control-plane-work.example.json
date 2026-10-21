@@ -1,0 +1,19 @@
+{
+  "schema_version": "development-work-v1",
+  "work_id": "example-work",
+  "title": "Correct a contributor instruction",
+  "kind": "lightweight",
+  "authority_ref": "current-user-work-request",
+  "outcome": {
+    "user": "Repository contributor",
+    "problem": "An existing instruction leads to a failed task",
+    "journey": "Follow the corrected instruction and complete the documented task",
+    "success": "The instruction resolves and its relevant check passes",
+    "baseline": "The current instruction fails",
+    "quality": "Preserve existing authority and unrelated content"
+  },
+  "write_scope": ["docs/diagnostics/example.md"],
+  "acceptance": [
+    {"id": "outcome-works", "description": "The corrected instruction is accurate and verifiable", "check_ids": ["documentation"]}
+  ]
+}

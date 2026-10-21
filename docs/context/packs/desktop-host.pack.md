@@ -91,3 +91,8 @@
 - Add `ipc-electron` for IPC/preload work.
 - Add `desktop-implementation` for renderer work.
 - Add `logging` and `testing` for diagnostics and regression-sensitive changes.
+
+- Image, dataset and Context host controllers are lazy retained: terminal tasks
+  can still own reviews and finalization receipts. Generic cleanup never derives
+  host-wide authority from workspace-required public task listing. Disposable
+  provider reuse waits for cleanup; uncertain cleanup retains the same owner.

@@ -1,3 +1,4 @@
+import type { WorkspaceAssetAccessPort } from "../../ports/asset/workspace-asset-access.port";
 import { normalizeListAssetCompositionPlansCommand, type ListAssetCompositionPlansCommand, type ListAssetCompositionPlansResult } from "../../../contracts/asset-composition";
 import type { AssetCompositionPlanRepositoryPort } from "../../ports/asset-composition";
 import { assetCompositionPlanFailure } from "./asset-composition-plan-result-helpers";
@@ -5,10 +6,11 @@ import { assetCompositionPlanFailure } from "./asset-composition-plan-result-hel
 const MAX_LIMIT = 100;
 
 export class ListAssetCompositionPlansUseCase {
-  constructor(private readonly d: { repository: AssetCompositionPlanRepositoryPort }) {}
+  constructor(private readonly d: { repository: AssetCompositionPlanRepositoryPort; workspaceAccess: WorkspaceAssetAccessPort }) {}
   async execute(command: ListAssetCompositionPlansCommand): Promise<ListAssetCompositionPlansResult> {
     let c;
     try { c = normalizeListAssetCompositionPlansCommand(command); } catch { return assetCompositionPlanFailure("validation", "asset-composition-workspace-required"); }
+    try { await this.d.workspaceAccess.authorize(c.targetWorkspaceId, "asset-composition:list-asset-composition-plans", "asset:read"); } catch { return assetCompositionPlanFailure("blocked", "asset-composition-workspace-invalid"); }
     const limit = typeof c.limit === "number" ? Math.max(1, Math.min(MAX_LIMIT, c.limit)) : undefined;
     try {
       const listed = await this.d.repository.listAssetCompositionPlanRecords({

@@ -39,3 +39,16 @@ describe("securityApiClient", () => {
     expect(result.tls).toBeUndefined();
   });
 });
+
+
+it("uses secureFetch for mode changes and never retries denied mutations publicly",async()=>{
+ const publicFetch=vi.fn();vi.stubGlobal('fetch',publicFetch);
+ secureFetchMock.mockResolvedValueOnce({status:200,json:async()=>({ok:true,value:{mode:'disabled-dev'}})});
+ expect(await createSecurityApiClient().setDevSecurityMode('disabled-dev')).toEqual({mode:'disabled-dev'});
+ expect(secureFetchMock).toHaveBeenCalledWith('/api/security/dev-mode',expect.objectContaining({method:'POST',body:JSON.stringify({mode:'disabled-dev'})}));
+ for(const status of [401,403]) {
+  secureFetchMock.mockResolvedValueOnce({status,json:async()=>({ok:false,error:{operation:'security.forbidden',code:'unauthorized',message:'Forbidden.'}})});
+  await expect(createSecurityApiClient().setDevSecurityMode('disabled-dev')).rejects.toMatchObject({status});
+ }
+ expect(publicFetch).not.toHaveBeenCalled();
+});

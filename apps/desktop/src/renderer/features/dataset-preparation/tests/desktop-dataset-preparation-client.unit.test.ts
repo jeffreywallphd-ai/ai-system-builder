@@ -3,6 +3,28 @@ import { describe, expect, it, vi } from "vitest";
 import { createDesktopDatasetPreparationClient } from "../api/desktopDatasetPreparationClient";
 
 describe("desktop dataset preparation client", () => {
+  it("preserves cancellation truth and rejects substituted or inconsistent replies", async () => {
+    const host = globalThis as typeof globalThis & { window?: Window & typeof globalThis };
+    host.window ??= {} as Window & typeof globalThis;
+    const cancelPrepareTrainingDatasetTask = vi.fn();
+    host.window.desktopApi = { cancelPrepareTrainingDatasetTask } as never;
+    const client = createDesktopDatasetPreparationClient();
+    for (const value of [
+      { requestId: "task", cancelled: false, status: "running" },
+      { requestId: "task", cancelled: false, status: "unknown" },
+      { requestId: "task", cancelled: true, status: "cancelled" },
+    ]) {
+      cancelPrepareTrainingDatasetTask.mockResolvedValueOnce({ ok: true, value });
+      expect(await client.cancelPrepareTrainingDatasetTask("task", "workspace-a")).toEqual({ ok: true, value });
+    }
+    for (const value of [undefined, {}, { requestId: "other", cancelled: true, status: "cancelled" },
+      { requestId: "task", cancelled: true, status: "running" }, { requestId: "task", cancelled: false, status: "cancelled" }]) {
+      cancelPrepareTrainingDatasetTask.mockResolvedValueOnce({ ok: true, value });
+      expect(await client.cancelPrepareTrainingDatasetTask("task", "workspace-a")).toMatchObject({ ok: false });
+    }
+    expect(cancelPrepareTrainingDatasetTask).toHaveBeenCalledWith({ requestId: "task", workspaceId: "workspace-a" });
+  });
+
   it("maps success response from preload bridge", async () => {
     const hostWindow = globalThis as typeof globalThis & {
       window?: Window & typeof globalThis;

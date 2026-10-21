@@ -25,6 +25,8 @@ export interface AssetDefinitionListResult {
 export interface AssetDefinitionRepositoryPort {
   saveDefinition(definition: AssetDefinition): Promise<AssetDefinition>;
   getDefinition(reference: AssetReference): Promise<AssetDefinition | undefined>;
+  /** Bounded ordered lookup; missing references retain their position. */
+  getDefinitions?(references: readonly AssetReference[]): Promise<readonly (AssetDefinition | undefined)[]>;
   listDefinitions(query?: AssetDefinitionListQuery): Promise<AssetDefinitionListResult>;
   deleteDefinition?(reference: AssetReference): Promise<void>;
 }

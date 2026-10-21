@@ -10,6 +10,48 @@ import { createWorkspaceId } from "../../../../contracts/workspace";
 import { createComfyUiImageGenerationRuntimeAdapter } from "../createComfyUiImageGenerationRuntimeAdapter";
 
 describe("createComfyUiImageGenerationRuntimeAdapter", () => {
+  it('uses one detached admission snapshot across runtime and reference preparation awaits',async()=>{
+    const payload={prompt:'Original',latentSource:{kind:'artifact',artifactId:'before.latent'},faceId:{enabled:true,references:[{artifactId:'before.one'},{artifactId:'before.two'}]}};
+    const prepared:string[]=[];
+    const adapter=createComfyUiImageGenerationRuntimeAdapter({
+      client:{submitPrompt:async()=>({prompt_id:'valid',number:1}),getQueue:async()=>({queue_running:[],queue_pending:[]}),getHistory:async()=>({})},
+      supervisor:{start:async()=>{payload.latentSource.artifactId='after.latent';}},
+      prepareLatentReferenceImage:async input=>{prepared.push(input.artifactId);return{imageName:'latent'};},
+      prepareFaceReferenceImage:async input=>{prepared.push(input.artifactId);payload.faceId.references[1].artifactId='after.two';return{imageName:'face'};},
+      mapperOptions:{defaultCheckpoint:'model'},
+    });
+    await adapter.startTask({taskType:TaskType.IMAGE_GENERATION,workspaceId:createWorkspaceId('workspace.test'),payload,requestId:'snapshot'});
+    expect(prepared).toEqual(['before.latent','before.one','before.two']);
+    await adapter.settleAfterRuntimeStop();
+  });
+  it('ignores caller additions to admitted reference collections while startup is pending',async()=>{
+    const payload={prompt:'Original',faceId:{enabled:true,references:[{artifactId:'before.one'}]}};
+    const prepared:string[]=[];
+    const adapter=createComfyUiImageGenerationRuntimeAdapter({
+      client:{submitPrompt:async()=>({prompt_id:'valid',number:1}),getQueue:async()=>({queue_running:[],queue_pending:[]}),getHistory:async()=>({})},
+      supervisor:{start:async()=>{payload.faceId.references.push(...new Array(5).fill({artifactId:'after.extra'}));}},
+      prepareFaceReferenceImage:async input=>{prepared.push(input.artifactId);return{imageName:'face'};},mapperOptions:{defaultCheckpoint:'model'},
+    });
+    try {
+      await adapter.startTask({taskType:TaskType.IMAGE_GENERATION,workspaceId:createWorkspaceId('workspace.test'),payload,requestId:'snapshot'});
+      expect(prepared).toEqual(['before.one']);
+    } finally {await adapter.settleAfterRuntimeStop();}
+  });
+  it('denies invalid direct payloads and effective defaults before startup, references or submission',async()=>{
+    let starts=0,references=0,submissions=0;
+    const client={submitPrompt:async()=>{submissions++;return{prompt_id:'valid',number:1};},getQueue:async()=>({queue_running:[],queue_pending:[]}),getHistory:async()=>({})};
+    const supervisor={start:async()=>{starts++;}};
+    const prepare=async()=>{references++;return{imageName:'prepared'};};
+    const adapter=createComfyUiImageGenerationRuntimeAdapter({client,supervisor,prepareLatentReferenceImage:prepare,prepareFaceReferenceImage:prepare,mapperOptions:{defaultCheckpoint:'model'}});
+    for(const payload of [{prompt:'Valid',width:4097},{prompt:'Valid',steps:201},{prompt:'Valid',numImages:1.5},{prompt:'Valid',cfg:NaN}])
+      await expect(adapter.startTask({taskType:TaskType.IMAGE_GENERATION,workspaceId:createWorkspaceId('workspace.test'),payload:{...payload,latentSource:{kind:'artifact',artifactId:'reference'}},requestId:'denied'})).rejects.toThrow();
+    const invalidDefault=createComfyUiImageGenerationRuntimeAdapter({client,supervisor,prepareLatentReferenceImage:prepare,mapperOptions:{defaultCheckpoint:'model',defaultWidth:4097}});
+    await expect(invalidDefault.startTask({taskType:TaskType.IMAGE_GENERATION,workspaceId:createWorkspaceId('workspace.test'),payload:{prompt:'Valid'}})).rejects.toThrow();
+    expect(starts).toBe(0);expect(references).toBe(0);expect(submissions).toBe(0);
+    const result=await adapter.startTask({taskType:TaskType.IMAGE_GENERATION,workspaceId:createWorkspaceId('workspace.test'),payload:{prompt:'Valid',width:64,height:64,steps:1},requestId:'denied'});
+    expect(result.status).toBe('queued');expect(starts).toBe(1);expect(submissions).toBe(1);
+    await adapter.settleAfterRuntimeStop();await invalidDefault.settleAfterRuntimeStop();
+  });
   const workspaceId = createWorkspaceId("workspace.test");
   const baseSupervisor = {
     start: testDouble.fn(async () => {}),
@@ -432,10 +474,12 @@ describe("createComfyUiImageGenerationRuntimeAdapter", () => {
         },
       }),
     ).rejects.toThrow("submit failed");
+    expect(failedCleanup).not.toHaveBeenCalled();
+    await failedAdapter.settleAfterRuntimeStop();
     expect(failedCleanup).toHaveBeenCalledOnce();
   });
 
-  it("returns a failed task record when ComfyUI crashes before status can be read", async () => {
+  it("retains task ownership on an unavailable read until the host confirms runtime stop", async () => {
     const adapter = createComfyUiImageGenerationRuntimeAdapter({
       supervisor: {
         ...baseSupervisor,
@@ -461,13 +505,12 @@ describe("createComfyUiImageGenerationRuntimeAdapter", () => {
       payload: { prompt: "cat" },
       requestId: "r1",
     });
+    await expect(adapter.getTaskStatus("r1")).rejects.toThrow("temporarily unavailable");
+    await adapter.settleAfterRuntimeStop();
     const record = await adapter.getTaskStatus("r1");
-
     expect(record.status).toBe("failed");
-    expect(record.error?.code).toBe("comfyui_runtime_crashed");
-    expect(record.error?.message).toContain(
-      "ComfyUI crashed while generating the image",
-    );
+    expect(record.error?.code).toBe("host_stopped");
+    expect(JSON.stringify(record)).not.toContain("0xc0000374");
   });
 
   it("rejects non-image runtime task types", async () => {

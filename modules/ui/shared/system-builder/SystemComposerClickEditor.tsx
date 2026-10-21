@@ -133,6 +133,7 @@ const COMPOSER_ASSET_BROWSE_CATEGORIES: readonly ComposerAssetBrowseCategory[] =
   ];
 
 export interface SystemComposerStructureEditorProps {
+  readonly browseScopeKey?: string;
   readonly draft: SystemComposerDraft;
   readonly rootInstanceRefs: readonly AssetReference[];
   readonly catalog: readonly SystemBuilderComposerAsset[];
@@ -174,6 +175,7 @@ export interface SystemComposerStructureEditorProps {
 }
 
 export function SystemComposerStructureEditor({
+  browseScopeKey,
   draft,
   rootInstanceRefs,
   catalog,
@@ -235,6 +237,8 @@ export function SystemComposerStructureEditor({
     new Map<SystemComposerSidebarTab, HTMLButtonElement>(),
   );
   const canvasRef = useRef<HTMLDivElement>(null);
+  const assetGeneration = useRef(0);
+  const assetCursors = useRef(new Set<string>());
   const loadLayoutsRef = useRef(loadLayouts);
   const loadCompatibleAssetsRef = useRef(loadCompatibleAssets);
   const sidebarChangeRef = useRef(onSidebarTabChange);
@@ -434,6 +438,8 @@ export function SystemComposerStructureEditor({
   }, [layoutOptions, layoutsExpanded, layoutsLoaded]);
 
   useEffect(() => {
+    const generation = ++assetGeneration.current;
+    assetCursors.current.clear();
     if (!activePickerTarget) {
       setAssetResults([]);
       setAssetNextCursor(undefined);
@@ -469,7 +475,7 @@ export function SystemComposerStructureEditor({
         : {}),
       limit: 48,
     }).then((result) => {
-      if (!active) return;
+      if (!active || generation !== assetGeneration.current) return;
       if (result.ok) {
         setAssetResults(result.value.items.filter(isSystemComposerVisualAsset));
         setAssetNextCursor(result.value.nextCursor);
@@ -484,6 +490,7 @@ export function SystemComposerStructureEditor({
       active = false;
     };
   }, [
+    browseScopeKey,
     activePickerTarget?.parentInstanceId,
     activePickerTarget?.slotId,
     compatibleAssets,
@@ -497,6 +504,10 @@ export function SystemComposerStructureEditor({
     if (!loader) return;
     setAssetLoading(true);
     setAssetError(undefined);
+    const generation = assetGeneration.current;
+    const requestedCursor = assetNextCursor;
+    if (assetCursors.current.has(requestedCursor)) { setAssetNextCursor(undefined); setAssetLoading(false); setAssetError("Unable to continue browsing assets. Search again."); return; }
+    assetCursors.current.add(requestedCursor);
     const result = await loader(activePickerTarget, {
       ...(deferredAssetSearch.trim()
         ? { searchText: deferredAssetSearch.trim() }
@@ -504,7 +515,9 @@ export function SystemComposerStructureEditor({
       cursor: assetNextCursor,
       limit: 48,
     });
+    if (generation !== assetGeneration.current) return;
     if (result.ok) {
+      if (result.value.nextCursor && assetCursors.current.has(result.value.nextCursor)) { setAssetNextCursor(undefined); setAssetLoading(false); setAssetError("Unable to continue browsing assets. Search again."); return; }
       const merged = new Map(
         assetResults.map((asset) => [
           `${asset.definitionId}@${asset.version}`,
@@ -519,6 +532,7 @@ export function SystemComposerStructureEditor({
       setAssetResults([...merged.values()]);
       setAssetNextCursor(result.value.nextCursor);
     } else {
+      assetCursors.current.delete(requestedCursor);
       setAssetError(result.error.message);
     }
     setAssetLoading(false);
@@ -546,6 +560,7 @@ export function SystemComposerStructureEditor({
   };
 
   const closeAssetPicker = () => {
+    assetGeneration.current++;
     setAssetPicker(undefined);
     setAssetSearch("");
     setAssetCategoryId("all");

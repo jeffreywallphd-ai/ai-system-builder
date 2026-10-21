@@ -64,11 +64,18 @@ describe("createComfyUiHttpClient", () => {
   });
 
   it("posts a scoped cancellation request", async () => {
-    const fetcher = testDouble.fn().mockResolvedValue({
+    let deleted = false;
+    const fetcher = testDouble.fn(async (url: string, init: RequestInit) => {
+      if (init.method === "POST") deleted = true;
+      return {
       ok: true,
       status: 200,
-      json: async () => ({}),
-    });
+      json: async () => {
+        if (init.method === "POST") { deleted = true; return {}; }
+        if (url.endsWith("/history")) return {};
+        return { queue_pending: deleted ? [] : [[0, "prompt-1"]], queue_running: [] };
+      },
+    }; });
     const client = createComfyUiHttpClient({
       baseUrl: "http://127.0.0.1:8188",
       fetchImplementation: fetcher as never,
@@ -78,7 +85,7 @@ describe("createComfyUiHttpClient", () => {
       cancelled: true,
     });
     expect(fetcher.mock.calls[0]?.[0]).toBe("http://127.0.0.1:8188/queue");
-    expect(fetcher.mock.calls[0]?.[1]).toMatchObject({
+    expect(fetcher.mock.calls[1]?.[1]).toMatchObject({
       method: "POST",
       body: JSON.stringify({ delete: ["prompt-1"] }),
     });

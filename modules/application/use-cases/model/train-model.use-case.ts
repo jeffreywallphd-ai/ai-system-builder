@@ -10,11 +10,12 @@ import {
   type ModelTrainingProgress,
 } from "../../../contracts/model";
 import { TaskType, type RuntimeTaskRecord } from "../../../contracts/runtime";
-import { createRetrieveArtifactRequest, type ArtifactStorageBinding } from "../../../contracts/storage";
+import { normalizeStorageArtifactKey, createRetrieveArtifactRequest, type ArtifactStorageBinding } from "../../../contracts/storage";
 import { isWorkspaceId } from "../../../contracts/workspace";
 import type { GeneratedModelStoragePort, ModelPublisherPort, ModelRegistryPort } from "../../ports/model";
 import type { RuntimeTaskRegistryPort } from "../../ports/runtime";
 import type { ArtifactObjectStoragePort, ArtifactStorageBindingPort } from "../../ports/storage";
+import type { OwnedTaskLease, OwnedTaskReconcilerService } from "../../services/runtime/owned-task-reconciler.service";
 import type { RuntimeCapabilityGuardService, TaskPowerLifecyclePort } from "../../services/runtime";
 
 function ensureBaseModelSelection(request: ModelTrainingRequest): void {
@@ -28,6 +29,7 @@ function ensureDatasetSelections(request: ModelTrainingRequest): void {
     throw new Error("Model training requires at least one dataset artifact.");
   }
 
+  if (request.datasets.length > 16) throw new Error("Training supports at most sixteen dataset artifacts.");
   request.datasets.forEach((dataset, index) => {
     if (!dataset.artifactId || dataset.artifactId.trim().length === 0) {
       throw new Error(`Model training dataset at index ${index} is missing artifactId.`);
@@ -108,7 +110,7 @@ function sanitizeRuntimeDatasetFileSegment(value: string): string {
     .replace(/[^a-zA-Z0-9._-]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "");
-  return normalized.length > 0 ? normalized : "dataset";
+  return normalized.length > 0 ? normalized.slice(0, 100) : "dataset";
 }
 
 function buildRuntimeDatasetPath(
@@ -119,7 +121,7 @@ function buildRuntimeDatasetPath(
 ): string {
   const sourceName = basename(artifactId);
   const stem = sanitizeRuntimeDatasetFileSegment(parse(sourceName).name || sourceName);
-  const extension = parse(sourceName).ext || extensionForMediaType(mediaType);
+  const extension = extensionForMediaType(mediaType);
   const prefix = `${String(datasetIndex + 1).padStart(4, "0")}-${stem}`;
   return join(runtimeDatasetDir, `${prefix}${extension}`);
 }
@@ -132,32 +134,21 @@ function buildRuntimeSourceArtifactPath(
 ): string {
   const sourceName = basename(artifactId);
   const stem = sanitizeRuntimeDatasetFileSegment(parse(sourceName).name || sourceName);
-  const extension = parse(sourceName).ext || extensionForMediaType(mediaType, ".bin");
+  const extension = extensionForMediaType(mediaType, ".bin");
   const prefix = `${String(sourceIndex + 1).padStart(4, "0")}-${stem}`;
   return join(runtimeDatasetDir, "sources", `${prefix}${extension}`);
 }
 
-function resolvePreferredObjectStorageBinding(
-  bindings: ArtifactStorageBinding[],
-): ArtifactStorageBinding | undefined {
-  return bindings.find((binding) =>
-    binding.backing.kind === "artifact-object"
-    && binding.backing.provider === "local"
-    && binding.role === "primary")
-    ?? bindings.find((binding) => binding.backing.kind === "artifact-object")
-    ?? bindings[0];
+const MAXIMUM_TRAINING_SOURCE_BYTES = 64 * 1024 * 1024;
+function resolveLocalStorageKeyForArtifact(artifactId: string, bindings: ArtifactStorageBinding[], workspaceId: string): string {
+  const eligible = bindings.filter((binding) => binding.workspaceId === workspaceId && binding.artifactId === artifactId && binding.backing.kind === "artifact-object" && ["local", "local-filesystem", "filesystem"].includes(binding.backing.provider));
+  const preferred = eligible.find((binding) => binding.role === "primary") ?? eligible[0];
+  if (!preferred) throw new Error("A workspace-owned local training artifact binding is required.");
+  return normalizeStorageArtifactKey(preferred.backing.locator);
 }
-
-function resolveLocalStorageKeyForArtifact(
-  artifactId: string,
-  bindings: ArtifactStorageBinding[],
-): string {
-  const preferredBinding = resolvePreferredObjectStorageBinding(bindings);
-  if (preferredBinding?.backing.kind === "artifact-object" && preferredBinding.backing.locator) {
-    return preferredBinding.backing.locator;
-  }
-
-  return artifactId;
+function trainingSourceBytes(content: unknown): Uint8Array {
+  if (!(content instanceof Uint8Array) || content.byteLength < 1 || content.byteLength > MAXIMUM_TRAINING_SOURCE_BYTES) throw new Error("Training artifact content is unavailable or exceeds its byte limit.");
+  return content;
 }
 
 function extractSourceArtifactIds(metadata: Record<string, unknown> | undefined): string[] {
@@ -170,6 +161,7 @@ function extractSourceArtifactIds(metadata: Record<string, unknown> | undefined)
 }
 
 export class TrainModelUseCase {
+  private readonly reads = new Map<string, Promise<ModelTrainingResult>>();
   private readonly registeredResultsByRequestId = new Map<string, ModelTrainingResult>();
   private readonly pendingResultsByRequestId = new Map<string, ModelTrainingResult>();
   private readonly approvedRequestIds = new Set<string>();
@@ -177,10 +169,21 @@ export class TrainModelUseCase {
   private readonly workspaceIdByRequestId = new Map<string, string>();
   private readonly requestContextByRequestId = new Map<string, { normalizedRequest: ModelTrainingRequest; baseModelRecordId?: string }>();
   private readonly runtimeDatasetDirsByRequestId = new Map<string, string>();
+  private readonly storedOutputs = new Map<string, Awaited<ReturnType<TrainModelUseCase["storeGeneratedModelLocally"]>>>();
+  private readonly publishedOutputs = new Map<string, Awaited<ReturnType<TrainModelUseCase["publishGeneratedModel"]>>>();
+  private readonly registrations = new Map<string, Awaited<ReturnType<ModelRegistryPort["registerGeneratedModel"]>>>();
+  private readonly pendingOutputCleanup = new Map<string, { runtimePath?: string; storedPath?: string }>();
+  private async cleanPendingOutput(requestId: string): Promise<void> {
+    const pending = this.pendingOutputCleanup.get(requestId);
+    if (!pending) return;
+    await this.cleanupRuntimeOutputDirectory(pending.runtimePath, pending.storedPath);
+    this.pendingOutputCleanup.delete(requestId);
+  }
 
   public constructor(
     private readonly dependencies: {
       runtimeTaskRegistry: RuntimeTaskRegistryPort;
+      taskReconciler?: OwnedTaskReconcilerService;
       modelRegistry: ModelRegistryPort;
       storageBindings: Pick<ArtifactStorageBindingPort, "readArtifactStorageBindings">;
       storage: Pick<ArtifactObjectStoragePort, "retrieveArtifact">;
@@ -192,6 +195,12 @@ export class TrainModelUseCase {
   ) {}
 
   public async execute(request: ModelTrainingRequest): Promise<ModelTrainingResult> {
+    return this.dependencies.taskReconciler ? this.dependencies.taskReconciler.withLease("python", (lease) => this.executeOwned(request, lease)) : this.executeOwned(request);
+  }
+
+  private async executeOwned(request: ModelTrainingRequest, lease?: OwnedTaskLease): Promise<ModelTrainingResult> {
+    if (this.workspaceIdByRequestId.size >= 1024) throw new Error("Training session task capacity is unavailable.");
+    this.dependencies.taskReconciler?.assertAccepting();
     const normalizedRequest = normalizeModelTrainingRequest(request);
     if (!isWorkspaceId(normalizedRequest.workspaceId)) {
       throw new Error("workspaceId must be provided for workspace-scoped model training.");
@@ -224,10 +233,12 @@ export class TrainModelUseCase {
     }
 
     let runtimeDatasetDir: string | undefined;
+    let stagedBytes = 0;
+    const accountBytes = (bytes: number) => { stagedBytes += bytes; if (stagedBytes > 256 * 1024 * 1024) throw new Error("Training inputs exceed the aggregate byte budget."); };
     try {
       const resolvedDatasets = [];
       for (const [datasetIndex, dataset] of normalizedRequest.datasets.entries()) {
-        const resolved = await this.resolveDatasetForRuntime(normalizedRequest, dataset, datasetIndex, () => runtimeDatasetDir, (value) => { runtimeDatasetDir = value; });
+        const resolved = await this.resolveDatasetForRuntime(normalizedRequest, dataset, datasetIndex, () => runtimeDatasetDir, (value) => { runtimeDatasetDir = value; }, accountBytes);
         resolvedDatasets.push(resolved);
       }
 
@@ -259,11 +270,20 @@ export class TrainModelUseCase {
         // Power blocker startup failures must not fail model training.
       }
 
+      lease?.start(async () => {
+        const result = await this.read(started.requestId, normalizedRequest.workspaceId!);
+        return result.status !== "queued" && result.status !== "running";
+      }, () => this.dependencies.runtimeTaskRegistry.cancelTask(started.requestId), async () => {
+        await this.completePowerLifecycle(started.requestId, "failed");
+        await this.cleanupRuntimeDatasetDir(started.requestId);
+        if (!this.pendingResultsByRequestId.has(started.requestId)) this.registeredResultsByRequestId.set(started.requestId, normalizeModelTrainingResult({ runId: started.requestId, status: "failed", error: { code: "host_stopped", message: "The host stopped before training completed." } }));
+      });
       return {
         runId: started.requestId,
         status: "queued",
       };
     } catch (error) {
+      lease?.release();
       if (runtimeDatasetDir) {
         await rm(runtimeDatasetDir, { recursive: true, force: true });
       }
@@ -278,28 +298,43 @@ export class TrainModelUseCase {
     ) {
       throw new Error("Model training run was not found in this workspace.");
     }
+    const existing = this.reads.get(requestId);
+    if (existing) return existing;
+    const operation = this.readOwned(requestId);
+    this.reads.set(requestId, operation);
+    try { return await operation; } finally { this.reads.delete(requestId); }
+  }
+
+  private async readOwned(requestId: string): Promise<ModelTrainingResult> {
     const cached = this.registeredResultsByRequestId.get(requestId);
     if (cached) {
+      await this.cleanupRuntimeDatasetDir(requestId);
+      await this.cleanPendingOutput(requestId);
       return cached;
     }
     const pending = this.pendingResultsByRequestId.get(requestId);
     if (pending) {
+      await this.cleanupRuntimeDatasetDir(requestId);
       return this.toPendingReviewResult(pending);
     }
 
     const statusRecord = await this.dependencies.runtimeTaskRegistry.getTaskStatus(requestId);
+    if (!("recordType" in statusRecord) && (statusRecord.requestId !== requestId || statusRecord.workspaceId !== this.workspaceIdByRequestId.get(requestId) || statusRecord.taskType !== TaskType.MODEL_TRAINING)) throw new Error("Model training status could not be verified.");
     if (statusRecord.status === "succeeded") {
       return this.resolveSucceededResult(statusRecord);
     }
 
-    if (statusRecord.status === "failed" || statusRecord.status === "cancelled" || statusRecord.status === "unknown") {
+    if (statusRecord.status === "unknown") return normalizeModelTrainingResult({ runId: requestId, status: "running", progress: { message: "Training status is temporarily unavailable." } });
+    if (statusRecord.status === "failed" || statusRecord.status === "cancelled") {
       await this.completePowerLifecycle(requestId, statusRecord.status);
       await this.cleanupRuntimeDatasetDir(requestId);
-      return normalizeModelTrainingResult({
+      const terminal = normalizeModelTrainingResult({
         runId: requestId,
-        status: statusRecord.status === "unknown" ? "failed" : statusRecord.status,
+        status: statusRecord.status,
         ...(statusRecord.error ? { error: statusRecord.error } : {}),
       });
+      this.registeredResultsByRequestId.set(requestId, terminal);
+      return terminal;
     }
 
     return normalizeModelTrainingResult({
@@ -349,6 +384,7 @@ export class TrainModelUseCase {
   }
 
   public async save(requestId: string, workspaceId: string): Promise<ModelTrainingResult> {
+    if (isWorkspaceId(workspaceId) && this.workspaceIdByRequestId.get(requestId) === workspaceId && this.registeredResultsByRequestId.has(requestId)) return this.read(requestId, workspaceId);
     const pending = this.requireOwnedPendingResult(requestId, workspaceId);
     if (this.reviewActionRequestIds.has(requestId)) {
       throw new Error("A model training review action is already in progress.");
@@ -397,12 +433,14 @@ export class TrainModelUseCase {
   }
 
   private async resolveSucceededResult(statusRecord: RuntimeTaskRecord): Promise<ModelTrainingResult> {
+    let trainingResult: ModelTrainingResult;
+    try {
     if (!statusRecord.data || typeof statusRecord.data !== "object") {
       throw new Error(`Model training runtime result missing for request '${statusRecord.requestId}'.`);
     }
 
     const runtimeTrainingResult = statusRecord.data as ModelTrainingResult;
-    const trainingResult = normalizeModelTrainingResult({
+    trainingResult = normalizeModelTrainingResult({
       ...runtimeTrainingResult,
       runId: statusRecord.requestId,
       generatedModelCandidate: runtimeTrainingResult.generatedModelCandidate
@@ -412,6 +450,13 @@ export class TrainModelUseCase {
           }
         : undefined,
     });
+    } catch {
+      await this.completePowerLifecycle(statusRecord.requestId, "failed");
+      await this.cleanupRuntimeDatasetDir(statusRecord.requestId);
+      const failed = normalizeModelTrainingResult({ runId: statusRecord.requestId, status: "failed", error: { code: "invalid_runtime_result", message: "Training output could not be verified." } });
+      this.registeredResultsByRequestId.set(statusRecord.requestId, failed);
+      return failed;
+    }
 
     if (trainingResult.status !== "succeeded" || !trainingResult.generatedModelCandidate) {
       await this.completePowerLifecycle(statusRecord.requestId, "unknown");
@@ -436,11 +481,12 @@ export class TrainModelUseCase {
     const registration = normalizedRequest.output.registration;
     const destination = normalizedRequest.output.destination;
     const stagedStorageResult = destination.local.enabled || destination.huggingFace?.enabled
-      ? await this.storeGeneratedModelLocally(normalizedRequest, trainingResult, generated)
+      ? this.storedOutputs.get(statusRecord.requestId) ?? await this.storeGeneratedModelLocally(normalizedRequest, trainingResult, generated)
       : undefined;
+    if (stagedStorageResult) this.storedOutputs.set(statusRecord.requestId, stagedStorageResult);
     const localStorageResult = destination.local.enabled ? stagedStorageResult : undefined;
     const publishedResult = destination.huggingFace?.enabled
-      ? await this.publishGeneratedModel(
+      ? this.publishedOutputs.get(statusRecord.requestId) ?? await this.publishGeneratedModel(
         normalizedRequest,
         statusRecord.requestId,
         {
@@ -449,6 +495,7 @@ export class TrainModelUseCase {
         },
       )
       : undefined;
+    if (publishedResult) this.publishedOutputs.set(statusRecord.requestId, publishedResult);
     const trainingValidation = generated.metadata && typeof generated.metadata["validation"] === "object"
       ? generated.metadata["validation"] as Record<string, unknown>
       : undefined;
@@ -461,7 +508,7 @@ export class TrainModelUseCase {
     const generatedMetadata = localStorageResult
       ? this.rewriteGeneratedMetadataPaths(generated.metadata, generated.localPath, localStorageResult.localPath)
       : (publishedResult ? this.removeGeneratedMetadataOutputPaths(generated.metadata) : generated.metadata);
-    const registered = await this.dependencies.modelRegistry.registerGeneratedModel({
+    const registered = this.registrations.get(statusRecord.requestId) ?? await this.dependencies.modelRegistry.registerGeneratedModel({
       ...(normalizedRequest.workspaceId ? { workspaceId: normalizedRequest.workspaceId } : {}),
       displayName: registration?.displayName ?? generated.displayName,
       provider: publishedResult ? "huggingface" : generated.provider,
@@ -496,6 +543,7 @@ export class TrainModelUseCase {
         validationReportPath,
     });
 
+    this.registrations.set(statusRecord.requestId, registered);
     const outputModel = publishedResult
       ? (await this.dependencies.modelRegistry.updateModelRecord({
           ...(normalizedRequest.workspaceId ? { workspaceId: normalizedRequest.workspaceId } : {}),
@@ -524,11 +572,12 @@ export class TrainModelUseCase {
       outputModel,
     };
     this.registeredResultsByRequestId.set(statusRecord.requestId, result);
+    this.pendingOutputCleanup.set(statusRecord.requestId, { runtimePath: generated.localPath, storedPath: localStorageResult?.localPath });
     this.pendingResultsByRequestId.delete(statusRecord.requestId);
     this.requestContextByRequestId.delete(statusRecord.requestId);
     await this.completePowerLifecycle(statusRecord.requestId, "succeeded");
     await this.cleanupRuntimeDatasetDir(statusRecord.requestId);
-    await this.cleanupRuntimeOutputDirectory(generated.localPath, localStorageResult?.localPath);
+    await this.cleanPendingOutput(statusRecord.requestId);
     return result;
   }
 
@@ -707,11 +756,8 @@ export class TrainModelUseCase {
     datasetIndex: number,
     getRuntimeDatasetDir: () => string | undefined,
     setRuntimeDatasetDir: (value: string) => void,
+    accountBytes: (bytes: number) => void,
   ): Promise<ModelTrainingRequest["datasets"][number]> {
-    if (dataset.path && dataset.path.trim().length > 0) {
-      return dataset;
-    }
-
     const bindingsResult = await this.dependencies.storageBindings.readArtifactStorageBindings({
       ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
       artifactId: dataset.artifactId,
@@ -720,21 +766,8 @@ export class TrainModelUseCase {
       throw new Error(`Failed to resolve storage binding for dataset artifact '${dataset.artifactId}': ${bindingsResult.error.message}`);
     }
 
-    const localFilesystemBinding = bindingsResult.value.bindings.find((binding) =>
-      binding.backing.provider === "local-filesystem"
-      && binding.backing.locator.trim().length > 0,
-    );
-    if (localFilesystemBinding) {
-      return { ...dataset, path: localFilesystemBinding.backing.locator };
-    }
-
-    const localObjectBinding = bindingsResult.value.bindings.find((binding) =>
-      binding.backing.kind === "artifact-object"
-      && binding.backing.provider === "local"
-      && binding.backing.locator.trim().length > 0,
-    );
-    const storageKey = localObjectBinding?.backing.locator ?? dataset.artifactId;
-    const retrieved = await this.dependencies.storage.retrieveArtifact(createRetrieveArtifactRequest(storageKey));
+    const storageKey = resolveLocalStorageKeyForArtifact(dataset.artifactId, bindingsResult.value.bindings, request.workspaceId!);
+    const retrieved = await this.dependencies.storage.retrieveArtifact(createRetrieveArtifactRequest(storageKey, { maximumBytes: MAXIMUM_TRAINING_SOURCE_BYTES }), { workspaceId: request.workspaceId });
     if (!retrieved.ok) {
       throw new Error(`Failed to retrieve local dataset artifact '${dataset.artifactId}' from artifact-object storage key '${storageKey}': ${retrieved.error.message}`);
     }
@@ -748,9 +781,10 @@ export class TrainModelUseCase {
       setRuntimeDatasetDir(runtimeDatasetDir);
     }
     const localPath = buildRuntimeDatasetPath(runtimeDatasetDir, dataset.artifactId, retrieved.value.descriptor.mediaType, datasetIndex);
-    await writeFile(localPath, Buffer.from(retrieved.value.content as Uint8Array));
+    const bytes = trainingSourceBytes(retrieved.value.content); accountBytes(bytes.byteLength);
+    await writeFile(localPath, bytes, { flag: "wx", mode: 0o600 });
     const stagedSourceArtifactPaths = isImageTrainingTask(request.trainingTask)
-      ? await this.stageSourceArtifactsForRuntime(request, datasetArtifactMetadata, runtimeDatasetDir)
+      ? await this.stageSourceArtifactsForRuntime(request, datasetArtifactMetadata, runtimeDatasetDir, accountBytes)
       : undefined;
     const datasetRuntimeMetadata = {
       ...dataset.metadata,
@@ -774,8 +808,10 @@ export class TrainModelUseCase {
     request: ModelTrainingRequest,
     datasetMetadata: Record<string, unknown> | undefined,
     runtimeDatasetDir: string,
+    accountBytes: (bytes: number) => void,
   ): Promise<Record<string, string>> {
     const sourceArtifactIds = extractSourceArtifactIds(datasetMetadata);
+    if (sourceArtifactIds.length > 128) throw new Error("Training source artifact count exceeds its limit.");
     if (sourceArtifactIds.length === 0) {
       return {};
     }
@@ -792,27 +828,19 @@ export class TrainModelUseCase {
         throw new Error(`Failed to resolve storage binding for source artifact '${artifactId}': ${bindingsResult.error.message}`);
       }
 
-      const localFilesystemBinding = bindingsResult.value.bindings.find((binding) =>
-        binding.backing.provider === "local-filesystem"
-        && binding.backing.locator.trim().length > 0,
-      );
-      if (localFilesystemBinding) {
-        stagedSourceArtifactPaths[artifactId] = localFilesystemBinding.backing.locator;
-        continue;
-      }
-
-      const storageKey = resolveLocalStorageKeyForArtifact(artifactId, bindingsResult.value.bindings);
+      const storageKey = resolveLocalStorageKeyForArtifact(artifactId, bindingsResult.value.bindings, request.workspaceId!);
       if (!storageKey.trim()) {
         throw new Error(`Storage locator missing for source artifact '${artifactId}'.`);
       }
 
-      const retrieved = await this.dependencies.storage.retrieveArtifact(createRetrieveArtifactRequest(storageKey));
+      const retrieved = await this.dependencies.storage.retrieveArtifact(createRetrieveArtifactRequest(storageKey, { maximumBytes: MAXIMUM_TRAINING_SOURCE_BYTES }), { workspaceId: request.workspaceId });
       if (!retrieved.ok) {
         throw new Error(`Failed to retrieve source artifact '${artifactId}' from artifact-object storage key '${storageKey}': ${retrieved.error.message}`);
       }
 
       const localPath = buildRuntimeSourceArtifactPath(runtimeDatasetDir, artifactId, retrieved.value.descriptor.mediaType, sourceIndex);
-      await writeFile(localPath, Buffer.from(retrieved.value.content as Uint8Array));
+      const bytes = trainingSourceBytes(retrieved.value.content); accountBytes(bytes.byteLength);
+      await writeFile(localPath, bytes, { flag: "wx", mode: 0o600 });
       stagedSourceArtifactPaths[artifactId] = localPath;
     }
 
@@ -833,8 +861,8 @@ export class TrainModelUseCase {
       return;
     }
 
-    this.runtimeDatasetDirsByRequestId.delete(requestId);
     await rm(runtimeDatasetDir, { recursive: true, force: true });
+    this.runtimeDatasetDirsByRequestId.delete(requestId);
   }
 
   private async cleanupRuntimeOutputDirectory(runtimeOutputDirectory: string | undefined, storedLocalDirectory: string | undefined): Promise<void> {

@@ -123,7 +123,11 @@ function constrainedJsonRecommendationCopy(
   return "Computer capacity has not been confirmed, so this option starts turned off.";
 }
 
-export function DatasetPreparationFeature({
+export function DatasetPreparationFeature(props: DatasetPreparationFeatureProps) {
+  return <WorkspaceDatasetPreparationFeature key={props.workspaceId ?? "none"} {...props} />;
+}
+
+function WorkspaceDatasetPreparationFeature({
   onPrepared,
   client,
   settingsClient,

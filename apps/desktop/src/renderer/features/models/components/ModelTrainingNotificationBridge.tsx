@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useTaskObservationManager } from "../../../../../../../modules/ui/shared/notifications/TaskObservationProvider";
+import { useEffect } from "react";
 
 import { useNotificationCenter } from "../../../../../../../modules/ui/shared";
 import type { DesktopModelTrainingResult } from "../../../lib/desktopApi";
@@ -24,86 +25,38 @@ export function ModelTrainingNotificationBridge({
   readonly workspaceId?: string;
 }) {
   const notifications = useNotificationCenter();
-  const activeRunIdsRef = useRef(new Set<string>());
-  const pollingRef = useRef(false);
-
+  const observer = useTaskObservationManager();
   useEffect(() => {
-    activeRunIdsRef.current.clear();
     if (!workspaceId) return;
-
     let disposed = false;
-    const upsert = (runId: string, result: DesktopModelTrainingResult) => {
-      const activity = toModelTrainingActivity(runId, workspaceId, result);
+    const subscriptions = new Map<string, () => void>();
+    const upsert = (id: string, value: DesktopModelTrainingResult) => {
+      if (disposed) return false;
+      const activity = toModelTrainingActivity(id, workspaceId, value);
       notifications.upsertActivity(activity);
-      if (activity.terminal) activeRunIdsRef.current.delete(runId);
-    };
-    const poll = async () => {
-      if (disposed || pollingRef.current) return;
-      pollingRef.current = true;
-      try {
-        for (const runId of [...activeRunIdsRef.current]) {
-          try {
-            upsert(runId, await client.readModelTrainingStatus({
-              runId,
-              workspaceId,
-            }));
-          } catch {
-            notifications.upsertActivity({
-              id: `model-training:${runId}`,
-              title: "Training model",
-              message:
-                "Progress is temporarily unavailable and will retry automatically.",
-              status: "running",
-              source: "Model Training",
-              workspaceId,
-            });
-          }
-        }
-      } finally {
-        pollingRef.current = false;
-      }
+      return activity.terminal;
     };
     const onStarted = (event: Event) => {
-      const detail = (event as CustomEvent<ModelTrainingStartedEventDetail>)
-        .detail;
-      if (
-        !detail
-        || detail.workspaceId !== workspaceId
-        || typeof detail.runId !== "string"
-        || !detail.runId.trim()
-      ) {
-        return;
-      }
-      activeRunIdsRef.current.add(detail.runId);
-      notifications.upsertActivity({
-        id: `model-training:${detail.runId}`,
-        title: "Training model",
-        message: "Starting model training.",
-        status: "queued",
-        source: "Model Training",
-        workspaceId,
-      });
+      const detail = (event as CustomEvent<ModelTrainingStartedEventDetail>).detail;
+      if (!detail || detail.workspaceId !== workspaceId || typeof detail.runId !== "string" || !detail.runId.trim() || detail.runId.length > 512) return;
+      const id = detail.runId; const scope = { workspaceId, family: "model-training", requestId: id };
+      if (subscriptions.has(id)) { observer.invalidate(scope); return; }
+      if (subscriptions.size >= 100) return;
+      notifications.upsertActivity({ id: `model-training:${workspaceId}:${id}`, title: "Training model", message: "Starting model training.", status: "queued", source: "Model Training", workspaceId });
       notifications.setPanelOpen(true);
-      void poll();
+      const stop = observer.subscribe(scope, async () => {
+        const value = await client.readModelTrainingStatus({ runId: id, workspaceId });
+        return { value, activity: value.status === "queued" || value.status === "running" ? "active" : "terminal" };
+      }, (result) => {
+        if (disposed) return;
+        if (!result) { notifications.upsertActivity({ id: `model-training:${workspaceId}:${id}`, title: "Training model", message: "Progress is temporarily unavailable and will retry automatically.", status: "running", source: "Model Training", workspaceId }); return; }
+        if (upsert(id, result.value)) queueMicrotask(() => { subscriptions.get(id)?.(); subscriptions.delete(id); });
+      });
+      subscriptions.set(id, stop);
     };
-
     window.addEventListener(MODEL_TRAINING_STARTED_EVENT, onStarted);
-    const timer = window.setInterval(
-      () => void poll(),
-      MODEL_TRAINING_NOTIFICATION_POLL_MS,
-    );
-    return () => {
-      disposed = true;
-      window.removeEventListener(MODEL_TRAINING_STARTED_EVENT, onStarted);
-      window.clearInterval(timer);
-    };
-  }, [
-    client,
-    notifications.setPanelOpen,
-    notifications.upsertActivity,
-    workspaceId,
-  ]);
-
+    return () => { disposed = true; window.removeEventListener(MODEL_TRAINING_STARTED_EVENT, onStarted); for (const stop of subscriptions.values()) stop(); subscriptions.clear(); };
+  }, [client, observer, notifications.publish, notifications.setPanelOpen, notifications.upsertActivity, workspaceId]);
   return null;
 }
 
@@ -113,7 +66,7 @@ function toModelTrainingActivity(
   result: DesktopModelTrainingResult,
 ) {
   const base = {
-    id: `model-training:${runId}`,
+    id: `model-training:${workspaceId}:${runId}`,
     title: "Training model",
     source: "Model Training",
     workspaceId,

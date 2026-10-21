@@ -30,19 +30,7 @@ export interface ArtifactPreviewSource {
   readonly artifactFamily?: string;
 }
 
-export function isArtifactBrowserVisible(
-  source: ArtifactPreviewSource,
-): boolean {
-  const mediaType = normalizeMediaType(source.mediaType);
-  const storageKey = source.storageKey.replace(/\\/g, "/").toLowerCase();
-  const originalName = source.originalName?.trim().toLowerCase() ?? "";
-  return !(
-    mediaType.endsWith("+json") ||
-    storageKey.endsWith("+json") ||
-    originalName.endsWith("+json") ||
-    storageKey.includes("/system-builds/")
-  );
-}
+export { isArtifactBrowserVisible } from "../../../contracts/artifact";
 
 export interface ArtifactPreviewDescriptor extends ArtifactPreviewSource {
   readonly kind: ArtifactPreviewKind;

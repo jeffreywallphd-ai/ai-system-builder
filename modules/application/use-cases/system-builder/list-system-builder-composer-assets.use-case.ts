@@ -76,85 +76,57 @@ export class ListSystemBuilderComposerAssetsUseCase {
           )
         : false;
 
-      const cards = await this.definitions.listDefinitionCards({
-        workspaceId: normalized.value.workspaceId,
-        ...(normalized.value.searchText
-          ? { searchText: normalized.value.searchText }
-          : {}),
-        ...(normalized.value.cursor ? { cursor: normalized.value.cursor } : {}),
-        limit: normalized.value.limit,
-      });
-      const details = await Promise.all(
-        cards.items.slice(0, normalized.value.limit).map(async (card) => ({
-          card,
-          detail: await this.definitions.readDefinitionDetail(
-            card.definitionRef,
-            {
-              workspaceId: normalized.value.workspaceId,
-              includePorts: true,
-            },
-          ),
-        })),
-      );
-      const items = details.flatMap(({ card, detail }) => {
-        if (!detail) return [];
-        if (
-          hasTrustedFoundation &&
-          card.builtIn &&
-          detail.definition.version !== CURRENT_COMPOSER_FOUNDATION_VERSION &&
-          CURRENT_COMPOSER_FOUNDATION_DEFINITION_IDS.has(
-            String(detail.definition.definitionId),
-          )
-        ) {
-          return [];
-        }
-        const compatibility = describeCompatibility(
-          slot,
-          detail.definition,
-          normalized.value.parentDefinitionRef,
-          parentDefinition,
-        );
-        if (
-          normalized.value.compatibleOnly &&
-          compatibility.status !== "compatible"
-        ) {
-          return [];
-        }
-        return [
-          toSystemBuilderComposerAsset(
-            detail.definition,
-            card.builtIn,
-            compatibility,
-          ),
-        ];
-      });
-      const currentFoundation = hasTrustedFoundation
-        ? this.readCompatibleCurrentFoundationDefinitions(
-            normalized.value,
-            slot,
-            normalized.value.parentDefinitionRef,
-            parentDefinition,
-          )
-        : [];
-      const mergedItems = new Map<string, SystemBuilderComposerAsset>();
-      // Exact current trusted Foundation definitions are the canonical
-      // Composer-only projection. Let them replace older/partial persisted
-      // cards so nested geometry and named slots cannot drift.
-      for (const item of [...items, ...currentFoundation]) {
-        mergedItems.set(`${item.definitionId}@${item.version}`, item);
+      const binding = JSON.stringify({ ...normalized.value, cursor: undefined });
+      const continuation = normalized.value.cursor ? JSON.parse(normalized.value.cursor) : { v: 1, b: binding, f: 0, r: null, d: false };
+      if (!continuation || continuation.v !== 1 || continuation.b !== binding || !Number.isSafeInteger(continuation.f) || continuation.f < 0 || typeof continuation.d !== "boolean" || (continuation.r !== null && (typeof continuation.r !== "string" || continuation.r.length > 8192))) {
+        return systemBuilderFailure("system-builder.composer-cursor-invalid", "The asset browse cursor is invalid.", "cursor");
       }
-      return systemBuilderSuccess({
-        items: [...mergedItems.values()].slice(0, normalized.value.limit),
-        ...(cards.nextCursor ? { nextCursor: cards.nextCursor } : {}),
-        ...(cards.diagnostics?.length
-          ? {
-              diagnostics: cards.diagnostics.map((diagnostic) => ({
-                severity: diagnostic.severity,
-                code: diagnostic.code,
-                message: diagnostic.message,
-              })),
-            }
-          : {}),
+      const foundation = hasTrustedFoundation
+        ? this.readCompatibleCurrentFoundationDefinitions(normalized.value, slot, normalized.value.parentDefinitionRef, parentDefinition)
+        : [];
+      if (continuation.f > foundation.length) return systemBuilderFailure("system-builder.composer-cursor-invalid", "The asset browse cursor is invalid.", "cursor");
+      const items = [...foundation.slice(continuation.f, continuation.f + normalized.value.limit)];
+      continuation.f += items.length;
+      const seenCursors = new Set<string>();
+      const seenItems = new Set(items.map(item => `${item.definitionId}@${item.version}`));
+      const diagnostics: {severity: "info" | "warning" | "error"; code: string; message: string}[] = [];
+      // Never fetch more raw candidates than remaining output capacity: there
+      // is then no compatible result to discard when the page fills.
+      for (let scan = 0; items.length < normalized.value.limit && !continuation.d && scan < 100; scan++) {
+        const cursorKey = continuation.r ?? "";
+        if (seenCursors.has(cursorKey)) throw new Error("Repeated source continuation.");
+        seenCursors.add(cursorKey);
+        const remaining = normalized.value.limit - items.length;
+        const cards = await this.definitions.listDefinitionCards({
+          workspaceId: normalized.value.workspaceId,
+          ...(normalized.value.searchText ? { searchText: normalized.value.searchText } : {}),
+          ...(continuation.r ? { cursor: continuation.r } : {}), limit: remaining,
+        });
+        if (cards.items.length > remaining) throw new Error("Unbounded candidate page.");
+        const refs = cards.items.map(card => card.definitionRef);
+        const options = { workspaceId: normalized.value.workspaceId, includePorts: true };
+        const details = this.definitions.readDefinitionDetails
+          ? await this.definitions.readDefinitionDetails(refs, options)
+          : await Promise.all(refs.map(ref => this.definitions.readDefinitionDetail(ref, options)));
+        for (let index = 0; index < cards.items.length; index++) {
+          const card = cards.items[index]!; const detail = details[index];
+          if (!detail) continue;
+          if (hasTrustedFoundation && CURRENT_COMPOSER_FOUNDATION_DEFINITION_IDS.has(String(detail.definition.definitionId)) &&
+              (card.builtIn || detail.definition.version === CURRENT_COMPOSER_FOUNDATION_VERSION)) continue;
+          const compatibility = describeCompatibility(slot, detail.definition, normalized.value.parentDefinitionRef, parentDefinition);
+          if (normalized.value.compatibleOnly && compatibility.status !== "compatible") continue;
+          const item = toSystemBuilderComposerAsset(detail.definition, card.builtIn, compatibility);
+          const key = `${item.definitionId}@${item.version}`;
+          if (!seenItems.has(key)) { seenItems.add(key); items.push(item); }
+        }
+        diagnostics.push(...(cards.diagnostics ?? []).map(({severity,code,message}) => ({severity,code,message})));
+        continuation.r = cards.nextCursor ?? null;
+        continuation.d = !cards.nextCursor;
+        if (!continuation.d && seenCursors.has(continuation.r)) throw new Error("Repeated source continuation.");
+      }
+      return systemBuilderSuccess({ items,
+        ...((continuation.f < foundation.length || !continuation.d) ? {nextCursor: JSON.stringify(continuation)} : {}),
+        ...(diagnostics.length ? {diagnostics} : {}),
       });
     } catch {
       return systemBuilderFailure(
@@ -215,7 +187,8 @@ function normalizeQuery(query: ListSystemBuilderComposerAssetsQuery):
       };
     }
   | SystemBuilderResult<never> {
-  const workspaceId = String(query.workspaceId).trim();
+  if (!query || typeof query !== "object" || typeof query.workspaceId !== "string") return systemBuilderFailure("system-builder.composer-workspace-required", "Select a workspace before browsing compatible assets.", "workspaceId");
+  const workspaceId = query.workspaceId.trim();
   const searchText = query.searchText?.trim();
   const cursor = query.cursor?.trim();
   const slotId = query.slotId ? String(query.slotId).trim() : undefined;
@@ -234,7 +207,7 @@ function normalizeQuery(query: ListSystemBuilderComposerAssetsQuery):
       "searchText",
     );
   }
-  if (cursor && cursor.length > 512) {
+  if (cursor && cursor.length > 16384) {
     return systemBuilderFailure(
       "system-builder.composer-cursor-invalid",
       "The asset browse cursor is invalid.",

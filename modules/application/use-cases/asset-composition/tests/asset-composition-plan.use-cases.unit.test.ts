@@ -23,7 +23,7 @@ const repo = (): AssetCompositionPlanRepositoryPort & { records: AssetCompositio
 describe("asset composition plan use cases", () => {
   it("creates draft plan with defaults/provenance", async () => {
     const r = repo();
-    const uc = new CreateAssetCompositionPlanUseCase({ repository: r, generatePlanId: () => "plan.generated", now: () => now });
+    const uc = new CreateAssetCompositionPlanUseCase({ workspaceAccess: {async authorize() {}}, repository: r, generatePlanId: () => "plan.generated", now: () => now });
     const out = await uc.execute({ targetWorkspaceId: ws, name: "Plan A" });
     assert.equal(out.status, "success");
     if (out.status === "success") {
@@ -35,7 +35,7 @@ describe("asset composition plan use cases", () => {
   });
   it("update respects safety and blocks valid/archive", async () => {
     const r = repo(); r.records.push(basePlan());
-    const uc = new UpdateAssetCompositionPlanUseCase({ repository: r, now: () => "2026-05-20T00:01:00.000Z" });
+    const uc = new UpdateAssetCompositionPlanUseCase({ workspaceAccess: {async authorize() {}}, repository: r, now: () => "2026-05-20T00:01:00.000Z" });
     const ok = await uc.execute({ targetWorkspaceId: ws, planId: "plan.alpha" as never, name: "Plan B" });
     assert.equal(ok.status, "success");
     const no = await uc.execute({ targetWorkspaceId: ws, planId: "plan.alpha" as never, status: "valid" });
@@ -43,19 +43,19 @@ describe("asset composition plan use cases", () => {
   });
   it("read/list are workspace scoped and not-found safe", async () => {
     const r = repo(); r.records.push(basePlan(), { ...basePlan(), planId: "plan.beta" as never, targetWorkspaceId: "workspace.beta" as never });
-    const read = new ReadAssetCompositionPlanUseCase({ repository: r });
+    const read = new ReadAssetCompositionPlanUseCase({ workspaceAccess: {async authorize() {}}, repository: r });
     const found = await read.execute({ targetWorkspaceId: ws, planId: "plan.alpha" as never });
     assert.equal(found.status, "success");
     const hidden = await read.execute({ targetWorkspaceId: ws, planId: "plan.beta" as never });
     assert.equal(hidden.status, "failure");
-    const list = new ListAssetCompositionPlansUseCase({ repository: r });
+    const list = new ListAssetCompositionPlansUseCase({ workspaceAccess: {async authorize() {}}, repository: r });
     const listed = await list.execute({ targetWorkspaceId: ws, limit: 500 });
     assert.equal(listed.status, "success");
     if (listed.status === "success") assert.equal(listed.value.records.length, 1);
   });
   it("archives idempotently", async () => {
     const r = repo(); r.records.push(basePlan());
-    const uc = new ArchiveAssetCompositionPlanUseCase({ repository: r, now: () => "2026-05-20T00:02:00.000Z" });
+    const uc = new ArchiveAssetCompositionPlanUseCase({ workspaceAccess: {async authorize() {}}, repository: r, now: () => "2026-05-20T00:02:00.000Z" });
     const out = await uc.execute({ targetWorkspaceId: ws, planId: "plan.alpha" as never });
     assert.equal(out.status, "success");
     if (out.status === "success") assert.equal(out.value.status, "archived");

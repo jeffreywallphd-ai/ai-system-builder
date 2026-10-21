@@ -5,8 +5,10 @@ import {
   testDouble,
 } from "../../../../testing/node-test";
 import { createWorkspaceId } from "../../../../contracts/workspace";
+import { RETRIEVE_ARTIFACT_MAXIMUM_BYTES } from '../../../../contracts/storage';
 import type { DatasetVersionRecord } from "../../../../contracts/dataset";
 import {
+  CountDatasetReviewTargetsUseCase,
   ListDatasetReviewTargetsUseCase,
   ReadDatasetReviewPageUseCase,
   EditDatasetReviewRowUseCase,
@@ -156,6 +158,17 @@ function dependencies() {
 }
 
 describe("dataset review use cases", () => {
+  it('propagates the existing retrieval cap and independently denies oversized source before runtime',async()=>{
+    const fixture=dependencies();
+    const read=new ReadDatasetReviewPageUseCase(fixture.value);
+    await read.execute({workspaceId,artifactKey:'source.parquet',page:0,pageSize:10},{workspaceId});
+    expect(fixture.value.artifacts.retrieveArtifact.mock.calls[0][0].maximumBytes).toBe(RETRIEVE_ARTIFACT_MAXIMUM_BYTES);
+    const oversized=new Uint8Array(RETRIEVE_ARTIFACT_MAXIMUM_BYTES+1);
+    fixture.value.artifacts.retrieveArtifact=testDouble.fn(async()=>({ok:true,value:{content:oversized}}));
+    fixture.value.parquet.readPage=testDouble.fn();
+    await expect(read.execute({workspaceId,artifactKey:'source.parquet',page:0,pageSize:10},{workspaceId})).rejects.toThrow(/byte limit/);
+    expect(fixture.value.parquet.readPage).not.toHaveBeenCalled();
+  });
   it("lists only locally readable Parquet records and labels the original 1.0", async () => {
     const fixture = dependencies();
     fixture.value.catalog.browseArtifactCatalogRecords = testDouble.fn(
@@ -356,4 +369,16 @@ describe("dataset review use cases", () => {
     ).rejects.toThrow("Localize or import it again");
     expect(fixture.value.parquet.readPage).not.toHaveBeenCalled();
   });
+});
+
+it("dataset summary counts locally available logical datasets without catalog or content reads", async () => {
+ const versions=[record("version.1"),{...record("version.2"),datasetId:"unavailable",artifacts:[{...record("version.2").artifacts[0],artifactKey:"missing.parquet"}]}] as any;
+ let probes=0;
+ const count=new CountDatasetReviewTargetsUseCase({repository:{listVersions:async()=>versions} as any,artifacts:{async hasArtifact(request){probes++;return {ok:true,value:{exists:request.key!=="missing.parquet" && request.artifactKey!=="missing.parquet"}} as any;}}});
+ expect(await count.execute({workspaceId})).toBe(1);expect(probes).toBe(2);
+});
+
+it("a failed dataset availability probe is unavailable rather than an available zero", async () => {
+ const counter=new CountDatasetReviewTargetsUseCase({repository:{listVersions:async()=>[record("version.1")]} as any,artifacts:{async hasArtifact(){return {ok:false,error:{code:"storage.unavailable",message:"private adapter failure"}} as any;}}});
+ await expect(counter.execute({workspaceId})).rejects.toThrow("Dataset availability is unavailable.");
 });

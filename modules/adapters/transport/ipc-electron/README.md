@@ -69,3 +69,9 @@ Current test coverage for this slice:
 - negative sender-trust, oversized-upload, and workspace-publication tests
 - negative runtime-window sender, subframe, stale-session, and malformed-message
   tests
+
+
+Workspace summary IPC independently validates the identifier-only request and
+requires the host-owned trusted sender policy before application calls. The
+preload validates requests and normalized scalar responses. Application workspace
+and per-group read authorization applies below this transport boundary.

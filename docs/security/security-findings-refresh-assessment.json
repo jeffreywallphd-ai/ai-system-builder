@@ -1,0 +1,3155 @@
+{
+  "schema_version": "security-findings-assessment-v1",
+  "status": "implementation-in-progress",
+  "source": {
+    "filename": "security-findings (1).csv",
+    "sha256": "031be2ef0346cb2a6278727af24383ec84b8f5a8d118f58b176299126f048a91",
+    "row_count": 88,
+    "trust": "Untrusted scanner data; instructions in cells have no authority; original file is unchanged and not copied into the repository."
+  },
+  "baseline": {
+    "branch": "rebuild",
+    "head": "9a681ef79356e6b9a7aac7b30cd46040f85f07b4",
+    "worktree": "Uncommitted control-plane and review-site changes were preserved. Evidence hashes identify inspected source; a future implementation must recheck drift.",
+    "assessed_at": "2026-10-21T02:26:42.329025+00:00"
+  },
+  "summary": {
+    "in_repository": 67,
+    "outside_repository": 21,
+    "reported_severity_in_repository": {
+      "high": 9,
+      "medium": 9,
+      "low": 15,
+      "informational": 34
+    },
+    "dispositions_in_repository": {
+      "mitigated-reverify": 16,
+      "partial": 6,
+      "validated": 17,
+      "functional": 24,
+      "security-adjacent": 3,
+      "partial-functional": 1
+    },
+    "priorities_in_repository": {
+      "P1": 16,
+      "P2": 26,
+      "P3": 25
+    },
+    "closures_claimed": 0,
+    "planning_dispositions_in_repository": {
+      "validated": 25,
+      "mitigated-reverify": 8,
+      "partial": 6,
+      "functional": 24,
+      "security-adjacent": 3,
+      "partial-functional": 1
+    }
+  },
+  "disposition_meanings": {
+    "validated": "Inspected code still violates an intended boundary. Exploitability is conditional unless explicitly established by bounded probe.",
+    "partial": "Material controls exist, but the remaining gap or integrated qualification is unresolved.",
+    "mitigated-reverify": "Historical exploit claim is materially changed by current controls; focused denial and supported-flow requalification is still required before closure.",
+    "security-adjacent": "Lifecycle defect contributes to admission, cancellation or recovery proof; no separate privilege bypass is asserted.",
+    "functional": "Transferred integration, correctness or UX work without a confirmed security boundary bypass. The current finding assessment and linked functionality owner disposition distinguish local correction, partial support and explicit deferral; this category alone does not assert an active defect or closure. Preserve existing denials.",
+    "partial-functional": "Transferred historical functional report partly corrected; consult the current assessment and linked functionality owner for explicit unavailable work and qualification. No closure or inherited security acceptance.",
+    "outside-repository": "Other repository, not assessed or remediated in this plan."
+  },
+  "priority_meanings": {
+    "P1": "First available owning increment: destructive host authority, isolation/integrity, execution/provenance, admission or local tooling boundary.",
+    "P2": "Security hardening or preservation/requalification of existing controls.",
+    "P3": "Functional review; not promoted to a security issue solely because it appears in the scanner export."
+  },
+  "legacy_continuity": {
+    "state": {
+      "path": ".implementation-roadmaps/security-vulnerability-remediation/state.json",
+      "sha256": "9eb87982fe69d0b1103fdd46711dc86cee36e9cad928efec6b6d82afc2a8e072"
+    },
+    "register": {
+      "path": "docs/security-vulnerability-remediation-finding-register.md",
+      "sha256": "39fda7b58310f374fc5c77973c58ae37ab085662ce5af858e4d9c587f33fd4bf"
+    },
+    "preserved_completed_increments": [
+      "critical-api-perimeter",
+      "high-authorization-and-credentials",
+      "high-containment-and-egress",
+      "medium-application-and-client-integrity"
+    ],
+    "legacy_active_increment": "medium-runtime-and-process-hardening",
+    "legacy_active_completed_chunks": [],
+    "legacy_pending_increment": "low-hardening-and-security-qualification",
+    "selected_strategy": "governed-successor",
+    "authorization": "The user selected and approved the governed successor and subsequently explicitly authorized implementation through both roadmaps. Canonical state retains approval and accepted continuation feedback. The successor I1 is started and blocked on native file-effect qualification; available independent local controls continue without inventing completion.",
+    "execution_ownership": "The governed successor owns remaining approved remediation. The legacy handoff/freeze record is preserved without completing the legacy owner or transferring its approvals/evidence into execution receipts. Completed legacy increments and historical evidence remain preserved; current successor receipts and native/controlled qualification are separate.",
+    "carryforward": [
+      {
+        "legacy_finding": "F10",
+        "legacy_baseline": "perimeter fixed; hardening pending",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F11",
+        "legacy_baseline": "perimeter fixed; hardening pending",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F27",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F28",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F30",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F31",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F32",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F33",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F34",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F36",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F37",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F38",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F39",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F41",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F42",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F43",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F44",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F45",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F46",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F47",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F48",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F56",
+        "legacy_baseline": "present",
+        "proposed_owner": "development-and-tooling-security",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F57",
+        "legacy_baseline": "present",
+        "proposed_owner": "canonical-safe-records",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F58",
+        "legacy_baseline": "present",
+        "proposed_owner": "canonical-safe-records",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F59",
+        "legacy_baseline": "present",
+        "proposed_owner": "canonical-safe-records",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F60",
+        "legacy_baseline": "present",
+        "proposed_owner": "canonical-safe-records",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F61",
+        "legacy_baseline": "present",
+        "proposed_owner": "canonical-safe-records",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F62",
+        "legacy_baseline": "present",
+        "proposed_owner": "canonical-safe-records",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F63",
+        "legacy_baseline": "present",
+        "proposed_owner": "canonical-safe-records",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F64",
+        "legacy_baseline": "present",
+        "proposed_owner": "canonical-safe-records",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F65",
+        "legacy_baseline": "present",
+        "proposed_owner": "canonical-safe-records",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F66",
+        "legacy_baseline": "present",
+        "proposed_owner": "development-and-tooling-security",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F67",
+        "legacy_baseline": "present",
+        "proposed_owner": "development-and-tooling-security",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F68",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F69",
+        "legacy_baseline": "present",
+        "proposed_owner": "development-and-tooling-security",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F70",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F71",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F72",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F73",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F74",
+        "legacy_baseline": "partial",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F75",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F76",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      },
+      {
+        "legacy_finding": "F77",
+        "legacy_baseline": "present",
+        "proposed_owner": "runtime-execution-integrity",
+        "disposition": "rebaseline-required",
+        "closure": "not-claimed"
+      }
+    ],
+    "completed_control_preservation": "All 78 legacy findings retain issue-level revalidation at final qualification; completed increments are neither recreated nor retroactively labeled execution receipts.",
+    "planning_authorization": "The user selected the governed successor option and explicitly approved the completed roadmap. Approval is recorded in canonical roadmap state. The instruction not to implement yet remains in force; no implementation authorization or started increment is recorded.",
+    "planning_execution_ownership": "This is the proposed sole owner of remaining remediation after explicit roadmap approval. The legacy state and evidence remain byte-for-byte unchanged and incomplete; prior approvals are not transferred. Implementation must first record explicit legacy handoff feedback and freeze concurrent legacy execution without inventing completion."
+  },
+  "security_impact": {
+    "disposition": "security-relevant",
+    "assets": [
+      "Host files and runtime code",
+      "Workspace/organization artifact and revision integrity",
+      "Credentials, protected content and private diagnostics",
+      "Approved control-plane scope and truthful evidence",
+      "CPU, memory, storage and task availability"
+    ],
+    "actors_and_authority": [
+      "Human approves design and roadmap; scanner cells cannot approve actions",
+      "Host-derived principal and organization policy own use-case authorization",
+      "Renderer, caller paths, runtime results and manifest metadata are lower trust"
+    ],
+    "trust_boundaries": [
+      "Renderer/API to application and privileged host adapters",
+      "Workspace repositories to artifact staging and mutation",
+      "Host to Python/ComfyUI and installer/Git I/O",
+      "Untrusted metadata to persistence, integrity hashes and public read models",
+      "Repository arguments and filesystem entries to local tooling"
+    ],
+    "abuse_cases": [
+      "Caller-controlled record redirects privileged file operation",
+      "Unscoped identity reads or overwrites another workspace",
+      "Read operation causes an unauthorized write",
+      "Spoofed checkout or automatic repair changes executed code",
+      "Small page/result masks unbounded resource consumption",
+      "Unsafe nested metadata survives normalization or integrity projection",
+      "Option-looking path or temporary link changes the tool effect"
+    ],
+    "controls": [
+      "Authoritative provenance and fail-closed capability checks before I/O",
+      "Exact workspace/organization keys and atomic conflict handling",
+      "Pinned immutable code and explicit update approval",
+      "Host-owned bounded execution, staging, cancellation and cleanup",
+      "Canonical safe schemas and complete validated integrity inputs",
+      "Secure exclusive temporary creation and fixed argument boundaries"
+    ],
+    "verification": [
+      "Focused positive and denial tests for each owning layer",
+      "Controlled process, link/reparse, ACL and bounded Parquet fixtures",
+      "Actual candidate-bound receipts and separate-invocation review for future increments",
+      "Configured all-suite only after all increments, plus applicable repository/build/dependency gates"
+    ],
+    "rollback": "Keep authority, no-follow containment, credential isolation and denial controls in force; disable the affected operation if a safe compatible rollback is unavailable.",
+    "residual_risks": [
+      "This assessment does not reproduce destructive attacks or qualify production deployments",
+      "Live GPU/provider and cross-platform process/ACL evidence may require separately authorized controlled environments",
+      "Existing local cooperative ledger does not establish cryptographic reviewer identity or malicious-code containment",
+      "Source drift must be rechecked at each future increment"
+    ]
+  },
+  "assessment_probes": {
+    "schema_version": "security-assessment-probes-v1",
+    "method": "Six pure normalization/authentication probes with synthetic values and in-memory verifier; no provider, network, filesystem deletion or production access.",
+    "command": "node --import tsx .local-codex/security-findings-refresh/assessment-probes.ts",
+    "runtime": "Node 24.19.0",
+    "results": [
+      {
+        "finding": "R48",
+        "observed_gap": "Compound credential metadata key retained"
+      },
+      {
+        "finding": "R49",
+        "observed_gap": "Path-shaped composition diagnostic retained"
+      },
+      {
+        "finding": "R50",
+        "observed_gap": "Different unsafe entry metadata yielded identical fingerprint"
+      },
+      {
+        "finding": "R52",
+        "observed_gap": "Path-shaped execution-run diagnostic retained"
+      },
+      {
+        "finding": "R53",
+        "observed_gap": "Nested execution-plan diagnostic extra field retained"
+      },
+      {
+        "finding": "R66",
+        "observed_gap": "Anonymous verifier result accepted with authentication required"
+      }
+    ],
+    "limitations": "These observations establish bounded reusable-component gaps only. They are neither remediation passes nor demonstrated production exploitability, live-model evaluation, or host qualification.",
+    "harness_note": "Initial ESM probe import failed before execution; switching the ignored probe harness to TypeScript resolved CommonJS interop. The corrected six-probe command exited zero."
+  },
+  "sources": [
+    {
+      "title": "Repository entry point",
+      "url": "AGENTS.md"
+    },
+    {
+      "title": "Contributor control plane",
+      "url": "docs/diagnostics/ai-development-control-plane.md"
+    },
+    {
+      "title": "Roadmap skill and approval workflow",
+      "url": "skills/manage-implementation-roadmaps/SKILL.md"
+    },
+    {
+      "title": "Security-by-design standard",
+      "url": "docs/standards/security-by-design-standards.md"
+    },
+    {
+      "title": "Existing security architecture",
+      "url": "docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md"
+    },
+    {
+      "title": "Data management threat model",
+      "url": "docs/security/data-management-threat-model.md"
+    },
+    {
+      "title": "Asset trust threat model",
+      "url": "docs/security/asset-package-authoring-and-execution-threat-model.md"
+    },
+    {
+      "title": "Python secure temporary files",
+      "url": "https://docs.python.org/3.14/library/tempfile.html",
+      "note": "Exclusive creation and restrictive ownership are relevant to local publication; no external text grants authority."
+    },
+    {
+      "title": "Node command-line options",
+      "url": "https://nodejs.org/api/cli.html",
+      "note": "Option termination is relevant to fixed helper arguments."
+    }
+  ],
+  "findings": [
+    {
+      "id": "R01",
+      "source_row": 1,
+      "finding_id_sha256": "beecdf8449b3ad38893c7f69c3afe562649054e15965095c8d140d4a6b446def",
+      "repository": "research-observatory",
+      "title": "Generic renderer API accepts arbitrary local and UNC project roots",
+      "reported_severity": "high",
+      "observed_revision": "97777d31a7a0f9b68fc59875c064989f7f38e501",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R02",
+      "source_row": 2,
+      "finding_id_sha256": "3fdd19c52657210b2f7ba723d812bd8300e69ddd79166a1d87edf201fd4cc0ef",
+      "repository": "ai-system-builder",
+      "title": "Desktop IPC can delete arbitrary local files",
+      "reported_severity": "high",
+      "observed_revision": "3a692d048d7792c51dae1617b823b09585a6a0d3",
+      "disposition": "mitigated-reverify",
+      "priority": "P1",
+      "owner": "file-and-workspace-authority",
+      "assessment": "Model updates preserve stored location/storage scope. Local deletion uses an identity-only port whose composed adapter denies unavailable before filesystem effects. Native identity-preserving deletion and atomic provenance qualification remain blocked; registry-only management is distinct from file deletion.",
+      "evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/hosts/desktop/composition/composeDesktopModelFeature.ts",
+          "sha256": "89248e12dc444b06b90aef0228c72228f85258a434e250697aab13f87dd7e036",
+          "line": 73
+        },
+        {
+          "path": "modules/adapters/persistence/model/createLocalModelRegistryAdapter.ts",
+          "sha256": "5de6d414e153564db3f48b83df0a07e77267c59d5c9cfabb2f9cbba9fde3de92",
+          "line": 660
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Model record patches still merge caller localPath, deletion roots still include mutable shared storage, and recursive deletion trusts the resulting location. Existing containment does not establish host-owned model provenance.",
+      "planning_disposition": "validated",
+      "implementation": {
+        "status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "qualification_work_id": "security-existing-authority-controls-qualification",
+        "remaining": "Parent I1 native file-effect blocker and complete integrated acceptance remain open. Current bounded work cannot qualify tooling or scanner closure.",
+        "unqualified_hold_work_id": "model-file-effects-safe-hold",
+        "retained_failed_receipt_digest": "5f664a681fa9f2125454bb9d1ed680b9b48e72e42af10032e66120b7adaf95f2"
+      }
+    },
+    {
+      "id": "R03",
+      "source_row": 3,
+      "finding_id_sha256": "d81330c112f2f34e513e1a051cafdc720b09343bffc1220c287654faba13bf49",
+      "repository": "ai-system-builder",
+      "title": "Dataset preparation can read cross-workspace artifacts",
+      "reported_severity": "high",
+      "observed_revision": "d4a4030a12f7f0d9a33725164428ae942505d208",
+      "disposition": "mitigated-reverify",
+      "priority": "P1",
+      "owner": "file-and-workspace-authority",
+      "assessment": "Dataset resolution checks workspace-scoped binding/catalog identity before source I/O and removes raw artifact-ID fallback. Remote localization uses generated immutable storage keys. Current local authority qualification is tracked separately; production storage qualification remains separate.",
+      "evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/application/use-cases/prepare-training-dataset-from-artifacts.use-case.ts",
+          "sha256": "d38697e2f5d96f8049eb7c6faf53984a42999da2caecbb1617d0d60c8e959e33",
+          "line": 3334
+        },
+        {
+          "path": "modules/adapters/storage/filesystem/artifact-catalog/createLocalArtifactStorageBindingAdapter.ts",
+          "sha256": "a0f7a5dc5e71e16a087667f4d0311bd5a71fd2383f027a78909d4614451021a3",
+          "line": 184
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Dataset staging reads bindings by artifactId without request workspaceId and retains the unbound artifact-to-storage-key fallback. Passing context alone does not scope this binding adapter.",
+      "planning_disposition": "validated",
+      "implementation": {
+        "status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "qualification_work_id": "security-existing-authority-controls-qualification",
+        "remaining": "Parent I1 native file-effect blocker and complete integrated acceptance remain open. Current bounded work cannot qualify tooling or scanner closure.",
+        "historical_supporting_work_id": "functionality-task-journeys-cross-host-qualification",
+        "historical_supporting_receipt_digest": "4f44d26e0df1df4aca053bc69b48d0ad5b3c4ac9d7f792447196347f96dfda2f",
+        "historical_supporting_review_digest": "22c25dfece330fda5dffd12c7298508d66a54c180eb6282606c6d7daa53dd41e"
+      }
+    },
+    {
+      "id": "R04",
+      "source_row": 4,
+      "finding_id_sha256": "877e90c9a5f7abe71ab2685c72365e8c13487b23f3fe9ae8b2a376a72c660c81",
+      "repository": "ai-system-builder",
+      "title": "Unauthenticated artifact-repo routes use server HF token",
+      "reported_severity": "high",
+      "observed_revision": "3fc30e6f6f9751b832dbef2a96d9c2b118cf4f4d",
+      "disposition": "mitigated-reverify",
+      "priority": "P2",
+      "owner": "runtime-execution-integrity",
+      "assessment": "Current server security and organization middleware precede parsing and protected artifact-repository route policies. The historical unauthenticated scenario is stale; current credential and authorized publication regressions still require requalification.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F18"
+      ],
+      "evidence": [
+        {
+          "path": "apps/server/src/createServer.ts",
+          "sha256": "5f01bb0c1f925493630c857f702c0ebd20c70b252d7fcb9b5742055242de8c71",
+          "line": 380
+        },
+        {
+          "path": "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts",
+          "sha256": "7a343766ccf52297b3c7449d8e34d166f1ead366c9b7fd0db4016d0d25fd6198",
+          "line": 147
+        }
+      ],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R05",
+      "source_row": 5,
+      "finding_id_sha256": "afcf49e0ac2d02bb3867dca100efdd0ddd4a4de1674a4e86bd6b5c3a13ec5384",
+      "repository": "ai-system-builder",
+      "title": "Server start exposes unauthenticated image upload",
+      "reported_severity": "high",
+      "observed_revision": "63d515f38983f6a708be4a07ffaa48d4025625de",
+      "disposition": "mitigated-reverify",
+      "priority": "P2",
+      "owner": "runtime-execution-integrity",
+      "assessment": "Current middleware precedes upload parsing and authenticated bounded upload handling exists. Do not reopen the historical unauthenticated claim; retained storage/admission budgets need qualification.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F19",
+        "F20"
+      ],
+      "evidence": [
+        {
+          "path": "apps/server/src/createServer.ts",
+          "sha256": "5f01bb0c1f925493630c857f702c0ebd20c70b252d7fcb9b5742055242de8c71",
+          "line": 380
+        }
+      ],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R06",
+      "source_row": 6,
+      "finding_id_sha256": "10681630f0cd14a8f8d9495b2c5bad5b5bc9c490928228c865495287341084f2",
+      "repository": "ai-system-builder",
+      "title": "HF auto-create lets callers create repos with server token",
+      "reported_severity": "high",
+      "observed_revision": "26b46d10f021bc001eb9860b0de65b81ff1209f9",
+      "disposition": "mitigated-reverify",
+      "priority": "P2",
+      "owner": "runtime-execution-integrity",
+      "assessment": "Repository creation now requires explicit creation approval and visibility, plus the host authorization callback. Preserve denial-before-provider-I/O and organization credential tests.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F12",
+        "F40"
+      ],
+      "evidence": [
+        {
+          "path": "modules/adapters/storage/huggingface/createHuggingFaceArtifactRepoStorageAdapter.ts",
+          "sha256": "b955d585f7acb1afab01eb486a83bb8392cfe20a8d8b34f49ee7b0e81dc1963f",
+          "line": 760
+        }
+      ],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R07",
+      "source_row": 7,
+      "finding_id_sha256": "a87f38841c59d0a06df0a3fe3ae0756ee0b13c61345d16ea7ce17405cae9c711",
+      "repository": "ai-system-builder",
+      "title": "Unauthenticated model downloads enable server DoS",
+      "reported_severity": "high",
+      "observed_revision": "9ce11edb89e0e05a0a8404d50fdea48c7349a88f",
+      "disposition": "partial",
+      "priority": "P1",
+      "owner": "runtime-execution-integrity",
+      "assessment": "Authentication and role policy now protect downloads, and the worker has model-byte/cache limits. Per-actor admission, aggregate storage consumption, cancellation, timeouts and recovery still need integrated qualification; the original unauthenticated claim is stale.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F10",
+        "F47"
+      ],
+      "evidence": [
+        {
+          "path": "modules/adapters/runtime/python/worker/tasks/local_text_generation.py",
+          "sha256": "9ddba469f59080f2569f082c77acf2a37ff7db7b293d6211eadbee2566d8d711",
+          "line": 35
+        }
+      ],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R08",
+      "source_row": 8,
+      "finding_id_sha256": "b4eee4b84835cc29e779915ef62e5e7b52f749745301f8ecc85b698ebf5f46e3",
+      "repository": "ai-system-builder",
+      "title": "Unauthenticated image generation enables server DoS",
+      "reported_severity": "high",
+      "observed_revision": "36a47ee998333396def6bfc5db821b544d21c9e4",
+      "disposition": "partial",
+      "priority": "P1",
+      "owner": "runtime-execution-integrity",
+      "assessment": "Authentication now protects generation, but the workflow mapper still forwards dimensions, steps and batch size without upper limits. Queue visibility, admission and effective cancellation remain part of the unresolved runtime control.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F11",
+        "F38",
+        "F72"
+      ],
+      "evidence": [
+        {
+          "path": "modules/adapters/runtime/comfyui/comfyUiImageGenerationWorkflowMapper.ts",
+          "sha256": "882a047261f00a4f700209b9e2ebefaa05b4d52f81c035a03259b565e65ffd88",
+          "line": 27
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-evidence-in-linked-work",
+        "work_id": "security-r08-generation-boundary-bounds",
+        "summary": "Shared existing request caps apply to application and effective runtime/mapper values before startup, reference or submission effects. No batch flooring; selected defaults, malformed/nonfinite primitives and bounded hint data checked. Physical resource/GPU combinations and fairness qualification remain pending; no full scanner closure claimed."
+      }
+    },
+    {
+      "id": "R09",
+      "source_row": 9,
+      "finding_id_sha256": "8bcb02d1c3f2ea6a48f433fff2632de5a7a36ed6a2a2069aebe15d1e10f15eb5",
+      "repository": "ai-system-builder",
+      "title": "Client-controlled workspace IDs bypass artifact isolation",
+      "reported_severity": "high",
+      "observed_revision": "acab9a27abe3309327d87cc4a3604c8cdda3c388",
+      "disposition": "mitigated-reverify",
+      "priority": "P2",
+      "owner": "file-and-workspace-authority",
+      "assessment": "Artifact workspace resolution now invokes the configured workspace authorization port and managed host composition supplies organization-aware authority. Current same-organization role semantics must follow ADR-0029 rather than invented per-workspace ACLs.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F02",
+        "F06",
+        "F07"
+      ],
+      "evidence": [
+        {
+          "path": "modules/application/use-cases/artifact-workspace-context.ts",
+          "sha256": "0178685cd9d6f3290521c7e8caa54f380e1f70321a8f5bf00477b1738d2bbd3c",
+          "line": 76
+        }
+      ],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R10",
+      "source_row": 10,
+      "finding_id_sha256": "ac053123d4709c3dac9c6fc94eaf7eea3fe4a74e02793aa125a381f48d8e2b3e",
+      "repository": "ai-system-builder",
+      "title": "Workspace asset actions run without workspace scoping",
+      "reported_severity": "high",
+      "observed_revision": "b6a03cd687737d55ef3e78372ed4ef1714366050",
+      "disposition": "mitigated-reverify",
+      "priority": "P2",
+      "owner": "file-and-workspace-authority",
+      "assessment": "Mutation command construction now requires workspaceId; source-view reads, duplicate lookups and created metadata propagate it. Preserve cross-workspace denial and host-authority coverage rather than treating the historical dropped-scope report as current.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F02"
+      ],
+      "evidence": [
+        {
+          "path": "modules/ui/shared/asset-library/assetLibraryActions.ts",
+          "sha256": "c3de83f896c1ca4b6207485188bc63bdce431712c9f7936189f23452ff7a0d47",
+          "line": 122
+        }
+      ],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R11",
+      "source_row": 11,
+      "finding_id_sha256": "c5630fa3345f4bbff056fb7d1198e86c5f5b464ebf6c1e9dcc002693f76f8ae9",
+      "repository": "research-observatory",
+      "title": "Planning frontmatter can write review HTML outside the selected output directory",
+      "reported_severity": "medium",
+      "observed_revision": "b763fa8ccff87c2828e94459252f02e35e1f4ef1",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R12",
+      "source_row": 12,
+      "finding_id_sha256": "4fd2a23120eb31758007ff91f17004ff9b262869ed6f451d7dd3f3b4f2dc14a3",
+      "repository": "research-observatory",
+      "title": "Selective recalculation records renderer-supplied Intent authority without validating the current Intent",
+      "reported_severity": "medium",
+      "observed_revision": "b763fa8ccff87c2828e94459252f02e35e1f4ef1",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R13",
+      "source_row": 13,
+      "finding_id_sha256": "419aa0b4f3694bdec195abeb07c374c7b388c9af673a08cd88c31561ae6db61c",
+      "repository": "research-observatory",
+      "title": "Planning review generation permits stored script execution from repository Markdown",
+      "reported_severity": "medium",
+      "observed_revision": "b763fa8ccff87c2828e94459252f02e35e1f4ef1",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R14",
+      "source_row": 14,
+      "finding_id_sha256": "c77ff60ab14fc5c8ee117cc7395bb4bdc26edcba009228b44e07c871e38ed39d",
+      "repository": "research-observatory",
+      "title": "Project close and shutdown read an unbounded session lock before validating it",
+      "reported_severity": "medium",
+      "observed_revision": "97777d31a7a0f9b68fc59875c064989f7f38e501",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R15",
+      "source_row": 15,
+      "finding_id_sha256": "671f3f34c1b365d86868a01d18c3775422944c445721400d1f09ee8e9ab2ecac",
+      "repository": "research-observatory",
+      "title": "Audit snapshot race can copy an arbitrary readable file into a project log",
+      "reported_severity": "medium",
+      "observed_revision": "97777d31a7a0f9b68fc59875c064989f7f38e501",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R16",
+      "source_row": 16,
+      "finding_id_sha256": "f5ea59b189a8f0c9e1c25df264a389b18931071be76433ce85711abf0a0aba24",
+      "repository": "research-observatory",
+      "title": "In-flight Core mutations can commit after the application lock generation changes",
+      "reported_severity": "medium",
+      "observed_revision": "97777d31a7a0f9b68fc59875c064989f7f38e501",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R17",
+      "source_row": 17,
+      "finding_id_sha256": "2090b239a28b38f3022f787771c482700adac7ba803dd4d038c5702801c1eef8",
+      "repository": "research-observatory",
+      "title": "Renderer can indefinitely spoof activity and defeat the inactivity lock",
+      "reported_severity": "medium",
+      "observed_revision": "97777d31a7a0f9b68fc59875c064989f7f38e501",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R18",
+      "source_row": 18,
+      "finding_id_sha256": "abaec76d85d1696bba3ab3cdd6c22e156db01bbd67e11e157556e05b552fac6e",
+      "repository": "research-observatory",
+      "title": "Unauthenticated CPython build outputs are promoted into the application-signed worker",
+      "reported_severity": "medium",
+      "observed_revision": "97777d31a7a0f9b68fc59875c064989f7f38e501",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R19",
+      "source_row": 19,
+      "finding_id_sha256": "33c06b9c458271d90f9371b9c04fb8fadfdf488cfbf8502fa70ddd7b1833c312",
+      "repository": "research-observatory",
+      "title": "BibTeX macro reuse can amplify a compact import into unbounded append-only preview data",
+      "reported_severity": "medium",
+      "observed_revision": "97777d31a7a0f9b68fc59875c064989f7f38e501",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R20",
+      "source_row": 20,
+      "finding_id_sha256": "3281317cb5d461fb5e0f8dbb402a61db6e162eae8738a622203cde3c5806c7e2",
+      "repository": "research-observatory",
+      "title": "Fresh command IDs can repeatedly duplicate complete immutable corpus reports",
+      "reported_severity": "medium",
+      "observed_revision": "97777d31a7a0f9b68fc59875c064989f7f38e501",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R21",
+      "source_row": 21,
+      "finding_id_sha256": "ae7c9b27d1a7f1fc5944b4976cc9f4a61de28407ae5f7aeaaad36e676f4f62de",
+      "repository": "research-observatory",
+      "title": "Reconciliation scoring permits attacker-amplified quadratic string work inside the SQLite writer",
+      "reported_severity": "medium",
+      "observed_revision": "97777d31a7a0f9b68fc59875c064989f7f38e501",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R22",
+      "source_row": 22,
+      "finding_id_sha256": "b7be757446702c936aeabb2e638afd8e233b3ce81ee0138789e547aec2de2535",
+      "repository": "research-observatory",
+      "title": "Renderer assertions are recorded as trusted researcher intent and workflow decisions",
+      "reported_severity": "medium",
+      "observed_revision": "97777d31a7a0f9b68fc59875c064989f7f38e501",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R23",
+      "source_row": 23,
+      "finding_id_sha256": "7419a13714eafe5d53ef9383792083d8bfe404a25269e6cb91d2107db192ef13",
+      "repository": "research-observatory",
+      "title": "Every bounded corpus report page rehashes the full snapshot under a write transaction",
+      "reported_severity": "medium",
+      "observed_revision": "97777d31a7a0f9b68fc59875c064989f7f38e501",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R24",
+      "source_row": 24,
+      "finding_id_sha256": "77096664804560db5f7e394abcbd4ab8cd08bcad859ed363437895574e55d72e",
+      "repository": "research-observatory",
+      "title": "A compromised renderer can open any known same-user project path without native selection authority",
+      "reported_severity": "medium",
+      "observed_revision": "97777d31a7a0f9b68fc59875c064989f7f38e501",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R25",
+      "source_row": 25,
+      "finding_id_sha256": "20bc54755523490865bb108d87c9b349bc94845fcf9b3a479f1d66bd6c7e5bde",
+      "repository": "ai-system-builder",
+      "title": "Parquet review page can exhaust the Python runtime",
+      "reported_severity": "medium",
+      "observed_revision": "8e134cbcdd925ec177ced9becaf2778ca810ab3f",
+      "disposition": "validated",
+      "priority": "P1",
+      "owner": "runtime-execution-integrity",
+      "assessment": "Review retrieves whole artifact bytes and high-offset Parquet reads scan/decode preceding batches. Small returned pages do not bound input bytes, decompression work, scan cost or concurrent requests.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/adapters/runtime/python/worker/tasks/review_dataset.py",
+          "sha256": "21ba6a930998c2d47c8359dc468f946e58a884b59313a701f2be7630b9d22afd",
+          "line": 60
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-partial-expanded-memory-qualification-pending",
+        "work_id": "security-r25-bounded-parquet-review",
+        "summary": "Existing64MiB retrieval/source bounds enforced before downstream effects, staging and worker parse; revised output reads bounded. Footer-directed group selection and page slicing eliminate preceding Python row conversion. Exact fingerprints and curation preserved. Decoded-cell memory, host fairness and native/resource qualification remain pending; no full scanner closure claimed."
+      }
+    },
+    {
+      "id": "R26",
+      "source_row": 26,
+      "finding_id_sha256": "08b8245ecc4facc4b5d08a95111949181a8a3eec40edc05dac4c01a8002906d6",
+      "repository": "ai-system-builder",
+      "title": "Desktop model reveal accepts arbitrary host paths",
+      "reported_severity": "medium",
+      "observed_revision": "9ae99f2a77b25c9a2736170f71161ec0d66e119c",
+      "disposition": "mitigated-reverify",
+      "priority": "P1",
+      "owner": "file-and-workspace-authority",
+      "assessment": "Desktop reveal uses an identity-only location port, currently unavailable before shell effects. Path/network checks remain defense in depth; qualified identity-preserving native reveal remains pending.",
+      "evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/revealModelPath.ts",
+          "sha256": "94473d8e915dd468fba6d6c2ac2646254db24278ebf57f7c9f9bc4a86e5dd035",
+          "line": 13
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Model reveal accepts an absolute registry path and invokes the host shell after normalization. Registry paths remain mutable; model ownership, no-network-path policy and canonical containment are missing from this boundary.",
+      "planning_disposition": "validated",
+      "implementation": {
+        "status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "qualification_work_id": "security-existing-authority-controls-qualification",
+        "remaining": "Parent I1 native file-effect blocker and complete integrated acceptance remain open. Current bounded work cannot qualify tooling or scanner closure.",
+        "unqualified_hold_work_id": "model-file-effects-safe-hold",
+        "retained_failed_receipt_digest": "5f664a681fa9f2125454bb9d1ed680b9b48e72e42af10032e66120b7adaf95f2"
+      }
+    },
+    {
+      "id": "R27",
+      "source_row": 27,
+      "finding_id_sha256": "5f7e891af006ef71eaaf252edea356c4db7c62c71aea9f79b3407e46922d9dec",
+      "repository": "ai-system-builder",
+      "title": "Model download read endpoints can register models",
+      "reported_severity": "medium",
+      "observed_revision": "51e49e06c07f713e9c80f6f3051aedf080923be6",
+      "disposition": "mitigated-reverify",
+      "priority": "P1",
+      "owner": "file-and-workspace-authority",
+      "assessment": "Read/list paths perform no model-registration writes. Explicit completion requires matching write authority and frozen organization/principal/workspace ownership, with in-process deduplication and explicit retry. Durable restart recovery and native provenance remain unqualified. Independent injected-port review reproduced a mismatched returned task id reaching projection/registration. The bounded successor now requires exact returned task id/type/workspace, filters wrong-type list results and denies substituted cancellation acknowledgements; regressions and fresh independent qualification are required.",
+      "evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/application/use-cases/model/model-download-tasks.use-case.ts",
+          "sha256": "47a245a5c652f75daf1cd9e12c1c2d2b7daed37e20da351ae12e166ed0c62045",
+          "line": 114
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Read/list task conversion still calls finalize on success and persists model registration. The route requires only model:read, while descriptors and finalization are keyed by request/workspace without immutable organization/principal execution authority.",
+      "planning_disposition": "validated",
+      "implementation": {
+        "status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "qualification_work_id": "security-existing-authority-controls-qualification",
+        "remaining": "Parent I1 native file-effect blocker and complete integrated acceptance remain open. Current bounded work cannot qualify tooling or scanner closure.",
+        "historical_supporting_work_id": "functionality-task-journeys-cross-host-qualification",
+        "historical_supporting_receipt_digest": "4f44d26e0df1df4aca053bc69b48d0ad5b3c4ac9d7f792447196347f96dfda2f",
+        "historical_supporting_review_digest": "22c25dfece330fda5dffd12c7298508d66a54c180eb6282606c6d7daa53dd41e",
+        "identity_correction_work_id": "security-r27-exact-download-task-identity",
+        "identity_reproduction": "Independent inert wrong-task probe and durable red regression retained; no real provider or filesystem effects."
+      }
+    },
+    {
+      "id": "R28",
+      "source_row": 28,
+      "finding_id_sha256": "31aaf1dd0289e916d5cd77ba94775ab879dbb6b40ea69d6593116c598f2d8345",
+      "repository": "ai-system-builder",
+      "title": "Desktop renderer can abuse Hugging Face publish IPC",
+      "reported_severity": "medium",
+      "observed_revision": "731fb5ee905293773adf39a808dbb7fe1029b7f9",
+      "disposition": "mitigated-reverify",
+      "priority": "P2",
+      "owner": "file-and-workspace-authority",
+      "assessment": "Artifact IPC now has host-owned sender trust and publication uses workspace/catalog authorization with credential-use scope before provider I/O. Preserve those safeguards and test denied publication; do not infer arbitrary host-file reads.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F17",
+        "F54"
+      ],
+      "evidence": [
+        {
+          "path": "modules/application/use-cases/publish-artifact-to-repo.use-case.ts",
+          "sha256": "466670da22e214d3b7972b2eafdc35e6b204692211b20a14f80f21c12ef595f7",
+          "line": 127
+        }
+      ],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R29",
+      "source_row": 29,
+      "finding_id_sha256": "6c475392bdc15d719054f00a6548851aa1f556b6033481c41d5918f44e9d0639",
+      "repository": "ai-system-builder",
+      "title": "Python runtime attach trusts spoofable local service",
+      "reported_severity": "medium",
+      "observed_revision": "c0e2253ccae5f6cba6b22e75793506f52df06015",
+      "disposition": "mitigated-reverify",
+      "priority": "P2",
+      "owner": "runtime-execution-integrity",
+      "assessment": "Managed Python foundations now generate and rotate a private launch token; clients authenticate health/capability probes and worker middleware denies missing identity. The generic attach helper is constrained by that client in production composition.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F14",
+        "F45"
+      ],
+      "evidence": [
+        {
+          "path": "modules/adapters/runtime/python/createPythonRuntimePort.ts",
+          "sha256": "d3cd5f9f3f93dd716d1820a74f8f8db9b15b21f45cf9e17a660909d4aef5832f",
+          "line": 42
+        }
+      ],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R30",
+      "source_row": 30,
+      "finding_id_sha256": "33120d20b436b87e5cbf45444f7bb37490a4c23ebdbf808cc1cdc2c3938e0254",
+      "repository": "ai-system-builder",
+      "title": "Dataset runtime accepts unsafe filesystem paths",
+      "reported_severity": "medium",
+      "observed_revision": "dbc9c40d1050bff6d5c6359df79262630b011285",
+      "disposition": "validated",
+      "priority": "P1",
+      "owner": "runtime-execution-integrity",
+      "assessment": "Dataset worker source paths remain plain strings read directly, and output baseName still reaches temporary-file prefixes. Launch authentication reduces reachability but does not validate host-to-worker path authority.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F48"
+      ],
+      "evidence": [
+        {
+          "path": "modules/adapters/runtime/python/worker/tasks/prepare_training_dataset.py",
+          "sha256": "888b1d82ff5cef3845813d0a1e56395957e113d862e563050254ba06c33a770a",
+          "line": 2482
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-naming-partial-source-native-qualification-pending",
+        "work_id": "security-r30-worker-output-name-admission",
+        "summary": "Worker model and task-entry naming admission mirror existing host save-name policy: ECMAScript whitespace trim,128UTF16-code-unit limit, path punctuation/control/trailing-period denial; primitive strings only. Entry revalidates constructed/mutated models and captures name before planning/source/model/generation/output effects; dataset and JSON reports use captured name. Existing absolute/canonical/non-symlink output directory check retained. Source paths, parent substitution and native identity remain separate pending authority/qualification work; no scanner closure."
+      }
+    },
+    {
+      "id": "R31",
+      "source_row": 31,
+      "finding_id_sha256": "b283f0835c5c62ceb6c886f88d37e971b25883097217bd6ad1fbd8fb45c53885",
+      "repository": "ai-system-builder",
+      "title": "Unbounded Python async task registry enables DoS",
+      "reported_severity": "medium",
+      "observed_revision": "e36cbda85efb50e9d59c66d772c157311b041e04",
+      "disposition": "mitigated-reverify",
+      "priority": "P2",
+      "owner": "runtime-execution-integrity",
+      "assessment": "Worker now caps active tasks and retained terminal records under the registry lock. Current admission races, timeouts, cancellation and healthy work after exhaustion require regression qualification; the unbounded-record claim is stale.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F42"
+      ],
+      "evidence": [
+        {
+          "path": "modules/adapters/runtime/python/worker/app.py",
+          "sha256": "15a7c5ead8949027e37d56ecfac6557f6161c03ec2dd0ddab7b27dc73efc167e",
+          "line": 114
+        }
+      ],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R32",
+      "source_row": 32,
+      "finding_id_sha256": "e60680b06fa4b82ac13f3fcd2bf52efb86f7e285c8869d726a164d13f5db22da",
+      "repository": "ai-system-builder",
+      "title": "ComfyUI auto-repair can silently update runtime code",
+      "reported_severity": "medium",
+      "observed_revision": "feebbb64ef0833330cb6ad4e2154d8a66c918cfd",
+      "disposition": "validated",
+      "priority": "P1",
+      "owner": "runtime-execution-integrity",
+      "assessment": "Supervisor requests no update, but ComfyUI repair paths still force allowUpdate true and can reach Git repair. A dependency repair can still change runtime code without the original caller authorizing that change.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F37"
+      ],
+      "evidence": [
+        {
+          "path": "modules/adapters/runtime/installer/comfyui/createComfyUiRuntimeInstaller.ts",
+          "sha256": "a317044709fd7b0bb1988e8b7ff1c2df834433fb08742e7ef2615e7199d57e06",
+          "line": 1045
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-evidence-in-linked-work",
+        "work_id": "security-r32-explicit-repair-authority",
+        "summary": "Both repair layers deny absent explicit update approval before I/O; forceRepair cannot grant updates. Initial installation, unmanaged provenance and parent runtime qualification remain separate."
+      }
+    },
+    {
+      "id": "R33",
+      "source_row": 33,
+      "finding_id_sha256": "22febe0e716fb855756e32d03ee5260c5579d1e674d2ee33774d071ed2597b23",
+      "repository": "ai-system-builder",
+      "title": "Unmanaged Git adoption trusts spoofable origin",
+      "reported_severity": "medium",
+      "observed_revision": "41149ab065f4122358f99d499f89f99c44deb5c9",
+      "disposition": "validated",
+      "priority": "P1",
+      "owner": "runtime-execution-integrity",
+      "assessment": "Unmanaged checkout adoption still trusts matching origin configuration and current HEAD while recording requested ref as resolvedRef. Approved commit provenance and dirty-tree rejection are absent from adoption.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F34"
+      ],
+      "evidence": [
+        {
+          "path": "modules/adapters/runtime/installer/git/createGitRuntimeInstallerAdapter.ts",
+          "sha256": "11a1eafe7123ea34e5fe3eb85494735776405faaff1aa13018e3b6ef671a8bbe",
+          "line": 264
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-focused-evidence-required-audit-pending",
+        "work_id": "security-r33-deny-unmanaged-adoption",
+        "summary": "Matching mutable Git origin cannot adopt an unmanaged tree. Target/root/canonical source consistency is required, and ComfyUI status authority precedes all targeted/fallback repair effects. Initial missing/empty installation remains separate. Full current-byte/provenance/native proof and dependency audit remain pending; no scanner closure is claimed."
+      }
+    },
+    {
+      "id": "R34",
+      "source_row": 34,
+      "finding_id_sha256": "964069c22f8691c75eff15156e1e7ae1338e2b4891e21ccc9e34b324c7cecc79",
+      "repository": "research-observatory",
+      "title": "Renderer code can indefinitely suppress inactivity locking",
+      "reported_severity": "low",
+      "observed_revision": "b763fa8ccff87c2828e94459252f02e35e1f4ef1",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R35",
+      "source_row": 35,
+      "finding_id_sha256": "31e8a6efafed04307fae78bb8760bc4ec2211115370ac2cb69471401018b535e",
+      "repository": "research-observatory",
+      "title": "Generic renderer requests can select any known local project path",
+      "reported_severity": "low",
+      "observed_revision": "b763fa8ccff87c2828e94459252f02e35e1f4ef1",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R36",
+      "source_row": 36,
+      "finding_id_sha256": "b3e1b218019ce793dd31f638866eb3a189bc42b99c3fdf1beefaac80b3fbade5",
+      "repository": "research-observatory",
+      "title": "Project deletion confirmation is not bound to a human action",
+      "reported_severity": "low",
+      "observed_revision": "b763fa8ccff87c2828e94459252f02e35e1f4ef1",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R37",
+      "source_row": 37,
+      "finding_id_sha256": "d773f02215378ec41fbe5d2dcfa66e3c7fe17b109bcf99aeefd081ca7f71b5df",
+      "repository": "research-observatory",
+      "title": "Project inventory builds unbounded directory and file collections",
+      "reported_severity": "low",
+      "observed_revision": "97777d31a7a0f9b68fc59875c064989f7f38e501",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R38",
+      "source_row": 38,
+      "finding_id_sha256": "810b8ad53daa29338698a3aef300617b42743d59b1d718138898b010a28704b9",
+      "repository": "research-observatory",
+      "title": "Rights evaluation appends a permanent decision for every replay without idempotency or quota",
+      "reported_severity": "low",
+      "observed_revision": "97777d31a7a0f9b68fc59875c064989f7f38e501",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R39",
+      "source_row": 39,
+      "finding_id_sha256": "9bed64a27b3ee7bd8b9d1771b9bf1d8ecf59f7045e799173df9e18cc44797f44",
+      "repository": "research-observatory",
+      "title": "CI executes an unhashed package-manager bootstrap before the locked dependency graph",
+      "reported_severity": "low",
+      "observed_revision": "97777d31a7a0f9b68fc59875c064989f7f38e501",
+      "disposition": "outside-repository",
+      "priority": "unassessed",
+      "owner": "research-observatory",
+      "assessment": "The finding belongs to another repository and was not assessed or scheduled here. It remains open for its owning repository.",
+      "evidence_level": "repository-scope-only",
+      "legacy_findings": [],
+      "evidence": [],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R40",
+      "source_row": 40,
+      "finding_id_sha256": "2e2198a7580a18a5cabce689fd30dd95dae41cc2654be0b6ac2920294f1409e9",
+      "repository": "ai-system-builder",
+      "title": "Runtime diagnostics are written to shared temp with loose perms",
+      "reported_severity": "low",
+      "observed_revision": "f57b2a5cb866e1cdb45052040fdc24f2dff0f829",
+      "disposition": "validated",
+      "priority": "P2",
+      "owner": "runtime-execution-integrity",
+      "assessment": "Dependency setup persists only versioned finite operation/platform/backend/stage outcomes, safe exit codes, grouped retry/failure counts and explicit overall success. Raw commands, arguments, environment paths, index URLs, subprocess output and exception details are not accumulated or serialized. Shared temporary default, directory ownership/ACLs, link-safe publication and retention remain unqualified; no full finding closure.",
+      "evidence_level": "local-source-and-focused-tests-controlled-qualification-pending",
+      "legacy_findings": [
+        "F68",
+        "F76"
+      ],
+      "evidence": [
+        {
+          "path": "modules/adapters/runtime/python/ensurePythonRuntimeWorkerDependencies.ts",
+          "sha256": "d89894c1776fcb11136aee782ce206a374011458bc0ee278eaa0d066996ab6c5",
+          "line": 658
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "work_id": "security-r40-minimal-install-outcomes",
+        "status": "implemented-independently-inspected-required-dependency-qualification-failed",
+        "controls": [
+          "explicit-field-outcome-projection",
+          "finite-stage-backend-grouping",
+          "truthful-overall-setup-success",
+          "best-effort-diagnostics-io-independent-of-setup"
+        ],
+        "remaining": [
+          "original-supplier-dependency-gate-failed",
+          "private-directory-ownership-and-permissions",
+          "native-link-safe-publication",
+          "retention-policy",
+          "supported-platform-qualification"
+        ],
+        "receipt_digest": "05a9b6261642c490e2ca14de86be1fc763898d2959fbc81a65612c5f58cca3e4",
+        "review_kind": "local-security-review-v1-not-qualifying-technical-acceptance",
+        "local_review_ref": ".local-codex/security-execution/r40-local-review.json",
+        "local_evidence": "22focused tests and28independent persisted-outcome cases passed; desktop TypeScript check passed. No raw synthetic command/path/index/output/error markers persisted; deterministic I/O failure preserves original setup result."
+      }
+    },
+    {
+      "id": "R41",
+      "source_row": 41,
+      "finding_id_sha256": "b410b0eed1cee9fa49006c5b3300acd901fad66158534bc5dbaa57b4468d8658",
+      "repository": "ai-system-builder",
+      "title": "Dataset preparation stop no longer cancels running tasks",
+      "reported_severity": "low",
+      "observed_revision": "85c1365283ea5c71fb5111b2bbd3b163147f3979",
+      "disposition": "partial",
+      "priority": "P2",
+      "owner": "runtime-execution-integrity",
+      "assessment": "Preload cancellation and the use-case cancel method now exist. The old missing-method claim is stale; UI terminal truth, acknowledgement, running-task cancellation, cleanup and subsequent work need integrated checks.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F73",
+        "F77"
+      ],
+      "evidence": [
+        {
+          "path": "apps/desktop/src/preload/exposedApi.ts",
+          "sha256": "1c6d3849086a28a93a112da5eb9d28303a1feec3ecb9503346c19eb4e582d1ef",
+          "line": 2493
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-evidence-in-linked-work",
+        "work_id": "security-r41-truthful-dataset-cancel",
+        "summary": "Both UIs retain identity and observe authoritative terminal state after refused, unknown, delayed or failed cancel. Review discard requires confirmation. Running dataset cancellation remains unsupported by the worker; physical lifecycle qualification remains pending."
+      }
+    },
+    {
+      "id": "R42",
+      "source_row": 42,
+      "finding_id_sha256": "171816ce406f40ef7388e469a82f2a33005b49d4969899ba723eece9c8e73803",
+      "repository": "ai-system-builder",
+      "title": "Thin-client dev server now exposed on all interfaces",
+      "reported_severity": "low",
+      "observed_revision": "12ee15f0d83ccd59d3ac87eccf18d4f10d946df2",
+      "disposition": "validated",
+      "priority": "P2",
+      "owner": "development-and-tooling-security",
+      "assessment": "Thin-client Vite configuration still binds all interfaces by default. Explicit LAN operation must be an operator choice with secure transport rather than an ambient development default.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F69"
+      ],
+      "evidence": [
+        {
+          "path": "apps/thin-client/vite.config.ts",
+          "sha256": "efc5ab75b8ddc992db4ae2f6617b3b3a7847d662270e789f93b3cc99949e0b1d",
+          "line": 14
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-focused-evidence-required-audit-pending",
+        "work_id": "security-r42-r46-development-listener-posture",
+        "summary": "Default server/preview loopback; existing explicit LAN profile requires frontend HTTPS and HTTPS API targets after final CLI configuration. Remote HTTPS verifies certificates; development trust applies only to exact loopback. Production builds do not resolve unused listener keys. Dependency audit and real LAN/browser trust qualification remain pending; no scanner closure is claimed."
+      }
+    },
+    {
+      "id": "R43",
+      "source_row": 43,
+      "finding_id_sha256": "ebc20acc0c2f31a3b8ac836daea98007ce3fa78dab4de4989261d17c6b1469d0",
+      "repository": "ai-system-builder",
+      "title": "Model asset views can expose task IDs and nested metadata",
+      "reported_severity": "low",
+      "observed_revision": "fb68d918a71c8a56c0df090662c48a5da09a4376",
+      "disposition": "validated",
+      "priority": "P2",
+      "owner": "canonical-safe-records",
+      "assessment": "Model resource views still copy generatedFromRunId and recursively project caller metadata. Existing denylist sanitization does not establish an explicit safe diagnostic schema or opaque source identity.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F63"
+      ],
+      "evidence": [
+        {
+          "path": "modules/application/services/asset/asset-dataset-model-resource-backed-view-provider.service.ts",
+          "sha256": "5f0813aa113e350867a6dd906bc2db676c0d01b604dab792ac489a8415da1d3b",
+          "line": 347
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-evidence-in-linked-work",
+        "work_id": "security-r43-minimal-model-views",
+        "summary": "List/detail model view and backing projections omit generatedFromRunId and all arbitrary model metadata. Only declared summary fields remain; caller metadata cannot substitute identity or numerical summaries, and omitted metadata is never accessed, including outer or nested getters. Exact scoped detail/read-only behavior preserved; other identity/provenance and parent qualification remain separate."
+      }
+    },
+    {
+      "id": "R44",
+      "source_row": 44,
+      "finding_id_sha256": "ab89164ea10a3ede920dd3e7dbc4f4b538ea277947a7affae1b251a3beda6897",
+      "repository": "ai-system-builder",
+      "title": "Raw image IDs leak through resource-backed view IDs",
+      "reported_severity": "low",
+      "observed_revision": "5400770d201268f2c4632756a832440b79008116",
+      "disposition": "validated",
+      "priority": "P2",
+      "owner": "canonical-safe-records",
+      "assessment": "Image/generated-output public view identifiers still embed direct source identifiers when syntactically safe. Source/request identity non-disclosure requires an opaque stable mapping, not syntax filtering.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F64"
+      ],
+      "evidence": [
+        {
+          "path": "modules/application/services/asset/asset-image-resource-backed-view-provider.service.ts",
+          "sha256": "176c214a205583ed3e0583c8ad4960adcdcd06d037f38c78f9594f4e33373dbf",
+          "line": 440
+        }
+      ],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R45",
+      "source_row": 45,
+      "finding_id_sha256": "57153fbdd04e0fd89623dfde40a47b62d9b5e608fdb9b3d23655e345f657f9b2",
+      "repository": "ai-system-builder",
+      "title": "Custom asset definitions can spoof built-in status",
+      "reported_severity": "low",
+      "observed_revision": "98140af6d180f47329275f61f28525a8bbf263e9",
+      "disposition": "partial",
+      "priority": "P2",
+      "owner": "canonical-safe-records",
+      "assessment": "Built-in markers now require seedVersion and fingerprint strings and catalog matching includes version, but caller-supplied marker strings still directly grant builtIn true without verifying trusted source and content.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F65"
+      ],
+      "evidence": [
+        {
+          "path": "modules/application/services/asset/asset-registry-read-facade.service.ts",
+          "sha256": "ead478551fb07a5160375f8156519d71314d713747caa330938e98de007ad8cf",
+          "line": 453
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-read-classification-qualified-integrity-install-native-qualification-pending",
+        "work_id": "security-r45-code-owned-asset-classification",
+        "summary": "Full descriptor-safe bounded content equality against17code-owned seeds and343Foundation definitions across all3immutable releases; precise permitted operational enrichment only. Editable markers/ID/version/display fingerprints cannot grant positive built-in/system/trusted cues. Projected metadata strips positive fallback claims; lists/filters/single/batch agree without mutations. Seeder/installer already-current marker shortcuts, package-integrity compatibility migration and native qualification remain pending; scanner closure not claimed."
+      }
+    },
+    {
+      "id": "R46",
+      "source_row": 46,
+      "finding_id_sha256": "d22ed6b0981c7683b623c37daebce8c8b3ca22e628612f1c4d9aec6c05a04015",
+      "repository": "ai-system-builder",
+      "title": "Dev proxy downgrades LAN HTTPS API to HTTP",
+      "reported_severity": "low",
+      "observed_revision": "8ad87061f9ef44a8a3919a8671d39d9f89c7eceb",
+      "disposition": "partial",
+      "priority": "P2",
+      "owner": "development-and-tooling-security",
+      "assessment": "Vite can now serve HTTPS through an explicit separate flag, but LAN token mode alone does not require that frontend transport and default bind remains non-loopback. Backend HTTPS does not protect the browser-to-proxy leg.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F67"
+      ],
+      "evidence": [
+        {
+          "path": "apps/thin-client/viteDevHttpsConfig.ts",
+          "sha256": "a1e9bfb8dfaa36cf0ad6856affe8a0ded079f3320622f5e62a879757383d40cf",
+          "line": 36
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-focused-evidence-required-audit-pending",
+        "work_id": "security-r42-r46-development-listener-posture",
+        "summary": "Default server/preview loopback; existing explicit LAN profile requires frontend HTTPS and HTTPS API targets after final CLI configuration. Remote HTTPS verifies certificates; development trust applies only to exact loopback. Production builds do not resolve unused listener keys. Dependency audit and real LAN/browser trust qualification remain pending; no scanner closure is claimed."
+      }
+    },
+    {
+      "id": "R47",
+      "source_row": 47,
+      "finding_id_sha256": "69f391acd54a378990d0372f2628dbccf855b4936f8332e1e61887d346c81897",
+      "repository": "ai-system-builder",
+      "title": "Public dev-mode endpoint can disable auth enforcement",
+      "reported_severity": "low",
+      "observed_revision": "8b3a96bf0229817a689c6449ae0fb39b29eff7f5",
+      "disposition": "validated",
+      "priority": "P2",
+      "owner": "development-and-tooling-security",
+      "assessment": "Development mode mutation is still public when the opt-in enforcement toggle is wired. This is limited to the explicitly enabled development configuration, not a managed OIDC production bypass.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F66"
+      ],
+      "evidence": [
+        {
+          "path": "modules/adapters/transport/api-express/security/registerSecurityRoutes.ts",
+          "sha256": "86c01694068f9c1477523dd1d6fa18d7d381e04af12c9d7208434d3dcb2b12b4",
+          "line": 68
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-evidence-in-linked-work",
+        "work_id": "security-r47-enforced-toggle-authority",
+        "summary": "Development-mode POST uses existing nonpublic security:admin policy and thin-client secureFetch. Enforced mode denies missing/invalid/nonadmin downgrade before setMode/body effects; deliberate disabled-dev bootstrap and startup-disabled LAN/OIDC toggle semantics are preserved. Controlled deployment/operator qualification remains pending."
+      }
+    },
+    {
+      "id": "R48",
+      "source_row": 48,
+      "finding_id_sha256": "f4db0ee4dbbb8fc96ad809f986444a526471f7de9f832f07d152eb15486d65d3",
+      "repository": "ai-system-builder",
+      "title": "Runtime readiness sanitizer misses common secret keys",
+      "reported_severity": "low",
+      "observed_revision": "eedd03ff800514e3acc626057041e3a6c6f0e580",
+      "disposition": "validated",
+      "priority": "P2",
+      "owner": "canonical-safe-records",
+      "assessment": "Current word-boundary credential filter retains common compound secret keys. A bounded synthetic normalization probe confirmed unsafe-key retention; no real credentials were used.",
+      "evidence_level": "synthetic-probe-and-source-inspection",
+      "legacy_findings": [
+        "F59"
+      ],
+      "evidence": [
+        {
+          "path": "modules/contracts/runtime-readiness/runtime-readiness-normalization.ts",
+          "sha256": "fb4eafd2f99cfdc4c7e4db9da9e0f8557fbdb22ca5ac2cb60b8bda3b88f5c834",
+          "line": 12
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-evidence-in-linked-work",
+        "work_id": "security-passive-readiness-diagnostics",
+        "summary": "Bounded plain passive metadata rejects compound credential keys, paths, raw representations, cycles/accessors/nonJSON/nonfinite and resource excess. Diagnostic/blocker fields are strictly reconstructed; composition unsafe message strings retain generic outward redaction. Other family, parent and controlled qualifications remain separate."
+      }
+    },
+    {
+      "id": "R49",
+      "source_row": 49,
+      "finding_id_sha256": "f1abbd8f7f0996380b534e44f796e1eba5cedf6ef82189dee62f9d7b8620ec02",
+      "repository": "ai-system-builder",
+      "title": "Diagnostic sanitizer no longer redacts file paths",
+      "reported_severity": "low",
+      "observed_revision": "26a8e9177a4b4cf75f2f14f4e0a320d40e1c8aaa",
+      "disposition": "validated",
+      "priority": "P2",
+      "owner": "canonical-safe-records",
+      "assessment": "Composition diagnostic filtering omits filesystem syntax. A bounded synthetic probe confirmed a path-shaped diagnostic message is retained.",
+      "evidence_level": "synthetic-probe-and-source-inspection",
+      "legacy_findings": [
+        "F60"
+      ],
+      "evidence": [
+        {
+          "path": "modules/contracts/asset-composition/asset-composition-diagnostics.ts",
+          "sha256": "d98b417a5ead90cf211231c88a60437d7ebb01a6e62a22dfffecd09d3b95b85d",
+          "line": 10
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-evidence-in-linked-work",
+        "work_id": "security-passive-readiness-diagnostics",
+        "summary": "Bounded plain passive metadata rejects compound credential keys, paths, raw representations, cycles/accessors/nonJSON/nonfinite and resource excess. Diagnostic/blocker fields are strictly reconstructed; composition unsafe message strings retain generic outward redaction. Other family, parent and controlled qualifications remain separate."
+      }
+    },
+    {
+      "id": "R50",
+      "source_row": 50,
+      "finding_id_sha256": "f0be1f2817acd0b3550030c44d4903d3ed26b7ee5531b2e6ae274d7b1d8ea4e2",
+      "repository": "ai-system-builder",
+      "title": "Manifest fingerprints omit unsafe fields before hashing",
+      "reported_severity": "low",
+      "observed_revision": "90c5a7d4825663a37ab7574e2f3092ce04bb77b4",
+      "disposition": "validated",
+      "priority": "P2",
+      "owner": "canonical-safe-records",
+      "assessment": "Manifest/entry fingerprints still hash a sanitized projection. A bounded synthetic probe confirmed different rejected-class metadata can yield the same fingerprint; hashing is not a substitute for complete input validation.",
+      "evidence_level": "synthetic-probe-and-source-inspection",
+      "legacy_findings": [
+        "F61"
+      ],
+      "evidence": [
+        {
+          "path": "modules/application/services/asset-packs/asset-pack-fingerprint.service.ts",
+          "sha256": "b6bdfecb1ab9ae4461b3d2b07e09395d8e23199d0c396fe1f2b4769076ad433d",
+          "line": 40
+        }
+      ],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R51",
+      "source_row": 51,
+      "finding_id_sha256": "08694ef90a27a02c3f75db95bdc039fdb9dc34c9279840b46520cc9645a4eb61",
+      "repository": "ai-system-builder",
+      "title": "Context-aware pack validation misses secret-like text",
+      "reported_severity": "low",
+      "observed_revision": "add76ceeb99c732c14e0911675b389042a696693",
+      "disposition": "validated",
+      "priority": "P2",
+      "owner": "canonical-safe-records",
+      "assessment": "Explanatory manifest fields skip the general forbidden-text check and credential syntax detection is narrower. Tighten actual protected-content detection while preserving legitimate safety documentation; mere security vocabulary must not become a universal rejection rule.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F62"
+      ],
+      "evidence": [
+        {
+          "path": "modules/application/services/asset-packs/asset-pack-validation.service.ts",
+          "sha256": "526759ae1045610bca5e251893725c9c95d3042f45879e8b99b8dff7302aaada",
+          "line": 387
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-evidence-in-linked-work",
+        "work_id": "security-r51-explanatory-credential-denial",
+        "summary": "Actual private-key and established credential-prefix representations in values and property names reject in explanatory purpose/description/limitations at validation, parse and serialization boundaries with non-disclosing errors and safe parent paths. Legitimate non-goals remain accepted. No legacy fingerprint rewrite or full arbitrary-sensitive-prose claim; parent qualification remains pending."
+      }
+    },
+    {
+      "id": "R52",
+      "source_row": 52,
+      "finding_id_sha256": "5f1e08f70b3ed77febea5ec6a7a76479b11e1fa933737dcfbbbbbd47f55caa41",
+      "repository": "ai-system-builder",
+      "title": "Execution run normalizer allows unsafe diagnostics",
+      "reported_severity": "low",
+      "observed_revision": "1aa7ab48867796b625454085687cebfa333cab2d",
+      "disposition": "validated",
+      "priority": "P2",
+      "owner": "canonical-safe-records",
+      "assessment": "Execution-run diagnostic strings are still only trimmed. A bounded synthetic probe confirmed path-shaped messages survive normalization; typed diagnostics require explicit safe-field reconstruction.",
+      "evidence_level": "synthetic-probe-and-source-inspection",
+      "legacy_findings": [
+        "F57"
+      ],
+      "evidence": [
+        {
+          "path": "modules/contracts/execution-runs/execution-run-normalization.ts",
+          "sha256": "3437d7bc5aa3634c8701af7838376b0da8fa2b10bc9c7347d283cc6c72ae12bc",
+          "line": 14
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-evidence-in-linked-work",
+        "work_id": "security-r52-r53-passive-execution-records",
+        "summary": "Explicit descriptor-safe bounded schemas replace coercion, raw nested spreading and unchecked provenance. Strict diagnostics, finite progress/attempts, actual flags and canonical timestamps; declared lifecycle references retained. Malformed stored records deny without rewrite. No new execution authority; native/runtime and parent qualification remain pending."
+      }
+    },
+    {
+      "id": "R53",
+      "source_row": 53,
+      "finding_id_sha256": "62cfd7f85713cd9807cb2307aac3eed26ffbe856dd9573b3ba679d75758a6e8f",
+      "repository": "ai-system-builder",
+      "title": "Execution plan normalization preserves unsafe extra fields",
+      "reported_severity": "low",
+      "observed_revision": "b3fc3560817cb65915ada437dc2d1201615c43f4",
+      "disposition": "partial",
+      "priority": "P2",
+      "owner": "canonical-safe-records",
+      "assessment": "Top-level plan keys are now allowlisted, but nested diagnostic/step normalizers still spread input objects. A bounded synthetic probe confirmed extra nested fields are retained.",
+      "evidence_level": "synthetic-probe-and-source-inspection",
+      "legacy_findings": [
+        "F58"
+      ],
+      "evidence": [
+        {
+          "path": "modules/contracts/execution-plans/execution-plan-normalization.ts",
+          "sha256": "a72e7a00f1dc4499af43329db03cf670bcb2694d17c1dafec30a0b8f0c418842",
+          "line": 49
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-evidence-in-linked-work",
+        "work_id": "security-r52-r53-passive-execution-records",
+        "summary": "Explicit descriptor-safe bounded schemas replace coercion, raw nested spreading and unchecked provenance. Strict diagnostics, finite progress/attempts, actual flags and canonical timestamps; declared lifecycle references retained. Malformed stored records deny without rewrite. No new execution authority; native/runtime and parent qualification remain pending."
+      }
+    },
+    {
+      "id": "R54",
+      "source_row": 54,
+      "finding_id_sha256": "67c85aa913a6b984d5b846183a78a0bad1bfd6138865899047bb91c0462ec3f9",
+      "repository": "ai-system-builder",
+      "title": "Roadmap writer follows predictable temp symlinks",
+      "reported_severity": "low",
+      "observed_revision": "750cc3a241adf2326fcc3e87ccf3e75873ce4aca",
+      "disposition": "validated",
+      "priority": "P1",
+      "owner": "development-and-tooling-security",
+      "assessment": "Roadmap atomic writes still open a predictable temporary pathname through write_text before replace. Publication locking does not prevent an attacker-controlled filesystem entry from being followed.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [
+        "F56"
+      ],
+      "evidence": [
+        {
+          "path": "skills/manage-implementation-roadmaps/scripts/roadmap.py",
+          "sha256": "a0f5aadcc3372257a5b13046140f692939968a9e62e0a9d88d9de4170facda98",
+          "line": 140
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-evidence-in-linked-work",
+        "work_id": "roadmap-implementation-qualification-boundary",
+        "summary": "Portable writer uses exclusive unpredictable temporary creation, fsync, atomic replacement and owned cleanup. Native parent/reparse/ACL race qualification remains pending."
+      }
+    },
+    {
+      "id": "R55",
+      "source_row": 55,
+      "finding_id_sha256": "3189335e96839e8d57347cad5e3f3de03db37338445ef72fac9dcccedc50a995",
+      "repository": "ai-system-builder",
+      "title": "Ingestion task API route is always denied",
+      "reported_severity": "informational",
+      "observed_revision": "f8e9115e2a59e6ddec03816619ca92b93a6b3d99",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "The ingestion execution route remains absent from the deny-by-default route map. This is unavailable functionality, not an authentication bypass; any future admission must retain exact policy and owning application authorization. Current replay verifies exact registered route families and substituted resources/methods remain denied. No broad route admission or global authorization fallback is introduced; composing their missing resource authority remains explicit successor integration work.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/adapters/transport/api-express/ingestion-task/registerIngestionTaskApiRoute.ts",
+          "sha256": "9ed4cf136a3ee82760fe833c5a38205005daf128011ebee7c8e1bbb2bf2d109b",
+          "line": 1
+        },
+        {
+          "path": "modules/adapters/transport/api-express/registerExpressApi.ts",
+          "sha256": "fa27980bfb005f0d0e2e3fc75340f6a0378465cfa54f0232fea3d94199fa6834",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "The ingestion execution route remains absent from the deny-by-default route map. This is unavailable functionality, not an authentication bypass; any future admission must retain exact policy and owning application authorization.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "explicitly-unavailable-resource-authority-integration-deferred",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R55",
+        "owner_increment_number": 2,
+        "owner_evidence_level": "executed-local-route-denial-contract",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R56",
+      "source_row": 56,
+      "finding_id_sha256": "075d64265b0af7b45bd06aa4ae93be7f39aac7ffc80a6bc831fa4365d96981c8",
+      "repository": "ai-system-builder",
+      "title": "Logger can throw before sink failure handling",
+      "reported_severity": "informational",
+      "observed_revision": "10b1ae2abd09bd2c328a80e6b71e5148ba9f5d07",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Logger normalization, serialization, sink and fallback failures are contained with safe static diagnostics; focused malformed/cyclic/BigInt/sink regressions passed.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/adapters/observability/logging/createLogger.ts",
+          "sha256": "396ac5b474515dccdc4f66b5411ff72c52c379aec931aabcedf607eb9e07b733",
+          "line": 1
+        },
+        {
+          "path": "modules/adapters/observability/logging/createLogger.ts",
+          "sha256": "396ac5b474515dccdc4f66b5411ff72c52c379aec931aabcedf607eb9e07b733",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Logger normalization and JSON serialization still precede the sink try/catch. Malformed/non-JSON events can reject; no current attacker-controlled exploit path was established in this assessment.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "locally-corrected-increment-qualification-pending",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R56",
+        "owner_increment_number": 2,
+        "owner_evidence_level": "focused-executable-regression-current-source",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R57",
+      "source_row": 57,
+      "finding_id_sha256": "a7c6a5be2144131c272479d2c934534accb9bb98e5b82e3b49126d2d970faac1",
+      "repository": "ai-system-builder",
+      "title": "Runtime start race during async preparation",
+      "reported_severity": "informational",
+      "observed_revision": "cced22e6a6c01a5e78253e31bcb36d89c79ad79a",
+      "disposition": "security-adjacent",
+      "priority": "P2",
+      "owner": "runtime-execution-integrity",
+      "assessment": "Python start guards only an existing child handle while preparation is awaited; no shared start promise is visible. Concurrent-start failure belongs in runtime admission and recovery qualification.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/adapters/runtime/python/supervisor/createPythonRuntimeSupervisor.ts",
+          "sha256": "1a95a229e95c77a8c76705e6d1a9ffef930f554db76b7180dadd5412fdf49a34",
+          "line": 1
+        },
+        {
+          "path": "modules/adapters/runtime/python/supervisor/createPythonRuntimeSupervisor.ts",
+          "sha256": "1a95a229e95c77a8c76705e6d1a9ffef930f554db76b7180dadd5412fdf49a34",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed"
+    },
+    {
+      "id": "R58",
+      "source_row": 58,
+      "finding_id_sha256": "28ec6b0df2e32e7ca3e75adc8e469e1f4afb04d305a5c962b77be277a4c2e890",
+      "repository": "ai-system-builder",
+      "title": "Model publish now starts unsupported runtime task",
+      "reported_severity": "informational",
+      "observed_revision": "66ebf22b5cd19f2315a51da0f165a5974f200e14",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Standalone publishing is explicitly unavailable before model I/O or task dispatch, including incorrectly ready capability hints. Supported training save/publish semantics are preserved.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/application/use-cases/model/publish-model.use-case.ts",
+          "sha256": "28224fb4643d3030b6a66c336227d6c3e9462be5ed58b9b5ba6d8751a93efb84",
+          "line": 1
+        },
+        {
+          "path": "modules/adapters/runtime/python/createPythonRuntimeTaskRegistryAdapter.ts",
+          "sha256": "1034ba3f4c3dfe86dcbe4c7275f405c3bcc444544e8506da06dc97ee7f8ce7d2",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Publish-model use case still dispatches MODEL_PUBLISHING while the inspected Python worker lacks the corresponding task handler. Preserve truthful unsupported behavior until an authorized implementation exists.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "locally-corrected-increment-qualification-pending",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R58",
+        "owner_increment_number": 2,
+        "owner_evidence_level": "focused-executable-regression-current-source",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R59",
+      "source_row": 59,
+      "finding_id_sha256": "81165eb16bcb46b2ea7e3a54e43aaa813dbadbf742b44bc2caf7989f618ba348",
+      "repository": "ai-system-builder",
+      "title": "Resource poll can hide runtime log updates",
+      "reported_severity": "informational",
+      "observed_revision": "70ae6aa879d803664a0f2ff2e8c6932ee84bac49",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Resource snapshot signatures no longer consume independent log freshness; actual hook 5s-resource/10s-log regression passed.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts",
+          "sha256": "b8ea761f5155a2a22b489a2d66559e98e6ee256cf3c3b93e8ba8700539af84c5",
+          "line": 1
+        },
+        {
+          "path": "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts",
+          "sha256": "b8ea761f5155a2a22b489a2d66559e98e6ee256cf3c3b93e8ba8700539af84c5",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Resource-only refresh still advances the shared snapshot signature before skipping logs, allowing later log refresh to skip the same snapshot. This is observability correctness.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "locally-corrected-increment-qualification-pending",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R59",
+        "owner_increment_number": 2,
+        "owner_evidence_level": "focused-executable-regression-current-source",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R60",
+      "source_row": 60,
+      "finding_id_sha256": "78581ac4b1e041f22b5ef6325a2878fc8cf50de41a17935b3481f4c84933fd30",
+      "repository": "ai-system-builder",
+      "title": "ComfyUI spawn errors leave stale supervisor handle",
+      "reported_severity": "informational",
+      "observed_revision": "0f112e799ffaf07d9e53fbbef42932703d486bd7",
+      "disposition": "security-adjacent",
+      "priority": "P2",
+      "owner": "runtime-execution-integrity",
+      "assessment": "ComfyUI asynchronous spawn error marks unhealthy but does not clear the retained process handle there. Retry/recovery must prove process state and avoid permanently wedged or orphaned capacity.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/adapters/runtime/comfyui/createComfyUiRuntimeSupervisor.ts",
+          "sha256": "4b55ca0350d8d5385d330ed7048f4869f9ddf9f21853c8c5ef7784af200aa77c",
+          "line": 1
+        },
+        {
+          "path": "modules/adapters/runtime/comfyui/createComfyUiRuntimeSupervisor.ts",
+          "sha256": "4b55ca0350d8d5385d330ed7048f4869f9ddf9f21853c8c5ef7784af200aa77c",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-evidence-in-linked-work",
+        "work_id": "security-r60-confirmed-worker-termination",
+        "summary": "Both owned-child stops require terminal proof with bounded waits; timeout/error/kill failure retains ownership. Startup and health/capability continuations are identity/generation fenced, spawn-error close permits retry and stale errors cannot poison replacement. Externally attached Python stop remains unconfirmed; idle attachment may require external coordination. Direct-child fake-process evidence does not qualify descendant/launcher trees or physical runtimes. Parent roadmap remains blocked."
+      }
+    },
+    {
+      "id": "R61",
+      "source_row": 61,
+      "finding_id_sha256": "959b6d45f57e8defba0fce2e956ad23007d6b378135fa7ce9bd1ef2480a43269",
+      "repository": "ai-system-builder",
+      "title": "Training dataset binding resolves to storage key, not file path",
+      "reported_severity": "informational",
+      "observed_revision": "c1d87639f84708965ab54a72115e3f5d89a749c6",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Training resolves exact workspace-owned local artifact bindings and copies bytes to private bounded staging; caller dataset paths and unbound/global fallbacks are denied. Focused training tests passed.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/application/use-cases/model/train-model.use-case.ts",
+          "sha256": "d2ba5c202679c5defe12ddcd36bf6dc8fca8a460f9d69bcee83bc215b6a285c0",
+          "line": 1
+        },
+        {
+          "path": "modules/application/use-cases/localize-artifact-from-repo.use-case.ts",
+          "sha256": "1242ea184596f03422da7414e7c16f4214d7d3f9cd7c73a7b59c1dee8e170468",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Training now stages object-storage bytes in one branch, but a local-filesystem binding is still returned directly as dataset.path. Distinguish opaque storage keys from private materialized runtime paths without weakening workspace authorization.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "locally-corrected-increment-qualification-pending",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R61",
+        "owner_increment_number": 2,
+        "owner_evidence_level": "focused-executable-regression-current-source",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R62",
+      "source_row": 62,
+      "finding_id_sha256": "15bad71b1d6d8ed8d41fd7e7904182e50526de798e061d365d64a9169afecd48",
+      "repository": "ai-system-builder",
+      "title": "Desktop asset version reads ignore requested version",
+      "reported_severity": "informational",
+      "observed_revision": "2d765c13826ea595de1a7cad9cdf852944328a5d",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Version-bearing reads use immutable references; real repository regression selects v1 with v2 present.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/adapters/transport/ipc-electron/asset-registry/registerAssetRegistryIpc.ts",
+          "sha256": "c14708366ce12060d26e6c05279a438460141874ff9c928b274a900d63224c7b",
+          "line": 1
+        },
+        {
+          "path": "modules/contracts/ipc/desktop-asset-registry-contract.ts",
+          "sha256": "d34b691733cd6a09590688d8ebd051042977953b6ee5a8d9aeb618254a66ab86",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Definition reference mapper still returns asset-definition even when a version is supplied. Exact-version reads need contract parity; the finding alone does not prove privilege escalation.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "locally-corrected",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R62",
+        "owner_increment_number": 1,
+        "owner_evidence_level": "focused-local-regression-or-explicit-source-owned-pending",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R63",
+      "source_row": 63,
+      "finding_id_sha256": "13b6098bc58a180b5a526ab0325db800dc0b448c6e6cc7a38bb82c280803af26",
+      "repository": "ai-system-builder",
+      "title": "Malformed asset inputs can throw before validation",
+      "reported_severity": "informational",
+      "observed_revision": "365a908877f389ce873df7c2261618569f352f79",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Malformed instance/composition shapes fail before context lookups or writes; loaded malformed references add issues.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/application/use-cases/asset/asset-use-case-helpers.ts",
+          "sha256": "4bd9f212d0a284ddbb11d777b550e58bea46455190031e8a708e427d328f203c",
+          "line": 1
+        },
+        {
+          "path": "modules/application/use-cases/asset/asset-use-case-helpers.ts",
+          "sha256": "4bd9f212d0a284ddbb11d777b550e58bea46455190031e8a708e427d328f203c",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Asset use-case helpers still dereference definition references and iterate instance references before robust shape checks. Malformed requests need safe validation failure; assess actual exposure before changing severity.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "locally-corrected",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R63",
+        "owner_increment_number": 1,
+        "owner_evidence_level": "focused-local-regression-or-explicit-source-owned-pending",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R64",
+      "source_row": 64,
+      "finding_id_sha256": "238bae7649c34b3dd7c555229c1fb4ea77a616355ae128e9a612e29cb29a06fc",
+      "repository": "ai-system-builder",
+      "title": "Malformed bindingRefs can crash asset validation",
+      "reported_severity": "informational",
+      "observed_revision": "337af4891b77265c78edaffc11946fb12b285748",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Pure validators return structured invalid results for malformed references/collections.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/application/services/asset/validate-asset-instance.service.ts",
+          "sha256": "fc8aa2640277686ab916f1a1fe1296827c8ca9a9e31309c724173fd26c913816",
+          "line": 1
+        },
+        {
+          "path": "modules/application/services/asset/validate-asset-composition.service.ts",
+          "sha256": "720c84e3a2d82ec1b9c0f04086bd5ba8019e0cf73a7f0e351ca0f9188fc18469",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Composition validation still reads binding reference members after validation helpers. Null/malformed reference regression coverage is needed before declaring the boundary safe; no new exploit qualification was run.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "locally-corrected",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R64",
+        "owner_increment_number": 1,
+        "owner_evidence_level": "focused-local-regression-or-explicit-source-owned-pending",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R65",
+      "source_row": 65,
+      "finding_id_sha256": "35cc6e825287991e937339b557f80433f375812db0790de63a494d82f3815a3b",
+      "repository": "ai-system-builder",
+      "title": "Runtime readiness API blocked by route policy",
+      "reported_severity": "informational",
+      "observed_revision": "34bcbeeeaf824a89fb1aad6383dfa79d4709d33a",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Runtime readiness route families remain default-denied by current policy. Fixing availability must not broadly open dynamic API paths. Current replay verifies exact registered route families and substituted resources/methods remain denied. No broad route admission or global authorization fallback is introduced; composing their missing resource authority remains explicit successor integration work.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/adapters/transport/api-express/runtime-readiness/registerRuntimeReadinessApiRoutes.ts",
+          "sha256": "d83eac456b33b5a9a2faf23ef1c4e5869eaf85dd55f1fef4c73ace66d81c1524",
+          "line": 1
+        },
+        {
+          "path": "modules/adapters/transport/api-express/registerExpressApi.ts",
+          "sha256": "fa27980bfb005f0d0e2e3fc75340f6a0378465cfa54f0232fea3d94199fa6834",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Runtime readiness route families remain default-denied by current policy. Fixing availability must not broadly open dynamic API paths.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "explicitly-unavailable-resource-authority-integration-deferred",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R65",
+        "owner_increment_number": 2,
+        "owner_evidence_level": "executed-local-route-denial-contract",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R66",
+      "source_row": 66,
+      "finding_id_sha256": "52c53813af3fffc3461a5dd9b0d2a672d2112e4b1a0cb885188f5b62dd2b75c6",
+      "repository": "ai-system-builder",
+      "title": "Token auth service accepts unauthenticated verifier results",
+      "reported_severity": "informational",
+      "observed_revision": "2e6880fb49a8c5d3b22df5c2a7ed9043be942891",
+      "disposition": "mitigated-reverify",
+      "priority": "P1",
+      "owner": "file-and-workspace-authority",
+      "assessment": "Authentication rejects anonymous, unauthenticated and malformed verifier results before success audit or protected identity use; valid authenticated contexts remain supported. Current local qualification is tracked separately; no new token issuer or deployment trust is selected.",
+      "evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/application/services/security/verify-transport-authentication.service.ts",
+          "sha256": "29e0a69cbb6cc596cf8c4cd1269a6c9a254e856e7f69d89774eeb0c3249eadac",
+          "line": 29
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "The authentication service accepts the verifier context without checking authenticated and records success. An in-memory synthetic verifier returning anonymous was accepted with authRequired true. Built-in verifiers may throw today; the service invariant is still fail-open for a contract-valid result.",
+      "planning_disposition": "validated",
+      "implementation": {
+        "status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "qualification_work_id": "security-existing-authority-controls-qualification",
+        "remaining": "Parent I1 native file-effect blocker and complete integrated acceptance remain open. Current bounded work cannot qualify tooling or scanner closure."
+      }
+    },
+    {
+      "id": "R67",
+      "source_row": 67,
+      "finding_id_sha256": "cd47094422249a5e106636376874eed3e6f0662361186351363f61eeea374eb6",
+      "repository": "ai-system-builder",
+      "title": "Runtime setup refresh uses unavailable read paths",
+      "reported_severity": "informational",
+      "observed_revision": "89952d86ef1839be782aa1050ffe7a133a294e19",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "The real preload now exposes the finite latest/detail readiness channels used by the desktop client; a real client-to-preload-to-IPC test passes. Server readiness remains default-denied under R65; no unsupported thin-client parity is claimed.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/features/runtime-readiness/api/desktopRuntimeReadinessClient.ts",
+          "sha256": "5b5200bf8971570c951384b5fd66231f2d4bf6fd65fc3cb7c80972bb5be56d1c",
+          "line": 1
+        },
+        {
+          "path": "apps/desktop/src/preload/exposedApi.ts",
+          "sha256": "1c6d3849086a28a93a112da5eb9d28303a1feec3ecb9503346c19eb4e582d1ef",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Latest-readiness client checks an optional preload operation not exposed by the inspected bridge; thin-client route shape also differs. Keep unavailable explicit pending transport parity.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "desktop-transport-corrected-server-parity-unavailable",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R67",
+        "owner_increment_number": 2,
+        "owner_evidence_level": "executed-local-preload-and-ipc-contract",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R68",
+      "source_row": 68,
+      "finding_id_sha256": "4e9d612a8d6002acbce81a75d52a1f8ae6dbdad30f7f1970014909b04196f4ae",
+      "repository": "ai-system-builder",
+      "title": "Readiness validation drops blocking conditions",
+      "reported_severity": "informational",
+      "observed_revision": "2c7c8338cf6fed90a80ffe36180a6f9585fc5597",
+      "disposition": "validated",
+      "priority": "P1",
+      "owner": "canonical-safe-records",
+      "assessment": "Readiness validation starts with fresh empty blockers and diagnostics rather than preserving caller-validated composition blockers. A ready status can erase an existing blocking condition; actual execution reachability needs host-level proof.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/application/use-cases/runtime-readiness/runtime-readiness-validation.service.ts",
+          "sha256": "5f17daae9c0d0b44fb2aeeaac4201c538861af14361b5d45665e39cc0a60672f",
+          "line": 35
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-evidence-in-linked-work",
+        "work_id": "security-r68-readiness-preconditions",
+        "summary": "Fresh scoped plan identity/status/version and blockers survive provider validation. Missing composition authority or substituted binding identity fails before save. Derived availability failures recompute without duplicate blockers; invalid/unselected candidates cannot be promoted. Plan version changes require explicit refresh. No execution/route authority or parent-roadmap qualification is granted."
+      }
+    },
+    {
+      "id": "R69",
+      "source_row": 69,
+      "finding_id_sha256": "b50134a05ebcc9eb916e8a2c5d44f5019fe621b38403c79567bd1d31fbd91866",
+      "repository": "ai-system-builder",
+      "title": "Plan connection clients send wrong relationship field",
+      "reported_severity": "informational",
+      "observed_revision": "3da919ddaac2c8dc2bf32bfcbfc81b7ca911a67e",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Desktop and thin clients use relationshipKind; both command payloads replayed.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "apps/thin-client/src/features/asset-composition/api/thinClientAssetCompositionClient.ts",
+          "sha256": "9b8879891a92108667cca9c109b8a5d8c29b325ca3911cb0927e472ccaa794d3",
+          "line": 1
+        },
+        {
+          "path": "apps/desktop/src/renderer/features/asset-composition/api/desktopAssetCompositionClient.ts",
+          "sha256": "ed17162935a51c7b0bf65358672a6ae407b94425cd0d98f0b0e04819b4478e76",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Thin-client connectNodes still sends kind while the owning command uses relationshipKind. This is a request-contract mismatch, not authority to weaken normalization.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "locally-corrected",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R69",
+        "owner_increment_number": 1,
+        "owner_evidence_level": "focused-local-regression-or-explicit-source-owned-pending",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R70",
+      "source_row": 70,
+      "finding_id_sha256": "c920eaa7a3bf460e740db78fe1505fb021570b3d0c4a652087ed9f8d84839fe7",
+      "repository": "ai-system-builder",
+      "title": "Asset composition add/connect routes reject valid requests",
+      "reported_severity": "informational",
+      "observed_revision": "94af476d1894e8fa79e8997827707a0055f57ff2",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Only actual route identifiers are compared; conflicting route/body workspace/plan still denied.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/adapters/transport/api-express/asset-composition/registerAssetCompositionApiRoutes.ts",
+          "sha256": "216e46bf1533c1f94ccd6ff7cd5c9476a823cf3ca2f4c1dd92555d78958795c5",
+          "line": 1
+        },
+        {
+          "path": "apps/thin-client/src/features/asset-composition/api/thinClientAssetCompositionClient.ts",
+          "sha256": "9b8879891a92108667cca9c109b8a5d8c29b325ca3911cb0927e472ccaa794d3",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Add/connect route checks compare required body identifiers against absent route parameters. Valid requests can be rejected before the use case; retain real route/body mismatch denial when repairing.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "locally-corrected",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R70",
+        "owner_increment_number": 1,
+        "owner_evidence_level": "focused-local-regression-or-explicit-source-owned-pending",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R71",
+      "source_row": 71,
+      "finding_id_sha256": "b14ca5f0dc3664662c4c2c57cc00fb833357b4aa3f01f88d473194a4739e0010",
+      "repository": "ai-system-builder",
+      "title": "Asset composition REST routes are denied by policy",
+      "reported_severity": "informational",
+      "observed_revision": "5c0f507ab715b3169175278f46fa168af8256527",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "All10composition use cases and5read-model entries require persisted active workspace/resource authorization before protected I/O; both hosts inject it. Only8exact registered method/templates are admitted, with unknown variants denied.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/adapters/transport/api-express/asset-composition/registerAssetCompositionApiRoutes.ts",
+          "sha256": "216e46bf1533c1f94ccd6ff7cd5c9476a823cf3ca2f4c1dd92555d78958795c5",
+          "line": 1
+        },
+        {
+          "path": "modules/adapters/transport/api-express/registerExpressApi.ts",
+          "sha256": "fa27980bfb005f0d0e2e3fc75340f6a0378465cfa54f0232fea3d94199fa6834",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Asset composition dynamic route family lacks admission in the current exact route policy. Default-deny is secure; functionality work needs finite template policy and authorization tests.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "locally-corrected",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R71",
+        "owner_increment_number": 1,
+        "owner_evidence_level": "focused-local-regression-or-explicit-source-owned-pending",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R72",
+      "source_row": 72,
+      "finding_id_sha256": "c3fab5aeb9077cdfa710b94ac43fae7c6034083002be9bf735f0f5cc46902ef4",
+      "repository": "ai-system-builder",
+      "title": "Projection API changes introduce non-security regressions",
+      "reported_severity": "informational",
+      "observed_revision": "588b70fcc1aa1e2da9054afe260d88a0394b90be",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Static projection reads precede the dynamic route; rejected adapter reads return sanitized unavailable. Server services remain uncomposed.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/adapters/transport/api-express/effective-asset-projections/registerEffectiveAssetProjectionApiRoutes.ts",
+          "sha256": "67c7472ba9d85cf83206d44bf3dc63ea8ab1c0e3bd2a0fd1af375c243164c6d0",
+          "line": 1
+        },
+        {
+          "path": "modules/contracts/effective-asset-projections/effective-asset-projection-policy.ts",
+          "sha256": "49912297ee2b9570670a74e79443230a47a5ed6df15040be3b02ba9664c75f07",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Filter parsing now uses contract normalizers, mitigating the old literal mismatch, but dynamic projection routing still precedes static by-reference/blocked routes. Report only the remaining integration issue.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "locally-corrected-production-uncomposed",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R72",
+        "owner_increment_number": 1,
+        "owner_evidence_level": "focused-local-regression-or-explicit-source-owned-pending",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R73",
+      "source_row": 73,
+      "finding_id_sha256": "4d547089a471766780e4c484ace1c98dfe39e6940c5e87ac65aad1d71dc81e1f",
+      "repository": "ai-system-builder",
+      "title": "Prompt capability normalizer rejects valid prompt labels",
+      "reported_severity": "informational",
+      "observed_revision": "c4e109d672333f5f884215a049b08d2da0619dc6",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Declared prompt-template capability keys/labels are accepted; protected nested metadata remains denied.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/contracts/asset-composition/asset-composition-capability.ts",
+          "sha256": "4aa11485f7b70abfa2c0fe6c3877f83831aa1fcfad3bffeb8b63f09161129278",
+          "line": 1
+        },
+        {
+          "path": "modules/contracts/asset-composition/asset-composition-capability.ts",
+          "sha256": "4aa11485f7b70abfa2c0fe6c3877f83831aa1fcfad3bffeb8b63f09161129278",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Capability text filtering still rejects the prompt vocabulary supported by its own kind list. Preserve legitimate labels while rejecting actual protected payloads.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "locally-corrected",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R73",
+        "owner_increment_number": 1,
+        "owner_evidence_level": "focused-local-regression-or-explicit-source-owned-pending",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R74",
+      "source_row": 74,
+      "finding_id_sha256": "3a2a05bbba8711d1fc2faa80c00d0721997d12b94a3b4b190526ce0a3e739a1a",
+      "repository": "ai-system-builder",
+      "title": "Projection store no longer rejects unsafe metadata",
+      "reported_severity": "informational",
+      "observed_revision": "75662547a2bd6f0e98bc03dc87f169ddc3a7cbea",
+      "disposition": "validated",
+      "priority": "P2",
+      "owner": "canonical-safe-records",
+      "assessment": "Projection persistence safety still checks only JSON.stringify availability. Unsanitized record/provenance/reference fields can bypass a safe projection; recursive schema validation is required before storage and reads.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/adapters/persistence/effective-asset-projections/local-effective-asset-projection-record-store.ts",
+          "sha256": "83a58d9d2a745780394198322856ac011dac70d50fc9aade5df58c7ed0c05e03",
+          "line": 35
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-evidence-in-linked-work",
+        "work_id": "security-r74-strict-projection-records",
+        "summary": "Complete explicit bounded schemas validate projection/snapshot records, typed references, provenance, graph scalars and safe metadata. Fixed collections validate before returns, writes and mutation callbacks; malformed stored bytes preserved. No route/runtime authority granted; controlled qualification pending."
+      }
+    },
+    {
+      "id": "R75",
+      "source_row": 75,
+      "finding_id_sha256": "a534193360a1e8f82c231f7625573c52ed044b6923a5c46723f19429fd1200db",
+      "repository": "ai-system-builder",
+      "title": "Asset-authoring IPC read handlers are nonfunctional",
+      "reported_severity": "informational",
+      "observed_revision": "0feb450a5035fe9739cc43a4e93de964d9665c3b",
+      "disposition": "partial-functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "IPC list envelopes match contracts. Effective-summary list is explicitly unavailable on both hosts pending owned authorized list service.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/adapters/transport/ipc-electron/asset-authoring/registerAssetAuthoringIpc.ts",
+          "sha256": "1276d4a7e29ebf869ed2824ffbbebbc9bdf9c24e98ec07566f2367662b5969ac",
+          "line": 1
+        },
+        {
+          "path": "modules/contracts/ipc/desktop-asset-authoring-contract.ts",
+          "sha256": "0992dc32431a2688793078af35453b1d27f1a9c6f07e178b6d15167a97697c85",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Individual authoring read handlers now call repositories rather than returning undefined. List/summary mappings still require contract-shaped replay and host-exposure checks; do not apply the historical all-stub claim unchanged.",
+      "planning_disposition": "partial-functional",
+      "implementation": {
+        "status": "partially-corrected-explicit-unavailable",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R75",
+        "owner_increment_number": 1,
+        "owner_evidence_level": "focused-local-regression-or-explicit-source-owned-pending",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R76",
+      "source_row": 76,
+      "finding_id_sha256": "a9bc5941707a33484efe72460c47189e27d8867a055b050c2ce14c870a19fd5a",
+      "repository": "ai-system-builder",
+      "title": "Authoring summaries stripped from asset read responses",
+      "reported_severity": "informational",
+      "observed_revision": "93a1ebd77fe43ec4139680a99f19ac239e12330f",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Explicit canonical authoring summary projection preserves authored identifiers without exempting generic metadata keys.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/application/services/asset/workspace-asset-registry-read-facade.service.ts",
+          "sha256": "2d748fc9efddee6cebf60ec91b090a3ffdbdd5e15e7d89a1958b200f611af896",
+          "line": 1
+        },
+        {
+          "path": "modules/application/services/asset/asset-registry-read-facade.types.ts",
+          "sha256": "d00c4c753f9a214b15872beb3d72a8f90f3dc24fbce0a4c66cee934219dda4ab",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "General asset metadata sanitizer still matches the auth substring, so the authoring summary property can be stripped. Use an explicit safe response schema instead of removing sensitive-data protection.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "locally-corrected",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R76",
+        "owner_increment_number": 1,
+        "owner_evidence_level": "focused-local-regression-or-explicit-source-owned-pending",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R77",
+      "source_row": 77,
+      "finding_id_sha256": "34ea14155ce8ed15834e5a4dc1fa0a492af4ac7c7ad0fb170327bf0c1cd3715d",
+      "repository": "ai-system-builder",
+      "title": "Workspace-scoped revisions can overwrite other workspaces",
+      "reported_severity": "informational",
+      "observed_revision": "0c0bc3a08b899e29c700dc8857f4534d05cba528",
+      "disposition": "mitigated-reverify",
+      "priority": "P1",
+      "owner": "file-and-workspace-authority",
+      "assessment": "Atomic revision replacement includes workspace, asset and revision identity, preserving matching IDs belonging to other workspaces. Current local concurrency/partition qualification is tracked separately; no external database or new tenancy topology is qualified.",
+      "evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/adapters/persistence/asset-authoring/createLocalAssetAuthoringRepositoryAdapters.ts",
+          "sha256": "50a3aa82ef98ab0eb82b74c70814b9530ceb5734bfcc0bea0b1dc77052360cc5",
+          "line": 112
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Revision replacement still keys only by authoredAssetId and revisionId, while reads key by workspace too. Same-identity writes can remove another workspace record; classify by integrity impact rather than CSV informational label.",
+      "planning_disposition": "validated",
+      "implementation": {
+        "status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "qualification_work_id": "security-existing-authority-controls-qualification",
+        "remaining": "Parent I1 native file-effect blocker and complete integrated acceptance remain open. Current bounded work cannot qualify tooling or scanner closure."
+      }
+    },
+    {
+      "id": "R78",
+      "source_row": 78,
+      "finding_id_sha256": "5a1f171a9cc4a757be8b5fca48a6cf099b86f4252e57a56de0ebb66670548189",
+      "repository": "ai-system-builder",
+      "title": "User-library API routes are default-denied",
+      "reported_severity": "informational",
+      "observed_revision": "4f7a98fd4c2bef02a9057b47b510d47042dfcffe",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Personal library authority is not modeled by organization partitioning; route default denial retained.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/adapters/transport/api-express/user-library/registerUserLibraryApiRoutes.ts",
+          "sha256": "c1668b25c72ee3b6c920d78d251443fd198b177867b9b1ba7e9878cb46a5fb28",
+          "line": 1
+        },
+        {
+          "path": "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts",
+          "sha256": "7a343766ccf52297b3c7449d8e34d166f1ead366c9b7fd0db4016d0d25fd6198",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "User-library route family remains default-denied. Future admission is an explicit integration task with principal/resource authorization, not a broad security-policy bypass.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "pending-library-ownership",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R78",
+        "owner_increment_number": 1,
+        "owner_evidence_level": "focused-local-regression-or-explicit-source-owned-pending",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R79",
+      "source_row": 79,
+      "finding_id_sha256": "5e458cdb08c9a8b23c5b5df9490fb7831a26c14a6bfb8b8c0b6c7f3456d3466d",
+      "repository": "ai-system-builder",
+      "title": "User-library promotion can overwrite existing assets",
+      "reported_severity": "informational",
+      "observed_revision": "6b543477c7512286450f560298c62e59a069512c",
+      "disposition": "mitigated-reverify",
+      "priority": "P1",
+      "owner": "file-and-workspace-authority",
+      "assessment": "Atomic library creation rejects target and duplicate promoted-source collisions and preserves existing records under concurrent promotion; supported first creation and intentional reuse remain available. This does not resolve the separate personal-library owner-scoping decision.",
+      "evidence_level": "implemented-source-and-historical-focused-evidence-current-local-qualification-planned",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/application/use-cases/user-library/promote-workspace-asset-to-user-library.use-case.ts",
+          "sha256": "0828258c1b568bd0cc08bd6210e1adba3f35b93541bcb1a8012d9d74409b0d8f",
+          "line": 95
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Promotion checks source identity but not collision of requested target identity before upsert. A conflicting library id/version can replace an existing record; require atomic create/conflict semantics and authoritative ownership.",
+      "planning_disposition": "validated",
+      "implementation": {
+        "status": "implemented-local-qualification-planned-no-I1-independent-completion",
+        "qualification_work_id": "security-existing-authority-controls-qualification",
+        "remaining": "Parent I1 native file-effect blocker and complete integrated acceptance remain open. Current bounded work cannot qualify tooling or scanner closure."
+      }
+    },
+    {
+      "id": "R80",
+      "source_row": 80,
+      "finding_id_sha256": "51dfdb2405ce3dd6b5200a31afb6db28162048b4e42cd29fe5d23ee51abf478e",
+      "repository": "ai-system-builder",
+      "title": "Lazy readiness keeps ComfyUI unavailable",
+      "reported_severity": "informational",
+      "observed_revision": "c1814c6daed8ead76bdd885d782f5353eb891c9b",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "After explicit lazy image-feature composition, desktop readiness reads the live supervisor lifecycle and passive installed status instead of constant callbacks. Uncomposed state remains unknown; readiness cannot start/install/probe a runtime. Type checking and owning provider regressions are local evidence; controlled physical activation/re-read remains pending.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/hosts/desktop/composition/composeDesktopHost.ts",
+          "sha256": "0d4c44a4b43643ed4bf08cb007df9eb51a9b1984f892174df4e2eec44dbd47af",
+          "line": 1
+        },
+        {
+          "path": "modules/hosts/desktop/composition/composeDesktopHost.ts",
+          "sha256": "0d4c44a4b43643ed4bf08cb007df9eb51a9b1984f892174df4e2eec44dbd47af",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Desktop readiness composition still supplies constant uninitialized/unknown ComfyUI callbacks. Confirm current explicit activation and live reread before claiming image generation is usable.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "lazy-readiness-wiring-corrected-host-qualification-pending",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R80",
+        "owner_increment_number": 2,
+        "owner_evidence_level": "source-wiring-and-local-provider-contract",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R81",
+      "source_row": 81,
+      "finding_id_sha256": "59e77a8f8bd09269bcd73422e8af63d595e486a39356bdd0781098ec4b4411e5",
+      "repository": "ai-system-builder",
+      "title": "Active task disposal guard omits workspace filter",
+      "reported_severity": "informational",
+      "observed_revision": "40ca530d289d2973f0fb85e9b087f624059be857",
+      "disposition": "security-adjacent",
+      "priority": "P2",
+      "owner": "runtime-execution-integrity",
+      "assessment": "Feature disposal queries still omit workspace although the router requires workspace for listTasks. Preserve active task identity and no-orphan lifecycle without making broad renderer-visible task lists.",
+      "evidence_level": "source-inspection-not-requalified",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/hosts/desktop/composition/composeDesktopDatasetPreparationFeature.ts",
+          "sha256": "41907302be487d107278f874710c7a1d4d43a118c6e94ad1e56f0b1c0b8a12cb",
+          "line": 1
+        },
+        {
+          "path": "modules/hosts/desktop/composition/composeDesktopImageGenerationFeature.ts",
+          "sha256": "5a520afa7f81fd0c2349eb0615ab5b1c89ffe0b4be858d071baee61102ffa56e",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-evidence-in-linked-work",
+        "work_id": "security-r81-retained-task-controllers",
+        "summary": "Task controllers retain private review, in-flight and finalization state under existing retained policy. Generic cleanup does not use unscoped public task listing; remaining disposable owner replacement is serialized and guard/cleanup failure retains the owner. Parent/native qualification remains pending."
+      }
+    },
+    {
+      "id": "R82",
+      "source_row": 82,
+      "finding_id_sha256": "17109bf50699a402c6655686041477121eb83a8a6307f3f59b2fc133cc3c270e",
+      "repository": "ai-system-builder",
+      "title": "Workspace errors now falsely block valid workspace pages",
+      "reported_severity": "informational",
+      "observed_revision": "6144287b1852db6526191fb82ec3b68e5033ab78",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Failed selection/clear preserves a confirmed workspace; refresh failure or revoked/missing workspace remains gated.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "apps/thin-client/src/features/workspace/hooks/useActiveWorkspace.tsx",
+          "sha256": "2ef5642f4ca5a1a03225f504763ff5b4ae26f935772e2871cc72c2dcc7b7e1b5",
+          "line": 1
+        },
+        {
+          "path": "apps/thin-client/src/routes/workspaceRouteBoundary.ts",
+          "sha256": "fc8e2e1babfa0778c10daa91a3a5aa4024ea7f710e7fe1af0f72cf4950809d84",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Workspace readiness still selects error before checking an existing active workspace. Recoverable action failures can block otherwise valid pages; preserve genuine authorization/unavailable blockers.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "locally-corrected",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R82",
+        "owner_increment_number": 1,
+        "owner_evidence_level": "focused-local-regression-or-explicit-source-owned-pending",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R83",
+      "source_row": 83,
+      "finding_id_sha256": "1be9a67238d60c4ba228efc75014bdf90f4fec25251440d667c1c7c21998fe23",
+      "repository": "ai-system-builder",
+      "title": "Desktop image generation loses workspace context",
+      "reported_severity": "informational",
+      "observed_revision": "b1e9e17326d0668fa1688d1f6588fda4aeb4f05e",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Typed image IPC preserves workspace context. Both hosts bind accepted task organization/workspace ownership and reauthorize read/cancel/finalize before I/O or receipt reuse. Focused authority denial tests passed; full host qualification remains pending.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/application/use-cases/image-generation/generate-image.use-case.ts",
+          "sha256": "751c89e4f54101020f5c9eee0608fca19f3d28568fa965ad2419aa1d7f77fea9",
+          "line": 1
+        },
+        {
+          "path": "apps/desktop/src/renderer/features/image-generation/hooks/useImageGenerationFeature.ts",
+          "sha256": "1a500c221e5a93940c816567a94a80f6faa9dd37bcea2cd89d0675cca99eb05f",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Image finalization now receives workspaceId, but start/read/cancel IPC context still omits it. The report is partially stale; repair remaining context propagation without restoring a global fallback.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "locally-corrected-increment-qualification-pending",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R83",
+        "owner_increment_number": 2,
+        "owner_evidence_level": "focused-executable-regression-current-source",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R84",
+      "source_row": 84,
+      "finding_id_sha256": "328fe906f8a15db36b04fc5a8ff8fae97c813f2c90073e139afa4b88c33ef50e",
+      "repository": "ai-system-builder",
+      "title": "Finalized artifact IDs with slashes break registration",
+      "reported_severity": "informational",
+      "observed_revision": "df7a1249e5da0c539fddfd748aaae20eeee5f4ed",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Reuses canonical finalized source identity for slash-bearing artifact IDs;19 asset finalization tests passed including repeat registration. Image persistence/registration receipts retain successful steps through concurrent and partial retries.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/application/use-cases/asset/finalize-generated-output-as-asset.use-case.ts",
+          "sha256": "f0c8d309404b49fbd6cdc0068bb8a01c03d92ee497388934375ac3055f21c2df",
+          "line": 1
+        },
+        {
+          "path": "modules/application/use-cases/asset/finalize-generated-output-as-asset.use-case.ts",
+          "sha256": "f0c8d309404b49fbd6cdc0068bb8a01c03d92ee497388934375ac3055f21c2df",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Generated-output resource references still concatenate backing artifact ids into the stricter asset id normalizer. Storage side effects may precede a registration failure; require retry-safe translation.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "locally-corrected-increment-qualification-pending",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R84",
+        "owner_increment_number": 2,
+        "owner_evidence_level": "focused-executable-regression-current-source",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R85",
+      "source_row": 85,
+      "finding_id_sha256": "8c0561478fe88db81eed36a0b018f42174d94e7df071bcb0513b98c423a8cf16",
+      "repository": "ai-system-builder",
+      "title": "Conversation routes fail closed under API route policy",
+      "reported_severity": "informational",
+      "observed_revision": "7d0050b0dbb900ac67ea0adece4f00bb2ce17581",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Conversation execution route family remains default-denied. This is availability/integration work; authorization and supported capability limits must remain intact. Current replay verifies exact registered route families and substituted resources/methods remain denied. No broad route admission or global authorization fallback is introduced; composing their missing resource authority remains explicit successor integration work.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/adapters/transport/api-express/registerExpressApi.ts",
+          "sha256": "fa27980bfb005f0d0e2e3fc75340f6a0378465cfa54f0232fea3d94199fa6834",
+          "line": 1
+        },
+        {
+          "path": "modules/adapters/transport/api-express/conversations/registerConversationExecutionApiRoutes.ts",
+          "sha256": "64d8f5bd4455dd41d355809914d4ed4ff3a0546af71e9249fb886ead2d31fa0a",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Conversation execution route family remains default-denied. This is availability/integration work; authorization and supported capability limits must remain intact.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "explicitly-unavailable-resource-authority-integration-deferred",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R85",
+        "owner_increment_number": 2,
+        "owner_evidence_level": "executed-local-route-denial-contract",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R86",
+      "source_row": 86,
+      "finding_id_sha256": "2dbed9e9573be7f5b4cbe936cacc6a890045b1901badb4f4e4c78f1590fc100a",
+      "repository": "ai-system-builder",
+      "title": "Execution plan API routes are default-denied",
+      "reported_severity": "informational",
+      "observed_revision": "b4501eda5ddea64839f4d21156c2c3ce8230a7d7",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Execution-plan route family remains default-denied. Admit only supported typed operations after resource policy, host wiring and negative contract evidence. Current replay verifies exact registered route families and substituted resources/methods remain denied. No broad route admission or global authorization fallback is introduced; composing their missing resource authority remains explicit successor integration work.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/adapters/transport/api-express/execution-plans/registerExecutionPlanApiRoutes.ts",
+          "sha256": "58513bb364281e934c49054d8072f6314e50ce41a40078e8164cd76022764e40",
+          "line": 1
+        },
+        {
+          "path": "modules/adapters/transport/api-express/registerExpressApi.ts",
+          "sha256": "fa27980bfb005f0d0e2e3fc75340f6a0378465cfa54f0232fea3d94199fa6834",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Execution-plan route family remains default-denied. Admit only supported typed operations after resource policy, host wiring and negative contract evidence.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "explicitly-unavailable-resource-authority-integration-deferred",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R86",
+        "owner_increment_number": 2,
+        "owner_evidence_level": "executed-local-route-denial-contract",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    },
+    {
+      "id": "R87",
+      "source_row": 87,
+      "finding_id_sha256": "bd364a2a6003d20791865afb00fbb5335d801b7869f1e9c1e7380dd17d15c483",
+      "repository": "ai-system-builder",
+      "title": "Helper path option injection enables local code execution",
+      "reported_severity": "informational",
+      "observed_revision": "22bfbc3fba73160ca29c386970bd2da2a6068930",
+      "disposition": "mitigated-reverify",
+      "priority": "P1",
+      "owner": "development-and-tooling-security",
+      "assessment": "Bounded helper path selection rejects option-like normalized paths, absolute/drive-relative selections and unsupported Node test files. Fixed Node/Prettier argument vectors use explicit option termination; inert regression and independent review completed. This is a local helper correction, not final tooling or parent-roadmap qualification.",
+      "evidence_level": "reviewed-local-correction-historical-after-later-source-edits",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "dev-tools/helpers/run_repository_checks.py",
+          "sha256": "1fc599125c9551a80f3864d87e8a0da65a97e20753f54a30c99b2f48d3d80b0a",
+          "line": 20
+        },
+        {
+          "path": "dev-tools/helpers/run_repository_checks.py",
+          "sha256": "1fc599125c9551a80f3864d87e8a0da65a97e20753f54a30c99b2f48d3d80b0a",
+          "line": 59
+        }
+      ],
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "locally-corrected-and-independently-reviewed-final-source-qualification-pending",
+        "work_id": "security-r87-helper-positional-arguments",
+        "summary": "Planning rejects option-like normalized paths, absolute/drive-relative selections and unsupported Node test files. Fixed Node/Prettier argv uses an explicit option terminator. Inert negative regression reproduced the old acceptance and now passes. Parent increment and native controlled qualification remain open.",
+        "receipt_digest": "729eccf132ab176a75aafd752e0799df637facd7c0fb27f00710b17de37f7040",
+        "review_digest": "0c4182a53713ce230f02f1afac10eeeadfa5512b88d8a38f007788876c938735"
+      },
+      "planning_assessment": "Bounded helper path validation accepts existing repository paths regardless of option-like prefix; fixed tools receive those strings without an option terminator. This crosses its advertised argument boundary and deserves higher priority than scanner informational.",
+      "planning_disposition": "validated"
+    },
+    {
+      "id": "R88",
+      "source_row": 88,
+      "finding_id_sha256": "c452930342429aff935d76a5bf97f25667da4dcf4dedc0326e3d7eed05ad6478",
+      "repository": "ai-system-builder",
+      "title": "Removing assets drops the composer structure",
+      "reported_severity": "informational",
+      "observed_revision": "8bd75b54e36ea95ee07dc6d2523b490bcfc59d80",
+      "disposition": "functional",
+      "priority": "P3",
+      "owner": "functionality-review",
+      "assessment": "Subtree removal preserves structure through undo/redo and serialized draft restoration.",
+      "evidence_level": "transferred-owner-local-report-final-security-qualification-pending",
+      "legacy_findings": [],
+      "evidence": [
+        {
+          "path": "modules/ui/shared/system-builder/systemComposerDraft.ts",
+          "sha256": "76494fb7499c72a2da5bee5e1080b4dc62a8598ec88f170ca36aa0c548c52c33",
+          "line": 1
+        },
+        {
+          "path": "modules/ui/shared/system-builder/systemComposerDraft.ts",
+          "sha256": "76494fb7499c72a2da5bee5e1080b4dc62a8598ec88f170ca36aa0c548c52c33",
+          "line": 1
+        }
+      ],
+      "closure": "not-claimed",
+      "planning_assessment": "Subtree removal still constructs a new draft without its optional structure. This is composer data-integrity/UX correctness, not an identified authorization boundary.",
+      "planning_disposition": "functional",
+      "implementation": {
+        "status": "locally-corrected",
+        "owner": "functionality-optimization",
+        "owner_assessment": "docs/functionality-optimization-review.json",
+        "owner_finding_id": "R88",
+        "owner_increment_number": 1,
+        "owner_evidence_level": "focused-local-regression-or-explicit-source-owned-pending",
+        "qualification": "Owner-reported local correction or explicit deferral; historical supporting receipts do not transfer security acceptance. Current final all-suite, failed original-supplier audit and unavailable controlled qualification remain separate. No scanner or security-roadmap closure."
+      }
+    }
+  ],
+  "implementation_authority": "Current user request authorizes both approved roadmaps; implementation proceeds through governed increment evidence.",
+  "dependency_requalification": {
+    "work_id": "security-authorized-dependency-patch-refresh",
+    "status": "official-toolchain-migrations-implemented-original-matcher-advisory-pending",
+    "evidence_kind": "executed-local-authorized-audit",
+    "baseline_affected_package_counts": {
+      "runtime": 2,
+      "full_tree": 52
+    },
+    "compatible_patch_affected_package_counts": {
+      "runtime": 0,
+      "full_tree": 31,
+      "toolchain_critical": 2,
+      "toolchain_high": 24,
+      "toolchain_moderate": 5
+    },
+    "count_meaning": "Affected npm package entries including propagated dependency advisories, not unique exploits.",
+    "controls": "Registry transmission explicitly authorized; npm targeted compatible update/install with lifecycle scripts disabled. Real exact upstream identities/integrities retained. Existing brace-expansion wrapper delegates to upstream5.0.12; Electron41.10.7,Vite7.3.7,WDS5.2.7,fast-uri3.1.8 and compatible Express/proxy/qs/transitives refreshed. No audit fix/force, advisory waiver or weakened zero-advisory/SBOM gate.",
+    "remaining": "Seven affected high-severity toolchain package entries through original braces3.0.3 chain. Full dependency gate remains failed. Native file, physical resource and controlled user/model qualification remain separate pending obligations.",
+    "closure": "not-claimed",
+    "official_toolchain_affected_package_counts": {
+      "runtime": 0,
+      "full_tree": 7,
+      "toolchain_critical": 0,
+      "toolchain_high": 7,
+      "toolchain_moderate": 0
+    },
+    "supplier_decision": "User retained original upstream braces supplier and directed tooling qualification remain pending. The reviewed derivative was not adopted or executed. No advisory or qualification gate is waived.",
+    "official_migration": "Exact official Forge8.0.1 direct packages and Vitest4.1.11 remove old extract-zip/tinypool chains. CJS main entry and JS/CJS map packaging exclusions match actual plugin generator; renderer/preload entry globals unchanged. Vitest preserves isolation, one worker, exact-file collection and failure admission after retired minWorkers removal. Official Electron41.10.7 binary acquired with bundled checksums for local package/startup verification. npm10 peer resolver failed without updating lock; pinned official npm12.2.0 in ignored tool storage resolved same scope. No new supplier or scripts-enabled bulk install.",
+    "toolchain_work_id": "security-official-toolchain-compatibility-migrations",
+    "toolchain_integration_work_id": "security-toolchain-esm-integration-correction",
+    "export_compatibility": "Existing local brace-expansion adapter exposes the same patched upstream function as both CJS callable and explicit ESM named expand. Real packaging exposed the missing static export; the failing package attempt and exact regression are retained. No parsing/expansion implementation or supplier changed. Removed tmp consumer is no longer required by compatibility tests.",
+    "source_binding_correction": {
+      "work_id": "security-toolchain-evidence-source-binding",
+      "status": "bounded-correction-complete-overall-dependency-gate-still-failed",
+      "receipt_digest": "b31b9e2d38b4edd09a02e76c8d6930973f79941b394bed6042aaa7d59375963b",
+      "review_digest": "e2faeb1bfc9dbb7a035deba2899f6df494269a0b1e2b34502df630f7e64ca7c3",
+      "local_smoke": "Desktop1of1 passed using a fresh current-worktree package and corrected root manifest/lock identity. Subsequent runtime source edits make that observation historical; no thin-client/user/model/native or full tooling qualification.",
+      "history": "Previous incomplete binding, failed argument selection and sandbox loopback fixture denial remain retained; independent review resolved only the local binding finding."
+    }
+  }
+}

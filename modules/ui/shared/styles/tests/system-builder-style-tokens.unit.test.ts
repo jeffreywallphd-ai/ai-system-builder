@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "../../../../testing/node-test";
 
 const readStyle = (relativePath: string): string =>
-  readFileSync(resolve(process.cwd(), relativePath), "utf8");
+  readFileSync(resolve(process.cwd(), relativePath), "utf8").replace(/\r\n?/g, "\n");
 
 const repositoryUiSources = (relativeDirectory: string): readonly string[] => {
   const sources: string[] = [];

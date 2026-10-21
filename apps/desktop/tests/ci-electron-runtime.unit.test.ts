@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("CI explicitly installs the pinned Electron runtime after the script-free dependency install", async () => {
-  const workflow = await readFile(".github/workflows/ci.yml", "utf8");
+  const workflow = (await readFile(".github/workflows/ci.yml", "utf8")).replace(/\r\n?/g, "\n");
 
   assert.match(
     workflow,

@@ -1,5 +1,6 @@
 import { ChildProcess, spawn, type SpawnOptions } from "node:child_process";
 import { platform } from "node:os";
+import { terminateOwnedProcess } from "../../shared/terminateOwnedProcess";
 
 import type { PythonRuntimeHttpClient } from "../client/createPythonRuntimeHttpClient";
 
@@ -79,6 +80,10 @@ export function createPythonRuntimeSupervisor(
   };
 
   let childProcess: ChildProcess | undefined;
+  let startFlight: Promise<void> | undefined;
+  let startGeneration: number | undefined;
+  let stopFlight: Promise<void> | undefined;
+  let lifecycleGeneration = 0;
   let status: PythonRuntimeSupervisorStatus = "stopped";
   let attachedToExistingRuntime = false;
   let lastHealthProbeError: string | undefined;
@@ -187,15 +192,20 @@ export function createPythonRuntimeSupervisor(
   };
 
   const applyChildExitBinding = (processHandle: ChildProcess) => {
-    processHandle.once("exit", (code, signal) => {
+    const onTerminal = (code: number | null, signal: NodeJS.Signals | null) => {
+      if (childProcess !== processHandle) return;
       const exitDetail = `Python runtime process exited during lifecycle (code=${String(code ?? "null")}, signal=${String(signal ?? "null")}).`;
-      lastStartupFailure = exitDetail;
+      const startupFailed = status === "failed";
+      if (!startupFailed) lastStartupFailure = exitDetail;
       childProcess = undefined;
       attachedToExistingRuntime = false;
-      status = "stopped";
+      status = startupFailed ? "failed" : "stopped";
       emitEvent("process-exit", exitDetail, { code, signal });
-    });
-    processHandle.once("error", (error) => {
+    };
+    processHandle.once("exit", onTerminal);
+    processHandle.once("close", onTerminal);
+    processHandle.on("error", (error) => {
+      if (childProcess !== processHandle) return;
       lastStartupFailure = "Python runtime process failed to start.";
       status = "failed";
       emitEvent("process-error", lastStartupFailure, {
@@ -212,6 +222,7 @@ export function createPythonRuntimeSupervisor(
       }
 
       stream.on("data", (chunk: string | Buffer) => {
+        if (childProcess !== processHandle) return;
         const text = chunk.toString();
         const summary = appendRuntimeOutput(source, text);
         if (summary) {
@@ -277,14 +288,16 @@ export function createPythonRuntimeSupervisor(
     }
   };
 
-  const tryAttachToExistingRuntime = async (): Promise<boolean> => {
+  const tryAttachToExistingRuntime = async (assertCurrent: () => void): Promise<boolean> => {
     try {
       const health = await options.runtimeClient.getHealthStatus();
+      assertCurrent();
       if (!health.healthy) {
         return false;
       }
 
       const missingCapabilities = await resolveMissingRequiredCapabilities();
+      assertCurrent();
       if (missingCapabilities.length > 0) {
         const detail = `Healthy Python runtime is missing required capability/capabilities: ${missingCapabilities.join(", ")}.`;
         lastStartupFailure = detail;
@@ -310,6 +323,7 @@ export function createPythonRuntimeSupervisor(
       );
       return true;
     } catch {
+      assertCurrent();
       return false;
     }
   };
@@ -330,15 +344,22 @@ export function createPythonRuntimeSupervisor(
     );
   };
 
-  const startHealthPolling = async () => {
+  const startHealthPolling = async (assertCurrent: () => void, owner: ChildProcess) => {
+    const assertOwned = () => {
+      assertCurrent();
+      if (childProcess !== owner) throw new Error("Python runtime exited before health check completed.");
+      assertRuntimeStillStarting();
+    };
     const startedAt = Date.now();
     while (Date.now() - startedAt < startupTimeoutMs) {
-      assertRuntimeStillStarting();
+      assertOwned();
       try {
         const health = await options.runtimeClient.getHealthStatus();
+        assertOwned();
         if (health.healthy) {
           const missingCapabilities =
             await resolveMissingRequiredCapabilities();
+          assertOwned();
           if (missingCapabilities.length > 0) {
             const detail = `Python runtime is healthy but missing required capability/capabilities: ${missingCapabilities.join(", ")}.`;
             lastStartupFailure = detail;
@@ -366,6 +387,7 @@ export function createPythonRuntimeSupervisor(
           runtimeStatus: health.status.status,
         });
       } catch (error) {
+        assertOwned();
         const message = `Python runtime health probe failed (${error instanceof Error ? error.name : "Error"}).`;
         lastHealthProbeError = message;
         healthProbeFailureCount += 1;
@@ -389,6 +411,15 @@ export function createPythonRuntimeSupervisor(
 
   return {
     async start() {
+      if (stopFlight) throw new Error("Python runtime is stopping; retry after confirmed termination.");
+      if (startFlight) {
+        if (startGeneration !== lifecycleGeneration) throw new Error("Previous Python runtime startup is still stopping.");
+        return startFlight;
+      }
+      const generation = lifecycleGeneration;
+      const assertCurrent = () => { if (generation !== lifecycleGeneration) throw new Error("Python runtime startup was stopped."); };
+      const operation = (async () => {
+      if (childProcess && status === "failed") throw new Error("Python runtime startup failed; stop the owned process before retrying.");
       if (childProcess && status !== "stopped") {
         emitEvent(
           "start-skipped",
@@ -396,16 +427,18 @@ export function createPythonRuntimeSupervisor(
         );
         return;
       }
-      if (status === "ready" && attachedToExistingRuntime) {
-        if (await tryAttachToExistingRuntime()) {
+      if (attachedToExistingRuntime) {
+        if (await tryAttachToExistingRuntime(assertCurrent)) {
+          assertCurrent();
           emitEvent(
             "start-skipped",
             "Runtime start skipped because supervisor is attached to an existing runtime.",
           );
           return;
         }
-        attachedToExistingRuntime = false;
-        status = "stopped";
+        assertCurrent();
+        status = "failed";
+        throw new Error("Externally attached Python worker is unavailable; external termination must be confirmed before replacement.");
       }
 
       lastHealthProbeError = undefined;
@@ -426,9 +459,11 @@ export function createPythonRuntimeSupervisor(
       maybeWarnOnWindowsCommand(command);
 
       status = "starting";
-      if (await tryAttachToExistingRuntime()) {
+      if (await tryAttachToExistingRuntime(assertCurrent)) {
+        assertCurrent();
         return;
       }
+      assertCurrent();
       if (incompatibleExistingRuntimeFailure) {
         throwStartupFailure(
           `${incompatibleExistingRuntimeFailure} Stop the existing Python runtime or use a different PYTHON_RUNTIME_BASE_URL/PYTHON_RUNTIME_PORT before starting a new worker.`,
@@ -444,6 +479,7 @@ export function createPythonRuntimeSupervisor(
             env: runtimeEnvironment,
           });
         } catch (error) {
+          assertCurrent();
           lastStartupFailure = "Python runtime environment preparation failed.";
           status = "failed";
           emitEvent("process-error", lastStartupFailure, {
@@ -455,6 +491,7 @@ export function createPythonRuntimeSupervisor(
         }
       }
 
+      assertCurrent();
       if (options.prepareLaunchEnvironment) {
         try {
           await options.prepareLaunchEnvironment({
@@ -464,6 +501,7 @@ export function createPythonRuntimeSupervisor(
             env: runtimeEnvironment,
           });
         } catch (error) {
+          assertCurrent();
           lastStartupFailure = "Python runtime launch preparation failed.";
           status = "failed";
           emitEvent("process-error", lastStartupFailure, {
@@ -475,6 +513,7 @@ export function createPythonRuntimeSupervisor(
         }
       }
 
+      assertCurrent();
       try {
         attachedToExistingRuntime = false;
         childProcess = spawnImplementation(command, args, {
@@ -483,6 +522,7 @@ export function createPythonRuntimeSupervisor(
           stdio: "pipe",
         } satisfies SpawnOptions);
       } catch (error) {
+        assertCurrent();
         lastStartupFailure = "Python runtime process failed to start.";
         status = "failed";
         emitEvent("process-error", lastStartupFailure, {
@@ -495,12 +535,22 @@ export function createPythonRuntimeSupervisor(
       applyChildExitBinding(childProcess);
       emitEvent("spawned", "Python runtime process spawned.");
 
-      await startHealthPolling();
+      await startHealthPolling(assertCurrent, childProcess);
+      assertCurrent();
+      })();
+      startFlight = operation;
+      startGeneration = generation;
+      try { await operation; } finally { if (startFlight === operation) { startFlight = undefined; startGeneration = undefined; } }
     },
 
     async stop() {
+      if (stopFlight) return stopFlight;
+      lifecycleGeneration++;
       emitEvent("stop-requested", "Stopping Python runtime process.");
       if (!childProcess) {
+        if (attachedToExistingRuntime) {
+          throw new Error("Externally attached Python worker termination cannot be confirmed; external shutdown remains required.");
+        }
         attachedToExistingRuntime = false;
         status = "stopped";
         emitEvent(
@@ -511,14 +561,14 @@ export function createPythonRuntimeSupervisor(
       }
 
       const processHandle = childProcess;
-      await new Promise<void>((resolve) => {
-        processHandle.once("exit", () => resolve());
-        processHandle.kill("SIGTERM");
+      status = "failed";
+      const operation = Promise.resolve().then(() => terminateOwnedProcess(processHandle)).then(() => {
+        if (childProcess === processHandle) childProcess = undefined;
+        status = "stopped";
+        emitEvent("stop-complete", "Python runtime process stopped.");
       });
-
-      childProcess = undefined;
-      status = "stopped";
-      emitEvent("stop-complete", "Python runtime process stopped.");
+      stopFlight = operation;
+      try { await operation; } finally { if (stopFlight === operation) stopFlight = undefined; }
     },
 
     async restart() {

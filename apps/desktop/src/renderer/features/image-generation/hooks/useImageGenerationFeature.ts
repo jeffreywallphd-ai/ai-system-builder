@@ -1,3 +1,4 @@
+import { useTaskObservationManager } from "../../../../../../../modules/ui/shared/notifications/TaskObservationProvider";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ImageGenerationRequest } from "../../../../../../../modules/contracts/image-generation";
@@ -93,6 +94,7 @@ const ACTIVE_STATUSES: ImageGenerationUiStatus[] = [
   "queued",
   "running",
   "finalizing",
+  "unknown",
 ];
 const INSTALL_STATUSES: RuntimeInstallStatus[] = [
   "not-installed",
@@ -301,11 +303,16 @@ export function useImageGenerationFeature(
     string | undefined
   >(undefined);
   const mountedRef = useRef(true);
+  const observer = useTaskObservationManager();
+  const currentWorkspaceRef = useRef(workspaceId); currentWorkspaceRef.current = workspaceId;
+  const pollStopRef = useRef<(() => void) | undefined>(undefined);
+  const taskStorageKey = `ai-system-builder.image-task.v1:${workspaceId ?? "none"}`;
+  const finalizedAssetsRef = useRef(finalizedAssets);
   const activePollRef = useRef<string | undefined>(undefined);
   const installStatusSequenceRef = useRef(0);
   const isPollingStillActive = useCallback(
-    (id: string) => mountedRef.current && activePollRef.current === id,
-    [],
+    (id: string) => mountedRef.current && currentWorkspaceRef.current === workspaceId && activePollRef.current === id,
+    [workspaceId],
   );
   useEffect(
     () => () => {
@@ -336,6 +343,7 @@ export function useImageGenerationFeature(
     });
     return () => {
       mountedRef.current = false;
+      pollStopRef.current?.();
       activePollRef.current = undefined;
     };
   }, []);
@@ -489,6 +497,7 @@ export function useImageGenerationFeature(
             const viewUrl = await artifacts.createArtifactMediaViewUrl({
               storageKey: a.storageKey ?? a.artifactId,
             });
+            if (!mountedRef.current || currentWorkspaceRef.current !== workspaceId) { URL.revokeObjectURL?.(viewUrl); return { ...a, previewStatus: "failed" as const, previewError: "Preview request is no longer active." }; }
             previewUrlsRef.current.push(viewUrl);
             return {
               ...a,
@@ -507,133 +516,61 @@ export function useImageGenerationFeature(
       );
       return resolved;
     },
-    [artifacts],
+    [artifacts, workspaceId],
   );
 
-  const replaceFinalizedAssets = useCallback(
-    (
-      assets: ImageGenerationFinalizedAssetReference[],
-      completedRequestId?: string,
-    ) => {
-      if (finalizedAssets.length > 0) {
-        setSessionGallery((history) => [
-          {
-            id: `${completedRequestId ?? "generation"}-${Date.now()}`,
-            requestId: completedRequestId,
-            createdAt: new Date().toISOString(),
-            assets: finalizedAssets,
-          },
-          ...history,
-        ]);
-      }
-      setFinalizedAssets(assets);
-    },
-    [finalizedAssets],
-  );
+  const replaceFinalizedAssets = useCallback((assets: ImageGenerationFinalizedAssetReference[], completedRequestId?: string) => {
+    const previous = finalizedAssetsRef.current;
+    if (previous.length && JSON.stringify(previous.map((a) => a.assetId)) !== JSON.stringify(assets.map((a) => a.assetId))) setSessionGallery((history) => [{ id: `${completedRequestId ?? "generation"}-${Date.now()}`, requestId: completedRequestId, createdAt: new Date().toISOString(), assets: previous }, ...history].slice(0, 20));
+    finalizedAssetsRef.current = assets; setFinalizedAssets(assets);
+  }, []);
 
-  const poll = useCallback(
-    async (id: string) => {
-      if (activePollRef.current === id) return;
-      activePollRef.current = id;
-      try {
-        while (isPollingStillActive(id)) {
-          const read = await imageGenerationClient.readImageGeneration({
-            requestId: id,
-            workspaceId,
-          } as never);
+  const poll = useCallback(async (id: string) => {
+    if (!workspaceId || activePollRef.current === id) return;
+    pollStopRef.current?.(); activePollRef.current = id;
+    let finalizing = false;
+    const scope = { workspaceId, family: "image-generation", requestId: id };
+    const stop = observer.subscribe(scope, async () => {
+      const response = await imageGenerationClient.readImageGeneration({ requestId: id, workspaceId });
+      if (!response.ok) throw new Error("Image progress is unavailable.");
+      return { value: response.value, activity: ["succeeded", "failed", "cancelled"].includes(response.value.status) || "recordType" in response.value ? "terminal" : "active" };
+    }, (snapshot) => {
+      if (!isPollingStillActive(id)) return;
+      if (!snapshot) { setError("Image progress is temporarily unavailable. It will retry automatically."); return; }
+      const record = snapshot.value;
+      if ("recordType" in record) { setStatus("failed"); setError("The image task is no longer available on this host."); return; }
+      const view: ImageGenerationTaskDataView = { status: record.status, progress: record.progress, outputs: normalizeImageGenerationOutputs(record) };
+      setTaskData(view); setProgress(view.progress); setOutputs(view.outputs);
+      if (record.status === "queued" || record.status === "running") { setStatus(record.status); setError(undefined); return; }
+      if (record.status === "failed" || record.status === "cancelled") { setStatus(record.status); if (record.status === "failed") setError("Image generation failed. Review runtime diagnostics before trying again."); return; }
+      if (record.status !== "succeeded") { setStatus("unknown"); setError("Runtime progress is unavailable. The task identity is retained."); return; }
+      if (finalizing) return; finalizing = true; setStatus("finalizing");
+      void (async () => {
+        try {
+          const result = await imageGenerationClient.finalizeImageGenerationIfCompleted({ requestId: id, workspaceId });
           if (!isPollingStillActive(id)) return;
-          if (!read.ok) {
-            setStatus("failed");
-            setError(
-              read.error.message ?? "Failed to read image generation status.",
-            );
-            return;
-          }
-          const view: ImageGenerationTaskDataView = {
-            status: read.value.status,
-            progress: read.value.progress
-              ? {
-                  message: read.value.progress.message,
-                  current: read.value.progress.current,
-                  total: read.value.progress.total,
-                }
-              : undefined,
-            outputs: normalizeImageGenerationOutputs(read.value),
-          };
-          setTaskData(view);
-          setProgress(view.progress);
-          setOutputs(view.outputs);
-          const s = read.value.status;
-          if (s === "queued") {
-            setStatus("queued");
-            await sleep(600);
-            continue;
-          }
-          if (s === "running") {
-            setStatus("running");
-            await sleep(600);
-            continue;
-          }
-          if (s === "succeeded") {
-            setStatus("finalizing");
-            const fin =
-              await imageGenerationClient.finalizeImageGenerationIfCompleted({
-                requestId: id,
-                workspaceId,
-              } as never);
-            if (!isPollingStillActive(id)) return;
-            if (!fin.ok) {
-              setStatus("failed");
-              setError(
-                fin.error.message ?? "Failed to finalize generated images.",
-              );
-              return;
-            }
-            const assets = (fin.value.assets ?? []).filter(
-              (a): a is ImageGenerationFinalizedAssetReference =>
-                typeof a?.assetId === "string" &&
-                typeof a?.artifactId === "string",
-            );
-            if (!hasFinalizedAssets(assets)) {
-              setStatus("failed");
-              setError(
-                "Image generation finalized but did not register any generated image artifacts.",
-              );
-              return;
-            }
-            const resolvedAssets = await hydratePreviews(assets);
-            replaceFinalizedAssets(resolvedAssets, id);
-            setStatus("succeeded");
-            return;
-          }
-          if (s === "failed") {
-            setStatus("failed");
-            setError(read.value.error?.message ?? "Task failed.");
-            return;
-          }
-          if (s === "cancelled") {
-            setStatus("cancelled");
-            return;
-          }
-          setStatus("unknown");
-          return;
-        }
-      } catch (cause) {
-        if (!isPollingStillActive(id)) return;
-        setStatus("failed");
-        setError(
-          cause instanceof Error ? cause.message : "Image generation failed.",
-        );
-      }
-    },
-    [
-      imageGenerationClient,
-      isPollingStillActive,
-      hydratePreviews,
-      replaceFinalizedAssets,
-      workspaceId,
-    ],
-  );
+          if (!result.ok || !result.value.finalized) throw new Error("Image finalization is unavailable.");
+          const assets = result.value.assets ?? [];
+          if (!hasFinalizedAssets(assets)) throw new Error("Image output registration is incomplete.");
+          const resolved = await hydratePreviews(assets);
+          if (!isPollingStillActive(id)) return;
+          replaceFinalizedAssets(resolved, id); setStatus("succeeded"); setError(undefined);
+          pollStopRef.current?.(); activePollRef.current = undefined;
+        } catch {
+          if (isPollingStillActive(id)) { setStatus("failed"); setError("Image finalization could not finish. Retry finalization to keep the same generation."); }
+        } finally { finalizing = false; }
+      })();
+    });
+    pollStopRef.current = stop;
+  }, [imageGenerationClient, observer, isPollingStillActive, hydratePreviews, replaceFinalizedAssets, workspaceId]);
+
+  useEffect(() => {
+    try { const id = sessionStorage.getItem(taskStorageKey); if (id && id.length <= 512) { setRequestId(id); void poll(id); } } catch { /* Session storage is optional. */ }
+    return () => { pollStopRef.current?.(); activePollRef.current = undefined; };
+  }, [poll, taskStorageKey]);
+  const retryFinalization = () => { if (workspaceId && requestId) observer.invalidate({ workspaceId, family: "image-generation", requestId }); };
+  const canRetryFinalization = status === "failed" && taskData?.status === "succeeded";
+
   const start = useCallback(async () => {
     if (validationError || isStartDisabled) return false;
     setStatus("starting");
@@ -691,6 +628,8 @@ export function useImageGenerationFeature(
       ...payload,
       workspaceId,
     } as never);
+    if (started.ok) { try { sessionStorage.setItem(taskStorageKey, started.value.requestId); } catch { /* Optional recovery identity. */ } }
+    if (!mountedRef.current || currentWorkspaceRef.current !== workspaceId) return false;
     if (!started.ok || !started.value.requestId) {
       setStatus("failed");
       setError(
@@ -719,10 +658,12 @@ export function useImageGenerationFeature(
       workspaceId,
     } as never);
     if (!isPollingStillActive(requestId)) return;
+    if (workspaceId) observer.invalidate({ workspaceId, family: "image-generation", requestId });
     if (cancelled.ok && cancelled.value.cancelled === true) {
       setStatus("cancelled");
       setMessage(cancelled.value.message);
       activePollRef.current = undefined;
+      pollStopRef.current?.();
       return;
     }
     setMessage(
@@ -806,6 +747,8 @@ export function useImageGenerationFeature(
     isStartDisabled,
     start,
     cancel,
+    retryFinalization,
+    canRetryFinalization,
     refreshInstallStatus,
     repairInstall,
     installStatus,

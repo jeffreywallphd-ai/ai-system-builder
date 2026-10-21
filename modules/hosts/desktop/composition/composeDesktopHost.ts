@@ -1,3 +1,13 @@
+import { createOwnedTaskReconciler } from "../../shared/createOwnedTaskReconciler";
+import { shutdownOwnedTasks } from "../../shared/shutdownOwnedTasks";
+import { asyncLazyObject } from "./lazyProxy";
+import { ImageGenerationTaskAuthorityService } from "../../../application/services/image/image-generation-task-authority.service";
+import { WorkspaceAssetAccessService } from "../../../application/services/asset/workspace-asset-access.service";
+import { composeWorkspaceSummary } from "../../shared/composition/composeWorkspaceSummary";
+import { CountDatasetReviewTargetsUseCase } from "../../../application/use-cases/dataset-review";
+import { createStructuredAssetDerivedCustomizationRepository } from "../../../adapters/persistence/asset-authoring/createStructuredAssetDerivedCustomizationRepository";
+import { createStructuredAssetStudioAssetDraftRepository } from "../../../adapters/persistence/asset-studio/createStructuredAssetStudioAssetDraftRepository";
+import { createStructuredDatasetVersionRepository } from "../../../adapters/persistence/dataset-version";
 import { randomUUID } from "node:crypto";
 import { cpus, freemem, totalmem } from "node:os";
 import path from "node:path";
@@ -237,10 +247,10 @@ export const DESKTOP_FEATURE_LIFECYCLE_POLICIES = {
   "comfyui-image-runtime": "explicit-unload-only",
   "runtime-task-registry": "explicit-unload-only",
   "model-registry": "retained",
-  "image-generation": "disposable",
+  "image-generation": "retained",
   "website-ingestion": "disposable",
-  "dataset-preparation": "disposable",
-  "context-management": "disposable",
+  "dataset-preparation": "retained",
+  "context-management": "retained",
 } as const satisfies Record<string, DesktopFeatureLifecyclePolicy>;
 
 export type DesktopFeatureLifecycleKey =
@@ -299,6 +309,7 @@ export interface DesktopHostComposition {
   clearHuggingFaceToken: () => HuggingFaceTokenStatus;
   startPythonRuntime: () => Promise<void>;
   stopPythonRuntime: () => Promise<void>;
+  shutdownBackgroundTasks: () => Promise<void>;
   restartPythonRuntime: () => Promise<void>;
   unloadPythonRuntimeModel: () => Promise<void>;
   clearPythonRuntimeLogs: () => Promise<void>;
@@ -500,6 +511,8 @@ export function composeDesktopHost(
           runtimeLogs,
           recordRuntimeLog,
         });
+        const startOwnedPython = feature.supervisor.start.bind(feature.supervisor);
+        feature.supervisor.start = async () => { taskReconciler.assertAccepting(); await startOwnedPython(); };
         recordHostMemorySnapshot(
           "desktop.host.python-runtime-foundation.compose.after",
           { baseUrlConfigured: Boolean(resolvePythonRuntimeBaseUrl()) },
@@ -641,6 +654,11 @@ export function composeDesktopHost(
       : undefined);
   recordHostMemorySnapshot("desktop.host.compose.return");
 
+  const taskReconciler = createOwnedTaskReconciler();
+  let closeImageAdmission: (() => void) | undefined;
+  let stopOwnedImageRuntime: (() => Promise<void>) | undefined;
+  let readComfyUiLifecycleState: Parameters<typeof createDesktopRuntimeReadinessService>[0]["readComfyUiLifecycleState"] = () => "uninitialized";
+  let readComfyUiInstallStatus: Parameters<typeof createDesktopRuntimeReadinessService>[0]["readComfyUiInstallStatus"] = async () => "unknown";
   return {
     loggingPort,
     loggingConfig,
@@ -655,6 +673,14 @@ export function composeDesktopHost(
     async startPythonRuntime() {
       recordRuntimeLog({ level: "info", message: "Starting Python runtime." });
       await (await getPythonRuntimeFoundation()).supervisor.start();
+    },
+    async shutdownBackgroundTasks() {
+      taskReconciler.stopAccepting();
+      closeImageAdmission?.();
+      await shutdownOwnedTasks({ reconciler: taskReconciler,
+        stopPython: async () => { if (pythonRuntimeFoundationPromise) await (await pythonRuntimeFoundationPromise).supervisor.stop(); },
+        stopImage: async () => { await stopOwnedImageRuntime?.(); },
+      });
     },
     async stopPythonRuntime() {
       if (!pythonRuntimeFoundationPromise) return;
@@ -756,6 +782,7 @@ export function composeDesktopHost(
               now: options.now,
             })
           : undefined;
+      const imageTaskAuthority = new ImageGenerationTaskAuthorityService({ workspaceRepository: startupWorkspaceShell.workspaceRepository, workspaceAuthorization, organizationContextProvider: options.localIdentity ? { getCurrentOrganizationContext: () => ({ organizationId: options.localIdentity!.organizationId, principalId: options.localIdentity!.principalId }) } : undefined });
       const runtimeReadiness = createDesktopRuntimeReadinessService({
         readPythonSupervisorState: () => {
           const status = pythonRuntimeFoundation?.supervisor.getStatus();
@@ -765,10 +792,8 @@ export function composeDesktopHost(
             ? status
             : "stopped";
         },
-        readComfyUiLifecycleState: () => "uninitialized",
-        async readComfyUiInstallStatus() {
-          return "unknown";
-        },
+        readComfyUiLifecycleState: () => readComfyUiLifecycleState(),
+        readComfyUiInstallStatus: () => readComfyUiInstallStatus(),
         now,
       });
       const getArtifactFeatures = featureLifecycle.registerAsyncFeature({
@@ -847,14 +872,23 @@ export function composeDesktopHost(
           importFeature: async () => {
             const module =
               await import("./composeDesktopComfyUiImageRuntimeFeature");
-            return () =>
-              module.composeDesktopComfyUiImageRuntimeFeature({
+            return async () => {
+              const feature = await module.composeDesktopComfyUiImageRuntimeFeature({
                 runtimeRootDirectory: registerOptions.runtimeRootDirectory,
                 loggingPort,
                 applicationSettings,
                 readRuntimeSettingString,
                 getArtifacts: getArtifactFeatures,
               });
+              readComfyUiLifecycleState = () => feature.supervisorPort.getLifecycleState();
+              const startOwnedImage = feature.supervisorPort.start.bind(feature.supervisorPort);
+              feature.supervisorPort.start = async () => { taskReconciler.assertAccepting(); await startOwnedImage(); };
+              taskReconciler.assertAccepting();
+              readComfyUiInstallStatus = async () => (await feature.installer.getInstallStatus({ targetId: "comfyui", installRoot: feature.installRoot })).status;
+              closeImageAdmission = () => feature.imageRuntimeTaskRegistry.closeAdmission();
+              stopOwnedImageRuntime = async () => { await feature.supervisorPort.stop(); await feature.imageRuntimeTaskRegistry.settleAfterRuntimeStop(); };
+              return feature;
+            };
           },
         });
       const getRuntimeTaskFeatures = featureLifecycle.registerAsyncFeature({
@@ -869,6 +903,7 @@ export function composeDesktopHost(
               imageRuntimeTaskRegistry: (await getComfyUiImageRuntimeFeatures())
                 .imageRuntimeTaskRegistry,
               runtimeReadiness,
+              taskReconciler,
               recordMilestone: recordHostMemorySnapshot,
             });
         },
@@ -881,6 +916,7 @@ export function composeDesktopHost(
           const module = await import("./composeDesktopModelFeature");
           return () =>
             module.composeDesktopModelFeature({
+              taskReconciler,
               storageRootDirectory: registerOptions.storageRootDirectory,
               now,
               documents: organizationDocuments,
@@ -905,6 +941,7 @@ export function composeDesktopHost(
               loggingPort,
               now,
               recordRuntimeLog,
+              taskAuthority: imageTaskAuthority,
               artifacts: await getArtifactFeatures(),
               assets: await getAssetFeatures(),
               runtime: await getRuntimeTaskFeatures(),
@@ -1191,6 +1228,9 @@ export function composeDesktopHost(
         createLocalEffectiveAssetProjectionRepositoryAdapter(
           structuredRepositoryOptions,
         );
+      const assetCompositionWorkspaceAccess = new WorkspaceAssetAccessService({
+        workspaceRepository: startupWorkspaceShell.workspaceRepository, workspaceAuthorization,
+      });
       const assetCompositionPlanRepository =
         createLocalAssetCompositionPlanRepositoryAdapter(
           structuredRepositoryOptions,
@@ -1252,7 +1292,7 @@ export function composeDesktopHost(
           projectionRepository: effectiveAssetProjectionRepository,
         });
       const assetCompositionReadModel =
-        new WorkspaceAssetCompositionReadModelService({
+        new WorkspaceAssetCompositionReadModelService({ workspaceAccess: assetCompositionWorkspaceAccess,
           compositionPlanRepository: assetCompositionPlanRepository,
         });
       const workspaceUserLibraryLinkRepository =
@@ -1530,7 +1570,22 @@ export function composeDesktopHost(
             validate: executionPlanServices.validatePlan,
             readModel: executionPlanServices.readModel,
           },
-          workspaceServices: startupWorkspaceShell,
+          workspaceServices: {
+            ...startupWorkspaceShell,
+            summarySenderTrust: registerOptions.senderTrust,
+            readWorkspaceSummary: workspaceAuthorization && organizationDocuments ? composeWorkspaceSummary({
+              workspaceRepository: startupWorkspaceShell.workspaceRepository,
+              authorization: workspaceAuthorization,
+              systems: systemBuilder?.repository, builds: systemBuild?.repository,
+              models: asyncLazyObject(async () => {
+                const { createLocalModelRegistryAdapter } = await import("../../../adapters/persistence/model");
+                return createLocalModelRegistryAdapter({filePath: `${registerOptions.storageRootDirectory}/model-registry/models.json`, rootDirectory: registerOptions.storageRootDirectory, documents: organizationDocuments, discovery: {enabled: false}});
+              }),
+              artifacts: {async browseArtifactCatalogRecords(request, context) {return (await getArtifactFeatures()).artifactCatalog.browseArtifactCatalogRecords(request, context);}, async readArtifactCatalogRecord(request, context) {return (await getArtifactFeatures()).artifactCatalog.readArtifactCatalogRecord(request, context);}},
+              countDatasets: workspaceId => new CountDatasetReviewTargetsUseCase({repository: createStructuredDatasetVersionRepository(organizationDocuments), artifacts: {async hasArtifact(request, context) {return (await getArtifactFeatures()).storage.hasArtifact(request, context);}}, workspaceRepository: startupWorkspaceShell.workspaceRepository, workspaceAuthorization}).execute({workspaceId}),
+              assetSources: [authoredAssetRepository, assetOverrideRepository, createStructuredAssetDerivedCustomizationRepository(organizationDocuments), createStructuredAssetStudioAssetDraftRepository(organizationDocuments)],
+            }) : undefined,
+          },
           settingsUseCases,
           selectFolder: options.folderPicker?.selectFolder,
           featureLifecycle: {
@@ -1688,45 +1743,45 @@ export function composeDesktopHost(
         },
         assetComposition: {
           ipcMain: registerOptions.ipcMain,
-          createPlan: new CreateAssetCompositionPlanUseCase({
+          createPlan: new CreateAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
             generatePlanId: () => `plan.${randomUUID()}`,
             now: options.now,
           }),
-          updatePlan: new UpdateAssetCompositionPlanUseCase({
+          updatePlan: new UpdateAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
             now: options.now,
           }),
-          readPlan: new ReadAssetCompositionPlanUseCase({
+          readPlan: new ReadAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
           }),
-          listPlans: new ListAssetCompositionPlansUseCase({
+          listPlans: new ListAssetCompositionPlansUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
           }),
-          archivePlan: new ArchiveAssetCompositionPlanUseCase({
+          archivePlan: new ArchiveAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
             now: options.now,
           }),
-          addProjection: new AddProjectionToCompositionPlanUseCase({
+          addProjection: new AddProjectionToCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
             projectionRepository: effectiveAssetProjectionRepository,
             generateNodeId: () => `node.${randomUUID()}`,
             now: options.now,
           }),
-          removeProjection: new RemoveProjectionFromCompositionPlanUseCase({
+          removeProjection: new RemoveProjectionFromCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
             now: options.now,
           }),
-          connectNodes: new ConnectCompositionNodesUseCase({
+          connectNodes: new ConnectCompositionNodesUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
             generateRelationshipId: () => `rel.${randomUUID()}`,
             now: options.now,
           }),
-          disconnectNodes: new DisconnectCompositionNodesUseCase({
+          disconnectNodes: new DisconnectCompositionNodesUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
             now: options.now,
           }),
-          validatePlan: new ValidateAssetCompositionPlanUseCase({
+          validatePlan: new ValidateAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
             repository: assetCompositionPlanRepository,
             projectionRepository: effectiveAssetProjectionRepository,
             now: options.now,

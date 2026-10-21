@@ -1,3 +1,4 @@
+import { OwnedTaskReconcilerService } from "../../../services/runtime/owned-task-reconciler.service";
 import { access, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
@@ -40,6 +41,7 @@ function command(): StartContextGenerationCommand {
 }
 
 function createHarness(options?: {
+  readonly reconciler?: OwnedTaskReconcilerService;
   readonly appendFails?: boolean;
   readonly bindingFails?: boolean;
   readonly outputDigestMismatch?: boolean;
@@ -234,6 +236,7 @@ function createHarness(options?: {
   };
   const useCase = new ContextGenerationUseCase({
     runtimeTaskRegistry,
+    taskReconciler: options?.reconciler,
     storageBindings,
     storage,
     artifactCatalog,
@@ -262,6 +265,21 @@ function createHarness(options?: {
 }
 
 describe("ContextGenerationUseCase", () => {
+  it("serializes duplicate saves and a competing discard, retaining the saved receipt", async () => {
+    const harness = createHarness();
+    await harness.useCase.start(command(), harness.context);
+    await harness.useCase.read("context-request", harness.context);
+    const [first, duplicate, discard] = await Promise.all([
+      harness.useCase.save("context-request", harness.context),
+      harness.useCase.save("context-request", harness.context),
+      harness.useCase.discard("context-request", harness.context),
+    ]);
+    expect(first).toMatchObject({ ok: true, value: { state: "saved" } });
+    expect(duplicate).toEqual(first);
+    expect(discard).toMatchObject({ ok: false, error: { code: "conflict" } });
+    expect(await harness.useCase.save("context-request", harness.context)).toEqual(first);
+    expect(harness.stored.length).toBe(1); expect(harness.catalogRecords.length).toBe(1);
+  });
   it("keeps successful generation staged for review, then saves and catalogs it", async () => {
     const harness = createHarness();
 
@@ -408,9 +426,42 @@ describe("ContextGenerationUseCase", () => {
       ok: false,
       error: {
         code: "internal",
-        message: "Context runtime output digest does not match.",
+        message: "Context generation completion could not be verified.",
       },
     });
     await expect(access(harness.getRuntimeDirectory()!)).rejects.toThrow();
   });
+});
+
+it("retains active staging and power after a transient status read failure and recovers", async () => {
+  const h = createHarness();
+  await h.useCase.start(command(), h.context);
+  h.runtimeTaskRegistry.getTaskStatus.mockRejectedValueOnce(new Error("private transport failure"));
+  const failed = await h.useCase.read("context-request", h.context);
+  expect(failed).toMatchObject({ ok: false, error: { code: "unavailable" } });
+  expect(JSON.stringify(failed)).not.toContain("private transport");
+  await access(h.getRuntimeDirectory()!);
+  expect(h.powerCompletions.length).toBe(0);
+  expect(await h.useCase.read("context-request", h.context)).toMatchObject({ ok: true, value: { state: "review-required" } });
+  expect(h.powerCompletions.length).toBe(1);
+  await h.useCase.discard("context-request", h.context);
+});
+
+it("host reconciliation retains successful review data and releases power without any page read", async () => {
+  const reconciler = new OwnedTaskReconcilerService(); const h = createHarness({ reconciler });
+  await h.useCase.start(command(), h.context);
+  await Promise.all([reconciler.reconcileNow(), reconciler.reconcileNow()]);
+  expect(reconciler.status.pending).toBe(0); expect(h.powerCompletions.length).toBe(1);
+  await access(h.getRuntimeDirectory()!); expect(h.stored.length).toBe(0);
+  expect(await h.useCase.read("context-request", h.context)).toMatchObject({ ok: true, value: { state: "review-required" } });
+  await h.useCase.discard("context-request", h.context);
+});
+
+for (const status of ["failed", "cancelled"] as const) it(`host reconciliation cleans ${status} output without feature polling`, async () => {
+  const reconciler = new OwnedTaskReconcilerService(); const h = createHarness({ reconciler });
+  await h.useCase.start(command(), h.context);
+  h.runtimeTaskRegistry.getTaskStatus.mockResolvedValue({ requestId: "context-request", workspaceId: h.context.workspaceId, taskType: TaskType.CONTEXT_GENERATION, status, error: { code: "task_timeout", message: "Task ended." } });
+  await reconciler.reconcileNow();
+  expect(reconciler.status.pending).toBe(0); expect(h.powerCompletions.length).toBe(1);
+  await expect(access(h.getRuntimeDirectory()!)).rejects.toThrow();
 });

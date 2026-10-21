@@ -27,9 +27,9 @@ test("desktop shutdown closes windows, sidecar, runtime databases, and platform 
   ]);
 });
 
-test("desktop shutdown continues after owned resource failures", async () => {
+test("desktop shutdown keeps persistence open after an unconfirmed worker stop", async () => {
   const calls: string[] = [];
-  await shutdownDesktopRuntimeResources({
+  await assert.rejects(shutdownDesktopRuntimeResources({
     async closeRuntimeWindows() {
       calls.push("windows");
       throw new Error("private window failure");
@@ -45,11 +45,6 @@ test("desktop shutdown continues after owned resource failures", async () => {
     closePlatformDatabase() {
       calls.push("platform-database");
     },
-  });
-  assert.deepEqual(calls, [
-    "windows",
-    "sidecar",
-    "runtime-databases",
-    "platform-database",
-  ]);
+  }), /sidecar failure/);
+  assert.deepEqual(calls, ["windows", "sidecar"]);
 });

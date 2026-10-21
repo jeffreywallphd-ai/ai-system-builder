@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { writeContainedFile, deleteContainedFile } from "../../../adapters/filesystem-security";
 import { execFile as nodeExecFile } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -121,6 +123,8 @@ export function composeDesktopComfyUiImageRuntimeFeature(
     ReturnType<typeof createComfyUiRuntimeSupervisor> | undefined;
   let activeRuntimeDeviceMode: ComfyUiRuntimeDeviceMode | undefined;
   const comfyUiSupervisorPort = {
+    async stop() { await comfyUiSupervisor?.stop(); },
+    getLifecycleState() { return comfyUiSupervisor?.getStatus() ?? "uninitialized"; },
     async start() {
       const persistedValue = (
         await options.applicationSettings.readValues({
@@ -195,11 +199,12 @@ export function composeDesktopComfyUiImageRuntimeFeature(
       baseUrl: process.env.COMFYUI_BASE_URL?.trim() || "http://127.0.0.1:8188",
     }),
     supervisor: comfyUiSupervisorPort,
-    prepareLatentReferenceImage: async ({ artifactId }) => {
+    prepareLatentReferenceImage: async ({ artifactId, workspaceId }) => {
       const artifacts = await options.getArtifacts();
       const result = await artifacts.storage.retrieveArtifact({
         key: artifactId,
-      });
+        maximumBytes: 16 * 1024 * 1024,
+      }, { workspaceId });
       if (!result.ok)
         throw new Error(
           `Unable to read latent reference image artifact '${artifactId}': ${result.error.message}`,
@@ -208,11 +213,11 @@ export function composeDesktopComfyUiImageRuntimeFeature(
         result.value.content instanceof Uint8Array
           ? result.value.content
           : new Uint8Array(result.value.content as ArrayBufferLike);
-      const imageName = `ai-system-builder-latent-${Date.now()}-${Math.random().toString(36).slice(2)}${extensionForImageReference(result.value.descriptor.mediaType, artifactId)}`;
+      const imageName = `ai-system-builder-latent-${randomUUID()}${extensionForImageReference(result.value.descriptor.mediaType, artifactId)}`;
       const inputDirectory = join(installRoot, "input");
-      await mkdir(inputDirectory, { recursive: true });
-      await writeFile(join(inputDirectory, imageName), content);
-      return { imageName };
+      await writeContainedFile({ rootDirectory: inputDirectory, key: imageName, content, overwrite: false });
+      return { imageName, cleanup: async () => { await deleteContainedFile({ rootDirectory: inputDirectory, key: imageName }); } };
+
     },
     mapperOptions: {
       defaultCheckpoint: process.env.COMFYUI_DEFAULT_CHECKPOINT,

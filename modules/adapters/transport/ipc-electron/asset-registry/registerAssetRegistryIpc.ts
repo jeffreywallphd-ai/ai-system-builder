@@ -1,3 +1,4 @@
+import { sanitizeAssetDefinitionList, sanitizeAssetDefinitionView } from "../../../../application/services/asset/asset-definition-view-sanitizer";
 import type { AssetRegistryDefinitionReadPort } from "../../../../application/ports/asset";
 import { sanitizeAssetViewValue } from "../../../../application/services/asset/asset-safe-metadata";
 import {
@@ -128,7 +129,7 @@ export function createDesktopAssetDefinitionsListIpcHandler(
 
     try {
       const result = await dependencies.assetRegistryRead.listDefinitionCards(query);
-      return createDesktopAssetDefinitionsListSuccessResponse(sanitizeAssetViewValue(result), context);
+      return createDesktopAssetDefinitionsListSuccessResponse(sanitizeAssetDefinitionList(result), context);
     } catch (error) {
       return workspaceReadFailure(DESKTOP_ASSET_DEFINITIONS_LIST_RESPONSE_CHANNEL, error, context, "Unable to read asset definitions.");
     }
@@ -158,7 +159,7 @@ export function createDesktopAssetDefinitionReadIpcHandler(
       if (!detail) {
         return failure(DESKTOP_ASSET_DEFINITION_READ_RESPONSE_CHANNEL, "not-found", "Asset definition was not found.", context);
       }
-      return createDesktopAssetDefinitionReadSuccessResponse(sanitizeAssetViewValue(detail), context);
+      return createDesktopAssetDefinitionReadSuccessResponse(sanitizeAssetDefinitionView(detail), context);
     } catch (error) {
       return workspaceReadFailure(DESKTOP_ASSET_DEFINITION_READ_RESPONSE_CHANNEL, error, context, "Unable to read asset definition.");
     }
@@ -188,7 +189,7 @@ export function createDesktopAssetDefinitionVersionReadIpcHandler(
       if (!detail) {
         return failure(DESKTOP_ASSET_DEFINITION_VERSION_READ_RESPONSE_CHANNEL, "not-found", "Asset definition version was not found.", context);
       }
-      return createDesktopAssetDefinitionVersionReadSuccessResponse(sanitizeAssetViewValue(detail), context);
+      return createDesktopAssetDefinitionVersionReadSuccessResponse(sanitizeAssetDefinitionView(detail), context);
     } catch (error) {
       return workspaceReadFailure(DESKTOP_ASSET_DEFINITION_VERSION_READ_RESPONSE_CHANNEL, error, context, "Unable to read asset definition version.");
     }

@@ -85,6 +85,65 @@ describe("DatasetPreparationFeature", () => {
     delete window.desktopApi;
   });
 
+  it.each(["running", "unknown", "error", "delayed"])("keeps observing when cancellation is %s", async (mode) => {
+    vi.useFakeTimers();
+    try {
+      let terminal = false;
+      let starts = 0;
+      let finishCancel: ((value: unknown) => void) | undefined;
+      const read = vi.fn(async () => ({ ok: true, status: terminal ? "cancelled" : "running" }));
+      const cancel = vi.fn(async () => {
+        if (mode === "error") throw new Error("private runtime failure");
+        if (mode === "delayed") return new Promise((resolve) => { finishCancel = resolve; });
+        return { ok: true, value: { requestId: "cancel-task", cancelled: false, status: mode } };
+      });
+      container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+      await act(async () => {
+        root?.render(<DatasetPreparationFeature settingsClient={settingsClient} client={{
+          browseSourceArtifacts: async () => [{ artifactId: "a", label: "a.jsonl", storageKey: "uploads/a.jsonl", mediaType: "application/x-ndjson" }],
+          startPrepareTrainingDataset: async () => ({ requestId: ++starts === 1 ? "cancel-task" : "cancel-task-2" }),
+          readPrepareTrainingDatasetTask: read, cancelPrepareTrainingDatasetTask: cancel,
+        } as any} />);
+        await flushAsyncWork();
+      });
+      await act(async () => { (container!.querySelector('input[type="checkbox"]') as HTMLInputElement).click(); });
+      await act(async () => {
+        container!.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        await flushAsyncWork();
+      });
+      const stop = () => Array.from(container!.querySelectorAll("button")).find((b) => b.textContent === "Stop training" || b.textContent === "Stopping training...") as HTMLButtonElement;
+      expect(stop()).toBeTruthy();
+      await act(async () => { stop().click(); await flushAsyncWork(); });
+      expect(cancel).toHaveBeenCalledWith("cancel-task", "workspace-a");
+      expect(container!.textContent).not.toContain("Training stopped.");
+      expect(container!.textContent).not.toContain("private runtime failure");
+      const before = read.mock.calls.length;
+      await act(async () => { await vi.advanceTimersByTimeAsync(1600); });
+      expect(read.mock.calls.length).toBeGreaterThan(before);
+      expect(stop()).toBeTruthy();
+      terminal = true;
+      await act(async () => { await vi.advanceTimersByTimeAsync(1600); });
+      expect(container!.textContent).toContain("Training stopped.");
+      if (mode === "delayed") {
+        const oldCancel = finishCancel;
+        terminal = false;
+        await act(async () => {
+          container!.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+          await flushAsyncWork();
+        });
+        expect(stop().disabled).toBe(false);
+        await act(async () => { stop().click(); await flushAsyncWork(); });
+        expect(cancel).toHaveBeenLastCalledWith("cancel-task-2", "workspace-a");
+        await act(async () => { oldCancel?.({ ok: true, value: { requestId: "cancel-task", cancelled: false, status: "running" } }); await flushAsyncWork(); });
+        expect(stop().disabled).toBe(true);
+        terminal = true;
+        await act(async () => { await vi.advanceTimersByTimeAsync(1600); });
+      }
+      await act(async () => { finishCancel?.({ ok: true, value: { requestId: "cancel-task-2", cancelled: false, status: "running" } }); await flushAsyncWork(); });
+      expect(container!.textContent).toContain("Training stopped.");
+    } finally { vi.useRealTimers(); }
+  });
+
   it("constructs request, shows loading, and renders success output summary", async () => {
     const startPrepareTrainingDataset = vi
       .fn()
@@ -1203,7 +1262,7 @@ describe("DatasetPreparationFeature", () => {
       .mockResolvedValue({ requestId: "stop-task" });
     const cancelPrepareTrainingDatasetTask = vi.fn(async () => {
       cancelled = true;
-      return { ok: true as const };
+      return { ok: true as const, value: { requestId: "stop-task", cancelled: true, status: "cancelled" as const } };
     });
     const runtimeStatusClient = {
       readStatus: vi.fn().mockResolvedValue({
@@ -3056,4 +3115,16 @@ describe("DatasetPreparationFeature", () => {
       vi.useRealTimers();
     }
   });
+  it("scopes cached source selection to each workspace and restores it on return", async () => {
+    const client: any = { browseSourceArtifacts: async () => [{ artifactId: "same-id", label: "Source.md", storageKey: "uploads/source.md" }], startPrepareTrainingDataset: vi.fn(), readPrepareTrainingDatasetTask: vi.fn() };
+    container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+    const render = async (workspaceId: string) => { await act(async () => { root!.render(<DatasetPreparationFeatureComponent workspaceId={workspaceId} settingsClient={settingsClient} client={client} />); await flushAsyncWork(); }); };
+    await render("workspace-a");
+    const checkbox = () => container!.querySelector<HTMLInputElement>(".dataset-preparation__artifact-group input[type='checkbox']")!;
+    await act(async () => checkbox().click()); expect(checkbox().checked).toBe(true);
+    await render("workspace-b"); expect(checkbox().checked).toBe(false);
+    await render("workspace-a"); expect(checkbox().checked).toBe(true);
+    expect(client.startPrepareTrainingDataset).not.toHaveBeenCalled();
+  });
+
 });

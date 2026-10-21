@@ -64,6 +64,9 @@ test("desktop packaging includes only webpack output and excludes runtime data",
   assert.equal(ignored?.("/apps/desktop/src/main/index.ts"), true);
   assert.equal(ignored?.("/.webpack/main/index.js"), false);
   assert.equal(ignored?.("/.webpack/main/index.js.map"), true);
+  assert.equal(ignored?.("/.webpack/main/index.cjs"), false);
+  assert.equal(ignored?.("/.webpack/main/index.cjs.map"), true);
+  assert.equal(requireFromRoot("./package.json").main, ".webpack/main/index.cjs");
 });
 
 test("desktop packaging includes a separately bundled minimal system runtime entry", () => {
@@ -83,4 +86,29 @@ test("desktop packaging includes a separately bundled minimal system runtime ent
     runtime.preload?.js,
     entries.find((entry) => entry.name === "main_window")?.preload?.js,
   );
+});
+
+test("Forge generates the declared CJS main and both preload entry contracts", async () => {
+  const plugin = forgeConfig.plugins?.[0] as unknown as {
+    setDirectories: (directory: string) => void;
+    config: { renderer: unknown };
+    configGenerator: {
+      getMainConfig: () => Promise<{ output: { filename: string; libraryTarget: string } }>;
+      getRendererConfig: (options: unknown) => Promise<Array<{ output?: { filename?: string }; entry?: object }>>;
+      getDefines: () => Record<string, string>;
+    };
+  };
+  plugin.setDirectories(process.cwd());
+  const main = await plugin.configGenerator.getMainConfig();
+  assert.equal(main.output.filename, "index.cjs");
+  assert.equal(main.output.libraryTarget, "commonjs2");
+  const renderers = await plugin.configGenerator.getRendererConfig(plugin.config.renderer);
+  const preload = renderers.find(config => config.output?.filename === "[name]/preload.cjs");
+  assert.ok(preload);
+  assert.deepEqual(Object.keys(preload.entry ?? {}).sort(), ["main_window", "system_runtime"]);
+  const defines = plugin.configGenerator.getDefines();
+  for (const name of ["MAIN_WINDOW", "SYSTEM_RUNTIME"]) {
+    assert.match(defines[`${name}_WEBPACK_ENTRY`] ?? "", /index\.html/);
+    assert.match(defines[`${name}_PRELOAD_WEBPACK_ENTRY`] ?? "", /preload\.cjs/);
+  }
 });

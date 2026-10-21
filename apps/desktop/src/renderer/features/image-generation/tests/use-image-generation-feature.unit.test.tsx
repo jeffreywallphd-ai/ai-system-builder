@@ -32,6 +32,7 @@ async function settleAsyncWork(): Promise<void> {
 
 describe("useImageGenerationFeature", () => {
   beforeEach(() => {
+    sessionStorage.clear();
     listModelsMock.mockReset();
     listModelsMock.mockResolvedValue([]);
   });
@@ -266,7 +267,7 @@ describe("useImageGenerationFeature", () => {
     const client = makeClient();
     client.startImageGeneration.mockResolvedValue({ ok: true, value: { requestId: "r3" } });
     client.readImageGeneration.mockResolvedValue({ ok: true, value: { status: "succeeded", requestId: "r3", taskType: "image-generation", concurrencyClass: "image-generation", data: { outputs: [{ fileName: "temp.png", subfolder: "output" }] } } });
-    client.finalizeImageGenerationIfCompleted.mockResolvedValue({ ok: true, value: { assets: [{ assetId: "asset-1", artifactId: "artifact-1", storageKey: "generated/images/asset-1/out.png" }] } });
+    client.finalizeImageGenerationIfCompleted.mockResolvedValue({ ok: true, value: { finalized: true, assets: [{ assetId: "asset-1", artifactId: "artifact-1", storageKey: "generated/images/asset-1/out.png" }] } });
     const artifactClient = { createArtifactMediaViewUrl: vi.fn(async () => "blob:preview-1") };
     let hook!: ReturnType<typeof useImageGenerationFeature>;
     const c = document.createElement("div");
@@ -293,8 +294,8 @@ describe("useImageGenerationFeature", () => {
       .mockResolvedValueOnce({ ok: true, value: { requestId: "r-new" } });
     client.readImageGeneration.mockResolvedValue({ ok: true, value: { status: "succeeded", requestId: "r", taskType: "image-generation", concurrencyClass: "image-generation", data: { outputs: [{ fileName: "temp.png" }] } } });
     client.finalizeImageGenerationIfCompleted
-      .mockResolvedValueOnce({ ok: true, value: { assets: [{ assetId: "asset-old", artifactId: "artifact-old", storageKey: "generated/images/old.png" }] } })
-      .mockResolvedValueOnce({ ok: true, value: { assets: [{ assetId: "asset-new", artifactId: "artifact-new", storageKey: "generated/images/new.png" }] } });
+      .mockResolvedValueOnce({ ok: true, value: { finalized: true, assets: [{ assetId: "asset-old", artifactId: "artifact-old", storageKey: "generated/images/old.png" }] } })
+      .mockResolvedValueOnce({ ok: true, value: { finalized: true, assets: [{ assetId: "asset-new", artifactId: "artifact-new", storageKey: "generated/images/new.png" }] } });
     const artifactClient = { createArtifactMediaViewUrl: vi.fn(async ({ storageKey }: { storageKey: string }) => `blob:${storageKey}`) };
     let hook!: ReturnType<typeof useImageGenerationFeature>;
     const c = document.createElement("div");

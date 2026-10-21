@@ -15,7 +15,7 @@ const desktopStylesheetPath = resolve(
 const thinClientStylesheetPath = resolve("apps/thin-client/src/styles/app.css");
 
 function readShellCss(): string {
-  return readFileSync(shellCssPath, "utf8");
+  return readFileSync(shellCssPath, "utf8").replace(/\r\n?/g, "\n");
 }
 
 function getRule(css: string, selector: string): string {

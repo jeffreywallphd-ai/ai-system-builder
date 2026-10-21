@@ -16,7 +16,7 @@ module.exports = {
     // plugin writes package.json during packageAfterCopy.
     ignore: (file) => {
       if (!file) return false;
-      if (/[^/\\]+\.js\.map$/.test(file)) return true;
+      if (/[^/\\]+\.[cm]?js\.map$/.test(file)) return true;
       return !/^[/\\]\.webpack($|[/\\]).*$/.test(file);
     },
   },

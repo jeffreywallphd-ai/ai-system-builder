@@ -215,3 +215,9 @@ $bytes = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Fi
 - Never commit generated private keys or token hash secrets; do not print secret values in logs.
 
 No automatic trust-store installation is performed. Trust installation is manual; browser/mobile trust limitations apply. Do not commit private keys or SERVER_TOKEN_HASH_SECRET.
+
+The opt-in disabled-development security toggle uses the existing nonpublic
+`security:admin` policy. Initial explicit `disabled-dev` bootstrap remains
+unauthenticated; once `lan-token-enforced` is enabled, missing/invalid tokens
+and nonadmin scopes cannot change the mode. Listener/TLS posture remains
+startup-owned, and LAN/OIDC startup does not enable this development toggle.

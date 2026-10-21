@@ -142,6 +142,17 @@ Required behavior:
 - apply the same redaction rules across all verbosity levels,
 - ensure debug/trace mode does not bypass privacy controls.
 
+Python dependency setup writes only the versioned
+`python-dependency-outcomes-v1` projection: finite operation/platform/backend
+and stage outcomes, explicit overall success, safe exit codes and grouped retry
+counts. Never serialize command lines, arguments, subprocess transcripts,
+environment inspection, index URLs or exception detail into those files. Use
+finite stage/backend grouping so retries cannot grow transcript history. A final
+successful subprocess does not establish overall setup success. Best-effort
+diagnostic I/O must preserve the original setup result. This minimization does
+not qualify shared-directory ownership, permissions, native publication or
+retention; those remain separate obligations.
+
 ## Signal-to-noise standards
 
 Avoid both extremes:

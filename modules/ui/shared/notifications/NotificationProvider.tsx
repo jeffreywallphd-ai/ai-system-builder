@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, type ReactNode } from "react";
+import { TaskObservationProvider } from "./TaskObservationProvider";
 
 import {
   INITIAL_NOTIFICATION_CENTER_STATE,
@@ -136,7 +137,7 @@ export function NotificationProvider({ children }: { readonly children: ReactNod
     setPanelOpen,
   }), [clearVisible, dismiss, markVisibleRead, publish, records, setActiveWorkspaceId, setPanelOpen, state, toasts, unreadCount, upsertActivity]);
 
-  return <NotificationCenterContext.Provider value={api}>{children}</NotificationCenterContext.Provider>;
+  return <NotificationCenterContext.Provider value={api}><TaskObservationProvider>{children}</TaskObservationProvider></NotificationCenterContext.Provider>;
 }
 
 export function useNotificationCenter(): NotificationCenterApi {

@@ -690,6 +690,32 @@ describe("SystemComposerStructureEditor interactions", () => {
   });
 });
 
+it("ignores a late Load more response after the destination changes", async () => {
+  const system = composerAsset("builtin.container.root", ["one", "two"]);
+  const first = composerAsset("builtin.container.first", []);
+  const stale = composerAsset("builtin.container.stale", []);
+  let resolveMore: (value: any) => void = () => {};
+  const loader = vi.fn((target, query) => query.cursor
+    ? new Promise(resolve => { resolveMore = resolve; })
+    : Promise.resolve({ok: true, value: {items: target.slotId === "one" ? [first] : [], ...(target.slotId === "one" ? {nextCursor: "page.two"} : {})}}));
+  render(<SystemComposerStructureEditor draft={{instances: [instance("root", system.definitionId, "Root")], placements: [], bindings: []}}
+    rootInstanceRefs={[{kind: "asset-instance", id: normalizeAssetId("root")}]} catalog={[system, first, stale]} selectedInstanceId="root"
+    protectedInstanceIds={new Set()} canUndo={false} canRedo={false} onSelect={vi.fn()} onAdd={vi.fn()} onPlace={vi.fn()}
+    onRemove={vi.fn()} onUndo={vi.fn()} onRedo={vi.fn()} loadCompatibleAssets={loader as any} />);
+  await click(ariaButton("Add an element inside Root")); await flushAsync();
+  const more = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(button => button.textContent?.trim() === "Load more")!;
+  await click(more);
+  const modal = document.querySelector<HTMLElement>('[role="dialog"]')!;
+  const filter = modal.querySelector('[aria-label="Filter elements by type"]');
+  const destination = Array.from(modal.querySelectorAll<HTMLSelectElement>("select")).find(select => select !== filter)!;
+  await act(async () => { destination.value = "two"; destination.dispatchEvent(new Event("change", {bubbles: true})); });
+  await flushAsync();
+  await act(async () => { resolveMore({ok: true, value: {items: [stale], nextCursor: "page.three"}}); });
+  await flushAsync();
+  expect(modal.textContent).not.toContain(stale.definitionId);
+  expect(Array.from(modal.querySelectorAll("button")).some(button => button.textContent?.trim() === "Load more")).toBe(false);
+});
+
 function render(element: React.ReactNode): void {
   container = document.createElement("div");
   document.body.append(container);

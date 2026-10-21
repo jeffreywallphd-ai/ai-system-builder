@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 
 import type {
   ContextBrowserDetail,
@@ -21,6 +21,7 @@ import { ModalDialog } from "../components/ModalDialog";
 import { PanelHeading } from "../components/PanelHeading";
 import { TypeBadge } from "../components/TypeBadge";
 import { DatasetReviewModal, type ReviewDecision } from "../dataset-review";
+import { useTaskObservationManager } from "../notifications/TaskObservationProvider";
 import { useOptionalNotificationCenter } from "../notifications/NotificationProvider";
 import { TransientNotificationPublisher } from "../notifications/TransientNotificationPublisher";
 
@@ -78,6 +79,7 @@ export function ContextStudio({
   onViewSource,
 }: ContextStudioProps) {
   const notifications = useOptionalNotificationCenter();
+  const observer = useTaskObservationManager();
   const [activeTab, setActiveTab] = useState<StudioTab>("rag-databases");
   const [sources, setSources] = useState<readonly ContextSourceOption[]>([]);
   const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
@@ -278,36 +280,17 @@ export function ContextStudio({
 
   useEffect(() => {
     if (!requestId) return;
-    let current = true;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const poll = async () => {
-      try {
-        const result = await client.execute({
-          workspaceId,
-          command: { action: "generation-read", requestId },
-        });
-        if (!current || result.action !== "generation-read") return;
-        setGeneration(result.status);
-        publishActivity(result.status);
-        if (
-          result.status.state === "queued" ||
-          result.status.state === "running"
-        ) {
-          timer = setTimeout(poll, 500);
-        }
-      } catch {
-        if (current)
-          setMessage("Context generation status is temporarily unavailable.");
-      }
-    };
-    void poll();
-    return () => {
-      current = false;
-      if (timer) clearTimeout(timer);
-    };
-    // notification methods are stable provider callbacks.
+    return observer.subscribe({ workspaceId, family: "context", requestId: `generation:${requestId}` }, async () => {
+      const result = await client.execute({ workspaceId, command: { action: "generation-read", requestId } });
+      if (result.action !== "generation-read") throw new Error("Context generation status is unavailable.");
+      return { value: result.status, activity: result.status.state === "queued" || result.status.state === "running" ? "active" : "terminal" };
+    }, (result) => {
+      if (!result) { setMessage("Context generation status is temporarily unavailable."); return; }
+      setGeneration(result.value); publishActivity(result.value);
+    });
+    // Notification methods are stable provider callbacks.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, requestId, workspaceId]);
+  }, [client, observer, requestId, workspaceId]);
 
   async function readSourceInspections(
     ids: readonly string[],
@@ -503,6 +486,7 @@ export function ContextStudio({
       });
       if (result.action !== "generation-start")
         throw new Error("Generation start response was invalid.");
+      observer.invalidate({ workspaceId, family: "context" });
       setRequestId(result.value.requestId);
       setReviewModalOpen(false);
       setReviewIndex(0);
@@ -584,6 +568,7 @@ export function ContextStudio({
         workspaceId,
         command: { action: "generation-cancel", requestId },
       });
+      observer.invalidate({ workspaceId, family: "context" });
       if (result.action === "generation-cancel") {
         setGeneration(result.status);
         publishActivity(result.status);
@@ -658,6 +643,7 @@ export function ContextStudio({
       });
       if (result.action !== "browser-rebuild")
         throw new Error("Context rebuild response was invalid.");
+      observer.invalidate({ workspaceId, family: "context" });
       setRequestId(result.value.requestId);
       sessionStorage.setItem(requestStorageKey, result.value.requestId);
       publishActivity({
@@ -2302,32 +2288,16 @@ export function ContextTaskNotificationBridge({
   readonly workspaceId?: string;
 }) {
   const notifications = useOptionalNotificationCenter();
+  const observer = useTaskObservationManager();
   const upsertActivity = notifications?.upsertActivity;
   useEffect(() => {
     if (!workspaceId || !upsertActivity) return;
-    let current = true;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const poll = async () => {
-      try {
-        const result = await client.execute({
-          workspaceId,
-          command: { action: "task-list" },
-        });
-        if (current && result.action === "task-list") {
-          for (const task of result.tasks)
-            upsertActivity(taskNotification(task, workspaceId));
-        }
-      } catch {
-        // Passive notification polling stays quiet; the active page owns actionable errors.
-      }
-      if (current) timer = setTimeout(poll, 1500);
-    };
-    void poll();
-    return () => {
-      current = false;
-      if (timer) clearTimeout(timer);
-    };
-  }, [client, upsertActivity, workspaceId]);
+    return observer.subscribe({ workspaceId, family: "context", requestId: "list" }, async () => {
+      const result = await client.execute({ workspaceId, command: { action: "task-list" } });
+      if (result.action !== "task-list") throw new Error("Context task list is unavailable.");
+      return { value: result.tasks, activity: result.tasks.some((task) => task.status === "queued" || task.status === "running") ? "active" : "idle" };
+    }, (result) => { if (result) for (const task of result.value) upsertActivity(taskNotification(task, workspaceId)); });
+  }, [client, observer, upsertActivity, workspaceId]);
   return null;
 }
 

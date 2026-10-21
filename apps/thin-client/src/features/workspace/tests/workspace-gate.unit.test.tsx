@@ -1,22 +1,16 @@
-import { JSDOM } from "jsdom";
-import { act, useState } from "react";
+// @vitest-environment jsdom
+import React, { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import {
   afterEach,
   describe,
   expect,
   it,
-  testDouble,
-} from "../../../../../../modules/testing/node-test";
+  vi as testDouble,
+} from "vitest";
 
-const dom = new JSDOM("<!doctype html><html><body></body></html>");
-(globalThis as any).window = dom.window;
-(globalThis as any).document = dom.window.document;
-(globalThis as any).Event = dom.window.Event;
-(globalThis as any).HTMLInputElement = dom.window.HTMLInputElement;
-(globalThis as any).HTMLSelectElement = dom.window.HTMLSelectElement;
-(globalThis as any).InputEvent = dom.window.InputEvent;
-(globalThis as any).FormData = dom.window.FormData;
+(globalThis as any).React = React;
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 import {
   ActiveWorkspaceProvider,
@@ -246,4 +240,5 @@ describe("thin-client WorkspaceGate", () => {
     expect(container!.textContent).toContain("Current workspace: Beta Project");
     expect(container!.textContent).not.toContain("workspace.beta");
   });
+
 });

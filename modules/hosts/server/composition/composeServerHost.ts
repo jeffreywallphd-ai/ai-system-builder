@@ -1,3 +1,11 @@
+import { createOwnedTaskReconciler } from "../../shared/createOwnedTaskReconciler";
+import { shutdownOwnedTasks } from "../../shared/shutdownOwnedTasks";
+import { ImageGenerationTaskAuthorityService } from "../../../application/services/image/image-generation-task-authority.service";
+import { WorkspaceAssetAccessService } from "../../../application/services/asset/workspace-asset-access.service";
+import { composeWorkspaceSummary } from "../../shared/composition/composeWorkspaceSummary";
+import { CountDatasetReviewTargetsUseCase } from "../../../application/use-cases/dataset-review";
+import { createStructuredAssetDerivedCustomizationRepository } from "../../../adapters/persistence/asset-authoring/createStructuredAssetDerivedCustomizationRepository";
+import { createStructuredAssetStudioAssetDraftRepository } from "../../../adapters/persistence/asset-studio/createStructuredAssetStudioAssetDraftRepository";
 import type { ArtifactRepoStoragePort } from "../../../application/ports/storage";
 import { execFile as nodeExecFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -612,6 +620,7 @@ export interface ServerHostComposition {
   registerApi: (options: RegisterServerApiOptions) => void;
   waitForAssetFoundation: () => Promise<void>;
   closeRuntimeDatabases: () => Promise<void>;
+  shutdownBackgroundTasks: () => Promise<void>;
   getInternalAssetRegistry: () => InternalAssetRegistryComposition | undefined;
 }
 
@@ -701,6 +710,7 @@ export function composeServerHost(
   let assetFoundationReady: Promise<void> = Promise.resolve();
   let systemRuntimeDatabases = options.runtimeDatabases;
 
+  let shutdownBackgroundTasks: (() => Promise<void>) | undefined;
   return {
     loggingPort,
     loggingConfig,
@@ -721,8 +731,10 @@ export function composeServerHost(
       return assetFoundationReady;
     },
     async closeRuntimeDatabases() {
+      await shutdownBackgroundTasks?.();
       await systemRuntimeDatabases?.closeAll();
     },
+    async shutdownBackgroundTasks() { await shutdownBackgroundTasks?.(); },
     registerApi(registerOptions) {
       const env = options.env ?? process.env;
       const organizationDocuments =
@@ -1248,6 +1260,7 @@ export function composeServerHost(
               fallbackReason,
             },
           });
+          taskReconciler.assertAccepting();
           await comfyUiSupervisor.start();
         };
         try {
@@ -1805,6 +1818,7 @@ export function composeServerHost(
         HF_HUB_DISABLE_SYMLINKS_WARNING:
           env.HF_HUB_DISABLE_SYMLINKS_WARNING ?? "1",
       };
+      const taskReconciler = createOwnedTaskReconciler();
       const pythonRuntimeFoundation = createPythonRuntimeAdapterFoundation({
         client: { baseUrl: pythonRuntimeBaseUrl },
         supervisor: {
@@ -1851,6 +1865,8 @@ export function composeServerHost(
           },
         },
       });
+      const startOwnedPython = pythonRuntimeFoundation.supervisor.start.bind(pythonRuntimeFoundation.supervisor);
+      pythonRuntimeFoundation.supervisor.start = async () => { taskReconciler.assertAccepting(); await startOwnedPython(); };
       const pythonRuntimeTaskRegistry = createPythonRuntimeTaskRegistryAdapter(
         pythonRuntimeFoundation.runtimePort,
         {
@@ -1871,11 +1887,22 @@ export function composeServerHost(
           },
         },
       );
-      const runtimeTaskRegistry = createRuntimeTaskRegistryRouter({
+      const imageTaskAuthority = new ImageGenerationTaskAuthorityService({ workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository, workspaceAuthorization, organizationContextProvider: options.organizationContextProvider });
+      const routedRuntimeTaskRegistry = createRuntimeTaskRegistryRouter({
         image: imageRuntimeTaskRegistry,
         python: pythonRuntimeTaskRegistry,
       });
+      const runtimeTaskRegistry = { ...routedRuntimeTaskRegistry, startTask: (request: Parameters<typeof routedRuntimeTaskRegistry.startTask>[0]) => { taskReconciler.assertAccepting(); return routedRuntimeTaskRegistry.startTask(request); } };
+      shutdownBackgroundTasks = async () => {
+        taskReconciler.stopAccepting();
+        imageRuntimeTaskRegistry.closeAdmission();
+        await shutdownOwnedTasks({ reconciler: taskReconciler,
+          stopPython: () => pythonRuntimeFoundation.supervisor.stop(),
+          stopImage: async () => { await comfyUiSupervisor?.stop(); await imageRuntimeTaskRegistry.settleAfterRuntimeStop(); },
+        });
+      };
       const modelDownloadTasksUseCase = new ModelDownloadTasksUseCase({
+        taskReconciler,
         runtimeTaskRegistry,
         modelDownloadCompletion: pythonRuntimeTaskRegistry,
         modelRegistry,
@@ -2075,6 +2102,7 @@ export function composeServerHost(
         : undefined;
       const prepareTrainingDatasetUseCase =
         new PrepareTrainingDatasetFromArtifactsUseCase({
+          taskReconciler,
           runtimeTaskRegistry,
           storageBindings: artifactBindings,
           storage,
@@ -2098,6 +2126,7 @@ export function composeServerHost(
           now: options.now,
         });
       const contextGenerationUseCase = new ContextGenerationUseCase({
+        taskReconciler,
         runtimeTaskRegistry,
         storageBindings: artifactBindings,
         storage,
@@ -2140,6 +2169,8 @@ export function composeServerHost(
           ),
         });
       const generateImageUseCase = new GenerateImageUseCase({
+        taskAuthority: imageTaskAuthority,
+        taskReconciler,
         runtimeTaskRegistry,
         modelCheckpointResolver: createRuntimePreparedModelCheckpointResolver({
           runtime: comfyUiSupervisorPort,
@@ -2176,9 +2207,11 @@ export function composeServerHost(
 
       const imageGenerationFinalizationOrchestrator =
         new ImageGenerationFinalizationOrchestratorService({
+          taskAuthority: imageTaskAuthority,
           runtimeTaskRegistry,
           organizationContextProvider: options.organizationContextProvider,
           finalizeImageGenerationService: new FinalizeImageGenerationService({
+            organizationContextProvider: options.organizationContextProvider,
             imageAssetRegistry,
             generatedImagePersistence:
               createFilesystemGeneratedImagePersistenceAdapter({
@@ -2200,6 +2233,9 @@ export function composeServerHost(
         now: options.now,
         documents: organizationDocuments,
       };
+      const assetCompositionWorkspaceAccess = new WorkspaceAssetAccessService({
+        workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository, workspaceAuthorization,
+      });
       const assetCompositionPlanRepository =
         createLocalAssetCompositionPlanRepositoryAdapter(
           structuredRepositoryOptions,
@@ -2369,6 +2405,14 @@ export function composeServerHost(
         datasetVersionUseCases,
         assetRegistryRead: internalAssetRegistry.workspaceReadFacade,
         workspaceServices: {
+          readWorkspaceSummary: workspaceAuthorization && organizationDocuments ? composeWorkspaceSummary({
+            workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository,
+            authorization: workspaceAuthorization,
+            systems: systemBuilder?.repository, builds: systemBuild?.repository, models: modelRegistry,
+            artifacts: artifactCatalog,
+            countDatasets: datasetVersionRepository ? workspaceId => new CountDatasetReviewTargetsUseCase({repository: datasetVersionRepository, artifacts: storage, workspaceRepository: workspaceFoundation.workspaceRepositories.workspaceRepository, workspaceAuthorization}).execute({workspaceId}) : undefined,
+            assetSources: [createLocalAuthoredAssetRepositoryAdapter(structuredRepositoryOptions), createLocalAssetOverrideRepositoryAdapter(structuredRepositoryOptions), createStructuredAssetDerivedCustomizationRepository(organizationDocuments), createStructuredAssetStudioAssetDraftRepository(organizationDocuments)],
+          }) : undefined,
           workspaceRepository:
             workspaceFoundation.workspaceRepositories.workspaceRepository,
           workspaceSelectionRepository:
@@ -2506,50 +2550,50 @@ export function composeServerHost(
               structuredRepositoryOptions,
             );
           return {
-            createPlan: new CreateAssetCompositionPlanUseCase({
+            createPlan: new CreateAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
               generatePlanId: () => `plan.${randomUUID()}`,
               now: options.now,
             }),
-            updatePlan: new UpdateAssetCompositionPlanUseCase({
+            updatePlan: new UpdateAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
               now: options.now,
             }),
-            readPlan: new ReadAssetCompositionPlanUseCase({
+            readPlan: new ReadAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
             }),
-            listPlans: new ListAssetCompositionPlansUseCase({
+            listPlans: new ListAssetCompositionPlansUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
             }),
-            archivePlan: new ArchiveAssetCompositionPlanUseCase({
+            archivePlan: new ArchiveAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
               now: options.now,
             }),
-            addProjection: new AddProjectionToCompositionPlanUseCase({
+            addProjection: new AddProjectionToCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
               projectionRepository: effectiveProjectionRepository,
               generateNodeId: () => `node.${randomUUID()}`,
               now: options.now,
             }),
-            removeProjection: new RemoveProjectionFromCompositionPlanUseCase({
+            removeProjection: new RemoveProjectionFromCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
               now: options.now,
             }),
-            connectNodes: new ConnectCompositionNodesUseCase({
+            connectNodes: new ConnectCompositionNodesUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
               generateRelationshipId: () => `rel.${randomUUID()}`,
               now: options.now,
             }),
-            disconnectNodes: new DisconnectCompositionNodesUseCase({
+            disconnectNodes: new DisconnectCompositionNodesUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
               now: options.now,
             }),
-            validatePlan: new ValidateAssetCompositionPlanUseCase({
+            validatePlan: new ValidateAssetCompositionPlanUseCase({ workspaceAccess: assetCompositionWorkspaceAccess,
               repository: assetCompositionPlanRepository,
               projectionRepository: effectiveProjectionRepository,
               now: options.now,
             }),
-            readModel: new WorkspaceAssetCompositionReadModelService({
+            readModel: new WorkspaceAssetCompositionReadModelService({ workspaceAccess: assetCompositionWorkspaceAccess,
               compositionPlanRepository: assetCompositionPlanRepository,
             }),
           };

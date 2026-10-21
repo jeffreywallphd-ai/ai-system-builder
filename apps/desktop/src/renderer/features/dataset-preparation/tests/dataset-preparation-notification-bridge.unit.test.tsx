@@ -1,6 +1,6 @@
 import { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   NotificationProvider,
@@ -26,12 +26,14 @@ describe("DatasetPreparationNotificationBridge", () => {
   let root: Root | undefined;
   let container: HTMLDivElement | undefined;
 
+  beforeEach(() => vi.useFakeTimers());
   afterEach(async () => {
     if (root) await act(async () => root?.unmount());
     container?.remove();
     root = undefined;
     container = undefined;
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it("opens global progress and keeps polling independently of the preparation page", async () => {
@@ -54,13 +56,6 @@ describe("DatasetPreparationNotificationBridge", () => {
             value: {} as never,
           },
     );
-    let intervalHandler: (() => void) | undefined;
-    vi.spyOn(window, "setInterval").mockImplementation((handler) => {
-      intervalHandler = handler as () => void;
-      return 1;
-    });
-    vi.spyOn(window, "clearInterval").mockImplementation(() => undefined);
-
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
@@ -91,7 +86,7 @@ describe("DatasetPreparationNotificationBridge", () => {
 
     status = "succeeded";
     await act(async () => {
-      intervalHandler?.();
+      await vi.advanceTimersByTimeAsync(1000);
       await Promise.resolve();
     });
     expect(container.textContent).toContain("Training dataset is ready.");

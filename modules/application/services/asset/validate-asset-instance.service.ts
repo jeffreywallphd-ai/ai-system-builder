@@ -12,6 +12,7 @@ import {
   validateReference,
   validateSafeId,
   valueAsString,
+  instanceInputShapeIssues,
   type AssetValidationContext,
   type AssetValidationOptions,
   type AssetValidationResult,
@@ -23,6 +24,8 @@ export function validateAssetInstance(
   instance: AssetInstance,
   context: AssetValidationContext = {},
 ): AssetValidationResult {
+  const shapeIssues = instanceInputShapeIssues(instance);
+  if (shapeIssues.length) return result(shapeIssues, context.options);
   const assetRef = ref("asset-instance", valueAsString(instance.instanceId));
   const issues: AssetValidationIssue[] = [];
   validateSafeId(instance.instanceId, "instanceId", "identity", issues, assetRef);

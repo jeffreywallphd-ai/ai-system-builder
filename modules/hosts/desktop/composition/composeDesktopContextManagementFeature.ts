@@ -4,7 +4,6 @@ import {
   ContextManagementCommandUseCase,
 } from "../../../application/use-cases";
 import { createPythonContextArtifactRuntimeAdapter } from "../../../adapters/runtime/python";
-import { TaskType } from "../../../contracts/runtime";
 
 export interface ComposeDesktopContextManagementFeatureOptions {
   readonly artifacts: any;
@@ -17,9 +16,9 @@ export interface ComposeDesktopContextManagementFeatureOptions {
 export function composeDesktopContextManagementFeature(
   options: ComposeDesktopContextManagementFeatureOptions,
 ): any {
-  let disposed = false;
   const generation = new ContextGenerationUseCase({
     runtimeTaskRegistry: options.runtime.runtimeTaskRegistry,
+    taskReconciler: options.runtime.taskReconciler,
     storageBindings: options.artifacts.artifactBindings,
     storage: options.artifacts.storage,
     artifactCatalog: options.artifacts.artifactCatalog,
@@ -52,30 +51,5 @@ export function composeDesktopContextManagementFeature(
     contextManagement,
     generation,
     browser,
-    dispose() {
-      disposed = true;
-    },
-    get disposed() {
-      return disposed;
-    },
-    async canDispose() {
-      try {
-        const active = await options.runtime.runtimeTaskRegistry.listTasks({
-          taskTypes: [
-            TaskType.CONTEXT_GENERATION,
-            TaskType.CONTEXT_RETRIEVAL,
-          ],
-          statuses: ["queued", "running", "unknown"],
-        });
-        return active.tasks.length > 0
-          ? {
-              blockedReason: "active-runtime-tasks",
-              activeTaskCount: active.tasks.length,
-            }
-          : undefined;
-      } catch {
-        return { blockedReason: "active-task-status-unavailable" };
-      }
-    },
   };
 }

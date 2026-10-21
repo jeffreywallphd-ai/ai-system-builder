@@ -6,3 +6,5 @@ export * from "./read-workspace-system-pack-activation.use-case";
 export * from "./set-workspace-system-pack-activation-status.use-case";
 export * from "./workspace-system-pack-activation-diagnostics";
 export * from "./workspace-system-pack-activation-policy";
+
+export * from "./read-workspace-summary.use-case";

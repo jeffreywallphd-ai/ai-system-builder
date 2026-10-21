@@ -261,12 +261,23 @@ export class RequestSystemBuildUseCase {
 
       const resolved: SystemBuildResolvedImplementation[] = [];
       const resolutionDiagnostics: SystemBuildDiagnostic[] = [];
+      // Only this immutable build request owns these selections. Mutable
+      // binding/package/revocation authority is checked again for reused entries.
+      const selections = new Map<string, {definitionRef: AssetReference; result: AssetImplementationResolutionResult; reused: boolean}>();
+      const policy = {
+        workspaceId: command.workspaceId, deploymentProfile: command.deploymentProfile,
+        availableCapabilities: command.availableCapabilities, permittedTrustLevels: command.permittedTrustLevels,
+        hostApiVersion: command.hostApiVersion, runtimeAbiVersion: command.runtimeAbiVersion,
+      };
       for (const instance of systemRevision.instances) {
-        const result = await resolveFirstSystemBuildFacet(
-          this.dependencies.resolver,
-          command,
-          instance.definitionRef,
-        );
+        const key = canonicalizeSystemBuildValue({...policy, definitionRef: {kind: instance.definitionRef.kind, id: instance.definitionRef.id, version: instance.definitionRef.version}, facetOrder: FACET_RESOLUTION_ORDER});
+        let selection = selections.get(key);
+        if (selection) selection.reused = true;
+        else {
+          selection = {definitionRef: instance.definitionRef, result: await resolveFirstSystemBuildFacet(this.dependencies.resolver, command, instance.definitionRef), reused: false};
+          selections.set(key, selection);
+        }
+        const result = selection.result;
         if (result.status !== "ready" || !result.selectedRelease) {
           resolutionDiagnostics.push(
             ...result.diagnostics.map((item) => ({
@@ -309,6 +320,26 @@ export class RequestSystemBuildUseCase {
               ))!,
             )
           : systemBuildFailure("not-found", "Build was not found.");
+
+      for (const selection of selections.values()) {
+        const prior = selection.result;
+        if (!selection.reused || prior.status !== "ready" || !prior.selectedRelease) continue;
+        const fresh = await this.dependencies.resolver.resolve({
+          ...policy, definitionRef: selection.definitionRef,
+          lockedReleaseId: prior.selectedRelease.releaseId,
+          requiredFacets: prior.selectedFacets.map(facet => facet.kind),
+        });
+        if (fresh.status !== "ready" || !fresh.selectedRelease ||
+          canonicalizeSystemBuildValue({release: fresh.selectedRelease, facets: fresh.selectedFacets}) !== canonicalizeSystemBuildValue({release: prior.selectedRelease, facets: prior.selectedFacets})) {
+          return await this.fail(running, [...validationDiagnostics, {severity: "error", code: "system.build.implementation-authority-changed", message: "Implementation authority changed or became unavailable before materialization."}]);
+        }
+      }
+
+      // Locked authority checks await external work; cancellation can arrive there.
+      if (await this.cancelled(command.workspaceId, command.buildId))
+        return systemBuildSuccess(
+          (await this.dependencies.repository.readBuild(command.workspaceId, command.buildId))!,
+        );
 
       const revisionDigest = this.dependencies.hasher.digest(
         canonicalizeSystemBuildValue(systemRevision),

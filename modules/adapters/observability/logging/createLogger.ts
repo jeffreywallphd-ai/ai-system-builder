@@ -88,14 +88,6 @@ function normalizeLogEvent(
   };
 }
 
-function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return String(error);
-}
-
 export function createLogger(options: CreateLoggerOptions = {}): LoggingPort {
   const config = options.config ?? createLoggingConfig();
   const minimumLevel = config.level ?? "info";
@@ -105,6 +97,7 @@ export function createLogger(options: CreateLoggerOptions = {}): LoggingPort {
 
   return {
     async log(event): Promise<void> {
+      try {
       if (!shouldEmitByLevel(event.level, minimumLevel)) {
         return;
       }
@@ -120,24 +113,25 @@ export function createLogger(options: CreateLoggerOptions = {}): LoggingPort {
       });
       const serializedEvent = JSON.stringify(eventToWrite);
 
-      try {
         await sink(serializedEvent, eventToWrite);
-      } catch (error) {
+      } catch {
+        // Neither malformed input nor diagnostics infrastructure may fail the
+        // owning operation. Never copy failed payloads or raw exceptions here.
+        try {
         const sinkFailureEvent: StructuredLogEvent = {
-          timestamp: now(),
+          timestamp: new Date().toISOString(),
           level: "error",
           verbosity: "normal",
           event: "observability.logging.write_failed",
           message: "Failed to write structured log event",
           component: "observability-logger",
           host: options.host,
-          data: {
-            sinkErrorMessage: toErrorMessage(error),
-            failedEvent: eventToWrite.event,
-          },
         };
 
         console.error(JSON.stringify(sinkFailureEvent));
+        } catch {
+          // A broken fallback console is still a diagnostics failure only.
+        }
       }
     },
   };

@@ -59,7 +59,10 @@ case path rather than desktop preload wiring.
 - Default API base URL in thin-client code is `/api`.
 - In local development, Vite proxies `/api` to the server on `127.0.0.1:3010`, which allows running
   thin-client and server on separate ports while keeping feature clients same-origin by default.
-- Thin-client Vite dev server defaults to HTTP at `http://localhost:5173`.
+- Thin-client Vite dev server and preview default to loopback at `http://127.0.0.1:5173` (preview uses its own port).
+- Nonloopback access requires `AI_SYSTEM_BUILDER_SECURITY_MODE=lan-https-token`, which also requires
+  frontend HTTPS. Explicitly disabling frontend HTTPS fails before certificate access. The final resolved
+  server and preview configuration is checked, including CLI `--host` overrides.
 - Optional thin-client Vite HTTPS can be enabled with:
   - `AI_SYSTEM_BUILDER_THIN_CLIENT_HTTPS_ENABLED=true`
   - explicit cert/key files via `AI_SYSTEM_BUILDER_THIN_CLIENT_TLS_CERT_PATH` and
@@ -67,12 +70,16 @@ case path rather than desktop preload wiring.
   - generated/reused dev cert material via `AI_SYSTEM_BUILDER_TLS_CERT_MODE=auto-self-signed`
     or `auto-local-ca`.
 - When explicit thin-client cert/key paths are set, files must be present and readable or Vite startup fails with an actionable error.
-- Thin-client HTTPS env vars control only the Vite UI listener (port 5173), not server API listener mode (port 3010).
+- Thin-client HTTPS env vars control the Vite UI listener (port 5173), not server API listener mode (port 3010).
+  LAN mode requires both the UI and its effective API proxy target to use HTTPS.
 - When `AI_SYSTEM_BUILDER_HTTPS_ENABLED=true` or `AI_SYSTEM_BUILDER_SECURITY_MODE=lan-https-token` is
   set for the thin-client dev server process, the Vite proxy targets `https://127.0.0.1:3010`.
 - For dev-generated TLS (`AI_SYSTEM_BUILDER_TLS_CERT_MODE=auto-self-signed` or `auto-local-ca`), the
-  Vite proxy disables proxy-side certificate verification so Node can reach the HTTPS dev server.
+  Vite proxy allows development trust only for exact loopback HTTPS targets. Remote HTTPS always verifies
+  certificates, including when the development certificate mode is set.
 - To force a specific dev proxy origin, set `AI_SYSTEM_BUILDER_THIN_CLIENT_API_PROXY_TARGET`.
+  HTTP targets in LAN mode, unsupported schemes and embedded credentials fail startup.
+- Production builds do not resolve development listener certificates or proxy targets.
 - To use a different server origin directly, set `VITE_API_BASE_URL` (for example
   `http://127.0.0.1:3100/api`).
 
@@ -181,3 +188,7 @@ Notes:
 - `auto-local-ca` requires manual CA trust installation.
 - Switching thin-client Vite between HTTP/HTTPS requires restarting `npm run dev:thin-client`.
 - Never commit or log private keys; this TLS mode is for development only, not public-internet hardening.
+
+Development security mode changes use `secureFetch` and the existing paired
+device token. Enforced-mode changes require `security:admin`; a denial is not
+retried through public fetch. Public status reads retain their existing policy.

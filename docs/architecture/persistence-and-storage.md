@@ -537,7 +537,7 @@ package into a private temporary directory for one bounded operation, then must
 remove it. Application SQLite, system-runtime SQLite, and Markdown context packs
 are unaffected by the Context RAG storage engine.
 
-Shared model storage is a configured host-local storage source for model discovery and reuse across workspaces. It is intentionally separate from workspace model inventory persistence: discovery produces read-only shared inventory entries at list/read time, while workspace downloads and generated models remain persisted workspace records. Model registry files must not persist discovered shared entries just because a workspace listed them. Explicit desktop model deletion keeps record mutation separate from filesystem authority: the application requests deletion through a narrow port, and the host-local adapter accepts only canonical descendants of the generated-model cache or configured shared model root. It deletes a Hugging Face model repository as one cache unit (snapshots plus blobs) or an exact discovered checkpoint file, rejects cache-root, link, traversal, and outside-root targets, and leaves the registry record intact when local deletion fails.
+Shared model storage is a configured host-local storage source for model discovery and reuse across workspaces. It is intentionally separate from workspace model inventory persistence: discovery produces read-only shared inventory entries at list/read time, while workspace downloads and generated models remain persisted workspace records. Model registry files must not persist discovered shared entries just because a workspace listed them. Desktop model file effects are currently unavailable pending a qualified native file authority. The portable path/rename prototype failed concurrency and supported-cache qualification and is not wired as an effect implementation. Identity-based ports fail before filesystem or shell access; no renderer path, mutable shared discovery root or metadata fallback is used. Registry-only removal remains supported and file removal is an explicit optional UI choice with corrective guidance. A future implementation must bind provenance atomically to the current model record, preserve supported cache links, hold authority through the actual OS operation, and pass positive plus replacement-race qualification. These requirements remain pending; existing disposable preflight denials do not establish that qualification.
 
 Server defaults should keep `SERVER_STORAGE_ROOT` and `SERVER_RUNTIME_ROOT` distinct. Desktop local mode should use desktop-owned runtime roots and desktop-owned artifact storage roots. Server/thin-client mode should use server-owned runtime roots and server-owned artifact storage roots. Future desktop-remote mode should not assume remote artifacts are local files.
 
@@ -580,7 +580,7 @@ Workspace records, active-selection preferences, and system-pack activation reco
 
 Workspace-owned resources require explicit workspace ids and must not fall back to legacy global storage. Artifacts/uploads use a workspace-scoped root/keyspace. Image assets, generated outputs, dataset outputs, model inventory records, and runtime task outputs are workspace-scoped where implemented; legacy global records are not auto-migrated or silently assigned to a hidden/default workspace. Storage descriptors exposed through contracts remain path-free, and public diagnostics must not expose raw roots or provider payloads.
 
-workspace foundations final cleanup hardens resource reads at the storage boundary: artifact byte retrieval must first validate the workspace-owned catalog record and must not fetch bytes after missing, invalid, wrong-workspace, or unavailable catalog ownership checks. Missing catalog files represent an empty catalog, but non-`ENOENT` catalog read failures are operational failures and must not be hidden as empty lists. Storage/catalog/generated-image errors crossing application, API, IPC, preload, renderer, or thin-client boundaries must use fixed sanitized messages plus safe operation/error-code details only. Generated image persistence must validate/brand workspace ids before constructing `workspaces/<workspaceId>/generated/images/...` keys. Normal model UI/API read models omit raw `localPath`, `validationReportPath`, and equivalent filesystem diagnostics; upload clients require an active workspace id before sending API/IPC requests. Desktop Model Management may reveal a local model in the operating-system file manager only through a workspace-scoped model-record command: the application resolves the stored location, the desktop host validates it as an absolute path before invoking the file manager, and IPC/preload responses never return the path. Server Model Management never exposes or opens a host path; after an explicit **Show model files** action in the Details modal, it may return at most 500 relative file names and sizes from the workspace-owned model record. Server enumeration must remain within operator-configured model-cache roots, bound visited entries and directory depth, validate link targets, return no file contents or absolute paths, and fail closed for remote-only, missing, or out-of-root records. Missing records, remote-only records, unavailable host support, and host failures fail closed with bounded path-free messages.
+workspace foundations final cleanup hardens resource reads at the storage boundary: artifact byte retrieval must first validate the workspace-owned catalog record and must not fetch bytes after missing, invalid, wrong-workspace, or unavailable catalog ownership checks. Missing catalog files represent an empty catalog, but non-`ENOENT` catalog read failures are operational failures and must not be hidden as empty lists. Storage/catalog/generated-image errors crossing application, API, IPC, preload, renderer, or thin-client boundaries must use fixed sanitized messages plus safe operation/error-code details only. Generated image persistence must validate/brand workspace ids before constructing `workspaces/<workspaceId>/generated/images/...` keys. Normal model UI/API read models omit raw `localPath`, `validationReportPath`, and equivalent filesystem diagnostics; upload clients require an active workspace id before sending API/IPC requests. Desktop Model Management may reveal a local model in the operating-system file manager only through a workspace-scoped model-record command: the application passes workspace/model identity to the private location authority, which verifies the grant and contained physical identity before the desktop shell validates the local path, and IPC/preload responses never return the path. Server Model Management never exposes or opens a host path; after an explicit **Show model files** action in the Details modal, it may return at most 500 relative file names and sizes from the workspace-owned model record. Server enumeration must remain within operator-configured model-cache roots, bound visited entries and directory depth, validate link targets, return no file contents or absolute paths, and fail closed for remote-only, missing, or out-of-root records. Missing records, remote-only records, unavailable host support, and host failures fail closed with bounded path-free messages.
 
 ## Workspace persistence boundary
 
@@ -604,3 +604,32 @@ retry, and organization RLS isolation when a disposable `TEST_POSTGRES_URL`
 target is available. The reference migration-plan artifact is release evidence;
 it does not execute destructive DDL or replace the monotonic database migration
 ledger.
+
+
+Model download task reads and lists are projections only. Registration is a separate
+idempotent `download-complete` write operation, protected by `model:write` and
+host-derived organization/principal context frozen at start. A later context
+cannot choose another registration tenant. Desktop and thin-client writer flows
+explicitly complete succeeded downloads; status polling alone cannot mutate inventory.
+Public record edits allow display name, inference mode, task tags, artifact form
+and metadata only. Trusted validation/publication use the internal registry seam;
+registry updates always preserve workspace, local path and storage scope.
+
+Effective projection records, snapshots, commands, references and provenance are
+explicitly reconstructed with the shared bounded passive DTO schemas. Declared
+labels/metadata, canonical timestamps, revision identities and finite graph-summary
+counts/actual boolean flags are validated. Projected metadata retains safe nested
+arrays, false/zero/null and existing field rules with bounded recursion; credential
+representations, paths, accessors, cycles and unknown payload fields deny.
+Diagnostic messages remain generic. Snapshot identity is required for snapshots.
+The fixed local projection/snapshot collections validate on read, before writes,
+and before/after mutation callbacks. Invalid stored records deny without rewriting
+bytes or invoking a mutation callback. This does not grant source authority, add
+transport admission, enable uncomposed runtime families or satisfy controlled
+qualification. Rollback must preserve the stronger record denial.
+Duplicated target workspace identities must agree across command/record source,
+target and provenance. Root and target effective references agree exactly on
+kind/id/version, and an optional target projection ID matches the record.
+Source workspace provenance may legitimately differ for library/import sources;
+intended policy may differ from the actual blocked policy. Contradictory records
+deny before persistence or progression, rather than selecting a convenient identity.

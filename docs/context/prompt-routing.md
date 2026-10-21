@@ -4,6 +4,14 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
 
 ## Baseline
 
+- Contributor workflow work requests start at `AGENTS.md` and
+  `docs/diagnostics/ai-development-control-plane.md`. Start or reuse its
+  JSON-backed review server and share the verified link. Use `docs-standards`
+  for workflow changes, plus `security` for execution or evidence boundaries.
+  For final aggregate admission, use the roadmap skill's implementation-boundary
+  rule: all chunks implemented, current approval and no blockers. Pending external
+  evidence never permits final closure.
+
 - Always include `docs/context/packs/index.pack.md`.
 - Read `docs/README.md` before assembling task context.
 - Use `docs/context/pack-catalog.json` for machine-readable task/path signals and applicable checks.

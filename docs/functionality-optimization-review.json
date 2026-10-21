@@ -1,0 +1,530 @@
+{
+  "schema_version": "feature-optimization-review-v1",
+  "assessment_kind": "static-source-and-existing-evidence",
+  "implementation_authorized": true,
+  "approval_status": "implementation-in-progress",
+  "baseline_measurements": "Source-bound local browse, bounded background-task observation and isolated native exact Context comparisons recorded; representative controlled qualification remains pending.",
+  "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+  "roadmap_state": ".implementation-roadmaps/functionality-optimization/state.json",
+  "features": [
+    {
+      "id": "F01",
+      "feature": "Home and page summaries",
+      "priority": "high",
+      "baseline": "Static: renderer sources request full releases and paged model/custom-asset catalogs for counts; Promise.all makes the whole summary unavailable if one source fails. No latency measurement.",
+      "target": "Proposed one bounded authorized summary request/page; preserve exact counting; independent metric availability; p95<=1000ms on named profiles.",
+      "improvement": "Application-owned count/read projection with shared API/IPC clients; no renderer lock/catalog transfer solely for totals.",
+      "measure": "1000systems/10000releases/10000models/10000assets; request count, bytes, I/O and p95, plus partial failure and workspace-switch tests.",
+      "sources": [
+        "modules/ui/shared/page-dashboard/dashboardMetrics.ts",
+        "apps/thin-client/src/features/page-dashboard/thinClientPageDashboardSource.ts",
+        "apps/desktop/src/renderer/features/page-dashboard/desktopPageDashboardSource.ts"
+      ],
+      "increment": 1
+    },
+    {
+      "id": "F02",
+      "feature": "Assets and System Composer",
+      "priority": "high",
+      "baseline": "Static: strong shared modal/lazy exact-detail design; Composer list still reads detail for every candidate before filtering. Six accepted performance budgets exist, but no owned production probe set located.",
+      "target": "Existing Catalog p95<=200ms/1000summaries and Studio<=350ms/500instances+1000bindings; proposed>=50% fewer candidate detail round trips with identical complete results.",
+      "improvement": "Own real workload probes; remove measured duplicate reads or add a bounded adapter batch seam; test sparse compatibility and cursor completeness.",
+      "measure": "Actual production outputs, counts and payloads, five warmups/thirty samples; do not time no-op fixtures.",
+      "sources": [
+        "modules/application/use-cases/system-builder/list-system-builder-composer-assets.use-case.ts",
+        "dev-tools/config/asset-system-qualification.json",
+        "dev-tools/scripts/qualification/asset-system-performance-core.mjs"
+      ],
+      "increment": 1
+    },
+    {
+      "id": "F03",
+      "feature": "Build, Publish and supported Run & Test",
+      "priority": "high",
+      "baseline": "Static: immutable release/bound authority and shared application workflows exist; only closed reference systems supported. Pending active-source proposal and controlled qualification are separate work. Current production latency unknown.",
+      "target": "Existing resolver<=150ms,build<=2500ms,preview<=750ms,handoff<=500ms at exact configured workloads; no lost/stale authority or duplicate start.",
+      "improvement": "Production-path performance probes and complete compose/build/publish/run journey evidence; repair measured gaps only; preserve authority and unsupported states.",
+      "measure": "Exact product/release identities, real lifecycle fixtures, timing and restart persistence; link active-source roadmap without implementing it.",
+      "sources": [
+        "modules/ui/shared/system-builder/SystemRunWorkflow.tsx",
+        "modules/ui/shared/system-builder/SystemPublishedLifecycleCard.tsx",
+        "docs/operations/asset-system-support-qualification.md",
+        ".implementation-roadmaps/systems-run-workflow-active-source/state.json"
+      ],
+      "increment": 1
+    },
+    {
+      "id": "F04",
+      "feature": "Downloads and background notifications",
+      "priority": "high",
+      "baseline": "Static: download bridge polls every1500ms for a selected workspace; Context has a separate1500ms bridge plus500ms active observer. Idle CPU/network cost unmeasured.",
+      "target": "Proposed>=80% fewer idle requests,one in-flight/family/workspace, bounded retained IDs; active progress/terminal p95<=2s under healthy local transport.",
+      "improvement": "Shared single-flight observation over current APIs, adaptive idle/error backoff, immediate explicit-action refresh and workspace-safe stale response guards.",
+      "measure": "Fake-clock ten-minute idle/active/failure schedules plus real host observation; count total calls and notifications, not speculative CPU savings.",
+      "sources": [
+        "modules/ui/shared/notifications/ModelDownloadNotificationBridge.tsx",
+        "modules/ui/shared/context-management/ContextStudio.tsx",
+        "apps/thin-client/src/App.tsx"
+      ],
+      "increment": 2
+    },
+    {
+      "id": "F05",
+      "feature": "Training and image-generation lifecycle",
+      "priority": "high",
+      "baseline": "Static: feature-specific polling exists; RuntimeTaskRegistryService completes power lifecycle during terminal reads. This identifies a cleanup risk to test, not proof of a leak. Generation is request/resource bounded.",
+      "target": "Terminal resource release exactly once without an open page; no duplicate output finalization; truthful retry/cancel; proposed healthy local progress<=2s.",
+      "improvement": "Prove lifecycle completion at host owner; unify observation and task rediscovery; preserve existing explicit device/readiness and actual supported cancellation.",
+      "measure": "No-page completion/failure/cancel/timeout/shutdown, navigation and retry fixtures, resource counts and terminal latency.",
+      "sources": [
+        "modules/application/services/runtime/runtime-task-registry.service.ts",
+        "modules/application/services/runtime/task-power-lifecycle.service.ts",
+        "apps/desktop/src/renderer/features/models/hooks/useModelTrainingFeature.ts",
+        "apps/desktop/src/renderer/features/image-generation/hooks/useImageGenerationFeature.ts",
+        "apps/thin-client/src/features/image-generation/hooks/useImageGenerationFeature.ts"
+      ],
+      "increment": 2
+    },
+    {
+      "id": "F06",
+      "feature": "Context and RAG query",
+      "priority": "high",
+      "baseline": "Static: each query hashes/retrieves bytes, privately extracts ZIP, converts full Arrow table to Python rows, validates every row and exact-searches. Embedding helper loads a local tokenizer/model per invocation. No measured bottleneck or query quality baseline.",
+      "target": "Proposed>=25% lower incremental peakRSS at10000/100000chunks without>5% p95 regression; deterministic top-k/citations unchanged; controlled recall@5>=0.90 and degradation<=0.02.",
+      "improvement": "Profile stages first; replace redundant full Python vector/text materialization with bounded validation iteration and minimal metadata. Preserve full validation/exact search. Separate decision before persistent cache or approximate index.",
+      "measure": "1000/10000/100000chunks,384dimensions within package bounds; cold/repeated timing,RSS,exact quality oracle,cancellation/cleanup and malformed packages.",
+      "sources": [
+        "modules/application/use-cases/context-management/context-browser.use-cases.ts",
+        "modules/adapters/runtime/python/worker/tasks/context_artifact_operation.py",
+        "modules/adapters/runtime/python/worker/tasks/context_generation.py",
+        "docs/security/context-management-threat-model.md"
+      ],
+      "increment": 3
+    },
+    {
+      "id": "F07",
+      "feature": "Data acquisition, preparation and dataset review",
+      "priority": "high",
+      "baseline": "Implemented guided acquisition,1MiB upload chunks,adaptive methods,curation,exact-row immutable revisions and lineage; six existing increments remain implemented-pending-qualification. No production-scale or representative-user pass inferred.",
+      "target": "Preserve split/lineage/row identity; proposed4of5 representative users complete critical tasks without help,zero critical data-loss/authority confusion; actual memory/cancel bounds under existing owner.",
+      "improvement": "Complete existing large-file/provider/user qualification; instrument and repair observed task gaps; measure accepted examples/minute and invalid/retry rate rather than raw generation speed.",
+      "measure": "Existing27-case preparation matrix and controlled ingestion protocol,synthetic inputs,held-out quality,peakRAM/VRAM,task completion and accessibility.",
+      "sources": [
+        "modules/ui/shared/data-management/README.md",
+        ".implementation-roadmaps/data-management-quality-and-usability/state.json",
+        "dev-tools/scripts/testing/run-dataset-preparation-e2e.mjs"
+      ],
+      "increment": 4
+    },
+    {
+      "id": "F08",
+      "feature": "Local models and constrained generation",
+      "priority": "high",
+      "baseline": "Capacity-aware generation,local-only preparation and optional constrained decoder exist; sufficient accelerator/constrained CPU/non-developer qualification remains pending. Planning made no real-model calls.",
+      "target": "Proposed>=20% accepted-output throughput gain or compliance with approved resource budget,without task-metric quality regression; invalids/retries charged; known unsafe resource choice denied.",
+      "improvement": "Compare fixed installed model/preset cohorts on identical synthetic held-out tasks,keep all attempts,capture quality/resource evidence and explicit unavailable states; no silent decoder fallback.",
+      "measure": "Existing nine-task training matrix,declared metric/tolerance and fixed dataset/model/environment; separateCPU/GPU and constrained/unchecked cohorts.",
+      "sources": [
+        ".implementation-roadmaps/optional-constrained-json-generation/state.json",
+        "dev-tools/scripts/testing/run-model-training-e2e.mjs",
+        "modules/ui/shared/data-management/README.md",
+        "modules/adapters/runtime/python/worker/tasks/local_text_generation.py"
+      ],
+      "increment": 4
+    },
+    {
+      "id": "F09",
+      "feature": "Accessibility, recovery and release confidence",
+      "priority": "high",
+      "baseline": "Shared semantic/axe/320px visual coverage and manual procedures exist; legacy qualification remains pending. Manual Composer procedure still mentions a persistent Asset Palette although current shared README prescribes Add element modal. Aggregate standard Node currently fails; no failure is labeled a product defect without triage.",
+      "target": "Exact supported profiles pass keyboard,screen-reader,focus,zoom/reflow,contrast/status checks; proposedmedian task-ease>=5/7; current aggregate green before completion with skips explicit.",
+      "improvement": "Refresh manual task scripts to implemented journeys; run controlled representative studies and repair demonstrated blockers; maintain owning roadmap crosswalk and current candidate evidence.",
+      "measure": "Exact product digest,environment,evidence digest,task failures and retest results; triage test harness/environment separately from reproduced product failure.",
+      "sources": [
+        "docs/operations/asset-experience-controlled-review.md",
+        "modules/ui/shared/README.md",
+        ".implementation-roadmaps/asset-experience-layered-customization/state.json",
+        "artifacts/test-reports/test-suite-report.json"
+      ],
+      "increment": 4
+    }
+  ],
+  "transferred_functional_findings": [
+    {
+      "finding_id": "R55",
+      "title": "Ingestion task API route is always denied",
+      "increment": 2,
+      "disposition": "explicitly-unavailable-resource-authority-integration-deferred",
+      "assessment": "The ingestion execution route remains absent from the deny-by-default route map. This is unavailable functionality, not an authentication bypass; any future admission must retain exact policy and owning application authorization. Current replay verifies exact registered route families and substituted resources/methods remain denied. No broad route admission or global authorization fallback is introduced; composing their missing resource authority remains explicit successor integration work.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/adapters/transport/api-express/ingestion-task/registerIngestionTaskApiRoute.ts",
+        "modules/adapters/transport/api-express/registerExpressApi.ts"
+      ],
+      "evidence_level": "executed-local-route-denial-contract"
+    },
+    {
+      "finding_id": "R56",
+      "title": "Logger can throw before sink failure handling",
+      "increment": 2,
+      "disposition": "locally-corrected-increment-qualification-pending",
+      "assessment": "Logger normalization, serialization, sink and fallback failures are contained with safe static diagnostics; focused malformed/cyclic/BigInt/sink regressions passed.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/adapters/observability/logging/createLogger.ts"
+      ],
+      "evidence_level": "focused-executable-regression-current-source"
+    },
+    {
+      "finding_id": "R58",
+      "title": "Model publish now starts unsupported runtime task",
+      "increment": 2,
+      "disposition": "locally-corrected-increment-qualification-pending",
+      "assessment": "Standalone publishing is explicitly unavailable before model I/O or task dispatch, including incorrectly ready capability hints. Supported training save/publish semantics are preserved.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/application/use-cases/model/publish-model.use-case.ts",
+        "modules/adapters/runtime/python/createPythonRuntimeTaskRegistryAdapter.ts"
+      ],
+      "evidence_level": "focused-executable-regression-current-source"
+    },
+    {
+      "finding_id": "R59",
+      "title": "Resource poll can hide runtime log updates",
+      "increment": 2,
+      "disposition": "locally-corrected-increment-qualification-pending",
+      "assessment": "Resource snapshot signatures no longer consume independent log freshness; actual hook 5s-resource/10s-log regression passed.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "apps/desktop/src/renderer/features/python-runtime/hooks/usePythonRuntimeFooter.ts"
+      ],
+      "evidence_level": "focused-executable-regression-current-source"
+    },
+    {
+      "finding_id": "R61",
+      "title": "Training dataset binding resolves to storage key, not file path",
+      "increment": 2,
+      "disposition": "locally-corrected-increment-qualification-pending",
+      "assessment": "Training resolves exact workspace-owned local artifact bindings and copies bytes to private bounded staging; caller dataset paths and unbound/global fallbacks are denied. Focused training tests passed.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/application/use-cases/model/train-model.use-case.ts",
+        "modules/application/use-cases/localize-artifact-from-repo.use-case.ts"
+      ],
+      "evidence_level": "focused-executable-regression-current-source"
+    },
+    {
+      "finding_id": "R62",
+      "title": "Desktop asset version reads ignore requested version",
+      "increment": 1,
+      "disposition": "locally-corrected",
+      "assessment": "Version-bearing reads use immutable references; real repository regression selects v1 with v2 present.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/adapters/transport/ipc-electron/asset-registry/registerAssetRegistryIpc.ts",
+        "modules/contracts/ipc/desktop-asset-registry-contract.ts"
+      ],
+      "evidence_level": "focused-local-regression-or-explicit-source-owned-pending"
+    },
+    {
+      "finding_id": "R63",
+      "title": "Malformed asset inputs can throw before validation",
+      "increment": 1,
+      "disposition": "locally-corrected",
+      "assessment": "Malformed instance/composition shapes fail before context lookups or writes; loaded malformed references add issues.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/application/use-cases/asset/asset-use-case-helpers.ts"
+      ],
+      "evidence_level": "focused-local-regression-or-explicit-source-owned-pending"
+    },
+    {
+      "finding_id": "R64",
+      "title": "Malformed bindingRefs can crash asset validation",
+      "increment": 1,
+      "disposition": "locally-corrected",
+      "assessment": "Pure validators return structured invalid results for malformed references/collections.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/application/services/asset/validate-asset-instance.service.ts",
+        "modules/application/services/asset/validate-asset-composition.service.ts"
+      ],
+      "evidence_level": "focused-local-regression-or-explicit-source-owned-pending"
+    },
+    {
+      "finding_id": "R65",
+      "title": "Runtime readiness API blocked by route policy",
+      "increment": 2,
+      "disposition": "explicitly-unavailable-resource-authority-integration-deferred",
+      "assessment": "Runtime readiness route families remain default-denied by current policy. Fixing availability must not broadly open dynamic API paths. Current replay verifies exact registered route families and substituted resources/methods remain denied. No broad route admission or global authorization fallback is introduced; composing their missing resource authority remains explicit successor integration work.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/adapters/transport/api-express/runtime-readiness/registerRuntimeReadinessApiRoutes.ts",
+        "modules/adapters/transport/api-express/registerExpressApi.ts"
+      ],
+      "evidence_level": "executed-local-route-denial-contract"
+    },
+    {
+      "finding_id": "R67",
+      "title": "Runtime setup refresh uses unavailable read paths",
+      "increment": 2,
+      "disposition": "desktop-transport-corrected-server-parity-unavailable",
+      "assessment": "The real preload now exposes the finite latest/detail readiness channels used by the desktop client; a real client-to-preload-to-IPC test passes. Server readiness remains default-denied under R65; no unsupported thin-client parity is claimed.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "apps/desktop/src/renderer/features/runtime-readiness/api/desktopRuntimeReadinessClient.ts",
+        "apps/desktop/src/preload/exposedApi.ts"
+      ],
+      "evidence_level": "executed-local-preload-and-ipc-contract"
+    },
+    {
+      "finding_id": "R69",
+      "title": "Plan connection clients send wrong relationship field",
+      "increment": 1,
+      "disposition": "locally-corrected",
+      "assessment": "Desktop and thin clients use relationshipKind; both command payloads replayed.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "apps/thin-client/src/features/asset-composition/api/thinClientAssetCompositionClient.ts",
+        "apps/desktop/src/renderer/features/asset-composition/api/desktopAssetCompositionClient.ts"
+      ],
+      "evidence_level": "focused-local-regression-or-explicit-source-owned-pending"
+    },
+    {
+      "finding_id": "R70",
+      "title": "Asset composition add/connect routes reject valid requests",
+      "increment": 1,
+      "disposition": "locally-corrected",
+      "assessment": "Only actual route identifiers are compared; conflicting route/body workspace/plan still denied.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/adapters/transport/api-express/asset-composition/registerAssetCompositionApiRoutes.ts",
+        "apps/thin-client/src/features/asset-composition/api/thinClientAssetCompositionClient.ts"
+      ],
+      "evidence_level": "focused-local-regression-or-explicit-source-owned-pending"
+    },
+    {
+      "finding_id": "R71",
+      "title": "Asset composition REST routes are denied by policy",
+      "increment": 1,
+      "disposition": "locally-corrected",
+      "assessment": "All10composition use cases and5read-model entries require persisted active workspace/resource authorization before protected I/O; both hosts inject it. Only8exact registered method/templates are admitted, with unknown variants denied.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/adapters/transport/api-express/asset-composition/registerAssetCompositionApiRoutes.ts",
+        "modules/adapters/transport/api-express/registerExpressApi.ts"
+      ],
+      "evidence_level": "focused-local-regression-or-explicit-source-owned-pending"
+    },
+    {
+      "finding_id": "R72",
+      "title": "Projection API changes introduce non-security regressions",
+      "increment": 1,
+      "disposition": "locally-corrected-production-uncomposed",
+      "assessment": "Static projection reads precede the dynamic route; rejected adapter reads return sanitized unavailable. Server services remain uncomposed.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/adapters/transport/api-express/effective-asset-projections/registerEffectiveAssetProjectionApiRoutes.ts",
+        "modules/contracts/effective-asset-projections/effective-asset-projection-policy.ts"
+      ],
+      "evidence_level": "focused-local-regression-or-explicit-source-owned-pending"
+    },
+    {
+      "finding_id": "R73",
+      "title": "Prompt capability normalizer rejects valid prompt labels",
+      "increment": 1,
+      "disposition": "locally-corrected",
+      "assessment": "Declared prompt-template capability keys/labels are accepted; protected nested metadata remains denied.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/contracts/asset-composition/asset-composition-capability.ts"
+      ],
+      "evidence_level": "focused-local-regression-or-explicit-source-owned-pending"
+    },
+    {
+      "finding_id": "R75",
+      "title": "Asset-authoring IPC read handlers are nonfunctional",
+      "increment": 1,
+      "disposition": "partially-corrected-explicit-unavailable",
+      "assessment": "IPC list envelopes match contracts. Effective-summary list is explicitly unavailable on both hosts pending owned authorized list service.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/adapters/transport/ipc-electron/asset-authoring/registerAssetAuthoringIpc.ts",
+        "modules/contracts/ipc/desktop-asset-authoring-contract.ts"
+      ],
+      "evidence_level": "focused-local-regression-or-explicit-source-owned-pending"
+    },
+    {
+      "finding_id": "R76",
+      "title": "Authoring summaries stripped from asset read responses",
+      "increment": 1,
+      "disposition": "locally-corrected",
+      "assessment": "Explicit canonical authoring summary projection preserves authored identifiers without exempting generic metadata keys.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/application/services/asset/workspace-asset-registry-read-facade.service.ts",
+        "modules/application/services/asset/asset-registry-read-facade.types.ts"
+      ],
+      "evidence_level": "focused-local-regression-or-explicit-source-owned-pending"
+    },
+    {
+      "finding_id": "R78",
+      "title": "User-library API routes are default-denied",
+      "increment": 1,
+      "disposition": "pending-library-ownership",
+      "assessment": "Personal library authority is not modeled by organization partitioning; route default denial retained.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/adapters/transport/api-express/user-library/registerUserLibraryApiRoutes.ts",
+        "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts"
+      ],
+      "evidence_level": "focused-local-regression-or-explicit-source-owned-pending"
+    },
+    {
+      "finding_id": "R80",
+      "title": "Lazy readiness keeps ComfyUI unavailable",
+      "increment": 2,
+      "disposition": "lazy-readiness-wiring-corrected-host-qualification-pending",
+      "assessment": "After explicit lazy image-feature composition, desktop readiness reads the live supervisor lifecycle and passive installed status instead of constant callbacks. Uncomposed state remains unknown; readiness cannot start/install/probe a runtime. Type checking and owning provider regressions are local evidence; controlled physical activation/re-read remains pending.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/hosts/desktop/composition/composeDesktopHost.ts"
+      ],
+      "evidence_level": "source-wiring-and-local-provider-contract"
+    },
+    {
+      "finding_id": "R82",
+      "title": "Workspace errors now falsely block valid workspace pages",
+      "increment": 1,
+      "disposition": "locally-corrected",
+      "assessment": "Failed selection/clear preserves a confirmed workspace; refresh failure or revoked/missing workspace remains gated.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "apps/thin-client/src/features/workspace/hooks/useActiveWorkspace.tsx",
+        "apps/thin-client/src/routes/workspaceRouteBoundary.ts"
+      ],
+      "evidence_level": "focused-local-regression-or-explicit-source-owned-pending"
+    },
+    {
+      "finding_id": "R83",
+      "title": "Desktop image generation loses workspace context",
+      "increment": 2,
+      "disposition": "locally-corrected-increment-qualification-pending",
+      "assessment": "Typed image IPC preserves workspace context. Both hosts bind accepted task organization/workspace ownership and reauthorize read/cancel/finalize before I/O or receipt reuse. Focused authority denial tests passed; full host qualification remains pending.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/application/use-cases/image-generation/generate-image.use-case.ts",
+        "apps/desktop/src/renderer/features/image-generation/hooks/useImageGenerationFeature.ts"
+      ],
+      "evidence_level": "focused-executable-regression-current-source"
+    },
+    {
+      "finding_id": "R84",
+      "title": "Finalized artifact IDs with slashes break registration",
+      "increment": 2,
+      "disposition": "locally-corrected-increment-qualification-pending",
+      "assessment": "Reuses canonical finalized source identity for slash-bearing artifact IDs;19 asset finalization tests passed including repeat registration. Image persistence/registration receipts retain successful steps through concurrent and partial retries.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/application/use-cases/asset/finalize-generated-output-as-asset.use-case.ts"
+      ],
+      "evidence_level": "focused-executable-regression-current-source"
+    },
+    {
+      "finding_id": "R85",
+      "title": "Conversation routes fail closed under API route policy",
+      "increment": 2,
+      "disposition": "explicitly-unavailable-resource-authority-integration-deferred",
+      "assessment": "Conversation execution route family remains default-denied. This is availability/integration work; authorization and supported capability limits must remain intact. Current replay verifies exact registered route families and substituted resources/methods remain denied. No broad route admission or global authorization fallback is introduced; composing their missing resource authority remains explicit successor integration work.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/adapters/transport/api-express/registerExpressApi.ts",
+        "modules/adapters/transport/api-express/conversations/registerConversationExecutionApiRoutes.ts"
+      ],
+      "evidence_level": "executed-local-route-denial-contract"
+    },
+    {
+      "finding_id": "R86",
+      "title": "Execution plan API routes are default-denied",
+      "increment": 2,
+      "disposition": "explicitly-unavailable-resource-authority-integration-deferred",
+      "assessment": "Execution-plan route family remains default-denied. Admit only supported typed operations after resource policy, host wiring and negative contract evidence. Current replay verifies exact registered route families and substituted resources/methods remain denied. No broad route admission or global authorization fallback is introduced; composing their missing resource authority remains explicit successor integration work.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/adapters/transport/api-express/execution-plans/registerExecutionPlanApiRoutes.ts",
+        "modules/adapters/transport/api-express/registerExpressApi.ts"
+      ],
+      "evidence_level": "executed-local-route-denial-contract"
+    },
+    {
+      "finding_id": "R88",
+      "title": "Removing assets drops the composer structure",
+      "increment": 1,
+      "disposition": "locally-corrected",
+      "assessment": "Subtree removal preserves structure through undo/redo and serialized draft restoration.",
+      "source_assessment": "docs/security/security-findings-refresh-assessment.json",
+      "source_paths": [
+        "modules/ui/shared/system-builder/systemComposerDraft.ts"
+      ],
+      "evidence_level": "focused-local-regression-or-explicit-source-owned-pending"
+    }
+  ],
+  "implementation_progress": {
+    "status": "increments-1-through-3-implemented-pending-qualification-increment-4-verifying",
+    "locally_verified": [
+      "Immutable version transport-to-repository selection with a later version present.",
+      "Malformed reference rejection before context reads/saves.",
+      "Typed canonical authoring summary projection and IPC list envelopes.",
+      "Relationship command and route/body parity; static projection dispatch order.",
+      "Confirmed workspace recovery and structure-preserving removal/undo/redo.",
+      "1000-definition sparse compatible traversal; actual 100 individual collection reads versus one batch collection read.",
+      "Late Load more responses ignored after destination change.",
+      "Scalar summary on both transports/hosts: exact 1000-system/10000-release/model/custom-asset fixture, one read per owning collection, sub-1000-byte home response; group failure and denied sender/authority regressions.",
+      "Six owned production-path probes: five warmups/30 samples on local-win32-node24-fixture; local p95 browse187.544ms, validate20.628ms, resolve7.811ms, build129.465ms, 2MiB preview1.957ms, handoff0.360ms. These do not qualify named reference profiles.",
+      "Build baseline3066.290ms versus candidate127.638ms on the same local core environment, with fresh locked authority and cancellation denial.",
+      "Required application workspace access on10composition use cases and5read-model methods; both hosts wire persisted active workspace and organization membership authority. Only8exact existing composition route templates admitted.",
+      "Real1000-candidate sparse traversal: baseline1006detail collection reads, candidate153(84.8percent reduction); identical100compatible results and84690response bytes. Shared Composer/workspace interaction16tests and thin workspace5tests pass.",
+      "I1bounded profile passed285Node tests plus23Vitest tests in45explicit files; server/thin builds passed. Fresh source-stable six-operation run passes local fixture budgets; named controlled profiles remain pending.",
+      "Current paired browser run: both thin-client and newly packaged desktop passed real save/reopen, exact instance/reference, preview, keyboard/focus return and320CSSpixel geometry. Source-identified synthetic fixtures; manual assistive-technology and participant evidence remain pending.",
+      "I2 focused regressions: scoped session observation with 24 idle reads versus401 baseline over10minutes, 1100ms healthy-transport p95 progress; duplicate Context save/dataset approval, malformed training cleanup and transient cleanup retry; truthful ComfyUI cancellation, ambiguous submission ownership and startup/shutdown generation fences; thin image finalization retry and workspace navigation isolation.",
+      "I3 exact Context validation uses256-row native Arrow batches;17focused denial/cancellation/oracle tests pass. Source-bound1000/10000/100000-row comparison with explicit dimensions is in docs/operations/context-efficiency-qualification.json; all attempts retained, no real-model or hardware qualification claimed."
+    ],
+    "pending": [
+      "Personal User Library owner scoping; organization partitioning is insufficient.",
+      "Workspace-wide effective authoring summary list remains explicitly unavailable.",
+      "Dedicated performance profiles, real-model hardware, manual accessibility and participant qualification.",
+      "Projection services remain uncomposed; execution and User Library route families remain denied pending their specific resource boundaries."
+    ],
+    "qualification": "Reviewed local implementation and focused conformance. Both failed and corrected passing aggregate attempts remain historical after later security edits. Registry transmission was authorized and the audit executed: runtime affected entries0, full-tree affected entries7(all high) through retained original braces supplier after official dependency/toolchain updates. The user retained that supplier and left tooling qualification pending; the unchanged zero-advisory gate fails. Current final aggregate/review is tracked by the control-plane overall work; all15controlled criteria remain pending. No fork, advisory waiver, controlled pass or roadmap closure is implied.",
+    "qualification_crosswalk": "docs/operations/functionality-qualification-crosswalk.json",
+    "qualification_procedure": "docs/operations/functionality-outcome-qualification.md",
+    "aggregate_attempts": [
+      {
+        "status": "failed-retained",
+        "receipt_digest": "aa37c43ada61777d779281cb54779c9985006fd5e1afe540c46cc17ca1c85bf5",
+        "summary": "Standard Node37failed,3145passed,2skipped; Vitest standard1failed,430passed; E2E95passed,2skipped. AI commands completed, with unavailable model/physical qualification still pending. Observed runner/fixture/runtime diagnostic repairs are in focused verification."
+      },
+      {
+        "status": "passed-reviewed-historical-after-later-source-edits",
+        "work_id": "functionality-overall-corrected-qualification",
+        "receipt_digest": "46edc0f668fdd3e27249c494d798558c14a6923610f57766de31f3aec2256433",
+        "review_digest": "057090313c85fd9d763937f24b4fd07c7d8b701c7060bb813594c51f9d17e01f",
+        "summary": "Standard Node3201passed/2skipped, Vitest431passed; E2E Node92passed/2skipped, Vitest3passed. Opt-in Python AI command exited0 in explicit offline environment; empty Node/Vitest AI discovery delegates to Python. No controlled model/hardware qualification. Source edits after this receipt require current final qualification."
+      },
+      {
+        "status": "failed-retained-before-artifact-media-fixture-correction",
+        "work_id": "functionality-final-source-qualification",
+        "receipt_digest": "01803651ba2fe0fe97fb4763520027f8d1a5baa396381dcc97f0b9dde4cdbb99",
+        "summary": "Standard Node3282passed/2skipped; Vitest427passed/6failed of433. E2E Node92passed/2skipped and Vitest3passed. Opt-in Python AI command exited0 under explicit offline settings; unavailable model qualification remains pending. Control-plane/roadmap/docs/agent/architecture/outcomes pass; required dependency gate fails7high original-supplier affected toolchain package entries. Six headless invalid-image fixture hangs were reproduced and corrected via explicit unavailable binary read/fallback, with17exact tests and actual independent fixture review passing. Corrected final aggregate is tracked dynamically in canonical overall work records."
+      }
+    ],
+    "dependency_requalification": "docs/security/security-findings-refresh-assessment.json#dependency_requalification",
+    "current_aggregate_lookup": {
+      "source": "local development control-plane work records",
+      "roadmap_state_path": ".implementation-roadmaps/functionality-optimization/state.json",
+      "increment_id": "overall",
+      "ordering": "creation time newest first; inspect actual receipt/review and freshness, not only work status",
+      "qualification": "A failed required dependency gate never becomes a controlled pending or a pass."
+    }
+  }
+}

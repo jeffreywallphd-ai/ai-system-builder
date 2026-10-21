@@ -260,6 +260,17 @@
       ]
     },
     {
+      "id": "control-plane-work-request",
+      "task": "Use the development control plane for a bounded work request, preserve security evidence, and share the live review site.",
+      "affectedPaths": ["dev-tools/helpers/control_plane/work.py", "dev-tools/review-site/server.py"],
+      "expectedPacks": ["docs-standards", "security"],
+      "forbiddenPacks": ["image-generation", "runtime-installer"],
+      "requiredSources": ["docs/diagnostics/ai-development-control-plane.md", "docs/architecture/ai-development-control-plane.md", "docs/security/ai-development-control-plane-threat-model.md"],
+      "requiredChecks": ["npm run docs:check", "npm run agent-support:check"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["The verified loopback review URL is shared, site data is JSON, work is scoped to outcomes, and executed evidence plus real separate-invocation review govern completion."]
+    },
+    {
       "id": "agent-governance-change",
       "task": "Change agent governance and context evaluation rules while keeping documentation and CI aligned.",
       "affectedPaths": ["docs/standards/ai-agent-development-standards.md", "dev-tools/agent-evals/scenarios.json"],

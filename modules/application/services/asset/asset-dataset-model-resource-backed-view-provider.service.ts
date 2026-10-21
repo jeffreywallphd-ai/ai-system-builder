@@ -344,11 +344,9 @@ export class AssetDatasetModelResourceBackedViewProvider implements AssetResourc
         backingArtifactCount: backingArtifactIds?.length,
         primaryArtifactId,
         baseModelId: safeModelId(record.baseModelId),
-        generatedFromRunId: safeModelId(record.generatedFromRunId),
         adapterOfModelId: safeModelId(record.adapterOfModelId),
         validationStatus: safeLabelValue(record.validationStatus),
         published: safePublishedSummary(record.published),
-        ...safePublicMetadata(record.metadata),
       }),
     }) as AssetResourceBacking;
     const assetRef: AssetReference = {
@@ -388,13 +386,11 @@ export class AssetDatasetModelResourceBackedViewProvider implements AssetResourc
         backingArtifactCount: backingArtifactIds?.length,
         primaryArtifactId,
         baseModelId: safeModelId(record.baseModelId),
-        generatedFromRunId: safeModelId(record.generatedFromRunId),
         adapterOfModelId: safeModelId(record.adapterOfModelId),
         validationStatus: safeLabelValue(record.validationStatus),
         published: safePublishedSummary(record.published),
         createdAt: safeTimestamp(record.createdAt),
         updatedAt: safeTimestamp(record.updatedAt),
-        ...safePublicMetadata(record.metadata),
       }),
     }) as AssetResourceBackedView;
   }
@@ -626,7 +622,10 @@ function hasUnsafeDatasetDescriptorData(value: DatasetDescriptor): boolean {
 }
 
 function hasUnsafeModelRecordData(value: ModelInventoryRecord): boolean {
-  return hasUnsafeData(value);
+  // Classify omitted private columns by presence only. Never access metadata,
+  // including its outer property getter, to produce a public diagnostic.
+  return Object.prototype.hasOwnProperty.call(value, "localPath")
+    || Object.prototype.hasOwnProperty.call(value, "validationReportPath");
 }
 
 function hasUnsafeData(value: unknown): boolean {

@@ -192,7 +192,7 @@ describe("model management use cases", () => {
     expect(result.model.baseModelId).toBe("base-1");
   });
 
-  it("updates validation status and report path", async () => {
+  it("rejects privileged lifecycle and path edits through the public metadata use case", async () => {
     const updateModelRecord = testDouble.fn<ModelRegistryPort["updateModelRecord"]>(async (request) => ({
       model: {
         modelRecordId: request.modelRecordId,
@@ -220,17 +220,10 @@ describe("model management use cases", () => {
       },
     });
 
-    const result = await useCase.execute({
-      workspaceId,
-      modelRecordId: "model-1",
-      patch: {
-        validationStatus: "valid",
-        validationReportPath: "/reports/model-1.json",
-      },
-    });
-
-    expect(result.model.validationStatus).toBe("valid");
-    expect(result.model.validationReportPath).toBe("/reports/model-1.json");
+    for (const patch of [{ validationStatus: "valid", validationReportPath: "/reports/model-1.json" }, { localPath: "/other" }, { workspaceId: "other" }]) {
+      await expect(useCase.execute({ workspaceId, modelRecordId: "model-1", patch } as any)).rejects.toThrow("cannot be edited");
+    }
+    expect(updateModelRecord).not.toHaveBeenCalled();
   });
 
   it("deletes registry records without deleting backing artifacts unless explicitly requested", async () => {
@@ -320,8 +313,8 @@ describe("model management use cases", () => {
     });
 
     expect(deleteLocalModelFiles).toHaveBeenCalledWith({
-      localPath: "C:\\cache\\models",
-      relativeFilePath: "model.safetensors",
+      workspaceId,
+      modelRecordId: "model-1",
     });
     expect(deletionOrder).toEqual(["files", "record"]);
     expect(result.deletedLocalFiles).toBe(true);

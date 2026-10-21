@@ -4,6 +4,10 @@
 
 ## Purpose
 
+Dataset cancellation acknowledgments preserve status and identity. UI observers
+retain work until terminal task reads; failed/refused cancellation and pending
+quality review discard never imply stopped work. See the runtime model.
+
 - Route work involving accepted long-running runtime tasks through the shared async task lifecycle.
 - Keep task lifecycle/progress separate from runtime readiness and feature-specific runtime protocols.
 
@@ -24,6 +28,11 @@
 - Readiness-guard-rejected starts must not create pollable task ids.
 - Do not use long-held HTTP/IPC requests to wait for completion.
 - Do not solve timeout/disconnect issues by stretching fetch/IPC timeouts.
+- Worker stop confirms owned-child exit/close within a bounded wait. Errors,
+  signals and timeouts retain ownership; host cleanup cannot infer termination.
+  Stale health/preparation callbacks are fenced by process and generation.
+  Externally attached Python termination and physical process-tree checks remain
+  external obligations, never implied by local fake-child evidence.
 - Model downloads use `TaskType.MODEL_DOWNLOAD`; completion cache handles and
   resolved local paths stay behind the host-internal completion port while the
   application finalizes the model registry exactly once.
@@ -49,6 +58,17 @@
 - List aggregation should return unsupported/failed delegate families as safe warnings instead of failing the whole read generically.
 
 ## Contract Boundaries
+
+- Accepted Context, preparation, training and image work uses host-owned bounded
+  reconciliation independently of renderer navigation. Network failures retain
+  ownership; forced cleanup requires confirmed worker-stop evidence.
+- Image request ownership binds persisted workspace and organization at start;
+  read/cancel/finalize reauthorize before I/O or receipt reuse. Session receipts
+  preserve partial completion and refuse capacity instead of unsafe eviction.
+- Downloads and Context share scoped observation in the shell. Keep transport
+  and session lifetimes separate, bound history and reject late replies.
+- Standalone publishing remains unsupported before dispatch. Do not infer a
+  publishing implementation from a capability status.
 
 - Generic registry contracts must not depend on Python-specific protocol types.
 - Python-prefixed task contracts are adapter-boundary protocol details only.
@@ -88,3 +108,7 @@
 
 - Typical set: `index` + `runtime-task-registry`.
 - Add feature/runtime/host packs only for boundaries directly touched.
+
+Python process absence and startup outcome are separate facts: close after a
+spawn error releases the handle while preserving failed startup diagnostics.
+An explicit confirmed stop can subsequently reach stopped.

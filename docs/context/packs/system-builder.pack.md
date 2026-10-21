@@ -195,3 +195,5 @@
 - `asset-composition-planning` for plan inputs and compatibility.
 - `desktop-implementation` for Systems or Settings UI changes.
 - `persistence-storage`, `ipc-electron`, `server-host`, or `testing` only when those boundaries are explicitly in scope.
+
+Composer uses bounded exact batches and query-bound continuations. Keep property details lazy and invalidate late picker responses on target/query/workspace changes; local I/O tests do not qualify controlled performance or manual accessibility.

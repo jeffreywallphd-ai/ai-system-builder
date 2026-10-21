@@ -10,8 +10,9 @@ import type {
 } from "../../../../../modules/contracts/ingestion";
 import { App } from "../App";
 
-(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
-  true;
+(
+  globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 Object.defineProperty(globalThis, "crypto", {
   configurable: true,
   value: webcrypto,
@@ -78,7 +79,8 @@ function ingestionTask(
       completedItems: fileStatus === "finalized" ? 1 : 0,
       totalItems: 1,
       percent: fileStatus === "finalized" ? 100 : acceptedBytes ? 100 : 0,
-      message: status === "succeeded" ? "All files are ready." : "Adding files.",
+      message:
+        status === "succeeded" ? "All files are ready." : "Adding files.",
     },
     revision: status === "queued" ? 1 : status === "transferring" ? 2 : 3,
     cleanupPending: status !== "succeeded",
@@ -157,16 +159,34 @@ describe("desktop renderer artifact workflow page", () => {
 
     const browseArtifacts = vi
       .fn()
+      .mockResolvedValueOnce({
+        operation: "artifact.browse",
+        channel: "ipc.artifact.browse.response",
+        ok: true,
+        value: { items: [] },
+      })
       .mockResolvedValue({
         operation: "artifact.browse",
         channel: "ipc.artifact.browse.response",
         ok: true,
         value: {
-          items: [{ storageKey: "uploads/train.csv", artifactFamily: "tabular", originalName: "train.csv" }],
+          items: [
+            {
+              storageKey: "uploads/train.csv",
+              artifactFamily: "tabular",
+              originalName: "train.csv",
+            },
+          ],
         },
       });
 
-    const workspaces: Array<{ workspaceId: string; displayName: string; status: "active"; createdAt: string; settings?: { defaultIncludeSystemFoundationAssets?: boolean } }> = [];
+    const workspaces: Array<{
+      workspaceId: string;
+      displayName: string;
+      status: "active";
+      createdAt: string;
+      settings?: { defaultIncludeSystemFoundationAssets?: boolean };
+    }> = [];
     let selectedWorkspaceId: string | undefined;
     const ingestionCommands: IngestionTaskTransportCommand[] = [];
     const executeIngestionTask = vi.fn(
@@ -189,10 +209,43 @@ describe("desktop renderer artifact workflow page", () => {
 
     window.desktopApi = {
       listWorkspaces: vi.fn(async () => ({ ok: true, value: { workspaces } })),
-      readActiveWorkspaceSelection: vi.fn(async () => ({ ok: true, value: selectedWorkspaceId ? { workspaceId: selectedWorkspaceId } : {} })),
-      saveActiveWorkspaceSelection: vi.fn(async (selection: { workspaceId?: string }) => { selectedWorkspaceId = selection.workspaceId; return { ok: true, value: { selection } }; }),
-      clearActiveWorkspaceSelection: vi.fn(async () => { selectedWorkspaceId = undefined; return { ok: true, value: {} }; }),
-      createWorkspace: vi.fn(async (input: { command: { displayName: string; includeSystemFoundationAssets?: boolean } }) => { const workspace = { workspaceId: "workspace.upload", displayName: input.command.displayName, status: "active" as const, createdAt: "2026-05-14T00:00:00.000Z", updatedAt: "2026-05-14T00:00:00.000Z", settings: { defaultIncludeSystemFoundationAssets: input.command.includeSystemFoundationAssets } }; workspaces.push(workspace); selectedWorkspaceId = workspace.workspaceId; return { ok: true, value: { workspace } }; }),
+      readActiveWorkspaceSelection: vi.fn(async () => ({
+        ok: true,
+        value: selectedWorkspaceId ? { workspaceId: selectedWorkspaceId } : {},
+      })),
+      saveActiveWorkspaceSelection: vi.fn(
+        async (selection: { workspaceId?: string }) => {
+          selectedWorkspaceId = selection.workspaceId;
+          return { ok: true, value: { selection } };
+        },
+      ),
+      clearActiveWorkspaceSelection: vi.fn(async () => {
+        selectedWorkspaceId = undefined;
+        return { ok: true, value: {} };
+      }),
+      createWorkspace: vi.fn(
+        async (input: {
+          command: {
+            displayName: string;
+            includeSystemFoundationAssets?: boolean;
+          };
+        }) => {
+          const workspace = {
+            workspaceId: "workspace.upload",
+            displayName: input.command.displayName,
+            status: "active" as const,
+            createdAt: "2026-05-14T00:00:00.000Z",
+            updatedAt: "2026-05-14T00:00:00.000Z",
+            settings: {
+              defaultIncludeSystemFoundationAssets:
+                input.command.includeSystemFoundationAssets,
+            },
+          };
+          workspaces.push(workspace);
+          selectedWorkspaceId = workspace.workspaceId;
+          return { ok: true, value: { workspace } };
+        },
+      ),
       executeIngestionTask,
       listModelDownloads: vi.fn(async () => ({
         ok: true,
@@ -204,19 +257,34 @@ describe("desktop renderer artifact workflow page", () => {
         operation: "artifact.read",
         channel: "ipc.artifact.read.response",
         ok: true,
-        value: { artifact: { locator: { storageKey: "uploads/cat.png" }, artifactFamily: "image" } },
+        value: {
+          artifact: {
+            locator: { storageKey: "uploads/cat.png" },
+            artifactFamily: "image",
+          },
+        },
       }),
       readArtifactContentDescriptor: vi.fn().mockResolvedValue({
         operation: "artifact.content.read",
         channel: "ipc.artifact.content.read.response",
         ok: true,
-        value: { content: { locator: { storageKey: "uploads/cat.png" }, availability: "available", retrieval: "deferred" } },
+        value: {
+          content: {
+            locator: { storageKey: "uploads/cat.png" },
+            availability: "available",
+            retrieval: "deferred",
+          },
+        },
       }),
       readArtifactViewerMedia: vi.fn().mockResolvedValue({
         operation: "artifact.media.view",
         channel: "ipc.artifact.media.view.response",
         ok: true,
-        value: { storageKey: "uploads/cat.png", mediaType: "image/png", bytes: new Uint8Array([1, 2]) },
+        value: {
+          storageKey: "uploads/cat.png",
+          mediaType: "image/png",
+          bytes: new Uint8Array([1, 2]),
+        },
       }),
       publishArtifactToRepo: vi.fn().mockResolvedValue({
         operation: "artifact.publish",
@@ -300,12 +368,16 @@ describe("desktop renderer artifact workflow page", () => {
       root.render(<App />);
     });
 
-    const artifactsButton = Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "Data");
+    const artifactsButton = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) => button.textContent === "Data");
     await act(async () => {
       artifactsButton?.dispatchEvent(new Event("click", { bubbles: true }));
     });
 
-    const nameInput = container.querySelector("input[placeholder=\"My Project\"]") as HTMLInputElement | null;
+    const nameInput = container.querySelector(
+      'input[placeholder="My Project"]',
+    ) as HTMLInputElement | null;
     await act(async () => {
       Object.getOwnPropertyDescriptor(
         window.HTMLInputElement.prototype,
@@ -314,19 +386,50 @@ describe("desktop renderer artifact workflow page", () => {
       nameInput!.dispatchEvent(new Event("input", { bubbles: true }));
     });
     await act(async () => {
-      nameInput!.closest("form")!.dispatchEvent(
-        new Event("submit", { bubbles: true, cancelable: true }),
-      );
+      nameInput!
+        .closest("form")!
+        .dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        );
       await new Promise((resolve) => window.setTimeout(resolve, 0));
+    });
+
+    await waitForElement<HTMLInputElement>(container, "input[type='file']");
+
+    // Visit before ingestion so returning to the browser must refresh a real
+    // previously observed listing; hidden tabs no longer fetch eagerly.
+    const initialBrowser = Array.from(
+      container.querySelectorAll("button"),
+    ).find((button) => button.textContent === "Artifact Browser");
+    expect(initialBrowser).toBeDefined();
+    await act(async () => {
+      initialBrowser!.click();
+    });
+    await vi.waitFor(() => expect(browseArtifacts).toHaveBeenCalledTimes(1));
+    expect(
+      document.getElementById(initialBrowser!.getAttribute("aria-controls")!)
+        ?.textContent,
+    ).not.toContain("train.csv");
+    const addDataTab = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Artifact Ingestion",
+    );
+    expect(addDataTab).toBeDefined();
+    await act(async () => {
+      addDataTab!.click();
     });
 
     const input = await waitForElement<HTMLInputElement>(
       container,
       "input[type='file']",
     );
-    expect(input, container.textContent ?? "No rendered content").not.toBeNull();
+    expect(
+      input,
+      container.textContent ?? "No rendered content",
+    ).not.toBeNull();
 
-    const file = new File([new Uint8Array([1, 2, 3])], "train.csv", { type: "text/csv" });
+    const file = new File([new Uint8Array([1, 2, 3])], "train.csv", {
+      type: "text/csv",
+    });
     Object.defineProperty(file, "arrayBuffer", {
       value: async () => new Uint8Array([1, 2, 3]).buffer,
     });
@@ -365,11 +468,7 @@ describe("desktop renderer artifact workflow page", () => {
     expect(
       ingestionCommands.map((command) => command.action),
       container.textContent ?? "No rendered content",
-    ).toEqual([
-      "create-files",
-      "append-chunk",
-      "finalize-file",
-    ]);
+    ).toEqual(["create-files", "append-chunk", "finalize-file"]);
     expect(container.textContent).toContain("All files are ready.");
     expect(container.textContent).toContain("0 files selected");
     expect(
@@ -389,7 +488,10 @@ describe("desktop renderer artifact workflow page", () => {
     });
     for (
       let attempt = 0;
-      attempt < 100 && !container.textContent?.includes("train.csv");
+      attempt < 100 &&
+      !document
+        .getElementById(artifactBrowserButton!.getAttribute("aria-controls")!)
+        ?.textContent?.includes("train.csv");
       attempt += 1
     ) {
       await act(async () => {
@@ -397,6 +499,10 @@ describe("desktop renderer artifact workflow page", () => {
       });
     }
     expect(browseArtifacts).toHaveBeenCalledTimes(2);
-    expect(container.textContent).toContain("train.csv");
+    expect(
+      document.getElementById(
+        artifactBrowserButton!.getAttribute("aria-controls")!,
+      )?.textContent,
+    ).toContain("train.csv");
   });
 });

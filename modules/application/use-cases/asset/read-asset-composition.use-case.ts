@@ -7,7 +7,7 @@ export class ReadAssetCompositionUseCase {
   public constructor(private readonly dependencies: { compositionRepository: AssetCompositionRepositoryPort }) {}
 
   public async execute(reference: AssetReference): Promise<AssetUseCaseResult<AssetComposition>> {
-    if (!isCompositionReference(reference)) return invalidReferenceResult("Asset composition reads require an asset-composition reference.", { referenceKind: reference.kind });
+    if (!isCompositionReference(reference)) return invalidReferenceResult("Asset composition reads require an asset-composition reference.");
     const composition = await this.dependencies.compositionRepository.getComposition(reference);
     return composition ? success(composition) : notFoundResult("Asset composition was not found.", { referenceKind: reference.kind, referenceId: reference.id });
   }

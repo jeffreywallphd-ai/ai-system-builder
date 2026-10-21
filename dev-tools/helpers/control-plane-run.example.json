@@ -1,0 +1,16 @@
+{
+  "schema_version": "agent-run-v1",
+  "trial_id": "denial-one",
+  "model": "replace-with-model-version",
+  "harness": "replace-with-harness-version",
+  "instruction_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "context_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "permission_profile": "replace-with-existing-host-profile",
+  "duration_ms": null,
+  "retries": 0,
+  "input_tokens": null,
+  "output_tokens": null,
+  "cost_usd": null,
+  "evidence_kind": "unavailable",
+  "infrastructure_status": "unavailable"
+}

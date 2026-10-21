@@ -1,3 +1,4 @@
+import type { ReadWorkspaceSummaryRequest } from "../../../../../modules/contracts/workspace";
 import type {
   ArtifactBrowseItem as ArtifactBrowseContractItem,
   ArtifactDetailReadModel as ArtifactDetailContractModel,
@@ -744,6 +745,7 @@ interface DesktopApiBridge {
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
 
+  readWorkspaceSummary?: (input: ReadWorkspaceSummaryRequest) => Promise<unknown>;
   listWorkspaces?: (context?: DesktopBridgeRequestContext) => Promise<unknown>;
   createWorkspace?: (
     input: { command: CreateWorkspaceCommand; selectAfterCreate?: boolean },
@@ -1330,6 +1332,10 @@ interface DesktopApiBridge {
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;
   readModelDownload?: (
+    input: DesktopReadModelDownloadRequest,
+    context?: DesktopBridgeRequestContext,
+  ) => Promise<unknown>;
+  completeModelDownload?: (
     input: DesktopReadModelDownloadRequest,
     context?: DesktopBridgeRequestContext,
   ) => Promise<unknown>;

@@ -28,7 +28,8 @@ import type {
   AssetResourceBackedViewProvider,
   AssetResourceBackedViewProviderDiagnostic,
 } from "../../ports/asset";
-import { BUILT_IN_ASSET_DEFINITION_CATALOG } from "./built-ins";
+import { copyBoundedPassiveData } from "../../../contracts/shared";
+import { matchCodeOwnedAssetDefinition, type CodeOwnedAssetDefinition } from "./code-owned-asset-definition.service";
 import { sanitizeAssetJsonValue, sanitizeAssetMetadata, sanitizeAssetStringValue, sanitizeAssetViewValue } from "./asset-safe-metadata";
 import { validateAssetComposition } from "./validate-asset-composition.service";
 import { validateAssetDefinition } from "./validate-asset-definition.service";
@@ -78,10 +79,6 @@ const FACADE_SIDE_FILTERING_DIAGNOSTIC: AssetRegistryListDiagnostic = {
   message: "Some filters were applied after repository retrieval because the repository query port does not support the full query shape.",
 };
 
-const builtInDefinitionKeys = new Set(
-  BUILT_IN_ASSET_DEFINITION_CATALOG.map((seed) => definitionKey(String(seed.definition.definitionId), String(seed.definition.version))),
-);
-
 const SYSTEM_FOUNDATION_PACK_ID = "system.foundation";
 const SYSTEM_FOUNDATION_PACK_DISPLAY_NAME = "System Foundation";
 const SYSTEM_FOUNDATION_CATEGORY_LABELS: Readonly<Record<string, string>> = {
@@ -112,15 +109,24 @@ export class AssetRegistryReadFacade {
   }
 
   public async readDefinitionDetail(ref: AssetReference, options: AssetRegistryReadOptions = {}): Promise<AssetDefinitionDetail | undefined> {
-    const definition = await this.readRepository(() => this.dependencies.definitionRepository.getDefinition(ref), "repository-read-failed");
-    if (!definition) return undefined;
+    return (await this.readDefinitionDetails([ref], options))[0];
+  }
 
-    const detail: AssetDefinitionDetail = {
-      definition: sanitizeDefinition(definition, options),
-      ...(isBuiltInDefinition(definition) ? { builtIn: true } : {}),
-      ...(options.includeValidation ? { validationSummary: sanitizeValue(validateAssetDefinition(definition)) as AssetDefinitionDetail["validationSummary"] } : {}),
-    };
-    return sanitizeValue(detail) as AssetDefinitionDetail;
+  public async readDefinitionDetails(refs: readonly AssetReference[], options: AssetRegistryReadOptions = {}): Promise<readonly (AssetDefinitionDetail | undefined)[]> {
+    if (!Array.isArray(refs) || refs.length > 250) throw new AssetRegistryReadFacadeError("repository-read-failed");
+    const definitions = await this.readRepository(() => this.dependencies.definitionRepository.getDefinitions
+      ? this.dependencies.definitionRepository.getDefinitions(refs)
+      : Promise.all(refs.map(ref => this.dependencies.definitionRepository.getDefinition(ref))), "repository-read-failed");
+    return definitions.map((stored) => {
+      if (!stored) return undefined;
+      const definition = boundedDefinition(stored);
+      const authority = matchCodeOwnedAssetDefinition(definition);
+      return sanitizeValue({
+        definition: sanitizeDefinition(definition, options, authority),
+        ...(authority ? { builtIn: true } : {}),
+        ...(options.includeValidation ? { validationSummary: sanitizeValue(validateAssetDefinition(definition)) } : {}),
+      }) as AssetDefinitionDetail;
+    });
   }
 
   public async listInstanceCards(query: AssetRegistryListQuery = {}): Promise<AssetRegistryListResult<AssetInstanceCard>> {
@@ -209,10 +215,12 @@ export class AssetRegistryReadFacade {
   }
 
   private toDefinitionCard(definition: AssetDefinition, query: AssetRegistryListQuery): AssetDefinitionCard | undefined {
-    const builtIn = isBuiltInDefinition(definition);
+    definition = boundedDefinition(definition);
+    const authority = matchCodeOwnedAssetDefinition(definition);
+    const builtIn = Boolean(authority);
     if (query.includeBuiltIns === false && builtIn) return undefined;
     if (query.includeCustom === false && !builtIn) return undefined;
-    const sourceMetadata = safeDefinitionSourceMetadata(definition);
+    const sourceMetadata = safeDefinitionSourceMetadata(definition, authority);
     return sanitizeValue({
       definitionRef: definitionRef(definition),
       definitionId: String(definition.definitionId),
@@ -224,7 +232,7 @@ export class AssetRegistryReadFacade {
       lifecycleStatus: definition.lifecycleStatus,
       ...(builtIn ? { builtIn: true } : {}),
       ...sourceMetadata,
-      ...(query.includeMetadata ? { metadata: metadataOf(definition.metadata) } : {}),
+      ...(query.includeMetadata ? { metadata: definitionReadMetadata(definition, authority) } : {}),
     }) as AssetDefinitionCard;
   }
 
@@ -446,56 +454,35 @@ function trimmedText(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-function definitionKey(id: string, version?: string): string {
-  return `${id}@${version ?? ""}`;
+function boundedDefinition(definition: AssetDefinition): AssetDefinition {
+  try { return copyBoundedPassiveData(definition) as AssetDefinition; }
+  catch { throw new AssetRegistryReadFacadeError("repository-read-failed"); }
 }
 
-function isBuiltInDefinition(definition: AssetDefinition): boolean {
-  const metadata = definition.metadata as Record<string, unknown> | undefined;
-  const marker = metadata?.builtInSeed;
-  const markerRecord = isRecord(marker) ? marker : undefined;
-  if (
-    markerRecord?.managedBy === "asset-kernel" &&
-    typeof markerRecord.seedId === "string" &&
-    typeof markerRecord.seedVersion === "string" &&
-    typeof markerRecord.fingerprint === "string"
-  ) {
-    return true;
+/** Remove editable positive authority cues before UI/consumer metadata fallbacks. */
+function definitionReadMetadata(definition: AssetDefinition, authority?: CodeOwnedAssetDefinition): AssetMetadata | undefined {
+  // Apply the eventual display normalization first: padded claims must not
+  // become positive authority again in a downstream metadata fallback.
+  const metadata: Record<string, unknown> = { ...metadataOf(definition.metadata) };
+  const install = isRecord(metadata.assetPackInstall) ? metadata.assetPackInstall : {};
+  // Preserve ordinary custom pack descriptors, never positive authority claims.
+  for (const field of ["sourcePackId", "sourcePackVersion", "sourceKind", "sourceLayer", "trustStatus"]) {
+    metadata[field] ??= install[field === "sourcePackId" ? "packId" : field === "sourcePackVersion" ? "packVersion" : field];
   }
-  if (isSystemFoundationSystemDefaultDefinition(definition)) {
-    return true;
+  for (const field of ["builtInSeed", "assetPackInstall", "builtIn", "systemDefault"]) delete metadata[field];
+  if (metadata.sourceKind === "system") delete metadata.sourceKind;
+  if (metadata.sourceLayer === "system-default") delete metadata.sourceLayer;
+  if (metadata.trustStatus === "trusted" || metadata.trustStatus === "system-trusted") delete metadata.trustStatus;
+  if (typeof metadata.sourcePackId === "string" && metadata.sourcePackId.toLowerCase() === SYSTEM_FOUNDATION_PACK_ID) {
+    delete metadata.sourcePackId; delete metadata.sourcePackVersion; delete metadata.sourcePackDisplayName;
   }
-  return builtInDefinitionKeys.has(definitionKey(String(definition.definitionId), String(definition.version)));
-}
-
-function isSystemFoundationSystemDefaultDefinition(definition: AssetDefinition): boolean {
-  const metadata = isRecord(definition.metadata) ? definition.metadata : {};
-  return hasTrustedSystemFoundationInstallMarker(metadata) || hasTrustedSystemFoundationSourceMetadata(metadata);
-}
-
-function hasTrustedSystemFoundationInstallMarker(metadata: Record<string, unknown>): boolean {
-  const installMetadata = isRecord(metadata.assetPackInstall) ? metadata.assetPackInstall : undefined;
-  return Boolean(
-    installMetadata &&
-      safeIdentifier(installMetadata.packId) === SYSTEM_FOUNDATION_PACK_ID &&
-      typeof installMetadata.packVersion === "string" &&
-      typeof installMetadata.entryId === "string" &&
-      typeof installMetadata.fingerprint === "string" &&
-      installMetadata.sourceKind === "system" &&
-      installMetadata.sourceLayer === "system-default" &&
-      installMetadata.trustStatus === "system-trusted" &&
-      installMetadata.managedBy === "asset-kernel" &&
-      typeof installMetadata.installedAt === "string",
-  );
-}
-
-function hasTrustedSystemFoundationSourceMetadata(metadata: Record<string, unknown>): boolean {
-  return (
-    safeIdentifier(metadata.sourcePackId) === SYSTEM_FOUNDATION_PACK_ID &&
-    metadata.sourceKind === "system" &&
-    metadata.sourceLayer === "system-default" &&
-    metadata.trustStatus === "system-trusted"
-  );
+  if (typeof metadata.sourcePackDisplayName === "string" && metadata.sourcePackDisplayName.trim().toLowerCase() === "system foundation") delete metadata.sourcePackDisplayName;
+  if (authority?.kind === "foundation") Object.assign(metadata, {
+    sourcePackId: authority.packId, sourcePackVersion: authority.packVersion,
+    sourceKind: "system", sourceLayer: "system-default", trustStatus: "system-trusted",
+    sourcePackDisplayName: SYSTEM_FOUNDATION_PACK_DISPLAY_NAME, systemDefault: true,
+  });
+  return metadataOf(metadata as AssetMetadata);
 }
 
 function definitionRef(definition: AssetDefinition): AssetReference {
@@ -525,8 +512,8 @@ function toBindingSummary(binding: AssetBinding): AssetBindingSummary {
   }) as AssetBindingSummary;
 }
 
-function safeDefinitionSourceMetadata(definition: AssetDefinition): Partial<AssetDefinitionCard> {
-  const metadata = isRecord(definition.metadata) ? definition.metadata : {};
+function safeDefinitionSourceMetadata(definition: AssetDefinition, authority?: CodeOwnedAssetDefinition): Partial<AssetDefinitionCard> {
+  const metadata = definitionReadMetadata(definition, authority) ?? {};
   const installMetadata = isRecord(metadata.assetPackInstall) ? metadata.assetPackInstall : {};
   const sourcePackId = safeIdentifier(metadata.sourcePackId) ?? safeIdentifier(installMetadata.packId);
   const sourcePackVersion =
@@ -543,7 +530,7 @@ function safeDefinitionSourceMetadata(definition: AssetDefinition): Partial<Asse
   const trustStatus =
     safeTrustStatus(metadata.trustStatus) ??
     safeTrustStatus(installMetadata.trustStatus);
-  const trustedSystemDefault = hasTrustedSystemFoundationInstallMarker(metadata) || hasTrustedSystemFoundationSourceMetadata(metadata);
+  const trustedSystemDefault = authority?.kind === "foundation";
   const sourcePackDisplayName =
     sanitizeAssetStringValue(stringValue(metadata.sourcePackDisplayName)) ??
     (trustedSystemDefault ? SYSTEM_FOUNDATION_PACK_DISPLAY_NAME : undefined);
@@ -649,7 +636,7 @@ function summarizeConfiguration(values: unknown): AssetConfigurationSummary | un
   return { configuredFieldCount: ids.length, configuredFieldIds: ids };
 }
 
-function sanitizeDefinition(definition: AssetDefinition, options: AssetRegistryReadOptions): AssetDefinition {
+function sanitizeDefinition(definition: AssetDefinition, options: AssetRegistryReadOptions, authority?: CodeOwnedAssetDefinition): AssetDefinition {
   return sanitizeValue({
     definitionId: definition.definitionId,
     assetType: definition.assetType,
@@ -660,16 +647,14 @@ function sanitizeDefinition(definition: AssetDefinition, options: AssetRegistryR
     lifecycleStatus: definition.lifecycleStatus,
     reviewStatus: definition.reviewStatus,
     provenance: definition.provenance,
-    defaultConfiguration: definition.defaultConfiguration,
-    configurationExamples: definition.configurationExamples,
     compositionRuleRefs: definition.compositionRuleRefs,
     compositionRules: definition.compositionRules,
     dependencies: definition.dependencies,
-    ...(options.includeConfigurationSchema ? { configurationSchema: definition.configurationSchema } : {}),
+    ...(options.includeConfigurationSchema ? { configurationSchema: definition.configurationSchema, defaultConfiguration: definition.defaultConfiguration, configurationExamples: definition.configurationExamples } : {}),
     ...(options.includeAiContext ? { aiContext: definition.aiContext } : {}),
     ...(options.includeRequirements ? { requirements: definition.requirements, requirementRefs: definition.requirementRefs } : {}),
-    ...(options.includePorts ? { ports: definition.ports, portRefs: definition.portRefs } : {}),
-    ...(options.includeMetadata ? { metadata: metadataOf(definition.metadata) } : {}),
+    ...(options.includePorts ? { ports: definition.ports, portRefs: definition.portRefs, slots: definition.slots } : {}),
+    ...(options.includeMetadata ? { metadata: definitionReadMetadata(definition, authority) } : {}),
   }) as AssetDefinition;
 }
 

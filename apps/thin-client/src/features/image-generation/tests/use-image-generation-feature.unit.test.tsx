@@ -29,6 +29,41 @@ function Harness({ client, modelClient }: { client: any; modelClient: any }) {
 }
 
 describe("useImageGenerationFeature", () => {
+  it("retries finalization for the same generation and reports unconfirmed cancellation truthfully", async () => {
+    const client = { createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn().mockResolvedValue({ requestId: "retry-id" }), readImageGeneration: vi.fn().mockResolvedValue({ requestId: "retry-id", status: "succeeded" }), finalizeImageGenerationIfCompleted: vi.fn().mockRejectedValueOnce(new Error("transient")).mockResolvedValue({ finalized: true, assets: [{ assetId: "a", storageKey: "output" }] }), cancelImageGeneration: vi.fn().mockResolvedValue({ cancelled: false }) };
+    const modelClient = { listModels: vi.fn().mockResolvedValue({ models: [] }) };
+    let feature!: ReturnType<typeof useImageGenerationFeature>;
+    function H() { feature = useImageGenerationFeature(client as any, undefined, modelClient as any, undefined, "workspace-a"); return null; }
+    const root = createRoot(document.createElement("div")); await act(async () => { root.render(<H />); });
+    await act(async () => { await feature.start(); });
+    expect(feature.canRetryFinalization).toBe(true);
+    await act(async () => { feature.retryFinalization(); await flush(); });
+    expect(feature.status).toBe("finalized"); expect(client.startImageGeneration).toHaveBeenCalledTimes(1);
+    expect(client.finalizeImageGenerationIfCompleted).toHaveBeenCalledTimes(2);
+    expect(client.finalizeImageGenerationIfCompleted).toHaveBeenLastCalledWith({ requestId: "retry-id", workspaceId: "workspace-a" });
+    client.readImageGeneration.mockResolvedValue({ requestId: "retry-id", status: "running" });
+    await act(async () => { void feature.start(); await flush(); });
+    await act(async () => { await feature.cancel(); });
+    expect(feature.status).toBe("running"); expect(feature.error).toContain("pending");
+  });
+
+  it("keeps workspace drafts private and ignores a former workspace's late terminal response", async () => {
+    let finish!: (value: any) => void;
+    const client = { createArtifactMediaViewUrl: vi.fn(), startImageGeneration: vi.fn().mockResolvedValue({ requestId: "scoped-id" }), readImageGeneration: vi.fn(() => new Promise((resolve) => { finish = resolve; })), finalizeImageGenerationIfCompleted: vi.fn(), cancelImageGeneration: vi.fn() };
+    const modelClient = { listModels: vi.fn().mockResolvedValue({ models: [] }) };
+    let feature!: ReturnType<typeof useImageGenerationFeature>;
+    function H({ workspaceId }: { workspaceId: string }) { feature = useImageGenerationFeature(client as any, undefined, modelClient as any, undefined, workspaceId); return null; }
+    const root = createRoot(document.createElement("div"));
+    await act(async () => { root.render(<H key="a" workspaceId="workspace-a" />); });
+    await act(async () => { feature.setForm((form) => ({ ...form, prompt: "Private draft A" })); });
+    await act(async () => { void feature.start(); await flush(); });
+    await act(async () => { root.render(<H key="b" workspaceId="workspace-b" />); });
+    expect(feature.form.prompt).not.toBe("Private draft A"); expect(feature.requestId).toBeUndefined();
+    await act(async () => { finish({ requestId: "scoped-id", status: "succeeded" }); await flush(); });
+    expect(client.finalizeImageGenerationIfCompleted).not.toHaveBeenCalled(); expect(feature.results).toEqual([]);
+    await act(async () => { root.render(<H key="a" workspaceId="workspace-a" />); });
+    expect(feature.form.prompt).toBe("Private draft A"); expect(feature.requestId).toBe("scoped-id");
+  });
   afterEach(async () => {
     await act(async () => {
       for (const root of mountedRoots) root.unmount();
@@ -243,6 +278,6 @@ describe("useImageGenerationFeature", () => {
     await act(async()=>{(c.querySelector("#prompt") as HTMLButtonElement).click();});
     await act(async()=>{(c.querySelector("#start") as HTMLButtonElement).click(); await flush();});
     expect((c.querySelector("#status") as HTMLElement).textContent).toBe("failed");
-    expect((c.querySelector("#error") as HTMLElement).textContent).toContain("did not register");
+    expect((c.querySelector("#error") as HTMLElement).textContent).toContain("Retry finalization");
   });
 });

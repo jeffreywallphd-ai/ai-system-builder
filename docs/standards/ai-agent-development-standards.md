@@ -12,6 +12,16 @@ This standard is tool-neutral. `AGENTS.md` is the compact entry point; this docu
 
 ## Required Work Cycle
 
+For contributor-work requests, follow
+`docs/diagnostics/ai-development-control-plane.md`: start or safely reuse the
+local JSON-backed review site and share its verified URL. Use a scoped outcome
+and acceptance contract, current execution receipts and a separate-invocation
+technical disposition. Established local fixes use the lightweight path;
+substantial work retains the roadmap skill and its approval gates. Claims and
+review attestations coordinate cooperative local work; they do not grant new
+authority or prove authenticated identity. Historical roadmap evidence remains
+explicitly declarative.
+
 ### 1. Discover before editing
 
 - Read the repository entry points and use context routing to load only relevant guidance.

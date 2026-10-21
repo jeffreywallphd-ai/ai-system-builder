@@ -236,3 +236,18 @@
   forced-colors, reduced-motion, and runtime checks are automated regression
   evidence; they do not replace physical touch, assistive-technology, manual
   security, real-model quality, or other-platform qualification.
+
+
+Composer candidate continuations bind the normalized workspace/query and retain
+Foundation and registry positions. Sparse compatible pages remain traversable;
+late Load more responses and repeated cursors cannot populate a changed picker.
+Workspace changes pass an explicit browse scope. Subtree removal preserves the
+layout structure through undo/redo. A failed selection or clear keeps a confirmed
+workspace usable, while failed authoritative reloads continue to gate access.
+
+
+Workspace page dashboards consume one versioned scalar summary per page, preserve
+available values when another metric group fails, and mark unavailable counts
+explicitly. Settings retain their existing settings read. Shared artifact
+visibility policy lives in the artifact contract and is reused by counts and the
+browser; the presenter does not own an alternative visibility rule.

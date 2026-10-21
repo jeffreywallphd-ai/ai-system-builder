@@ -45,6 +45,10 @@
   test queries without returning vectors.
 - Source inspection always returns the typed `textFields` projection; document
   sources use an empty array rather than omitting the required field.
+- Saved RAG validation scans every vector in bounded 256-row Arrow batches,
+  retains metadata only and checks cancellation throughout. Exact query ranking,
+  citations, package limits and private materialization cleanup remain required;
+  no cross-request cache or approximate index is introduced.
 - The desktop Context page keeps the shared sanitized Python runtime monitor
   available beneath RAG Databases, Context Packs, and Context Browser.
 - Desktop preload/IPC and thin-client/API use the same typed command union.

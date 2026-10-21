@@ -65,3 +65,31 @@ Workspace records may carry passive collaboration/readiness placeholders for fut
 ## UI route boundary
 
 Workspace-required UI routes must be blocked at the app route boundary before the requested page becomes the visible shell state. Page-level workspace gates remain defensive boundaries, but setup, loading, and unavailable-workspace surfaces must be stable and must not flash or mark the pending workspace page active until a valid active workspace is available.
+
+
+## Workspace summary projection
+
+`ReadWorkspaceSummaryUseCase` accepts one validated workspace and finite page
+kind. It resolves the persisted active workspace and requires workspace read
+authority before invoking any projection. Each requested systems/assets,
+models, datasets or artifacts group additionally requires its owning read scope;
+a denied or failed group yields unavailable values without suppressing independent
+authorized metrics. Host composition and IPC sender trust are required; absent
+authority is unavailable rather than a permissive fallback.
+
+The versioned response contains only the page's fixed scalar metrics. Desktop
+and thin pages use one summary request. Counts use repository-owned release/model
+and exact custom-asset identity projections, with one read per owning collection,
+no model discovery, runtime bootstrap, model completion, release locks, resource
+content or model catalogs returned to renderers. System publication and latest
+release asset semantics match the established reducers; custom identities are
+deduplicated across all four sources. Logical dataset counts require a locally
+available Parquet version and avoid catalog/content reads; raw Parquet objects
+without a dataset identity do not increase the count. Stored model paths indicate
+inventory availability, not fresh disk qualification.
+
+Underlying aggregate documents still require linear reads. The large local
+fixture establishes exact counts, bounded response size and collection-read
+counts; it does not qualify dedicated-profile p95 budgets. Rollback must preserve
+workspace/group authority and unavailable states, without restoring full-catalog
+renderer count requests or inferred zero values.

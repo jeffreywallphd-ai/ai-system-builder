@@ -1,3 +1,4 @@
+import { normalizeReadWorkspaceSummaryRequest, type ReadWorkspaceSummaryRequest, type WorkspaceSummary } from "../workspace";
 import type {
   ActiveWorkspaceSelection,
   CreateWorkspaceCommand,
@@ -20,7 +21,12 @@ export const DESKTOP_WORKSPACE_SELECTION_READ_OPERATION = createTransportOperati
 export const DESKTOP_WORKSPACE_SELECTION_SAVE_OPERATION = createTransportOperation("workspace", "selection-save") as "workspace.selection-save";
 export const DESKTOP_WORKSPACE_SELECTION_CLEAR_OPERATION = createTransportOperation("workspace", "selection-clear") as "workspace.selection-clear";
 
+export const DESKTOP_WORKSPACE_SUMMARY_OPERATION = "workspace.summary" as const;
+export const DESKTOP_WORKSPACE_SUMMARY_REQUEST_CHANNEL = createIpcChannel(DESKTOP_WORKSPACE_SUMMARY_OPERATION, "request");
+export const DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL = createIpcChannel(DESKTOP_WORKSPACE_SUMMARY_OPERATION, "response");
+
 export type DesktopWorkspaceOperation =
+  | typeof DESKTOP_WORKSPACE_SUMMARY_OPERATION
   | typeof DESKTOP_WORKSPACE_LIST_OPERATION
   | typeof DESKTOP_WORKSPACE_CREATE_OPERATION
   | typeof DESKTOP_WORKSPACE_SELECTION_READ_OPERATION
@@ -124,6 +130,7 @@ export type DesktopWorkspaceSelectionClearResponse = IpcResponse<
 >;
 
 export type DesktopWorkspaceResponseChannelValue =
+  | typeof DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL.value
   | typeof DESKTOP_WORKSPACE_LIST_RESPONSE_CHANNEL.value
   | typeof DESKTOP_WORKSPACE_CREATE_RESPONSE_CHANNEL.value
   | typeof DESKTOP_WORKSPACE_SELECTION_READ_RESPONSE_CHANNEL.value
@@ -139,6 +146,7 @@ export type DesktopWorkspaceFailureResponse = IpcResponse<
 >;
 
 type DesktopWorkspaceResponseChannel =
+  | typeof DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL
   | typeof DESKTOP_WORKSPACE_LIST_RESPONSE_CHANNEL
   | typeof DESKTOP_WORKSPACE_CREATE_RESPONSE_CHANNEL
   | typeof DESKTOP_WORKSPACE_SELECTION_READ_RESPONSE_CHANNEL
@@ -220,4 +228,13 @@ export function createDesktopWorkspaceFailureResponse(
   options?: { requestId?: string; correlationId?: string; details?: Record<string, unknown> },
 ): DesktopWorkspaceFailureResponse {
   return createIpcFailureResponse(createIpcError(channel, code, message, options));
+}
+
+export type DesktopWorkspaceSummaryRequest = IpcRequest<ReadWorkspaceSummaryRequest, typeof DESKTOP_WORKSPACE_SUMMARY_OPERATION, Record<string, never>>;
+export type DesktopWorkspaceSummaryResponse = IpcResponse<WorkspaceSummary, Record<string, unknown>, typeof DESKTOP_WORKSPACE_SUMMARY_OPERATION, Record<string, never>, typeof DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL.value>;
+export function createDesktopWorkspaceSummaryRequest(payload: ReadWorkspaceSummaryRequest, options?: {requestId?: string; correlationId?: string}): DesktopWorkspaceSummaryRequest {
+  return createIpcRequest(DESKTOP_WORKSPACE_SUMMARY_REQUEST_CHANNEL, normalizeReadWorkspaceSummaryRequest(payload), options);
+}
+export function createDesktopWorkspaceSummarySuccessResponse(value: WorkspaceSummary, options?: {requestId?: string; correlationId?: string}): DesktopWorkspaceSummaryResponse {
+  return createIpcSuccessResponse(DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL, value, options);
 }

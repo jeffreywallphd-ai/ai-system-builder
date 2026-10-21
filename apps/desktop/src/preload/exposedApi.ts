@@ -1,3 +1,6 @@
+import { DESKTOP_RUNTIME_READINESS_READ_LATEST_FOR_COMPOSITION_PLAN_REQUEST_CHANNEL, DESKTOP_RUNTIME_READINESS_READ_DETAIL_REQUEST_CHANNEL } from "../../../../modules/contracts/ipc";
+import { normalizeReadWorkspaceSummaryRequest, normalizeWorkspaceSummary, type ReadWorkspaceSummaryRequest } from "../../../../modules/contracts/workspace";
+import { createDesktopWorkspaceSummaryRequest, DESKTOP_WORKSPACE_SUMMARY_OPERATION, DESKTOP_WORKSPACE_SUMMARY_REQUEST_CHANNEL, DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL, type DesktopWorkspaceSummaryResponse } from "../../../../modules/contracts/ipc";
 import {
   DESKTOP_ARTIFACT_BROWSE_OPERATION,
   DESKTOP_ARTIFACT_BROWSE_REQUEST_CHANNEL,
@@ -430,8 +433,11 @@ import {
   DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_READ_OPERATION,
+  DESKTOP_MODEL_DOWNLOAD_COMPLETE_OPERATION,
   DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_COMPLETE_REQUEST_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_COMPLETE_RESPONSE_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_LIST_OPERATION,
   DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL,
@@ -454,6 +460,7 @@ import {
   createDesktopModelDownloadRequest,
   createDesktopModelDownloadStartRequest,
   createDesktopModelDownloadReadRequest,
+  createDesktopModelDownloadCompleteRequest,
   createDesktopModelDownloadListRequest,
   createDesktopModelDownloadCancelRequest,
   createDesktopModelRecordUpdateRequest,
@@ -473,6 +480,7 @@ import {
   type DesktopModelDownloadResponse,
   type DesktopModelDownloadStartResponse,
   type DesktopModelDownloadReadResponse,
+  type DesktopModelDownloadCompleteResponse,
   type DesktopModelDownloadListResponse,
   type DesktopModelDownloadCancelResponse,
   type DesktopModelRecordUpdateResponse,
@@ -904,6 +912,8 @@ export interface DesktopPreloadApi {
     input: { capabilityId: RuntimeCapabilityId },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopRuntimeCapabilityStatusReadResponse>;
+  readLatestRuntimeReadinessForCompositionPlan: (input: { targetWorkspaceId: string; compositionPlanId: string }, context?: DesktopArtifactUploadBridgeContext) => Promise<unknown>;
+  readRuntimeReadinessDetail: (input: { targetWorkspaceId: string; readinessBindingId: string }, context?: DesktopArtifactUploadBridgeContext) => Promise<unknown>;
   refreshRuntimeReadinessInventory: (
     input: {
       targetWorkspaceId: string;
@@ -1083,6 +1093,7 @@ export interface DesktopPreloadApi {
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopFeatureLifecycleIdleDisposeResponse>;
 
+  readWorkspaceSummary: (input: ReadWorkspaceSummaryRequest, context?: DesktopArtifactUploadBridgeContext) => Promise<DesktopWorkspaceSummaryResponse>;
   listWorkspaces: (
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopWorkspaceListResponse>;
@@ -1801,11 +1812,11 @@ export interface DesktopPreloadApi {
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopImageGenerationStartResponse>;
   readImageGeneration: (
-    input: { requestId: string },
+    input: { requestId: string; workspaceId?: string },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopImageGenerationReadResponse>;
   cancelImageGeneration: (
-    input: { requestId: string },
+    input: { requestId: string; workspaceId?: string },
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopImageGenerationCancelResponse>;
   finalizeImageGenerationIfCompleted: (
@@ -1958,6 +1969,10 @@ export interface DesktopPreloadApi {
     input: Parameters<typeof createDesktopModelDownloadReadRequest>[0],
     context?: DesktopArtifactUploadBridgeContext,
   ) => Promise<DesktopModelDownloadReadResponse>;
+  completeModelDownload: (
+    input: Parameters<typeof createDesktopModelDownloadCompleteRequest>[0],
+    context?: DesktopArtifactUploadBridgeContext,
+  ) => Promise<DesktopModelDownloadCompleteResponse>;
   listModelDownloads: (
     input: Parameters<typeof createDesktopModelDownloadListRequest>[0],
     context?: DesktopArtifactUploadBridgeContext,
@@ -2867,6 +2882,12 @@ export function createDesktopPreloadApi(
       );
     },
 
+    async readLatestRuntimeReadinessForCompositionPlan(input, context = {}) {
+      return dependencies.ipcRenderer.invoke(DESKTOP_RUNTIME_READINESS_READ_LATEST_FOR_COMPOSITION_PLAN_REQUEST_CHANNEL.value, { requestId: context.requestId, correlationId: context.correlationId, payload: input });
+    },
+    async readRuntimeReadinessDetail(input, context = {}) {
+      return dependencies.ipcRenderer.invoke(DESKTOP_RUNTIME_READINESS_READ_DETAIL_REQUEST_CHANNEL.value, { requestId: context.requestId, correlationId: context.correlationId, payload: input });
+    },
     async refreshRuntimeReadinessInventory(input, context = {}) {
       return dependencies.ipcRenderer.invoke(
         DESKTOP_RUNTIME_READINESS_REFRESH_INVENTORY_REQUEST_CHANNEL.value,
@@ -3194,6 +3215,12 @@ export function createDesktopPreloadApi(
       );
     },
 
+    async readWorkspaceSummary(input, context = {}) {
+      const request = normalizeReadWorkspaceSummaryRequest(input);
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_WORKSPACE_SUMMARY_REQUEST_CHANNEL.value, createDesktopWorkspaceSummaryRequest(request, context));
+      const envelope = assertDesktopEnvelopeResponse<DesktopWorkspaceSummaryResponse>(response, {operation: DESKTOP_WORKSPACE_SUMMARY_OPERATION, channel: DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL.value, message: "Invalid workspace summary response."});
+      return envelope.ok ? {...envelope, value: normalizeWorkspaceSummary(envelope.value, request)} : envelope;
+    },
     async listWorkspaces(context = {}) {
       const response = await dependencies.ipcRenderer.invoke(
         DESKTOP_WORKSPACE_LIST_REQUEST_CHANNEL.value,
@@ -4987,19 +5014,21 @@ export function createDesktopPreloadApi(
     },
     async readModelDownload(input, context = {}) {
       const request = createDesktopModelDownloadReadRequest(input, context);
-      const response = await dependencies.ipcRenderer.invoke(
-        DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL.value,
-        request,
-      );
-      return assertDesktopEnvelopeResponse<DesktopModelDownloadReadResponse>(
-        response,
-        {
-          operation: DESKTOP_MODEL_DOWNLOAD_READ_OPERATION,
-          channel: DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL.value,
-          message:
-            "Received invalid desktop model download-read IPC response envelope.",
-        },
-      );
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL.value, request);
+      return assertDesktopEnvelopeResponse<DesktopModelDownloadReadResponse>(response, {
+        operation: DESKTOP_MODEL_DOWNLOAD_READ_OPERATION,
+        channel: DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL.value,
+        message: "Received invalid desktop model download-read IPC response envelope.",
+      });
+    },
+    async completeModelDownload(input, context = {}) {
+      const request = createDesktopModelDownloadCompleteRequest(input, context);
+      const response = await dependencies.ipcRenderer.invoke(DESKTOP_MODEL_DOWNLOAD_COMPLETE_REQUEST_CHANNEL.value, request);
+      return assertDesktopEnvelopeResponse<DesktopModelDownloadCompleteResponse>(response, {
+        operation: DESKTOP_MODEL_DOWNLOAD_COMPLETE_OPERATION,
+        channel: DESKTOP_MODEL_DOWNLOAD_COMPLETE_RESPONSE_CHANNEL.value,
+        message: "Received invalid desktop model download-complete IPC response envelope.",
+      });
     },
     async listModelDownloads(input, context = {}) {
       const request = createDesktopModelDownloadListRequest(input, context);

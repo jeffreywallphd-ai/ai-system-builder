@@ -41,6 +41,7 @@ import type {
 } from "../../../ports/system-build";
 import {
   ApproveSystemReleaseUseCase,
+  CancelSystemBuildUseCase,
   CompareSystemReleasesUseCase,
   RequestSystemBuildUseCase,
 } from "../system-build-use-cases";
@@ -580,4 +581,83 @@ describe("system build and release use cases", () => {
       result.ok ? result.value.diagnostics[0]?.code : result.error.code,
     ).toBe("system.build.instance-count-exceeded");
   });
+});
+
+
+function repeatedRevision(count = 3): SystemBuilderRevision {
+  const instances = Array.from({length: count}, (_, i) => ({...instance, instanceId: normalizeAssetId(`instance.repeat.${i}`)}));
+  const refs = instances.map(value => ({kind: "asset-instance" as const, id: value.instanceId}));
+  return {...revision, instances, composition: {...revision.composition, instanceRefs: refs, rootInstanceRefs: refs}};
+}
+
+it("reuses exact selections per build, refreshes authority and preserves every instance lock", async () => {
+  let calls = 0; const base = resolver();
+  const counting: SystemBuildImplementationResolverPort = {async resolve(request) {calls++;return base.resolve(request);}};
+  const documents = createInMemoryStructuredDocumentStore(); const repository=createStructuredSystemBuildRepository(documents); const hasher=createSha256SystemBuildHasher(); const artifacts=artifactPort(hasher);
+  const build=new RequestSystemBuildUseCase({repository,systems:systemRepository(repeatedRevision(500)),validator:new ValidateSystemBuilderRevisionService({readExactDefinition:async()=>definition}),resolver:counting,artifacts:artifacts.port,hasher,materializer:createDeterministicSystemBuildMaterializer()});
+  const first=await build.execute(command("build.reuse.one"));
+  expect(first.ok && first.value.status).toBe("succeeded"); expect(calls).toBe(2);
+  if(first.ok) expect(first.value.lock?.resolvedImplementations.length).toBe(500);
+  const next=await Promise.all([build.execute(command("build.reuse.two")),build.execute(command("build.reuse.three"))]);
+  expect(next.every(result=>result.ok && result.value.status==="succeeded")).toBe(true); expect(calls).toBe(6);
+  if(first.ok && next[0].ok && next[1].ok) {expect(next[0].value.lockDigest).toBe(first.value.lockDigest);expect(next[1].value.lockDigest).toBe(first.value.lockDigest);}
+});
+
+it("revoked, changed or unavailable reused authority denies before materialization or artifact writes", async () => {
+  for(const disposition of ["revoked","changed","unavailable"]) {
+    let calls=0;let writes=0;let materializations=0;const base=resolver();const hasher=createSha256SystemBuildHasher();const artifacts=artifactPort(hasher);
+    const build=new RequestSystemBuildUseCase({repository:createStructuredSystemBuildRepository(createInMemoryStructuredDocumentStore()),systems:systemRepository(repeatedRevision()),validator:new ValidateSystemBuilderRevisionService({readExactDefinition:async()=>definition}),resolver:{async resolve(request){
+      calls++;const result=await base.resolve(request);if(calls===1)return result;
+      if(disposition==="unavailable")throw new Error("private source unavailable");
+      return disposition==="revoked"?{...result,status:"revoked",selectedRelease:undefined}:{...result,selectedRelease:{...result.selectedRelease!,packageDigest:`sha256:${"e".repeat(64)}`}};
+    }},artifacts:{...artifacts.port,async putImmutable(request){writes++;return artifacts.port.putImmutable(request);}},hasher,materializer:{async materialize(){materializations++;return [];}}});
+    const result=await build.execute(command(`build.reuse.${disposition}`));expect(result.ok && result.value.status).toBe("failed");expect(writes).toBe(0);expect(materializations).toBe(0);
+    expect(JSON.stringify(result)).not.toContain("private source unavailable");
+  }
+});
+
+it("cached unsuccessful selections retain instance-specific diagnostics", async () => {
+ const hasher=createSha256SystemBuildHasher();const artifacts=artifactPort(hasher);
+ const build=new RequestSystemBuildUseCase({repository:createStructuredSystemBuildRepository(createInMemoryStructuredDocumentStore()),systems:systemRepository(repeatedRevision(2)),validator:new ValidateSystemBuilderRevisionService({readExactDefinition:async()=>definition}),resolver:resolver(false),artifacts:artifacts.port,hasher,materializer:createDeterministicSystemBuildMaterializer()});
+ const result=await build.execute(command("build.reuse.failed"));expect(result.ok && result.value.status).toBe("failed");
+ if(result.ok) {expect(result.value.diagnostics.some(item=>item.path?.includes("instance.repeat.0"))).toBe(true);expect(result.value.diagnostics.some(item=>item.path?.includes("instance.repeat.1"))).toBe(true);}
+});
+
+it("cancellation during the fresh locked check prevents materialization and artifact writes", async () => {
+  const repository = createStructuredSystemBuildRepository(createInMemoryStructuredDocumentStore());
+  const hasher = createSha256SystemBuildHasher(); const artifacts = artifactPort(hasher);
+  const base = resolver(); let writes = 0; let materializations = 0;
+  const request = command("build.reuse.cancelled");
+  const build = new RequestSystemBuildUseCase({repository, systems: systemRepository(repeatedRevision()), validator: new ValidateSystemBuilderRevisionService({readExactDefinition: async () => definition}), resolver: {async resolve(value) {
+    if (value.lockedReleaseId) {
+      const cancelled = await new CancelSystemBuildUseCase(repository).execute({workspaceId, buildId: request.buildId, actorId: "owner-1"});
+      expect(cancelled.ok).toBe(true);
+    }
+    return base.resolve(value);
+  }}, artifacts: {...artifacts.port, async putImmutable(value) {writes++; return artifacts.port.putImmutable(value);}}, hasher, materializer: {async materialize() {materializations++; return [];}}});
+  const result = await build.execute(request);
+  expect(result.ok && result.value.status).toBe("cancelled"); expect(materializations).toBe(0); expect(writes).toBe(0);
+});
+
+it("keeps exact versions and concurrent resolution policies separate and locks fresh requests", async () => {
+  const value = repeatedRevision(4);
+  const exactRevision = {...value, instances: value.instances.map((entry, index) => ({...entry, definitionRef: {...definitionRef, version: index < 2 ? "1.0.0" : "2.0.0"}}))};
+  const hasher = createSha256SystemBuildHasher(); const artifacts = artifactPort(hasher); const base = resolver();
+  const seen: Parameters<SystemBuildImplementationResolverPort["resolve"]>[0][] = [];
+  const build = new RequestSystemBuildUseCase({repository: createStructuredSystemBuildRepository(createInMemoryStructuredDocumentStore()), systems: systemRepository(exactRevision), validator: new ValidateSystemBuilderRevisionService({readExactDefinition: async ref => ({...definition, version: ref.version!})}), resolver: {async resolve(request) {
+    seen.push(request);
+    const result = await base.resolve(request);
+    if (!result.selectedRelease) return result;
+    const releaseId = normalizeAssetImplementationReleaseId(`implementation.${request.definitionRef.version}.${request.deploymentProfile}`);
+    if (request.lockedReleaseId) {expect(request.lockedReleaseId).toBe(releaseId); expect(request.requiredFacets).toEqual(["ui"]);}
+    return {...result, selectedRelease: {...result.selectedRelease, releaseId, definitionRef: request.definitionRef, version: request.definitionRef.version!}};
+  }}, artifacts: artifacts.port, hasher, materializer: createDeterministicSystemBuildMaterializer()});
+  const results = await Promise.all([
+    build.execute({...command("build.exact.desktop"), availableCapabilities: ["artifact:read"], runtimeAbiVersion: "1.0.0"}),
+    build.execute({...command("build.exact.server"), deploymentProfile: "campus-server", availableCapabilities: [], runtimeAbiVersion: "2.0.0"}),
+  ]);
+  expect(results.every(result => result.ok && result.value.status === "succeeded")).toBe(true);
+  expect(seen.length).toBe(8); expect(seen.filter(request => !!request.lockedReleaseId).length).toBe(4);
+  for (const request of seen) {expect(request.workspaceId).toBe(workspaceId); expect(request.permittedTrustLevels).toEqual(["system-trusted"]); expect(request.hostApiVersion).toBe("1.0.0"); expect(request.runtimeAbiVersion).toBe(request.deploymentProfile === "local-desktop" ? "1.0.0" : "2.0.0"); expect(request.availableCapabilities).toEqual(request.deploymentProfile === "local-desktop" ? ["artifact:read"] : []);}
+  if (results[0].ok && results[1].ok) {expect(new Set(results[0].value.lock?.resolvedImplementations.map(item => item.releaseId)).size).toBe(2); expect(results[0].value.lockDigest === results[1].value.lockDigest).toBe(false);}
 });

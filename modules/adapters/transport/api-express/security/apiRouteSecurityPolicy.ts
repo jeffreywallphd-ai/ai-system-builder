@@ -13,6 +13,15 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   string,
   ApiRoutePolicy
 >([
+  ["POST /api/asset-composition/workspaces/:workspaceId/plans", {public: false, scopes: ["asset:write"]}],
+  ["PATCH /api/asset-composition/workspaces/:workspaceId/plans/:planId", {public: false, scopes: ["asset:write"]}],
+  ["POST /api/asset-composition/workspaces/:workspaceId/plans/:planId/projections", {public: false, scopes: ["asset:write"]}],
+  ["POST /api/asset-composition/workspaces/:workspaceId/plans/:planId/relationships", {public: false, scopes: ["asset:write"]}],
+  ["POST /api/asset-composition/workspaces/:workspaceId/plans/:planId/validate", {public: false, scopes: ["asset:write"]}],
+  ["GET /api/asset-composition/workspaces/:workspaceId/projections/:projectionId/plans", {public: false, scopes: ["asset:read"]}],
+  ["GET /api/asset-composition/workspaces/:workspaceId/effective-assets/:kind/:id/plans", {public: false, scopes: ["asset:read"]}],
+  ["GET /api/asset-composition/workspaces/:workspaceId/plans-needing-attention", {public: false, scopes: ["asset:read"]}],
+  ["GET /api/workspaces/summary", { public: false, scopes: ["workspace:read"] }],
   ["GET /api/security/status", { public: true }],
   ["POST /api/security/pairing/complete", { public: true }],
   [
@@ -21,7 +30,7 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   ],
   ["GET /api/security/tls/local-ca.pem", { public: true }],
   ["GET /api/security/dev-mode", { public: true }],
-  ["POST /api/security/dev-mode", { public: true }],
+  ["POST /api/security/dev-mode", { public: false, scopes: ["security:admin"] }],
 
   ["GET /api/workspaces", { public: false, scopes: ["workspace:read"] }],
   ["POST /api/workspaces", { public: false, scopes: ["workspace:write"] }],
@@ -52,6 +61,7 @@ export const API_ROUTE_POLICIES: ReadonlyMap<string, ApiRoutePolicy> = new Map<
   ],
   ["POST /api/model/download/read", { public: false, scopes: ["model:read"] }],
   ["POST /api/model/download/list", { public: false, scopes: ["model:read"] }],
+  ["POST /api/model/download/complete", { public: false, scopes: ["model:write"] }],
   [
     "POST /api/model/download/cancel",
     { public: false, scopes: ["model:write"] },

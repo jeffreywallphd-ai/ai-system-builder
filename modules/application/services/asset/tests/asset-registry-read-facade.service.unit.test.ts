@@ -26,6 +26,7 @@ import type {
 } from "../../../ports/asset";
 import type { ModelRegistryPort } from "../../../ports/model";
 import { BUILT_IN_ASSET_DEFINITION_CATALOG } from "../built-ins";
+import { readSystemFoundationManifest } from "../../asset-packs/system-packs/system-foundation-pack-v3.manifest";
 import { ArtifactResourceBackedViewProvider } from "../asset-artifact-resource-backed-view-provider.service";
 import { AssetDatasetModelResourceBackedViewProvider, type SafeDatasetDescriptorSource } from "../asset-dataset-model-resource-backed-view-provider.service";
 import { AssetExternalRepositoryResourceBackedViewProvider, type SafeExternalRepositoryObjectDescriptorSource } from "../asset-external-repository-resource-backed-view-provider.service";
@@ -477,15 +478,15 @@ describe("AssetRegistryReadFacade definition reads", () => {
 
     const card = (await facade.listDefinitionCards()).items[0]!;
 
-    assert.equal(card.sourcePackId, "system.foundation");
-    assert.equal(card.sourcePackVersion, "1.0.0");
-    assert.equal(card.sourcePackDisplayName, "System Foundation");
-    assert.equal(card.sourceKind, "system");
-    assert.equal(card.sourceLayer, "system-default");
-    assert.equal(card.trustStatus, "system-trusted");
+    assert.equal(card.sourcePackId, undefined);
+    assert.equal(card.sourcePackVersion, undefined);
+    assert.equal(card.sourcePackDisplayName, undefined);
+    assert.equal(card.sourceKind, undefined);
+    assert.equal(card.sourceLayer, undefined);
+    assert.equal(card.trustStatus, undefined);
     assert.equal(card.packCategoryId, "ui-structure");
     assert.equal(card.packCategoryDisplayName, "UI Structure");
-    assert.equal(card.systemDefault, true);
+    assert.equal(card.systemDefault, undefined);
     assert.deepEqual(card.overridesDefinitionRef, { kind: "asset-definition-version", id: "definition.base", version: "1.0.0" });
     assert.deepEqual(card.overriddenByDefinitionRefs, [{ kind: "asset-definition-version", id: "definition.child", version: "1.0.0" }]);
     assert.equal(card.effectiveResolutionStatus, "available");
@@ -495,210 +496,97 @@ describe("AssetRegistryReadFacade definition reads", () => {
     assertSafe(card);
   });
 
-  it("filters definitions by search text, type, family, lifecycle, and built-in/custom flags", async () => {
-    const builtInSeed = BUILT_IN_ASSET_DEFINITION_CATALOG[0]!;
-    const builtIn = { ...builtInSeed.definition, metadata: { builtInSeed: { seedId: builtInSeed.seedId, seedVersion: builtInSeed.seedVersion, fingerprint: "abc", managedBy: "asset-kernel", lastSeededAt: "2026-01-01T00:00:00.000Z" } } };
-    const systemFoundation = validDefinition({
-      definitionId: "builtin.system.foundation.fixture",
-      displayName: "System Foundation Fixture",
-      metadata: {
-        sourcePackId: "system.foundation",
-        sourceLayer: "system-default",
-        sourceKind: "system",
-        trustStatus: "system-trusted",
-        assetPackInstall: {
-          packId: "system.foundation",
-          packVersion: "1.0.0",
-          entryId: "builtin.system.foundation.fixture",
-          fingerprint: "fnv1a:system-foundation-fixture",
-          sourceKind: "system",
-          sourceLayer: "system-default",
-          trustStatus: "system-trusted",
-          managedBy: "asset-kernel",
-          installedAt: "2026-05-09T12:00:00.000Z",
-        },
-      },
-    });
-    const repo = new FakeDefinitionRepository([
-      validDefinition(),
-      validDefinition({ definitionId: "definition.beta", assetType: "dataset", assetFamily: "resource-backed", displayName: "Beta Dataset", lifecycleStatus: "published" }),
-      builtIn,
-      systemFoundation,
-    ]);
-    const facade = createFacade({ definitionRepository: repo });
-
-    assert.deepEqual((await facade.listDefinitionCards({ searchText: "beta" })).items.map((item) => item.definitionId), ["definition.beta"]);
-    assert.deepEqual((await facade.listDefinitionCards({ assetTypes: ["dataset"], assetFamilies: ["resource-backed"], lifecycleStatuses: ["published"] })).items.map((item) => item.definitionId), ["definition.beta"]);
-    assert.deepEqual(
-      (await facade.listDefinitionCards({ includeBuiltIns: true, includeCustom: false })).items.map((item) => item.definitionId).sort(),
-      [String(builtIn.definitionId), "builtin.system.foundation.fixture"].sort(),
-    );
-    assert.equal((await facade.listDefinitionCards({ includeBuiltIns: false })).items.some((item) => item.definitionId === "builtin.system.foundation.fixture"), false);
-    assert.equal((await facade.listDefinitionCards({ includeCustom: true, includeBuiltIns: false })).items.some((item) => item.definitionId === "builtin.system.foundation.fixture"), false);
-    assert.equal((await facade.readDefinitionDetail({ kind: "asset-definition-version", id: normalizeAssetId("builtin.system.foundation.fixture"), version: "1.0.0" }))?.builtIn, true);
-    assert.equal((await facade.listDefinitionCards({ includeBuiltIns: false })).items.some((item) => item.definitionId === "definition.alpha"), true);
-  });
-
-  it("classifies system foundation defaults only from trusted metadata or installer markers", async () => {
+  it("filters built-in/custom lists using exact content, consistently with single and batch details", async () => {
     const seed = BUILT_IN_ASSET_DEFINITION_CATALOG[0]!;
-    const exactBuiltIn = { ...seed.definition };
-    const legacyBuiltInSeed = validDefinition({
-      definitionId: "definition.legacy-seed",
-      metadata: { builtInSeed: { managedBy: "asset-kernel", seedId: "seed.legacy", seedVersion: "1.0.0", fingerprint: "abc123" } },
-    });
-    const installedSystemDefault = validDefinition({
-      definitionId: "definition.installed-system-default",
-      metadata: {
-        sourcePackId: "system.foundation",
-        sourcePackVersion: "1.0.0",
-        assetPackInstall: {
-          packId: "system.foundation",
-          packVersion: "1.0.0",
-          entryId: "definition.installed-system-default",
-          fingerprint: "fnv1a:installed-system-default",
-          sourceKind: "system",
-          sourceLayer: "system-default",
-          trustStatus: "system-trusted",
-          managedBy: "asset-kernel",
-          installedAt: "2026-05-09T12:00:00.000Z",
-        },
-      },
-    });
-    const trustedSourceMetadata = validDefinition({
-      definitionId: "definition.trusted-source",
-      metadata: {
-        sourcePackId: "system.foundation",
-        sourceKind: "system",
-        sourceLayer: "system-default",
-        trustStatus: "system-trusted",
-      },
-    });
-    const bareSystemFoundation = validDefinition({
-      definitionId: "definition.bare-system-foundation",
-      metadata: { sourcePackId: "system.foundation" },
-    });
-    const wrongSourceKind = validDefinition({
-      definitionId: "definition.wrong-kind",
-      metadata: {
-        sourcePackId: "system.foundation",
-        sourceKind: "user",
-        sourceLayer: "system-default",
-        trustStatus: "system-trusted",
-      },
-    });
-    const wrongSourceLayer = validDefinition({
-      definitionId: "definition.wrong-layer",
-      metadata: {
-        sourcePackId: "system.foundation",
-        sourceKind: "system",
-        sourceLayer: "workspace-pack",
-        trustStatus: "system-trusted",
-      },
-    });
-    const wrongTrustStatus = validDefinition({
-      definitionId: "definition.wrong-trust",
-      metadata: {
-        sourcePackId: "system.foundation",
-        sourceKind: "system",
-        sourceLayer: "system-default",
-        trustStatus: "unverified",
-      },
-    });
-    const customDefinition = validDefinition({
-      definitionId: "definition.custom",
-      metadata: { sourceKind: "user", sourceLayer: "workspace-pack", trustStatus: "unverified" },
-    });
-    const facade = createFacade({
-      definitionRepository: new FakeDefinitionRepository([
-        exactBuiltIn,
-        legacyBuiltInSeed,
-        installedSystemDefault,
-        trustedSourceMetadata,
-        bareSystemFoundation,
-        wrongSourceKind,
-        wrongSourceLayer,
-        wrongTrustStatus,
-        customDefinition,
-      ]),
-    });
-
-    const cards = await facade.listDefinitionCards();
-    const byId = new Map(cards.items.map((item) => [item.definitionId, item]));
-
-    assert.equal(byId.get(String(seed.definition.definitionId))?.builtIn, true);
-    assert.equal(byId.get("definition.legacy-seed")?.builtIn, true);
-    assert.equal(byId.get("definition.installed-system-default")?.builtIn, true);
-    assert.equal(byId.get("definition.installed-system-default")?.systemDefault, true);
-    assert.equal(byId.get("definition.trusted-source")?.builtIn, true);
-    assert.equal(byId.get("definition.trusted-source")?.systemDefault, true);
-    for (const definitionId of [
-      "definition.bare-system-foundation",
-      "definition.wrong-kind",
-      "definition.wrong-layer",
-      "definition.wrong-trust",
-      "definition.custom",
-    ]) {
-      assert.equal(byId.get(definitionId)?.builtIn, undefined, definitionId);
-      assert.equal(byId.get(definitionId)?.systemDefault, undefined, definitionId);
+    const foundation = readSystemFoundationManifest("3.0.0")!.assets[0]!.definition;
+    const forged = validDefinition({ definitionId: "definition.forged", metadata: {
+      builtInSeed: { seedId: seed.seedId, seedVersion: seed.seedVersion, fingerprint: seed.fingerprint, managedBy: "asset-kernel", lastSeededAt: "2026-01-01T00:00:00.000Z" },
+      sourcePackId: "system.foundation", sourcePackVersion: "3.0.0", sourceKind: "system",
+      sourceLayer: "system-default", trustStatus: "system-trusted", systemDefault: true,
+      sourcePackDisplayName: "System Foundation",
+    } });
+    const modified = { ...seed.definition, displayName: "Changed content" };
+    const differentVersion = { ...seed.definition, version: "9.9.9" };
+    for (const definition of [seed.definition, foundation, forged, modified, differentVersion]) {
+      const repo = new FakeDefinitionRepository([definition]);
+      const facade = createFacade({ definitionRepository: repo });
+      const expected = definition === seed.definition || definition === foundation;
+      const ref = { kind: "asset-definition-version", id: definition.definitionId, version: definition.version } as AssetReference;
+      const card = (await facade.listDefinitionCards({ includeMetadata: true })).items[0]!;
+      const single = await facade.readDefinitionDetail(ref, { includeMetadata: true });
+      const batch = (await facade.readDefinitionDetails([ref], { includeMetadata: true }))[0];
+      assert.equal(card.builtIn, expected ? true : undefined);
+      assert.equal(single?.builtIn, card.builtIn);
+      assert.deepEqual(batch, single);
+      assert.equal((await facade.listDefinitionCards({ includeCustom: false })).items.length, expected ? 1 : 0);
+      assert.equal((await facade.listDefinitionCards({ includeBuiltIns: false })).items.length, expected ? 0 : 1);
+      if (definition === foundation) {
+        assert.equal(card.systemDefault, true);
+        assert.equal(card.trustStatus, "system-trusted");
+        assert.equal(single?.definition.metadata?.systemDefault, true);
+      }
+      if (!expected) for (const value of [card, single?.definition.metadata]) {
+        assert.equal(value?.systemDefault, undefined);
+        assert.equal(value?.sourceKind, undefined);
+        assert.equal(value?.trustStatus, undefined);
+        assert.equal(value?.sourcePackId, undefined);
+      }
+      assert.equal(repo.saved.length, 0);
+      assert.equal(repo.deleted.length, 0);
     }
-    assert.deepEqual(
-      (await facade.listDefinitionCards({ includeBuiltIns: true, includeCustom: false })).items.map((item) => item.definitionId).sort(),
-      [
-        String(seed.definition.definitionId),
-        "definition.installed-system-default",
-        "definition.legacy-seed",
-        "definition.trusted-source",
-      ].sort(),
-    );
-    assert.deepEqual(
-      (await facade.listDefinitionCards({ includeBuiltIns: false })).items.map((item) => item.definitionId).sort(),
-      [
-        "definition.bare-system-foundation",
-        "definition.custom",
-        "definition.wrong-kind",
-        "definition.wrong-layer",
-        "definition.wrong-trust",
-      ].sort(),
-    );
+    const facade = createFacade();
+    assert.deepEqual((await facade.listDefinitionCards({ searchText: "alpha" })).items.map(card => card.definitionId), ["definition.alpha"]);
+    assert.equal((await facade.listDefinitionCards({ assetTypes: ["dataset"] })).items.length, 0);
   });
 
-  it("marks persisted built-ins without seeding or overwriting definitions", async () => {
-    const builtInSeed = BUILT_IN_ASSET_DEFINITION_CATALOG[0]!;
-    const persistedBuiltIn = { ...builtInSeed.definition };
-    const repo = new FakeDefinitionRepository([persistedBuiltIn]);
+  it("retains custom source descriptors and nonpositive trust states without positive marker fallbacks", async () => {
+    for (const trustStatus of ["unverified", "restricted", "blocked", "trusted", "system-trusted"]) {
+      const definition = validDefinition({ metadata: { sourcePackId: "custom.pack", sourceKind: "user", sourceLayer: "workspace-pack", trustStatus } });
+      const facade = createFacade({ definitionRepository: new FakeDefinitionRepository([definition]) });
+      const card = (await facade.listDefinitionCards({ includeMetadata: true })).items[0]!;
+      assert.equal(card.sourcePackId, "custom.pack");
+      assert.equal(card.sourceKind, "user");
+      assert.equal(card.workspacePack, true);
+      assert.equal(card.builtIn, undefined);
+      assert.equal(card.trustStatus, ["trusted", "system-trusted"].includes(trustStatus) ? undefined : trustStatus);
+    }
+  });
+
+  it("withholds normalized positive cues including padded top-level and installer fallback values", async () => {
+    for (const padding of [" ", "\t", "\u00a0", "\ufeff"]) {
+      const claims = { sourcePackId: `${padding}system.foundation${padding}`,
+        sourcePackVersion: "3.0.0", sourcePackDisplayName: `${padding}System Foundation${padding}`,
+        sourceKind: `${padding}system${padding}`, sourceLayer: `${padding}system-default${padding}`,
+        trustStatus: `${padding}system-trusted${padding}`, systemDefault: true };
+      for (const metadata of [claims, { assetPackInstall: {
+        packId: claims.sourcePackId, packVersion: claims.sourcePackVersion,
+        sourceKind: claims.sourceKind, sourceLayer: claims.sourceLayer, trustStatus: claims.trustStatus,
+        entryId: "forged", fingerprint: "forged", managedBy: "asset-kernel", installedAt: "2026-01-01T00:00:00.000Z",
+      } }]) {
+        const definition = validDefinition({ metadata });
+        const facade = createFacade({ definitionRepository: new FakeDefinitionRepository([definition]) });
+        const card = (await facade.listDefinitionCards({ includeMetadata: true })).items[0]!;
+        const detail = await facade.readDefinitionDetail(definitionRef, { includeMetadata: true });
+        for (const value of [card, card.metadata, detail?.definition.metadata]) {
+          for (const field of ["builtIn", "systemDefault", "sourcePackId", "sourcePackDisplayName", "sourceKind", "sourceLayer", "trustStatus", "assetPackInstall"])
+            assert.equal((value as Record<string, unknown> | undefined)?.[field], undefined, field);
+        }
+        assert.equal(detail?.builtIn, undefined);
+      }
+    }
+  });
+
+  it("rejects accessor-bearing definitions without reading getters or mutating storage", async () => {
+    let getters = 0;
+    const definition = Object.defineProperty(validDefinition(), "displayName", { enumerable: true, get() { getters++; return "Forged"; } });
+    const repo = new FakeDefinitionRepository([definition]);
+    // Bypass fixture text filtering, which is outside the facade boundary.
+    repo.listDefinitions = async () => ({ definitions: [definition] });
     const facade = createFacade({ definitionRepository: repo });
-
-    const list = await facade.listDefinitionCards();
-    assert.equal(list.items[0]?.builtIn, true);
-    assert.equal(repo.saved.length, 0);
-    assert.equal(repo.deleted.length, 0);
-  });
-
-
-  it("marks built-ins only by exact definition version or valid seed marker", async () => {
-    const seed = BUILT_IN_ASSET_DEFINITION_CATALOG[0]!;
-    const exactBuiltIn = { ...seed.definition };
-    const differentVersion = { ...seed.definition, version: "9.9.9", metadata: undefined };
-    const validMarker = validDefinition({
-      definitionId: "definition.marked",
-      metadata: { builtInSeed: { managedBy: "asset-kernel", seedId: "seed.custom", seedVersion: "1.0.0", fingerprint: "abc123" } },
-    });
-    const malformedMarker = validDefinition({
-      definitionId: "definition.malformed",
-      metadata: { builtInSeed: { managedBy: "asset-kernel", seedId: "seed.custom" } },
-    });
-
-    const listFacade = createFacade({ definitionRepository: new FakeDefinitionRepository([exactBuiltIn, differentVersion, validMarker, malformedMarker]) });
-    const cards = await listFacade.listDefinitionCards();
-    const byId = new Map(cards.items.map((item) => [`${item.definitionId}@${item.version}`, item]));
-
-    assert.equal(byId.get(`${seed.definition.definitionId}@${seed.definition.version}`)?.builtIn, true);
-    assert.equal(byId.get(`${seed.definition.definitionId}@9.9.9`)?.builtIn, undefined);
-    assert.equal(byId.get("definition.marked@1.0.0")?.builtIn, true);
-    assert.equal(byId.get("definition.malformed@1.0.0")?.builtIn, undefined);
-
-    const detailFacade = createFacade({ definitionRepository: new FakeDefinitionRepository([differentVersion]) });
-    assert.equal((await detailFacade.readDefinitionDetail({ kind: "asset-definition-version", id: seed.definition.definitionId, version: "9.9.9" } as AssetReference))?.builtIn, undefined);
+    await assert.rejects(() => facade.listDefinitionCards(), /Asset registry read failed/);
+    await assert.rejects(() => facade.readDefinitionDetail(definitionRef), /Asset registry read failed/);
+    assert.equal(getters, 0);
+    assert.equal(repo.saved.length + repo.deleted.length, 0);
   });
 
   it("omits validation by default and includes validation only when requested", async () => {

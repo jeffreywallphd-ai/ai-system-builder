@@ -1,3 +1,4 @@
+import type { OwnedTaskLease, OwnedTaskReconcilerService } from "../services/runtime/owned-task-reconciler.service";
 import {
   lstat,
   mkdtemp,
@@ -440,6 +441,7 @@ export interface PrepareTrainingDatasetFromArtifactsUseCaseDependencies {
   artifactRepoStorage?: ArtifactRepoStoragePort;
   artifactCatalog?: ArtifactCatalogReadPort;
   taskPowerLifecycle: TaskPowerLifecyclePort;
+  taskReconciler?: OwnedTaskReconcilerService;
   runtimeCapabilityGuard?: Pick<
     RuntimeCapabilityGuardService,
     "requireCapabilityReady"
@@ -507,7 +509,6 @@ function resolveImportedSourceBinding(
 }
 
 function resolveLocalStorageKeyForArtifact(
-  artifactId: string,
   bindings: ArtifactStorageBinding[],
 ): string {
   const preferredBinding = resolvePreferredObjectStorageBinding(bindings);
@@ -518,9 +519,7 @@ function resolveLocalStorageKeyForArtifact(
     return preferredBinding.backing.locator;
   }
 
-  // Catalog-backed local artifacts use storageKey as artifact identity in desktop flows.
-  // When no explicit storage binding exists yet, use the artifact id as local key.
-  return artifactId;
+  return "";
 }
 
 function extensionForMediaType(mediaType: string): string {
@@ -1643,6 +1642,16 @@ function validateAdaptiveAdvancedSettings(
 }
 
 export class PrepareTrainingDatasetFromArtifactsUseCase {
+  private readonly approvals = new Map<string, { signature: string; operation: Promise<Awaited<ReturnType<PrepareTrainingDatasetFromArtifactsUseCase["performApprovePreparedTrainingDataset"]>>> }>();
+  private readonly approvedSignatures = new Map<string, string>();
+  private readonly taskActions = new Map<string, Promise<unknown>>();
+  private async serialize<T>(requestId: string, operation: () => Promise<T>): Promise<T> {
+    const prior = this.taskActions.get(requestId) ?? Promise.resolve();
+    const current = prior.catch(() => undefined).then(operation); this.taskActions.set(requestId, current);
+    try { return await current; } finally { if (this.taskActions.get(requestId) === current) this.taskActions.delete(requestId); }
+  }
+  private readonly reads = new Map<string, Promise<Awaited<ReturnType<PrepareTrainingDatasetFromArtifactsUseCase["performReadPrepareTrainingDataset"]>>>>();
+  private readonly taskReconciler?: OwnedTaskReconcilerService;
   private readonly runtimeTaskRegistry: RuntimeTaskRegistryPort;
   private readonly storageBindings: ArtifactStorageBindingPort;
   private readonly storage: ArtifactObjectStoragePort;
@@ -1692,6 +1701,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     this.artifactRepoStorage = dependencies.artifactRepoStorage;
     this.artifactCatalog = dependencies.artifactCatalog;
     this.taskPowerLifecycle = dependencies.taskPowerLifecycle;
+    this.taskReconciler = dependencies.taskReconciler;
     this.runtimeCapabilityGuard = dependencies.runtimeCapabilityGuard;
     this.datasetQualityPolicyProvider =
       dependencies.datasetQualityPolicyProvider;
@@ -1700,9 +1710,14 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     this.now = dependencies.now ?? (() => new Date().toISOString());
   }
 
-  public async startPrepareTrainingDataset(
+  public async startPrepareTrainingDataset(command: PrepareTrainingDatasetFromArtifactsCommand, context?: ApplicationRequestContext): Promise<Awaited<ReturnType<PrepareTrainingDatasetFromArtifactsUseCase["startOwned"]>>> {
+    return this.taskReconciler ? this.taskReconciler.withLease("python", (lease) => this.startOwned(command, context, lease)) : this.startOwned(command, context);
+  }
+
+  private async startOwned(
     command: PrepareTrainingDatasetFromArtifactsCommand,
     context?: ApplicationRequestContext,
+    lease?: OwnedTaskLease,
   ): Promise<
     ContractResult<{
       requestId: string;
@@ -1863,6 +1878,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         typeof started.requestId !== "string" ||
         started.requestId.trim().length === 0
       ) {
+        lease?.release();
         await rm(staged.value.runtimeWorkingDir, {
           recursive: true,
           force: true,
@@ -1906,6 +1922,14 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       } catch {
         // Blocker startup failures must not fail dataset preparation.
       }
+      const ownedContext = { ...context };
+      lease?.start(async () => {
+        const result = await this.readPrepareTrainingDataset(started.requestId, ownedContext);
+        return result.ok && ["succeeded", "failed", "cancelled", "review-required"].includes(result.value.status);
+      }, () => this.runtimeTaskRegistry.cancelTask(started.requestId), async () => {
+        await this.taskPowerLifecycle.completeTask(started.requestId, "failed");
+        if (!this.pendingQualityReviewsByRequestId.has(started.requestId)) await this.cleanupRuntimeWorkingDir(started.requestId);
+      });
       return createSuccessResult(
         {
           requestId: started.requestId,
@@ -1916,6 +1940,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         context,
       );
     } catch (error) {
+      lease?.release();
       await rm(staged.value.runtimeWorkingDir, {
         recursive: true,
         force: true,
@@ -1936,7 +1961,16 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     }
   }
 
-  public async readPrepareTrainingDataset(
+  public async readPrepareTrainingDataset(requestId: string, context?: ApplicationRequestContext): Promise<Awaited<ReturnType<PrepareTrainingDatasetFromArtifactsUseCase["performReadPrepareTrainingDataset"]>>> {
+    const key = JSON.stringify([context?.organizationId, context?.principalId, context?.workspaceId, requestId]);
+    const existing = this.reads.get(key);
+    if (existing) return existing;
+    const operation = this.serialize(requestId, () => this.performReadPrepareTrainingDataset(requestId, context));
+    this.reads.set(key, operation);
+    try { return await operation; } finally { this.reads.delete(key); }
+  }
+
+  private async performReadPrepareTrainingDataset(
     requestId: string,
     context?: ApplicationRequestContext,
   ): Promise<
@@ -1985,6 +2019,8 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       }
       const cached = this.materializedResultsByRequestId.get(requestId);
       if (cached) {
+        await this.taskPowerLifecycle.completeTask(requestId, "succeeded");
+        await this.cleanupRuntimeWorkingDir(requestId);
         return createSuccessResult(
           {
             requestId,
@@ -2101,11 +2137,8 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
           terminalStatus = "failed";
           throw error;
         } finally {
+          await this.taskPowerLifecycle.completeTask(requestId, terminalStatus);
           if (!retainForReview) {
-            await this.taskPowerLifecycle.completeTask(
-              requestId,
-              terminalStatus,
-            );
             await this.cleanupRuntimeWorkingDir(requestId);
           }
         }
@@ -2113,8 +2146,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       if (
         statusRecord.status === "succeeded" ||
         statusRecord.status === "failed" ||
-        statusRecord.status === "cancelled" ||
-        statusRecord.status === "unknown"
+        statusRecord.status === "cancelled"
       ) {
         await this.taskPowerLifecycle.completeTask(
           requestId,
@@ -2136,7 +2168,11 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
     }
   }
 
-  public async cancelPrepareTrainingDataset(
+  public async cancelPrepareTrainingDataset(requestId: string, context?: ApplicationRequestContext): Promise<Awaited<ReturnType<PrepareTrainingDatasetFromArtifactsUseCase["performCancel"]>>> {
+    return this.serialize(requestId, () => this.performCancel(requestId, context));
+  }
+
+  private async performCancel(
     requestId: string,
     context?: ApplicationRequestContext,
   ): Promise<
@@ -2382,6 +2418,22 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
   }
 
   public async approvePreparedTrainingDataset(
+    approval: DatasetQualityApprovalRequest, context?: ApplicationRequestContext,
+  ): Promise<Awaited<ReturnType<PrepareTrainingDatasetFromArtifactsUseCase["performApprovePreparedTrainingDataset"]>>> {
+    const scope = this.taskScopeByRequestId.get(approval?.requestId);
+    if (!scope || !context || !this.isRecordedScopeOwned(scope, context)) return this.performApprovePreparedTrainingDataset(approval, context);
+    const signature = JSON.stringify([approval.reportFingerprint, approval.outputBaseName ?? null]);
+    const current = this.approvals.get(approval.requestId);
+    if (current) {
+      if (current.signature === signature) return current.operation;
+      return createFailureResult(createContractError("conflict", "A different dataset review action is already in progress."), context);
+    }
+    const operation = this.serialize(approval.requestId, () => this.performApprovePreparedTrainingDataset(approval, context));
+    this.approvals.set(approval.requestId, { signature, operation });
+    try { return await operation; } finally { this.approvals.delete(approval.requestId); }
+  }
+
+  private async performApprovePreparedTrainingDataset(
     approval: DatasetQualityApprovalRequest,
     context?: ApplicationRequestContext,
   ): Promise<
@@ -2418,6 +2470,13 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         createContractError("validation", saveNameError),
         context,
       );
+    }
+    const receipt = this.materializedResultsByRequestId.get(approval.requestId);
+    const receiptScope = this.taskScopeByRequestId.get(approval.requestId);
+    if (receipt && receiptScope && this.isRecordedScopeOwned(receiptScope, context)) {
+      if (this.approvedSignatures.get(approval.requestId) !== JSON.stringify([approval.reportFingerprint, approval.outputBaseName ?? null])) return createFailureResult(createContractError("conflict", "Dataset review has already been resolved."), context);
+      await this.cleanupRuntimeWorkingDir(approval.requestId);
+      return createSuccessResult({ requestId: approval.requestId, taskType: "prepare-training-dataset" as const, status: "succeeded" as const, result: receipt }, context);
     }
     const pending = this.pendingQualityReviewsByRequestId.get(
       approval.requestId,
@@ -2513,6 +2572,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
         await this.deleteStoredArtifacts([pending.reviewStorage.key], context);
       }
       this.materializedResultsByRequestId.set(approval.requestId, finalized);
+      this.approvedSignatures.set(approval.requestId, JSON.stringify([approval.reportFingerprint, approval.outputBaseName ?? null]));
       this.pendingQualityReviewsByRequestId.delete(approval.requestId);
       await this.taskPowerLifecycle.completeTask(
         approval.requestId,
@@ -3252,14 +3312,12 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
 
   private async cleanupRuntimeWorkingDir(requestId: string): Promise<void> {
     const runtimeWorkingDir = this.runtimeWorkingDirsByRequestId.get(requestId);
+    if (runtimeWorkingDir) await rm(runtimeWorkingDir, { recursive: true, force: true });
     this.runtimeWorkingDirsByRequestId.delete(requestId);
     this.commandByRequestId.delete(requestId);
     this.runtimeQualityByRequestId.delete(requestId);
     this.sourceVersionLineageByRequestId.delete(requestId);
-    if (!runtimeWorkingDir) {
-      return;
-    }
-    await rm(runtimeWorkingDir, { recursive: true, force: true });
+
   }
 
   private isTaskOwnedByScope(
@@ -3314,6 +3372,10 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       sourceVersionLineage: readonly DatasetVersionSource[];
     }>
   > {
+    if (!isWorkspaceId(context?.workspaceId)) {
+      return createFailureResult(createContractError("validation", "Workspace context is required for source staging."), context);
+    }
+    const workspaceId = createWorkspaceId(context.workspaceId);
     const runtimeWorkingDir = await mkdtemp(
       join(tmpdir(), "ai-system-builder-runtime-"),
     );
@@ -3332,18 +3394,20 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
       ] of command.sourceArtifactIds.entries()) {
         const bindingsResult = resolveArtifactBindingsReadFailureAsEmpty(
           await this.storageBindings.readArtifactStorageBindings(
-            { artifactId },
+            { artifactId, workspaceId },
             context,
           ),
         );
         if (!bindingsResult.ok) {
           return failAndCleanup(bindingsResult.error);
         }
-        let storageKey = resolveLocalStorageKeyForArtifact(
-          artifactId,
-          bindingsResult.value.bindings,
-        );
-        if (!storageKey.trim()) {
+        const bindings = bindingsResult.value.bindings;
+        if (bindings.some((binding) => binding.workspaceId !== workspaceId || binding.artifactId !== artifactId)) {
+          return failAndCleanup(createContractError("not-found", "Source is not available in this workspace."));
+        }
+        let storageKey = resolveLocalStorageKeyForArtifact(bindings);
+        const importedSource = resolveImportedSourceBinding(bindings);
+        if (!storageKey.trim() && !importedSource) {
           return failAndCleanup(
             createContractError(
               "not-found",
@@ -3351,14 +3415,12 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
             ),
           );
         }
-        let retrieveResult = await this.storage.retrieveArtifact(
-          createRetrieveArtifactRequest(storageKey),
-          context,
-        );
+        // Remote-only bindings authorize provider localization, never a guessed
+        // local storage key. Every denied/missing binding exits before I/O.
+        let retrieveResult = storageKey
+          ? await this.storage.retrieveArtifact(createRetrieveArtifactRequest(storageKey), context)
+          : createFailureResult(createContractError("not-found", "Source requires localization."), context);
         if (!retrieveResult.ok) {
-          const importedSource = resolveImportedSourceBinding(
-            bindingsResult.value.bindings,
-          );
           const importedTarget = importedSource?.backing.target;
           if (retrieveResult.error.code !== "not-found" || !importedTarget) {
             return failAndCleanup(retrieveResult.error);
@@ -3392,17 +3454,17 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
           const localizedResult = await this.storage.storeArtifact(
             createStoreArtifactRequest(remoteResult.value.content, {
               descriptor: {
-                key: artifactId,
                 mediaType: remoteResult.value.descriptor.mediaType,
                 metadata: {
                   originalName: remoteOriginalName,
+                  originalFileName: remoteOriginalName,
                   sourceProvider: importedTarget.provider,
                   sourceRepository: importedTarget.repository,
                   sourcePath: importedTarget.path,
                   sourceRevision: importedTarget.revision,
                 },
               },
-              overwrite: true,
+              overwrite: false,
             }),
             context,
           );
@@ -3413,9 +3475,7 @@ export class PrepareTrainingDatasetFromArtifactsUseCase {
             await this.storageBindings.upsertArtifactStorageBinding(
               {
                 binding: {
-                  ...(context?.workspaceId
-                    ? { workspaceId: createWorkspaceId(context.workspaceId) }
-                    : {}),
+                  workspaceId,
                   artifactId,
                   backing: {
                     kind: "artifact-object",

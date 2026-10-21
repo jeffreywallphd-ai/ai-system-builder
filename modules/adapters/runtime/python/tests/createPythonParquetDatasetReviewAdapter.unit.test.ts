@@ -1,10 +1,27 @@
 import { describe, expect, it, vi } from "vitest";
-import { writeFile } from "node:fs/promises";
+import { writeFile, truncate } from "node:fs/promises";
 import { join } from "node:path";
 import { createWorkspaceId } from "../../../../contracts/workspace";
 import { createPythonParquetDatasetReviewAdapter } from "../createPythonParquetDatasetReviewAdapter";
+import { RETRIEVE_ARTIFACT_MAXIMUM_BYTES } from '../../../../contracts/storage';
 
 describe("python parquet dataset review adapter", () => {
+  it('denies oversized source before runtime admission and bounds revised-file reads with recovery',async()=>{
+    const workspaceId=createWorkspaceId('workspace-review');let oversizedOutput=true;
+    const startTask=vi.fn(async(request:any)=>{
+      const output=join(request.payload.runtime.runtimeWorkingDirectory,request.payload.outputHandle);
+      await writeFile(output,new Uint8Array([80,65,82,49]));
+      if(oversizedOutput)await truncate(output,RETRIEVE_ARTIFACT_MAXIMUM_BYTES+1);
+      return{requestId:request.requestId,status:'queued' as const};
+    });
+    const adapter=createPythonParquetDatasetReviewAdapter({startTask,getTaskStatus:vi.fn(async()=>({status:'succeeded',data:{totalRows:1}})) as any,cancelTask:vi.fn(),listTasks:vi.fn()});
+    await expect(adapter.readPage({workspaceId,content:new Uint8Array(RETRIEVE_ARTIFACT_MAXIMUM_BYTES+1),page:0,pageSize:10})).rejects.toThrow(/non-empty Parquet/);
+    expect(startTask).not.toHaveBeenCalled();
+    const input={workspaceId,content:new Uint8Array([80,65,82,49]),rowIndex:0,rowFingerprint:`sha256:${'a'.repeat(64)}` as const,values:{value:'Reviewed'}};
+    await expect(adapter.replaceRow(input)).rejects.toThrow(/byte limit/);
+    oversizedOutput=false;
+    expect((await adapter.replaceRow(input)).content).toEqual(new Uint8Array([80,65,82,49]));
+  });
   it("binds row reads to the authorized workspace runtime task", async () => {
     const workspaceId = createWorkspaceId("workspace-review");
     const startTask = vi.fn(async () => ({

@@ -1,4 +1,5 @@
 import type { AssetPackManifest } from "../../../contracts/asset";
+import { hasActualAssetPackCredential } from "./asset-pack-content-safety";
 import {
   isAssetPackId,
   isAssetPackVersion,
@@ -179,7 +180,12 @@ function collectUnsafeIssues(
     return;
   }
 
-  for (const [key, entry] of Object.entries(value)) {
+  for (const key of Object.keys(value)) {
+    if (hasActualAssetPackCredential(key)) {
+      issues.push(issue("unsafe-key", "Manifest contains an unsafe payload key.", path));
+      continue;
+    }
+    const entry = (value as Record<string, unknown>)[key];
     const entryPath = [...path, key];
     if (
       UNSAFE_PAYLOAD_KEY_PATTERN.test(key) ||
@@ -198,6 +204,9 @@ function normalizeJsonValue(
   value: unknown,
   seen = new WeakSet<object>(),
 ): unknown {
+  if (typeof value === "string" && hasActualAssetPackCredential(value)) {
+    throw new Error("Asset pack content contains an unsafe value.");
+  }
   if (value === null || typeof value === "string" || typeof value === "boolean") {
     return value;
   }
@@ -220,6 +229,9 @@ function normalizeJsonValue(
     return normalized;
   }
   if (isPlainRecord(value)) {
+    if (Object.keys(value).some(hasActualAssetPackCredential)) {
+      throw new Error("Asset pack content contains an unsafe value.");
+    }
     if (seen.has(value)) return undefined;
     seen.add(value);
     const entries = Object.entries(value)
@@ -251,6 +263,7 @@ function hasText(value: unknown): value is string {
 function isUnsafeString(value: string, path: readonly string[]): boolean {
   const trimmed = value.trim();
   return (
+    hasActualAssetPackCredential(trimmed) ||
     (path.includes("metadata") && isUnsafeAssetMetadataString(trimmed)) ||
     LOCAL_PATH_PATTERN.test(trimmed) ||
     AUTH_VALUE_PATTERN.test(trimmed) ||

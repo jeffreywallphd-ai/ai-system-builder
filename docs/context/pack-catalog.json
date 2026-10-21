@@ -520,12 +520,16 @@
         "adr",
         "decision readiness",
         "agent governance",
+        "development control plane",
+        "review site",
         "change impact"
       ],
       "pathSignals": [
         "AGENTS.md",
         "README.md",
         "CONTRIBUTING.md",
+        "dev-tools/helpers/control_plane/",
+        "dev-tools/review-site/",
         "docs/",
         ".github/"
       ],

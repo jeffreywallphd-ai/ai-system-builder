@@ -7,7 +7,7 @@ export class ReadAssetInstanceUseCase {
   public constructor(private readonly dependencies: { instanceRepository: AssetInstanceRepositoryPort }) {}
 
   public async execute(reference: AssetReference): Promise<AssetUseCaseResult<AssetInstance>> {
-    if (!isInstanceReference(reference)) return invalidReferenceResult("Asset instance reads require an asset-instance reference.", { referenceKind: reference.kind });
+    if (!isInstanceReference(reference)) return invalidReferenceResult("Asset instance reads require an asset-instance reference.");
     const instance = await this.dependencies.instanceRepository.getInstance(reference);
     return instance ? success(instance) : notFoundResult("Asset instance was not found.", { referenceKind: reference.kind, referenceId: reference.id });
   }

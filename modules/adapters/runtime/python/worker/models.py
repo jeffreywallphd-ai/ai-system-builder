@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class PythonRuntimeError(BaseModel):
@@ -224,8 +224,33 @@ class DatasetSplitConfig(BaseModel):
     shuffle: bool | None = None
 
 
+# Mirror validateDatasetPreparationSaveName in contracts/runtime. ECMAScript
+# trim and UTF-16 length are deliberate: Python strip/codepoint length differ.
+_DATASET_NAME_TRIM = "\u0009\u000a\u000b\u000c\u000d\u0020\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"
+
+
+def normalize_dataset_output_base_name(value: object) -> str | None:
+    if value is None:
+        return None
+    if type(value) is not str:
+        raise ValueError("Dataset output name is invalid.")
+    name = value.strip(_DATASET_NAME_TRIM)
+    if not name:
+        return None
+    if (len(name) > 128 or len(name.encode("utf-16-le", errors="surrogatepass")) // 2 > 128
+            or name in (".", "..") or name.endswith((".", " "))
+            or any(character in '<>:"/\\|?*' or ord(character) < 32 for character in name)):
+        raise ValueError("Dataset output name is invalid.")
+    return name
+
+
 class DatasetOutputConfigNaming(BaseModel):
     baseName: str | None = None
+
+    @field_validator("baseName", mode="before")
+    @classmethod
+    def validate_base_name(cls, value: object) -> str | None:
+        return normalize_dataset_output_base_name(value)
 
 
 class DatasetOutputConfig(BaseModel):

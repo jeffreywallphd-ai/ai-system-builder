@@ -65,6 +65,7 @@ import type {
 } from "../../ports/storage";
 import type { WorkspaceRepository } from "../../ports/workspace";
 import type { ApplicationRequestContext } from "../../ports";
+import type { OwnedTaskLease, OwnedTaskReconcilerService } from "../../services/runtime/owned-task-reconciler.service";
 import type { TaskPowerLifecyclePort } from "../../services/runtime";
 import { resolveArtifactWorkspaceContext } from "../artifact-workspace-context";
 import { projectContextSourceInformation } from "./context-source-information";
@@ -89,6 +90,7 @@ interface PendingContextGeneration {
 
 export interface ContextGenerationUseCaseDependencies {
   readonly runtimeTaskRegistry: RuntimeTaskRegistryPort;
+  readonly taskReconciler?: OwnedTaskReconcilerService;
   readonly storageBindings: ArtifactStorageBindingPort;
   readonly storage: ArtifactObjectStoragePort;
   readonly artifactCatalog: ContextArtifactCatalogPort;
@@ -328,6 +330,29 @@ function ownsScope(
 }
 
 export class ContextGenerationUseCase {
+  private readonly actions = new Map<string, Promise<unknown>>();
+  private async serialize<T>(requestId: string, operation: () => Promise<T>): Promise<T> {
+    const previous = this.actions.get(requestId) ?? Promise.resolve();
+    const current = previous.catch(() => undefined).then(operation);
+    this.actions.set(requestId, current);
+    try { return await current; } finally { if (this.actions.get(requestId) === current) this.actions.delete(requestId); }
+  }
+  private async reviewAction(requestId: string, context: ApplicationRequestContext | undefined, action: "save" | "discard" | "cancel"): Promise<ContractResult<ContextGenerationStatus>> {
+    const workspace = await this.resolveWorkspace(context, `context.${action}`, "artifact:write");
+    if (!workspace.ok) return workspace;
+    const scope = this.scopes.get(requestId);
+    if (!scope || !ownsScope(scope, context)) return createFailureResult(createContractError("not-found", "Context generation task was not found."), context);
+    return this.serialize(requestId, async () => {
+      const cached = this.completed.get(requestId);
+      if (cached) {
+        if (action === "cancel" || cached.state === (action === "save" ? "saved" : "discarded")) return createSuccessResult(cached, context);
+        return createFailureResult(createContractError("conflict", "Context generation review has already been resolved."), context);
+      }
+      return action === "save" ? this.performSave(requestId, context) : action === "discard" ? this.performDiscard(requestId, context) : this.performCancel(requestId, context);
+    });
+  }
+  private readonly reads = new Map<string, Promise<ContractResult<ContextGenerationStatus>>>();
+  private readonly taskReconciler?: OwnedTaskReconcilerService;
   private readonly runtime: RuntimeTaskRegistryPort;
   private readonly bindings: ArtifactStorageBindingPort;
   private readonly storage: ArtifactObjectStoragePort;
@@ -352,6 +377,7 @@ export class ContextGenerationUseCase {
 
   public constructor(dependencies: ContextGenerationUseCaseDependencies) {
     this.runtime = dependencies.runtimeTaskRegistry;
+    this.taskReconciler = dependencies.taskReconciler;
     this.bindings = dependencies.storageBindings;
     this.storage = dependencies.storage;
     this.catalog = dependencies.artifactCatalog;
@@ -380,9 +406,14 @@ export class ContextGenerationUseCase {
     );
   }
 
-  public async start(
+  public async start(command: StartContextGenerationCommand, context?: ApplicationRequestContext): Promise<ContractResult<StartContextGenerationValue>> {
+    return this.taskReconciler ? this.taskReconciler.withLease("python", (lease) => this.startOwned(command, context, lease)) : this.startOwned(command, context);
+  }
+
+  private async startOwned(
     command: StartContextGenerationCommand,
     context?: ApplicationRequestContext,
+    lease?: OwnedTaskLease,
   ): Promise<ContractResult<StartContextGenerationValue>> {
     const workspace = await this.resolveWorkspace(
       context,
@@ -462,6 +493,17 @@ export class ContextGenerationUseCase {
         TaskType.CONTEXT_GENERATION,
         "Generating context artifact",
       );
+      const ownedContext = { ...context, workspaceId: workspace.value.workspaceId };
+      lease?.start(async () => {
+        const result = await this.readOwned(started.requestId, workspace.value.workspaceId, ownedContext);
+        return result.ok ? result.value.state !== "queued" && result.value.state !== "running" : !this.runtimeDirectories.has(started.requestId);
+      }, () => this.runtime.cancelTask(started.requestId), async () => {
+        await this.taskPower.completeTask(started.requestId, "failed");
+        if (!this.pending.has(started.requestId)) {
+          await this.cleanup(started.requestId);
+          this.completed.set(started.requestId, { requestId: started.requestId, state: "failed", error: { code: "host_stopped", message: "The host stopped before context work completed.", retryable: false } });
+        }
+      });
       return createSuccessResult(
         {
           requestId: started.requestId,
@@ -472,6 +514,7 @@ export class ContextGenerationUseCase {
         context,
       );
     } catch (error) {
+      lease?.release();
       await rm(staged.value.runtimeDirectory, {
         recursive: true,
         force: true,
@@ -510,6 +553,19 @@ export class ContextGenerationUseCase {
         context,
       );
     }
+    return this.readOwned(requestId, workspace.value.workspaceId, context);
+  }
+
+  private async readOwned(requestId: string, workspaceId: WorkspaceId, context?: ApplicationRequestContext): Promise<ContractResult<ContextGenerationStatus>> {
+    const existing = this.reads.get(requestId);
+    if (existing) return existing;
+    const operation = this.serialize(requestId, () => this.performReadOwned(requestId, workspaceId, context));
+    this.reads.set(requestId, operation);
+    try { return await operation; } finally { this.reads.delete(requestId); }
+  }
+
+  private async performReadOwned(requestId: string, workspaceId: WorkspaceId, context?: ApplicationRequestContext): Promise<ContractResult<ContextGenerationStatus>> {
+    const scope = this.scopes.get(requestId)!;
     const cached = this.completed.get(requestId);
     if (cached) {
       return createSuccessResult(cached, context);
@@ -527,8 +583,18 @@ export class ContextGenerationUseCase {
         context,
       );
     }
+    let status: RuntimeTaskStatusRecord;
     try {
-      const status = await this.runtime.getTaskStatus(requestId);
+      status = await this.runtime.getTaskStatus(requestId);
+    } catch {
+      // A transport failure is not terminal evidence. The worker may still own
+      // the staged inputs, so retain its identity, directory and power lease.
+      return createFailureResult(
+        createContractError("unavailable", "Context generation status is temporarily unavailable."),
+        context,
+      );
+    }
+    try {
       if ("recordType" in status) {
         return createFailureResult(
           createContractError(
@@ -540,7 +606,7 @@ export class ContextGenerationUseCase {
       }
       if (
         status.workspaceId !== undefined &&
-        status.workspaceId !== workspace.value.workspaceId
+        status.workspaceId !== workspaceId
       ) {
         return createFailureResult(
           createContractError(
@@ -638,15 +704,14 @@ export class ContextGenerationUseCase {
         },
         context,
       );
-    } catch (error) {
+    } catch {
       await this.taskPower.completeTask(requestId, "failed");
       await this.cleanup(requestId);
+      this.completed.set(requestId, { requestId, state: "failed", error: { code: "invalid_runtime_result", message: "Context generation completion could not be verified.", retryable: false } });
       return createFailureResult(
         createContractError(
           "internal",
-          error instanceof Error
-            ? error.message
-            : "Context generation status could not be read.",
+          "Context generation completion could not be verified.",
         ),
         context,
       );
@@ -654,6 +719,10 @@ export class ContextGenerationUseCase {
   }
 
   public async save(
+    requestId: string, context?: ApplicationRequestContext,
+  ): Promise<ContractResult<ContextGenerationStatus>> { return this.reviewAction(requestId, context, "save"); }
+
+  private async performSave(
     requestId: string,
     context?: ApplicationRequestContext,
   ): Promise<ContractResult<ContextGenerationStatus>> {
@@ -815,6 +884,10 @@ export class ContextGenerationUseCase {
   }
 
   public async discard(
+    requestId: string, context?: ApplicationRequestContext,
+  ): Promise<ContractResult<ContextGenerationStatus>> { return this.reviewAction(requestId, context, "discard"); }
+
+  private async performDiscard(
     requestId: string,
     context?: ApplicationRequestContext,
   ): Promise<ContractResult<ContextGenerationStatus>> {
@@ -846,6 +919,10 @@ export class ContextGenerationUseCase {
   }
 
   public async cancel(
+    requestId: string, context?: ApplicationRequestContext,
+  ): Promise<ContractResult<ContextGenerationStatus>> { return this.reviewAction(requestId, context, "cancel"); }
+
+  private async performCancel(
     requestId: string,
     context?: ApplicationRequestContext,
   ): Promise<ContractResult<ContextGenerationStatus>> {
@@ -890,13 +967,11 @@ export class ContextGenerationUseCase {
 
   private async cleanup(requestId: string): Promise<void> {
     const directory = this.runtimeDirectories.get(requestId);
+    if (directory) await rm(directory, { recursive: true, force: true });
     this.runtimeDirectories.delete(requestId);
     this.commands.delete(requestId);
     this.sourceInputs.delete(requestId);
     this.pending.delete(requestId);
-    if (directory) {
-      await rm(directory, { recursive: true, force: true });
-    }
   }
 
   private async stageSources(

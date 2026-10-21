@@ -209,3 +209,11 @@ asset authoring/customization must not assume hidden propagation, live workspace
 ## Relationship to asset composition planning
 
 asset composition planning may compose projections derived from linked/copied/imported user-library sources, but must not create live workspace-to-workspace links, silently propagate changes, or mutate user-library records.
+
+
+New User Library records use atomic create/conflict semantics. Target id/version
+and exact source identity are checked inside the serialized/CAS document mutation;
+concurrent promotion cannot overwrite a winner. Promotion returns a sanitized
+conflict and preserves the existing record. Updates remain a distinct port method.
+Workspace-authored revision replacement includes workspace id in the key, matching
+reads, so equal asset/revision ids in separate workspaces retain both records.

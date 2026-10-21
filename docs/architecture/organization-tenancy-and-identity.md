@@ -101,3 +101,10 @@ qualification matrix.
 > AI documentation reminder: when behavior in this area changes, update ADR-0029,
 > security and persistence context packs, deployment profiles, operations, and
 > cross-tenant tests in the same change.
+
+
+Transport authentication treats verifier results as a runtime contract: success
+requires authenticated=true, a supported non-none method, a non-anonymous principal
+kind, a nonempty canonical principal id and array roles/scopes. Anonymous,
+whitespace-padded reserved identities and malformed results fail before success
+audit. Supplied invalid token results cannot downgrade into anonymous access.

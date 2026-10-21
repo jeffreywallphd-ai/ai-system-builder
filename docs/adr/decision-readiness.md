@@ -38,6 +38,12 @@ This register tells contributors and automated agents whether architecture-sensi
 
 ## How to Use This Register
 
+The contributor development control plane is ready within ADR-0042 and
+`docs/architecture/ai-development-control-plane.md`: preserve the existing
+roadmap authority, bounded execution, JSON-only loopback review projection,
+current evidence and explicit cooperative-local trust limits. Remote execution,
+authenticated reviewer identity and public hosting require successor decisions.
+
 1. Locate the nearest row for the proposed change.
 2. Read its linked ADR and architecture sources.
 3. If `ready`, stay inside the stated boundary, apply the security impact screen, and use the change-impact matrix.

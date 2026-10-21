@@ -13,6 +13,11 @@ import { ImageGenerationStatus } from "./ImageGenerationStatus";
 export function ImageGenerationFeature(
   props: { workspaceId?: string; workspaceName?: string } = {},
 ) {
+  return <WorkspaceImageGenerationFeature key={props.workspaceId ?? "unselected"} {...props} />;
+}
+function WorkspaceImageGenerationFeature(
+  props: { workspaceId?: string; workspaceName?: string },
+) {
   const feature = useImageGenerationFeature(
     undefined,
     undefined,
@@ -108,6 +113,7 @@ export function ImageGenerationFeature(
               progress={feature.progress}
               error={feature.error}
             />
+            {feature.canRetryFinalization ? <button type="button" className="ui-button" onClick={feature.retryFinalization}>Retry finalization</button> : null}
             {feature.status === "queued" || feature.status === "running" ? (
               <div className="ui-workflow__actions">
                 <button

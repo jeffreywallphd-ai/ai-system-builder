@@ -16,6 +16,7 @@ import type {
 import type { WorkspaceId } from "../../../contracts/workspace";
 
 export interface ModelRegistryPort {
+  readModelSummary?(workspaceId: WorkspaceId): Promise<{readonly modelsInstalled: number; readonly modelsTrained: number}>;
   listModels(request: ListModelsRequest): Promise<ListModelsResult>;
   getModelRecord(workspaceId: WorkspaceId, modelRecordId: string): Promise<ModelInventoryRecord | undefined>;
   saveModelReference(request: SaveModelReferenceRequest): Promise<SaveModelReferenceResult>;

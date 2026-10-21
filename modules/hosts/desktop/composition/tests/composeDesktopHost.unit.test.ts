@@ -14,6 +14,7 @@ import {
 import type { LoggingPort } from "../../../../application/ports/logging";
 import type { StructuredLogEvent } from "../../../../contracts/logging";
 import { TaskType } from "../../../../contracts/runtime";
+import { OwnedTaskReconcilerService } from "../../../../application/services/runtime/owned-task-reconciler.service";
 import type { HuggingFaceFetchImplementation } from "../../../../adapters/storage/huggingface";
 
 import {
@@ -647,6 +648,7 @@ describe("composeDesktopHost", () => {
     const milestones: string[] = [];
 
     const feature = await composeDesktopRuntimeTaskFeature({
+      taskReconciler: new OwnedTaskReconcilerService(),
       pythonRuntimeFoundation: {
         supervisor: { start: testDouble.fn(async () => undefined) },
         runtimePort: {},
@@ -687,6 +689,7 @@ describe("composeDesktopHost", () => {
       supervisorStatus = "ready";
     });
     const feature = await composeDesktopRuntimeTaskFeature({
+      taskReconciler: new OwnedTaskReconcilerService(),
       pythonRuntimeFoundation: {
         supervisor: { start },
         runtimePort: {},
@@ -722,6 +725,7 @@ describe("composeDesktopHost", () => {
       await import("../composeDesktopRuntimeTaskFeature");
     const callOrder: string[] = [];
     const feature = await composeDesktopRuntimeTaskFeature({
+      taskReconciler: new OwnedTaskReconcilerService(),
       pythonRuntimeFoundation: {
         supervisor: {
           start: testDouble.fn(async () => {
@@ -769,6 +773,7 @@ describe("composeDesktopHost", () => {
       await import("../composeDesktopRuntimeTaskFeature");
     const callOrder: string[] = [];
     const feature = await composeDesktopRuntimeTaskFeature({
+      taskReconciler: new OwnedTaskReconcilerService(),
       pythonRuntimeFoundation: {
         supervisor: {
           start: testDouble.fn(async () => {

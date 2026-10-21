@@ -410,3 +410,17 @@ function asset(
     previewAvailability: "trusted-declarative",
   };
 }
+
+
+it("preserves layout structure through subtree removal and undo/redo serialization", () => {
+  const structure = { schemaVersion: "system-builder-structure.v1" as const, profile: "interactive" as const,
+    layoutPresetRef: { kind: "asset-definition-version" as const, id: normalizeAssetId("builtin.layout.application.standard"), version: "2.0.0" } };
+  const before = add({ ...baseDraft(), structure }, "instance.card", "instance.shell", "content");
+  const removed = removeSystemComposerSubtree(before, "instance.card", new Set(["instance.root", "instance.shell"]));
+  expect(removed.ok).toBe(true); if (!removed.ok) return;
+  expect(removed.value.structure).toEqual(structure);
+  const committed = commitSystemComposerDraft(createSystemComposerDraftHistory(before), removed.value);
+  expect(undoSystemComposerDraft(committed).present.structure).toEqual(structure);
+  expect(redoSystemComposerDraft(undoSystemComposerDraft(committed)).present.structure).toEqual(structure);
+  expect(JSON.parse(JSON.stringify(removed.value)).structure).toEqual(structure);
+});

@@ -231,10 +231,65 @@ export function validateRequirements(requirements: readonly AssetRequirement[] |
   });
 }
 
-export function validateReference(assetReference: AssetReference | undefined, issues: AssetValidationIssue[], assetRef: AssetReference, path: readonly string[]): void {
-  if (!assetReference) return;
+export function validateReference(assetReference: AssetReference | undefined, issues: AssetValidationIssue[], assetRef: AssetReference, path: readonly string[]): boolean {
+  if (!isPlainObject(assetReference) || typeof assetReference.kind !== "string" || typeof assetReference.id !== "string") {
+    addIssue(issues, { severity: "error", category: "identity", message: "A structured asset reference with kind and id is required.", assetRef, path });
+    return false;
+  }
+  const before = issues.length;
   checkAllowed(assetReference.kind, isAssetReferenceKind, [...path, "kind"].join("."), "identity", issues, assetRef, "Asset reference kind is not allowed.");
   validateSafeId(assetReference.id, [...path, "id"].join("."), "identity", issues, assetRef);
+  if ((assetReference.kind === "asset-definition-version" || assetReference.version !== undefined) &&
+      (typeof assetReference.version !== "string" || !isAssetVersion(assetReference.version))) {
+    addIssue(issues, { severity: "error", category: "identity", message: "An immutable asset reference requires a valid version.", assetRef, path: [...path, "version"] });
+  }
+  return issues.length === before;
+}
+
+/** Shape validation runs before context repositories or semantic rules. */
+export function instanceInputShapeIssues(value: unknown): AssetValidationIssue[] {
+  const issues: AssetValidationIssue[] = [];
+  const assetRef = ref("asset-instance", "invalid-input");
+  if (!isPlainObject(value)) {
+    addIssue(issues, { severity: "error", category: "identity", message: "Asset instance must be an object.", assetRef });
+    return issues;
+  }
+  referenceShape(value.definitionRef, issues, assetRef, ["definitionRef"]);
+  referenceCollection(value.bindingRefs, false, issues, assetRef, "bindingRefs");
+  referenceCollection(value.resourceRefs, false, issues, assetRef, "resourceRefs");
+  return issues;
+}
+
+export function compositionInputShapeIssues(value: unknown): AssetValidationIssue[] {
+  const issues: AssetValidationIssue[] = [];
+  const assetRef = ref("asset-composition", "invalid-input");
+  if (!isPlainObject(value)) {
+    addIssue(issues, { severity: "error", category: "composition", message: "Asset composition must be an object.", assetRef });
+    return issues;
+  }
+  referenceCollection(value.instanceRefs, true, issues, assetRef, "instanceRefs");
+  referenceCollection(value.rootInstanceRefs, true, issues, assetRef, "rootInstanceRefs");
+  referenceCollection(value.bindingRefs, false, issues, assetRef, "bindingRefs");
+  if (value.bindings !== undefined && (!Array.isArray(value.bindings) || value.bindings.some((v) => !isPlainObject(v)))) {
+    addIssue(issues, { severity: "error", category: "binding", message: "Inline bindings must be an array of objects.", assetRef, path: ["bindings"] });
+  }
+  return issues;
+}
+
+function referenceCollection(value: unknown, required: boolean, issues: AssetValidationIssue[], assetRef: AssetReference, field: string): void {
+  if (value === undefined && !required) return;
+  if (!Array.isArray(value)) {
+    addIssue(issues, { severity: "error", category: "identity", message: "Asset reference collection must be an array.", assetRef, path: [field] });
+    return;
+  }
+  value.forEach((reference, index) => referenceShape(reference, issues, assetRef, [field, String(index)]));
+}
+
+function referenceShape(value: unknown, issues: AssetValidationIssue[], assetRef: AssetReference, path: readonly string[]): void {
+  if (!isPlainObject(value) || typeof value.kind !== "string" || typeof value.id !== "string" ||
+      (value.version !== undefined && typeof value.version !== "string")) {
+    addIssue(issues, { severity: "error", category: "identity", message: "A structured asset reference with kind and id is required.", assetRef, path });
+  }
 }
 
 export function validateProvenance(provenance: { readonly sourceKind?: string; readonly sourceAssetRefs?: readonly AssetReference[]; readonly sourceResourceRefs?: readonly AssetReference[]; readonly derivedFromRefs?: readonly AssetReference[] } | undefined, issues: AssetValidationIssue[], assetRef: AssetReference, path: readonly string[]): void {

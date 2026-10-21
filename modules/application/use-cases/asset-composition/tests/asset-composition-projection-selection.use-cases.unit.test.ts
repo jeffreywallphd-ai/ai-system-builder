@@ -26,7 +26,7 @@ const repos = () => {
 describe("composition plan projection add/remove", () => {
   it("adds ready projection as node and removes it", async () => {
     const r = repos();
-    const add = new AddProjectionToCompositionPlanUseCase({ repository: r.planRepo, projectionRepository: r.projRepo, generateNodeId: () => "node.a", now: () => now });
+    const add = new AddProjectionToCompositionPlanUseCase({ workspaceAccess: {async authorize() {}}, repository: r.planRepo, projectionRepository: r.projRepo, generateNodeId: () => "node.a", now: () => now });
     const added = await add.execute({ targetWorkspaceId: ws, planId: "plan.alpha" as never, projectionId: "projection.a" as never });
     assert.equal(added.status, "success");
     if (added.status === "success") {
@@ -35,7 +35,7 @@ describe("composition plan projection add/remove", () => {
       assert.equal(added.value.relationships.length, 0);
       assert.equal(added.value.provenance.at(-1)?.kind, "projection-selected");
     }
-    const remove = new RemoveProjectionFromCompositionPlanUseCase({ repository: r.planRepo, now: () => "2026-05-20T00:01:00.000Z" });
+    const remove = new RemoveProjectionFromCompositionPlanUseCase({ workspaceAccess: {async authorize() {}}, repository: r.planRepo, now: () => "2026-05-20T00:01:00.000Z" });
     const removed = await remove.execute({ targetWorkspaceId: ws, planId: "plan.alpha" as never, projectionId: "projection.a" as never });
     assert.equal(removed.status, "success");
   });
@@ -43,7 +43,7 @@ describe("composition plan projection add/remove", () => {
   it("rejects blocked statuses and archived/duplicate safely", async () => {
     for (const status of ["draft-only", "blocked", "conflicted", "disabled", "source-missing", "stale", "unsupported", "invalid"] as const) {
       const r = repos(); r.projections[0] = projection(status);
-      const add = new AddProjectionToCompositionPlanUseCase({ repository: r.planRepo, projectionRepository: r.projRepo, generateNodeId: () => "node.a", now: () => now });
+      const add = new AddProjectionToCompositionPlanUseCase({ workspaceAccess: {async authorize() {}}, repository: r.planRepo, projectionRepository: r.projRepo, generateNodeId: () => "node.a", now: () => now });
       const out = await add.execute({ targetWorkspaceId: ws, planId: "plan.alpha" as never, projectionId: "projection.a" as never });
       assert.equal(out.status, "failure");
     }

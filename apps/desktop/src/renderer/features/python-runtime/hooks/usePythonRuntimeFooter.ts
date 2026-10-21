@@ -47,6 +47,7 @@ export function usePythonRuntimeFooter(options: UsePythonRuntimeFooterOptions): 
   const [logsExpanded, setLogsExpanded] = useState(false);
   const inFlightRefresh = useRef(false);
   const lastSnapshotSignature = useRef<string | undefined>(undefined);
+  const lastLogSignature = useRef<string | undefined>(undefined);
   const toSystemResources = useCallback((snapshot: Awaited<ReturnType<DesktopPythonRuntimeClient["readStatus"]>>) => ({
     memoryUsagePercent: snapshot.systemResources?.memoryUsagePercent ?? 0,
     cpuUsagePercent: snapshot.systemResources?.cpuUsagePercent ?? 0,
@@ -71,6 +72,10 @@ export function usePythonRuntimeFooter(options: UsePythonRuntimeFooterOptions): 
 
   const applySnapshot = useCallback((snapshot: Awaited<ReturnType<DesktopPythonRuntimeClient["readStatus"]>>, options?: { includeLogs?: boolean }) => {
     const signature = toSnapshotSignature(snapshot);
+    if ((options?.includeLogs ?? true) && lastLogSignature.current !== signature) {
+      setLogs(snapshot.logs);
+      lastLogSignature.current = signature;
+    }
     if (lastSnapshotSignature.current === signature) {
       setSystemResources(toSystemResources(snapshot));
       return;
@@ -81,9 +86,6 @@ export function usePythonRuntimeFooter(options: UsePythonRuntimeFooterOptions): 
     setHealthLabel(snapshot.healthy ? "healthy" : "unhealthy");
     setCapabilitiesLabel(snapshot.capabilities.length > 0 ? snapshot.capabilities.join(", ") : "none");
     setSystemResources(toSystemResources(snapshot));
-    if (options?.includeLogs ?? true) {
-      setLogs(snapshot.logs);
-    }
   }, [toSnapshotSignature, toSystemResources]);
 
   const runRefresh = useCallback(async (background: boolean) => {

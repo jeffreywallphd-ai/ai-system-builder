@@ -158,6 +158,16 @@ test("contributor helpers accept portable configuration and expose bounded plans
         "full non-browser suite",
       ],
     );
+    assert.deepEqual(checkPlan[0]?.command.slice(-2), ["--", "package.json"]);
+    assert.deepEqual(checkPlan[0]?.command.slice(0, 3), [
+      "node",
+      "node_modules/prettier/bin/prettier.cjs",
+      "--check",
+    ]);
+    assert.deepEqual(checkPlan[1]?.command.slice(-2), [
+      "--",
+      "apps/desktop/tests/ci-electron-runtime.unit.test.ts",
+    ]);
 
     const arbitraryCommand = runHelper("run_repository_checks.py", [
       "--command",
@@ -166,6 +176,68 @@ test("contributor helpers accept portable configuration and expose bounded plans
     ]);
     assert.equal(arbitraryCommand.status, 2);
     assert.match(arbitraryCommand.stderr, /unrecognized arguments/);
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test("repository checks reject option-like existing paths and unsupported test targets before execution", async () => {
+  const temporaryRoot = await mkdtemp(
+    path.join(tmpdir(), "helper-path-authority-"),
+  );
+  try {
+    for (const filename of [
+      "--import=fixture.test.ts",
+      "--plugin=fixture.mjs",
+      "fixture.mjs",
+      "safe.test.ts",
+    ]) {
+      await writeFile(
+        path.join(temporaryRoot, filename),
+        "// inert fixture; never executed\n",
+      );
+    }
+    const configPath = path.join(temporaryRoot, "helpers.json");
+    for (const selection of [
+      { focusedTests: ["--import=fixture.test.ts"] },
+      { focusedTests: ["./--import=fixture.test.ts"] },
+      { formatPaths: ["--plugin=fixture.mjs"] },
+      { focusedTests: ["fixture.mjs"] },
+      { focusedTests: ["."] },
+    ]) {
+      await writeFile(
+        configPath,
+        JSON.stringify({
+          repositoryChecks: { repo: temporaryRoot, ...selection },
+        }),
+      );
+      const result = runHelper("run_repository_checks.py", [
+        "--config",
+        configPath,
+        "--plan",
+      ]);
+      assert.equal(result.status, 2, result.stdout);
+      assert.match(result.stderr, /positional|Node test file/);
+    }
+    await writeFile(
+      configPath,
+      JSON.stringify({
+        repositoryChecks: {
+          repo: temporaryRoot,
+          focusedTests: ["safe.test.ts"],
+          formatPaths: ["fixture.mjs"],
+        },
+      }),
+    );
+    const result = runHelper("run_repository_checks.py", [
+      "--config",
+      configPath,
+      "--plan",
+    ]);
+    assert.equal(result.status, 0, result.stderr);
+    const plan = JSON.parse(result.stdout);
+    assert.deepEqual(plan[0].command.slice(-2), ["--", "fixture.mjs"]);
+    assert.deepEqual(plan[1].command.slice(-2), ["--", "safe.test.ts"]);
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
   }
@@ -182,4 +254,64 @@ test("agent and documentation entry points route and maintain contributor helper
   assert.match(docsIndex, /contributor-helper-loops\.md/);
   assert.match(helperGuide, /## Maintenance and extension/);
   assert.match(helperGuide, /arbitrary command/);
+});
+
+test("format filenames retain literal metacharacters through the fixed Node CLI", async () => {
+  const temporaryRoot = await mkdtemp(
+    path.join(tmpdir(), "helper-literal-argv-"),
+  );
+  try {
+    // Mirror only the fixed CLI path with an inert argv sink. No fixture input
+    // is imported or evaluated, and no command interpreter is launched.
+    const { mkdir } = await import("node:fs/promises");
+    const cli = path.join(temporaryRoot, "node_modules/prettier/bin");
+    await mkdir(cli, { recursive: true });
+    await writeFile(
+      path.join(cli, "prettier.cjs"),
+      "console.log(JSON.stringify(process.argv.slice(2)));\n",
+    );
+    const filename = "safe&ver.mjs";
+    await writeFile(path.join(temporaryRoot, filename), "// inert input\n");
+    const configPath = path.join(temporaryRoot, "helpers.json");
+    await writeFile(
+      configPath,
+      JSON.stringify({
+        repositoryChecks: {
+          repo: temporaryRoot,
+          formatPaths: [filename],
+          documentation: false,
+          agentSupport: false,
+          architecture: false,
+          deployment: false,
+        },
+      }),
+    );
+    const planned = runHelper("run_repository_checks.py", [
+      "--config",
+      configPath,
+      "--plan",
+    ]);
+    assert.equal(planned.status, 0, planned.stderr);
+    const command = JSON.parse(planned.stdout)[0].command;
+    assert.deepEqual(command, [
+      "node",
+      "node_modules/prettier/bin/prettier.cjs",
+      "--check",
+      "--",
+      filename,
+    ]);
+    const executed = runHelper("run_repository_checks.py", [
+      "--config",
+      configPath,
+    ]);
+    assert.equal(executed.status, 0, executed.stderr);
+    assert.equal(
+      executed.stdout
+        .split(/\r?\n/)
+        .filter((line) => line === '["--check","--","safe&ver.mjs"]').length,
+      1,
+    );
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
 });

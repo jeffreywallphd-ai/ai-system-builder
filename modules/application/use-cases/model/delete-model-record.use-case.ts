@@ -29,10 +29,8 @@ export class DeleteModelRecordUseCase {
       }
       deletedLocalFiles = (
         await this.dependencies.modelLocalFilesDeletePort.deleteLocalModelFiles({
-          localPath: current.localPath,
-          relativeFilePath: typeof current.metadata?.["checkpointFile"] === "string"
-            ? current.metadata["checkpointFile"]
-            : undefined,
+          workspaceId: normalizedRequest.workspaceId,
+          modelRecordId: normalizedRequest.modelRecordId,
         })
       ).deleted;
     }

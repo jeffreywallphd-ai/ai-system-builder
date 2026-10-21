@@ -14,6 +14,7 @@ from modules.adapters.runtime.python.worker.models import (
     ContextGenerationTaskRequest,
 )
 from modules.adapters.runtime.python.worker.tasks.context_artifact_operation import (
+    ContextArtifactOperationCancellationRequested,
     operate_on_context_artifact,
 )
 from modules.adapters.runtime.python.worker.tasks.context_generation import (
@@ -27,6 +28,30 @@ def _digest(value: bytes) -> str:
 
 
 class ContextArtifactOperationTests(unittest.TestCase):
+    def test_cancelled_validation_removes_private_materialization_before_retry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            path, _result = self._generate(root, "rag-database")
+            request = self._operation(root, path, RAG_MEDIA_TYPE, "query", query="policy", maximumResults=3)
+            checks = 0
+
+            def cancel_during_scan():
+                nonlocal checks
+                checks += 1
+                if checks == 3:
+                    self.assertTrue(list(root.glob(".rag-lancedb-read-*")))
+                    raise ContextArtifactOperationCancellationRequested("cancelled")
+
+            def forbidden_embedding(*_args):
+                self.fail("Cancelled validation must not start embedding or search.")
+
+            with self.assertRaises(ContextArtifactOperationCancellationRequested):
+                operate_on_context_artifact(request, cancellation_check=cancel_during_scan, embedding_provider=forbidden_embedding)
+            self.assertEqual(list(root.glob(".rag-lancedb-read-*")), [])
+            result = operate_on_context_artifact(request, embedding_provider=lambda texts, _settings: [[1.0, 0.0] for _ in texts])
+            self.assertEqual(len(result["matches"]), 1)
+            self.assertEqual(list(root.glob(".rag-lancedb-read-*")), [])
+
     def _generate(
         self,
         root: Path,

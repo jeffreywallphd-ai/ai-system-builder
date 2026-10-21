@@ -12,6 +12,7 @@ import type {
   UserLibraryAssetRepositoryPort,
   WorkspaceAssetForUserLibraryReadPort,
 } from "../../ports/user-library";
+import { UserLibraryAssetConflictError } from "../../ports/user-library";
 import {
   containsUnsafeUserLibraryUseCaseMetadata,
   createUserLibraryDiagnostic,
@@ -116,7 +117,10 @@ export class PromoteWorkspaceAssetToUserLibraryUseCase {
         provenance: saved.provenance,
         diagnostics: [createUserLibraryDiagnostic("info", "user-library-promotion-created", "Workspace asset was promoted to the user library without mutating the source workspace asset.")],
       };
-    } catch {
+    } catch (error) {
+      if (error instanceof UserLibraryAssetConflictError) {
+        return failure("conflict", "A user-library asset with this target or source identity already exists.", createUserLibraryDiagnostic("error", "user-library-promotion-existing-conflict", "Promotion preserved the existing record. Choose another target or reuse the existing source."));
+      }
       return failure("internal", "Workspace asset promotion failed with a sanitized internal error.", createUserLibraryDiagnostic("error", "user-library-promotion-internal", "An internal promotion error occurred."));
     }
   }

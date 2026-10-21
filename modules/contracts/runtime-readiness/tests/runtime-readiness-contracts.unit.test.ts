@@ -19,3 +19,36 @@ describe("runtime readiness contracts",()=>{
  it("normalizes commands with explicit workspace+composition scope",()=>{assert.equal(rr.normalizeCreateRuntimeReadinessBindingCommand({targetWorkspaceId:ws,compositionPlanId:"plan.a" as never}).compositionPlanId,"plan.a");assert.equal(rr.normalizeSelectRuntimeBindingCandidateCommand({targetWorkspaceId:ws,readinessBindingId:"rb.a" as never,bindingCandidateId:"bc.a" as never}).bindingCandidateId,"bc.a");});
  it("result unions separate success/failure payloads",()=>{const ok:rr.CreateRuntimeReadinessBindingResult={status:"success",value:{readinessBindingId:"rb.a" as never,targetWorkspaceId:ws,compositionPlanId:"plan.a" as never,status:"draft",requirements:[],providerCandidates:[],bindingCandidates:[],bindings:[],blockers:[],diagnostics:[],provenance:[],createdAt:"2026-05-21T00:00:00.000Z",updatedAt:"2026-05-21T00:00:00.000Z"}}; assert.equal(ok.status,"success"); const fail=rr.createRuntimeReadinessFailure("validation","runtime-readiness-workspace-required",[]); assert.equal(fail.status,"failure");});
 });
+
+
+it("rejects compound credential metadata and unsafe bounded diagnostic records", () => {
+ const diagnostic={code:"runtime-readiness-provider-unavailable" as const,severity:"error" as const,message:"Capability unavailable"};
+ const blocker={code:diagnostic.code,message:diagnostic.message};
+ const safe={count:0,enabled:false,absent:null,nested:{reasonCode:"not-configured"}};
+ assert.deepEqual(rr.normalizeRuntimeReadinessSafeMetadata(safe),safe);
+ for(const value of [{accessToken:"synthetic"},{OPENAI_API_KEY:"synthetic"},{nested:{label:"/srv/private"}},{count:NaN},{array:[]}]) assert.throws(()=>rr.normalizeRuntimeReadinessSafeMetadata(value));
+ for(const value of [{...diagnostic,extra:{rawResponse:"synthetic"}},{...diagnostic,severity:"critical"},{...diagnostic,code:"invented-code"},{...diagnostic,message:"See /srv/private"},{...diagnostic,safeDetails:{refreshToken:"synthetic"}}]) {
+  const result=rr.tryNormalizeRuntimeReadinessDiagnostic(value as never); assert.equal(result.status,"failure");
+  if(result.status==="failure") assert.equal(result.diagnostics[0]?.message,"Sanitized normalization failure.");
+ }
+ assert.throws(()=>rr.normalizeRuntimeReadinessBlocker({...blocker,extra:"synthetic"} as never));
+ assert.deepEqual(rr.normalizeRuntimeReadinessDiagnostic({...diagnostic,safeDetails:safe}),{...diagnostic,safeDetails:safe});
+ assert.deepEqual(rr.normalizeRuntimeReadinessBlocker({...blocker,safeDetails:safe}),{...blocker,safeDetails:safe});
+ let evaluated=false; const accessor=Object.defineProperty({...diagnostic},"message",{enumerable:true,get:()=>{evaluated=true;return "private";}});
+ assert.throws(()=>rr.normalizeRuntimeReadinessDiagnostic(accessor)); assert.equal(evaluated,false);
+});
+
+
+it("requires primitive diagnostic fields without invoking nested trim getters", () => {
+ let calls=0;
+ const supplied=(result:string)=>Object.defineProperty({},"trim",{get:()=>{calls++;return()=>result;}});
+ const diagnostic={code:"runtime-readiness-provider-unavailable" as const,severity:"error" as const,message:"Safe summary"};
+ const blocker={code:diagnostic.code,message:diagnostic.message};
+ for(const [field,text] of [["code",diagnostic.code],["severity","error"],["diagnosticId","diagnostic.a"],["message","Safe summary"]]) {
+  assert.throws(()=>rr.normalizeRuntimeReadinessDiagnostic({...diagnostic,[field!]:supplied(text!)} as never));
+ }
+ for(const [field,text] of [["code",diagnostic.code],["blockerId","blocker.a"],["message","Safe summary"]]) {
+  assert.throws(()=>rr.normalizeRuntimeReadinessBlocker({...blocker,[field!]:supplied(text!)} as never));
+ }
+ assert.equal(calls,0);
+});

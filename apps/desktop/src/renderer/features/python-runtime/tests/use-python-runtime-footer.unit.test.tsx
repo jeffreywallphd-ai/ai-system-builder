@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { usePythonRuntimeFooter } from "../hooks/usePythonRuntimeFooter";
 import type { DesktopPythonRuntimeClient } from "../api/desktopPythonRuntimeClient";
 
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+
 interface HookProbeProps {
   client: DesktopPythonRuntimeClient;
   enabled?: boolean;
@@ -146,6 +148,19 @@ describe("usePythonRuntimeFooter", () => {
     expect(clearIntervalSpy).toHaveBeenCalledTimes(2);
     expect(removeListenerSpy).toHaveBeenCalledWith("dataset-preparation-training-started", expect.any(Function));
     expect(client.controlRuntime).not.toHaveBeenCalled();
+  });
+
+  it("resource polls do not consume log freshness before the next log refresh", async () => {
+    const initial = createSnapshot();
+    const next = { ...initial, logs: [{ timestamp: "2026-10-21T00:00:00Z", level: "info" as const, message: "Runtime ready." }] };
+    const client: DesktopPythonRuntimeClient = { readStatus: vi.fn().mockResolvedValueOnce(initial).mockResolvedValue(next), controlRuntime: vi.fn().mockResolvedValue(initial) };
+    mountedContainer = document.createElement("div"); document.body.appendChild(mountedContainer);
+    mountedRoot = createRoot(mountedContainer);
+    await act(async () => { mountedRoot!.render(<HookProbe client={client} />); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+    expect(mountedContainer.querySelector("[data-testid='log-count']")?.textContent).toBe("0");
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+    expect(mountedContainer.querySelector("[data-testid='log-count']")?.textContent).toBe("1");
   });
 
 });

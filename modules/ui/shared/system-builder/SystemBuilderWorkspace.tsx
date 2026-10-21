@@ -1429,6 +1429,7 @@ export function SystemBuilderWorkspace({
               </div>
               {composerMode === "design" ? (
                 <SystemComposerStructureEditor
+                  browseScopeKey={workspaceId}
                   draft={draft}
                   rootInstanceRefs={revision.composition.rootInstanceRefs}
                   catalog={composerCatalog}

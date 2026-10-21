@@ -84,7 +84,7 @@ export interface DesktopDatasetPreparationClient {
     requestId: string,
     workspaceId?: string,
   ) => Promise<
-    | { ok: true }
+    | { ok: true; value: { requestId: string; cancelled: boolean; status: "cancelled" | "running" | "unknown" } }
     | {
         ok: false;
         error: {
@@ -572,7 +572,13 @@ export function createDesktopDatasetPreparationClient(): DesktopDatasetPreparati
             },
           };
         }
-        return { ok: true };
+        const value = response.value as Record<string, unknown> | undefined;
+        if (!value || value.requestId !== requestId || typeof value.cancelled !== "boolean" ||
+            !["cancelled", "running", "unknown"].includes(String(value.status)) ||
+            value.cancelled !== (value.status === "cancelled")) {
+          return { ok: false, error: { code: "internal", message: "Dataset cancellation could not be confirmed." } };
+        }
+        return { ok: true, value: { requestId, cancelled: value.cancelled, status: value.status as "cancelled" | "running" | "unknown" } };
       } catch (error) {
         throw normalizeDatasetPreparationTransportError(error);
       }

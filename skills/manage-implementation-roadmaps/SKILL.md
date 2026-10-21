@@ -11,6 +11,19 @@ resume faithfully without committing verbose progress reports.
 
 ## Start
 
+When the target repository provides the development control plane linked from
+`AGENTS.md`, read that guide, start or safely reuse its JSON-backed review site,
+and provide the verified link on workflow work requests. Keep this skill's
+planning authority; the repository helper owns bounded execution and review.
+New governed roadmaps require current receipts and a separate-invocation review
+covering each increment criterion. Historical state remains explicitly
+declarative; never manufacture qualifying evidence or a second reviewer identity.
+For this adapter, initialize AI-related roadmaps with `completionSuite: all`
+(otherwise `standardande2e`). After all implementation chunks are recorded, use the guide's `overall` work
+binding for current aggregate qualification. The final increment may be verifying
+while all predecessors are implemented. Pending controlled qualification never
+becomes a pass and still prevents final roadmap closure.
+
 1. Read the repository agent instructions, root README, documentation entry point,
    current worktree status, affected code, nearest README files, tests, architecture
    decisions, change-impact guidance, and

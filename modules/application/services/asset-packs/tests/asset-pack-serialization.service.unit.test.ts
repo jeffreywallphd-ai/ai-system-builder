@@ -203,3 +203,38 @@ describe("system.foundation export readiness as a manifest string", () => {
     }
   });
 });
+
+
+it("rejects actual credentials before parse/serialization while preserving explanatory non-goals", () => {
+ const base=createImportedPackManifestFixture();
+ const entry=base.assets[0]!; assert.ok(entry.definition);
+ const safe={...base,assets:[{...entry,definition:{...entry.definition,description:'This pack does not include prompt text.',aiContext:{...entry.definition.aiContext,purpose:'No resource bytes are stored. No runtime execution occurs.'}}},...base.assets.slice(1)]};
+ assert.equal(validateAssetPackManifest(safe).status,'valid');
+ assert.deepEqual(parseOk(serializeAssetPackManifest(safe)),normalizeAssetPackManifestForSerialization(safe));
+ for(const credential of [...['hf_','ghp_','github_pat_','sk_','sk-'].map(prefix=>prefix+'syntheticvalue'.repeat(3)), '-----BEGIN PRIVATE KEY-----','-----BEGIN OPENSSH PRIVATE KEY-----']) {
+  for(const field of ['purpose','description','limitations']) {
+   const definition={...entry.definition,...(field==='description'?{description:credential}:{}),aiContext:{...entry.definition.aiContext,...(field==='purpose'?{purpose:credential}:{}),...(field==='limitations'?{limitations:[{limitationId:'fixture.limitation',summary:credential}]}:{})}};
+   const manifest={...base,assets:[{...entry,definition},...base.assets.slice(1)]};
+   const parsed=parseAssetPackManifestJson(JSON.stringify(manifest));
+   assert.equal(parsed.ok,false);
+   assert.equal(JSON.stringify(parsed).includes(credential),false);
+   for(const operation of [()=>serializeAssetPackManifest(manifest),()=>normalizeAssetPackManifestForSerialization(manifest)]) {
+    assert.throws(operation, error=>error instanceof Error && error.message==='Asset pack content contains an unsafe value.');
+   }
+  }
+ }
+});
+
+
+it("rejects credential-bearing keys before parse paths, nested descent or serialization",()=>{
+ const base=createImportedPackManifestFixture(); const entry=base.assets[0]!; assert.ok(entry.definition);
+ for(const credential of ['hf_'+ 'syntheticvalue'.repeat(3),'-----BEGIN PRIVATE KEY-----']) {
+  for(const location of ['limitation','metadata']) {
+   const definition={...entry.definition,aiContext:{...entry.definition.aiContext,limitations:[{limitationId:'fixture.limitation',summary:'Safe',...(location==='limitation'?{[credential]:{token:'synthetic'}}:{})}]}};
+   const manifest={...base,assets:[{...entry,definition,...(location==='metadata'?{metadata:{nested:{[credential]:{token:'synthetic'}}}}:{})},...base.assets.slice(1)]};
+   const parsed=parseAssetPackManifestJson(JSON.stringify(manifest)); assert.equal(parsed.ok,false);
+   assert.equal(JSON.stringify(parsed).includes(credential),false);
+   for(const operation of [()=>serializeAssetPackManifest(manifest),()=>normalizeAssetPackManifestForSerialization(manifest)]) assert.throws(operation,error=>error instanceof Error && error.message==='Asset pack content contains an unsafe value.');
+  }
+ }
+});

@@ -9,3 +9,5 @@ export * from "./workspace-record";
 export * from "./workspace-create-command";
 export * from "./workspace-selection";
 export * from "./workspace-request-context";
+
+export * from "./workspace-summary";

@@ -1,3 +1,5 @@
+import ts from "typescript";
+
 const metricPattern =
   /^(?:\W+)?\s*(tests|suites|pass|fail|cancelled|skipped|todo|duration_ms)\s+(.+)$/;
 
@@ -11,11 +13,40 @@ const supportedTestSuites = new Set([
 const endToEndTestFilePattern = /\.(?:e2e|integration)\.test\.[cm]?[jt]sx?$/i;
 const endToEndTestMarkerPattern = /^\s*\/\/\s*@test-duration\s+long\s*$/m;
 const aiTestMarkerPattern = /^\s*\/\/\s*@test-suite\s+ai\s*$/m;
-const vitestImportPattern = /\bfrom\s+["']vitest["']/m;
 const nonBrowserAssetSourcePattern = /\.(?:png|svg)$/i;
 
-export const isVitestOwnedTestSource = (sourceText) =>
-  vitestImportPattern.test(sourceText);
+export const isVitestOwnedTestSource = (sourceText) => {
+  if (typeof sourceText !== "string") return false;
+  const source = ts.createSourceFile(
+    "test.tsx",
+    sourceText,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
+  let found = false;
+  const visit = (node) => {
+    if (
+      ((ts.isImportDeclaration(node) && !node.importClause?.isTypeOnly) ||
+        (ts.isExportDeclaration(node) && !node.isTypeOnly)) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteral(node.moduleSpecifier) &&
+      node.moduleSpecifier.text === "vitest"
+    )
+      found = true;
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+      node.arguments.length === 1 &&
+      ts.isStringLiteral(node.arguments[0]) &&
+      node.arguments[0].text === "vitest"
+    )
+      found = true;
+    if (!found) ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return found;
+};
 
 export const isNonBrowserAssetSource = (sourcePath) =>
   typeof sourcePath === "string" &&
@@ -105,7 +136,8 @@ export const createTestTimingTracker = ({ limit = 20 } = {}) => {
 export const buildNonBrowserNodeTestRunOptions = ({ files, cwd }) => ({
   cwd,
   files: [...files],
-  isolation: "none",
+  isolation: "process",
+  concurrency: 4,
 });
 
 const formatSerializedError = (error) => {
@@ -204,40 +236,13 @@ export const applyDiagnosticSummaryMetric = (summary, diagnosticMessage) => {
   }
 };
 
-export const isIgnorableRunnerSpawnFailure = ({
-  event,
-  sourceFile,
-  runnerRelativePath,
-}) => {
-  if (!event || typeof event !== "object") {
-    return false;
-  }
-
-  const file = typeof sourceFile === "string" ? sourceFile : "";
-  const errorCode = event.details?.error?.code;
-  const causeCode = event.details?.error?.cause?.code;
-
-  return (
-    file === runnerRelativePath &&
-    errorCode === "ERR_TEST_FAILURE" &&
-    causeCode === "EPERM"
-  );
-};
-
-export const applyIgnoredFailureAdjustments = (
+export const isSuccessfulNonBrowserRun = ({
   summary,
-  ignoredFailureCount,
-) => {
-  if (!Number.isFinite(ignoredFailureCount) || ignoredFailureCount <= 0) {
-    return;
-  }
-
-  summary.counts.failed = Math.max(
-    0,
-    summary.counts.failed - ignoredFailureCount,
-  );
-  summary.counts.tests = Math.max(
-    0,
-    summary.counts.tests - ignoredFailureCount,
-  );
-};
+  failures,
+  discoveredCount,
+  delegatedEmpty = false,
+}) =>
+  failures.length === 0 &&
+  summary.counts.failed === 0 &&
+  summary.counts.cancelled === 0 &&
+  (discoveredCount > 0 ? summary.counts.passed > 0 : delegatedEmpty === true);

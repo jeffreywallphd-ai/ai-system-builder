@@ -7,32 +7,120 @@ import { normalizeExecutionApprovalId, normalizeExecutionAttemptId, normalizeExe
 import { normalizeExecutionApprovalKind, normalizeExecutionApprovalStatus, normalizeExecutionAttemptStatus, normalizeExecutionCancellationStatus, normalizeExecutionEventKind, normalizeExecutionFailureClassification, normalizeExecutionProgressPhase, normalizeExecutionResultKind, normalizeExecutionResultStatus, normalizeExecutionRetryStatus, normalizeExecutionRunStatus, normalizeExecutionRuntimeReferenceStatus } from './execution-run-status';
 import type { ExecutionProgressSummary } from './execution-run-event';
 import type { ExecutionRunRecord, ExecutionRunSourceContextKind } from './execution-run-record';
-const ISO=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/; const o=(v:unknown,n:string)=>{if(!v||typeof v!=='object'||Array.isArray(v)) throw new Error(`${n} is invalid.`);return v as Record<string,unknown>;};
-const ts=(v:unknown,f:string)=>{if(typeof v!=='string'||!ISO.test(v.trim())) throw new Error(`${f} is invalid.`);return v.trim();}; const s=(v:unknown,f:string,req=true)=>{if(v===undefined){if(req) throw new Error(`${f} is invalid.`); return undefined;} if(typeof v!=='string'||!v.trim()) throw new Error(`${f} is invalid.`); return v.trim();}; const a=(v:unknown,f:(x:unknown)=>any)=>Array.isArray(v)?v.map(f):[];
-const sourceContextKinds=['conversation-turn','generic-context'] as const;
-const normalizeExecutionRunSourceContextKind=(v:string):ExecutionRunSourceContextKind=>{const n=v.trim().toLowerCase(); if(!(sourceContextKinds as readonly string[]).includes(n)) throw new Error('sourceContextKind is invalid.'); return n as ExecutionRunSourceContextKind;};
-export const normalizeExecutionDiagnostic=(d:unknown)=>{const r=o(d,'Execution diagnostic'); return {code:s(r.code,'Diagnostic code')!,message:s(r.message,'Diagnostic message')!,severity:r.severity===undefined?undefined:s(r.severity,'Diagnostic severity')!,targetReferenceId:r.targetReferenceId===undefined?undefined:s(r.targetReferenceId,'Diagnostic target')!,targetReferenceKind:r.targetReferenceKind===undefined?undefined:s(r.targetReferenceKind,'Diagnostic target kind')!};};
-export const normalizeExecutionBlocker=(d:unknown)=>{const r=o(d,'Execution blocker'); return {code:s(r.code,'Blocker code')!,message:s(r.message,'Blocker message')!,targetReferenceId:r.targetReferenceId===undefined?undefined:s(r.targetReferenceId,'Blocker target')!,targetReferenceKind:r.targetReferenceKind===undefined?undefined:s(r.targetReferenceKind,'Blocker target kind')!};};
-export const normalizeExecutionProgressSummary=(p:unknown):ExecutionProgressSummary=>{const r=o(p,'Execution progress'); const phase=normalizeExecutionProgressPhase(String(r.phase)); return {phase,label:s(r.label,'Progress label')!,summary:r.summary===undefined?undefined:s(r.summary,'Progress summary')!,percentage:r.percentage===undefined?undefined:Number(r.percentage),at:ts(r.at,'Progress at'),terminal:r.terminal===undefined?['finished','failed','cancelled'].includes(phase):Boolean(r.terminal)};};
-export const normalizeExecutionRunRecord=(x:unknown):ExecutionRunRecord=>{const r=o(x,'Execution run'); return {id:normalizeExecutionRunId(String(r.id)),workspaceId:createWorkspaceId(String(r.workspaceId)),sourceExecutionPlanId:normalizeExecutionPlanId(String(r.sourceExecutionPlanId)),sourceCompositionPlanId:r.sourceCompositionPlanId===undefined?undefined:normalizeAssetCompositionPlanId(String(r.sourceCompositionPlanId)),sourceRuntimeReadinessBindingId:r.sourceRuntimeReadinessBindingId===undefined?undefined:normalizeRuntimeReadinessBindingId(String(r.sourceRuntimeReadinessBindingId)),sourceContextKind:r.sourceContextKind===undefined?undefined:normalizeExecutionRunSourceContextKind(String(r.sourceContextKind)),sourceContextId:r.sourceContextId===undefined?undefined:s(r.sourceContextId,'sourceContextId')!,status:normalizeExecutionRunStatus(String(r.status)),approvalId:r.approvalId===undefined?undefined:normalizeExecutionApprovalId(String(r.approvalId)),approvalStatus:r.approvalStatus===undefined?undefined:s(r.approvalStatus,'approvalStatus')!,runtimeReferenceId:r.runtimeReferenceId===undefined?undefined:normalizeExecutionRuntimeReferenceId(String(r.runtimeReferenceId)),attemptIds:a(r.attemptIds,(q)=>normalizeExecutionAttemptId(String(q))),eventIds:a(r.eventIds,(q)=>normalizeExecutionEventId(String(q))),resultIds:a(r.resultIds,(q)=>normalizeExecutionResultId(String(q))),progress:r.progress===undefined?undefined:normalizeExecutionProgressSummary(r.progress),blockers:a(r.blockers,normalizeExecutionBlocker),diagnostics:a(r.diagnostics,normalizeExecutionDiagnostic),provenance:Array.isArray(r.provenance)?r.provenance as any:[],createdAt:ts(r.createdAt,'createdAt'),updatedAt:ts(r.updatedAt,'updatedAt'),startedAt:r.startedAt===undefined?undefined:ts(r.startedAt,'startedAt'),completedAt:r.completedAt===undefined?undefined:ts(r.completedAt,'completedAt'),cancelledAt:r.cancelledAt===undefined?undefined:ts(r.cancelledAt,'cancelledAt'),archivedAt:r.archivedAt===undefined?undefined:ts(r.archivedAt,'archivedAt')};};
-export const normalizeExecutionAttemptRecord=(x:unknown)=>{const r=o(x,'Execution attempt'); return {id:normalizeExecutionAttemptId(String(r.id)),workspaceId:createWorkspaceId(String(r.workspaceId)),executionRunId:normalizeExecutionRunId(String(r.executionRunId)),attemptNumber:Number(r.attemptNumber),status:normalizeExecutionAttemptStatus(String(r.status)),runtimeReferenceId:normalizeExecutionRuntimeReferenceId(String(r.runtimeReferenceId)),progress:r.progress===undefined?undefined:normalizeExecutionProgressSummary(r.progress),resultId:r.resultId===undefined?undefined:normalizeExecutionResultId(String(r.resultId)),failureClassification:r.failureClassification===undefined?undefined:normalizeExecutionFailureClassification(String(r.failureClassification)),cancellationRequestId:r.cancellationRequestId===undefined?undefined:normalizeExecutionCancellationRequestId(String(r.cancellationRequestId)),blockers:a(r.blockers,normalizeExecutionBlocker),diagnostics:a(r.diagnostics,normalizeExecutionDiagnostic),provenance:Array.isArray(r.provenance)?r.provenance as any:[],createdAt:ts(r.createdAt,'createdAt'),updatedAt:ts(r.updatedAt,'updatedAt'),startedAt:r.startedAt===undefined?undefined:ts(r.startedAt,'startedAt'),completedAt:r.completedAt===undefined?undefined:ts(r.completedAt,'completedAt')};};
-export const normalizeExecutionEventRecord=(x:unknown)=>{const r=o(x,'Execution event'); return {id:normalizeExecutionEventId(String(r.id)),workspaceId:createWorkspaceId(String(r.workspaceId)),executionRunId:normalizeExecutionRunId(String(r.executionRunId)),executionAttemptId:r.executionAttemptId===undefined?undefined:normalizeExecutionAttemptId(String(r.executionAttemptId)),sourceContextKind:r.sourceContextKind===undefined?undefined:s(r.sourceContextKind,'sourceContextKind')!,sourceContextId:r.sourceContextId===undefined?undefined:s(r.sourceContextId,'sourceContextId')!,kind:normalizeExecutionEventKind(String(r.kind)),category:s(r.category,'category')!,message:s(r.message,'message')!,progress:r.progress===undefined?undefined:normalizeExecutionProgressSummary(r.progress),diagnostics:a(r.diagnostics,normalizeExecutionDiagnostic),at:ts(r.at,'at')};};
-export const normalizeExecutionResultRecord=(x:unknown)=>{const r=o(x,'Execution result'); return {id:normalizeExecutionResultId(String(r.id)),workspaceId:createWorkspaceId(String(r.workspaceId)),executionRunId:normalizeExecutionRunId(String(r.executionRunId)),executionAttemptId:r.executionAttemptId===undefined?undefined:normalizeExecutionAttemptId(String(r.executionAttemptId)),kind:normalizeExecutionResultKind(String(r.kind)),status:normalizeExecutionResultStatus(String(r.status)),assistantResponseId:r.assistantResponseId===undefined?undefined:s(r.assistantResponseId,'assistantResponseId')!,outputReference:r.outputReference===undefined?undefined:s(r.outputReference,'outputReference')!,blockers:a(r.blockers,normalizeExecutionBlocker),diagnostics:a(r.diagnostics,normalizeExecutionDiagnostic),provenance:Array.isArray(r.provenance)?r.provenance as any:[],createdAt:ts(r.createdAt,'createdAt'),completedAt:r.completedAt===undefined?undefined:ts(r.completedAt,'completedAt')};};
-export const normalizeExecutionApprovalRecord=(x:unknown)=>{const r=o(x,'Execution approval'); return {id:normalizeExecutionApprovalId(String(r.id)),workspaceId:createWorkspaceId(String(r.workspaceId)),sourceExecutionPlanId:normalizeExecutionPlanId(String(r.sourceExecutionPlanId)),conversationSessionId:r.conversationSessionId===undefined?undefined:s(r.conversationSessionId,'conversationSessionId')!,executionRunId:r.executionRunId===undefined?undefined:normalizeExecutionRunId(String(r.executionRunId)),approvalKind:normalizeExecutionApprovalKind(String(r.approvalKind)),approvalStatus:normalizeExecutionApprovalStatus(String(r.approvalStatus)),label:s(r.label,'label')!,summary:r.summary===undefined?undefined:s(r.summary,'summary')!,runtimeReferenceId:r.runtimeReferenceId===undefined?undefined:normalizeExecutionRuntimeReferenceId(String(r.runtimeReferenceId)),sourcePlanRevision:r.sourcePlanRevision===undefined?undefined:s(r.sourcePlanRevision,'sourcePlanRevision')!,sourceReadinessRevision:r.sourceReadinessRevision===undefined?undefined:s(r.sourceReadinessRevision,'sourceReadinessRevision')!,blockers:a(r.blockers,normalizeExecutionBlocker),diagnostics:a(r.diagnostics,normalizeExecutionDiagnostic),provenance:Array.isArray(r.provenance)?r.provenance as any:[],createdAt:ts(r.createdAt,'createdAt'),updatedAt:ts(r.updatedAt,'updatedAt'),grantedAt:r.grantedAt===undefined?undefined:ts(r.grantedAt,'grantedAt'),revokedAt:r.revokedAt===undefined?undefined:ts(r.revokedAt,'revokedAt'),invalidatedAt:r.invalidatedAt===undefined?undefined:ts(r.invalidatedAt,'invalidatedAt')};};
-export const normalizeExecutionRuntimeReferenceRecord=(x:unknown)=>{const r=o(x,'Execution runtime reference'); return {id:normalizeExecutionRuntimeReferenceId(String(r.id)),workspaceId:createWorkspaceId(String(r.workspaceId)),sourceExecutionPlanAdapterReferenceId:s(r.sourceExecutionPlanAdapterReferenceId,'sourceExecutionPlanAdapterReferenceId')!,sourceRuntimeReadinessBindingId:normalizeRuntimeReadinessBindingId(String(r.sourceRuntimeReadinessBindingId)),runtimeKind:s(r.runtimeKind,'runtimeKind')!,capabilityKind:s(r.capabilityKind,'capabilityKind')!,selectedModelRecordId:r.selectedModelRecordId===undefined?undefined:normalizeSystemBuilderModelRecordId(String(r.selectedModelRecordId)),status:normalizeExecutionRuntimeReferenceStatus(String(r.status)),label:s(r.label,'label')!,summary:r.summary===undefined?undefined:s(r.summary,'summary')!,blockers:a(r.blockers,normalizeExecutionBlocker),diagnostics:a(r.diagnostics,normalizeExecutionDiagnostic)};};
-export const normalizeExecutionCancellationRequestRecord=(x:unknown)=>{const r=o(x,'Execution cancellation request'); return {id:normalizeExecutionCancellationRequestId(String(r.id)),workspaceId:createWorkspaceId(String(r.workspaceId)),executionRunId:normalizeExecutionRunId(String(r.executionRunId)),status:normalizeExecutionCancellationStatus(String(r.status)),reasonCategory:r.reasonCategory===undefined?undefined:s(r.reasonCategory,'reasonCategory')!,diagnostics:a(r.diagnostics,normalizeExecutionDiagnostic),provenance:Array.isArray(r.provenance)?r.provenance as any:[],requestedAt:ts(r.requestedAt,'requestedAt'),updatedAt:r.updatedAt===undefined?undefined:ts(r.updatedAt,'updatedAt')};};
-export const normalizeExecutionRetryRequestRecord=(x:unknown)=>{const r=o(x,'Execution retry request'); return {id:normalizeExecutionRetryRequestId(String(r.id)),workspaceId:createWorkspaceId(String(r.workspaceId)),originalExecutionRunId:normalizeExecutionRunId(String(r.originalExecutionRunId)),status:normalizeExecutionRetryStatus(String(r.status)),reasonCategory:r.reasonCategory===undefined?undefined:s(r.reasonCategory,'reasonCategory')!,diagnostics:a(r.diagnostics,normalizeExecutionDiagnostic),provenance:Array.isArray(r.provenance)?r.provenance as any:[],requestedAt:ts(r.requestedAt,'requestedAt'),updatedAt:r.updatedAt===undefined?undefined:ts(r.updatedAt,'updatedAt')};};
-const ws=(c:unknown)=>createWorkspaceId(String(o(c,'command').workspaceId));
-export const normalizeCreateExecutionRunCommand=(c:unknown)=>{const r=o(c,'CreateExecutionRunCommand'); return {workspaceId:ws(c),sourceExecutionPlanId:normalizeExecutionPlanId(String(r.sourceExecutionPlanId)),sourceCompositionPlanId:r.sourceCompositionPlanId===undefined?undefined:normalizeAssetCompositionPlanId(String(r.sourceCompositionPlanId)),sourceRuntimeReadinessBindingId:r.sourceRuntimeReadinessBindingId===undefined?undefined:normalizeRuntimeReadinessBindingId(String(r.sourceRuntimeReadinessBindingId)),conversationSessionId:r.conversationSessionId===undefined?undefined:s(r.conversationSessionId,'conversationSessionId')!,conversationTurnId:r.conversationTurnId===undefined?undefined:s(r.conversationTurnId,'conversationTurnId')!};};
-export const normalizeReadExecutionRunCommand=(c:unknown)=>{const r=o(c,'ReadExecutionRunCommand'); return {workspaceId:ws(c),executionRunId:normalizeExecutionRunId(String(r.executionRunId))};};
-export const normalizeListExecutionRunsCommand=(c:unknown)=>({workspaceId:ws(c)});
-export const normalizeApproveExecutionRunCommand=(c:unknown)=>{const r=o(c,'ApproveExecutionRunCommand'); return {workspaceId:ws(c),executionRunId:normalizeExecutionRunId(String(r.executionRunId)),approvalId:normalizeExecutionApprovalId(String(r.approvalId))};};
-export const normalizeValidateExecutionRunEligibilityCommand=normalizeReadExecutionRunCommand;
-export const normalizeStartExecutionRunCommand=normalizeReadExecutionRunCommand;
-export const normalizeArchiveExecutionRunCommand=normalizeReadExecutionRunCommand;
-export const normalizeCancelExecutionRunCommand=(c:unknown)=>{const r=o(c,'CancelExecutionRunCommand'); return {workspaceId:ws(c),executionRunId:normalizeExecutionRunId(String(r.executionRunId)),reasonCategory:r.reasonCategory===undefined?undefined:s(r.reasonCategory,'reasonCategory')!};};
-export const normalizeRetryExecutionRunCommand=(c:unknown)=>{const r=o(c,'RetryExecutionRunCommand'); return {workspaceId:ws(c),executionRunId:normalizeExecutionRunId(String(r.executionRunId)),reasonCategory:r.reasonCategory===undefined?undefined:s(r.reasonCategory,'reasonCategory')!};};
-export const normalizeReadExecutionAttemptCommand=(c:unknown)=>{const r=o(c,'ReadExecutionAttemptCommand'); return {workspaceId:ws(c),executionAttemptId:normalizeExecutionAttemptId(String(r.executionAttemptId))};};
-export const normalizeListExecutionAttemptsCommand=(c:unknown)=>{const r=o(c,'ListExecutionAttemptsCommand'); return {workspaceId:ws(c),executionRunId:normalizeExecutionRunId(String(r.executionRunId))};};
-export const normalizeListExecutionEventsCommand=normalizeListExecutionAttemptsCommand;
-export const normalizeReadExecutionResultCommand=(c:unknown)=>{const r=o(c,'ReadExecutionResultCommand'); return {workspaceId:ws(c),executionResultId:normalizeExecutionResultId(String(r.executionResultId))};};
+import type { ExecutionAttemptRecord } from './execution-run-attempt';
+import type { ExecutionEventRecord } from './execution-run-event';
+import type { ExecutionResultRecord } from './execution-run-result';
+import type { ExecutionApprovalRecord } from './execution-run-approval';
+import type { ExecutionRuntimeReferenceRecord } from './execution-run-runtime-reference';
+import type { ExecutionCancellationRequestRecord } from './execution-run-cancellation';
+import type { ExecutionRetryRequestRecord } from './execution-run-retry';
+import type { ExecutionRunProvenanceEntry } from './execution-run-provenance';
+import type { ExecutionDiagnostic, ExecutionBlocker } from './execution-run-diagnostics';
+import * as Commands from './execution-run-commands';
+import { passiveRecord as record, passiveOptional as optional, passiveArray, passiveText as text,
+  passiveTypedString as typed, passiveEnum, passiveTimestamp as timestamp, passiveBoolean,
+  passiveDiagnosticCode, passivePercentage, passivePositiveInteger } from '../shared';
+
+const list = <T>(parse: (value: unknown) => T) => passiveArray(parse, true);
+const workspaceId = typed(createWorkspaceId);
+const runId = typed(normalizeExecutionRunId);
+const attemptId = typed(normalizeExecutionAttemptId);
+const planId = typed(normalizeExecutionPlanId);
+const runtimeId = typed(normalizeExecutionRuntimeReferenceId);
+const provenance = record<ExecutionRunProvenanceEntry>({
+  kind: passiveEnum(['execution-run-created','execution-run-approval-requested','execution-run-approved',
+    'execution-run-approval-invalidated','execution-run-start-requested','execution-run-attempt-created',
+    'execution-run-progress-recorded','execution-run-result-recorded','execution-run-succeeded',
+    'execution-run-failed','execution-run-cancellation-requested','execution-run-cancelled',
+    'execution-run-retry-requested','execution-run-marked-stale','execution-run-archived']),
+  at: timestamp, actorId: optional(text), workspaceId: optional(workspaceId),
+  executionRunId: optional(runId), executionAttemptId: optional(attemptId),
+  executionResultId: optional(typed(normalizeExecutionResultId)),
+});
+export const normalizeExecutionDiagnostic = record<ExecutionDiagnostic>({
+  code: passiveDiagnosticCode, message: text, severity: passiveEnum(['info','warning','error']),
+  targetReferenceId: optional(text), targetReferenceKind: optional(text),
+});
+export const normalizeExecutionBlocker = record<ExecutionBlocker>({
+  code: passiveDiagnosticCode, message: text, targetReferenceId: optional(text), targetReferenceKind: optional(text),
+});
+const diagnostics = list(normalizeExecutionDiagnostic);
+const blockers = list(normalizeExecutionBlocker);
+const progressSchema = record<ExecutionProgressSummary>({
+  phase: typed(normalizeExecutionProgressPhase), label: text, summary: optional(text),
+  percentage: optional(passivePercentage), at: timestamp, terminal: passiveBoolean,
+});
+export const normalizeExecutionProgressSummary = progressSchema;
+export const normalizeExecutionRunRecord = record<ExecutionRunRecord>({
+  id: runId, workspaceId, sourceExecutionPlanId: planId,
+  sourceCompositionPlanId: optional(typed(normalizeAssetCompositionPlanId)),
+  sourceRuntimeReadinessBindingId: optional(typed(normalizeRuntimeReadinessBindingId)),
+  sourceContextKind: optional(passiveEnum<ExecutionRunSourceContextKind>(['conversation-turn','generic-context'])),
+  sourceContextId: optional(text), status: typed(normalizeExecutionRunStatus),
+  approvalId: optional(typed(normalizeExecutionApprovalId)), approvalStatus: optional(typed(normalizeExecutionApprovalStatus)),
+  runtimeReferenceId: optional(runtimeId), attemptIds: list(attemptId), eventIds: list(typed(normalizeExecutionEventId)),
+  resultIds: list(typed(normalizeExecutionResultId)), progress: optional(progressSchema), blockers, diagnostics,
+  provenance: list(provenance), createdAt: timestamp, updatedAt: timestamp,
+  startedAt: optional(timestamp), completedAt: optional(timestamp), cancelledAt: optional(timestamp), archivedAt: optional(timestamp),
+});
+export const normalizeExecutionAttemptRecord = record<ExecutionAttemptRecord>({
+  id: attemptId, workspaceId, executionRunId: runId, attemptNumber: passivePositiveInteger,
+  status: typed(normalizeExecutionAttemptStatus), runtimeReferenceId: runtimeId,
+  progress: optional(progressSchema), resultId: optional(typed(normalizeExecutionResultId)),
+  failureClassification: optional(typed(normalizeExecutionFailureClassification)),
+  cancellationRequestId: optional(typed(normalizeExecutionCancellationRequestId)), blockers, diagnostics,
+  provenance: list(provenance), createdAt: timestamp, updatedAt: timestamp, startedAt: optional(timestamp), completedAt: optional(timestamp),
+});
+export const normalizeExecutionEventRecord = record<ExecutionEventRecord>({
+  id: typed(normalizeExecutionEventId), workspaceId, executionRunId: runId, executionAttemptId: optional(attemptId),
+  conversationSessionId: optional(text), conversationTurnId: optional(text), kind: typed(normalizeExecutionEventKind),
+  category: text, message: text, progress: optional(progressSchema), diagnostics, blockers, at: timestamp,
+});
+export const normalizeExecutionResultRecord = record<ExecutionResultRecord>({
+  id: typed(normalizeExecutionResultId), workspaceId, executionRunId: runId, executionAttemptId: optional(attemptId),
+  kind: typed(normalizeExecutionResultKind), status: typed(normalizeExecutionResultStatus),
+  assistantResponseId: optional(text), outputReferenceId: optional(text), summary: optional(text), conversationTurnId: optional(text),
+  blockers, diagnostics, provenance: list(provenance), createdAt: timestamp, completedAt: optional(timestamp),
+});
+export const normalizeExecutionApprovalRecord = record<ExecutionApprovalRecord>({
+  id: typed(normalizeExecutionApprovalId), workspaceId, sourceExecutionPlanId: planId,
+  conversationSessionId: optional(text), executionRunId: optional(runId),
+  approvalKind: typed(normalizeExecutionApprovalKind), approvalStatus: typed(normalizeExecutionApprovalStatus),
+  label: text, summary: optional(text), runtimeReferenceId: optional(runtimeId),
+  sourcePlanRevision: optional(text), sourceReadinessRevision: optional(text), blockers, diagnostics, provenance: list(provenance),
+  createdAt: timestamp, updatedAt: timestamp, grantedAt: optional(timestamp), revokedAt: optional(timestamp), invalidatedAt: optional(timestamp),
+});
+export const normalizeExecutionRuntimeReferenceRecord = record<ExecutionRuntimeReferenceRecord>({
+  id: runtimeId, workspaceId, sourceExecutionPlanAdapterReferenceId: text,
+  sourceRuntimeReadinessBindingId: typed(normalizeRuntimeReadinessBindingId), runtimeKind: text, capabilityKind: text,
+  selectedModelRecordId: optional(typed(normalizeSystemBuilderModelRecordId)), status: typed(normalizeExecutionRuntimeReferenceStatus),
+  label: text, summary: optional(text), blockers, diagnostics,
+});
+export const normalizeExecutionCancellationRequestRecord = record<ExecutionCancellationRequestRecord>({
+  id: typed(normalizeExecutionCancellationRequestId), workspaceId, executionRunId: runId, executionAttemptId: optional(attemptId),
+  status: typed(normalizeExecutionCancellationStatus), reasonCategory: optional(text), diagnostics, provenance: list(provenance),
+  requestedAt: timestamp, acknowledgedAt: optional(timestamp), completedAt: optional(timestamp),
+});
+export const normalizeExecutionRetryRequestRecord = record<ExecutionRetryRequestRecord>({
+  id: typed(normalizeExecutionRetryRequestId), workspaceId, originalExecutionRunId: runId,
+  originalExecutionAttemptId: optional(attemptId), resultingExecutionRunId: optional(runId), resultingExecutionAttemptId: optional(attemptId),
+  status: typed(normalizeExecutionRetryStatus), reasonCategory: optional(text), diagnostics, provenance: list(provenance),
+  requestedAt: timestamp, completedAt: optional(timestamp), rejectedAt: optional(timestamp),
+});
+export const normalizeCreateExecutionRunCommand = record<Commands.CreateExecutionRunCommand>({
+  workspaceId, sourceExecutionPlanId: planId, sourceCompositionPlanId: optional(typed(normalizeAssetCompositionPlanId)),
+  sourceRuntimeReadinessBindingId: optional(typed(normalizeRuntimeReadinessBindingId)),
+  conversationSessionId: optional(text), conversationTurnId: optional(text),
+});
+export const normalizeReadExecutionRunCommand = record<Commands.ReadExecutionRunCommand>({ workspaceId, executionRunId: runId });
+export const normalizeListExecutionRunsCommand = record<Commands.ListExecutionRunsCommand>({ workspaceId });
+export const normalizeApproveExecutionRunCommand = record<Commands.ApproveExecutionRunCommand>({ workspaceId, executionRunId: runId, approvalId: typed(normalizeExecutionApprovalId) });
+export const normalizeValidateExecutionRunEligibilityCommand = normalizeReadExecutionRunCommand;
+export const normalizeStartExecutionRunCommand = normalizeReadExecutionRunCommand;
+export const normalizeArchiveExecutionRunCommand = normalizeReadExecutionRunCommand;
+export const normalizeCancelExecutionRunCommand = record<Commands.CancelExecutionRunCommand>({ workspaceId, executionRunId: runId, reasonCategory: optional(text) });
+export const normalizeRetryExecutionRunCommand = normalizeCancelExecutionRunCommand;
+export const normalizeReadExecutionAttemptCommand = record<Commands.ReadExecutionAttemptCommand>({ workspaceId, executionAttemptId: attemptId });
+export const normalizeListExecutionAttemptsCommand = record<Commands.ListExecutionAttemptsCommand>({ workspaceId, executionRunId: runId });
+export const normalizeListExecutionEventsCommand = normalizeListExecutionAttemptsCommand;
+export const normalizeReadExecutionResultCommand = record<Commands.ReadExecutionResultCommand>({ workspaceId, executionResultId: typed(normalizeExecutionResultId) });

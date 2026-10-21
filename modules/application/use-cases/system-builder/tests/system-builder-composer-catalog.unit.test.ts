@@ -521,3 +521,85 @@ function card(value: AssetDefinition): AssetDefinitionCard {
     builtIn: false,
   };
 }
+
+
+it("traverses a sparse 1000-definition catalog completely with bounded versioned continuations", async () => {
+  const definitions = Array.from({length: 1000}, (_, i) => definition(`candidate.${String(i).padStart(4, "0")}`, i % 10 === 0 ? "ui-component" : "tool", "structural"));
+  const byId = new Map(definitions.map(value => [String(value.definitionId), value]));
+  let individualReads = 0; let batchReads = 0;
+  const registry: AssetRegistryDefinitionReadPort = {
+    async listDefinitionCards(query = {}) {
+      const offset = Number(query.cursor ?? "0"); const end = Math.min(definitions.length, offset + (query.limit ?? 25));
+      return {items: definitions.slice(offset, end).map(card), ...(end < definitions.length ? {nextCursor: String(end)} : {})};
+    },
+    async readDefinitionDetail(ref) { individualReads++; return ref.id === parent.definitionId ? {definition: parent} : undefined; },
+    async readDefinitionDetails(refs) { batchReads++; return refs.map(ref => ({definition: byId.get(String(ref.id))!})); },
+  };
+  const useCase = new ListSystemBuilderComposerAssetsUseCase(registry);
+  const query = {workspaceId, parentDefinitionRef: exactReference(parent), slotId: "content", compatibleOnly: true, limit: 25};
+  let cursor: string | undefined; const cursors = new Set<string>(); const actual: string[] = [];
+  do {
+    const result = await useCase.execute({...query, cursor});
+    expect(result.ok).toBe(true); if (!result.ok) throw new Error(result.error.message);
+    actual.push(...result.value.items.map(item => item.definitionId));
+    cursor = result.value.nextCursor;
+    if (cursor) { expect(cursors.has(cursor)).toBe(false); cursors.add(cursor); }
+  } while (cursor);
+  expect(actual).toEqual(definitions.filter((_, i) => i % 10 === 0).map(value => value.definitionId));
+  expect(new Set(actual).size).toBe(100); expect(batchReads).toBeGreaterThan(0);
+  expect(individualReads).toBe(cursors.size + 1); // Parent only, never one detail read per candidate.
+  const saved = [...cursors][0]!;
+  expect((await useCase.execute({...query, cursor: saved, workspaceId: "workspace.other"})).ok).toBe(false);
+  expect((await useCase.execute({...query, cursor: "malformed"})).ok).toBe(false);
+  registry.listDefinitionCards = async () => ({items: [], nextCursor: "loop"});
+  expect((await useCase.execute(query)).ok).toBe(false);
+});
+
+
+it("real repository and facade preserve parent slots and omit property defaults from candidate details", async () => {
+  const {AssetRegistryReadFacade} = await import("../../../services/asset/asset-registry-read-facade.service");
+  const {createLocalAssetDefinitionRepositoryAdapter} = await import("../../../../adapters/persistence/asset");
+  const {createInMemoryStructuredDocumentStore} = await import("../../../../adapters/persistence/shared");
+  const repository = createLocalAssetDefinitionRepositoryAdapter({rootDir: "composer-regression", documents: createInMemoryStructuredDocumentStore()});
+  await repository.saveDefinition(parent); await repository.saveDefinition(child);
+  const registry = new AssetRegistryReadFacade({definitionRepository: repository, instanceRepository: {} as never, compositionRepository: {} as never});
+  const detail = await registry.readDefinitionDetail(exactReference(parent), {includePorts: true});
+  expect(detail?.definition.slots?.[0]?.slotId).toBe("content");
+  const candidate = await registry.readDefinitionDetail(exactReference(child), {includePorts: true});
+  expect(candidate?.definition.configurationSchema).toBeUndefined(); expect(candidate?.definition.defaultConfiguration).toBeUndefined();
+  const selected = await registry.readDefinitionDetail(exactReference(child), {includePorts: true, includeConfigurationSchema: true});
+  expect(selected?.definition.defaultConfiguration).toEqual(child.defaultConfiguration);
+  const result = await new ListSystemBuilderComposerAssetsUseCase(registry).execute({workspaceId, parentDefinitionRef: exactReference(parent), slotId: "content", compatibleOnly: true, limit: 25});
+  expect(result.ok).toBe(true); if (result.ok) expect(result.value.items.map(item => item.definitionId)).toEqual([child.definitionId]);
+});
+
+it("reduces measured real-store detail reads by half for the same complete sparse catalog and bytes", async () => {
+  const {AssetRegistryReadFacade} = await import("../../../services/asset/asset-registry-read-facade.service");
+  const {createLocalAssetDefinitionRepositoryAdapter, LocalAssetRecordStore} = await import("../../../../adapters/persistence/asset");
+  const {createInMemoryStructuredDocumentStore} = await import("../../../../adapters/persistence/shared");
+  const documents = createInMemoryStructuredDocumentStore();
+  const options = {rootDir: "composer-io-fixture", documents};
+  const definitions = Array.from({length: 1000}, (_, i) => definition(`io.candidate.${String(i).padStart(4, "0")}`, i % 10 === 0 ? "ui-component" : "tool", "structural"));
+  await new LocalAssetRecordStore(options).writeCollection("definitions", [parent, ...definitions]);
+  const repository = createLocalAssetDefinitionRepositoryAdapter(options);
+  let detailCollectionReads = 0;
+  const counted = {...repository, async getDefinition(ref: AssetReference) {detailCollectionReads++; return repository.getDefinition(ref);}, async getDefinitions(refs: readonly AssetReference[]) {detailCollectionReads++; return repository.getDefinitions!(refs);}};
+  const facade = new AssetRegistryReadFacade({definitionRepository: counted, instanceRepository: {} as never, compositionRepository: {} as never});
+  const baseline: AssetRegistryDefinitionReadPort = {listDefinitionCards: query => facade.listDefinitionCards(query), readDefinitionDetail: (ref, opts) => facade.readDefinitionDetail(ref, opts)};
+  async function traverse(registry: AssetRegistryDefinitionReadPort) {
+    detailCollectionReads = 0; let cursor: string | undefined; let bytes = 0; const resultIds: string[] = []; const cursors = new Set<string>();
+    const useCase = new ListSystemBuilderComposerAssetsUseCase(registry);
+    do {
+      const result = await useCase.execute({workspaceId, text: "io.candidate.", parentDefinitionRef: exactReference(parent), slotId: "content", compatibleOnly: true, limit: 25, cursor});
+      if (!result.ok) throw new Error(result.error.message);
+      bytes += Buffer.byteLength(JSON.stringify(result.value));
+      resultIds.push(...result.value.items.map(item => item.definitionId)); cursor = result.value.nextCursor;
+      if (cursor) {expect(cursors.has(cursor)).toBe(false); cursors.add(cursor);}
+    } while (cursor);
+    return {resultIds, detailCollectionReads, bytes};
+  }
+  const before = await traverse(baseline); const after = await traverse(facade);
+  expect(after.resultIds).toEqual(definitions.filter((_, i) => i % 10 === 0).map(value => value.definitionId)); expect(after.resultIds).toEqual(before.resultIds);
+  expect(after.detailCollectionReads <= before.detailCollectionReads / 2).toBe(true); expect(after.bytes).toBe(before.bytes); expect(after.bytes).toBeGreaterThan(0);
+  console.log(JSON.stringify({fixture: "1000-candidates-100-compatible-page25", baselineDetailCollectionReads: before.detailCollectionReads, candidateDetailCollectionReads: after.detailCollectionReads, baselineResponseBytes: before.bytes, candidateResponseBytes: after.bytes}));
+});

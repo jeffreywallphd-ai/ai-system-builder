@@ -31,6 +31,7 @@ export interface UserLibraryAssetListResult {
 }
 
 export interface UserLibraryAssetRepositoryPort {
+  /** Atomically insert a new identity; never replace an existing target or source. */
   saveUserLibraryAssetRecord(record: UserLibraryAssetRecord): Promise<UserLibraryAssetRecord>;
   updateUserLibraryAssetRecord(record: UserLibraryAssetRecord): Promise<UserLibraryAssetRecord>;
   readUserLibraryAssetRecord(reference: UserLibraryAssetReference): Promise<UserLibraryAssetRecord | undefined>;
@@ -43,4 +44,11 @@ export interface UserLibraryAssetRepositoryPort {
     query: UserLibraryAssetSourceIdentityQuery,
   ): Promise<UserLibraryAssetRecord | undefined>;
   archiveUserLibraryAssetRecord?(reference: UserLibraryAssetReference, archivedAt: string): Promise<UserLibraryAssetRecord | undefined>;
+}
+
+export class UserLibraryAssetConflictError extends Error {
+  public constructor() {
+    super("A user-library asset with this target or source identity already exists.");
+    this.name = "UserLibraryAssetConflictError";
+  }
 }

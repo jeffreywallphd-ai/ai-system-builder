@@ -24,6 +24,9 @@
 - Python/ComfyUI and other runtimes are adapter paths under `modules/adapters/runtime`.
 - Shared runtime vocabulary belongs in `modules/contracts/runtime`.
 - Runtime-specific protocol details stay out of core contracts and application/domain logic.
+- Installer repair requires explicit host update approval before I/O. Neither
+  `forceRepair` nor a fallback may grant it; automatic unapproved repair fails
+  closed. See the runtime model for initial-install and provenance boundaries.
 - Runtime operation identity should be helper-driven and transport-neutral.
 - Runtime diagnostics specialize shared structured logging; do not invent parallel runtime-only diagnostics.
 - Runtime readiness describes host-owned capability availability; it is not a runtime protocol payload or task lifecycle record.
@@ -151,3 +154,8 @@
 - Typical set: `index` + `runtime`.
 - Add `runtime-task-registry`, `runtime-installer`, or feature packs only when those responsibilities are directly touched.
 - Add `logging` for diagnosability-heavy runtime work and `testing` for fixes/refactors.
+
+- Unmanaged Git roots cannot be adopted by matching origin. Repair requires
+  explicit update approval and consistent installed/missing target/root status
+  before Python/pip or fallback effects. Marker consistency does not establish
+  current tree integrity or immutable source provenance; retain pending proof.

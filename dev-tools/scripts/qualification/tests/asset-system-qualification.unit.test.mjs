@@ -157,3 +157,11 @@ test("qualification rejects forged or over-budget performance passes", () => {
     /operation is invalid/,
   );
 });
+
+test("qualification rejects valid passing performance from a different source candidate", async () => {
+  const performanceReport = await runAssetSystemPerformanceQualification({config, environmentId: "local-fixture", sourceRevision: "source.old-candidate", iterations: 30, warmupIterations: 5, now: () => 1, probes: Object.fromEntries(config.performanceBudgets.map(row => [row.operation, async () => {}]))});
+  const profile = config.qualificationProfiles.find(row => row.profile === "local-windows");
+  const evidence = {schemaVersion: 1, profile: "local-windows", sourceRevision: "source.new-candidate", productDigest: digest, recordedAt: "2026-10-21T00:00:00Z", checks: profile.requiredEvidence.map(id => ({id, status: "passed", evidenceId: `evidence.${id}`, evidenceDigest: digest, ...(id === "performance" ? {performanceReport} : {})}))};
+  assert.throws(() => assessAssetSystemQualification(config, evidence), /different source revision/);
+  assert.equal(assessAssetSystemQualification(config, {...evidence, sourceRevision: performanceReport.sourceRevision}).status, "qualified");
+});

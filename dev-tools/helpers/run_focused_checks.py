@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+"""Derive bounded source-owned tests; never accepts commands or shell text."""
+from __future__ import annotations
+
+import argparse
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+from control_plane.candidate import snapshot
+from control_plane.common import fields, identifier, inside, read_json, relative, refuse
+from control_plane.contracts import ControlError
+from control_plane.storage import confined_path
+
+
+def commands(root, affected, *, exact=False):
+    files = snapshot(root)["files"]
+    owners = set()
+    for path in affected:
+        parts = relative(path).split("/")
+        if path.startswith("modules/") and len(parts) >= 3:
+            owners.add("/".join(parts[:3]))
+        elif path.startswith("apps/") and len(parts) >= 2:
+            owners.add("/".join(parts[:2]))
+        elif path.startswith("dev-tools/") and len(parts) >= 3:
+            owners.add("/".join(parts[:3]))
+    # These controlled modules belong exclusively to the explicit AI suite.
+    controlled_ai = {"test_constrained_json_outlines_integration.py", "test_context_generation_ai_e2e.py"}
+    tests = sorted(p for p in files if (p in affected if exact else inside(p, list(owners))) and Path(p).name not in controlled_ai and (".test." in p or Path(p).name.startswith("test_") and p.endswith(".py")))
+    if not tests or len(tests) > 300:
+        refuse("verification.focused-tests-unavailable", "No bounded owned test set is available.", "Add focused coverage and a tracked catalog mapping for this boundary.")
+    node, vitest, python = [], [], []
+    for p in tests:
+        if not p.endswith(".py") and re.search(r"(?m)^\s*//\s*@test-suite\s+ai\s*$", (root / p).read_text(encoding="utf-8")):
+            continue
+        if p.endswith(".py"):
+            python.append(p)
+        elif re.search(r"(?m)^[ \t]*import[ \t]+[^;\"'`]*?\bfrom\s+[\"']vitest[\"']", (root / p).read_text(encoding="utf-8")):
+            vitest.append(p)
+        else:
+            node.append(p)
+    result = []
+    if not (node or vitest or python):
+        refuse("verification.focused-tests-unavailable", "No non-AI focused tests are available.")
+    # Chunk arguments to stay below Windows process command-line limits.
+    for at in range(0, len(node), 12):
+        chunk = node[at:at + 12]
+        loader = ["--import", "tsx"] if any(p.endswith((".ts", ".tsx")) for p in chunk) else []
+        result.append(["node", *loader, "--test", "--", *chunk])
+    if vitest:
+        result.append(["node", "dev-tools/helpers/run_vitest_checks.mjs", "--", *vitest])
+    for test in python:
+        result.append([sys.executable, "-B", "-m", "unittest", "discover", "-s", Path(test).parent.as_posix(), "-p", Path(test).name])
+    return result
+
+
+def profile_commands(root, profile_id):
+    identifier(profile_id)
+    data = read_json(confined_path(root, "dev-tools/config/contributor-check-profiles.json"))
+    fields(data, {"schema_version", "profiles"}, {"schema_version", "profiles"})
+    if data["schema_version"] != "contributor-check-profiles-v1" or not isinstance(data["profiles"], dict):
+        refuse("verification.profile-schema", "Use the versioned source-owned profile schema.")
+    profile = data["profiles"].get(profile_id)
+    fields(profile, {"test_paths", "source_paths"}, {"test_paths", "source_paths"})
+    paths = profile["test_paths"]
+    if not isinstance(paths, list) or not 1 <= len(paths) <= 100 or not all(isinstance(p, str) for p in paths) or len(set(paths)) != len(paths):
+        refuse("verification.profile-unavailable", "Choose a bounded registered qualification profile.")
+    source = snapshot(root)["files"]
+    controlled = {"test_constrained_json_outlines_integration.py", "test_context_generation_ai_e2e.py"}
+    for path in paths:
+        relative(path)
+        confined_path(root, path)
+        if not path.startswith(("modules/", "apps/", "dev-tools/")) or path not in source or (
+            ".test." not in path and not (Path(path).name.startswith("test_") and path.endswith(".py"))
+        ) or Path(path).name in controlled or ".ai." in path or "/tests/ai/" in path:
+            refuse("verification.profile-path", "Profiles contain only available source-owned non-AI tests.")
+        if re.search(r"(?m)^\s*//\s*@test-suite\s+ai\s*$", (root / path).read_text(encoding="utf-8")):
+            refuse("verification.profile-ai", "Controlled AI qualification is reserved for the explicit AI suite.")
+    return commands(root, paths, exact=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--affected", action="append", default=[])
+    parser.add_argument("--regression-test")
+    parser.add_argument("--profile")
+    args = parser.parse_args()
+    try:
+        root = Path(__file__).resolve().parents[2]
+        if sum(bool(v) for v in (args.regression_test, args.affected, args.profile)) > 1:
+            refuse("verification.arguments", "Choose affected ownership or one exact regression.")
+        selected = profile_commands(root, args.profile) if args.profile else commands(root, [relative(args.regression_test)] if args.regression_test else args.affected, exact=bool(args.regression_test))
+        for argv in selected:
+            r = subprocess.run(argv, cwd=root, check=False, timeout=270)
+            if r.returncode:
+                return r.returncode
+        return 0
+    except (ControlError, OSError, subprocess.TimeoutExpired):
+        print("Focused verification unavailable or failed; inspect the owning tests.", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

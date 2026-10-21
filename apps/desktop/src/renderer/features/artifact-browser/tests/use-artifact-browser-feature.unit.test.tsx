@@ -246,10 +246,8 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       createArtifactMediaViewUrl: vi
         .fn()
         .mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi.fn().mockResolvedValue({
-        mediaType: "text/plain",
-        bytes: new Uint8Array([97]),
-      }),
+      // This action fixture has no decodable image; exercise the media URL fallback.
+      readArtifactMedia: vi.fn().mockRejectedValue(new Error("Synthetic preview bytes unavailable.")),
       getHuggingFaceTokenStatus: vi
         .fn()
         .mockResolvedValue({ configured: false }),
@@ -314,6 +312,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     ).find(
       (button) => button.textContent === "Publish to Hugging Face",
     ) as HTMLButtonElement;
+    expect(publishToggleButton).toBeDefined();
     await act(async () => {
       publishToggleButton.click();
     });
@@ -370,10 +369,8 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       createArtifactMediaViewUrl: vi
         .fn()
         .mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi.fn().mockResolvedValue({
-        mediaType: "text/plain",
-        bytes: new Uint8Array([97]),
-      }),
+      // This action fixture has no decodable image; exercise the media URL fallback.
+      readArtifactMedia: vi.fn().mockRejectedValue(new Error("Synthetic preview bytes unavailable.")),
       getHuggingFaceTokenStatus: vi
         .fn()
         .mockResolvedValue({ configured: false }),
@@ -415,6 +412,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     ).find(
       (button) => button.textContent === "Publish to Hugging Face",
     ) as HTMLButtonElement;
+    expect(publishToggleButton).toBeDefined();
     await act(async () => {
       publishToggleButton.click();
     });
@@ -465,10 +463,8 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       createArtifactMediaViewUrl: vi
         .fn()
         .mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi.fn().mockResolvedValue({
-        mediaType: "text/plain",
-        bytes: new Uint8Array([97]),
-      }),
+      // This action fixture has no decodable image; exercise the media URL fallback.
+      readArtifactMedia: vi.fn().mockRejectedValue(new Error("Synthetic preview bytes unavailable.")),
       getHuggingFaceTokenStatus: vi
         .fn()
         .mockResolvedValue({ configured: false }),
@@ -505,6 +501,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     ).find((button) =>
       button.textContent?.includes("Hugging Face defaults"),
     ) as HTMLButtonElement;
+    expect(defaultsPanelToggle).toBeDefined();
 
     expect(defaultsPanelToggle.getAttribute("aria-expanded")).toBe("false");
   });
@@ -725,6 +722,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     const deleteButton = Array.from(
       document.body.querySelectorAll("button"),
     ).find((button) => button.textContent === "Delete") as HTMLButtonElement;
+    expect(deleteButton).toBeDefined();
 
     await act(async () => {
       registerButton.click();
@@ -809,6 +807,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     const deleteButton = Array.from(
       document.body.querySelectorAll("button"),
     ).find((button) => button.textContent === "Delete") as HTMLButtonElement;
+    expect(deleteButton).toBeDefined();
 
     await act(async () => {
       deleteButton.click();
@@ -869,10 +868,8 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       createArtifactMediaViewUrl: vi
         .fn()
         .mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi.fn().mockResolvedValue({
-        mediaType: "text/plain",
-        bytes: new Uint8Array([97]),
-      }),
+      // This action fixture has no decodable image; exercise the media URL fallback.
+      readArtifactMedia: vi.fn().mockRejectedValue(new Error("Synthetic preview bytes unavailable.")),
       getHuggingFaceTokenStatus: vi
         .fn()
         .mockResolvedValue({ configured: false }),
@@ -909,6 +906,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     ).find(
       (button) => button.textContent === "Delete registered artifact",
     ) as HTMLButtonElement;
+    expect(deleteButton).toBeDefined();
 
     await act(async () => {
       deleteButton.click();
@@ -959,10 +957,8 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       createArtifactMediaViewUrl: vi
         .fn()
         .mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi.fn().mockResolvedValue({
-        mediaType: "text/plain",
-        bytes: new Uint8Array([97]),
-      }),
+      // This action fixture has no decodable image; exercise the media URL fallback.
+      readArtifactMedia: vi.fn().mockRejectedValue(new Error("Synthetic preview bytes unavailable.")),
       getHuggingFaceTokenStatus: vi
         .fn()
         .mockResolvedValue({ configured: false }),
@@ -999,6 +995,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     ).find(
       (button) => button.textContent === "Delete registered artifact",
     ) as HTMLButtonElement;
+    expect(deleteButton).toBeDefined();
     await act(async () => {
       deleteButton.click();
     });
@@ -1107,10 +1104,8 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
       createArtifactMediaViewUrl: vi
         .fn()
         .mockResolvedValue("blob:desktop-preview"),
-      readArtifactMedia: vi.fn().mockResolvedValue({
-        mediaType: "text/plain",
-        bytes: new Uint8Array([97]),
-      }),
+      // This action fixture has no decodable image; exercise the media URL fallback.
+      readArtifactMedia: vi.fn().mockRejectedValue(new Error("Synthetic preview bytes unavailable.")),
       getHuggingFaceTokenStatus: vi
         .fn()
         .mockResolvedValue({ configured: false }),
@@ -1160,6 +1155,7 @@ describe("Desktop ArtifactBrowserFeature publish flow", () => {
     ).find(
       (button) => button.textContent === "Re-check published backing",
     ) as HTMLButtonElement;
+    expect(recheckButton).toBeDefined();
     await act(async () => {
       recheckButton.click();
     });

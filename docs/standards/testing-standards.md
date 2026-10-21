@@ -15,10 +15,18 @@ They are not written to satisfy vanity coverage metrics or performative CI check
 - `node:test` is the canonical default runner for non-browser tests.
 - Use `node:assert/strict`-backed assertions for non-browser test coverage.
 - The canonical runner supplies its transpiled test files to Node's programmatic
-  `run()` API with `isolation: "none"`; do not pre-import the same files and then
-  invoke `run()`, which can double-register execution under Node 24.
-- Vitest-owned renderer tests are selected by their explicit Vitest import and run
-  separately from Node-owned tests.
+  `run()` API with `isolation: "process"` and concurrency 4. Independent files
+  must not share DOM, transport or environment globals. Do not pre-import the
+  same files and then invoke `run()`, which can double-register Node execution.
+- Retain every child-spawn, assertion and cancellation failure. Discovered work
+  needs actual executed passes; an empty or entirely skipped event stream is not
+  a passing test run. Empty Node AI discovery is explicitly delegated to the
+  separate controlled AI runner, never labeled executed Node coverage.
+- Vitest ownership follows actual import/re-export/dynamic-import syntax, parsed
+  as code. Comments and fixture strings cannot change test ownership. Vitest and
+  Node discovery remain separate; the runner's own tests must remain discoverable.
+- Text-source fixture assertions normalize line endings before semantic checks.
+  Test the actual user journey; hidden tabs need not fetch data eagerly.
 - Canonical repo commands:
   - `npm test` / `npm run test:standard` (standard unit and interaction coverage)
   - `npm run test:e2e` (integration and end-to-end coverage)
@@ -276,3 +284,21 @@ Before merging:
 - Are tests deterministic and CI-reliable?
 
 If any answer is “no”, test quality is insufficient.
+
+Desktop packaging compatibility must verify the actual generated main/preload
+entry contracts as well as config types. The current Forge main is
+`.webpack/main/index.cjs`; preload entry globals resolve each window's
+`preload.cjs` while renderer scripts/HTML retain their existing names. A custom
+packaging ignore function must exclude JS and CJS source maps and runtime data,
+since it replaces Forge's default filter. Use the isolated packaged-desktop
+journey for real startup/preload/IPC compatibility; generator tests alone do not
+qualify a packaged application. Keep physical/user qualification separate.
+
+Headless artifact action fixtures must declare binary-preview behavior explicitly.
+A synthetic one-byte payload is not a decodable image. For publish/delete/backing
+journeys that do not qualify decoding, reject the binary media read and exercise
+the existing view-URL fallback; retain action payload, exact typed-confirmation,
+denial and cleanup assertions. Do not rely on missing object-URL support: Vitest
+and Node may provide that API while jsdom emits no image load/error event. Do not
+add sleeps, globally disable browser capabilities or claim real image/provider
+qualification from those fixtures. Dedicated decoder tests own image outcomes.

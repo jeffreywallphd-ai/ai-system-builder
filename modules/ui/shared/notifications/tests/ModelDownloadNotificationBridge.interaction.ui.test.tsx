@@ -1,3 +1,5 @@
+import { useTaskObservationManager } from "../TaskObservationProvider";
+import type { TaskObservationManager } from "../taskObservation";
 // @ts-expect-error jsdom is a runtime test dependency without local declarations.
 import { JSDOM } from "jsdom";
 import { act, useEffect } from "react";
@@ -45,10 +47,10 @@ describe("ModelDownloadNotificationBridge", () => {
       progress: status === "running" ? { current: 25, total: 100, percent: 25, unit: "bytes", message: "Downloading model." } : undefined,
     }] }));
     let intervalHandler: (() => void) | undefined;
-    const originalSetInterval = window.setInterval.bind(window);
-    const originalClearInterval = window.clearInterval.bind(window);
-    window.setInterval = ((handler: TimerHandler) => { intervalHandler = handler as () => void; return 1 as unknown as number; }) as typeof window.setInterval;
-    window.clearInterval = (() => undefined) as typeof window.clearInterval;
+    const originalSetInterval = globalThis.setTimeout;
+    const originalClearInterval = globalThis.clearTimeout;
+    globalThis.setTimeout = ((handler: () => void, delay: number, ...args: any[]) => { if (delay === 1000) { intervalHandler = handler; return 1; } return originalSetInterval(handler, delay, ...args); }) as typeof globalThis.setTimeout;
+    globalThis.clearTimeout = ((timer: any) => { if (timer !== 1) originalClearInterval(timer); }) as typeof globalThis.clearTimeout;
     try {
       container = document.createElement("div");
       document.body.appendChild(container);
@@ -73,8 +75,21 @@ describe("ModelDownloadNotificationBridge", () => {
       expect(container.querySelector(".ui-notification__badge")?.textContent).toBe("1");
       expect(listModelDownloads.mock.calls[0]?.[0]).toMatchObject({ workspaceId, includeCompleted: true, limit: 100 });
     } finally {
-      window.setInterval = originalSetInterval;
-      window.clearInterval = originalClearInterval;
+      globalThis.setTimeout = originalSetInterval;
+      globalThis.clearTimeout = originalClearInterval;
     }
   });
+});
+
+it("announces only new terminal IDs while a newest-first window grows beyond100", async () => {
+  const workspaceId = createWorkspaceId("workspace.downloads"); let newest = 100; let observer!: TaskObservationManager;
+  const client = { listModelDownloads: async () => ({ activities: Array.from({ length: 100 }, (_, index) => ({ requestId: String(newest - index), workspaceId, displayName: `Model ${newest - index}`, modelId: "org/model", status: "succeeded" as const })) }) };
+  function Records() { const n = useNotificationCenter(); observer = useTaskObservationManager(); return <p data-count={n.records.length}>{n.records.map((r) => r.title).join("|")}</p>; }
+  container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
+  await act(async () => { root!.render(<NotificationProvider><ActiveWorkspace workspaceId={workspaceId} /><ModelDownloadNotificationBridge client={client} workspaceId={workspaceId} /><Records /></NotificationProvider>); });
+  expect(container.querySelector("[data-count]")?.getAttribute("data-count")).toBe("0");
+  for (newest = 101; newest <= 102; newest++) {
+    await act(async () => { observer.invalidate({ workspaceId, family: "model-download" }); await Promise.resolve(); });
+    expect(container.querySelector("[data-count]")?.getAttribute("data-count")).toBe(String(newest - 100));
+  }
 });

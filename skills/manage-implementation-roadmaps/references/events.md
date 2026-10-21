@@ -10,6 +10,17 @@ the engine never executes them.
 
 ## Security evidence convention
 
+New roadmaps in a repository containing the integrated contributor adapter carry
+`evidencePolicy: control-plane-v1`. This is a versioned adoption boundary, not a
+new user approval event. `increment-completed` requires a completed helper work
+record bound to the active approved increment, every acceptance ID, current
+executed verification and separate-invocation review. Descriptive evidence events
+do not bypass that guard. Old state remains readable and explicitly legacy.
+
+Command publication is serialized and predecessor-checked. An interrupted apply
+or init has a confined recovery journal; the next apply or render finishes it
+before accepting another mutation. Status and validate remain read-only.
+
 The event schema stores a structured security impact in discovery, then uses
 acceptance criteria, risks, plans, and evidence without duplicating repository
 security policy. Follow the target repository's security-by-design standard:
@@ -329,6 +340,14 @@ criterion may be pending.
 ```
 
 ### `roadmap-completed`
+
+With `evidencePolicy: control-plane-v1`, first complete the guide's reviewed
+`overall` work item with current source and the configured completion suite.
+Completed increment declarations alone cannot qualify final closure.
+Overall verification may run with the final increment verifying only after every
+implementation chunk and all predecessors are implemented, approval is current
+and no blocker is open. This admits checks, never controlled evidence or closure.
+Do not record aggregate execution as a completed implementation chunk in advance.
 
 ```json
 {

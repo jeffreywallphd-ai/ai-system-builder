@@ -1,0 +1,86 @@
+"""Public review contract derived only from versioned JSON, never Markdown."""
+from __future__ import annotations
+
+from pathlib import Path
+from datetime import datetime, timezone
+
+from .common import digest, now, read_json, safe_text
+from .contracts import ControlError
+from .records import Records
+from .metrics import delivery
+from .storage import confined_path
+
+
+def creation_time(value):
+    """Normalize authoritative dates for sorting; never infer from file mtime."""
+    if not isinstance(value, str) or len(value) > 80:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            return None
+        return parsed.astimezone(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
+    except (ValueError, OverflowError):
+        return None
+
+
+def project(root: Path) -> dict:
+    roadmaps, diagnostics = [], []
+    base = confined_path(root, ".implementation-roadmaps")
+    if base.is_dir():
+        for path in sorted(base.glob("*/state.json"))[:200]:
+            try:
+                relative_path = path.relative_to(root).as_posix()
+                s = read_json(confined_path(root, relative_path), maximum=2 * 1024 * 1024)
+                if s.get("schemaVersion") != 1 or not isinstance(s.get("increments"), list):
+                    raise ValueError("schema")
+                roadmap_created = creation_time(s.get("createdAt"))
+                increments = []
+                for i in s["increments"][:100]:
+                    evidence = [e for e in s.get("evidence", []) if e.get("incrementId") == i["id"]]
+                    latest = {e["criterionId"]: e for e in evidence}
+                    criteria = [{"id": safe_text(c["id"], 80), "description": safe_text(c["description"], 1500), "qualification": safe_text(c.get("qualification", "local")), "outcome": safe_text(latest.get(c["id"], {}).get("outcome", "missing")), "evidence_summary": safe_text(latest.get(c["id"], {}).get("summary", ""), 1600)} for c in i.get("acceptanceCriteria", [])[:100]]
+                    completed = set(i.get("completedChunks", []))
+                    records = {c["chunkId"]: c for c in s.get("chunks", []) if c.get("incrementId") == i["id"]}
+                    planned = (i.get("plan") or {}).get("chunks", [])[:100]
+                    chunk_created = creation_time((i.get("plan") or {}).get("recordedAt")) or creation_time(i.get("startedAt")) or roadmap_created
+                    next_id = next((c["id"] for c in planned if c["id"] not in completed), None)
+                    chunks = []
+                    for number, c in enumerate(planned, 1):
+                        record = records.get(c["id"], {})
+                        chunks.append({"id": safe_text(c["id"], 80), "chunk_number": number, "title": safe_text(c["title"]), "outcome": safe_text(c["outcome"], 1400), "created_at": chunk_created, "status": "completed" if c["id"] in completed else "planned", "is_next": s.get("currentIncrementId") == i["id"] and c["id"] == next_id, "criteria_ids": [safe_text(k, 80) for k in c.get("criteriaIds", [])[:100]], "completed_at": safe_text(record.get("completedAt", ""), 80), "summary": safe_text(record.get("summary", ""), 1000), "tests": [safe_text(t, 400) for t in record.get("tests", [])[:12]]})
+                    increments.append({"id": safe_text(i["id"], 80), "number": i["number"], "title": safe_text(i["title"]), "objective": safe_text(i["objective"], 1600), "status": safe_text(i["status"]), "criteria": criteria, "chunks_complete": sum(c["status"] == "completed" for c in chunks), "chunks_planned": len(chunks), "chunks": chunks})
+                roadmaps.append({"id": safe_text(s["slug"], 80), "title": safe_text(s["name"]), "objective": safe_text(s["objective"], 1800), "created_at": roadmap_created, "status": safe_text(s["status"]), "evidence_policy": s.get("evidencePolicy", "declarative-legacy"), "current_increment": safe_text(s.get("currentIncrementId") or "none"), "increments": increments, "blocker_count": sum(b.get("status") == "open" for b in s.get("blockers", []))})
+            except (ControlError, ValueError, KeyError, TypeError):
+                diagnostics.append({"code": "projection.roadmap-unavailable"})
+    # Stable identifiers break equal-date ties; unknown creation dates stay last.
+    roadmaps.sort(key=lambda r: r["id"])
+    roadmaps.sort(key=lambda r: r["created_at"] or "", reverse=True)
+    try:
+        state = Records(root).load()
+    except ControlError:
+        state = Records.empty()
+        diagnostics.append({"code": "projection.local-state-unavailable"})
+    works = []
+    for roadmap in roadmaps:
+        for increment in roadmap["increments"]:
+            for chunk in increment["chunks"]:
+                works.append({**chunk, "id": "/".join((roadmap["id"], increment["id"], chunk["id"])), "chunk_id": chunk["id"], "source": "roadmap-chunk", "roadmap_id": roadmap["id"], "roadmap_title": roadmap["title"], "increment_id": increment["id"], "increment_number": increment["number"], "increment_title": increment["title"], "criteria": [c for c in increment["criteria"] if c["id"] in chunk["criteria_ids"]], "evidence_policy": roadmap["evidence_policy"]})
+    for w in list(state["work_items"].values())[:200]:
+        works.append({"id": safe_text(w["spec"]["work_id"], 80), "title": safe_text(w["spec"]["title"]), "kind": w["spec"]["kind"], "status": w["status"], "outcome": {k: safe_text(v, 1000) for k, v in w["spec"]["outcome"].items()}, "roadmap": safe_text((w["spec"].get("roadmap") or {}).get("increment_id", "lightweight")), "receipt_count": len(w.get("receipts", [])), "review_count": len(w.get("reviews", [])), "latest_verification": (w.get("receipts") or [{}])[-1].get("qualification", "unverified"), "latest_review": (w.get("reviews") or [{}])[-1].get("disposition", "missing"), "claim": "active" if w.get("claim") else "none"})
+        works[-1]["metrics"] = delivery(w)
+        works[-1]["source"] = "execution"
+        works[-1]["created_at"] = creation_time(w.get("created_at")) or creation_time((w.get("events") or [{}])[0].get("at"))
+    works.sort(key=lambda w: (w.get("roadmap_id", ""), w.get("increment_number", 0), w.get("chunk_number", 0), w["id"]))
+    works.sort(key=lambda w: w["created_at"] or "", reverse=True)
+    trials = [{"id": safe_text(t["trial_id"], 80), "task_id": safe_text(t["task_id"], 80), "status": t["status"], "evidence_kind": t.get("evidence_kind", "unavailable"), "result": t.get("result", {}).get("status", "ungraded")} for t in list(state["trials"].values())[:200]]
+    for projected, trial in zip(trials, list(state["trials"].values())[:200]):
+        run = trial.get("run", {})
+        projected["attempt_count"] = len(trial.get("attempts", []))
+        projected["run"] = {"model": safe_text(run.get("model", "unavailable")), "assurance": safe_text(run.get("assurance", "unavailable")), "infrastructure_status": safe_text(run.get("infrastructure_status", "unavailable")), **{k: run.get(k) for k in ("duration_ms", "retries", "input_tokens", "output_tokens", "cost_usd")}}
+    feedback = [{"id": safe_text(f["id"], 80), "work_id": safe_text(f["work_id"], 80), "summary": safe_text(f["summary"]), "status": f["status"], "regression": safe_text(f.get("regression", "unlinked"), 160)} for f in list(state["feedback"].values())[:200]]
+    content = {"schema_version": "development-review-v1", "roadmaps": roadmaps, "work_items": works, "evaluations": trials, "feedback": feedback, "diagnostics": diagnostics, "local_revision": state["revision"]}
+    content["source_digest"] = digest(content)
+    content["generated_at"] = now()
+    content["repository_id"] = digest(str(root.resolve()))
+    return content

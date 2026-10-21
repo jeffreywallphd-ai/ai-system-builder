@@ -108,7 +108,7 @@ describe("registerAssetRegistryApiRoutes", () => {
     await handlers.get("/api/assets/definitions/:definitionId")({ params: { definitionId: "builtin.workflow" }, query: { workspaceId: "workspace.alpha", version: "1.0.0", expand: "aiContext,metadata,ports", includeValidation: "true" }, headers: {} }, res);
 
     expect(readDefinitionDetail).toHaveBeenCalledWith(
-      { kind: "asset-definition", id: "builtin.workflow", version: "1.0.0" },
+      { kind: "asset-definition-version", id: "builtin.workflow", version: "1.0.0" },
       { includeValidation: true, includeAiContext: true, includeConfigurationSchema: false, includePorts: true, includeRequirements: false, includeMetadata: true, workspaceId: "workspace.alpha" },
     );
     expect(status).toHaveBeenCalledWith(200);
@@ -123,7 +123,7 @@ describe("registerAssetRegistryApiRoutes", () => {
 
     await handlers.get("/api/assets/definitions/:definitionId/versions/:version")({ params: { definitionId: "builtin.workflow", version: "2.0.0" }, query: { workspaceId: "workspace.alpha" }, headers: {} }, res);
 
-    expect(readDefinitionDetail.mock.calls[0]?.[0]).toEqual({ kind: "asset-definition", id: "builtin.workflow", version: "2.0.0" });
+    expect(readDefinitionDetail.mock.calls[0]?.[0]).toEqual({ kind: "asset-definition-version", id: "builtin.workflow", version: "2.0.0" });
     expect(readDefinitionDetail.mock.calls[0]?.[1]).toMatchObject({ workspaceId: "workspace.alpha" });
     expect(status).toHaveBeenCalledWith(200);
     expect(json.mock.calls[0]?.[0]).toMatchObject({ ok: true, operation: "asset.definition-version-read" });

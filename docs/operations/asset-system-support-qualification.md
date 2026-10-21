@@ -165,6 +165,61 @@ runtime version, data fixture, storage mode, and background-load controls. Do
 not turn ordinary unit tests into timing gates; host variance would make them
 flaky and would not qualify the target environment.
 
+The repository-owned probe module is
+`dev-tools/scripts/qualification/asset-system-owned-probes.ts`. Run it with:
+
+```text
+node --import tsx dev-tools/scripts/qualification/run-asset-system-performance-qualification.mjs --probe-module dev-tools/scripts/qualification/asset-system-owned-probes.ts
+```
+
+The runner accepts an async `createQualificationProbeSet` factory so fixture
+preparation is outside timing. Each operation asserts its actual result. Catalog
+uses an isolated disk store with 1,000 workspace-authored definitions; validation
+uses 500 instances and 1,000 bindings; resolution examines 500 real releases with
+revocation and incompatibility. Build uses the real validator, resolver and
+materializer with a digest-verified in-memory sink. Preview builds and approves
+the secured-review reference, resolves its release-bound policy, actually reads
+2 MiB of supported text, and verifies bounded output and audit. Runtime handoff
+consumes 35 separately prepared active deployments with real release verification,
+revocation checks, trusted runtime, persisted run and audit. Its database lifecycle
+adapter is an in-memory fixture; it does not qualify SQLite durability or a model.
+
+The source identity hashes the relative names and contents of tracked and new
+source files under `modules/`, `apps/`, and `dev-tools/`, including dirty files,
+plus root `package.json` and `package-lock.json`. Root dependency declaration or
+resolution changes therefore invalidate an in-flight measurement or packaged
+smoke observation. Observations using the earlier identity policy remain
+historical evidence and do not qualify a later dependency candidate.
+Local observations remain separate from controlled profile evidence. Scratch
+stores are kept under ignored `.local-codex/t/` for inspection. Use five warmups
+and 30 measurements; retain failed reports as well as candidate results.
+The CLI captures source before workload loading and refuses to emit a report if
+the source changes before measurement completes. Qualification admission requires
+the performance report and qualification candidate to name the same source.
+
+For the model-free browse authoring journey on both real fixture hosts, run:
+
+```text
+npm run test:visual-composer -- thin-client-browse.e2e.spec.ts packaged-desktop-browse.e2e.spec.ts
+```
+
+This builds the current desktop package and uses isolated desktop/server data.
+It verifies searched compatible elements, exact detail identity, insertion,
+undo/redo, rendered preview, save and fresh-renderer reopen, keyboard/focus return,
+and reachable controls with real 320 CSS-pixel geometry. The harness pins a source
+digest before loading/building and checks source stability at teardown. Its
+sanitized evidence includes source/environment identity and each host result.
+It makes no model/provider call and does not replace manual assistive-technology,
+participant, real-model hardware or named controlled performance qualification.
+
+Within one build, identical exact definitions and resolution inputs share the
+complete selected implementation. Every instance retains its own lock entry and
+diagnostics. Before materialization, each reused ready selection gets an uncached
+locked-release/facet authority check; changed evidence or unavailable authority
+fails the build. Cancellation is checked again after that await. Later/concurrent
+builds have separate caches and model authority remains uncached. Approval verifies
+lock/artifact integrity; deployment still performs fresh revocation checks.
+
 ## Admission and availability controls
 
 The manifest consolidates package byte/entry/expansion ceilings, declaration

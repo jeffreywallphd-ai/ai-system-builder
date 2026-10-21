@@ -3,6 +3,7 @@ import { JSDOM } from "jsdom";
 import { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import {
+  after,
   afterEach,
   describe,
   expect,
@@ -31,7 +32,12 @@ const dom = new JSDOM("<!doctype html><html><body></body></html>", {
 (globalThis as any).HTMLElement = dom.window.HTMLElement;
 (globalThis as any).HTMLInputElement = dom.window.HTMLInputElement;
 (globalThis as any).HTMLTextAreaElement = dom.window.HTMLTextAreaElement;
-(globalThis as any).navigator = dom.window.navigator;
+const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+Object.defineProperty(globalThis, "navigator", { configurable: true, value: dom.window.navigator });
+after(() => {
+  if (originalNavigator) Object.defineProperty(globalThis, "navigator", originalNavigator);
+  else Reflect.deleteProperty(globalThis, "navigator");
+});
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 let scrollTo = testDouble.fn();
 Object.defineProperty(dom.window, "scrollTo", {

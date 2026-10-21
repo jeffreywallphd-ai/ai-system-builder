@@ -99,7 +99,11 @@ function renderImageGenerationNumericLabel(label: string) {
   return label;
 }
 
-export function ImageGenerationFeature({
+export function ImageGenerationFeature(props: Parameters<typeof WorkspaceImageGenerationFeature>[0] = {}) {
+  return <WorkspaceImageGenerationFeature key={props.workspaceId ?? "unselected"} {...props} />;
+}
+
+function WorkspaceImageGenerationFeature({
   onGenerated,
   onNavigateToArtifacts,
   onNavigateToModels,
@@ -614,6 +618,7 @@ export function ImageGenerationFeature({
                 <p>Request ID: {feature.requestId}</p>
               ) : null}
               {feature.error ? <p role="alert">{feature.error}</p> : null}
+              {feature.canRetryFinalization ? <button type="button" className="ui-button" onClick={feature.retryFinalization}>Retry finalization</button> : null}
               <TransientNotificationPublisher message={feature.unloadModelState.status !== "loading" ? feature.unloadModelState.message : undefined} title={feature.unloadModelState.status === "error" ? "Model unload needs attention" : "Model unloaded"} tone={feature.unloadModelState.status === "error" ? "error" : "success"} source="Image Generation" workspaceId={workspaceId} />
             </div>
           </WorkflowStep>

@@ -21,7 +21,7 @@ const wa = "workspace.a" as any; const wb = "workspace.b" as any;
 test("workspace-scoped summaries and attention classification", async () => {
   const repo = new FakeRepo();
   repo.records = [plan("p.valid", wa, "valid"), plan("p.blocked", wa, "blocked"), plan("p.foreign", wb, "blocked")];
-  const svc = new WorkspaceAssetCompositionReadModelService({ compositionPlanRepository: repo as any });
+  const svc = new WorkspaceAssetCompositionReadModelService({ workspaceAccess: {async authorize() {}}, compositionPlanRepository: repo as any });
   const list = await svc.listCompositionPlanSummaries({ targetWorkspaceId: wa });
   assert.equal(list.summaries.length, 2);
   assert.equal(list.summaries.find((s) => s.planId === "p.valid")?.needsAttention, false);
@@ -30,7 +30,7 @@ test("workspace-scoped summaries and attention classification", async () => {
 
 test("reads detail safely and workspace isolated", async () => {
   const repo = new FakeRepo(); repo.records = [plan("p.same", wa, "draft"), plan("p.same", wb, "draft")];
-  const svc = new WorkspaceAssetCompositionReadModelService({ compositionPlanRepository: repo as any });
+  const svc = new WorkspaceAssetCompositionReadModelService({ workspaceAccess: {async authorize() {}}, compositionPlanRepository: repo as any });
   const a = await svc.readCompositionPlanDetail({ targetWorkspaceId: wa, planId: "p.same" });
   const miss = await svc.readCompositionPlanDetail({ targetWorkspaceId: wa, planId: "none" });
   assert.equal(a?.summary.targetWorkspaceId, wa);
@@ -43,7 +43,7 @@ test("reads detail safely and workspace isolated", async () => {
 test("plans for projection/effective ref and needing-attention are workspace scoped", async () => {
   const repo = new FakeRepo();
   repo.records = [plan("p1", wa, "valid"), plan("p2", wa, "conflicted"), plan("p1", wb, "blocked")];
-  const svc = new WorkspaceAssetCompositionReadModelService({ compositionPlanRepository: repo as any });
+  const svc = new WorkspaceAssetCompositionReadModelService({ workspaceAccess: {async authorize() {}}, compositionPlanRepository: repo as any });
   const byProjection = await svc.listPlansForProjection({ targetWorkspaceId: wa, projectionId: "proj.1" });
   const byRef = await svc.listPlansForEffectiveAssetReference({ targetWorkspaceId: wa, effectiveAssetReference: { kind: "asset-instance", id: "asset.1", version: "1.0.0" } as any });
   const attention = await svc.listPlansNeedingAttention({ targetWorkspaceId: wa });
@@ -68,7 +68,7 @@ function plan(id: string, workspaceId: any, status: any): AssetCompositionPlan {
 
 test("sanitizes unsafe display fields", async () => {
   const repo = new FakeRepo(); repo.records = [plan("p.safe", wa, "blocked")];
-  const svc = new WorkspaceAssetCompositionReadModelService({ compositionPlanRepository: repo as any });
+  const svc = new WorkspaceAssetCompositionReadModelService({ workspaceAccess: {async authorize() {}}, compositionPlanRepository: repo as any });
   const detail = await svc.readCompositionPlanDetail({ targetWorkspaceId: wa, planId: "p.safe" });
   assert.equal(detail?.summary.name.includes("<"), false);
   assert.equal(detail?.selectedProjections[0]?.displayLabel?.includes("<"), false);

@@ -1,8 +1,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import path from "node:path";
+import { tmpdir } from "node:os";
 
 import {
-  applyIgnoredFailureAdjustments,
   applyDiagnosticSummaryMetric,
   buildNonBrowserNodeTestRunOptions,
   classifyTestFileSuite,
@@ -10,7 +13,7 @@ import {
   createTestTimingTracker,
   formatNonBrowserFailureSummary,
   isVitestOwnedTestSource,
-  isIgnorableRunnerSpawnFailure,
+  isSuccessfulNonBrowserRun,
   isNonBrowserAssetSource,
   parseTestSuiteArgument,
   shouldIncludeTestFileForSuite,
@@ -41,8 +44,86 @@ describe("non-browser test runner core helpers", () => {
     assert.equal(runOptions.cwd, "C:/repo");
     assert.deepEqual(runOptions.files, files);
     assert.notEqual(runOptions.files, files);
-    assert.equal(runOptions.isolation, "none");
-    assert.equal("concurrency" in runOptions, false);
+    assert.equal(runOptions.isolation, "process");
+    assert.equal(runOptions.concurrency, 4);
+  });
+
+  it("executes files with separate globals and retains one/all denied child spawns", () => {
+    const directory = mkdtempSync(path.join(tmpdir(), "runner-isolation-"));
+    try {
+      for (const [file, marker] of [
+        ["a.test.mjs", "one"],
+        ["b.test.mjs", "two"],
+      ]) {
+        writeFileSync(
+          path.join(directory, file),
+          `import {test} from 'node:test'; import assert from 'node:assert/strict'; globalThis.marker=${JSON.stringify(marker)}; test('owns its global',()=>assert.equal(globalThis.marker,${JSON.stringify(marker)}));`,
+        );
+      }
+      const core = new URL(
+        "../non-browser-test-runner-core.mjs",
+        import.meta.url,
+      ).href;
+      writeFileSync(
+        path.join(directory, "observe.cjs"),
+        `
+const cp=require('node:child_process'), path=require('node:path');
+const mode=process.argv[2], original=cp.spawn;
+let denied=0;
+cp.spawn=function(...args) {
+  if(mode==='all' || mode==='one' && args[1].includes(path.join(__dirname,'b.test.mjs'))) {
+    denied++; const error=new Error('Synthetic bounded spawn denial'); error.code='EPERM'; throw error;
+  }
+  return original.apply(this,args);
+};
+(async()=>{
+  const core=await import(${JSON.stringify(core)}), {run}=await import('node:test');
+  const summary={counts:{failed:0,cancelled:0,passed:0}}, failures=[];
+  for await(const item of run(core.buildNonBrowserNodeTestRunOptions({files:['a.test.mjs','b.test.mjs'].map(f=>path.join(__dirname,f)),cwd:process.cwd()}))) {
+    if(item.type==='test:diagnostic') core.applyDiagnosticSummaryMetric(summary,item.data.message);
+    if(item.type==='test:fail') failures.push({code:item.data.details?.error?.cause?.code});
+  }
+  console.log(JSON.stringify({denied,failures,counts:summary.counts,qualified:core.isSuccessfulNonBrowserRun({summary,failures,discoveredCount:2})}));
+})().catch(()=>{process.exitCode=2;});`,
+      );
+      for (const mode of ["none", "one", "all"]) {
+        const environment = { ...process.env };
+        delete environment.NODE_TEST_CONTEXT;
+        const result = spawnSync(
+          process.execPath,
+          [path.join(directory, "observe.cjs"), mode],
+          {
+            cwd: process.cwd(),
+            env: environment,
+            encoding: "utf8",
+            timeout: 15000,
+            maxBuffer: 65536,
+          },
+        );
+        assert.equal(result.error, undefined);
+        assert.equal(result.status, 0, result.stderr);
+        const observed = JSON.parse(result.stdout.trim());
+        assert.equal(
+          observed.qualified,
+          mode === "none",
+          JSON.stringify(observed),
+        );
+        assert.equal(
+          observed.denied,
+          mode === "all" ? 2 : mode === "one" ? 1 : 0,
+        );
+        assert.equal(
+          observed.counts.passed,
+          mode === "all" ? 0 : mode === "one" ? 1 : 2,
+        );
+        assert.equal(observed.failures.length, observed.denied);
+        assert.ok(
+          observed.failures.every((failure) => failure.code === "EPERM"),
+        );
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it("classifies standard, end-to-end, and explicitly marked AI tests", () => {
@@ -184,59 +265,67 @@ describe("non-browser test runner core helpers", () => {
     assert.equal(summary.durationMs, 67.5);
   });
 
-  it("detects ignorable self-runner spawn failures produced by node:test in sandboxed environments", () => {
-    const event = {
-      details: {
-        error: {
-          code: "ERR_TEST_FAILURE",
-          cause: {
-            code: "EPERM",
-          },
-        },
-      },
-    };
-
+  it("never qualifies unexecuted, cancelled, failed or all-skipped discovered work", () => {
+    const summary = { counts: { failed: 0, cancelled: 0, passed: 1 } };
     assert.equal(
-      isIgnorableRunnerSpawnFailure({
-        event,
-        sourceFile: "dev-tools/scripts/testing/run-non-browser-tests.mjs",
-        runnerRelativePath:
-          "dev-tools/scripts/testing/run-non-browser-tests.mjs",
-      }),
+      isSuccessfulNonBrowserRun({ summary, failures: [], discoveredCount: 1 }),
       true,
     );
-
+    for (const counts of [
+      { failed: 1, cancelled: 0, passed: 1 },
+      { failed: 0, cancelled: 1, passed: 1 },
+      { failed: 0, cancelled: 0, passed: 0 },
+    ]) {
+      assert.equal(
+        isSuccessfulNonBrowserRun({
+          summary: { counts },
+          failures: [],
+          discoveredCount: 1,
+        }),
+        false,
+      );
+    }
+    const denied = {
+      file: "dev-tools/scripts/testing/run-non-browser-tests.mjs",
+      details: {
+        error: { code: "ERR_TEST_FAILURE", cause: { code: "EPERM" } },
+      },
+    };
     assert.equal(
-      isIgnorableRunnerSpawnFailure({
-        event,
-        sourceFile: "modules/contracts/shared/operation-identity.unit.test.ts",
-        runnerRelativePath:
-          "dev-tools/scripts/testing/run-non-browser-tests.mjs",
+      isSuccessfulNonBrowserRun({
+        summary,
+        failures: [denied],
+        discoveredCount: 2,
       }),
       false,
     );
+    assert.equal(
+      isSuccessfulNonBrowserRun({ summary, failures: [], discoveredCount: 0 }),
+      false,
+    );
+    assert.equal(
+      isSuccessfulNonBrowserRun({
+        summary: { counts: { failed: 0, cancelled: 0, passed: 0 } },
+        failures: [],
+        discoveredCount: 0,
+        delegatedEmpty: true,
+      }),
+      true,
+    );
   });
 
-  it("adjusts summary counters when ignorable failures are filtered from report failures", () => {
-    const summary = {
-      counts: {
-        cancelled: 0,
-        passed: 0,
-        failed: 1,
-        skipped: 0,
-        suites: 0,
-        tests: 1,
-        todo: 0,
-        topLevel: 0,
-      },
-      durationMs: 0,
-      success: false,
-    };
-
-    applyIgnoredFailureAdjustments(summary, 1);
-
-    assert.equal(summary.counts.failed, 0);
-    assert.equal(summary.counts.tests, 0);
+  it("routes actual imports without interpreting fixture strings or comments as framework ownership", () => {
+    for (const source of [
+      "// import { it } from 'vitest';",
+      `const fixture = 'import { it } from "vitest"';`,
+      "const fixture = `from 'vitest'`;",
+      "import type { Test } from 'vitest';",
+    ]) {
+      assert.equal(isVitestOwnedTestSource(source), false, source);
+    }
+    assert.equal(isVitestOwnedTestSource("import {it}\nfrom 'vitest';"), true);
+    assert.equal(isVitestOwnedTestSource("export {it} from 'vitest';"), true);
+    assert.equal(isVitestOwnedTestSource("await import('vitest');"), true);
   });
 
   it("formats startup and assertion failures for CI console diagnostics", () => {

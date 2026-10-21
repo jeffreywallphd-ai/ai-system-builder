@@ -5,6 +5,16 @@ import { describe, expect, it } from "../../../modules/testing/node-test";
 import { isThinClientViteHttpsEnabled, resolveThinClientViteHttpsConfig } from "../viteDevHttpsConfig";
 
 describe("thin-client Vite HTTPS config", () => {
+  it("implicitly enables LAN HTTPS and rejects explicit disable before accessing certificate files", async () => {
+    expect(isThinClientViteHttpsEnabled({ AI_SYSTEM_BUILDER_SECURITY_MODE: "lan-https-token" })).toBe(true);
+    for (const flag of ["false", "", "invalid"]) {
+      await expect(resolveThinClientViteHttpsConfig({ AI_SYSTEM_BUILDER_SECURITY_MODE: "lan-https-token",
+        AI_SYSTEM_BUILDER_THIN_CLIENT_HTTPS_ENABLED: flag,
+        AI_SYSTEM_BUILDER_THIN_CLIENT_TLS_CERT_PATH: "unreadable" })).rejects.toThrow(/disabling it is not permitted/);
+    }
+    await expect(resolveThinClientViteHttpsConfig({ AI_SYSTEM_BUILDER_SECURITY_MODE: "lan-https-token" }))
+      .rejects.toThrow(/TLS_CERT_PATH is required/);
+  });
   it("returns false when thin-client HTTPS is disabled", async () => {
     expect(await resolveThinClientViteHttpsConfig({})).toBe(false);
     expect(await resolveThinClientViteHttpsConfig({ AI_SYSTEM_BUILDER_THIN_CLIENT_HTTPS_ENABLED: "false" })).toBe(false);

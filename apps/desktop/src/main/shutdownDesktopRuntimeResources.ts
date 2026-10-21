@@ -1,5 +1,6 @@
 export async function shutdownDesktopRuntimeResources(options: {
   readonly closeRuntimeWindows: () => Promise<void>;
+  readonly shutdownBackgroundTasks?: () => Promise<void>;
   readonly stopPythonRuntime: () => Promise<void>;
   readonly closeRuntimeDatabases?: () => Promise<void>;
   readonly closePlatformDatabase: () => void;
@@ -9,11 +10,10 @@ export async function shutdownDesktopRuntimeResources(options: {
   } catch {
     // Shutdown remains best-effort and never exposes internal failure details.
   }
-  try {
-    await options.stopPythonRuntime();
-  } catch {
-    // Continue closing owned persistence even when the sidecar already exited.
-  }
+  // A failed worker stop is retryable. Persistence must remain available to its
+  // still-owned callbacks until shutdown reconciliation actually succeeds.
+  if (options.shutdownBackgroundTasks) await options.shutdownBackgroundTasks();
+  else await options.stopPythonRuntime();
   try {
     await options.closeRuntimeDatabases?.();
   } catch {

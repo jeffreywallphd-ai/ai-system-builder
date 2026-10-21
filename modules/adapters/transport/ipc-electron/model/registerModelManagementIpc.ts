@@ -1,3 +1,5 @@
+import { ModelLocalFileEffectsUnavailableError } from "../../../../application/ports/model";
+import { normalizeEditableModelRecordRequest } from "../../../../contracts/model";
 import type {
   BrowseModelsUseCase,
   DeleteModelRecordUseCase,
@@ -42,7 +44,9 @@ import {
   DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_START_RESPONSE_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_COMPLETE_REQUEST_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_READ_RESPONSE_CHANNEL,
+  DESKTOP_MODEL_DOWNLOAD_COMPLETE_RESPONSE_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_LIST_RESPONSE_CHANNEL,
   DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL,
@@ -66,6 +70,7 @@ import {
   createDesktopModelDownloadSuccessResponse,
   createDesktopModelDownloadStartSuccessResponse,
   createDesktopModelDownloadReadSuccessResponse,
+  createDesktopModelDownloadCompleteSuccessResponse,
   createDesktopModelDownloadListSuccessResponse,
   createDesktopModelDownloadCancelSuccessResponse,
   createDesktopModelReferenceSaveSuccessResponse,
@@ -103,7 +108,9 @@ import {
   type DesktopModelDownloadStartRequest,
   type DesktopModelDownloadStartResponse,
   type DesktopModelDownloadReadRequest,
+  type DesktopModelDownloadCompleteRequest,
   type DesktopModelDownloadReadResponse,
+  type DesktopModelDownloadCompleteResponse,
   type DesktopModelDownloadListRequest,
   type DesktopModelDownloadListResponse,
   type DesktopModelDownloadCancelRequest,
@@ -126,7 +133,7 @@ export interface RegisterModelManagementIpcDependencies {
   listModelsUseCase: Pick<ListModelsUseCase, "execute">;
   saveModelReferenceUseCase: Pick<SaveModelReferenceUseCase, "execute">;
   downloadModelUseCase: Pick<DownloadModelUseCase, "execute">;
-  modelDownloadTasksUseCase?: Pick<ModelDownloadTasksUseCase, "start" | "read" | "list" | "cancel">;
+  modelDownloadTasksUseCase?: Pick<ModelDownloadTasksUseCase, "start" | "read" | "list" | "cancel" | "complete">;
   updateModelRecordUseCase: Pick<UpdateModelRecordUseCase, "execute">;
   deleteModelRecordUseCase: Pick<DeleteModelRecordUseCase, "execute">;
   revealModelInFolderUseCase: Pick<RevealModelInFolderUseCase, "execute">;
@@ -165,11 +172,12 @@ function toFailureResponse<
   request: { requestId?: string; correlationId?: string },
 ): TResponse {
   const unavailable = isRuntimeCapabilityUnavailableError(error);
+  const fileEffectsUnavailable = error instanceof ModelLocalFileEffectsUnavailableError;
   return createIpcFailureResponse(
     createIpcError(
       channel,
-      unavailable ? "unavailable" : "internal",
-      unavailable
+      unavailable || fileEffectsUnavailable ? "unavailable" : "internal",
+      fileEffectsUnavailable ? error.message : unavailable
         ? "Required runtime capability is not ready."
         : "Model management request failed.",
       {
@@ -329,6 +337,16 @@ export function createReadModelDownloadIpcHandler(useCase: Pick<ModelDownloadTas
   };
 }
 
+export function createCompleteModelDownloadIpcHandler(useCase: Pick<ModelDownloadTasksUseCase, "complete">) {
+  return async (_event: unknown, request: DesktopModelDownloadCompleteRequest): Promise<DesktopModelDownloadCompleteResponse> => {
+    try {
+      return createDesktopModelDownloadCompleteSuccessResponse(await useCase.complete(request.payload, { modelWriteAuthorized: true }), request);
+    } catch (error) {
+      return toFailureResponse<DesktopModelDownloadCompleteResponse>(DESKTOP_MODEL_DOWNLOAD_COMPLETE_RESPONSE_CHANNEL, error, request);
+    }
+  };
+}
+
 export function createListModelDownloadsIpcHandler(useCase: Pick<ModelDownloadTasksUseCase, "list">) {
   return async (_event: unknown, request: DesktopModelDownloadListRequest): Promise<DesktopModelDownloadListResponse> => {
     try {
@@ -357,7 +375,7 @@ export function createUpdateModelRecordIpcHandler(
     request: DesktopModelRecordUpdateRequest,
   ): Promise<DesktopModelRecordUpdateResponse> => {
     try {
-      const result = await useCase.execute(request.payload);
+      const result = await useCase.execute(normalizeEditableModelRecordRequest(request.payload));
       return createDesktopModelRecordUpdateSuccessResponse(result, {
         requestId: request.requestId,
         correlationId: request.correlationId,
@@ -623,6 +641,7 @@ export function registerModelManagementIpc(
   if (dependencies.modelDownloadTasksUseCase) {
     dependencies.ipcMain.handle(DESKTOP_MODEL_DOWNLOAD_START_REQUEST_CHANNEL.value, createStartModelDownloadIpcHandler(dependencies.modelDownloadTasksUseCase));
     dependencies.ipcMain.handle(DESKTOP_MODEL_DOWNLOAD_READ_REQUEST_CHANNEL.value, createReadModelDownloadIpcHandler(dependencies.modelDownloadTasksUseCase));
+    dependencies.ipcMain.handle(DESKTOP_MODEL_DOWNLOAD_COMPLETE_REQUEST_CHANNEL.value, createCompleteModelDownloadIpcHandler(dependencies.modelDownloadTasksUseCase));
     dependencies.ipcMain.handle(DESKTOP_MODEL_DOWNLOAD_LIST_REQUEST_CHANNEL.value, createListModelDownloadsIpcHandler(dependencies.modelDownloadTasksUseCase));
     dependencies.ipcMain.handle(DESKTOP_MODEL_DOWNLOAD_CANCEL_REQUEST_CHANNEL.value, createCancelModelDownloadIpcHandler(dependencies.modelDownloadTasksUseCase));
   }

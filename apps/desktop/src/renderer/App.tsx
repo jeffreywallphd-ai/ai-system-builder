@@ -39,6 +39,7 @@ type DesktopWorkspacePageKey = Extract<
   "artifacts" | "context" | "assets" | "models" | "image-generation" | "systems"
 >;
 const desktopModelDownloadNotificationClient = {
+  completeModelDownload: (input: Parameters<ReturnType<typeof createDesktopModelsClient>["completeModelDownload"]>[0]) => createDesktopModelsClient().completeModelDownload(input),
   listModelDownloads: (
     input: Parameters<
       ReturnType<typeof createDesktopModelsClient>["listModelDownloads"]

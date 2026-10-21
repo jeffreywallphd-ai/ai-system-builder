@@ -994,3 +994,41 @@ describe("local asset adapter architecture boundaries", () => {
     assert.equal(typeof createLocalAssetBindingRepositoryAdapter, "function");
   });
 });
+
+
+it("transport exact-version references select the requested release when a later version exists", async () => {
+  const { toAssetRegistryDefinitionReference } = await import("../../../transport/asset-registry/assetRegistryReadInputMapper");
+  const repo = createLocalAssetDefinitionRepositoryAdapter({ rootDir: await tempRoot(), now: fixedNow });
+  await repo.saveDefinition(validDefinition({version: "1.0.0"}));
+  await repo.saveDefinition(validDefinition({version: "2.0.0"}));
+  const exact = toAssetRegistryDefinitionReference({ definitionId: "definition.one", version: "1.0.0" } as any);
+  assert.equal((await repo.getDefinition(exact))?.version, "1.0.0");
+  assert.equal((await repo.getDefinition(definitionRef))?.version, "2.0.0");
+});
+
+it("bounded exact batches preserve results with one collection read instead of one read per detail", async () => {
+  const backing = createInMemoryStructuredDocumentStore(fixedNow);
+  let reads = 0;
+  const documents = new Proxy(backing, { get(target, key) {
+    if (key === "readDocument") return async (namespace: string, id: string) => {
+      if (id.endsWith("definitions.json")) reads++;
+      return target.readDocument(namespace, id);
+    };
+    const value = Reflect.get(target, key);
+    return typeof value === "function" ? value.bind(target) : value;
+  } });
+  const options = { rootDir: await tempRoot(), documents, now: fixedNow };
+  const store = new LocalAssetRecordStore(options);
+  await store.writeCollection("definitions", Array.from({length: 1000}, (_, i) => validDefinition({definitionId: `definition.${i}`})));
+  const repository = createLocalAssetDefinitionRepositoryAdapter(options);
+  const refs = Array.from({length: 100}, (_, i) => ({kind: "asset-definition-version", id: `definition.${i}`, version: "1.0.0"}) as AssetReference);
+  reads = 0;
+  const baseline = await Promise.all(refs.map(ref => repository.getDefinition(ref)));
+  assert.equal(reads, 100);
+  reads = 0;
+  const batch = await repository.getDefinitions!(refs);
+  assert.deepEqual(batch, baseline);
+  assert.equal(reads, 1);
+  assert.ok(!JSON.stringify(batch).includes("configurationSchema"));
+  await assert.rejects(repository.getDefinitions!(Array(251).fill(refs[0])));
+});

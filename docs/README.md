@@ -25,6 +25,11 @@ This directory separates canonical system guidance from downstream task context 
 
 ## Supporting Areas
 
+- `docs/operations/functionality-qualification-crosswalk.json` maps current and
+  legacy controlled criteria to owners, procedures, harnesses and required
+  environments. `docs/operations/functionality-outcome-qualification.md` explains
+  the bounded source-bound JSON assessment and pending release decision.
+
 - `docs/security/`
   - Canonical threat models plus security-oriented operational checks and manual verification guidance.
 - `docs/diagnostics/`
@@ -65,6 +70,11 @@ This directory separates canonical system guidance from downstream task context 
   - Templates for durable epic, feature, and story context artifacts.
 
 ## Start by Task
+
+- AI-assisted contributor workflow: start at `AGENTS.md` and
+  `docs/diagnostics/ai-development-control-plane.md`. Start or safely reuse the
+  local review server and share its returned URL. The dynamic site uses
+  versioned JSON; scoped work, verification, review and recovery use one CLI.
 
 - Any repository task: read the root `AGENTS.md`, then `docs/context/packs/index.pack.md`, and record the mandatory security impact disposition from `docs/standards/security-by-design-standards.md`.
 - Implementation roadmap preparation, review, execution, continuation, or

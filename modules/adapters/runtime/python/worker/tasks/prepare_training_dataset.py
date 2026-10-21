@@ -17,6 +17,7 @@ from ..models import (
     PrepareTrainingDatasetRequest,
     PrepareTrainingDatasetResult,
     PythonRuntimeOutputDescriptor,
+    normalize_dataset_output_base_name,
 )
 from .document_normalization import normalize_sources_to_markdown
 from .example_generation import (
@@ -2334,6 +2335,11 @@ def prepare_training_dataset(
     on_generation_progress: Callable[[dict[str, Any]], None] | None = None,
     output_directory: Path | None = None,
 ) -> PrepareTrainingDatasetResult:
+    # Revalidate even constructed/mutated models, before task planning, source
+    # reads, generation or output effects. A private primitive survives callbacks.
+    base_name = normalize_dataset_output_base_name(
+        payload.output.naming.baseName if payload.output.naming is not None else None
+    ) or "training-dataset"
     task_type, task_recipe = _resolve_task_recipe(payload)
     structured_output = (
         _resolve_structured_output_for_generation(payload)
@@ -2479,7 +2485,6 @@ def prepare_training_dataset(
         for row in split_rows[role]
     ]
 
-    base_name = payload.output.naming.baseName if payload.output.naming and payload.output.naming.baseName else "training-dataset"
     output_metadata = {
         "stage": "prepared-dataset",
         "preparation": preparation_plan,

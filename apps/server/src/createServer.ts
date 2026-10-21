@@ -79,6 +79,7 @@ export interface CreatedServer {
   config: ServerRuntimeConfig;
   loggingPort: LoggingPort;
   closePersistence(): Promise<void>;
+  shutdownBackgroundTasks(): Promise<void>;
 }
 
 interface PersistenceReadinessResponse {
@@ -442,11 +443,12 @@ export async function createServer(
       app,
       config,
       loggingPort: serverHost.loggingPort,
+      shutdownBackgroundTasks: () => serverHost.shutdownBackgroundTasks(),
       async closePersistence() {
         if (persistenceClosed) return;
-        persistenceClosed = true;
         await serverHost.closeRuntimeDatabases();
         await postgresDatabase?.close();
+        persistenceClosed = true;
       },
     };
   } finally {

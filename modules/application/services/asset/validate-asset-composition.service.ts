@@ -14,6 +14,7 @@ import {
   validateReference,
   validateSafeId,
   valueAsString,
+  compositionInputShapeIssues,
   type AssetValidationContext,
   type AssetValidationOptions,
   type AssetValidationResult,
@@ -26,6 +27,8 @@ export function validateAssetComposition(
   composition: AssetComposition,
   context: AssetValidationContext = {},
 ): AssetValidationResult {
+  const shapeIssues = compositionInputShapeIssues(composition);
+  if (shapeIssues.length) return result(shapeIssues, context.options);
   const assetRef = ref("asset-composition", valueAsString(composition.compositionId));
   const issues: AssetValidationIssue[] = [];
   validateSafeId(composition.compositionId, "compositionId", "identity", issues, assetRef);

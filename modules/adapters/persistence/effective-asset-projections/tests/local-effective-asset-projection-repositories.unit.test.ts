@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
@@ -14,6 +14,7 @@ import {
   createLocalEffectiveAssetProjectionRepositoryAdapter,
   createLocalEffectiveAssetProjectionSnapshotRepositoryAdapter,
   LocalEffectiveAssetProjectionRecordStoreError,
+  LocalEffectiveAssetProjectionRecordStore,
 } from "..";
 
 const wsA = createWorkspaceId("workspace.a");
@@ -124,4 +125,39 @@ describe("local effective asset projection persistence", () => {
     );
     assert.equal((await repo.listEffectiveAssetProjectionSnapshotRecords({ targetWorkspaceId: wsB })).records.length, 0);
   });
+});
+
+it('validates fixed collection schemas before writes and mutation callbacks and preserves unsafe stored bytes',async()=>{
+ const rootDir=await mkdtemp(join(tmpdir(),'eap-strict-'));
+ const store=new LocalEffectiveAssetProjectionRecordStore({rootDir});
+ const projection=makeProjection();
+ await store.writeCollection('projections',[projection]);
+ const file=join(rootDir,'effective-asset-projections','effective-asset-projections.json');
+ const valid=await readFile(file,'utf8');
+ await assert.rejects(()=>store.writeCollection('projections',[{...projection,providerPayload:'private'}]),LocalEffectiveAssetProjectionRecordStoreError);
+ assert.equal(await readFile(file,'utf8'),valid);
+ await assert.rejects(()=>store.writeCollection('snapshots',[projection]),LocalEffectiveAssetProjectionRecordStoreError);
+ const unsafe=JSON.stringify([{...projection,provenance:{...projection.provenance,providerPayload:'private'}}]);
+ await writeFile(file,unsafe,'utf8');
+ await assert.rejects(()=>store.readCollection('projections'),LocalEffectiveAssetProjectionRecordStoreError);
+ let calls=0;
+ await assert.rejects(()=>store.mutateCollection('projections',records=>{calls++;return{records,result:undefined};}),LocalEffectiveAssetProjectionRecordStoreError);
+ assert.equal(calls,0);assert.equal(await readFile(file,'utf8'),unsafe);
+ await writeFile(file,valid,'utf8');
+ await assert.rejects(()=>store.mutateCollection('projections',()=>({records:[{...projection,rawPayload:'private'}],result:undefined})),LocalEffectiveAssetProjectionRecordStoreError);
+ assert.equal(await readFile(file,'utf8'),valid);
+ const unsafeDiagnostic={...projection,diagnostics:[{code:'effective-projection-source-missing',message:'Failed',metadata:{detail:'echo synthetic; bash'}}]};
+ await assert.rejects(()=>store.writeCollection('projections',[unsafeDiagnostic]),LocalEffectiveAssetProjectionRecordStoreError);
+ await writeFile(file,JSON.stringify([unsafeDiagnostic]),'utf8');
+ calls=0;
+ await assert.rejects(()=>store.readCollection('projections'),LocalEffectiveAssetProjectionRecordStoreError);
+ await assert.rejects(()=>store.mutateCollection('projections',records=>{calls++;return {records,result:undefined};}),LocalEffectiveAssetProjectionRecordStoreError);
+ assert.equal(calls,0);
+ assert.equal(await readFile(file,'utf8'),JSON.stringify([unsafeDiagnostic]));
+ const mismatch={...projection,target:{...projection.target,targetWorkspaceId:wsB}};
+ await writeFile(file,JSON.stringify([mismatch]),'utf8');
+ await assert.rejects(()=>store.readCollection('projections'),LocalEffectiveAssetProjectionRecordStoreError);
+ calls=0;
+ await assert.rejects(()=>store.mutateCollection('projections',records=>{calls++;return {records,result:undefined};}),LocalEffectiveAssetProjectionRecordStoreError);
+ assert.equal(calls,0);assert.equal(await readFile(file,'utf8'),JSON.stringify([mismatch]));
 });

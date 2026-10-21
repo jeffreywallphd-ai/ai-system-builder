@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTaskObservationManager } from "../../../../../../../modules/ui/shared/notifications/TaskObservationProvider";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 
 import type { DesktopArtifactBrowseItem } from "../../../lib/desktopApi";
 import type { DesktopModelInventoryRecord, DesktopModelTrainingResult } from "../../../lib/desktopApi";
@@ -13,7 +14,6 @@ import type { DatasetPreparationTaskType } from "../../../../../../../modules/co
 type TrainingStatus = "idle" | "running" | "succeeded" | "failed" | "cancelled";
 type PollableTrainingStatus = DesktopModelTrainingResult["status"];
 
-const TRAINING_STATUS_POLL_INTERVAL_MS = 500;
 const TRAINING_DATASET_MEDIA_TYPES = new Set([
   "application/x-parquet",
   "application/vnd.apache.parquet",
@@ -28,11 +28,7 @@ const TRAINING_DATASET_FILE_EXTENSIONS = [
   ".csv",
 ];
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}
+
 
 function isTerminalTrainingStatus(status: PollableTrainingStatus): boolean {
   return status === "succeeded" || status === "failed" || status === "cancelled";
@@ -155,6 +151,13 @@ function resolveTrainingDatasetFormat(
 }
 
 export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceId?: string) {
+  const observer = useTaskObservationManager();
+  const currentWorkspace = useRef(workspaceId); currentWorkspace.current = workspaceId;
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const current = () => mounted.current && currentWorkspace.current === workspaceId;
+  const trainingStorageKey = `ai-system-builder.training-task.v1:${workspaceId ?? "none"}`;
+  const storedTask = () => { try { const id = sessionStorage.getItem(trainingStorageKey); return id && id.length <= 512 ? id : undefined; } catch { return undefined; } };
   const modelClient = useModelsClient(client);
   const runtimeStatusClient = useMemo(
     () => createDesktopPythonRuntimeClient(),
@@ -196,7 +199,10 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
   const [status, setStatus] = useState<TrainingStatus>("idle");
   const [message, setMessage] = useState<string>();
   const [result, setResult] = useState<DesktopModelTrainingResult>();
-  const [activeRunId, setActiveRunId] = useState<string>();
+  const [activeRun, setActiveRun] = useState<{ workspaceId?: string; runId?: string }>(() => ({ workspaceId, runId: storedTask() }));
+  const activeRunId = activeRun.workspaceId === workspaceId ? activeRun.runId : undefined;
+  const activeRunRef = useRef(activeRunId); activeRunRef.current = activeRunId;
+  const setActiveRunId = useCallback((runId: string | undefined) => { activeRunRef.current = runId; setActiveRun({ workspaceId, runId }); }, [workspaceId]);
   const [stopTrainingInFlight, setStopTrainingInFlight] = useState(false);
   const [unloadModelInFlight, setUnloadModelInFlight] = useState(false);
   const [unloadedRunId, setUnloadedRunId] = useState<string>();
@@ -238,6 +244,7 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
           artifacts = [];
         }
       }
+      if (!current()) return;
       setModels(listed);
       setDatasetArtifacts(artifacts.filter(isTrainingDatasetArtifact));
       if (!baseModelRecordId && listed.length > 0) {
@@ -246,7 +253,7 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
         );
       }
     };
-    void load();
+    void load().catch(() => { if (current()) setMessage("Training inputs are temporarily unavailable."); });
   }, [modelClient, baseModelRecordId, workspaceId]);
 
   useEffect(() => {
@@ -374,6 +381,8 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
         validation: { enabled: validateAfterTraining, expectedLoRA: method !== "full-finetune" },
         runtimeMetadata: { trainingTask },
       });
+      try { sessionStorage.setItem(trainingStorageKey, trainingResult.runId); } catch { /* Storage cannot fail accepted work. */ }
+      if (!current()) return;
       announceModelTrainingStarted({
         runId: trainingResult.runId,
         workspaceId,
@@ -383,52 +392,42 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
       if (!isTerminalTrainingStatus(trainingResult.status)) {
         setActiveRunId(trainingResult.runId);
       }
-      let latestResult = trainingResult;
-      let consecutivePollFailures = 0;
-
-      while (!isTerminalTrainingStatus(latestResult.status)) {
-        setStatus("running");
-        setMessage(toTrainingMessage(latestResult));
-        await delay(TRAINING_STATUS_POLL_INTERVAL_MS);
-        try {
-          latestResult = await modelClient.readModelTrainingStatus({
-            runId: latestResult.runId,
-            workspaceId,
-          });
-          consecutivePollFailures = 0;
-        } catch (error) {
-          consecutivePollFailures += 1;
-          if (consecutivePollFailures >= 5) {
-            throw error;
-          }
-          setMessage(`Training status temporarily unavailable. Run ID: ${latestResult.runId}. Retrying...`);
-          continue;
-        }
-        setResult(latestResult);
+      if (isTerminalTrainingStatus(trainingResult.status)) {
+        setStatus(trainingResult.status === "succeeded" ? "succeeded" : trainingResult.status === "cancelled" ? "cancelled" : "failed");
+        setMessage(trainingResult.reviewPending ? "Training completed. Save or discard the trained model." : toTrainingMessage(trainingResult));
       }
-
-      if (latestResult.status === "succeeded") {
-        setStatus("succeeded");
-        if (latestResult.reviewPending) {
-          setMessage("Training completed. Save or discard the trained model.");
-        } else {
-          setMessage("Training completed.");
-          const refreshed = workspaceId ? await modelClient.listModels({ workspaceId: createWorkspaceId(workspaceId) }) : [];
-          setModels(refreshed);
-        }
-      } else {
-        setStatus(latestResult.status === "cancelled" ? "cancelled" : "failed");
-        setMessage(latestResult.error?.message ?? (latestResult.status === "cancelled" ? "Training cancelled." : "Training failed."));
-      }
-      setActiveRunId(undefined);
-      void refreshRuntimeModelStatus();
     } catch (error) {
+      if (!current()) return;
       setActiveRunId(undefined);
       setStatus("failed");
       setMessage(error instanceof Error ? error.message : "Training failed.");
       void refreshRuntimeModelStatus();
     }
   };
+
+  useEffect(() => {
+    setResult(undefined); setStatus("idle"); setMessage(""); setActiveRunId(storedTask());
+    // Workspace-scoped opaque task identity; no payload or prompt is persisted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId]);
+
+  useEffect(() => {
+    if (!activeRunId || !workspaceId) return;
+    return observer.subscribe({ workspaceId, family: "model-training", requestId: activeRunId }, async () => {
+      const value = await modelClient.readModelTrainingStatus({ runId: activeRunId, workspaceId });
+      return { value, activity: isTerminalTrainingStatus(value.status) ? "terminal" : "active" };
+    }, (snapshot) => {
+      if (!current() || activeRunRef.current !== activeRunId) return;
+      if (!snapshot) { setMessage("Training status temporarily unavailable. Progress will retry automatically."); return; }
+      const value = snapshot.value; setResult(value);
+      if (!isTerminalTrainingStatus(value.status)) { setStatus("running"); setMessage(toTrainingMessage(value)); return; }
+      setStatus(value.status === "succeeded" ? "succeeded" : value.status === "cancelled" ? "cancelled" : "failed");
+      setMessage(value.status === "succeeded" ? value.reviewPending ? "Training completed. Save or discard the trained model." : "Training completed." : value.status === "cancelled" ? "Training cancelled." : "Training failed.");
+      setActiveRunId(undefined);
+    });
+    // Current workspace is checked before publication and subscription cleanup.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeRunId, modelClient, observer, workspaceId]);
 
   const stopTraining = async () => {
     if (!activeRunId || !workspaceId || stopTrainingInFlight) {
@@ -442,6 +441,7 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
         runId: activeRunId,
         workspaceId,
       });
+      if (!current()) return;
       setResult(stopped);
       if (stopped.status === "cancelled") {
         setStatus("cancelled");
@@ -450,10 +450,13 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
       } else {
         setMessage("Stop requested. Waiting for the current batch to finish.");
       }
+      observer.invalidate({ workspaceId, family: "model-training" });
     } catch (error) {
+      if (!current()) return;
       setStatus("running");
       setMessage(error instanceof Error ? error.message : "Failed to stop model training.");
     } finally {
+      if (!current()) return;
       setStopTrainingInFlight(false);
       void refreshRuntimeModelStatus();
     }
@@ -478,9 +481,11 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
       setUnloadedRunId(result.runId);
       setMessage("Model unloaded from memory.");
     } catch (error) {
+      if (!current()) return;
       setStatus("failed");
       setMessage(error instanceof Error ? error.message : "Failed to unload model.");
     } finally {
+      if (!current()) return;
       setUnloadModelInFlight(false);
       void refreshRuntimeModelStatus();
     }
@@ -496,14 +501,19 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
         runId: result.runId,
         workspaceId,
       });
+      if (!current()) return;
+      observer.invalidate({ workspaceId, family: "model-training" });
       setResult(saved);
       setStatus("succeeded");
       setMessage("Trained model saved.");
-      setModels(await modelClient.listModels({ workspaceId: createWorkspaceId(workspaceId) }));
+      const refreshed = await modelClient.listModels({ workspaceId: createWorkspaceId(workspaceId) });
+      if (current()) setModels(refreshed);
     } catch (error) {
+      if (!current()) return;
       setStatus("failed");
       setMessage(error instanceof Error ? error.message : "Failed to save trained model.");
     } finally {
+      if (!current()) return;
       setReviewActionInFlight(undefined);
       void refreshRuntimeModelStatus();
     }
@@ -519,13 +529,17 @@ export function useModelTrainingFeature(client?: DesktopModelsClient, workspaceI
         runId: result.runId,
         workspaceId,
       });
+      if (!current()) return;
+      observer.invalidate({ workspaceId, family: "model-training" });
       setResult(discarded);
       setStatus("cancelled");
       setMessage("Trained model discarded.");
     } catch (error) {
+      if (!current()) return;
       setStatus("failed");
       setMessage(error instanceof Error ? error.message : "Failed to discard trained model.");
     } finally {
+      if (!current()) return;
       setReviewActionInFlight(undefined);
       void refreshRuntimeModelStatus();
     }

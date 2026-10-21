@@ -21,6 +21,16 @@
 
 ## Core Guidance
 
+- Functionality controlled qualification uses the versioned operations crosswalk
+  and read-only source-bound assessor. Preserve owner history and pending external
+  environments; an automated assessment never grants approval or release status.
+
+- Route contributor workflow requests through `AGENTS.md` and
+  `docs/diagnostics/ai-development-control-plane.md`. Start or reuse its review
+  server and share the verified URL; site data comes from versioned JSON.
+- Keep the existing roadmap authority, explicit legacy evidence, bounded helper
+  execution and current source-bound receipts and separate-invocation review.
+
 - Canonical documentation roles are distinct: ADRs (decisions), architecture docs (system boundaries), standards docs (working rules), context docs (task-oriented summaries).
 - If code changes affect documented behavior or boundaries, update canonical docs in the same work item.
 - Prompts/AI context are accelerators, not substitutes for canonical documentation.

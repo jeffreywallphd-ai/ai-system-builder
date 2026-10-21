@@ -12,6 +12,21 @@ This file is the repository entry point for coding agents. Keep it short; use th
 6. For architecture-sensitive work, consult `docs/adr/decision-readiness.md` before planning implementation.
 7. Inspect the affected code, its nearest README, and its tests before editing.
 
+## AI Development Control Plane
+
+- For a work request using the contributor workflow, read
+  `docs/diagnostics/ai-development-control-plane.md`, run
+  `python dev-tools/helpers/development_control_plane.py review-site start`,
+  and provide the returned, verified review-site link to the user before work.
+- The review site reads versioned JSON and refreshes dynamically. Markdown is
+  generated documentation; the site is read-only and grants no approval.
+- Use the same CLI for scoped outcomes, claims, check plans, executed receipts,
+  separate-invocation review, coding trials, measurements, regression feedback,
+  status and recovery. Established fixes use the
+  lightweight path; substantial work uses the existing approved roadmap skill.
+- Preserve legacy roadmap history as declarative evidence. New governed work
+  needs current candidate-bound verification and review before completion.
+
 ## Repository Agent Skills
 
 - Discover portable repository skills from `skills/*/SKILL.md`. Read the

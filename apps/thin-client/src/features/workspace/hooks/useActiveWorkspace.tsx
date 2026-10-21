@@ -79,6 +79,7 @@ export function ActiveWorkspaceProvider({
   >();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | undefined>();
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,9 +89,11 @@ export function ActiveWorkspaceProvider({
         workspaceClient.readActiveWorkspaceSelection(),
       ]);
       setWorkspaces([...records]);
+      setLoadFailed(false);
       setActiveWorkspaceId(selection.workspaceId);
       setError(undefined);
     } catch {
+      setLoadFailed(true);
       setError("Workspace could not be loaded.");
     } finally {
       setLoading(false);
@@ -173,11 +176,11 @@ export function ActiveWorkspaceProvider({
 
   const status = useMemo<ActiveWorkspaceReadinessStatus>(() => {
     if (loading) return "loading";
-    if (error) return "error";
+    if (loadFailed) return "error";
     if (activeWorkspace) return "ready";
     if (activeWorkspaceId) return "unavailable";
     return "missing";
-  }, [activeWorkspace, activeWorkspaceId, error, loading]);
+  }, [activeWorkspace, activeWorkspaceId, loadFailed, loading]);
 
   const value = useMemo<ActiveWorkspaceContextValue>(
     () => ({

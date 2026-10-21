@@ -11,6 +11,7 @@ import type {
 } from "../../../contracts/asset";
 import type { AssetBindingRepositoryPort, AssetDefinitionRepositoryPort, AssetInstanceRepositoryPort } from "../../ports/asset";
 import type { AssetValidationContext, AssetValidationResult } from "../../services/asset";
+import { instanceInputShapeIssues, compositionInputShapeIssues, validateReference } from "../../services/asset/asset-validation-helpers";
 import type { AssetUseCaseErrorCode, AssetUseCaseResult } from "./asset-use-case-result";
 
 export function definitionReferenceFor(definition: AssetDefinition): AssetReference {
@@ -26,18 +27,22 @@ export function compositionReferenceFor(composition: AssetComposition): AssetRef
 }
 
 export function isDefinitionReference(reference: AssetReference): boolean {
+  if (!reference || typeof reference.kind !== "string" || typeof reference.id !== "string") return false;
   return reference.kind === "asset-definition" || reference.kind === "asset-definition-version";
 }
 
 export function isInstanceReference(reference: AssetReference): boolean {
+  if (!reference || typeof reference.kind !== "string" || typeof reference.id !== "string") return false;
   return reference.kind === "asset-instance";
 }
 
 export function isCompositionReference(reference: AssetReference): boolean {
+  if (!reference || typeof reference.kind !== "string" || typeof reference.id !== "string") return false;
   return reference.kind === "asset-composition";
 }
 
 export function isBindingReference(reference: AssetReference): boolean {
+  if (!reference || typeof reference.kind !== "string" || typeof reference.id !== "string") return false;
   return reference.kind === "asset-binding";
 }
 
@@ -77,6 +82,8 @@ export async function buildInstanceValidationContext(
 ): Promise<{ context: AssetValidationContext; issues: readonly AssetValidationIssue[] }> {
   const definitions = new Map<string, AssetDefinition>();
   const issues: AssetValidationIssue[] = [];
+  if (instanceInputShapeIssues(instance).length) return { context: { definitionsById: definitions }, issues };
+  if (!validateReference(instance.definitionRef, [], instanceReferenceFor(instance), ["definitionRef"])) return { context: { definitionsById: definitions }, issues };
   if (isDefinitionReference(instance.definitionRef)) {
     const definition = await definitionRepository.getDefinition(instance.definitionRef);
     if (definition) {
@@ -100,6 +107,11 @@ export async function buildCompositionValidationContext(
   const instances = new Map<string, AssetInstance>();
   const bindings = new Map<string, AssetBinding>();
   const issues: AssetValidationIssue[] = [];
+  if (compositionInputShapeIssues(composition).length) return { context: { definitionsById: definitions, instancesById: instances, bindingsById: bindings }, issues };
+  if ([...composition.instanceRefs, ...composition.rootInstanceRefs, ...(composition.bindingRefs ?? [])]
+    .some((reference) => !validateReference(reference, [], compositionReferenceFor(composition), []))) {
+    return { context: { definitionsById: definitions, instancesById: instances, bindingsById: bindings }, issues };
+  }
 
   for (const instanceRef of composition.instanceRefs) {
     if (!isInstanceReference(instanceRef)) {
@@ -113,6 +125,9 @@ export async function buildCompositionValidationContext(
       continue;
     }
 
+    const shapeIssues = instanceInputShapeIssues(instance);
+    if (shapeIssues.length) { issues.push(...shapeIssues); continue; }
+    if (!validateReference(instance.definitionRef, issues, compositionReferenceFor(composition), ["instanceRefs", instanceRef.id, "definitionRef"])) continue;
     instances.set(instanceRef.id, instance);
     if (isDefinitionReference(instance.definitionRef)) {
       const definition = await dependencies.definitionRepository.getDefinition(instance.definitionRef);

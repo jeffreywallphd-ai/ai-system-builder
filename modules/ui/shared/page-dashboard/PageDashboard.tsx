@@ -68,6 +68,7 @@ export function PageDashboard({
           </div>
         ))}
       </dl>
+      {state.status === "ready" && metrics.some(metric => metric.unavailable) ? (<p className="page-dashboard__status" role="status">Some summary counts are unavailable.</p>) : null}
       {state.status === "unavailable" ? (
         <p className="page-dashboard__status" role="status">
           Summary unavailable.

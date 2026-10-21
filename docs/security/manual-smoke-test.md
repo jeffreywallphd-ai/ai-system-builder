@@ -47,6 +47,15 @@ database roles, object service, or audit retention by themselves.
 
 ## lan-https-token smoke
 
+The thin-client process also needs `AI_SYSTEM_BUILDER_SECURITY_MODE=lan-https-token`
+and valid frontend certificate material (explicit paths or the existing auto certificate modes).
+This permits the explicit LAN bind and requires HTTPS for both browser-to-frontend and
+frontend-to-API traffic. Verify an explicit frontend HTTPS disable, HTTP proxy override,
+or nonloopback `--host` without this profile fails before a listener starts. Repeat for
+Vite preview. Remote HTTPS API targets must have verifiable certificates; development
+trust exceptions apply only to exact loopback targets. Real LAN/browser trust checks
+remain pending when that qualification environment is unavailable.
+
 1. Generate or provide cert/key (example with mkcert):
    ```bash
    mkcert -install
@@ -171,3 +180,15 @@ Notes:
 - Switching thin-client HTTP/HTTPS mode requires restarting `npm run dev:thin-client`.
 - Do not commit or log private keys.
 - This is development-only TLS support, not production/public-internet hardening.
+
+## Development-mode mutation authority
+
+In an explicitly opt-in disabled-development instance, enable token enforcement
+using the existing bootstrap flow. Then confirm missing/invalid tokens receive
+401 and a valid token lacking `security:admin` receives403 for a downgrade POST.
+The mode must remain enforced after each denial, including malformed JSON sent
+without authorization. A paired administrator may change the mode through the
+secured client; denied requests must never retry through public fetch. Verify
+the toggle remains unavailable in LAN/OIDC startup. These are controlled manual
+checks still pending when no qualification deployment/operator is available;
+automated loopback and middleware evidence does not replace that qualification.

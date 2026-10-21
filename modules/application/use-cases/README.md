@@ -104,3 +104,42 @@ Use cases in this folder own application orchestration and remain adapter-agnost
   - verifies every immutable local artifact before one bounded provider commit;
   - records append-only success evidence only after an immutable provider
     revision is returned, leaving the local version intact on every failure.
+
+
+Workspace summaries resolve the persisted active workspace and authorize before
+protected group reads. A group failure preserves independently available metrics.
+Dataset summary counts share the review journey's logical identity, Parquet and
+local-availability rules, while avoiding unrelated raw artifact/catalog/content
+reads. Neither summary operation finalizes model downloads or starts a runtime.
+
+Image-generation request bounds are pure shared contracts used by the application
+and ComfyUI runtime/mapper. Effective selected host defaults are checked before
+supervisor startup, reference preparation or prompt submission. Existing limits
+remain:10000-character positive/negative text,64..4096 dimensions,16777216 pixels,
+1..200 steps,1..8 images, finite CFG(0,50] and denoise[0,1], at most3 face references.
+Invalid batches are rejected rather than floored. Primitive/descriptor checks reject
+coercion and accessors; engine hints are bounded JSON data, and seeds are safe
+integers. Workspace authority, queue/history limits, deadlines and truthful
+cancellation remain intact. These caps do not prove combined workload GPU capacity,
+per-actor fairness or physical model qualification; those remain pending.
+Admission consumes one detached descriptor-safe request snapshot before authority,
+model, runtime-start or reference-preparation awaits. Nested reference collections,
+reference identities and hint data cannot change through caller-owned aliases after
+validation. Prompts retain their exact allowed content; display sanitization is not
+used to construct runtime input.
+
+Parquet dataset review propagates the existing64MiB artifact retrieval maximum and
+checks actual returned source bytes before runtime admission. The Python adapter
+rejects oversized source before staging, the worker checks staged size before
+Parquet parsing, and revised output uses one bounded file-handle read with a growth
+probe instead of unbounded readFile. Application output bounds precede hashing
+or storage. Output I/O failures have static outward messages. Worker Parquet
+handles close explicitly. Footer row counts select only overlapping row groups;
+preceding batches use num_rows, and only page slices convert to Python rows.
+Exact row fingerprints, curation semantics and workspace authorization remain.
+Small installed-PyArrow fixtures qualify these local controls. Compressed-source
+limits and display budgets do not bound decoded-cell memory; adversarial decode
+memory, host admission fairness, private-stage filesystem identity and physical
+resource qualification remain pending. Existing worker queue/deadline controls
+remain in force, including the two-hour dataset-review deadline. No new expanded
+memory budget, model/provider download or runtime authority is introduced.

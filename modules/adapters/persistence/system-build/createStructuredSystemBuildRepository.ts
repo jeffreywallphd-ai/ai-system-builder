@@ -8,6 +8,15 @@ const RELEASE_NAMESPACE = "system-build/releases";
 
 export function createStructuredSystemBuildRepository(documents: StructuredDocumentStore): SystemBuildRepositoryPort {
   return {
+    async readReleaseSummary(workspaceId) {
+      const latest = new Map<string, SystemRelease>();
+      for (const {value} of await documents.listDocuments<SystemRelease>(RELEASE_NAMESPACE)) {
+        if (value.targetWorkspaceId !== workspaceId) continue;
+        const prior = latest.get(value.systemId);
+        if (!prior || value.approvedAt.localeCompare(prior.approvedAt) > 0 || (value.approvedAt === prior.approvedAt && value.createdAt.localeCompare(prior.createdAt) > 0)) latest.set(value.systemId, value);
+      }
+      return {publishedSystemIds: [...latest.keys()], assetsUsed: [...latest.values()].reduce((sum, release) => sum + release.lock.resolvedImplementations.length, 0)};
+    },
     async createBuild(build) {
       const key = buildKey(build.targetWorkspaceId, build.buildId);
       if (await documents.readDocument(BUILD_NAMESPACE, key)) throw new StructuredDocumentConflictError(BUILD_NAMESPACE, key, 0);

@@ -15,6 +15,11 @@ export function createStructuredAssetDerivedCustomizationRepository(
   documents: StructuredDocumentStore,
 ): AssetDerivedCustomizationRepositoryPort {
   return {
+    async readPublishedAssetReferences(workspaceId) {
+      return (await documents.listDocuments<AssetDerivedCustomizationDraftRecord>(NAMESPACE)).filter(document => document.value.workspaceId === workspaceId).map(document => normalizeAssetDerivedCustomizationDraftRecord(document.value))
+        .filter(record => record.status === "published")
+        .map(record => ({...record.derivedDefinitionRef}));
+    },
     async create(record) {
       const normalized = normalizeAssetDerivedCustomizationDraftRecord(record);
       const key = recordKey(normalized.workspaceId, normalized.customizationId);

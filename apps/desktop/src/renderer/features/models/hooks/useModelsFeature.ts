@@ -1,3 +1,4 @@
+import { useTaskObservationManager } from "../../../../../../../modules/ui/shared/notifications/TaskObservationProvider";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { ModelArtifactForm, ModelLifecycleStatus, ModelSource, ModelTaskTag } from "../../../../../../../modules/contracts/model";
@@ -49,6 +50,7 @@ function normalizeOptionalSelect<TOption extends string>(value: string, options:
 }
 
 export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: string) {
+  const observer = useTaskObservationManager();
   const modelClient = useModelsClient(client);
   const [browseQuery, setBrowseQuery] = useState("");
   const [browseTaskTag, setBrowseTaskTag] = useState("");
@@ -74,6 +76,7 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
   const [selectedManagedModel, setSelectedManagedModel] = useState<DesktopManagedModelInventoryRecord>();
   const [pendingDeleteModelRecordId, setPendingDeleteModelRecordId] = useState<string>();
   const [deleteConfirmationInput, setDeleteConfirmationInput] = useState("");
+  const [deleteModelLocalFiles, setDeleteModelLocalFiles] = useState(false);
   const [publishRepository, setPublishRepository] = useState("");
   const [folderOpenState, setFolderOpenState] = useState<ViewState>({ status: "idle" });
 
@@ -207,6 +210,7 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
   }, [modelClient, selectedBrowseModel, workspaceId]);
 
   const refreshModels = useCallback(async () => {
+    if (workspaceId) observer.invalidate({ workspaceId, family: "model-download" });
     recordSectionLoadMilestone("renderer.section.load.start", { pageKey: "models", sectionKey: "models.local-list", trigger: "initial" });
     setManageState({ status: "loading", message: "Loading model inventory..." });
     try {
@@ -227,7 +231,7 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
       setManageState({ status: "error", message: error instanceof Error ? error.message : "Failed to list model records." });
       recordSectionLoadMilestone("renderer.section.load.failed", { pageKey: "models", sectionKey: "models.local-list", trigger: "initial" });
     }
-  }, [manageArtifactForm, manageLifecycleStatus, manageSearch, manageSource, modelClient, workspaceId]);
+  }, [manageArtifactForm, manageLifecycleStatus, manageSearch, manageSource, modelClient, observer, workspaceId]);
 
   useEffect(() => {
     void refreshModels();
@@ -265,6 +269,7 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
       };
       if (modelClient.startModelDownload) {
         await modelClient.startModelDownload(downloadRequest);
+        observer.invalidate({ workspaceId, family: "model-download" });
         setDownloadState({ status: "success" });
       } else {
         await modelClient.downloadModel(downloadRequest);
@@ -274,7 +279,7 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
     } catch (error) {
       setDownloadState({ status: "error", message: error instanceof Error ? error.message : "Failed to download model." });
     }
-  }, [modelClient, refreshModels, selectedBrowseModel, workspaceId]);
+  }, [modelClient, observer, refreshModels, selectedBrowseModel, workspaceId]);
 
   const confirmDeleteModelRecord = useCallback(async () => {
     if (!pendingDeleteModelRecordId || deleteConfirmationInput !== "Delete") {
@@ -282,14 +287,14 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
     }
     if (!workspaceId) { setManageState({ status: "error", message: "Select a workspace before deleting model records." }); return; }
     try {
-      await modelClient.deleteModelRecord({ workspaceId, modelRecordId: pendingDeleteModelRecordId, deleteBackingArtifacts: false, deleteLocalFiles: true });
+      await modelClient.deleteModelRecord({ workspaceId, modelRecordId: pendingDeleteModelRecordId, deleteBackingArtifacts: false, deleteLocalFiles: deleteModelLocalFiles });
       setPendingDeleteModelRecordId(undefined);
       setDeleteConfirmationInput("");
       await refreshModels();
     } catch (error) {
       setManageState({ status: "error", message: error instanceof Error ? error.message : "Failed to delete the model record." });
     }
-  }, [deleteConfirmationInput, modelClient, pendingDeleteModelRecordId, refreshModels, workspaceId]);
+  }, [deleteConfirmationInput, deleteModelLocalFiles, modelClient, pendingDeleteModelRecordId, refreshModels, workspaceId]);
 
   const revealManagedModelInFolder = useCallback(async () => {
     if (!selectedManagedModel) {
@@ -391,6 +396,8 @@ export function useModelsFeature(client?: DesktopModelsClient, workspaceId?: str
     refreshModels,
     pendingDeleteModelRecordId,
     setPendingDeleteModelRecordId,
+    deleteModelLocalFiles,
+    setDeleteModelLocalFiles,
     deleteConfirmationInput,
     setDeleteConfirmationInput,
     confirmDeleteModelRecord,

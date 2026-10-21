@@ -1,0 +1,419 @@
+{
+  "schema_version": "context-efficiency-qualification-v1",
+  "environment": {
+    "profile": "local-native-deterministic-fixture",
+    "platform": "win32",
+    "python": "3.14.3",
+    "lancedb": "0.34.0",
+    "pyarrow": "25.0.0",
+    "model": "deterministic-one-hot-v1",
+    "model_load_ms": null,
+    "artifact_storage_retrieve_ms": null,
+    "os_file_cache_state": "uncontrolled",
+    "rss_sample_interval_ms": 5
+  },
+  "baseline": {
+    "commit": "9a681ef79356e6b9a7aac7b30cd46040f85f07b4",
+    "source_sha256_normalized": "24a98c96a5f9db75d776dc115abf43ef84ae4dce0a308217d0f357ae60bce30b"
+  },
+  "candidate_source_sha256": "26a28205a4e0039c7f3058d4ddd7267c6af3e8208b4e5f12d3b14beb10f0dbf8",
+  "probe_source_sha256": "610a28a71363d227120aa74a6a8247ef978f9eff28c5d849049f7e603ad86621",
+  "warmups": 5,
+  "samples": 20,
+  "pending": [
+    "Representative real local embedding-model CPU/accelerator timing, memory and labeled recall qualification.",
+    "Host artifact-storage retrieval latency lies outside this worker-local measurement boundary."
+  ],
+  "source_stability": "Candidate and probe hashes rechecked against current files at publication.",
+  "qualification": "executed-local-native-deterministic-comparison-only",
+  "raw_evidence": {
+    "path": ".local-codex/context-efficiency/8c8bf2baa1a6444eaf828a413724714a/report.json",
+    "sha256": "a2742703a15b078d6d254380458c31817cba9ee11b89d6eb580495fd1eede5b2"
+  },
+  "previous_attempts": [
+    {
+      "report_sha256": "f5a7846c7cf4f828b567160da5033defdcfa454f8990ab5b081ec0e9d80342dd",
+      "samples": 5,
+      "source_sha256": "26a28205a4e0039c7f3058d4ddd7267c6af3e8208b4e5f12d3b14beb10f0dbf8",
+      "workloads": [
+        {
+          "chunks": 1000,
+          "status": "passed",
+          "attempts": [
+            {
+              "variant": "baseline",
+              "status": "passed",
+              "memory_runs": 3,
+              "timing_samples": 5
+            },
+            {
+              "variant": "candidate",
+              "status": "passed",
+              "memory_runs": 3,
+              "timing_samples": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "report_sha256": "ab119794a1714c23389d3529298e5505a220eda8be69f8a4f0f6c6e9d481dbf3",
+      "samples": 20,
+      "source_sha256": "26a28205a4e0039c7f3058d4ddd7267c6af3e8208b4e5f12d3b14beb10f0dbf8",
+      "workloads": [
+        {
+          "chunks": 1000,
+          "status": "passed",
+          "attempts": [
+            {
+              "variant": "baseline",
+              "status": "passed",
+              "memory_runs": 3,
+              "timing_samples": 20
+            },
+            {
+              "variant": "candidate",
+              "status": "passed",
+              "memory_runs": 3,
+              "timing_samples": 20
+            }
+          ]
+        },
+        {
+          "chunks": 10000,
+          "status": "passed",
+          "attempts": [
+            {
+              "variant": "baseline",
+              "status": "passed",
+              "memory_runs": 3,
+              "timing_samples": 20
+            },
+            {
+              "variant": "candidate",
+              "status": "passed",
+              "memory_runs": 3,
+              "timing_samples": 20
+            }
+          ]
+        },
+        {
+          "chunks": 100000,
+          "status": "unavailable",
+          "attempts": [
+            {
+              "status": "unavailable",
+              "error_type": "RuntimeError"
+            }
+          ]
+        }
+      ],
+      "limitation": "100000rows at384dimensions exceeded the unchanged128MiB database-member limit during package creation. It was unavailable, not a performance or quality pass. The final100000row cohort declares128dimensions for both baseline and candidate."
+    }
+  ],
+  "workloads": [
+    {
+      "chunks": 1000,
+      "corpus": {
+        "path": "corpus-1000.lancedb.zip",
+        "bytes": 26098,
+        "sha256": "6f2c975edca628ad1ff2ffb8fc7a0ddf56902212ce9ff8206e990d8d706307e8",
+        "chunks": 1000,
+        "dimensions": 384,
+        "corpus_id": "synthetic-context-v1-1000-384d"
+      },
+      "status": "passed",
+      "attempts": [
+        {
+          "variant": "baseline",
+          "status": "passed",
+          "memory_runs": 3,
+          "timing_samples": 20
+        },
+        {
+          "variant": "candidate",
+          "status": "passed",
+          "memory_runs": 3,
+          "timing_samples": 20
+        }
+      ],
+      "quality": {
+        "identities_order_citations_equal": true,
+        "maximum_score_delta": 0.0,
+        "answer_sha256": "54cf5174348dbe50c3640f5885e1f8a0a16e15a2024db40aee70413b3f41e7dc"
+      },
+      "rss_reduction_ratio": 0.46593707250342,
+      "p95_ratio": 0.5072476414176983,
+      "baseline": {
+        "cold_ms": 219.00799998547882,
+        "p50_ms": 235.27574999025092,
+        "p95_ms": 301.394599955529,
+        "incremental_peak_rss_bytes": 29941760,
+        "memory_runs": [
+          {
+            "baseline_rss_bytes": 142884864,
+            "peak_rss_bytes": 172826624,
+            "incremental_peak_rss_bytes": 29941760,
+            "cleanup_passed": true
+          },
+          {
+            "baseline_rss_bytes": 143798272,
+            "peak_rss_bytes": 173838336,
+            "incremental_peak_rss_bytes": 30040064,
+            "cleanup_passed": true
+          },
+          {
+            "baseline_rss_bytes": 143970304,
+            "peak_rss_bytes": 172941312,
+            "incremental_peak_rss_bytes": 28971008,
+            "cleanup_passed": true
+          }
+        ],
+        "mean_stage_ms": {
+          "path_digest": 0.8856499916873872,
+          "materialize": 7.2962749865837395,
+          "table_validation": 154.1316899994854,
+          "embedding": 0.023214996326714754,
+          "exact_search": 3.782894992036745,
+          "cleanup": 42.60131000773981
+        }
+      },
+      "candidate": {
+        "cold_ms": 119.56839996855706,
+        "p50_ms": 112.35599999781698,
+        "p95_ms": 152.88169996347278,
+        "incremental_peak_rss_bytes": 15990784,
+        "memory_runs": [
+          {
+            "baseline_rss_bytes": 141762560,
+            "peak_rss_bytes": 158547968,
+            "incremental_peak_rss_bytes": 16785408,
+            "cleanup_passed": true
+          },
+          {
+            "baseline_rss_bytes": 144449536,
+            "peak_rss_bytes": 160350208,
+            "incremental_peak_rss_bytes": 15900672,
+            "cleanup_passed": true
+          },
+          {
+            "baseline_rss_bytes": 143384576,
+            "peak_rss_bytes": 159375360,
+            "incremental_peak_rss_bytes": 15990784,
+            "cleanup_passed": true
+          }
+        ],
+        "mean_stage_ms": {
+          "path_digest": 0.8511199965141714,
+          "materialize": 6.626384996343404,
+          "table_validation": 29.22773000318557,
+          "embedding": 0.016224989667534828,
+          "exact_search": 3.7901600007899106,
+          "cleanup": 40.608129993779585
+        }
+      }
+    },
+    {
+      "chunks": 10000,
+      "corpus": {
+        "path": "corpus-10000.lancedb.zip",
+        "bytes": 185174,
+        "sha256": "89355821e7cbd3b8d81376b40953f0ef293672f4feddb30d587a342f1217d499",
+        "chunks": 10000,
+        "dimensions": 384,
+        "corpus_id": "synthetic-context-v1-10000-384d"
+      },
+      "status": "passed",
+      "attempts": [
+        {
+          "variant": "baseline",
+          "status": "passed",
+          "memory_runs": 3,
+          "timing_samples": 20
+        },
+        {
+          "variant": "candidate",
+          "status": "passed",
+          "memory_runs": 3,
+          "timing_samples": 20
+        }
+      ],
+      "quality": {
+        "identities_order_citations_equal": true,
+        "maximum_score_delta": 0.0,
+        "answer_sha256": "5b2ddb906aa7e0cea63d6f607d8b1ba41e06693162d1284257a5fcf3572a9e43"
+      },
+      "rss_reduction_ratio": 0.7432203216643165,
+      "p95_ratio": 0.14623436150721553,
+      "baseline": {
+        "cold_ms": 1375.4400999750942,
+        "p50_ms": 1385.3031000471674,
+        "p95_ms": 1497.8216999443248,
+        "incremental_peak_rss_bytes": 200429568,
+        "memory_runs": [
+          {
+            "baseline_rss_bytes": 143384576,
+            "peak_rss_bytes": 344711168,
+            "incremental_peak_rss_bytes": 201326592,
+            "cleanup_passed": true
+          },
+          {
+            "baseline_rss_bytes": 143867904,
+            "peak_rss_bytes": 343842816,
+            "incremental_peak_rss_bytes": 199974912,
+            "cleanup_passed": true
+          },
+          {
+            "baseline_rss_bytes": 142843904,
+            "peak_rss_bytes": 343273472,
+            "incremental_peak_rss_bytes": 200429568,
+            "cleanup_passed": true
+          }
+        ],
+        "mean_stage_ms": {
+          "path_digest": 0.918460002867505,
+          "materialize": 14.103275001980364,
+          "table_validation": 1310.05492999102,
+          "embedding": 0.023839983623474836,
+          "exact_search": 12.428619991987944,
+          "cleanup": 37.90266499854624
+        }
+      },
+      "candidate": {
+        "cold_ms": 193.55189998168498,
+        "p50_ms": 197.1334500121884,
+        "p95_ms": 219.0329999430105,
+        "incremental_peak_rss_bytes": 51466240,
+        "memory_runs": [
+          {
+            "baseline_rss_bytes": 144822272,
+            "peak_rss_bytes": 196653056,
+            "incremental_peak_rss_bytes": 51830784,
+            "cleanup_passed": true
+          },
+          {
+            "baseline_rss_bytes": 144498688,
+            "peak_rss_bytes": 195964928,
+            "incremental_peak_rss_bytes": 51466240,
+            "cleanup_passed": true
+          },
+          {
+            "baseline_rss_bytes": 142364672,
+            "peak_rss_bytes": 190578688,
+            "incremental_peak_rss_bytes": 48214016,
+            "cleanup_passed": true
+          }
+        ],
+        "mean_stage_ms": {
+          "path_digest": 0.9283799969125539,
+          "materialize": 14.524944999720901,
+          "table_validation": 91.52003500494175,
+          "embedding": 0.013930007116869092,
+          "exact_search": 11.572030012030154,
+          "cleanup": 41.32539999554865
+        }
+      }
+    },
+    {
+      "chunks": 100000,
+      "corpus": {
+        "path": "corpus-100000.lancedb.zip",
+        "bytes": 1482960,
+        "sha256": "308f8b687032557a85388376e7bdfe2f09e5b6a4ec16314ea5d42ee9f6ce7569",
+        "chunks": 100000,
+        "dimensions": 128,
+        "corpus_id": "synthetic-context-v1-100000-128d"
+      },
+      "status": "passed",
+      "attempts": [
+        {
+          "variant": "baseline",
+          "status": "passed",
+          "memory_runs": 3,
+          "timing_samples": 20
+        },
+        {
+          "variant": "candidate",
+          "status": "passed",
+          "memory_runs": 3,
+          "timing_samples": 20
+        }
+      ],
+      "quality": {
+        "identities_order_citations_equal": true,
+        "maximum_score_delta": 0.0,
+        "answer_sha256": "78dbe2bbbc3dcb6aef72eca59b0a46c16f87584a614694168ee727cc1849576e"
+      },
+      "rss_reduction_ratio": 0.6961921026642732,
+      "p95_ratio": 0.18015783088290813,
+      "baseline": {
+        "cold_ms": 5231.035100063309,
+        "p50_ms": 4936.958200007211,
+        "p95_ms": 5018.561200005934,
+        "incremental_peak_rss_bytes": 750702592,
+        "memory_runs": [
+          {
+            "baseline_rss_bytes": 144490496,
+            "peak_rss_bytes": 894513152,
+            "incremental_peak_rss_bytes": 750022656,
+            "cleanup_passed": true
+          },
+          {
+            "baseline_rss_bytes": 144195584,
+            "peak_rss_bytes": 903307264,
+            "incremental_peak_rss_bytes": 759111680,
+            "cleanup_passed": true
+          },
+          {
+            "baseline_rss_bytes": 143589376,
+            "peak_rss_bytes": 894291968,
+            "incremental_peak_rss_bytes": 750702592,
+            "cleanup_passed": true
+          }
+        ],
+        "mean_stage_ms": {
+          "path_digest": 1.8008700048085302,
+          "materialize": 43.60661499667913,
+          "table_validation": 4732.552855001995,
+          "embedding": 0.01227000611834228,
+          "exact_search": 33.6654799990356,
+          "cleanup": 64.8367399990093
+        }
+      },
+      "candidate": {
+        "cold_ms": 839.9371999548748,
+        "p50_ms": 850.7127499906346,
+        "p95_ms": 904.1330999461934,
+        "incremental_peak_rss_bytes": 228069376,
+        "memory_runs": [
+          {
+            "baseline_rss_bytes": 144281600,
+            "peak_rss_bytes": 372350976,
+            "incremental_peak_rss_bytes": 228069376,
+            "cleanup_passed": true
+          },
+          {
+            "baseline_rss_bytes": 142143488,
+            "peak_rss_bytes": 376926208,
+            "incremental_peak_rss_bytes": 234782720,
+            "cleanup_passed": true
+          },
+          {
+            "baseline_rss_bytes": 144154624,
+            "peak_rss_bytes": 370663424,
+            "incremental_peak_rss_bytes": 226508800,
+            "cleanup_passed": true
+          }
+        ],
+        "mean_stage_ms": {
+          "path_digest": 1.7822150024585426,
+          "materialize": 42.73590000229888,
+          "table_validation": 627.0962850074284,
+          "embedding": 0.012664991663768888,
+          "exact_search": 33.33449499332346,
+          "cleanup": 69.74213500507176
+        }
+      }
+    }
+  ]
+}

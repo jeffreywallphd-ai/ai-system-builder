@@ -30,6 +30,11 @@ database directory is internal package structure, never a storage root or
 global singleton. The pre-release SQLite RAG format is rejected and is not
 migrated. Unrelated application and system-runtime SQLite persistence is outside
 this feature boundary.
+
+Status transport failures retain active task identity, staging and power for
+retry. Host-owned reconciliation validates successful output into review state
+without a page read; it never saves that candidate automatically. Terminal
+cleanup retains its owned directory until removal succeeds.
 `ContextManagementCommandUseCase` is the single typed facade used by desktop
 IPC and server API clients, including bounded generation/retrieval task lists.
 

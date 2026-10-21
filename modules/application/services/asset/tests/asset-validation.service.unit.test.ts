@@ -295,3 +295,22 @@ test("validators return issues instead of throwing, derive status, keep safe det
   assert.equal(typeof validateAssetBinding, "function");
   assert.equal(typeof validateAssetComposition, "function");
 });
+
+
+test("malformed reference collections return invalid results without throwing", () => {
+  for (const value of [null, undefined, {}, 4, "bad"]) {
+    const invalidInstance = instance({ bindingRefs: [value] as any });
+    const invalidComposition = composition({ bindingRefs: [value] as any });
+    assert.equal(validateAssetInstance(invalidInstance).status, "invalid");
+    assert.equal(validateAssetComposition(invalidComposition).status, "invalid");
+  }
+  for (const value of [null, undefined, 4, "bad"]) {
+    assert.equal(validateAssetInstance(value as any).status, "invalid");
+    assert.equal(validateAssetComposition(value as any).status, "invalid");
+  }
+  for (const value of [null, {}, "bad"]) {
+    assert.equal(validateAssetComposition(composition({ instanceRefs: value as any })).status, "invalid");
+    assert.equal(validateAssetComposition(composition({ rootInstanceRefs: value as any })).status, "invalid");
+    assert.equal(validateAssetInstance(instance({ bindingRefs: value as any })).status, "invalid");
+  }
+});

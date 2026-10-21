@@ -5,7 +5,7 @@
   "engines": {
     "node": ">=24 <25"
   },
-  "main": ".webpack/main",
+  "main": ".webpack/main/index.cjs",
   "workspaces": [
     "apps/server",
     "apps/thin-client"
@@ -76,10 +76,10 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
-    "@electron-forge/cli": "^7.10.2",
-    "@electron-forge/maker-squirrel": "^7.10.2",
-    "@electron-forge/maker-zip": "^7.10.2",
-    "@electron-forge/plugin-webpack": "^7.10.2",
+    "@electron-forge/cli": "8.0.1",
+    "@electron-forge/maker-squirrel": "8.0.1",
+    "@electron-forge/maker-zip": "8.0.1",
+    "@electron-forge/plugin-webpack": "8.0.1",
     "@playwright/test": "1.61.1",
     "@types/busboy": "^1.5.4",
     "@types/node": "^24.7.2",
@@ -89,22 +89,22 @@
     "@vercel/webpack-asset-relocator-loader": "^1.10.0",
     "brace-expansion": "file:dev-tools/vendor/brace-expansion-compat",
     "css-loader": "^7.1.2",
-    "electron": "41.10.2",
+    "electron": "41.10.7",
     "jsdom": "^26.1.0",
     "node-loader": "^2.1.0",
     "style-loader": "^4.0.0",
     "ts-loader": "^9.5.4",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4",
+    "vitest": "4.1.11",
     "webpack": "^5.99.9"
   },
   "overrides": {
     "brace-expansion": "$brace-expansion",
-    "fast-uri": "3.1.4",
+    "fast-uri": "3.1.8",
     "tar": "7.5.22",
     "tmp": "0.2.7",
-    "webpack-dev-server": "5.2.6",
+    "webpack-dev-server": "5.2.7",
     "sockjs": {
       "uuid": "11.1.1"
     }

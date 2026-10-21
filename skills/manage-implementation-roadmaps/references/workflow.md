@@ -169,6 +169,31 @@ still has pending work.
 
 ## Per-increment execution loop
 
+When integrated contributor helpers are present, create a bounded work record
+for the active approved increment, copying every acceptance ID into its work
+contract. Execute the planned fixed checks, obtain a real separate-invocation
+review through an authorized host/operator, and complete that work record before
+closing a new governed increment. `evidencePolicy: control-plane-v1` makes the
+engine check this evidence. Existing roadmaps without that field retain their
+legacy qualification; use a successor roadmap to adopt the current policy.
+
+The JSON-backed review site follows state changes automatically. Keep its
+verified link available and use the same guide/CLI for lightweight fixes.
+
+For this repository adapter, select `completionSuite: all` at initialization
+for AI-related work, otherwise `standardande2e`. After all implementation chunks are recorded,
+create the guide's `overall` work item with acceptance `overall-validation` and
+the matching `completion-all` or `completion-standardande2e` check. Verify,
+obtain separate review and complete it before `roadmap-completed`. Aggregate
+checks are refused earlier, and source edits invalidate final qualification.
+The final active increment may be verifying when every predecessor is implemented
+and every nonempty planned chunk set matches its completed set. Approval must be
+current and no blocker may be open. Release its source claim before starting the
+serial overall claim, then recover it to record evidence. External qualification
+remains pending; final closure still requires every controlled criterion to pass.
+Publication uses exclusive unpredictable temporary files; parent-directory native
+identity and ACL race qualification remains separate.
+
 ### 1. Reconcile
 
 Before starting or resuming an increment:

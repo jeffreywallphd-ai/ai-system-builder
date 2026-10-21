@@ -10,6 +10,9 @@ import json
 import os
 import re
 import sys
+import tempfile
+import time
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -137,15 +140,24 @@ def temporary_report_path(value: Any, label: str) -> str:
 
 def atomic_write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    temporary = None
     try:
-        temporary.write_text(content, encoding="utf-8", newline="\n")
+        # Exclusive creation owns this entry; a precreated predictable link/file
+        # cannot redirect the write. Parent-directory platform races are separate.
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n",
+                                         prefix=f".{path.name}.", suffix=".tmp",
+                                         dir=path.parent, delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
         os.replace(temporary, path)
     except OSError as error:
         raise RoadmapError(f"Unable to write {path.name}: {error}") from error
     finally:
         try:
-            temporary.unlink(missing_ok=True)
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
         except OSError:
             pass
 
@@ -211,6 +223,10 @@ def roadmap_fingerprint(state: dict[str, Any]) -> str:
     security_impact = (state.get("discovery") or {}).get("securityImpact")
     if security_impact is not None:
         value["securityImpact"] = security_impact
+    if state.get("evidencePolicy"):
+        value["evidencePolicy"] = state["evidencePolicy"]
+    if state.get("completionSuite"):
+        value["completionSuite"] = state["completionSuite"]
     return fingerprint(value)
 
 
@@ -229,6 +245,122 @@ def approval_is_current(state: dict[str, Any]) -> bool:
         and approved_decisions_are_current(state)
         and approval.get("fingerprint") == roadmap_fingerprint(state)
     )
+
+
+def implementation_ready_for_overall(state: dict[str, Any]) -> bool:
+    """Admit verification after implementation, without qualifying release."""
+    increments = state.get("increments", [])
+    if not increments or not approval_is_current(state) or any(
+        item.get("status") != "resolved" for item in state.get("blockers", [])
+    ):
+        return False
+    for increment in increments:
+        planned = [item["id"] for item in (increment.get("plan") or {}).get("chunks", [])]
+        completed = increment.get("completedChunks", [])
+        if not planned or len(completed) != len(planned) or set(completed) != set(planned):
+            return False
+    if all(item["status"] in INCREMENT_DONE for item in increments):
+        return state.get("status") in {
+            "roadmap-ready-to-close", "implementation-complete-qualification-pending"
+        } and state.get("currentIncrementId") is None
+    final = increments[-1]
+    return (
+        state.get("status") == "executing"
+        and state.get("currentIncrementId") == final["id"]
+        and final["status"] == "verifying"
+        and all(item["status"] in INCREMENT_DONE for item in increments[:-1])
+    )
+
+
+@contextmanager
+def publication_lock(repo: Path, state_path: str):
+    """Roadmap-specific publication lock, automatically released after a crash."""
+    key = hashlib.sha256(state_path.encode()).hexdigest()[:24]
+    path = repo / ".local-codex" / "roadmap-publication" / (key + ".lock")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a+b") as stream:
+        if path.stat().st_size == 0:
+            stream.write(b"\0")
+            stream.flush()
+        deadline = time.monotonic() + 5
+        while True:
+            try:
+                stream.seek(0)
+                if os.name == "nt":
+                    import msvcrt
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError:
+                if time.monotonic() >= deadline:
+                    raise RoadmapError("Another roadmap mutation owns the publication lock.")
+                time.sleep(0.025)
+        try:
+            yield path.with_suffix(".json")
+        finally:
+            stream.seek(0)
+            if os.name == "nt":
+                import msvcrt
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+
+
+def recover_publication(repo: Path, journal: Path, state_path: str) -> None:
+    if not journal.exists():
+        return
+    value = read_json(journal, "publication journal")
+    reject_unknown(value, {"before", "successor", "previousReport"}, "journal")
+    successor = value["successor"]
+    validate_state_shape(repo, successor)
+    if successor["paths"]["state"] != state_path:
+        raise RoadmapError("Publication journal targets another roadmap.")
+    previous_report = value.get("previousReport")
+    if previous_report is not None:
+        safe_relative_path(repo, previous_report, "previous report")
+        if not previous_report.startswith("docs/") or not previous_report.endswith(".md"):
+            raise RoadmapError("Publication recovery has an invalid previous report.")
+    current = read_json(repo / state_path, "state") if (repo / state_path).exists() else None
+    if fingerprint(current) not in {value["before"], fingerprint(successor)}:
+        raise RoadmapError("Publication recovery conflicts with an external state change.")
+    # Only the successor's validated generated outputs are written, never arbitrary journal paths.
+    write_project_files(repo, successor, previous_report_path=value.get("previousReport"))
+    journal.unlink()
+
+
+def require_control_completion(repo: Path, state: dict[str, Any], *, overall: bool = False) -> None:
+    if state.get("evidencePolicy") != "control-plane-v1":
+        return  # Historical state remains explicitly declarative, never retroactively verified.
+    helper = repo / "dev-tools" / "helpers"
+    if not (helper / "control_plane" / "work.py").is_file():
+        raise RoadmapError("This roadmap requires the repository control-plane adapter.")
+    sys.path.insert(0, str(helper))
+    try:
+        from control_plane.work import Work
+        controller = Work(repo)
+        increment_id = "overall" if overall else state.get("currentIncrementId")
+        expected = {"overall-validation"} if overall else {c["id"] for c in current_increment(state)["acceptanceCriteria"]}
+        candidates = [w for w in controller.records.load()["work_items"].values() if w["status"] == "complete" and (w["spec"].get("roadmap") or {}) == {"state_path": state["paths"]["state"], "increment_id": increment_id} and {c["id"] for c in w["spec"]["acceptance"]} == expected]
+        if not candidates:
+            raise RoadmapError("Complete candidate-bound verification and independent review for every increment criterion first.")
+        # Persisted maps sort by identity, not recency. Any current completed correction
+        # may qualify, but no stale predecessor may block or replace it.
+        for candidate in candidates:
+            try:
+                controller.current_receipt(candidate)
+                return
+            except Exception:
+                continue
+        raise RoadmapError("Control-plane completion evidence is unavailable or stale.")
+    except RoadmapError:
+        raise
+    except Exception as error:
+        raise RoadmapError("Control-plane completion evidence is unavailable or stale.") from error
+    finally:
+        sys.path.pop(0)
 
 
 def find_increment(state: dict[str, Any], increment_id: str) -> dict[str, Any]:
@@ -1313,6 +1445,8 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
         "history",
         "completion",
         "finalApproval",
+        "evidencePolicy",
+        "completionSuite",
     }
     reject_unknown(state, allowed, "state")
     if state.get("schemaVersion") != SCHEMA_VERSION:
@@ -1325,6 +1459,10 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
     require_string(state.get("createdAt"), "state.createdAt", maximum=80)
     require_string(state.get("updatedAt"), "state.updatedAt", maximum=80)
     require_string(state.get("status"), "state.status", maximum=80)
+    if state.get("evidencePolicy") not in {None, "control-plane-v1"}:
+        raise RoadmapError("Unsupported roadmap evidence policy.")
+    if state.get("completionSuite") not in {None, "standardande2e", "all"}:
+        raise RoadmapError("Unsupported roadmap completion suite.")
     paths = require_object(state.get("paths"), "state.paths")
     reject_unknown(paths, {"state", "roadmap", "report"}, "state.paths")
     normalized_paths = {
@@ -1856,6 +1994,7 @@ def initial_state(repo: Path, config: dict[str, Any]) -> dict[str, Any]:
             "statePath",
             "roadmapPath",
             "reportPath",
+            "completionSuite",
         },
         "config",
     )
@@ -1922,6 +2061,11 @@ def initial_state(repo: Path, config: dict[str, Any]) -> dict[str, Any]:
         "completion": None,
         "finalApproval": None,
     }
+    if (repo / "dev-tools/helpers/development_control_plane.py").is_file():
+        if not paths["state"].startswith(".implementation-roadmaps/") or not paths["state"].endswith("/state.json"):
+            raise RoadmapError("The control-plane adapter requires .implementation-roadmaps/<slug>/state.json.")
+        state["evidencePolicy"] = "control-plane-v1"
+        state["completionSuite"] = config.get("completionSuite", "standardande2e")
     validate_state_shape(repo, state)
     return state
 
@@ -1964,24 +2108,39 @@ def result_payload(repo: Path, state: dict[str, Any]) -> dict[str, Any]:
 def command_init(args: argparse.Namespace) -> dict[str, Any]:
     repo = resolve_repo(args.repo)
     config = read_json(Path(args.config).resolve(), "config")
-    state = initial_state(repo, config)
-    write_project_files(repo, state)
+    state_path = config.get("statePath", f".implementation-roadmaps/{config['slug']}/state.json")
+    safe_relative_path(repo, state_path, "statePath")
+    with publication_lock(repo, state_path) as journal:
+        recover_publication(repo, journal, state_path)
+        state = initial_state(repo, config)
+        atomic_write(journal, canonical_json({"before": fingerprint(None), "successor": state, "previousReport": None}))
+        write_project_files(repo, state)
+        journal.unlink()
     return result_payload(repo, state)
 
 
 def command_apply(args: argparse.Namespace) -> dict[str, Any]:
     repo = resolve_repo(args.repo)
-    _, state = load_state(repo, args.state)
-    ensure_documents_match(repo, state)
-    event = read_json(Path(args.event_file).resolve(), "event")
-    updated = apply_event(state, event)
-    validate_state_shape(repo, updated)
-    if not args.dry_run:
-        write_project_files(
-            repo,
-            updated,
-            previous_report_path=state["paths"]["report"],
-        )
+    state_path = safe_relative_path(repo, args.state, "--state")
+    with publication_lock(repo, state_path) as journal:
+        if not args.dry_run:
+            recover_publication(repo, journal, state_path)
+        _, state = load_state(repo, args.state)
+        before = fingerprint(state)
+        ensure_documents_match(repo, state)
+        event = read_json(Path(args.event_file).resolve(), "event")
+        if event.get("type") == "increment-completed":
+            require_control_completion(repo, state)
+        elif event.get("type") == "roadmap-completed":
+            require_control_completion(repo, state, overall=True)
+        updated = apply_event(state, event)
+        validate_state_shape(repo, updated)
+        if not args.dry_run:
+            if fingerprint(read_json(repo / state_path, "state")) != before:
+                raise RoadmapError("State revision changed before publication; reconcile first.")
+            atomic_write(journal, canonical_json({"before": before, "successor": updated, "previousReport": state["paths"]["report"]}))
+            write_project_files(repo, updated, previous_report_path=state["paths"]["report"])
+            journal.unlink()
     result = result_payload(repo, updated)
     result["dryRun"] = args.dry_run
     result["eventFingerprint"] = fingerprint(event)
@@ -1999,13 +2158,13 @@ def command_validate(args: argparse.Namespace) -> dict[str, Any]:
 
 def command_render(args: argparse.Namespace) -> dict[str, Any]:
     repo = resolve_repo(args.repo)
-    _, state = load_state(repo, args.state)
-    contents = document_contents(state)
-    if not args.dry_run:
-        for relative, content in contents.items():
-            atomic_write(repo / relative, content)
-        if state.get("finalApproval"):
-            remove_generated_report(repo / state["paths"]["report"])
+    state_path = safe_relative_path(repo, args.state, "--state")
+    with publication_lock(repo, state_path) as journal:
+        if not args.dry_run:
+            recover_publication(repo, journal, state_path)
+        _, state = load_state(repo, args.state)
+        if not args.dry_run:
+            write_project_files(repo, state)
     result = result_payload(repo, state)
     result["dryRun"] = args.dry_run
     return result

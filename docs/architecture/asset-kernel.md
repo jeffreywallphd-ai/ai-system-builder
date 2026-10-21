@@ -339,3 +339,74 @@ Non-goals:
 - `docs/architecture/asset-authoring-and-execution-security.md` defines coding-model, sandbox, UI isolation, and capability-broker boundaries.
 - `docs/architecture/persistence-and-storage.md` defines artifact/resource/storage boundaries.
 - `docs/architecture/module-dependency-rules.md` defines dependency direction constraints.
+
+
+## Bounded definition browsing
+
+Definition detail requests carrying a version use `asset-definition-version`.
+Ordered internal batches accept at most 250 references and preserve missing
+positions and the single-read projection/membership rules. The local adapter
+reads the definitions collection once per batch; this is not a persistent cache
+or constant-time storage aggregation. Canonical authoring source summaries use
+an explicit contract projection, while generic metadata filtering remains strict.
+
+Workspace browsing pages the active Foundation manifest and registry separately,
+removes exact manifest duplicates, and rechecks the workspace on every request.
+Its versioned query-bound continuation is URI encoded and bounded to 8 KiB at
+the public mapper. Composer retains a separate bounded continuation (16 KiB)
+for compatible Foundation/registry traversal and scans at most 100 source pages
+per request. Scan exhaustion returns a continuation, including an empty page;
+repeated source cursors fail closed. Property schema/defaults remain lazy exact
+reads. Batch output and denial tests do not qualify controlled latency profiles.
+
+Workspace-authored source summaries also use ordered batches of at most 250
+references. The owning authored/revision adapters read each collection once,
+filter workspace ownership before normalization, and retain missing positions.
+Effective-summary enrichment preserves the existing override fallback and never
+shares cached content across requests or workspaces.
+
+Semantic Asset Pack explanatory fields retain non-goal prose such as descriptions
+of resource bytes, prompt text or runtime execution. This allowance never admits
+actual private-key blocks or established credential-prefix representations.
+Validation and JSON parse checks reject those strings with static diagnostics;
+serialization/normalization rejects before returning a document containing them.
+The shared content predicate is pure admission logic, separate from lossy display
+sanitization. This is syntax hardening, not proof that arbitrary prose contains
+no sensitive data. Existing schema, trust and metadata controls still apply.
+Legacy semantic fingerprints and their exclusions remain unchanged; complete
+content integrity/version migration remains a separate unresolved qualification
+and compatibility boundary. No provider, model or runtime execution is added.
+
+Actual credential checks apply to property names as well as string values.
+Credential-bearing names are denied before descent/copy and never become public
+diagnostic paths; issues refer to the safe parent. Direct serialization also
+rejects those names before creating a document.
+
+Resource-backed model views expose explicit model inventory summary fields, not
+`generatedFromRunId` or arbitrary `record.metadata`. Model metadata cannot
+override workspace/model identity, parameter counts or other declared fields.
+The same projection applies to list, exact scoped detail and backing metadata.
+Omitted metadata is not recursively inspected merely to construct a diagnostic.
+Existing safe model labels, typed summaries, explicit published summaries and
+workspace-scoped source lookups remain supported. This projection adds no
+discovery, runtime, provider, mutation, opaque-ID mapping or provenance authority.
+
+Model diagnostic classification checks only named private-column presence,
+without accessing the omitted metadata property or its getter.
+
+Built-in definition read classification compares complete bounded, descriptor-safe
+content against the code-owned legacy catalog and exact immutable Foundation
+1/2/3 releases before display sanitization. Only raw content and precisely
+reconstructed seeder/installer enrichment match; only declared operational
+timestamps may vary. ID/version or editable marker/fingerprint claims alone
+confer no badge. Unknown enrichment and changed schema, AI context, provenance or
+metadata cannot earn built-in/system/trusted status. List/filter/single/batch
+reads use the same classification, and projected metadata removes editable
+positive cues before downstream UI fallbacks. Ordinary custom-source descriptors
+and nonpositive trust states remain visible. Reads never seed, install or write.
+The shared passive structural bounds now apply before definition projection;
+malformed/accessor-bearing records fail with a static read error. This is read
+classification, not package admission or general proof of trusted provenance.
+Seeder/installer marker-only already-current shortcuts, complete package integrity
+migration and native qualification remain separate pending work. Rollback retains
+the stronger denial of forged authority cues.

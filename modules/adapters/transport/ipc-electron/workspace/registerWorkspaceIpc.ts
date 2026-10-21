@@ -1,3 +1,7 @@
+import type { ReadWorkspaceSummaryUseCase } from "../../../../application/use-cases/workspace";
+import { normalizeReadWorkspaceSummaryRequest } from "../../../../contracts/workspace";
+import { DESKTOP_WORKSPACE_SUMMARY_REQUEST_CHANNEL, DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL, createDesktopWorkspaceSummarySuccessResponse } from "../../../../contracts/ipc";
+import type { IpcSenderTrustPolicy } from "../ipcMainHandlePort";
 import type { WorkspaceRepository, WorkspaceSelectionRepository } from "../../../../application/ports/workspace";
 import type { CreateWorkspaceUseCase } from "../../../../application/use-cases/workspace";
 import { createWorkspaceId, type ActiveWorkspaceSelection } from "../../../../contracts/workspace";
@@ -31,9 +35,20 @@ export interface RegisterWorkspaceIpcDependencies {
   readonly workspaceRepository: WorkspaceRepository;
   readonly workspaceSelectionRepository: WorkspaceSelectionRepository;
   readonly createWorkspaceUseCase: CreateWorkspaceUseCase;
+  readonly readWorkspaceSummary?: Pick<ReadWorkspaceSummaryUseCase, "execute">;
+  readonly summarySenderTrust?: IpcSenderTrustPolicy;
 }
 
 export function registerWorkspaceIpc(dependencies: RegisterWorkspaceIpcDependencies): void {
+  dependencies.ipcMain.handle(DESKTOP_WORKSPACE_SUMMARY_REQUEST_CHANNEL.value, async (event, request: any) => {
+    if (!dependencies.summarySenderTrust?.isTrustedSender(event) || !dependencies.readWorkspaceSummary) return createDesktopWorkspaceFailureResponse(DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL, "unavailable", "Workspace summary is unavailable.");
+    let input;
+    try { input = normalizeReadWorkspaceSummaryRequest(request?.payload); }
+    catch { return createDesktopWorkspaceFailureResponse(DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL, "validation", "Invalid summary request."); }
+    try { return createDesktopWorkspaceSummarySuccessResponse(await dependencies.readWorkspaceSummary.execute(input), contextFrom(request)); }
+    catch { return createDesktopWorkspaceFailureResponse(DESKTOP_WORKSPACE_SUMMARY_RESPONSE_CHANNEL, "unavailable", "Workspace summary is unavailable."); }
+  });
+
   dependencies.ipcMain.handle(
     DESKTOP_WORKSPACE_LIST_REQUEST_CHANNEL.value,
     async (_event, request: DesktopWorkspaceListRequest) => {

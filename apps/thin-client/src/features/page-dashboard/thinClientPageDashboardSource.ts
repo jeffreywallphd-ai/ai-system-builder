@@ -1,3 +1,6 @@
+import { normalizeReadWorkspaceSummaryRequest, normalizeWorkspaceSummary } from "../../../../../modules/contracts/workspace";
+import { secureFetch } from "../../security/secureFetch";
+import { parseApiEnvelope } from "../../security/apiErrorEnvelope";
 import type {
   DashboardSettingsDefaults,
   PageDashboardDataSource,
@@ -15,6 +18,14 @@ import { createThinClientSystemBuilderClient } from "../system-builder/api/thinC
 const PAGE_LIMIT = 100;
 
 export const thinClientPageDashboardSource: PageDashboardDataSource = {
+  async readWorkspaceSummary(workspaceId, page) {
+    const request = normalizeReadWorkspaceSummaryRequest({workspaceId, page});
+    const query = new URLSearchParams({workspaceId: request.workspaceId, page: request.page});
+    const response = await secureFetch(`/api/workspaces/summary?${query}`, {method: "GET"});
+    const envelope = parseApiEnvelope(await response.json()) as {ok?: boolean; value?: unknown};
+    if (!envelope?.ok) throw new Error("Workspace summary unavailable.");
+    return normalizeWorkspaceSummary(envelope.value, request);
+  },
   async listSystems(workspaceId) {
     const result = await createThinClientSystemBuilderClient().list({
       workspaceId,

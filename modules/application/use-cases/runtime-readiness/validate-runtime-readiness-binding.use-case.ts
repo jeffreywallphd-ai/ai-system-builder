@@ -19,16 +19,22 @@ export class ValidateRuntimeReadinessBindingUseCase {
       return runtimeReadinessFailure("internal", "runtime-readiness-service-unavailable");
     }
     if (!binding) return runtimeReadinessFailure("not-found", "runtime-readiness-binding-candidate-missing");
+    if (binding.targetWorkspaceId !== c.targetWorkspaceId || binding.readinessBindingId !== c.readinessBindingId) return runtimeReadinessFailure("validation", "runtime-readiness-workspace-invalid");
     if (binding.archivedAt || binding.status === "archived") return runtimeReadinessFailure("validation", "runtime-readiness-composition-plan-not-valid");
 
-    const blockers = [...binding.blockers];
-    const diagnostics = [...binding.diagnostics];
+    // Re-evaluate authoritative composition and derived provider conditions.
+    // Old persisted failures must not survive after their actual cause is fixed.
+    const blockers: RuntimeReadinessBinding["blockers"][number][] = [];
+    const diagnostics: RuntimeReadinessBinding["diagnostics"][number][] = [];
+    if (!this.d.compositionRepository) return runtimeReadinessFailure("internal", "runtime-readiness-service-unavailable");
     if (this.d.compositionRepository) {
       try {
         const plan = await this.d.compositionRepository.readAssetCompositionPlanRecord(c.targetWorkspaceId, binding.compositionPlanId);
         if (!plan) blockers.push({ code: "runtime-readiness-composition-plan-missing", message: "Composition plan reference is missing." });
-        else if (["invalid", "archived", "blocked", "conflicted", "unsupported"].includes(plan.status as string)) blockers.push({ code: "runtime-readiness-composition-plan-not-valid", message: "Composition plan is not valid for runtime readiness progression." });
+        else if (plan.targetWorkspaceId !== c.targetWorkspaceId || plan.planId !== binding.compositionPlanId) blockers.push({ code: "runtime-readiness-workspace-invalid", message: "Composition plan reference does not match the authorized workspace and plan." });
         else if (plan.status === "stale") blockers.push({ code: "runtime-readiness-composition-plan-stale", message: "Composition plan is stale." });
+        else if (plan.status !== "valid" || plan.archivedAt || plan.blockers.length > 0) blockers.push({ code: "runtime-readiness-composition-plan-not-valid", message: "Composition plan is not valid for runtime readiness progression." });
+        else if (!binding.compositionPlanValidationAt || !plan.updatedAt || binding.compositionPlanValidationAt !== plan.updatedAt) blockers.push({ code: "runtime-readiness-composition-plan-stale", message: "Composition plan changed; refresh the readiness binding before progression." });
       } catch {
         return runtimeReadinessFailure("internal", "runtime-readiness-composition-plan-missing");
       }

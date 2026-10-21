@@ -21,6 +21,7 @@ describe("model family invariants", () => {
       "normalizeBrowseModelsResult",
       "normalizeDeleteModelRecordRequest",
       "normalizeDownloadModelRequest",
+      "normalizeEditableModelRecordRequest",
       "normalizeGetModelDetailsRequest",
       "normalizeGetModelDetailsResult",
       "normalizeListModelDownloadTasksRequest",
