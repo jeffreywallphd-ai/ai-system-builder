@@ -491,3 +491,14 @@ pre-execution review required safe pool errors, bounded waits, independent clean
 and owner/partial-pair checks; ten focused delta admission cases passed after
 retained test failures were corrected without weakening those controls.
 
+The trained Context harness admits a read-only native exit observer for the
+validated ready worker before authorizing Windows inference. A redirector's exit
+alone is insufficient. Returned evidence requires actual worker exit zero. An
+unconfirmed exit or blocked reader latches later launches and immediately aborts
+the matrix with its partial report and cleanup pending; confirm exact owned
+cleanup before attempting another invocation. Termination errors still permit
+independent exit confirmation. Termination remains limited to the originally
+spawned launcher tree. Memory/job limits, corpus, metrics and thresholds stay unchanged.
+Injected denial tests and a harmless native handshake fixture qualify this
+lifecycle behavior separately from the full trained-model matrix.
+

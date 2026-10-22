@@ -28,6 +28,7 @@ sys.path.insert(0, str(ROOT))
 from trained_context_fixture import TOPICS, relevant_ids, rows
 from run_context_efficiency_qualification import BASELINE_COMMIT, BASELINE_SHA256, compare, load_runtime, percentile95, reduction, rss
 from windows_qualification_memory import constrain_current_process, memory_profile_evidence
+from observe_windows_process_exit import observe
 
 MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 REVISION = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
@@ -39,6 +40,85 @@ FILES = {
     "vocab.txt": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3",
     "model.safetensors": "53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db",
 }
+
+_UNCONFIRMED_CHILD = None
+
+
+def failure_kind(error):
+    name = type(error).__name__
+    return name if name in {"ValueError", "RuntimeError", "OSError", "TimeoutExpired", "Empty", "JSONDecodeError"} else "QualificationFailure"
+
+
+class UnconfirmedChildExit(RuntimeError):
+    def __init__(self, launcher_pid, workload_error=None, cleanup_errors=()):
+        super().__init__("Owned child shutdown could not be confirmed; further cohorts are refused.")
+        self.evidence = {"launcher_pid": launcher_pid, "workload_failure_type": failure_kind(workload_error) if workload_error is not None else None, "cleanup_failure_types": list(cleanup_errors)}
+
+
+def physical_exit_code(process, native_thread, native_result):
+    if os.name != "nt":
+        return process.poll()
+    if native_thread is not None:
+        try:
+            native_thread.join(timeout=5)
+        except (RuntimeError, OSError):
+            return None
+        if not native_thread.is_alive() and len(native_result) == 1 and type(native_result[0]) is int and 0 <= native_result[0] <= 0xFFFFFFFF:
+            return native_result[0]
+    return None
+
+
+def finish_owned_child(process, readers, native_thread, native_result, stderr_tail, folder, workload_error):
+    global _UNCONFIRMED_CHILD
+    cleanup_errors = []
+    if process.poll() is None:
+        try:
+            if os.name == "nt":
+                stopped = subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True, timeout=10)
+                if stopped.returncode:
+                    cleanup_errors.append("TerminationUnavailable")
+            else:
+                process.kill()
+        except (OSError, subprocess.SubprocessError) as error:
+            cleanup_errors.append(failure_kind(error))
+    # A termination error must not skip independent exit confirmation.
+    try:
+        process.wait(timeout=10)
+    except (OSError, subprocess.SubprocessError) as error:
+        cleanup_errors.append(failure_kind(error))
+    reader_join_failed = False
+    for reader in readers:
+        try:
+            reader.join(timeout=2)
+        except (RuntimeError, OSError):
+            cleanup_errors.append("ReaderJoinUnavailable")
+            reader_join_failed = True
+    observed = physical_exit_code(process, native_thread, native_result)
+    confirmed = process.poll() is not None and observed is not None and not reader_join_failed and not any(reader.is_alive() for reader in readers)
+    if not confirmed:
+        _UNCONFIRMED_CHILD = UnconfirmedChildExit(process.pid, workload_error, cleanup_errors)
+    # A live reader may own a buffered stream lock. Never close it synchronously.
+    if confirmed:
+        try:
+            for stream in (process.stdin, process.stdout, process.stderr):
+                stream.close()
+        except OSError as error:
+            _UNCONFIRMED_CHILD = UnconfirmedChildExit(process.pid, workload_error, [*cleanup_errors, failure_kind(error)])
+    try:
+        if stderr_tail:
+            diagnostic = folder / f"private-diagnostic-{uuid.uuid4().hex}.log"
+            with diagnostic.open("x", encoding="utf-8") as output:
+                output.write("".join(stderr_tail))
+    finally:
+        if _UNCONFIRMED_CHILD is not None:
+            raise _UNCONFIRMED_CHILD from None
+
+
+def abort_unconfirmed_child(error, report, save):
+    if isinstance(error, UnconfirmedChildExit):
+        report.update(status="aborted-unconfirmed-child-exit", qualification_complete=False, cleanup_pending=error.evidence)
+        save()
+        raise SystemExit(1) from None
 
 
 def sha256_file(path):
@@ -222,9 +302,11 @@ def child(args, folder):
 
 
 def run_child(args, folder, count, mode, variant="candidate", device="cpu", phase="timing",profile="reference"):
+    if _UNCONFIRMED_CHILD is not None:
+        raise _UNCONFIRMED_CHILD
     command = [sys.executable, "-s", "-B", str(SCRIPT), "--child", mode, "--run-id", folder.name, "--count", str(count), "--variant", variant, "--device", device, "--phase", phase, "--profile",profile,"--samples", str(args.samples), "--model-manifest", args.model_manifest]
     process = subprocess.Popen(command, cwd=ROOT, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
-    stderr_tail=[]; readers=[]
+    stderr_tail=[]; readers=[]; native_thread=None; native_result=[]
     try:
         messages = queue.Queue(maxsize=4); overflow = threading.Event()
         def drain(stream, collect):
@@ -241,8 +323,22 @@ def run_child(args, folder, count, mode, variant="candidate", device="cpu", phas
         readers = [threading.Thread(target=drain, args=(process.stdout, True), daemon=True), threading.Thread(target=drain, args=(process.stderr, False), daemon=True)]
         for reader in readers: reader.start()
         ready = json.loads(messages.get(timeout=60))
-        if ready.get("kind") != "ready" or (ready["pid"] != process.pid and ready["parent_pid"] != process.pid):
+        if ready.get("kind") != "ready" or any(type(ready.get(key)) is not int or not 0 < ready[key] <= 0xFFFFFFFF for key in ("pid", "parent_pid")) or (ready["pid"] != process.pid and ready["parent_pid"] != process.pid):
             raise ValueError("Qualification child identity failed.")
+        if os.name == "nt":
+            native_ready = threading.Event()
+            def native():
+                try:
+                    native_result.append(observe(ready["pid"], native_ready.set, (900 if mode == "prepare" else 600) * 1000 + 30_000))
+                except Exception:
+                    native_result.append(None)
+                    native_ready.set()
+            native_thread = threading.Thread(target=native, daemon=True)
+            native_thread.start()
+            if not native_ready.wait(5) or native_result:
+                raise RuntimeError("Owned native child observation unavailable.")
+        elif ready["pid"] != process.pid:
+            raise ValueError("A distinct native worker cannot be observed on this profile.")
         baseline = peak = ready["rss_bytes"]
         process.stdin.write("run\n"); process.stdin.flush()
         started = time.monotonic()
@@ -255,26 +351,18 @@ def run_child(args, folder, count, mode, variant="candidate", device="cpu", phas
                 raise RuntimeError("Qualification child exceeded the fixed 4GiB safety ceiling.")
             time.sleep(0.005)
         for reader in readers: reader.join(timeout=2)
-        if overflow.is_set() or any(reader.is_alive() for reader in readers) or process.returncode:
+        if overflow.is_set() or any(reader.is_alive() for reader in readers) or process.returncode or physical_exit_code(process, native_thread, native_result) != 0:
             raise RuntimeError("Trained qualification failed.")
         result = json.loads(messages.get(timeout=1))
         if result.get("kind") != "result" or not messages.empty():
             raise ValueError("Qualification output invalid.")
         if mode == "prepare":
-            result["corpus"].update(generation_initial_rss_bytes=baseline,generation_peak_rss_bytes=peak)
+            result["corpus"].update(generation_initial_rss_bytes=baseline,generation_peak_rss_bytes=peak,physical_exit_code=0)
             return result["corpus"]
-        result.update(baseline_rss_bytes=baseline, peak_rss_bytes=peak, incremental_peak_rss_bytes=max(0, peak-baseline))
+        result.update(baseline_rss_bytes=baseline, peak_rss_bytes=peak, incremental_peak_rss_bytes=max(0, peak-baseline),physical_exit_code=0)
         return result
     finally:
-        if process.poll() is None:
-            if os.name == "nt": subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True, timeout=10)
-            else: process.kill()
-            process.wait(timeout=10)
-        for reader in readers: reader.join(timeout=2)
-        if stderr_tail:
-            diagnostic=folder/f"private-diagnostic-{uuid.uuid4().hex}.log"
-            with diagnostic.open("x",encoding="utf-8") as output: output.write("".join(stderr_tail))
-        for stream in (process.stdin, process.stdout, process.stderr): stream.close()
+        finish_owned_child(process, readers, native_thread, native_result, stderr_tail, folder, sys.exc_info()[1])
 
 
 def main():
@@ -307,6 +395,7 @@ def main():
         report["attempts"][-1]["status"]="passed"
     except Exception as error:
         report["attempts"][-1].update(status="failed",error_type=type(error).__name__)
+        abort_unconfirmed_child(error, report, save)
     save()
     for count in args.chunks:
         report["attempts"].append({"phase":"prepare","chunks":count,"status":"running"}); save()
@@ -314,7 +403,9 @@ def main():
             corpus = run_child(args,folder,count,"prepare",device="cuda")
             report["attempts"][-1]["status"]="passed"; save()
         except Exception as error:
-            report["attempts"][-1].update(status="failed",error_type=type(error).__name__); save(); continue
+            report["attempts"][-1].update(status="failed",error_type=type(error).__name__)
+            abort_unconfirmed_child(error, report, save)
+            save(); continue
         for device,profile in [("cpu","reference"),("cuda","reference"),("cpu","constrained-2gib")]:
             item={"chunks":count,"device":device,"profile":profile,"corpus":corpus,"attempts":[]}; report["workloads"].append(item); results={}; save()
             try:
@@ -328,7 +419,7 @@ def main():
                     for memory_index in range(3):
                         item["attempts"].append({"variant":variant,"phase":"memory","sample":memory_index,"status":"running"}); save()
                         measured=run_child(args,folder,count,"measure",variant,device,"memory",profile)
-                        item[variant]["memory_runs"].append({key:measured[key] for key in ("baseline_rss_bytes","peak_rss_bytes","incremental_peak_rss_bytes","cleanup_passed")})
+                        item[variant]["memory_runs"].append({key:measured[key] for key in ("baseline_rss_bytes","peak_rss_bytes","incremental_peak_rss_bytes","cleanup_passed","physical_exit_code")})
                         item[variant]["incremental_peak_rss_bytes"]=statistics.median(run["incremental_peak_rss_bytes"] for run in item[variant]["memory_runs"])
                         item["attempts"][-1]["status"]="passed"; save()
                 item["quality"]=compare(results["baseline"],results["candidate"])
@@ -339,6 +430,7 @@ def main():
                 item["status"]="passed" if quality and budget else "failed-quality-or-budget"
             except Exception as error:
                 item["status"]="failed"; item["attempts"].append({"status":"failed","error_type":type(error).__name__})
+                abort_unconfirmed_child(error, report, save)
             save(); print(json.dumps({"chunks":count,"device":device,"profile":profile,"status":item["status"]}),flush=True)
     report["source_stable"]=source_identity()==source
     try:
