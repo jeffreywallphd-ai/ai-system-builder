@@ -68,6 +68,12 @@ Prompt schema/examples retain the existing sorted canonical presentation and
 exact values; changing prompt field order requires real fixed-model regression
 evidence. Token constraints and final integrity identities retain their own
 semantically equivalent representations.
+The existing output-sample caption is retained. A generic wording clarification
+improved one 0.5B development case, but the candidate containing it lost a
+previously correct 1.5B constrained case in both phases of the exposed regression.
+That broader comparison does not isolate caption causality. The wording was withdrawn;
+small-model gains cannot justify a shared-default regression. Prompt experiments
+need task/model-specific evidence in addition to unchanged contract tests.
 - The task registry assigns an explicit bounded deadline by work class: two
   minutes for short/unknown work, two hours for validation and Parquet dataset
   review, eight hours for dataset preparation and context generation, twelve hours for model

@@ -93,6 +93,66 @@ resource budget. Do not choose a tolerance after seeing results. Compare only
 matching cohorts; unavailable or skipped runs stay pending. Deterministic Context
 conformance and Python fixtures are not installed-model quality evidence.
 
+### Task and model expectations
+
+Model size describes a resource/capability class, not a quality guarantee. Declare
+the task, use, precision/coverage targets and failure handling before opening fresh
+validation. Keep expectations separate from model-independent schema, grounding,
+isolation, review, injection and resource controls.
+
+| Model/use class | Realistic expectation and qualification limit |
+| --- | --- |
+| Small general-instruct models, including the pinned 0.5B model | Evaluate narrow tasks with explicit definitions and bounded outputs as review-required proposals. Report useful correct coverage, accepted precision, abstentions and repair cost; expect broader tasks to need more review or remain unsupported. Neither constrained syntax nor a development success implies broad reasoning, reliable automatic acceptance or a universal 95-percent accuracy claim. |
+| Larger or task-specialized models, including the approved 1.5B trial | Measure broader coverage against added load/RAM/VRAM cost on matching cohorts. Size alone does not fix errors; retained 23/24 observations apply to that synthetic task only. Keep unavailable CPU admission pending. |
+| Automatic or high-impact use | Parameter count grants no additional authority. Representative independent semantic/error and operational qualification would be required before changing the existing review or acceptance policy. This experiment changes neither policy. |
+
+The bounded 0.5B caption experiment uses twelve new development cases across three
+unrelated task configurations. Compare the exact current prechange caption with
+one generic clarification in both existing decoding modes and first/warm phases,
+using unchanged profile/settings and owned-child guards. Keep the candidate only
+if it preserves every paired correct case and improves correct accepted outcomes;
+a cost-only benefit must meet the existing 20-percent whole-delivery target across
+matching repeated groups. Otherwise withdraw it. These are development selection
+rules, not new product quality thresholds or unseen validation. Original exposed
+24-case regressions, strict quality/throughput gates and failed observations stay
+unchanged. Freeze any prospective task-specific validation targets and candidate
+before a separate case author supplies fresh validation. No domain answers,
+benchmark-specific heuristics or new few-shot input contract enter production.
+
+The completed caption-only GPU development comparison retained all baseline-correct
+cases. One distinct case improved in both first and warm phases; across the repeated
+observations, correct outcomes increased from 42/48 to 44/48, with 46 accepted in
+each arm. Both constrained arms correctly handled all twelve distinct clear cases
+in each phase. Two wrong accepted outcomes still remain in the candidate's unchecked
+observations. Twelve cases repeated across modes/phases are not 48 independent
+examples or a population accuracy estimate. The three-group median delivery ratios
+were 1.07582 unchecked and 1.01910 constrained, below 1.2; the constrained opaque-label
+pair was slower. These measurements support the predeclared development semantic
+alternative, not a 20-percent cost improvement or automatic acceptance.
+
+The unchanged CPU guard denied the first development child before inference:
+3543986384 bytes required against 1961914368 available after runtime initialization.
+The remaining CPU development is unexecuted/pending. The twelve completed GPU
+children recorded physical exit zero and runtime cleanup; neither supplies CPU
+compatibility. Retain the raw paired/token/resource reports and independent
+recomputation under ignored local evidence. Known-model regressions and future
+independent task-specific validation remain distinct from this development split.
+
+The subsequent exposed 24-case GPU compatibility run used one baseline/candidate
+pair per mode for each approved model. Against the original 442518c4 baseline,
+the 0.5B candidate improved 7 to 12 correct unchecked and 5 to 14 constrained in each
+phase, losing no previously correct case. Both still failed the absolute quality
+floor. This comparison includes existing allowed-label schema constraints and
+other earlier framework changes; it does not isolate the caption. The 1.5B
+unchecked pair retained 23/24, but constrained regressed 23 to 22/24 in both phases,
+losing one distinct correct case. The shared caption clarification was therefore
+withdrawn, restoring the original production wording. Preserve all eight native
+child reports, paired identities, cleanup results and original thresholds.
+One diagnostic pair per cohort is neither the full three-replicate qualification
+nor fresh independent validation; its process exit zero means measurement
+completed, not that quality passed. No new model-size threshold, automatic
+acceptance policy or CPU pass is inferred from these results.
+
 ## Whole-host task qualification
 
 The representative controlled download matrix has passed on the declared
