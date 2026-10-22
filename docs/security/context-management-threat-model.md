@@ -41,6 +41,17 @@ model installation state are authoritative at their owning boundaries.
 
 ## Threats and controls
 
+Embedding placement accepts only CPU, CUDA or automatic execution intent. It
+cannot select a path, provider, model, credential, network destination or portable
+artifact authority. CPU is the omitted default. Query placement is separate from
+verified manifest model/dimension metadata; injected manifest placement is ignored.
+Explicit unavailable CUDA and exhaustion fail without fallback or private detail.
+Weights and all inputs use the same device and owned tensors/cache are released.
+Tests cover propagation, compatibility, unavailable/exhausted devices, manifest
+injection and unchanged cleanup/validation. Real trained-device qualification
+uses fixed verified safe files, no remote code/pickle and synthetic sources;
+availability or deterministic fixtures alone never qualifies model performance.
+
 | Threat | Control |
 | --- | --- |
 | Cross-workspace source read or review/save | Host adds workspace context; application authorization requires artifact read/write scopes; task scope includes workspace and available organization/principal; mismatch returns not found. |

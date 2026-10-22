@@ -6,7 +6,7 @@
 
 ## Asset Kernel relationship
 
-The Asset Kernel is the semantic composition model for reusable building blocks. Persistence and storage remain separate lower-level architecture concerns. Asset metadata may be persisted as structured records for asset definitions, instances, bindings, compositions, lifecycle, and provenance; binary/content payloads remain storage concerns. The current Asset Kernel persistence stack uses typed local repository adapters over the active host's structured-document seam, while retaining its schema-versioned JSON layout only for unshaped development compatibility and explicit legacy import. Descriptor-only resource-backed mapping/view helpers remain separate. This does not add a durable resource-backed mapping repository or version-history service.
+The Asset Kernel is the semantic composition model for reusable building blocks. Persistence and storage remain separate lower-level architecture concerns. Asset metadata may be persisted as structured records for asset definitions, instances, bindings, compositions, lifecycle, and provenance; binary/content payloads remain storage concerns. The current Asset Kernel persistence stack uses typed local repository adapters over the active host's structured-document seam, while retaining its schema-versioned JSON layout only for unshaped development compatibility and explicit legacy import. Descriptor-only resource-backed mapping/view helpers remain separate. View bodies and version history remain separate; the private image/output identity index described below is the narrow ADR-0043 addition.
 
 Resource-backed assets should reference artifact/resource storage identities instead of embedding raw file paths or bytes in asset metadata. Generated outputs produced by runtime tasks become reusable only after finalization/registration as artifacts or resource-backed assets. Hugging Face repository objects remain external repository objects until registered/imported as resource-backed assets. Existing artifact, model, dataset, and image concepts should not be renamed during Asset Kernel contract baseline.
 
@@ -234,7 +234,7 @@ application/domain boundaries to SQLite- or PostgreSQL-specific APIs.
 
 `modules/adapters/persistence/asset` provides the current local Asset Kernel persistence adapter. It stores JSON-compatible `AssetDefinition`, `AssetInstance`, `AssetComposition`, and `AssetBinding` records through the active host's structured-document store. Its compatibility/legacy layout remains `asset-kernel/manifest.json`, `definitions.json`, `instances.json`, `compositions.json`, and `bindings.json`; the manifest uses `schemaVersion: 1` and `storeKind: "asset-kernel-local-store"`. The adapter implements application repository ports and remains infrastructure-only: it does not own Asset Kernel validation, business rules, host composition, API/IPC/UI exposure, resource-backed mapping helpers, artifact/object storage, workflow execution, graph execution, runtime readiness, prompt assembly, embeddings, or AI-generated context.
 
-The local adapter persists records and references only. It must not embed raw file/blob bytes, generated model/image/dataset payload bytes, secrets, environment values, local filesystem handles, or adapter-native paths in asset records or public errors. Durable resource-backed asset mapping persistence and explicit persistence-to-storage linkage remain deferred beyond this checkpoint.
+The local adapter persists records and references only. It must not embed raw file/blob bytes, generated model/image/dataset payload bytes, secrets, environment values, local filesystem handles, or adapter-native paths in asset records or public errors. Durable view-body persistence and general persistence-to-storage linkage remain deferred; private image/output public identity indexes do not store view bodies or resource content.
 
 ### Workspace local persistence checkpoint
 
@@ -521,7 +521,7 @@ The registry read facade is an application-layer service only. It reads through 
 
 Read-only Asset Registry API/IPC/preload wrappers and desktop/thin-client Asset Library pages operate over persisted definitions and computed resource-backed view list/detail reads. This does not change the persistence/storage boundary: Asset Library UI and transport code must not access local persistence adapters, storage adapters, filesystem paths, resource bytes, provider clients, runtime roots, resolver result objects, or resource scans directly. Built-ins appear only when already persisted/seeded through internal seeding, and resource-backed views remain computed descriptor-only read models that do not read bytes or turn generated outputs/external repository objects into registered assets.
 
-Resource-backed mappings are still not persisted. Artifact/document, image/generated-output, dataset/model, and external-repository object views are computed from safe descriptor/read seams only. Asset Kernel persistence continues to store records only, not resource bytes, generated outputs, source files, thumbnails, model files, dataset files, provider payloads, or durable resource-backed view mappings.
+Resource-backed view bodies are computed from safe descriptor/read seams. Image/output public identity indexes are persisted separately under ADR-0043; other families do not gain mappings. Asset Kernel persistence continues to store records only, not resource bytes, generated outputs, source files, thumbnails, model files, dataset files, provider payloads, or durable resource-backed view mappings.
 
 ## Runtime roots are not artifact storage roots
 
@@ -633,3 +633,39 @@ kind/id/version, and an optional target projection ID matches the record.
 Source workspace provenance may legitimately differ for library/import sources;
 intended policy may differ from the actual blocked policy. Contradictory records
 deny before persistence or progression, rather than selecting a convenient identity.
+
+Image/generated-output view identities are persisted random opaque aliases under
+accepted ADR-0043. The narrow identity port stores private organization/workspace
+source and public indexes; a hash appears only in the private source index key,
+never in a public identifier. Active SQLite/PostgreSQL host composition supplies
+the organization-context store. Organization scope is frozen before awaiting;
+unassigned or missing stores deny this projection without a legacy JSON fallback.
+
+Revision-CAS publication reserves one immutable alias per owner/source, inserts
+its exact inverse, then commits the source revision. Only committed consistent
+pairs are returned or resolved. A new reserved publication can resume after an
+authorized descriptor read, using the same alias; committed missing or substituted
+pairs deny without repair. Four conflict attempts bound admission. This avoids
+adding overlapping connection transactions to the existing SQLite seam. Private
+reserved records grant no source authority and are never public evidence.
+
+Image/output/artifact aliases and source cursors use this mapping. Descriptor
+capture rejects active/malformed input before projection. Detail reads use two
+exact index lookups, followed by an exact workspace-scoped source reauthorization;
+there is no source-ID decoding or list fallback. Revoked/mismatched sources deny.
+Image cursor continuation uses the last returned source row, avoiding a skipped
+next item. No image bytes, providers, runtimes, registration or finalization are
+invoked by projection. Generated-output finalization remains uncomposed in hosts.
+
+Existing source-derived view references are not migrated or silently reassigned.
+Explicit owner-approved legacy-reference migration and native persistence/ACL
+qualification remain pending. Preserve mapping records and stronger denials on
+rollback; never restore source-derived public IDs. This component evidence does
+not close parent security increments or establish protected physical-file effects.
+
+Asset definition batch writes preserve the existing collection/manifest format.
+At most250 unique exact identities and aligned expected original bodies enter one
+retryable whole-collection mutation. Inputs are passively captured before awaits,
+organization context is bound for the operation, and all comparisons rerun against
+the current collection on conflicts. A batch is atomic for the definition
+collection; manifest refresh remains a separate existing operational write.

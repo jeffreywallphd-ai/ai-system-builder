@@ -1,4 +1,5 @@
 import { createOwnedTaskReconciler } from "../../shared/createOwnedTaskReconciler";
+import { createSystemFoundationInitializationError } from "../../../application/services/asset-packs";
 import { shutdownOwnedTasks } from "../../shared/shutdownOwnedTasks";
 import { ImageGenerationTaskAuthorityService } from "../../../application/services/image/image-generation-task-authority.service";
 import { WorkspaceAssetAccessService } from "../../../application/services/asset/workspace-asset-access.service";
@@ -39,7 +40,7 @@ import { createGitRuntimeInstallerAdapter } from "../../../adapters/runtime/inst
 import { createLocalApplicationSettingsAdapter } from "../../../adapters/persistence/settings";
 import { createLocalModelRegistryAdapter } from "../../../adapters/persistence/model";
 import { createHuggingFaceModelBrowseDetailsAdapter } from "../../../adapters/model/huggingface";
-import { createLocalImageAssetRegistryAdapter } from "../../../adapters/persistence/image";
+import { createLocalImageAssetRegistryAdapter, createStructuredImageResourceIdentityAdapter } from "../../../adapters/persistence/image";
 import {
   createLocalModelCheckpointResolverAdapter,
   createLocalModelFileListerAdapter,
@@ -374,7 +375,13 @@ export interface ComposeServerHostOptions {
     localSettingsFilePath?: string;
   };
   runtimeDatabases?: ServerSystemRuntimeDatabaseAdapter;
+  /** Trusted nonproduction composition only; production always prepares the managed Python dependencies. */
+  pythonRuntimeEnvironmentPreparer?: ServerPythonRuntimeEnvironmentPreparer;
 }
+
+export type ServerPythonRuntimeEnvironmentPreparer = NonNullable<
+  Parameters<typeof createPythonRuntimeAdapterFoundation>[0]["supervisor"]["prepareRuntimeEnvironment"]
+>;
 
 export type ServerSystemRuntimeDatabaseAdapter =
   SystemRuntimeDatabaseLifecyclePort &
@@ -632,6 +639,15 @@ export {
 export function composeServerHost(
   options: ComposeServerHostOptions = {},
 ): ServerHostComposition {
+  const pythonRuntimeEnvironmentPreparer = options.pythonRuntimeEnvironmentPreparer;
+  if (pythonRuntimeEnvironmentPreparer !== undefined) {
+    if ((options.env ?? process.env).NODE_ENV === "production" || process.env.NODE_ENV === "production") {
+      throw new Error("The controlled runtime preparation seam is unavailable in production.");
+    }
+    if (typeof pythonRuntimeEnvironmentPreparer !== "function") {
+      throw new TypeError("Controlled runtime preparation must be a function.");
+    }
+  }
   const loggingConfig = createLoggingConfig({
     verbosity: options.logging?.verbosity,
     fallbackVerbosity: options.logging?.fallbackVerbosity,
@@ -1510,6 +1526,7 @@ export function composeServerHost(
         documents: organizationDocuments,
         definitionDocuments: options.persistence?.documents,
         resourceBackedViewProvider: composeResourceBackedViewProviders({
+          imageResourceIdentity: organizationDocuments ? createStructuredImageResourceIdentityAdapter(organizationDocuments) : undefined,
           artifactBrowserMetadataRead: artifactBrowserRead,
           imageAssetDescriptorRead: imageAssetRegistry,
           modelRegistry,
@@ -1522,7 +1539,7 @@ export function composeServerHost(
         })
         .then((results) => {
           if (results.some((result) => result.status === "failed")) {
-            throw new Error("System foundation assets are unavailable.");
+            throw createSystemFoundationInitializationError(results);
           }
         });
       assetFoundationReady = foundationReady;
@@ -1826,7 +1843,7 @@ export function composeServerHost(
           args: pythonRuntimeArgs,
           cwd: pythonRuntimeWorkerDirectory,
           env: pythonRuntimeEnvironment,
-          async prepareRuntimeEnvironment(context) {
+          prepareRuntimeEnvironment: pythonRuntimeEnvironmentPreparer ?? (async (context) => {
             await ensurePythonRuntimeContextDependencies({
               command: context.command,
               cwd: context.cwd,
@@ -1837,7 +1854,7 @@ export function composeServerHost(
               cwd: context.cwd,
               env: context.env,
             });
-          },
+          }),
           onEvent(event) {
             const source = event.data?.source;
             const detail = event.detail?.trim();

@@ -5,9 +5,9 @@ import ts from "typescript";
 
 import { describe, expect, it } from "../../../modules/testing/node-test";
 
-describe("desktop webpack TypeScript configuration", () => {
+describe("desktop TypeScript configuration", () => {
   it("typechecks the Electron main dependency closure with emit enabled", () => {
-    const configPath = join(process.cwd(), "apps/desktop/tsconfig.webpack.json");
+    const configPath = join(process.cwd(), "apps/desktop/tsconfig.desktop.json");
     const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
 
     if (configFile.error) {

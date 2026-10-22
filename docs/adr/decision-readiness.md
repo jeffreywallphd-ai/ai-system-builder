@@ -14,6 +14,13 @@ This register tells contributors and automated agents whether architecture-sensi
 
 ## Current Decision Surface
 
+ADR-0043 accepts the remaining model-file ownership/native-effect, aggregate
+admission, session-diagnostic, opaque-image identity, versioned semantic
+fingerprint and principal-owned personal-library choices. Implementation may
+proceed within those boundaries. Native and controlled qualification remain
+pending; design approval does not grant physical file effects or legacy data
+ownership, waive dependency findings, or admit unsupported routes.
+
 | Area                                                                                        | Readiness         | Authority and boundary                                                                                                                                                                                                               | Agent action                                                                                                                                                                                                                                                              |
 | ------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Repository shape and dependency direction                                                   | ready             | ADR-0001 and `docs/architecture/module-dependency-rules.md`                                                                                                                                                                          | Follow the existing layers; changing dependency direction requires an ADR update or successor.                                                                                                                                                                            |
@@ -37,6 +44,12 @@ This register tells contributors and automated agents whether architecture-sensi
 | Public registry/marketplace behavior                                                        | decision-required | ADR-0031 deliberately excludes public discovery, publisher governance, ratings, billing, and automatic updates                                                                                                                       | Do not expose a public marketplace or automatic update policy without a successor decision and qualification.                                                                                                                                                             |
 
 ## How to Use This Register
+
+Desktop tooling is ready within ADR-0044: use the exactly pinned official Forge
+Vite plugin, preserve both isolated renderer/preload entries, source-confined
+loopback development and self-contained provider imports. Updates need actual
+dev/package/feature compatibility and a clean dependency gate. Non-Windows and
+manual/reference qualification remain pending until executed.
 
 The contributor development control plane is ready within ADR-0042 and
 `docs/architecture/ai-development-control-plane.md`: preserve the existing

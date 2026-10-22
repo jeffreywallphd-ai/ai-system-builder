@@ -57,16 +57,6 @@ export function createPythonRuntimeAdapterFoundation(
     environment: runtimeEnvironment,
     authorizationTokenProvider: () => authorizationToken,
   });
-  const supervisor = createPythonRuntimeSupervisor({
-    ...options.supervisor,
-    env: runtimeEnvironment,
-    prepareLaunchEnvironment: () => {
-      authorizationToken = assertStrongToken(generateAuthorizationToken());
-      runtimeEnvironment.PYTHON_RUNTIME_AUTH_TOKEN = authorizationToken;
-    },
-    runtimeClient: client,
-  });
-
   const trackedTasks = new Map<
     string,
     { taskType: string; deadline: number }
@@ -85,6 +75,41 @@ export function createPythonRuntimeAdapterFoundation(
       terminalOverrides.delete(oldest);
     }
   };
+  let ownedExitEpoch = 0;
+  const rememberOwnedExit = (requestId: string, taskType: string) => {
+    const completedAt = new Date().toISOString();
+    rememberOverride(requestId, {
+      requestId, taskType, status: "failed",
+      error: {
+        code: "python_runtime_worker_exited",
+        message: "Python runtime worker stopped before the task completed.",
+        retryable: true,
+      },
+      completedAt, updatedAt: completedAt,
+      metadata: { recovery: "worker-exited" },
+    });
+  };
+  const supervisor = createPythonRuntimeSupervisor({
+    ...options.supervisor,
+    env: runtimeEnvironment,
+    prepareLaunchEnvironment: () => {
+      authorizationToken = assertStrongToken(generateAuthorizationToken());
+      runtimeEnvironment.PYTHON_RUNTIME_AUTH_TOKEN = authorizationToken;
+    },
+    runtimeClient: client,
+    onEvent: (event) => {
+      // The supervisor emits this only for its currently owned process handle.
+      // HTTP uncertainty and events from a previous generation cannot supply it.
+      if (event.type === "process-exit") {
+        ownedExitEpoch++;
+        for (const [requestId, tracked] of trackedTasks) {
+          rememberOwnedExit(requestId, tracked.taskType);
+        }
+        trackedTasks.clear();
+      }
+      options.supervisor.onEvent?.(event);
+    },
+  });
   const boundedTaskTimeout = (request: StartPythonRuntimeTaskRequest) =>
     Math.min(
       Math.max(
@@ -93,13 +118,27 @@ export function createPythonRuntimeAdapterFoundation(
       ),
       24 * 60 * 60 * 1_000,
     );
+  const assertReplyIdentity = (
+    requestId: string,
+    reply: {requestId: string; taskType?: string},
+    taskType = trackedTasks.get(requestId)?.taskType,
+  ) => {
+    if (reply.requestId !== requestId ||
+        (taskType && reply.taskType !== undefined && reply.taskType !== taskType)) {
+      throw new Error("Python runtime task response identity did not match the accepted request.");
+    }
+  };
   const recoverWorker = async (
     targetRequestId: string,
     targetStatus: "cancelled" | "failed",
   ) => {
+    const recoveringTasks = [...trackedTasks];
     await supervisor.restart();
     const completedAt = new Date().toISOString();
-    for (const [requestId, tracked] of trackedTasks) {
+    for (const [requestId, tracked] of recoveringTasks) {
+      const retained = terminalOverrides.get(requestId);
+      // A real terminal response observed before exit remains authoritative.
+      if (retained && retained.error?.code !== "python_runtime_worker_exited") continue;
       const isTarget = requestId === targetRequestId;
       rememberOverride(requestId, {
         requestId,
@@ -121,18 +160,24 @@ export function createPythonRuntimeAdapterFoundation(
         updatedAt: completedAt,
         metadata: { recovery: "worker-restarted" },
       });
+      trackedTasks.delete(requestId);
     }
-    trackedTasks.clear();
   };
 
   const runtimePort: PythonRuntimePort = {
     startTask: async (request) => {
-      terminalOverrides.delete(request.requestId);
+      const admissionEpoch = ownedExitEpoch;
       const result = await client.startTask(request);
-      trackedTasks.set(request.requestId, {
-        taskType: request.taskType,
-        deadline: Date.now() + boundedTaskTimeout(request),
-      });
+      assertReplyIdentity(request.requestId, result, request.taskType);
+      if (admissionEpoch !== ownedExitEpoch) {
+        rememberOwnedExit(request.requestId, request.taskType);
+      } else {
+        terminalOverrides.delete(request.requestId);
+        trackedTasks.set(request.requestId, {
+          taskType: request.taskType,
+          deadline: Date.now() + boundedTaskTimeout(request),
+        });
+      }
       return result;
     },
     readTaskStatus: async (requestId) => {
@@ -143,12 +188,20 @@ export function createPythonRuntimeAdapterFoundation(
         await recoverWorker(requestId, "failed");
         return terminalOverrides.get(requestId)!;
       }
-      const status = await client.readTaskStatus(requestId);
+      const status = await client.readTaskStatus(requestId).catch(error => {
+        const exited = terminalOverrides.get(requestId);
+        if (exited) return exited;
+        throw error;
+      });
+      const afterReadOverride = terminalOverrides.get(requestId);
+      if (afterReadOverride) return afterReadOverride;
+      assertReplyIdentity(requestId, status);
       if (
         status.status === "succeeded" ||
         status.status === "failed" ||
         status.status === "cancelled"
       ) {
+        if (trackedTasks.has(requestId)) rememberOverride(requestId, status);
         trackedTasks.delete(requestId);
       }
       return status;
@@ -169,7 +222,18 @@ export function createPythonRuntimeAdapterFoundation(
         };
       }
       const result = await client.cancelTask(requestId);
+      const afterCancelOverride = terminalOverrides.get(requestId);
+      if (afterCancelOverride) {
+        return { requestId, taskType: afterCancelOverride.taskType,
+          status: afterCancelOverride.status,
+          cancelled: afterCancelOverride.status === "cancelled" };
+      }
+      assertReplyIdentity(requestId, result);
       if (result.cancelled || result.status === "cancelled") {
+        if (trackedTasks.has(requestId)) rememberOverride(requestId, {
+          requestId, taskType: result.taskType ?? trackedTasks.get(requestId)!.taskType, status: "cancelled",
+          completedAt: new Date().toISOString(), metadata: result.metadata,
+        });
         trackedTasks.delete(requestId);
         return result;
       }

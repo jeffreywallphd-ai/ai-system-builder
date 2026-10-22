@@ -46,3 +46,48 @@ test("root dependency declarations and resolution bind observations and deny dri
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("visual assets and worker/native inputs bind observations without extension gaps", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "probe-visual-source-"));
+  try {
+    execFileSync("git", ["init", "--quiet", root]);
+    await mkdir(path.join(root, "apps"));
+    for (const name of ["canvas.css", "canvas.html", "icon.svg", "font.woff2", "worker.py", "native.cpp", "new-format.asset"]) {
+      const file = path.join(root, "apps", name);
+      const before = await readAssetSystemSourceIdentity(root);
+      await writeFile(file, "synthetic version one");
+      const added = await readAssetSystemSourceIdentity(root);
+      assert.notEqual(added, before, `${name} must be included`);
+      await writeFile(file, "synthetic version two");
+      await assert.rejects(assertAssetSystemSourceIdentity(root, added), /Source changed/);
+    }
+    const current = await readAssetSystemSourceIdentity(root);
+    await mkdir(path.join(root, "artifacts"));
+    await writeFile(path.join(root, "artifacts", "unrelated.css"), "not a source input");
+    assert.equal(await readAssetSystemSourceIdentity(root), current);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("tracked deletion and rename bind the working tree independently of staging", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "probe-removal-source-"));
+  try {
+    execFileSync("git", ["init", "--quiet", root]);
+    await mkdir(path.join(root, "apps"));
+    const file = path.join(root, "apps", "old.config.js");
+    await writeFile(file, "export default {};\n");
+    execFileSync("git", ["add", "--", "apps/old.config.js"], { cwd: root });
+    const before = await readAssetSystemSourceIdentity(root);
+    await rm(file);
+    const removed = await readAssetSystemSourceIdentity(root);
+    assert.notEqual(removed, before);
+    await assert.rejects(assertAssetSystemSourceIdentity(root, before), /Source changed/);
+    await writeFile(path.join(root, "apps", "new.config.mjs"), "export default {};\n");
+    const renamed = await readAssetSystemSourceIdentity(root);
+    assert.notEqual(renamed, removed);
+    assert.notEqual(renamed, before);
+    execFileSync("git", ["add", "--all"], { cwd: root });
+    assert.equal(await readAssetSystemSourceIdentity(root), renamed);
+    await writeFile(file, "export default {};\n");
+    await assert.rejects(assertAssetSystemSourceIdentity(root, renamed), /Source changed/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

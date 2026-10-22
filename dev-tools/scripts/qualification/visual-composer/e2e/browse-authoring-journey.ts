@@ -1,7 +1,8 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page, type TestInfo } from "@playwright/test";
+import { qualifyTechnicalAccessibility } from "./technical-accessibility";
 
 /** Shared real-host journey: no model registration, worker calls or provider traffic. */
-export async function completeBrowseAuthoringJourney(page: Page, name: string, reopen: () => Promise<void>) {
+export async function completeBrowseAuthoringJourney(page: Page, name: string, reopen: () => Promise<void>, info: TestInfo) {
   await page.setViewportSize({width: 1440, height: 1000});
   await page.getByLabel("New system name").fill(name);
   await page.getByRole("button", {name: "Create system", exact: true}).click();
@@ -9,6 +10,7 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
 
   async function insert(search: string) {
     const trigger = page.getByRole("button", {name: /^Add an element inside /}).last();
+    await expect(trigger).toBeEnabled({ timeout: 30_000 });
     await trigger.focus(); await trigger.press("Enter");
     const dialog = page.getByRole("dialog", {name: /^Add an element to /});
     const query = dialog.getByLabel("Search compatible elements");
@@ -57,7 +59,17 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
   const tree = page.getByRole("tree", {name: "System asset hierarchy"});
   await expect(tree).toBeVisible();
   const firstItem = tree.getByRole("treeitem").first(); await firstItem.focus(); await firstItem.press("ArrowDown");
-  expect(await tree.evaluate(element => element.contains(document.activeElement))).toBe(true);
+  await expect(tree.getByRole("treeitem").nth(1)).toBeFocused();
+  const ownLabel = await firstItem.locator(":scope > span").first().innerText();
+  await expect(firstItem).toHaveAccessibleName(ownLabel);
+  await tree.locator(".system-composer__tree-toggle").first().click();
+  await expect(firstItem).toBeFocused();
+  await expect(firstItem).toHaveAccessibleName(ownLabel);
+  await firstItem.press("ArrowRight");
+  await expect(firstItem).toHaveAttribute("aria-expanded", "true");
+  await expect(firstItem).toHaveAccessibleName(ownLabel);
+  await firstItem.press("ArrowDown");
+  await expect(tree.getByRole("treeitem").nth(1)).toBeFocused();
 
   await page.setViewportSize({width: 320, height: 1000});
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
@@ -72,5 +84,6 @@ export async function completeBrowseAuthoringJourney(page: Page, name: string, r
   await expect(dialog.getByLabel("Search compatible elements")).toBeFocused();
   const bounds = await dialog.boundingBox(); expect(bounds).toBeTruthy(); expect(bounds!.width).toBeLessThanOrEqual(320);
   await dialog.press("Escape"); await expect(add).toBeFocused();
-  return {persistedInstanceId: added.id, exactReference: added.reference, viewportWidth: 320};
+  const accessibility = await qualifyTechnicalAccessibility(page, info);
+  return {persistedInstanceId: added.id, exactReference: added.reference, viewportWidth: 320, accessibility};
 }

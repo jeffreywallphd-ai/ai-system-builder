@@ -1,12 +1,46 @@
 import type { AssetDefinition, AssetReference } from "../../../contracts/asset";
 import type { AssetDefinitionListQuery, AssetDefinitionRepositoryPort } from "../../../application/ports/asset";
-import { cloneJson, LocalAssetRecordStore, type LocalAssetRecordStoreOptions } from "./local-asset-record-store";
+import { isDeepStrictEqual, types } from "node:util";
+import { assertJsonCompatibleAssetRecord, cloneJson, LocalAssetRecordStore, type LocalAssetRecordStoreOptions } from "./local-asset-record-store";
 import { deleteRecord, pageRecords, sortByUpdatedAtDescendingThenId, textValuesMatch, upsertRecord } from "./local-asset-repository-helpers";
 
 export function createLocalAssetDefinitionRepositoryAdapter(options: LocalAssetRecordStoreOptions): AssetDefinitionRepositoryPort {
   const store = new LocalAssetRecordStore(options);
 
   return {
+    async saveDefinitions(definitions, expected) {
+      if (types.isProxy(definitions) || types.isProxy(expected) || !Array.isArray(definitions) || !definitions.length || definitions.length > 250 || !Array.isArray(expected) || expected.length !== definitions.length) throw new Error("Invalid bounded definition batch.");
+      assertJsonCompatibleAssetRecord(definitions);
+      const originals: (AssetDefinition | undefined)[] = [];
+      for (let index = 0; index < expected.length; index++) {
+        const descriptor = Object.getOwnPropertyDescriptor(expected, String(index));
+        if (!descriptor || !("value" in descriptor)) throw new Error("Invalid bounded definition expectations.");
+        if (descriptor.value !== undefined) assertJsonCompatibleAssetRecord(descriptor.value);
+        originals.push(descriptor.value === undefined ? undefined : cloneJson(descriptor.value));
+      }
+      const admitted = cloneJson(definitions);
+      const keys = admitted.map(definitionStorageKey);
+      if (admitted.some(d => !d || typeof d.definitionId !== "string" || !d.definitionId || typeof d.version !== "string" || !d.version) || new Set(keys).size !== keys.length) throw new Error("Invalid bounded definition identities.");
+      const owner = options.documents?.organizationId;
+      const operationStore = new LocalAssetRecordStore({ ...options, documents: owner ? options.documents!.forOrganization(owner) : options.documents });
+      await operationStore.mutateCollection("definitions", current => {
+        const selected = new Set(keys);
+        const byKey = new Map<string, AssetDefinition>();
+        for (const definition of current) {
+          const key = definitionStorageKey(definition);
+          if (!selected.has(key)) continue;
+          if (byKey.has(key)) throw new Error("Definition identity is ambiguous.");
+          byKey.set(key, definition);
+        }
+        // This comparison is inside the retryable mutation, never a stale preflight.
+        keys.forEach((key, index) => { if (!isDeepStrictEqual(byKey.get(key), originals[index])) throw new Error("Definition changed during registration."); });
+        const replacements = new Map(admitted.map(d => [definitionStorageKey(d), d]));
+        const records = current.map(definition => replacements.get(definitionStorageKey(definition)) ?? definition);
+        records.push(...admitted.filter(definition => !byKey.has(definitionStorageKey(definition))));
+        return { records, result: undefined };
+      });
+      return cloneJson(admitted);
+    },
     async saveDefinition(definition: AssetDefinition): Promise<AssetDefinition> {
       await store.mutateCollection("definitions", (definitions) => ({
         records: upsertRecord(definitions, definition, definitionStorageKey),
@@ -57,6 +91,8 @@ export function createLocalAssetDefinitionRepositoryAdapter(options: LocalAssetR
 function matchesDefinition(definition: AssetDefinition, query: AssetDefinitionListQuery): boolean {
   if (query.assetType && definition.assetType !== query.assetType) return false;
   if (query.assetFamily && definition.assetFamily !== query.assetFamily) return false;
+  if (query.assetTypes?.length && !query.assetTypes.includes(definition.assetType)) return false;
+  if (query.assetFamilies?.length && !query.assetFamilies.includes(definition.assetFamily)) return false;
   if (query.lifecycleStatus && definition.lifecycleStatus !== query.lifecycleStatus) return false;
   if (query.reviewStatus && definition.reviewStatus !== query.reviewStatus) return false;
   return textValuesMatch([

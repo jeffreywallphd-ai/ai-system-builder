@@ -53,9 +53,15 @@ metadata cannot earn built-in/system/trusted status. List/filter/single/batch
 reads use the same classification, and projected metadata removes editable
 positive cues before downstream UI fallbacks. Ordinary custom-source descriptors
 and nonpositive trust states remain visible. Reads never seed, install or write.
-The shared passive structural bounds now apply before definition projection;
-malformed/accessor-bearing records fail with a static read error. This is read
+Each list/single/batch path makes one complete bounded passive copy and classifies
+that owned body through a private full-content matcher before projection. The
+standalone classification API uses the same safe admission; there is no unchecked
+classification entry point or editable-record cache. Invalid authority timestamps
+on otherwise passive custom content withhold badges without denying the read.
+Malformed/accessor-bearing records fail with a static read error. This is read
 classification, not package admission or general proof of trusted provenance.
-Seeder/installer marker-only already-current shortcuts, complete package integrity
-migration and native qualification remain separate pending work. Rollback retains
-the stronger denial of forged authority cues.
+Seeder/installer reuse independently captures the complete stored body and checks
+it against exact source content plus permitted operational enrichment before an
+already-current result. Complete package integrity migration and native
+qualification remain separate pending work. Rollback retains the stronger denial
+of forged authority cues.

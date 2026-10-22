@@ -1,3 +1,5 @@
+import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
+import { createStructuredImageResourceIdentityAdapter } from "../../../../adapters/persistence/image";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -54,7 +56,7 @@ class FakeImageDescriptorRead implements ImageAssetDescriptorReadPort {
     return { items: [...this.items].slice(0, query.limit) };
   }
 
-  public async readImageAssetDescriptor(assetId: string) {
+  public async readImageAssetDescriptor(_workspaceId: string, assetId: string) {
     this.readCalls += 1;
     return this.items.find((item) => item.assetId === assetId);
   }
@@ -184,6 +186,7 @@ function artifact(): ArtifactBrowseItem {
 
 function image(): ImageAsset {
   return {
+    workspaceId: "workspace-a" as never,
     assetId: "image-1",
     artifactId: "artifact-image-1",
     source: "generated",
@@ -260,6 +263,7 @@ describe("composeResourceBackedViewProviders", () => {
 
     const provider = composeResourceBackedViewProviders({
       artifactBrowserMetadataRead: artifacts,
+      imageResourceIdentity: createStructuredImageResourceIdentityAdapter(createInMemoryStructuredDocumentStore().forOrganization("organization-a" as never)),
       imageAssetDescriptorRead: images,
       modelRegistry: models,
       publishedModelRegistry: models,
@@ -275,6 +279,7 @@ describe("composeResourceBackedViewProviders", () => {
     const models = new FakeModelRegistry([model(), model({ modelRecordId: "model-2", displayName: "Second Model", published: undefined })]);
     const provider = composeResourceBackedViewProviders({
       artifactBrowserMetadataRead: artifacts,
+      imageResourceIdentity: createStructuredImageResourceIdentityAdapter(createInMemoryStructuredDocumentStore().forOrganization("organization-a" as never)),
       imageAssetDescriptorRead: images,
       modelRegistry: models,
       publishedModelRegistry: models,
@@ -288,12 +293,14 @@ describe("composeResourceBackedViewProviders", () => {
     assert.equal(models.listCalls, 2);
     assert.deepEqual(models.listRequests.map((request) => request.includeDiscovered), [false, false]);
     assert.deepEqual(models.listRequests.map((request) => request.includeSharedStorage), [true, undefined]);
-    assert.equal(viewIds.includes("asset-view.image.internal.image-1"), true);
+    const imageViewId = result.items.find((item) => item.viewKind === "image-asset")?.viewId;
+    assert.ok(imageViewId);
+    assert.match(imageViewId, /^asset-view\.image\.opaque\.image-resource\.v1\./);
     assert.equal(viewIds.includes("asset-view.model.internal.model-1"), true);
     assert.equal(new Set(viewIds).size, viewIds.length);
     assertSafe(result);
 
-    const imageDetail = await provider.readResourceBackedView("asset-view.image.internal.image-1", { workspaceId: "workspace-a" as never });
+    const imageDetail = await provider.readResourceBackedView(imageViewId, { workspaceId: "workspace-a" as never });
     assert.equal(imageDetail?.viewKind, "image-asset");
     const modelDetail = await provider.readResourceBackedView("asset-view.model.internal.model-1", { workspaceId: "workspace-a" as never });
     assert.equal(modelDetail?.viewKind, "model");

@@ -4,8 +4,9 @@
 
 ## Toolchain
 
-- Host runtime: Electron
-- Build/dev system: Electron Forge (webpack plugin)
+- Host runtime: exact original-supplier Electron 42.11.3 (Node 24), including
+  the GHSA-fw47-9c62-h3vw permission-origin fix
+- Build/dev system: Electron Forge (exact Vite plugin), per ADR-0044
 - Entry point orchestration: `apps/desktop/src/main` + `modules/hosts/desktop`
 
 ## Commands
@@ -17,6 +18,24 @@ From the repository root:
 - `npm run make`
 - `npm run test:visual-composer -- --project packaged-desktop` after packaging,
   to run the isolated real preload/IPC System Composer workflow on Windows
+
+Forge emits `.vite/build/main.cjs`, independent `main_window_preload.cjs` and
+`system_runtime_preload.cjs`, and separate relative-asset renderer directories.
+Both preload bundles run without Node integration; the published runtime keeps
+its minimal bridge and sandbox. Dev servers bind only to loopback ports3005/3006
+and serve declared source/dependency roots. The runtime keeps its CSP and uses
+ordinary reload instead of React Refresh's inline development preamble.
+`tsconfig.desktop.json` defines the shared desktop type-checking boundary.
+The official Hub clients use bundler-visible lazy imports so packaged provider
+features require no checkout-local dependencies. The optional PostgreSQL native
+peer remains guarded; the ordinary JS client does not require native installation.
+
+Dependency resolution keeps lifecycle scripts disabled. Electron 42 no longer has
+the old installation postinstall hook: CI and explicit local setup run
+`node node_modules/electron/install.js` after the locked install to acquire the
+official binary with bundled checksums. `npm rebuild electron` alone does not
+establish that the runtime is installed. Device permissions in published-system
+windows remain denied; a runtime update does not expand renderer authority.
 
 ## Packaged Python worker
 

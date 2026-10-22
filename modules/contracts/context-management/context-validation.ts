@@ -83,10 +83,12 @@ export function normalizeContextRetrievalRequest(value: {
   readonly artifactId: string;
   readonly query: string;
   readonly maximumResults?: number;
+  readonly embeddingDevice?: "cpu" | "cuda" | "auto";
 }): {
   readonly artifactId: string;
   readonly query: string;
   readonly maximumResults: number;
+  readonly embeddingDevice?: "cpu" | "cuda" | "auto";
 } {
   const artifactId = value.artifactId.trim();
   const query = value.query.trim();
@@ -98,11 +100,12 @@ export function normalizeContextRetrievalRequest(value: {
     query.length > CONTEXT_GENERATION_LIMITS.maximumQueryCharacters ||
     !Number.isSafeInteger(maximumResults) ||
     maximumResults < 1 ||
-    maximumResults > CONTEXT_GENERATION_LIMITS.maximumQueryResults
+    maximumResults > CONTEXT_GENERATION_LIMITS.maximumQueryResults ||
+    (value.embeddingDevice !== undefined && !["cpu", "cuda", "auto"].includes(value.embeddingDevice))
   ) {
     throw new Error("Context retrieval request is invalid.");
   }
-  return { artifactId, query, maximumResults };
+  return { artifactId, query, maximumResults, ...(value.embeddingDevice === undefined ? {} : {embeddingDevice: value.embeddingDevice}) };
 }
 
 export function validateContextChunkCitation(
@@ -261,6 +264,7 @@ export function validateStartContextGenerationCommand(
   if (value.kind === "rag-database") {
     if (
       !value.embedding ||
+      (value.embedding.device !== undefined && !["cpu", "cuda", "auto"].includes(value.embedding.device)) ||
       value.contextPack !== undefined ||
       !/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}\/[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/.test(
         value.embedding.modelId,

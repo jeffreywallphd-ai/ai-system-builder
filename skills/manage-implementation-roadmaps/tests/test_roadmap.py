@@ -224,6 +224,187 @@ class RoadmapEngineTest(unittest.TestCase):
             }
         )
 
+    def pending_human_acceptance(self):
+        self.define_and_approve([increment_definition("increment-1", 1, qualification="controlled-environment", allow_pending=True)])
+        self.execute_increment(1, "pending")
+        return {"type": "human-acceptance-transferred", "incrementId": "increment-1", "criterionIds": ["criterion-1"],
+                "approvedFingerprint": roadmap.roadmap_fingerprint(self.state), "authorityRef": "explicit-user-offline-acceptance",
+                "onlyHumanAcceptance": True, "summary": "User owns manual acceptance offline; technical evidence remains declarative."}
+
+    def test_human_acceptance_handoff_archives_without_fabricating_passes(self):
+        event = self.pending_human_acceptance()
+        before = copy.deepcopy(self.state)
+        self.apply(event)
+        self.assertEqual(self.state["increments"][0]["status"], "completed")
+        self.assertEqual(self.state["increments"][0]["pendingCriteria"], [])
+        self.assertEqual(self.state["evidence"], before["evidence"])
+        self.assertEqual(self.state["chunks"], before["chunks"])
+        self.assertEqual(self.state["increments"][0]["plan"], before["increments"][0]["plan"])
+        transfer = self.state["humanAcceptanceTransfers"][0]
+        self.assertEqual(transfer["criteria"], before["increments"][0]["acceptanceCriteria"][:1])
+        self.assertEqual(transfer["originalPlan"], before["increments"][0]["plan"])
+        self.assertEqual(transfer["previousApproval"], before["roadmapApproval"])
+        self.assertEqual(transfer["status"], "offline-user-owned")
+        self.assertFalse(roadmap.approval_is_current(self.state))
+        self.assertIn("no test pass asserted", roadmap.render_roadmap(self.state))
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply({"type": "roadmap-completed", "summary": "No stale approval allowed"})
+        self.apply({"type": "roadmap-approved", "note": "User explicitly directed this narrow human acceptance scope transfer."})
+        self.assertEqual(self.state["status"], "roadmap-ready-to-close")
+        self.assertNotEqual(self.state["roadmapApproval"]["fingerprint"], before["roadmapApproval"]["fingerprint"])
+
+    def test_human_acceptance_handoff_cannot_bypass_governed_completion_policy(self):
+        event = self.pending_human_acceptance()
+        self.state["evidencePolicy"] = "control-plane-v1"
+        self.state["completionSuite"] = "standardande2e"
+        self.state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(self.state)
+        event["approvedFingerprint"] = roadmap.roadmap_fingerprint(self.state)
+        before = copy.deepcopy(self.state)
+        with self.assertRaisesRegex(roadmap.RoadmapError, "governed"):
+            self.apply(event)
+        self.assertEqual(self.state, before)
+
+    def test_human_acceptance_handoff_denies_unsafe_or_nonsole_blockers(self):
+        event = self.pending_human_acceptance()
+        original = copy.deepcopy(self.state)
+        cases = []
+        for patch in [{"approvedFingerprint": "stale"}, {"onlyHumanAcceptance": False}, {"criterionIds": ["unknown"]},
+                      {"criterionIds": ["criterion-1", "criterion-1"]}, {"authorityRef": ""}]:
+            cases.append((copy.deepcopy(original), {**event, **patch}))
+        for status in ["implementing", "pending", "completed"]:
+            state = copy.deepcopy(original); state["increments"][0]["status"] = status; cases.append((state, event))
+        for outcome in ["failed", "passed", "missing"]:
+            state = copy.deepcopy(original)
+            if outcome == "missing": state["evidence"] = state["evidence"][1:]
+            else: state["evidence"][0]["outcome"] = outcome
+            cases.append((state, event))
+        state = copy.deepcopy(original); state["increments"][0]["completedChunks"] = []; cases.append((state, event))
+        state = copy.deepcopy(original); state["blockers"] = [{"status": "open"}]; cases.append((state, event))
+        state = copy.deepcopy(original); state["evidence"][-1]["outcome"] = "failed"; cases.append((state, event))
+        state = copy.deepcopy(original); state["increments"][0]["acceptanceCriteria"][0]["qualification"] = "local"
+        state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(state)
+        cases.append((state, {**event, "approvedFingerprint": roadmap.roadmap_fingerprint(state)}))
+        state = copy.deepcopy(original)
+        state["increments"][0]["acceptanceCriteria"][1]["qualification"] = "controlled-environment"
+        state["evidence"][-1]["outcome"] = "pending"
+        state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(state)
+        cases.append((state, {**event, "approvedFingerprint": roadmap.roadmap_fingerprint(state)}))
+        cases.append((state, {**event, "criterionIds": ["security-impact-reviewed"], "approvedFingerprint": roadmap.roadmap_fingerprint(state)}))
+        state = copy.deepcopy(state)
+        state["evidence"][0]["outcome"] = "passed"
+        # Isolate the security guard: every other criterion already passes.
+        cases.append((state, {**event, "criterionIds": ["security-impact-reviewed"], "approvedFingerprint": roadmap.roadmap_fingerprint(state)}))
+        for state, request in cases:
+            with self.subTest(request=request, status=state["increments"][0]["status"]):
+                frozen = copy.deepcopy(state)
+                with self.assertRaises(roadmap.RoadmapError): roadmap.apply_event(state, request)
+                self.assertEqual(state, frozen)
+
+    def governed_human_scope(self):
+        self.pending_human_acceptance()
+        self.state.update(evidencePolicy="control-plane-v1", completionSuite="standardande2e")
+        increment = self.state["increments"][0]
+        increment["acceptanceCriteria"].append({"id": "mixed-check", "description": "Reference performance and manual screen reader", "qualification": "controlled-environment"})
+        increment["pendingCriteria"].append("mixed-check")
+        self.state["evidence"].append({**self.state["evidence"][0], "id": "evidence-3", "criterionId": "mixed-check"})
+        increment["plan"]["chunks"][0]["criteriaIds"].append("mixed-check")
+        self.state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(self.state)
+        return {"type": "acceptance-scope-revised", "incrementId": "increment-1",
+                "approvedFingerprint": roadmap.roadmap_fingerprint(self.state), "authorityRef": "explicit-user-agent-only",
+                "onlyHumanScope": True, "summary": "Human acceptance is user-owned offline; retain technical checks.",
+                "removeCriterionIds": ["criterion-1"], "replaceCriteria": [{"criterion": {"id": "mixed-check", "description": "Reference performance and automated keyboard/accessibility", "qualification": "controlled-environment"}, "humanScope": "Manual screen-reader acceptance"}]}
+
+    def test_governed_human_scope_preserves_technical_evidence_and_never_closes(self):
+        event = self.governed_human_scope()
+        self.state["blockers"] = [{"id": "technical-environment", "status": "open"}]
+        before = copy.deepcopy(self.state)
+        self.apply(event)
+        increment = self.state["increments"][0]
+        self.assertEqual(increment["status"], before["increments"][0]["status"])
+        self.assertEqual(increment["pendingCriteria"], ["mixed-check"])
+        for key in ["chunks", "evidence", "blockers", "currentIncrementId", "completionSuite", "evidencePolicy"]:
+            self.assertEqual(self.state[key], before[key])
+        self.assertEqual(increment["plan"], before["increments"][0]["plan"])
+        self.assertEqual(self.state["history"][:-1], before["history"])
+        revision = self.state["acceptanceScopeRevisions"][0]
+        self.assertEqual(revision["removedCriteria"], before["increments"][0]["acceptanceCriteria"][:1])
+        self.assertEqual(revision["replacedCriteria"][0]["original"], before["increments"][0]["acceptanceCriteria"][-1])
+        self.assertEqual(revision["previousApproval"], before["roadmapApproval"])
+        self.assertFalse(roadmap.approval_is_current(self.state))
+        self.assertIn("no test pass asserted", roadmap.render_roadmap(self.state))
+        self.apply({"type": "roadmap-approved", "note": "User explicitly approved the narrow agent-only scope."})
+        self.assertNotEqual(self.state["roadmapApproval"]["fingerprint"], before["roadmapApproval"]["fingerprint"])
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply({"type": "roadmap-completed", "summary": "Pending technical checks cannot close"})
+
+    def test_governed_human_scope_denies_unsafe_changes_without_mutation(self):
+        event = self.governed_human_scope()
+        original = copy.deepcopy(self.state)
+        cases = []
+        for patch in [{"approvedFingerprint": "stale"}, {"onlyHumanScope": False}, {"removeCriterionIds": ["unknown"]},
+                      {"removeCriterionIds": ["criterion-1", "criterion-1"]}, {"authorityRef": ""},
+                      {"removeCriterionIds": [], "replaceCriteria": []}, {"removeCriterionIds": ["mixed-check"]},
+                      {"completionSuite": "all"}]:
+            cases.append((copy.deepcopy(original), {**event, **patch}))
+        for policy in [None, "unknown"]:
+            state = copy.deepcopy(original); state["evidencePolicy"] = policy; cases.append((state, event))
+        for status in ["pending", "implementing", "completed"]:
+            state = copy.deepcopy(original); state["increments"][0]["status"] = status; cases.append((state, event))
+        for outcome in ["passed", "failed", "missing"]:
+            state = copy.deepcopy(original)
+            if outcome == "missing": state["evidence"] = state["evidence"][1:]
+            else: state["evidence"][0]["outcome"] = outcome
+            cases.append((state, event))
+        state = copy.deepcopy(original); state["increments"][0]["completedChunks"] = []; cases.append((state, event))
+        for replacement in [{"id": "new-id"}, {"qualification": "local"}, {"description": "Reference performance and manual screen reader"}]:
+            request = copy.deepcopy(event); request["replaceCriteria"][0]["criterion"].update(replacement); cases.append((original, request))
+        state = copy.deepcopy(original)
+        state["increments"][0]["acceptanceCriteria"][0]["qualification"] = "local"
+        state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(state)
+        cases.append((state, {**event, "approvedFingerprint": roadmap.roadmap_fingerprint(state)}))
+        state = copy.deepcopy(original)
+        state["increments"][0]["acceptanceCriteria"][1]["qualification"] = "controlled-environment"
+        state["evidence"][1]["outcome"] = "pending"
+        state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(state)
+        cases.append((state, {**event, "removeCriterionIds": ["security-impact-reviewed"], "approvedFingerprint": roadmap.roadmap_fingerprint(state)}))
+        for state, request in cases:
+            with self.subTest(request=request):
+                frozen = copy.deepcopy(state)
+                with self.assertRaises(roadmap.RoadmapError): roadmap.apply_event(state, request)
+                self.assertEqual(state, frozen)
+
+    def test_governed_scope_archive_rejects_malformed_or_active_retired_requirements(self):
+        event = self.governed_human_scope()
+        self.apply(event)
+        original = copy.deepcopy(self.state)
+        patches = [lambda r: r.update(status="passed"), lambda r: r.update(authorityRef=""),
+                   lambda r: r.update(removedCriteria=[{"id": "mixed-check", "description": "Active", "qualification": "controlled-environment"}]),
+                   lambda r: r["replacedCriteria"][0]["revised"].update(id="different"),
+                   lambda r: r["replacedCriteria"][0]["revised"].update(qualification="local"),
+                   lambda r: r.update(replacedCriteria=[None]),
+                   lambda r: r.update(removedCriteria=[], replacedCriteria=[])]
+        for patch in patches:
+            state = copy.deepcopy(original)
+            patch(state["acceptanceScopeRevisions"][0])
+            with self.assertRaises(roadmap.RoadmapError): roadmap.validate_state_shape(self.repo, state)
+
+    def test_pending_target_qualification_refuses_legacy_and_unperformed_checks(self) -> None:
+        self.define_and_approve([increment_definition("increment-1", 1, qualification="controlled-environment", allow_pending=True)])
+        self.execute_increment(1, "pending")
+        event = {"type": "increment-qualified", "incrementId": "increment-1", "workId": "target-proof",
+                 "receiptDigest": "0" * 64, "reviewDigest": "0" * 64, "summary": "No unperformed check may pass"}
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply(event)
+        self.state["evidencePolicy"] = "control-plane-v1"
+        self.state["roadmapApproval"]["fingerprint"] = roadmap.roadmap_fingerprint(self.state)
+        self.assertIsNotNone(roadmap.pending_qualification_context(self.state, "increment-1"))
+        with self.assertRaisesRegex(roadmap.RoadmapError, "Every target criterion"):
+            self.apply(event)
+        increment = self.state["increments"][0]
+        increment["plan"]["chunks"] *= 2
+        increment["completedChunks"] *= 2
+        self.assertIsNone(roadmap.pending_qualification_context(self.state, "increment-1"))
+
     def test_two_increment_happy_path_renders_durable_artifacts(self) -> None:
         self.define_and_approve(
             [

@@ -1,5 +1,11 @@
 # Runtime Model
 
+Desktop compilation follows ADR-0044: the pinned Forge Vite pipeline emits a
+self-contained Node/Electron main, independent sandbox-compatible CJS preloads
+and separate product/published-runtime renderers. Relative asset URLs and the
+packaged worker resource preserve installed behavior; development file serving
+is confined to source/dependency roots on loopback.
+
 - Status: current
 - Related decisions: `docs/adr/ADR-0002-typescript-first-runtime-model.md`, `docs/adr/ADR-0010-python-runtime.md`, `docs/adr/ADR-0011-runtime-task-registry.md`, `docs/adr/ADR-0012-image-generation-runtime.md`, `docs/adr/ADR-0013-host-owned-runtime-execution-and-feature-placement.md`, `docs/adr/ADR-0014-runtime-installer.md`
 - Verification: `docs/architecture/architecture-verification.md`
@@ -201,8 +207,26 @@ Dataset preparation tasks with textual training inputs declare whether text fiel
 
 Token-constrained JSON is an optional Python-adapter capability for local causal
 and chat generation. The shared output-shape compiler remains the authority: its
-canonical exact schema is used for prompting, the model-bound next-token
-processor, parsing, validation, and later role mapping. The adapter accepts only
+canonical exact schema governs prompting, parsing, validation and later role
+mapping. The model-bound next-token processor may use a proven equivalent
+encoding of disjoint conditional object branches: a required string discriminator
+must have distinct constants, and replaced properties must be exact known
+subsets. Every other root rule is retained in each complete branch. Original and
+expanded forms share the existing combined byte/node/property/choice bounds and
+cache accounting; unsupported or over-budget lowering keeps the original form.
+The original schema and fingerprint remain the final validation authority.
+The pinned constrained backend retains its default whitespace policy. A compact
+formatting experiment preserved parsed values but regressed held-out model
+quality and was withdrawn. Lexical equivalence does not establish unchanged
+sampled outcomes. Original validation and cache/resource bounds remain authoritative.
+Prompt schema/examples preserve the existing sorted canonical presentation and
+exact values. Experimental prompt ordering was withdrawn after a fixed-model
+quality regression; it is not an interface contract or a qualification shortcut.
+Token constraint representation and sorted integrity identity remain separate.
+Built-in classification shapes constrain a finite configured label set when it
+fits the existing choice limits; larger recipes retain their prior bounded
+parsing/semantic policy. Existing saved schemas are never rewritten.
+The adapter accepts only
 a bounded non-recursive schema subset, keeps a bounded model-local LRU of
 compiled processors, resets a reused processor before each generation, and
 requires EOS after an accepting state. Checked mode fails closed on dependency,
@@ -441,10 +465,13 @@ projection: finite operation/platform/backend/stage outcomes, safe exit codes,
 grouped retry/failure counts and explicit overall success. They retain no command,
 argument, path, index URL, environment inspection, output or exception transcript.
 Repeated stages are grouped by their finite stage/backend identities. Raw results
-remain local to existing operational parsing/retry/failure paths; diagnostic I/O
-is best effort and cannot change the setup outcome. Shared temporary directory
-ownership/ACLs, native link-safe publication, retention and physical qualification
-remain pending; content minimization does not establish private storage.
+remain local to operational parsing/retry/failure paths. At most the latest worker
+and model-training summaries are retained in immutable session memory. Trusted
+observers receive the same minimized immutable summaries; observer failures cannot
+change setup outcomes. No automatic filesystem persistence occurs, and legacy
+`diagnosticsFile` paths are ignored. Optional persistent sinks remain unavailable
+until private storage authority, bounds, retention and physical qualification are
+established. Security audit records remain separately governed.
 
 Model download task reads and explicit completion require returned registry records
 to match the exact requested task id, task type and workspace before projection or
@@ -453,3 +480,12 @@ adapter filter alone. Cancellation confirms only an acknowledgement for the exac
 requested id; substituted acknowledgements fail without reporting cancellation
 success. These checks supplement frozen organization/principal/workspace and
 current write authority, and do not qualify native provenance or durable recovery.
+# Confirmed worker exit and task recovery
+
+The Python foundation fails only its accepted unfinished tasks after the owned
+supervisor confirms process exit. It fences admission and in-flight read races,
+retains observed terminal results in a bounded private cache, and preserves
+explicit cancellation recovery. A network failure remains transport uncertainty.
+UI notifications retain bounded identities of live work across workspace changes
+so returning reconciles its terminal outcome without replaying unrelated history.
+

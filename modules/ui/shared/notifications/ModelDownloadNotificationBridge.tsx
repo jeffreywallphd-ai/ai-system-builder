@@ -32,6 +32,10 @@ export function ModelDownloadNotificationBridge({
   const observer = useTaskObservationManager();
   const initializedRef = useRef(false);
   const terminalIdsRef = useRef(new BoundedTaskIds());
+  // Retain only bounded identities of activities actually observed live. These
+  // survive workspace navigation so initial history can settle an existing row
+  // without announcing unrelated terminal history as new work.
+  const liveIdsRef = useRef(new BoundedTaskIds());
   const failureReportedRef = useRef(false);
 
   useEffect(() => {
@@ -65,8 +69,10 @@ export function ModelDownloadNotificationBridge({
       for (const activity of result.value) {
         const terminal = isTerminal(activity.status);
         const identity = `${workspaceId}:${activity.requestId}`;
-        if (!initializedRef.current && terminal) continue;
+        if (!initializedRef.current && terminal && !liveIdsRef.current.has(identity)) continue;
         if (terminal && previouslyTerminal.has(activity.requestId)) continue;
+        if (terminal) liveIdsRef.current.delete(identity);
+        else liveIdsRef.current.add(identity);
         notifications.upsertActivity(toNotificationActivity(activity));
       }
       for (const activity of [...result.value].reverse()) if (isTerminal(activity.status)) terminalIdsRef.current.add(`${workspaceId}:${activity.requestId}`);

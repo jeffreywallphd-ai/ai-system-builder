@@ -363,6 +363,7 @@ export class ContextBrowserUseCases {
         digest: artifact.value.digest,
         query: normalized.query,
         maximumResults: normalized.maximumResults,
+        ...(normalized.embeddingDevice === undefined ? {} : {embeddingDevice: normalized.embeddingDevice}),
       });
       return createSuccessResult(
         { artifactId: normalized.artifactId, matches },
@@ -372,7 +373,7 @@ export class ContextBrowserUseCases {
       return createFailureResult(
         createContractError(
           "unavailable",
-          "Context retrieval could not be completed. Verify the local model and retry.",
+          "Context retrieval could not be completed. Verify the local model and selected embedding device, or choose CPU and retry.",
         ),
         context,
       );

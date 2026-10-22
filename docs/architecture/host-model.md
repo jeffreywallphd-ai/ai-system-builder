@@ -1,5 +1,19 @@
 # Host Model
 
+Controlled server qualification can provide a typed worker-environment
+preparation callback through composition, alongside the existing explicit test
+dependencies. Both application startup and direct host composition reject this
+callback in production before initialization. Every defined override is rejected
+in production; nonproduction values must be
+functions. Each entry captures the option once before validation and use, so
+falsy values or later option mutation cannot omit preparation.
+Ordinary startup retains its exact Python/context dependency preparation and
+failure behavior. The fixed synthetic
+worker callback validates command, arguments, cwd, loopback endpoint and isolated
+cache; it does not replace host-owned launch, private rotating authentication,
+capability negotiation or termination, and does not qualify real Python/model
+dependencies. No environment variable or API enables this seam.
+
 - Status: current
 - Related decisions: `docs/adr/ADR-0003-host-model-and-transport-separation.md`, `docs/adr/ADR-0013-host-owned-runtime-execution-and-feature-placement.md`, `docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md`, `docs/adr/ADR-0025-deployment-shaped-structured-persistence.md`, `docs/adr/ADR-0026-local-sqlite-runtime.md`, `docs/adr/ADR-0027-managed-postgresql-runtime.md`, `docs/adr/ADR-0039-dedicated-system-runtime-data-plane.md`
 - Verification: `docs/architecture/architecture-verification.md`
@@ -24,7 +38,7 @@ Hosts are implemented under `modules/hosts/` and surfaced through `apps/*` entry
 
 ## Desktop host (initial implementation priority)
 
-- Built on Electron with Electron Forge (webpack plugin) as the canonical desktop dev/build/package path.
+- Built on Electron with the exactly pinned Electron Forge Vite plugin as the canonical desktop dev/build/package path (ADR-0044).
 - Owns desktop lifecycle composition and desktop-specific wiring.
 - Uses Electron IPC as a transport boundary (via transport adapters), not as business logic location.
 - Desktop implementation is split intentionally across Electron `main`, preload, renderer, and host composition:

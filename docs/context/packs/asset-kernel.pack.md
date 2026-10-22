@@ -2,7 +2,15 @@
 
 - Pack name: `asset-kernel`
 
+- Image/output public identities use the private owner-scoped persisted random
+  index in ADR-0043; view bodies stay computed. Details reauthorize exact sources,
+  and legacy references require explicit migration without a decoding fallback.
+
 ## Purpose
+
+- Semantic Asset Pack fingerprints validate bounded passive full input and use
+  `sha256:semantic-v2`; display sanitization is not hash input. Legacy identities
+  need explicit revalidation; byte digests and immutable approvals stay separate.
 
 - Keep implementation prompts aligned to the canonical Asset Kernel vocabulary.
 - Prevent parallel models for assets, artifacts, resources, UI components, workflows, tools, pages, systems, generated outputs, previews, models, datasets, documents, external repository objects, and AI-readable context.
@@ -150,3 +158,7 @@ Use this pack for tasks involving:
 - Pair this pack with the narrow task pack that matches the work.
 - Read canonical docs when changing architecture, source semantics, workspace scope, mutation behavior, or public transport/UI exposure.
 - Keep this pack as stable vocabulary and constraints; implementation-history state belongs in issues, PRs, or release notes, not reusable context.
+
+Foundation startup uses bounded exact reads and optional validated atomic batch
+registration with expected-body CAS guards. Preserve full stored-content checks
+and injected registration hooks; see the canonical Asset Kernel architecture.

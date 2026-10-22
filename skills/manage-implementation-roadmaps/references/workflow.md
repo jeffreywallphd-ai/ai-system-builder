@@ -275,8 +275,12 @@ qualification.
 Record evidence separately for each acceptance criterion. The latest evidence is
 authoritative. A controlled-environment criterion may remain pending only when the
 increment explicitly permits it; the increment then becomes
-`implemented-pending-qualification`, not complete. Later passing evidence promotes
-it to complete.
+`implemented-pending-qualification`, not complete. Legacy passing evidence can
+promote it. Governed targets require fresh exact-target checks and independent
+review after all implementation is complete, then `increment-qualified` with exact
+work/receipt/review references. Record passing evidence and immutable reports
+before starting that work. Plan/evidence/report changes invalidate qualification.
+Other active increments remain intact; overall-only evidence cannot qualify a target.
 
 Security evidence states the disposition and uses sanitized summaries. A
 `not-security-relevant` criterion records review evidence and rationale. A
@@ -311,6 +315,22 @@ generated report from `docs/tmp/` while retaining the durable roadmap and JSON
 state. New scope after final approval requires a successor roadmap.
 
 ## Feedback loop
+
+Technical acceptance uses agent-executable tests, including automated UI journeys.
+User-owned human acceptance stays offline. For approved started governed work,
+`acceptance-scope-revised` archives pure human criteria or human portions of mixed
+criteria without changing technical status/evidence. Explicitly mark human portions
+of original plans historical/superseded; retain all technical checks and obtain
+fresh candidate receipts/review after actual user narrow reapproval. See the event
+reference for strict admission and independent classification review.
+
+Explicit offline human acceptance uses `human-acceptance-transferred` followed by
+the actual human-authorized narrow `roadmap-approved` event. Only completed
+implementation with solely human acceptance outstanding qualifies. Preserve the
+archived criteria, evidence and approval, keep mixed technical qualification open,
+and never record the handoff as a passed test. See `events.md` for admission rules.
+This metadata event is legacy-only; receipt-governed roadmaps retain their separate
+current-candidate completion requirements and cannot use it.
 
 Classify each feedback item:
 

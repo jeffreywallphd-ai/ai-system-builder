@@ -15,15 +15,35 @@ function selectView(next, query = "", increment = null) {
   render();
 }
 function action(label, run) { const button = el("button", label, "link-button"); button.type = "button"; button.addEventListener("click", run); return button; }
+function qualificationBadge(criterion) {
+  const outcome = criterion?.outcome || "missing";
+  return badge(outcome === "missing" ? "qualification-not-recorded" : outcome === "pending" && criterion?.evaluation_mode ? "technical-check-pending" : outcome);
+}
 function criteriaList(criteria, chunks = []) {
   const list = el("ul", undefined, "criteria");
   for (const c of criteria) {
     const li = el("li"); const detail = el("div");
-    detail.append(el("strong", c.id, "criterion-name"), el("span", c.description));
+    detail.append(el("strong", c.title || readable(c.id), "criterion-name"), el("span", c.description));
+    detail.append(el("p", c.id, "record-id"));
+    if (c.evaluation_mode) detail.append(el("p", `Agent-executable technical check${c.qualification === "controlled-environment" ? " · requires its declared environment" : ""}. Human acceptance is offline.`, "small"));
     const linked = chunks.filter(chunk => chunk.criteria_ids.includes(c.id));
     if (linked.length) detail.append(el("p", `Work chunks: ${linked.map(chunk => `${chunk.title} (${readable(chunk.status)})`).join("; ")}`, "small"));
     if (c.evidence_summary) detail.append(el("p", c.evidence_summary, "small"));
-    li.append(badge(c.outcome), detail); list.append(li);
+    const support = c.supporting_work || [];
+    if (support.length) {
+      const local = el("details", undefined, "local-support");
+      const verified = support.filter(s => s.status === "reviewed-local-snapshot").length;
+      local.append(el("summary", `${verified} reviewed local work records · parent qualification remains separate`));
+      local.append(el("p", "Reviewed local support at recorded snapshot. Current whole-candidate qualification is not asserted.", "small"));
+      for (const s of support) {
+        local.append(el("p", `${readable(s.status)}: ${s.scope}`, "small"));
+        local.append(el("p", `Receipt ${s.receipt_digest.slice(0, 12)} · Review ${s.review_digest.slice(0, 12)}`, "small"));
+        for (const limit of s.limitations) local.append(el("p", limit, "small"));
+        local.append(action("View supporting work", () => selectView("work_items", s.work_id)));
+      }
+      detail.append(local);
+    }
+    li.append(qualificationBadge(c), detail); list.append(li);
   }
   return list;
 }
@@ -34,7 +54,7 @@ function chunkBody(chunk, criteria) {
   body.append(el("p", `${linked.filter(c => c.outcome === "passed").length} / ${chunk.criteria_ids.length} linked criteria passed${chunk.is_next ? " · Next planned chunk" : ""}${chunk.completed_at ? ` · Recorded complete ${new Date(chunk.completed_at).toLocaleString()}` : ""}`, "small"));
   if (chunk.summary) body.append(el("p", chunk.summary, "objective"));
   const coverage = el("ul", undefined, "chunk-criteria");
-  for (const id of chunk.criteria_ids) { const criterion = linked.find(c => c.id === id); const li = el("li"); li.append(badge(criterion?.outcome || "missing"), el("span", id)); coverage.append(li); }
+  for (const id of chunk.criteria_ids) { const criterion = linked.find(c => c.id === id); const li = el("li"); li.append(qualificationBadge(criterion), el("span", id)); coverage.append(li); }
   body.append(coverage);
   if (chunk.tests?.length) {
     const evidence = el("details", undefined, "chunk-evidence"); evidence.append(el("summary", "Recorded verification"));
@@ -60,6 +80,7 @@ function render() {
     if (item.objective || item.outcome && typeof item.outcome === "object") card.append(el("p", item.objective || item.outcome.success || item.outcome.problem, "objective"));
     if (item.increments) {
       card.append(el("p", item.evidence_policy === "control-plane-v1" ? "Receipt-backed completion policy" : "Historical roadmap · declarative evidence", "small"));
+      if (item.successor) card.append(el("p", item.successor.summary, "small"), action("View active successor roadmap", () => selectView("roadmaps", item.successor.id)));
       const progress = item.increments.filter(i => i.status === "completed").length;
       const progressLabel = `${progress} of ${item.increments.length} increments complete`;
       card.append(el("p", progressLabel, "small")); const meter = el("progress"); meter.max = item.increments.length || 1; meter.value = progress; meter.setAttribute("aria-label", progressLabel); card.append(meter);
@@ -67,6 +88,8 @@ function render() {
         const details = el("details", undefined, "increment"); if (item.current_increment === i.id || focusedIncrement === i.id) details.open = true;
         const summary = el("summary"); const heading = el("span", `${i.number}. ${i.title}`); summary.append(heading, badge(i.status)); details.append(summary, el("p", i.objective, "objective"));
         details.append(el("p", `${i.chunks_complete} / ${i.chunks_planned} work chunks · ${i.criteria.filter(c => c.outcome === "passed").length} / ${i.criteria.length} criteria passed`, "small"));
+        const supported = i.criteria.filter(c => c.supporting_work?.some(s => s.status === "reviewed-local-snapshot")).length;
+        if (supported) details.append(el("p", `${supported} / ${i.criteria.length} criteria have reviewed local implementation support. Planned chunks and parent qualification are tracked separately.`, "small"));
         details.append(el("h3", "Work chunks"));
         const chunks = i.chunks || [];
         if (!chunks.length) details.append(el("p", "No chunk plan recorded for this increment.", "small"));
@@ -76,7 +99,12 @@ function render() {
           work.append(heading, chunkBody(chunk, i.criteria)); details.append(work);
         }
         if (chunks.length) details.append(action("View these work items", () => selectView("work_items", `${item.id}/${i.id}/`)));
-        details.append(el("h3", "Acceptance criteria"), criteriaList(i.criteria, chunks)); card.append(details);
+        details.append(el("h3", "Acceptance criteria"), criteriaList(i.criteria, chunks));
+        for (const handoff of i.offline_acceptance || []) {
+          details.append(el("p", `Human scope: ${readable(handoff.status)} · Human portions of original plans are historical; current technical criteria govern closure. No human test pass asserted.`, "small"));
+          for (const c of handoff.criteria) details.append(el("p", `${c.id}: ${c.description}`, "small"));
+        }
+        card.append(details);
       }
     } else if (item.source === "roadmap-chunk") {
       card.append(el("p", `Roadmap chunk · ${item.roadmap_title} › ${item.increment_title}`, "small"));

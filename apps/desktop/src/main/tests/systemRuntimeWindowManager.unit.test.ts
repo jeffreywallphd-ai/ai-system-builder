@@ -99,6 +99,9 @@ test("creates one hardened non-persistent window and reuses it by exact release"
   );
   assert.equal(window.permissionAllowed(), false);
   assert.equal(window.permissionChecked(), false);
+  // Device permissions stay denied regardless of Electron's frame-origin details.
+  assert.equal(window.permissionAllowed("hid"), false);
+  assert.equal(window.permissionAllowed("usb"), false);
   assert.equal(window.windowOpenAction(), "deny");
   assert.equal(
     window.contentSecurityPolicy().includes("connect-src 'none'"),
@@ -209,9 +212,9 @@ class FakeWindow implements RuntimeBrowserWindowLike {
   on(event: "closed", listener: () => void) {
     this.listeners.set(event, listener);
   }
-  permissionAllowed() {
+  permissionAllowed(permission = "camera") {
     let allowed = true;
-    this.permissionRequest?.({}, "camera", (value) => {
+    this.permissionRequest?.({}, permission, (value) => {
       allowed = value;
     });
     return allowed;

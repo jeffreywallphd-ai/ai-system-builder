@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "technical-reference-profiles-v1",
+  "environmentId": "windows-i5-14600kf-16g-rtx4060-reference",
+  "platform": "win32",
+  "architecture": "x64",
+  "logicalProcessors": 20,
+  "installedMemoryGiB": 16,
+  "accelerator": "NVIDIA GeForce RTX 4060",
+  "acceleratorMemoryMiB": 8188,
+  "hosts": ["packaged-desktop", "managed-server-thin-client"],
+  "viewports": [{"width": 1440, "height": 1000}, {"width": 320, "height": 1000}],
+  "deviceScaleFactor": 1,
+  "zoomPercent": 100,
+  "motionProfiles": ["no-preference", "reduce"],
+  "performance": {
+    "operationBudgetsSource": "dev-tools/config/asset-system-qualification.json",
+    "warmups": 5,
+    "samples": 30,
+    "percentile": 95,
+    "maximumSummaryPageMilliseconds": 1000,
+    "maximumFirstCompatiblePageMilliseconds": 1000,
+    "maximumColdCanvasMilliseconds": 15542.8,
+    "coldCanvasBudgetBasis": "The approved at-least-30-percent improvement target applied to the preserved 22204 ms packaged Canvas observation; this is a predeclared regression budget, not a population guarantee."
+  },
+  "limits": [
+    "This named reference machine qualifies only the explicitly measured supported host profiles, not all hardware or production deployments.",
+    "Managed-server measurements require actual managed persistence and authorization; the existing unmanaged summary-503 fixture cannot qualify that profile.",
+    "Runtime versions, source, viewport, motion preference and actual assertion coverage must accompany every observation."
+  ]
+}

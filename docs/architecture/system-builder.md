@@ -225,16 +225,34 @@ customization, and single-asset Studio workflows.
   separately in the Layers view under System resources and logic. Missing exact
   catalog metadata fails closed into that nonvisual group. Save remains a
   separate optimistic command that creates a new immutable revision.
-- Composer startup reads structural catalog summaries that omit configuration
-  schemas and defaults. Opening Layouts performs its bounded layout query on
-  demand. Opening Add element performs a region-scoped compatibility query and
-  presents bounded, searchable pages of new definitions and compatible
-  unassigned visual instances. Properties reads exact detail only for the
-  selected asset. Candidate summaries carry only a lightweight category ID so
-  the modal can group and filter results without loading editable metadata.
-  Styling reads exact detail only for the system root while that tab is active. Responses are scoped to their initiating selection so stale
-  requests cannot replace current detail. Full revision instance values remain
-  in the local draft for preview, undo, redo, and save.
+- Composer resolves the exact structural definitions used by the current revision
+  through bounded ID searches and exact version checks, preserving ADR-0037.
+  One reader budget covers at most eight physical structural/detail reads across
+  catalog, inspector, save and navigation generations, with512distinct draft
+  definitions and a bounded inactive-pruned queue. Settled results cannot accept
+  new subscribers, nor can generations without live subscribers; the physical
+  slot remains reserved until final cleanup, so
+  an explicit retry or new navigation cannot inherit a cancelled failure.
+  A new system first resolves the required Minimal
+  layout using its bounded search and stops once found; it does not await the
+  unrelated catalog continuation. Structural queries and candidate browsing omit
+  configuration schemas/defaults; editable detail stays selected-context lazy. Opening Layouts performs its bounded layout query on demand.
+  Opening Add element performs a region-scoped compatibility query and presents
+  bounded searchable pages. Properties and Styling retain their selected/root
+  exact-detail behavior. Every response is scoped to the initiating workspace,
+  system or selection; exact reference substitution fails closed. Legacy test
+  clients without detail support retain bounded catalog loading.
+- Unsaved drafts use privately owned immutable snapshots. Unchanged owned data
+  is shared; mutable or shallow-frozen caller objects are copied, never trusted
+  as immutable. Accessors, executable values and cycles are rejected without
+  invoking them. The saved checkpoint is independent of the50entry Undo limit.
+  Host transactions synchronously lock mutations and fence late responses by
+  scope/system. The editor exposes structural readiness and a failed-definition
+  retry instead of allowing edits against incomplete metadata. Optional history never gates the current Canvas and merges by
+  immutable revision identity so a late snapshot cannot erase a local save.
+  Failed current reads provide an inline retry; raw transport exceptions are
+  not presented. Move targets use indexed definitions and child counts, and
+  same-slot absolute positions refer to the final sequence after removal.
 - Compose provides a design-time UI preview of the current unsaved hierarchy and
   configuration. The shared modal recursively follows canonical placement and
   canonical region order, reports unplaced visual, nonvisual resource, and

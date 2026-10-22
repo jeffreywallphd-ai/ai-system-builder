@@ -38,6 +38,13 @@ The configuration has three independent sections:
 Command-line arguments override configuration. Review `--help` for all
 options.
 
+When selected, `--install-electron` runs the fixed official
+`node node_modules/electron/install.js` command before focused tests. Dependency
+resolution remains script-free. Electron 42 removes the old postinstall hook, so
+`npm rebuild electron` cannot provision a missing binary; do not rely on an
+implicit download during the first test import. The explicit installer retains
+the pinned package's bundled checksum verification and existing approval boundary.
+
 ## Safe usage
 
 ```text

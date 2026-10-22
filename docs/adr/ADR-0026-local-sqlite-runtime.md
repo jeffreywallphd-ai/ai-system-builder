@@ -10,7 +10,7 @@
 The local deployment needs a SQLite driver that works in the packaged Electron
 main process, does not require a separately administered service, and can create
 consistent online backups. Native addon drivers introduce Electron ABI rebuild
-and packaging work. The repository's Electron 41 runtime embeds Node 24, which
+and packaging work. The initially qualified Electron 41 runtime embeds Node 24, which
 provides `node:sqlite` directly.
 
 ## Research basis
@@ -57,5 +57,15 @@ provides `node:sqlite` directly.
   layers.
 - A future Electron upgrade must rerun migration, backup/restore, and packaging
   qualification against its embedded Node/SQLite versions.
+
+## Runtime compatibility update
+
+The exact original-supplier desktop pin advances to Electron 42.11.3 to address
+[GHSA-fw47-9c62-h3vw](https://github.com/electron/electron/security/advisories/GHSA-fw47-9c62-h3vw).
+[Electron 42](https://www.electronjs.org/blog/electron-42-0) retains Node 24 and
+the built-in SQLite boundary; the driver decision and storage format are unchanged.
+Migration, transaction, backup/restore and actual development/package qualification
+must run with that embedded runtime before its candidate is accepted. Non-Windows
+and controlled-environment qualification are separate from local Windows evidence.
 
 > AI documentation reminder: when behavior in this area changes, update the related ADRs, architecture docs, context packs, and README files in the same change.

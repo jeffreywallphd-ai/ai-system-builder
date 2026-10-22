@@ -11,7 +11,7 @@
     "branch": "rebuild",
     "head": "9a681ef79356e6b9a7aac7b30cd46040f85f07b4",
     "worktree": "Uncommitted control-plane and review-site changes were preserved. Evidence hashes identify inspected source; a future implementation must recheck drift.",
-    "assessed_at": "2026-10-21T02:26:42.329025+00:00"
+    "assessed_at": "2026-10-20T22:26:42.329025-04:00"
   },
   "summary": {
     "in_repository": 67,
@@ -1503,9 +1503,12 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-focused-evidence-required-audit-pending",
+        "status": "implemented-local-controls-requalification-linked-lan-environment-pending",
         "work_id": "security-r42-r46-development-listener-posture",
-        "summary": "Default server/preview loopback; existing explicit LAN profile requires frontend HTTPS and HTTPS API targets after final CLI configuration. Remote HTTPS verifies certificates; development trust applies only to exact loopback. Production builds do not resolve unused listener keys. Dependency audit and real LAN/browser trust qualification remain pending; no scanner closure is claimed."
+        "summary": "Default server/preview loopback; explicit LAN profile requires frontend HTTPS and HTTPS API targets after final CLI configuration. Remote HTTPS verifies certificates; development trust applies only to exact loopback. Production builds do not resolve unused listener keys. The linked tooling reconciliation work owns current fixed checks and the explicitly authorized dependency audit. Actual LAN/browser trust qualification remains pending; no scanner closure is claimed.",
+        "related_work_ids": [
+          "security-local-tooling-evidence-reconciliation"
+        ]
       }
     },
     {
@@ -1561,7 +1564,12 @@
           "line": 440
         }
       ],
-      "closure": "not-claimed"
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-qualified-native-and-legacy-reference-migration-pending",
+        "work_id": "security-r44-persisted-opaque-image-identities",
+        "summary": "Random persisted image/output/artifact/cursor aliases replace source-derived public identities. Private indexed organization/workspace CAS reservation/inverse/commit publication is invisible until consistent, survives authorized retry and denies corrupted committed pairs. Exact source rereads reauthorize each detail without list fallback; legacy refs/unassigned stores deny without automatic reassignment. Focused privacy/pagination/reconstruction/revocation/isolation and real production-SQLite concurrency regressions are implemented. Explicit legacy-reference migration, native persistence/ACL and parent qualification remain pending; scanner closure is not claimed. Actual separate-invocation review accepted all three component criteria after67focused tests,7actualElectron SQLite tests and server build/registered gates passed. These local controls do not establish native ACL or hostile-database integrity."
+      }
     },
     {
       "id": "R45",
@@ -1588,9 +1596,12 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-read-classification-qualified-integrity-install-native-qualification-pending",
+        "status": "implemented-local-read-and-reuse-qualified-integrity-migration-and-native-pending",
         "work_id": "security-r45-code-owned-asset-classification",
-        "summary": "Full descriptor-safe bounded content equality against17code-owned seeds and343Foundation definitions across all3immutable releases; precise permitted operational enrichment only. Editable markers/ID/version/display fingerprints cannot grant positive built-in/system/trusted cues. Projected metadata strips positive fallback claims; lists/filters/single/batch agree without mutations. Seeder/installer already-current marker shortcuts, package-integrity compatibility migration and native qualification remain pending; scanner closure not claimed."
+        "summary": "Complete code-owned read classification remains in place. Separately scoped seed/install reuse now captures repository records before marker access and compares exact complete bodies with expected content plus permitted operational timestamps. Edited content with unchanged legacy markers cannot be already current; malformed active records deny without callbacks, user changes are preserved and explicit same-pack refresh remains supported. Legacy immutable hashes are retained, not promoted; package-integrity migration, native and parent qualification remain pending. Registered focused checks/server build and actual separate-invocation review passed in the independently completed reuse work; no scanner or parent closure is claimed.",
+        "related_work_ids": [
+          "security-r45-installed-content-revalidation"
+        ]
       }
     },
     {
@@ -1618,9 +1629,12 @@
       ],
       "closure": "not-claimed",
       "implementation": {
-        "status": "implemented-local-focused-evidence-required-audit-pending",
+        "status": "implemented-local-controls-requalification-linked-lan-environment-pending",
         "work_id": "security-r42-r46-development-listener-posture",
-        "summary": "Default server/preview loopback; existing explicit LAN profile requires frontend HTTPS and HTTPS API targets after final CLI configuration. Remote HTTPS verifies certificates; development trust applies only to exact loopback. Production builds do not resolve unused listener keys. Dependency audit and real LAN/browser trust qualification remain pending; no scanner closure is claimed."
+        "summary": "Default server/preview loopback; explicit LAN profile requires frontend HTTPS and HTTPS API targets after final CLI configuration. Remote HTTPS verifies certificates; development trust applies only to exact loopback. Production builds do not resolve unused listener keys. The linked tooling reconciliation work owns current fixed checks and the explicitly authorized dependency audit. Actual LAN/browser trust qualification remains pending; no scanner closure is claimed.",
+        "related_work_ids": [
+          "security-local-tooling-evidence-reconciliation"
+        ]
       }
     },
     {
@@ -1650,7 +1664,10 @@
       "implementation": {
         "status": "implemented-local-evidence-in-linked-work",
         "work_id": "security-r47-enforced-toggle-authority",
-        "summary": "Development-mode POST uses existing nonpublic security:admin policy and thin-client secureFetch. Enforced mode denies missing/invalid/nonadmin downgrade before setMode/body effects; deliberate disabled-dev bootstrap and startup-disabled LAN/OIDC toggle semantics are preserved. Controlled deployment/operator qualification remains pending."
+        "summary": "Development-mode POST uses existing nonpublic security:admin policy and thin-client secureFetch. Enforced mode denies missing/invalid/nonadmin downgrade before setMode/body effects; deliberate disabled-dev bootstrap and startup-disabled LAN/OIDC toggle semantics are preserved. Controlled deployment/operator qualification remains pending.",
+        "related_work_ids": [
+          "security-local-tooling-evidence-reconciliation"
+        ]
       }
     },
     {
@@ -1736,7 +1753,12 @@
           "line": 40
         }
       ],
-      "closure": "not-claimed"
+      "closure": "not-claimed",
+      "implementation": {
+        "status": "implemented-local-qualified-native-and-legacy-consumer-qualification-pending",
+        "work_id": "security-r50-versioned-semantic-fingerprint",
+        "summary": "Complete bounded descriptor-safe passive capture and existing manifest/entry validation precede domain-separated semantic-v2 hashing. Valid authorship/explanatory distinctions survive; unsafe/active/malformed inputs deny with static errors. Legacy verification requires explicit revalidation; immutable Foundation records, byte digests, trust and approvals are not rewritten. This pure semantic utility is not installer admission or native/parent-roadmap qualification. Separate-invocation review closed reproduced malformed-tag canonical-collision and incomplete encoded-byte-accounting findings after durable red/green tests; current registered focused gates passed before this separately scoped integration work. No scanner or parent roadmap closure is claimed."
+      }
     },
     {
       "id": "R51",
@@ -1855,7 +1877,10 @@
       "implementation": {
         "status": "implemented-local-evidence-in-linked-work",
         "work_id": "roadmap-implementation-qualification-boundary",
-        "summary": "Portable writer uses exclusive unpredictable temporary creation, fsync, atomic replacement and owned cleanup. Native parent/reparse/ACL race qualification remains pending."
+        "summary": "Portable writer uses exclusive unpredictable temporary creation, fsync, atomic replacement and owned cleanup. Native parent/reparse/ACL race qualification remains pending.",
+        "related_work_ids": [
+          "security-local-tooling-evidence-reconciliation"
+        ]
       }
     },
     {
@@ -3064,9 +3089,12 @@
       "implementation": {
         "status": "locally-corrected-and-independently-reviewed-final-source-qualification-pending",
         "work_id": "security-r87-helper-positional-arguments",
-        "summary": "Planning rejects option-like normalized paths, absolute/drive-relative selections and unsupported Node test files. Fixed Node/Prettier argv uses an explicit option terminator. Inert negative regression reproduced the old acceptance and now passes. Parent increment and native controlled qualification remain open.",
+        "summary": "Planning rejects option-like normalized paths, absolute/drive-relative selections and unsupported Node test files. Fixed Node/Prettier argv uses an explicit option terminator. Inert negative regression reproduced the old acceptance and now passes. Parent increment and native controlled qualification remain open. Current fixed tooling/workflow checks are owned by the related reconciliation work; optional missing Prettier fails normally without implicit package fetch, as documented.",
         "receipt_digest": "729eccf132ab176a75aafd752e0799df637facd7c0fb27f00710b17de37f7040",
-        "review_digest": "0c4182a53713ce230f02f1afac10eeeadfa5512b88d8a38f007788876c938735"
+        "review_digest": "0c4182a53713ce230f02f1afac10eeeadfa5512b88d8a38f007788876c938735",
+        "related_work_ids": [
+          "security-local-tooling-evidence-reconciliation"
+        ]
       },
       "planning_assessment": "Bounded helper path validation accepts existing repository paths regardless of option-like prefix; fixed tools receive those strings without an option terminator. This crosses its advertised argument boundary and deserves higher priority than scanner informational.",
       "planning_disposition": "validated"
@@ -3151,5 +3179,42 @@
       "local_smoke": "Desktop1of1 passed using a fresh current-worktree package and corrected root manifest/lock identity. Subsequent runtime source edits make that observation historical; no thin-client/user/model/native or full tooling qualification.",
       "history": "Previous incomplete binding, failed argument selection and sandbox loopback fixture denial remain retained; independent review resolved only the local binding finding."
     }
+  },
+  "electron_host_security_refresh": {
+    "work_id": "canvas-electron42-installer-contract",
+    "status": "local-host-compatibility-and-zero-audit-passed-independent-review-pending",
+    "prior_failed_overall_receipt": "f681f7cd4694d6f0a20bfcd2cd527b73d56d021b2840c61317dd8a9095174ab0",
+    "advisory": "GHSA-fw47-9c62-h3vw",
+    "source": "https://github.com/electron/electron/security/advisories/GHSA-fw47-9c62-h3vw",
+    "supplier_release": "https://github.com/electron/electron/releases/tag/v42.11.3",
+    "previous_pin": "41.10.7",
+    "fixed_pin": "42.11.3",
+    "supplier": "original electron/electron; no fork or advisory waiver",
+    "resolution": "Targeted exact npm install with lifecycle scripts disabled changes only the root and electron lock entries. Official binary acquisition uses reviewed vendor installer and bundled checksums. Electron 42 removes postinstall: CI now invokes that installer explicitly after npm ci rather than relying on npm rebuild. Existing runtime device permissions remain denied. Independent review also found the same no-op in the contributor helper. Its fixed explicit installer now precedes focused tests; a durable no-network red-to-green regression verifies command and ordering without adding arbitrary execution.",
+    "actual_local_evidence": "Twenty-two focused checks pass, including actual embedded Electron 42.11.3 / Node 24.19.0 SQLite migration, transaction, backup/restore and guarded operator CLI. Six helper/CI checks pass after a reproduced installer-order failure. Current dependency gate reports zero runtime and zero full-tree advisories and validates production SPDX. Actual isolated Forge development startup and all ten fresh package/thin-client useful-system, PDF and publication/runtime journeys pass on source.938c99a2. Subsequent helper-only changes do not alter tested app/module/package inputs. Separate current-source review and final aggregate remain required; no unperformed qualification is inferred.",
+    "history": "The earlier dependency_requalification section is preserved as historical evidence. The new audit failure, host correction and compatibility/CI checks do not erase those attempts or assert scanner/roadmap closure.",
+    "remaining": "Native, model, reference-environment and unperformed automated technical qualification remain pending. Non-Windows behavior is not inferred from local Windows tests; human acceptance remains user-owned offline.",
+    "closure": "not-claimed"
+  },
+  "vitest_mocker_security_refresh": {
+    "work_id": "security-session-vitest-patch-qualification",
+    "previous_pin": "4.1.11",
+    "fixed_pin": "4.1.12",
+    "advisories": [
+      "GHSA-qxg6-89mg-rqv8",
+      "GHSA-xp26-3454-mjgp"
+    ],
+    "sources": [
+      "https://github.com/vitest-dev/vitest/security/advisories/GHSA-qxg6-89mg-rqv8",
+      "https://github.com/vitest-dev/vitest/security/advisories/GHSA-xp26-3454-mjgp",
+      "https://github.com/vitest-dev/vitest/releases/tag/v4.1.12"
+    ],
+    "supplier": "Original vitest-dev/vitest patch release; no fork, audit waiver, additional listener or capability.",
+    "trigger": "Current session-only diagnostics qualification replayed the real LanceDB-owning tests successfully but failed its required dependency gate: runtime zero, toolchain two moderate affected package entries. Preserve receipt bb1a4ea82d512403337c733644521c11905f7c5b57b48181388bbd770c5a77ae and earlier audit history.",
+    "resolution": "Targeted exact npm12 install with lifecycle scripts disabled changes only Vitest and its matching internal package family. Two unchanged-version transitive packages are hoisted/deduplicated. Existing isolation, one-worker execution, exact-file collection, failure admission, authentication, tenancy and native controls remain required.",
+    "integrity": "Registry repository and release metadata inspected; locked Vitest SHA512 matches the published artifact. Registry signature and provenance metadata are present, but their presence alone is not asserted as independent cryptographic verification.",
+    "qualification": "Use current executed control-plane receipts and separate review for actual status. This inventory does not supply a compatibility, audit, host or roadmap pass; final current host and aggregate qualification remain separate.",
+    "remaining": "Native file identity, private persistent diagnostics, ownership/resource/provenance qualifications and model/runtime outcomes retain their own acceptance. Human testing remains user-owned offline.",
+    "closure": "not-claimed"
   }
 }

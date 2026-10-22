@@ -1,3 +1,4 @@
+import { createTestImageResourceIdentity } from "./fixtures/image-resource-identities.fixture";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
@@ -57,6 +58,8 @@ class FakeDefinitionRepository implements AssetDefinitionRepositoryPort {
     const definitions = [...this.definitions.values()]
       .filter((definition) => !query?.assetType || definition.assetType === query.assetType)
       .filter((definition) => !query?.assetFamily || definition.assetFamily === query.assetFamily)
+      .filter((definition) => !query?.assetTypes?.length || query.assetTypes.includes(definition.assetType))
+      .filter((definition) => !query?.assetFamilies?.length || query.assetFamilies.includes(definition.assetFamily))
       .filter((definition) => !query?.lifecycleStatus || definition.lifecycleStatus === query.lifecycleStatus)
       .filter((definition) => matchesTextQuery(query?.text, [definition.definitionId, definition.displayName, definition.description, definition.assetType, definition.assetFamily]));
     return { definitions: takeLimit(definitions, query?.limit), nextCursor: query?.cursor ? "next-definition" : undefined };
@@ -158,6 +161,10 @@ class FakeGeneratedOutputDescriptorSource implements GeneratedImageOutputDescrip
   public byteReadCalls = 0;
   public statusReadCalls = 0;
   public generationCalls = 0;
+  public async readGeneratedImageOutputDescriptor(workspaceId: string, outputId: string) {
+    if (workspaceId !== "workspace-a" || outputId !== "output-facade") return undefined;
+    return (await this.listGeneratedImageOutputDescriptors()).items[0];
+  }
 
   public async listGeneratedImageOutputDescriptors() {
     return {
@@ -184,11 +191,16 @@ class FakeImageAssetDescriptorRead {
   public storageScanCalls = 0;
   public createAssetInstanceCalls = 0;
   public persistMappingCalls = 0;
+  public async readImageAssetDescriptor(workspaceId: string, assetId: string) {
+    if (workspaceId !== "workspace-a" || assetId !== "image-facade") return undefined;
+    return (await this.listImageAssetDescriptors()).items[0];
+  }
 
   public async listImageAssetDescriptors() {
     return {
       items: [
         {
+          workspaceId: "workspace-a" as never,
           assetId: "image-facade",
           artifactId: "artifact-facade",
           source: "generated" as const,
@@ -589,6 +601,85 @@ describe("AssetRegistryReadFacade definition reads", () => {
     assert.equal(repo.saved.length + repo.deleted.length, 0);
   });
 
+  it("keeps passive records with invalid authority timestamps readable as custom content", async () => {
+    const seed = BUILT_IN_ASSET_DEFINITION_CATALOG[0]!;
+    for (const timestamp of [undefined, "not-a-time", "2026-02-30T00:00:00.000Z"]) {
+      const definition = { ...seed.definition, metadata: { ...seed.definition.metadata, builtInSeed: {
+        seedId: seed.seedId, seedVersion: seed.seedVersion, fingerprint: seed.fingerprint,
+        managedBy: "asset-kernel", lastSeededAt: timestamp,
+      } } };
+      const repo = new FakeDefinitionRepository([definition]);
+      const facade = createFacade({ definitionRepository: repo });
+      const ref = { kind: "asset-definition-version", id: definition.definitionId, version: definition.version } as AssetReference;
+      const card = (await facade.listDefinitionCards({ includeMetadata: true })).items[0]!;
+      const detail = await facade.readDefinitionDetail(ref, { includeMetadata: true });
+      assert.equal(card.displayName, definition.displayName);
+      assert.equal(detail?.definition.displayName, definition.displayName);
+      assert.deepEqual((await facade.readDefinitionDetails([ref], { includeMetadata: true }))[0], detail);
+      assert.equal(card.builtIn, undefined);
+      assert.equal(detail?.builtIn, undefined);
+      for (const metadata of [card.metadata, detail?.definition.metadata]) {
+        assert.equal(metadata?.builtInSeed, undefined);
+        assert.equal(metadata?.systemDefault, undefined);
+        assert.equal(metadata?.trustStatus, undefined);
+      }
+      assert.equal((await facade.listDefinitionCards({ includeCustom: false })).items.length, 0);
+      assert.equal((await facade.listDefinitionCards({ includeBuiltIns: false })).items.length, 1);
+      assert.equal(repo.saved.length + repo.deleted.length, 0);
+    }
+  });
+
+  it("denies malformed unknown custom bodies consistently on list, single and native/fallback batch reads", async () => {
+    let callbacks = 0;
+    const original = validDefinition({ definitionId: "definition.custom.unknown", metadata: {} });
+    const cyclic: Record<string, unknown> = {}; cyclic.child = cyclic;
+    let deep: unknown = {};
+    for (let index = 0; index < 14; index++) deep = { child: deep };
+    const malformed = [
+      Object.defineProperty({ ...original }, "displayName", { enumerable: true, get() { callbacks++; return "Custom"; } }),
+      { ...original, toJSON() { callbacks++; return original; } },
+      { ...original, metadata: cyclic }, { ...original, metadata: deep },
+      { ...original, description: "x".repeat(2049) }, { ...original, requirements: new Array(1025).fill(null) },
+      { ...original, requirements: new Array(2) },
+      { ...original, metadata: { groups: Array.from({ length: 5 }, () => new Array(1024).fill(null)) } },
+      { ...original, metadata: Object.fromEntries(Array.from({ length: 128 }, (_, i) => [`field${i}`, "x".repeat(2048)])) },
+    ];
+    for (const value of malformed) for (const nativeBatch of [false, true]) {
+      const definition = value as AssetDefinition;
+      const repo = new FakeDefinitionRepository([definition]);
+      repo.listDefinitions = async () => ({ definitions: [definition] });
+      if (nativeBatch) Object.assign(repo, { getDefinitions: async (refs: readonly AssetReference[]) => refs.map(() => definition) });
+      const facade = createFacade({ definitionRepository: repo });
+      const ref = { kind: "asset-definition-version", id: original.definitionId, version: original.version } as AssetReference;
+      for (const read of [() => facade.listDefinitionCards(), () => facade.readDefinitionDetail(ref), () => facade.readDefinitionDetails([ref])]) {
+        await assert.rejects(read, (error: unknown) => error instanceof AssetRegistryReadFacadeError
+          && error.code === "repository-read-failed" && error.message === "Asset registry read failed.");
+      }
+      assert.equal(repo.saved.length + repo.deleted.length, 0);
+    }
+    assert.equal(callbacks, 0);
+  });
+
+  it("detaches projected detail bodies across caller storage, repeated reads and batch positions", async () => {
+    const definition = validDefinition({ metadata: { note: "Readable" } });
+    const repo = new FakeDefinitionRepository([definition]);
+    const facade = createFacade({ definitionRepository: repo });
+    const missing = { kind: "asset-definition-version", id: "definition.missing", version: "1.0.0" } as AssetReference;
+    const options = { includeMetadata: true, includeConfigurationSchema: true };
+    const batch = await facade.readDefinitionDetails([definitionRef, missing, definitionRef], options);
+    assert.equal(batch[1], undefined);
+    assert.notEqual(batch[0]!.definition, batch[2]!.definition);
+    assert.notEqual(batch[0]!.definition.configurationSchema, definition.configurationSchema);
+    (batch[0]!.definition.configurationSchema!.fields[0] as { label: string }).label = "Changed returned copy";
+    (batch[0]!.definition.metadata as { note: string }).note = "Changed returned metadata";
+    assert.equal(batch[2]!.definition.configurationSchema!.fields[0]!.label, "Safe field");
+    assert.equal(definition.configurationSchema!.fields[0]!.label, "Safe field");
+    assert.equal(definition.metadata?.note, "Readable");
+    const next = await facade.readDefinitionDetail(definitionRef, options);
+    assert.deepEqual(next, batch[2]);
+    assert.equal(repo.saved.length + repo.deleted.length, 0);
+  });
+
   it("omits validation by default and includes validation only when requested", async () => {
     const facade = createFacade({ definitionRepository: new FakeDefinitionRepository([validDefinition({ displayName: "" })]) });
     assert.equal((await facade.readDefinitionDetail(definitionRef))?.validationSummary, undefined);
@@ -735,6 +826,7 @@ describe("AssetRegistryReadFacade resource-backed view reads", () => {
     const imageSource = new FakeImageAssetDescriptorRead();
     const outputSource = new FakeGeneratedOutputDescriptorSource();
     const provider = new AssetImageResourceBackedViewProvider({
+      imageResourceIdentity: createTestImageResourceIdentity(),
       imageAssetDescriptorRead: imageSource,
       generatedImageOutputDescriptorSource: outputSource,
     });
@@ -886,7 +978,7 @@ describe("AssetRegistryReadFacade query, pagination, and boundaries", () => {
     assert.deepEqual(compositions.lastQuery, { lifecycleStatus: "draft", text: "feature", limit: 6, cursor: undefined });
   });
 
-  it("diagnoses multi-value facade-side filtering and fetches a bounded page before final limiting", async () => {
+  it("forwards multi-value filters without advancing past unreturned compatible rows", async () => {
     const repo = new FakeDefinitionRepository([
       validDefinition({ definitionId: "definition.one", assetType: "dataset", displayName: "One" }),
       validDefinition({ definitionId: "definition.two", assetType: "tool", displayName: "Two" }),
@@ -897,7 +989,8 @@ describe("AssetRegistryReadFacade query, pagination, and boundaries", () => {
     const list = await facade.listDefinitionCards({ assetTypes: ["dataset", "tool"], limit: 1 });
 
     assert.equal(repo.lastQuery?.assetType, undefined);
-    assert.equal(repo.lastQuery?.limit, 3);
+    assert.deepEqual(repo.lastQuery?.assetTypes, ["dataset", "tool"]);
+    assert.equal(repo.lastQuery?.limit, 1);
     assert.deepEqual(list.items.map((item) => item.definitionId), ["definition.one"]);
     assert.equal(list.diagnostics?.some((diagnostic) => diagnostic.code === "facade-side-filtering"), true);
   });

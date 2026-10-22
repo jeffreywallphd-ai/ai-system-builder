@@ -10,6 +10,7 @@ import express from "express";
 import {
   composeServerHost,
   type ServerSystemRuntimeDatabaseAdapter,
+  type ServerPythonRuntimeEnvironmentPreparer,
 } from "../../../modules/hosts/server";
 import {
   applySecurityHeaders,
@@ -72,6 +73,8 @@ export interface CreateServerOptions {
   structuredDocuments?: StructuredDocumentStore;
   /** Explicit non-production runtime-data seam for controlled tests and qualification. */
   runtimeDatabases?: ServerSystemRuntimeDatabaseAdapter;
+  /** Explicit nonproduction composition seam; never configurable by an API or environment flag. */
+  pythonRuntimeEnvironmentPreparer?: ServerPythonRuntimeEnvironmentPreparer;
 }
 
 export interface CreatedServer {
@@ -238,6 +241,15 @@ export async function createServer(
   options: CreateServerOptions = {},
 ): Promise<CreatedServer> {
   const env = options.env ?? process.env;
+  const pythonRuntimeEnvironmentPreparer = options.pythonRuntimeEnvironmentPreparer;
+  if (pythonRuntimeEnvironmentPreparer !== undefined) {
+    if (env.NODE_ENV === "production" || process.env.NODE_ENV === "production") {
+      throw new Error("The controlled runtime preparation seam is unavailable in production.");
+    }
+    if (typeof pythonRuntimeEnvironmentPreparer !== "function") {
+      throw new TypeError("Controlled runtime preparation must be a function.");
+    }
+  }
   const runtimePaths = resolveServerRuntimePaths(options.env);
   if (env.NODE_ENV === "production" && options.runtimeDatabases) {
     throw new Error(
@@ -339,6 +351,7 @@ export async function createServer(
         : undefined,
       organizationAuthorizer,
       runtimeDatabases: options.runtimeDatabases,
+      pythonRuntimeEnvironmentPreparer,
       ...(persistenceDocuments
         ? {
             persistence: {

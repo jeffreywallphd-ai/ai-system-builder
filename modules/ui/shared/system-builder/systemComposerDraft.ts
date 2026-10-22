@@ -44,46 +44,47 @@ export type SystemComposerDraftResult =
   | { readonly ok: true; readonly value: SystemComposerDraft }
   | { readonly ok: false; readonly message: string };
 
-export function createSystemComposerDraftHistory(
-  draft: SystemComposerDraft,
-): SystemComposerDraftHistory {
-  return { past: [], present: cloneDraft(draft), future: [] };
+// Only snapshots created here can be shared. A caller-frozen object is not
+// trusted: it may still contain mutable descendants or executable accessors.
+const ownedSnapshots = new WeakSet<object>();
+const ownedHistories = new WeakSet<object>();
+
+export function areSystemComposerDraftsEqual(left: SystemComposerDraft | undefined, right: SystemComposerDraft | undefined): boolean {
+  if (!left || !right) return left === right;
+  const a = cloneDraft(left), b = cloneDraft(right);
+  if (a === b) return true;
+  const sameItems = (x: readonly unknown[], y: readonly unknown[]) => x === y || x.length === y.length && x.every((item, index) => item === y[index] || JSON.stringify(item) === JSON.stringify(y[index]));
+  return sameItems(a.instances, b.instances) && sameItems(a.placements, b.placements) && sameItems(a.bindings, b.bindings) &&
+    (a.structure === b.structure || JSON.stringify(a.structure) === JSON.stringify(b.structure));
 }
 
-export function commitSystemComposerDraft(
-  history: SystemComposerDraftHistory,
-  next: SystemComposerDraft,
-): SystemComposerDraftHistory {
-  if (JSON.stringify(history.present) === JSON.stringify(next)) return history;
-  return {
-    past: [...history.past, cloneDraft(history.present)].slice(-50),
-    present: cloneDraft(next),
-    future: [],
-  };
+function immutableHistory(past: readonly SystemComposerDraft[], present: SystemComposerDraft, future: readonly SystemComposerDraft[]): SystemComposerDraftHistory {
+  const history = Object.freeze({ past: Object.freeze(past.slice(-50).map(cloneDraft)), present: cloneDraft(present), future: Object.freeze(future.slice(0, 50).map(cloneDraft)) });
+  ownedHistories.add(history);
+  return history;
 }
 
-export function undoSystemComposerDraft(
-  history: SystemComposerDraftHistory,
-): SystemComposerDraftHistory {
+export function createSystemComposerDraftHistory(draft: SystemComposerDraft): SystemComposerDraftHistory {
+  return immutableHistory([], cloneDraft(draft), []);
+}
+
+export function commitSystemComposerDraft(history: SystemComposerDraftHistory, next: SystemComposerDraft): SystemComposerDraftHistory {
+  const present = cloneDraft(history.present);
+  const changed = cloneDraft(next);
+  if (areSystemComposerDraftsEqual(present, changed)) return ownedHistories.has(history) ? history : immutableHistory(history.past, present, history.future);
+  return immutableHistory([...history.past, present].slice(-50), changed, []);
+}
+
+export function undoSystemComposerDraft(history: SystemComposerDraftHistory): SystemComposerDraftHistory {
   const previous = history.past[history.past.length - 1];
-  if (!previous) return history;
-  return {
-    past: history.past.slice(0, -1),
-    present: cloneDraft(previous),
-    future: [cloneDraft(history.present), ...history.future].slice(0, 50),
-  };
+  if (!previous) return ownedHistories.has(history) ? history : immutableHistory(history.past, history.present, history.future);
+  return immutableHistory(history.past.slice(0, -1), cloneDraft(previous), [cloneDraft(history.present), ...history.future].slice(0, 50));
 }
 
-export function redoSystemComposerDraft(
-  history: SystemComposerDraftHistory,
-): SystemComposerDraftHistory {
+export function redoSystemComposerDraft(history: SystemComposerDraftHistory): SystemComposerDraftHistory {
   const next = history.future[0];
-  if (!next) return history;
-  return {
-    past: [...history.past, cloneDraft(history.present)].slice(-50),
-    present: cloneDraft(next),
-    future: history.future.slice(1),
-  };
+  if (!next) return ownedHistories.has(history) ? history : immutableHistory(history.past, history.present, history.future);
+  return immutableHistory([...history.past, cloneDraft(history.present)].slice(-50), cloneDraft(next), history.future.slice(1));
 }
 
 export function addSystemComposerAsset(
@@ -251,9 +252,9 @@ export function reparentSystemComposerAsset(
     );
   }
   const slotId = normalizeAssetSlotId(input.slotId);
-  const remaining = draft.placements.filter(
+  const remaining = normalizePlacementOrders(draft.placements.filter(
     (item) => String(item.placementId) !== String(placement.placementId),
-  );
+  ));
   const order = boundedInsertionOrder(
     input.order,
     nextSlotOrder(remaining, input.parentInstanceId, slotId),
@@ -410,7 +411,9 @@ export function buildSystemComposerTree(
   const byParent = new Map<string, AssetPlacement[]>();
   for (const placement of draft.placements) {
     const key = String(placement.parentInstanceRef.id);
-    byParent.set(key, [...(byParent.get(key) ?? []), placement]);
+    const siblings = byParent.get(key);
+    if (siblings) siblings.push(placement);
+    else byParent.set(key, [placement]);
   }
   for (const placements of byParent.values()) {
     placements.sort(
@@ -615,7 +618,35 @@ function normalizePlacementOrders(
 }
 
 function cloneDraft(draft: SystemComposerDraft): SystemComposerDraft {
-  return JSON.parse(JSON.stringify(draft)) as SystemComposerDraft;
+  const ancestors = new Set<object>();
+  const copy = (value: unknown): unknown => {
+    if (value === null || typeof value === "string" || typeof value === "boolean") return value;
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (value === undefined) return undefined;
+    if (!value || typeof value !== "object" || ancestors.has(value)) throw new Error("Draft snapshots require acyclic data values.");
+    if (ownedSnapshots.has(value)) return value;
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null && !(Array.isArray(value) && prototype === Array.prototype)) throw new Error("Draft snapshots require plain data values.");
+    ancestors.add(value);
+    try {
+      const descriptors = Object.getOwnPropertyDescriptors(value);
+      const entries: [string, unknown][] = [];
+      for (const key of Reflect.ownKeys(descriptors)) {
+        if (typeof key !== "string") throw new Error("Draft snapshots require plain data fields.");
+        const descriptor = descriptors[key]!;
+        if (!("value" in descriptor)) throw new Error("Draft snapshots require plain data fields.");
+        if (descriptor.enumerable && descriptor.value !== undefined) entries.push([key, copy(descriptor.value)]);
+      }
+      const fields = Object.fromEntries(entries);
+      const result = Array.isArray(value)
+        ? Array.from({ length: value.length }, (_, index) => fields[index] ?? null)
+        : fields;
+      Object.freeze(result);
+      ownedSnapshots.add(result);
+      return result;
+    } finally { ancestors.delete(value); }
+  };
+  return copy(draft) as SystemComposerDraft;
 }
 
 function safeId(value: string): string {

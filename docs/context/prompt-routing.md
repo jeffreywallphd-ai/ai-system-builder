@@ -11,6 +11,8 @@ Use this guide to select **minimum-sufficient** context packs. Start with `index
   For final aggregate admission, use the roadmap skill's implementation-boundary
   rule: all chunks implemented, current approval and no blockers. Pending external
   evidence never permits final closure.
+  Pending implemented targets use `increment-qualified` after actual checks and
+  fresh exact-target review; preserve other active work and overall authority.
 
 - Always include `docs/context/packs/index.pack.md`.
 - Read `docs/README.md` before assembling task context.
@@ -98,6 +100,12 @@ Before architecture-sensitive implementation, consult `docs/adr/decision-readine
 - Do not include all phase packs for asset work; include the narrow chain that matches the task.
 
 ## Implementation Roadmap Routing
+
+When the user assigns human acceptance offline, route to the skill's explicit
+handoff event; retain technical checks and archived history without invented passes.
+For agent-only acceptance on started governed roadmaps, use the skill's
+`acceptance-scope-revised` event, independent classification review and fresh
+candidate qualification. Retain automated UI and actual technical/native checks.
 
 Requests to prepare, implement, continue, resume, or review an implementation
 roadmap route to `skills/manage-implementation-roadmaps/SKILL.md`. Drafting or

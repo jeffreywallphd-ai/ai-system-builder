@@ -37,6 +37,7 @@ import { ApplicationIcon } from "../components/ApplicationIcon";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { ModalDialog } from "../components/ModalDialog";
 import { SystemCompositionPreview } from "./SystemCompositionPreview";
+import { createSystemComposerDefinitionReader } from "./SystemComposerDefinitionReader";
 import {
   SystemComposerStructureEditor,
   type SystemComposerAssetBrowseRequest,
@@ -56,6 +57,7 @@ import {
   attachUnassignedSystemComposerAsset,
   commitSystemComposerDraft,
   createSystemComposerDraftHistory,
+  areSystemComposerDraftsEqual,
   deriveProtectedSystemInstanceIds,
   redoSystemComposerDraft,
   removeSystemComposerSubtree,
@@ -231,6 +233,18 @@ export function SystemBuilderWorkspace({
   );
   const [busy, setBusy] = useState(false);
   const [revisionLoading, setRevisionLoading] = useState(false);
+  const [revisionError, setRevisionError] = useState<string>();
+  const [historyError, setHistoryError] = useState<string>();
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const savedDraft = useRef<SystemComposerDraft | undefined>(undefined);
+  const appliedInitialSystem = useRef<string | undefined>(undefined);
+  const scope = useMemo(() => ({ client, workspaceId }), [client, workspaceId]);
+  const currentScope = useRef(scope);
+  currentScope.current = scope;
+  const currentSystem = useRef(selectedSystemId);
+  currentSystem.current = selectedSystemId;
+  const operation = useRef<object | undefined>(undefined);
+  const [definitionReader] = useState(createSystemComposerDefinitionReader);
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
@@ -245,7 +259,7 @@ export function SystemBuilderWorkspace({
     (system) => String(system.systemId) === selectedSystemId,
   );
   const existingSystemIsLoaded = Boolean(
-    selectedSystem && revision && existingSystemId === selectedSystemId,
+    selectedSystem && revision && String(revision.systemId) === selectedSystemId && String(revision.targetWorkspaceId) === workspaceId && existingSystemId === selectedSystemId,
   );
   const selectedInstance = instances.find(
     (instance) => String(instance.instanceId) === selectedInstanceId,
@@ -268,7 +282,7 @@ export function SystemBuilderWorkspace({
   const stylingRootDefinitionSummary = composerCatalog.find(
     (definition) =>
       definition.definitionId ===
-        String(stylingRootInstance?.definitionRef.id) &&
+      String(stylingRootInstance?.definitionRef.id) &&
       definition.version === stylingRootInstance?.definitionRef.version,
   );
   const stylingRootDefinition =
@@ -288,6 +302,10 @@ export function SystemBuilderWorkspace({
       ),
     [composerCatalog],
   );
+  const componentsReady = useMemo(() => {
+    const available = new Set(composerCatalog.map(asset => `${asset.definitionId}@${asset.version}`));
+    return instances.every(instance => available.has(`${String(instance.definitionRef.id)}@${instance.definitionRef.version ?? ""}`));
+  }, [instances, composerCatalog]);
   const protectedInstanceIds = useMemo(
     () =>
       deriveProtectedSystemInstanceIds(
@@ -298,8 +316,14 @@ export function SystemBuilderWorkspace({
     [composerCatalog, draft, revision?.composition.rootInstanceRefs],
   );
 
+  useEffect(() => {
+    operation.current = undefined;
+    setBusy(false);
+    return () => { operation.current = undefined; };
+  }, [scope, selectedSystemId]);
+
   function requestComposerCatalog() {
-    if (catalogRequestInFlight.current || composerCatalog.length > 0) return;
+    if (catalogRequestInFlight.current) return;
     catalogRequestInFlight.current = true;
     setCatalogLoadRequest((current) => ({
       workspaceId,
@@ -309,6 +333,12 @@ export function SystemBuilderWorkspace({
 
   useEffect(() => {
     let active = true;
+    operation.current = undefined;
+    appliedInitialSystem.current = undefined;
+    savedDraft.current = undefined;
+    setBusy(false);
+    setRevisionError(undefined);
+    setHistoryError(undefined);
     setError(undefined);
     setRevision(undefined);
     setStructure(undefined);
@@ -334,7 +364,7 @@ export function SystemBuilderWorkspace({
     setStylingRootDetailLoading(false);
     setStylingRootDetailError(undefined);
     setSystems([]);
-    void client.listTemplates().then((templateResult) => {
+    void Promise.resolve().then(() => client.listTemplates()).then((templateResult) => {
       if (!active) return;
       if (templateResult.ok) {
         setTemplates(templateResult.value);
@@ -342,7 +372,7 @@ export function SystemBuilderWorkspace({
           (current) => current || templateResult.value[0]?.templateId || "",
         );
       } else setError(templateResult.error.message);
-    });
+    }).catch(() => { if (active) setError("System templates are unavailable. Retry opening the workspace."); });
     return () => {
       active = false;
     };
@@ -350,8 +380,7 @@ export function SystemBuilderWorkspace({
 
   useEffect(() => {
     let active = true;
-    void client
-      .list({ workspaceId, includeArchived: false })
+    void Promise.resolve().then(() => client.list({ workspaceId, includeArchived: false }))
       .then((systemResult) => {
         if (!active) return;
         if (!systemResult.ok) {
@@ -371,48 +400,49 @@ export function SystemBuilderWorkspace({
         setSelectedSystemId((current) =>
           current && !activeSystemIds.has(current) ? undefined : current,
         );
-      });
+      }).catch(() => { if (active) setError("Systems are unavailable. Retry opening the workspace."); });
     return () => {
       active = false;
     };
   }, [activeSystemsRevision, client, workspaceId]);
 
+  const draftDefinitionKey = useMemo(() => [...new Set(instances.map(instance => `${String(instance.definitionRef.id)}@${instance.definitionRef.version ?? ""}`))].sort().join("|"), [instances]);
   useEffect(() => {
-    if (catalogLoadRequest?.workspaceId !== workspaceId) return;
+    if (catalogLoadRequest?.workspaceId !== workspaceId || !revision || String(revision.systemId) !== selectedSystemId) return;
     let active = true;
     setCatalogLoading(true);
     setCatalogError(undefined);
-    void loadComposerCatalog(client, workspaceId).then((catalogResult) => {
+    void loadDraftComposerCatalog(client, workspaceId, instances, composerCatalog, () => active, definitionReader).then((catalogResult) => {
       if (!active) return;
       if (catalogResult.ok) {
         setComposerCatalog(catalogResult.value.items);
-        setSelectedLayoutDefinitionId(
-          (current) =>
-            current ??
-            defaultApplicationLayout(catalogResult.value.items)?.definitionId,
-        );
+        setSelectedLayoutDefinitionId(current => current ?? defaultApplicationLayout(catalogResult.value.items)?.definitionId);
       } else setCatalogError(catalogResult.error.message);
-      catalogRequestInFlight.current = false;
-      setCatalogLoading(false);
+    }).catch(() => {
+      if (active) setCatalogError("The component catalog is unavailable. Retry opening this system.");
+    }).finally(() => {
+      if (active) { catalogRequestInFlight.current = false; setCatalogLoading(false); }
     });
-    return () => {
-      active = false;
-      catalogRequestInFlight.current = false;
-    };
-  }, [catalogLoadRequest, client, workspaceId]);
+    return () => { active = false; catalogRequestInFlight.current = false; };
+  }, [catalogLoadRequest, client, workspaceId, selectedSystemId, draftDefinitionKey, Boolean(revision)]);
 
   useEffect(() => {
-    if (!initialSystemId) return;
+    if (!initialSystemId || appliedInitialSystem.current === initialSystemId) return;
+    if (dirty) {
+      setError("Save or discard unsaved changes before switching systems.");
+      return;
+    }
     const requestedSystem = systems.find(
       (item) =>
         String(item.systemId) === initialSystemId && item.status !== "archived",
     );
     if (requestedSystem) {
+      appliedInitialSystem.current = initialSystemId;
       setExistingSystemId(initialSystemId);
       setSelectedSystemId(initialSystemId);
       requestComposerCatalog();
     }
-  }, [initialSystemId, systems]);
+  }, [initialSystemId, systems, dirty]);
 
   useEffect(() => {
     if (!selectedSystemId) {
@@ -436,39 +466,43 @@ export function SystemBuilderWorkspace({
     setPlacements([]);
     setStructure(undefined);
     setRevisions([]);
-    void Promise.all([
-      client.readRevision({ workspaceId, systemId: selectedSystemId }),
-      client.listRevisions({ workspaceId, systemId: selectedSystemId }),
-    ]).then(([revisionResult, historyResult]) => {
-      if (!active) return;
-      if (revisionResult.ok) {
-        setRevision(revisionResult.value);
-        setInstances(revisionResult.value.instances);
-        setBindings(revisionResult.value.bindings);
-        setPlacements(revisionResult.value.placements ?? []);
-        setStructure(revisionResult.value.structure);
-        setSelectedLayoutDefinitionId(
-          revisionResult.value.structure?.layoutPresetRef
-            ? String(revisionResult.value.structure.layoutPresetRef.id)
-            : undefined,
-        );
-        setUndoDrafts([]);
-        setRedoDrafts([]);
-        setFoundationUpgradeOpen(false);
-        setFoundationUpgradePreview(undefined);
-        setSelectedInstanceId(
-          String(revisionResult.value.instances[0]?.instanceId ?? "") ||
-            undefined,
-        );
-        setDirty(false);
-      } else setError(revisionResult.error.message);
-      if (historyResult.ok) setRevisions(historyResult.value);
-      setRevisionLoading(false);
-    });
-    return () => {
-      active = false;
+    setRevisionError(undefined);
+    setHistoryError(undefined);
+    const acceptRevision = (value: SystemBuilderRevision) => {
+      if (String(value.systemId) !== selectedSystemId || String(value.targetWorkspaceId) !== workspaceId) {
+        setRevisionError("The loaded revision does not belong to this system. Retry loading it.");
+        return;
+      }
+      setRevision(value);
+      installSavedDraft(value);
+      setSelectedLayoutDefinitionId(value.structure?.layoutPresetRef ? String(value.structure.layoutPresetRef.id) : undefined);
+      setUndoDrafts([]);
+      setRedoDrafts([]);
+      setFoundationUpgradeOpen(false);
+      setFoundationUpgradePreview(undefined);
+      setSelectedInstanceId(String(value.instances[0]?.instanceId ?? "") || undefined);
+      setDirty(false);
     };
-  }, [client, selectedSystemId, workspaceId]);
+    // Optional history never gates the usable current Canvas.
+    void Promise.resolve().then(() => client.readRevision({ workspaceId, systemId: selectedSystemId }))
+      .then(result => {
+        if (!active) return;
+        if (result.ok) acceptRevision(result.value);
+        else setRevisionError("Unable to load this system revision. Retry loading it.");
+      }).catch(() => { if (active) setRevisionError("Unable to load this system revision. Retry loading it."); })
+      .finally(() => { if (active) setRevisionLoading(false); });
+    void Promise.resolve().then(() => client.listRevisions({ workspaceId, systemId: selectedSystemId }))
+      .then(result => {
+        if (!active) return;
+        if (result.ok) setRevisions(current => {
+          const owned = result.value.filter(item => String(item.systemId) === selectedSystemId && String(item.targetWorkspaceId) === workspaceId);
+          const byId = new Map([...owned, ...current].map(item => [String(item.revisionId), item]));
+          return [...byId.values()].sort((a, b) => b.revisionNumber - a.revisionNumber);
+        });
+        else setHistoryError("Revision history is unavailable. Your current Canvas is ready.");
+      }).catch(() => { if (active) setHistoryError("Revision history is unavailable. Your current Canvas is ready."); });
+    return () => { active = false; };
+  }, [client, selectedSystemId, workspaceId, loadAttempt]);
 
   useEffect(() => {
     if (
@@ -504,15 +538,15 @@ export function SystemBuilderWorkspace({
     }
     let active = true;
     setSelectedAssetDetailLoading(true);
-    void client
-      .readComposerAsset({
-        workspaceId,
-        definitionRef: selectedInstance.definitionRef,
-      })
+    void definitionReader.read(client, { workspaceId, definitionRef: selectedInstance.definitionRef }, () => active)
       .then((result) => {
         if (!active) return;
         if (result.ok) setSelectedAssetDetail(result.value);
         else setSelectedAssetDetailError(result.error.message);
+        setSelectedAssetDetailLoading(false);
+      }).catch(() => {
+        if (!active) return;
+        setSelectedAssetDetailError("Asset properties are unavailable. Select the asset again to retry.");
         setSelectedAssetDetailLoading(false);
       });
     return () => {
@@ -545,7 +579,7 @@ export function SystemBuilderWorkspace({
     let active = true;
     setModelOptionsLoading(true);
     setModelOptionsError(undefined);
-    void client.listModelOptions({ workspaceId }).then((result) => {
+    void Promise.resolve().then(() => client.listModelOptions!({ workspaceId })).then((result) => {
       if (!active) return;
       if (result.ok) {
         setModelOptions(result.value.options);
@@ -554,6 +588,10 @@ export function SystemBuilderWorkspace({
         setModelOptionsError(result.error.message);
       }
       setModelOptionsLoading(false);
+    }).catch(() => {
+      if (!active) return;
+      setModelOptionsLoading(false);
+      setModelOptionsError("Compatible models are unavailable. Select the composer again to retry.");
     });
     return () => {
       active = false;
@@ -585,15 +623,15 @@ export function SystemBuilderWorkspace({
     }
     let active = true;
     setStylingRootDetailLoading(true);
-    void client
-      .readComposerAsset({
-        workspaceId,
-        definitionRef: stylingRootInstance.definitionRef,
-      })
+    void definitionReader.read(client, { workspaceId, definitionRef: stylingRootInstance.definitionRef }, () => active)
       .then((result) => {
         if (!active) return;
         if (result.ok) setStylingRootDetail(result.value);
         else setStylingRootDetailError(result.error.message);
+        setStylingRootDetailLoading(false);
+      }).catch(() => {
+        if (!active) return;
+        setStylingRootDetailError("Asset properties are unavailable. Select the asset again to retry.");
         setStylingRootDetailLoading(false);
       });
     return () => {
@@ -642,8 +680,39 @@ export function SystemBuilderWorkspace({
     });
   }
 
+  function installSavedDraft(value: SystemBuilderRevision) {
+    const checkpoint = createSystemComposerDraftHistory({ instances: value.instances, bindings: value.bindings, placements: value.placements ?? [], structure: value.structure }).present;
+    savedDraft.current = checkpoint;
+    setInstances(checkpoint.instances);
+    setBindings(checkpoint.bindings);
+    setPlacements(checkpoint.placements);
+    setStructure(checkpoint.structure);
+  }
+
+  async function transact(action: (isCurrent: () => boolean) => Promise<void>) {
+    if (operation.current) return;
+    const token = {};
+    const targetSystem = selectedSystemId;
+    operation.current = token;
+    const isCurrent = () => operation.current === token && currentScope.current === scope && currentSystem.current === targetSystem;
+    setBusy(true);
+    setError(undefined);
+    setNotice(undefined);
+    try { await action(isCurrent); }
+    catch {
+      if (isCurrent()) {
+        catalogRequestInFlight.current = false;
+        setCatalogLoading(false);
+        setError("The system operation could not be completed. Your draft is preserved. Retry the action.");
+      }
+    }
+    finally {
+      if (operation.current === token) { operation.current = undefined; setBusy(false); }
+    }
+  }
+
   function editExistingSystem() {
-    if (!existingSystemId) return;
+    if (!existingSystemId || operation.current) return;
     if (dirty && existingSystemId !== selectedSystemId) {
       setError("Save or discard unsaved changes before switching systems.");
       return;
@@ -654,57 +723,72 @@ export function SystemBuilderWorkspace({
   }
 
   async function createSystem() {
+    if (operation.current) return;
+    if (dirty) {
+      setError("Save or discard unsaved changes before creating another system.");
+      return;
+    }
     if (!newSystemName.trim()) {
       setError("Enter a system name.");
       return;
     }
-    setBusy(true);
-    setError(undefined);
-    setNotice(undefined);
-    let catalogItems = composerCatalog;
-    if (catalogItems.length === 0) {
-      catalogRequestInFlight.current = true;
-      setCatalogLoading(true);
-      setCatalogError(undefined);
-      const catalogResult = await loadComposerCatalog(client, workspaceId);
-      catalogRequestInFlight.current = false;
-      setCatalogLoading(false);
-      if (!catalogResult.ok) {
-        setCatalogError(catalogResult.error.message);
-        setError(catalogResult.error.message);
-        setBusy(false);
+    return transact(async (isCurrent) => {
+      setError(undefined);
+      setNotice(undefined);
+      let catalogItems = composerCatalog;
+      if (!catalogItems.some(asset => asset.definitionId === DEFAULT_APPLICATION_LAYOUT_DEFINITION_ID && asset.layoutRole === "application-shell")) {
+        catalogRequestInFlight.current = true;
+        setCatalogLoading(true);
+        setCatalogError(undefined);
+        const catalogResult = await listAllComposerAssets(client, { workspaceId, searchText: DEFAULT_APPLICATION_LAYOUT_DEFINITION_ID }, items => items.some(asset => asset.definitionId === DEFAULT_APPLICATION_LAYOUT_DEFINITION_ID && asset.layoutRole === "application-shell"));
+        if (!isCurrent()) return;
+        catalogRequestInFlight.current = false;
+        setCatalogLoading(false);
+        if (!catalogResult.ok) {
+          setCatalogError(catalogResult.error.message);
+          setError(catalogResult.error.message);
+          return;
+        }
+        catalogItems = catalogResult.value.items;
+        setComposerCatalog(catalogItems);
+      }
+      const layout = catalogItems.find(asset => asset.definitionId === DEFAULT_APPLICATION_LAYOUT_DEFINITION_ID && asset.layoutRole === "application-shell");
+      if (!layout) {
+        setError("The required Minimal application layout is unavailable.");
         return;
       }
-      catalogItems = catalogResult.value.items;
-      setComposerCatalog(catalogItems);
-    }
-    const layout = defaultApplicationLayout(catalogItems);
-    if (!layout) {
-      setError("The required Minimal application layout is unavailable.");
-      setBusy(false);
-      return;
-    }
-    setSelectedLayoutDefinitionId(layout.definitionId);
-    const result = await client.create({
-      workspaceId,
-      name: newSystemName.trim(),
-      profile: "interactive",
-      layoutPresetRef: layout.definitionRef,
+      setSelectedLayoutDefinitionId(layout.definitionId);
+      const result = await client.create({
+        workspaceId,
+        name: newSystemName.trim(),
+        profile: "interactive",
+        layoutPresetRef: layout.definitionRef,
+      });
+      if (!isCurrent()) return;
+      if (result.ok && String(result.value.targetWorkspaceId) !== workspaceId) {
+        setError("The created system does not belong to this workspace.");
+        return;
+      }
+      if (result.ok) {
+        setSystems((current) => [result.value, ...current]);
+        setExistingSystemId(String(result.value.systemId));
+        setSelectedSystemId(String(result.value.systemId));
+        requestComposerCatalog();
+        setNewSystemName("");
+        setDirty(false);
+        setNotice(
+          `${layout.displayName} system created. Use Add element in a canvas container to compose its contents.`,
+        );
+      } else setError(result.error.message);
     });
-    if (result.ok) {
-      setSystems((current) => [result.value, ...current]);
-      setExistingSystemId(String(result.value.systemId));
-      setSelectedSystemId(String(result.value.systemId));
-      setNewSystemName("");
-      setDirty(false);
-      setNotice(
-        `${layout.displayName} system created. Use Add element in a canvas container to compose its contents.`,
-      );
-    } else setError(result.error.message);
-    setBusy(false);
   }
 
   async function createReferenceSystem() {
+    if (operation.current) return;
+    if (dirty) {
+      setError("Save or discard unsaved changes before creating another system.");
+      return;
+    }
     const template = templates.find(
       (item) => item.templateId === selectedTemplateId,
     );
@@ -716,26 +800,31 @@ export function SystemBuilderWorkspace({
       setError("Enter a template system name.");
       return;
     }
-    setBusy(true);
-    setError(undefined);
-    setNotice(undefined);
-    const result = await client.createFromTemplate({
-      workspaceId,
-      templateId: template.templateId,
-      name: referenceSystemName.trim(),
+    return transact(async (isCurrent) => {
+      setError(undefined);
+      setNotice(undefined);
+      const result = await client.createFromTemplate({
+        workspaceId,
+        templateId: template.templateId,
+        name: referenceSystemName.trim(),
+      });
+      if (!isCurrent()) return;
+      if (result.ok && String(result.value.targetWorkspaceId) !== workspaceId) {
+        setError("The created system does not belong to this workspace.");
+        return;
+      }
+      if (result.ok) {
+        setSystems((current) => [result.value, ...current]);
+        requestComposerCatalog();
+        setExistingSystemId(String(result.value.systemId));
+        setSelectedSystemId(String(result.value.systemId));
+        setReferenceSystemName("");
+        setDirty(false);
+        setNotice(
+          `${template.displayName} created and validated from canonical assets.`,
+        );
+      } else setError(result.error.message);
     });
-    if (result.ok) {
-      setSystems((current) => [result.value, ...current]);
-      requestComposerCatalog();
-      setExistingSystemId(String(result.value.systemId));
-      setSelectedSystemId(String(result.value.systemId));
-      setReferenceSystemName("");
-      setDirty(false);
-      setNotice(
-        `${template.displayName} created and validated from canonical assets.`,
-      );
-    } else setError(result.error.message);
-    setBusy(false);
   }
 
   function applyDraftHistory(
@@ -752,12 +841,13 @@ export function SystemBuilderWorkspace({
     );
     setUndoDrafts(history.past);
     setRedoDrafts(history.future);
-    setDirty(history.past.length > 0);
+    setDirty(!areSystemComposerDraftsEqual(history.present, savedDraft.current));
     setError(undefined);
     setNotice(undefined);
   }
 
   function commitDraft(next: SystemComposerDraft) {
+    if (operation.current) return;
     applyDraftHistory(
       commitSystemComposerDraft(
         { past: undoDrafts, present: draft, future: redoDrafts },
@@ -767,6 +857,7 @@ export function SystemBuilderWorkspace({
   }
 
   function undoDraft() {
+    if (operation.current) return;
     applyDraftHistory(
       undoSystemComposerDraft({
         past: undoDrafts,
@@ -777,6 +868,7 @@ export function SystemBuilderWorkspace({
   }
 
   function redoDraft() {
+    if (operation.current) return;
     applyDraftHistory(
       redoSystemComposerDraft({
         past: undoDrafts,
@@ -790,7 +882,7 @@ export function SystemBuilderWorkspace({
     asset: SystemBuilderComposerAsset,
     target: SystemComposerTargetSlot,
   ) {
-    if (!revision) return;
+    if (!revision || operation.current) return;
     const instanceId = `instance.${safeId(asset.definitionId)}.${uniqueId()}`;
     const result = addSystemComposerAsset(draft, {
       asset,
@@ -805,6 +897,7 @@ export function SystemBuilderWorkspace({
       return;
     }
     commitDraft(result.value);
+    setComposerCatalog(current => current.some(item => item.definitionId === asset.definitionId && item.version === asset.version) ? current : [...current, asset]);
     setSelectedInstanceId(instanceId);
   }
 
@@ -834,14 +927,14 @@ export function SystemBuilderWorkspace({
     const result = hasPlacement
       ? reparentSystemComposerAsset(draft, { instanceId, ...target })
       : attachUnassignedSystemComposerAsset(draft, {
-          instanceId,
-          ...target,
-          rootInstanceIds: new Set(
-            revision?.composition.rootInstanceRefs.map((reference) =>
-              String(reference.id),
-            ) ?? [],
-          ),
-        });
+        instanceId,
+        ...target,
+        rootInstanceIds: new Set(
+          revision?.composition.rootInstanceRefs.map((reference) =>
+            String(reference.id),
+          ) ?? [],
+        ),
+      });
     if (!result.ok) {
       setError(result.message);
       return;
@@ -850,14 +943,17 @@ export function SystemBuilderWorkspace({
     setSelectedInstanceId(instanceId);
   }
   function discardDraft() {
+    if (operation.current) return;
     if (!revision) return;
-    setInstances(revision.instances);
-    setBindings(revision.bindings);
-    setPlacements(revision.placements ?? []);
-    setStructure(revision.structure);
+    const checkpoint = savedDraft.current;
+    if (!checkpoint) return;
+    setInstances(checkpoint.instances);
+    setBindings(checkpoint.bindings);
+    setPlacements(checkpoint.placements);
+    setStructure(checkpoint.structure);
     setSelectedLayoutDefinitionId(
-      revision.structure?.layoutPresetRef
-        ? String(revision.structure.layoutPresetRef.id)
+      checkpoint.structure?.layoutPresetRef
+        ? String(checkpoint.structure.layoutPresetRef.id)
         : undefined,
     );
     setUndoDrafts([]);
@@ -958,133 +1054,134 @@ export function SystemBuilderWorkspace({
       setNotice(`${layout.displayName} is already the active layout.`);
       return;
     }
-    setBusy(true);
-    setError(undefined);
-    setNotice(undefined);
-    const result = await client.previewLayoutChange({
-      workspaceId,
-      systemId: String(selectedSystem.systemId),
-      expectedRecordRevision: selectedSystem.revision,
-      targetLayoutPresetRef: layout.definitionRef,
-      composition: revision.composition,
-      instances,
-      bindings,
-      placements,
-      ...(structure ? { structure } : {}),
-    });
-    if (result.ok) {
-      commitDraft({
-        instances: result.value.instances,
-        placements: result.value.placements,
-        bindings: result.value.bindings,
-        structure: result.value.structure,
+    return transact(async (isCurrent) => {
+      setError(undefined);
+      setNotice(undefined);
+      const result = await client.previewLayoutChange({
+        workspaceId,
+        systemId: String(selectedSystem.systemId),
+        expectedRecordRevision: selectedSystem.revision,
+        targetLayoutPresetRef: layout.definitionRef,
+        composition: revision.composition,
+        instances,
+        bindings,
+        placements,
+        ...(structure ? { structure } : {}),
       });
-      setSelectedLayoutDefinitionId(layout.definitionId);
-    } else setError(result.error.message);
-    setBusy(false);
+      if (!isCurrent()) return;
+      if (result.ok) {
+        applyDraftHistory(commitSystemComposerDraft({ past: undoDrafts, present: draft, future: redoDrafts }, {
+          instances: result.value.instances, placements: result.value.placements,
+          bindings: result.value.bindings, structure: result.value.structure,
+        }));
+        setSelectedLayoutDefinitionId(layout.definitionId);
+      } else setError(result.error.message);
+    });
   }
 
   async function save() {
     if (!revision || !selectedSystem) return;
-    setBusy(true);
-    setError(undefined);
-    setNotice(undefined);
-    const saveCatalog: SystemBuilderComposerAsset[] = [
-      ...composerCatalog,
-      ...(selectedAssetDetail ? [selectedAssetDetail] : []),
-      ...(stylingRootDetail ? [stylingRootDetail] : []),
-    ];
-    if (client.readComposerAsset) {
-      const detailedDefinitionKeys = new Set(
-        saveCatalog
-          .filter((definition) => definition.configurationSchema)
-          .map(
-            (definition) => `${definition.definitionId}@${definition.version}`,
-          ),
-      );
-      const missingConfiguredDefinitionRefs = new Map<string, AssetReference>();
-      for (const instance of instances) {
-        if (Object.keys(instance.selectedConfiguration ?? {}).length === 0) {
-          continue;
-        }
-        const definitionKey = `${String(instance.definitionRef.id)}@${instance.definitionRef.version ?? ""}`;
-        if (!detailedDefinitionKeys.has(definitionKey)) {
-          missingConfiguredDefinitionRefs.set(
-            definitionKey,
-            instance.definitionRef,
-          );
-        }
-      }
-      const detailResults = await Promise.all(
-        [...missingConfiguredDefinitionRefs.values()].map((definitionRef) =>
-          client.readComposerAsset!({ workspaceId, definitionRef }),
-        ),
-      );
-      const failedDetail = detailResults.find((result) => !result.ok);
-      if (failedDetail && !failedDetail.ok) {
-        setError(
-          `Unable to verify configured asset properties before saving. ${failedDetail.error.message}`,
+    return transact(async (isCurrent) => {
+      setError(undefined);
+      setNotice(undefined);
+      const saveCatalog: SystemBuilderComposerAsset[] = [
+        ...composerCatalog,
+        ...(selectedAssetDetail ? [selectedAssetDetail] : []),
+        ...(stylingRootDetail ? [stylingRootDetail] : []),
+      ];
+      if (client.readComposerAsset) {
+        const detailedDefinitionKeys = new Set(
+          saveCatalog
+            .filter((definition) => definition.configurationSchema)
+            .map(
+              (definition) => `${definition.definitionId}@${definition.version}`,
+            ),
         );
-        setBusy(false);
+        const missingConfiguredDefinitionRefs = new Map<string, AssetReference>();
+        for (const instance of instances) {
+          if (Object.keys(instance.selectedConfiguration ?? {}).length === 0) {
+            continue;
+          }
+          const definitionKey = `${String(instance.definitionRef.id)}@${instance.definitionRef.version ?? ""}`;
+          if (!detailedDefinitionKeys.has(definitionKey)) {
+            missingConfiguredDefinitionRefs.set(
+              definitionKey,
+              instance.definitionRef,
+            );
+          }
+        }
+        const detailResults = await Promise.all(
+          [...missingConfiguredDefinitionRefs.values()].map((definitionRef) =>
+            definitionReader.read(client, { workspaceId, definitionRef }, isCurrent),
+          ),
+        );
+        if (!isCurrent()) return;
+        const failedDetail = detailResults.find((result) => !result.ok);
+        if (failedDetail && !failedDetail.ok) {
+          setError(
+            `Unable to verify configured asset properties before saving. ${failedDetail.error.message}`,
+          );
+          return;
+        }
+        saveCatalog.push(
+          ...detailResults
+            .filter((result) => result.ok)
+            .map((result) => result.value),
+        );
+      }
+      const saveInstances = sanitizeSystemComposerInstanceConfigurations(
+        instances,
+        saveCatalog,
+      );
+      const instanceRefs = saveInstances.map(
+        (item) =>
+          ({ kind: "asset-instance", id: item.instanceId }) as AssetReference,
+      );
+      const bindingRefs = bindings.map(
+        (item) =>
+          ({ kind: "asset-binding", id: item.bindingId }) as AssetReference,
+      );
+      const placementRefs = placements.map(
+        (item) =>
+          ({ kind: "asset-placement", id: item.placementId }) as AssetReference,
+      );
+      const composition = {
+        ...revision.composition,
+        lifecycleStatus: "draft" as const,
+        instanceRefs,
+        rootInstanceRefs: revision.composition.rootInstanceRefs,
+        bindingRefs,
+        placementRefs,
+      };
+      const result = await client.saveRevision({
+        workspaceId,
+        systemId: String(selectedSystem.systemId),
+        expectedRecordRevision: selectedSystem.revision,
+        composition,
+        instances: saveInstances,
+        bindings,
+        structure,
+        placements,
+      });
+      if (!isCurrent()) return;
+      if (result.ok && (String(result.value.systemId) !== selectedSystemId || String(result.value.targetWorkspaceId) !== workspaceId)) {
+        setError("The returned revision does not belong to this system. Your draft is preserved.");
         return;
       }
-      saveCatalog.push(
-        ...detailResults
-          .filter((result) => result.ok)
-          .map((result) => result.value),
-      );
-    }
-    const saveInstances = sanitizeSystemComposerInstanceConfigurations(
-      instances,
-      saveCatalog,
-    );
-    const instanceRefs = saveInstances.map(
-      (item) =>
-        ({ kind: "asset-instance", id: item.instanceId }) as AssetReference,
-    );
-    const bindingRefs = bindings.map(
-      (item) =>
-        ({ kind: "asset-binding", id: item.bindingId }) as AssetReference,
-    );
-    const placementRefs = placements.map(
-      (item) =>
-        ({ kind: "asset-placement", id: item.placementId }) as AssetReference,
-    );
-    const composition = {
-      ...revision.composition,
-      lifecycleStatus: "draft" as const,
-      instanceRefs,
-      rootInstanceRefs: revision.composition.rootInstanceRefs,
-      bindingRefs,
-      placementRefs,
-    };
-    const result = await client.saveRevision({
-      workspaceId,
-      systemId: String(selectedSystem.systemId),
-      expectedRecordRevision: selectedSystem.revision,
-      composition,
-      instances: saveInstances,
-      bindings,
-      structure,
-      placements,
-    });
-    if (result.ok) {
-      setRevision(result.value);
-      setInstances(result.value.instances);
-      setBindings(result.value.bindings);
-      setPlacements(result.value.placements ?? []);
-      setStructure(result.value.structure);
-      setUndoDrafts([]);
-      setRedoDrafts([]);
-      setRevisions((current) => [result.value, ...current]);
-      setDirty(false);
-      const invalid = result.value.validationIssues.filter(
-        (issue) => issue.severity === "error",
-      ).length;
-      setSystems((current) =>
-        current.map((item) =>
-          String(item.systemId) === selectedSystemId
-            ? {
+      if (result.ok) {
+        setRevision(result.value);
+        installSavedDraft(result.value);
+        setUndoDrafts([]);
+        setRedoDrafts([]);
+        setRevisions((current) => [result.value, ...current]);
+        setDirty(false);
+        const invalid = result.value.validationIssues.filter(
+          (issue) => issue.severity === "error",
+        ).length;
+        setSystems((current) =>
+          current.map((item) =>
+            String(item.systemId) === selectedSystemId
+              ? {
                 ...item,
                 revision: item.revision + 1,
                 currentRevisionId: result.value.revisionId,
@@ -1095,35 +1192,36 @@ export function SystemBuilderWorkspace({
                     ? "validated"
                     : "draft",
               }
-            : item,
-        ),
-      );
-      setNotice(
-        invalid
-          ? `Revision saved with ${invalid} blocking validation issue${invalid === 1 ? "" : "s"}.`
-          : "Revision saved and validated.",
-      );
-    } else setError(result.error.message);
-    setBusy(false);
+              : item,
+          ),
+        );
+        setNotice(
+          invalid
+            ? `Revision saved with ${invalid} blocking validation issue${invalid === 1 ? "" : "s"}.`
+            : "Revision saved and validated.",
+        );
+      } else setError(result.error.message);
+    });
   }
 
   async function previewFoundationUpgrade() {
     if (!revision || !selectedSystem || dirty) return;
-    setBusy(true);
-    setError(undefined);
-    setNotice(undefined);
-    const result = await client.previewFoundationUpgrade({
-      workspaceId,
-      systemId: String(selectedSystem.systemId),
-      expectedRecordRevision: selectedSystem.revision,
+    return transact(async (isCurrent) => {
+      setError(undefined);
+      setNotice(undefined);
+      const result = await client.previewFoundationUpgrade({
+        workspaceId,
+        systemId: String(selectedSystem.systemId),
+        expectedRecordRevision: selectedSystem.revision,
+      });
+      if (!isCurrent()) return;
+      if (result.ok) {
+        setFoundationUpgradePreview(result.value);
+        setFoundationUpgradeOpen(true);
+      } else {
+        setError(result.error.message);
+      }
     });
-    if (result.ok) {
-      setFoundationUpgradePreview(result.value);
-      setFoundationUpgradeOpen(true);
-    } else {
-      setError(result.error.message);
-    }
-    setBusy(false);
   }
 
   async function confirmFoundationUpgrade() {
@@ -1135,54 +1233,56 @@ export function SystemBuilderWorkspace({
     ) {
       return;
     }
-    setBusy(true);
-    setError(undefined);
-    const result = await client.upgradeFoundation({
-      workspaceId,
-      systemId: String(selectedSystem.systemId),
-      expectedRecordRevision: selectedSystem.revision,
-      sourceRevisionId: foundationUpgradePreview.sourceRevisionId,
-    });
-    if (result.ok) {
-      setRevision(result.value);
-      setInstances(result.value.instances);
-      setBindings(result.value.bindings);
-      setPlacements(result.value.placements ?? []);
-      setStructure(result.value.structure);
-      setSelectedLayoutDefinitionId(
-        result.value.structure?.layoutPresetRef
-          ? String(result.value.structure.layoutPresetRef.id)
-          : undefined,
-      );
-      setSelectedInstanceId(
-        String(result.value.instances[0]?.instanceId ?? "") || undefined,
-      );
-      setUndoDrafts([]);
-      setRedoDrafts([]);
-      setRevisions((current) => [result.value, ...current]);
-      setDirty(false);
-      setSystems((current) =>
-        current.map((item) =>
-          String(item.systemId) === selectedSystemId
-            ? {
+    return transact(async (isCurrent) => {
+      setError(undefined);
+      const result = await client.upgradeFoundation({
+        workspaceId,
+        systemId: String(selectedSystem.systemId),
+        expectedRecordRevision: selectedSystem.revision,
+        sourceRevisionId: foundationUpgradePreview.sourceRevisionId,
+      });
+      if (!isCurrent()) return;
+      if (result.ok && (String(result.value.systemId) !== selectedSystemId || String(result.value.targetWorkspaceId) !== workspaceId)) {
+        setError("The returned revision does not belong to this system. Your draft is preserved.");
+        return;
+      }
+      if (result.ok) {
+        setRevision(result.value);
+        installSavedDraft(result.value);
+        setSelectedLayoutDefinitionId(
+          result.value.structure?.layoutPresetRef
+            ? String(result.value.structure.layoutPresetRef.id)
+            : undefined,
+        );
+        setSelectedInstanceId(
+          String(result.value.instances[0]?.instanceId ?? "") || undefined,
+        );
+        setUndoDrafts([]);
+        setRedoDrafts([]);
+        setRevisions((current) => [result.value, ...current]);
+        setDirty(false);
+        setSystems((current) =>
+          current.map((item) =>
+            String(item.systemId) === selectedSystemId
+              ? {
                 ...item,
                 revision: item.revision + 1,
                 currentRevisionId: result.value.revisionId,
                 composition: result.value.composition,
                 status: "validated",
               }
-            : item,
-        ),
-      );
-      setFoundationUpgradeOpen(false);
-      setFoundationUpgradePreview(undefined);
-      setNotice(
-        "System Foundation upgraded to 3.0.0 in a new immutable revision.",
-      );
-    } else {
-      setError(result.error.message);
-    }
-    setBusy(false);
+              : item,
+          ),
+        );
+        setFoundationUpgradeOpen(false);
+        setFoundationUpgradePreview(undefined);
+        setNotice(
+          "System Foundation upgraded to 3.0.0 in a new immutable revision.",
+        );
+      } else {
+        setError(result.error.message);
+      }
+    });
   }
 
   return (
@@ -1310,7 +1410,7 @@ export function SystemBuilderWorkspace({
                     onChange={(event) =>
                       setSelectedTemplateId(
                         event.currentTarget.value as
-                          SystemBuilderTemplateSummary["templateId"] | "",
+                        SystemBuilderTemplateSummary["templateId"] | "",
                       )
                     }
                   >
@@ -1370,7 +1470,7 @@ export function SystemBuilderWorkspace({
                 type="button"
                 className="ui-button ui-button--outline"
                 onClick={() => setPreviewOpen(true)}
-                disabled={busy || instances.length === 0}
+                disabled={busy || !componentsReady || instances.length === 0}
                 aria-haspopup="dialog"
               >
                 <ApplicationIcon name="play" />
@@ -1392,6 +1492,7 @@ export function SystemBuilderWorkspace({
               ) : null}
             </div>
           ) : null}
+          {revisionError ? <div role="alert"><p>{revisionError}</p><button type="button" onClick={() => setLoadAttempt(value => value + 1)}>Retry loading system</button></div> : null}
           {selectedSystem && revision && existingSystemIsLoaded ? (
             <>
               <div className="system-builder__status">
@@ -1427,94 +1528,97 @@ export function SystemBuilderWorkspace({
                   </button>
                 ))}
               </div>
-              {composerMode === "design" ? (
-                <SystemComposerStructureEditor
-                  browseScopeKey={workspaceId}
-                  draft={draft}
-                  rootInstanceRefs={revision.composition.rootInstanceRefs}
-                  catalog={composerCatalog}
-                  selectedLayoutDefinitionId={selectedLayoutDefinitionId}
-                  layoutSelectionDisabled={busy}
-                  selectedInstanceId={selectedInstanceId}
-                  protectedInstanceIds={protectedInstanceIds}
-                  propertiesPanel={
-                    selectedAssetDetailLoading ? (
-                      <div className="system-composer__detail-loading">
-                        <LoadingSpinner label="Loading selected asset properties" />
-                        <span>Loading selected asset properties...</span>
-                      </div>
-                    ) : selectedAssetDetailError ? (
-                      <p className="ui-status ui-status--error" role="alert">
-                        {selectedAssetDetailError}
-                      </p>
-                    ) : (
-                      <SystemComposerInspector
-                        mode="configuration"
-                        embedded
-                        selectedInstance={selectedInstance}
-                        selectedDefinition={selectedDefinition}
-                        instances={instances}
-                        catalog={composerCatalog}
-                        bindings={bindings}
-                        modelOptions={modelOptions}
-                        modelOptionsLoading={modelOptionsLoading}
-                        modelOptionsError={modelOptionsError}
-                        onConfigurationChange={updateSelectedConfiguration}
-                        onAddConnection={connectDeclaredPorts}
-                        onRemoveConnection={removeBinding}
-                      />
-                    )
-                  }
-                  stylingPanel={
-                    stylingRootDetailLoading ? (
-                      <div className="system-composer__detail-loading">
-                        <LoadingSpinner label="Loading system styling" />
-                        <span>Loading system styling...</span>
-                      </div>
-                    ) : stylingRootDetailError ? (
-                      <p className="ui-status ui-status--error" role="alert">
-                        {stylingRootDetailError}
-                      </p>
-                    ) : (
-                      <SystemComposerStylingPanel
-                        rootInstance={stylingRootInstance}
-                        rootDefinition={stylingRootDefinition}
-                        catalog={composerCatalog}
-                        onChange={updateRootStyling}
-                      />
-                    )
-                  }
-                  catalogLoading={catalogLoading}
-                  catalogError={catalogError}
-                  canUndo={undoDrafts.length > 0}
-                  canRedo={redoDrafts.length > 0}
-                  onSelect={setSelectedInstanceId}
-                  onSelectLayout={(layout) => void selectLayout(layout)}
-                  loadLayouts={loadLayoutsOnDemand}
-                  loadCompatibleAssets={loadCompatibleAssetsOnDemand}
-                  onSidebarTabChange={setActiveSidebarTab}
-                  onAdd={addAsset}
-                  onPlace={placeAsset}
-                  onRemove={removeSelected}
-                  onUndo={undoDraft}
-                  onRedo={redoDraft}
-                />
-              ) : (
-                <SystemComposerInspector
-                  mode="connections"
-                  selectedInstance={selectedInstance}
-                  selectedDefinition={selectedDefinition}
-                  instances={instances}
-                  catalog={composerCatalog}
-                  bindings={bindings}
-                  modelOptions={modelOptions}
-                  modelOptionsLoading={modelOptionsLoading}
-                  modelOptionsError={modelOptionsError}
-                  onConfigurationChange={updateSelectedConfiguration}
-                  onAddConnection={connectDeclaredPorts}
-                  onRemoveConnection={removeBinding}
-                />
-              )}
+              {catalogError ? <div role="alert"><p>{catalogError}</p><button type="button" onClick={requestComposerCatalog}>Retry component definitions</button></div> : null}
+              <fieldset disabled={busy || !componentsReady} aria-busy={!componentsReady && !catalogError} aria-label="System draft editor" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+                {composerMode === "design" ? (
+                  <SystemComposerStructureEditor
+                    browseScopeKey={workspaceId}
+                    draft={draft}
+                    rootInstanceRefs={revision.composition.rootInstanceRefs}
+                    catalog={composerCatalog}
+                    selectedLayoutDefinitionId={selectedLayoutDefinitionId}
+                    layoutSelectionDisabled={busy}
+                    selectedInstanceId={selectedInstanceId}
+                    protectedInstanceIds={protectedInstanceIds}
+                    propertiesPanel={
+                      selectedAssetDetailLoading ? (
+                        <div className="system-composer__detail-loading">
+                          <LoadingSpinner label="Loading selected asset properties" />
+                          <span>Loading selected asset properties...</span>
+                        </div>
+                      ) : selectedAssetDetailError ? (
+                        <p className="ui-status ui-status--error" role="alert">
+                          {selectedAssetDetailError}
+                        </p>
+                      ) : (
+                        <SystemComposerInspector
+                          mode="configuration"
+                          embedded
+                          selectedInstance={selectedInstance}
+                          selectedDefinition={selectedDefinition}
+                          instances={instances}
+                          catalog={composerCatalog}
+                          bindings={bindings}
+                          modelOptions={modelOptions}
+                          modelOptionsLoading={modelOptionsLoading}
+                          modelOptionsError={modelOptionsError}
+                          onConfigurationChange={updateSelectedConfiguration}
+                          onAddConnection={connectDeclaredPorts}
+                          onRemoveConnection={removeBinding}
+                        />
+                      )
+                    }
+                    stylingPanel={
+                      stylingRootDetailLoading ? (
+                        <div className="system-composer__detail-loading">
+                          <LoadingSpinner label="Loading system styling" />
+                          <span>Loading system styling...</span>
+                        </div>
+                      ) : stylingRootDetailError ? (
+                        <p className="ui-status ui-status--error" role="alert">
+                          {stylingRootDetailError}
+                        </p>
+                      ) : (
+                        <SystemComposerStylingPanel
+                          rootInstance={stylingRootInstance}
+                          rootDefinition={stylingRootDefinition}
+                          catalog={composerCatalog}
+                          onChange={updateRootStyling}
+                        />
+                      )
+                    }
+                    catalogLoading={catalogLoading}
+                    catalogError={catalogError}
+                    canUndo={undoDrafts.length > 0}
+                    canRedo={redoDrafts.length > 0}
+                    onSelect={setSelectedInstanceId}
+                    onSelectLayout={(layout) => void selectLayout(layout)}
+                    loadLayouts={loadLayoutsOnDemand}
+                    loadCompatibleAssets={loadCompatibleAssetsOnDemand}
+                    onSidebarTabChange={setActiveSidebarTab}
+                    onAdd={addAsset}
+                    onPlace={placeAsset}
+                    onRemove={removeSelected}
+                    onUndo={undoDraft}
+                    onRedo={redoDraft}
+                  />
+                ) : (
+                  <SystemComposerInspector
+                    mode="connections"
+                    selectedInstance={selectedInstance}
+                    selectedDefinition={selectedDefinition}
+                    instances={instances}
+                    catalog={composerCatalog}
+                    bindings={bindings}
+                    modelOptions={modelOptions}
+                    modelOptionsLoading={modelOptionsLoading}
+                    modelOptionsError={modelOptionsError}
+                    onConfigurationChange={updateSelectedConfiguration}
+                    onAddConnection={connectDeclaredPorts}
+                    onRemoveConnection={removeBinding}
+                  />
+                )}
+              </fieldset>
               {revision.validationIssues.length ? (
                 <section
                   className="system-builder__diagnostics"
@@ -1544,6 +1648,7 @@ export function SystemBuilderWorkspace({
               <footer className="system-builder__footer">
                 <div>
                   <strong>Revision history</strong>
+                  {historyError ? <span role="status">{historyError}</span> : null}
                   <span>
                     {revisions
                       .map((item) => `r${item.revisionNumber}`)
@@ -1767,9 +1872,9 @@ export function preferredSystemComposerTarget({
     : undefined;
   const activeLayout = activeLayoutDefinitionId
     ? instances.find(
-        (instance) =>
-          String(instance.definitionRef.id) === activeLayoutDefinitionId,
-      )
+      (instance) =>
+        String(instance.definitionRef.id) === activeLayoutDefinitionId,
+    )
     : undefined;
   const orderedCandidates = uniqueInstances([
     ...placedPageLayouts,
@@ -1789,7 +1894,7 @@ export function preferredSystemComposerTarget({
       const currentCount = placements.filter(
         (placement) =>
           String(placement.parentInstanceRef.id) ===
-            String(instance.instanceId) &&
+          String(instance.instanceId) &&
           placement.slotId === candidate.slotId,
       ).length;
       return currentCount < candidate.cardinality.maxItems;
@@ -1814,6 +1919,35 @@ function uniqueInstances(
     seen.add(id);
     return true;
   });
+}
+
+
+async function loadDraftComposerCatalog(
+  client: SystemBuilderClient, workspaceId: string, instances: readonly AssetInstance[], known: readonly SystemBuilderComposerAsset[], active: () => boolean, reader: ReturnType<typeof createSystemComposerDefinitionReader>,
+): Promise<SystemBuilderResult<SystemBuilderComposerCatalog>> {
+  if (!client.readComposerAsset) return loadComposerCatalog(client, workspaceId);
+  const needed = new Map<string, AssetReference>();
+  for (const instance of instances) needed.set(`${String(instance.definitionRef.id)}@${instance.definitionRef.version ?? ""}`, instance.definitionRef);
+  if (needed.size > 512) return systemBuilderFailure("catalog-limit", "This system exceeds the component definition loading limit.");
+  const available = new Map(known.map(asset => [`${asset.definitionId}@${asset.version}`, asset]));
+  const missing = [...needed.entries()].filter(([key]) => !available.has(key));
+  let cursor = 0;
+  let failure = false;
+  await Promise.all(Array.from({ length: Math.min(8, missing.length) }, async () => {
+    while (active() && !failure) {
+      const entry = missing[cursor++];
+      if (!entry) return;
+      const [key, definitionRef] = entry;
+      try {
+        const result = await reader.readSummary(client, { workspaceId, definitionRef }, active);
+        if (!active()) return;
+        if (!result.ok || result.value.definitionId !== String(definitionRef.id) || result.value.version !== definitionRef.version) { failure = true; return; }
+        available.set(key, result.value);
+      } catch { failure = true; return; }
+    }
+  }));
+  if (failure) return systemBuilderFailure("catalog-unavailable", "A required component definition is unavailable. Retry opening this system.");
+  return systemBuilderSuccess({ items: [...needed.keys()].flatMap(key => available.has(key) ? [available.get(key)!] : []) });
 }
 
 async function loadComposerCatalog(
@@ -1854,6 +1988,7 @@ async function loadComposerCatalog(
 async function listAllComposerAssets(
   client: Pick<SystemBuilderClient, "listComposerAssets">,
   query: Omit<ListSystemBuilderComposerAssetsQuery, "cursor" | "limit">,
+  stopWhen?: (items: readonly SystemBuilderComposerAsset[]) => boolean,
 ): Promise<SystemBuilderResult<SystemBuilderComposerCatalog>> {
   const items: SystemBuilderComposerAsset[] = [];
   const diagnostics: NonNullable<
@@ -1880,7 +2015,7 @@ async function listAllComposerAssets(
     diagnostics.push(...(result.value.diagnostics ?? []));
 
     const nextCursor = result.value.nextCursor?.trim();
-    if (!nextCursor) {
+    if (!nextCursor || stopWhen?.(items)) {
       return systemBuilderSuccess({
         items,
         ...(diagnostics.length ? { diagnostics } : {}),

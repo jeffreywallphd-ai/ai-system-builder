@@ -16,7 +16,7 @@ const formatDiagnostics = (diagnostics: readonly ts.Diagnostic[]) => {
 
 test("keeps desktop image generation renderer boundary emit-safe", () => {
   const repoRoot = process.cwd();
-  const configPath = path.join(repoRoot, "apps", "desktop", "tsconfig.webpack.json");
+  const configPath = path.join(repoRoot, "apps", "desktop", "tsconfig.desktop.json");
   const configFile = ts.readConfigFile(configPath, (fileName) => fs.readFileSync(fileName, "utf8"));
 
   assert.equal(configFile.error, undefined, configFile.error ? formatDiagnostics([configFile.error]) : undefined);

@@ -1042,6 +1042,11 @@ export function composeDesktopHost(
                   reference,
                   readOptions,
                 ),
+              readDefinitionDetails: async (references, readOptions) =>
+                (await getAssetFeatures()).assetRegistryRead.readDefinitionDetails(
+                  references,
+                  readOptions,
+                ),
             },
             modelRegistry: {
               listModels: async (request) =>
@@ -1698,6 +1703,11 @@ export function composeDesktopHost(
             readDefinitionDetail: async (reference, options) =>
               (await getAssetFeatures()).assetRegistryRead.readDefinitionDetail(
                 reference,
+                options,
+              ),
+            readDefinitionDetails: async (references, options) =>
+              (await getAssetFeatures()).assetRegistryRead.readDefinitionDetails(
+                references,
                 options,
               ),
           },

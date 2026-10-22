@@ -53,6 +53,21 @@ Foundation for the managed Python sidecar runtime adapter:
   decoder codes and never retry without token constraints. Unchecked generation
   remains a separate compatibility mode and still uses strict parsing and
   semantic validation.
+
+Conditional object constraints use complete disjoint branches only when a
+required discriminator and exact property subsets prove equivalence. Original
+final validation/fingerprints remain authoritative. Both forms count against
+unchanged schema/cache budgets; unsupported expansion retains the original.
+The pinned backend retains its default JSON formatting policy. An empty
+inter-token whitespace override preserved lexical values but regressed actual
+held-out model quality and was withdrawn. Grammar equivalence alone cannot
+establish model quality; original final validation and all bounds still apply.
+Built-in classification shapes constrain bounded configured labels, including
+multi-label items, without truncating larger recipes or rewriting saved layouts.
+Prompt schema/examples retain the existing sorted canonical presentation and
+exact values; changing prompt field order requires real fixed-model regression
+evidence. Token constraints and final integrity identities retain their own
+semantically equivalent representations.
 - The task registry assigns an explicit bounded deadline by work class: two
   minutes for short/unknown work, two hours for validation and Parquet dataset
   review, eight hours for dataset preparation and context generation, twelve hours for model
@@ -81,3 +96,25 @@ Foundation for the managed Python sidecar runtime adapter:
 - Cancellation ends the selected task but does not stop the shared Python
   runtime or unrelated tasks. Long deadlines reduce false failures; they do not
   remove task progress, cancellation, terminal cleanup, or hard resource bounds.
+
+Dependency setup publishes only finite `python-dependency-outcomes-v1` outcomes.
+`readPythonRuntimeDependencySessionOutcomes` exposes at most the two latest
+operation summaries, deeply immutable and session-only. A trusted
+`onDiagnosticOutcomes` observer cannot alter setup results. Legacy
+`diagnosticsFile` paths are ignored: private persistent sink authority, bounds
+and retention require separate qualification. No automatic temporary files are
+created; security audit remains separate.
+
+Context embeddings accept optional `cpu`/`cuda`/`auto` placement. CPU remains the
+omitted default, and explicit CUDA fails if unavailable or exhausted. Weight and
+token tensors move together; GPU tensors/cache are released without cross-request
+model/vector caching. Device is absent from saved manifests and uses a separate
+retrieval request hint. Model resolution remains local-only and trusted-code-free.
+# Owned task loss
+
+The foundation retains bounded terminal results for tasks it accepted. A confirmed
+exit from its owned supervisor fails unfinished accepted tasks with a safe retryable
+error, including admission/read races. Transport errors alone do not establish
+failure. Old process events cannot affect a new generation; observed terminal
+results and confirmed cancellation recovery remain authoritative.
+

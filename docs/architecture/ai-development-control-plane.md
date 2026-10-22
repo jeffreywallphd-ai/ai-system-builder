@@ -1,5 +1,15 @@
 # AI Development Control Plane
 
+Explicit user-directed offline human acceptance may leave technical closure through
+the roadmap skill's bounded transfer event. The archive preserves original
+criteria, plan, approval and evidence; the active scope needs explicit reapproval.
+Only solely human-blocked implemented increments qualify. Semantic classification
+is reviewed operator attestation, not an inferred authority or a passed test.
+The JSON projection displays offline ownership separately and filters archived
+criteria out of active chunk links. Other technical and current-receipt gates stay.
+This metadata-only event is legacy-only; any evidence policy is refused. It cannot
+close receipt-governed increments using stale or merely declarative technical checks.
+
 - Status: current
 - Related decisions: `docs/adr/ADR-0042-integrated-ai-development-control-plane.md`, `docs/adr/ADR-0015-security-architecture-and-policy-boundaries.md`
 - Verification: `dev-tools/helpers/tests/`, `skills/manage-implementation-roadmaps/tests/test_roadmap.py`, `npm run agent-support:check`
@@ -112,6 +122,24 @@ legacy roadmap and reports the actual executed checks.
 
 ## Dynamic review data
 
+Implemented-pending targets admit qualification-only work once all implementation
+is complete, approval is current and no blocker remains. This preserves the active
+increment pointer. Authority additionally binds target criterion semantics,
+plan/chunks, latest evidence and bounded report hashes. The explicit
+`increment-qualified` event consumes exact current completed work/receipt/review
+references and requires all target criteria passed. Partial, overall-only or stale
+records cannot substitute. Consumed pending-only work is historical; final overall
+qualification remains independently required.
+
+Technical acceptance is agent-executable; human studies/manual acceptance are
+user-owned offline. A started governed roadmap may use the skill's narrowly
+attested `acceptance-scope-revised` event. It archives original removed/mixed
+criteria, plan and approval, supersedes only human portions of historical
+instructions and invalidates approval. It cannot change evidence, statuses,
+blockers or completion policy. Retained mixed IDs stay active/pending and only
+retired IDs leave chunk projections. Actual user narrow reapproval and fresh
+fingerprint-bound receipts/separate review remain required for technical closure.
+
 `dev-tools/review-site/server.py` projects canonical roadmap JSON and the local
 JSON record store into `development-review-v1` at `/api/review`. The buildless
 browser polls the API; editing JSON updates the next response without Markdown
@@ -147,3 +175,15 @@ performance evidence remain distinguishable from local harness conformance.
 
 See `docs/diagnostics/ai-development-control-plane.md` for contributor commands
 and `docs/security/ai-development-control-plane-threat-model.md` for trust limits.
+
+## Supporting implementation evidence
+
+A fixed bounded JSON document, `docs/operations/roadmap-supporting-work.json`, maps
+known roadmap criteria to scoped completed component work. The projection verifies
+receipt integrity/passing attempts, source stability at execution, accepted
+separate-review coverage/digest and exact completion references before labeling
+reviewed local support. This is historical support at a recorded snapshot; current
+whole-candidate qualification is not asserted. Missing/invalid/active/failed records
+remain unverified. Decoration never changes canonical outcomes, status, approvals,
+chunks or qualification policy. Agent-executable labels and approved successor
+links clarify current technical scope while preserving original histories.

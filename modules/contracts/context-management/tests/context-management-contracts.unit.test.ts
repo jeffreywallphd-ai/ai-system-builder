@@ -6,6 +6,7 @@ import {
   evaluateContextSourceCapability,
   normalizeContextLaunchIntent,
   normalizeContextSaveName,
+  normalizeContextRetrievalRequest,
   validatePersistedContextChunks,
   validateStartContextGenerationCommand,
 } from "..";
@@ -77,6 +78,9 @@ describe("context management contracts", () => {
       },
     });
     expect(rag.embedding?.modelId).toContain("MiniLM");
+    expect(rag.embedding?.device).toBe(undefined);
+    expect(validateStartContextGenerationCommand({...rag, embedding: {...rag.embedding!, device: "cuda"}}).embedding?.device).toBe("cuda");
+    expect(() => validateStartContextGenerationCommand({...rag, embedding: {...rag.embedding!, device: "other" as "cpu"}})).toThrow("RAG embedding");
 
     const topicAware = validateStartContextGenerationCommand({
       ...rag,
@@ -133,6 +137,12 @@ describe("context management contracts", () => {
         },
       }),
     ).toThrow("Context-pack generation settings");
+  });
+
+  it("keeps query placement finite and omitted CPU requests compatible", () => {
+    expect(normalizeContextRetrievalRequest({artifactId: "a", query: "q"})).toEqual({artifactId: "a", query: "q", maximumResults: 5});
+    expect(normalizeContextRetrievalRequest({artifactId: "a", query: "q", embeddingDevice: "cuda"})).toMatchObject({embeddingDevice: "cuda"});
+    expect(() => normalizeContextRetrievalRequest({artifactId: "a", query: "q", embeddingDevice: "cuda:1" as "cpu"})).toThrow("retrieval request");
   });
 
   it("accepts persisted chunks only when source digest and exact lineage match", () => {

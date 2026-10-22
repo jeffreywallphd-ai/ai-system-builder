@@ -210,6 +210,7 @@ def roadmap_fingerprint(state: dict[str, Any]) -> str:
         "completedChunks",
         "completionSummary",
         "pendingCriteria",
+        "qualificationCompletion",
     }
     for increment in state["increments"]:
         definitions.append(
@@ -257,7 +258,7 @@ def implementation_ready_for_overall(state: dict[str, Any]) -> bool:
     for increment in increments:
         planned = [item["id"] for item in (increment.get("plan") or {}).get("chunks", [])]
         completed = increment.get("completedChunks", [])
-        if not planned or len(completed) != len(planned) or set(completed) != set(planned):
+        if not planned or len(set(planned)) != len(planned) or len(completed) != len(planned) or set(completed) != set(planned):
             return False
     if all(item["status"] in INCREMENT_DONE for item in increments):
         return state.get("status") in {
@@ -270,6 +271,22 @@ def implementation_ready_for_overall(state: dict[str, Any]) -> bool:
         and final["status"] == "verifying"
         and all(item["status"] in INCREMENT_DONE for item in increments[:-1])
     )
+
+
+def pending_qualification_context(state: dict[str, Any], increment_id: str) -> dict[str, Any] | None:
+    """Exact target context, without reopening implementation or granting a pass."""
+    if state.get("evidencePolicy") != "control-plane-v1" or not implementation_ready_for_overall(state):
+        return None
+    target = next((item for item in state["increments"] if item["id"] == increment_id), None)
+    if not target or target["status"] != "implemented-pending-qualification":
+        return None
+    return {
+        "incrementId": increment_id,
+        "criteria": target["acceptanceCriteria"],
+        "plan": target["plan"],
+        "completedChunks": target["completedChunks"],
+        "evidence": [latest_criterion_evidence(state, increment_id, c["id"]) for c in target["acceptanceCriteria"]],
+    }
 
 
 @contextmanager
@@ -331,7 +348,8 @@ def recover_publication(repo: Path, journal: Path, state_path: str) -> None:
     journal.unlink()
 
 
-def require_control_completion(repo: Path, state: dict[str, Any], *, overall: bool = False) -> None:
+def require_control_completion(repo: Path, state: dict[str, Any], *, overall: bool = False,
+                               increment_id: str | None = None, work_id: str | None = None) -> dict | None:
     if state.get("evidencePolicy") != "control-plane-v1":
         return  # Historical state remains explicitly declarative, never retroactively verified.
     helper = repo / "dev-tools" / "helpers"
@@ -341,17 +359,33 @@ def require_control_completion(repo: Path, state: dict[str, Any], *, overall: bo
     try:
         from control_plane.work import Work
         controller = Work(repo)
-        increment_id = "overall" if overall else state.get("currentIncrementId")
-        expected = {"overall-validation"} if overall else {c["id"] for c in current_increment(state)["acceptanceCriteria"]}
-        candidates = [w for w in controller.records.load()["work_items"].values() if w["status"] == "complete" and (w["spec"].get("roadmap") or {}) == {"state_path": state["paths"]["state"], "increment_id": increment_id} and {c["id"] for c in w["spec"]["acceptance"]} == expected]
+        target_id = "overall" if overall else increment_id or state.get("currentIncrementId")
+        expected = {"overall-validation"} if overall else {c["id"] for c in find_increment(state, target_id)["acceptanceCriteria"]}
+        candidates = [w for w in controller.records.load()["work_items"].values() if w["status"] == "complete" and
+                      (work_id is None or w["spec"]["work_id"] == work_id) and
+                      (w["spec"].get("roadmap") or {}) == {"state_path": state["paths"]["state"], "increment_id": target_id} and
+                      {c["id"] for c in w["spec"]["acceptance"]} == expected]
         if not candidates:
             raise RoadmapError("Complete candidate-bound verification and independent review for every increment criterion first.")
         # Persisted maps sort by identity, not recency. Any current completed correction
         # may qualify, but no stale predecessor may block or replace it.
         for candidate in candidates:
             try:
-                controller.current_receipt(candidate)
-                return
+                receipt = controller.current_receipt(candidate)
+                completion = candidate["completion"]
+                review = next(r for r in candidate["reviews"] if r["review_digest"] == completion["review_digest"])
+                from control_plane.common import digest
+                if (completion["receipt_digest"] != receipt["receipt_digest"] or
+                    completion["source_digest"] != receipt["source_digest"] or
+                    review["receipt_digest"] != receipt["receipt_digest"] or
+                    review["source_digest"] != receipt["source_digest"] or
+                    review["disposition"] != "accepted" or
+                    set(review["reviewed_criteria"]) != expected or
+                    review["invocation_id"] in candidate["contributors"] or
+                    review["review_digest"] != digest({k: v for k, v in review.items() if k != "review_digest"})):
+                    continue
+                return {"workId": candidate["spec"]["work_id"], "receiptDigest": receipt["receipt_digest"],
+                        "reviewDigest": review["review_digest"]}
             except Exception:
                 continue
         raise RoadmapError("Control-plane completion evidence is unavailable or stale.")
@@ -1116,10 +1150,117 @@ def handle_evidence_recorded(state: dict[str, Any], event: dict[str, Any]) -> No
             if not latest or latest["outcome"] != "passed":
                 pending.append(expected["id"])
         increment["pendingCriteria"] = pending
-        if not pending:
+        # Governed declarations do not replace criterion-bound executed review.
+        # An overall check may exist while controlled qualification is still pending.
+        if not pending and state.get("evidencePolicy") != "control-plane-v1":
             increment["status"] = "completed"
             if all(item["status"] == "completed" for item in state["increments"]):
                 state["status"] = "roadmap-ready-to-close"
+
+
+def handle_human_acceptance_transferred(state: dict[str, Any], event: dict[str, Any]) -> None:
+    """Record an explicitly authorized scope handoff, never a passing test."""
+    reject_unknown(event, {"type", "incrementId", "criterionIds", "approvedFingerprint",
+                           "authorityRef", "onlyHumanAcceptance", "summary"}, "event")
+    if state.get("evidencePolicy") is not None:
+        raise RoadmapError("This legacy human-acceptance handoff cannot alter governed completion policy.")
+    if not approval_is_current(state) or event.get("approvedFingerprint") != roadmap_fingerprint(state):
+        raise RoadmapError("Human acceptance transfer requires the current approved fingerprint.")
+    if event.get("onlyHumanAcceptance") is not True:
+        raise RoadmapError("Explicit human-only acceptance attestation is required.")
+    authority = require_identifier(event.get("authorityRef"), "event.authorityRef")
+    summary = require_string(event.get("summary"), "event.summary")
+    increment = find_increment(state, require_identifier(event.get("incrementId"), "event.incrementId"))
+    if increment["status"] != "implemented-pending-qualification" or any(
+        b.get("status") != "resolved" for b in state["blockers"]
+    ):
+        raise RoadmapError("Transfer requires implemented pending qualification with no open blocker.")
+    planned = [c["id"] for c in (increment.get("plan") or {}).get("chunks", [])]
+    completed = increment.get("completedChunks", [])
+    if not planned or len(completed) != len(planned) or set(planned) != set(completed):
+        raise RoadmapError("Complete every implementation chunk before transferring acceptance.")
+    ids = require_string_list(event.get("criterionIds"), "event.criterionIds", minimum=1)
+    if len(ids) != len(set(ids)):
+        raise RoadmapError("Transfer criterion identities must be unique.")
+    selected = set(ids)
+    criteria = increment["acceptanceCriteria"]
+    if selected - {c["id"] for c in criteria} or len(selected) == len(criteria):
+        raise RoadmapError("Transfer requires known criteria and retained technical acceptance.")
+    for c in criteria:
+        evidence = latest_criterion_evidence(state, increment["id"], c["id"])
+        if c["id"] in selected:
+            if c["id"].startswith("security-") or c["qualification"] != "controlled-environment" or not evidence or evidence["outcome"] != "pending":
+                raise RoadmapError("Only pending controlled human acceptance may transfer; security, local, failed or missing checks cannot.")
+        elif not evidence or evidence["outcome"] != "passed":
+            raise RoadmapError("Other technical qualification must pass before human acceptance transfers.")
+    state.setdefault("humanAcceptanceTransfers", []).append({
+        "incrementId": increment["id"], "criteria": copy.deepcopy([c for c in criteria if c["id"] in selected]),
+        "originalPlan": copy.deepcopy(increment["plan"]),
+        "previousApproval": copy.deepcopy(state["roadmapApproval"]),
+        "authorityRef": authority, "summary": summary, "status": "offline-user-owned", "recordedAt": now_utc(),
+    })
+    # Keep original evidence, completed chunks and their plan mappings as history.
+    increment["acceptanceCriteria"] = [c for c in criteria if c["id"] not in selected]
+    increment["pendingCriteria"] = []
+    increment["status"] = "completed"
+    increment["completionSummary"] += " Human acceptance transferred offline by explicit user direction; no human test pass asserted."
+    invalidate_roadmap_approval(state)
+    state["status"] = "approval-required"
+
+
+def handle_acceptance_scope_revised(state: dict[str, Any], event: dict[str, Any]) -> None:
+    """Archive user-owned human scope without supplying qualification authority."""
+    reject_unknown(event, {"type", "incrementId", "approvedFingerprint", "authorityRef",
+                           "onlyHumanScope", "summary", "removeCriterionIds", "replaceCriteria"}, "event")
+    if state.get("evidencePolicy") != "control-plane-v1":
+        raise RoadmapError("Acceptance scope revision requires receipt-governed completion policy.")
+    if not approval_is_current(state) or event.get("approvedFingerprint") != roadmap_fingerprint(state):
+        raise RoadmapError("Acceptance scope revision requires the current approved fingerprint.")
+    if event.get("onlyHumanScope") is not True:
+        raise RoadmapError("Explicit human-only scope attestation is required; review the classification independently.")
+    authority = require_identifier(event.get("authorityRef"), "event.authorityRef")
+    summary = require_string(event.get("summary"), "event.summary")
+    increment = find_increment(state, require_identifier(event.get("incrementId"), "event.incrementId"))
+    if increment["status"] not in {"verifying", "implemented-pending-qualification"}:
+        raise RoadmapError("Revise human scope only after implementation is complete.")
+    planned = [c["id"] for c in (increment.get("plan") or {}).get("chunks", [])]
+    completed = increment.get("completedChunks", [])
+    if not planned or len(completed) != len(planned) or set(planned) != set(completed):
+        raise RoadmapError("Complete every planned implementation chunk before revising acceptance scope.")
+    removed = require_string_list(event.get("removeCriterionIds"), "event.removeCriterionIds")
+    replacements = []
+    for item in require_list(event.get("replaceCriteria"), "event.replaceCriteria"):
+        item = require_object(item, "event.replacement")
+        reject_unknown(item, {"criterion", "humanScope"}, "event.replacement")
+        replacements.append({"criterion": validate_criterion(item.get("criterion"), "event.replacement.criterion"),
+                             "humanScope": require_string(item.get("humanScope"), "event.replacement.humanScope")})
+    ids = removed + [r["criterion"]["id"] for r in replacements]
+    criteria = {c["id"]: c for c in increment["acceptanceCriteria"]}
+    if not ids or len(ids) != len(set(ids)) or set(ids) - criteria.keys() or len(removed) >= len(criteria):
+        raise RoadmapError("Scope revision requires unique known criteria and retained technical acceptance.")
+    for identifier in ids:
+        criterion = criteria[identifier]
+        evidence = latest_criterion_evidence(state, increment["id"], identifier)
+        if identifier.startswith("security-") or criterion["qualification"] != "controlled-environment" or not evidence or evidence["outcome"] != "pending":
+            raise RoadmapError("Only pending controlled human scope may change; security, local, failed or missing checks cannot.")
+    for replacement in replacements:
+        revised = replacement["criterion"]
+        if revised["qualification"] != criteria[revised["id"]]["qualification"] or revised == criteria[revised["id"]]:
+            raise RoadmapError("Mixed scope revisions must retain criterion identity/qualification and change the description.")
+    state.setdefault("acceptanceScopeRevisions", []).append({
+        "incrementId": increment["id"], "removedCriteria": [copy.deepcopy(criteria[k]) for k in removed],
+        "replacedCriteria": [{"original": copy.deepcopy(criteria[r["criterion"]["id"]]),
+                              "revised": copy.deepcopy(r["criterion"]), "humanScope": r["humanScope"]} for r in replacements],
+        "originalPlan": copy.deepcopy(increment["plan"]), "previousApproval": copy.deepcopy(state["roadmapApproval"]),
+        "authorityRef": authority, "summary": summary, "status": "offline-user-owned", "recordedAt": now_utc(),
+    })
+    revised = {r["criterion"]["id"]: r["criterion"] for r in replacements}
+    increment["acceptanceCriteria"] = [revised.get(c["id"], c) for c in increment["acceptanceCriteria"] if c["id"] not in removed]
+    increment["pendingCriteria"] = [k for k in increment.get("pendingCriteria", []) if k not in removed]
+    # Evidence, implementation history, statuses and technical blockers remain intact.
+    # Changed definitions invalidate old receipts through the existing authority binding.
+    invalidate_roadmap_approval(state)
+    state["status"] = "approval-required"
 
 
 def handle_feedback_recorded(state: dict[str, Any], event: dict[str, Any]) -> None:
@@ -1340,6 +1481,32 @@ def handle_roadmap_completed(state: dict[str, Any], event: dict[str, Any]) -> No
     }
 
 
+def handle_increment_qualified(state: dict[str, Any], event: dict[str, Any]) -> None:
+    reject_unknown(event, {"type", "incrementId", "workId", "receiptDigest", "reviewDigest", "summary"}, "event")
+    target_id = require_identifier(event.get("incrementId"), "event.incrementId")
+    if pending_qualification_context(state, target_id) is None:
+        raise RoadmapError("Target qualification requires approved complete implementation, an implemented-pending target and no unresolved blockers.")
+    target = find_increment(state, target_id)
+    if any(not (e := latest_criterion_evidence(state, target_id, c["id"])) or e["outcome"] != "passed"
+           for c in target["acceptanceCriteria"]):
+        raise RoadmapError("Every target criterion must pass before qualification completion.")
+    completion = {"workId": require_identifier(event.get("workId"), "event.workId")}
+    for key in ("receiptDigest", "reviewDigest"):
+        value = require_string(event.get(key), "event." + key, maximum=64)
+        if not re.fullmatch(r"[a-f0-9]{64}", value):
+            raise RoadmapError("Qualification requires exact receipt and review digests.")
+        completion[key] = value
+    completion["qualifiedAt"] = now_utc()
+    target["qualificationCompletion"] = completion
+    target["status"] = "completed"
+    target["pendingCriteria"] = []
+    target["completionSummary"] = require_string(event.get("summary"), "event.summary")
+    target["completedAt"] = completion["qualifiedAt"]
+    if state.get("currentIncrementId") is None:
+        state["status"] = ("roadmap-ready-to-close" if all(i["status"] == "completed" for i in state["increments"])
+                           else "implementation-complete-qualification-pending")
+
+
 def handle_report_relocated(state: dict[str, Any], event: dict[str, Any]) -> None:
     reject_unknown(event, {"type", "reportPath", "reason"}, "event")
     if state.get("finalApproval"):
@@ -1380,10 +1547,13 @@ EVENT_HANDLERS = {
     "increment-plan-recorded": handle_increment_plan_recorded,
     "chunk-recorded": handle_chunk_recorded,
     "evidence-recorded": handle_evidence_recorded,
+    "human-acceptance-transferred": handle_human_acceptance_transferred,
+    "acceptance-scope-revised": handle_acceptance_scope_revised,
     "feedback-recorded": handle_feedback_recorded,
     "blocker-recorded": handle_blocker_recorded,
     "resumed": handle_resumed,
     "increment-completed": handle_increment_completed,
+    "increment-qualified": handle_increment_qualified,
     "roadmap-completed": handle_roadmap_completed,
     "report-relocated": handle_report_relocated,
     "final-approval-recorded": handle_final_approval_recorded,
@@ -1447,8 +1617,54 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
         "finalApproval",
         "evidencePolicy",
         "completionSuite",
+        "humanAcceptanceTransfers",
+        "acceptanceScopeRevisions",
     }
     reject_unknown(state, allowed, "state")
+    for transfer in require_list(state.get("humanAcceptanceTransfers", []), "state.humanAcceptanceTransfers"):
+        reject_unknown(transfer, {"incrementId", "criteria", "originalPlan", "previousApproval", "authorityRef", "summary", "status", "recordedAt"}, "transfer")
+        increment = find_increment(state, require_identifier(transfer.get("incrementId"), "transfer.incrementId"))
+        require_identifier(transfer.get("authorityRef"), "transfer.authorityRef")
+        require_string(transfer.get("summary"), "transfer.summary")
+        require_string(transfer.get("recordedAt"), "transfer.recordedAt", maximum=80)
+        require_object(transfer.get("originalPlan"), "transfer.originalPlan")
+        require_object(transfer.get("previousApproval"), "transfer.previousApproval")
+        if transfer.get("status") != "offline-user-owned":
+            raise RoadmapError("Transferred human acceptance must remain offline-user-owned.")
+        for c in require_list(transfer.get("criteria"), "transfer.criteria", minimum=1):
+            archived = validate_criterion(c, "transfer.criterion")
+            if archived["id"] in {item["id"] for item in increment["acceptanceCriteria"]}:
+                raise RoadmapError("Transferred human acceptance cannot remain an active criterion.")
+    for revision in require_list(state.get("acceptanceScopeRevisions", []), "state.acceptanceScopeRevisions"):
+        revision = require_object(revision, "revision")
+        reject_unknown(revision, {"incrementId", "removedCriteria", "replacedCriteria", "originalPlan", "previousApproval",
+                                  "authorityRef", "summary", "status", "recordedAt"}, "revision")
+        increment = find_increment(state, require_identifier(revision.get("incrementId"), "revision.incrementId"))
+        if state.get("evidencePolicy") != "control-plane-v1" or revision.get("status") != "offline-user-owned":
+            raise RoadmapError("Acceptance scope revision must remain governed and offline-user-owned.")
+        require_identifier(revision.get("authorityRef"), "revision.authorityRef")
+        require_string(revision.get("summary"), "revision.summary")
+        require_string(revision.get("recordedAt"), "revision.recordedAt", maximum=80)
+        require_object(revision.get("originalPlan"), "revision.originalPlan")
+        require_object(revision.get("previousApproval"), "revision.previousApproval")
+        active_ids = {c["id"] for c in increment["acceptanceCriteria"]}
+        ids = []
+        for c in require_list(revision.get("removedCriteria"), "revision.removedCriteria"):
+            c = validate_criterion(c, "revision.removedCriterion")
+            if c["id"] in active_ids or c["id"].startswith("security-") or c["qualification"] != "controlled-environment":
+                raise RoadmapError("Retired human scope cannot be active, local or security acceptance.")
+            ids.append(c["id"])
+        for r in require_list(revision.get("replacedCriteria"), "revision.replacedCriteria"):
+            r = require_object(r, "revision.replacement")
+            reject_unknown(r, {"original", "revised", "humanScope"}, "revision.replacement")
+            original = validate_criterion(r.get("original"), "revision.original")
+            revised = validate_criterion(r.get("revised"), "revision.revised")
+            require_string(r.get("humanScope"), "revision.humanScope")
+            if original["id"] != revised["id"] or original["id"].startswith("security-") or original["qualification"] != "controlled-environment" or revised["qualification"] != "controlled-environment" or original == revised:
+                raise RoadmapError("Archived mixed scope must retain the original technical identity and qualification.")
+            ids.append(original["id"])
+        if not ids or len(ids) != len(set(ids)):
+            raise RoadmapError("Archived scope requires unique criterion identities.")
     if state.get("schemaVersion") != SCHEMA_VERSION:
         raise RoadmapError(
             f"Unsupported state schema version: {state.get('schemaVersion')}."
@@ -1685,6 +1901,8 @@ def render_roadmap(state: dict[str, Any]) -> str:
             ]
         )
         if increment["workPackages"]:
+            if any(r["incrementId"] == increment["id"] for r in state.get("acceptanceScopeRevisions", [])):
+                lines.extend(["Human portions of the original work packages, deliverables, verification and completed plan below are superseded by the exact offline scope archive. They remain historical approved intent; only the current technical acceptance criteria govern future qualification. No test pass is asserted.", ""])
             lines.extend(
                 f"- **{item['title']}** (`{item['id']}`): {item['outcome']}"
                 for item in increment["workPackages"]
@@ -1710,6 +1928,19 @@ def render_roadmap(state: dict[str, Any]) -> str:
                 f"| {criterion['qualification']} "
                 f"| {evidence_label(state, increment['id'], criterion['id'])} |"
             )
+        transfers = [t for t in state.get("humanAcceptanceTransfers", []) if t["incrementId"] == increment["id"]]
+        if transfers:
+            lines.extend(["", "### Human acceptance handled offline", ""])
+            for transfer in transfers:
+                lines.append(f"- {markdown(transfer['summary'])} (`{transfer['authorityRef']}`)")
+                lines.extend(f"  - `{c['id']}`: {markdown(c['description'])} — offline user-owned; no test pass asserted." for c in transfer["criteria"])
+        revisions = [r for r in state.get("acceptanceScopeRevisions", []) if r["incrementId"] == increment["id"]]
+        if revisions:
+            lines.extend(["", "### Human scope handled offline", ""])
+            for revision in revisions:
+                lines.append(f"- {markdown(revision['summary'])} (`{revision['authorityRef']}`)")
+                lines.extend(f"  - `{c['id']}`: {markdown(c['description'])} — offline user-owned; no test pass asserted." for c in revision["removedCriteria"])
+                lines.extend(f"  - Human portion of `{r['original']['id']}`: {markdown(r['humanScope'])} — offline user-owned; technical criterion retained; no test pass asserted." for r in revision["replacedCriteria"])
         lines.extend(
             [
                 "",
@@ -2131,6 +2362,12 @@ def command_apply(args: argparse.Namespace) -> dict[str, Any]:
         event = read_json(Path(args.event_file).resolve(), "event")
         if event.get("type") == "increment-completed":
             require_control_completion(repo, state)
+        elif event.get("type") == "increment-qualified":
+            target_id = require_identifier(event.get("incrementId"), "event.incrementId")
+            work_id = require_identifier(event.get("workId"), "event.workId")
+            completion = require_control_completion(repo, state, increment_id=target_id, work_id=work_id)
+            if completion is None or any(event.get(k) != v for k, v in completion.items()):
+                raise RoadmapError("Qualification must consume the exact current target work, receipt and independent review.")
         elif event.get("type") == "roadmap-completed":
             require_control_completion(repo, state, overall=True)
         updated = apply_event(state, event)

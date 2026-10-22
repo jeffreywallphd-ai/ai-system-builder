@@ -47,6 +47,11 @@ quality review discard never imply stopped work. See the runtime model.
 - Runtime readiness describes capability availability and does not replace task records or task lifecycle operations.
 - Task handlers remain feature-specific but must map into generic registry contracts.
 - Do not introduce feature-specific task queues for dataset/model/image/runtime features.
+- Checked JSON generation retains its original final schema and fingerprint.
+  Only proven disjoint conditional branches may use an equivalent token encoding;
+  original and expanded forms share unchanged bounds. See the runtime model.
+  Keep the pinned backend's default whitespace policy: a lexically equivalent
+  compact-formatting trial regressed actual model quality and was withdrawn.
 
 ## Status And Progress Rules
 

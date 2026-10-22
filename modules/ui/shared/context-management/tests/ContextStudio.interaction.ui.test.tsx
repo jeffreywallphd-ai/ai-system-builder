@@ -160,6 +160,27 @@ async function renderStudio(
 }
 
 describe("ContextStudio", () => {
+  it("resets transient embedding placement when the workspace changes", async () => {
+    const client: ContextManagementClient = {
+      listSourceArtifacts: vi.fn(async () => []),
+      execute: vi.fn(async () => ({ action: "browser-list" as const, items: [] })),
+    };
+    const mounted = await renderStudio(client);
+    const device = () => [...mounted.querySelectorAll<HTMLSelectElement>("select")]
+      .find(select => select.parentElement?.textContent?.includes("Embedding device"))!;
+    expect(device().value).toBe("cpu");
+    await act(async () => setSelect(device(), "cuda"));
+    expect(device().value).toBe("cuda");
+    await act(async () => root?.render(
+      <NotificationProvider>
+        <ContextStudio workspaceId="workspace-b" client={client} />
+        <NotificationRecordProbe workspaceId="workspace-b" />
+      </NotificationProvider>,
+    ));
+    expect(device().value).toBe("cpu");
+    expect(client.execute).toHaveBeenLastCalledWith({workspaceId: "workspace-b", command: {action: "browser-list"}});
+  });
+
   it("reuses persisted chunks, reviews inert output, saves, and opens the new RAG detail", async () => {
     let saved = false;
     let startedCommand:
@@ -300,6 +321,9 @@ describe("ContextStudio", () => {
               },
             };
             break;
+          case "browser-query":
+            value = {action: "browser-query", result: {artifactId: command.request.artifactId, matches: []}};
+            break;
           default:
             throw new Error(`Unexpected command: ${command.action}`);
         }
@@ -376,9 +400,12 @@ describe("ContextStudio", () => {
     ].find((select) =>
       select.parentElement?.textContent?.includes("Chunking method"),
     )!;
+    const embeddingDevice = [...visiblePanel.querySelectorAll<HTMLSelectElement>("select")].find(select => select.parentElement?.textContent?.includes("Embedding device"))!;
+    expect(embeddingDevice.value).toBe("cpu");
     await act(async () => {
       setInput(saveName, "support-rag");
       setSelect(chunkingMethod, "topic-aware");
+      setSelect(embeddingDevice, "cuda");
     });
     await act(async () => button("Prepare RAG database").click());
     await vi.waitFor(() =>
@@ -416,6 +443,7 @@ describe("ContextStudio", () => {
     expect(startedCommand).toMatchObject({
       kind: "rag-database",
       name: "support-rag",
+      embedding: {device: "cuda"},
       sources: [{ artifactId: "uploads/support.parquet" }],
       chunking: {
         strategy: "topic-aware",
@@ -434,6 +462,12 @@ describe("ContextStudio", () => {
     await vi.waitFor(() =>
       expect(document.body.textContent).toContain("Source freshness"),
     );
+    const retrievalDevice = [...document.querySelectorAll<HTMLSelectElement>("select")].find(select => select.parentElement?.textContent?.includes("Retrieval embedding device"))!;
+    expect(retrievalDevice.value).toBe("cpu");
+    const queryInput = [...document.querySelectorAll<HTMLInputElement>("input")].find(input => input.parentElement?.textContent?.trim() === "Query")!;
+    await act(async () => { setSelect(retrievalDevice, "cuda"); setInput(queryInput, "release policy"); });
+    await act(async () => button("Run test query").click());
+    expect(execute).toHaveBeenCalledWith({workspaceId: "workspace-a", command: {action: "browser-query", request: {artifactId: savedItem.artifactId, query: "release policy", maximumResults: 5, embeddingDevice: "cuda"}}});
     expect(mounted.textContent).toContain(
       "support-rag is available in Context Browser.",
     );

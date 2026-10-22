@@ -77,3 +77,64 @@ test("review work items expose chunk progress, criterion links and parent naviga
     assert.match(window.document.querySelector("article").textContent, /Focused verification passed/);
   } finally { window.close(); }
 });
+
+test("review support stays separate from qualification and navigates safely", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), {
+    runScripts: "outside-only", url: "http://127.0.0.1:8766",
+  });
+  const { window } = dom;
+  const support = {
+    work_id: "reviewed-component", status: "reviewed-local-snapshot",
+    receipt_digest: "a".repeat(64), review_digest: "b".repeat(64),
+    scope: "<img src=x onerror=alert(1)>", limitations: ["Reference budget still pending"],
+  };
+  const criteria = [
+    {
+      id: "reference-and-accessibility-qualification", title: "Automated reference checks",
+      description: "Actual automated qualification", outcome: "pending",
+      evaluation_mode: "agent-executable-technical", qualification: "controlled-environment",
+      supporting_work: [support, { ...support, work_id: "unverified-component", status: "unverified-support" }],
+    },
+    { id: "recorded-later", description: "Not yet qualified", outcome: "missing" },
+    { id: "failed-check", description: "Failure stays visible", outcome: "failed" },
+  ];
+  const chunk = {
+    id: "chunk", chunk_number: 1, title: "Complete qualification", outcome: "Gather actual proof",
+    status: "planned", criteria_ids: criteria.map(c => c.id), tests: [],
+  };
+  const response = {
+    schema_version: "development-review-v1", source_digest: "support-snapshot",
+    roadmaps: [{
+      id: "trace", title: "Trace support", status: "executing", current_increment: "one",
+      increments: [{
+        id: "one", number: 1, title: "Qualify outcome", objective: "Preserve evidence authority",
+        status: "verifying", chunks_complete: 0, chunks_planned: 1, chunks: [chunk], criteria,
+      }],
+    }],
+    work_items: [{ id: "reviewed-component", title: "Reviewed component", status: "complete" }],
+    evaluations: [], feedback: [], diagnostics: [],
+  };
+  window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) });
+  window.setInterval = () => 1;
+  try {
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8"));
+    await pause();
+    assert.deepEqual(
+      [...window.document.querySelectorAll(".criteria > li > .status")].map(e => e.textContent),
+      ["technical check pending", "qualification not recorded", "failed"],
+    );
+    assert.match(window.document.querySelector(".increment").textContent, /0 \/ 1 work chunks · 0 \/ 3 criteria passed/);
+    assert.match(window.document.querySelector(".increment").textContent, /1 \/ 3 criteria have reviewed local implementation support/);
+    assert.equal(window.document.querySelector(".work-chunk summary .status").textContent, "planned");
+    assert.match(window.document.querySelector(".local-support > summary").textContent, /^1 reviewed local work records/);
+    assert.match(window.document.querySelector(".local-support").textContent, /unverified support/);
+    assert.match(window.document.querySelector(".local-support").textContent, /Current whole-candidate qualification is not asserted/);
+    assert.match(window.document.querySelector(".criteria").textContent, /Agent-executable technical check.*Human acceptance is offline/);
+    assert.equal(window.document.querySelectorAll("img").length, 0);
+    [...window.document.querySelectorAll("button")].find(b => b.textContent === "View supporting work").click();
+    assert.equal(window.document.querySelector("h1").textContent, "Work items");
+    assert.equal(window.document.querySelector("#search").value, "reviewed-component");
+    assert.equal(window.document.querySelectorAll("article").length, 1);
+    assert.equal(window.document.querySelector("h2").textContent, "Reviewed component");
+  } finally { window.close(); }
+});

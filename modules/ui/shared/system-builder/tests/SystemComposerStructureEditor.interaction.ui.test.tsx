@@ -120,12 +120,20 @@ describe("SystemComposerStructureEditor interactions", () => {
     );
     expect(treeItems).toHaveLength(3);
     expect(treeItems[1]?.getAttribute("aria-selected")).toBe("true");
+    expect(document.getElementById(treeItems[0]!.getAttribute("aria-labelledby")!)?.textContent).toBe("System root");
+    expect(document.getElementById(treeItems[0]!.getAttribute("aria-labelledby")!)?.textContent).not.toContain("Application shell");
+    for (const item of treeItems.filter(item => item.getAttribute("aria-expanded") === "true")) {
+      const ownedGroup = document.getElementById(item.getAttribute("aria-owns")!);
+      expect(ownedGroup?.getAttribute("role")).toBe("group");
+      expect(ownedGroup?.querySelector('[role="treeitem"]')).not.toBeNull();
+    }
     expect(container!.textContent).toContain("System root");
     expect(container!.textContent).toContain("Application shell");
 
     await fire(treeItems[1]!, "keydown", { key: "ArrowUp" });
     expect(onSelect).toHaveBeenCalledWith("instance.root");
     await fire(treeItems[0]!, "keydown", { key: "ArrowLeft" });
+    expect(treeItems[0]?.hasAttribute("aria-owns")).toBe(false);
     expect(
       container!.querySelectorAll<HTMLButtonElement>('[role="treeitem"]'),
     ).toHaveLength(1);
@@ -133,6 +141,12 @@ describe("SystemComposerStructureEditor interactions", () => {
     expect(
       container!.querySelectorAll<HTMLButtonElement>('[role="treeitem"]'),
     ).toHaveLength(3);
+    const toggle = container!.querySelector<HTMLButtonElement>(".system-composer__tree-toggle")!;
+    expect(toggle.getAttribute("aria-hidden")).toBe("true");
+    await click(toggle);
+    expect(document.activeElement).toBe(treeItems[0]);
+    expect(onSelect).toHaveBeenLastCalledWith("instance.root");
+    await fire(treeItems[0]!, "keydown", { key: "ArrowRight" });
 
     expect(
       Array.from(

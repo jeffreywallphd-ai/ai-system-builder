@@ -149,8 +149,8 @@ test("contributor helpers accept portable configuration and expose bounded plans
       checkPlan.map((entry) => entry.label),
       [
         "format",
-        "focused tests",
         "pinned Electron runtime",
+        "focused tests",
         "documentation",
         "agent support",
         "architecture",
@@ -164,7 +164,11 @@ test("contributor helpers accept portable configuration and expose bounded plans
       "node_modules/prettier/bin/prettier.cjs",
       "--check",
     ]);
-    assert.deepEqual(checkPlan[1]?.command.slice(-2), [
+    assert.deepEqual(checkPlan[1]?.command, [
+      "node",
+      "node_modules/electron/install.js",
+    ]);
+    assert.deepEqual(checkPlan[2]?.command.slice(-2), [
       "--",
       "apps/desktop/tests/ci-electron-runtime.unit.test.ts",
     ]);

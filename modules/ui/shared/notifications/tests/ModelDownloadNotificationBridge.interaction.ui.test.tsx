@@ -34,17 +34,36 @@ afterEach(async () => {
   container = undefined;
 });
 
+it("reconciles an existing live activity after another workspace was active without replaying history",async()=>{
+  const a=createWorkspaceId("workspace.a"),b=createWorkspaceId("workspace.b");
+  let status:"running"|"succeeded"="running";
+  const client={listModelDownloads:async({workspaceId}:{workspaceId:string})=>({activities:workspaceId===a?[{workspaceId:a,requestId:"live.a",modelId:"org/model",displayName:"Existing live A",status}]:[{workspaceId:b,requestId:"historical.b",modelId:"org/other",displayName:"Unrelated historical B",status:"succeeded" as const}]})};
+  function Probe(){const n=useNotificationCenter();return <output>{n.records.map(record=>`${record.title}:${record.message}`).join("|")}</output>;}
+  const render=(workspaceId:string)=><NotificationProvider><ActiveWorkspace workspaceId={workspaceId}/><ModelDownloadNotificationBridge client={client} workspaceId={workspaceId}/><Probe/></NotificationProvider>;
+  container=document.createElement("div");document.body.appendChild(container);root=createRoot(container);
+  await act(async()=>{root!.render(render(a));});
+  expect(container.textContent).toContain("Existing live A:Downloading model.");
+  await act(async()=>{root!.render(render(b));});
+  expect(container.textContent).not.toContain("Unrelated historical B");
+  status="succeeded";
+  await act(async()=>{root!.render(render(a));});
+  expect(container.textContent).toContain("Existing live A:Model download completed.");
+  await act(async()=>{root!.render(render(b));root!.render(render(a));});
+  expect(container.textContent).not.toContain("Unrelated historical B");
+});
+
 describe("ModelDownloadNotificationBridge", () => {
   it("keeps authoritative progress visible and announces a later terminal transition", async () => {
     const workspaceId = createWorkspaceId("workspace.downloads");
     let status: "running" | "succeeded" = "running";
+    let percent=25;
     const listModelDownloads = testDouble.fn(async () => ({ activities: [{
       requestId: "download-1",
       workspaceId,
       modelId: "org/model",
       displayName: "Demo model",
       status,
-      progress: status === "running" ? { current: 25, total: 100, percent: 25, unit: "bytes", message: "Downloading model." } : undefined,
+      progress: status === "running" ? { current: percent, total: 100, percent, unit: "bytes", message: "Downloading model." } : undefined,
     }] }));
     let intervalHandler: (() => void) | undefined;
     const originalSetInterval = globalThis.setTimeout;
@@ -68,6 +87,14 @@ describe("ModelDownloadNotificationBridge", () => {
       await act(async () => bell.click());
       expect(container.textContent).toContain("Demo model");
       expect(container.textContent).toContain("25%");
+
+      // The actual observer schedules running work at1000ms. Its next poll
+      // must render a newer progress transition without restarting the task.
+      expect(intervalHandler).toBeDefined();
+      percent=90;
+      await act(async () => { intervalHandler?.(); await Promise.resolve(); });
+      expect(container.textContent).toContain("90%");
+      expect(container.textContent).not.toContain("25%");
 
       status = "succeeded";
       await act(async () => { intervalHandler?.(); await Promise.resolve(); });

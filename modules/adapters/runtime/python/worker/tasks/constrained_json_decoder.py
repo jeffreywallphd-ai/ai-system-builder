@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from collections.abc import Callable, Mapping
+from copy import deepcopy
 from dataclasses import dataclass
 from hashlib import sha256
 import importlib
@@ -332,6 +333,56 @@ def _validate_schema_node(
             )
 
 
+def _same_json(left: Any, right: Any) -> bool:
+    # Python equates True and 1; JSON Schema does not.
+    return json.dumps(left, sort_keys=True, ensure_ascii=False) == json.dumps(right, sort_keys=True, ensure_ascii=False)
+
+
+def _known_property_subset(candidate: dict[str, Any], original: dict[str, Any]) -> bool:
+    if _same_json(candidate, original):
+        return True
+    if set(original) == {"enum"} and set(candidate) == {"const"}:
+        return any(_same_json(candidate["const"], item) for item in original["enum"])
+    if set(original) == {"anyOf"}:
+        return any(_same_json(candidate, item) for item in original["anyOf"])
+    return False
+
+
+def _lower_disjoint_object_choices(schema: dict[str, Any]) -> dict[str, Any] | None:
+    """Only the finite, proven disjoint conditional-object form is lowered.
+
+    The pinned token compiler can ignore sibling oneOf property conditions.
+    Complete branches retain every root constraint. A required discriminator
+    with distinct string constants proves oneOf/anyOf equivalence; each replaced
+    property is an exact known subset, never a guessed schema intersection.
+    """
+    choices = schema.get("oneOf")
+    properties = schema.get("properties")
+    if not isinstance(choices, list) or not isinstance(properties, dict):
+        return None
+    if any(set(choice) != {"properties"} or not isinstance(choice["properties"], dict) for choice in choices):
+        return None
+    if any(name not in properties or not _known_property_subset(rule, properties[name]) for choice in choices for name, rule in choice["properties"].items()):
+        return None
+    disjoint = False
+    for name in schema.get("required", []):
+        rules = [choice["properties"].get(name) for choice in choices]
+        if all(isinstance(rule, dict) and set(rule) == {"const"} and isinstance(rule["const"], str) for rule in rules):
+            values = [rule["const"] for rule in rules]
+            if len(set(values)) == len(values):
+                disjoint = True
+                break
+    if not disjoint:
+        return None
+    branches = []
+    for choice in choices:
+        branch = deepcopy(schema)
+        del branch["oneOf"]
+        branch["properties"].update(deepcopy(choice["properties"]))
+        branches.append(branch)
+    return {"anyOf": branches}
+
+
 def compile_constrained_json_schema(value: Any) -> ConstrainedJsonSchemaPlan:
     if (
         not isinstance(value, dict)
@@ -372,6 +423,30 @@ def compile_constrained_json_schema(value: Any) -> ConstrainedJsonSchemaPlan:
     counters = _SchemaCounters()
     _validate_schema_node(value, depth=0, counters=counters)
     normalized_schema = json.loads(constraint_schema)
+    lowered = _lower_disjoint_object_choices(normalized_schema)
+    if lowered is not None:
+        lowered_counters = _SchemaCounters()
+        try:
+            _validate_schema_node(lowered, depth=0, counters=lowered_counters)
+            lowered_text = json.dumps(lowered, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
+            combined_bytes = byte_count + len(lowered_text.encode("utf-8"))
+            combined_nodes = counters.nodes + lowered_counters.nodes
+            combined_properties = counters.properties + lowered_counters.properties
+            combined_enums = counters.enum_values + lowered_counters.enum_values
+            if (
+                combined_bytes <= CONSTRAINED_JSON_MAX_SCHEMA_BYTES
+                and combined_nodes <= CONSTRAINED_JSON_MAX_SCHEMA_NODES
+                and combined_properties <= CONSTRAINED_JSON_MAX_TOTAL_PROPERTIES
+                and combined_enums <= CONSTRAINED_JSON_MAX_TOTAL_ENUM_VALUES
+            ):
+                constraint_schema = lowered_text
+                byte_count = combined_bytes
+                counters = _SchemaCounters(combined_nodes, combined_properties, combined_enums)
+        except ConstrainedJsonDecoderError as error:
+            if error.code != "decoder-schema-limit":
+                raise
+        # Unsupported or over-budget lowering keeps the original constraints
+        # and its authoritative final validator; acceptance is never broadened.
     return ConstrainedJsonSchemaPlan(
         schema=normalized_schema,
         canonical_schema=canonical_schema,

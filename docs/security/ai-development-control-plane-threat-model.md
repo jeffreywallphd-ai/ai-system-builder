@@ -6,6 +6,18 @@
 
 ## Assets and authority
 
+Pending-target qualification protects the same completion authority. It admits
+only currently approved governed implementation with all chunks complete and no
+blockers, retaining other active work. Exact target plan/chunks, criterion
+semantics, latest evidence and bounded regular report bytes are authority-bound.
+Changing any of them invalidates the work. `increment-qualified` requires every
+target criterion passed and consumes exact current completed work/receipt/review
+references with independent all-criterion coverage. It rejects overall-only,
+partial, wrong-target, stale, failed or self-reviewed evidence. No declaration
+auto-promotes a target. Consumed target evidence becomes historical; final overall
+qualification remains required. Cooperative identity/native filesystem limits
+remain; this path supplies no unavailable model/hardware qualification.
+
 Protect repository integrity, approved scope, acceptance and check policy,
 completion truth, local ownership, recovery evidence and protected inputs.
 The human request and accepted repository decisions grant authority. Work records,
@@ -37,6 +49,18 @@ showing a roadmap chunk cannot manufacture a receipt or reviewer identity.
 | Final roadmap closure uses stale increment results | Separate overall qualification bound to final candidate and configured aggregate suite | Public closure refusal and correction test |
 
 ## Residual risk and recovery
+
+An explicit offline human-acceptance transfer changes scope, not test truth.
+The roadmap engine requires the current approved fingerprint, explicit authority
+reference and human-only attestation, complete implementation, no blocker, pending
+controlled selected criteria and passing retained criteria. Security criteria do
+not transfer. Original criteria/plan/approval are archived and approval is
+invalidated until the exact human-authorized scope is approved again. Independent
+review must distinguish human-only from mixed technical criteria; an operator's
+attestation cannot prove the semantics of arbitrary prose. Public projection omits
+private approval/plan fields, displays offline ownership and asserts no human pass.
+The metadata event refuses any evidence-policy-bearing roadmap. Its legacy scope
+cannot bypass current receipts for governed increment or overall completion.
 
 This is cooperative contributor infrastructure. A malicious process with the same
 filesystem and execution authority can rewrite local state or impersonate a local
@@ -70,6 +94,22 @@ consistent with this cooperative infrastructure's existing trust boundary.
 
 ## Implementation and qualification boundary
 
+Acceptance-scope revision is security-relevant evidence authority. Its governed-only
+event requires current approved fingerprint, explicit user human-only attestation,
+completed implementation and selected pending controlled nonsecurity criteria.
+It rejects local/security/failed/passed/missing checks and changed identities or
+qualification modes. Archives preserve original criteria, plan and approval;
+evidence, status, blockers and completion policy cannot change. Old receipt
+bindings become stale after narrow reapproval. Independent semantic review is
+mandatory because the engine cannot infer human-only meaning from prose or
+authenticate the operator attestation. Safe projection exposes only offline scope
+summaries and never archived authority/plan data. Metadata alone cannot qualify
+the candidate or substitute for automated UI/native/security evidence.
+Governed `evidence-recorded` events cannot implicitly promote pending increments.
+An overall receipt may predate controlled qualification and reviews only its
+overall criterion; it cannot supply missing target-specific review. The public
+completion bridge remains mandatory. Legacy promotion stays explicitly declarative.
+
 The functionality crosswalk is requirements data. Its assessor accepts only
 canonical repository owner paths, bounded JSON/source files, complete exact
 criterion ownership and contained procedure/harness references. It executes no
@@ -90,3 +130,24 @@ files, flush before atomic replacement, preserve old targets on failure and
 remove only their owned temporary entry. Precreated predictable entries cannot
 redirect writes. Native parent identity/reparse replacement races, hostile local
 writers and supported-platform ACL qualification remain separate residual risks.
+
+Supporting-work projection delta: the single contained JSON input is bounded and
+strictly shaped; targets must match known projected roadmap criteria. Historical
+reviewed support requires actual completed work, valid passed receipt/digest,
+source-stable execution, matching spec/selected criteria, accepted separate review
+and completion references. Invalid or missing records never gain the reviewed
+tier. Safe summaries/digests are projected, never raw execution output, reviewer
+identity, private authority, plans or file paths. The UI renders text inertly.
+Support cannot alter parent outcomes/chunks or establish source-current, native,
+production, scanner or controlled qualification. Mapping scope is independently
+reviewed because prose semantics and operator identity are not cryptographically
+proved by this cooperative local store.
+
+Automated accessibility qualification uses only disposable synthetic workspaces,
+the installed fixed axe script and owned local hosts. Reports retain bounded
+rule diagnostics, fixture selectors, counts and source/profile digests, never
+DOM, credentials or entered content. All incomplete rules remain visible;
+contrast retries measure the same exact element after scrolling, with original
+attempts preserved. A profile mismatch, unresolved rule, browser failure or
+source drift prevents a pass. UI corrections change no authorization, preview
+execution, model loading or data-retention authority.

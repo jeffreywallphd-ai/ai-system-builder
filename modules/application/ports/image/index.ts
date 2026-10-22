@@ -4,3 +4,4 @@ export * from "./image-binary-retrieval.port";
 
 export * from "./generated-image-persistence.port";
 export * from "./finalize-generated-output.port";
+export * from "./image-resource-identity.port";

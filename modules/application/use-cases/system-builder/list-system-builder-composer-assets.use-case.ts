@@ -90,6 +90,17 @@ export class ListSystemBuilderComposerAssetsUseCase {
       const seenCursors = new Set<string>();
       const seenItems = new Set(items.map(item => `${item.definitionId}@${item.version}`));
       const diagnostics: {severity: "info" | "warning" | "error"; code: string; message: string}[] = [];
+      // Slot alternatives are OR predicates. A registry query combines filters
+      // with AND, so push down only a sole necessary branch. Trusted Foundation
+      // bridges are already projected above; otherwise keep their full scan.
+      const canFilterSlot = normalized.value.compatibleOnly && slot &&
+        (!projectCurrentFoundation || hasTrustedFoundation) &&
+        !slot.acceptedDefinitionRefs?.length;
+      const necessarySlotFilter = canFilterSlot && slot.acceptedAssetTypes?.length && !slot.acceptedAssetFamilies?.length
+        ? {assetTypes: slot.acceptedAssetTypes}
+        : canFilterSlot && slot.acceptedAssetFamilies?.length && !slot.acceptedAssetTypes?.length
+          ? {assetFamilies: slot.acceptedAssetFamilies}
+          : {};
       // Never fetch more raw candidates than remaining output capacity: there
       // is then no compatible result to discard when the page fills.
       for (let scan = 0; items.length < normalized.value.limit && !continuation.d && scan < 100; scan++) {
@@ -99,6 +110,10 @@ export class ListSystemBuilderComposerAssetsUseCase {
         const remaining = normalized.value.limit - items.length;
         const cards = await this.definitions.listDefinitionCards({
           workspaceId: normalized.value.workspaceId,
+          // These are necessary slot predicates, never a replacement for the
+          // authoritative detail compatibility check below. Filtering before
+          // paging avoids repeatedly materializing unrelated sparse candidates.
+          ...necessarySlotFilter,
           ...(normalized.value.searchText ? { searchText: normalized.value.searchText } : {}),
           ...(continuation.r ? { cursor: continuation.r } : {}), limit: remaining,
         });

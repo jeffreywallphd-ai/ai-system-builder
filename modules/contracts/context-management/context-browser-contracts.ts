@@ -77,6 +77,8 @@ export interface ContextRetrievalRequest {
   readonly artifactId: string;
   readonly query: string;
   readonly maximumResults?: number;
+  /** Execution placement only; the verified manifest owns model identity. */
+  readonly embeddingDevice?: "cpu" | "cuda" | "auto";
 }
 
 export interface ContextRetrievalMatch {

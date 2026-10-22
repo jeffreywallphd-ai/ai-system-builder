@@ -1,6 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { platform as runtimePlatform, tmpdir } from "node:os";
+import { platform as runtimePlatform } from "node:os";
 import {
   spawnSync,
   type SpawnSyncReturns,
@@ -13,7 +11,9 @@ export interface EnsurePythonRuntimeWorkerDependenciesOptions {
   env?: NodeJS.ProcessEnv;
   requirementsFile?: string;
   trainingRequirementsFile?: string;
+  /** @deprecated Ignored: a pathname grants no private persistence authority. */
   diagnosticsFile?: string;
+  onDiagnosticOutcomes?: (outcomes: PythonDependencyOutcomes) => void | Promise<void>;
   torchPackageSpecifier?: string;
   torchIndexesByBackend?: Partial<Record<TorchInstallBackend, string>>;
   installTimeoutMs?: number;
@@ -78,6 +78,24 @@ interface TorchInstallDiagnostics {
     success: boolean;
     backend: TorchInstallBackend;
   };
+}
+
+export interface PythonDependencyOutcomes {
+  readonly schemaVersion: "python-dependency-outcomes-v1";
+  readonly operation: "worker" | "model-training";
+  readonly platform: string;
+  readonly success: boolean;
+  readonly detectedBackend?: TorchInstallBackend;
+  readonly selectedBackend?: TorchInstallBackend;
+  readonly verificationResult?: Readonly<{ success: boolean; backend: TorchInstallBackend }>;
+  readonly stages: readonly Readonly<CommandExecutionRecord>[];
+}
+
+// Two finite operation keys, replaced on every attempt; no transcript history.
+const sessionOutcomes = new Map<PythonDependencyOutcomes["operation"], PythonDependencyOutcomes>();
+
+export function readPythonRuntimeDependencySessionOutcomes(): readonly PythonDependencyOutcomes[] {
+  return Object.freeze([...sessionOutcomes.values()]);
 }
 
 const DEFAULT_TORCH_INDEX_BY_BACKEND: Record<TorchInstallBackend, string> = {
@@ -633,51 +651,37 @@ except Exception as error:
   };
 }
 
-function persistDiagnostics(
+function publishDiagnostics(
   options: EnsurePythonRuntimeWorkerDependenciesOptions,
   diagnostics: TorchInstallDiagnostics,
 ): void {
-  const diagnosticsDirectory = join(
-    tmpdir(),
-    "ai-system-builder",
-    "python-runtime",
-  );
-  const defaultPath = join(
-    diagnosticsDirectory,
-    "worker-dependency-diagnostics.json",
-  );
-  const filePath = options.diagnosticsFile ?? defaultPath;
-  try {
     // Explicit projection: never serialize subprocess transcripts, command inputs,
     // environment inspection, index URLs, error messages or arbitrary payloads.
-    const outcomes = {
+    const outcomes: PythonDependencyOutcomes = Object.freeze({
       schemaVersion: "python-dependency-outcomes-v1",
       operation: diagnostics.operation,
       platform: SUPPORTED_PLATFORMS.has(diagnostics.os as NodeJS.Platform) ? diagnostics.os : "other",
       success: diagnostics.success,
       detectedBackend: diagnostics.detectedAccelerator,
       selectedBackend: diagnostics.selectedBackend,
-      verificationResult: diagnostics.verificationResult ? {
+      verificationResult: diagnostics.verificationResult ? Object.freeze({
         success: diagnostics.verificationResult.success,
         backend: diagnostics.verificationResult.backend,
-      } : undefined,
-      stages: diagnostics.executedCommands.map(record => ({
+      }) : undefined,
+      stages: Object.freeze(diagnostics.executedCommands.map(record => Object.freeze({
         stage: record.stage,
         backend: record.backend,
         exitCode: record.exitCode,
         success: record.success,
         attempts: record.attempts,
         failedAttempts: record.failedAttempts,
-      })),
-    };
-    mkdirSync(dirname(filePath), { recursive: true });
-    writeFileSync(
-      filePath,
-      `${JSON.stringify(outcomes, null, 2)}\n`,
-      "utf8",
-    );
+      }))),
+    });
+  sessionOutcomes.set(outcomes.operation, outcomes);
+  try {
+    void Promise.resolve(options.onDiagnosticOutcomes?.(outcomes)).catch(() => {});
   } catch {
-    // Best-effort diagnostics persistence. Dependency setup should still fail/succeed independently.
+    // A trusted observer cannot change setup success/failure; retain no observer exception.
   }
 }
 
@@ -948,7 +952,7 @@ export function ensurePythonRuntimeWorkerDependencies(
     );
     diagnostics.success = true;
   } finally {
-    persistDiagnostics(options, diagnostics);
+    publishDiagnostics(options, diagnostics);
   }
 }
 
@@ -971,19 +975,6 @@ export function ensurePythonRuntimeModelTrainingDependencies(
     );
     diagnostics.success = true;
   } finally {
-    persistDiagnostics(
-      {
-        ...options,
-        diagnosticsFile:
-          options.diagnosticsFile ??
-          join(
-            tmpdir(),
-            "ai-system-builder",
-            "python-runtime",
-            "model-training-dependency-diagnostics.json",
-          ),
-      },
-      diagnostics,
-    );
+    publishDiagnostics(options, diagnostics);
   }
 }

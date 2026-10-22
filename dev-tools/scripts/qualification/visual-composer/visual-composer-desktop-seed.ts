@@ -1,4 +1,7 @@
 import path from "node:path";
+import { composeInternalAssetRegistry } from "../../../../modules/hosts/shared/composition/composeInternalAssetRegistry";
+import { createWorkspaceId } from "../../../../modules/contracts/workspace";
+import { seedReferenceBrowseFixture } from "./reference-browse-fixture";
 
 import {
   openLocalSqliteDatabase,
@@ -25,13 +28,22 @@ async function main(): Promise<void> {
     policy: resolveLocalSqliteDatabasePolicy({ dataRootDirectory: dataRoot }),
   });
   try {
-    const existing = await readLocalIdentityProfile(database.documents);
+    let existing = await readLocalIdentityProfile(database.documents);
     if (!existing) {
       await initializeLocalIdentityProfile({
         documents: database.documents,
         organizationDisplayName: "Qualification Organization",
         principalDisplayName: "Qualification Owner",
       });
+      existing = await readLocalIdentityProfile(database.documents);
+    }
+    if(process.env.VISUAL_COMPOSER_LARGE_FIXTURE==="1") {
+      if(!existing)throw new Error("Reference qualification identity is unavailable.");
+      const documents=database.documents.forOrganization(existing.organizationId);
+      const composition=composeInternalAssetRegistry({rootDirectory:dataRoot,documents});
+      const result=await composition.workspaceUseCases.createWorkspace.execute({command:{displayName:"Desktop reference performance"},organizationId:existing.organizationId,generateWorkspaceId:()=>createWorkspaceId("workspace.reference.performance"),selectAfterCreate:true});
+      if(result.status!=="created"||!result.workspace)throw new Error("Reference workspace setup failed.");
+      await seedReferenceBrowseFixture({documents,definitionDocuments:documents,rootDirectory:dataRoot,workspaceId:result.workspace.workspaceId});
     }
   } finally {
     database.close();

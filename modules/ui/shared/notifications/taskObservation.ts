@@ -151,6 +151,7 @@ export class BoundedTaskIds {
   private readonly ids = new Set<string>();
   public has(id: string): boolean { return this.ids.has(id); }
   public clear(): void { this.ids.clear(); }
+  public delete(id: string): void { this.ids.delete(id); }
   public add(id: string): void { this.ids.delete(id); this.ids.add(id); if (this.ids.size > 100) this.ids.delete(this.ids.values().next().value!); }
   public get size(): number { return this.ids.size; }
 }

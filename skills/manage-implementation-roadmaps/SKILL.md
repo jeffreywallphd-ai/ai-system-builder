@@ -24,6 +24,37 @@ binding for current aggregate qualification. The final increment may be verifyin
 while all predecessors are implemented. Pending controlled qualification never
 becomes a pass and still prevents final roadmap closure.
 
+When the human explicitly takes human acceptance testing offline, use
+`human-acceptance-transferred` as documented in `references/events.md`. Close only
+legacy implemented increments whose sole remaining criteria are human acceptance.
+This metadata handoff refuses receipt-governed roadmaps; those retain their
+candidate-bound completion policy and require separately qualified scope changes.
+Archive the original criteria and approval, preserve evidence and chunk history,
+and record the human's narrow scope approval through `roadmap-approved` afterward.
+Offline acceptance is user-owned, never a passing test. Mixed performance,
+hardware, provider, runtime and security checks remain technical qualification.
+Review the classification independently; the event's human-only attestation is
+operator supplied and cannot infer the meaning of arbitrary criterion prose.
+
+For technical roadmaps, define agent-executable acceptance, including automated UI
+tests where relevant; human studies/manual acceptance belong offline. For a started
+receipt-governed roadmap, use `acceptance-scope-revised` to remove purely human
+criteria or revise mixed descriptions under their existing IDs/qualification.
+Archive originals and explicitly supersede human portions of historical plans;
+retain automated accessibility, zero-data-loss/authority invariants and all
+performance, model, hardware, native and security checks. This event never closes
+an increment, changes evidence or qualifies a test. Independently review the exact
+classification, record actual narrow user reapproval, then obtain fresh current
+receipts/review for technical closure. Unavailable technical checks stay pending.
+Governed evidence declarations never auto-complete an implemented-pending
+increment, even when an overall review exists. After actual technical checks pass,
+record the exact evidence/reports, create fresh work bound to that pending target
+with every criterion, verify and independently review it, then use
+`increment-qualified` with its exact work/receipt/review references. This path
+requires all implementation complete and preserves any other active increment.
+Evidence, report or plan changes invalidate qualification work. Do not fabricate
+an active implementation or bypass target review with overall evidence.
+
 1. Read the repository agent instructions, root README, documentation entry point,
    current worktree status, affected code, nearest README files, tests, architecture
    decisions, change-impact guidance, and

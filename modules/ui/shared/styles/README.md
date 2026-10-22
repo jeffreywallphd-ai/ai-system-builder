@@ -8,6 +8,14 @@ Keep the import order token-first. Add a rule here only when both application su
 
 Do not recreate app-local copies of a shared stylesheet. Both app entrypoints should import `application.css`, and changes to shared rules should be verified in both builds and viewport shapes.
 
+System Builder, its asset picker and composition preview suppress cosmetic
+animations/transitions when reduced motion is requested, including shared controls
+inside those surfaces. Status meaning remains available as text. The real-host
+browse qualification checks computed motion, contrast, semantics and narrow reflow
+on both desktop and thin client.
+The main reading surface is opaque, so decorative backgrounds cannot obscure
+text contrast or make its automated measurement indeterminate.
+
 Page headers and the Home workspace card use the shared `page-dashboard`
 surface instead of decorative artwork. Keep metric cards responsive,
 text-labeled, and based on authoritative scoped reads. Page dashboards stay in
@@ -18,6 +26,11 @@ grid. Do not reintroduce
 The summaries are hidden at small-screen widths so primary page controls retain
 the viewport. Do not reintroduce shell-level or Home hero images as a substitute
 for current workspace state.
+
+Home workspace controls stay within the copy column: selector/change controls
+wrap, and workspace creation uses the following row. Long names and active
+workspace controls must not overflow beneath the summary cards or block pointer
+access. Verify the real Home-to-create journey with an existing workspace.
 
 Unselected tabs retain a visible border so the complete tab set reads as interactive. Wide-screen navigation groups use semantic disclosure controls, and collapsing the global sidebar must allow the content container to use the reclaimed width. Colored type badges and action icons are shared primitives: use them alongside text, not as unlabeled substitutes.
 

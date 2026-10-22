@@ -22,3 +22,13 @@ cannot discard their pending reviews or finalization receipts; it does not query
 unscoped public task listings. Other disposable providers serialize replacement
 with cleanup and retain the existing owner on uncertainty. Heavy processes keep
 their explicit stop/unload policies.
+
+Shared Asset Library composition binds authored assets, revisions, drafts and
+overrides to the same organization-scoped document store as the workspace. Custom
+list and detail reads require persisted workspace sources; metadata grants no
+authority and another workspace or organization cannot read those definitions.
+
+Desktop's lazy System Builder and reuse readers preserve the same ordered batch
+detail method as the scoped registry. Opening the host does not initialize that
+feature. An admitted batch forwards its original workspace/options once; reader
+failure propagates without replaying one full collection read per component.

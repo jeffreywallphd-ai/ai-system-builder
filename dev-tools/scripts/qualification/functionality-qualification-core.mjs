@@ -99,14 +99,26 @@ export function readFunctionalitySourceIdentity(root) {
   const files = [...new Set(listed.split("\0").filter(Boolean))].sort();
   if (!files.length || files.length > 20000) fail();
   const hash = createHash("sha256");
+  let presentFiles = 0;
   for (const name of files) {
+    // Git enumerates tracked unstaged deletions too. Hash the present candidate
+    // independently of index staging; only this initial absence is admissible.
+    // Explicit evidence, unsafe files and errors after discovery still fail.
+    try {
+      lstatSync(path.join(root, name));
+    } catch (error) {
+      if (error?.code === "ENOENT") continue;
+      throw error;
+    }
     const file = repositoryFile(root, name);
+    presentFiles += 1;
     hash
       .update(name)
       .update("\0")
       .update(readBounded(file, 8 * 1024 * 1024))
       .update("\0");
   }
+  if (!presentFiles) fail();
   return hash.digest("hex");
 }
 

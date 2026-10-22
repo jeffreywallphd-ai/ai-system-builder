@@ -13,6 +13,34 @@ import { AssetRegistryReadFacade, AssetRegistryReadFacadeError } from "../../../
 import { BUILT_IN_ASSET_DEFINITION_CATALOG } from "../../../../application/services/asset/built-ins";
 import { SYSTEM_FOUNDATION_PACK_MANIFEST } from "../../../../application/services/asset-packs";
 import { composeInternalAssetRegistry } from "../composeInternalAssetRegistry";
+import {createInMemoryStructuredDocumentStore} from "../../../../adapters/persistence/shared";
+import {LocalAssetAuthoringRecordStore} from "../../../../adapters/persistence/asset-authoring";
+import {createOrganizationId} from "../../../../contracts/organization";
+
+it("composes published authored definitions only into their owning workspace and organization",async()=>{
+  const root=createInMemoryStructuredDocumentStore();
+  const a=root.forOrganization(createOrganizationId("organization.a"));
+  const b=root.forOrganization(createOrganizationId("organization.b"));
+  const primary=composeInternalAssetRegistry({rootDirectory:"shared-authoring-fixture",documents:a,definitionDocuments:root});
+  const foreign=composeInternalAssetRegistry({rootDirectory:"shared-authoring-fixture",documents:b,definitionDocuments:root});
+  const workspaceId=createWorkspaceId("workspace.authored");const foreignWorkspaceId=createWorkspaceId("workspace.foreign");
+  await primary.workspaceUseCases.createWorkspace.execute({command:{displayName:"Primary"},organizationId:createOrganizationId("organization.a"),generateWorkspaceId:()=>workspaceId});
+  await foreign.workspaceUseCases.createWorkspace.execute({command:{displayName:"Foreign"},organizationId:createOrganizationId("organization.b"),generateWorkspaceId:()=>foreignWorkspaceId});
+  const definition=validDefinition({definitionId:"workspace.published.component",assetType:"ui-component",assetFamily:"structural",lifecycleStatus:"published"});
+  await primary.assetKernel.repositories.definitionRepository.saveDefinition(definition);
+  const time="2026-10-21T00:00:00Z";
+  const reference={kind:"asset-definition-version",id:definition.definitionId,version:definition.version} as AssetReference;
+  const store=new LocalAssetAuthoringRecordStore({rootDir:"shared-authoring-fixture",documents:a});
+  await store.writeCollection("authoredAssets",[{workspaceId,authoredAssetId:"authored.component",assetReference:reference,currentRevisionId:"revision.component",status:"published",editableValues:{"display-name":"Published component"},provenance:{kind:"authored-from-scratch",operationAt:time},createdAt:time,updatedAt:time}]);
+  await store.writeCollection("revisions",[{workspaceId,authoredAssetId:"authored.component",revisionId:"revision.component",revision:"1.0.0",status:"published",editableValues:{"display-name":"Published component"},provenance:{kind:"revised-authored-asset",operationAt:time},createdAt:time,updatedAt:time,publishedAt:time}]);
+  const result=await primary.workspaceReadFacade.listDefinitionCards({workspaceId,searchText:"workspace.published.component"});
+  assert.deepEqual(result.items.map(item=>item.definitionId),[definition.definitionId]);
+  const detail=await primary.workspaceReadFacade.readDefinitionDetail(reference,{workspaceId});
+  assert.equal(detail?.definition.definitionId,definition.definitionId);
+  assert.equal((await foreign.workspaceReadFacade.listDefinitionCards({workspaceId:foreignWorkspaceId,searchText:"workspace.published.component"})).items.length,0);
+  await assert.rejects(foreign.workspaceReadFacade.readDefinitionDetail(reference,{workspaceId:foreignWorkspaceId}),/workspace effective asset view/);
+  await assert.rejects(primary.workspaceReadFacade.listDefinitionCards({workspaceId:foreignWorkspaceId}));
+});
 
 const definitionRef: AssetReference = { kind: "asset-definition-version", id: "definition.internal", version: "1.0.0" } as AssetReference;
 

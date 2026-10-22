@@ -29,6 +29,7 @@ import {
   createLocalAssetInstanceRepositoryAdapter,
 } from "..";
 import { createInMemoryStructuredDocumentStore } from "../../shared";
+import { AssetRegistryReadFacade } from "../../../../application/services/asset/asset-registry-read-facade.service";
 
 const definitionRef: AssetReference = {
   kind: "asset-definition",
@@ -55,6 +56,39 @@ const bindingRef: AssetReference = {
 async function tempRoot(): Promise<string> {
   return mkdtemp(join(tmpdir(), "asset-kernel-store-"));
 }
+
+for(const includeBuiltIns of [undefined,false]) it(`multi-type catalog preserves complete sparse pages without repeated raw scans (${includeBuiltIns})`,async()=>{
+  const options={rootDir:await tempRoot(),documents:createInMemoryStructuredDocumentStore()};
+  const store=new LocalAssetRecordStore(options);
+  await store.writeCollection("definitions",Array.from({length:1000},(_,i)=>validDefinition({definitionId:`reference.${String(i).padStart(4,"0")}`,displayName:`Reference ${String(i).padStart(4,"0")}`,assetType:i%10===0?"ui-component":"tool",assetFamily:"structural"})));
+  const repository=createLocalAssetDefinitionRepositoryAdapter(options);
+  let reads=0;const original=repository.listDefinitions.bind(repository);
+  repository.listDefinitions=async query=>{reads++;return original(query);};
+  const facade=new AssetRegistryReadFacade({definitionRepository:repository,instanceRepository:{} as never,compositionRepository:{} as never});
+  const query={assetTypes:["ui-component","page","feature"] as const,searchText:"Reference",limit:48,...(includeBuiltIns===false?{includeBuiltIns:false}:{})};
+  const first=await facade.listDefinitionCards(query);
+  assert.equal(first.items.length,48);assert.equal(reads,1);
+  assert.equal(first.items[0]!.definitionId,"reference.0000");assert.equal(first.items[47]!.definitionId,"reference.0470");
+  const found=first.items.map(item=>item.definitionId);let cursor=first.nextCursor;const seen=new Set<string>();
+  while(cursor){assert.ok(!seen.has(cursor));seen.add(cursor);const page=await facade.listDefinitionCards({...query,cursor});found.push(...page.items.map(item=>item.definitionId));cursor=page.nextCursor;}
+  assert.deepEqual(found,Array.from({length:100},(_,i)=>`reference.${String(i*10).padStart(4,"0")}`));
+  assert.equal(reads,3);
+});
+
+it("repository alternatives use OR within each field and preserve scalar intersections",async()=>{
+  const options={rootDir:await tempRoot(),documents:createInMemoryStructuredDocumentStore()};
+  await new LocalAssetRecordStore(options).writeCollection("definitions",[
+    validDefinition({definitionId:"a",assetType:"ui-component",assetFamily:"structural"}),
+    validDefinition({definitionId:"b",assetType:"tool",assetFamily:"behavioral"}),
+    validDefinition({definitionId:"c",assetType:"tool",assetFamily:"resource-backed"}),
+    validDefinition({definitionId:"d",assetType:"system",assetFamily:"structural"}),
+  ]);
+  const repository=createLocalAssetDefinitionRepositoryAdapter(options);
+  const query={assetTypes:["ui-component","tool"] as const,assetFamilies:["structural","behavioral"] as const};
+  assert.deepEqual((await repository.listDefinitions(query)).definitions.map(item=>item.definitionId),["a","b"]);
+  assert.deepEqual((await repository.listDefinitions({...query,assetType:"tool"})).definitions.map(item=>item.definitionId),["b"]);
+  assert.equal((await repository.listDefinitions({assetTypes:[],assetFamilies:[]})).definitions.length,4);
+});
 
 function fixedNow(): string {
   return "2026-05-07T00:00:00.000Z";

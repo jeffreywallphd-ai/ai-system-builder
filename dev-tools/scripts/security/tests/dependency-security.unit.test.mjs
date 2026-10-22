@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, mkdtemp, writeFile, rm, mkdir } from "node:fs/promises";
 import http from "node:http";
 import { createRequire } from "node:module";
 import path from "node:path";
 import test from "node:test";
+import { pathToFileURL } from "node:url";
 
 import {
   evaluateAuditReport,
@@ -59,17 +60,23 @@ test("root manifest and lock retain the reviewed patched toolchain boundary", as
   ]);
 
   assert.equal(manifest.engines.node, ">=24 <25");
-  assert.equal(manifest.devDependencies.electron, "41.10.7");
+  assert.equal(manifest.devDependencies.electron, "42.11.3");
   assert.equal(manifest.dependencies.selfsigned, "5.5.0");
   assert.deepEqual(manifest.overrides, {
     "brace-expansion": "$brace-expansion",
-    "fast-uri": "3.1.8",
     tar: "7.5.22",
     tmp: "0.2.7",
-    "webpack-dev-server": "5.2.7",
-    sockjs: { uuid: "11.1.1" },
+    "@electron/get": { undici: "7.29.1" },
   });
-  assert.equal(lockfile.packages["node_modules/electron"].version, "41.10.7");
+  assert.equal(lockfile.packages["node_modules/electron"].version, "42.11.3");
+  assert.equal(
+    lockfile.packages["node_modules/electron"].resolved,
+    "https://registry.npmjs.org/electron/-/electron-42.11.3.tgz",
+  );
+  assert.equal(
+    lockfile.packages["node_modules/electron"].integrity,
+    "sha512-r/rC6BikQ2vEGQLhnHmFwFpvVPlWTc/rnHcYfJe4HDa5MEl00yhx72ffKw7zMf1WvAM2r2hcGJ3ZftuJRo0QaQ==",
+  );
   assert.equal(lockfile.packages["node_modules/selfsigned"].version, "5.5.0");
 
   const lockedPackages = Object.entries(lockfile.packages);
@@ -90,22 +97,23 @@ test("root manifest and lock retain the reviewed patched toolchain boundary", as
   // npm may place the exact upstream alias beneath its local file consumer.
   // Check all locked instances instead of assuming a hoisted physical layout.
   assert.deepEqual([...new Set(versionsFor("brace-expansion-upstream"))], ["5.0.12"]);
-  assert.deepEqual([...new Set(versionsFor("fast-uri"))], ["3.1.8"]);
+  assert.deepEqual(versionsFor("fast-uri"), []);
   assert.deepEqual([...new Set(versionsFor("tar"))], ["7.5.22"]);
   // The supported Forge migration removes the old tmp consumer entirely.
   assert.deepEqual(versionsFor("tmp"), []);
-  assert.deepEqual([...new Set(versionsFor("uuid"))], ["11.1.1"]);
-  assert.deepEqual([...new Set(versionsFor("webpack-dev-server"))], ["5.2.7"]);
+  for (const obsolete of ["@electron-forge/plugin-webpack", "webpack", "webpack-dev-server", "braces", "micromatch", "http-proxy-middleware"]) {
+    assert.deepEqual(versionsFor(obsolete), [], `${obsolete} must not remain in the resolved toolchain`);
+  }
+  assert.equal(manifest.devDependencies["@electron-forge/plugin-vite"], "8.0.1");
+  assert.equal(manifest.devDependencies.vite, "7.3.7");
+  assert.deepEqual([...new Set(versionsFor("undici").filter(version => version.startsWith("7.")))], ["7.29.1"]);
 });
 
 test("reviewed overrides retain the APIs used by the Electron Forge toolchain", () => {
   const require = createRequire(import.meta.url);
   const braceExpansion = require("brace-expansion");
-  const fastUri = require("fast-uri");
   const glob = require("glob");
   const tar = require("tar");
-  const uuid = require("uuid");
-  const WebpackDevServer = require("webpack-dev-server");
 
   assert.equal(typeof braceExpansion, "function");
   assert.equal(braceExpansion.expand, braceExpansion);
@@ -122,14 +130,8 @@ test("reviewed overrides retain the APIs used by the Electron Forge toolchain", 
     glob.sync("package.json", { cwd: process.cwd(), nodir: true }),
     ["package.json"],
   );
-  assert.equal(fastUri.parse("https://example.com/path").host, "example.com");
   assert.equal(typeof tar.extract, "function");
-  assert.match(
-    uuid.v4(),
-    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
-  );
-  assert.equal(typeof WebpackDevServer, "function");
-  assert.equal(typeof WebpackDevServer.prototype.start, "function");
+
 });
 
 test("brace expansion compatibility supports both ESM named and CommonJS callable consumers", async () => {
@@ -156,53 +158,59 @@ test("patched proxy subnet matching denies unrelated IPv4 identities", () => {
   }
 });
 
-test("patched webpack dev server supports the Forge lifecycle and same-origin response policy", async (t) => {
-  const require = createRequire(import.meta.url);
-  const webpack = require("webpack");
-  const WebpackDevServer = require("webpack-dev-server");
-  const compiler = webpack({
-    mode: "development",
-    entry: {},
-    output: {
-      path: path.resolve(
-        "artifacts",
-        "test-runtime",
-        "webpack-dev-server-compatibility",
-      ),
-    },
-  });
-  const server = new WebpackDevServer(
-    {
-      host: "127.0.0.1",
-      port: 0,
-      static: false,
-      hot: false,
-      client: false,
-      setupExitSignals: false,
-    },
-    compiler,
-  );
-  t.after(async () => {
-    await server.stop();
-    await new Promise((resolve, reject) =>
-      compiler.close((error) => (error ? reject(error) : resolve())),
-    );
-  });
-
-  await server.start();
-  const address = server.server?.address();
+test("Vite development serves source but denies private evidence and foreign origins", { timeout: 15_000 }, async (t) => {
+  const { createServer } = await import("vite");
+  // The aggregate runner stages executable files, not renderer HTML. Exercise
+  // the real repository server config and filesystem boundary in either mode.
+  const { createDesktopRendererConfig } = await import(pathToFileURL(
+    path.resolve("apps/desktop/vite.renderer.shared.mjs"),
+  ).href);
+  const config = createDesktopRendererConfig("main_window", "renderer", 0);
+  assert.equal(config.root, path.resolve("apps/desktop/src/renderer"));
+  const privateRoot = path.resolve(".local-codex/t");
+  await mkdir(privateRoot, { recursive: true });
+  const fixtureRoot = await mkdtemp(path.join(privateRoot, "vite-denial-"));
+  const privateFile = path.join(fixtureRoot, "synthetic-private-diagnostic.json");
+  await writeFile(privateFile, '{"fixture":"private evidence must not be served"}');
+  const artifactRoot = path.resolve("artifacts/test-runtime");
+  await mkdir(artifactRoot, { recursive: true });
+  const artifactFixtureRoot = await mkdtemp(path.join(artifactRoot, "vite-denial-"));
+  const artifact = path.join(artifactFixtureRoot, "synthetic-private-diagnostic.json").replaceAll("\\", "/");
+  await writeFile(artifact, '{"fixture":"private artifact must not be served"}');
+  // This test owns HTTP exposure, not React transformation. Avoid dependency
+  // optimization/watch work shared with concurrent bundle tests; real dev and
+  // packaged UI journeys qualify the unchanged React pipeline separately.
+  const server = await createServer({ ...config, configFile: false, logLevel: "silent", plugins: [], server: { ...config.server, watch: null, hmr: false }, optimizeDeps: { noDiscovery: true, include: [] } });
+  t.after(async () => { server.httpServer?.closeAllConnections(); await server.close(); await rm(fixtureRoot, { recursive: true, force: true }); await rm(artifactFixtureRoot, { recursive: true, force: true }); });
+  await server.listen();
+  const address = server.httpServer.address();
   assert.ok(address && typeof address === "object");
-  const response = await new Promise((resolve, reject) => {
-    const request = http.get(
-      { host: "127.0.0.1", port: address.port, path: "/" },
-      (result) => {
-        result.resume();
-        result.once("end", () => resolve(result));
-      },
-    );
-    request.once("error", reject);
+  const request = (requestPath, headers = {}) => new Promise((resolve, reject) => {
+    http.get({ host: "127.0.0.1", port: address.port, path: requestPath, headers }, response => {
+      response.resume(); response.once("end", () => resolve(response));
+    }).once("error", reject);
   });
-  assert.equal(response.headers["cross-origin-resource-policy"], "same-origin");
+  assert.equal((await request("/")).statusCode, 200);
+  const denied = await request(`/@fs/${privateFile.replaceAll("\\", "/")}`);
+  assert.equal(denied.statusCode, 403);
+  assert.equal((await request(`/@fs/${artifact}`)).statusCode, 403);
+  const crossOrigin = await request("/", { Origin: "https://untrusted.example" });
+  assert.equal(crossOrigin.headers["access-control-allow-origin"], undefined);
+  assert.equal((await request("/", { Host: "untrusted.example" })).statusCode, 403);
+});
+
+test("Electron downloader retains compatible patched proxy dispatcher APIs", async (t) => {
+  const require = createRequire(import.meta.url);
+  const downloaderRequire = createRequire(require.resolve("@electron/get"));
+  const { EnvHttpProxyAgent, fetch } = downloaderRequire("undici");
+  assert.equal(downloaderRequire("undici/package.json").version, "7.29.1");
+  const agent = new EnvHttpProxyAgent({ noProxy: "*" });
+  const server = http.createServer((_request, response) => response.end("offline downloader fixture"));
+  t.after(async () => { await agent.close(); await new Promise(resolve => server.close(resolve)); });
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  const response = await fetch(`http://127.0.0.1:${address.port}/`, { dispatcher: agent });
+  assert.equal(await response.text(), "offline downloader fixture");
 });
 
 test("runtime SBOM validation requires SPDX packages and relationships", () => {

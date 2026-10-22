@@ -12,3 +12,15 @@ and before/after mutation callbacks. Invalid stored records deny without rewriti
 bytes or invoking a mutation callback. This does not grant source authority, add
 transport admission, enable uncomposed runtime families or satisfy controlled
 qualification. Rollback must preserve the stronger record denial.
+
+Image resource views use the private organization/workspace identity port backed by
+structured persistence. Public image/output/artifact/cursor aliases are random and
+persisted; exact source reauthorization is required on every detail read. Reserved
+CAS publication is private until both indexes agree and the source revision commits.
+Unassigned/legacy JSON storage and old source-derived references never trigger a
+compatibility identity fallback. See ADR-0043 and the asset/package threat model.
+
+Asset definition repositories optionally support bounded atomic batch registration
+with aligned expected original bodies. Validate/capture before awaits, bind owner
+context, and recheck every expectation inside each retryable collection mutation.
+Never turn this optimization into an unguarded bulk overwrite or schema migration.

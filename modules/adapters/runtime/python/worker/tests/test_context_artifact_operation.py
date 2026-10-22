@@ -28,6 +28,34 @@ def _digest(value: bytes) -> str:
 
 
 class ContextArtifactOperationTests(unittest.TestCase):
+    def test_query_placement_is_transient_and_manifest_cannot_select_a_device(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            path, _ = self._generate(root, "rag-database")
+            rewritten = root / "injected.lancedb.zip"
+            with ZipFile(path) as archive, ZipFile(rewritten, "w", ZIP_DEFLATED) as target:
+                for entry in archive.infolist():
+                    content = archive.read(entry.filename)
+                    if entry.filename == "manifest.json":
+                        manifest = json.loads(content)
+                        manifest["embedding"]["device"] = "cuda"
+                        content = json.dumps(manifest).encode()
+                    target.writestr(entry, content)
+            for hint, expected in [(None, "cpu"), ("cuda", "cuda"), ("auto", "auto")]:
+                observed = []
+                def embed(texts, settings):
+                    observed.append((settings.modelId, settings.device))
+                    return [[1.0, 0.0] for _ in texts]
+                request = self._operation(root, rewritten, RAG_MEDIA_TYPE, "query", query="release", maximumResults=3, **({"embeddingDevice": hint} if hint else {}))
+                result = operate_on_context_artifact(request, embedding_provider=embed)
+                self.assertEqual(len(result["matches"]), 1)
+                self.assertEqual(observed, [("sentence-transformers/all-MiniLM-L6-v2", expected)])
+                self.assertEqual(list(root.glob(".rag-lancedb-read-*")), [])
+            with self.assertRaisesRegex(ValueError, "only valid for retrieval"):
+                operate_on_context_artifact(self._operation(root, rewritten, RAG_MEDIA_TYPE, "inspect-artifact", embeddingDevice="cuda"))
+            with self.assertRaises(ValueError):
+                self._operation(root, rewritten, RAG_MEDIA_TYPE, "query", query="release", embeddingDevice="cuda:1")
+
     def test_cancelled_validation_removes_private_materialization_before_retry(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

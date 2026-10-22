@@ -5,7 +5,7 @@
   "engines": {
     "node": ">=24 <25"
   },
-  "main": ".webpack/main/index.cjs",
+  "main": ".vite/build/main.cjs",
   "workspaces": [
     "apps/server",
     "apps/thin-client"
@@ -79,34 +79,29 @@
     "@electron-forge/cli": "8.0.1",
     "@electron-forge/maker-squirrel": "8.0.1",
     "@electron-forge/maker-zip": "8.0.1",
-    "@electron-forge/plugin-webpack": "8.0.1",
+    "@electron-forge/plugin-vite": "8.0.1",
     "@playwright/test": "1.61.1",
     "@types/busboy": "^1.5.4",
+    "@types/express": "4.17.25",
     "@types/node": "^24.7.2",
     "@types/pg": "^8.20.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
-    "@vercel/webpack-asset-relocator-loader": "^1.10.0",
+    "@vitejs/plugin-react": "5.2.0",
     "brace-expansion": "file:dev-tools/vendor/brace-expansion-compat",
-    "css-loader": "^7.1.2",
-    "electron": "41.10.7",
+    "electron": "42.11.3",
     "jsdom": "^26.1.0",
-    "node-loader": "^2.1.0",
-    "style-loader": "^4.0.0",
-    "ts-loader": "^9.5.4",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "vitest": "4.1.11",
-    "webpack": "^5.99.9"
+    "vite": "7.3.7",
+    "vitest": "4.1.12"
   },
   "overrides": {
     "brace-expansion": "$brace-expansion",
-    "fast-uri": "3.1.8",
     "tar": "7.5.22",
     "tmp": "0.2.7",
-    "webpack-dev-server": "5.2.7",
-    "sockjs": {
-      "uuid": "11.1.1"
+    "@electron/get": {
+      "undici": "7.29.1"
     }
   }
 }

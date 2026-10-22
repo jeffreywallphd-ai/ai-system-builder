@@ -6,6 +6,24 @@ Repository-owned scripts live under `dev-tools/scripts`. Portable contributor
 helpers for recurring Codex and verification loops live under
 `dev-tools/helpers`; see its README for configuration and safety boundaries.
 
+Actual managed reference qualification uses the separate PostgreSQL/OIDC/TLS
+launcher in `scripts/qualification/visual-composer/managed-reference-host.ts` and
+`config/playwright.managed-reference.config.ts`. Setup is isolated, credentials
+stay private, failures are retained and forced cleanup never counts as graceful
+shutdown. See `docs/operations/functionality-outcome-qualification.md` for exact
+profiles, finite worker scenarios, existing budgets and qualification limits.
+
+Owned task visibility timing captures the fixture's fixed initial 10-percent
+progress and timestamp before navigation. Reload/recovery time stays in the
+sample; a later authoritative update cannot retimestamp older rendered progress.
+Missing initial milestones and invalid/negative progress or terminal delays fail
+qualification. Focused counterexamples live in `scripts/qualification/tests/`.
+
+Installed generation comparisons admit only the two explicitly pinned Qwen
+profiles documented in the outcome qualification procedure. Native precision is
+fixed per profile for both variants and devices, and propagated to every fresh
+child; changing a profile cannot overwrite another model's failed evidence.
+
 User-invoked cross-agent workflows are different: their canonical definitions
 live under `skills/`. The implementation-roadmap skill may describe when to
 use a bounded helper, but its workflow state engine remains with the skill and
@@ -21,6 +39,14 @@ coverage. Use `npm run test:all` for standard, end-to-end, and AI coverage only
 for AI-related changes or an explicit request. The Node and Vitest runners discover
 their owned files independently and write duration-ranked JSON reports under
 `artifacts/test-reports/`.
+
+Qualification identities hash the present candidate, including dirty and
+untracked inputs. Tracked unstaged deletions change the identity without making
+it depend on index staging; unsafe files, other read errors, empty candidates
+and missing explicitly referenced evidence still deny qualification. Tests of
+repository HTTP exposure load the actual source server configuration when the
+aggregate runner stages executable tests, retaining the production filesystem
+allowlist and private-file/origin denial assertions.
 
 `npm run test:dataset-preparation:e2e` is the opt-in dataset creation matrix.
 Run it only when Dataset Preparation changes or when explicitly requested. It

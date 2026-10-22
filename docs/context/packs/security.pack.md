@@ -77,6 +77,7 @@
   security gate requires clean production and complete development trees and
   validates a production SPDX SBOM. Reviewed transitive overrides are exact and
   must retain packaging and feature compatibility evidence.
+  ADR-0044 pins desktop Vite, confines dev file serving to source/dependencies, preserves isolated CJS bridges, and tests packaged provider loading without ambient modules.
 
 ## Layered Enforcement Model
 
@@ -96,7 +97,6 @@
 - Never store secrets, protected prompts, raw sensitive payloads, private content, or exploitable production detail in roadmap state, evidence, tests, documentation, logs, or reports.
 
 ## Sanitization Rules
-
 - Never expose secrets, bearer tokens, auth headers, cookies, passwords, API keys, signed URLs, query credentials, raw env values, or token hashes.
 - Never expose local/cache/temp/storage/runtime paths, storage roots, command lines, stack traces, raw exceptions, process internals, provider-native payloads, raw JSON lines, or raw logs in public responses.
 - Never expose bytes, blobs, base64/data URLs, prompt/workflow payloads, model/dataset/image/document contents, or resource contents through diagnostics or Asset Kernel metadata.
@@ -151,11 +151,11 @@
 
 ## Current Limitations
 
-- OIDC bearer verification, membership authorization, redacted append-only audit,
-  and organization-level storage authorization are implemented. Interactive
-  login/session UX, mTLS, external TLS termination mode, encryption at rest,
-  broad public-internet abuse hardening, full admin UI, fine-grained resource
-  grants, and complete managed audit export remain open.
+- ADR-0043 governs native ownership, budgets, session outcomes, opaque identities,
+  fingerprints and personal libraries; qualification remains pending.
+- OIDC, membership, redacted audit and organization storage are implemented;
+  login UX, mTLS, external termination, encryption at rest, public-internet
+  hardening, admin UI, fine-grained grants and managed audit export remain open.
 - Dev browser localStorage token persistence is LAN-convenience behavior, not hostile-browser hardening.
 
 ## Dependency Rules

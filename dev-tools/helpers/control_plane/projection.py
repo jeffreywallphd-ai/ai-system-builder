@@ -9,6 +9,7 @@ from .contracts import ControlError
 from .records import Records
 from .metrics import delivery
 from .storage import confined_path
+from .supporting_work import enrich
 
 
 def creation_time(value):
@@ -41,6 +42,16 @@ def project(root: Path) -> dict:
                     latest = {e["criterionId"]: e for e in evidence}
                     criteria = [{"id": safe_text(c["id"], 80), "description": safe_text(c["description"], 1500), "qualification": safe_text(c.get("qualification", "local")), "outcome": safe_text(latest.get(c["id"], {}).get("outcome", "missing")), "evidence_summary": safe_text(latest.get(c["id"], {}).get("summary", ""), 1600)} for c in i.get("acceptanceCriteria", [])[:100]]
                     completed = set(i.get("completedChunks", []))
+                    transferred_ids = {c["id"] for t in s.get("humanAcceptanceTransfers", []) if t.get("incrementId") == i["id"] for c in t.get("criteria", [])}
+                    offline = [{"status": "offline-user-owned", "criteria": [{"id": safe_text(c["id"], 80), "description": safe_text(c["description"], 1500)} for c in t.get("criteria", [])[:100]]} for t in s.get("humanAcceptanceTransfers", [])[:100] if t.get("incrementId") == i["id"]]
+                    for revision in s.get("acceptanceScopeRevisions", [])[:100]:
+                        if revision.get("incrementId") != i["id"]:
+                            continue
+                        retired = revision.get("removedCriteria", [])[:100]
+                        transferred_ids.update(c["id"] for c in retired)
+                        human = [{"id": safe_text(c["id"], 80), "description": safe_text(c["description"], 1500)} for c in retired]
+                        human.extend({"id": safe_text(r["original"]["id"], 80), "description": "Human portion only; technical criterion retained: " + safe_text(r["humanScope"], 1400)} for r in revision.get("replacedCriteria", [])[:100])
+                        offline.append({"status": "offline-user-owned", "criteria": human})
                     records = {c["chunkId"]: c for c in s.get("chunks", []) if c.get("incrementId") == i["id"]}
                     planned = (i.get("plan") or {}).get("chunks", [])[:100]
                     chunk_created = creation_time((i.get("plan") or {}).get("recordedAt")) or creation_time(i.get("startedAt")) or roadmap_created
@@ -48,8 +59,8 @@ def project(root: Path) -> dict:
                     chunks = []
                     for number, c in enumerate(planned, 1):
                         record = records.get(c["id"], {})
-                        chunks.append({"id": safe_text(c["id"], 80), "chunk_number": number, "title": safe_text(c["title"]), "outcome": safe_text(c["outcome"], 1400), "created_at": chunk_created, "status": "completed" if c["id"] in completed else "planned", "is_next": s.get("currentIncrementId") == i["id"] and c["id"] == next_id, "criteria_ids": [safe_text(k, 80) for k in c.get("criteriaIds", [])[:100]], "completed_at": safe_text(record.get("completedAt", ""), 80), "summary": safe_text(record.get("summary", ""), 1000), "tests": [safe_text(t, 400) for t in record.get("tests", [])[:12]]})
-                    increments.append({"id": safe_text(i["id"], 80), "number": i["number"], "title": safe_text(i["title"]), "objective": safe_text(i["objective"], 1600), "status": safe_text(i["status"]), "criteria": criteria, "chunks_complete": sum(c["status"] == "completed" for c in chunks), "chunks_planned": len(chunks), "chunks": chunks})
+                        chunks.append({"id": safe_text(c["id"], 80), "chunk_number": number, "title": safe_text(c["title"]), "outcome": safe_text(c["outcome"], 1400), "created_at": chunk_created, "status": "completed" if c["id"] in completed else "planned", "is_next": s.get("currentIncrementId") == i["id"] and c["id"] == next_id, "criteria_ids": [safe_text(k, 80) for k in c.get("criteriaIds", [])[:100] if k not in transferred_ids], "completed_at": safe_text(record.get("completedAt", ""), 80), "summary": safe_text(record.get("summary", ""), 1000), "tests": [safe_text(t, 400) for t in record.get("tests", [])[:12]]})
+                    increments.append({"id": safe_text(i["id"], 80), "number": i["number"], "title": safe_text(i["title"]), "objective": safe_text(i["objective"], 1600), "status": safe_text(i["status"]), "criteria": criteria, "offline_acceptance": offline, "chunks_complete": sum(c["status"] == "completed" for c in chunks), "chunks_planned": len(chunks), "chunks": chunks})
                 roadmaps.append({"id": safe_text(s["slug"], 80), "title": safe_text(s["name"]), "objective": safe_text(s["objective"], 1800), "created_at": roadmap_created, "status": safe_text(s["status"]), "evidence_policy": s.get("evidencePolicy", "declarative-legacy"), "current_increment": safe_text(s.get("currentIncrementId") or "none"), "increments": increments, "blocker_count": sum(b.get("status") == "open" for b in s.get("blockers", []))})
             except (ControlError, ValueError, KeyError, TypeError):
                 diagnostics.append({"code": "projection.roadmap-unavailable"})
@@ -61,6 +72,7 @@ def project(root: Path) -> dict:
     except ControlError:
         state = Records.empty()
         diagnostics.append({"code": "projection.local-state-unavailable"})
+    enrich(root, roadmaps, state, diagnostics)
     works = []
     for roadmap in roadmaps:
         for increment in roadmap["increments"]:

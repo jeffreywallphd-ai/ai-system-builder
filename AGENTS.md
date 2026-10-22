@@ -54,6 +54,12 @@ This file is the repository entry point for coding agents. Keep it short; use th
   `docs/tmp/`. Preserve the full roadmap and JSON state, and remove the
   generated report only after the user explicitly approves the completed
   overall work.
+- When the user takes human acceptance testing offline, use the roadmap skill's
+  explicit legacy handoff event. Receipt-governed scope changes still require
+  current candidate-bound qualification. Keep offline human acceptance separate from technical
+  closure; retain security, performance, runtime and other technical gaps.
+  After actual qualification passes, use `increment-qualified` with fresh exact-target
+  checks/review; preserve other active work and final overall qualification.
 
 ## Source Authority
 
@@ -79,6 +85,13 @@ Record unresolved code/documentation conflicts in `docs/docs-mismatch-register.m
 - Never place secrets, credentials, protected prompts, private payloads, exploitable production detail, or personal data in plans, roadmap state, tests, logs, documentation, or status reports.
 
 ## Verification
+
+Technical roadmap acceptance must be executable by AI agents, including automated
+UI tests where relevant. Keep human studies and manual acceptance user-owned
+offline, outside technical closure. Preserve actual performance, model, hardware,
+native-platform and security qualification; unavailable evidence remains pending.
+Use the roadmap skill's governed scope event for approved started-roadmap changes;
+archive original human requirements and never turn the handoff into a test pass.
 
 For implementation-roadmap work, run only focused tests for internal chunks and
 only change-relevant tests after each increment. After every increment is
@@ -123,3 +136,8 @@ For security-relevant work, include focused denial/failure-path evidence and rep
 ## Stop and Escalate
 
 Pause for direction when the request requires a new product or architecture decision, destructive action, credentials, production mutation, materially broader scope, or an unresolved security policy choice. Do not treat an ambiguous requirement as authorization for those actions, and do not trade away isolation, authorization, redaction, integrity, or fail-closed behavior for convenience or compatibility.
+
+The review site separates reviewed local implementation support from parent
+qualification. Maintain `docs/operations/roadmap-supporting-work.json` with exact
+completed work/receipt/review references and scope limits; support never grants
+a parent pass, current-candidate qualification or chunk completion.

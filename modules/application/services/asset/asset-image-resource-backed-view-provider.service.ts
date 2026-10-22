@@ -12,7 +12,9 @@ import { normalizeAssetId } from "../../../contracts/asset";
 import type { ImageAsset } from "../../../contracts/image";
 import type { ImageGenerationOutput } from "../../../contracts/image-generation";
 import { isWorkspaceId } from "../../../contracts/workspace";
-import type { ImageAssetDescriptorReadPort } from "../../ports/image";
+import type { ImageAssetDescriptorListResult, ImageAssetDescriptorReadPort, ImageResourceIdentityKind, ImageResourceIdentityPort } from "../../ports/image";
+import { isImageResourcePublicId } from "../../ports/image";
+import { captureAssetPackFingerprintInput } from "../asset-packs/asset-pack-fingerprint-input";
 import type {
   AssetResourceBackedViewListQuery,
   AssetResourceBackedViewListResult,
@@ -47,6 +49,7 @@ export interface GeneratedImageOutputDescriptorSource {
 }
 
 export interface AssetImageResourceBackedViewProviderDependencies {
+  readonly imageResourceIdentity?: ImageResourceIdentityPort;
   readonly imageAssetDescriptorRead?: ImageAssetDescriptorReadPort;
   readonly generatedImageOutputDescriptorSource?: GeneratedImageOutputDescriptorSource;
   readonly mappingService?: AssetResourceBackedMappingService;
@@ -57,8 +60,8 @@ export interface AssetImageResourceBackedViewProviderDependencies {
 const DEFAULT_PROVIDER_ID = "asset-image-resource-backed-view-provider";
 const DEFAULT_LIST_LIMIT = 100;
 const ABSOLUTE_MAX_LIST_LIMIT = 250;
-const IMAGE_VIEW_ID_PREFIX = "asset-view.image.internal.";
-const GENERATED_OUTPUT_VIEW_ID_PREFIX = "asset-view.generated-output.internal.";
+const IMAGE_VIEW_ID_PREFIX = "asset-view.image.opaque.";
+const GENERATED_OUTPUT_VIEW_ID_PREFIX = "asset-view.generated-output.opaque.";
 type UnknownRecord = Readonly<Record<string, unknown>>;
 type SourceListResult = Readonly<{ views: readonly AssetResourceBackedView[]; nextCursor?: string }>;
 
@@ -68,8 +71,10 @@ export class AssetImageResourceBackedViewProvider implements AssetResourceBacked
   private readonly generatedImageOutputDescriptorSource?: GeneratedImageOutputDescriptorSource;
   private readonly mappingService: AssetResourceBackedMappingService;
   private readonly maxListLimit: number;
+  private readonly identities?: ImageResourceIdentityPort;
 
   public constructor(dependencies: AssetImageResourceBackedViewProviderDependencies = {}) {
+    this.identities = dependencies.imageResourceIdentity;
     this.imageAssetDescriptorRead = dependencies.imageAssetDescriptorRead;
     this.generatedImageOutputDescriptorSource = dependencies.generatedImageOutputDescriptorSource;
     this.mappingService = dependencies.mappingService ?? assetResourceBackedMappingService;
@@ -84,6 +89,7 @@ export class AssetImageResourceBackedViewProvider implements AssetResourceBacked
         diagnostics: [this.diagnostic("error", "image-resource-backed-view-workspace-required", "Workspace id is required for image and generated-output resource-backed views.")],
       };
     }
+    if (!this.identities) return { items: [], diagnostics: [this.diagnostic("warning", "image-resource-backed-view-identities-unavailable", "Private image resource identities are unavailable.")] };
     const diagnostics: AssetResourceBackedViewProviderDiagnostic[] = [];
     const limit = this.safeLimit(query.limit);
     const imageSourceActive = allowsViewKind(query, "image-asset") && Boolean(this.imageAssetDescriptorRead);
@@ -127,38 +133,34 @@ export class AssetImageResourceBackedViewProvider implements AssetResourceBacked
   }
 
   public async readResourceBackedView(viewId: string, query: { readonly workspaceId?: string } = {}): Promise<AssetResourceBackedView | undefined> {
-    if (!isWorkspaceId(query.workspaceId)) return undefined;
-    const directImageAssetId = parseDirectViewId(viewId, IMAGE_VIEW_ID_PREFIX);
-    if (directImageAssetId && this.imageAssetDescriptorRead?.readImageAssetDescriptor) {
-      try {
-        const descriptor = await this.imageAssetDescriptorRead.readImageAssetDescriptor(query.workspaceId, directImageAssetId);
-        if (descriptor) {
-          const diagnostics: AssetResourceBackedViewProviderDiagnostic[] = [];
-          const view = this.viewFromImageAsset(descriptor, diagnostics);
-          if (view?.viewId === viewId) return view;
-        }
-      } catch {
-        // Fall back to the bounded list path below; the thrown source details are not exposable.
+    if (!isWorkspaceId(query.workspaceId) || !this.identities || typeof viewId !== "string") return undefined;
+    const kind = viewId.startsWith(IMAGE_VIEW_ID_PREFIX) ? "image"
+      : viewId.startsWith(GENERATED_OUTPUT_VIEW_ID_PREFIX) ? "generated-output" : undefined;
+    if (!kind) return undefined; // Legacy references require explicit owner-approved migration.
+    const publicId = viewId.slice((kind === "image" ? IMAGE_VIEW_ID_PREFIX : GENERATED_OUTPUT_VIEW_ID_PREFIX).length);
+    if (!isImageResourcePublicId(publicId)) return undefined;
+    try {
+      const mapping = await this.identities.resolveIdentity(query.workspaceId, publicId);
+      if (!mapping || mapping.workspaceId !== query.workspaceId || mapping.kind !== kind || mapping.publicId !== publicId) return undefined;
+      const diagnostics: AssetResourceBackedViewProviderDiagnostic[] = [];
+      if (kind === "image" && this.imageAssetDescriptorRead?.readImageAssetDescriptor) {
+        const descriptor = await this.imageAssetDescriptorRead.readImageAssetDescriptor(query.workspaceId, mapping.sourceId);
+        if (!descriptor) return undefined;
+        const captured = captureAssetPackFingerprintInput(descriptor) as unknown as ImageAsset;
+        if (captured.assetId !== mapping.sourceId || captured.workspaceId !== query.workspaceId) return undefined;
+        const view = await this.viewFromImageAsset(captured, diagnostics, query.workspaceId);
+        return view?.viewId === viewId ? view : undefined;
       }
-    }
-
-    const directOutputId = parseDirectViewId(viewId, GENERATED_OUTPUT_VIEW_ID_PREFIX);
-    if (directOutputId && this.generatedImageOutputDescriptorSource?.readGeneratedImageOutputDescriptor) {
-      try {
-        const descriptor = await this.generatedImageOutputDescriptorSource.readGeneratedImageOutputDescriptor(query.workspaceId, directOutputId);
-        if (descriptor) {
-          const diagnostics: AssetResourceBackedViewProviderDiagnostic[] = [];
-          const view = this.viewFromGeneratedOutputDescriptor(descriptor, diagnostics);
-          if (view?.viewId === viewId) return view;
-        }
-      } catch {
-        // Fall back to the bounded list path below; the thrown source details are not exposable.
+      if (kind === "generated-output" && this.generatedImageOutputDescriptorSource?.readGeneratedImageOutputDescriptor) {
+        const descriptor = await this.generatedImageOutputDescriptorSource.readGeneratedImageOutputDescriptor(query.workspaceId, mapping.sourceId);
+        if (!descriptor) return undefined;
+        const captured = captureAssetPackFingerprintInput(descriptor) as unknown as GeneratedImageOutputDescriptor;
+        if (captured.outputId !== mapping.sourceId) return undefined;
+        const view = await this.viewFromGeneratedOutputDescriptor(captured, diagnostics, query.workspaceId);
+        return view?.viewId === viewId ? view : undefined;
       }
-    }
-
-    const result = await this.listResourceBackedViews({ limit: this.maxListLimit, workspaceId: query.workspaceId });
-    const view = result.items.find((item) => item.viewId === viewId);
-    return view ? withDetailFallbackDiagnostic(view, this.diagnostic("info", "image-resource-backed-view-detail-list-fallback-limited", "Detail read used the bounded descriptor list fallback because a direct descriptor read seam or reversible safe view id was not available.")) : undefined;
+    } catch { /* Source denial and private index failures expose no details. */ }
+    return undefined;
   }
 
   private async listImageAssetViews(
@@ -176,14 +178,15 @@ export class AssetImageResourceBackedViewProvider implements AssetResourceBacked
     let items: readonly ImageAsset[];
     let nextCursor: string | undefined;
     try {
-      const result = await this.imageAssetDescriptorRead.listImageAssetDescriptors({
+      const result = captureAssetPackFingerprintInput(await this.imageAssetDescriptorRead.listImageAssetDescriptors({
         workspaceId: query.workspaceId as never,
         searchText: query.searchText,
         limit,
-        cursor,
-      });
+        cursor: await this.sourceCursor(query.workspaceId!, "image-cursor", cursor),
+      })) as unknown as ImageAssetDescriptorListResult;
       items = result.items;
-      nextCursor = sanitizeAssetStringValue(result.nextCursor);
+      if (!Array.isArray(items)) throw new Error("Invalid image descriptors.");
+      nextCursor = result.nextCursor ? await this.publicIdentity(query.workspaceId!, "image-cursor", result.nextCursor) : undefined;
     } catch {
       diagnostics.push(this.diagnostic("warning", "image-resource-backed-view-image-source-failed", "Finalized image asset descriptor source failed while listing resource-backed views.", {
         failureKind: "source-exception",
@@ -193,7 +196,9 @@ export class AssetImageResourceBackedViewProvider implements AssetResourceBacked
 
     const views: AssetResourceBackedView[] = [];
     for (const item of items) {
-      const view = this.viewFromImageAsset(item, diagnostics);
+      let view: AssetResourceBackedView | undefined;
+      try { view = await this.viewFromImageAsset(captureAssetPackFingerprintInput(item) as unknown as ImageAsset, diagnostics, query.workspaceId!); }
+      catch { diagnostics.push(this.diagnostic("warning", "image-resource-backed-view-skipped-invalid-descriptor", "An image descriptor or its private identity was unavailable.")); }
       if (!view || !matchesQuery(view, query)) continue;
       views.push(view);
       if (views.length >= limit) break;
@@ -216,14 +221,15 @@ export class AssetImageResourceBackedViewProvider implements AssetResourceBacked
     let items: readonly GeneratedImageOutputDescriptor[];
     let nextCursor: string | undefined;
     try {
-      const result = await this.generatedImageOutputDescriptorSource.listGeneratedImageOutputDescriptors({
+      const result = captureAssetPackFingerprintInput(await this.generatedImageOutputDescriptorSource.listGeneratedImageOutputDescriptors({
         workspaceId: query.workspaceId as string,
         searchText: query.searchText,
         limit,
-        cursor,
-      });
+        cursor: await this.sourceCursor(query.workspaceId!, "output-cursor", cursor),
+      })) as unknown as GeneratedImageOutputDescriptorListResult;
       items = result.items;
-      nextCursor = sanitizeAssetStringValue(result.nextCursor);
+      if (!Array.isArray(items)) throw new Error("Invalid output descriptors.");
+      nextCursor = result.nextCursor ? await this.publicIdentity(query.workspaceId!, "output-cursor", result.nextCursor) : undefined;
     } catch {
       diagnostics.push(this.diagnostic("warning", "image-resource-backed-view-generated-output-source-failed", "Generated image output descriptor source failed while listing resource-backed views.", {
         failureKind: "source-exception",
@@ -233,7 +239,9 @@ export class AssetImageResourceBackedViewProvider implements AssetResourceBacked
 
     const views: AssetResourceBackedView[] = [];
     for (const item of items) {
-      const view = this.viewFromGeneratedOutputDescriptor(item, diagnostics);
+      let view: AssetResourceBackedView | undefined;
+      try { view = await this.viewFromGeneratedOutputDescriptor(captureAssetPackFingerprintInput(item) as unknown as GeneratedImageOutputDescriptor, diagnostics, query.workspaceId!); }
+      catch { diagnostics.push(this.diagnostic("warning", "image-resource-backed-view-skipped-invalid-descriptor", "An image descriptor or its private identity was unavailable.")); }
       if (!view || !matchesQuery(view, query)) continue;
       views.push(view);
       if (views.length >= limit) break;
@@ -241,12 +249,14 @@ export class AssetImageResourceBackedViewProvider implements AssetResourceBacked
     return { views, ...(nextCursor ? { nextCursor } : {}) };
   }
 
-  private viewFromImageAsset(
+  private async viewFromImageAsset(
     image: ImageAsset,
     diagnostics: AssetResourceBackedViewProviderDiagnostic[],
-  ): AssetResourceBackedView | undefined {
-    const imageIdentity = safeIdentity(image.assetId, "image");
-    const artifactIdentity = safeIdentity(image.artifactId, "artifact");
+    workspaceId: string,
+  ): Promise<AssetResourceBackedView | undefined> {
+    if (image.workspaceId !== workspaceId) return undefined;
+    const imageIdentity = await this.safeIdentity(workspaceId, "image", image.assetId, "Image asset");
+    const artifactIdentity = await this.safeIdentity(workspaceId, "artifact", image.artifactId, "Image artifact");
     if (!imageIdentity || !artifactIdentity) {
       diagnostics.push(this.diagnostic("warning", "image-resource-backed-view-skipped-invalid-descriptor", "An image asset descriptor was skipped because its identifier was invalid."));
       return undefined;
@@ -260,7 +270,7 @@ export class AssetImageResourceBackedViewProvider implements AssetResourceBacked
     const displayName = safeDisplayName(stringField(metadata, ["title", "name", "displayName", "originalFileName"])) ?? imageIdentity.safeLabel;
     const sourceRef = artifactSourceRef(artifactIdentity, displayName);
     const backing: AssetResourceBacking = sanitizeAssetViewValue({
-      backingId: `image.internal.${stableHash(imageIdentity.raw)}`,
+      backingId: `image.opaque.${imageIdentity.publicId}`,
       resourceKind: "image",
       ref: sourceRef,
       role: "primary",
@@ -281,7 +291,7 @@ export class AssetImageResourceBackedViewProvider implements AssetResourceBacked
     };
 
     return sanitizeAssetViewValue({
-      viewId: `${IMAGE_VIEW_ID_PREFIX}${imageIdentity.directId ?? stableHash(imageIdentity.raw)}`,
+      viewId: `${IMAGE_VIEW_ID_PREFIX}${imageIdentity.publicId}`,
       viewKind: "image-asset",
       assetType: "image" satisfies AssetType,
       assetFamily: "resource-backed" satisfies AssetFamily,
@@ -304,11 +314,14 @@ export class AssetImageResourceBackedViewProvider implements AssetResourceBacked
     }) as AssetResourceBackedView;
   }
 
-  private viewFromGeneratedOutputDescriptor(
+  private async viewFromGeneratedOutputDescriptor(
     descriptor: GeneratedImageOutputDescriptor,
     diagnostics: AssetResourceBackedViewProviderDiagnostic[],
-  ): AssetResourceBackedView | undefined {
-    const outputIdentity = safeIdentity(descriptor.outputId, "generated-output");
+    workspaceId: string,
+  ): Promise<AssetResourceBackedView | undefined> {
+    const declaredWorkspace = descriptor.generatedOutput?.metadata?.workspaceId ?? descriptor.metadata?.workspaceId;
+    if (declaredWorkspace !== undefined && declaredWorkspace !== workspaceId) return undefined;
+    const outputIdentity = await this.safeIdentity(workspaceId, "generated-output", descriptor.outputId, "Generated image output");
     if (!outputIdentity) {
       diagnostics.push(this.diagnostic("warning", "image-resource-backed-view-skipped-invalid-descriptor", "A generated image output descriptor was skipped because its identifier was invalid."));
       return undefined;
@@ -318,7 +331,8 @@ export class AssetImageResourceBackedViewProvider implements AssetResourceBacked
       diagnostics.push(this.diagnostic("warning", "image-resource-backed-view-unsafe-data-omitted", "Unsafe generated image output descriptor fields were omitted from a resource-backed view."));
     }
 
-    const generatedOutput = this.generatedOutputReference(descriptor, outputIdentity);
+    const artifactIdentity = descriptor.artifactId ? await this.safeIdentity(workspaceId, "artifact", descriptor.artifactId, "Image artifact") : undefined;
+    const generatedOutput = this.generatedOutputReference(descriptor, outputIdentity, workspaceId, artifactIdentity);
     const backing = this.mappingService.mapGeneratedOutputToBacking(generatedOutput);
     const displayName =
       safeDisplayName(descriptor.displayName) ??
@@ -326,7 +340,7 @@ export class AssetImageResourceBackedViewProvider implements AssetResourceBacked
       outputIdentity.safeLabel;
 
     return sanitizeAssetViewValue({
-      viewId: `${GENERATED_OUTPUT_VIEW_ID_PREFIX}${outputIdentity.directId ?? stableHash(outputIdentity.raw)}`,
+      viewId: `${GENERATED_OUTPUT_VIEW_ID_PREFIX}${outputIdentity.publicId}`,
       viewKind: "generated-output",
       generatedOutput,
       resourceBacking: {
@@ -336,13 +350,13 @@ export class AssetImageResourceBackedViewProvider implements AssetResourceBacked
         metadata: metadataOf({
           producedAssetType: "image",
           runtimeCapabilityId: "image-generation",
-          artifactId: descriptor.artifactId ? safeIdentity(descriptor.artifactId, "artifact")?.publicId : undefined,
+          artifactId: artifactIdentity?.publicId,
         }),
       },
       displayName,
       summary: "Generated image output descriptor; not finalized or registered as an image asset.",
       metadata: metadataOf({
-        workspaceId: descriptor.generatedOutput?.metadata?.workspaceId ?? descriptor.metadata?.workspaceId,
+        workspaceId,
         outputId: outputIdentity.publicId,
         producedAssetType: "image",
         finalized: false,
@@ -371,6 +385,8 @@ export class AssetImageResourceBackedViewProvider implements AssetResourceBacked
   private generatedOutputReference(
     descriptor: GeneratedImageOutputDescriptor,
     outputIdentity: SafeIdentity,
+    workspaceId: string,
+    artifactIdentity?: SafeIdentity,
   ): AssetGeneratedOutputReference {
     const base = descriptor.generatedOutput ?? (descriptor.output
       ? this.mappingService.mapImageGenerationOutputToGeneratedOutputReference(descriptor.output, outputIdentity.publicId)
@@ -379,7 +395,6 @@ export class AssetImageResourceBackedViewProvider implements AssetResourceBacked
           runtimeCapabilityId: "image-generation" as const,
           producedAssetType: "image" as const,
         });
-    const artifactIdentity = descriptor.artifactId ? safeIdentity(descriptor.artifactId, "artifact") : undefined;
     const artifactRef = artifactIdentity ? artifactSourceRef(artifactIdentity, artifactIdentity.safeLabel) : undefined;
 
     return sanitizeAssetViewValue({
@@ -389,12 +404,32 @@ export class AssetImageResourceBackedViewProvider implements AssetResourceBacked
       producedAt: safeMetadataString(descriptor.producedAt ?? base.producedAt),
       ...(artifactRef ? { sourceRefs: [artifactRef] } : {}),
       metadata: metadataOf({
-        workspaceId: descriptor.generatedOutput?.metadata?.workspaceId ?? descriptor.metadata?.workspaceId,
-        ...safeGeneratedOutputMetadata(base.metadata),
+        workspaceId,
+        ...safeImageGenerationMetadata(base.metadata),
         ...safeImageGenerationMetadata(descriptor.metadata),
         artifactId: artifactIdentity?.publicId,
       }),
     }) as AssetGeneratedOutputReference;
+  }
+
+  private async publicIdentity(workspaceId: string, kind: ImageResourceIdentityKind, sourceId: string): Promise<string> {
+    if (!isWorkspaceId(workspaceId) || !this.identities) throw new Error("Private image identity unavailable.");
+    const id = await this.identities.getOrCreateIdentity(workspaceId, kind, sourceId);
+    if (!isImageResourcePublicId(id)) throw new Error("Private image identity unavailable.");
+    return id;
+  }
+
+  private async safeIdentity(workspaceId: string, kind: ImageResourceIdentityKind, sourceId: string, safeLabel: string): Promise<SafeIdentity | undefined> {
+    if (typeof sourceId !== "string" || !sourceId) return undefined;
+    return { publicId: await this.publicIdentity(workspaceId, kind, sourceId), safeLabel };
+  }
+
+  private async sourceCursor(workspaceId: string, kind: ImageResourceIdentityKind, cursor: string | undefined): Promise<string | undefined> {
+    if (!cursor) return undefined;
+    if (!isWorkspaceId(workspaceId) || !this.identities || !isImageResourcePublicId(cursor)) throw new Error("Image cursor unavailable.");
+    const mapping = await this.identities.resolveIdentity(workspaceId, cursor);
+    if (!mapping || mapping.workspaceId !== workspaceId || mapping.kind !== kind || mapping.publicId !== cursor) throw new Error("Image cursor unavailable.");
+    return mapping.sourceId;
   }
 
   private safeLimit(limit: number | undefined): number {
@@ -426,22 +461,8 @@ export function createAssetImageResourceBackedViewProvider(
 }
 
 interface SafeIdentity {
-  readonly raw: string;
   readonly publicId: string;
   readonly safeLabel: string;
-  readonly directId?: string;
-}
-
-function safeIdentity(value: string | undefined, fallbackPrefix: string): SafeIdentity | undefined {
-  const raw = typeof value === "string" ? value.trim() : undefined;
-  if (!raw) return undefined;
-  const pathLikeOrUnsafe = /[\\/]/.test(raw) || /^[a-z]:/i.test(raw) || isUnsafeAssetMetadataString(raw);
-  if (!pathLikeOrUnsafe) {
-    const publicId = stableToken(raw);
-    return { raw, publicId, safeLabel: raw, ...(publicId === raw ? { directId: publicId } : {}) };
-  }
-  const publicId = `${fallbackPrefix}.${stableHash(raw)}`;
-  return { raw, publicId, safeLabel: publicId };
 }
 
 function artifactSourceRef(identity: SafeIdentity, label: string): AssetReference {
@@ -463,14 +484,6 @@ function builtInDefinitionRef(id: "builtin.resource-backed-image"): AssetReferen
 
 function metadataOf(value: Record<string, unknown> | AssetMetadata | undefined): AssetMetadata | undefined {
   return sanitizeAssetMetadata(value);
-}
-
-function safeGeneratedOutputMetadata(metadata: AssetMetadata | undefined): AssetMetadata | undefined {
-  if (!metadata) return undefined;
-  const entries = Object.entries(metadata)
-    .filter(([key]) => !unsafeImageMetadataKey(key))
-    .filter(([key]) => !/^(fileName|subfolder|promptId|requestId|taskId)$/i.test(key));
-  return metadataOf(Object.fromEntries(entries));
 }
 
 function safeImageGenerationMetadata(metadata: UnknownRecord | undefined): AssetMetadata | undefined {
@@ -578,43 +591,3 @@ function matchesSearch(searchText: string | undefined, values: readonly (string 
   return values.some((value) => value?.toLowerCase().includes(needle));
 }
 
-function stableToken(value: string): string {
-  const token = value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_.-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return token.length > 0 ? token : "resource";
-}
-
-function stableHash(value: string): string {
-  let hash = 2166136261;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(36);
-}
-
-function parseDirectViewId(viewId: string, prefix: string): string | undefined {
-  if (!viewId.startsWith(prefix)) return undefined;
-  const candidate = viewId.slice(prefix.length);
-  if (!candidate || !/^[a-z0-9_.-]+$/i.test(candidate)) return undefined;
-  return candidate;
-}
-
-function withDetailFallbackDiagnostic(
-  view: AssetResourceBackedView,
-  diagnostic: AssetResourceBackedViewProviderDiagnostic,
-): AssetResourceBackedView {
-  return sanitizeAssetViewValue({
-    ...view,
-    diagnostics: [...(view.diagnostics ?? []), {
-      severity: diagnostic.severity,
-      code: diagnostic.code,
-      message: diagnostic.message,
-      sourceKind: diagnostic.sourceKind,
-      metadata: diagnostic.metadata,
-    }],
-  }) as AssetResourceBackedView;
-}

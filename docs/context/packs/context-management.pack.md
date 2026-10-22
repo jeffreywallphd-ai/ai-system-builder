@@ -29,6 +29,10 @@
 - The Python `generate-context-artifact` task owns extraction, chunking,
   local-only embedding or topic/summary generation, physical LanceDB/ZIP output,
   bounded preview, per-chunk progress, and cooperative cancellation.
+- Embedding placement is transient CPU (omitted default), CUDA or automatic.
+  Queries carry `embeddingDevice`; manifests never retain it. Explicit CUDA
+  failure never silently falls back. Weights/inputs share a device, local-only
+  model authority and portable package/citation bounds stay unchanged.
 - Host-owned managed setup installs exact LanceDB and PyArrow pins by default.
   Explicit RAG create/inspect/query starts repeat the asynchronous one-flight
   probe/install/re-probe and publish fixed installation progress through the

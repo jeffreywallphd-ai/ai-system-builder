@@ -7,6 +7,6 @@ test("CI explicitly installs the pinned Electron runtime after the script-free d
 
   assert.match(
     workflow,
-    /npm ci --ignore-scripts --no-audit --no-fund\n\s+- name: Install pinned Electron runtime for integration tests\n\s+run: npm rebuild electron --no-audit --no-fund/,
+    /npm ci --ignore-scripts --no-audit --no-fund\n\s+- name: Install pinned Electron runtime for integration tests\n\s+run: node node_modules\/electron\/install\.js/,
   );
 });

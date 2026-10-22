@@ -65,3 +65,15 @@ URL to host-owned loopback HTTP, then delegates per-launch bearer generation and
 rotation to the shared Python runtime foundation. Runtime launch credentials are
 child-only state and must not be included in desktop logs, diagnostics, preload,
 IPC, or renderer data.
+
+Image resource views use the private organization/workspace identity port backed by
+structured persistence. Public image/output/artifact/cursor aliases are random and
+persisted; exact source reauthorization is required on every detail read. Reserved
+CAS publication is private until both indexes agree and the source revision commits.
+Unassigned/legacy JSON storage and old source-derived references never trigger a
+compatibility identity fallback. See ADR-0043 and the asset/package threat model.
+
+First-use asset composition still waits for validated Foundation definitions and
+trusted implementations. Bounded bootstrap batching reduces that work; readiness
+never skips integrity checks. Foundation failures retain the generic public
+message with safe internal stage/version/count/code attribution.

@@ -117,6 +117,15 @@ class Work:
     def check_completion_phase(self, spec):
         required = {c for a in spec["acceptance"] for c in a["check_ids"]}
         overall = (spec.get("roadmap") or {}).get("increment_id") == "overall"
+        if spec.get("roadmap") and not overall:
+            from .common import read_json
+            state = read_json(confined_path(self.root, spec["roadmap"]["state_path"]))
+            target = next((i for i in state["increments"] if i["id"] == spec["roadmap"]["increment_id"]), None)
+            if target and target["status"] == "implemented-pending-qualification" and (
+                len(spec["acceptance"]) != len(target["acceptanceCriteria"]) or
+                {a["id"] for a in spec["acceptance"]} != {c["id"] for c in target["acceptanceCriteria"]}
+            ):
+                refuse("verification.qualification-coverage", "Target qualification must cover every exact target criterion.")
         if any(c.startswith("completion-") for c in required) and not overall:
             refuse("verification.aggregate-too-early", "Aggregate qualification runs only after every roadmap increment is implemented.")
         if overall:

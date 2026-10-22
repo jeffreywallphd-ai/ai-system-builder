@@ -7,6 +7,7 @@ import {
   type ServerListener,
 } from "../../../../apps/server/src/createServer";
 import { createVisualComposerQualificationRuntimeDatabase } from "./visual-composer-runtime-database";
+import { createControlledRuntimeEnvironmentPreparer } from "./controlled-runtime-preparation.mjs";
 
 let listener: ServerListener | undefined;
 let closePersistence: (() => Promise<void>) | undefined;
@@ -31,6 +32,9 @@ async function start(): Promise<void> {
     env: process.env,
     structuredDocuments: createInMemoryStructuredDocumentStore(),
     runtimeDatabases: createVisualComposerQualificationRuntimeDatabase(),
+    pythonRuntimeEnvironmentPreparer: createControlledRuntimeEnvironmentPreparer({
+      repoRoot: process.cwd(), runRoot: runtimeRoot, environment: process.env,
+    }),
   });
   listener = createServerListener(created);
   closePersistence = created.closePersistence;

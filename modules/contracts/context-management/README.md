@@ -17,3 +17,8 @@ prompts, runtime internals, and storage roots. A source is already chunked only
 after application-side inspection validates persisted records against the exact
 source digest and lineage. Generic prepared status, filenames, route flags, and
 renderer claims are never authority.
+
+Embedding device is transient execution intent: `cpu` (the compatible omitted
+default), `cuda`, or `auto`. It never enters the portable manifest. Retrieval
+carries a separate optional `embeddingDevice`; the verified manifest still owns
+model identity and dimensions. Explicit unavailable CUDA fails without fallback.

@@ -594,6 +594,59 @@ describe("TrainModelUseCase", () => {
     }
   });
 
+  for (const terminal of [
+    { status: "failed", code: "failed" },
+    { status: "cancelled", code: undefined },
+    { status: "failed", code: "task_timeout" },
+  ] as const) {
+    it(`reconciles training ${terminal.code ?? terminal.status} without feature reads and releases staging/power once`, async () => {
+      const reconciler = new OwnedTaskReconcilerService();
+      const lifecycle = createLifecycleFake();
+      const runtime = createRuntimeTaskRegistryFake();
+      (runtime.getTaskStatus as ReturnType<typeof testDouble.fn>).mockResolvedValue({
+        requestId: "train-req-1", taskType: TaskType.MODEL_TRAINING,
+        workspaceId: "workspace-a", concurrencyClass: "unknown", status: terminal.status,
+        ...(terminal.code ? { error: { code: terminal.code, message: "Synthetic terminal condition." } } : {}),
+      });
+      const registerGeneratedModel = testDouble.fn<ModelRegistryPort["registerGeneratedModel"]>();
+      const useCase = new TrainModelUseCase({
+        taskReconciler: reconciler, runtimeTaskRegistry: runtime,
+        modelRegistry: { ...baseRegistry, registerGeneratedModel },
+        storageBindings: createStorageBindingsFake(), storage: createStorageFake(),
+        taskPowerLifecycle: lifecycle,
+      });
+      const cleanup = (useCase as any).cleanupRuntimeDatasetDir.bind(useCase);
+      let cleanupCalls = 0;
+      (useCase as any).cleanupRuntimeDatasetDir = async (id: string) => { cleanupCalls++; await cleanup(id); };
+      const request = { ...baseRequest };
+      try {
+        await useCase.execute(request);
+        const dispatched = (runtime.startTask as ReturnType<typeof testDouble.fn>).mock.calls[0][0];
+        const stagedInput = dispatched.payload.datasets[0].path;
+        expect(dispatched.workspaceId).toBe("workspace-a");
+        await expect(access(stagedInput)).resolves.toBeUndefined();
+        expect(reconciler.status.pending).toBe(1);
+        request.workspaceId = "workspace-b" as never;
+        // Only the registered host callback reads the task. No feature read or
+        // cancel occurs, including for the real failed/task_timeout shape.
+        await reconciler.reconcileNow();
+        await reconciler.reconcileNow();
+        expect(reconciler.status.pending).toBe(0);
+        expect(runtime.getTaskStatus).toHaveBeenCalledTimes(1);
+        expect(runtime.getTaskStatus).toHaveBeenCalledWith("train-req-1");
+        expect(runtime.cancelTask).not.toHaveBeenCalled();
+        await expect(access(stagedInput)).rejects.toThrow();
+        expect(cleanupCalls).toBe(1);
+        expect(lifecycle.completeTask).toHaveBeenCalledTimes(1);
+        expect(lifecycle.completeTask).toHaveBeenCalledWith("train-req-1", terminal.status);
+        expect(registerGeneratedModel).not.toHaveBeenCalled();
+      } finally {
+        reconciler.stopObservation();
+        await cleanup("train-req-1");
+      }
+    });
+  }
+
   for (const terminalStatus of ["failed", "cancelled"] as const) {
     it(`completes lifecycle for terminal status ${terminalStatus}`, async () => {
       const lifecycle = createLifecycleFake();

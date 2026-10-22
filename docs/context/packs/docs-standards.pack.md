@@ -21,6 +21,11 @@
 
 ## Core Guidance
 
+- User-owned offline human acceptance uses the roadmap skill's explicit handoff;
+  close only solely human-blocked legacy increments and preserve technical qualification.
+  Started governed roadmaps use `acceptance-scope-revised`, which never closes or
+  supplies a pass; independently review scope and obtain fresh candidate evidence.
+
 - Functionality controlled qualification uses the versioned operations crosswalk
   and read-only source-bound assessor. Preserve owner history and pending external
   environments; an automated assessment never grants approval or release status.

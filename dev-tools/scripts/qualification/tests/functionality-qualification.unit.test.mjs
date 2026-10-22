@@ -215,7 +215,81 @@ test("repository crosswalk resolves every actual controlled criterion and availa
   const root = process.cwd();
   const result = readFunctionalityQualification(root);
   assert.equal(result.owner_states.length, 4);
-  assert.equal(result.controlled_criteria, 15);
+  assert.equal(result.controlled_criteria, 11);
+  // Live owner evidence may advance from pending to failed without changing
+  // coverage. This assessor cannot qualify a pass from declarative evidence.
+  assert.equal(result.pending_criteria + result.failed_criteria, result.controlled_criteria);
+  assert.deepEqual(
+    result.criteria
+      .filter((c) => c.owner === "data-management-quality-and-usability")
+      .map((c) => c.criterion_id)
+      .sort(),
+    [
+      "controlled-advanced-capabilities-are-qualified",
+      "controlled-ingestion-scale-is-qualified",
+      "controlled-provider-publication-is-qualified",
+    ],
+  );
+  for (const retired of [
+    "guided-usability-is-qualified",
+    "quality-review-usability-is-qualified",
+    "exact-task-usability-is-qualified",
+    "user-task-outcome-targets",
+  ]) {
+    assert.ok(!result.criteria.some((c) => c.criterion_id === retired));
+  }
+  const accessibility = result.criteria.find((c) =>
+    c.owner === "functionality-optimization" && c.criterion_id === "accessibility-outcomes-qualified");
+  assert.deepEqual(accessibility.environment_requirements, ["automated-accessibility-hosts"]);
   assert.equal(result.release_readiness, "unqualified");
   assert.match(result.source_identity, /^[a-f0-9]{64}$/u);
+});
+
+test("source identity follows deletion and rename independently of Git staging", () => {
+  const root = mkdtempSync(path.join(tmpdir(), "functionality-deletion-"));
+  try {
+    execFileSync("git", ["init", "--quiet"], { cwd: root, stdio: "ignore" });
+    mkdirSync(path.join(root, "apps"));
+    writeFileSync(path.join(root, "apps/retained.ts"), "export {};\n");
+    const previous = path.join(root, "apps/previous.config.js");
+    writeFileSync(previous, "export default {};\n");
+    execFileSync("git", ["add", "--", "apps"], { cwd: root });
+    const before = readFunctionalitySourceIdentity(root);
+    rmSync(previous);
+    const removed = readFunctionalitySourceIdentity(root);
+    assert.notEqual(removed, before);
+    // Only source enumeration admits a deletion; explicit evidence must exist.
+    assert.throws(() => repositoryFile(root, "apps/previous.config.js"));
+    assert.throws(() => readQualificationJson(root, "apps/previous.config.js"));
+    writeFileSync(path.join(root, "apps/current.config.mjs"), "export default {};\n");
+    const renamed = readFunctionalitySourceIdentity(root);
+    assert.notEqual(renamed, removed);
+    assert.notEqual(renamed, before);
+    execFileSync("git", ["add", "--all"], { cwd: root });
+    assert.equal(readFunctionalitySourceIdentity(root), renamed);
+    writeFileSync(previous, "export default {};\n");
+    assert.notEqual(readFunctionalitySourceIdentity(root), renamed);
+    rmSync(previous);
+    const unsafe = path.join(root, "apps/retained.ts");
+    rmSync(unsafe);
+    mkdirSync(unsafe);
+    assert.throws(() => readFunctionalitySourceIdentity(root));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("source identity rejects a candidate with no remaining files", () => {
+  const root = mkdtempSync(path.join(tmpdir(), "functionality-absent-"));
+  try {
+    execFileSync("git", ["init", "--quiet"], { cwd: root, stdio: "ignore" });
+    mkdirSync(path.join(root, "apps"));
+    const file = path.join(root, "apps/only.ts");
+    writeFileSync(file, "export {};\n");
+    execFileSync("git", ["add", "--", "apps"], { cwd: root });
+    rmSync(file);
+    assert.throws(() => readFunctionalitySourceIdentity(root));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

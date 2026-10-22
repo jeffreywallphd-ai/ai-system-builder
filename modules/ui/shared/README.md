@@ -84,6 +84,9 @@
   keeps the Compose panel
   mounted while sibling tabs are active so its canonical draft and loaded catalog
   survive Manage and Build handoffs; other tab content remains lazy by default.
+  Definition reads share only pending demands with live subscribers. Settled or
+  inactive generations cannot poison new navigation or explicit retries; each
+  physical request retains its budget slot through final cleanup.
   Every exact slot-bearing Canvas container exposes Add element. It opens the
   shared modal scoped to that container, lets the user choose an available
   region, and requests bounded searchable compatible definitions and compatible
@@ -251,3 +254,18 @@ available values when another metric group fails, and mark unavailable counts
 explicitly. Settings retain their existing settings read. Shared artifact
 visibility policy lives in the artifact contract and is reused by counts and the
 browser; the presenter does not own an alternative visibility rule.
+
+- Canvas draft integrity uses an explicit saved checkpoint independent of the
+  bounded undo history. Creating or switching systems requires saving or
+  discarding edits first. Host transactions synchronously lock editor controls
+  and fence late responses by workspace, client and system. Current-revision
+  loading is independent of optional history; failed revision reads offer an
+  inline retry and retain only a generic diagnostic. Composition previews are
+  nonexecuting: useful form/dashboard controls do not establish business data
+  writes or model inference. See `docs/diagnostics/system-builder-canvas-testing.md`.
+
+- Canvas performance uses owned immutable snapshots with unchanged-data sharing,
+  indexed move targets and bounded exact in-use definition reads. Bootstrap
+  stops after finding the required Minimal layout; compatible browsing remains
+  paged. Record local algorithm and browser-paint observations separately from
+  pending reference/manual qualification; retain failures and source identity.

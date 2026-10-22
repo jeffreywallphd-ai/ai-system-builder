@@ -129,6 +129,8 @@ export async function completeGuidedSystemLifecycle(
   await expect(
     publishWorkspace.getByText("Ready to publish", { exact: true }).first(),
   ).toBeVisible();
+  const selectedSystem = await publishWorkspace.getByRole("combobox", { name: "System", exact: true }).inputValue();
+  const selectedBuild = await publishWorkspace.getByRole("combobox", { name: "Build version", exact: true }).inputValue();
 
   const publishBuild = publishWorkspace.getByRole("button", {
     name: "Publish build",
@@ -149,11 +151,11 @@ export async function completeGuidedSystemLifecycle(
   await publishDialog
     .getByRole("button", { name: "Publish", exact: true })
     .press("Enter");
-  await expect(
-    publishWorkspace.getByText(`${systemName}, build`, { exact: false }),
-  ).toBeVisible({
-    timeout: 30_000,
-  });
+  const published = publishWorkspace.getByRole("region", { name: "Published builds", exact: true }).getByRole("article");
+  await expect(published).toHaveCount(1, { timeout: 30_000 });
+  await expect(published).toHaveAttribute("aria-labelledby", `published-build-${selectedBuild}`);
+  await expect(publishWorkspace.getByRole("combobox", { name: "System", exact: true })).toHaveValue(selectedSystem);
+  await expect(publishWorkspace.getByRole("combobox", { name: "System", exact: true }).locator("option:checked")).toHaveText(systemName);
   await expect(
     publishWorkspace.getByRole("heading", { name: "Published builds" }),
   ).toBeVisible();
@@ -171,7 +173,7 @@ export async function completeGuidedSystemLifecycle(
   await expect(install).toBeVisible({ timeout: 30_000 });
   await install.click();
   await expect(
-    publishWorkspace.getByText("Installed and activated."),
+    published.getByText("Active and stopped", { exact: true }),
   ).toBeVisible({
     timeout: 30_000,
   });
@@ -218,6 +220,7 @@ export async function completeGuidedSystemLifecycle(
     ).toBeVisible();
   }
   await publishWorkspace.getByRole("button", { name: "Uninstall" }).click();
+  await expect(published.getByText("Not installed", { exact: true })).toBeVisible();
   await expect(
     publishWorkspace.getByRole("button", { name: "Install" }),
   ).toBeVisible();

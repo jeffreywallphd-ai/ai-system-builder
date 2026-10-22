@@ -1,4 +1,5 @@
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 
@@ -40,7 +41,7 @@ async function createMainWindow(): Promise<void> {
     height: 800,
     show: false,
     webPreferences: {
-      preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+      preload: path.join(__dirname, "main_window_preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -62,7 +63,10 @@ async function createMainWindow(): Promise<void> {
     milestone: "desktop.window.load.before",
     component: "desktop-main",
   });
-  await mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
+  await mainWindow.loadURL(
+    MAIN_WINDOW_VITE_DEV_SERVER_URL ??
+      pathToFileURL(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`)).href,
+  );
   recordDesktopMemorySnapshot({
     milestone: "desktop.window.load.after",
     component: "desktop-main",
@@ -187,8 +191,9 @@ app.whenReady().then(async () => {
   });
 
   const systemRuntimeWindows = createSystemRuntimeWindowManager({
-    entryUrl: SYSTEM_RUNTIME_WEBPACK_ENTRY,
-    preloadPath: SYSTEM_RUNTIME_PRELOAD_WEBPACK_ENTRY,
+    entryUrl: SYSTEM_RUNTIME_VITE_DEV_SERVER_URL ??
+      pathToFileURL(path.join(__dirname, `../renderer/${SYSTEM_RUNTIME_VITE_NAME}/index.html`)).href,
+    preloadPath: path.join(__dirname, "system_runtime_preload.cjs"),
     developmentMode: !app.isPackaged,
     createWindow: (windowOptions) =>
       new BrowserWindow(windowOptions) as unknown as RuntimeBrowserWindowLike,

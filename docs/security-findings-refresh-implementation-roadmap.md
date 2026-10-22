@@ -3,7 +3,7 @@
 # Security Findings Refresh and Governed Remediation Implementation Roadmap
 
 - Status: `blocked`
-- Updated: `2026-10-21T10:56:20Z`
+- Updated: `2026-10-21T19:37:45Z`
 
 ## Objective
 
@@ -99,6 +99,104 @@ The legacy security roadmap is executing increment 5 of 6 after four completed i
 | --- | --- | --- | --- | --- |
 | Create a governed successor roadmap (governed-successor) | Preserve all history, reconcile unresolved work and validated new findings, and use the revised verification workflow. | yes | Requires one current-source rebaseline and an explicit handoff from the unfinished legacy increment.; Provides one future execution owner and current executed evidence without retroactively relabeling old declarations. | Preserve the four completed increments and the incomplete fifth/pending sixth exactly.; Do not transfer old approvals or claim incomplete work complete.; After complete-roadmap approval, record the legacy handoff and freeze parallel execution, then use new receipts, criteria review and overall all-suite qualification. |
 | Amend and continue the legacy roadmap (amend-legacy) | Keep the existing roadmap as owner, reconcile its active increment and append or revise remaining work under renewed approval. | no | Less artifact migration, but active-increment scope and old approval validity must be reconciled.; Retains declarative legacy engine completion semantics; it cannot transparently acquire the new evidence policy. | Preserve completed increments and completed chunks.; Obtain renewed scope approval before changing active or pending definitions.; Use explicit helper checks where possible but keep the historical evidence limitation visible. |
+
+### Native model file effects
+
+Which approved remediation option governs this boundary?
+
+Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.
+
+- Status: `approved`
+- Selected option: `recommended`
+
+| Option | Summary | Recommended | Tradeoffs | Consequences |
+| --- | --- | --- | --- | --- |
+| Approved recommended option (recommended) | Qualified identity-preserving native adapter; Windows first; reveal independently qualified. | yes | Additional implementation and focused denial evidence; unavailable controlled qualification remains pending. | Preserve fail-closed behavior and existing roadmap history. |
+| Alternative not selected (alternative) | Keep all physical model effects unavailable indefinitely. | no | Does not implement the selected remediation. | Cannot claim the selected remediation complete. |
+
+### Model ownership and shared caches
+
+Which approved remediation option governs this boundary?
+
+Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.
+
+- Status: `approved`
+- Selected option: `recommended`
+
+| Option | Summary | Recommended | Tradeoffs | Consequences |
+| --- | --- | --- | --- | --- |
+| Approved recommended option (recommended) | Delete only exclusively application-owned content with protected provenance and crash-consistent publication; external and shared caches remain reference-only. | yes | Additional implementation and focused denial evidence; unavailable controlled qualification remains pending. | Preserve fail-closed behavior and existing roadmap history. |
+| Alternative not selected (alternative) | Permit mutation of shared provider cache trees. | no | Does not implement the selected remediation. | Cannot claim the selected remediation complete. |
+
+### Aggregate resource budgets
+
+Which approved remediation option governs this boundary?
+
+Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.
+
+- Status: `approved`
+- Selected option: `recommended`
+
+| Option | Summary | Recommended | Tradeoffs | Consequences |
+| --- | --- | --- | --- | --- |
+| Approved recommended option (recommended) | Per-principal admission and organization aggregate storage/concurrency reservations with streaming enforcement and recovery reconciliation. | yes | Additional implementation and focused denial evidence; unavailable controlled qualification remains pending. | Preserve fail-closed behavior and existing roadmap history. |
+| Alternative not selected (alternative) | Only per-request byte and concurrency limits. | no | Does not implement the selected remediation. | Cannot claim the selected remediation complete. |
+
+### Diagnostic persistence
+
+Which approved remediation option governs this boundary?
+
+Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.
+
+- Status: `approved`
+- Selected option: `recommended`
+
+| Option | Summary | Recommended | Tradeoffs | Consequences |
+| --- | --- | --- | --- | --- |
+| Approved recommended option (recommended) | Session-only outcomes by default; optional persistence requires private bounded storage with explicit size and retention limits; audit stays separate. | yes | Additional implementation and focused denial evidence; unavailable controlled qualification remains pending. | Preserve fail-closed behavior and existing roadmap history. |
+| Alternative not selected (alternative) | Automatic shared-temporary-directory persistence. | no | Does not implement the selected remediation. | Cannot claim the selected remediation complete. |
+
+### Opaque public image identities
+
+Which approved remediation option governs this boundary?
+
+Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.
+
+- Status: `approved`
+- Selected option: `recommended`
+
+| Option | Summary | Recommended | Tradeoffs | Consequences |
+| --- | --- | --- | --- | --- |
+| Approved recommended option (recommended) | Persisted random opaque identifiers with indexed owner-scoped lookup and explicit legacy migration. | yes | Additional implementation and focused denial evidence; unavailable controlled qualification remains pending. | Preserve fail-closed behavior and existing roadmap history. |
+| Alternative not selected (alternative) | Source-derived public identifiers. | no | Does not implement the selected remediation. | Cannot claim the selected remediation complete. |
+
+### Versioned semantic fingerprints
+
+Which approved remediation option governs this boundary?
+
+Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.
+
+- Status: `approved`
+- Selected option: `recommended`
+
+| Option | Summary | Recommended | Tradeoffs | Consequences |
+| --- | --- | --- | --- | --- |
+| Approved recommended option (recommended) | Validate before a versioned canonical semantic hash; separate display projection and byte digests; revalidate ambiguous legacy identity. | yes | Additional implementation and focused denial evidence; unavailable controlled qualification remains pending. | Preserve fail-closed behavior and existing roadmap history. |
+| Alternative not selected (alternative) | Silently change existing unversioned identity in place. | no | Does not implement the selected remediation. | Cannot claim the selected remediation complete. |
+
+### Personal User Library ownership
+
+Which approved remediation option governs this boundary?
+
+Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.
+
+- Status: `approved`
+- Selected option: `recommended`
+
+| Option | Summary | Recommended | Tradeoffs | Consequences |
+| --- | --- | --- | --- | --- |
+| Approved recommended option (recommended) | Bind personal library to authenticated principal within organization; legacy records stay unassigned until explicit migration. | yes | Additional implementation and focused denial evidence; unavailable controlled qualification remains pending. | Preserve fail-closed behavior and existing roadmap history. |
+| Alternative not selected (alternative) | Use organization partition alone as personal ownership. | no | Does not implement the selected remediation. | Cannot claim the selected remediation complete. |
 
 ## Increment map
 

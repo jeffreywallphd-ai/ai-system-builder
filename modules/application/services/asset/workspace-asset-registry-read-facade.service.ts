@@ -200,8 +200,23 @@ export class WorkspaceAssetRegistryReadFacade implements AssetRegistryDefinition
       const detail = details[index] ?? systemFoundationDetail(ref);
     if (!detail) return undefined;
 
+    const effectiveSourceSummary = await this.sourceResolver.resolve(
+      context.workspaceId,
+      {
+        definitionRef: ref,
+        sourcePackId: readStringMetadata(detail.definition.metadata, "sourcePackId"),
+        sourcePackVersion: readStringMetadata(detail.definition.metadata, "sourcePackVersion"),
+        sourceKind: readStringMetadata(detail.definition.metadata, "sourceKind"),
+        sourceLayer: readStringMetadata(detail.definition.metadata, "sourceLayer"),
+        trustStatus: readStringMetadata(detail.definition.metadata, "trustStatus"),
+        systemDefault: readBooleanMetadata(detail.definition.metadata, "systemDefault"),
+      },
+    );
+
     if (
-      !isDetailInWorkspaceEffectiveView(detail, activations.activeSystemPacks)
+      !isDetailInWorkspaceEffectiveView(detail, activations.activeSystemPacks) &&
+      !isUserLibraryOrWorkspaceReuseSource(effectiveSourceSummary?.effectiveSourceKind) &&
+      !isWorkspaceAuthoringSource(sourceSummaries[index]?.effectiveSourceKind)
     ) {
       throw new WorkspaceAssetRegistryReadFacadeError(
         "workspace-asset-not-in-effective-view",
@@ -211,36 +226,7 @@ export class WorkspaceAssetRegistryReadFacade implements AssetRegistryDefinition
 
     return {
       ...detail,
-      effectiveSourceSummary: await this.sourceResolver.resolve(
-        context.workspaceId,
-        {
-          definitionRef: refs[index]!,
-          sourcePackId: readStringMetadata(
-            detail.definition.metadata,
-            "sourcePackId",
-          ),
-          sourcePackVersion: readStringMetadata(
-            detail.definition.metadata,
-            "sourcePackVersion",
-          ),
-          sourceKind: readStringMetadata(
-            detail.definition.metadata,
-            "sourceKind",
-          ),
-          sourceLayer: readStringMetadata(
-            detail.definition.metadata,
-            "sourceLayer",
-          ),
-          trustStatus: readStringMetadata(
-            detail.definition.metadata,
-            "trustStatus",
-          ),
-          systemDefault: readBooleanMetadata(
-            detail.definition.metadata,
-            "systemDefault",
-          ),
-        },
-      ),
+      effectiveSourceSummary,
       assetAuthoringEffectiveSourceSummary: sourceSummaries[index],
     };
     }));

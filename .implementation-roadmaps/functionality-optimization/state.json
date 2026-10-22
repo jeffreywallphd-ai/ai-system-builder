@@ -1,4 +1,108 @@
 {
+  "acceptanceScopeRevisions": [
+    {
+      "authorityRef": "explicit-user-agent-only-acceptance",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "originalPlan": {
+        "assumptions": [
+          "Participants and physical qualification environments are unavailable; external criteria remain pending.",
+          "No new model download, provider traffic, credential or production mutation is authorized."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "existing-qualification-preserved",
+              "security-impact-reviewed"
+            ],
+            "id": "qualification-owner-reconciliation",
+            "outcome": "Versioned JSON maps every known pending criterion to the canonical owner, required environment, actual procedure and existing harness.",
+            "title": "Preserve qualification owners"
+          },
+          {
+            "criteriaIds": [
+              "existing-qualification-preserved",
+              "security-impact-reviewed"
+            ],
+            "id": "qualification-assessment",
+            "outcome": "Bounded read-only CLI emits source/owner-bound sanitized JSON, detects ownership drift and distinguishes declarations, local evidence and unavailable controlled qualification.",
+            "title": "Assess current evidence safely"
+          },
+          {
+            "criteriaIds": [
+              "user-task-outcome-targets",
+              "accessibility-outcomes-qualified",
+              "model-quality-resource-outcomes",
+              "security-impact-reviewed"
+            ],
+            "id": "qualification-task-procedures",
+            "outcome": "Task scripts, predeclared approved targets, accessibility profiles and separate CPU/accelerator cohorts are ready; unavailable executions remain pending.",
+            "title": "Specify reproducible user and model outcomes"
+          },
+          {
+            "criteriaIds": [
+              "full-current-qualification",
+              "security-impact-reviewed"
+            ],
+            "id": "release-evidence-and-gap-repairs",
+            "outcome": "Reconcile implemented functionality and observed fixes, generate current pending ledger, and prepare aggregate qualification after implementation without declaring unavailable checks passed.",
+            "title": "Prepare honest release assessment"
+          }
+        ],
+        "completionTests": [
+          "functionality-outcomes, documentation, agent-support and required build gates.",
+          "Configured test:all only after implementation; do not treat failed/skipped/unavailable checks as passes."
+        ],
+        "documentation": [
+          "Qualification JSON crosswalk and task/environment procedure",
+          "Functionality review JSON",
+          "Owning control-plane and operations guidance"
+        ],
+        "fingerprint": "a8a12a2298a496de164541eb8e5cdc975862c874d2745b4fcc59afbd19d1e8c1",
+        "focusedTests": [
+          "Exact functionality qualification assessment/CLI tests with synthetic owner states, malformed input, missing evidence and source drift."
+        ],
+        "recordedAt": "2026-10-21T07:18:13Z",
+        "rollback": "Withdraw unqualified assessment and restore last verified source without changing historical evidence or restoring weaker security controls.",
+        "steps": [
+          "Map nine legacy and six current controlled criteria without changing owners or approvals.",
+          "Implement bounded source-bound JSON assessment and denial tests.",
+          "Document exact user, accessibility and model/resource task procedures with approved thresholds and pending environments.",
+          "Reconcile current implemented work and execute final aggregate checks/review at the implementation boundary; pending controlled evidence prevents final closure."
+        ],
+        "summary": "Implement honest qualification ownership and read-only assessment; prepare approved task/model procedures and run current aggregate verification only after every implementation chunk is recorded."
+      },
+      "previousApproval": {
+        "approvedAt": "2026-10-21T11:12:46Z",
+        "fingerprint": "815b19550fe6113ecbe332126f02313c1403a2ea1f613535a022dbbba3772c93",
+        "note": "The user renewed implementation authority for both existing roadmaps with the approved seven remediation options. Existing increments, completed chunks and evidence remain unchanged; unavailable qualification and failed dependency gates are not waived."
+      },
+      "recordedAt": "2026-10-21T18:15:09Z",
+      "removedCriteria": [
+        {
+          "description": "Proposed study target: at least5 representative non-developer participants, at least4 of5 completing each assigned critical journey without facilitator intervention, zero critical data-loss/authority confusion, and median task ease at least5/7. Record sample size and limitations; do not infer population success or accessibility conformance from this small study.",
+          "id": "user-task-outcome-targets",
+          "qualification": "controlled-environment"
+        }
+      ],
+      "replacedCriteria": [
+        {
+          "humanScope": "Manual screen-reader/operator acceptance and representative-participant evaluation are user-owned offline; automated accessibility and zero-data-loss/authority-confusion invariants remain technical requirements.",
+          "original": {
+            "description": "Keyboard-only, screen-reader, focus return,320 CSS-pixel reflow, contrast, non-color status and reduced-motion checks pass on the exact supported desktop/thin-client profiles. Automated axe/semantic passes supplement manual evidence; unresolved critical exceptions block qualification.",
+            "id": "accessibility-outcomes-qualified",
+            "qualification": "controlled-environment"
+          },
+          "revised": {
+            "description": "Automated packaged-desktop and thin-client UI checks verify keyboard traversal/activation, modal focus return, accessible names/roles/status semantics, 320 CSS-pixel reflow, computed contrast, status text independent of color and reduced motion on declared supported profiles. Critical automated exceptions, data loss or authority confusion block qualification. Retain actual DOM/semantic/visual evidence; unavailable checks remain pending.",
+            "id": "accessibility-outcomes-qualified",
+            "qualification": "controlled-environment"
+          }
+        }
+      ],
+      "status": "offline-user-owned",
+      "summary": "User explicitly assigned human acceptance offline and requested agent-executable technical acceptance. Human portions of original instructions are superseded; no pass or closure is asserted."
+    }
+  ],
   "blockers": [],
   "chunks": [
     {
@@ -510,7 +614,274 @@
   "completionSuite": "all",
   "createdAt": "2026-10-21T02:26:54Z",
   "currentIncrementId": "qualified-user-and-model-outcomes",
-  "decisions": [],
+  "decisions": [
+    {
+      "approvalNote": "The user explicitly approved the seven recommended options and directed implementation, continuation of both roadmaps, pending unavailable qualification, and completion-conditioned commit/main fast-forward.",
+      "approvedAt": "2026-10-21T11:12:44Z",
+      "approvedFingerprint": "6887e390e61902668fc34526c500e78df57c05c8111692b6adad75ef5e6f56f4",
+      "context": "Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.",
+      "id": "native-model-effects",
+      "options": [
+        {
+          "consequences": [
+            "Preserve fail-closed behavior and existing roadmap history."
+          ],
+          "id": "recommended",
+          "label": "Approved recommended option",
+          "recommended": true,
+          "summary": "Qualified identity-preserving native adapter; Windows first; reveal independently qualified.",
+          "tradeoffs": [
+            "Additional implementation and focused denial evidence; unavailable controlled qualification remains pending."
+          ]
+        },
+        {
+          "consequences": [
+            "Cannot claim the selected remediation complete."
+          ],
+          "id": "alternative",
+          "label": "Alternative not selected",
+          "recommended": false,
+          "summary": "Keep all physical model effects unavailable indefinitely.",
+          "tradeoffs": [
+            "Does not implement the selected remediation."
+          ]
+        }
+      ],
+      "proposalFingerprint": "6887e390e61902668fc34526c500e78df57c05c8111692b6adad75ef5e6f56f4",
+      "question": "Which approved remediation option governs this boundary?",
+      "selectedOptionId": "recommended",
+      "status": "approved",
+      "title": "Native model file effects"
+    },
+    {
+      "approvalNote": "The user explicitly approved the seven recommended options and directed implementation, continuation of both roadmaps, pending unavailable qualification, and completion-conditioned commit/main fast-forward.",
+      "approvedAt": "2026-10-21T11:12:44Z",
+      "approvedFingerprint": "fdf0122bcfe78eb8279a451a8db58b5c211f9cf71bebe5c54059b78c285b153d",
+      "context": "Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.",
+      "id": "exclusive-model-ownership",
+      "options": [
+        {
+          "consequences": [
+            "Preserve fail-closed behavior and existing roadmap history."
+          ],
+          "id": "recommended",
+          "label": "Approved recommended option",
+          "recommended": true,
+          "summary": "Delete only exclusively application-owned content with protected provenance and crash-consistent publication; external and shared caches remain reference-only.",
+          "tradeoffs": [
+            "Additional implementation and focused denial evidence; unavailable controlled qualification remains pending."
+          ]
+        },
+        {
+          "consequences": [
+            "Cannot claim the selected remediation complete."
+          ],
+          "id": "alternative",
+          "label": "Alternative not selected",
+          "recommended": false,
+          "summary": "Permit mutation of shared provider cache trees.",
+          "tradeoffs": [
+            "Does not implement the selected remediation."
+          ]
+        }
+      ],
+      "proposalFingerprint": "fdf0122bcfe78eb8279a451a8db58b5c211f9cf71bebe5c54059b78c285b153d",
+      "question": "Which approved remediation option governs this boundary?",
+      "selectedOptionId": "recommended",
+      "status": "approved",
+      "title": "Model ownership and shared caches"
+    },
+    {
+      "approvalNote": "The user explicitly approved the seven recommended options and directed implementation, continuation of both roadmaps, pending unavailable qualification, and completion-conditioned commit/main fast-forward.",
+      "approvedAt": "2026-10-21T11:12:44Z",
+      "approvedFingerprint": "876f9e29805e296d15888d175b3d553d6108487aa98a5c47a0d812f7086807a2",
+      "context": "Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.",
+      "id": "aggregate-resource-admission",
+      "options": [
+        {
+          "consequences": [
+            "Preserve fail-closed behavior and existing roadmap history."
+          ],
+          "id": "recommended",
+          "label": "Approved recommended option",
+          "recommended": true,
+          "summary": "Per-principal admission and organization aggregate storage/concurrency reservations with streaming enforcement and recovery reconciliation.",
+          "tradeoffs": [
+            "Additional implementation and focused denial evidence; unavailable controlled qualification remains pending."
+          ]
+        },
+        {
+          "consequences": [
+            "Cannot claim the selected remediation complete."
+          ],
+          "id": "alternative",
+          "label": "Alternative not selected",
+          "recommended": false,
+          "summary": "Only per-request byte and concurrency limits.",
+          "tradeoffs": [
+            "Does not implement the selected remediation."
+          ]
+        }
+      ],
+      "proposalFingerprint": "876f9e29805e296d15888d175b3d553d6108487aa98a5c47a0d812f7086807a2",
+      "question": "Which approved remediation option governs this boundary?",
+      "selectedOptionId": "recommended",
+      "status": "approved",
+      "title": "Aggregate resource budgets"
+    },
+    {
+      "approvalNote": "The user explicitly approved the seven recommended options and directed implementation, continuation of both roadmaps, pending unavailable qualification, and completion-conditioned commit/main fast-forward.",
+      "approvedAt": "2026-10-21T11:12:45Z",
+      "approvedFingerprint": "04c8c6cdd0567734b678d681c7e11fcacd8bf0baef39697573cd739eafebfabd",
+      "context": "Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.",
+      "id": "session-diagnostics",
+      "options": [
+        {
+          "consequences": [
+            "Preserve fail-closed behavior and existing roadmap history."
+          ],
+          "id": "recommended",
+          "label": "Approved recommended option",
+          "recommended": true,
+          "summary": "Session-only outcomes by default; optional persistence requires private bounded storage with explicit size and retention limits; audit stays separate.",
+          "tradeoffs": [
+            "Additional implementation and focused denial evidence; unavailable controlled qualification remains pending."
+          ]
+        },
+        {
+          "consequences": [
+            "Cannot claim the selected remediation complete."
+          ],
+          "id": "alternative",
+          "label": "Alternative not selected",
+          "recommended": false,
+          "summary": "Automatic shared-temporary-directory persistence.",
+          "tradeoffs": [
+            "Does not implement the selected remediation."
+          ]
+        }
+      ],
+      "proposalFingerprint": "04c8c6cdd0567734b678d681c7e11fcacd8bf0baef39697573cd739eafebfabd",
+      "question": "Which approved remediation option governs this boundary?",
+      "selectedOptionId": "recommended",
+      "status": "approved",
+      "title": "Diagnostic persistence"
+    },
+    {
+      "approvalNote": "The user explicitly approved the seven recommended options and directed implementation, continuation of both roadmaps, pending unavailable qualification, and completion-conditioned commit/main fast-forward.",
+      "approvedAt": "2026-10-21T11:12:45Z",
+      "approvedFingerprint": "bbebc7dfde0643601a08147c6fd601f4e5a8ba97eb28ed3b574252782b670b56",
+      "context": "Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.",
+      "id": "opaque-image-identities",
+      "options": [
+        {
+          "consequences": [
+            "Preserve fail-closed behavior and existing roadmap history."
+          ],
+          "id": "recommended",
+          "label": "Approved recommended option",
+          "recommended": true,
+          "summary": "Persisted random opaque identifiers with indexed owner-scoped lookup and explicit legacy migration.",
+          "tradeoffs": [
+            "Additional implementation and focused denial evidence; unavailable controlled qualification remains pending."
+          ]
+        },
+        {
+          "consequences": [
+            "Cannot claim the selected remediation complete."
+          ],
+          "id": "alternative",
+          "label": "Alternative not selected",
+          "recommended": false,
+          "summary": "Source-derived public identifiers.",
+          "tradeoffs": [
+            "Does not implement the selected remediation."
+          ]
+        }
+      ],
+      "proposalFingerprint": "bbebc7dfde0643601a08147c6fd601f4e5a8ba97eb28ed3b574252782b670b56",
+      "question": "Which approved remediation option governs this boundary?",
+      "selectedOptionId": "recommended",
+      "status": "approved",
+      "title": "Opaque public image identities"
+    },
+    {
+      "approvalNote": "The user explicitly approved the seven recommended options and directed implementation, continuation of both roadmaps, pending unavailable qualification, and completion-conditioned commit/main fast-forward.",
+      "approvedAt": "2026-10-21T11:12:45Z",
+      "approvedFingerprint": "3557a462356ed3bf4429642968c420096a42d0cc62b415283bd0f53b090a0577",
+      "context": "Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.",
+      "id": "versioned-semantic-fingerprints",
+      "options": [
+        {
+          "consequences": [
+            "Preserve fail-closed behavior and existing roadmap history."
+          ],
+          "id": "recommended",
+          "label": "Approved recommended option",
+          "recommended": true,
+          "summary": "Validate before a versioned canonical semantic hash; separate display projection and byte digests; revalidate ambiguous legacy identity.",
+          "tradeoffs": [
+            "Additional implementation and focused denial evidence; unavailable controlled qualification remains pending."
+          ]
+        },
+        {
+          "consequences": [
+            "Cannot claim the selected remediation complete."
+          ],
+          "id": "alternative",
+          "label": "Alternative not selected",
+          "recommended": false,
+          "summary": "Silently change existing unversioned identity in place.",
+          "tradeoffs": [
+            "Does not implement the selected remediation."
+          ]
+        }
+      ],
+      "proposalFingerprint": "3557a462356ed3bf4429642968c420096a42d0cc62b415283bd0f53b090a0577",
+      "question": "Which approved remediation option governs this boundary?",
+      "selectedOptionId": "recommended",
+      "status": "approved",
+      "title": "Versioned semantic fingerprints"
+    },
+    {
+      "approvalNote": "The user explicitly approved the seven recommended options and directed implementation, continuation of both roadmaps, pending unavailable qualification, and completion-conditioned commit/main fast-forward.",
+      "approvedAt": "2026-10-21T11:12:46Z",
+      "approvedFingerprint": "331f6461d8a069b89fd97c32510a34943097f08a5aa1345be949f9f6da8f72dc",
+      "context": "Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.",
+      "id": "personal-library-owner",
+      "options": [
+        {
+          "consequences": [
+            "Preserve fail-closed behavior and existing roadmap history."
+          ],
+          "id": "recommended",
+          "label": "Approved recommended option",
+          "recommended": true,
+          "summary": "Bind personal library to authenticated principal within organization; legacy records stay unassigned until explicit migration.",
+          "tradeoffs": [
+            "Additional implementation and focused denial evidence; unavailable controlled qualification remains pending."
+          ]
+        },
+        {
+          "consequences": [
+            "Cannot claim the selected remediation complete."
+          ],
+          "id": "alternative",
+          "label": "Alternative not selected",
+          "recommended": false,
+          "summary": "Use organization partition alone as personal ownership.",
+          "tradeoffs": [
+            "Does not implement the selected remediation."
+          ]
+        }
+      ],
+      "proposalFingerprint": "331f6461d8a069b89fd97c32510a34943097f08a5aa1345be949f9f6da8f72dc",
+      "question": "Which approved remediation option governs this boundary?",
+      "selectedOptionId": "recommended",
+      "status": "approved",
+      "title": "Personal User Library ownership"
+    }
+  ],
   "discovery": {
     "constraints": [
       "The user requested assessment and a roadmap only. No implementation, roadmap approval, completion evidence or reviewer identity is inferred.",
@@ -984,6 +1355,127 @@
       "outcome": "failed",
       "recordedAt": "2026-10-21T10:56:19Z",
       "summary": "Current source-stable receipt079a16a3c8eef412d8530306a8e154aaab2dfe976ad873483b60db1657245336: completion-all/outcomes/docs/agent/control-plane/roadmap/architecture pass. Standard Node3282pass2skip/Vitest433pass; E2E Node92pass2skip/Vitest3pass; opt-in offline AI command exits0, no real-model qualification. Only required dependency gate fails: exact matched audit output0runtime/7high affected toolchain entries. Original supplier retained as directed. Actual independent local review confirms scope/freshness but cannot grant technical acceptance. Fifteen controlled criteria remain pending; no formal roadmap completion."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "accessibility-outcomes-qualified",
+      "id": "evidence-31",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T19:00:17Z",
+      "summary": "Agent-executable accessibility qualification only. Actual both-host useful-system journeys provide local supporting coverage; the full declared automated keyboard/focus/semantics/reflow/contrast/non-color/reduced-motion assertion set and exact supported profiles must be evidenced before qualification. Human screen-reader/operator/participant acceptance is archived offline and does not block technical closure. No unperformed automated assertion is counted as passed."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-10-21t20-20-22-807z-bf3c40c4/evidence.json",
+      "command": "node node_modules/@playwright/test/cli.js test --config=dev-tools/config/playwright.visual-composer.config.ts --grep=complete-browse-authoring-journey (actual invocation uses the spaced test-name pattern)",
+      "criterionId": "accessibility-outcomes-qualified",
+      "id": "evidence-32",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T20:26:24Z",
+      "summary": "Actual packaged desktop and thin-client browse journeys passed on the predeclared Windows i5-14600KF 16GiB reference profile: exact tree names/keyboard focus, modal activation/both wrap boundaries/Escape focus return, 320-pixel reflow, text status independent of color and computed reduced motion. Both widths on both hosts: zero WCAG violations or incomplete checks, 103/82 passing contrast nodes, zero animation/transition duration. Source-bound reports and prior failed attempts retained. Supporting work canvas-automated-qualification completed on receipt13736e000c66f01b0e147abe465650f1441e7a04d893136d53840437da90641e with independent review1329051409a51327bc3f9af96ab36df93619ade5ac189132bd1cf7be3a05de35; no performance, native or model qualification inferred."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-10-21t20-20-22-807z-bf3c40c4/evidence.json",
+      "command": "node node_modules/@playwright/test/cli.js test --config=dev-tools/config/playwright.visual-composer.config.ts --grep='complete browse authoring journey'",
+      "criterionId": "accessibility-outcomes-qualified",
+      "id": "evidence-33",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-21T20:26:45Z",
+      "summary": "Actual packaged desktop and thin-client browse journeys passed on the predeclared Windows i5-14600KF 16GiB reference profile: exact tree names/keyboard focus, modal activation/both wrap boundaries/Escape focus return, 320-pixel reflow, text status independent of color and computed reduced motion. Both widths on both hosts: zero WCAG violations or incomplete checks, 103/82 passing contrast nodes, zero animation/transition duration. Source-bound reports and prior failed attempts retained. Supporting work canvas-automated-qualification completed on receipt13736e000c66f01b0e147abe465650f1441e7a04d893136d53840437da90641e with independent review1329051409a51327bc3f9af96ab36df93619ade5ac189132bd1cf7be3a05de35; no performance, native or model qualification inferred."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-desktop-reference-independent-note.json",
+      "command": null,
+      "criterionId": "browse-performance-qualified",
+      "id": "evidence-34",
+      "incrementId": "responsive-workspace-browse",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T22:33:16Z",
+      "summary": "Named desktop and managed PostgreSQL/OIDC reference environments are available. Actual large/sparse UI runs passed exact48/100 continuation and1000ms page budgets after before-paging filters and lazy desktop batch forwarding. Final-source combined operation/reference evidence and target-bound verification/review remain required. Human testing is not an active acceptance criterion."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/canvas-recovery-successor-independent-review.json",
+      "command": null,
+      "criterionId": "task-host-qualification",
+      "id": "evidence-35",
+      "incrementId": "efficient-reliable-task-journeys",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T22:33:16Z",
+      "summary": "Actual supported host environments are available. Supporting managed and packaged journeys cover ownedworkerexit, transientdisconnect/reconnect, terminalworkspace-return and physicalcleanup; one-sample diagnostics do not satisfy the30sample p95 target. Fresh full host timing/cleanup qualification and target-specific receipt/review remain technical work, with no human acceptance dependency."
+    },
+    {
+      "artifact": ".local-codex/trained-context/0c2dafefb78740f586b2ddc3f44df0f0/report.json",
+      "command": null,
+      "criterionId": "context-runtime-qualified",
+      "id": "evidence-36",
+      "incrementId": "quality-preserving-context-efficiency",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T22:33:16Z",
+      "summary": "Explicitly authorized safe pinned MiniLM, CPU/CUDA and enforced2GiB qualification environments are available. Reviewed device support and trained1k diagnostic evidence exist; the full source-stable1k/10k/100k30sample paired quality/memory/latency matrix remains required. No missing human or participant qualification is asserted."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/installed-generation-matrix-01-interruption.json",
+      "command": null,
+      "criterionId": "model-quality-resource-outcomes",
+      "id": "evidence-37",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-21T22:33:16Z",
+      "summary": "The user authorized the pinned official Qwen0.5B acquisition; safe model files and actual CPU/CUDA environments exist. Retained first matrix: CPUfloat32admission failed the unchanged memory guard; the first CUDAunchecked pair produced baseline7/24 and candidate9/24 correct per phase, below the predeclared>=95percent candidate quality floor. Remaining repeats were stopped after the known failure. Diagnose only separate development inputs and retain fixed cases/targets; no partial pass, numerical waiver or human-test blocker is substituted."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/installed-generation-matrix-02-interruption.json",
+      "command": null,
+      "criterionId": "model-quality-resource-outcomes",
+      "id": "evidence-38",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-21T22:46:04Z",
+      "summary": "Pinned official Qwen0.5B model and actual CPU/CUDA environments are available. Matrix01 retained CPU admission denial plus CUDA unchecked baseline7/24 and candidate9/24 per phase. Matrix02 admitted CPU under the unchanged memory guard; its unchecked candidate already exceeded the fixed allowed error count, so only owned remaining repetitions were stopped. Preserve both partial reports with their interruption records. Separate development cases reached7/8 in both modes but do not qualify the parent. No quality target, schema validation, memory policy or human-test waiver changed; further supported model qualification remains required."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/qwen15-cpu-admission-pending.json",
+      "command": null,
+      "criterionId": "model-quality-resource-outcomes",
+      "id": "evidence-39",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-21T23:02:04Z",
+      "summary": "The approved official1.5B profile is pinned and verified. Actual CPU admission requires4933075754availablebytes; two attempts observed3890782208 and3705556992, so CPU qualification is pending more available RAM under the unchanged guard. No leftover owned qualification process was found and no unrelated application was stopped. GPU fixed-case cohorts continue; all original0.5B failures remain preserved. Development8-case CUDAresults7/8unchecked and8/8constrained are diagnostic only. No model-quality/throughput or complete-matrix pass is asserted."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/qwen15-compact-regression-withdrawn.json",
+      "command": null,
+      "criterionId": "model-quality-resource-outcomes",
+      "id": "evidence-40",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "external",
+      "outcome": "failed",
+      "recordedAt": "2026-10-21T23:37:17Z",
+      "summary": "Fixed compact-JSON model trial failed: completed constrained pair scored18/24candidate versus23/24baseline in both phases despite lexical grammar passes. Candidate was withdrawn and pinned default formatting restored. Three unchecked matched GPUrepeats preserved23/24but median gain was only0.12percent. Remaining redundant repeats were interrupted on the verified owned tree and retained as partial, never a passing matrix. CPUretry remained denied by unchanged memory guard; a separate post-import observation found3974615040availablebytes versus4933075754required. Earlier canonical-presentation matrix gains2.9percent/5.3percent also remain below unchanged20percent target. Parent model qualification is not passed; human acceptance is offline."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/catalog-admission-owned-performance-01.log",
+      "command": "node --import tsx dev-tools/scripts/qualification/run-asset-system-performance-qualification.mjs --probe-module dev-tools/scripts/qualification/asset-system-owned-probes.ts",
+      "criterionId": "owned-performance-probes",
+      "id": "evidence-41",
+      "incrementId": "responsive-workspace-browse",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:06:49Z",
+      "summary": "All six configured repository-owned operation/workload probes ran against source.f459693377dd421f5d4a6b20ea54f510d6d0c217bf1c60e7ec161eb638e622f7 on local-win32-node24-fixture, with the unchanged five warmups and thirty measured iterations, real output assertions and the registered negative-path coverage. Catalog p95 172.582 ms, validate 21.481 ms, resolve 7.309 ms, build 162.286 ms, preview 1.564 ms and handoff 0.406 ms all met their original budgets. The harness verified source identity before and after. Scoped catalog work is completed with passed receipt 150f75a2daa67ba80ff5fe8c2f138527785ef3b46d01b679acf284c19ecace6d and accepted review a76dc38b0dbffd83dce263298e2422167f71bab5dc2e19f58dccb15c11f3660e. Earlier 205.704 ms catalog failure is retained. This evidence fulfills owned probes only; final page-level performance, whole-host qualification, exact-target review and other criteria remain separate."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -1066,6 +1558,46 @@
       "nextAction": "Preserve reviewed implementation as a rebuild checkpoint, original supplier and failed zero-advisory gate. Keep native/durable/policy-owner gaps and15controlled criteria pending; both roadmaps remain open and completion-conditioned main promotion remains pending. Earlier paired-host2of2 observation is historical after test/profile edits. Released precursor work and failed qualification records remain historical; use newest canonical overall binding and actual freshness for current evidence.",
       "recordedAt": "2026-10-21T10:56:20Z",
       "summary": "Corrected final all-suite and7nondependency gates pass on source-stable receipt079a16a3c8eef412d8530306a8e154aaab2dfe976ad873483b60db1657245336 with actual independent nonqualifying local review. Standard3282Node+433Vitest and E2E92Node+3Vitest pass;4Node skips retained. AI command0 under offline settings does not qualify real models. Previous6fixture failures and all older failed/passing history remain preserved; exact17test fixture correction independently accepted without weakening actions or changing runtime/global APIs. Exact final audit observation matches receipt:0runtime and7high toolchain affected entries.",
+      "targetIncrementId": "qualified-user-and-model-outcomes"
+    },
+    {
+      "category": "decision",
+      "disposition": "accepted",
+      "id": "approved-native-and-policy-resumption",
+      "impact": "within-increment",
+      "nextAction": "Implement the selected controls, maintain current-source receipts and independent review; complete roadmaps and promote main only when every required gate actually qualifies.",
+      "recordedAt": "2026-10-21T11:12:46Z",
+      "summary": "The seven recommended native/policy options are explicitly approved. Record implementation in bounded separately reviewed work while preserving parent increment dependencies and all unavailable qualification. Original dependency supplier remains retained without a gate waiver.",
+      "targetIncrementId": "qualified-user-and-model-outcomes"
+    },
+    {
+      "category": "decision",
+      "disposition": "accepted",
+      "id": "approved-policy-baseline-reviewed",
+      "impact": "within-increment",
+      "nextAction": "Implement independently scoped selected controls. Preserve the original supplier, failed dependency gate and unavailable controlled qualification.",
+      "recordedAt": "2026-10-21T11:30:53Z",
+      "summary": "ADR0043 records the seven explicitly approved remediation options. Documentation and agent checks pass on82f8af83...; actual independent review18899371... accepts only the decision baseline. No native/resource/owner implementation or qualification is claimed.",
+      "targetIncrementId": "qualified-user-and-model-outcomes"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "agent-only-acceptance-scope-qualified",
+      "impact": "within-increment",
+      "nextAction": "Obtain actual technical profile/model/resource evidence and current target-specific/overall qualification. Human acceptance does not block technical closure; no unperformed automated accessibility or native check is passed.",
+      "recordedAt": "2026-10-21T18:25:32Z",
+      "summary": "Completed the user-authorized human-scope amendment with current receipt5ea12d9c5104108545573395b7f7d0a959443a503b15fc326dbec69a31d8bdbf and accepted separate reviewcd827ae8035a9d93c06a0d9ed4bc9a6954c63d662a75d124e4998cf0068fd963. Participant study and manual AT scope are archived/offline; automated accessibility, zero-data-loss/authority invariants, technical environments and original failed/pending evidence retained. Governed declarations cannot implicitly complete increments.",
+      "targetIncrementId": "qualified-user-and-model-outcomes"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "review-site-support-and-agent-only-scope-visible",
+      "impact": "within-increment",
+      "nextAction": "Use the linked completed component records to inspect local implementation; retain each actual technical pending/failed qualification and existing completion authority.",
+      "recordedAt": "2026-10-21T19:37:45Z",
+      "summary": "Current technical acceptance is agent-executable; archived participant/manual operator acceptance is offline user-owned. Automated accessibility and actual model/resource/profile criteria remain pending. The revised viewer labels those gaps clearly and links reviewed local Canvas startup/useful-system coverage as partial support. Historical failed all-suite/dependency evidence is preserved; the new passing Canvas non-AI aggregate does not substitute for a fresh functionality AI-related overall qualification.",
       "targetIncrementId": "qualified-user-and-model-outcomes"
     }
   ],
@@ -1526,6 +2058,198 @@
       "recordedAt": "2026-10-21T10:56:20Z",
       "sequence": 76,
       "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "8bcc772c358720b8c05d4048c5580041bf564445953e36c40720e61a298357c9",
+      "recordedAt": "2026-10-21T11:12:44Z",
+      "sequence": 77,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "16d7faf5a046f2c78086bdb1cc64cce4881bf27ac793bd077f05b3bd12cfa606",
+      "recordedAt": "2026-10-21T11:12:44Z",
+      "sequence": 78,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "8f50a440158af6533db62918e072ce6dde1dda7f83b603ff6f131507680215fc",
+      "recordedAt": "2026-10-21T11:12:44Z",
+      "sequence": 79,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "731f9dce3ab4931b89b05acacab180d0f92cf65e663cefb94de55870d2b4957c",
+      "recordedAt": "2026-10-21T11:12:44Z",
+      "sequence": 80,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "6df18b62e88120e6d9b7e2853a2b63ded692a4e76051d3b4fa5e4974b0cb7182",
+      "recordedAt": "2026-10-21T11:12:44Z",
+      "sequence": 81,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "85ac15b86b06b3a29885bf85a34c1b3630573dbf6db76ef67b9c1c347294c900",
+      "recordedAt": "2026-10-21T11:12:44Z",
+      "sequence": 82,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "f7f8e2ce71dbc9ccf4b90cd18687d222732675f5ff4b42ed05da164a496cbec3",
+      "recordedAt": "2026-10-21T11:12:45Z",
+      "sequence": 83,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "466fe2aa65c507550004bbee1ff96b0ec84c86e7a6b2b047ff0a3d80f6d04fed",
+      "recordedAt": "2026-10-21T11:12:45Z",
+      "sequence": 84,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "c6307029d5a5cef9617817a391b0f02b03a7255f421e250bb0d217bdf3fd50e8",
+      "recordedAt": "2026-10-21T11:12:45Z",
+      "sequence": 85,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "5edcb4293848ae9863cbe3b05015e82241c01beb28566685767057ecee380624",
+      "recordedAt": "2026-10-21T11:12:45Z",
+      "sequence": 86,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "76ea3e5c1e925e80a30958a715ca496eea886718d249635704c81119cd95b967",
+      "recordedAt": "2026-10-21T11:12:45Z",
+      "sequence": 87,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "4ae93a4dcea6f21f4244ab8a8e2841e8db7804ea6872d8229e56a7c3e4a1e9ee",
+      "recordedAt": "2026-10-21T11:12:45Z",
+      "sequence": 88,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "35ee9d004e4b108b4c922c1a022ad9142f6d1a2db77db6fa5ce777f532bf312c",
+      "recordedAt": "2026-10-21T11:12:46Z",
+      "sequence": 89,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "e93512cccf23eb9bca5d34f77a67d7cd70a9568551a913021c57ffb3da00c2ec",
+      "recordedAt": "2026-10-21T11:12:46Z",
+      "sequence": 90,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "27b698c7bf9f5cfd5cea77b7d65bd73bcd69c458a66793bca3f60c14c9a01fcb",
+      "recordedAt": "2026-10-21T11:12:46Z",
+      "sequence": 91,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "b40ce927cdaed3f8877101a1a32b40f372576db0f178783264d624112763da06",
+      "recordedAt": "2026-10-21T11:12:46Z",
+      "sequence": 92,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "985fee0df65a5bb6d09e371cc7a017d93796adf187786d0611fa7e6f698c7951",
+      "recordedAt": "2026-10-21T11:30:53Z",
+      "sequence": 93,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "524842dc3b0472f9d8698d14a24825543b6d56509673da64ce30c8e2cc46d48a",
+      "recordedAt": "2026-10-21T18:15:09Z",
+      "sequence": 94,
+      "type": "acceptance-scope-revised"
+    },
+    {
+      "eventFingerprint": "ac1fe19f504ae12fbedfbf793fb4d3ebfebd0a8c60bbe096a50f8b9a5dbf4a6c",
+      "recordedAt": "2026-10-21T18:15:09Z",
+      "sequence": 95,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "f01f585671aa51ba6808fed26334ec4594bbdd869afaba0ce54ef18c6f360d51",
+      "recordedAt": "2026-10-21T18:25:32Z",
+      "sequence": 96,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "0fdbbb7f7c80d7c327399989b5466622240f621e81fec1d9951420d7637b95fc",
+      "recordedAt": "2026-10-21T19:00:17Z",
+      "sequence": 97,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1c909c2840d1ad2720933419500a15007dab3026cebbdc2a1e85f10a9ef96f7a",
+      "recordedAt": "2026-10-21T19:37:45Z",
+      "sequence": 98,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "02b11340193cbbfc55a128e81f6793806845e91e8a043935b89d4c703f2c50e9",
+      "recordedAt": "2026-10-21T20:26:24Z",
+      "sequence": 99,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "bd0ca73fda1b705a2fc25a400a6301fcfbfd9ee92e444a8fc0dcd766fc1dc8b4",
+      "recordedAt": "2026-10-21T20:26:45Z",
+      "sequence": 100,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "571b843c5240c3719b3fd6662f9944762aaf12b4e1ffbea4864a9cdcdb53714d",
+      "recordedAt": "2026-10-21T22:33:16Z",
+      "sequence": 101,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "32bfa190d15adb2b4fcc5b35c44e4bb34b0389ddfd8d90f83c926e6aacbe7289",
+      "recordedAt": "2026-10-21T22:33:16Z",
+      "sequence": 102,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5249c895fbb2bb6217091f77355845dcdde4c0e1047adfa59605b5eca338ad70",
+      "recordedAt": "2026-10-21T22:33:16Z",
+      "sequence": 103,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c80cb8935c0e68bc6ace1f73ff417f05ff17bf041d7679ad06588724fcdb8305",
+      "recordedAt": "2026-10-21T22:33:16Z",
+      "sequence": 104,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ed7c8a523c28df660f04d2c44f7b648e84b57b93f683ae7a56823574982ab40d",
+      "recordedAt": "2026-10-21T22:46:04Z",
+      "sequence": 105,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1c3b46cf73634d89c6545d7c4be7a8a6f0be75f464eb4d9acc8000386be28fae",
+      "recordedAt": "2026-10-21T23:02:04Z",
+      "sequence": 106,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "79afbcff689a4b51c5bc85c8b36a31a7b6af73b5e6e35c0082d7bbe5fda61a74",
+      "recordedAt": "2026-10-21T23:37:17Z",
+      "sequence": 107,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "30cc7e69e0b23676094fdb36410eb606844d7dda32b9b25b19d22b9a5cbc4de1",
+      "recordedAt": "2026-10-22T01:06:49Z",
+      "sequence": 108,
+      "type": "evidence-recorded"
     }
   ],
   "increments": [
@@ -2205,12 +2929,7 @@
           "qualification": "local"
         },
         {
-          "description": "Proposed study target: at least5 representative non-developer participants, at least4 of5 completing each assigned critical journey without facilitator intervention, zero critical data-loss/authority confusion, and median task ease at least5/7. Record sample size and limitations; do not infer population success or accessibility conformance from this small study.",
-          "id": "user-task-outcome-targets",
-          "qualification": "controlled-environment"
-        },
-        {
-          "description": "Keyboard-only, screen-reader, focus return,320 CSS-pixel reflow, contrast, non-color status and reduced-motion checks pass on the exact supported desktop/thin-client profiles. Automated axe/semantic passes supplement manual evidence; unresolved critical exceptions block qualification.",
+          "description": "Automated packaged-desktop and thin-client UI checks verify keyboard traversal/activation, modal focus return, accessible names/roles/status semantics, 320 CSS-pixel reflow, computed contrast, status text independent of color and reduced motion on declared supported profiles. Critical automated exceptions, data loss or authority confusion block qualification. Retain actual DOM/semantic/visual evidence; unavailable checks remain pending.",
           "id": "accessibility-outcomes-qualified",
           "qualification": "controlled-environment"
         },
@@ -2257,6 +2976,7 @@
       "id": "qualified-user-and-model-outcomes",
       "number": 4,
       "objective": "Turn the implemented feature set into a truthful release decision through representative accessibility/usability, dataset/model and operational outcome evidence, fixing only measured in-scope gaps and preserving existing roadmap owners.",
+      "pendingCriteria": [],
       "plan": {
         "assumptions": [
           "Participants and physical qualification environments are unavailable; external criteria remain pending.",
@@ -2398,12 +3118,12 @@
   },
   "resumeAudits": [],
   "roadmapApproval": {
-    "approvedAt": "2026-10-21T02:34:11Z",
-    "fingerprint": "ba62c99c105717a86eded871b803acbd2a27e3ae4b357feef8d5c67531cedcc9",
-    "note": "The user explicitly requested approval of the two recently created roadmaps, including Functionality and Quality-Adjusted Optimization. This records roadmap approval only; the earlier instruction not to implement yet remains in force. No increment is started."
+    "approvedAt": "2026-10-21T18:15:09Z",
+    "fingerprint": "45475662f8e988d74bc3b86d87a0019a26d58d9156532fcd7eeeb16351e705c8",
+    "note": "User explicitly directed these three named technical roadmaps to use AI-agent acceptance, with human studies/manual acceptance handled offline. This narrow scope reapproval preserves technical qualification and does not assert passing tests."
   },
   "schemaVersion": 1,
   "slug": "functionality-optimization",
   "status": "executing",
-  "updatedAt": "2026-10-21T10:56:20Z"
+  "updatedAt": "2026-10-22T01:06:49Z"
 }

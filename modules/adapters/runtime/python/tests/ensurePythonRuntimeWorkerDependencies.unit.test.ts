@@ -1,6 +1,6 @@
 import type { SpawnSyncReturns } from "node:child_process";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -14,6 +14,7 @@ import {
 import {
   ensurePythonRuntimeModelTrainingDependencies,
   ensurePythonRuntimeWorkerDependencies,
+  readPythonRuntimeDependencySessionOutcomes,
 } from "../ensurePythonRuntimeWorkerDependencies";
 
 function createSpawnSyncResult(
@@ -114,75 +115,89 @@ function assertMinimalOutcomes(value: any) {
   assert.ok(!JSON.stringify(value).includes(privateMarker));
 }
 
-describe("minimal dependency outcome persistence", () => {
-  it("reports successful training setup and normalizes unsupported platform values", () => {
-    const root = mkdtempSync(join(tmpdir(), "minimal-training-outcome-"));
+describe("session-only dependency outcomes", () => {
+  function latest(operation = "worker") {
+    const value = readPythonRuntimeDependencySessionOutcomes().find(item => item.operation === operation)!;
+    assertMinimalOutcomes(value);
+    return value;
+  }
+
+  it("reports training and unsupported platform outcomes without creating even an explicitly requested file", () => {
+    const root = mkdtempSync(join(tmpdir(), "session-install-outcome-"));
     try {
-      const diagnosticsFile = join(root, "outcome.json");
+      const diagnosticsFile = join(root, "nested", "outcome.json");
       ensurePythonRuntimeModelTrainingDependencies({ command: "python", diagnosticsFile, spawnSyncImplementation: outcomeFixture() as any });
-      const value = JSON.parse(readFileSync(diagnosticsFile, "utf8"));
-      assertMinimalOutcomes(value);
-      assert.equal(value.success, true);
-      assert.equal(value.operation, "model-training");
+      assert.equal(latest("model-training").success, true);
       assert.throws(() => ensurePythonRuntimeWorkerDependencies({ command: "python", diagnosticsFile, platform: privateMarker as any, spawnSyncImplementation: outcomeFixture() as any }), /Unsupported host platform/);
-      const denied = JSON.parse(readFileSync(diagnosticsFile, "utf8"));
-      assertMinimalOutcomes(denied);
-      assert.equal(denied.success, false);
-      assert.equal(denied.platform, "other");
-      assert.deepEqual(denied.stages, []);
+      assert.equal(latest().success, false);
+      assert.equal(latest().platform, "other");
+      assert.deepEqual(latest().stages, []);
+      assert.equal(existsSync(join(root, "nested")), false);
     } finally { rmSync(root, { recursive: true, force: true }); }
   });
 
   for (const failure of [undefined, "inspect", "worker", "training", "malformed"] as const) {
-    it(`persists only declared outcomes for ${failure ?? "early success"}`, () => {
-      const root = mkdtempSync(join(tmpdir(), "minimal-install-outcome-"));
-      try {
-        const diagnosticsFile = join(root, "outcome.json");
-        const run = () => (failure === "training" ? ensurePythonRuntimeModelTrainingDependencies : ensurePythonRuntimeWorkerDependencies)({
-          command: `/synthetic/${privateMarker}/python`, cwd: `/synthetic/${privateMarker}`,
-          env: { SYNTHETIC_PRIVATE_VALUE: privateMarker }, diagnosticsFile,
-          spawnSyncImplementation: outcomeFixture(failure) as any,
-        });
-        if (failure) assert.throws(run);
-        else run();
-        const value = JSON.parse(readFileSync(diagnosticsFile, "utf8"));
-        assertMinimalOutcomes(value);
-        assert.equal(value.success, !failure);
-        assert.equal(value.operation, failure === "training" ? "model-training" : "worker");
-        if (!failure) assert.deepEqual(value.verificationResult, { success: true, backend: "cpu" });
-      } finally { rmSync(root, { recursive: true, force: true }); }
+    it(`publishes only declared outcomes for ${failure ?? "early success"}`, () => {
+      let observed: unknown;
+      const run = () => (failure === "training" ? ensurePythonRuntimeModelTrainingDependencies : ensurePythonRuntimeWorkerDependencies)({
+        command: `/synthetic/${privateMarker}/python`, cwd: `/synthetic/${privateMarker}`,
+        env: { SYNTHETIC_PRIVATE_VALUE: privateMarker },
+        onDiagnosticOutcomes: value => { observed = value; },
+        spawnSyncImplementation: outcomeFixture(failure) as any,
+      });
+      if (failure) assert.throws(run);
+      else run();
+      const value = latest(failure === "training" ? "model-training" : "worker");
+      assert.equal(observed, value);
+      assert.equal(value.success, !failure);
+      if (!failure) assert.deepEqual(value.verificationResult, { success: true, backend: "cpu" });
     });
   }
 
-  it("groups retry outcomes and preserves CUDA failure followed by CPU success", () => {
-    const root = mkdtempSync(join(tmpdir(), "minimal-install-retry-"));
-    try {
-      const diagnosticsFile = join(root, "outcome.json");
-      ensurePythonRuntimeWorkerDependencies({ command: "python", retryCount: 3, diagnosticsFile,
+  it("groups retries, bounds retained operations and freezes every published level", () => {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      ensurePythonRuntimeWorkerDependencies({ command: "python", retryCount: 3,
         torchIndexesByBackend: { cpu: `https://${privateMarker}.invalid/cpu`, cuda: `https://${privateMarker}.invalid/cuda` },
         spawnSyncImplementation: outcomeFixture(undefined, true) as any });
-      const value = JSON.parse(readFileSync(diagnosticsFile, "utf8"));
-      assertMinimalOutcomes(value);
-      assert.equal(value.success, true);
-      assert.equal(value.detectedBackend, "cuda");
-      assert.equal(value.selectedBackend, "cpu");
-      assert.deepEqual(value.stages.find((s: any) => s.stage === "install-torch" && s.backend === "cuda"),
-        { stage: "install-torch", backend: "cuda", exitCode: 1, success: false, attempts: 4, failedAttempts: 4 });
-      assert.equal(value.stages.find((s: any) => s.stage === "install-torch" && s.backend === "cpu").attempts, 1);
-    } finally { rmSync(root, { recursive: true, force: true }); }
+    }
+    const snapshot = readPythonRuntimeDependencySessionOutcomes();
+    assert.equal(snapshot.length, 2);
+    assert.equal(new Set(snapshot.map(value => value.operation)).size, 2);
+    const value = latest();
+    assert.equal(value.success, true);
+    assert.equal(value.detectedBackend, "cuda");
+    assert.equal(value.selectedBackend, "cpu");
+    assert.deepEqual(value.stages.find(s => s.stage === "install-torch" && s.backend === "cuda"),
+      { stage: "install-torch", backend: "cuda", exitCode: 1, success: false, attempts: 4, failedAttempts: 4 });
+    assert.equal(value.stages.find(s => s.stage === "install-torch" && s.backend === "cpu")!.attempts, 1);
+    assert.ok([snapshot, value, value.stages, value.verificationResult, ...value.stages].every(Object.isFrozen));
+    assert.throws(() => (value as any).success = false, TypeError);
+    assert.throws(() => (value.stages as any).push({}), TypeError);
+    assert.throws(() => (value.stages[0] as any).stage = privateMarker, TypeError);
+    assert.equal(latest().success, true);
   });
 
-  it("diagnostic I/O failure cannot replace setup success or its original failure", () => {
-    const root = mkdtempSync(join(tmpdir(), "minimal-install-io-"));
-    try {
-      const parent = join(root, "regular-file");
-      writeFileSync(parent, "fixture");
-      for (const failure of [undefined, "inspect"] as const) {
-        const run = () => ensurePythonRuntimeWorkerDependencies({ command: "python", diagnosticsFile: join(parent, "outcome.json"), spawnSyncImplementation: outcomeFixture(failure) as any });
-        if (failure) assert.throws(run, /Failed to inspect Python runtime environment/);
-        else assert.doesNotThrow(run);
-      }
-    } finally { rmSync(root, { recursive: true, force: true }); }
+  it("observer failure cannot replace setup success or its original failure", () => {
+    for (const failure of [undefined, "inspect"] as const) {
+      const run = () => ensurePythonRuntimeWorkerDependencies({ command: "python",
+        onDiagnosticOutcomes: () => { throw new Error(privateMarker); },
+        spawnSyncImplementation: outcomeFixture(failure) as any });
+      if (failure) assert.throws(run, /Failed to inspect Python runtime environment/);
+      else assert.doesNotThrow(run);
+      assert.equal(latest().success, !failure);
+    }
+  });
+
+  it("handles asynchronous observer rejection without replacing either setup outcome", async () => {
+    for (const failure of [undefined, "inspect"] as const) {
+      const run = () => ensurePythonRuntimeWorkerDependencies({ command: "python",
+        onDiagnosticOutcomes: async () => { throw new Error(privateMarker); },
+        spawnSyncImplementation: outcomeFixture(failure) as any });
+      if (failure) assert.throws(run, /Failed to inspect Python runtime environment/);
+      else assert.doesNotThrow(run);
+      await new Promise<void>(resolve => setImmediate(resolve));
+      assert.equal(latest().success, !failure);
+    }
   });
 });
 
@@ -299,11 +314,7 @@ describe("ensurePythonRuntimeWorkerDependencies", () => {
     ).toBe(false);
   });
 
-  it("writes diagnostics when an existing matching torch installation returns early", () => {
-    const diagnosticsFile = join(
-      mkdtempSync(join(tmpdir(), "python-runtime-diag-")),
-      "diag.json",
-    );
+  it("publishes session outcomes when an existing matching torch installation returns early", () => {
     const spawnSyncImplementation = createSpawnSyncImplementation(
       (command, args) => {
         if (
@@ -379,12 +390,9 @@ describe("ensurePythonRuntimeWorkerDependencies", () => {
       command: "python",
       cwd: "/tmp/runtime-worker",
       spawnSyncImplementation: spawnSyncImplementation as any,
-      diagnosticsFile,
     });
 
-    const diagnostics = JSON.parse(readFileSync(diagnosticsFile, "utf8")) as {
-      verificationResult?: { success?: boolean; backend?: string };
-    };
+    const diagnostics = readPythonRuntimeDependencySessionOutcomes().find(value => value.operation === "worker")!;
     expect(diagnostics.verificationResult).toMatchObject({
       success: true,
       backend: "cpu",

@@ -19,6 +19,7 @@ test("visual composer host plan isolates roots, security, ports, and direct chil
     serverPort: 45_001,
     thinClientPort: 45_002,
     runtimePort: 45_003,
+    serverRuntimePort: 45_004,
     environment: {
       PATH: "configured-path",
       DEPLOYMENT_SHAPE: "managed-single",
@@ -75,8 +76,18 @@ test("visual composer host plan isolates roots, security, ports, and direct chil
   );
   assert.equal(plan.server.env.DEPLOYMENT_SHAPE, undefined);
   assert.equal(plan.server.env.DATABASE_URL, undefined);
+  assert.equal(plan.server.env.PYTHON_RUNTIME_BASE_URL, "http://127.0.0.1:45004");
+  assert.equal(plan.server.env.PYTHON_RUNTIME_COMMAND, process.execPath);
+  assert.equal(plan.server.env.HF_HUB_CACHE, path.join(plan.paths.thinRuntimeRoot, "controlled-model-cache"));
+  assert.equal(plan.desktop.env.HF_HUB_CACHE, path.join(plan.paths.desktopDataRoot, "controlled-model-cache"));
   assert.ok(plan.server.args.includes("--import"));
   assert.ok(plan.thinClient.args.includes("--strictPort"));
+});
+
+test("visual composer rejects collisions with either authenticated runtime listener", () => {
+  for (const runtime of ["runtimePort", "serverRuntimePort"]) {
+    assert.throws(() => createVisualComposerHostLaunchPlan({ serverPort: 45_001, [runtime]: 45_001 }), /ports must be different/);
+  }
 });
 
 test("packaged qualification builds the current worktree with a fixed npm script", () => {

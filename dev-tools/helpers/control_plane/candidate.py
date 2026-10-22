@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import stat
 import subprocess
 from pathlib import Path
 
@@ -97,12 +98,40 @@ def roadmap_authority(root: Path, binding: dict | None) -> str | None:
         module.validate_state_shape(root, state)
         approved = module.approval_is_current(state)
         overall_ready = module.implementation_ready_for_overall(state)
+        qualification = module.pending_qualification_context(state, binding["increment_id"])
     except Exception:
         refuse("authority.invalid", "The roadmap authority is missing, malformed or stale.")
     finally:
         sys.path.pop(0)
     overall = binding["increment_id"] == "overall"
-    active = overall_ready if overall else (state.get("currentIncrementId") == binding["increment_id"] and state.get("status") == "executing")
+    active = overall_ready if overall else (qualification is not None or
+        (state.get("currentIncrementId") == binding["increment_id"] and state.get("status") == "executing"))
     if state["paths"]["state"] != path or not approved or not active:
         refuse("authority.not-active", "The work is not bound to the active approved roadmap increment.")
+    if qualification is not None:
+        artifacts = {}
+        total = 0
+        for evidence in qualification["evidence"]:
+            if not evidence or not evidence.get("artifact"):
+                continue
+            name = relative(evidence["artifact"])
+            if name in artifacts:
+                continue
+            path = confined_path(root, name)
+            try:
+                before = path.lstat()
+                if not stat.S_ISREG(before.st_mode) or getattr(before, "st_file_attributes", 0) & 0x400:
+                    raise ValueError("regular evidence required")
+                total += before.st_size
+                if before.st_size > 8 * 1024 * 1024 or total > 64 * 1024 * 1024:
+                    raise ValueError("bounded evidence required")
+                with path.open("rb") as stream:
+                    payload = stream.read(8 * 1024 * 1024 + 1)
+                after = path.lstat()
+                if len(payload) != before.st_size or (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
+                    raise ValueError("stable evidence required")
+            except (OSError, ValueError):
+                refuse("authority.evidence-unavailable", "Target qualification evidence is missing, unsafe, oversized or changing.")
+            artifacts[name] = hashlib.sha256(payload).hexdigest()
+        return digest({"approval": state["roadmapApproval"]["fingerprint"], "qualification": qualification, "artifacts": artifacts})
     return state["roadmapApproval"]["fingerprint"]

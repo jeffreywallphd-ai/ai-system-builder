@@ -16,6 +16,7 @@ import {
 export const DEFAULT_VISUAL_COMPOSER_SERVER_PORT = 43_170;
 export const DEFAULT_VISUAL_COMPOSER_THIN_CLIENT_PORT = 43_171;
 export const DEFAULT_VISUAL_COMPOSER_RUNTIME_PORT = 43_172;
+export const DEFAULT_VISUAL_COMPOSER_SERVER_RUNTIME_PORT = 43_173;
 export const DEFAULT_VISUAL_COMPOSER_STARTUP_TIMEOUT_MS = 30_000;
 export const DEFAULT_VISUAL_COMPOSER_SHUTDOWN_TIMEOUT_MS = 5_000;
 export const VISUAL_COMPOSER_PROCESS_LOG_LIMIT = 16_000;
@@ -81,7 +82,8 @@ export function createVisualComposerHostLaunchPlan(options = {}) {
     DEFAULT_VISUAL_COMPOSER_RUNTIME_PORT,
     "controlled runtime",
   );
-  if (new Set([serverPort, thinClientPort, runtimePort]).size !== 3) {
+  const serverRuntimePort = normalizePort(options.serverRuntimePort, DEFAULT_VISUAL_COMPOSER_SERVER_RUNTIME_PORT, "controlled server runtime");
+  if (new Set([serverPort, thinClientPort, runtimePort, serverRuntimePort]).size !== 4) {
     throw new Error("Visual composer qualification ports must be different.");
   }
 
@@ -96,6 +98,16 @@ export function createVisualComposerHostLaunchPlan(options = {}) {
     paths,
     serverPort,
   );
+  Object.assign(serverEnvironment, {
+    PYTHON_RUNTIME_BASE_URL: `http://${LOOPBACK_HOST}:${serverRuntimePort}`,
+    PYTHON_RUNTIME_HOST: LOOPBACK_HOST,
+    PYTHON_RUNTIME_PORT: String(serverRuntimePort),
+    PYTHON_RUNTIME_COMMAND: process.execPath,
+    PYTHON_RUNTIME_ARGS: CONTROLLED_CONVERSATION_WORKER_RELATIVE_PATH.replaceAll("\\", "/"),
+    PYTHON_RUNTIME_WORKER_DIR: repoRoot,
+    PYTHON_RUNTIME_STARTUP_TIMEOUT_MS: "15000",
+    HF_HUB_CACHE: path.join(paths.thinRuntimeRoot, "controlled-model-cache"),
+  });
   const thinClientEnvironment = createThinClientEnvironment(
     baseEnvironment,
     serverOrigin,
@@ -117,6 +129,7 @@ export function createVisualComposerHostLaunchPlan(options = {}) {
   const desktopEnvironment = {
     ...baseEnvironment,
     VISUAL_COMPOSER_DESKTOP_DATA_ROOT: paths.desktopDataRoot,
+    HF_HUB_CACHE: path.join(paths.desktopDataRoot, "controlled-model-cache"),
     PYTHON_RUNTIME_BASE_URL: `http://${LOOPBACK_HOST}:${runtimePort}`,
     PYTHON_RUNTIME_HOST: LOOPBACK_HOST,
     PYTHON_RUNTIME_PORT: String(runtimePort),

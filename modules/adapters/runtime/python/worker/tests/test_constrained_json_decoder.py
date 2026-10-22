@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from copy import deepcopy
 from types import SimpleNamespace
+import json
+import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from modules.adapters.runtime.python.worker.tasks import constrained_json_decoder as decoder_module
 
@@ -91,6 +93,39 @@ def _constraint_factory(
 
 
 class ConstrainedJsonSchemaTests(unittest.TestCase):
+    def test_default_backend_keeps_pinned_formatting_and_original_value_validation(self) -> None:
+        from modules.adapters.runtime.python.worker.tasks.structured_output_runtime import validate_json_schema_value
+        checked = []
+        class Validator:
+            @staticmethod
+            def check_schema(schema):checked.append(schema)
+            def __init__(self,schema):self.schema=schema
+            def validate(self,value):validate_json_schema_value(value,self.schema)
+        processor = _FakeProcessor()
+        backend = Mock(return_value=processor)
+        wrapper = SimpleNamespace(tensor_library_name="torch")
+        modules = {
+            "jsonschema":SimpleNamespace(Draft202012Validator=Validator),
+            "outlines.backends":SimpleNamespace(get_json_schema_logits_processor=backend),
+            "outlines.models.transformers":SimpleNamespace(Transformers=lambda *_args:wrapper),
+        }
+        values = ['two words','quoted "value" and slash \\',"line one\nline two\tspace","braces { } café ✓"]
+        with patch.dict(sys.modules,modules),patch.object(decoder_module,"get_constrained_json_decoder_runtime_status",return_value=SimpleNamespace(available=True)),patch.object(decoder_module,"_configure_windows_eager_outlines_torch_kernel"):
+            decoder = ConstrainedJsonDecoder(_FakeModel(),_FakeTokenizer())
+            for value in values:
+                schema = _schema(const_value=value)
+                plan = compile_constrained_json_schema(schema)
+                compiled = decoder._build_outlines_constraint(plan)
+                # Lexically equivalent formatting changed real-model label
+                # quality. Keep the pinned backend default, not an override.
+                backend.assert_called_with("outlines_core",wrapper,plan.constraint_schema)
+                self.assertIs(compiled.processor,processor)
+                self.assertEqual(checked[-1],schema)
+                compact = json.dumps({"answer":value},ensure_ascii=False,separators=(",",":"))
+                compiled.validate(json.loads(compact))
+                self.assertEqual(json.loads(compact)["answer"],value)
+                with self.assertRaises(ValueError):compiled.validate({"answer":value+"wrong"})
+
     def test_uses_outlines_eager_mask_kernel_on_windows(self) -> None:
         def eager_kernel(*_args):
             return None

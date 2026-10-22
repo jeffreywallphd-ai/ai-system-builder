@@ -98,9 +98,19 @@ serialization/normalization rejects before returning a document containing them.
 The shared content predicate is pure admission logic, separate from lossy display
 sanitization. This is syntax hardening, not proof that arbitrary prose contains
 no sensitive data. Existing schema, trust and metadata controls still apply.
-Legacy semantic fingerprints and their exclusions remain unchanged; complete
-content integrity/version migration remains a separate unresolved qualification
-and compatibility boundary. No provider, model or runtime execution is added.
+Semantic fingerprint utilities capture complete passive input before existing
+manifest/entry validation and domain-separated `sha256:semantic-v2` hashing.
+Display projection cannot remove distinctions before hashing. Proxy/accessor/
+toJSON objects, cycles, nonJSON values, malformed arrays and structural prototype
+keys deny without evaluation. Capture bounds are32levels,250000values,8192items
+per container and16MiB aggregate encoded key/string bytes. Original property order
+is preserved for existing schema validation; hash keys sort by code unit afterward.
+Only declared packaging/self-reference exclusions and set-like collection ordering
+are normalized. Valid authorship and explanatory text remain integrity inputs.
+Static errors expose no rejected values. Immutable shipped identities and package
+byte digests are unchanged. Legacy hash verification requires explicit revalidation
+and cannot rewrite trust, approval or bindings. This pure utility does not qualify
+installer trust shortcuts, native file effects, or actual release authorization.
 
 Actual credential checks apply to property names as well as string values.
 Credential-bearing names are denied before descent/copy and never become public
@@ -164,6 +174,82 @@ and nonpositive trust states remain visible. Reads never seed, install or write.
 The shared passive structural bounds now apply before definition projection;
 malformed/accessor-bearing records fail with a static read error. This is read
 classification, not package admission or general proof of trusted provenance.
-Seeder/installer marker-only already-current shortcuts, complete package integrity
-migration and native qualification remain separate pending work. Rollback retains
-the stronger denial of forged authority cues.
+Seeder and system-pack installer reuse also captures the complete bounded passive
+stored body before reading markers, and compares it against exact expected source
+content plus declared operational enrichment. An unchanged editable fingerprint
+never makes edited content already current. Nonmatching seeds preserve user edits;
+nonmatching installs deny unless the existing explicit same-pack refresh is
+authorized. Refresh writes validated supplied source content and never treats an
+editable marker as proof of its current body. Immutable legacy fingerprints are
+retained as source identifiers, without migration or promotion to semantic-v2.
+Complete package-integrity migration and native qualification remain pending.
+Rollback retains content comparison and the stronger denial of forged authority cues.
+
+Image/generated-output view identities are persisted random opaque aliases under
+accepted ADR-0043. The narrow identity port stores private organization/workspace
+source and public indexes; a hash appears only in the private source index key,
+never in a public identifier. Active SQLite/PostgreSQL host composition supplies
+the organization-context store. Organization scope is frozen before awaiting;
+unassigned or missing stores deny this projection without a legacy JSON fallback.
+
+Revision-CAS publication reserves one immutable alias per owner/source, inserts
+its exact inverse, then commits the source revision. Only committed consistent
+pairs are returned or resolved. A new reserved publication can resume after an
+authorized descriptor read, using the same alias; committed missing or substituted
+pairs deny without repair. Four conflict attempts bound admission. This avoids
+adding overlapping connection transactions to the existing SQLite seam. Private
+reserved records grant no source authority and are never public evidence.
+
+Image/output/artifact aliases and source cursors use this mapping. Descriptor
+capture rejects active/malformed input before projection. Detail reads use two
+exact index lookups, followed by an exact workspace-scoped source reauthorization;
+there is no source-ID decoding or list fallback. Revoked/mismatched sources deny.
+Image cursor continuation uses the last returned source row, avoiding a skipped
+next item. No image bytes, providers, runtimes, registration or finalization are
+invoked by projection. Generated-output finalization remains uncomposed in hosts.
+
+Existing source-derived view references are not migrated or silently reassigned.
+Explicit owner-approved legacy-reference migration and native persistence/ACL
+qualification remain pending. Preserve mapping records and stronger denials on
+rollback; never restore source-derived public IDs. This component evidence does
+not close parent security increments or establish protected physical-file effects.
+
+Canvas startup optimization delta: bounded Foundation reads and atomic batch
+registration retain full validation, stored-content matching and explicit refresh
+authority. Expected-body comparisons execute inside each CAS retry; stale plans,
+duplicate identities, active/malformed JSON and invalid later members cannot
+overwrite user edits. Injected single-registration rejection is never bypassed.
+Trusted definition snapshots are exact-version and invocation-private; owner-bound
+single-flight expires on settlement and later attempts revalidate persisted trust.
+Public failure messages remain generic. Internal Foundation attribution includes
+only fixed stage, known release version, bounded counts and allowlisted codes,
+never raw records, paths or repository errors. Immutable artifacts and partial
+failed attempts remain intact. Native filesystem/platform and reference-model
+qualification remain separate; these optimizations provide no new authority.
+
+Managed reference qualification is an isolated test composition with actual
+PostgreSQL, forced RLS, OIDC/JOSE and verified TLS. It checks the exact owned
+container image/labels and every published binding, uses fresh synthetic database
+and least-privilege nonowner runtime roles, and confines CA trust to owned child
+processes. Invalid identities, missing membership and existing foreign-workspace
+reads retain their public denials. No verifier, persistence or authorization
+substitution supplies managed evidence. Private credentials/keys and bounded
+diagnostics remain ignored; traces carrying bearer injection are disabled.
+Fixed synthetic workers accept only the existing controlled model and finite
+scenarios. Observed work supports authenticated cancellation, duplicate active
+identity denial and bounded timers; fixture failure exits only its own process.
+Startup failure attempts every acquired cleanup; admitted-host teardown requires
+acknowledgment, exit zero and physical owned-worker exit. Forced cleanup and stale
+source fail qualification. Actual failed product journeys stay failed until fixed
+and rerun; this harness grants neither inference nor parent roadmap completion.
+# Qualification defect reconciliation
+
+Actual managed-host qualification exposed missing scoped custom readers and
+inconsistent list/detail membership. Both now resolve persisted workspace sources;
+custom metadata and foreign workspace/organization records confer no authority.
+Necessary Composer filters reduce reads while final compatibility and bounded,
+query-bound paging remain enforced. Owned Python process-exit reconciliation
+uses supervisor ownership rather than network failures; late replies and old
+generations cannot resurrect accepted unfinished tasks. Retained failures and
+actual host regression evidence remain distinct from inference qualification.
+

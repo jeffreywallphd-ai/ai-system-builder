@@ -6,10 +6,20 @@ import type { ImageAsset } from "../../../../contracts/image";
 import type { ImageGenerationOutput } from "../../../../contracts/image-generation";
 import type { ImageAssetDescriptorReadPort } from "../../../ports/image";
 import {
-  AssetImageResourceBackedViewProvider,
+  AssetImageResourceBackedViewProvider as ProductionImageProvider,
+  type AssetImageResourceBackedViewProviderDependencies,
   type GeneratedImageOutputDescriptor,
   type GeneratedImageOutputDescriptorSource,
 } from "../asset-image-resource-backed-view-provider.service";
+import { createTestImageResourceIdentity } from "./fixtures/image-resource-identities.fixture";
+import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
+import { createLocalImageAssetRegistryAdapter, createStructuredImageResourceIdentityAdapter } from "../../../../adapters/persistence/image";
+
+class AssetImageResourceBackedViewProvider extends ProductionImageProvider {
+  constructor(dependencies: AssetImageResourceBackedViewProviderDependencies = {}) {
+    super({ imageResourceIdentity: createTestImageResourceIdentity(), ...dependencies });
+  }
+}
 
 class FakeImageAssetDescriptorRead implements ImageAssetDescriptorReadPort {
   public listCalls = 0;
@@ -69,6 +79,7 @@ class FakeGeneratedOutputDescriptorSource implements GeneratedImageOutputDescrip
 
 function imageAsset(overrides: Partial<ImageAsset> = {}): ImageAsset {
   return {
+    workspaceId: "workspace-a" as never,
     assetId: "image-1",
     artifactId: "artifact-1",
     source: "generated",
@@ -138,6 +149,82 @@ function assertSafe(value: unknown): void {
 }
 
 describe("AssetImageResourceBackedViewProvider", () => {
+  it("preserves all image pages through opaque cursors and rereads after provider reconstruction", async () => {
+    const documents = createInMemoryStructuredDocumentStore().forOrganization("organization-a" as never);
+    const registry = createLocalImageAssetRegistryAdapter({ filePath: "unused/image-assets.json", rootDirectory: "unused", documents });
+    for (const letter of ["A", "B", "C"]) await registry.registerImageAsset({
+      workspaceId: "workspace-a" as never, assetId: `private-image-${letter}`, artifactId: `private-artifact-${letter}`,
+      source: "uploaded", metadata: { originalFileName: `${letter}.png` },
+    });
+    const provider = new ProductionImageProvider({ imageAssetDescriptorRead: registry, imageResourceIdentity: createStructuredImageResourceIdentityAdapter(documents) });
+    const items = [];
+    let cursor: string | undefined;
+    for (let page = 0; page < 5; page++) {
+      const result = await provider.listResourceBackedViews({ workspaceId: "workspace-a", limit: 1, cursor });
+      items.push(...result.items);
+      cursor = result.nextCursor;
+      if (!cursor) break;
+      assert.match(cursor, /^image-resource\.v1\./);
+    }
+    assert.deepEqual(items.map((item) => item.displayName), ["A.png", "B.png", "C.png"]);
+    assert.equal(new Set(items.map((item) => item.viewId)).size, 3);
+    const reopened = new ProductionImageProvider({ imageAssetDescriptorRead: registry, imageResourceIdentity: createStructuredImageResourceIdentityAdapter(documents) });
+    for (const item of items) assert.deepEqual(await reopened.readResourceBackedView(item.viewId, { workspaceId: "workspace-a" }), item);
+    assert.equal(JSON.stringify(items).includes("private-image-"), false);
+    assert.equal(JSON.stringify(items).includes("private-artifact-"), false);
+  });
+
+  it("reauthorizes each exact source and denies revocation, substitution, wrong workspace and guessed legacy IDs", async () => {
+    let available = true;
+    let substitute = false;
+    let reads = 0;
+    let lists = 0;
+    const source = {
+      async listImageAssetDescriptors() { lists++; return { items: [imageAsset()] }; },
+      async readImageAssetDescriptor(workspaceId: string, assetId: string) {
+        reads++;
+        if (!available || workspaceId !== "workspace-a" || assetId !== "image-1") return undefined;
+        return imageAsset(substitute ? { assetId: "different-private-id" } : {});
+      },
+    };
+    const provider = new AssetImageResourceBackedViewProvider({ imageAssetDescriptorRead: source });
+    const view = (await provider.listResourceBackedViews({ workspaceId: "workspace-a" })).items[0]!;
+    assert.equal((await provider.readResourceBackedView(view.viewId, { workspaceId: "workspace-a" }))?.viewId, view.viewId);
+    available = false;
+    assert.equal(await provider.readResourceBackedView(view.viewId, { workspaceId: "workspace-a" }), undefined);
+    available = true; substitute = true;
+    assert.equal(await provider.readResourceBackedView(view.viewId, { workspaceId: "workspace-a" }), undefined);
+    assert.equal(await provider.readResourceBackedView(view.viewId, { workspaceId: "workspace-b" }), undefined);
+    assert.equal(await provider.readResourceBackedView("asset-view.image.internal.image-1", { workspaceId: "workspace-a" }), undefined);
+    assert.equal(lists, 1);
+    assert.equal(reads, 3);
+  });
+
+  it("fails safely without owner-bound identity storage and never evaluates active descriptor callbacks", async () => {
+    const source = new FakeImageAssetDescriptorRead([imageAsset()]);
+    const unavailable = await new ProductionImageProvider({ imageAssetDescriptorRead: source }).listResourceBackedViews({ workspaceId: "workspace-a" });
+    assert.equal(unavailable.items.length, 0);
+    assert.equal(source.listCalls, 0);
+    let callbacks = 0;
+    const active = Object.defineProperty(imageAsset(), "assetId", { enumerable: true, get() { callbacks++; return "private-active"; } });
+    const provider = new AssetImageResourceBackedViewProvider({ imageAssetDescriptorRead: { async listImageAssetDescriptors() { return { items: [active] }; } } });
+    const result = await provider.listResourceBackedViews({ workspaceId: "workspace-a" });
+    assert.equal(result.items.length, 0);
+    assert.equal(callbacks, 0);
+    assert.equal(JSON.stringify(result).includes("private-active"), false);
+  });
+
+  it("does not publish private source identifiers through view IDs or public aliases", async () => {
+    const sourceIds = ["private-image-identity-389", "private-artifact-identity-617", "private-output-identity-725"];
+    const provider = new AssetImageResourceBackedViewProvider({
+      imageAssetDescriptorRead: new FakeImageAssetDescriptorRead([imageAsset({ assetId: sourceIds[0]!, artifactId: sourceIds[1]! })]),
+      generatedImageOutputDescriptorSource: new FakeGeneratedOutputDescriptorSource([{ outputId: sourceIds[2]!, artifactId: sourceIds[1]!, output: output() }]),
+    });
+    const result = await provider.listResourceBackedViews({ workspaceId: "workspace-a", limit: 10 });
+    assert.equal(result.items.length, 2);
+    for (const sourceId of sourceIds) assert.equal(JSON.stringify(result).includes(sourceId), false);
+  });
+
   it("maps a safe finalized image asset descriptor to an image resource-backed view", async () => {
     const imageSource = new FakeImageAssetDescriptorRead([imageAsset()]);
     const provider = new AssetImageResourceBackedViewProvider({ imageAssetDescriptorRead: imageSource });
@@ -287,11 +374,16 @@ describe("AssetImageResourceBackedViewProvider", () => {
 
   it("safely reports unsupported cursor behavior and sanitized source failures", async () => {
     const generatedCursorSource = new FakeGeneratedOutputDescriptorSource([{ outputId: "output-1", output: output() }]);
+    const identities = createTestImageResourceIdentity();
+    const cursor = await identities.getOrCreateIdentity("workspace-a" as never, "output-cursor", "cursor-1");
     const cursorResult = await new AssetImageResourceBackedViewProvider({
+      imageResourceIdentity: identities,
       generatedImageOutputDescriptorSource: generatedCursorSource,
-    }).listResourceBackedViews({ workspaceId: "workspace-a" as never, cursor: "cursor-1", viewKinds: ["generated-output"] });
+    }).listResourceBackedViews({ workspaceId: "workspace-a" as never, cursor, viewKinds: ["generated-output"] });
     assert.equal(generatedCursorSource.lastListQuery?.cursor, "cursor-1");
-    assert.equal(cursorResult.nextCursor, "next-generated");
+    assert.ok(cursorResult.nextCursor);
+    assert.equal((await identities.resolveIdentity("workspace-a" as never, cursorResult.nextCursor))?.sourceId, "next-generated");
+    assert.notEqual(cursorResult.nextCursor, "next-generated");
 
     const combinedImageSource = new FakeImageAssetDescriptorRead([imageAsset()]);
     const combinedGeneratedSource = new FakeGeneratedOutputDescriptorSource([{ outputId: "output-1", output: output() }]);
@@ -324,22 +416,26 @@ describe("AssetImageResourceBackedViewProvider", () => {
       { outputId: "output-first", output: output() },
       { outputId: "output-read", output: output() },
     ]);
+    const identities = createTestImageResourceIdentity();
+    const imageId = await identities.getOrCreateIdentity("workspace-a" as never, "image", "image-read");
+    const outputId = await identities.getOrCreateIdentity("workspace-a" as never, "generated-output", "output-read");
     const provider = new AssetImageResourceBackedViewProvider({
+      imageResourceIdentity: identities,
       imageAssetDescriptorRead: imageSource,
       generatedImageOutputDescriptorSource: generatedSource,
       maxListLimit: 1,
     });
 
-    assert.equal((await provider.readResourceBackedView("asset-view.image.internal.image-read", { workspaceId: "workspace-a" as never }))?.viewKind, "image-asset");
-    assert.equal((await provider.readResourceBackedView("asset-view.generated-output.internal.output-read", { workspaceId: "workspace-a" as never }))?.viewKind, "generated-output");
+    assert.equal((await provider.readResourceBackedView(`asset-view.image.opaque.${imageId}`, { workspaceId: "workspace-a" as never }))?.viewKind, "image-asset");
+    assert.equal((await provider.readResourceBackedView(`asset-view.generated-output.opaque.${outputId}`, { workspaceId: "workspace-a" as never }))?.viewKind, "generated-output");
     assert.equal(await provider.readResourceBackedView("missing", { workspaceId: "workspace-a" as never }), undefined);
     assert.equal(imageSource.readCalls, 1);
     assert.equal(generatedSource.readCalls, 1);
-    assert.equal(imageSource.listCalls + generatedSource.listCalls, 1);
+    assert.equal(imageSource.listCalls + generatedSource.listCalls, 0);
     assert.equal(imageSource.byteReadCalls + generatedSource.byteReadCalls, 0);
   });
 
-  it("keeps bounded list fallback explicit when direct detail lookup is unavailable", async () => {
+  it("denies legacy IDs and detail without source reauthorization instead of falling back to a list", async () => {
     const imageSource = {
       listCalls: 0,
       async listImageAssetDescriptors(query?: { readonly limit?: number }) {
@@ -348,11 +444,12 @@ describe("AssetImageResourceBackedViewProvider", () => {
       },
     };
     const provider = new AssetImageResourceBackedViewProvider({ imageAssetDescriptorRead: imageSource, maxListLimit: 1 });
-    const detail = await provider.readResourceBackedView("asset-view.image.internal.image-list-only", { workspaceId: "workspace-a" as never });
-
-    assert.equal(detail?.viewKind, "image-asset");
-    assert.equal(detail?.diagnostics?.some((diagnostic) => diagnostic.code === "image-resource-backed-view-detail-list-fallback-limited"), true);
+    const listed = await provider.listResourceBackedViews({ workspaceId: "workspace-a" });
+    assert.equal(listed.items.length, 1);
+    assert.equal(await provider.readResourceBackedView(listed.items[0]!.viewId, { workspaceId: "workspace-a" }), undefined);
+    assert.equal(await provider.readResourceBackedView("asset-view.image.internal.image-list-only", { workspaceId: "workspace-a" }), undefined);
     assert.equal(await provider.readResourceBackedView("asset-view.image.internal.image-beyond-first-page", { workspaceId: "workspace-a" as never }), undefined);
+    assert.equal(imageSource.listCalls, 1);
   });
 
   it("imports no forbidden outer layers, storage adapters, byte readers, filesystem, network, runtime, or execution seams", () => {

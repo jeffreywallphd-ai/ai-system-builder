@@ -645,7 +645,7 @@ describe("SystemBuilderWorkspace UI preview", () => {
             items: [
               composerDefinition("builtin.system.system", "System root", [
                 "application-shell",
-              ]),
+              ], false, "3.0.0"),
             ],
             nextCursor: "composer-page-2",
           },
@@ -1009,7 +1009,13 @@ describe("SystemBuilderWorkspace UI preview", () => {
       createdBy: "person-1",
       updatedBy: "person-1",
     } as SystemBuilderRecord;
-    const client = clientFor(record, revision);
+    const client = {
+      ...clientFor(record, revision),
+      listComposerAssets: async () => ({ ok: true as const, value: { items: [
+        composerDefinition("builtin.shell.page", "Requests page", [], false, "1.0.0"),
+        { ...composerDefinition("builtin.security.authorization-policy", "Read policy", [], false, "1.0.0"), assetType: "policy" as const },
+      ] } }),
+    };
 
     container = document.createElement("div");
     document.body.append(container);
@@ -1452,9 +1458,10 @@ describe("SystemBuilderWorkspace UI preview", () => {
         ([input]) => input.parentDefinitionRef,
       ),
     ).toHaveLength(0);
-    expect(
-      listComposerAssets.mock.calls.filter(([input]) => input.searchText),
-    ).toHaveLength(0);
+    expect(listComposerAssets.mock.calls.map(([input]) => input.searchText).sort()).toEqual(
+      [rootDetail.definitionId, shellDetail.definitionId, historyDetail.definitionId].sort(),
+    );
+    expect(listComposerAssets.mock.calls.every(([input]) => input.limit === 200)).toBe(true);
     expect(
       Array.from(container.querySelectorAll("button")).some((candidate) =>
         ["Clone", "Archive", "Restore"].includes(

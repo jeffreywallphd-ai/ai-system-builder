@@ -11,6 +11,11 @@ import {
 
 import { createWorkspaceId } from "../../../../modules/contracts/workspace";
 import { createLocalWorkspaceRepository } from "../../../../modules/adapters/persistence/workspace";
+import {
+  createInMemoryStructuredDocumentStore,
+  type StructuredDocumentStore,
+} from "../../../../modules/adapters/persistence/shared";
+import type { StructuredLogEvent } from "../../../../modules/contracts/logging";
 import { createServer } from "../createServer";
 
 const tempRoots: string[] = [];
@@ -33,8 +38,9 @@ async function createTempRoot(): Promise<string> {
 async function seedActiveWorkspace(
   rootDirectory: string,
   workspaceId = "workspace-a",
+  documents?: StructuredDocumentStore,
 ): Promise<void> {
-  await createLocalWorkspaceRepository({ rootDirectory }).saveWorkspace({
+  await createLocalWorkspaceRepository({ rootDirectory, documents }).saveWorkspace({
     workspaceId: createWorkspaceId(workspaceId),
     displayName: "Workspace A",
     status: "active",
@@ -44,6 +50,89 @@ async function seedActiveWorkspace(
 }
 
 describe("server app artifact upload route", () => {
+  it("rejects malformed controlled runtime preparation before other configuration or I/O", async () => {
+    const root = await createTempRoot();
+    for (const mode of ["production", "test"]) {
+      for (const value of [false, 0, "", null, {}, []]) {
+        await expect(createServer({
+          env: { NODE_ENV: mode, SERVER_STORAGE_ROOT: path.join(root, "unused"),
+            AI_SYSTEM_BUILDER_SECURITY_MODE: "invalid-sentinel-before-initialization" },
+          pythonRuntimeEnvironmentPreparer: value as never,
+        })).rejects.toThrow(mode === "production"
+          ? "controlled runtime preparation seam is unavailable in production"
+          : "Controlled runtime preparation must be a function");
+      }
+    }
+    const { readdir } = await import("node:fs/promises");
+    expect(await readdir(root)).toEqual([]);
+  });
+  it("rejects controlled runtime preparation before production startup or storage writes", async () => {
+    const root = await createTempRoot();
+    await expect(createServer({
+      env: { NODE_ENV: "production", SERVER_STORAGE_ROOT: path.join(root, "unused") },
+      pythonRuntimeEnvironmentPreparer: () => { throw new Error("must not run"); },
+    })).rejects.toThrow("controlled runtime preparation seam is unavailable in production");
+    const { readdir } = await import("node:fs/promises");
+    expect(await readdir(root)).toEqual([]);
+  });
+
+  it("keeps preparation failures closed for explicit fixtures and the original default", async () => {
+    for (const explicitFixture of [true, false]) {
+      const root = await createTempRoot();
+      // Own the persistence fixture for this runtime failure-path regression.
+      // Foundation still installs through the real repositories and validators;
+      // filesystem bootstrap is exercised by separate server/whole-host cases.
+      const documents = createInMemoryStructuredDocumentStore();
+      await seedActiveWorkspace(root, "workspace-a", documents);
+      let preparations = 0;
+      const events: StructuredLogEvent[] = [];
+      const created = await createServer({
+        structuredDocuments: documents,
+        logSink: (_serialized, event) => { events.push(event); },
+        env: { ...process.env, PORT: "0", SERVER_STORAGE_ROOT: root,
+          SERVER_RUNTIME_ROOT: path.join(root, "runtime"), AI_SYSTEM_BUILDER_SECURITY_MODE: "disabled-dev",
+          PYTHON_RUNTIME_BASE_URL: "http://127.0.0.1:45069", PYTHON_RUNTIME_HOST: "127.0.0.1", PYTHON_RUNTIME_PORT: "45069",
+          PYTHON_RUNTIME_COMMAND: "__missing_controlled_runtime_executable__" },
+        ...(explicitFixture ? { pythonRuntimeEnvironmentPreparer: () => { preparations += 1; throw new Error("synthetic-denial"); } } : {}),
+      });
+      const server = await new Promise<import("node:http").Server>(resolve => {
+        const listening = created.app.listen(0, "127.0.0.1", () => resolve(listening));
+      });
+      try {
+        const address = server.address();
+        if (!address || typeof address === "string") throw new Error("expected port");
+        const response = await fetch(`http://127.0.0.1:${address.port}/api/model/download`, {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ workspaceId: "workspace-a", provider: "huggingface", modelId: "qualification/controlled-chat" }),
+        });
+        expect(response.status).toBe(500);
+        const payload = await response.json();
+        expect(payload).toMatchObject({ ok: false, error: { code: "internal" } });
+        expect(JSON.stringify(payload)).not.toContain("synthetic-denial");
+        expect(JSON.stringify(payload)).not.toContain("__missing_controlled_runtime_executable__");
+        // The unique ASCII directory name survives JSON's Windows-path escaping.
+        expect(JSON.stringify(payload)).not.toContain(path.basename(root));
+        expect(preparations).toBe(explicitFixture ? 1 : 0);
+        const failure = events.find(event =>
+          event.event === "runtime.python.server.activity" &&
+          event.data?.eventType === "process-error",
+        );
+        expect(failure).toMatchObject({
+          level: "error",
+          message: "Python runtime environment preparation failed.",
+          data: {
+            supervisorStatus: "failed",
+            errorName: explicitFixture ? "Error" : "PythonRuntimeContextDependencyError",
+          },
+        });
+      } finally {
+        server.closeAllConnections();
+        await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+        await created.shutdownBackgroundTasks();
+        await created.closePersistence();
+      }
+    }
+  });
   it("enforces canonical API routing and authentication before JSON parsing", async () => {
     const storageRootDirectory = await createTempRoot();
     await seedActiveWorkspace(storageRootDirectory);

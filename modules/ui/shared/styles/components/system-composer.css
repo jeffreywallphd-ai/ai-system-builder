@@ -1,3 +1,12 @@
+.system-builder {
+  --color-text-muted: #8fa2bc;
+  background: var(--color-bg-panel);
+}
+
+.system-builder .ui-panel__section-header {
+  background: var(--color-bg-elevated);
+}
+
 .system-composer__modes {
   display: flex;
   flex-wrap: wrap;
@@ -1053,6 +1062,16 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .system-builder *,
+  .system-builder *::before,
+  .system-builder *::after,
+  .system-composer__asset-picker-dialog *,
+  .system-composition-preview * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+
   .system-composer__flat-control,
   .system-composer__drag-handle,
   .system-composer__canvas-node {
@@ -1262,6 +1281,32 @@
 }
 
 @media (max-width: 36rem) {
+  .system-builder,
+  .system-composer__panel {
+    padding: var(--space-xs);
+  }
+
+  .system-composer__canvas {
+    max-block-size: none;
+    overflow: visible;
+  }
+
+  .system-composer__canvas-node,
+  .system-composer__slot {
+    padding: var(--space-2xs);
+  }
+
+  .system-composer__canvas-node-select,
+  .system-composer__slot > header,
+  .system-composer__slot-summary {
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .system-composer__canvas-node-select > span:first-child {
+    flex: 1 1 8rem;
+  }
+
   .system-composer__asset-picker-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1273,5 +1318,9 @@
 
   .system-composer__add-element {
     inline-size: 100%;
+    min-inline-size: 0;
+    flex-wrap: wrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }

@@ -1,0 +1,20 @@
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import path from "node:path";
+
+// Each case exercises a fresh installed profile; a preceding case's persisted
+// workspace selection must not hide startup or change another case's outcome.
+export function prepareIsolatedDesktopCase(caseId: "browse" | "meaningful" | "lifecycle" | "pdf" | "tasks" | "reference" | "worker-exit" | "worker-disconnect" | "cold", sampleIndex?: number) {
+  assert.ok(["browse", "meaningful", "lifecycle", "pdf", "tasks", "reference", "worker-exit", "worker-disconnect", "cold"].includes(caseId));
+  assert.ok(caseId === "cold" ? Number.isInteger(sampleIndex) && sampleIndex! >= 0 && sampleIndex! < 35 : sampleIndex === undefined);
+  const base = process.env.VISUAL_COMPOSER_DESKTOP_DATA_ROOT!;
+  assert.ok(base && path.isAbsolute(base));
+  assert.ok(path.resolve(base).replaceAll("\\", "/").includes("/artifacts/qualification/visual-composer/d/"));
+  const dataRoot = path.join(base, caseId === "cold" ? `cold-${sampleIndex}` : caseId);
+  const result = spawnSync(process.env.VISUAL_COMPOSER_ELECTRON_NODE_EXECUTABLE!, [
+    "--preserve-symlinks", "--preserve-symlinks-main", "--import", "tsx",
+    path.resolve("dev-tools/scripts/qualification/visual-composer/visual-composer-desktop-seed.ts"),
+  ], { cwd: process.cwd(), env: { ...process.env, VISUAL_COMPOSER_DESKTOP_DATA_ROOT: dataRoot, VISUAL_COMPOSER_LARGE_FIXTURE:caseId==="reference"?"1":"0", ELECTRON_RUN_AS_NODE: "1" }, windowsHide: true, encoding: "utf8", timeout: 30_000 });
+  assert.equal(result.status, 0, "isolated desktop case identity seed must succeed");
+  return { dataRoot, env: { ...process.env, VISUAL_COMPOSER_DESKTOP_DATA_ROOT: dataRoot, HF_HUB_CACHE: path.join(dataRoot, "controlled-model-cache") } };
+}

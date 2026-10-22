@@ -1,0 +1,1638 @@
+{
+  "schema_version": "roadmap-supporting-work-v1",
+  "agent_only_roadmaps": [
+    "functionality-optimization",
+    "system-builder-canvas-reliability",
+    "security-findings-refresh"
+  ],
+  "criterion_labels": [
+    {
+      "roadmap_id": "system-builder-canvas-reliability",
+      "increment_id": "measured-canvas-responsiveness",
+      "criterion_id": "reference-and-accessibility-qualification",
+      "title": "Automated reference performance and accessibility"
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "qualified-user-and-model-outcomes",
+      "criterion_id": "accessibility-outcomes-qualified",
+      "title": "Automated desktop and thin-client accessibility"
+    }
+  ],
+  "successors": [
+    {
+      "roadmap_id": "security-vulnerability-remediation",
+      "successor_roadmap_id": "security-findings-refresh",
+      "summary": "Historical security delivery plan; unresolved remediation continues in the approved Security findings refresh successor. Original history and statuses are preserved."
+    }
+  ],
+  "links": [
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "work_id": "security-existing-authority-controls-qualification",
+      "work_criteria": [
+        "local-model-effects-held"
+      ],
+      "receipt_digest": "532890f88015990f338b0cb30534d1433d1c8e92e1a057f125f5c35e2b8ff91d",
+      "review_digest": "c9e34a9c2995fd4fdf3e0a42854baf294a1c75866fb8e4ba78346789ec362ee4",
+      "scope": "Qualify existing local host and workspace authority controls",
+      "limitations": [
+        "Safe model-effect holds and denials only; native positive ownership/effect qualification remains pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "dataset-source-isolation",
+      "work_id": "security-existing-authority-controls-qualification",
+      "work_criteria": [
+        "local-dataset-source-isolation"
+      ],
+      "receipt_digest": "532890f88015990f338b0cb30534d1433d1c8e92e1a057f125f5c35e2b8ff91d",
+      "review_digest": "c9e34a9c2995fd4fdf3e0a42854baf294a1c75866fb8e4ba78346789ec362ee4",
+      "scope": "Qualify existing local host and workspace authority controls",
+      "limitations": [
+        "Local source-isolation controls; owning native/environment qualification remains separate.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "write-owned-model-completion",
+      "work_id": "security-existing-authority-controls-qualification",
+      "work_criteria": [
+        "local-write-owned-download-completion"
+      ],
+      "receipt_digest": "532890f88015990f338b0cb30534d1433d1c8e92e1a057f125f5c35e2b8ff91d",
+      "review_digest": "c9e34a9c2995fd4fdf3e0a42854baf294a1c75866fb8e4ba78346789ec362ee4",
+      "scope": "Qualify existing local host and workspace authority controls",
+      "limitations": [
+        "Exact local task/completion support; native owned publication and positive effects remain pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "write-owned-model-completion",
+      "work_id": "security-r27-exact-download-task-identity",
+      "work_criteria": [
+        "exact-requested-task-admission",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "28d8f18863491e60c04b248bb86cb4ee0d613bac1287e86952d5790946f0ee10",
+      "review_digest": "e61d8036ade4f574e4f33fe748c594a9e2424ad942ed57fea1d8a7874db7dada",
+      "scope": "Bind download task results to exact requested identity",
+      "limitations": [
+        "Exact local task/completion support; native owned publication and positive effects remain pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "scoped-state-integrity",
+      "work_id": "security-existing-authority-controls-qualification",
+      "work_criteria": [
+        "local-workspace-revision-integrity",
+        "local-library-create-conflicts"
+      ],
+      "receipt_digest": "532890f88015990f338b0cb30534d1433d1c8e92e1a057f125f5c35e2b8ff91d",
+      "review_digest": "c9e34a9c2995fd4fdf3e0a42854baf294a1c75866fb8e4ba78346789ec362ee4",
+      "scope": "Qualify existing local host and workspace authority controls",
+      "limitations": [
+        "Revision/create conflict support; principal/native ownership qualification remains separate.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "authentication-result-invariant",
+      "work_id": "security-existing-authority-controls-qualification",
+      "work_criteria": [
+        "local-authentication-result-invariant"
+      ],
+      "receipt_digest": "532890f88015990f338b0cb30534d1433d1c8e92e1a057f125f5c35e2b8ff91d",
+      "review_digest": "c9e34a9c2995fd4fdf3e0a42854baf294a1c75866fb8e4ba78346789ec362ee4",
+      "scope": "Qualify existing local host and workspace authority controls",
+      "limitations": [
+        "Local authentication invariant tests; parent environment qualification not inherited.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "legacy-history-preserved",
+      "work_id": "security-local-tooling-evidence-reconciliation",
+      "work_criteria": [
+        "available-tooling-checks-executed",
+        "qualified-dispositions-traceable",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "a5a96a3aa272b808ae2df4609d7bdcdb2d67deddfa93a5afed1eedbc40587c40",
+      "review_digest": "8b91415ea0ee1df077b22ff259022c4c40195089145ab007cad6851257a32098",
+      "scope": "Qualify available security tooling controls and reconcile residual native boundaries",
+      "limitations": [
+        "Scoped continuity support; original findings, failures and pending native evidence retained.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "legacy-history-preserved",
+      "work_id": "roadmaps-final-local-evidence-reconciliation",
+      "work_criteria": [
+        "current-honest-reporting",
+        "qualification-ownership-preserved",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "efb85bfdff3c56deba4b55e7d5d11d9d5023ec3480d7909343b4018aadc9fef8",
+      "review_digest": "cb0625f5c01f74b72c3865a451a5f653bec196aa57f7f3b87db5710079d1a8ac",
+      "scope": "Reconcile implemented roadmaps with actual remaining qualification",
+      "limitations": [
+        "Scoped continuity support; original findings, failures and pending native evidence retained.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-authority-and-paths",
+      "work_id": "security-r30-worker-output-name-admission",
+      "work_criteria": [
+        "worker-name-admission",
+        "captured-output-name",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "cd4f3cde2880abc8211651379e291b6677ea112e514d8f75275102294aba05ee",
+      "review_digest": "0f998e3d23f78f63c6b6ff97898861b444722813c357ba16a5c3911c4b9ab39f",
+      "scope": "Validate dataset output names before worker effects",
+      "limitations": [
+        "Partial admission/path support; native runtime launch/effect qualification remains pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-authority-and-paths",
+      "work_id": "runtime-preparer-defined-option-denial",
+      "work_criteria": [
+        "runtime-preparation-denial",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "d1af7386afd523b19c4c2d25f62ce70f330a5019089a36d9a3620b2c527790be",
+      "review_digest": "f725cb84a2307b2d841920a57f56972cb754556f52f8d7f331ed6d9e7c9ea389",
+      "scope": "Reject malformed controlled runtime preparation options before initialization",
+      "limitations": [
+        "Partial admission/path support; native runtime launch/effect qualification remains pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-resource-budgets",
+      "work_id": "security-r08-generation-boundary-bounds",
+      "work_criteria": [
+        "effective-generation-bounds",
+        "no-effects-on-denial",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "9dcc97112b3a2c781e1a07424f836f4ec42c3db33b969340141575f322e0a0c2",
+      "review_digest": "10abea9dfe1f826e9e8618242c87882cfc222ca6b395f2c770d9aa5b1964cec0",
+      "scope": "Enforce existing generation bounds before runtime effects",
+      "limitations": [
+        "Local bounds support; aggregate/native resource qualification remains pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-resource-budgets",
+      "work_id": "security-r25-bounded-parquet-review",
+      "work_criteria": [
+        "bounded-review-bytes",
+        "bounded-page-conversion",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "ecaef8a3d7888626823c45d0acd1ba98fa5ce1ff12e41a69f0e88ad2b13a1eb5",
+      "review_digest": "447de965f7ce662b79a1a9947fe5d621325b41e0189fbc6b6d1beb4a118b98bf",
+      "scope": "Bound Parquet review source bytes and page conversion",
+      "limitations": [
+        "Local bounds support; aggregate/native resource qualification remains pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-recovery-truth",
+      "work_id": "security-r41-truthful-dataset-cancel",
+      "work_criteria": [
+        "cancel-truth-preserved",
+        "observation-until-terminal",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "bb600c6ef98f1293ce2487d7649da60cf2219f8f372250c131a338d6e1eb66a4",
+      "review_digest": "cadf1beb2ff4e2622c87b294f4385fa51313180ecf6496e72c1dd9abb05496ec",
+      "scope": "R41: Observe dataset work until cancellation is confirmed",
+      "limitations": [
+        "Local cancellation/controller/termination support; whole-runtime environment qualification remains separate.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-recovery-truth",
+      "work_id": "security-r60-confirmed-worker-termination",
+      "work_criteria": [
+        "confirmed-worker-stop",
+        "startup-ownership-and-retry",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "7a1213573d4695444e0cadd3a30d1724265e8beb9cc174f1dc9ae21e67db7d91",
+      "review_digest": "201426efb8cf06ea926571a792f3418635128b1d0813f16df8fd7116cb344fbe",
+      "scope": "R60: Retain worker ownership until confirmed termination",
+      "limitations": [
+        "Local cancellation/controller/termination support; whole-runtime environment qualification remains separate.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-recovery-truth",
+      "work_id": "security-r81-retained-task-controllers",
+      "work_criteria": [
+        "retained-private-state",
+        "safe-disposal-recovery",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "bce5b0eb96b02f785574b8fae4d3df5b94051c0d9375bed6dde3e1b14a030271",
+      "review_digest": "07016d1d37e029757c8bc6cf9e177e1abb2795bc3a58f3457f7e25c4ab051d5c",
+      "scope": "Preserve task review and finalization owners during desktop cleanup",
+      "limitations": [
+        "Local cancellation/controller/termination support; whole-runtime environment qualification remains separate.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-private-diagnostics",
+      "work_id": "security-r52-r53-passive-execution-records",
+      "work_criteria": [
+        "strict-passive-plan-records",
+        "strict-passive-run-records",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "7ba9ef6e60ddb42a4056166b7563b70829d928e319f26ff87216126da027494e",
+      "review_digest": "845c81710b307ce7c1ea1e9dea39fc10dae646de5bb84ec4aaa5a2b7d3492246",
+      "scope": "Validate complete passive execution plan and run records",
+      "limitations": [
+        "Partial record-safety support; full runtime diagnostic qualification remains separate.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-private-diagnostics",
+      "work_id": "security-passive-readiness-diagnostics",
+      "work_criteria": [
+        "bounded-safe-metadata",
+        "safe-diagnostic-records",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "04858191f75888d684bf21563733089719c879a9ed0cfefa0a83deea17c8cb47",
+      "review_digest": "c28289bb0754cb223951496dfac3feebf2aaa86e5baecfdbb02fb632e8e2f51f",
+      "scope": "Bound and sanitize readiness and composition passive diagnostics",
+      "limitations": [
+        "Partial record-safety support; full runtime diagnostic qualification remains separate.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "supported-runtime-journeys",
+      "work_id": "desktop-tooling-and-home-compatibility",
+      "work_criteria": [
+        "desktop-compatibility",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "039c0ff9e59da38727dd2e61078b46c72622f31409f8f827428b6d48145128f2",
+      "review_digest": "2f7d318fa6a5daaccf679cc626c6e925254525bcae0c31d80f625ea1f0f47ce8",
+      "scope": "Qualify secure desktop tooling and usable workspace entry controls",
+      "limitations": [
+        "Bounded and synthetic journeys; real installed-model/native environments remain pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "supported-runtime-journeys",
+      "work_id": "security-r27-exact-download-task-identity",
+      "work_criteria": [
+        "exact-requested-task-admission",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "28d8f18863491e60c04b248bb86cb4ee0d613bac1287e86952d5790946f0ee10",
+      "review_digest": "e61d8036ade4f574e4f33fe748c594a9e2424ad942ed57fea1d8a7874db7dada",
+      "scope": "Bind download task results to exact requested identity",
+      "limitations": [
+        "Bounded and synthetic journeys; real installed-model/native environments remain pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "supported-runtime-journeys",
+      "work_id": "security-r41-truthful-dataset-cancel",
+      "work_criteria": [
+        "cancel-truth-preserved",
+        "observation-until-terminal",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "bb600c6ef98f1293ce2487d7649da60cf2219f8f372250c131a338d6e1eb66a4",
+      "review_digest": "cadf1beb2ff4e2622c87b294f4385fa51313180ecf6496e72c1dd9abb05496ec",
+      "scope": "R41: Observe dataset work until cancellation is confirmed",
+      "limitations": [
+        "Bounded and synthetic journeys; real installed-model/native environments remain pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "strict-nested-safe-records",
+      "work_id": "security-passive-readiness-diagnostics",
+      "work_criteria": [
+        "bounded-safe-metadata",
+        "safe-diagnostic-records",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "04858191f75888d684bf21563733089719c879a9ed0cfefa0a83deea17c8cb47",
+      "review_digest": "c28289bb0754cb223951496dfac3feebf2aaa86e5baecfdbb02fb632e8e2f51f",
+      "scope": "Bound and sanitize readiness and composition passive diagnostics",
+      "limitations": [
+        "Local passive record/denial support; ordered parent qualification remains pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "strict-nested-safe-records",
+      "work_id": "security-r52-r53-passive-execution-records",
+      "work_criteria": [
+        "strict-passive-plan-records",
+        "strict-passive-run-records",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "7ba9ef6e60ddb42a4056166b7563b70829d928e319f26ff87216126da027494e",
+      "review_digest": "845c81710b307ce7c1ea1e9dea39fc10dae646de5bb84ec4aaa5a2b7d3492246",
+      "scope": "Validate complete passive execution plan and run records",
+      "limitations": [
+        "Local passive record/denial support; ordered parent qualification remains pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "strict-nested-safe-records",
+      "work_id": "security-r74-strict-projection-records",
+      "work_criteria": [
+        "strict-passive-projection-records",
+        "validated-projection-persistence",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "7d8d7305f4e001c28a34197624f336ae8aa5938e301072ca47037e208209f026",
+      "review_digest": "157c045c28688da393563a750031b8549728c50302ba95175999658b9d23843f",
+      "scope": "Validate complete effective projection records before persistence",
+      "limitations": [
+        "Local passive record/denial support; ordered parent qualification remains pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "strict-nested-safe-records",
+      "work_id": "security-r51-explanatory-credential-denial",
+      "work_criteria": [
+        "explanatory-credential-denial",
+        "safe-prose-compatible",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "da08e4fdeff1597b3268762d68c6ce958ff0cc6b8011d61f0041d5b6bbd2f090",
+      "review_digest": "bcd80af522cef01f28c75e40c8f5b72e544e35a498ad56e1d1a5aace9b57bf5e",
+      "scope": "Reject actual credentials in explanatory asset pack fields",
+      "limitations": [
+        "Local passive record/denial support; ordered parent qualification remains pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "complete-integrity-input",
+      "work_id": "security-r50-versioned-semantic-fingerprint",
+      "work_criteria": [
+        "complete-versioned-semantic-input",
+        "supported-pack-compatibility",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "fb8c11a13ded5fa5785a611946fac9bb4a3a4a9022fb8993eaa4fa10a704912e",
+      "review_digest": "37146dcc4d7c0f5015c337d0c47d301e1277815d8813c1b6a3c3d5abd7a97cd4",
+      "scope": "Validate complete semantic input before versioned asset-pack fingerprints",
+      "limitations": [
+        "Complete bounded semantic-v2 input checks; legacy admission/trust migration and parent qualification remain pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "trusted-provenance-and-opaque-identity",
+      "work_id": "security-r45-code-owned-asset-classification",
+      "work_criteria": [
+        "code-owned-definition-match",
+        "consistent-read-cues",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "5d6daeef94c4d14cbd8ab61624f16327eff66b1503a20338d179063cbdce4db8",
+      "review_digest": "8c8f644c00a8a313256de61b889009f2968096cbe71f021416fe1e015f99604f",
+      "scope": "Derive built-in asset badges from exact code-owned definitions",
+      "limitations": [
+        "Local content and random identity controls; explicit legacy-reference migration/native ACL qualification remains pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "trusted-provenance-and-opaque-identity",
+      "work_id": "security-r45-installed-content-revalidation",
+      "work_criteria": [
+        "stored-content-is-revalidated",
+        "supported-install-and-seed-compatibility",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "fb7b7b5087cfd8fbe91a8ba72ee9b706f719fe477cf2a78e823692ed5cf1860d",
+      "review_digest": "9cc750529eb0c2dc9f5ff4314ce885ac0c1572e410601910306fad4e490f3c1e",
+      "scope": "Revalidate stored definition content before system seed or install reuse",
+      "limitations": [
+        "Local content and random identity controls; explicit legacy-reference migration/native ACL qualification remains pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "trusted-provenance-and-opaque-identity",
+      "work_id": "security-r44-persisted-opaque-image-identities",
+      "work_criteria": [
+        "opaque-private-identities",
+        "indexed-source-reauthorization",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "1954b181fe1560013c5edc318b0656dc374efeb4127f99dd428b564bfa06628b",
+      "review_digest": "d8d1842c51c321af39fb2e9ccfad69a9b00cbee4d8f512456cea07db462ca3bb",
+      "scope": "Persist private owner-scoped opaque identities for image resource views",
+      "limitations": [
+        "Local content and random identity controls; explicit legacy-reference migration/native ACL qualification remains pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "readiness-blockers-preserved",
+      "work_id": "security-r68-readiness-preconditions",
+      "work_criteria": [
+        "authoritative-preconditions-preserved",
+        "readiness-recovery-and-bounds",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "22581ed062f0c16ce8f863e0fb3c4a94b444fccd5fac8408ed5e9a0df6a8a7e5",
+      "review_digest": "b6e22918783301e88c6fb1ba2f2bc1158e7c7013e43a0a0ac8fd93952f038d21",
+      "scope": "R68: Preserve authoritative readiness blockers",
+      "limitations": [
+        "Local readiness denial support; unavailable native/runtime environments remain pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "readiness-blockers-preserved",
+      "work_id": "security-passive-readiness-diagnostics",
+      "work_criteria": [
+        "bounded-safe-metadata",
+        "safe-diagnostic-records",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "04858191f75888d684bf21563733089719c879a9ed0cfefa0a83deea17c8cb47",
+      "review_digest": "c28289bb0754cb223951496dfac3feebf2aaa86e5baecfdbb02fb632e8e2f51f",
+      "scope": "Bound and sanitize readiness and composition passive diagnostics",
+      "limitations": [
+        "Local readiness denial support; unavailable native/runtime environments remain pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "safe-user-facing-compatibility",
+      "work_id": "security-r43-minimal-model-views",
+      "work_criteria": [
+        "minimal-model-summary",
+        "read-only-detail-preserved",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "19abc035bf90345fa9cf97f6aa771bf3cd7d1140584d0071cdbcb8bec9c2ee1d",
+      "review_digest": "60c2943181bcb8742380c176eb2a21f952ccaded52dcc0ce8fa92bc324d0254c",
+      "scope": "Project only declared public model summaries",
+      "limitations": [
+        "Local compatibility/redaction support; parent/native qualification remains separate.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "safe-user-facing-compatibility",
+      "work_id": "security-r45-code-owned-asset-classification",
+      "work_criteria": [
+        "code-owned-definition-match",
+        "consistent-read-cues",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "5d6daeef94c4d14cbd8ab61624f16327eff66b1503a20338d179063cbdce4db8",
+      "review_digest": "8c8f644c00a8a313256de61b889009f2968096cbe71f021416fe1e015f99604f",
+      "scope": "Derive built-in asset badges from exact code-owned definitions",
+      "limitations": [
+        "Local compatibility/redaction support; parent/native qualification remains separate.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "safe-user-facing-compatibility",
+      "work_id": "security-r51-explanatory-credential-denial",
+      "work_criteria": [
+        "explanatory-credential-denial",
+        "safe-prose-compatible",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "da08e4fdeff1597b3268762d68c6ce958ff0cc6b8011d61f0041d5b6bbd2f090",
+      "review_digest": "bcd80af522cef01f28c75e40c8f5b72e544e35a498ad56e1d1a5aace9b57bf5e",
+      "scope": "Reject actual credentials in explanatory asset pack fields",
+      "limitations": [
+        "Local compatibility/redaction support; parent/native qualification remains separate.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "safe-user-facing-compatibility",
+      "work_id": "security-passive-readiness-diagnostics",
+      "work_criteria": [
+        "bounded-safe-metadata",
+        "safe-diagnostic-records",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "04858191f75888d684bf21563733089719c879a9ed0cfefa0a83deea17c8cb47",
+      "review_digest": "c28289bb0754cb223951496dfac3feebf2aaa86e5baecfdbb02fb632e8e2f51f",
+      "scope": "Bound and sanitize readiness and composition passive diagnostics",
+      "limitations": [
+        "Local compatibility/redaction support; parent/native qualification remains separate.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "bounded-helper-argument-authority",
+      "work_id": "security-r87-helper-positional-arguments",
+      "work_criteria": [
+        "positional-path-authority",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "729eccf132ab176a75aafd752e0799df637facd7c0fb27f00710b17de37f7040",
+      "review_digest": "0c4182a53713ce230f02f1afac10eeeadfa5512b88d8a38f007788876c938735",
+      "scope": "R87: Keep configured helper paths positional",
+      "limitations": [
+        "Fixed argument denial support; parent qualification not inherited.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "secure-roadmap-publication",
+      "work_id": "roadmap-implementation-qualification-boundary",
+      "work_criteria": [
+        "implementation-boundary-admission",
+        "controlled-closure-preserved",
+        "exclusive-roadmap-publication",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "5646378fc8a5d7c0b8eb27a4ba14ec967a694a210de945cc3d1c73cc9c11fc49",
+      "review_digest": "3ec5acdea0b9a372d1d9e5d2e9a634c8f7e1948b3b288722e723ca94a09999d8",
+      "scope": "Qualify implemented roadmaps without hiding pending evidence",
+      "limitations": [
+        "Portable publication safety only; native parent/reparse/ACL qualification remains pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "secure-development-exposure",
+      "work_id": "security-r47-enforced-toggle-authority",
+      "work_criteria": [
+        "enforced-toggle-authority",
+        "authenticated-client-and-host-evidence",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "54e1ed32f94cb1b59cbd5836ce40ecb97cd3be65894bb019d78732e412cb5f80",
+      "review_digest": "bf96e7c32abcd1d513128ccfb2fe94993efcbceabb585da78db9259d04c982c7",
+      "scope": "Require existing admin authority to disable enforced development security",
+      "limitations": [
+        "Local secure configuration/denial support; actual LAN/browser/deployment qualification remains pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "secure-development-exposure",
+      "work_id": "security-local-tooling-evidence-reconciliation",
+      "work_criteria": [
+        "available-tooling-checks-executed",
+        "qualified-dispositions-traceable",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "a5a96a3aa272b808ae2df4609d7bdcdb2d67deddfa93a5afed1eedbc40587c40",
+      "review_digest": "8b91415ea0ee1df077b22ff259022c4c40195089145ab007cad6851257a32098",
+      "scope": "Qualify available security tooling controls and reconcile residual native boundaries",
+      "limitations": [
+        "Local secure configuration/denial support; actual LAN/browser/deployment qualification remains pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "secure-development-exposure",
+      "work_id": "desktop-tooling-and-home-compatibility",
+      "work_criteria": [
+        "desktop-compatibility",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "039c0ff9e59da38727dd2e61078b46c72622f31409f8f827428b6d48145128f2",
+      "review_digest": "2f7d318fa6a5daaccf679cc626c6e925254525bcae0c31d80f625ea1f0f47ce8",
+      "scope": "Qualify secure desktop tooling and usable workspace entry controls",
+      "limitations": [
+        "Local secure configuration/denial support; actual LAN/browser/deployment qualification remains pending.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "issue-traceability-and-qualified-dispositions",
+      "work_id": "security-local-tooling-evidence-reconciliation",
+      "work_criteria": [
+        "available-tooling-checks-executed",
+        "qualified-dispositions-traceable",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "a5a96a3aa272b808ae2df4609d7bdcdb2d67deddfa93a5afed1eedbc40587c40",
+      "review_digest": "8b91415ea0ee1df077b22ff259022c4c40195089145ab007cad6851257a32098",
+      "scope": "Qualify available security tooling controls and reconcile residual native boundaries",
+      "limitations": [
+        "Scoped evidence inventory and unchanged finding dispositions; scanner closure not claimed.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "issue-traceability-and-qualified-dispositions",
+      "work_id": "roadmaps-final-local-evidence-reconciliation",
+      "work_criteria": [
+        "current-honest-reporting",
+        "qualification-ownership-preserved",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "efb85bfdff3c56deba4b55e7d5d11d9d5023ec3480d7909343b4018aadc9fef8",
+      "review_digest": "cb0625f5c01f74b72c3865a451a5f653bec196aa57f7f3b87db5710079d1a8ac",
+      "scope": "Reconcile implemented roadmaps with actual remaining qualification",
+      "limitations": [
+        "Scoped evidence inventory and unchanged finding dispositions; scanner closure not claimed.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "governed-workflow-preserved",
+      "work_id": "agent-only-roadmap-acceptance-scope",
+      "work_criteria": [
+        "governed-scope-preserves-qualification",
+        "named-roadmaps-use-agent-acceptance",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "5ea12d9c5104108545573395b7f7d0a959443a503b15fc326dbec69a31d8bdbf",
+      "review_digest": "cd827ae8035a9d93c06a0d9ed4bc9a6954c63d662a75d124e4998cf0068fd963",
+      "scope": "Use agent-executable acceptance in governed technical roadmaps",
+      "limitations": [
+        "Scoped workflow controls; no automatic parent qualification or source-currentness asserted.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "governed-workflow-preserved",
+      "work_id": "roadmap-implementation-qualification-boundary",
+      "work_criteria": [
+        "implementation-boundary-admission",
+        "controlled-closure-preserved",
+        "exclusive-roadmap-publication",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "5646378fc8a5d7c0b8eb27a4ba14ec967a694a210de945cc3d1c73cc9c11fc49",
+      "review_digest": "3ec5acdea0b9a372d1d9e5d2e9a634c8f7e1948b3b288722e723ca94a09999d8",
+      "scope": "Qualify implemented roadmaps without hiding pending evidence",
+      "limitations": [
+        "Scoped workflow controls; no automatic parent qualification or source-currentness asserted.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "governed-workflow-preserved",
+      "work_id": "bounded-qualification-profiles",
+      "work_criteria": [
+        "bounded-profile-execution"
+      ],
+      "receipt_digest": "78a755faa0c8881c779604ab845e5edc3acedeb8663871f90efb21d8fd6931a8",
+      "review_digest": "848f8f3187586de1d9fac688e81d3cf80a6e188aa5e0eaeea96d3c3da314278c",
+      "scope": "Bound focused qualification for substantial approved increments",
+      "limitations": [
+        "Scoped workflow controls; no automatic parent qualification or source-currentness asserted.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "governed-workflow-preserved",
+      "work_id": "control-plane-snapshot-consumer-qualification",
+      "work_criteria": [
+        "bounded-history-preserved",
+        "snapshot-integrity-and-recovery",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "6b92ebabe93301fdc29c824ef5d166acfec16235e8d259b6ae4cb78c0f4c3857",
+      "review_digest": "0e2f1f887eae3677878c2e39f006607586eb2fb1f146afac3170df3315b530be",
+      "scope": "Qualify shared snapshot storage and every evidence consumer",
+      "limitations": [
+        "Scoped workflow controls; no automatic parent qualification or source-currentness asserted.",
+        "Reviewed local support at its recorded snapshot; current whole-candidate requalification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-passive-readiness-diagnostics",
+      "work_criteria": [
+        "bounded-safe-metadata",
+        "safe-diagnostic-records",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "04858191f75888d684bf21563733089719c879a9ed0cfefa0a83deea17c8cb47",
+      "review_digest": "c28289bb0754cb223951496dfac3feebf2aaa86e5baecfdbb02fb632e8e2f51f",
+      "scope": "Bound and sanitize readiness and composition passive diagnostics",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r52-r53-passive-execution-records",
+      "work_criteria": [
+        "strict-passive-plan-records",
+        "strict-passive-run-records",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "7ba9ef6e60ddb42a4056166b7563b70829d928e319f26ff87216126da027494e",
+      "review_digest": "845c81710b307ce7c1ea1e9dea39fc10dae646de5bb84ec4aaa5a2b7d3492246",
+      "scope": "Validate complete passive execution plan and run records",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r74-strict-projection-records",
+      "work_criteria": [
+        "strict-passive-projection-records",
+        "validated-projection-persistence",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "7d8d7305f4e001c28a34197624f336ae8aa5938e301072ca47037e208209f026",
+      "review_digest": "157c045c28688da393563a750031b8549728c50302ba95175999658b9d23843f",
+      "scope": "Validate complete effective projection records before persistence",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r51-explanatory-credential-denial",
+      "work_criteria": [
+        "explanatory-credential-denial",
+        "safe-prose-compatible",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "da08e4fdeff1597b3268762d68c6ce958ff0cc6b8011d61f0041d5b6bbd2f090",
+      "review_digest": "bcd80af522cef01f28c75e40c8f5b72e544e35a498ad56e1d1a5aace9b57bf5e",
+      "scope": "Reject actual credentials in explanatory asset pack fields",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r50-versioned-semantic-fingerprint",
+      "work_criteria": [
+        "complete-versioned-semantic-input",
+        "supported-pack-compatibility",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "fb8c11a13ded5fa5785a611946fac9bb4a3a4a9022fb8993eaa4fa10a704912e",
+      "review_digest": "37146dcc4d7c0f5015c337d0c47d301e1277815d8813c1b6a3c3d5abd7a97cd4",
+      "scope": "Validate complete semantic input before versioned asset-pack fingerprints",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r45-code-owned-asset-classification",
+      "work_criteria": [
+        "code-owned-definition-match",
+        "consistent-read-cues",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "5d6daeef94c4d14cbd8ab61624f16327eff66b1503a20338d179063cbdce4db8",
+      "review_digest": "8c8f644c00a8a313256de61b889009f2968096cbe71f021416fe1e015f99604f",
+      "scope": "Derive built-in asset badges from exact code-owned definitions",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r45-installed-content-revalidation",
+      "work_criteria": [
+        "stored-content-is-revalidated",
+        "supported-install-and-seed-compatibility",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "fb7b7b5087cfd8fbe91a8ba72ee9b706f719fe477cf2a78e823692ed5cf1860d",
+      "review_digest": "9cc750529eb0c2dc9f5ff4314ce885ac0c1572e410601910306fad4e490f3c1e",
+      "scope": "Revalidate stored definition content before system seed or install reuse",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r44-persisted-opaque-image-identities",
+      "work_criteria": [
+        "opaque-private-identities",
+        "indexed-source-reauthorization",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "1954b181fe1560013c5edc318b0656dc374efeb4127f99dd428b564bfa06628b",
+      "review_digest": "d8d1842c51c321af39fb2e9ccfad69a9b00cbee4d8f512456cea07db462ca3bb",
+      "scope": "Persist private owner-scoped opaque identities for image resource views",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r68-readiness-preconditions",
+      "work_criteria": [
+        "authoritative-preconditions-preserved",
+        "readiness-recovery-and-bounds",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "22581ed062f0c16ce8f863e0fb3c4a94b444fccd5fac8408ed5e9a0df6a8a7e5",
+      "review_digest": "b6e22918783301e88c6fb1ba2f2bc1158e7c7013e43a0a0ac8fd93952f038d21",
+      "scope": "R68: Preserve authoritative readiness blockers",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r43-minimal-model-views",
+      "work_criteria": [
+        "minimal-model-summary",
+        "read-only-detail-preserved",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "19abc035bf90345fa9cf97f6aa771bf3cd7d1140584d0071cdbcb8bec9c2ee1d",
+      "review_digest": "60c2943181bcb8742380c176eb2a21f952ccaded52dcc0ce8fa92bc324d0254c",
+      "scope": "Project only declared public model summaries",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r87-helper-positional-arguments",
+      "work_criteria": [
+        "positional-path-authority",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "729eccf132ab176a75aafd752e0799df637facd7c0fb27f00710b17de37f7040",
+      "review_digest": "0c4182a53713ce230f02f1afac10eeeadfa5512b88d8a38f007788876c938735",
+      "scope": "R87: Keep configured helper paths positional",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "roadmap-implementation-qualification-boundary",
+      "work_criteria": [
+        "implementation-boundary-admission",
+        "controlled-closure-preserved",
+        "exclusive-roadmap-publication",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "5646378fc8a5d7c0b8eb27a4ba14ec967a694a210de945cc3d1c73cc9c11fc49",
+      "review_digest": "3ec5acdea0b9a372d1d9e5d2e9a634c8f7e1948b3b288722e723ca94a09999d8",
+      "scope": "Qualify implemented roadmaps without hiding pending evidence",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r47-enforced-toggle-authority",
+      "work_criteria": [
+        "enforced-toggle-authority",
+        "authenticated-client-and-host-evidence",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "54e1ed32f94cb1b59cbd5836ce40ecb97cd3be65894bb019d78732e412cb5f80",
+      "review_digest": "bf96e7c32abcd1d513128ccfb2fe94993efcbceabb585da78db9259d04c982c7",
+      "scope": "Require existing admin authority to disable enforced development security",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-local-tooling-evidence-reconciliation",
+      "work_criteria": [
+        "available-tooling-checks-executed",
+        "qualified-dispositions-traceable",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "a5a96a3aa272b808ae2df4609d7bdcdb2d67deddfa93a5afed1eedbc40587c40",
+      "review_digest": "8b91415ea0ee1df077b22ff259022c4c40195089145ab007cad6851257a32098",
+      "scope": "Qualify available security tooling controls and reconcile residual native boundaries",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "desktop-tooling-and-home-compatibility",
+      "work_criteria": [
+        "desktop-compatibility",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "039c0ff9e59da38727dd2e61078b46c72622f31409f8f827428b6d48145128f2",
+      "review_digest": "2f7d318fa6a5daaccf679cc626c6e925254525bcae0c31d80f625ea1f0f47ce8",
+      "scope": "Qualify secure desktop tooling and usable workspace entry controls",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "roadmaps-final-local-evidence-reconciliation",
+      "work_criteria": [
+        "current-honest-reporting",
+        "qualification-ownership-preserved",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "efb85bfdff3c56deba4b55e7d5d11d9d5023ec3480d7909343b4018aadc9fef8",
+      "review_digest": "cb0625f5c01f74b72c3865a451a5f653bec196aa57f7f3b87db5710079d1a8ac",
+      "scope": "Reconcile implemented roadmaps with actual remaining qualification",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "agent-only-roadmap-acceptance-scope",
+      "work_criteria": [
+        "governed-scope-preserves-qualification",
+        "named-roadmaps-use-agent-acceptance",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "5ea12d9c5104108545573395b7f7d0a959443a503b15fc326dbec69a31d8bdbf",
+      "review_digest": "cd827ae8035a9d93c06a0d9ed4bc9a6954c63d662a75d124e4998cf0068fd963",
+      "scope": "Use agent-executable acceptance in governed technical roadmaps",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "bounded-qualification-profiles",
+      "work_criteria": [
+        "bounded-profile-execution"
+      ],
+      "receipt_digest": "78a755faa0c8881c779604ab845e5edc3acedeb8663871f90efb21d8fd6931a8",
+      "review_digest": "848f8f3187586de1d9fac688e81d3cf80a6e188aa5e0eaeea96d3c3da314278c",
+      "scope": "Bound focused qualification for substantial approved increments",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "control-plane-snapshot-consumer-qualification",
+      "work_criteria": [
+        "bounded-history-preserved",
+        "snapshot-integrity-and-recovery",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "6b92ebabe93301fdc29c824ef5d166acfec16235e8d259b6ae4cb78c0f4c3857",
+      "review_digest": "0e2f1f887eae3677878c2e39f006607586eb2fb1f146afac3170df3315b530be",
+      "scope": "Qualify shared snapshot storage and every evidence consumer",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-existing-authority-controls-qualification",
+      "work_criteria": [
+        "local-model-effects-held"
+      ],
+      "receipt_digest": "532890f88015990f338b0cb30534d1433d1c8e92e1a057f125f5c35e2b8ff91d",
+      "review_digest": "c9e34a9c2995fd4fdf3e0a42854baf294a1c75866fb8e4ba78346789ec362ee4",
+      "scope": "Qualify existing local host and workspace authority controls",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r27-exact-download-task-identity",
+      "work_criteria": [
+        "exact-requested-task-admission",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "28d8f18863491e60c04b248bb86cb4ee0d613bac1287e86952d5790946f0ee10",
+      "review_digest": "e61d8036ade4f574e4f33fe748c594a9e2424ad942ed57fea1d8a7874db7dada",
+      "scope": "Bind download task results to exact requested identity",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-local-tooling-evidence-reconciliation",
+      "work_criteria": [
+        "available-tooling-checks-executed",
+        "qualified-dispositions-traceable",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "a5a96a3aa272b808ae2df4609d7bdcdb2d67deddfa93a5afed1eedbc40587c40",
+      "review_digest": "8b91415ea0ee1df077b22ff259022c4c40195089145ab007cad6851257a32098",
+      "scope": "Qualify available security tooling controls and reconcile residual native boundaries",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "roadmaps-final-local-evidence-reconciliation",
+      "work_criteria": [
+        "current-honest-reporting",
+        "qualification-ownership-preserved",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "efb85bfdff3c56deba4b55e7d5d11d9d5023ec3480d7909343b4018aadc9fef8",
+      "review_digest": "cb0625f5c01f74b72c3865a451a5f653bec196aa57f7f3b87db5710079d1a8ac",
+      "scope": "Reconcile implemented roadmaps with actual remaining qualification",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r30-worker-output-name-admission",
+      "work_criteria": [
+        "worker-name-admission",
+        "captured-output-name",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "cd4f3cde2880abc8211651379e291b6677ea112e514d8f75275102294aba05ee",
+      "review_digest": "0f998e3d23f78f63c6b6ff97898861b444722813c357ba16a5c3911c4b9ab39f",
+      "scope": "Validate dataset output names before worker effects",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "runtime-preparer-defined-option-denial",
+      "work_criteria": [
+        "runtime-preparation-denial",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "d1af7386afd523b19c4c2d25f62ce70f330a5019089a36d9a3620b2c527790be",
+      "review_digest": "f725cb84a2307b2d841920a57f56972cb754556f52f8d7f331ed6d9e7c9ea389",
+      "scope": "Reject malformed controlled runtime preparation options before initialization",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r08-generation-boundary-bounds",
+      "work_criteria": [
+        "effective-generation-bounds",
+        "no-effects-on-denial",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "9dcc97112b3a2c781e1a07424f836f4ec42c3db33b969340141575f322e0a0c2",
+      "review_digest": "10abea9dfe1f826e9e8618242c87882cfc222ca6b395f2c770d9aa5b1964cec0",
+      "scope": "Enforce existing generation bounds before runtime effects",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r25-bounded-parquet-review",
+      "work_criteria": [
+        "bounded-review-bytes",
+        "bounded-page-conversion",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "ecaef8a3d7888626823c45d0acd1ba98fa5ce1ff12e41a69f0e88ad2b13a1eb5",
+      "review_digest": "447de965f7ce662b79a1a9947fe5d621325b41e0189fbc6b6d1beb4a118b98bf",
+      "scope": "Bound Parquet review source bytes and page conversion",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r41-truthful-dataset-cancel",
+      "work_criteria": [
+        "cancel-truth-preserved",
+        "observation-until-terminal",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "bb600c6ef98f1293ce2487d7649da60cf2219f8f372250c131a338d6e1eb66a4",
+      "review_digest": "cadf1beb2ff4e2622c87b294f4385fa51313180ecf6496e72c1dd9abb05496ec",
+      "scope": "R41: Observe dataset work until cancellation is confirmed",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r60-confirmed-worker-termination",
+      "work_criteria": [
+        "confirmed-worker-stop",
+        "startup-ownership-and-retry",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "7a1213573d4695444e0cadd3a30d1724265e8beb9cc174f1dc9ae21e67db7d91",
+      "review_digest": "201426efb8cf06ea926571a792f3418635128b1d0813f16df8fd7116cb344fbe",
+      "scope": "R60: Retain worker ownership until confirmed termination",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r81-retained-task-controllers",
+      "work_criteria": [
+        "retained-private-state",
+        "safe-disposal-recovery",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "bce5b0eb96b02f785574b8fae4d3df5b94051c0d9375bed6dde3e1b14a030271",
+      "review_digest": "07016d1d37e029757c8bc6cf9e177e1abb2795bc3a58f3457f7e25c4ab051d5c",
+      "scope": "Preserve task review and finalization owners during desktop cleanup",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r52-r53-passive-execution-records",
+      "work_criteria": [
+        "strict-passive-plan-records",
+        "strict-passive-run-records",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "7ba9ef6e60ddb42a4056166b7563b70829d928e319f26ff87216126da027494e",
+      "review_digest": "845c81710b307ce7c1ea1e9dea39fc10dae646de5bb84ec4aaa5a2b7d3492246",
+      "scope": "Validate complete passive execution plan and run records",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-passive-readiness-diagnostics",
+      "work_criteria": [
+        "bounded-safe-metadata",
+        "safe-diagnostic-records",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "04858191f75888d684bf21563733089719c879a9ed0cfefa0a83deea17c8cb47",
+      "review_digest": "c28289bb0754cb223951496dfac3feebf2aaa86e5baecfdbb02fb632e8e2f51f",
+      "scope": "Bound and sanitize readiness and composition passive diagnostics",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "desktop-tooling-and-home-compatibility",
+      "work_criteria": [
+        "desktop-compatibility",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "039c0ff9e59da38727dd2e61078b46c72622f31409f8f827428b6d48145128f2",
+      "review_digest": "2f7d318fa6a5daaccf679cc626c6e925254525bcae0c31d80f625ea1f0f47ce8",
+      "scope": "Qualify secure desktop tooling and usable workspace entry controls",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r27-exact-download-task-identity",
+      "work_criteria": [
+        "exact-requested-task-admission",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "28d8f18863491e60c04b248bb86cb4ee0d613bac1287e86952d5790946f0ee10",
+      "review_digest": "e61d8036ade4f574e4f33fe748c594a9e2424ad942ed57fea1d8a7874db7dada",
+      "scope": "Bind download task results to exact requested identity",
+      "limitations": [
+        "Component security review covers only its own recorded acceptance scope; parent increment review and native/environment evidence remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "system-builder-canvas-reliability",
+      "increment_id": "measured-canvas-responsiveness",
+      "criterion_id": "measured-local-responsiveness",
+      "work_id": "canvas-startup-bounded-bootstrap",
+      "work_criteria": [
+        "bounded-bootstrap-preserves-functionality",
+        "trusted-startup-retry-and-measurements",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "71607080158d919b14b33f278b4a0bd1813d9e26a4c13fed6a7d97876224a41f",
+      "review_digest": "2706d88ee789642d6f4b9746332a695b010786e3d5df04990895823fc5b50586",
+      "scope": "Canvas startup and useful-system automated host regression coverage",
+      "limitations": [
+        "Local source-bound startup and operation measurements; named reference performance remains pending.",
+        "Reviewed local support at recorded snapshot; current parent qualification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "system-builder-canvas-reliability",
+      "increment_id": "measured-canvas-responsiveness",
+      "criterion_id": "whole-host-journeys",
+      "work_id": "canvas-startup-bounded-bootstrap",
+      "work_criteria": [
+        "bounded-bootstrap-preserves-functionality",
+        "trusted-startup-retry-and-measurements",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "71607080158d919b14b33f278b4a0bd1813d9e26a4c13fed6a7d97876224a41f",
+      "review_digest": "2706d88ee789642d6f4b9746332a695b010786e3d5df04990895823fc5b50586",
+      "scope": "Canvas startup and useful-system automated host regression coverage",
+      "limitations": [
+        "Actual10both-host journeys pass; final whole-candidate aggregate qualification remains separate.",
+        "Reviewed local support at recorded snapshot; current parent qualification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "system-builder-canvas-reliability",
+      "increment_id": "measured-canvas-responsiveness",
+      "criterion_id": "reference-and-accessibility-qualification",
+      "work_id": "canvas-startup-bounded-bootstrap",
+      "work_criteria": [
+        "bounded-bootstrap-preserves-functionality",
+        "trusted-startup-retry-and-measurements",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "71607080158d919b14b33f278b4a0bd1813d9e26a4c13fed6a7d97876224a41f",
+      "review_digest": "2706d88ee789642d6f4b9746332a695b010786e3d5df04990895823fc5b50586",
+      "scope": "Canvas startup and useful-system automated host regression coverage",
+      "limitations": [
+        "Local automated journeys/startup improvements only; named reference budgets and unperformed automated accessibility assertions remain pending.",
+        "Reviewed local support at recorded snapshot; current parent qualification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "qualified-user-and-model-outcomes",
+      "criterion_id": "accessibility-outcomes-qualified",
+      "work_id": "canvas-startup-bounded-bootstrap",
+      "work_criteria": [
+        "bounded-bootstrap-preserves-functionality",
+        "trusted-startup-retry-and-measurements",
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "71607080158d919b14b33f278b4a0bd1813d9e26a4c13fed6a7d97876224a41f",
+      "review_digest": "2706d88ee789642d6f4b9746332a695b010786e3d5df04990895823fc5b50586",
+      "scope": "Canvas startup and useful-system automated host regression coverage",
+      "limitations": [
+        "Both-host useful-system journeys are supporting coverage; exact contrast, non-color, reduced-motion and all required automated accessibility assertions remain pending.",
+        "Reviewed local support at recorded snapshot; current parent qualification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "efficient-reliable-task-journeys",
+      "criterion_id": "terminal-cleanup-independent",
+      "work_id": "no-page-terminal-qualification",
+      "work_criteria": [
+        "training-no-page-terminal-matrix",
+        "dataset-no-page-terminal-matrix"
+      ],
+      "receipt_digest": "01d1c0551337658a001d6ab5d9ecff61e9ee7f70b6fddf49ddb4951033fff6f6",
+      "review_digest": "193eb1f00f877daa03caac8e72b49bd7095a2067222a8314b5432d51d1180f94",
+      "scope": "Registered reconciliation covers failed, cancelled and timed-out training/dataset tasks after page disposal, with staging removal and exactly-once cleanup.",
+      "limitations": [
+        "Focused fake/in-memory lifecycle coverage; whole-host physical cleanup remains separately qualified.",
+        "Reviewed local support at its recorded snapshot; no current whole-candidate or parent criterion pass is inferred."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "efficient-reliable-task-journeys",
+      "criterion_id": "idle-observer-budget",
+      "work_id": "no-page-terminal-qualification",
+      "work_criteria": [
+        "explicit-action-invalidates-idle-error-backoff"
+      ],
+      "receipt_digest": "01d1c0551337658a001d6ab5d9ecff61e9ee7f70b6fddf49ddb4951033fff6f6",
+      "review_digest": "193eb1f00f877daa03caac8e72b49bd7095a2067222a8314b5432d51d1180f94",
+      "scope": "Explicit owned actions invalidate idle/error backoff immediately without clock advance; unrelated scope is ignored and one request remains in flight.",
+      "limitations": [
+        "Deterministic observer coverage; this link does not measure current browser or native task response latency.",
+        "Reviewed local support at its recorded snapshot; no current whole-candidate or parent criterion pass is inferred."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "responsive-workspace-browse",
+      "criterion_id": "browse-journey-preserved",
+      "work_id": "managed-browse-route-readiness",
+      "work_criteria": [
+        "managed-authoring-route-qualified",
+        "managed-security-and-failure-history-preserved"
+      ],
+      "receipt_digest": "0ba0741c8a6d90afb1babce6cab56c5f31526c2d784d1e55e8e66fc11ea8907e",
+      "review_digest": "e206ea907c89a8442038d5cacd0b84f8e896be012d66522fd8602e64cf778f4f",
+      "scope": "Managed browse qualifies the selected workspace, actual Systems route and authoring form before continuing the existing authenticated journey.",
+      "limitations": [
+        "A previous Home-card heading false positive and failed diagnostic remain preserved.",
+        "Managed browse support only; packaged desktop, thin-client and performance cohorts require their own actual evidence.",
+        "Reviewed local support at its recorded snapshot; no current whole-candidate or parent criterion pass is inferred."
+      ]
+    },
+    {
+      "roadmap_id": "system-builder-canvas-reliability",
+      "increment_id": "measured-canvas-responsiveness",
+      "criterion_id": "reference-and-accessibility-qualification",
+      "work_id": "managed-browse-route-readiness",
+      "work_criteria": [
+        "managed-authoring-route-qualified",
+        "managed-security-and-failure-history-preserved"
+      ],
+      "receipt_digest": "0ba0741c8a6d90afb1babce6cab56c5f31526c2d784d1e55e8e66fc11ea8907e",
+      "review_digest": "e206ea907c89a8442038d5cacd0b84f8e896be012d66522fd8602e64cf778f4f",
+      "scope": "Managed browse provides partial automated authoring, keyboard, focus and reflow support through its eight actual accessibility checks after exact workspace and route readiness.",
+      "limitations": [
+        "A previous Home-card heading false positive and failed diagnostic remain preserved.",
+        "Managed-host accessibility support only; named reference performance, both final host profiles, three-system workloads and current-source aggregate qualification remain separate.",
+        "Reviewed local support at its recorded snapshot; no current whole-candidate or parent criterion pass is inferred."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "efficient-reliable-task-journeys",
+      "criterion_id": "retry-and-output-integrity",
+      "work_id": "owned-listener-refusal-report-successor",
+      "work_criteria": [
+        "actual-owned-listener-refusal-required",
+        "retained-task-and-native-cleanup-preserved"
+      ],
+      "receipt_digest": "82bdf51a04c3e23acdc5b31fa4c4d96cc38d6cbfb9d108965a4f178689331c66",
+      "review_digest": "9c976e237f1787fb5c5c8324a80c431395277e6d24e8fdba7510d78db2961c89",
+      "scope": "Both actual packaged-worker fault scenarios pass; disconnect requires observed listener refusal, the same accepted task completes and native graceful cleanup is nonvacuous.",
+      "limitations": [
+        "Connection-reset handling has separate deterministic callback coverage; the accepted native run observed refusal with zero resets.",
+        "Two owned synthetic fault scenarios; no model inference, provider reliability or full current host matrix is implied.",
+        "Reviewed local support at its recorded snapshot; no current whole-candidate or parent criterion pass is inferred."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "efficient-reliable-task-journeys",
+      "criterion_id": "task-host-qualification",
+      "work_id": "owned-listener-refusal-report-successor",
+      "work_criteria": [
+        "actual-owned-listener-refusal-required",
+        "retained-task-and-native-cleanup-preserved"
+      ],
+      "receipt_digest": "82bdf51a04c3e23acdc5b31fa4c4d96cc38d6cbfb9d108965a4f178689331c66",
+      "review_digest": "9c976e237f1787fb5c5c8324a80c431395277e6d24e8fdba7510d78db2961c89",
+      "scope": "Both actual packaged-worker fault scenarios pass; disconnect requires observed listener refusal, the same accepted task completes and native graceful cleanup is nonvacuous.",
+      "limitations": [
+        "Connection-reset handling has separate deterministic callback coverage; the accepted native run observed refusal with zero resets.",
+        "Two owned synthetic fault scenarios; no model inference, provider reliability or full current host matrix is implied.",
+        "Reviewed local support at its recorded snapshot; no current whole-candidate or parent criterion pass is inferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-private-diagnostics",
+      "work_id": "security-session-vitest-patch-qualification",
+      "work_criteria": [
+        "session-outcomes-only"
+      ],
+      "receipt_digest": "9efca7ed6727b25a734fef4941456a46366562530d0502fe784b59b6c8e54a28",
+      "review_digest": "3c4582d79e84281e45ec9a0e79dc811ff119a4851d09d300f9b6dd4d9ebc5f81",
+      "scope": "Runtime setup uses bounded session-only diagnostic outcomes and contains optional callback failures without changing operation truth.",
+      "limitations": [
+        "Persistent private-sink ownership, native permissions and retention qualification remain pending.",
+        "Reviewed local support at its recorded snapshot; no current whole-candidate or parent criterion pass is inferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-session-vitest-patch-qualification",
+      "work_criteria": [
+        "official-vitest-patch-compatible"
+      ],
+      "receipt_digest": "9efca7ed6727b25a734fef4941456a46366562530d0502fe784b59b6c8e54a28",
+      "review_digest": "3c4582d79e84281e45ec9a0e79dc811ff119a4851d09d300f9b6dd4d9ebc5f81",
+      "scope": "Exact original-supplier Vitest 4.1.12 patch passes fixed compatibility checks and current dependency policy; prior audit failures remain historical.",
+      "limitations": [
+        "Registry metadata and artifact integrity checks do not independently verify cryptographic provenance.",
+        "No parent secure-publication race, native authority or individual finding traceability closure is inferred.",
+        "Reviewed local support at its recorded snapshot; no current whole-candidate or parent criterion pass is inferred."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "responsive-workspace-browse",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "catalog-single-passive-admission",
+      "work_criteria": [
+        "single-admission-authority-parity",
+        "facade-failure-and-copy-isolation"
+      ],
+      "receipt_digest": "150f75a2daa67ba80ff5fe8c2f138527785ef3b46d01b679acf284c19ecace6d",
+      "review_digest": "a76dc38b0dbffd83dce263298e2422167f71bab5dc2e19f58dccb15c11f3660e",
+      "scope": "Catalog list/single/batch reads admit one detached complete passive body and privately classify full content without weakening metadata or authority controls.",
+      "limitations": [
+        "Definition-read admission security delta only; the complete increment threat/control review remains required. No unchecked classification API or editable-record cache; installation, migration and native authority remain separate.",
+        "Reviewed local support at its recorded snapshot; no current whole-candidate or parent criterion pass is inferred."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "responsive-workspace-browse",
+      "criterion_id": "owned-performance-probes",
+      "work_id": "catalog-single-passive-admission",
+      "work_criteria": [
+        "owned-catalog-budget-and-output-equivalence"
+      ],
+      "receipt_digest": "150f75a2daa67ba80ff5fe8c2f138527785ef3b46d01b679acf284c19ecace6d",
+      "review_digest": "a76dc38b0dbffd83dce263298e2422167f71bab5dc2e19f58dccb15c11f3660e",
+      "scope": "Unchanged six-operation probe passes: catalog 172.582 ms p95 within 200 ms, with five warmups and thirty samples and exact output assertions.",
+      "limitations": [
+        "Earlier 205.704 ms failure remains preserved; this is supporting fixed-budget evidence, not a paired improvement estimate or final host qualification.",
+        "Reviewed local support at its recorded snapshot; no current whole-candidate or parent criterion pass is inferred."
+      ]
+    }
+  ]
+}

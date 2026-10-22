@@ -45,6 +45,78 @@ const createRegistry = (overrides?: {
 });
 
 describe("PrepareTrainingDatasetFromArtifactsUseCase", () => {
+  for (const terminal of [
+    { status: "failed", code: "failed" },
+    { status: "cancelled", code: undefined },
+    { status: "failed", code: "task_timeout" },
+  ] as const) {
+    it(`reconciles dataset ${terminal.code ?? terminal.status} without feature reads and releases staging/power once`, async () => {
+      const reconciler = new OwnedTaskReconcilerService();
+      const lifecycle = createLifecycleFake();
+      let runtimeDir = "";
+      let dispatched: any;
+      const runtimeStatus = testDouble.fn(async () => ({
+        requestId: "r-terminal", taskType: "dataset-preparation", workspaceId: "workspace-a",
+        status: terminal.status, concurrencyClass: "unknown",
+        ...(terminal.code ? { error: { code: terminal.code, message: "Synthetic terminal condition." } } : {}),
+      }));
+      const storeArtifact = testDouble.fn();
+      const upsertBinding = testDouble.fn();
+      const registry = createRegistry({
+        startTask: testDouble.fn(async (request: any) => {
+          dispatched = request; runtimeDir = request.payload.runtime.runtimeWorkingDirectory;
+          return { requestId: "r-terminal", accepted: true, status: "queued" };
+        }),
+        getTaskStatus: runtimeStatus,
+      });
+      const useCase = new PrepareTrainingDatasetFromArtifactsUseCase({
+        taskReconciler: reconciler, runtimeTaskRegistry: registry,
+        storageBindings: {
+          readArtifactStorageBindings: testDouble.fn(async () => ({ ok: true, value: { bindings: [
+            { workspaceId: "workspace-a", artifactId: "a1", role: "primary", backing: { kind: "artifact-object", provider: "local-filesystem", locator: "a1" } },
+          ] } })),
+          upsertArtifactStorageBinding: upsertBinding, deleteArtifactStorageBindings: testDouble.fn(),
+        },
+        storage: {
+          retrieveArtifact: testDouble.fn(async () => ({ ok: true, value: {
+            descriptor: { key: "a1", mediaType: "text/markdown", metadata: {} },
+            content: new TextEncoder().encode("Synthetic owned source."),
+          } })),
+          storeArtifact, hasArtifact: testDouble.fn(), deleteArtifact: testDouble.fn(),
+        },
+        taskPowerLifecycle: lifecycle,
+      });
+      const cleanup = (useCase as any).cleanupRuntimeWorkingDir.bind(useCase);
+      let cleanupCalls = 0;
+      (useCase as any).cleanupRuntimeWorkingDir = async (id: string) => { cleanupCalls++; await cleanup(id); };
+      const context = { workspaceId: "workspace-a" };
+      try {
+        expect((await useCase.startPrepareTrainingDataset(command, context)).ok).toBe(true);
+        expect(dispatched.workspaceId).toBe("workspace-a");
+        expect(await exists(runtimeDir)).toBe(true);
+        expect(reconciler.status.pending).toBe(1);
+        context.workspaceId = "workspace-b";
+        // A copied owner context must survive caller navigation. Only the
+        // registered callback reads; a direct feature read cannot mask a gap.
+        await reconciler.reconcileNow();
+        await reconciler.reconcileNow();
+        expect(reconciler.status.pending).toBe(0);
+        expect(runtimeStatus).toHaveBeenCalledTimes(1);
+        expect(runtimeStatus).toHaveBeenCalledWith("r-terminal");
+        expect(registry.cancelTask).not.toHaveBeenCalled();
+        expect(await exists(runtimeDir)).toBe(false);
+        expect(cleanupCalls).toBe(1);
+        expect(lifecycle.completeTask).toHaveBeenCalledTimes(1);
+        expect(lifecycle.completeTask).toHaveBeenCalledWith("r-terminal", terminal.status);
+        expect(storeArtifact).not.toHaveBeenCalled();
+        expect(upsertBinding).not.toHaveBeenCalled();
+      } finally {
+        reconciler.stopObservation();
+        await cleanup("r-terminal");
+      }
+    });
+  }
+
   it("materializes once without a renderer and retries owed staging cleanup before releasing lifecycle ownership", async () => {
     const lifecycle = createLifecycleFake();
     const reconciler = new OwnedTaskReconcilerService();

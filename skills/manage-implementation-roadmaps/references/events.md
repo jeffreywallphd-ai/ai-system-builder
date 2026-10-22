@@ -329,6 +329,87 @@ Every criterion must be assigned to one or more planned chunks.
 Kinds are `test`, `documentation`, `review`, `manual`, or `external`.
 Outcomes are `passed`, `failed`, or `pending`. Only a controlled-environment
 criterion may be pending.
+On governed roadmaps these are declarations: recording the last passing outcome
+does not promote an implemented-pending increment to completed. An overall work
+can qualify while controlled criteria are pending and cannot replace targeted
+criterion-bound review. Use `increment-qualified` after current exact-target
+verification and independent review. Do not edit status, invent an active
+increment or reuse overall-only evidence to close it.
+
+### `human-acceptance-transferred`
+
+Use only after the human explicitly assigns human acceptance testing offline.
+Review the exact criteria: manual accessibility and representative-user acceptance
+may qualify; mixed performance, hardware, provider, runtime or security checks do
+not. The human-only attestation is operator supplied, not semantic or identity proof.
+
+```json
+{
+  "type": "human-acceptance-transferred",
+  "incrementId": "completed-technical-slice",
+  "criterionIds": ["manual-user-acceptance"],
+  "approvedFingerprint": "current-roadmap-fingerprint",
+  "authorityRef": "explicit-user-offline-acceptance",
+  "onlyHumanAcceptance": true,
+  "summary": "User handles manual acceptance offline; no human test pass asserted."
+}
+```
+
+Admission is legacy-only: any `evidencePolicy` is refused so this metadata event
+cannot bypass receipt-governed completion. Governed scope changes need separately
+qualified current candidate evidence; this event supplies no such authority.
+Admission requires a current approval/fingerprint, an implemented-pending increment,
+every chunk complete, no open blocker, selected controlled criteria with pending
+evidence, and every retained criterion passed. Local, missing, failed and security
+criteria cannot transfer. Transfer archives the original criteria, plan and approval
+under `humanAcceptanceTransfers`; original evidence/chunks stay unchanged. Active
+criteria exclude the transferred checks and the increment becomes completed, but
+approval is invalidated. Apply `roadmap-approved` only when this exact narrow change
+is authorized by the human, attributing that actual direction. Other roadmap and
+current-receipt closure gates remain intact. Never convert legacy declarations
+into current executed evidence or remove the temporary report through this event.
+
+### `acceptance-scope-revised`
+
+For a started receipt-governed roadmap, use `acceptance-scope-revised` when the
+human explicitly requests agent-only technical acceptance. This is a metadata
+scope amendment, never an increment-completion event:
+
+```json
+{
+  "type": "acceptance-scope-revised",
+  "incrementId": "implemented-slice",
+  "approvedFingerprint": "current-roadmap-fingerprint",
+  "authorityRef": "explicit-user-agent-only-acceptance",
+  "onlyHumanScope": true,
+  "summary": "Human acceptance is user-owned offline; technical checks remain.",
+  "removeCriterionIds": ["participant-study"],
+  "replaceCriteria": [{
+    "criterion": {"id": "mixed-accessibility", "description": "Automated keyboard, focus, semantics and reflow pass on named hosts.", "qualification": "controlled-environment"},
+    "humanScope": "Manual screen-reader and participant acceptance"
+  }]
+}
+```
+
+Admission requires `control-plane-v1`, current approval/fingerprint, a verifying
+or implemented-pending increment and all planned chunks complete. Selected IDs
+must be unique known controlled criteria with latest **pending** evidence. Local,
+security, missing, failed and passed criteria are refused. Replacements retain
+the exact ID and qualification; at least one criterion remains active. The
+human-only attestation requires independent semantic review; it is not inferred
+from arbitrary prose or authenticated by the engine. Remove only pure human
+scope, preserve technical portions of mixed scope, and retain automated UI,
+performance, model, hardware, runtime, native and security requirements.
+
+`acceptanceScopeRevisions` archives removed/original/revised criteria, exact human
+scope, original plan and previous approval. Human portions of original work
+packages, deliverables, verification and completed plans become historical/offline;
+current technical criteria govern future qualification. Original evidence,
+chunks, increment status, blockers and completion policy are unchanged. Only
+retired IDs leave pending/chunk projections; retained mixed IDs stay linked and
+pending. Approval is invalidated. Record `roadmap-approved` only for the actual
+user-authorized narrow change. Changed fingerprints invalidate old bound receipts;
+fresh checks and separate review remain mandatory. No pass or closure is created.
 
 ### `increment-completed`
 
@@ -338,6 +419,35 @@ criterion may be pending.
   "summary": "The contract slice is implemented, documented, and verified."
 }
 ```
+
+### `increment-qualified`
+
+After all implementation is complete, record each target criterion's actual
+passing evidence and immutable report. Create fresh work bound to the exact
+implemented-pending increment with every criterion; execute its fixed checks,
+obtain independent review and complete it. Consume the exact references:
+
+```json
+{
+  "type": "increment-qualified",
+  "incrementId": "implemented-slice",
+  "workId": "target-qualification",
+  "receiptDigest": "replace-with-64-character-receipt-sha256",
+  "reviewDigest": "replace-with-64-character-review-sha256",
+  "summary": "All target criteria passed with current independent review."
+}
+```
+
+Admission requires current governed approval, complete implementation, no blockers,
+a pending target and every target criterion passed. Authority binds plan/chunks,
+criterion semantics, latest evidence and referenced report bytes. Missing, unsafe,
+changing or oversized reports fail closed. Evidence changes need fresh successor
+work. Partial, overall-only, wrong-target, failed, stale or self-reviewed records
+cannot qualify. Other active increments, original plans/chunks/evidence and
+approval remain intact. The event records consumed references and completes only
+the target. Its pending-only receipt becomes historical after consumption;
+completed targets cannot reopen here. Final closure still requires current overall
+qualification and all increments complete.
 
 ### `roadmap-completed`
 

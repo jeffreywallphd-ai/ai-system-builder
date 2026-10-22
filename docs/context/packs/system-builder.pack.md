@@ -190,10 +190,10 @@
 - Do not rename valid ownership terms such as `system.foundation` or `system-owned`.
 
 ## Companion Packs
-
 - `asset-kernel` for component and composition vocabulary.
 - `asset-composition-planning` for plan inputs and compatibility.
 - `desktop-implementation` for Systems or Settings UI changes.
 - `persistence-storage`, `ipc-electron`, `server-host`, or `testing` only when those boundaries are explicitly in scope.
 
-Composer uses bounded exact batches and query-bound continuations. Keep property details lazy and invalidate late picker responses on target/query/workspace changes; local I/O tests do not qualify controlled performance or manual accessibility.
+Composer uses bounded exact batches and query-bound continuations. Keep property details lazy and invalidate late picker responses on target/query/workspace changes; local I/O tests do not qualify controlled performance or manual accessibility. Canvas dirty state follows a saved checkpoint independent of bounded Undo. Transactions lock mutations and fence late workspace/system responses; optional history never gates the current Canvas and merges saved revisions. Real mixed-component UI journeys cover edit/save/reopen/build and explicit policy/model denials; previews do not prove application runtime. See `docs/diagnostics/system-builder-canvas-testing.md`.
+Reference accessibility measures actual-host contrast/motion, tree/modal keyboard behavior and 320-pixel reflow; incomplete checks require measured resolution. Human acceptance stays offline. Named hardware alone does not qualify performance. Custom list/detail membership uses persisted scoped sources; slot alternatives are OR predicates, never simultaneous type/family filters. Repository multi-value alternatives filter before bounded paging; consuming extra raw rows must not discard matches. Tree names exclude descendants; narrow labels/actions wrap without hiding controls.

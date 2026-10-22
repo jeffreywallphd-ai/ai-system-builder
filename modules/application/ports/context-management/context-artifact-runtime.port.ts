@@ -28,6 +28,7 @@ export interface InspectContextArtifactInput extends ContextArtifactRuntimeInput
 export interface QueryContextArtifactInput extends ContextArtifactRuntimeInput {
   readonly query: string;
   readonly maximumResults: number;
+  readonly embeddingDevice?: "cpu" | "cuda" | "auto";
 }
 
 export interface ContextArtifactRuntimePort {

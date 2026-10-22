@@ -1,0 +1,12 @@
+import { expect,test } from "@playwright/test";
+import { qualifyOwnedTaskJourney } from "./owned-task-journey";
+test("managed reference observes and cancels owned background tasks",async({page})=>{
+  test.setTimeout(300000);
+  await page.addInitScript(token=>localStorage.setItem("ai-system-builder.paired-device-token",token),process.env.VISUAL_COMPOSER_THIN_CLIENT_BEARER_TOKEN!);
+  await page.goto(new URL("/systems",process.env.VISUAL_COMPOSER_THIN_CLIENT_ORIGIN!).href);
+  await page.locator('input[name="workspaceName"]').fill("Managed owned task workspace");
+  await page.getByRole("button",{name:"Create workspace",exact:true}).click();
+  await expect(page.getByRole("heading",{name:"Systems",exact:true})).toBeVisible();
+  const samples=process.env.QUALIFICATION_TASK_DIAGNOSTIC==="1"?1:30;
+  await qualifyOwnedTaskJourney(page,test.info(),{samples,transport:"thin-http"});
+});

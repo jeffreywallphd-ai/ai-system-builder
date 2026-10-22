@@ -19,6 +19,11 @@ roadmaps require current candidate-bound helper completion; pre-existing
 roadmap history stays explicitly declarative. The planning engine never executes
 commands from an evidence string.
 
+Pending governed increments close via `increment-qualified` after complete
+implementation, exact passing evidence/reports, fresh target-bound checks covering
+every criterion and separate accepted review. Other active work remains intact;
+overall review cannot substitute for target-specific qualification.
+
 Agents must route to the skill by intent, not only by exact name. Use it when a
 user:
 
@@ -100,6 +105,23 @@ suffix through `roadmap-revised`, render the consolidated proposal, and obtain
 renewed roadmap approval before continuing.
 
 ## Durable tracking and temporary reports
+
+If the user takes human acceptance offline, review all open increments and use
+`human-acceptance-transferred` only where that is the sole remaining qualification.
+The event archives original criteria/plan/approval and preserves evidence, then
+requires the actual narrowly authorized `roadmap-approved` event. The JSON review
+site shows offline user ownership separately from active technical criteria.
+
+Technical roadmap criteria should be executable by AI agents, including automated
+UI testing. For started governed roadmaps use `acceptance-scope-revised` instead:
+independently classify pure/mixed human scope, archive originals, retain technical
+requirements and pending evidence, record actual user narrow reapproval, then
+obtain fresh candidate checks/review. The event never closes an increment or
+changes a test result. Original human plan instructions are historical/offline.
+Performance, provider, security, hardware and runtime checks remain technical.
+The attestation is operator supplied; independent review checks semantic scope.
+This metadata handoff is legacy-only and refuses any receipt-governed roadmap;
+current candidate-bound completion requirements cannot be replaced by a transfer.
 
 By default the skill creates:
 

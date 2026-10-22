@@ -37,34 +37,6 @@
       "slug": "data-management-quality-and-usability",
       "criteria": [
         {
-          "increment_id": "guided-trustworthy-foundation",
-          "criterion_id": "guided-usability-is-qualified",
-          "environment_requirements": [
-            "representative-participants",
-            "manual-assistive-technology"
-          ],
-          "procedures": [
-            "docs/operations/functionality-outcome-qualification.md"
-          ],
-          "supporting_harnesses": [
-            "dev-tools/scripts/testing/run-dataset-preparation-e2e.mjs"
-          ]
-        },
-        {
-          "increment_id": "quality-curation-and-review",
-          "criterion_id": "quality-review-usability-is-qualified",
-          "environment_requirements": [
-            "representative-participants",
-            "manual-assistive-technology"
-          ],
-          "procedures": [
-            "docs/operations/functionality-outcome-qualification.md"
-          ],
-          "supporting_harnesses": [
-            "dev-tools/scripts/testing/run-dataset-preparation-e2e.mjs"
-          ]
-        },
-        {
           "increment_id": "versioned-dataset-lineage-and-publishing",
           "criterion_id": "controlled-provider-publication-is-qualified",
           "environment_requirements": [
@@ -104,20 +76,6 @@
           ],
           "supporting_harnesses": [
             "modules/adapters/runtime/python/worker/tests/test_dataset_preparation_training_material_matrix_e2e.py"
-          ]
-        },
-        {
-          "increment_id": "exact-task-adaptive-quality-and-preparation",
-          "criterion_id": "exact-task-usability-is-qualified",
-          "environment_requirements": [
-            "representative-participants",
-            "manual-assistive-technology"
-          ],
-          "procedures": [
-            "docs/operations/functionality-outcome-qualification.md"
-          ],
-          "supporting_harnesses": [
-            "dev-tools/scripts/testing/run-dataset-preparation-e2e.mjs"
           ]
         }
       ]
@@ -193,29 +151,17 @@
         },
         {
           "increment_id": "qualified-user-and-model-outcomes",
-          "criterion_id": "user-task-outcome-targets",
-          "environment_requirements": [
-            "representative-participants",
-            "manual-assistive-technology"
-          ],
-          "procedures": [
-            "docs/operations/functionality-outcome-qualification.md"
-          ],
-          "supporting_harnesses": [
-            "dev-tools/scripts/testing/run-dataset-preparation-e2e.mjs"
-          ]
-        },
-        {
-          "increment_id": "qualified-user-and-model-outcomes",
           "criterion_id": "accessibility-outcomes-qualified",
           "environment_requirements": [
-            "manual-assistive-technology"
+            "automated-accessibility-hosts"
           ],
           "procedures": [
             "docs/operations/functionality-outcome-qualification.md"
           ],
           "supporting_harnesses": [
-            "dev-tools/scripts/qualification/check-asset-system-qualification.mjs"
+            "dev-tools/scripts/qualification/visual-composer/e2e/packaged-desktop-meaningful-systems.e2e.spec.ts",
+            "dev-tools/scripts/qualification/visual-composer/e2e/thin-client-meaningful-systems.e2e.spec.ts",
+            "dev-tools/scripts/qualification/visual-composer/e2e/meaningful-system-journeys.ts"
           ]
         },
         {
@@ -254,14 +200,12 @@
     "reference-performance-profiles": "Named reference desktop and managed-server/thin-client performance environments; cold/warm and transport effects declared.",
     "whole-host-runtime-profiles": "Controlled desktop and server/thin-client runtime leave/reopen/disconnect/cancel/failure/shutdown measurements with physical worker cleanup evidence.",
     "controlled-security-target": "Authorized disposable target-environment security assessment; source review alone is insufficient.",
-    "ocr-supported-runtime": "OCR remains explicitly unavailable; do not declare advanced qualification passed from hardware availability alone."
+    "ocr-supported-runtime": "OCR remains explicitly unavailable; do not declare advanced qualification passed from hardware availability alone.",
+    "automated-accessibility-hosts": "Declared packaged-desktop and thin-client builds/profiles with automated keyboard traversal/activation, modal focus return, accessible names/roles/status semantics, 320 CSS-pixel reflow, computed contrast, non-color status and reduced motion. Retain actual DOM/semantic/visual results and zero-data-loss/authority-confusion journey invariants. Existing journey/axe coverage is supporting evidence; unasserted contrast/non-color/reduced-motion or unavailable profiles remain pending."
   },
   "targets": {
-    "participants": 5,
-    "critical_journey_success_minimum": 4,
-    "critical_data_loss_or_authority_confusion": 0,
-    "median_task_ease_minimum_out_of_7": 5,
     "accepted_output_throughput_improvement_minimum_percent": 20,
-    "quality": "Predeclare held-out metric and statistical tolerance per task; no material quality regression. CPU/accelerator and constrained/unchecked cohorts remain separate."
+    "quality": "Predeclare held-out metric and statistical tolerance per task; no material quality regression. CPU/accelerator and constrained/unchecked cohorts remain separate.",
+    "technical_journey_invariants": "Zero critical data loss or authority confusion in automated supported task journeys; human study scoring is offline and excluded from technical closure."
   }
 }

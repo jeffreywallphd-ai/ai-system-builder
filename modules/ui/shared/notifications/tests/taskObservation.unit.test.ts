@@ -52,6 +52,41 @@ test("duplicate subscribers share a flight, explicit actions queue only one imme
   manager.dispose();
 });
 
+for (const mode of ["idle", "error"] as const) {
+  test(`explicit invalidation immediately interrupts maximum ${mode} backoff without advancing time`, async () => {
+    const clock = new Clock(); const manager = new TaskObservationManager(clock);
+    let requests = 0; let active = false; let inFlight = 0; let peakFlights = 0;
+    const seen: number[] = [];
+    manager.subscribe(scope, async () => {
+      requests++; inFlight++; peakFlights = Math.max(peakFlights, inFlight);
+      try {
+        await Promise.resolve();
+        if (mode === "error" && !active) throw new Error("Synthetic transport failure.");
+        return { value: requests, activity: active ? "active" : "idle" };
+      } finally { inFlight--; }
+    }, (result) => { if (result) seen.push(result.value); });
+    // Both schedules reach their capped backoff well before this point.
+    await clock.advance(120_000);
+    assert.equal(inFlight, 0);
+    const before = requests;
+    await clock.advance(1);
+    assert.equal(requests, before, "A future idle/error timer must actually be pending.");
+    active = true;
+    manager.invalidate({ ...scope, workspaceId: "workspace-b" });
+    await clock.flush(); assert.equal(requests, before, "Foreign workspace cannot invalidate this reader.");
+    const invalidatedAt = clock.now;
+    manager.invalidate(scope);
+    await clock.flush();
+    assert.equal(clock.now, invalidatedAt);
+    assert.equal(requests, before + 1);
+    assert.equal(seen.at(-1), before + 1);
+    assert.equal(peakFlights, 1);
+    manager.dispose();
+    await clock.advance(60_000);
+    assert.equal(requests, before + 1);
+  });
+}
+
 test("late unsubscribed replies cannot publish into a replacement workspace or subscriber", async () => {
   const clock = new Clock(); const manager = new TaskObservationManager(clock);
   let release!: (value: any) => void;

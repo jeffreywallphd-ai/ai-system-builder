@@ -107,6 +107,8 @@ export function ContextStudio({
   const [includeSourceAttribution, setIncludeSourceAttribution] =
     useState(true);
   const [embeddingModel, setEmbeddingModel] = useState(DEFAULT_EMBEDDING_MODEL);
+  const [embeddingDevice, setEmbeddingDevice] = useState<"cpu" | "cuda" | "auto">("cpu");
+  const [queryEmbeddingDevice, setQueryEmbeddingDevice] = useState<"cpu" | "cuda" | "auto">("cpu");
   const [packMethod, setPackMethod] = useState<"none" | "local-model">("none");
   const [packCleaningPreset, setPackCleaningPreset] = useState<
     "standard" | "strict"
@@ -202,6 +204,9 @@ export function ContextStudio({
     setRequireLicenseMetadata(false);
     setRequireConsentMetadata(false);
     setIncludeSourceAttribution(true);
+    setEmbeddingModel(DEFAULT_EMBEDDING_MODEL);
+    setEmbeddingDevice("cpu");
+    setQueryEmbeddingDevice("cpu");
     setPackInputMode(undefined);
     setPackMethod("none");
     setPackCleaningPreset("standard");
@@ -454,6 +459,7 @@ export function ContextStudio({
               embedding: {
                 provider: "transformers",
                 modelId: embeddingModel,
+                ...(embeddingDevice === "cpu" ? {} : {device: embeddingDevice}),
                 batchSize: 16,
               },
             }
@@ -618,7 +624,8 @@ export function ContextStudio({
         workspaceId,
         command: {
           action: "browser-query",
-          request: { artifactId: selectedBrowserId, query, maximumResults: 5 },
+          request: { artifactId: selectedBrowserId, query, maximumResults: 5,
+            ...(queryEmbeddingDevice === "cpu" ? {} : {embeddingDevice: queryEmbeddingDevice}) },
         },
       });
       if (result.action !== "browser-query")
@@ -821,6 +828,8 @@ export function ContextStudio({
       requireConsentMetadata,
       includeSourceAttribution,
       embeddingModel,
+      embeddingDevice,
+      queryEmbeddingDevice,
       reviewDecisions,
     ],
   );
@@ -1311,6 +1320,16 @@ export function ContextStudio({
                     value={embeddingModel}
                     onChange={(event) => setEmbeddingModel(event.target.value)}
                   />
+                </label>
+                <label>
+                  Embedding device
+                  <select value={embeddingDevice} disabled={running}
+                    onChange={event => setEmbeddingDevice(event.target.value as "cpu" | "cuda" | "auto")}>
+                    <option value="cpu">CPU (default)</option>
+                    <option value="cuda">CUDA accelerator</option>
+                    <option value="auto">Automatic (CUDA when available)</option>
+                  </select>
+                  <small className="ui-text-muted">CUDA requires a compatible local accelerator. If unavailable or out of memory, choose CPU and retry; explicit CUDA never falls back automatically.</small>
                 </label>
               </div>
               {rag ? (
@@ -2203,6 +2222,15 @@ export function ContextStudio({
                 {detail.item.kind === "rag-database" ? (
                   <section className="ui-stack ui-stack--sm">
                     <h4>Test retrieval</h4>
+                    <label>
+                      Retrieval embedding device
+                      <select value={queryEmbeddingDevice} disabled={busyAction === "query"}
+                        onChange={event => setQueryEmbeddingDevice(event.target.value as "cpu" | "cuda" | "auto")}>
+                        <option value="cpu">CPU (default)</option>
+                        <option value="cuda">CUDA accelerator</option>
+                        <option value="auto">Automatic (CUDA when available)</option>
+                      </select>
+                    </label>
                     <label>
                       Query
                       <input

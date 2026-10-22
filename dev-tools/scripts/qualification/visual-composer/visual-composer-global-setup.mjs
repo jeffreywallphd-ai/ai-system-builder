@@ -143,6 +143,7 @@ function prepareThinClientQualificationIdentity(launchPlan) {
               .digest("hex"),
             tokenHashAlgorithm: "sha256",
             scopes: [
+              "artifact:read",
               "asset:read",
               "asset:write",
               "model:read",

@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { _electron as electron } from "playwright";
+import { prepareIsolatedDesktopCase } from "./isolated-desktop-case";
 import {
   assertGuidedLifecycleReflow,
   completeGuidedSystemLifecycle,
@@ -21,11 +22,12 @@ test("packaged desktop completes the guided build and publication lifecycle", as
   const executablePath = requiredEnvironment(
     "VISUAL_COMPOSER_DESKTOP_EXECUTABLE",
   );
-  const dataRoot = requiredEnvironment("VISUAL_COMPOSER_DESKTOP_DATA_ROOT");
+  const isolated = prepareIsolatedDesktopCase("lifecycle");
+  const dataRoot = isolated.dataRoot;
   const electronApp = await electron.launch({
     executablePath,
     args: [`--user-data-dir=${dataRoot}`, "--disable-gpu"],
-    env: { ...process.env, VISUAL_COMPOSER_DESKTOP_DATA_ROOT: dataRoot },
+    env: isolated.env,
     timeout: 60_000,
   });
   const featureLoadDiagnostics: Array<Record<string, string>> = [];
@@ -252,10 +254,11 @@ async function seedDesktopQualificationModel(
             updateModelRecord?: (
               input: Record<string, unknown>,
             ) => Promise<any>;
+            downloadModel?: (input: Record<string, unknown>) => Promise<any>;
           };
         }
       ).desktopApi;
-      if (!api?.listModels || !api.saveModelReference || !api.updateModelRecord)
+      if (!api?.listModels || !api.saveModelReference || !api.updateModelRecord || !api.downloadModel)
         return { ok: false as const, stage: "bridge" };
       const listed = await api.listModels({
         workspaceId: currentWorkspaceId,
@@ -291,13 +294,20 @@ async function seedDesktopQualificationModel(
             saved?.error?.message ??
             "The qualification model reference was not saved.",
         };
-      const updated = await api?.updateModelRecord?.({
+      const deniedPatch = await api.updateModelRecord({
         workspaceId: currentWorkspaceId,
         modelRecordId,
         patch: {
           lifecycleStatus: "downloaded",
           validationStatus: "valid",
         },
+      });
+      if (deniedPatch?.ok) return { ok: false as const, stage: "lifecycle-edit-not-denied" };
+      const updated = await api.downloadModel({
+        workspaceId: currentWorkspaceId, modelRecordId,
+        provider: "huggingface", modelId: "qualification/controlled-chat",
+        displayName: modelName, inferenceMode: "chat",
+        taskTags: ["text-generation"], artifactForm: "full-model",
       });
       return updated?.ok
         ? { ok: true as const }

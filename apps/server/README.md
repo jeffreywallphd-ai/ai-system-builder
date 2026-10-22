@@ -70,6 +70,23 @@ drain the database pool idempotently. Deployment templates live under
 
 ## Local runtime state
 
+Controlled tests may supply the typed `pythonRuntimeEnvironmentPreparer`
+composition callback. Both server entry points reject it in production before
+initialization. It is never read from an API or environment flag; omitting it
+preserves the normal managed Python dependency checks and propagates failures.
+The preparation-failure integration regression uses a fresh real in-memory
+structured store per case through the existing test seam, while still running
+Foundation installation, HTTP routing and the owned supervisor. It asserts the
+specific sanitized preparation-failure event as well as the public denial.
+Separate file-backed server and whole-host cases qualify filesystem behavior;
+this narrow regression does not establish filesystem bootstrap reliability.
+Each entry point captures the option once. Every defined production override
+and every nonfunction nonproduction value are rejected, including falsy values.
+The qualification harness validates the exact fixed worker command, arguments,
+cwd, loopback endpoint and isolated cache. The host still owns worker launch,
+private rotating authentication, capability checks and termination. This seam
+does not qualify real Python dependencies, models or hardware.
+
 - `SERVER_STORAGE_ROOT` overrides server artifact storage.
 - `SERVER_RUNTIME_ROOT` overrides server-owned runtime state for ComfyUI, Python worker caches, and managed runtime dependencies.
 - Without overrides, server runtime state lives under `apps/server/.local/server-runtime`, which keeps dev runtime installs out of the source tree and separate from artifact storage.

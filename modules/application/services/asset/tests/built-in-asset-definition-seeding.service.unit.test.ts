@@ -38,6 +38,38 @@ class FakeDefinitionRepository implements AssetDefinitionRepositoryPort {
 }
 
 describe("BuiltInAssetDefinitionSeedingService", () => {
+  test("does not reuse an edited stored body with an unchanged seed fingerprint marker", async () => {
+    const repository = new FakeDefinitionRepository();
+    const seed = validSeed();
+    await createService(repository).seedDefinitions([seed]);
+    const stored = await repository.getDefinition(referenceFor(seed.definition));
+    assert.ok(stored);
+    repository.definitions.set(keyFor(stored.definitionId, stored.version), { ...stored, displayName: "Edited existing content" });
+    repository.saveCount = 0;
+    const result = await createService(repository).seedDefinitions([seed]);
+    assert.equal(result.unchangedCount, 0);
+    assert.equal(result.diagnostics[0]?.status, "skipped-user-modified");
+    assert.equal(repository.saveCount, 0);
+    assert.equal((await repository.getDefinition(referenceFor(seed.definition)))?.displayName, "Edited existing content");
+  });
+
+  test("rejects active repository records before evaluating marker fields", async () => {
+    const repository = new FakeDefinitionRepository();
+    const seed = validSeed();
+    await createService(repository).seedDefinitions([seed]);
+    const stored = await repository.getDefinition(referenceFor(seed.definition));
+    assert.ok(stored);
+    let callbacks = 0;
+    const active = Object.defineProperty({ ...stored }, "metadata", { enumerable: true, get() { callbacks++; return stored.metadata; } });
+    repository.getDefinition = async () => active;
+    repository.saveCount = 0;
+    const result = await createService(repository).seedDefinitions([seed]);
+    assert.equal(callbacks, 0);
+    assert.equal(result.failedCount, 1);
+    assert.equal(result.unchangedCount, 0);
+    assert.equal(repository.saveCount, 0);
+  });
+
   test("creates a missing valid built-in definition with safe seed metadata without mutating the seed", async () => {
     const repository = new FakeDefinitionRepository();
     const service = createService(repository);

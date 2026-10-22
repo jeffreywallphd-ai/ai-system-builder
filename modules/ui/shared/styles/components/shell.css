@@ -438,17 +438,8 @@
   min-width: 0;
   overflow: hidden;
   padding: clamp(1.25rem, 2.5vw, 2.5rem);
-}
-
-.ui-shell__main::before {
-  content: "";
-  position: absolute;
-  z-index: -2;
-  inset: 0;
-  background:
-    linear-gradient(115deg, rgb(5 15 29 / 96%) 0 28%, transparent 56%),
-    radial-gradient(circle at 76% -8%, rgb(35 74 179 / 14%), transparent 35rem);
-  pointer-events: none;
+  /* An opaque reading surface keeps text contrast independent of decoration. */
+  background: var(--color-bg-primary);
 }
 
 .ui-shell__content {

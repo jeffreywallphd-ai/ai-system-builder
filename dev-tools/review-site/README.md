@@ -20,6 +20,13 @@ the Work items tab, or "View parent increment" to navigate back. Criterion
 qualification and chunk completion are tracked independently; legacy chunk
 declarations do not acquire execution receipts.
 
+Criteria show parent qualification separately from reviewed local supporting
+work. The fixed JSON map in `docs/operations/roadmap-supporting-work.json` links
+actual completed receipt/review lineages without granting current qualification
+or completing planned chunks. Long qualification badges wrap inside their own
+column in narrow review panels. Agent-only labels distinguish automated technical
+checks from archived offline human acceptance; genuine technical gaps stay pending.
+
 Roadmaps and work items appear newest first by creation time, regardless of
 status or later updates. Chunks use their plan's recorded time, falling back to
 increment start or roadmap creation for legacy data. Equal-time chunks retain

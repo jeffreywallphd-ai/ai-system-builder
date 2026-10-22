@@ -1,0 +1,115 @@
+{
+  "schema_version": "security-local-controls-qualification-v1",
+  "scope": "available-local-increment3-and4-controls",
+  "qualification_work_id": "security-local-tooling-evidence-reconciliation",
+  "authority_ref": "approved-security-roadmap-and-adr0043-available-local-work",
+  "limitation": "This inventory links actual bounded work; its text is not a pass or a replacement for current executed receipts and separate review. Original findings, failed evidence and scanner closure notclaimed are preserved. Parent increment order and native/environment blockers remain.",
+  "controls": [
+    {
+      "finding_ids": [
+        "R44"
+      ],
+      "work_ids": [
+        "security-r44-persisted-opaque-image-identities"
+      ],
+      "local_scope": "Random persisted owner-scoped image/output/artifact/cursor aliases, coherent CAS public admission, exact indexed source reread, isolated actual SQLite concurrency and image pagination compatibility.",
+      "pending": [
+        "Explicit owner-approved legacy-reference migration",
+        "Native persistence and ACL qualification",
+        "Hostile database tamper and uncomposed generated-output finalization"
+      ]
+    },
+    {
+      "finding_ids": [
+        "R45"
+      ],
+      "work_ids": [
+        "security-r45-code-owned-asset-classification",
+        "security-r45-installed-content-revalidation"
+      ],
+      "local_scope": "Code-owned exact-content read classification and complete passive stored-body comparison before seed/install current reuse; supported explicit refresh and custom-edit preservation.",
+      "pending": [
+        "Full package-integrity compatibility migration",
+        "Native and parent qualification"
+      ]
+    },
+    {
+      "finding_ids": [
+        "R50"
+      ],
+      "work_ids": [
+        "security-r50-versioned-semantic-fingerprint"
+      ],
+      "local_scope": "Complete passive validated semantic-v2 hashes, exact full encoded bounds, malformed list denial, explicit legacy revalidation and immutable Foundation compatibility.",
+      "pending": [
+        "Admission/trust/legacy consumer migration",
+        "Parent native/runtime qualification"
+      ]
+    },
+    {
+      "finding_ids": [
+        "R42",
+        "R46"
+      ],
+      "work_ids": [
+        "security-r42-r46-development-listener-posture",
+        "security-local-tooling-evidence-reconciliation"
+      ],
+      "local_scope": "Loopback defaults, explicit secure LAN frontend/proxy/backend posture and fixed configuration denial/supported-flow tests.",
+      "pending": [
+        "Actual LAN deployment, browser trust and owning environment qualification"
+      ]
+    },
+    {
+      "finding_ids": [
+        "R47"
+      ],
+      "work_ids": [
+        "security-r47-enforced-toggle-authority",
+        "security-local-tooling-evidence-reconciliation"
+      ],
+      "local_scope": "Nonpublic security-admin toggle, enforced auth denial before mutation and secure client request path; deliberate disabled-dev bootstrap remains explicit.",
+      "pending": [
+        "Controlled deployment/operator environment qualification"
+      ]
+    },
+    {
+      "finding_ids": [
+        "R54"
+      ],
+      "work_ids": [
+        "roadmap-implementation-qualification-boundary",
+        "security-local-tooling-evidence-reconciliation"
+      ],
+      "local_scope": "Portable exclusive unpredictable temp creation, fsync, atomic replacement, owned cleanup and current receipt/workflow regression checks.",
+      "pending": [
+        "Native parent/reparse/ACL race qualification"
+      ]
+    },
+    {
+      "finding_ids": [
+        "R87"
+      ],
+      "work_ids": [
+        "security-r87-helper-positional-arguments",
+        "security-local-tooling-evidence-reconciliation"
+      ],
+      "local_scope": "Positional repository paths, normalized option-prefix/absolute/drive/type denial, fixed Node/Prettier option terminators; optional missing formatter denies normally without fetching.",
+      "pending": [
+        "Parent roadmap closure and any applicable controlled environment qualification"
+      ]
+    }
+  ],
+  "requalification_checks": [
+    "security-tooling",
+    "dependencies",
+    "control-plane",
+    "roadmap",
+    "documentation"
+  ],
+  "controlled_pending": [
+    "Host-native identity-preserving model effects and owned publication/recovery",
+    "Reference/model/provider/hardware/environment evidence absent from current local work"
+  ],
+  "rollback": "Preserve stronger denials, original supplier and zero-advisory policy, historical receipts/reviews and failed attempts. Never promote local evidence to native/production qualification."
+}

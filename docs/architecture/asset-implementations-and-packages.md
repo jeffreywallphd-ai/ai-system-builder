@@ -100,6 +100,14 @@ Package parsing must reject absolute/device/traversal paths, links, duplicate no
 
 ## Trust and provenance
 
+Semantic Asset Pack utilities use validated `sha256:semantic-v2` identity under
+ADR-0043. This hash covers complete admitted semantic input, with explicit
+packaging/self-reference exclusions and set-like ordering normalization; it is
+separate from immutable package-byte digests and grants no admission authority.
+Legacy semantic hashes require explicit revalidation/review, with no automatic
+approval, binding or shipped Foundation rewrite. See the Asset Kernel architecture
+and owning threat model for the canonical input and capture bounds.
+
 Trust is an evaluated result, not a source label:
 
 - `system-trusted`: shipped and digest-locked with the product;
@@ -209,3 +217,10 @@ sequence, bounded entry descriptors, evidence, and separate trust decisions.
 - [OCI Image and Distribution 1.1](https://opencontainers.org/posts/blog/2024-03-13-image-and-distribution-1-1/)
 - [SLSA provenance 1.2](https://slsa.dev/spec/v1.2/provenance)
 - [Sigstore blob signing bundles](https://docs.sigstore.dev/cosign/signing/signing_with_blobs/)
+
+Trusted built-in initialization joins only overlapping calls for the same composed
+store/owner. It snapshots missing-release exact definitions in bounded groups for
+that invocation alone. Ordinary publish APIs retain direct reads; later bootstrap
+calls revalidate releases, backing resources and bindings. Successful and failed
+flights are released only after settlement, with no persistent trust/readiness cache.
+Partial immutable publication is preserved for healthy idempotent retry.

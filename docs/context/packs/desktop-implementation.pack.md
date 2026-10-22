@@ -19,7 +19,7 @@
 
 ## Core Guidance
 
-- Use Electron + Electron Forge webpack plugin as the canonical desktop path; avoid parallel desktop build pipelines.
+- Use Electron + the exactly pinned Electron Forge Vite plugin as the canonical desktop path (ADR-0044). Preserve independent CJS preloads and product/runtime renderer bundles, relative packaged assets, loopback-only source-confined development and actual installed-feature qualification.
 - Keep responsibilities split across `main`, preload, renderer, and `modules/hosts/desktop` composition.
 - `apps/desktop/src/main/` handles lifecycle/bootstrap/window creation only.
 - `apps/desktop/src/preload/` exposes a narrow secure bridge; keep it transport-oriented.

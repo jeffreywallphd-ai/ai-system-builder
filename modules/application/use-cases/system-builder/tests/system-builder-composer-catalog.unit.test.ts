@@ -20,6 +20,9 @@ import type {
 } from "../../../services/asset/asset-registry-read-facade.types";
 import { ListSystemBuilderComposerAssetsUseCase } from "../list-system-builder-composer-assets.use-case";
 import { ReadSystemBuilderComposerAssetUseCase } from "../read-system-builder-composer-asset.use-case";
+import { createLocalAssetDefinitionRepositoryAdapter } from "../../../../adapters/persistence/asset";
+import { createInMemoryStructuredDocumentStore } from "../../../../adapters/persistence/shared";
+import { AssetRegistryReadFacade } from "../../../services/asset/asset-registry-read-facade.service";
 
 const workspaceId = createWorkspaceId("workspace-composer");
 const parent = definition("builtin.layout.parent", "system", "structural", {
@@ -51,6 +54,21 @@ const child = definition("workspace.card", "ui-component", "structural", {
 });
 
 describe("System Builder composer catalog", () => {
+  for (const alternative of ["family", "exact-reference"] as const) {
+    it(`retains a compatible ${alternative} alternative through the real filtered repository`, async () => {
+      const alternativeChild = definition(`workspace.alternative.${alternative}`, "tool", "behavioral");
+      const alternativeParent = {...parent, slots: [{...parent.slots![0]!,
+        ...(alternative === "family" ? {acceptedAssetFamilies:["behavioral"]} : {acceptedDefinitionRefs:[exactReference(alternativeChild)]}),
+      }]};
+      const repository = createLocalAssetDefinitionRepositoryAdapter({rootDir:"composer-filter-regression",documents:createInMemoryStructuredDocumentStore()});
+      await repository.saveDefinition(alternativeParent);
+      await repository.saveDefinition(alternativeChild);
+      const registry = new AssetRegistryReadFacade({definitionRepository:repository,instanceRepository:{} as never,compositionRepository:{} as never});
+      const result = await new ListSystemBuilderComposerAssetsUseCase(registry).execute({workspaceId,parentDefinitionRef:exactReference(alternativeParent),slotId:"content",compatibleOnly:true,limit:1});
+      expect(result.ok).toBe(true);
+      if(result.ok) expect(result.value.items.map(item=>item.definitionId)).toEqual([alternativeChild.definitionId]);
+    });
+  }
   it("returns exact effective details and shared slot compatibility", async () => {
     const registry = new FakeRegistry(parent, child);
     const result = await new ListSystemBuilderComposerAssetsUseCase(
@@ -80,6 +98,7 @@ describe("System Builder composer catalog", () => {
     expect(result.value.items[0]?.ports[0]?.portId).toBe("selected");
     expect(registry.listQuery?.workspaceId).toBe(workspaceId);
     expect(registry.listQuery?.limit).toBe(20);
+    expect(registry.listQuery?.assetTypes).toEqual(["ui-component"]);
     expect(
       registry.readOptions.every(
         (options) =>
@@ -88,6 +107,14 @@ describe("System Builder composer catalog", () => {
           options.includePorts === true,
       ),
     ).toBe(true);
+  });
+
+  it("preserves unfiltered compatibility explanations without pushing slot constraints",async()=>{
+    const registry=new FakeRegistry(parent,child);
+    const result=await new ListSystemBuilderComposerAssetsUseCase(registry).execute({workspaceId,parentDefinitionRef:exactReference(parent),slotId:"content",compatibleOnly:false,limit:20});
+    expect(result.ok).toBe(true);
+    expect(registry.listQuery?.assetTypes).toBeUndefined();
+    expect(registry.listQuery?.assetFamilies).toBeUndefined();
   });
 
   it("loads property schema and defaults only through an exact workspace-scoped detail read", async () => {

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { types } from "node:util";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { Stream } from "node:stream";
@@ -440,6 +441,7 @@ function assertJsonCompatibleValue(value: unknown, seen: Set<object>): void {
   }
 
   if (typeof value !== "object") return;
+  if (types.isProxy(value)) throw new LocalAssetRecordStoreError("Asset Kernel local store record must be passive JSON.");
 
   if (
     value instanceof Date ||
@@ -469,11 +471,20 @@ function assertJsonCompatibleValue(value: unknown, seen: Set<object>): void {
   }
 
   seen.add(value);
+  const descriptors = Object.getOwnPropertyDescriptors(value);
   if (Array.isArray(value)) {
-    for (const entry of value) assertJsonCompatibleValue(entry, seen);
-  } else {
-    for (const entry of Object.values(value as Record<string, unknown>))
-      assertJsonCompatibleValue(entry, seen);
+    for (let index = 0; index < value.length; index++) {
+      const descriptor = descriptors[String(index)];
+      if (!descriptor || !("value" in descriptor)) throw new LocalAssetRecordStoreError("Asset Kernel local store record must be passive JSON.");
+      assertJsonCompatibleValue(descriptor.value, seen);
+    }
+  }
+  for (const [key, descriptor] of Object.entries(descriptors)) {
+    // Indexed array values were already traversed, including hole/accessor denial.
+    if (Array.isArray(value) && /^(0|[1-9][0-9]*)$/.test(key) && Number(key) < value.length) continue;
+    if (!descriptor.enumerable && key !== "toJSON") continue;
+    if (!("value" in descriptor)) throw new LocalAssetRecordStoreError("Asset Kernel local store record must be passive JSON.");
+    assertJsonCompatibleValue(descriptor.value, seen);
   }
   seen.delete(value);
 }

@@ -1,3 +1,5 @@
+import { types } from "node:util";
+import { captureAssetPackFingerprintInput } from "../../../application/services/asset-packs/asset-pack-fingerprint-input";
 import type { AssetDefinitionRepositoryPort } from "../../../application/ports/asset";
 import {
   readSystemFoundationBackingResourceBundle,
@@ -184,14 +186,48 @@ export function composeAssetImplementationKernel(
     listReleases: new ListAssetImplementationReleasesUseCase(repository),
   };
 
-  return {
-    repository,
-    backingResources,
-    useCases,
-    async ensureTrustedBuiltIns(): Promise<void> {
-      for (const seed of options.trustedSeeds ??
-        DEFAULT_TRUSTED_ASSET_IMPLEMENTATION_SEEDS) {
-        const existingRelease = await repository.readRelease(seed.releaseId);
+  const platformOwner = Symbol("platform-owner");
+  const trustedInitializations = new Map<string | symbol, Promise<void>>();
+  const exactKey = (reference: AssetReference) => JSON.stringify([reference.kind, reference.id, reference.version ?? null]);
+  async function initializeTrustedBuiltIns(owner: typeof options.documents.organizationId): Promise<void> {
+    const operationDocuments = owner ? options.documents.forOrganization(owner) : options.documents;
+    const operationRepository = createStructuredAssetImplementationRepository(operationDocuments);
+    const operationBacking = createStructuredAssetImplementationBackingResourceRepository(operationDocuments);
+    const assertOwner = () => { if (options.documents.organizationId !== owner) throw new Error("Trusted initialization owner changed."); };
+    const seeds = options.trustedSeeds ?? DEFAULT_TRUSTED_ASSET_IMPLEMENTATION_SEEDS;
+    const existingReleases = new Map();
+    const missing = [];
+    for (const seed of seeds) {
+      assertOwner();
+      const release = await operationRepository.readRelease(seed.releaseId);
+      if (release && !matchesTrustedSeedRelease(release, seed)) throw new Error("Trusted built-in implementation release is incompatible.");
+      existingReleases.set(seed.releaseId, release);
+      if (!release) missing.push(seed);
+    }
+    // A private exact-version snapshot for this operation only, never a trust cache.
+    const snapshot = new Map<string, Awaited<ReturnType<typeof options.definitions.getDefinition>>>();
+    for (let offset = 0; offset < missing.length; offset += 250) {
+      const refs = missing.slice(offset, offset + 250).map(seed => seed.definitionRef);
+      const batch = options.definitions.getDefinitions
+        ? await options.definitions.getDefinitions(refs)
+        : await (async () => { const values = []; for (const ref of refs) values.push(await options.definitions.getDefinition(ref)); return values; })();
+      assertOwner();
+      if (types.isProxy(batch) || !Array.isArray(batch) || batch.length !== refs.length) throw new Error("Trusted definition snapshot is unavailable.");
+      refs.forEach((ref, index) => {
+        const descriptor = Object.getOwnPropertyDescriptor(batch, String(index));
+        if (!descriptor || !("value" in descriptor)) throw new Error("Trusted definition snapshot is unavailable.");
+        const definition = descriptor.value === undefined ? undefined : captureAssetPackFingerprintInput(descriptor.value) as unknown as Awaited<ReturnType<typeof options.definitions.getDefinition>>;
+        if (definition && (definition.definitionId !== ref.id || definition.version !== ref.version)) throw new Error("Trusted definition snapshot is incompatible.");
+        snapshot.set(exactKey(ref), definition);
+      });
+    }
+    const operationPublish = new PublishAssetImplementationReleaseUseCase(operationRepository, {
+      readExactDefinition: async reference => { assertOwner(); return snapshot.get(exactKey(reference)); },
+    }, now);
+    const operationBind = new BindAssetImplementationReleaseUseCase(operationRepository, now);
+      for (const seed of seeds) {
+        assertOwner();
+        const existingRelease = existingReleases.get(seed.releaseId);
         if (existingRelease) {
           if (!matchesTrustedSeedRelease(existingRelease, seed)) {
             throw new Error(
@@ -199,7 +235,7 @@ export function composeAssetImplementationKernel(
             );
           }
         } else {
-          const published = await publishRelease.execute({
+          const published = await operationPublish.execute({
             releaseId: seed.releaseId,
             definitionRef: seed.definitionRef,
             version: seed.version,
@@ -211,7 +247,7 @@ export function composeAssetImplementationKernel(
           if (!published.ok) throw new Error(published.error.message);
         }
 
-        const release = await repository.readRelease(seed.releaseId);
+        const release = await operationRepository.readRelease(seed.releaseId);
         if (!release) {
           throw new Error(
             "Trusted built-in implementation release is unavailable.",
@@ -219,7 +255,7 @@ export function composeAssetImplementationKernel(
         }
 
         if (options.artifacts) {
-          const existingBackingResource = await backingResources.readByRelease(
+          const existingBackingResource = await operationBacking.readByRelease(
             seed.releaseId,
           );
           if (existingBackingResource) {
@@ -256,7 +292,7 @@ export function composeAssetImplementationKernel(
                 "Trusted built-in implementation release identity is invalid.",
               );
             }
-            await backingResources.save({
+            await operationBacking.save({
               backingResourceId: `implementation-backing.${identity}.${releaseGeneration}`,
               origin: "system-foundation",
               releaseId: seed.releaseId,
@@ -275,7 +311,7 @@ export function composeAssetImplementationKernel(
           }
         }
 
-        const existingBinding = await repository.readBinding(seed.bindingId);
+        const existingBinding = await operationRepository.readBinding(seed.bindingId);
         if (existingBinding) {
           if (!matchesTrustedSeedBinding(existingBinding, seed)) {
             throw new Error(
@@ -283,7 +319,7 @@ export function composeAssetImplementationKernel(
             );
           }
         } else {
-          const bound = await bindRelease.execute({
+          const bound = await operationBind.execute({
             bindingId: seed.bindingId,
             definitionRef: seed.definitionRef,
             releaseId: seed.releaseId,
@@ -293,6 +329,22 @@ export function composeAssetImplementationKernel(
           if (!bound.ok) throw new Error(bound.error.message);
         }
       }
+  }
+
+  return {
+    repository,
+    backingResources,
+    useCases,
+    async ensureTrustedBuiltIns(): Promise<void> {
+      const owner = options.documents.organizationId;
+      const key = owner ?? platformOwner;
+      const existing = trustedInitializations.get(key);
+      if (existing) return existing;
+      const attempt = initializeTrustedBuiltIns(owner).finally(() => {
+        if (trustedInitializations.get(key) === attempt) trustedInitializations.delete(key);
+      });
+      trustedInitializations.set(key, attempt);
+      return attempt;
     },
     resolveTrustedBuiltIn(
       workspaceId: WorkspaceId,

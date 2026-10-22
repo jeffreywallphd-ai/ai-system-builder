@@ -73,18 +73,18 @@ def build_commands(
     commands: list[tuple[str, list[str]]] = []
     if format_paths:
         commands.append(("format", ["node", "node_modules/prettier/bin/prettier.cjs", "--check", "--", *format_paths]))
+    if install_electron:
+        commands.append(
+            (
+                "pinned Electron runtime",
+                ["node", "node_modules/electron/install.js"],
+            )
+        )
     if focused_tests:
         commands.append(
             (
                 "focused tests",
                 ["node", "--import", "tsx", "--test", "--", *focused_tests],
-            )
-        )
-    if install_electron:
-        commands.append(
-            (
-                "pinned Electron runtime",
-                [npm, "rebuild", "electron", "--no-audit", "--no-fund"],
             )
         )
     if documentation:

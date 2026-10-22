@@ -26,6 +26,22 @@ import {
 } from "../composeServerHost";
 
 describe("composeServerHost", () => {
+  it("rejects malformed controlled runtime preparation before host composition", () => {
+    for (const mode of ["production", "test"]) {
+      for (const value of [false, 0, "", null, {}, []]) {
+        expect(() => composeServerHost({ env: { NODE_ENV: mode }, pythonRuntimeEnvironmentPreparer: value as never }))
+          .toThrow(mode === "production"
+            ? "controlled runtime preparation seam is unavailable in production"
+            : "Controlled runtime preparation must be a function");
+      }
+    }
+  });
+  it("rejects a controlled runtime preparation callback before production composition", () => {
+    const prepare = testDouble.fn();
+    expect(() => composeServerHost({ env: { NODE_ENV: "production" }, pythonRuntimeEnvironmentPreparer: prepare }))
+      .toThrow("controlled runtime preparation seam is unavailable in production");
+    expect(prepare).not.toHaveBeenCalled();
+  });
   it("provides a LoggingPort-backed seam using the real logging adapter", async () => {
     const sink = testDouble.fn();
     const host = composeServerHost({

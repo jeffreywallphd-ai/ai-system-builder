@@ -28,8 +28,7 @@ import type {
   AssetResourceBackedViewProvider,
   AssetResourceBackedViewProviderDiagnostic,
 } from "../../ports/asset";
-import { copyBoundedPassiveData } from "../../../contracts/shared";
-import { matchCodeOwnedAssetDefinition, type CodeOwnedAssetDefinition } from "./code-owned-asset-definition.service";
+import { admitAssetDefinitionForRead, type CodeOwnedAssetDefinition } from "./code-owned-asset-definition.service";
 import { sanitizeAssetJsonValue, sanitizeAssetMetadata, sanitizeAssetStringValue, sanitizeAssetViewValue } from "./asset-safe-metadata";
 import { validateAssetComposition } from "./validate-asset-composition.service";
 import { validateAssetDefinition } from "./validate-asset-definition.service";
@@ -119,8 +118,7 @@ export class AssetRegistryReadFacade {
       : Promise.all(refs.map(ref => this.dependencies.definitionRepository.getDefinition(ref))), "repository-read-failed");
     return definitions.map((stored) => {
       if (!stored) return undefined;
-      const definition = boundedDefinition(stored);
-      const authority = matchCodeOwnedAssetDefinition(definition);
+      const { definition, authority } = admitDefinitionForFacade(stored);
       return sanitizeValue({
         definition: sanitizeDefinition(definition, options, authority),
         ...(authority ? { builtIn: true } : {}),
@@ -214,9 +212,8 @@ export class AssetRegistryReadFacade {
     return sanitizeValue(detail) as AssetRegistryResourceBackedViewDetail;
   }
 
-  private toDefinitionCard(definition: AssetDefinition, query: AssetRegistryListQuery): AssetDefinitionCard | undefined {
-    definition = boundedDefinition(definition);
-    const authority = matchCodeOwnedAssetDefinition(definition);
+  private toDefinitionCard(stored: AssetDefinition, query: AssetRegistryListQuery): AssetDefinitionCard | undefined {
+    const { definition, authority } = admitDefinitionForFacade(stored);
     const builtIn = Boolean(authority);
     if (query.includeBuiltIns === false && builtIn) return undefined;
     if (query.includeCustom === false && !builtIn) return undefined;
@@ -325,7 +322,6 @@ export class AssetRegistryReadFacade {
   }
 
   private definitionRepositoryQuery(query: AssetRegistryListQuery, limit: number): AssetDefinitionListQuery {
-    const needsFacadeFiltering = this.definitionNeedsFacadeSideFiltering(query);
     const assetType = singleValue(query.assetTypes);
     const assetFamily = singleValue(query.assetFamilies);
     const lifecycleStatus = singleValue(query.lifecycleStatuses);
@@ -333,9 +329,13 @@ export class AssetRegistryReadFacade {
     return {
       ...(assetType ? { assetType } : {}),
       ...(assetFamily ? { assetFamily } : {}),
+      ...(hasMultipleValues(query.assetTypes) ? {assetTypes:query.assetTypes} : {}),
+      ...(hasMultipleValues(query.assetFamilies) ? {assetFamilies:query.assetFamilies} : {}),
       ...(lifecycleStatus ? { lifecycleStatus } : {}),
       ...(text ? { text } : {}),
-      limit: this.repositoryFetchLimit(query, limit, needsFacadeFiltering),
+      // Consuming more raw rows than output capacity can discard compatible
+      // matches while advancing an opaque repository cursor past them.
+      limit,
       cursor: query.cursor,
     };
   }
@@ -454,8 +454,8 @@ function trimmedText(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-function boundedDefinition(definition: AssetDefinition): AssetDefinition {
-  try { return copyBoundedPassiveData(definition) as AssetDefinition; }
+function admitDefinitionForFacade(definition: AssetDefinition): ReturnType<typeof admitAssetDefinitionForRead> {
+  try { return admitAssetDefinitionForRead(definition); }
   catch { throw new AssetRegistryReadFacadeError("repository-read-failed"); }
 }
 

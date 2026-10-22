@@ -25,11 +25,17 @@ This directory separates canonical system guidance from downstream task context 
 
 ## Supporting Areas
 
+- `docs/diagnostics/system-builder-canvas-testing.md` describes meaningful
+  scratch-built multi-component UI journeys, failure reproductions and the
+  distinction between preview controls and qualified runtime outcomes.
+
 - `docs/operations/functionality-qualification-crosswalk.json` maps current and
   legacy controlled criteria to owners, procedures, harnesses and required
   environments. `docs/operations/functionality-outcome-qualification.md` explains
   the bounded source-bound JSON assessment and pending release decision.
 
+- `docs/security/security-local-controls-qualification.json` links available local
+  security component work and its remaining native/environment boundaries.
 - `docs/security/`
   - Canonical threat models plus security-oriented operational checks and manual verification guidance.
 - `docs/diagnostics/`
@@ -166,3 +172,7 @@ If context guidance conflicts with an ADR, architecture document, or standard, t
 - Run `npm run test:all` for combined standard, end-to-end, and AI coverage
   only when the work is AI-related or the user explicitly requests it.
 - Continuous integration enforces both gates for pull requests and changes to the default branch.
+
+- `docs/operations/roadmap-supporting-work.json` maps scoped reviewed local work
+  to roadmap criteria for the JSON review site. It distinguishes implementation
+  progress from pending parent/current-candidate qualification.

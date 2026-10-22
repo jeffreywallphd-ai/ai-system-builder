@@ -142,16 +142,18 @@ Required behavior:
 - apply the same redaction rules across all verbosity levels,
 - ensure debug/trace mode does not bypass privacy controls.
 
-Python dependency setup writes only the versioned
+Python dependency setup publishes only the versioned
 `python-dependency-outcomes-v1` projection: finite operation/platform/backend
 and stage outcomes, explicit overall success, safe exit codes and grouped retry
-counts. Never serialize command lines, arguments, subprocess transcripts,
-environment inspection, index URLs or exception detail into those files. Use
-finite stage/backend grouping so retries cannot grow transcript history. A final
-successful subprocess does not establish overall setup success. Best-effort
-diagnostic I/O must preserve the original setup result. This minimization does
-not qualify shared-directory ownership, permissions, native publication or
-retention; those remain separate obligations.
+counts. Never retain command lines, arguments, subprocess transcripts,
+environment inspection, index URLs or exception detail. Keep at most the latest
+summary for each of the two setup operations in immutable session memory.
+Optional trusted observers receive only that projection and cannot replace setup
+success or failure. Do not write automatic temporary files; a legacy
+`diagnosticsFile` pathname grants no persistence authority and is ignored.
+Persistent sinks require separately qualified private ownership, permissions,
+bounds and retention; that qualification remains pending. This policy does not
+replace security audit obligations.
 
 ## Signal-to-noise standards
 

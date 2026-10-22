@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { createSystemFoundationInitializationError } from "../../../application/services/asset-packs";
 import { join } from "node:path";
 import {
   FinalizeGeneratedOutputAsAssetUseCase,
@@ -6,7 +7,7 @@ import {
   LocalizeExternalRepositoryObjectAsAssetUseCase,
   RegisterResourceBackedViewAsAssetInstanceUseCase,
 } from "../../../application/use-cases";
-import { createLocalImageAssetRegistryAdapter } from "../../../adapters/persistence/image";
+import { createLocalImageAssetRegistryAdapter, createStructuredImageResourceIdentityAdapter } from "../../../adapters/persistence/image";
 import { createLocalModelRegistryAdapter } from "../../../adapters/persistence/model";
 import { createLocalAuthoredAssetRepositoryAdapter } from "../../../adapters/persistence/asset-authoring";
 import { createStructuredAssetPackageRepository } from "../../../adapters/persistence/asset-package";
@@ -63,6 +64,7 @@ export async function composeDesktopAssetFeature(
     now: options.now,
     documents: options.documents,
     resourceBackedViewProvider: composeResourceBackedViewProviders({
+      imageResourceIdentity: options.documents ? createStructuredImageResourceIdentityAdapter(options.documents) : undefined,
       artifactBrowserMetadataRead: options.artifacts.artifactBrowserRead,
       imageAssetDescriptorRead: imageAssetRegistry,
       modelRegistry,
@@ -75,7 +77,7 @@ export async function composeDesktopAssetFeature(
       allowSystemDefinitionRefresh: true,
     });
   if (foundationInstalls.some((result) => result.status === "failed")) {
-    throw new Error("System foundation assets are unavailable.");
+    throw createSystemFoundationInitializationError(foundationInstalls);
   }
   const implementationArtifacts = createAssetImplementationArtifactAdapter(
     options.artifacts.storage,

@@ -3,7 +3,7 @@
 # Functionality and Quality-Adjusted Optimization Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-10-21T10:56:20Z`
+- Updated: `2026-10-22T01:06:49Z`
 
 ## Objective
 
@@ -82,7 +82,104 @@ Static review confirms substantial implemented shared workflows and deterministi
 
 ## High-level decisions
 
-No high-level decision has been recorded.
+### Native model file effects
+
+Which approved remediation option governs this boundary?
+
+Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.
+
+- Status: `approved`
+- Selected option: `recommended`
+
+| Option | Summary | Recommended | Tradeoffs | Consequences |
+| --- | --- | --- | --- | --- |
+| Approved recommended option (recommended) | Qualified identity-preserving native adapter; Windows first; reveal independently qualified. | yes | Additional implementation and focused denial evidence; unavailable controlled qualification remains pending. | Preserve fail-closed behavior and existing roadmap history. |
+| Alternative not selected (alternative) | Keep all physical model effects unavailable indefinitely. | no | Does not implement the selected remediation. | Cannot claim the selected remediation complete. |
+
+### Model ownership and shared caches
+
+Which approved remediation option governs this boundary?
+
+Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.
+
+- Status: `approved`
+- Selected option: `recommended`
+
+| Option | Summary | Recommended | Tradeoffs | Consequences |
+| --- | --- | --- | --- | --- |
+| Approved recommended option (recommended) | Delete only exclusively application-owned content with protected provenance and crash-consistent publication; external and shared caches remain reference-only. | yes | Additional implementation and focused denial evidence; unavailable controlled qualification remains pending. | Preserve fail-closed behavior and existing roadmap history. |
+| Alternative not selected (alternative) | Permit mutation of shared provider cache trees. | no | Does not implement the selected remediation. | Cannot claim the selected remediation complete. |
+
+### Aggregate resource budgets
+
+Which approved remediation option governs this boundary?
+
+Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.
+
+- Status: `approved`
+- Selected option: `recommended`
+
+| Option | Summary | Recommended | Tradeoffs | Consequences |
+| --- | --- | --- | --- | --- |
+| Approved recommended option (recommended) | Per-principal admission and organization aggregate storage/concurrency reservations with streaming enforcement and recovery reconciliation. | yes | Additional implementation and focused denial evidence; unavailable controlled qualification remains pending. | Preserve fail-closed behavior and existing roadmap history. |
+| Alternative not selected (alternative) | Only per-request byte and concurrency limits. | no | Does not implement the selected remediation. | Cannot claim the selected remediation complete. |
+
+### Diagnostic persistence
+
+Which approved remediation option governs this boundary?
+
+Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.
+
+- Status: `approved`
+- Selected option: `recommended`
+
+| Option | Summary | Recommended | Tradeoffs | Consequences |
+| --- | --- | --- | --- | --- |
+| Approved recommended option (recommended) | Session-only outcomes by default; optional persistence requires private bounded storage with explicit size and retention limits; audit stays separate. | yes | Additional implementation and focused denial evidence; unavailable controlled qualification remains pending. | Preserve fail-closed behavior and existing roadmap history. |
+| Alternative not selected (alternative) | Automatic shared-temporary-directory persistence. | no | Does not implement the selected remediation. | Cannot claim the selected remediation complete. |
+
+### Opaque public image identities
+
+Which approved remediation option governs this boundary?
+
+Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.
+
+- Status: `approved`
+- Selected option: `recommended`
+
+| Option | Summary | Recommended | Tradeoffs | Consequences |
+| --- | --- | --- | --- | --- |
+| Approved recommended option (recommended) | Persisted random opaque identifiers with indexed owner-scoped lookup and explicit legacy migration. | yes | Additional implementation and focused denial evidence; unavailable controlled qualification remains pending. | Preserve fail-closed behavior and existing roadmap history. |
+| Alternative not selected (alternative) | Source-derived public identifiers. | no | Does not implement the selected remediation. | Cannot claim the selected remediation complete. |
+
+### Versioned semantic fingerprints
+
+Which approved remediation option governs this boundary?
+
+Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.
+
+- Status: `approved`
+- Selected option: `recommended`
+
+| Option | Summary | Recommended | Tradeoffs | Consequences |
+| --- | --- | --- | --- | --- |
+| Approved recommended option (recommended) | Validate before a versioned canonical semantic hash; separate display projection and byte digests; revalidate ambiguous legacy identity. | yes | Additional implementation and focused denial evidence; unavailable controlled qualification remains pending. | Preserve fail-closed behavior and existing roadmap history. |
+| Alternative not selected (alternative) | Silently change existing unversioned identity in place. | no | Does not implement the selected remediation. | Cannot claim the selected remediation complete. |
+
+### Personal User Library ownership
+
+Which approved remediation option governs this boundary?
+
+Current-source review identified this remaining native or policy boundary. The user explicitly approved the recommended options and requested implementation through the existing roadmaps.
+
+- Status: `approved`
+- Selected option: `recommended`
+
+| Option | Summary | Recommended | Tradeoffs | Consequences |
+| --- | --- | --- | --- | --- |
+| Approved recommended option (recommended) | Bind personal library to authenticated principal within organization; legacy records stay unassigned until explicit migration. | yes | Additional implementation and focused denial evidence; unavailable controlled qualification remains pending. | Preserve fail-closed behavior and existing roadmap history. |
+| Alternative not selected (alternative) | Use organization partition alone as personal ownership. | no | Does not implement the selected remediation. | Cannot claim the selected remediation complete. |
+
 ## Increment map
 
 | Increment | Outcome | Dependencies | Status |
@@ -122,10 +219,10 @@ Make Home, feature summaries and Add element useful at representative catalog sc
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
 | `transferred-asset-functional-rows`: All13 transferred asset/composition/workspace rows are replayed against the current source and classified with exact regression evidence or an explicit stale/deferred reason. Prove requested immutable versions, safe malformed-ref rejection, valid relationship and route/body contracts, non-shadowed projection routes, safe authoring summary/list shapes, current active-workspace recovery and structure-preserving subtree removal. Route admission remains finite, exact, authenticated and resource-authorized; unauthorized/unknown variants remain denied. No closure is inferred from the scanner report. | local | passed (review) |
-| `owned-performance-probes`: All six configured operation/workload pairs have repository-owned probes that assert real outputs and negative failures. Record five warmups and at least thirty measured iterations on the same named environment; a no-op, mock-only or wrong-workload pass is rejected. | local | passed (review) |
+| `owned-performance-probes`: All six configured operation/workload pairs have repository-owned probes that assert real outputs and negative failures. Record five warmups and at least thirty measured iterations on the same named environment; a no-op, mock-only or wrong-workload pass is rejected. | local | passed (test) |
 | `summary-cost-and-truth`: For a fixture of 1000 active systems, 10000 releases, 10000 model records and 10000 custom-asset records, desktop/thin summary values exactly match the reference reducer. Proposed target: one bounded summary request per page and no transfer of full release locks or model/asset catalogs solely for counts; one unrelated metric failure does not hide already available independent metrics. | local | passed (review) |
 | `composer-search-cost`: For 1000 authorized candidate definitions with sparse compatible matches and page size 25, candidate pages have no duplicates/skipped matches/repeated cursor loops; collect exact detail-read counts and payload bytes. Proposed target: at least 50 percent fewer detail-store round trips than unchanged baseline for the same complete compatible results; if no amplification exists, document the measured result instead of adding a speculative cache. | local | passed (review) |
-| `browse-performance-qualified`: All six existing p95 budgets pass with exact declared workloads: browse200ms, validate350ms, resolve150ms, build2500ms, preview750ms and handoff500ms. Proposed page-level target: summary and first compatible candidate page each usable within p95 1000ms on the named reference desktop and managed-server/thin-client profiles, excluding deliberate network impairment. | controlled-environment | pending (external) |
+| `browse-performance-qualified`: All six existing p95 budgets pass with exact declared workloads: browse200ms, validate350ms, resolve150ms, build2500ms, preview750ms and handoff500ms. Proposed page-level target: summary and first compatible candidate page each usable within p95 1000ms on the named reference desktop and managed-server/thin-client profiles, excluding deliberate network impairment. | controlled-environment | pending (test) |
 | `browse-journey-preserved`: Search, Add element, selected exact detail, add/place, undo/redo, preview, save and reopen remain correct in both hosts; keyboard, focus restoration and 320 CSS-pixel reflow retain access to all controls. | local | passed (review) |
 | `security-impact-reviewed`: Refresh the threat/control delta, prove isolation, failure bounds and non-disclosure for this increment, and preserve a rollback at least as secure as the forward path. Coordinate with the security remediation owner rather than duplicating its controls. | local | passed (review) |
 
@@ -181,7 +278,7 @@ Make downloads, preparation, Context generation, training and image generation r
 | `active-progress-budget`: Under a local healthy test transport, active task progress and terminal state appear within two seconds at p95; explicit start/cancel/refresh invalidates idle backoff immediately. Navigation/reopen and workspace changes never publish stale or cross-workspace state. Separate transport delay from UI delay. | local | passed (test) |
 | `terminal-cleanup-independent`: A task that completes, fails, is cancelled or times out releases owned power/staging/process resources exactly once even when no feature page polls it; worker/host shutdown denies new work and reconciles existing records. Demonstrate this per supported lifecycle path; a TODO alone is not failure evidence. | local | passed (test) |
 | `retry-and-output-integrity`: A retryable failure retains correct user inputs or task identity, retries only when explicitly supported, and cannot duplicate model registration, artifact finalization, dataset publication or terminal notifications. Unsupported cancel/retry remains clearly unavailable. | local | passed (test) |
-| `task-host-qualification`: Controlled desktop and server/thin-client tests cover leave/reopen, disconnect, cancellation, worker failure and shutdown while tasks run, with measured progress delay and cleanup latency; no real credentials or provider traffic is required for deterministic host fixtures. | controlled-environment | pending (external) |
+| `task-host-qualification`: Controlled desktop and server/thin-client tests cover leave/reopen, disconnect, cancellation, worker failure and shutdown while tasks run, with measured progress delay and cleanup latency; no real credentials or provider traffic is required for deterministic host fixtures. | controlled-environment | pending (test) |
 | `security-impact-reviewed`: Refresh the threat/control delta, prove isolation, failure bounds and non-disclosure for this increment, and preserve a rollback at least as secure as the forward path. Coordinate with the security remediation owner rather than duplicating its controls. | local | passed (review) |
 
 ### Verification
@@ -233,7 +330,7 @@ Reduce measured query allocation and repeated work in the existing portable Lanc
 | `context-allocation-target`: Proposed target: at10000 and100000 chunks, reduce incremental query peak RSS by at least25 percent against unchanged baseline without increasing p95 latency by more than5 percent, or demonstrate that the measured baseline already meets an explicitly approved environment budget. Keep source and package ceilings unchanged. | local | passed (test) |
 | `context-quality-invariant`: For deterministic embeddings, top-k identities/order, scores within the fixed numerical tolerance and exact citations match unchanged exact-search results. For separately authorized local embedding runs, proposed recall@5 is at least0.90 on the labeled synthetic corpus with no regression greater than0.02; invalid/cross-workspace citations remain zero. Quality failures cannot be offset by a cheaper/faster result. | local | passed (test) |
 | `context-integrity-and-cancel`: Every archive/table/vector/citation/digest denial remains enforced; cancellation and failure remove private materialization and produce sanitized bounded state. No optimization bypasses full required validation, downloads a model, retains query/source content or introduces a cross-request cache. | local | passed (test) |
-| `context-runtime-qualified`: Representative CPU and sufficient accelerator profiles report actual local model identity, warm/cold p95, RSS, retrieval quality and cleanup; observed results remain distinct from deterministic conformance and from production guarantees. | controlled-environment | pending (external) |
+| `context-runtime-qualified`: Representative CPU and sufficient accelerator profiles report actual local model identity, warm/cold p95, RSS, retrieval quality and cleanup; observed results remain distinct from deterministic conformance and from production guarantees. | controlled-environment | pending (test) |
 | `security-impact-reviewed`: Refresh the threat/control delta, prove isolation, failure bounds and non-disclosure for this increment, and preserve a rollback at least as secure as the forward path. Coordinate with the security remediation owner rather than duplicating its controls. | local | passed (review) |
 
 ### Verification
@@ -264,6 +361,8 @@ Turn the implemented feature set into a truthful release decision through repres
 
 ### Work packages
 
+Human portions of the original work packages, deliverables, verification and completed plan below are superseded by the exact offline scope archive. They remain historical approved intent; only the current technical acceptance criteria govern future qualification. No test pass is asserted.
+
 - **Reconcile existing qualification owners** (`qualification-owner-reconciliation`): Map each unfinished Assets, Data Management and constrained-JSON criterion to its owning roadmap, source/product digest, actual evidence and operator needs. Link results without rewriting legacy approval or fabricating passes.
 - **Measure representative user journeys** (`complete-feature-task-study`): Use synthetic inputs and task scripts for acquire/review/save/find data, customize/publish an asset, compose/build/publish/run a supported system, Context retrieve/cite and download/train/find a model.
 - **Measure quality-adjusted model efficiency** (`model-quality-cost-comparison`): Use existing nine-task training and27-case preparation harnesses where applicable, fixed installed models and labeled synthetic held-out data; retain failures/retries and compare accepted examples or accepted task outcomes per second and resource use.
@@ -282,11 +381,16 @@ Turn the implemented feature set into a truthful release decision through repres
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
 | `existing-qualification-preserved`: Each existing pending criterion has an owning roadmap and evidence reference or explicit pending reason. New evidence never silently rewrites historical approvals; the active-source Run & Test proposal and security remediation remain separately approval-gated. | local | passed (review) |
-| `user-task-outcome-targets`: Proposed study target: at least5 representative non-developer participants, at least4 of5 completing each assigned critical journey without facilitator intervention, zero critical data-loss/authority confusion, and median task ease at least5/7. Record sample size and limitations; do not infer population success or accessibility conformance from this small study. | controlled-environment | pending (external) |
-| `accessibility-outcomes-qualified`: Keyboard-only, screen-reader, focus return,320 CSS-pixel reflow, contrast, non-color status and reduced-motion checks pass on the exact supported desktop/thin-client profiles. Automated axe/semantic passes supplement manual evidence; unresolved critical exceptions block qualification. | controlled-environment | pending (external) |
-| `model-quality-resource-outcomes`: For authorized installed-model trials, retain held-out task quality, invalid-output rate, retry count, accepted examples per minute, peak RAM/VRAM and elapsed time. A candidate requires no statistically material quality regression under a predeclared task metric/tolerance and at least20 percent better accepted-output throughput or demonstrated adherence to the approved resource budget. CPU/accelerator and constrained/unchecked modes are separate cohorts; unavailable runs remain pending. | controlled-environment | pending (external) |
+| `accessibility-outcomes-qualified`: Automated packaged-desktop and thin-client UI checks verify keyboard traversal/activation, modal focus return, accessible names/roles/status semantics, 320 CSS-pixel reflow, computed contrast, status text independent of color and reduced motion on declared supported profiles. Critical automated exceptions, data loss or authority confusion block qualification. Retain actual DOM/semantic/visual evidence; unavailable checks remain pending. | controlled-environment | passed (test) |
+| `model-quality-resource-outcomes`: For authorized installed-model trials, retain held-out task quality, invalid-output rate, retry count, accepted examples per minute, peak RAM/VRAM and elapsed time. A candidate requires no statistically material quality regression under a predeclared task metric/tolerance and at least20 percent better accepted-output throughput or demonstrated adherence to the approved resource budget. CPU/accelerator and constrained/unchecked modes are separate cohorts; unavailable runs remain pending. | controlled-environment | failed (external) |
 | `full-current-qualification`: After every increment is implemented, triage the existing standard-Node failures without treating skips as passes, run test:all once plus relevant repository gates/builds, obtain separate-invocation current candidate review and complete the overall-validation work item. Every required controlled criterion must pass before final roadmap completion. | local | failed (test) |
 | `security-impact-reviewed`: Refresh the threat/control delta, prove isolation, failure bounds and non-disclosure for this increment, and preserve a rollback at least as secure as the forward path. Coordinate with the security remediation owner rather than duplicating its controls. | local | passed (review) |
+
+### Human scope handled offline
+
+- User explicitly assigned human acceptance offline and requested agent-executable technical acceptance. Human portions of original instructions are superseded; no pass or closure is asserted. (`explicit-user-agent-only-acceptance`)
+  - `user-task-outcome-targets`: Proposed study target: at least5 representative non-developer participants, at least4 of5 completing each assigned critical journey without facilitator intervention, zero critical data-loss/authority confusion, and median task ease at least5/7. Record sample size and limitations; do not infer population success or accessibility conformance from this small study. — offline user-owned; no test pass asserted.
+  - Human portion of `accessibility-outcomes-qualified`: Manual screen-reader/operator acceptance and representative-participant evaluation are user-owned offline; automated accessibility and zero-data-loss/authority-confusion invariants remain technical requirements. — offline user-owned; technical criterion retained; no test pass asserted.
 
 ### Verification
 

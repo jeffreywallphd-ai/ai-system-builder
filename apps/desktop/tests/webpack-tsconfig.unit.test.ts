@@ -12,12 +12,12 @@ type DesktopWebpackTsConfig = {
 };
 
 function loadDesktopWebpackTsConfig(): DesktopWebpackTsConfig {
-  const configPath = resolve("apps/desktop/tsconfig.webpack.json");
+  const configPath = resolve("apps/desktop/tsconfig.desktop.json");
   const source = readFileSync(configPath, "utf8");
   return JSON.parse(source) as DesktopWebpackTsConfig;
 }
 
-describe("desktop webpack TypeScript config", () => {
+describe("desktop TypeScript config", () => {
   it("includes shared modules source files required by desktop host composition", () => {
     const config = loadDesktopWebpackTsConfig();
     const include = config.include ?? [];
@@ -27,7 +27,7 @@ describe("desktop webpack TypeScript config", () => {
     expect(include).toContain("../../modules/**/*.d.ts");
   });
 
-  it("excludes module test files from webpack compilation to keep desktop runtime builds emit-safe", () => {
+  it("excludes module test files from desktop compilation to keep desktop runtime builds emit-safe", () => {
     const config = loadDesktopWebpackTsConfig();
     const exclude = config.exclude ?? [];
 
@@ -36,7 +36,7 @@ describe("desktop webpack TypeScript config", () => {
     expect(exclude).toContain("../../modules/**/tests/**");
   });
 
-  it("does not disable emit for webpack main TypeScript compilation", () => {
+  it("does not disable emit for desktop TypeScript compilation", () => {
     const config = loadDesktopWebpackTsConfig();
     expect(config.compilerOptions?.noEmit).not.toBe(true);
   });

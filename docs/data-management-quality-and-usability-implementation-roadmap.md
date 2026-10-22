@@ -3,7 +3,7 @@
 # Data Management Quality and Usability Implementation Roadmap
 
 - Status: `implementation-complete-qualification-pending`
-- Updated: `2026-07-30T14:14:33Z`
+- Updated: `2026-10-21T17:07:35Z`
 
 ## Objective
 
@@ -128,17 +128,17 @@ Broad text-versus-image adaptation remains misleading because instruction tuning
 
 | Increment | Outcome | Dependencies | Status |
 | --- | --- | --- | --- |
-| 1: Guided and trustworthy Data Management foundation | Deliver one truthful end-to-end path from supported local or Hugging Face source data to a correctly split training dataset, presented through the established ordered-steps UX with plain-language defaults and safe diagnostics. | None | `implemented-pending-qualification` |
-| 2: Data quality, curation, and human review | Turn the Check data and Review steps into a measurable curation workflow that profiles data, quarantines problems, applies configurable quality and governance policies, and lets users approve a dataset using understandable evidence. | guided-trustworthy-foundation | `implemented-pending-qualification` |
+| 1: Guided and trustworthy Data Management foundation | Deliver one truthful end-to-end path from supported local or Hugging Face source data to a correctly split training dataset, presented through the established ordered-steps UX with plain-language defaults and safe diagnostics. | None | `completed` |
+| 2: Data quality, curation, and human review | Turn the Check data and Review steps into a measurable curation workflow that profiles data, quarantines problems, applies configurable quality and governance policies, and lets users approve a dataset using understandable evidence. | guided-trustworthy-foundation | `completed` |
 | 3: Immutable dataset versions, lineage, and publishing | Make every approved dataset a reproducible versioned data product with split manifests, quality evidence, lineage, comparison, documentation, and safe local or Hugging Face publication. | quality-curation-and-review | `implemented-pending-qualification` |
 | 4: Governed and scalable ingestion | Scale supported local, repository, and website acquisition through bounded streaming, resumable tasks, reproducible capture, and conservative crawl governance without exposing infrastructure concepts in the primary UI. | guided-trustworthy-foundation | `implemented-pending-qualification` |
 | 5: Advanced preparation and synthetic-data quality | Add optional structure-aware document processing, semantic curation, and verified synthetic-data generation through explicit runtime capabilities while keeping the ordinary workflow simple and preserving human approval. | quality-curation-and-review, versioned-dataset-lineage-and-publishing | `implemented-pending-qualification` |
-| 6: Exact-task adaptive quality and preparation | Make the ordered Data Management workflow truthful and simple for every supported training task by establishing input intent before preparation, then adapting checks, source transformations, example creation, Advanced settings, runtime validation, and review evidence to the exact task, source kind, and selected method. | quality-curation-and-review, advanced-preparation-and-synthetic-quality | `implemented-pending-qualification` |
+| 6: Exact-task adaptive quality and preparation | Make the ordered Data Management workflow truthful and simple for every supported training task by establishing input intent before preparation, then adapting checks, source transformations, example creation, Advanced settings, runtime validation, and review evidence to the exact task, source kind, and selected method. | quality-curation-and-review, advanced-preparation-and-synthetic-quality | `completed` |
 
 ## Increment 1: Guided and trustworthy Data Management foundation
 
 - Id: `guided-trustworthy-foundation`
-- Status: `implemented-pending-qualification`
+- Status: `completed`
 - Dependencies: None
 
 Deliver one truthful end-to-end path from supported local or Hugging Face source data to a correctly split training dataset, presented through the established ordered-steps UX with plain-language defaults and safe diagnostics.
@@ -171,7 +171,11 @@ Deliver one truthful end-to-end path from supported local or Hugging Face source
 | `ordered-steps-default-is-plain-language`: Desktop and thin client use the established numbered WorkflowSequence and WorkflowStep presentation, show only goal-oriented primary controls and recommended defaults, place technical tuning under Advanced settings, preserve keyboard and screen-reader semantics, and remain usable at supported zoom and narrow widths. | local | passed (test) |
 | `warnings-and-results-are-actionable`: Preparation warnings, skipped items, split counts, readiness problems, and result locations appear in bounded plain language with contextual correction or retry actions; the global notification center is used only for cross-page outcomes and authoritative long-running progress. | local | passed (test) |
 | `security-foundation-closes-known-disclosures`: Upload, network, provider, storage, runtime, workspace, organization, and diagnostic boundaries remain fail closed and bounded; focused negative tests prove source content, prompts, model output, credentials, provider payloads, local paths, raw logs, and cross-workspace records cannot enter public diagnostics or the wrong workspace. | local | passed (test) |
-| `guided-usability-is-qualified`: Controlled keyboard, screen-reader, zoom/reflow, and representative non-technical usability review confirms that users can add supported data, understand readiness, create a dataset, and find its result without opening Advanced settings or needing unexplained technical terms. | controlled-environment | pending (external) |
+
+### Human acceptance handled offline
+
+- Explicit user direction assigns manual accessibility and representative-user acceptance offline. Remove this human-only criterion from technical closure; preserve original evidence and legacy declarations. No human pass or hardware/resource qualification is asserted. (`explicit-user-offline-human-acceptance`)
+  - `guided-usability-is-qualified`: Controlled keyboard, screen-reader, zoom/reflow, and representative non-technical usability review confirms that users can add supported data, understand readiness, create a dataset, and find its result without opening Advanced settings or needing unexplained technical terms. — offline user-owned; no test pass asserted.
 
 ### Verification
 
@@ -197,7 +201,7 @@ Disable the new guided entry point and additive capability projections while ret
 ## Increment 2: Data quality, curation, and human review
 
 - Id: `quality-curation-and-review`
-- Status: `implemented-pending-qualification`
+- Status: `completed`
 - Dependencies: `guided-trustworthy-foundation`
 
 Turn the Check data and Review steps into a measurable curation workflow that profiles data, quarantines problems, applies configurable quality and governance policies, and lets users approve a dataset using understandable evidence.
@@ -228,7 +232,11 @@ Turn the Check data and Review steps into a measurable curation workflow that pr
 | `quality-and-leakage-gates-protect-datasets`: Exact and fuzzy duplicates, malformed rows, excluded benchmark material, disallowed languages or sources, policy-blocked sensitive or unsafe content, and schema violations are prevented from entering approved splits according to an explicit workspace or organization policy. | local | passed (test) |
 | `review-step-supports-informed-approval`: Users can understand Ready, Needs attention, and Blocked results, inspect bounded examples and reasons, adjust permitted policies, and explicitly approve or stop the run without interpreting raw scores, schemas, logs, or internal field names. | local | passed (test) |
 | `security-curation-policy-is-enforced`: Curation policies derive from authoritative configuration, remain workspace and organization scoped, apply before publication, bound preview and report content, and fail closed on missing policy or classifier failure; denial and non-disclosure tests cover PII, secrets, protected content, guessed identifiers, and cross-workspace access. | local | passed (test) |
-| `quality-review-usability-is-qualified`: Controlled accessibility and representative non-technical review confirms that users can identify why data needs attention, make an allowed correction, inspect quarantine, and approve a ready dataset using the ordered workflow and plain-language summaries. | controlled-environment | pending (external) |
+
+### Human acceptance handled offline
+
+- Explicit user direction assigns manual accessibility and representative-user acceptance offline. Remove this human-only criterion from technical closure; preserve original evidence and legacy declarations. No human pass or hardware/resource qualification is asserted. (`explicit-user-offline-human-acceptance`)
+  - `quality-review-usability-is-qualified`: Controlled accessibility and representative non-technical review confirms that users can identify why data needs attention, make an allowed correction, inspect quarantine, and approve a ready dataset using the ordered workflow and plain-language summaries. — offline user-owned; no test pass asserted.
 
 ### Verification
 
@@ -430,7 +438,7 @@ Disable each optional capability profile and its UI preset while retaining the b
 ## Increment 6: Exact-task adaptive quality and preparation
 
 - Id: `exact-task-adaptive-quality-and-preparation`
-- Status: `implemented-pending-qualification`
+- Status: `completed`
 - Dependencies: `quality-curation-and-review`, `advanced-preparation-and-synthetic-quality`
 
 Make the ordered Data Management workflow truthful and simple for every supported training task by establishing input intent before preparation, then adapting checks, source transformations, example creation, Advanced settings, runtime validation, and review evidence to the exact task, source kind, and selected method.
@@ -464,7 +472,11 @@ Make the ordered Data Management workflow truthful and simple for every supporte
 | `task-quality-rules-protect-examples`: Instruction, classification, extraction, embedding, reranking, diffusion, image classification, detection, and segmentation examples receive their required bounded schema, relationship, label, balance, image, caption, box, mask, duplicate, source-association, and split checks before admission, with unsupported visual inspection reported honestly. | local | passed (test) |
 | `runtime-rejects-contradictory-recipes`: Contract, application, and runtime validation fail closed on incompatible or stale input-intent, task, source, method, generation, and Advanced-setting combinations; inactive values are omitted rather than ignored, legacy saved recipes migrate deterministically or stop with a corrective action, and source lineage remains exact. | local | passed (test) |
 | `security-adaptive-data-boundaries-reviewed`: Synthetic denial tests prove malformed annotations, forged source associations, unsafe metadata, incompatible dataset combinations, unavailable visual or semantic inspection, oversized work, and contradictory recipes cannot bypass review, silently duplicate or reinterpret data, or expose source content, prompts, model output, identifiers, local paths, or raw errors through diagnostics or notifications. | local | passed (review) |
-| `exact-task-usability-is-qualified`: Representative non-technical users can distinguish combining existing datasets from creating a dataset from source material, understand when no preparation copy is needed, select each supported task, understand what is checked, choose from only meaningful methods, and identify unavailable capabilities without opening irrelevant settings or needing unexplained technical terminology; keyboard, screen-reader, zoom, and reduced-motion behavior also pass. | controlled-environment | pending (external) |
+
+### Human acceptance handled offline
+
+- Explicit user direction assigns manual accessibility and representative-user acceptance offline. Remove this human-only criterion from technical closure; preserve original evidence and legacy declarations. No human pass or hardware/resource qualification is asserted. (`explicit-user-offline-human-acceptance`)
+  - `exact-task-usability-is-qualified`: Representative non-technical users can distinguish combining existing datasets from creating a dataset from source material, understand when no preparation copy is needed, select each supported task, understand what is checked, choose from only meaningful methods, and identify unavailable capabilities without opening irrelevant settings or needing unexplained technical terminology; keyboard, screen-reader, zoom, and reduced-motion behavior also pass. — offline user-owned; no test pass asserted.
 
 ### Verification
 

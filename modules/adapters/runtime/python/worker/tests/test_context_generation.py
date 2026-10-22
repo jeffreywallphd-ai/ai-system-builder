@@ -6,16 +6,21 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
+from unittest.mock import MagicMock
+from contextlib import nullcontext
+from types import SimpleNamespace
 from zipfile import ZipFile
 
 from modules.adapters.runtime.python.worker.models import (
     ContextGenerationTaskRequest,
+    ContextEmbeddingSettings,
 )
 from modules.adapters.runtime.python.worker.tasks.context_generation import (
     ContextGenerationCancellationRequested,
     PACK_MEDIA_TYPE,
     RAG_MEDIA_TYPE,
     generate_context_artifact,
+    _embed_with_transformers,
 )
 from modules.adapters.runtime.python.worker.tasks.markdown_chunking import (
     chunk_markdown_documents,
@@ -27,6 +32,52 @@ def _digest(value: bytes) -> str:
 
 
 class ContextGenerationTests(unittest.TestCase):
+    def test_embedding_device_moves_weights_and_every_input_without_changing_cpu_default(self):
+        for requested, available, expected in [(None, True, "cpu"), ("cuda", True, "cuda"), ("auto", True, "cuda"), ("auto", False, "cpu")]:
+            with self.subTest(requested=requested, available=available):
+                model, tokenizer, auto_model, auto_tokenizer = [MagicMock() for _ in range(4)]
+                model.to.return_value = model
+                auto_model.from_pretrained.return_value = model
+                auto_tokenizer.from_pretrained.return_value = tokenizer
+                inputs = {key: MagicMock() for key in ["input_ids", "attention_mask"]}
+                tokenizer.return_value = inputs
+                moved = {key: MagicMock(device=expected) for key in inputs}
+                for key, value in inputs.items():
+                    value.to.return_value = moved[key]
+                normalized = MagicMock()
+                normalized.detach.return_value.cpu.return_value.tolist.return_value = [[0.2, 0.4]]
+                cuda = SimpleNamespace(is_available=lambda: available, OutOfMemoryError=MemoryError, empty_cache=MagicMock())
+                torch = SimpleNamespace(cuda=cuda, no_grad=nullcontext, nn=SimpleNamespace(functional=SimpleNamespace(normalize=MagicMock(return_value=normalized))))
+                settings = ContextEmbeddingSettings.model_validate({"provider": "transformers", "modelId": "local/test-model", **({"device": requested} if requested else {})})
+                with patch.dict("sys.modules", {"torch": torch, "transformers": SimpleNamespace(AutoModel=auto_model, AutoTokenizer=auto_tokenizer)}):
+                    self.assertEqual(_embed_with_transformers(["Synthetic input"], settings), [[0.2, 0.4]])
+                model.to.assert_called_once_with(expected)
+                model.assert_called_once_with(**moved)
+                for value in inputs.values():
+                    value.to.assert_called_once_with(expected)
+                auto_model.from_pretrained.assert_called_once_with("local/test-model", local_files_only=True, trust_remote_code=False)
+                auto_tokenizer.from_pretrained.assert_called_once_with("local/test-model", local_files_only=True, trust_remote_code=False)
+                self.assertEqual(cuda.empty_cache.call_count, int(expected == "cuda"))
+
+    def test_explicit_cuda_unavailable_denies_before_model_loading_and_oom_never_falls_back(self):
+        for available in [False, True]:
+            with self.subTest(available=available):
+                auto_model, auto_tokenizer, model = MagicMock(), MagicMock(), MagicMock()
+                auto_model.from_pretrained.return_value = model
+                model.to.side_effect = MemoryError("private model path must not be disclosed")
+                cuda = SimpleNamespace(is_available=lambda: available, OutOfMemoryError=MemoryError, empty_cache=MagicMock())
+                torch = SimpleNamespace(cuda=cuda)
+                settings = ContextEmbeddingSettings(provider="transformers", modelId="local/test-model", device="cuda")
+                with patch.dict("sys.modules", {"torch": torch, "transformers": SimpleNamespace(AutoModel=auto_model, AutoTokenizer=auto_tokenizer)}):
+                    with self.assertRaisesRegex(RuntimeError, "resources are insufficient" if available else "device is unavailable"):
+                        _embed_with_transformers(["Synthetic input"], settings)
+                if available:
+                    model.to.assert_called_once_with("cuda")
+                    cuda.empty_cache.assert_called_once()
+                else:
+                    auto_model.from_pretrained.assert_not_called()
+                    auto_tokenizer.from_pretrained.assert_not_called()
+
     def test_manual_context_pack_preserves_entered_markdown_without_summarizing(
         self,
     ) -> None:
@@ -316,6 +367,7 @@ class ContextGenerationTests(unittest.TestCase):
                     "modelId": "local/test-embedding",
                     "dimensions": 3,
                     "batchSize": 2,
+                    "device": "cuda",
                 },
                 "runtime": {"runtimeWorkingDirectory": str(root)},
             })
@@ -347,6 +399,8 @@ class ContextGenerationTests(unittest.TestCase):
                 )
                 manifest = json.loads(archive.read("manifest.json"))
             self.assertEqual(manifest["embedding"]["dimensions"], 3)
+            self.assertNotIn("device", manifest["embedding"])
+            self.assertNotIn("batchSize", manifest["embedding"])
             self.assertEqual(manifest, result["manifest"])
             embedding_updates = [
                 item for item in progress if item.get("phase") == "embedding"

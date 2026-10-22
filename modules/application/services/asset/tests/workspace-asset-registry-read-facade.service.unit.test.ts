@@ -683,6 +683,23 @@ async function assertWorkspaceError(
   });
 }
 
+test("custom detail membership uses scoped sources and rejects metadata-only and foreign authority", async () => {
+  const { facade, readPort, authoredAssets, revisions } = setup();
+  const ref = customCard().definitionRef;
+  const detail = { definition: { definitionId: ref.id, version: ref.version,
+    assetType: "ui-component", assetFamily: "primitive", displayName: "Custom",
+    metadata: { sourceKind: "workspace-authored", workspaceId: workspaceA } } } as AssetDefinitionDetail;
+  readPort.readDefinitionDetail = async () => detail;
+  await assertWorkspaceError(() => facade.readDefinitionDetail(ref, { workspaceId: workspaceA }), "workspace-asset-not-in-effective-view");
+  authoredAssets.byWorkspace[workspaceA] = [{ authoredAssetId: "auth.detail", workspaceId: workspaceA,
+    assetReference: ref, currentRevisionId: "rev.detail", provenance: { kind: "authored-from-scratch" } }];
+  revisions.revisions.set(`${workspaceA}:auth.detail:rev.detail`, { revision: "r1" });
+  const selected = await facade.readDefinitionDetails([ref], { workspaceId: workspaceA });
+  assert.equal(selected[0]?.definition.definitionId, ref.id);
+  assert.equal(selected[0]?.assetAuthoringEffectiveSourceSummary?.effectiveSourceKind, "workspace-authored");
+  await assertWorkspaceError(() => facade.readDefinitionDetails([ref], { workspaceId: workspaceB }), "workspace-asset-not-in-effective-view");
+});
+
 function setup() {
   const readPort = new FakeReadPort();
   const activations = new FakeActivationRepo();

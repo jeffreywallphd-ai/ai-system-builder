@@ -36,6 +36,7 @@ interface OperationInput {
   readonly sourceChecks?: unknown;
   readonly query?: string;
   readonly maximumResults?: number;
+  readonly embeddingDevice?: "cpu" | "cuda" | "auto";
 }
 
 export function createPythonContextArtifactRuntimeAdapter(
@@ -115,6 +116,7 @@ async function runOperation(
         ...(input.maximumResults !== undefined
           ? { maximumResults: input.maximumResults }
           : {}),
+        ...(input.embeddingDevice === undefined ? {} : {embeddingDevice: input.embeddingDevice}),
         runtime: { runtimeWorkingDirectory: workingDirectory },
       },
       metadata: { operation: "context-artifact-operation" },

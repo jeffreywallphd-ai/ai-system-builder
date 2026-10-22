@@ -12,6 +12,6 @@ test("thin client preserves the complete browse authoring journey", async ({page
   await expect(page.getByRole("heading", {name: "Systems", exact: true})).toBeVisible();
   const result = await completeBrowseAuthoringJourney(page, "Browser browse fixture", async () => {
     await page.reload(); await expect(page.getByRole("heading", {name: "Systems", exact: true})).toBeVisible();
-  });
+  }, test.info());
   await test.info().attach("browse-journey", {body: JSON.stringify({...result, sourceRevision: process.env.VISUAL_COMPOSER_QUALIFICATION_SOURCE_REVISION, qualification: "local-browser-fixture"}), contentType: "application/json"});
 });

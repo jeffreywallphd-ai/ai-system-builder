@@ -724,40 +724,56 @@ def _embed_with_transformers(
         from transformers import AutoModel, AutoTokenizer
     except ImportError as error:
         raise RuntimeError("Local embedding dependencies are unavailable.") from error
+    device = settings.device
+    if device == "auto":
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("The selected embedding device is unavailable.")
     reference = _resolved_model_reference_for(settings.modelId)
     tokenizer = AutoTokenizer.from_pretrained(
         reference, local_files_only=True, trust_remote_code=False
     )
-    model = AutoModel.from_pretrained(
-        reference, local_files_only=True, trust_remote_code=False
-    )
-    model.eval()
-    vectors: list[list[float]] = []
-    for offset in range(0, len(texts), settings.batchSize):
-        encoded = tokenizer(
-            texts[offset:offset + settings.batchSize],
-            padding=True,
-            truncation=True,
-            max_length=512,
-            return_tensors="pt",
+    model = encoded = output = mask = pooled = None
+    try:
+        model = AutoModel.from_pretrained(
+            reference, local_files_only=True, trust_remote_code=False
         )
-        with torch.no_grad():
-            output = model(**encoded)
-        mask = encoded["attention_mask"].unsqueeze(-1)
-        pooled = (
-            (output.last_hidden_state * mask).sum(1)
-            / mask.sum(1).clamp(min=1)
-        )
-        pooled = torch.nn.functional.normalize(pooled, p=2, dim=1)
-        for vector in pooled.detach().cpu().tolist():
-            if settings.dimensions is not None:
-                if settings.dimensions > len(vector):
-                    raise ValueError(
-                        "Requested embedding dimensions exceed model output."
-                    )
-                vector = vector[:settings.dimensions]
-            vectors.append([float(value) for value in vector])
-    return vectors
+        model = model.to(device)
+        model.eval()
+        vectors: list[list[float]] = []
+        for offset in range(0, len(texts), settings.batchSize):
+            encoded = tokenizer(
+                texts[offset:offset + settings.batchSize],
+                padding=True,
+                truncation=True,
+                max_length=512,
+                return_tensors="pt",
+            )
+            encoded = {name: value.to(device) for name, value in encoded.items()}
+            with torch.no_grad():
+                output = model(**encoded)
+            mask = encoded["attention_mask"].unsqueeze(-1)
+            pooled = (
+                (output.last_hidden_state * mask).sum(1)
+                / mask.sum(1).clamp(min=1)
+            )
+            pooled = torch.nn.functional.normalize(pooled, p=2, dim=1)
+            for vector in pooled.detach().cpu().tolist():
+                if settings.dimensions is not None:
+                    if settings.dimensions > len(vector):
+                        raise ValueError(
+                            "Requested embedding dimensions exceed model output."
+                        )
+                    vector = vector[:settings.dimensions]
+                vectors.append([float(value) for value in vector])
+        return vectors
+    except torch.cuda.OutOfMemoryError:
+        raise RuntimeError("Local embedding resources are insufficient.") from None
+    finally:
+        del model, encoded, output, mask, pooled
+        if device == "cuda":
+            gc.collect()
+            torch.cuda.empty_cache()
 
 
 def _build_manifest(
@@ -786,7 +802,7 @@ def _build_manifest(
         manifest["sourceChecks"] = payload.sourceChecks.model_dump(mode="json")
     if payload.embedding is not None:
         manifest["embedding"] = payload.embedding.model_dump(
-            mode="json", exclude={"batchSize"}, exclude_none=True
+            mode="json", exclude={"batchSize", "device"}, exclude_none=True
         )
     if payload.contextPack is not None:
         manifest["contextPack"] = {

@@ -58,6 +58,11 @@ credentials, or local paths.
   directory with a single `chunks` table containing ordered text, citation JSON,
   and fixed-size float32 vectors. Embedding models use the managed local
   Transformers runtime with network access disabled during generation.
+  Embedding placement is optional finite CPU/CUDA/automatic execution intent,
+  with CPU as the omitted compatible default. It is excluded from the portable
+  manifest; queries carry a separate transient hint while verified package
+  metadata retains model identity/dimensions. Explicit CUDA unavailability or
+  exhaustion fails without silently changing device or weakening validation.
 - Markdown context packs are ZIP artifacts with fixed members. Manual mode
   validates and preserves exact Markdown in `context.md`. Source mode
   semantically chunks, groups, and cleans selected material, then either keeps

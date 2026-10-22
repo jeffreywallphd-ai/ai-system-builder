@@ -941,6 +941,7 @@ def _query_rag(
             settings = ContextEmbeddingSettings.model_validate({
                 **manifest["embedding"],
                 "batchSize": 1,
+                "device": payload.embeddingDevice or "cpu",
             })
             cancellation_check()
             query_vectors = (embedding_provider or _embed_with_transformers)(
@@ -1039,6 +1040,8 @@ def operate_on_context_artifact(
     ) = None,
 ) -> dict[str, Any]:
     check_cancelled = cancellation_check or (lambda: None)
+    if payload.operation != "query" and payload.embeddingDevice is not None:
+        raise ValueError("Embedding placement is only valid for retrieval.")
     path = _validated_input_path(payload)
     check_cancelled()
     if payload.operation == "inspect-source":

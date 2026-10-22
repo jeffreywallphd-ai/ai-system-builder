@@ -165,7 +165,7 @@ describe("system.foundation export readiness as a manifest string", () => {
     assert.equal(parsed.assets.length, manifest.assets.length);
     assert.equal(Boolean(parsed.assets[0]?.definition), true);
     assert.equal(validateAssetPackManifest(parsed).status, "valid");
-    assert.match(createAssetPackManifestFingerprint(parsed), /^sha256:[a-f0-9]{64}$/);
+    assert.match(createAssetPackManifestFingerprint(parsed), /^sha256:semantic-v2:[a-f0-9]{64}$/);
     assertNoUnsafeContent(parsed);
     assert.doesNotMatch(serialized.toLowerCase(), /archivepath|archivebytes|signaturevalue|preloadmethod|ipchandler|apiroute|rendererbutton|runtimeadapter|storageadapter/);
   });

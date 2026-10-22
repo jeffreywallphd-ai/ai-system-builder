@@ -117,6 +117,35 @@ requires a successor task for corrections.
 
 ## Roadmaps and qualification
 
+For agent-only acceptance on a started governed roadmap, use the skill's
+`acceptance-scope-revised` event after independently reviewing the exact human-only
+classification. It removes pure human criteria or revises pending mixed controlled
+criteria under the same IDs/qualification, archives originals and invalidates
+approval. It never closes work or supplies a pass. The user-authorized narrow
+reapproval still needs fresh checks/review; old receipt bindings are stale.
+Historical human instructions are superseded/offline, while automated UI,
+accessibility and actual performance/model/native/security checks remain active.
+Governed evidence declarations do not automatically complete pending increments.
+An overall review alone cannot supply target-specific controlled qualification;
+retain noncompleted status until actual target-specific qualification passes.
+After all implementation is complete, record passing evidence and immutable
+reports, create fresh work bound to the pending target with every criterion,
+execute fixed checks, obtain separate accepted review and complete it. Consume
+exact references with the skill's `increment-qualified` event. Pending-target
+authority binds plan/chunks, criterion semantics, latest evidence and report bytes;
+changes require successor work. No active increment is invented or displaced.
+Consumption makes the target completed and its pending-only receipt historical.
+Other targets and final overall qualification retain separate authority.
+
+User-directed offline human acceptance is recorded by the roadmap skill's
+`human-acceptance-transferred` event. It may close an implemented increment only
+when every remaining technical criterion passed. The site separates the archived
+offline user-owned criteria from active criteria and chunk links; no human pass is
+invented. Original evidence and plans remain historical. Mixed technical checks
+stay pending, and current source-bound closure requirements still apply.
+The metadata transfer event is limited to legacy roadmaps. It refuses receipt-
+governed roadmaps, which need separately qualified scope changes and fresh evidence.
+
 New roadmaps require control-plane completion for each approved increment, with
 the work acceptance IDs matching that increment's IDs. Pre-existing roadmaps
 retain their original declarations and fingerprints. A successor roadmap adopts
@@ -253,3 +282,20 @@ declarations with the corresponding implementation. They grant no new command,
 test-suite or resource authority. This is security-relevant verification policy:
 unknown paths, controlled AI tests and uncovered changes retain existing denial
 or focused qualification; the catalog and declarations remain policy-bound.
+
+## Read implementation progress correctly
+
+The site displays reviewed local support separately from parent qualification.
+Maintain the fixed JSON supporting-work map with actual completion receipt/review
+references, selected component criterion IDs and explicit partial-scope limits.
+Never link an active/failed work record as completed evidence. The projection
+validates recorded lineage but does not run tests or infer currentness from an old
+completion. Missing local records remain unavailable on another checkout.
+
+"Qualification not recorded" means the parent has no recorded acceptance outcome;
+it does not mean every linked component is unimplemented. "Technical check pending"
+identifies an agent-executable requirement with remaining declared environment or
+automated assertions. Human acceptance is offline. Expand local support to see
+recorded work and limits, and follow successor navigation for superseded delivery
+plans. Keep canonical failed/pending evidence, native/security/reference gaps and
+stronger governed completion guards intact.

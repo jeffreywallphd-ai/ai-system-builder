@@ -150,7 +150,23 @@ This model covers workspace source selection, local and Hugging Face staging, st
   attempt. A recoverable failure may invoke one correction attempt with the
   same schema and constraints; failure never invokes an unconstrained retry.
   Grammar serialization preserves the intended field order without weakening
-  the order-independent integrity fingerprint. Windows uses the pinned
+  the order-independent integrity fingerprint. Conditional object lowering is
+  limited to required distinct string discriminators and exact known property
+  subsets, retaining all other root constraints in each complete branch.
+  Combined original/expanded schema and cache budgets apply without increases;
+  unsupported or over-budget forms retain the original constraint. Original
+  final validation remains authoritative. Built-in bounded label choices follow
+  the configured task policy; old saved schemas retain their identity.
+  The pinned backend default whitespace policy is retained. A compact-formatting
+  experiment passed lexical checks but failed actual model quality and was
+  withdrawn; semantic model outcomes require separate verification. Original
+  string values, validation and byte/cache limits remain enforced. Callers
+  cannot supply a regex or request a weaker fallback.
+  Prompt schema/sample serialization preserves existing sorted canonical
+  presentation, exact values and source-data quoting; an experimental ordering
+  change was withdrawn after real quality regression. Grammar representation
+  never replaces the original sorted integrity fingerprint or final validation.
+  Windows uses the pinned
   Outlines kernel's eager callable to avoid an optional compiler probe and
   retains the same token mask and mandatory post-validation. Desktop startup uses
   only fixed bounded version probes to prefer an installed decoder-compatible

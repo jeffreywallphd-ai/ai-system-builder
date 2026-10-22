@@ -1,6 +1,7 @@
 import {
   useDeferredValue,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -1408,6 +1409,7 @@ function TreeNode({
   readonly onToggle: (instanceId: string) => void;
 }) {
   const instanceId = String(node.instance.instanceId);
+  const childrenId = useId();
   const selected = instanceId === selectedInstanceId;
   const expanded = node.children.length
     ? !collapsedInstanceIds.has(instanceId)
@@ -1422,7 +1424,13 @@ function TreeNode({
             aria-label={`${expanded ? "Collapse" : "Expand"} ${node.instance.displayName ?? instanceId}`}
             data-expanded={expanded}
             tabIndex={-1}
-            onClick={() => onToggle(instanceId)}
+            aria-hidden="true"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => {
+              onToggle(instanceId);
+              onSelect(instanceId);
+              itemRefs.get(instanceId)?.focus();
+            }}
           >
             <ApplicationIcon name="chevron" />
           </button>
@@ -1439,30 +1447,33 @@ function TreeNode({
           aria-level={node.depth}
           aria-selected={selected}
           aria-expanded={expanded}
+          aria-owns={expanded ? childrenId : undefined}
+          aria-labelledby={`${childrenId}-label`}
+          aria-describedby={`${childrenId}-description${protectedInstanceIds.has(instanceId) ? ` ${childrenId}-required` : ""}`}
           tabIndex={
             selected || (!selectedInstanceId && node.depth === 1) ? 0 : -1
           }
           onClick={() => onSelect(instanceId)}
           onKeyDown={(event) => onKeyDown(event, node)}
         >
-          <span>
+          <span id={`${childrenId}-label`}>
             {node.instance.displayName ??
               String(node.instance.definitionRef.id)}
           </span>
           {node.placement ? (
-            <small>
+            <small id={`${childrenId}-description`}>
               Region {node.placement.slotId} / layer {node.placement.order + 1}
             </small>
           ) : (
-            <small>System root</small>
+            <small id={`${childrenId}-description`}>System root</small>
           )}
           {protectedInstanceIds.has(instanceId) ? (
-            <span className="ui-badge ui-badge--info">Required</span>
+            <span className="ui-badge ui-badge--info" id={`${childrenId}-required`}>Required</span>
           ) : null}
         </button>
       </div>
       {node.children.length && expanded ? (
-        <ul role="group">
+        <ul role="group" id={childrenId}>
           {node.children.map((child) => (
             <TreeNode
               key={String(child.instance.instanceId)}
@@ -1567,6 +1578,7 @@ function CanvasNode({
       definition.slots.length === 0 ? (
         <div
           className="system-composer__editable-preview"
+          role="group"
           aria-label={`${node.instance.displayName ?? definition.displayName} safe visual preview`}
         >
           <FoundationAssetPreview
@@ -1772,26 +1784,26 @@ function buildMoveTargets(
       String(node.instance.instanceId),
     ),
   );
+  const definitions = new Map(catalog.map(asset => [`${asset.definitionId}@${asset.version}`, asset]));
+  const childCounts = new Map<string, number>();
+  for (const placement of placements) {
+    const key = `${String(placement.parentInstanceRef.id)}|${String(placement.slotId)}`;
+    childCounts.set(key, (childCounts.get(key) ?? 0) + 1);
+  }
   return nodes.flatMap((node) => {
     const parentId = String(node.instance.instanceId);
     if (excluded.has(parentId)) return [];
-    const definition = definitionForInstance(node.instance, catalog);
+    const definition = definitions.get(`${String(node.instance.definitionRef.id)}@${node.instance.definitionRef.version ?? ""}`);
     return (definition?.slots ?? []).flatMap((slot) => {
-      const currentChildren = placements.filter(
-        (placement) =>
-          String(placement.parentInstanceRef.id) === parentId &&
-          String(placement.slotId) === String(slot.slotId),
-      );
-      const selectedAlreadyHere = currentChildren.some(
-        (placement) => String(placement.childInstanceRef.id) === selectedId,
-      );
+      const key = `${parentId}|${String(slot.slotId)}`;
+      const currentCount = childCounts.get(key) ?? 0;
+      const selectedAlreadyHere = selectedNode.placement?.parentInstanceRef.id === parentId && String(selectedNode.placement.slotId) === String(slot.slotId);
       if (
         !selectedAlreadyHere &&
-        currentChildren.length >= slot.cardinality.maxItems
+        currentCount >= slot.cardinality.maxItems
       ) {
         return [];
       }
-      const key = `${parentId}|${String(slot.slotId)}`;
       return [
         {
           key,

@@ -61,10 +61,25 @@ for (const version of ["1.0.0", "2.0.0", "3.0.0"]) {
   }
 }
 
+/** Own one complete passive copy before read-side projection and classification. */
+export function admitAssetDefinitionForRead(input: unknown): {
+  readonly definition: AssetDefinition;
+  readonly authority: CodeOwnedAssetDefinition | undefined;
+} {
+  const definition = copyBoundedPassiveData(input) as AssetDefinition;
+  return { definition, authority: matchAdmittedDefinition(definition) };
+}
+
 /** Read-side classification only; no install, seeding, hash migration or writes. */
 export function matchCodeOwnedAssetDefinition(input: unknown): CodeOwnedAssetDefinition | undefined {
+  try { return admitAssetDefinitionForRead(input).authority; }
+  catch { return undefined; } // Malformed, accessor-bearing or oversized bodies cannot earn a badge.
+}
+
+// Only the safe admission above supplies this private matcher. An invalid
+// authority marker on otherwise passive custom content must not deny the read.
+function matchAdmittedDefinition(candidate: AssetDefinition): CodeOwnedAssetDefinition | undefined {
   try {
-    const candidate = copyBoundedPassiveData(input) as AssetDefinition;
     if (!candidate || typeof candidate.definitionId !== "string" || typeof candidate.version !== "string") return undefined;
     const source = sources.get(key(candidate));
     if (!source) return undefined;
@@ -74,7 +89,7 @@ export function matchCodeOwnedAssetDefinition(input: unknown): CodeOwnedAssetDef
     const timestamp = passiveTimestamp((marker as Record<string, unknown>)[source.timestampField]);
     if (equalContent(candidate, source.enriched(timestamp))) return { ...source.authority };
   } catch {
-    // Malformed, accessor-bearing or oversized content cannot earn a badge.
+    // Invalid marker timestamps cannot confer authority; the admitted body is still readable.
   }
   return undefined;
 }

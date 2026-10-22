@@ -81,8 +81,20 @@ when every implementation chunk and predecessor is done, approval is current and
 no blocker is open. Pending external criteria still prevent final closure.
 Keep exclusive unpredictable temporary publication and failure-cleanup tests;
 portable installation does not attest OS-native ACL/reparse race qualification.
+Preserve the explicit offline human-acceptance handoff tests and documentation.
+The user-directed handoff archives original criteria and invalidates approval;
+it never supplies a human test pass or bypasses technical/security/current-receipt
+gates. Portable hosts must review criterion classification, not infer it from keywords.
+Keep the denial test proving this legacy metadata event refuses receipt-governed
+roadmaps; it cannot replace their current candidate-bound completion evidence.
 
 Before publishing or changing the skill:
+
+Preserve governed `acceptance-scope-revised` regression coverage: explicit narrow
+human scope, immutable history/evidence/completion policy, stale-receipt denial,
+pending technical closure and safe projection. Natural-language requests for
+agent-only acceptance route to this event for started governed roadmaps. Keep the
+legacy-only handoff separate and require actual fresh review after scope changes.
 
 1. Run the skill unit tests.
 2. Run the repository documentation and agent-support gates.
@@ -109,6 +121,12 @@ Before publishing or changing the skill:
     choices, blockers, and final overall approval remain explicit gates.
 
 ## Primary references
+
+Adapter installations must test `increment-qualified` using portable skill tests
+and repository lifecycle tests. Verify partial/overall-only/stale evidence denial,
+report/plan/evidence binding and preservation of other active increments. Target
+receipt consumption is historical. Repositories without the adapter cannot use
+this governed path.
 
 - [Agent Skills specification](https://agentskills.io/specification)
 - [Agent Skills overview](https://agentskills.io/home)

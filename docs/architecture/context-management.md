@@ -213,6 +213,16 @@ the power-suspension blocker and private staging.
 
 ## Failure and recovery
 
+Generation may select CPU, CUDA or automatic embedding placement; omission keeps
+CPU behavior. Retrieval uses its own optional `embeddingDevice` request hint.
+Device is never persisted in a portable manifest, so saved packages and source
+rebuilds remain placement independent. Automatic selection prefers available
+CUDA; explicit CUDA fails when unavailable and never falls back on failure.
+The local runtime moves weights and every token tensor to the same selected
+device, preserves float32 pooling/normalization/dimensions, and releases owned
+GPU tensors/cache after success or failure. UI preferences reset with workspace
+changes. The model, sources and dimensions still come from verified authority.
+
 Missing workspace, authorization, source, capability, digest, model,
 dependency, citation, output containment, or storage evidence fails closed.
 Public errors do not contain source text, manual content, prompts, model output,

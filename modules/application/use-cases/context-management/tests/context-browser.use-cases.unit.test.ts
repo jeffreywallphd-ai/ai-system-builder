@@ -318,10 +318,12 @@ describe("ContextBrowserUseCases", () => {
         artifactId: "generated/context/rag/release.lancedb.zip",
         query: "release policy",
         maximumResults: 3,
+        embeddingDevice: "cuda",
       },
       test.context,
     );
     expect(query.ok).toBe(true);
+    expect(test.runtime.query).toHaveBeenCalledWith(expect.objectContaining({workspaceId: "workspace.context", embeddingDevice: "cuda"}));
     if (!query.ok) return;
     expect(query.value.matches[0]).toMatchObject({
       score: 0.9,

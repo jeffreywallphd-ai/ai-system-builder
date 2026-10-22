@@ -122,6 +122,8 @@ def _task_example_schema(
             },
         }
     if task_type == "llm-classification":
+        labels = list(dict.fromkeys(_task_prompt_settings(task_type, task_recipe or {})["allowedLabels"]))
+        bounded_choices = {"enum": labels} if 0 < len(labels) <= 64 and all(len(label) <= 120 for label in labels) else {}
         label_schema: dict[str, Any]
         if task_recipe and bool(task_recipe.get("multiLabel", False)):
             label_schema = {
@@ -129,10 +131,10 @@ def _task_example_schema(
                 "minItems": 1,
                 "maxItems": 32,
                 "uniqueItems": True,
-                "items": _string_schema(120),
+                "items": {**_string_schema(120), **bounded_choices},
             }
         else:
-            label_schema = _string_schema(120)
+            label_schema = {**_string_schema(120), **bounded_choices}
         return {
             "type": "object",
             "additionalProperties": False,

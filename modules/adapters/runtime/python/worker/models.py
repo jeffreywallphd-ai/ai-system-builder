@@ -436,6 +436,7 @@ class ContextEmbeddingSettings(BaseModel):
     modelId: str = Field(min_length=3, max_length=193)
     dimensions: int | None = Field(default=None, ge=1, le=8_192)
     batchSize: int = Field(default=16, ge=1, le=128)
+    device: Literal["cpu", "cuda", "auto"] = "cpu"
 
 
 class ContextPackLocalModelSettings(BaseModel):
@@ -491,6 +492,7 @@ class ContextArtifactOperationTaskRequest(BaseModel):
     sourceChecks: ContextSourceCheckSettings | None = None
     query: str | None = Field(default=None, min_length=1, max_length=4_000)
     maximumResults: int | None = Field(default=None, ge=1, le=20)
+    embeddingDevice: Literal["cpu", "cuda", "auto"] | None = None
     runtime: ContextGenerationRuntimeSettings
 
 

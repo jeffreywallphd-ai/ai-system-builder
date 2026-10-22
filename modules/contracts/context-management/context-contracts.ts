@@ -91,6 +91,8 @@ export interface ContextEmbeddingSettings {
   readonly modelId: string;
   readonly dimensions?: number;
   readonly batchSize?: number;
+  /** Transient execution placement; omitted preserves CPU behavior. */
+  readonly device?: "cpu" | "cuda" | "auto";
 }
 
 export interface ContextLocalModelSettings {
@@ -167,7 +169,7 @@ export interface ContextArtifactManifest {
   readonly manualEntries: readonly ContextManifestManualEntry[];
   readonly chunking: ContextChunkingSettings;
   readonly sourceChecks?: ContextSourceCheckSettings;
-  readonly embedding?: Omit<ContextEmbeddingSettings, "batchSize">;
+  readonly embedding?: Omit<ContextEmbeddingSettings, "batchSize" | "device">;
   readonly contextPack?: {
     readonly inputMode?: "manual" | "source-materials";
     readonly method: ContextGenerationMethod | "deterministic";

@@ -51,7 +51,9 @@ This module contains the first concrete artifact-repo storage provider adapter.
 ## Notes
 
 - Provider existence checks and writes use the official `@huggingface/hub`
-  client. Retrieval deliberately uses the shared secure-egress broker so DNS,
+  client through a bundler-visible lazy import. Desktop packages contain that
+  client and must not resolve it from the checkout after installation.
+  Retrieval deliberately uses the shared secure-egress broker so DNS,
   redirects, authorization forwarding, content type, streamed bytes, deadline,
   and concurrency are controlled before localization.
 - The brokered retrieval path is the only download path; there is no unbounded

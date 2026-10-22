@@ -180,11 +180,13 @@ describe("createPythonContextArtifactRuntimeAdapter", () => {
       digest: digest(content),
       query: "release",
       maximumResults: 3,
+      embeddingDevice: "cuda",
     });
     expect(matches[0]).toMatchObject({
       score: 0.8,
       citation: { chunkIndex: 0 },
     });
+    expect(queryRegistry.registry.startTask).toHaveBeenCalledWith(expect.objectContaining({payload: expect.objectContaining({embeddingDevice: "cuda"})}));
   });
 
   it("rejects substituted bytes before starting a runtime task", async () => {
