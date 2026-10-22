@@ -545,3 +545,22 @@ quality/resource pass, native file-security qualification or human acceptance.
 Any subsequent diagnostic must retain the original gates and distinguish sampled
 stage RSS from allocation ownership and from this whole-query comparison.
 
+A separately reviewed two-child CPU10k diagnostic then used the identical source,
+fixed MiniLM and a verified copy of the original package. Each fresh child ran
+one synthetic query, retained recall 1.0, confirmed native exit zero and cleanup.
+Five inert admission tests passed, including rejection of preparation, broader
+arguments, a changed operator hash and a missing owned folder. Original full-run
+artifacts remain unchanged; the diagnostic is under ignored
+`.local-codex/trained-context/202ced330bf4454baa7a00c134730e3a/`.
+
+At 5 ms sampling, full-table-validation peak working set was 753.6 MB for the
+baseline and 598.0 MB for the candidate. The candidate's embedding stage,
+including first lazy imports, fresh load and unload, peaked at 744.2 MB.
+Whole-child parent observations were 754.0 and 751.3 MB respectively (decimal
+MB). In this observation the validation improvement moves the highest sampled
+stage to embedding, so a validation-only improvement need not deliver the same
+whole-query memory reduction. This does not identify individual allocations or
+prove a loader fix. Nested stages overlap, two samplers can observe different
+peaks, and instrumentation adds overhead. One query per arm supplies neither
+statistical qualification nor a replacement for the retained four RSS failures.
+
