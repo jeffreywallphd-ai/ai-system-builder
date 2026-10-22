@@ -502,3 +502,46 @@ spawned launcher tree. Memory/job limits, corpus, metrics and thresholds stay un
 Injected denial tests and a harmless native handshake fixture qualify this
 lifecycle behavior separately from the full trained-model matrix.
 
+## Completed trained Context comparison
+
+The full offline MiniLM comparison completed on
+`source.44132fa20f5f03ff971cc2641bbbbce23b1a4362c821bfc284c468f4ddb05542`.
+The original matrix, model, corpus, thirty measured queries after five warmups,
+three fresh memory children per arm, and thresholds were preserved. Source and
+model/package checks remained stable. The process returned failure because four
+cohorts missed the memory target; completed measurement is not product
+qualification.
+
+All nine cohorts retained recall at five of 1.0, the in-process comparison reported
+equal IDs/order/citations with zero score delta, and measured p95 latency improved.
+The 1,000-chunk cohorts passed their quality/control checks; the 25 percent RSS
+reduction requirement applies to the larger cohorts below. RSS is the median
+incremental process working-set peak across three fresh children per arm, including
+first lazy imports, fresh model load, validation, inference, search and cleanup.
+Negative reduction means increased memory.
+
+| Chunks | Profile | Baseline / candidate p95 (ms) | RSS reduction | Original gates |
+| --- | --- | --- | --- | --- |
+| 10,000 | CPU | 1470.17 / 361.44 | 1.96% | Failed: RSS |
+| 10,000 | CUDA | 1647.38 / 541.85 | -0.65% | Failed: RSS |
+| 10,000 | CPU, enforced 2 GiB | 1455.63 / 348.46 | 4.82% | Failed: RSS |
+| 100,000 | CPU | 5077.34 / 1068.20 | 50.70% | Passed |
+| 100,000 | CUDA | 5311.03 / 1233.43 | 15.37% | Failed: RSS |
+| 100,000 | CPU, enforced 2 GiB | 5084.30 / 1030.28 | 50.38% | Passed |
+
+The terminal report and per-query progress remain under ignored
+`.local-codex/trained-context/3483a5af86b747df8427e07a2f38a426/`. Reports retain
+sample timings, recalls, comparison digests, native exit and cleanup outcomes.
+Raw returned result sets are not retained, so an independent reviewer can
+recompute metrics and inspect the comparator but cannot replay the exact match
+comparison from persisted answers. Timing children retain numeric memory-profile
+readback; memory-child summaries retain exit and cleanup rather than that full
+readback. Enforcement before each successful return is also covered by the
+harness and focused tests. OS file-cache warmth remains uncontrolled.
+
+The Context runtime criterion remains failed, with the earlier interrupted run
+preserved. These results supply no generative-model CPU admission, installed-model
+quality/resource pass, native file-security qualification or human acceptance.
+Any subsequent diagnostic must retain the original gates and distinguish sampled
+stage RSS from allocation ownership and from this whole-query comparison.
+

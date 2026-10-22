@@ -1630,6 +1630,28 @@
       "outcome": "passed",
       "recordedAt": "2026-10-22T01:43:55Z",
       "summary": "Copied accepted task ownership and persisted workspace authorization; no cross-tenant/workspace stale reads/finalization receipts; private staging/cleanup, bounded notification/receipt stores, safe error output, truthful unsupported modes and no read-side registration. Managed TLS/OIDC/forced-RLS positives/denials and owned graceful cleanup retain rollback/security boundaries. Final exact-target reviewer must attest the present scope. Native identity/ACL/publication, original supplier/runtime provenance and remaining full-security work stay separate; no broad authority change is authorized by these passes. Actual frozen-source matrix04 and immutable combined reports support this exact criterion; fresh owning verification and separate review remain required before increment qualification. No full Functionality/AI/security or human acceptance is inferred."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/context-trained-final-matrix-results-independent-note.json",
+      "command": "run_trained_context_qualification.py --samples30 --chunks1000 10000 100000; independent metric and lifecycle reconciliation",
+      "criterionId": "context-runtime-qualified",
+      "id": "evidence-56",
+      "incrementId": "quality-preserving-context-efficiency",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-22T03:15:08Z",
+      "summary": "The full fixed MiniLM matrix completed on source44132 with stable source/model/packages:9cohorts,18timing children with5warmups/30samples,54fresh memory children and4generation children. All76recorded native returns and cleanup passed; all9retained recall1.0, reported exact IDs/order/citations and zero score delta, and met latency. Five cohorts pass; all10kprofiles and100kCUDA fail the original25percentRSS reduction gate. Reductions:10kCPU1.96percent/CUDA-0.65percent/constrainedCPU4.82percent;100kCPU50.70percent/CUDA15.37percent/constrainedCPU50.38percent. Independent raw-result reconciliation preserves all failed gates and evidence-retention limits. Measurement completion does not qualify this criterion; no missing human check or unavailable environment is substituted for a measured failure."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/qwen05-caption-withdrawal-decision.json",
+      "command": null,
+      "criterionId": "model-quality-resource-outcomes",
+      "id": "evidence-57",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-22T03:15:09Z",
+      "summary": "Completed the bounded0.5Bgrounded-caption development trial and exposed0.5B/1.5Bregression comparison with fixed settings and reviewed actual native cleanup. Development improved44/48versus42/48 but only one unique case improved twice. Exposed0.5Bquality still failed;1.5Bconstrained regressed23to22/24with heldout03lost in both phases. Shared production caption was withdrawn conservatively, original bytes restored, regression tests/docs retained, and independently reviewed Work completed. Broad exposed comparison does not isolate caption causality. No fresh unseen validation or full3replicate qualification was supplied. CPUadmission remains pending under the unchanged memory guard; existing quality/20percentthroughput gates and earlier failures are preserved. Model-size expectations now distinguish narrow review-required0.5Bproposals from separately measured larger-model utility without weakening original acceptance."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -2500,6 +2522,18 @@
       "recordedAt": "2026-10-22T01:51:30Z",
       "sequence": 124,
       "type": "increment-qualified"
+    },
+    {
+      "eventFingerprint": "a104cfac2fea5c140f3900f72eefa57ccdebb3f3825f57133281b15e0962933e",
+      "recordedAt": "2026-10-22T03:15:08Z",
+      "sequence": 125,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "832bbddd37b148774367de097dc3d5192cfcd459d02b45097effb8fa9e948814",
+      "recordedAt": "2026-10-22T03:15:09Z",
+      "sequence": 126,
+      "type": "evidence-recorded"
     }
   ],
   "increments": [
@@ -3383,5 +3417,5 @@
   "schemaVersion": 1,
   "slug": "functionality-optimization",
   "status": "executing",
-  "updatedAt": "2026-10-22T01:51:30Z"
+  "updatedAt": "2026-10-22T03:15:09Z"
 }

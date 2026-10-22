@@ -3,7 +3,7 @@
 # Functionality and Quality-Adjusted Optimization Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-10-22T01:51:30Z`
+- Updated: `2026-10-22T03:15:09Z`
 
 ## Objective
 
@@ -330,7 +330,7 @@ Reduce measured query allocation and repeated work in the existing portable Lanc
 | `context-allocation-target`: Proposed target: at10000 and100000 chunks, reduce incremental query peak RSS by at least25 percent against unchanged baseline without increasing p95 latency by more than5 percent, or demonstrate that the measured baseline already meets an explicitly approved environment budget. Keep source and package ceilings unchanged. | local | passed (test) |
 | `context-quality-invariant`: For deterministic embeddings, top-k identities/order, scores within the fixed numerical tolerance and exact citations match unchanged exact-search results. For separately authorized local embedding runs, proposed recall@5 is at least0.90 on the labeled synthetic corpus with no regression greater than0.02; invalid/cross-workspace citations remain zero. Quality failures cannot be offset by a cheaper/faster result. | local | passed (test) |
 | `context-integrity-and-cancel`: Every archive/table/vector/citation/digest denial remains enforced; cancellation and failure remove private materialization and produce sanitized bounded state. No optimization bypasses full required validation, downloads a model, retains query/source content or introduces a cross-request cache. | local | passed (test) |
-| `context-runtime-qualified`: Representative CPU and sufficient accelerator profiles report actual local model identity, warm/cold p95, RSS, retrieval quality and cleanup; observed results remain distinct from deterministic conformance and from production guarantees. | controlled-environment | pending (test) |
+| `context-runtime-qualified`: Representative CPU and sufficient accelerator profiles report actual local model identity, warm/cold p95, RSS, retrieval quality and cleanup; observed results remain distinct from deterministic conformance and from production guarantees. | controlled-environment | failed (test) |
 | `security-impact-reviewed`: Refresh the threat/control delta, prove isolation, failure bounds and non-disclosure for this increment, and preserve a rollback at least as secure as the forward path. Coordinate with the security remediation owner rather than duplicating its controls. | local | passed (review) |
 
 ### Verification
@@ -382,7 +382,7 @@ Human portions of the original work packages, deliverables, verification and com
 | --- | --- | --- |
 | `existing-qualification-preserved`: Each existing pending criterion has an owning roadmap and evidence reference or explicit pending reason. New evidence never silently rewrites historical approvals; the active-source Run & Test proposal and security remediation remain separately approval-gated. | local | passed (review) |
 | `accessibility-outcomes-qualified`: Automated packaged-desktop and thin-client UI checks verify keyboard traversal/activation, modal focus return, accessible names/roles/status semantics, 320 CSS-pixel reflow, computed contrast, status text independent of color and reduced motion on declared supported profiles. Critical automated exceptions, data loss or authority confusion block qualification. Retain actual DOM/semantic/visual evidence; unavailable checks remain pending. | controlled-environment | passed (test) |
-| `model-quality-resource-outcomes`: For authorized installed-model trials, retain held-out task quality, invalid-output rate, retry count, accepted examples per minute, peak RAM/VRAM and elapsed time. A candidate requires no statistically material quality regression under a predeclared task metric/tolerance and at least20 percent better accepted-output throughput or demonstrated adherence to the approved resource budget. CPU/accelerator and constrained/unchecked modes are separate cohorts; unavailable runs remain pending. | controlled-environment | failed (external) |
+| `model-quality-resource-outcomes`: For authorized installed-model trials, retain held-out task quality, invalid-output rate, retry count, accepted examples per minute, peak RAM/VRAM and elapsed time. A candidate requires no statistically material quality regression under a predeclared task metric/tolerance and at least20 percent better accepted-output throughput or demonstrated adherence to the approved resource budget. CPU/accelerator and constrained/unchecked modes are separate cohorts; unavailable runs remain pending. | controlled-environment | failed (test) |
 | `full-current-qualification`: After every increment is implemented, triage the existing standard-Node failures without treating skips as passes, run test:all once plus relevant repository gates/builds, obtain separate-invocation current candidate review and complete the overall-validation work item. Every required controlled criterion must pass before final roadmap completion. | local | failed (test) |
 | `security-impact-reviewed`: Refresh the threat/control delta, prove isolation, failure bounds and non-disclosure for this increment, and preserve a rollback at least as secure as the forward path. Coordinate with the security remediation owner rather than duplicating its controls. | local | passed (review) |
 
