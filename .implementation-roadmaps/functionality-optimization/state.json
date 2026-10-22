@@ -1476,6 +1476,160 @@
       "outcome": "passed",
       "recordedAt": "2026-10-22T01:06:49Z",
       "summary": "All six configured repository-owned operation/workload probes ran against source.f459693377dd421f5d4a6b20ea54f510d6d0c217bf1c60e7ec161eb638e622f7 on local-win32-node24-fixture, with the unchanged five warmups and thirty measured iterations, real output assertions and the registered negative-path coverage. Catalog p95 172.582 ms, validate 21.481 ms, resolve 7.309 ms, build 162.286 ms, preview 1.564 ms and handoff 0.406 ms all met their original budgets. The harness verified source identity before and after. Scoped catalog work is completed with passed receipt 150f75a2daa67ba80ff5fe8c2f138527785ef3b46d01b679acf284c19ecace6d and accepted review a76dc38b0dbffd83dce263298e2422167f71bab5dc2e19f58dccb15c11f3660e. Earlier 205.704 ms catalog failure is retained. This evidence fulfills owned probes only; final page-level performance, whole-host qualification, exact-target review and other criteria remain separate."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/functionality-f1-f2-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, captured combined execution, focused evidence and independently reconciled exact criterion assertions",
+      "criterionId": "transferred-asset-functional-rows",
+      "id": "evidence-42",
+      "incrementId": "responsive-workspace-browse",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:43:53Z",
+      "summary": "Exact-version repository/IPC reads with a later version present; malformed collection/reference denial before I/O; both-host relationshipKind; route/body conflicts; all10composition operations and5read-model operations authorize before effects; static projection route precedence and sanitized rejection; capability metadata checks; authored list/summary shapes; confirmed-workspace recovery; subtree structure/history preservation. R72corrected service remains production-uncomposed; R75effective-summary list remains explicitly unavailable; R78personal-library principal ownership remains unmodeled/default-denied. The criterion expressly permits evidence-backed stale/deferred reasons; do not describe all13as positively integrated or close those residuals. Actual frozen-source matrix04 and immutable combined reports support this exact criterion; fresh owning verification and separate review remain required before increment qualification. No full Functionality/AI/security or human acceptance is inferred."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/functionality-f1-f2-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, captured combined execution, focused evidence and independently reconciled exact criterion assertions",
+      "criterionId": "owned-performance-probes",
+      "id": "evidence-43",
+      "incrementId": "responsive-workspace-browse",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:43:53Z",
+      "summary": "Five warmups and30samples per unchanged workload. Catalog exact1000authorized unique summaries/four pages and missing-workspace denial; validation500instances/1000bindings and invalid denial; resolution500candidates with incompatible/revoked exclusion; build500lock entries/verified artifacts; release-bound2MiB preview with denied unauthenticated request; trusted active reference handoff with actual runtime/audit outcome. Declared structured/in-memory sink/runtime fixtures and empty capability handoff are not generic native/provider execution. Preparation excluded; result assertions remain inside timing. Actual frozen-source matrix04 and immutable combined reports support this exact criterion; fresh owning verification and separate review remain required before increment qualification. No full Functionality/AI/security or human acceptance is inferred."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/functionality-f1-f2-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, captured combined execution, focused evidence and independently reconciled exact criterion assertions",
+      "criterionId": "summary-cost-and-truth",
+      "id": "evidence-44",
+      "incrementId": "responsive-workspace-browse",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:43:53Z",
+      "summary": "Real repositories with1000active systems/10000releases/10000models/10000authored assets match shared reducers; foreign workspace excluded; one owning-collection read; bounded scalar response contains neither release lock nor localPath. Both actual host clients use one summary transport and no full model listing. Independent unavailable metric does not hide1000/2500/10000available counts. Owning stores still scan collections. This qualifies bounded summary transport and count truth, not indexed constant-time database aggregation. Actual frozen-source matrix04 and immutable combined reports support this exact criterion; fresh owning verification and separate review remain required before increment qualification. No full Functionality/AI/security or human acceptance is inferred."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/functionality-f1-f2-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, captured combined execution, focused evidence and independently reconciled exact criterion assertions",
+      "criterionId": "composer-search-cost",
+      "id": "evidence-45",
+      "incrementId": "responsive-workspace-browse",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:43:53Z",
+      "summary": "Exact complete compatible IDs and bytes unchanged; no duplicate/repeated continuation; malformed/cross-workspace/loop cursors denied; parent-only single reads and batch candidate reads. Comparator is the unchanged supported single-detail fallback with only the optional batch port withheld, on the same current store/algorithm. It is not an archived historical-source reconstruction. Real UI uses page48and is separate reference performance evidence. measurements: {\"baseline_detail_collection_reads\":104,\"baseline_response_bytes\":61534,\"candidate_definitions\":1000,\"candidate_detail_collection_reads\":8,\"candidate_response_bytes\":61534,\"compatible\":100,\"page_size\":25} Actual frozen-source matrix04 and immutable combined reports support this exact criterion; fresh owning verification and separate review remain required before increment qualification. No full Functionality/AI/security or human acceptance is inferred."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/functionality-f1-f2-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, captured combined execution, focused evidence and independently reconciled exact criterion assertions",
+      "criterionId": "browse-performance-qualified",
+      "id": "evidence-46",
+      "incrementId": "responsive-workspace-browse",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:43:53Z",
+      "summary": "Five warmups/30samples on the named Windows reference profile; actual usable DOM assertions, same sparse/large workloads. OS caches uncontrolled and all hardware not qualified. Earlier205.704ms catalog failure remains retained, not replaced or waived. operation_p95_ms: {\"catalog.browse\":188.011,\"implementation.resolve\":7.267,\"runtime.handoff\":0.388,\"studio.validate\":19.947,\"system.build\":131.322,\"system.preview\":2.993} unchanged_budgets_ms: [200,350,150,2500,750,500] reference_page_p95_ms: {\"budget_each\":1000,\"desktop_picker\":395.1102,\"desktop_summary\":347.612,\"managed_picker\":867.2657,\"managed_summary\":578.854} Actual frozen-source matrix04 and immutable combined reports support this exact criterion; fresh owning verification and separate review remain required before increment qualification. No full Functionality/AI/security or human acceptance is inferred."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/functionality-f1-f2-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, captured combined execution, focused evidence and independently reconciled exact criterion assertions",
+      "criterionId": "browse-journey-preserved",
+      "id": "evidence-47",
+      "incrementId": "responsive-workspace-browse",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:43:54Z",
+      "summary": "Actual search/picker, exact references/details, parent/slot/order/config changes, sibling/reparent/remove, undo/redo, useful native preview controls, save/reload/reopen; keyboard tree navigation, modal focus/Escape/Tab wrapping,320px visible controls/reflow and scoped automated axe assertions. Dashboard checked build succeeds. Intake correctly denies missing platform policy; conversation correctly denies missing required model. No custom executable runtime/model output or human/assistive-technology qualification is inferred. Actual frozen-source matrix04 and immutable combined reports support this exact criterion; fresh owning verification and separate review remain required before increment qualification. No full Functionality/AI/security or human acceptance is inferred."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/functionality-f1-f2-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, captured combined execution, focused evidence and independently reconciled exact criterion assertions",
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-48",
+      "incrementId": "responsive-workspace-browse",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:43:54Z",
+      "summary": "Persisted active workspace/organization authorization precedes reads/writes; exact route templates/body identity; passive bounded full-body authority admission and forged-cue stripping; sanitized errors; version/cursor/private snapshot/retry/CAS controls retained. Managed raw host report supplies positive/denied HTTP and nonowner forced-RLS evidence. Fresh target review must preserve these controls and explicit unsupported dispositions. Neither this note nor parent security partial evidence closes native file authority, provider provenance or broader security roadmap obligations. Actual frozen-source matrix04 and immutable combined reports support this exact criterion; fresh owning verification and separate review remain required before increment qualification. No full Functionality/AI/security or human acceptance is inferred."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/functionality-f1-f2-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, captured combined execution, focused evidence and independently reconciled exact criterion assertions",
+      "criterionId": "transferred-runtime-functional-rows",
+      "id": "evidence-49",
+      "incrementId": "efficient-reliable-task-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:43:54Z",
+      "summary": "Malformed/cyclic/BigInt/sink logger containment; unsupported publishing never dispatches;5sresource/10slog freshness; workspace-owned private staging and no raw path fallback; real image client/preload/IPC context; accepted organization/workspace read/cancel/finalize reauthorization; canonical finalization identity, concurrent/partial retry receipts. R55/R65/R85/R86unsupported route families stay denied; R67desktop channels are corrected but server parity unavailable; R80live read-only readiness wiring corrected locally while physical ComfyUI activation/re-read remains pending. Explicit residuals are permitted by this replay criterion and must remain visible, not become positive integration claims. Actual frozen-source matrix04 and immutable combined reports support this exact criterion; fresh owning verification and separate review remain required before increment qualification. No full Functionality/AI/security or human acceptance is inferred."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/functionality-f1-f2-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, captured combined execution, focused evidence and independently reconciled exact criterion assertions",
+      "criterionId": "idle-observer-budget",
+      "id": "evidence-50",
+      "incrementId": "efficient-reliable-task-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:43:54Z",
+      "summary": "Actual manager under injected deterministic clock for original download/context observer families; duplicate subscribers and requests serialize; idle/error invalidation starts once without advancing clock; foreign scope cannot invalidate; hidden provider makes0reads across60000ms, visibility resumes immediately and StrictMode/unmount cleanup is bounded. Ten-minute schedule evidence is deterministic clock execution, not a ten-minute browser wall-clock trace. Shared manager contracts are local evidence; physical host observation is separately covered below. measurements: {\"candidate_requests\":24,\"fixed_1500ms_baseline_requests\":401,\"maximum_subscriptions\":128,\"maximum_terminal_ids\":100,\"simulated_duration_ms\":600000} Actual frozen-source matrix04 and immutable combined reports support this exact criterion; fresh owning verification and separate review remain required before increment qualification. No full Functionality/AI/security or human acceptance is inferred."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/functionality-f1-f2-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, captured combined execution, focused evidence and independently reconciled exact criterion assertions",
+      "criterionId": "active-progress-budget",
+      "id": "evidence-51",
+      "incrementId": "efficient-reliable-task-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:43:54Z",
+      "summary": "Actual rendered initial10progress from a pre-navigation captured timestamp, later50update, authoritative terminal completedAt; action invalidation, disposed owner replacement and late-workspace fencing covered by current focused assertions. Measured initial/terminal visibility includes transport/rendering on one local controlled transport. It is not timing for every intermediate update, device or real provider. No transport latency is subtracted. measurements: {\"budget_ms\":2000,\"desktop_initial_p95_ms\":217,\"desktop_terminal_p95_ms\":1137,\"managed_initial_p95_ms\":453,\"managed_terminal_p95_ms\":1368,\"unique_tasks_each_host\":30} Actual frozen-source matrix04 and immutable combined reports support this exact criterion; fresh owning verification and separate review remain required before increment qualification. No full Functionality/AI/security or human acceptance is inferred."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/functionality-f1-f2-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, captured combined execution, focused evidence and independently reconciled exact criterion assertions",
+      "criterionId": "terminal-cleanup-independent",
+      "id": "evidence-52",
+      "incrementId": "efficient-reliable-task-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:43:55Z",
+      "summary": "All3failed/cancelled/failed+task_timeout shapes for training and dataset start through actual use cases, create real private staging, mutate caller context, reconcile twice without feature reads/cancel, read worker once, remove staging, complete power once and publish/register nothing. Success/malformed-success/cleanup retry, Context/download terminals, shared shutdown admission/draining and ComfyUI unknown/ambiguous ownership controls remain covered. Three desktop cleanup raw reports each observe1owned worker,0alive after shutdown, native main exit0 and fresh will-quit acknowledgment; cleanup326.3801/280.965/285.4807ms. Two managed task/failure companion reports each observe1worker/0alive, graceful exit and0cleanup errors at255.2189/201.3722ms. Successful review-required output intentionally remains staged until authorized save/discard. Unconfirmed/unknown timeouts retain ownership; tests use genuine failed/task_timeout, not invented terminal proof. Actual workers are controlled synthetic Python fixtures, not every model/ComfyUI physical path. Actual frozen-source matrix04 and immutable combined reports support this exact criterion; fresh owning verification and separate review remain required before increment qualification. No full Functionality/AI/security or human acceptance is inferred."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/functionality-f1-f2-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, captured combined execution, focused evidence and independently reconciled exact criterion assertions",
+      "criterionId": "retry-and-output-integrity",
+      "id": "evidence-53",
+      "incrementId": "efficient-reliable-task-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:43:55Z",
+      "summary": "Concurrent receipt coalescing and caller-mutation isolation, retry only unfinished registration steps after partial outputs, fresh owner authorization before cached success, explicit approval serialization and cleanup retry. Real host leave/reopen preserves same task, rendered activity is unique, complete called twice is idempotent, cancellation remains authoritative; actual disconnected worker transport recovers the same task. No durable cross-crash distributed exactly-once guarantee or unsupported cancel/provider retry is inferred. Unavailable standalone publish remains unavailable; required review/authorization cannot be bypassed. Actual frozen-source matrix04 and immutable combined reports support this exact criterion; fresh owning verification and separate review remain required before increment qualification. No full Functionality/AI/security or human acceptance is inferred."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/functionality-f1-f2-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, captured combined execution, focused evidence and independently reconciled exact criterion assertions",
+      "criterionId": "task-host-qualification",
+      "id": "evidence-54",
+      "incrementId": "efficient-reliable-task-journeys",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:43:55Z",
+      "summary": "Both actual hosts leave/reopen, workspace switch, cancel, active shutdown and measured30-task initial/terminal latency. Desktop actual listener refusal/disconnect recovers same task and actual worker-failure settles failed; managed browser offline/online recovery and separate owned worker-failure run pass. Native cleanup and graceful host/worker exit are nonvacuous. Fixed synthetic download transport without model weights/provider traffic. No R80physical ComfyUI activation qualification, general process-tree/platform guarantee, model quality or external-service qualification. Actual frozen-source matrix04 and immutable combined reports support this exact criterion; fresh owning verification and separate review remain required before increment qualification. No full Functionality/AI/security or human acceptance is inferred."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/functionality-f1-f2-final-technical-evidence-01.json",
+      "command": "Actual final matrix04, captured combined execution, focused evidence and independently reconciled exact criterion assertions",
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-55",
+      "incrementId": "efficient-reliable-task-journeys",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T01:43:55Z",
+      "summary": "Copied accepted task ownership and persisted workspace authorization; no cross-tenant/workspace stale reads/finalization receipts; private staging/cleanup, bounded notification/receipt stores, safe error output, truthful unsupported modes and no read-side registration. Managed TLS/OIDC/forced-RLS positives/denials and owned graceful cleanup retain rollback/security boundaries. Final exact-target reviewer must attest the present scope. Native identity/ACL/publication, original supplier/runtime provenance and remaining full-security work stay separate; no broad authority change is authorized by these passes. Actual frozen-source matrix04 and immutable combined reports support this exact criterion; fresh owning verification and separate review remain required before increment qualification. No full Functionality/AI/security or human acceptance is inferred."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -2250,6 +2404,102 @@
       "recordedAt": "2026-10-22T01:06:49Z",
       "sequence": 108,
       "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9f83dbbc2e254d326e6014c668aac45ebe98a6add4f69484b0d56e35ade15517",
+      "recordedAt": "2026-10-22T01:43:53Z",
+      "sequence": 109,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "2e170cfd80b81a4a4b5b13c9531036a8d0bd08797106822cc7e07392ad4ddb7a",
+      "recordedAt": "2026-10-22T01:43:53Z",
+      "sequence": 110,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1ee6e5c1b5c8d0bb366cfd2af5d7518e7d1d48c6ba83bbf2967377aed502831a",
+      "recordedAt": "2026-10-22T01:43:53Z",
+      "sequence": 111,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e4e696e6424dd402d4e1cbd2b362de8c8282ea1dec348d72d525ded6fcdb5b6f",
+      "recordedAt": "2026-10-22T01:43:53Z",
+      "sequence": 112,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "58edfe840632e7da166ce7c630defbccf3ed630598d9fba1195a3ea28d58494d",
+      "recordedAt": "2026-10-22T01:43:53Z",
+      "sequence": 113,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "010e7c791b384b7dac6432e8c56c9dc914b0b92ddc33ef34a5f9f3493b598329",
+      "recordedAt": "2026-10-22T01:43:54Z",
+      "sequence": 114,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9aea351ea584e43bfb8df8b487d35fa9f36e55d52adaa469113d07fe1063a0dc",
+      "recordedAt": "2026-10-22T01:43:54Z",
+      "sequence": 115,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "df4b1f5c068e2badaee372209b80227db11300727b68658fd2b32732a521018d",
+      "recordedAt": "2026-10-22T01:43:54Z",
+      "sequence": 116,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ee61f0b929c213b7ae0280684072012e8dd0f64f53c32da71c332e56764bdf32",
+      "recordedAt": "2026-10-22T01:43:54Z",
+      "sequence": 117,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ad7f2fba80fa150a8ae590dadacf1f9eb7072a47e9990234e349be09f45b34af",
+      "recordedAt": "2026-10-22T01:43:54Z",
+      "sequence": 118,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "d27b60a261016f8f513063aeb4bbad213bca4f7981d31a8d99d94dc063b25296",
+      "recordedAt": "2026-10-22T01:43:55Z",
+      "sequence": 119,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "c4513011f3ecd5a3756e7b48c9c776e27ed045249506fb014e6b370eedb08553",
+      "recordedAt": "2026-10-22T01:43:55Z",
+      "sequence": 120,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b358bc18f0bdf0b419a0ea082fd39fac20ba1daf722de42cd42d4832a8f05c37",
+      "recordedAt": "2026-10-22T01:43:55Z",
+      "sequence": 121,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e91becdec339debde37a62be59e96e435713fbe6197acf18bbf15648b5b871c8",
+      "recordedAt": "2026-10-22T01:43:55Z",
+      "sequence": 122,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "414f13f18e1d96606b2d89aabf67dab2effb32ffb3d732adc663024788a7dafa",
+      "recordedAt": "2026-10-22T01:47:49Z",
+      "sequence": 123,
+      "type": "increment-qualified"
+    },
+    {
+      "eventFingerprint": "f13f619a77281bfd7c0d2da7b1768e6f4d4493a2b28f1c9d0a6984ede029e93e",
+      "recordedAt": "2026-10-22T01:51:30Z",
+      "sequence": 124,
+      "type": "increment-qualified"
     }
   ],
   "increments": [
@@ -2292,7 +2542,7 @@
         }
       ],
       "allowPendingQualification": true,
-      "completedAt": "2026-10-21T04:59:40Z",
+      "completedAt": "2026-10-22T01:47:49Z",
       "completedChunks": [
         "workspace-and-draft-continuity",
         "asset-read-validation-parity",
@@ -2301,7 +2551,7 @@
         "composition-transport-parity",
         "composer-query-and-journey"
       ],
-      "completionSummary": "All6implementation chunks and6local criteria verified with independent review; named controlled performance remains pending. Both real-host browser journeys and all6source-bound local operation probes passed.",
+      "completionSummary": "All seven exact browse criteria are supported by immutable actual current-source local and controlled-host evidence, freshly passed owning checks and actual separate accepted review. Preserve the thirteen replay dispositions, identical-result page25 fallback comparison, fixed six-operation/page budgets, source/cursor/authority controls and automated accessibility limits. Unavailable positive integrations and separate native/security/model obligations remain explicitly deferred or pending; no full Functionality overall/AI/human pass is inferred. Other active work is preserved.",
       "deliverables": [
         "Repository-owned trusted production probe set using existing performance runner",
         "Baseline and candidate latency, I/O count and response-byte reports with source/environment identities",
@@ -2320,9 +2570,7 @@
       "id": "responsive-workspace-browse",
       "number": 1,
       "objective": "Make Home, feature summaries and Add element useful at representative catalog scale without transferring or re-reading entire collections for counts or one candidate page.",
-      "pendingCriteria": [
-        "browse-performance-qualified"
-      ],
+      "pendingCriteria": [],
       "plan": {
         "assumptions": [
           "Dedicated performance profiles, real-model cohorts and real user/accessibility qualification are unavailable, per the user.",
@@ -2418,6 +2666,12 @@
         ],
         "summary": "Restore demonstrated correctness before measuring and reducing full-catalog transfers and candidate amplification."
       },
+      "qualificationCompletion": {
+        "qualifiedAt": "2026-10-22T01:47:49Z",
+        "receiptDigest": "28e860fa65764b21701eb8ee655c744b403bb488e985a9dc7b5b5d69bec25cf6",
+        "reviewDigest": "77529a03eb2c87e1acf864f659a5508080833309559ccf9eca9f70db01fd6889",
+        "workId": "functionality-final-browse-target"
+      },
       "research": [
         {
           "recordedAt": "2026-10-21T03:35:01Z",
@@ -2454,7 +2708,7 @@
       ],
       "rollback": "Revert the summary/candidate optimization as one slice while retaining fixture reports and isolation regressions. Restore the prior bounded authorized read path, never a raw-key fallback or removed security control. No persisted record migration is planned.",
       "startedAt": "2026-10-21T03:35:01Z",
-      "status": "implemented-pending-qualification",
+      "status": "completed",
       "title": "Responsive workspace navigation and composition",
       "verification": [
         "While chunks remain, run dashboard reducer/client tests, Composer catalog/use-case tests, exact-version and cursor denial tests, and focused shared UI tests only.",
@@ -2529,7 +2783,7 @@
         }
       ],
       "allowPendingQualification": true,
-      "completedAt": "2026-10-21T06:15:49Z",
+      "completedAt": "2026-10-22T01:51:30Z",
       "completedChunks": [
         "retry-safe-output-finalization",
         "runtime-functional-contracts",
@@ -2537,7 +2791,7 @@
         "host-owned-terminal-reconciliation",
         "task-journey-qualification"
       ],
-      "completionSummary": "Task journeys implemented and independently reviewed with current passing local verification; controlled whole-host and physical worker qualification remains pending.",
+      "completionSummary": "All seven exact task criteria passed with immutable actual current-source local and controlled-host evidence, fresh owning checks and actual separate accepted review. Preserve all twelve replay dispositions, deterministic ten-minute idle schedule401to24, action invalidation, independent no-page terminal cleanup, thirty-task per-host latency observations, same-task retry/integrity and nonvacuous owned worker/graceful native shutdown proofs. Unsupported provider routes and physical ComfyUI/native/model gaps remain explicit; no full Functionality overall/AI, broad security or human acceptance is inferred. Other active work is preserved.",
       "deliverables": [
         "Measured observer/lifecycle inventory",
         "Shared bounded polling/observation helper with deterministic clock tests",
@@ -2558,9 +2812,7 @@
       "id": "efficient-reliable-task-journeys",
       "number": 2,
       "objective": "Make downloads, preparation, Context generation, training and image generation remain understandable and release resources correctly when users navigate, disconnect, cancel or encounter a failure, while reducing idle polling.",
-      "pendingCriteria": [
-        "task-host-qualification"
-      ],
+      "pendingCriteria": [],
       "plan": {
         "assumptions": [
           "No new queue, protocol, model provider or persistent content cache is authorized.",
@@ -2651,6 +2903,12 @@
         ],
         "summary": "Preserve scoped task correctness and owned cleanup while reducing redundant observation through existing contracts."
       },
+      "qualificationCompletion": {
+        "qualifiedAt": "2026-10-22T01:51:30Z",
+        "receiptDigest": "a40c759ae129fc55e19720a716ad50c7380b2c08c80e411f6e2751f6b603ad3e",
+        "reviewDigest": "269cf9ac809978b3486465444dd3e58e3bbd6c8d8b7f9973922781f1869510c7",
+        "workId": "functionality-final-task-target"
+      },
       "research": [
         {
           "recordedAt": "2026-10-21T05:01:51Z",
@@ -2688,7 +2946,7 @@
       ],
       "rollback": "Revert observation scheduling/UI changes independently from host cleanup controls. Retain security/lifecycle fixes and regressions; restore only the previous bounded observer through the same authorized APIs. Never roll back to cleanup that depends solely on an open UI.",
       "startedAt": "2026-10-21T05:01:51Z",
-      "status": "implemented-pending-qualification",
+      "status": "completed",
       "title": "Efficient and reliable background task journeys",
       "verification": [
         "Use focused fake-clock ModelDownloadNotificationBridge, ContextStudio and training/image-generation observer tests while iterating.",
@@ -3125,5 +3383,5 @@
   "schemaVersion": 1,
   "slug": "functionality-optimization",
   "status": "executing",
-  "updatedAt": "2026-10-22T01:06:49Z"
+  "updatedAt": "2026-10-22T01:51:30Z"
 }

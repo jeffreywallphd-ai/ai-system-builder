@@ -95,8 +95,10 @@ conformance and Python fixtures are not installed-model quality evidence.
 
 ## Whole-host task qualification
 
-This procedure is pending for both a packaged desktop host and a managed server
-with thin client. Record source/build, OS, runtime/dependency versions, transport,
+The representative controlled download matrix has passed on the declared
+packaged desktop and managed-server/thin-client profiles; see the final controlled
+qualification results below. This does not qualify every model or provider family.
+Record source/build, OS, runtime/dependency versions, transport,
 installed model revision, device, fixture digest and the physical worker identity
 in private operator evidence; retain only sanitized identity digests and counts
 in repository evidence. Use a disposable workspace and synthetic inputs. Never
@@ -393,4 +395,39 @@ qualification. The earlier 205.704 ms failure remains preserved. The focused
 authority/facade suite passed all thirty tests; its initial copy-isolation test
 omitted the existing configuration-schema opt-in, then passed after requesting
 that option without changing production projection behavior.
+
+## Final controlled host and database results
+
+The subsequent frozen matrix on
+`source.e17e30d2c83ce4f62a0bda9f9d39f4bb3584a15f419b15ef1839a69dcd7f8ac7`
+passed all eight groups, including all nine packaged desktop and six thin-client
+cases and the four managed cohorts. Three useful mixed-component systems per
+editor host retained their exact saved structure and declared behavior. Actual
+automated keyboard, focus, reflow and scoped accessibility checks passed on the
+named profiles. The catalog p95 was 188.011 ms within 200 ms; all other fixed
+operation and reference-page budgets passed. The cold Canvas p95 was 6209.8462 ms
+within 15542.8 ms over thirty measured fresh profiles after five warmups. Retain
+the 15949.4652 ms maximum, the small Add p95 regression, earlier failures and
+the unresolved cause of the historical Foundation startup failure.
+
+The Canvas roadmap and functionality browse/task increments have actual
+criterion-specific verification and independent review. Their immutable local
+evidence packets retain the raw report bindings and scope limits. The combined
+suite remains 3953 passed, four skipped and zero failed; its skipped outcomes
+are not rewritten. Context, installed-model and remaining native/security
+qualification are separate.
+
+Both optional PostgreSQL cases were then executed separately, unchanged, against
+fresh databases in the existing isolated loopback fixture. Migration/transaction/
+health/revision conformance and physical runtime database/least-privilege isolation
+each passed, with ordinary child exit zero and no skip. The bounded operator
+verified exact fixture identity and exclusive access, kept credentials in memory
+and private child environments, and restored the exact baseline database, role
+and membership inventory using journaled object identities. Its actual result is
+under ignored `.local-codex/approved-controls/postgres-conformance-df19d477de93757f/`.
+This supplies neither deployment TLS nor native file/model/provider qualification.
+The separate run does not replace the four skipped aggregate events. Independent
+pre-execution review required safe pool errors, bounded waits, independent cleanup
+and owner/partial-pair checks; ten focused delta admission cases passed after
+retained test failures were corrected without weakening those controls.
 

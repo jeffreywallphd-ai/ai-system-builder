@@ -3,7 +3,7 @@
 # Functionality and Quality-Adjusted Optimization Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-10-22T01:06:49Z`
+- Updated: `2026-10-22T01:51:30Z`
 
 ## Objective
 
@@ -184,15 +184,15 @@ Current-source review identified this remaining native or policy boundary. The u
 
 | Increment | Outcome | Dependencies | Status |
 | --- | --- | --- | --- |
-| 1: Responsive workspace navigation and composition | Make Home, feature summaries and Add element useful at representative catalog scale without transferring or re-reading entire collections for counts or one candidate page. | None | `implemented-pending-qualification` |
-| 2: Efficient and reliable background task journeys | Make downloads, preparation, Context generation, training and image generation remain understandable and release resources correctly when users navigate, disconnect, cancel or encounter a failure, while reducing idle polling. | responsive-workspace-browse | `implemented-pending-qualification` |
+| 1: Responsive workspace navigation and composition | Make Home, feature summaries and Add element useful at representative catalog scale without transferring or re-reading entire collections for counts or one candidate page. | None | `completed` |
+| 2: Efficient and reliable background task journeys | Make downloads, preparation, Context generation, training and image generation remain understandable and release resources correctly when users navigate, disconnect, cancel or encounter a failure, while reducing idle polling. | responsive-workspace-browse | `completed` |
 | 3: Quality-preserving Context and RAG efficiency | Reduce measured query allocation and repeated work in the existing portable LanceDB/Context workflow while preserving exact validation, citations and retrieval correctness. | efficient-reliable-task-journeys | `implemented-pending-qualification` |
 | 4: Qualify complete user and model outcomes | Turn the implemented feature set into a truthful release decision through representative accessibility/usability, dataset/model and operational outcome evidence, fixing only measured in-scope gaps and preserving existing roadmap owners. | quality-preserving-context-efficiency | `verifying` |
 
 ## Increment 1: Responsive workspace navigation and composition
 
 - Id: `responsive-workspace-browse`
-- Status: `implemented-pending-qualification`
+- Status: `completed`
 - Dependencies: None
 
 Make Home, feature summaries and Add element useful at representative catalog scale without transferring or re-reading entire collections for counts or one candidate page.
@@ -218,12 +218,12 @@ Make Home, feature summaries and Add element useful at representative catalog sc
 
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
-| `transferred-asset-functional-rows`: All13 transferred asset/composition/workspace rows are replayed against the current source and classified with exact regression evidence or an explicit stale/deferred reason. Prove requested immutable versions, safe malformed-ref rejection, valid relationship and route/body contracts, non-shadowed projection routes, safe authoring summary/list shapes, current active-workspace recovery and structure-preserving subtree removal. Route admission remains finite, exact, authenticated and resource-authorized; unauthorized/unknown variants remain denied. No closure is inferred from the scanner report. | local | passed (review) |
+| `transferred-asset-functional-rows`: All13 transferred asset/composition/workspace rows are replayed against the current source and classified with exact regression evidence or an explicit stale/deferred reason. Prove requested immutable versions, safe malformed-ref rejection, valid relationship and route/body contracts, non-shadowed projection routes, safe authoring summary/list shapes, current active-workspace recovery and structure-preserving subtree removal. Route admission remains finite, exact, authenticated and resource-authorized; unauthorized/unknown variants remain denied. No closure is inferred from the scanner report. | local | passed (test) |
 | `owned-performance-probes`: All six configured operation/workload pairs have repository-owned probes that assert real outputs and negative failures. Record five warmups and at least thirty measured iterations on the same named environment; a no-op, mock-only or wrong-workload pass is rejected. | local | passed (test) |
-| `summary-cost-and-truth`: For a fixture of 1000 active systems, 10000 releases, 10000 model records and 10000 custom-asset records, desktop/thin summary values exactly match the reference reducer. Proposed target: one bounded summary request per page and no transfer of full release locks or model/asset catalogs solely for counts; one unrelated metric failure does not hide already available independent metrics. | local | passed (review) |
-| `composer-search-cost`: For 1000 authorized candidate definitions with sparse compatible matches and page size 25, candidate pages have no duplicates/skipped matches/repeated cursor loops; collect exact detail-read counts and payload bytes. Proposed target: at least 50 percent fewer detail-store round trips than unchanged baseline for the same complete compatible results; if no amplification exists, document the measured result instead of adding a speculative cache. | local | passed (review) |
-| `browse-performance-qualified`: All six existing p95 budgets pass with exact declared workloads: browse200ms, validate350ms, resolve150ms, build2500ms, preview750ms and handoff500ms. Proposed page-level target: summary and first compatible candidate page each usable within p95 1000ms on the named reference desktop and managed-server/thin-client profiles, excluding deliberate network impairment. | controlled-environment | pending (test) |
-| `browse-journey-preserved`: Search, Add element, selected exact detail, add/place, undo/redo, preview, save and reopen remain correct in both hosts; keyboard, focus restoration and 320 CSS-pixel reflow retain access to all controls. | local | passed (review) |
+| `summary-cost-and-truth`: For a fixture of 1000 active systems, 10000 releases, 10000 model records and 10000 custom-asset records, desktop/thin summary values exactly match the reference reducer. Proposed target: one bounded summary request per page and no transfer of full release locks or model/asset catalogs solely for counts; one unrelated metric failure does not hide already available independent metrics. | local | passed (test) |
+| `composer-search-cost`: For 1000 authorized candidate definitions with sparse compatible matches and page size 25, candidate pages have no duplicates/skipped matches/repeated cursor loops; collect exact detail-read counts and payload bytes. Proposed target: at least 50 percent fewer detail-store round trips than unchanged baseline for the same complete compatible results; if no amplification exists, document the measured result instead of adding a speculative cache. | local | passed (test) |
+| `browse-performance-qualified`: All six existing p95 budgets pass with exact declared workloads: browse200ms, validate350ms, resolve150ms, build2500ms, preview750ms and handoff500ms. Proposed page-level target: summary and first compatible candidate page each usable within p95 1000ms on the named reference desktop and managed-server/thin-client profiles, excluding deliberate network impairment. | controlled-environment | passed (test) |
+| `browse-journey-preserved`: Search, Add element, selected exact detail, add/place, undo/redo, preview, save and reopen remain correct in both hosts; keyboard, focus restoration and 320 CSS-pixel reflow retain access to all controls. | local | passed (test) |
 | `security-impact-reviewed`: Refresh the threat/control delta, prove isolation, failure bounds and non-disclosure for this increment, and preserve a rollback at least as secure as the forward path. Coordinate with the security remediation owner rather than duplicating its controls. | local | passed (review) |
 
 ### Verification
@@ -247,7 +247,7 @@ Revert the summary/candidate optimization as one slice while retaining fixture r
 ## Increment 2: Efficient and reliable background task journeys
 
 - Id: `efficient-reliable-task-journeys`
-- Status: `implemented-pending-qualification`
+- Status: `completed`
 - Dependencies: `responsive-workspace-browse`
 
 Make downloads, preparation, Context generation, training and image generation remain understandable and release resources correctly when users navigate, disconnect, cancel or encounter a failure, while reducing idle polling.
@@ -278,7 +278,7 @@ Make downloads, preparation, Context generation, training and image generation r
 | `active-progress-budget`: Under a local healthy test transport, active task progress and terminal state appear within two seconds at p95; explicit start/cancel/refresh invalidates idle backoff immediately. Navigation/reopen and workspace changes never publish stale or cross-workspace state. Separate transport delay from UI delay. | local | passed (test) |
 | `terminal-cleanup-independent`: A task that completes, fails, is cancelled or times out releases owned power/staging/process resources exactly once even when no feature page polls it; worker/host shutdown denies new work and reconciles existing records. Demonstrate this per supported lifecycle path; a TODO alone is not failure evidence. | local | passed (test) |
 | `retry-and-output-integrity`: A retryable failure retains correct user inputs or task identity, retries only when explicitly supported, and cannot duplicate model registration, artifact finalization, dataset publication or terminal notifications. Unsupported cancel/retry remains clearly unavailable. | local | passed (test) |
-| `task-host-qualification`: Controlled desktop and server/thin-client tests cover leave/reopen, disconnect, cancellation, worker failure and shutdown while tasks run, with measured progress delay and cleanup latency; no real credentials or provider traffic is required for deterministic host fixtures. | controlled-environment | pending (test) |
+| `task-host-qualification`: Controlled desktop and server/thin-client tests cover leave/reopen, disconnect, cancellation, worker failure and shutdown while tasks run, with measured progress delay and cleanup latency; no real credentials or provider traffic is required for deterministic host fixtures. | controlled-environment | passed (test) |
 | `security-impact-reviewed`: Refresh the threat/control delta, prove isolation, failure bounds and non-disclosure for this increment, and preserve a rollback at least as secure as the forward path. Coordinate with the security remediation owner rather than duplicating its controls. | local | passed (review) |
 
 ### Verification
