@@ -138,8 +138,20 @@ approval from a request to draft or inspect a roadmap.
    concise `not-security-relevant` review. Keep closely coupled work as chunks
    inside one cohesive vertical slice.
    The state engine rejects new or revised increments that omit this criterion.
-7. Present the complete roadmap and stop for explicit user approval. Record
-   `roadmap-approved` only after that approval.
+7. Publish the complete unapproved draft through `roadmap-defined` or the
+   applicable `roadmap-revised` event, then render and validate its canonical
+   roadmap/state. In repositories with the control-plane adapter, start or reuse
+   the review site and verify its live JSON projection matches the draft: the
+   expected nonzero increments, objectives, dependencies, work packages,
+   deliverables, criterion IDs/counts/descriptions/qualification, verification,
+   rollback and exclusions must be reviewable. A discovery-only 0/0 shell or an
+   ignored-only proposal is not a published draft. Repair missing, stale or
+   incomplete projection before asking. Implementation chunk plans follow
+   approval and increment research; they are not required to publish a draft.
+8. Share the verified review-site link and canonical full-roadmap reference before
+   requesting roadmap approval. Keep the draft unapproved; publication is neither
+   approval nor implementation authority. Record `roadmap-approved` only after
+   the user actually approves that published proposal.
 
 Do not start implementation while an option or roadmap approval is missing or stale.
 

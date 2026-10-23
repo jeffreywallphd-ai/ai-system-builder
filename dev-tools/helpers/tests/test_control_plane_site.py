@@ -83,6 +83,56 @@ class SiteTests(unittest.TestCase):
         self.assertIn("frame-ancestors 'none'", headers["Content-Security-Policy"])
         self.assertNotIn("Access-Control-Allow-Origin", headers)
 
+    def test_live_full_unapproved_draft_replaces_discovery_shell_without_granting_authority(self):
+        path = self.root / ".implementation-roadmaps/draft/state.json"
+        path.parent.mkdir(parents=True)
+        value = {"schemaVersion": 1, "slug": "draft", "name": "Reviewable draft", "objective": "Deliver a complete user journey",
+                 "status": "discovery", "roadmapApproval": None, "increments": []}
+        path.write_text(json.dumps(value))
+        shell = json.loads(self.request()[2])
+        self.assertEqual(shell["roadmaps"][0]["increments"], [])
+        value["status"] = "roadmap-review"
+        value["increments"] = [{"id": f"increment-{number}", "number": number, "title": f"Outcome {number}",
+            "objective": f"Deliver outcome {number}", "status": "pending", "completedChunks": [], "plan": None,
+            "dependsOn": [] if number == 1 else ["increment-1"],
+            "workPackages": [{"id": f"package-{number}", "title": f"Package {number}", "outcome": f"Usable outcome {number}"}],
+            "deliverables": [f"Delivered behavior {number}"],
+            "verification": [f"Execute focused verification {number}"],
+            "rollback": f"Revert the additive behavior {number} while retaining controls.",
+            "excluded": [f"Unrelated scope {number}"],
+            "acceptanceCriteria": [{"id": f"works-{number}", "description": f"The complete user task {number} passes.", "qualification": "local"},
+                                   {"id": "security-impact-reviewed", "description": "Security controls and denial behavior are reviewed.", "qualification": "local"}]}
+            for number in (1, 2)]
+        published = json.dumps(value)
+        path.write_text(published)
+        status, _, body = self.request()
+        self.assertEqual(status, 200)
+        live = json.loads(body)
+        draft = next(row for row in live["roadmaps"] if row["id"] == "draft")
+        self.assertEqual(draft["status"], "roadmap-review")
+        self.assertEqual(len(draft["increments"]), 2)
+        self.assertEqual(sum(len(i["criteria"]) for i in draft["increments"]), 4)
+        for number, increment in enumerate(draft["increments"], 1):
+            self.assertEqual(increment["objective"], f"Deliver outcome {number}")
+            self.assertEqual({c["id"] for c in increment["criteria"]}, {f"works-{number}", "security-impact-reviewed"})
+            self.assertTrue(all(c["description"] and c["outcome"] == "missing" for c in increment["criteria"]))
+            self.assertTrue(all(c["qualification"] == "local" for c in increment["criteria"]))
+            definition = value["increments"][number - 1]
+            self.assertEqual(increment["proposal"], {
+                "depends_on": definition["dependsOn"],
+                "work_packages": definition["workPackages"],
+                "deliverables": definition["deliverables"],
+                "verification": definition["verification"],
+                "rollback": definition["rollback"],
+                "excluded": definition["excluded"],
+            })
+            self.assertTrue(increment["chunk_plan_pending_approval"])
+            self.assertEqual(increment["chunks_complete"], 0)
+        self.assertNotEqual(live["source_digest"], shell["source_digest"])
+        self.assertEqual(path.read_text(), published)
+        self.assertIsNone(json.loads(path.read_text())["roadmapApproval"])
+        self.assertFalse(any(self.root.rglob("*.md")))
+
     def test_json_changes_are_dynamic_without_markdown(self):
         p = self.root / ".implementation-roadmaps/example/state.json"
         p.parent.mkdir(parents=True)

@@ -57,7 +57,10 @@ The workflow requires:
 2. two or three options for each high-level choice with one recommendation;
 3. explicit user approval of the selected high-level option;
 4. an ordered increment roadmap with acceptance criteria and rollback;
-5. explicit user approval of the completed roadmap;
+5. publication of the complete unapproved roadmap draft, verification that the
+   live review site exposes its expected nonzero increments/objectives and
+   criterion IDs/counts/details, and sharing its verified link before requesting
+   explicit user approval; a discovery-only 0/0 record is insufficient;
 6. increment-specific research and a written plan before each increment;
 7. coherent work chunks with tests, documentation, feedback, and evidence;
 8. final verification that distinguishes local checks from

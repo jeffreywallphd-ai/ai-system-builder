@@ -57,6 +57,11 @@ explicitly declarative.
 - Plans must identify assumptions, decision gates, affected boundaries, the security impact disposition, validation, and documentation impact.
 - Security-relevant plans must identify abuse/failure cases, owning controls, negative tests, safe rollback, residual risk, and controlled-environment evidence. Security cannot be excluded as a whole.
 - A plan does not grant permission to expand scope or make an unresolved decision.
+- Before requesting roadmap approval, publish and render the complete unapproved
+  draft through the roadmap skill. Verify the live review-site identity, expected
+  nonzero increments/objectives and criterion IDs/counts/details, and share its
+  verified link first. A discovery-only 0/0 record is insufficient. Publication
+  cannot supply approval or authorize implementation.
 
 ### 6. Implement within boundaries
 

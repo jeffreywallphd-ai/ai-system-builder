@@ -149,10 +149,27 @@ increment.
 
 ### 4. Obtain roadmap approval
 
-Present the full roadmap with its recommendation and important assumptions. Wait for
-explicit approval before recording the approval event or editing implementation
-code. Approval is fingerprinted; changed decisions or increment definitions require
-new approval.
+Publish the complete unapproved proposal through `roadmap-defined`, or the
+applicable `roadmap-revised` event, and render/validate the canonical state and
+roadmap before requesting roadmap approval. An ignored draft or discovery-only
+0/0 record is insufficient. Preserve the existing high-level option decisions.
+
+When the repository provides the control-plane review site, start or safely reuse
+its server and inspect the actual live JSON projection for this roadmap identity.
+Compare the expected nonzero increment and criterion counts/IDs, objectives,
+dependencies, work packages, deliverables, acceptance descriptions/qualification,
+verification, rollback and exclusions with the canonical draft. Make these
+proposal details reviewable on the site, with the canonical full-roadmap reference
+available. Implementation chunk plans follow approval and increment research;
+their absence does not make a complete proposal empty. Repair missing,
+stale, incomplete, truncated or malformed projection before asking. Share the
+verified review-site link and full-roadmap reference first, then present the
+recommendation and assumptions and request approval.
+
+Publication remains unapproved and read-only; neither a server link nor a
+populated draft grants implementation authority. Wait for explicit approval
+before recording the approval event or editing implementation code. Approval is
+fingerprinted; changed decisions or increment definitions require new approval.
 
 ### 5. Reconcile plan continuity after approval
 

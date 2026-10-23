@@ -102,6 +102,14 @@ roadmaps; it cannot replace their current candidate-bound completion evidence.
 
 Before publishing or changing the skill:
 
+Preserve draft-before-approval behavior across hosts: persist and render the
+complete unapproved proposal before asking. Where a review-site adapter exists,
+verify the actual live roadmap identity, expected nonzero increments/objectives
+and criterion IDs/counts/details, and share the verified link first. Test a
+discovery-only 0/0 shell becoming a reviewable draft through live JSON refresh,
+and prove that publication cannot start implementation or create approval.
+Portable installation alone does not install a server or grant authority.
+
 Preserve the portable new-increment blocker guard and its atomic denial tests.
 An approved not-started roadmap with an unresolved blocker cannot start; complete
 `resumed` reconciliation permits normal admission while approval, order and

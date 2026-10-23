@@ -990,6 +990,26 @@ class RoadmapEngineTest(unittest.TestCase):
         self.assertIn("pending", scenario["task"])
         self.assertIn("unrelated", scenario["task"])
 
+    def test_complete_draft_renders_before_approval_without_execution_authority(self) -> None:
+        self.apply({"type": "discovery-recorded", "summary": "The complete proposal is ready to publish.",
+                    "sources": [], "constraints": [], "securityImpact": security_impact(), "decisionRequired": False})
+        self.apply({"type": "roadmap-defined", "increments": [increment_definition("increment-1", 1),
+                    increment_definition("increment-2", 2, depends_on=["increment-1"])]})
+        self.assertEqual(self.state["status"], "roadmap-review")
+        self.assertIsNone(self.state["roadmapApproval"])
+        self.assertEqual(len(self.state["increments"]), 2)
+        self.assertTrue(all(i["objective"] and len(i["acceptanceCriteria"]) == 2 for i in self.state["increments"]))
+        roadmap.write_project_files(self.repo, self.state)
+        rendered = (self.repo / self.state["paths"]["roadmap"]).read_text(encoding="utf-8")
+        for identifier in ("criterion-1", "criterion-2", "security-impact-reviewed"):
+            self.assertIn(identifier, rendered)
+        before = copy.deepcopy(self.state)
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply({"type": "increment-started", "incrementId": "increment-1"})
+        self.assertEqual(self.state, before)
+        self.assertEqual(self.state["chunks"], [])
+        self.assertEqual(self.state["evidence"], [])
+
     def test_completed_chunk_does_not_complete_pending_technical_parent(self) -> None:
         self.define_and_approve([increment_definition("increment-1", 1,
                                                      qualification="controlled-environment", allow_pending=True)])

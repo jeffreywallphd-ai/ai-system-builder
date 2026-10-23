@@ -101,6 +101,11 @@ Before architecture-sensitive implementation, consult `docs/adr/decision-readine
 
 ## Implementation Roadmap Routing
 
+Requests for roadmap approval must first publish the complete unapproved draft
+through the roadmap skill and verify its live review-site increments, objectives
+and acceptance details. A discovery-only 0/0 shell is insufficient; share the
+verified link before asking. Publication never supplies approval.
+
 Approved not-started work is Pending (`ready`); active work is In progress
 (`executing`). Reserve Blocked for an actual obstacle. User-ordered future work
 stays queued in its plan, without inventing a blocker or automatic cross-roadmap

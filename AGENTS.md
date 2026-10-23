@@ -53,6 +53,9 @@ This file is the repository entry point for coding agents. Keep it short; use th
 - Commit coherent completed, tested and reviewed roadmap chunks before continuing;
   pending parent qualification does not defer a safe checkpoint. Follow the skill's
   owned-change and source-claim safeguards; a checkpoint grants no release authority.
+- Publish the complete unapproved roadmap draft and verify its live review-site
+  increments and acceptance details before asking for roadmap approval. Share the
+  verified site link; a discovery-only 0/0 record is not a reviewable proposal.
 - Keep roadmap implementation reports concise and temporary under ignored
   `docs/tmp/`. Preserve the full roadmap and JSON state, and remove the
   generated report only after the user explicitly approves the completed

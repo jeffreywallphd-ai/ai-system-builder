@@ -293,6 +293,17 @@
       "acceptanceSignals": ["Checkpoint only the reviewed chunk's owned dependency-complete paths or hunks after releasing source claims. Preserve unrelated index/worktree changes, report the actual commit identity and create a fresh baseline for later work. Parent hardware qualification stays pending; no accuracy rerun, parent completion, push, history rewrite or main advancement is inferred."]
     },
     {
+      "id": "publish-roadmap-draft-before-approval",
+      "task": "Prepare a complete implementation roadmap for user approval while preserving security authority. The review site currently shows only a discovery shell with zero increments and criteria, while the full unapproved proposal is in ignored preparation files.",
+      "affectedPaths": ["skills/manage-implementation-roadmaps/SKILL.md", "docs/diagnostics/implementation-roadmap-skill.md"],
+      "expectedPacks": ["docs-standards", "security"],
+      "forbiddenPacks": ["runtime-installer", "image-generation"],
+      "requiredSources": ["skills/manage-implementation-roadmaps/SKILL.md", "skills/manage-implementation-roadmaps/references/workflow.md", "docs/diagnostics/ai-development-control-plane.md"],
+      "requiredChecks": ["npm run docs:check", "npm run agent-support:check"],
+      "decisionExpectation": "proceed",
+      "acceptanceSignals": ["Publish the complete unapproved draft through the governed roadmap event and canonical render, verify its live expected nonzero increment/objective/criterion identities and details, repair missing projection, then share the verified review link before requesting approval. A discovery shell, ignored proposal or live server alone is insufficient; no approval or implementation is inferred."]
+    },
+    {
       "id": "agent-governance-change",
       "task": "Change agent governance and context evaluation rules while keeping documentation and CI aligned.",
       "affectedPaths": ["docs/standards/ai-agent-development-standards.md", "dev-tools/agent-evals/scenarios.json"],

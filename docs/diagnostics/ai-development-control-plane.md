@@ -129,6 +129,14 @@ parent completion or release.
 
 ## Roadmaps and qualification
 
+Before requesting roadmap approval, publish the complete unapproved draft through
+the skill engine and verify the live JSON projection against the canonical
+roadmap: expected nonzero increments, objectives, criterion IDs/counts and full
+details must be reviewable. A discovery-only 0/0 record is insufficient. Repair
+missing or stale projection and share the verified site link before asking. The
+site remains read-only and publication supplies no approval or implementation
+authority.
+
 An explicit user-authorized technical-policy change uses the roadmap skill's
 replacement-only `technical-acceptance-revised` event. It preserves criterion
 identity/qualification, original evidence/chunks/blockers and completion policy,

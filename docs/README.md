@@ -88,7 +88,8 @@ This directory separates canonical system guidance from downstream task context 
   from intent even without the exact skill name; a request such as "use a skill
   if available to create an implementation roadmap" is sufficient.
   Commit completed, tested and reviewed chunks through its scoped checkpoint
-  procedure while retaining any pending parent qualification.
+  procedure while retaining any pending parent qualification. Publish and verify
+  the complete unapproved draft on the review site before asking for approval.
 - Narrow implementation task: use `docs/context/prompt-routing.md` to add only materially relevant packs.
 - Architecture or dependency change: read `docs/architecture/system-overview.md`, `docs/architecture/module-dependency-rules.md`, and related ADRs.
 - Persistence or deployment work: read `docs/architecture/persistence-and-storage.md`, `docs/architecture/host-model.md`, ADR-0003, and ADR-0004.
