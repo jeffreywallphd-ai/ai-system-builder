@@ -2440,6 +2440,42 @@
         "Observed job exit does not prove that file protection survives until worker exit after a guardian crash. Stable tree/security protection and protected durable accounting remain unimplemented or unqualified. Guarded restart stays denied and unknown retained staging consumes the full 12 GiB allowance.",
         "This is reviewed local support at its recorded snapshot. Parent criterion, increment and roadmap qualification are unchanged; remaining technical implementation and checks are agent-owned pending work, with no human action required."
       ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "versioned-dataset-lineage-and-publishing",
+      "criterion_id": "controlled-provider-publication-is-qualified",
+      "work_id": "private-provider-publication-qualification",
+      "work_criteria": [
+        "bounded-private-operator",
+        "real-private-evidence"
+      ],
+      "receipt_digest": "12a1cfe525de9eae31dfaf1f127a1fb12f2fdca57782efd4d1d2affe0be07769",
+      "review_digest": "c3a8d6475b11803f46a0aed7bcc926f65a6d2450e062681e3cb41fa41ba515e0",
+      "scope": "Actual private test repository creation, one-commit publication and exact-revision retrieval of three synthetic files passed. Anonymous and invalid credentials were denied; unconfirmed Public publication stopped before network work. Immediate same-process application retry added no request. All four registered checks and an isolated 18-test compatibility set, including nine helper tests, passed.",
+      "limitations": [
+        "This is reviewed application/provider support at its recorded working-source snapshot. Isolated committed-source compatibility tests do not rebind the live runs. It does not qualify a parent criterion, increment or roadmap.",
+        "The provider returned the generated documentation bytes correctly. Separate website requests returned HTTP 401, so website rendering remains unqualified; the existing token still works for approved API transfers. No extra credential request is inferred.",
+        "Three synthetic files remain in the private test repository for replay. No remote files were deleted. Durable host retry, meaningful cleanup/failure recovery, mounted UI, governed ingestion, scale and advanced/native/model checks remain pending agent work."
+      ]
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "increment_id": "governed-scalable-ingestion",
+      "criterion_id": "controlled-ingestion-scale-is-qualified",
+      "work_id": "private-provider-publication-qualification",
+      "work_criteria": [
+        "bounded-private-operator",
+        "real-private-evidence"
+      ],
+      "receipt_digest": "12a1cfe525de9eae31dfaf1f127a1fb12f2fdca57782efd4d1d2affe0be07769",
+      "review_digest": "c3a8d6475b11803f46a0aed7bcc926f65a6d2450e062681e3cb41fa41ba515e0",
+      "scope": "Actual private test repository creation, one-commit publication and exact-revision retrieval of three synthetic files passed. Anonymous and invalid credentials were denied; unconfirmed Public publication stopped before network work. Immediate same-process application retry added no request. All four registered checks and an isolated 18-test compatibility set, including nine helper tests, passed.",
+      "limitations": [
+        "This is reviewed application/provider support at its recorded working-source snapshot. Isolated committed-source compatibility tests do not rebind the live runs. It does not qualify a parent criterion, increment or roadmap.",
+        "The provider returned the generated documentation bytes correctly. Separate website requests returned HTTP 401, so website rendering remains unqualified; the existing token still works for approved API transfers. No extra credential request is inferred.",
+        "Three synthetic files remain in the private test repository for replay. No remote files were deleted. Durable host retry, meaningful cleanup/failure recovery, mounted UI, governed ingestion, scale and advanced/native/model checks remain pending agent work."
+      ]
     }
   ]
 }

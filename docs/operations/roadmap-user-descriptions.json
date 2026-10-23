@@ -9996,6 +9996,56 @@
           "No action is needed from you."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "2c756cfdaade27a221a27c552b052b865323c7a2bf577fc7c63c26a784186307",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The private test repository was created, and three synthetic files were published together.",
+          "All three files were downloaded from the recorded commit with matching checksums.",
+          "Anonymous access, an invalid token and unconfirmed public publication were refused.",
+          "Retrying in the same running application added no provider request.",
+          "Eighteen isolated compatibility tests passed, including nine helper tests."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "2148e2983c9e7ef458b69135be73b99bb677de9ddd8760623174015e93770ea5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This completed work supports the roadmap at its recorded source version.",
+          "The compatibility tests did not repeat the live provider tests.",
+          "Other roadmap requirements remain incomplete."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "be1a46eec6ad57b753df9090f64148c36ceccd540e2101e67f27ac9dd06e7997",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The private data transfers succeeded.",
+          "The provider website refused the document-page requests, so its rendering is not yet checked.",
+          "The existing token still works for the approved data transfers. No additional credential is requested."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3c277ab70c98fa6eb7f1f96e1ba8a9acd180e3e855d24ab821cf0f8d71e4e324",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Three synthetic files remain in the private test repository for repeat tests. No remote files were deleted.",
+          "The agent must still test retry after restart, cleanup and recovery after failure.",
+          "The agent must also finish the relevant app screens, import, scale and advanced checks. No action is needed from you."
+        ]
+      }
     }
   ]
 }

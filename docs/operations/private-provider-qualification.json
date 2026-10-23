@@ -1,0 +1,61 @@
+{
+  "schema_version": "private-provider-qualification-assessment-v1",
+  "status": "reviewed-local-support-parent-pending",
+  "work_id": "private-provider-publication-qualification",
+  "receipt_digest": "12a1cfe525de9eae31dfaf1f127a1fb12f2fdca57782efd4d1d2affe0be07769",
+  "review_digest": "c3a8d6475b11803f46a0aed7bcc926f65a6d2450e062681e3cb41fa41ba515e0",
+  "operator_commit": "44b211af2c2671a8d696a1fe9ba0e8c379591ca3",
+  "raw_report_hashes": {
+    "initial": "46c5d1262f35beaf848fc9e5abc4a1ff9be1075bbdc0e32e402560038aef15d0",
+    "existing_repository_replay": "82874b18882edcbcdc538ffcc61110a8b10c81bfc876a007f10c32b68236cfd7",
+    "read_only_rendering_probe": "7476d8ed46176e7b0b9a588cbed45ae5e80bee3ee4fb6b5d75fde74f6f26aff4"
+  },
+  "actual_provider_facts": {
+    "private_repository_created": true,
+    "synthetic_files": 3,
+    "total_bytes": 1543,
+    "files": [
+      {
+        "sha256": "2f0a396feb5a6ccecffb94769067c4eead4141ddb422f30ec23defa73e719885",
+        "size_bytes": 362
+      },
+      {
+        "sha256": "c1ae6ccd4b0b33fae34cd138cf8e1e2782a7409ae8b54f8c3922cad50261b50f",
+        "size_bytes": 1085
+      },
+      {
+        "sha256": "7a2b64de472410eb36499d6033879667ec792613909b0c82245b8acc8799a0d4",
+        "size_bytes": 96
+      }
+    ],
+    "initial_revision": "eb21836acb6d9541ec9db3a26bbd2bec149980c7",
+    "replay_revision": "efe145578c187676ffa8c64586c41796fdf4e318",
+    "immutable_download_hashes_match": true,
+    "immediate_application_retry_added_requests": 0,
+    "anonymous_http_status": 401,
+    "invalid_credential_http_status": 401,
+    "unconfirmed_public_denied_before_network": true,
+    "remote_synthetic_files_retained": 3,
+    "remote_files_deleted": 0,
+    "local_payload_files_written": 0
+  },
+  "checks": {
+    "registered": [
+      "documentation",
+      "agent-support",
+      "architecture",
+      "focused-tests"
+    ],
+    "helper_tests": 9,
+    "isolated_head_plus_helper_tests": 18,
+    "isolated_failures": 0,
+    "isolated_skips": 0
+  },
+  "scope_limits": [
+    "Live provider evidence used the recorded full working-source graph. Independent review proved that the final plan-only correction leaves executed provider behavior unchanged. The isolated HEAD-plus-helper tests establish dependency compatibility, not new external qualification.",
+    "Documentation bytes were generated and downloaded with matching hashes. The separate read-only bearer-authenticated website probe returned HTTP 401 for both pages; provider-side rendering is not qualified. The existing token remains valid for authorized API operations.",
+    "Immediate application retry is qualified only against the same in-memory version repository. Process-restart durable retry, meaningful cleanup and failure recovery, mounted-host UI, governed ingestion, large-file/website scale and advanced runtime/model/OCR remain pending agent work. No native/offload/model pass is asserted."
+  ],
+  "parent_qualification": false,
+  "human_action_required": false
+}
