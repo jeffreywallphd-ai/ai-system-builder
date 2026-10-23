@@ -43,3 +43,40 @@ chrome so operating-system colors cannot leak into product forms. Use
 `ui-file-input` for file selection, and an explicit `ui-button` class for
 actions. Semantic warning colors remain reserved for warning state; they are
 not a form-control theme.
+
+
+Page dashboard details live inside the metric description so assistive technology
+can associate them with its term. Keep their normal wrapping, small text and
+normal weight explicit rather than inheriting the large numeric value styling.
+
+
+Reduced-motion preference suppresses cosmetic transitions/animations throughout
+shared shell descendants and their pseudo-elements; loading and status text
+remain visible. At narrow viewport widths the header scrolls normally, so a
+multirow workspace header cannot cover controls at native zoom. Wide headers
+retain their sticky position.
+
+
+Shell, metric, panel, tab-body and numbered workflow reading surfaces use opaque
+solid dark backgrounds. Keep decorative rails, borders and shadows separate from
+text backdrops so real contrast stays deterministic on both host renderers.
+
+Selected navigation, tiny type badges and empty-state text also use solid dark
+backings. Badge foreground and border retain the type color. Primary-button hover
+uses a darker mix of the primary blue so white normal-size text retains contrast;
+outline/destructive control semantics and shared focus rings remain distinct.
+
+Glossary help buttons set an explicit unit line height: inherited body line
+height can place their small glyph outside the button's opaque background.
+
+The custom file chooser retains an opaque, correctly spaced label backing and
+shows a focus ring when its native input receives keyboard focus.
+
+Workflow numbers use outlined pills over opaque step cards. The dashed connector
+paints behind those cards, preserving the steps' existing stacking order and
+keeping it out of numeral backdrops. Text numbers retain normal-text contrast;
+real host checks sample first, active and default number interiors in device pixels.
+
+Asset card/detail headers wrap their title and source badge when space is tight.
+Badges keep intrinsic width; long titles can break within the available width.
+Actual wide,320px and native-zoom checks reject title/badge overlap or overflow.

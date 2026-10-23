@@ -19,15 +19,13 @@
 .ui-workflow::before {
   content: "";
   position: absolute;
-  z-index: 2;
+  /* Paint before opaque cards, retaining the steps' existing stacking behavior. */
+  z-index: auto;
   inset-block: 1.75rem 2rem;
   inset-inline-start: 1.55rem;
-  inline-size: 1px;
-  background: repeating-linear-gradient(
-    to bottom,
-    rgb(107 153 220 / 55%) 0 0.2rem,
-    transparent 0.2rem 0.42rem
-  );
+  inline-size: 0;
+  border-inline-start: 1px dashed rgb(107 153 220 / 55%);
+  background: transparent;
   pointer-events: none;
 }
 
@@ -55,7 +53,7 @@
   place-items: center;
   border: 1px solid rgb(89 139 216 / 34%);
   border-radius: var(--radius-pill);
-  background: linear-gradient(145deg, #17375d, #0b1c33);
+  background: transparent;
   color: #c5ddff;
   font-size: var(--font-size-xs);
   font-weight: 720;
@@ -75,7 +73,7 @@
 .ui-workflow__step[data-active="true"]::before,
 .ui-workflow__step:has(.ui-panel__toggle[aria-expanded="true"])::before {
   border-color: rgb(96 157 255 / 72%);
-  background: linear-gradient(145deg, #28528b, #10294a);
+  background: transparent;
   box-shadow:
     0 0 0 0.22rem rgb(7 20 36 / 92%),
     0 0 0.85rem rgb(76 145 255 / 34%);

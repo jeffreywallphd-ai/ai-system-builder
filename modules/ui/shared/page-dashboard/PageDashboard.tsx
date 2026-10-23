@@ -61,10 +61,10 @@ export function PageDashboard({
             <dt>{metric.label}</dt>
             <dd>
               {loading || state.status === "unavailable" ? "—" : metric.value}
-            </dd>
             {metric.detail ? (
               <span className="page-dashboard__detail">{metric.detail}</span>
             ) : null}
+            </dd>
           </div>
         ))}
       </dl>

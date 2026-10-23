@@ -453,12 +453,15 @@
 .asset-definition-card__header,
 .asset-library-detail__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-sm);
 }
 
 .asset-definition-card__title {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
   font-size: var(--font-size-lg);
   font-weight: 700;
 }
@@ -473,6 +476,7 @@
 }
 
 .asset-library-badge {
+  flex: 0 0 auto;
   min-block-size: 1.5rem;
   display: inline-flex;
   align-items: center;
@@ -670,9 +674,16 @@
 }
 
 .asset-package-manager__file {
+  background: var(--color-bg-elevated);
+  line-height: var(--line-height-base);
   position: relative;
   inline-size: fit-content;
   overflow: hidden;
+}
+
+.asset-package-manager__file:focus-within {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .asset-package-manager__starter {

@@ -16,7 +16,7 @@ export function NotificationBell() {
       type="button"
       aria-label={notifications.unreadCount > 0 ? `Notifications, ${notifications.unreadCount} unread` : "Notifications"}
       aria-haspopup="dialog"
-      aria-controls={NOTIFICATION_PANEL_ID}
+      aria-controls={notifications.state.panelOpen ? NOTIFICATION_PANEL_ID : undefined}
       aria-expanded={notifications.state.panelOpen}
       title="Notifications"
       onClick={() => notifications.setPanelOpen(!notifications.state.panelOpen)}

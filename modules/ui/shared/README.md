@@ -275,3 +275,9 @@ without an inline duplicate, including preflight rejection. Shared memory copy
 uses validated numeric RAM/VRAM shortfalls, subtracts permitted overflow and rounds
 upward. Missing facts never produce an invented amount or bypass a guard.
 Other contextual validation and security/readiness blockers remain unchanged.
+
+Page dashboard metric details belong inside their description (`dd`), preserving
+valid definition-list semantics on Assets and Systems.
+
+Notification bell controls reference the panel only while it is mounted;
+expanded state, Escape dismissal and focus restoration remain unchanged.

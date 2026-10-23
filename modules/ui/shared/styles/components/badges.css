@@ -8,11 +8,7 @@
   padding: 0 var(--space-xs);
   border: 1px solid rgb(var(--ui-type-color) / 45%);
   border-radius: 0.35rem;
-  background: linear-gradient(
-    145deg,
-    rgb(var(--ui-type-color) / 34%),
-    rgb(var(--ui-type-color) / 14%)
-  );
+  background: var(--color-bg-elevated);
   color: rgb(var(--ui-type-color));
   font-size: 0.625rem;
   font-weight: 760;

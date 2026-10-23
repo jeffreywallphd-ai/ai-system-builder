@@ -53,9 +53,7 @@
   border: 1px solid
     color-mix(in srgb, var(--color-border) 78%, var(--color-accent));
   border-radius: var(--radius-md);
-  background:
-    linear-gradient(135deg, rgb(76 145 255 / 14%), transparent 66%),
-    var(--color-bg-elevated);
+  background: var(--color-bg-elevated);
   box-shadow: var(--shadow-sm);
 }
 
@@ -83,6 +81,9 @@
   margin-block-start: var(--space-xs);
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
+  font-weight: 400;
+  line-height: var(--line-height-base);
+  white-space: normal;
 }
 
 .page-dashboard__status {
