@@ -362,3 +362,19 @@ and a diagnostic if either limit is exceeded; current work beyond the old
 Linked work resolves complete criterion details by exact roadmap/increment/criterion
 identity in the same response; it does not duplicate long requirement/evidence
 trees or change their qualification.
+
+## Plain-language blocker explanations
+
+Optional `plain_language` copy on an existing blocker reference contains exactly
+`needed` (400 characters), `prevents` (800) and `action` (800). The same current
+criterion-description and still-open canonical blocker digest checks govern this
+copy. Shared blocker explanations must agree; conflicting or invalid copy falls
+back to canonical facts with a diagnostic. Sanitization and inert text rendering
+remain mandatory. No copy changes status, authority or qualification.
+
+Parent and affected-criterion views show **What’s needed**, **Why it matters** and
+**What to do**, followed by expandable **Technical details** retaining the original
+canonical summary/action and criterion-specific operation explanation. Historical
+technical wording can predate newly supplied access; primary copy must accurately
+distinguish authorized access from successful verification. Do not ask for access
+again when it has been supplied, or imply it works before an actual check passes.

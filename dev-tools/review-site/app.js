@@ -166,6 +166,25 @@ function proposalDetails(increment) {
   return detail;
 }
 
+function appendBlockerExplanation(container, row, criterion = false) {
+  const copy = row.plain_language;
+  const limits = { needed: 400, prevents: 800, action: 800 };
+  const valid = copy && typeof copy === "object" && !Array.isArray(copy) &&
+    Object.keys(copy).length === 3 && Object.entries(limits).every(([key, limit]) =>
+      typeof copy[key] === "string" && copy[key].trim() && copy[key].length <= limit);
+  const technical = valid ? el("details", undefined, "blocker-technical-details") : container;
+  if (valid) {
+    container.append(el("strong", `What’s needed: ${copy.needed}`),
+      el("p", `Why it matters: ${copy.prevents}`), el("p", `What to do: ${copy.action}`));
+    technical.append(el("summary", "Technical details"));
+  }
+  if (typeof row.kind === "string" && typeof row.id === "string") technical.append(el("strong", `${readable(row.kind.slice(0, 80))} · ${readable(row.id.slice(0, 80))}`));
+  technical.append(el("p", row.summary.slice(0, 1600)));
+  if (criterion) technical.append(el("p", `Prevents: ${row.prevents.slice(0, 800)}`));
+  technical.append(el("p", `${criterion ? "Needed action" : "Required action"}: ${row.required_action.slice(0, 1600)}`, "small"));
+  if (valid) container.append(technical);
+}
+
 function blockerDetails(roadmap) {
   const rows = Array.isArray(roadmap.blockers) ? roadmap.blockers.slice(0, 40) : [];
   if (!rows.length) return null;
@@ -173,8 +192,8 @@ function blockerDetails(roadmap) {
   details.append(el("summary", `${roadmap.status === "blocked" ? "Why blocked" : "Recorded obstacles"} · ${roadmap.blocker_count || rows.length} recorded obstacles`));
   for (const row of rows) {
     if (!row || typeof row !== "object" || typeof row.summary !== "string" || typeof row.required_action !== "string") continue;
-    if (typeof row.kind === "string" && typeof row.id === "string") details.append(el("strong", `${readable(row.kind.slice(0, 80))} · ${readable(row.id.slice(0, 80))}`));
-    details.append(el("p", row.summary.slice(0, 1600)), el("p", `Required action: ${row.required_action.slice(0, 1600)}`, "small"));
+    const explanation = el("div", undefined, "blocker-explanation");
+    appendBlockerExplanation(explanation, row); details.append(explanation);
   }
   if (roadmap.blocker_count > rows.length) details.append(el("p", `Showing ${rows.length} of ${roadmap.blocker_count} recorded obstacles.`, "small"));
   return details;
@@ -190,9 +209,7 @@ function criterionBlockers(criterion) {
   const list = el("ul");
   for (const row of rows) {
     const item = el("li");
-    item.append(el("strong", row.summary.slice(0, 1600)),
-      el("p", `Prevents: ${row.prevents.slice(0, 800)}`),
-      el("p", `Needed action: ${row.required_action.slice(0, 1600)}`));
+    appendBlockerExplanation(item, row, true);
     list.append(item);
   }
   section.append(list);

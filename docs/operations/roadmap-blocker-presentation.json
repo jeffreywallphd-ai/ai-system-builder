@@ -10,7 +10,12 @@
         {
           "blocker_id": "restricted-legacy-authority-review-pending",
           "source_blocker_digest": "4be25f9ecdd629e8438cd89bbe36a4dbb844827a48e9f99e184fb94fe9b44cd9",
-          "prevents": "Independent qualification of the existing Assets authority component cannot be completed while its review is restricted."
+          "prevents": "Independent qualification of the existing Assets authority component cannot be completed while its review is restricted.",
+          "plain_language": {
+            "needed": "An independent security review of Assets access controls.",
+            "prevents": "This part of the Assets roadmap depends on a security review that is currently restricted. The completed UI tests do not replace it.",
+            "action": "Wait until an allowed independent review is available. Continue other permitted work without retrying the restricted review."
+          }
         }
       ]
     },
@@ -23,7 +28,12 @@
         {
           "blocker_id": "private-provider-and-advanced-runtime-unavailable",
           "source_blocker_digest": "17c028da2af802617154f557ece278b63099b5d3815cae6f88eb5742b6e8d9b7",
-          "prevents": "Real publication to a private Hugging Face test repository requires an authorized repository and provider credentials configured through the existing secure credential path."
+          "prevents": "Real publication to a private Hugging Face test repository requires an authorized repository and provider credentials configured through the existing secure credential path.",
+          "plain_language": {
+            "needed": "Verification of the authorized private Hugging Face test repository access.",
+            "prevents": "Access has been supplied and use is authorized. The private publishing and ingestion checks still need to verify that access works. Other local tests can continue.",
+            "action": "Verify the saved credential through the existing secure path, create the approved private test repository if absent, and run a small synthetic upload and download. Record the result before closing this check."
+          }
         }
       ]
     },
@@ -36,7 +46,12 @@
         {
           "blocker_id": "private-provider-and-advanced-runtime-unavailable",
           "source_blocker_digest": "17c028da2af802617154f557ece278b63099b5d3815cae6f88eb5742b6e8d9b7",
-          "prevents": "The private-provider portion of ingestion qualification needs an authorized private test repository and provider credentials. Independent local/website/scale subchecks can continue."
+          "prevents": "The private-provider portion of ingestion qualification needs an authorized private test repository and provider credentials. Independent local/website/scale subchecks can continue.",
+          "plain_language": {
+            "needed": "Verification of the authorized private Hugging Face test repository access.",
+            "prevents": "Access has been supplied and use is authorized. The private publishing and ingestion checks still need to verify that access works. Other local tests can continue.",
+            "action": "Verify the saved credential through the existing secure path, create the approved private test repository if absent, and run a small synthetic upload and download. Record the result before closing this check."
+          }
         }
       ]
     },
@@ -49,7 +64,12 @@
         {
           "blocker_id": "advanced-runtime-qualification-unavailable",
           "source_blocker_digest": "6d23be515c8a30a6c3fe529b87224217f215b63d31fd2bc3c435b3a6fd42b749",
-          "prevents": "The OCR and layout-extraction portion cannot qualify until a selected OCR provider/runtime is governed and available. Available model/UI subchecks can continue."
+          "prevents": "The OCR and layout-extraction portion cannot qualify until a selected OCR provider/runtime is governed and available. Available model/UI subchecks can continue.",
+          "plain_language": {
+            "needed": "An approved OCR tool for reading scanned text and document layout.",
+            "prevents": "The OCR and layout tests cannot run because the selected tool is not yet approved and available. Other available tests can continue.",
+            "action": "Select and configure the OCR tool through the approved workflow, then run the OCR and layout tests."
+          }
         }
       ]
     },
@@ -62,7 +82,12 @@
         {
           "blocker_id": "native-staging-restart-proof-unavailable",
           "source_blocker_digest": "ac246c697ef4560b6bf62c8ef186122b0ebfb615f03902f987e9adcfa4c636e9",
-          "prevents": "Actual optional offload is denied until retained staging protection/accounting and owned-worker exit/recovery proof qualify. Completed Standard model-quality tests are already closed and must not be rerun."
+          "prevents": "Actual optional offload is denied until retained staging protection/accounting and owned-worker exit/recovery proof qualify. Completed Standard model-quality tests are already closed and must not be rerun.",
+          "plain_language": {
+            "needed": "A safe restart path for low-memory mode.",
+            "prevents": "Another offload test cannot run safely until old temporary files are protected, counted against the disk limit and separated from a new test.",
+            "action": "Finish and test the Windows file protection, disk accounting, background-worker shutdown and restart safeguards. Completed model accuracy tests stay closed."
+          }
         }
       ]
     },
@@ -75,12 +100,22 @@
         {
           "blocker_id": "model-file-effect-native-qualification",
           "source_blocker_digest": "760f7e0af4d151645f997f55b4eebc461fc35ec4e849467110dd0e22605ddd26",
-          "prevents": "Supported model file operations cannot qualify until identity-preserving native file-effect and concurrency controls have actual supported-host evidence."
+          "prevents": "Supported model file operations cannot qualify until identity-preserving native file-effect and concurrency controls have actual supported-host evidence.",
+          "plain_language": {
+            "needed": "Proof that model file operations stay inside the intended folder.",
+            "prevents": "The software has not yet demonstrated safe model file operations when another process changes a folder or file at the same time.",
+            "action": "Complete the supported Windows file-operation controls and run the concurrency tests on a supported host."
+          }
         },
         {
           "blocker_id": "approved-native-design-qualification-pending",
           "source_blocker_digest": "bb1db8cfd43cb7ecd589965731e27e02813dee5c1bbf7c12b709be1d6b023d39",
-          "prevents": "The selected native ownership design is approved, but implementation, protected ownership publication and supported-host race qualification are not yet demonstrated."
+          "prevents": "The selected native ownership design is approved, but implementation, protected ownership publication and supported-host race qualification are not yet demonstrated.",
+          "plain_language": {
+            "needed": "Implementation and tests for the approved Windows file-ownership design.",
+            "prevents": "The design is approved, but the actual protected file-ownership and race-test evidence is still missing.",
+            "action": "Implement the approved design and collect the supported-host ownership and concurrency test results."
+          }
         }
       ]
     },
@@ -93,7 +128,12 @@
         {
           "blocker_id": "legacy-authority-independent-review-unavailable",
           "source_blocker_digest": "754a10029b3f86062eefdb2730cf6b06d1cb4edfcd9869e282aa2a8273b45743",
-          "prevents": "The legacy Assets authorization portion of this increment's independent security review cannot be completed while that separately invoked review remains restricted. Other permitted threat/control work may continue; author tests cannot replace it."
+          "prevents": "The legacy Assets authorization portion of this increment's independent security review cannot be completed while that separately invoked review remains restricted. Other permitted threat/control work may continue; author tests cannot replace it.",
+          "plain_language": {
+            "needed": "An independent security review of the existing Assets access controls.",
+            "prevents": "The legacy Assets portion of this security review cannot close because the independent review is currently restricted. Author tests cannot replace it.",
+            "action": "Wait until an allowed independent review is available. Continue other permitted security work without retrying the restricted review."
+          }
         }
       ]
     }

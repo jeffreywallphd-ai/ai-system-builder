@@ -505,3 +505,54 @@ test("roadmap labels distinguish queued pending, in-progress, approval and actua
   } finally { window.close(); }
 });
 
+test("review explains blockers plainly while retaining original technical facts and pending qualification", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), {
+    runScripts: "outside-only", url: "http://127.0.0.1:8766",
+  });
+  const { window } = dom;
+  const blocker = { id: "provider-check", kind: "controlled-environment", summary: "Original technical summary predates supplied access.",
+    prevents: "Private publication qualification has not executed.", required_action: "Original canonical required action.",
+    plain_language: { needed: "Verification of the authorized private test access.",
+      prevents: "Access has been supplied and use is authorized. Its operation still needs verification.",
+      action: "Verify saved access, create the approved private test repository if absent, and run a small synthetic upload and download." } };
+  let response = { schema_version: "development-review-v1", source_digest: "plain-blocker-first",
+    roadmaps: [{ id: "provider", title: "Private provider checks", status: "blocked", current_increment: "one", blocker_count: 1,
+      blockers: [blocker], increments: [{ id: "one", number: 1, title: "Provider verification", status: "blocked", objective: "Retain actual evidence",
+        chunks_complete: 0, chunks_planned: 0, criteria: [{ id: "qualified", description: "Actual provider behavior is qualified.",
+          evaluation_mode: "agent-executable-technical", qualification: "controlled-environment", outcome: "pending", blockers: [blocker] }] }] }],
+    work_items: [], evaluations: [], feedback: [], diagnostics: [] };
+  window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) });
+  window.setInterval = () => 1;
+  try {
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8"));
+    await pause();
+    const parent = window.document.querySelector(".roadmap-blockers .blocker-explanation");
+    const criterion = window.document.querySelector(".criterion-blockers li");
+    for (const container of [parent, criterion]) {
+      assert.match(container.firstElementChild.textContent, /What’s needed: Verification of the authorized private test access/);
+      assert.match(container.textContent, /Why it matters: Access has been supplied and use is authorized/);
+      assert.match(container.textContent, /What to do: Verify saved access, create the approved private test repository if absent/);
+      const technical = container.querySelector(".blocker-technical-details");
+      assert.equal(technical.open, false);
+      assert.equal(technical.querySelector("summary").textContent, "Technical details");
+      assert.match(technical.textContent, /Original technical summary predates supplied access/);
+      assert.match(technical.textContent, /Original canonical required action/);
+    }
+    assert.match(criterion.querySelector(".blocker-technical-details").textContent, /Prevents: Private publication qualification has not executed/);
+    assert.equal(window.document.querySelector(".criteria > li > .status").textContent, "technical check pending");
+    assert.equal(window.document.querySelector(".card-heading > .status").textContent, "blocked");
+    response = structuredClone(response);
+    response.source_digest = "plain-copy-inert-markup";
+    response.roadmaps[0].increments[0].criteria[0].blockers[0].plain_language.needed = "<img src=x onerror=alert(1)> remains inert.";
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.equal(window.document.querySelectorAll("img").length, 0);
+    assert.match(window.document.querySelector(".criterion-blockers").textContent, /<img src=x/);
+    response.source_digest = "invalid-copy-canonical-fallback";
+    response.roadmaps[0].increments[0].criteria[0].blockers[0].plain_language = { needed: "Unsupported incomplete copy" };
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.equal(window.document.querySelectorAll(".criterion-blockers .blocker-technical-details").length, 0);
+    assert.match(window.document.querySelector(".criterion-blockers").textContent, /Original technical summary predates supplied access/);
+    assert.doesNotMatch(window.document.querySelector(".criterion-blockers").textContent, /Unsupported incomplete copy/);
+  } finally { window.close(); }
+});
+

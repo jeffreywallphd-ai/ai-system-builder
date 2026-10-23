@@ -120,6 +120,13 @@ def canonical_blocker_source(state):
     return {'descriptions': descriptions, 'blockers': blockers, 'ambiguous': ambiguous}
 
 
+def _plain_blocker_copy(value):
+    """Optional reviewed explanation; never replaces the authoritative obstacle."""
+    fields(value, {'needed', 'prevents', 'action'}, {'needed', 'prevents', 'action'})
+    return {key: safe_text(text(value[key], limit=limit), limit)
+            for key, limit in (('needed', 400), ('prevents', 800), ('action', 800))}
+
+
 def apply_blocker_presentations(root: Path, roadmaps: list, sources: dict, diagnostics: list) -> None:
     """Attach only exact current open obstacles to explicitly reviewed criteria."""
     known, ambiguous, expected = {}, set(), set()
@@ -167,7 +174,7 @@ def apply_blocker_presentations(root: Path, roadmaps: list, sources: dict, diagn
                     raise ValueError('bounded nonempty blocker references required')
                 selected, blocker_ids = [], set()
                 for reference in references:
-                    fields(reference, {'blocker_id', 'source_blocker_digest', 'prevents'}, {'blocker_id', 'source_blocker_digest', 'prevents'})
+                    fields(reference, {'blocker_id', 'source_blocker_digest', 'prevents', 'plain_language'}, {'blocker_id', 'source_blocker_digest', 'prevents'})
                     blocker_id = identifier(reference['blocker_id'])
                     if blocker_id in blocker_ids or blocker_id in source['ambiguous'] or blocker_id not in source['blockers']:
                         raise ValueError('foreign, resolved or duplicate blocker')
@@ -181,16 +188,38 @@ def apply_blocker_presentations(root: Path, roadmaps: list, sources: dict, diagn
                                      'summary': safe_text(blocker.get('summary', ''), 1600),
                                      'prevents': safe_text(text(reference['prevents'], limit=800), 800),
                                      'required_action': safe_text(blocker.get('requiredAction', ''), 1600)})
+                    if 'plain_language' in reference:
+                        selected[-1]['plain_language'] = _plain_blocker_copy(reference['plain_language'])
                 staged[key] = selected
             except (ControlError, ValueError, KeyError, TypeError, RecursionError):
                 invalid = True
                 if key is not None:
                     staged.pop(key, None)
+        # Shared obstacles must not acquire contradictory display explanations
+        # through separate criterion associations. Preserve technical facts on
+        # conflict; parent copy comes only from these exact admitted references.
+        copies, conflicts = {}, set()
+        for key, blockers in staged.items():
+            for blocker in blockers:
+                if 'plain_language' not in blocker:
+                    continue
+                identity = (key[0], blocker['id'])
+                if identity in copies and copies[identity] != blocker['plain_language']:
+                    conflicts.add(identity)
+                copies[identity] = blocker['plain_language']
         mapped = set()
         for key, blockers in staged.items():
+            for blocker in blockers:
+                if (key[0], blocker['id']) in conflicts:
+                    blocker.pop('plain_language', None)
             known[key]['blockers'] = blockers
             mapped.update((key[0], blocker['id']) for blocker in blockers)
-        if invalid or expected - mapped:
+        for roadmap in roadmaps:
+            for blocker in roadmap.get('blockers', []):
+                identity = (roadmap['id'], blocker['id'])
+                if identity in copies and identity not in conflicts:
+                    blocker['plain_language'] = copies[identity]
+        if invalid or conflicts or expected - mapped:
             diagnostics.append({'code': 'projection.criterion-blockers-unavailable'})
     except (ControlError, ValueError, KeyError, TypeError, RecursionError, OSError):
         diagnostics.append({'code': 'projection.criterion-blockers-unavailable'})

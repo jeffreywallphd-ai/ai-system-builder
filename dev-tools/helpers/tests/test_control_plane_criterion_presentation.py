@@ -389,6 +389,72 @@ class CriterionPresentationTests(unittest.TestCase):
         self.assertNotIn('C:\\\\private', public)
         self.assertIn('<img src=x>', self.criterion(value)['blockers'][0]['prevents'])
 
+    def test_plain_blocker_copy_is_optional_bound_and_retains_canonical_technical_facts(self):
+        row = self.blocker_fixture()
+        explanation = {'needed': 'Verify the supplied test access.',
+                       'prevents': 'Access is authorized but the real test has not passed.',
+                       'action': 'Run the authorized synthetic test through the secure credential path.'}
+        row['blockers'][0]['plain_language'] = explanation
+        self.write_blocker_map([row])
+        before = self.state_path.read_bytes()
+        value = project(self.root)
+        criterion = self.criterion(value)
+        blocker = criterion['blockers'][0]
+        self.assertEqual(blocker['plain_language'], explanation)
+        self.assertEqual(value['roadmaps'][0]['blockers'][0]['plain_language'], explanation)
+        self.assertEqual(blocker['summary'], self.state['blockers'][0]['summary'])
+        self.assertEqual(blocker['required_action'], self.state['blockers'][0]['requiredAction'])
+        self.assertEqual(criterion['outcome'], 'pending')
+        self.assertEqual(value['roadmaps'][0]['status'], 'blocked')
+        self.assertEqual(value['diagnostics'], [])
+        self.assertEqual(self.state_path.read_bytes(), before)
+        self.state['blockers'][0]['summary'] = 'Current canonical obstacle changed.'
+        self.state_path.write_text(json.dumps(self.state))
+        value = project(self.root)
+        self.assertNotIn('plain_language', value['roadmaps'][0]['blockers'][0])
+        self.assertEqual(self.criterion(value)['blockers'], [])
+        self.assertTrue(value['diagnostics'])
+
+    def test_malformed_plain_copy_keeps_canonical_parent_obstacle_and_sanitizes_valid_text(self):
+        row = self.blocker_fixture()
+        valid = {'needed': 'Verification remains pending.', 'prevents': 'The test has not run.', 'action': 'Run the allowed check.'}
+        variants = [None, [], {}, {**valid, 'unknown': 'not allowed'}, {k: v for k, v in valid.items() if k != 'action'},
+                    {**valid, 'needed': 'x' * 401}, {**valid, 'prevents': 'x' * 801},
+                    {**valid, 'action': 'x' * 801}, {**valid, 'action': ''}, {**valid, 'needed': 42}]
+        for copy_value in variants:
+            with self.subTest(copy_value=type(copy_value).__name__):
+                row['blockers'][0]['plain_language'] = copy_value
+                self.write_blocker_map([row])
+                value = project(self.root)
+                parent = value['roadmaps'][0]['blockers'][0]
+                self.assertNotIn('plain_language', parent)
+                self.assertEqual(parent['summary'], self.state['blockers'][0]['summary'])
+                self.assertEqual(parent['required_action'], self.state['blockers'][0]['requiredAction'])
+                self.assertEqual(self.criterion(value)['blockers'], [])
+                self.assertTrue(value['diagnostics'])
+        row['blockers'][0]['plain_language'] = {**valid, 'needed': '<img src=x> password=synthetic-copy-secret C:\\private\\fixture'}
+        self.write_blocker_map([row])
+        public = json.dumps(project(self.root))
+        self.assertNotIn('synthetic-copy-secret', public)
+        self.assertNotIn('C:\\\\private', public)
+        self.assertIn('<img src=x>', public)
+
+    def test_conflicting_shared_blocker_copy_falls_back_without_hiding_technical_obstacles(self):
+        row = self.blocker_fixture()
+        row['blockers'][0]['plain_language'] = {'needed': 'Verify access.', 'prevents': 'Verification is pending.', 'action': 'Run the allowed check.'}
+        second = copy.deepcopy(row)
+        second['criterion_id'] = 'second'
+        second['blockers'][0]['plain_language']['needed'] = 'A conflicting explanation.'
+        self.state['increments'][0]['acceptanceCriteria'].append({'id': 'second', 'description': self.description})
+        self.state_path.write_text(json.dumps(self.state))
+        self.write_blocker_map([row, second])
+        value = project(self.root)
+        self.assertNotIn('plain_language', value['roadmaps'][0]['blockers'][0])
+        for criterion in value['roadmaps'][0]['increments'][0]['criteria']:
+            self.assertEqual(len(criterion['blockers']), 1)
+            self.assertNotIn('plain_language', criterion['blockers'][0])
+        self.assertEqual(value['diagnostics'], [{'code': 'projection.criterion-blockers-unavailable'}])
+
 
 if __name__ == "__main__":
     unittest.main()
