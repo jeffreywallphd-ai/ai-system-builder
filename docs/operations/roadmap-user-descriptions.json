@@ -9946,6 +9946,56 @@
           "Legacy publication and native artifact races were excluded."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f03767c8013d27657e302b4965d58ad119adee579f668b50145ad873c9f0c930",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Twelve tests passed: six used real Windows programs, and six checked settings or failure handling.",
+          "The tests checked that Windows placed only the intended test program in its group and applied the fixed limits.",
+          "The test program stopped when its supervising program closed, lost the control connection or crashed.",
+          "A timed exit and an invalid start message could not count as successful shutdown.",
+          "An extra control connection kept the test program running. The tests close that connection before checking automatic shutdown."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "698481bcf90b85826f9d6f201defac854b105ee9bc79aacd896849d71f0fa2d5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These tests cover only the fixed Windows test setup.",
+          "They do not prove that actual low-memory model runs work, that old temporary files are safe, or who owned an old program.",
+          "Completed model accuracy checks remain complete."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c96e294dc889818189d9b6ec4f1eb8849a7682870904ef347210dd4f1d96f739",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must still prove that temporary files stay protected until workers stop after a crash.",
+          "File protection and protected disk accounting still need implementation or verification.",
+          "Restarting the low-memory test remains disabled. The test still reserves the full 12 GiB allowance for old temporary files."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6624c1a398791c4ef48af58687dea7a5544c86dee54769771044d27af882296c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These completed tests support the roadmap. They do not complete its other requirements.",
+          "The agent must finish the remaining low-memory work.",
+          "No action is needed from you."
+        ]
+      }
     }
   ]
 }

@@ -2402,6 +2402,44 @@
         "Deferred/disconnected POST, stale read/cancel, malformed IDs, recovery fences and saved-profile tests are synthetic/local software evidence. Original failures and current30percent/80percentquality closure remain recorded.",
         "No actual offload execution, protected staging/accounting, historical process-exit proof, native hard-memory limit or parent/current-target qualification follows from this support."
       ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "native-owned-job-lifetime-fixture",
+      "work_criteria": [
+        "atomic-owned-child",
+        "observed-owned-exit",
+        "no-staging-authority"
+      ],
+      "receipt_digest": "a8e055a5b021d36a14aa914a006409a7a487ca21d1e95d0bc5114c27602d6ef9",
+      "review_digest": "11f103e754b01dc22a7463b1622d633ce25df024b9c868e9a5b915875a05c974",
+      "scope": "Twelve model-free software tests passed: six actual Windows process cases and six policy/failure cases. Fixed job membership and limits were read back. The three positive supervisor-close, input-loss and crash paths required observed native exit code zero; actual timed self-expiry, an extra job reference and an invalid handshake were negative controls.",
+      "limitations": [
+        "Only this fixed harmless Windows worker profile is qualified. No actual model, offload, retained-file operation or historical worker ownership is qualified. Completed Standard model accuracy remains closed.",
+        "Observed job exit does not prove that file protection survives until worker exit after a guardian crash. Stable tree/security protection and protected durable accounting remain unimplemented or unqualified. Guarded restart stays denied and unknown retained staging consumes the full 12 GiB allowance.",
+        "This is reviewed local support at its recorded snapshot. Parent criterion, increment and roadmap qualification are unchanged; remaining technical implementation and checks are agent-owned pending work, with no human action required."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "native-owned-job-lifetime-fixture",
+      "work_criteria": [
+        "atomic-owned-child",
+        "observed-owned-exit",
+        "no-staging-authority"
+      ],
+      "receipt_digest": "a8e055a5b021d36a14aa914a006409a7a487ca21d1e95d0bc5114c27602d6ef9",
+      "review_digest": "11f103e754b01dc22a7463b1622d633ce25df024b9c868e9a5b915875a05c974",
+      "scope": "Twelve model-free software tests passed: six actual Windows process cases and six policy/failure cases. Fixed job membership and limits were read back. The three positive supervisor-close, input-loss and crash paths required observed native exit code zero; actual timed self-expiry, an extra job reference and an invalid handshake were negative controls.",
+      "limitations": [
+        "Only this fixed harmless Windows worker profile is qualified. No actual model, offload, retained-file operation or historical worker ownership is qualified. Completed Standard model accuracy remains closed.",
+        "Observed job exit does not prove that file protection survives until worker exit after a guardian crash. Stable tree/security protection and protected durable accounting remain unimplemented or unqualified. Guarded restart stays denied and unknown retained staging consumes the full 12 GiB allowance.",
+        "This is reviewed local support at its recorded snapshot. Parent criterion, increment and roadmap qualification are unchanged; remaining technical implementation and checks are agent-owned pending work, with no human action required."
+      ]
     }
   ]
 }
