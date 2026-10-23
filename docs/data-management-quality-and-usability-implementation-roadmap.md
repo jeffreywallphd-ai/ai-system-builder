@@ -3,7 +3,7 @@
 # Data Management Quality and Usability Implementation Roadmap
 
 - Status: `implementation-complete-qualification-pending`
-- Updated: `2026-10-21T17:07:35Z`
+- Updated: `2026-10-23T18:49:25Z`
 
 ## Objective
 
@@ -386,6 +386,8 @@ Add optional structure-aware document processing, semantic curation, and verifie
 
 ### Work packages
 
+Human portions of the original work packages, deliverables, verification and completed plan below are superseded by the exact offline scope archive. They remain historical approved intent; only the current technical acceptance criteria govern future qualification. No test pass is asserted.
+
 - **Structure-aware content processing** (`structure-aware-content-processing`): Optional capabilities add token, sentence, section, table, and semantic chunking, OCR and layout-aware extraction, document quality scoring, and exact source-span lineage while preserving the bounded baseline parser when advanced capabilities are unavailable.
 - **Semantic curation and data mixing** (`semantic-curation-and-data-mixing`): Embedding-based near-duplicate detection, source and class balancing, quality-aware sampling, per-source caps, semantic coverage, and task-specific hard-negative mining produce measured recommendations that users can review before approval.
 - **Verified synthetic generation** (`verified-synthetic-generation`): Task-specific generation creates multiple candidates, validates strict schemas, records grounding and source citations, applies independent critic and rejection thresholds, measures diversity and coverage, and sends uncertain examples to the existing review and quarantine flow.
@@ -411,7 +413,12 @@ Add optional structure-aware document processing, semantic curation, and verifie
 | `synthetic-examples-are-validated-before-admission`: Generated candidates must pass task schema, grounding or source-support, duplication, quality, safety, and diversity checks; uncertain or rejected candidates enter quarantine with bounded reasons, and no model-generated row reaches an approved split without the configured review policy. | local | passed (test) |
 | `advanced-options-do-not-complicate-the-default-path`: Users who do not enable advanced capabilities see the same concise ordered workflow and recommended defaults; users who opt in receive simple presets, readiness and time guidance, cancel and retry controls, and plain explanations while model, device, precision, threshold, and algorithm settings remain under Advanced settings. | local | passed (test) |
 | `security-model-assisted-boundaries-reviewed`: Model outputs, OCR text, embeddings, prompts, citations, critic evidence, and rejected candidates remain workspace scoped, bounded, sanitized, and absent from diagnostics; unavailable capabilities, dependency failure, model failure, cancellation, and cleanup fail closed without admitting unverified rows or weakening baseline controls. | local | passed (review) |
-| `controlled-advanced-capabilities-are-qualified`: Controlled representative hardware and accessibility qualification proves OCR and layout extraction, semantic deduplication, hard-negative mining, model generation and criticism, progress, cancellation, memory and time bounds, quality evidence, and non-technical preset usability with synthetic data. | controlled-environment | pending (external) |
+| `controlled-advanced-capabilities-are-qualified`: Agent-executable qualification on controlled representative hardware and automated accessibility/UI tests proves OCR and layout extraction, semantic deduplication, hard-negative mining, model generation and criticism, progress, cancellation, memory and time bounds, quality evidence, and non-technical preset workflows with synthetic data, including keyboard/focus, accessibility-tree semantics, zoom/reflow, reduced-motion and responsive behavior. | controlled-environment | pending (external) |
+
+### Human scope handled offline
+
+- User-directed offline human acceptance; preserve every technical requirement and all prior evidence. No test pass or closure is asserted. (`user-agent-only-acceptance-and-current-scope-20261022`)
+  - Human portion of `controlled-advanced-capabilities-are-qualified`: Participant/non-technical usability studies and observed human screen-reader/manual acceptance are handled offline. This transfers no automated accessibility/UI, actual OCR/layout, hardware/model/resource/quality/security qualification or product human approval/curation controls. — offline user-owned; technical criterion retained; no test pass asserted.
 
 ### Verification
 
@@ -498,3 +505,17 @@ Remove the additive intent and adaptive capability mapping plus task-specific va
 - New training task types or model-training algorithm changes
 - A free-form expert Custom mode that permits unsupported cross-product combinations
 - Artificially providing three Step 3 methods when a task and source combination supports fewer
+
+## Pending work
+
+Owner: coding agent. No user action is needed. Technical checks are not passed.
+- **private-provider-and-advanced-runtime-unavailable**: Saved Hugging Face credentials and the exact private test repository are authorized. Real private publishing and ingestion verification remains unfinished; independent advanced-...
+  - Owner: Coding agent
+  - Action: Use the saved credential through the existing secure path. Create the already authorized private synthetic test repository if absent, then qualify publishing and ingestion. Preserve independent advanced-runtime and sc...
+  - Where: Approved private Hugging Face dataset repository and existing secure app credential store
+  - Done when: Current private publication and ingestion tests pass, with exact-candidate checks and independent review. The supplied credential alone is not a test pass.
+- **advanced-runtime-qualification-unavailable**: OCR has no qualified provider/runtime. Actual advanced model/layout/semantic quality, representative resources, scale, progress/cancellation/cleanup and automated UI/preset cove...
+  - Owner: Coding agent
+  - Action: Complete the available approved data, model, UI and scale work. Prepare bounded OCR provider options before requesting any new supplier decision; do not claim unsupported OCR is delivered.
+  - Where: Data roadmap advanced preparation and scalable ingestion increments
+  - Done when: The unchanged advanced-capability acceptance checks have measured evidence and independent review. Any new supplier choice is separately approved before adoption.

@@ -248,12 +248,46 @@ def approval_is_current(state: dict[str, Any]) -> bool:
     )
 
 
+ACTION_FIELDS = {"actionOwner", "responsibleRole", "requiredAction", "actionLocation",
+                 "completionCondition", "authorityRef"}
+
+
+def action_assignment(value: dict[str, Any], label: str) -> dict[str, str]:
+    """Validate responsibility, without interpreting prose or granting authority."""
+    if not isinstance(value.get("actionOwner"), str) or value["actionOwner"] not in {"agent", "human"}:
+        raise RoadmapError(f"{label}.actionOwner must be agent or human.")
+    result = {"actionOwner": value["actionOwner"]}
+    for field in ACTION_FIELDS - {"actionOwner", "authorityRef"}:
+        result[field] = require_string(value.get(field), f"{label}.{field}", maximum=2000)
+    result["authorityRef"] = require_identifier(value.get("authorityRef"), f"{label}.authorityRef")
+    return result
+
+
+def unresolved_work(state: dict[str, Any]) -> list[dict[str, Any]]:
+    return [item for item in state.get("blockers", []) if item.get("status") != "resolved"]
+
+
+def requires_human_action(item: dict[str, Any]) -> bool:
+    # Unclassified legacy records retain their conservative execution guard.
+    # Only an explicit valid assignment can admit agent-owned execution.
+    if "actionOwner" not in item:
+        return True
+    return action_assignment(item, "blocker")["actionOwner"] == "human"
+
+
+def execution_blocked(state: dict[str, Any]) -> bool:
+    return any(requires_human_action(item) for item in unresolved_work(state))
+
+
+def require_no_pending_work(state: dict[str, Any]) -> None:
+    if unresolved_work(state):
+        raise RoadmapError("Complete and reconcile pending technical work and human actions before completion.")
+
+
 def implementation_ready_for_overall(state: dict[str, Any]) -> bool:
     """Admit verification after implementation, without qualifying release."""
     increments = state.get("increments", [])
-    if not increments or not approval_is_current(state) or any(
-        item.get("status") != "resolved" for item in state.get("blockers", [])
-    ):
+    if not increments or not approval_is_current(state) or execution_blocked(state):
         return False
     for increment in increments:
         planned = [item["id"] for item in (increment.get("plan") or {}).get("chunks", [])]
@@ -924,36 +958,7 @@ def handle_roadmap_approved(state: dict[str, Any], event: dict[str, Any]) -> Non
         if event.get("note")
         else None,
     }
-    if any(item.get("status") == "open" for item in state["blockers"]):
-        state["status"] = "blocked"
-        if state.get("currentIncrementId"):
-            current_increment(state)["status"] = "blocked"
-        return
-    if state.get("currentIncrementId"):
-        increment = current_increment(state)
-        if increment["plan"]:
-            increment["status"] = (
-                "verifying"
-                if len(increment["completedChunks"])
-                == len(increment["plan"]["chunks"])
-                else "implementing"
-            )
-        elif increment["research"]:
-            increment["status"] = "planning"
-        else:
-            increment["status"] = "researching"
-        state["status"] = "executing"
-    elif state["increments"] and all(
-        item["status"] == "completed" for item in state["increments"]
-    ):
-        state["status"] = "roadmap-ready-to-close"
-    elif any(
-        item["status"] == "implemented-pending-qualification"
-        for item in state["increments"]
-    ):
-        state["status"] = "implementation-complete-qualification-pending"
-    else:
-        state["status"] = "ready"
+    derive_progress_status(state)
 
 
 def handle_increment_started(state: dict[str, Any], event: dict[str, Any]) -> None:
@@ -962,8 +967,8 @@ def handle_increment_started(state: dict[str, Any], event: dict[str, Any]) -> No
         raise RoadmapError("Complete or block the active increment before starting another.")
     if not approval_is_current(state):
         raise RoadmapError("Roadmap approval is absent or stale.")
-    if any(item.get("status") != "resolved" for item in state["blockers"]):
-        raise RoadmapError("Resolve and reconcile all blockers before starting an increment.")
+    if execution_blocked(state):
+        raise RoadmapError("Resolve human-action blockers or classify legacy records before starting an increment.")
     increment_id = require_identifier(event.get("incrementId"), "event.incrementId")
     increment = find_increment(state, increment_id)
     pending = [item for item in state["increments"] if item["status"] == "pending"]
@@ -1159,7 +1164,7 @@ def handle_evidence_recorded(state: dict[str, Any], event: dict[str, Any]) -> No
         increment["pendingCriteria"] = pending
         # Governed declarations do not replace criterion-bound executed review.
         # An overall check may exist while controlled qualification is still pending.
-        if not pending and state.get("evidencePolicy") != "control-plane-v1":
+        if not pending and not unresolved_work(state) and state.get("evidencePolicy") != "control-plane-v1":
             increment["status"] = "completed"
             if all(item["status"] == "completed" for item in state["increments"]):
                 state["status"] = "roadmap-ready-to-close"
@@ -1385,6 +1390,10 @@ def handle_feedback_recorded(state: dict[str, Any], event: dict[str, Any]) -> No
     disposition = event.get("disposition")
     if disposition not in {"accepted", "deferred", "needs-decision", "blocked"}:
         raise RoadmapError("event.disposition is not supported.")
+    if disposition == "blocked" and not any(
+        b.get("actionOwner") == "human" for b in unresolved_work(state)
+    ):
+        raise RoadmapError("Blocked feedback requires a recorded explicit human action.")
     target = event.get("targetIncrementId")
     if target is not None:
         target = require_identifier(target, "event.targetIncrementId")
@@ -1407,68 +1416,12 @@ def handle_feedback_recorded(state: dict[str, Any], event: dict[str, Any]) -> No
             current_increment(state)["status"] = "paused-for-approval"
 
 
-def handle_blocker_recorded(state: dict[str, Any], event: dict[str, Any]) -> None:
-    reject_unknown(event, {"type", "id", "kind", "summary", "requiredAction"}, "event")
-    blocker_id = require_identifier(event.get("id"), "event.id")
-    if any(item["id"] == blocker_id for item in state["blockers"]):
-        raise RoadmapError(f"Blocker {blocker_id} has already been recorded.")
-    kind = event.get("kind")
-    if kind not in {
-        "environment",
-        "dependency",
-        "decision",
-        "credential",
-        "production-authority",
-        "technical",
-    }:
-        raise RoadmapError("event.kind is not supported.")
-    state["blockers"].append(
-        {
-            "id": blocker_id,
-            "kind": kind,
-            "summary": require_string(event.get("summary"), "event.summary"),
-            "requiredAction": require_string(
-                event.get("requiredAction"), "event.requiredAction"
-            ),
-            "status": "open",
-            "recordedAt": now_utc(),
-            "resolvedAt": None,
-            "resolution": None,
-        }
-    )
-    if state.get("currentIncrementId"):
-        current_increment(state)["status"] = "blocked"
-    state["status"] = "blocked"
-
-
-def handle_resumed(state: dict[str, Any], event: dict[str, Any]) -> None:
-    reject_unknown(event, {"type", "blockerId", "resolution", "reconciliation"}, "event")
-    blocker_id = require_identifier(event.get("blockerId"), "event.blockerId")
-    blocker = next(
-        (
-            item
-            for item in state["blockers"]
-            if item["id"] == blocker_id and item["status"] == "open"
-        ),
-        None,
-    )
-    if not blocker:
-        raise RoadmapError(f"Open blocker {blocker_id} was not found.")
-    blocker["status"] = "resolved"
-    blocker["resolvedAt"] = now_utc()
-    blocker["resolution"] = require_string(event.get("resolution"), "event.resolution")
-    reconciliation = require_string(
-        event.get("reconciliation"), "event.reconciliation"
-    )
-    state["resumeAudits"].append(
-        {
-            "blockerId": blocker_id,
-            "reconciliation": reconciliation,
-            "recordedAt": now_utc(),
-        }
-    )
-    if any(item["status"] == "open" for item in state["blockers"]):
+def derive_progress_status(state: dict[str, Any]) -> None:
+    """Responsibility affects execution, never evidence, approval or completion."""
+    if execution_blocked(state):
         state["status"] = "blocked"
+        if state.get("currentIncrementId"):
+            current_increment(state)["status"] = "blocked"
         return
     if not approval_is_current(state):
         state["status"] = "approval-required"
@@ -1479,32 +1432,92 @@ def handle_resumed(state: dict[str, Any], event: dict[str, Any]) -> None:
         increment = current_increment(state)
         if increment["plan"]:
             increment["status"] = (
-                "verifying"
-                if len(increment["completedChunks"])
-                == len(increment["plan"]["chunks"])
-                else "implementing"
+                "verifying" if set(increment["completedChunks"])
+                == {c["id"] for c in increment["plan"]["chunks"]} else "implementing"
             )
         elif increment["research"]:
             increment["status"] = "planning"
         else:
             increment["status"] = "researching"
         state["status"] = "executing"
-    elif state["increments"] and all(
-        item["status"] == "completed" for item in state["increments"]
-    ):
+    elif state["increments"] and all(i["status"] == "completed" for i in state["increments"]) and not unresolved_work(state):
         state["status"] = "roadmap-ready-to-close"
-    elif state["increments"] and all(
-        item["status"] in INCREMENT_DONE for item in state["increments"]
-    ):
+    elif state["increments"] and all(i["status"] in INCREMENT_DONE for i in state["increments"]):
         state["status"] = "implementation-complete-qualification-pending"
     else:
         state["status"] = "ready"
+
+
+def handle_blocker_recorded(state: dict[str, Any], event: dict[str, Any]) -> None:
+    reject_unknown(event, {"type", "id", "kind", "summary"} | ACTION_FIELDS, "event")
+    blocker_id = require_identifier(event.get("id"), "event.id")
+    if any(item["id"] == blocker_id for item in state["blockers"]):
+        raise RoadmapError(f"Blocker {blocker_id} has already been recorded.")
+    kind = event.get("kind")
+    if not isinstance(kind, str) or kind not in {"environment", "dependency", "decision", "credential", "production-authority", "technical"}:
+        raise RoadmapError("event.kind is not supported.")
+    assignment = action_assignment(event, "event")
+    if assignment["actionOwner"] != "human":
+        raise RoadmapError("New blockers require a human action; record ordinary agent work in the plan.")
+    state["blockers"].append({
+        "id": blocker_id, "kind": kind,
+        "summary": require_string(event.get("summary"), "event.summary"),
+        **assignment, "status": "open", "recordedAt": now_utc(),
+        "resolvedAt": None, "resolution": None,
+    })
+    derive_progress_status(state)
+
+
+def handle_blocker_reclassified(state: dict[str, Any], event: dict[str, Any]) -> None:
+    reject_unknown(event, {"type", "blockerId", "expectedBlockerDigest", "reason", "summary"} | ACTION_FIELDS, "event")
+    blocker_id = require_identifier(event.get("blockerId"), "event.blockerId")
+    blocker = next((b for b in state["blockers"] if b["id"] == blocker_id and b.get("status") == "open"), None)
+    if blocker is None:
+        raise RoadmapError("Reclassification requires an existing open blocker.")
+    if blocker.get("resolution") is not None or blocker.get("resolvedAt") is not None:
+        raise RoadmapError("Reclassification cannot reopen a resolved action.")
+    if event.get("expectedBlockerDigest") != fingerprint(blocker):
+        raise RoadmapError("Reclassification requires the exact current blocker digest.")
+    assignment = action_assignment(event, "event")
+    reason = require_string(event.get("reason"), "event.reason")
+    summary = require_string(event["summary"], "event.summary") if "summary" in event else blocker.get("summary")
+    if all(blocker.get(k) == v for k, v in assignment.items()) and summary == blocker.get("summary"):
+        raise RoadmapError("Reclassification must change the action assignment.")
+    state.setdefault("blockerReclassifications", []).append({
+        "blockerId": blocker_id, "originalBlocker": copy.deepcopy(blocker),
+        "originalDigest": fingerprint(blocker), "assignment": assignment,
+        "authorityRef": assignment["authorityRef"], "reason": reason, "recordedAt": now_utc(),
+        **({"revisedSummary": summary} if "summary" in event else {}),
+    })
+    blocker.update(assignment)
+    if "summary" in event:
+        blocker["summary"] = summary
+    # Open means unfinished. Reclassification never supplies resolution or proof.
+    derive_progress_status(state)
+
+
+def handle_resumed(state: dict[str, Any], event: dict[str, Any]) -> None:
+    reject_unknown(event, {"type", "blockerId", "resolution", "reconciliation"}, "event")
+    blocker_id = require_identifier(event.get("blockerId"), "event.blockerId")
+    blocker = next((b for b in state["blockers"] if b["id"] == blocker_id and b.get("status") == "open"), None)
+    if not blocker:
+        raise RoadmapError(f"Open blocker {blocker_id} was not found.")
+    blocker["status"] = "resolved"
+    blocker["resolvedAt"] = now_utc()
+    blocker["resolution"] = require_string(event.get("resolution"), "event.resolution")
+    state["resumeAudits"].append({
+        "blockerId": blocker_id,
+        "reconciliation": require_string(event.get("reconciliation"), "event.reconciliation"),
+        "recordedAt": now_utc(),
+    })
+    derive_progress_status(state)
 
 
 def handle_increment_completed(state: dict[str, Any], event: dict[str, Any]) -> None:
     reject_unknown(event, {"type", "summary"}, "event")
     if not approval_is_current(state):
         raise RoadmapError("Renew roadmap approval before completing the increment.")
+    require_no_pending_work(state)
     increment = current_increment(state)
     if not increment["plan"]:
         raise RoadmapError("The active increment has no implementation plan.")
@@ -1564,6 +1577,7 @@ def handle_roadmap_completed(state: dict[str, Any], event: dict[str, Any]) -> No
         raise RoadmapError(
             "Every increment and controlled-environment qualification must pass first."
         )
+    require_no_pending_work(state)
     state["status"] = "completed"
     state["completion"] = {
         "summary": require_string(event.get("summary"), "event.summary"),
@@ -1573,6 +1587,7 @@ def handle_roadmap_completed(state: dict[str, Any], event: dict[str, Any]) -> No
 
 def handle_increment_qualified(state: dict[str, Any], event: dict[str, Any]) -> None:
     reject_unknown(event, {"type", "incrementId", "workId", "receiptDigest", "reviewDigest", "summary"}, "event")
+    require_no_pending_work(state)
     target_id = require_identifier(event.get("incrementId"), "event.incrementId")
     if pending_qualification_context(state, target_id) is None:
         raise RoadmapError("Target qualification requires approved complete implementation, an implemented-pending target and no unresolved blockers.")
@@ -1618,6 +1633,7 @@ def handle_final_approval_recorded(
         )
     if state.get("finalApproval"):
         raise RoadmapError("Final approval has already been recorded.")
+    require_no_pending_work(state)
     state["status"] = "completed"
     state["finalApproval"] = {
         "note": require_string(event.get("note"), "event.note"),
@@ -1645,7 +1661,7 @@ def require_finalized_completion(state: dict[str, Any]) -> None:
     blockers = require_list(state.get("blockers", []), "state.blockers")
     if (state.get("currentIncrementId") is not None
             or any(require_object(i, "state.increment").get("status") != "completed" for i in increments)
-            or any(require_object(b, "state.blocker").get("status") == "open" for b in blockers)):
+            or any(require_object(b, "state.blocker").get("status") != "resolved" for b in blockers)):
         raise RoadmapError("Final approval requires completed increments and no active work or blockers.")
 
 
@@ -1677,6 +1693,7 @@ EVENT_HANDLERS = {
     "technical-acceptance-revised": handle_technical_acceptance_revised,
     "feedback-recorded": handle_feedback_recorded,
     "blocker-recorded": handle_blocker_recorded,
+    "blocker-reclassified": handle_blocker_reclassified,
     "resumed": handle_resumed,
     "increment-completed": handle_increment_completed,
     "increment-qualified": handle_increment_qualified,
@@ -1707,6 +1724,10 @@ def apply_event(state: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
         raise RoadmapError(f"Unsupported event type: {event_type}.")
     updated = copy.deepcopy(state)
     handler(updated, event)
+    if execution_blocked(updated):
+        updated["status"] = "blocked"
+        if updated.get("currentIncrementId"):
+            current_increment(updated)["status"] = "blocked"
     timestamp = now_utc()
     updated["updatedAt"] = timestamp
     updated["history"].append(
@@ -1749,8 +1770,44 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
         "acceptanceScopeRevisions",
         "legacyAcceptanceScopeRevisions",
         "technicalAcceptanceRevisions",
+        "blockerReclassifications",
     }
     reject_unknown(state, allowed, "state")
+    for blocker in require_list(state.get("blockers"), "state.blockers"):
+        blocker = require_object(blocker, "state.blocker")
+        if ACTION_FIELDS.intersection(blocker) - {"requiredAction"}:
+            action_assignment(blocker, "state.blocker")
+            if blocker.get("status") not in {"open", "resolved"}:
+                raise RoadmapError("Assigned blocker work must remain open or explicitly resolved.")
+    latest_assignments = {}
+    for revision in require_list(state.get("blockerReclassifications", []), "state.blockerReclassifications"):
+        revision = require_object(revision, "blocker reclassification")
+        reject_unknown(revision, {"blockerId", "originalBlocker", "originalDigest", "assignment",
+                                  "authorityRef", "reason", "recordedAt", "revisedSummary"}, "blocker reclassification")
+        identifier = require_identifier(revision.get("blockerId"), "reclassification.blockerId")
+        original = require_object(revision.get("originalBlocker"), "reclassification.originalBlocker")
+        if (original.get("id") != identifier or original.get("status") != "open"
+                or revision.get("originalDigest") != fingerprint(original)):
+            raise RoadmapError("Reclassification must archive the exact open original record.")
+        if identifier in latest_assignments and original != latest_assignments[identifier]:
+            raise RoadmapError("Reclassification archive chain does not match the prior assignment.")
+        assignment = require_object(revision.get("assignment"), "reclassification.assignment")
+        reject_unknown(assignment, ACTION_FIELDS, "reclassification.assignment")
+        if action_assignment(assignment, "reclassification.assignment") != assignment:
+            raise RoadmapError("Archived assignment is not canonical.")
+        if revision.get("authorityRef") != assignment["authorityRef"]:
+            raise RoadmapError("Reclassification must retain its authority reference.")
+        require_string(revision.get("reason"), "reclassification.reason")
+        require_string(revision.get("recordedAt"), "reclassification.recordedAt", maximum=80)
+        latest_assignments[identifier] = {**original, **assignment}
+        if "revisedSummary" in revision:
+            latest_assignments[identifier]["summary"] = require_string(revision["revisedSummary"], "reclassification.revisedSummary")
+    for identifier, expected in latest_assignments.items():
+        current = next((b for b in state["blockers"] if b.get("id") == identifier), None)
+        mutable_resolution = {"status", "resolution", "resolvedAt"}
+        if current is None or {k: v for k, v in current.items() if k not in mutable_resolution} != {
+                k: v for k, v in expected.items() if k not in mutable_resolution}:
+            raise RoadmapError("Current work must retain its archived action assignment.")
     for revision in require_list(state.get("technicalAcceptanceRevisions", []), "state.technicalAcceptanceRevisions"):
         revision = validate_technical_replacement(revision, "technical revision")
         if state.get("evidencePolicy") != "control-plane-v1":
@@ -1906,6 +1963,30 @@ def evidence_label(state: dict[str, Any], increment_id: str, criterion_id: str) 
     if not evidence:
         return "not recorded"
     return f"{evidence['outcome']} ({evidence['kind']})"
+
+
+def render_action_items(state: dict[str, Any]) -> list[str]:
+    lines: list[str] = []
+    groups = [
+        ("Human action needed", [b for b in unresolved_work(state) if b.get("actionOwner") == "human"]),
+        ("Pending work", [b for b in unresolved_work(state) if b.get("actionOwner") == "agent"]),
+        ("Legacy classification pending", [b for b in unresolved_work(state) if "actionOwner" not in b]),
+    ]
+    for title, records in groups:
+        if not records:
+            continue
+        lines.extend(["", f"## {title}", ""])
+        if title == "Pending work":
+            lines.append("Owner: coding agent. No user action is needed. Technical checks are not passed.")
+        for item in records:
+            lines.append(f"- **{markdown(item['id'])}**: {compact_markdown(item.get('summary', 'Saved unresolved work'), 180)}")
+            if item.get("actionOwner"):
+                for label, key in [("Owner", "responsibleRole"), ("Action", "requiredAction"),
+                                   ("Where", "actionLocation"), ("Done when", "completionCondition")]:
+                    lines.append(f"  - {label}: {compact_markdown(item[key], 220)}")
+            else:
+                lines.append("  - Classify responsibility before execution. No human action has been inferred.")
+    return lines
 
 
 def render_roadmap(state: dict[str, Any]) -> str:
@@ -2106,6 +2187,8 @@ def render_roadmap(state: dict[str, Any]) -> str:
                 *bullet_lines(increment["excluded"]),
             ]
         )
+    if any("actionOwner" in b for b in state["blockers"]):
+        lines.extend(render_action_items(state))
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -2124,6 +2207,8 @@ def next_checkpoint(state: dict[str, Any]) -> str:
         return "Define the increments and obtain explicit roadmap approval."
     if status == "approval-required":
         return "Reconcile feedback and obtain renewed user approval before continuing."
+    if any(b.get("actionOwner") == "agent" for b in unresolved_work(state)) and not execution_blocked(state):
+        return "Continue the coding agent work and its technical checks. No user action is needed."
     if status == "ready":
         return (
             "Start the next pending increment, then research and plan it before editing."
@@ -2131,7 +2216,9 @@ def next_checkpoint(state: dict[str, Any]) -> str:
     if status == "executing":
         return "Complete the active planned chunk and update this report."
     if status == "blocked":
-        return "Resolve the recorded blocker and complete a resume reconciliation."
+        if any("actionOwner" not in b for b in unresolved_work(state)):
+            return "Classify the saved unresolved work before execution; no human action is inferred."
+        return "The named person or role must complete the recorded action. Then reconcile the result."
     if status == "implementation-complete-qualification-pending":
         return "Collect the outstanding controlled-environment evidence."
     if status == "roadmap-ready-to-close":
@@ -2275,19 +2362,7 @@ def render_report(state: dict[str, Any]) -> str:
             )
     else:
         lines.append("None recorded.")
-    lines.extend(["", "## Open blockers", ""])
-    open_blockers = [
-        blocker for blocker in state["blockers"] if blocker["status"] != "resolved"
-    ]
-    if open_blockers:
-        for blocker in open_blockers[-3:]:
-            lines.append(
-                f"- **{blocker['id']}** ({blocker['kind']}, {blocker['status']}): "
-                f"{compact_markdown(blocker['summary'], 140)} Required action: "
-                f"{compact_markdown(blocker['requiredAction'], 140)}"
-            )
-    else:
-        lines.append("No blockers recorded.")
+    lines.extend(render_action_items(state))
     if state.get("completion"):
         lines.extend(
             [

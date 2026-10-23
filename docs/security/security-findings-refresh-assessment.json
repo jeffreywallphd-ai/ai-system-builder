@@ -385,7 +385,15 @@
     ],
     "completed_control_preservation": "All 78 legacy findings retain issue-level revalidation at final qualification; completed increments are neither recreated nor retroactively labeled execution receipts.",
     "planning_authorization": "The user selected the governed successor option and explicitly approved the completed roadmap. Approval is recorded in canonical roadmap state. The instruction not to implement yet remains in force; no implementation authorization or started increment is recorded.",
-    "planning_execution_ownership": "This is the proposed sole owner of remaining remediation after explicit roadmap approval. The legacy state and evidence remain byte-for-byte unchanged and incomplete; prior approvals are not transferred. Implementation must first record explicit legacy handoff feedback and freeze concurrent legacy execution without inventing completion."
+    "planning_execution_ownership": "This is the proposed sole owner of remaining remediation after explicit roadmap approval. The legacy state and evidence remain byte-for-byte unchanged and incomplete; prior approvals are not transferred. Implementation must first record explicit legacy handoff feedback and freeze concurrent legacy execution without inventing completion.",
+    "consolidation": {
+      "path": "docs/security/security-roadmap-consolidation.json",
+      "canonical_roadmap": "security-findings-refresh",
+      "source_roadmap": "security-vulnerability-remediation",
+      "legacy_unfinished_criteria": 10,
+      "current_criteria": 26,
+      "effect": "One execution backlog; all original finding identities and pending owners retained. This metadata checkpoint includes no product/native implementation and transfers no closure, qualification or approval."
+    }
   },
   "security_impact": {
     "disposition": "security-relevant",

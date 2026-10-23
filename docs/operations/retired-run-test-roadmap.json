@@ -1,0 +1,330 @@
+{
+  "schema_version": "retired-run-test-roadmap-v1",
+  "source_roadmap_id": "systems-run-workflow-active-source",
+  "target_roadmap_id": "systems-publish-runtime-lifecycle",
+  "source_digest": "e8072735262a822ca2b0d01472d6a6849a777b4065773bd65c55e361908dce5a",
+  "target_criteria_digest": "6b7adebee3de424b51d4f982c3876bb58307a3186991be42888157b451827827",
+  "authority_ref": "user-remove-superseded-contrary-scope-20261022",
+  "summary": "The completed Publish lifecycle absorbed this unapproved Run and Test proposal, including active-source and security checks. The standalone surface must not be restored. All six former criteria retain exact primary/companion owners; original pending history is preserved without a new pass.",
+  "legacy_criteria": [
+    {
+      "increment_id": "active-release-workflow-eligibility",
+      "criterion_id": "published-source-correlated",
+      "owner_increment_id": "publish-lifecycle-experience",
+      "owner_criterion_id": "active-source-identity",
+      "related_owners": [
+        {
+          "increment_id": "published-lifecycle-runtime-foundation",
+          "criterion_id": "lifecycle-host-parity"
+        },
+        {
+          "increment_id": "publish-lifecycle-experience",
+          "criterion_id": "no-manual-deployment-internals"
+        }
+      ],
+      "disposition": "merged-existing-owner",
+      "summary": "The completed Publish lifecycle owns recognizable system-name/build-version labels and their exact immutable release mapping. The obsolete Run & Test surface must not be restored to satisfy old wording.",
+      "evidence_paths": [
+        "modules/ui/shared/system-builder/SystemPublishWorkspace.tsx",
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "active-release-workflow-eligibility",
+      "criterion_id": "inactive-releases-hidden",
+      "owner_increment_id": "publish-lifecycle-experience",
+      "owner_criterion_id": "active-source-identity",
+      "related_owners": [
+        {
+          "increment_id": "published-lifecycle-runtime-foundation",
+          "criterion_id": "idempotent-retained-state"
+        },
+        {
+          "increment_id": "publish-lifecycle-experience",
+          "criterion_id": "security-publish-reviewed"
+        }
+      ],
+      "disposition": "merged-existing-owner",
+      "summary": "Current Publish source eligibility rejects missing/deleted/archived/foreign/mismatched owning systems while immutable release and deployment history is retained. This is the same active-source concern in the later completed product surface.",
+      "evidence_paths": [
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "active-release-workflow-eligibility",
+      "criterion_id": "lifecycle-rechecked",
+      "owner_increment_id": "published-lifecycle-runtime-foundation",
+      "owner_criterion_id": "release-bound-runtime",
+      "related_owners": [
+        {
+          "increment_id": "published-lifecycle-runtime-foundation",
+          "criterion_id": "lifecycle-transition-matrix"
+        },
+        {
+          "increment_id": "publish-lifecycle-experience",
+          "criterion_id": "active-source-identity"
+        },
+        {
+          "increment_id": "published-lifecycle-runtime-foundation",
+          "criterion_id": "security-lifecycle-reviewed"
+        }
+      ],
+      "disposition": "merged-existing-owner",
+      "summary": "Lifecycle reads and intent invocation resolve owning active source before current projection/action dispatch; exact verified release/runtime and stale expected-revision checks remain application-owned. Keep existing lower lifecycle guards and fail-closed source checks.",
+      "evidence_paths": [
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/system-deployment-use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "active-release-workflow-eligibility",
+      "criterion_id": "host-ui-parity",
+      "owner_increment_id": "published-lifecycle-runtime-foundation",
+      "owner_criterion_id": "lifecycle-host-parity",
+      "related_owners": [
+        {
+          "increment_id": "publish-lifecycle-experience",
+          "criterion_id": "active-source-identity"
+        },
+        {
+          "increment_id": "publish-lifecycle-experience",
+          "criterion_id": "accessible-responsive-controls"
+        },
+        {
+          "increment_id": "publish-lifecycle-experience",
+          "criterion_id": "run-test-removed"
+        }
+      ],
+      "disposition": "merged-existing-owner",
+      "summary": "Desktop/server share authoritative lifecycle semantics; desktop/thin-client shared Publish controls replace renderer-owned Run & Test workflows. Preserve recognizable labels, safe UI and exact host policy.",
+      "evidence_paths": [
+        "modules/hosts/desktop/composition/composeDesktopHost.ts",
+        "modules/hosts/server/composition/composeServerHost.ts",
+        "modules/ui/shared/system-builder/SystemPublishWorkspace.tsx",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "active-release-workflow-eligibility",
+      "criterion_id": "security-lifecycle-reviewed",
+      "owner_increment_id": "published-lifecycle-runtime-foundation",
+      "owner_criterion_id": "security-lifecycle-reviewed",
+      "related_owners": [
+        {
+          "increment_id": "publish-lifecycle-experience",
+          "criterion_id": "security-publish-reviewed"
+        },
+        {
+          "increment_id": "published-lifecycle-runtime-foundation",
+          "criterion_id": "idempotent-retained-state"
+        }
+      ],
+      "disposition": "merged-existing-owner",
+      "summary": "Retain full original security scope: workspace/exact-release integrity, active lifecycle authority, denied stale/unsupported input, runtime/launch isolation, retained audit/history, secure rollback and explicit residual sandbox/deployment-environment qualification. No security check is retired because its old UI was removed.",
+      "evidence_paths": [
+        "docs/systems-publish-runtime-lifecycle-implementation-roadmap.md",
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "active-release-workflow-eligibility",
+      "criterion_id": "repository-gates",
+      "owner_increment_id": "publish-lifecycle-experience",
+      "owner_criterion_id": "publish-experience-gates",
+      "related_owners": [
+        {
+          "increment_id": "published-lifecycle-runtime-foundation",
+          "criterion_id": "lifecycle-foundation-gates"
+        }
+      ],
+      "disposition": "merged-existing-owner",
+      "summary": "The later completed roadmap records owning focused, packaged desktop/thin-client, build/documentation/architecture/security and repository gates. Existing historical evidence stays historical; this supersession event creates neither a current-candidate receipt nor a new completion/approval.",
+      "evidence_paths": [
+        "docs/systems-publish-runtime-lifecycle-implementation-roadmap.md",
+        ".implementation-roadmaps/systems-publish-runtime-lifecycle/state.json",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    }
+  ],
+  "current_criteria": [
+    {
+      "increment_id": "published-lifecycle-runtime-foundation",
+      "criterion_id": "lifecycle-transition-matrix",
+      "disposition": "qualification-required",
+      "summary": "Existing completed successor responsibility retained: The application-owned transition matrix implements Install as install-and-activate; permits Start, Deactivate, and Uninstall for an active stopped installation; permits Activate and Uninstall for an inactive stopped installation; exposes Stop as the only running action; and rejects stale or invalid transitions without side effects. Retirement grants no new current-candidate qualification.",
+      "evidence_paths": [
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "published-lifecycle-runtime-foundation",
+      "criterion_id": "idempotent-retained-state",
+      "disposition": "qualification-required",
+      "summary": "Existing completed successor responsibility retained: Repeated intents reconcile to one workspace-scoped current deployment per exact release and host target while preserving immutable release identity, audit history, prior deployments, uninstall history, and restart recovery without destructive deletion. Retirement grants no new current-candidate qualification.",
+      "evidence_paths": [
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "published-lifecycle-runtime-foundation",
+      "criterion_id": "release-bound-runtime",
+      "disposition": "qualification-required",
+      "summary": "Existing completed successor responsibility retained: Start creates a truthful long-lived runtime session bound to the selected active system and exact approved release; qualified visual releases receive a bounded launch descriptor, nonvisual releases start without one, and unsupported imported or authored execution fails closed. Retirement grants no new current-candidate qualification.",
+      "evidence_paths": [
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "published-lifecycle-runtime-foundation",
+      "criterion_id": "partial-failure-truthfulness",
+      "disposition": "qualification-required",
+      "summary": "Existing completed successor responsibility retained: Activation, automatic visual launch, stop, deactivation, uninstall, adapter, and persistence failures leave a recoverable authoritative state, expose only valid retry or cleanup actions, and never report a system as running, stopped, active, or uninstalled contrary to retained evidence. Retirement grants no new current-candidate qualification.",
+      "evidence_paths": [
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "published-lifecycle-runtime-foundation",
+      "criterion_id": "lifecycle-host-parity",
+      "disposition": "qualification-required",
+      "summary": "Existing completed successor responsibility retained: Desktop and server hosts enforce identical exact-release, workspace, authorization, state-transition, and action-eligibility semantics through allowlisted IPC and API projections with safe diagnostics. Retirement grants no new current-candidate qualification.",
+      "evidence_paths": [
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "published-lifecycle-runtime-foundation",
+      "criterion_id": "security-lifecycle-reviewed",
+      "disposition": "qualification-required",
+      "summary": "Existing completed successor responsibility retained: Workspace isolation, exact-release integrity, runtime authority, launch isolation, fail-closed unsupported execution, transition races, idempotency, audit retention, sanitized diagnostics, secure rollback, and residual risk are documented and evidenced with denial and failure-path tests. Retirement grants no new current-candidate qualification.",
+      "evidence_paths": [
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "published-lifecycle-runtime-foundation",
+      "criterion_id": "lifecycle-foundation-gates",
+      "disposition": "qualification-required",
+      "summary": "Existing completed successor responsibility retained: Focused contract, use-case, persistence, runtime, host, transport, and recovery tests pass before the applicable documentation, architecture, server/thin-client build, security, and full repository gates run once for the completed increment. Retirement grants no new current-candidate qualification.",
+      "evidence_paths": [
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "publish-lifecycle-experience",
+      "criterion_id": "publish-action-progression",
+      "disposition": "qualification-required",
+      "summary": "Existing completed successor responsibility retained: An unpublished or unsupported build has no lifecycle controls; a published uninstalled build shows Install; successful Install also activates and then shows Start, Deactivate, and Uninstall; inactive stopped installations show Activate and Uninstall; running systems show Stop only; Stop restores Start, Deactivate, and Uninstall for an active installation. Retirement grants no new current-candidate qualification.",
+      "evidence_paths": [
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "publish-lifecycle-experience",
+      "criterion_id": "automatic-launch-without-open-control",
+      "disposition": "qualification-required",
+      "summary": "Existing completed successor responsibility retained: Starting a qualified visual system automatically opens its exact-release interface without displaying an Open System action, while starting a nonvisual server starts it without opening a visual surface; launch and server-start failures produce truthful recoverable UI. Retirement grants no new current-candidate qualification.",
+      "evidence_paths": [
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "publish-lifecycle-experience",
+      "criterion_id": "no-manual-deployment-internals",
+      "disposition": "qualification-required",
+      "summary": "Existing completed successor responsibility retained: Users never enter or select deployment ids, run ids, requested capability lists, raw secret references, or egress origins for normal Publish lifecycle actions; internal identifiers and policy-derived configuration remain application-owned. Retirement grants no new current-candidate qualification.",
+      "evidence_paths": [
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "publish-lifecycle-experience",
+      "criterion_id": "active-source-identity",
+      "disposition": "qualification-required",
+      "summary": "Existing completed successor responsibility retained: Every active published build is recognizable by system name and build version and maps to its exact immutable release, while archived, deleted, cross-workspace, stale, or mismatched sources never appear as operable lifecycle cards. Retirement grants no new current-candidate qualification.",
+      "evidence_paths": [
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "publish-lifecycle-experience",
+      "criterion_id": "run-test-removed",
+      "disposition": "qualification-required",
+      "summary": "Existing completed successor responsibility retained: Desktop and thin-client Systems navigation no longer expose a standalone Run & Test tab or the superseded multi-step workflow, and direct stale routes or calls fail safely without reviving renderer-owned authority. Retirement grants no new current-candidate qualification.",
+      "evidence_paths": [
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "publish-lifecycle-experience",
+      "criterion_id": "accessible-responsive-controls",
+      "disposition": "qualification-required",
+      "summary": "Existing completed successor responsibility retained: Lifecycle controls use the existing flat design system, fit supported widths, expose loading and status feedback, preserve keyboard and focus behavior, prevent duplicate action submission, and do not flash stale or ineligible actions during refresh. Retirement grants no new current-candidate qualification.",
+      "evidence_paths": [
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "publish-lifecycle-experience",
+      "criterion_id": "security-publish-reviewed",
+      "disposition": "qualification-required",
+      "summary": "Existing completed successor responsibility retained: Automatic launch, host surface isolation, workspace and exact-release binding, archive/delete lifecycle exclusion, idempotency, policy-derived configuration, no client authority, safe diagnostics, stop and uninstall recovery, secure rollback, and residual risks are documented and evidenced. Retirement grants no new current-candidate qualification.",
+      "evidence_paths": [
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "publish-lifecycle-experience",
+      "criterion_id": "publish-experience-gates",
+      "disposition": "qualification-required",
+      "summary": "Existing completed successor responsibility retained: Focused shared UI and host tests pass before packaged desktop and thin-client end-to-end qualification plus applicable documentation, architecture, agent-support, security, build, and full repository gates run once for the completed increment. Retirement grants no new current-candidate qualification.",
+      "evidence_paths": [
+        "modules/application/use-cases/system-deployment/system-published-lifecycle.use-cases.ts",
+        "modules/application/use-cases/system-deployment/tests/system-published-lifecycle.use-cases.unit.test.ts",
+        "modules/ui/shared/system-builder/tests/system-run-workflow-page-cutover.unit.test.ts"
+      ]
+    }
+  ],
+  "finding_inventories": {},
+  "overall_qualification": {
+    "completion_suite": "preserved-completed-successor",
+    "procedure": [
+      "Preserve all original successor completion, approval and executed evidence.",
+      "Focused current lifecycle/cutover tests corroborate the existing owner; no new full-suite/native/production qualification is inferred.",
+      "Any new technical scope belongs to a separately approved successor with current candidate checks and independent review."
+    ],
+    "limits": "The original unapproved draft remains blocked historical scope, not implemented or completed. No status, approval, receipt or technical pass transfers."
+  }
+}

@@ -16,6 +16,12 @@ test("contributor control plane passes focused behavioral qualification", () => 
 });
 
 const pause = () => new Promise(resolve => setImmediate(resolve));
+const humanIssue = (needed, prevents, action) => ({
+  action_owner: "human", summary: "Internal technical summary stays off the page.", prevents, required_action: action,
+  plain_language: { needed, prevents, action, responsible_role: "Repository owner", user_action: action,
+    done_when: "The agent has checked and recorded the requested result." },
+});
+
 test("JSON review UI refreshes, navigates and renders hostile text inertly", async () => {
   const html = readFileSync("dev-tools/review-site/index.html", "utf8");
   const script = readFileSync("dev-tools/review-site/app.js", "utf8");
@@ -49,7 +55,7 @@ test("review work items expose chunk progress, criterion links and parent naviga
   const { window } = dom;
   const criterion = { id: "works", description: "User completes the task. Safe cleanup remains required.", outcome: "passed", evidence_summary: "Actual criterion evidence",
     requirements: [{ text: "User completes the task." }, { text: "Safe cleanup remains required." }],
-    blockers: [{ summary: "Private provider credential unavailable", prevents: "The authorized publication test cannot execute", required_action: "Configure the approved credential store" }] };
+    blockers: [humanIssue("Private test access is needed", "The authorized publication test cannot execute", "Configure the approved credential store")] };
   const chunk = { id: "chunk", chunk_number: 1, title: "Implement the journey", outcome: "Recover from an error", status: "planned", is_next: true, criteria_ids: ["works"], completed_at: "", summary: "", tests: [] };
   let response = { schema_version: "development-review-v1", source_digest: "chunk-first", roadmaps: [{ id: "trace", title: "Trace workflow", objective: "Review useful work", status: "executing", evidence_policy: "declarative-legacy", current_increment: "increment", increments: [{ id: "increment", number: 1, title: "Deliver outcome", objective: "Complete the task", status: "implementing", chunks_complete: 0, chunks_planned: 1, chunks: [chunk], criteria: [criterion] }] }], work_items: [{ ...chunk, id: "trace/increment/chunk", source: "roadmap-chunk", roadmap_id: "trace", roadmap_title: "Trace workflow", increment_id: "increment", increment_title: "Deliver outcome", evidence_policy: "declarative-legacy", criteria: [criterion] }], evaluations: [], feedback: [], diagnostics: [] };
   window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) });
@@ -65,7 +71,7 @@ test("review work items expose chunk progress, criterion links and parent naviga
     assert.equal(window.document.querySelectorAll("article").length, 1);
     assert.match(window.document.querySelector("article").textContent, /Trace workflow.*Deliver outcome/);
     assert.equal(window.document.querySelectorAll(".criterion-requirements > li").length, 2);
-    assert.match(window.document.querySelector(".criterion-blockers").textContent, /Needed action: Configure the approved credential store/);
+    assert.match(window.document.querySelector(".criterion-blockers").textContent, /Your action: Configure the approved credential store/);
     assert.equal(window.document.querySelector(".card-heading > .status").textContent, "planned");
     assert.match(window.document.querySelector("article").textContent, /Historical roadmap declaration/);
     [...window.document.querySelectorAll("button")].find(b => b.textContent === "View parent increment").click();
@@ -308,6 +314,7 @@ test("consolidated security history stays inspectable and searchable without a d
   const { window } = dom;
   const criteria = [{ id: "native-check", description: "Actual native proof", outcome: "pending" }];
   const owner = { id: "security-findings-refresh", title: "Unified security delivery", status: "blocked", current_increment: "current",
+    blocker_count: 1, blockers: [humanIssue("A permitted independent review is needed.", "This review needs an allowed independent reviewer.", "Arrange the permitted review of Assets access controls.")],
     increments: [{ id: "current", number: 1, title: "Current authority", status: "blocked", criteria, chunks_planned: 0, chunks_complete: 0 }],
     merged_history: [{ id: "security-vulnerability-remediation", title: "Legacy <img src=x onerror=alert(1)>", status: "blocked",
       summary: "Keep completed history and current pending proof separate", increments: [{ id: "old", number: 5, title: "Legacy runtime", status: "blocked", criteria,
@@ -324,6 +331,7 @@ test("consolidated security history stays inspectable and searchable without a d
     assert.equal(window.document.querySelectorAll("img").length, 0);
     const history = window.document.querySelector(".merged-history");
     assert.match(history.textContent, /Historical chunk: completed/);
+    assert.equal(history.querySelector(".status").textContent, "archived pending");
     assert.match(history.textContent, /no legacy or current qualification pass is inferred/i);
     assert.match(history.textContent, /Required companion checks: current\/other-check/);
     assert.equal(window.document.querySelector(".card-heading > .status").textContent, "blocked");
@@ -364,7 +372,7 @@ test("review requirement bullets retain shared context, one qualification and ca
   const { window } = dom;
   const description = "Models load safely. Memory, staging and cleanup stay bounded.";
   const criterion = { id: "bounded", description, outcome: "pending", evaluation_mode: "agent-executable-technical",
-    blockers: [{ summary: "Private provider credential is unavailable.", prevents: "The real private publication test cannot run without an authorized credential.", required_action: "Configure the private test repository through the approved credential store." }],
+    blockers: [humanIssue("Private test access is needed.", "The real private publication test cannot run without an authorized credential.", "Configure the private test repository through the approved credential store.")],
     qualification: "controlled-environment", requirements: [
       { text: "Models load safely." }, { text: "Memory,", children: [{ text: "staging and cleanup stay bounded." }] },
     ] };
@@ -388,8 +396,8 @@ test("review requirement bullets retain shared context, one qualification and ca
     assert.equal(window.document.querySelector(".original-criterion p").textContent, description);
     const blockers = window.document.querySelector(".criterion-blockers");
     assert.equal(blockers.querySelector("h5").textContent, "Blockers");
-    assert.match(blockers.textContent, /Prevents: The real private publication test cannot run/);
-    assert.match(blockers.textContent, /Needed action: Configure the private test repository/);
+    assert.match(blockers.textContent, /Why it matters: The real private publication test cannot run/);
+    assert.match(blockers.textContent, /Your action: Configure the private test repository/);
     assert.equal(blockers.querySelectorAll(".status,details").length, 0);
     assert.ok(window.document.querySelector(".criterion-requirement-body").compareDocumentPosition(blockers) & window.Node.DOCUMENT_POSITION_FOLLOWING);
     assert.match(window.document.querySelector(".increment").textContent, /0 \/ 0 work chunks · 0 \/ 1 criteria passed/);
@@ -475,7 +483,7 @@ test("roadmap labels distinguish queued pending, in-progress, approval and actua
       { id: "active", title: "Active", status: "executing", blocker_count: 0, increments: [] },
       { id: "proposal", title: "Proposal", status: "roadmap-review", blocker_count: 0, increments: [] },
       { id: "real-gap", title: "Real gap", status: "blocked", blocker_count: 1, increments: [],
-        blockers: [{ id: "native-proof", kind: "technical", summary: "Native containment proof remains pending.", required_action: "Collect the actual protected lifecycle evidence." }] },
+        blockers: [{ id: "review-access", ...humanIssue("An allowed independent review is needed.", "This review requires the repository owner to arrange access.", "Arrange the permitted independent review.") }] },
       { id: "stale-label", title: "No actual blocker", status: "blocked", blocker_count: 0, current_increment: "none", increments: [] },
       { id: "qualification", title: "Qualification", status: "implementation-complete-qualification-pending", blocker_count: 0, increments: [] },
       { id: "finalize", title: "Finalize", status: "roadmap-ready-to-close", blocker_count: 0, increments: [] },
@@ -487,13 +495,13 @@ test("roadmap labels distinguish queued pending, in-progress, approval and actua
     window.eval(readFileSync("dev-tools/review-site/app.js", "utf8"));
     await pause();
     assert.deepEqual([...window.document.querySelectorAll(".card-heading > .status")].map(n => n.textContent),
-      ["pending", "in progress", "awaiting approval", "blocked", "blocked", "pending qualification", "ready to finalize", "completed"]);
+      ["pending", "in progress", "awaiting approval", "blocked", "status review needed", "pending qualification", "ready to finalize", "completed"]);
     assert.equal(response.roadmaps[0].status, "ready");
     assert.equal(response.roadmaps[4].status, "blocked");
-    assert.match(window.document.querySelector(".status-review-note").textContent, /Status needs review/);
-    assert.match(window.document.querySelector(".roadmap-blockers").textContent, /Native containment proof remains pending/);
-    assert.match(window.document.querySelector(".roadmap-blockers").textContent, /Required action: Collect the actual protected lifecycle evidence/);
-    assert.equal(window.document.querySelector(".roadmap-blockers").open, false);
+    assert.match(window.document.querySelector(".status-review-note").textContent, /The agent must review this status/);
+    assert.match(window.document.querySelector(".roadmap-blockers").textContent, /An allowed independent review is needed/);
+    assert.match(window.document.querySelector(".roadmap-blockers").textContent, /Your action: Arrange the permitted independent review/);
+    assert.equal(window.document.querySelector(".roadmap-blockers").querySelectorAll("details").length, 0);
     const legend = window.document.querySelector(".roadmap-status-legend");
     assert.equal(legend.getAttribute("aria-labelledby"), "roadmap-status-key");
     assert.equal(window.document.querySelector("#items").firstElementChild, legend);
@@ -501,58 +509,56 @@ test("roadmap labels distinguish queued pending, in-progress, approval and actua
     for (const text of ["technical check pending", "Qualification not recorded", "This does not mean its test failed", "Reviewed local support", "the parent roadmap is not thereby qualified", "Paused for approval", "Ready to finalize"])
       assert.ok(legend.textContent.includes(text), text);
     assert.match(window.document.querySelector("#summary").textContent, /1In progress/);
-    assert.match(window.document.querySelector("#summary").textContent, /1Open blockers/);
+    assert.match(window.document.querySelector("#summary").textContent, /1Human actions needed/);
   } finally { window.close(); }
 });
 
-test("review explains blockers plainly while retaining original technical facts and pending qualification", async () => {
-  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), {
-    runScripts: "outside-only", url: "http://127.0.0.1:8766",
-  });
+test("review assigns agent work and human blockers clearly without displaying technical source text", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
   const { window } = dom;
-  const blocker = { id: "provider-check", kind: "controlled-environment", summary: "Original technical summary predates supplied access.",
-    prevents: "Private publication qualification has not executed.", required_action: "Original canonical required action.",
-    plain_language: { needed: "Verification of the authorized private test access.",
-      prevents: "Access has been supplied and use is authorized. Its operation still needs verification.",
-      action: "Verify saved access, create the approved private test repository if absent, and run a small synthetic upload and download." } };
-  let response = { schema_version: "development-review-v1", source_digest: "plain-blocker-first",
-    roadmaps: [{ id: "provider", title: "Private provider checks", status: "blocked", current_increment: "one", blocker_count: 1,
-      blockers: [blocker], increments: [{ id: "one", number: 1, title: "Provider verification", status: "blocked", objective: "Retain actual evidence",
-        chunks_complete: 0, chunks_planned: 0, criteria: [{ id: "qualified", description: "Actual provider behavior is qualified.",
-          evaluation_mode: "agent-executable-technical", qualification: "controlled-environment", outcome: "pending", blockers: [blocker] }] }] }],
+  const issue = { id: "safe-restart", action_owner: "agent", summary: "Private technical staging-fence implementation detail.",
+    prevents: "Internal ownership proof is not composed.", required_action: "Internal native qualification specification.",
+    plain_language: { needed: "Finish the safe restart checks for low-memory mode.", responsible_role: "Coding agent",
+      prevents: "The software must protect temporary model files before another low-memory test can start.",
+      user_action: "None. The agent will finish the code and tests.", action: "Finish and test file protection, disk limits and worker shutdown.",
+      done_when: "The restart and cleanup tests pass without changing completed model accuracy results." } };
+  let response = { schema_version: "development-review-v1", source_digest: "agent-pending-first",
+    roadmaps: [{ id: "low-memory", title: "Low-memory mode", status: "executing", blocker_count: 0, blockers: [], pending_work: [issue], current_increment: "one",
+      increments: [{ id: "one", number: 1, title: "Safe restart", status: "verifying", chunks_complete: 0, chunks_planned: 0, criteria: [
+        { id: "checked", description: "Required tests remain pending.", evaluation_mode: "agent-executable-technical", outcome: "pending", blockers: [], pending_work: [issue] } ] }] }],
     work_items: [], evaluations: [], feedback: [], diagnostics: [] };
   window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) });
   window.setInterval = () => 1;
   try {
-    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8"));
-    await pause();
-    const parent = window.document.querySelector(".roadmap-blockers .blocker-explanation");
-    const criterion = window.document.querySelector(".criterion-blockers li");
-    for (const container of [parent, criterion]) {
-      assert.match(container.firstElementChild.textContent, /What’s needed: Verification of the authorized private test access/);
-      assert.match(container.textContent, /Why it matters: Access has been supplied and use is authorized/);
-      assert.match(container.textContent, /What to do: Verify saved access, create the approved private test repository if absent/);
-      const technical = container.querySelector(".blocker-technical-details");
-      assert.equal(technical.open, false);
-      assert.equal(technical.querySelector("summary").textContent, "Technical details");
-      assert.match(technical.textContent, /Original technical summary predates supplied access/);
-      assert.match(technical.textContent, /Original canonical required action/);
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8")); await pause();
+    assert.equal(window.document.querySelectorAll(".criterion-blockers,.roadmap-blockers,.blocker-technical-details").length, 0);
+    for (const section of [".roadmap-pending-work", ".criterion-pending-work"]) {
+      const text = window.document.querySelector(section).textContent;
+      assert.match(text, /Who will act: Coding agent/);
+      assert.match(text, /Your action: None/);
+      assert.match(text, /Agent work: Finish and test file protection/);
+      assert.match(text, /Complete when: The restart and cleanup tests pass/);
     }
-    assert.match(criterion.querySelector(".blocker-technical-details").textContent, /Prevents: Private publication qualification has not executed/);
+    assert.doesNotMatch(window.document.body.textContent, /staging-fence|ownership proof|native qualification specification/);
+    assert.equal(window.document.querySelector(".card-heading > .status").textContent, "in progress");
     assert.equal(window.document.querySelector(".criteria > li > .status").textContent, "technical check pending");
+    response = structuredClone(response); response.source_digest = "human-needed";
+    const human = humanIssue("A permitted independent review is needed.", "This review needs an allowed reviewer.", "Arrange an allowed reviewer for the named access-control change.");
+    response.roadmaps[0].status = "blocked"; response.roadmaps[0].blocker_count = 1;
+    response.roadmaps[0].blockers = [human]; response.roadmaps[0].increments[0].criteria[0].blockers = [human];
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.match(window.document.querySelector(".criterion-blockers").textContent, /Who will act: Repository owner/);
+    assert.match(window.document.querySelector(".criterion-blockers").textContent, /Your action: Arrange an allowed reviewer/);
     assert.equal(window.document.querySelector(".card-heading > .status").textContent, "blocked");
-    response = structuredClone(response);
-    response.source_digest = "plain-copy-inert-markup";
-    response.roadmaps[0].increments[0].criteria[0].blockers[0].plain_language.needed = "<img src=x onerror=alert(1)> remains inert.";
+    response.source_digest = "hostile-copy";
+    response.roadmaps[0].increments[0].criteria[0].pending_work[0].plain_language.needed = "<img src=x onerror=alert(1)> remains inert.";
     window.document.querySelector("#refresh").click(); await pause();
     assert.equal(window.document.querySelectorAll("img").length, 0);
-    assert.match(window.document.querySelector(".criterion-blockers").textContent, /<img src=x/);
-    response.source_digest = "invalid-copy-canonical-fallback";
-    response.roadmaps[0].increments[0].criteria[0].blockers[0].plain_language = { needed: "Unsupported incomplete copy" };
+    assert.match(window.document.querySelector(".criterion-pending-work").textContent, /<img src=x/);
+    response.source_digest = "stale-copy";
+    response.roadmaps[0].increments[0].criteria[0].pending_work[0].plain_language = { needed: "Unsupported incomplete copy" };
     window.document.querySelector("#refresh").click(); await pause();
-    assert.equal(window.document.querySelectorAll(".criterion-blockers .blocker-technical-details").length, 0);
-    assert.match(window.document.querySelector(".criterion-blockers").textContent, /Original technical summary predates supplied access/);
-    assert.doesNotMatch(window.document.querySelector(".criterion-blockers").textContent, /Unsupported incomplete copy/);
+    assert.match(window.document.querySelector(".criterion-pending-work").textContent, /Clear action instructions are not yet available/);
+    assert.doesNotMatch(window.document.body.textContent, /Unsupported incomplete copy|staging-fence/);
   } finally { window.close(); }
 });
-

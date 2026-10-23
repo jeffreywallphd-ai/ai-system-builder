@@ -2,8 +2,8 @@
 
 # Asset Experience and Layered Customization Implementation Roadmap
 
-- Status: `implementation-complete-qualification-pending`
-- Updated: `2026-07-18T21:14:33Z`
+- Status: `blocked`
+- Updated: `2026-10-23T18:49:24Z`
 
 ## Objective
 
@@ -333,6 +333,8 @@ Prove the complete Assets and Systems experience, layered customization, and uni
 
 ### Work packages
 
+Human portions of the original work packages, deliverables, verification and completed plan below are superseded by the exact offline scope archive. They remain historical approved intent; only the current technical acceptance criteria govern future qualification. No test pass is asserted.
+
 - **Representative end-to-end scenarios** (`scenario-tests`): Tests cover default or system and admitted imported customization plus new Studio asset save, reopen, review, publication, browse visibility, restart persistence, and original immutability on desktop and server paths.
 - **Failure and security qualification** (`failure-security`): Cross-workspace access, stale revisions or bases, unsafe paths or content, oversized files, revoked or unavailable package truth, interrupted persistence, and unavailable Studio adapters fail closed with recoverable safe UI states.
 - **Accessibility and responsive qualification** (`accessibility-responsive`): Keyboard, focus, modal stacking, tab semantics, screen-reader naming and status, 400-percent zoom and reflow, contrast, and narrow-layout checks are recorded for desktop and thin client.
@@ -353,8 +355,13 @@ Prove the complete Assets and Systems experience, layered customization, and uni
 | `e2e-default-imported`: A built-in or system asset and an admitted installed imported asset can each be selected, customized, reviewed, published as distinct workspace-owned assets, rediscovered after restart, and proven not to mutate their bases. | local | passed (test) |
 | `e2e-studio-saved`: A new from-scratch resource-backed asset can be saved unpublished, reopened from Saved in Studio, reviewed, published, and rediscovered after restart without executing authored source. | local | passed (test) |
 | `all-gates-pass`: Focused suites, npm test, documentation, architecture, agent-support, dependency security, server, thin-client, and desktop build or package gates pass or have explicitly recorded environmental limitations with no product defect concealed. | local | passed (test) |
-| `desktop-thin-accessibility`: Documented keyboard, screen-reader, 400-percent zoom and reflow, contrast, focus, modal, and responsive checks pass on supported desktop and thin-client surfaces. | controlled-environment | pending (manual) |
+| `desktop-thin-accessibility`: Agent-executed automated keyboard interactions, accessibility-tree semantics for screen-reader compatibility, 400-percent zoom and reflow, text and non-text contrast, focus, modal, reduced-motion and responsive checks pass on supported desktop and thin-client surfaces. | controlled-environment | pending (external) |
 | `security-review`: A controlled security review confirms source containment, non-execution during browsing and import inspection, workspace isolation, immutable bases, safe diagnostics, and no implied activation or deployment authority. | controlled-environment | pending (manual) |
+
+### Human scope handled offline
+
+- User-directed offline human acceptance; preserve every technical requirement and all prior evidence. No test pass or closure is asserted. (`user-agent-only-acceptance-and-current-scope-20261022`)
+  - Human portion of `desktop-thin-accessibility`: Observed human screen-reader sessions and participant/manual accessibility acceptance are handled offline. This transfers no automated keyboard/touch compatibility, accessibility-tree semantics, actual400-percent zoom/reflow, contrast or claimed physical-hardware/native support qualification. — offline user-owned; technical criterion retained; no test pass asserted.
 
 ### Verification
 
@@ -371,3 +378,11 @@ Keep new create operations capability-gated while retaining read-only browse, im
 - Automatic package updates
 - Automatic build, installation, activation, deployment, or unqualified execution
 - Cross-workspace collaborative editing
+
+## Human action needed
+
+- **restricted-legacy-authority-review-pending**: The shared legacy Assets authorization review owned by security-findings-refresh remains unperformed because its independent review turn was restricted before review. Reviewed l...
+  - Owner: Repository owner
+  - Action: Arrange one permitted independent assessment of the existing Assets access-control change. Do not retry the restricted coding-agent review through another agent, tool or route. The same assessment supplies both roadma...
+  - Where: Existing work security-legacy-assets-workspace-authority; Assets production-qualification/security-review and Security file-and-workspace-authority/security-impact-reviewed
+  - Done when: An allowed independent reviewer supplies a genuine review of the actual candidate, with identity, findings and required current checks. Author tests and this status audit do not replace the review.

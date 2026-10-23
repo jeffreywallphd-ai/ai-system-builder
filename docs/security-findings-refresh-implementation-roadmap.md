@@ -3,7 +3,7 @@
 # Security Findings Refresh and Governed Remediation Implementation Roadmap
 
 - Status: `blocked`
-- Updated: `2026-10-21T19:37:45Z`
+- Updated: `2026-10-23T18:49:25Z`
 
 ## Objective
 
@@ -406,3 +406,25 @@ Preserve the current governed state, journals and issue evidence. Disable unsafe
 - Remote/public review-site hosting, authenticated reviewer service or remote-agent execution
 - Changing real production configuration, rotating credentials, publishing packages or deploying software
 - Implementing the 21 other-repository or 25 separately owned functional findings; security-relevant dependencies must be coordinated explicitly
+
+## Human action needed
+
+- **legacy-authority-independent-review-unavailable**: Legacy Assets authorization fixes passed their four registered checks and desktop/server type/build checks, but the separately invoked review was stopped before review by an ext...
+  - Owner: Repository owner
+  - Action: Arrange one permitted independent assessment of the existing Assets access-control change. Do not retry the restricted coding-agent review through another agent, tool or route. The same assessment supplies both roadma...
+  - Where: Existing work security-legacy-assets-workspace-authority; Assets production-qualification/security-review and Security file-and-workspace-authority/security-impact-reviewed
+  - Done when: An allowed independent reviewer supplies a genuine review of the actual candidate, with identity, findings and required current checks. Author tests and this status audit do not replace the review.
+
+## Pending work
+
+Owner: coding agent. No user action is needed. Technical checks are not passed.
+- **model-file-effect-native-qualification**: Independent review found unresolved host file-effect concurrency and supported-cache compatibility issues. Authentication, scoped revisions, library creation and source staging...
+  - Owner: Coding agent
+  - Action: Finish and independently qualify approved identity-preserving native file operations and atomic source-record binding. Keep unsafe file effects disabled; preserve authorization, provenance, concurrency and supported-c...
+  - Where: Security roadmap file-and-workspace-authority native file-operation implementation
+  - Done when: Supported-host native concurrency and cache-compatibility evidence plus exact-candidate independent review satisfy the unchanged owning security criteria.
+- **approved-native-design-qualification-pending**: Native design direction is approved, but the identity-preserving implementation, protected ownership publication and supported-cache positive/race qualification are not yet demo...
+  - Owner: Coding agent
+  - Action: Implement and independently qualify the already approved exclusive-ownership/native design. Keep all unproven physical effects pending and preserve supported model-cache workflows.
+  - Where: Security roadmap approved native file-control design and qualification fixtures
+  - Done when: Current supported-host evidence and independent review prove protected ownership, publication, concurrency and supported model-cache behavior required by the unchanged security criteria.

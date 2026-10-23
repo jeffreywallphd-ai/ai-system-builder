@@ -3,7 +3,11 @@
   "agent_only_roadmaps": [
     "functionality-optimization",
     "system-builder-canvas-reliability",
-    "security-findings-refresh"
+    "security-findings-refresh",
+    "asset-experience-layered-customization",
+    "data-management-quality-and-usability",
+    "optional-constrained-json-generation",
+    "optional-low-memory-inference"
   ],
   "criterion_labels": [
     {
@@ -17,13 +21,26 @@
       "increment_id": "qualified-user-and-model-outcomes",
       "criterion_id": "accessibility-outcomes-qualified",
       "title": "Automated desktop and thin-client accessibility"
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "title": "Actual optional offload execution and cleanup"
     }
   ],
   "successors": [
     {
       "roadmap_id": "security-vulnerability-remediation",
       "successor_roadmap_id": "security-findings-refresh",
-      "summary": "Historical security delivery plan; unresolved remediation continues in the approved Security findings refresh successor. Original history and statuses are preserved."
+      "summary": "Merged into security-findings-refresh as the sole execution owner. Preserved legacy history and exact criterion crosswalk are available inside that roadmap; no duplicate backlog or inherited completion.",
+      "consolidation_path": "docs/security/security-roadmap-consolidation.json"
+    },
+    {
+      "roadmap_id": "systems-run-workflow-active-source",
+      "successor_roadmap_id": "systems-publish-runtime-lifecycle",
+      "summary": "Unapproved standalone Run and Test proposal absorbed by completed Publish lifecycle; all security and active-source concerns remain with their existing owners.",
+      "consolidation_path": "docs/operations/retired-run-test-roadmap.json"
     }
   ],
   "links": [
@@ -1632,6 +1649,758 @@
       "limitations": [
         "Earlier 205.704 ms failure remains preserved; this is supporting fixed-budget evidence, not a paired improvement estimate or final host qualification.",
         "Reviewed local support at its recorded snapshot; no current whole-candidate or parent criterion pass is inferred."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-authority-and-paths",
+      "work_id": "security-r32-r33-current-local-qualification",
+      "work_criteria": [
+        "explicit-repair-authority-qualified",
+        "unmanaged-adoption-denial-qualified"
+      ],
+      "receipt_digest": "42647a9fde00f7e4dc0c4ff8aa5e813515123644932e8b2f7d79c9a06ad895fb",
+      "review_digest": "e93051cc41b0f1b97d8dd8f366d8ac6530e7d471b6b65d2aa02f7db37ee2c03e",
+      "scope": "Qualify explicit runtime repair permission and unmanaged adoption denial",
+      "limitations": [
+        "Inert component tests only; no initial-install, tree-byte, immutable-source or native identity qualification.",
+        "Completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r32-r33-current-local-qualification",
+      "work_criteria": [
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "42647a9fde00f7e4dc0c4ff8aa5e813515123644932e8b2f7d79c9a06ad895fb",
+      "review_digest": "e93051cc41b0f1b97d8dd8f366d8ac6530e7d471b6b65d2aa02f7db37ee2c03e",
+      "scope": "Review bounded runtime repair/adoption controls",
+      "limitations": [
+        "Parent security review and native/provenance qualification remain separate.",
+        "Completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "complete-integrity-input",
+      "work_id": "security-r50-package-semantic-admission",
+      "work_criteria": [
+        "bounded-semantic-claims-enforced",
+        "package-lifecycle-compatible"
+      ],
+      "receipt_digest": "52e6bfc0320a10e241dc6df39acc4cf0a21347ff18936c567044ab38fb2ce802",
+      "review_digest": "2b336c8d761f743768a3c0529d07ce406f11f68d2e1653f61c063a3ef31777cf",
+      "scope": "Verify imported semantic identities before package admission",
+      "limitations": [
+        "Broader nonsemantic resource/schema, installed legacy and trust/provenance/native qualification remain separate.",
+        "Completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-r50-package-semantic-admission",
+      "work_criteria": [
+        "security-impact-reviewed"
+      ],
+      "receipt_digest": "52e6bfc0320a10e241dc6df39acc4cf0a21347ff18936c567044ab38fb2ce802",
+      "review_digest": "2b336c8d761f743768a3c0529d07ce406f11f68d2e1653f61c063a3ef31777cf",
+      "scope": "Review real package semantic admission and effect-free stale-summary denial",
+      "limitations": [
+        "Component scope only; no parent, legacy migration or native qualification.",
+        "Completed component support at its recorded snapshot; no current whole-candidate, native, parent-roadmap or scanner closure."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "dataset-source-isolation",
+      "work_id": "security-ingestion-guarded-origin-publication",
+      "work_criteria": [
+        "usable-composed-ingestion-source",
+        "acknowledged-origin-and-recovery",
+        "immutable-task-snapshot-lineage"
+      ],
+      "receipt_digest": "c5648dcf98e582fa8aad78d099a42b235229ad799e4d7ff59f78f0bd6373f2c1",
+      "review_digest": "f07798e39e0eab6fb3fac19f4d3e07d2913050fb8ec7700e4c7087c9add31c58",
+      "scope": "Reviewed cooperative exclusive ingestion publication, one-shot origin issuance, immutable task/snapshot lineage and actual desktop source-to-preparation integration.",
+      "limitations": [
+        "Historical component snapshot; no current parent criterion or chunk completion.",
+        "Hostile native post-publication identity, protected crash recovery, unknown cleanup and filesystem/metadata atomicity remain pending.",
+        "Server HTTP task admission stays denied; provider, whole UI and model qualification are separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "security-ingestion-guarded-origin-publication",
+      "work_criteria": [
+        "security-impact-reviewed",
+        "exclusive-durable-file-publication"
+      ],
+      "receipt_digest": "c5648dcf98e582fa8aad78d099a42b235229ad799e4d7ff59f78f0bd6373f2c1",
+      "review_digest": "f07798e39e0eab6fb3fac19f4d3e07d2913050fb8ec7700e4c7087c9add31c58",
+      "scope": "Reviewed cooperative exclusive ingestion publication, one-shot origin issuance, immutable task/snapshot lineage and actual desktop source-to-preparation integration.",
+      "limitations": [
+        "Historical component snapshot; no current parent criterion or chunk completion.",
+        "Hostile native post-publication identity, protected crash recovery, unknown cleanup and filesystem/metadata atomicity remain pending.",
+        "Server HTTP task admission stays denied; provider, whole UI and model qualification are separate."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "security-review",
+      "work_id": "security-assets-sender-source-compatibility",
+      "work_criteria": [
+        "untrusted-sender-no-effects",
+        "trusted-feature-compatibility",
+        "security-scope-documented",
+        "scoped-pdf-catalog-compatibility"
+      ],
+      "receipt_digest": "b445dc0e9f169f24dcdb0449a0fc8b67a73e7064696d6cf74f076630c2bda7d9",
+      "review_digest": "9ef0b786a98a1b2a7fe6431715f4d90623dd5c31b2c87915a1fdda07dab2094d",
+      "scope": "Reviewed local Assets security support",
+      "limitations": [
+        "Trusted sender admission and PDF fixture compatibility; does not establish resource or publication authority.",
+        "Scoped support at its recorded candidate only; no parent criterion pass, current aggregate qualification or UI/model/provider/native/platform qualification."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "security-review",
+      "work_id": "security-assets-workspace-authority",
+      "work_criteria": [
+        "all-application-entries-authorize",
+        "real-workspace-policy-and-hosts",
+        "compatibility-and-residual-truth"
+      ],
+      "receipt_digest": "37a809b008552fe59a4b90b54ea277a0c6af3357a021d9842768f84ae72c3279",
+      "review_digest": "07e2266672893c89a41697ae1e6738a4864825eb1d58b1edeaf3891a19d9a7d8",
+      "scope": "Reviewed local Assets security support",
+      "limitations": [
+        "27 Studio/package/derived entries and actual both-host resource policy; legacy authoring was excluded.",
+        "Scoped support at its recorded candidate only; no parent criterion pass, current aggregate qualification or UI/model/provider/native/platform qualification."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "security-review",
+      "work_id": "security-structured-transaction-ownership",
+      "work_criteria": [
+        "concurrent-operation-isolation",
+        "transaction-cas-and-runtime-compatibility",
+        "authority-and-scope-preserved"
+      ],
+      "receipt_digest": "f649f14067c3bba070fc3b36e6ff03efb956892afe6e8981696817d2bd6beb49",
+      "review_digest": "7a4c4827776f86269fd731fde6ff80defe00b16c2c6de774367112983d66d8a6",
+      "scope": "Reviewed local Assets security support",
+      "limitations": [
+        "Memory and exact SQLite connection structured operations, including Electron; raw maintenance/hidden aliases/live PostgreSQL excluded.",
+        "Scoped support at its recorded candidate only; no parent criterion pass, current aggregate qualification or UI/model/provider/native/platform qualification."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "security-review",
+      "work_id": "security-assets-atomic-reviewed-publication",
+      "work_criteria": [
+        "review-and-definition-atomic",
+        "immutable-owned-retry-and-base",
+        "real-host-and-runtime-compatibility",
+        "security-scope-and-pending-truth"
+      ],
+      "receipt_digest": "d6fb96bf27c87be35a1aefd9fba5a9cf0a785e9564fd22cfd6db25818ccfef10",
+      "review_digest": "cffe8dda6eacdfc53c3479df58e6b87d4634380f5d1c4bb3c14589d0c17aaf9c",
+      "scope": "Reviewed local Assets security support",
+      "limitations": [
+        "Typed atomic Studio/Derived reviewed publication, both definition placements and actual Electron; legacy publishing and native artifact races excluded.",
+        "Scoped support at its recorded candidate only; no parent criterion pass, current aggregate qualification or UI/model/provider/native/platform qualification."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "e2e-studio-saved",
+      "work_id": "assets-saved-listing-compatibility",
+      "work_criteria": [
+        "exact-legacy-list-mapping",
+        "saved-ui-rejection-recovery",
+        "qualification-limits-preserved"
+      ],
+      "receipt_digest": "53103f58dec1b95750e9e0ecb258d9295b77282685015499af25f740695ce9ff",
+      "review_digest": "ea7eece78883703fe628d4689caa2c2821fd5adfdafbba9e54ccc2013c83f80f",
+      "scope": "Saved IPC list-field compatibility, rejected-list recovery and stale-workspace fencing. Exact Saved resource/semantic reopening passed before a later real Windows UI failure.",
+      "limitations": [
+        "UI10 failed published Studio Browse rediscovery after restart. Final customized-copy resource checks and accessibility assertions remain unexecuted; no full journey or parent pass.",
+        "This functional component does not review or qualify the separately pending legacy authorization changes, native effects, managed hosts, models or providers.",
+        "Reviewed local snapshot support only; final owning source-bound qualification, complete gates and independent parent review remain required."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "qualified-user-and-model-outcomes",
+      "criterion_id": "model-quality-resource-outcomes",
+      "work_id": "standalone-model-progress-and-timing",
+      "work_criteria": [
+        "diagnostic-progress",
+        "diagnostic-observation",
+        "evidence-disposition"
+      ],
+      "receipt_digest": "d82fffa1dbe682ce58334e6b3843acbe5ea660f627441782f11ebc1026e636a4",
+      "review_digest": "b3caed7d5bbff222a3a427b1d9cda75b09401566d224b7550e5ed56b9372eee6",
+      "scope": "Assess supplied model evidence and qualify bounded diagnostic reporting",
+      "limitations": [
+        "Original CPU first22/24 and warm timeout evidence is preserved; cleanup was not observed. No parent pass.",
+        "Corrected one-case CUDA first/warm diagnostics observed cleanup/native exits; no complete quality matrix, matched throughput comparison, CPU or offload qualification.",
+        "Reviewed local support at its recorded snapshot; current parent candidate qualification remains separate."
+      ]
+    },
+    {
+      "roadmap_id": "optional-constrained-json-generation",
+      "increment_id": "production-hardening-and-qualification",
+      "criterion_id": "representative-resource-and-usability-qualification",
+      "work_id": "standalone-model-progress-and-timing",
+      "work_criteria": [
+        "diagnostic-progress",
+        "diagnostic-observation",
+        "evidence-disposition"
+      ],
+      "receipt_digest": "d82fffa1dbe682ce58334e6b3843acbe5ea660f627441782f11ebc1026e636a4",
+      "review_digest": "b3caed7d5bbff222a3a427b1d9cda75b09401566d224b7550e5ed56b9372eee6",
+      "scope": "Assess supplied model evidence and qualify bounded diagnostic reporting",
+      "limitations": [
+        "Original CPU first22/24 and warm timeout evidence is preserved; cleanup was not observed. No parent pass.",
+        "Corrected one-case CUDA first/warm diagnostics observed cleanup/native exits; no complete quality matrix, matched throughput comparison, CPU or offload qualification.",
+        "Reviewed local support at its recorded snapshot; current parent candidate qualification remains separate."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "e2e-default-imported",
+      "work_id": "assets-published-workspace-rediscovery",
+      "work_criteria": [
+        "published-list-detail",
+        "publication-isolation",
+        "scope-and-trace"
+      ],
+      "receipt_digest": "82b9cf9208d6bf99e2df7135d3a16fc58eb57e3c65c5b0b022d2529dfa4d75d6",
+      "review_digest": "e8e964f91a37e35925b0adeda4b0f506bf81da81dd6bfa33d99bca0734e287a5",
+      "scope": "Restore exact owner-bound published Studio and derived registry visibility",
+      "limitations": [
+        "Current private-source list/detail and actual repository recomposition controls only; no parent or legacy security-review pass.",
+        "Windows UI02 passed Studio rediscovery then failed an unsupported later automatic-release assertion. Complete source/resource/accessibility and managed-host qualification remain separate.",
+        "Reviewed local support at its recorded snapshot; current parent candidate qualification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "e2e-studio-saved",
+      "work_id": "assets-published-workspace-rediscovery",
+      "work_criteria": [
+        "published-list-detail",
+        "publication-isolation",
+        "scope-and-trace"
+      ],
+      "receipt_digest": "82b9cf9208d6bf99e2df7135d3a16fc58eb57e3c65c5b0b022d2529dfa4d75d6",
+      "review_digest": "e8e964f91a37e35925b0adeda4b0f506bf81da81dd6bfa33d99bca0734e287a5",
+      "scope": "Restore exact owner-bound published Studio and derived registry visibility",
+      "limitations": [
+        "Current private-source list/detail and actual repository recomposition controls only; no parent or legacy security-review pass.",
+        "Windows UI02 passed Studio rediscovery then failed an unsupported later automatic-release assertion. Complete source/resource/accessibility and managed-host qualification remain separate.",
+        "Reviewed local support at its recorded snapshot; current parent candidate qualification is not asserted."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "supported-runtime-journeys",
+      "work_id": "electron-42-current-security-patch",
+      "work_criteria": [
+        "patched-supplier-tree",
+        "host-compatibility",
+        "qualification-scope"
+      ],
+      "receipt_digest": "0973feac89eab8afeba29d5e51e94504dffcf5e86438900ba2a03e6857eea8d4",
+      "review_digest": "32b4183da4d0bed8c3c5eccfec2f38b6a292e588602ffd25b6b8740b854cb889",
+      "scope": "Qualify the original-supplier Electron 42.11.18 security patch with strict audits and actual Windows host compatibility",
+      "limitations": [
+        "Six embedded SQLite checks, isolated development and eight packaged/thin-client useful-system, publication/runtime and PDF journeys passed at the recorded source.",
+        "The supplier declares 42.x end-of-support. This is a qualified patch, not qualification of a future supported major.",
+        "Local supporting work only; parent current-candidate gates, Assets accessibility, restricted legacy review, native physical effects and model/provider qualification remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "secure-development-exposure",
+      "work_id": "electron-42-current-security-patch",
+      "work_criteria": [
+        "patched-supplier-tree",
+        "host-compatibility",
+        "qualification-scope"
+      ],
+      "receipt_digest": "0973feac89eab8afeba29d5e51e94504dffcf5e86438900ba2a03e6857eea8d4",
+      "review_digest": "32b4183da4d0bed8c3c5eccfec2f38b6a292e588602ffd25b6b8740b854cb889",
+      "scope": "Qualify the original-supplier Electron 42.11.18 security patch with strict audits and actual Windows host compatibility",
+      "limitations": [
+        "Six embedded SQLite checks, isolated development and eight packaged/thin-client useful-system, publication/runtime and PDF journeys passed at the recorded source.",
+        "The supplier declares 42.x end-of-support. This is a qualified patch, not qualification of a future supported major.",
+        "Local supporting work only; parent current-candidate gates, Assets accessibility, restricted legacy review, native physical effects and model/provider qualification remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "all-gates-pass",
+      "work_id": "electron-42-current-security-patch",
+      "work_criteria": [
+        "patched-supplier-tree",
+        "host-compatibility",
+        "qualification-scope"
+      ],
+      "receipt_digest": "0973feac89eab8afeba29d5e51e94504dffcf5e86438900ba2a03e6857eea8d4",
+      "review_digest": "32b4183da4d0bed8c3c5eccfec2f38b6a292e588602ffd25b6b8740b854cb889",
+      "scope": "Qualify the original-supplier Electron 42.11.18 security patch with strict audits and actual Windows host compatibility",
+      "limitations": [
+        "Six embedded SQLite checks, isolated development and eight packaged/thin-client useful-system, publication/runtime and PDF journeys passed at the recorded source.",
+        "The supplier declares 42.x end-of-support. This is a qualified patch, not qualification of a future supported major.",
+        "Local supporting work only; parent current-candidate gates, Assets accessibility, restricted legacy review, native physical effects and model/provider qualification remain separate."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "e2e-default-imported",
+      "work_id": "assets-catalog-and-host-reliability",
+      "work_criteria": [
+        "bounded-fresh-catalog",
+        "host-check-reliability",
+        "owned-fixture-qualified",
+        "current-docs-and-scope"
+      ],
+      "receipt_digest": "7cf95e750b8803e98d819aa0fd1a501032c33da94831306ad0b8ed9da15578ea",
+      "review_digest": "1bf89069bb9d53fc611e147c9bf2a2e28a3129717074caaff3339c3ab66478a7",
+      "scope": "Bound exact target reads and preserve explicit focus and actual host evidence",
+      "limitations": [
+        "Local supporting implementation only; actual desktop UI06 reached publication/restart and standard rendered focus before separate semantic/zoom failures.",
+        "Managed UI02 published both customized copies but failed after reload; no complete managed/accessibility or parent qualification.",
+        "Current parent candidate, restricted legacy review, native storage, models and providers remain separately pending."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "e2e-studio-saved",
+      "work_id": "assets-catalog-and-host-reliability",
+      "work_criteria": [
+        "bounded-fresh-catalog",
+        "host-check-reliability",
+        "owned-fixture-qualified",
+        "current-docs-and-scope"
+      ],
+      "receipt_digest": "7cf95e750b8803e98d819aa0fd1a501032c33da94831306ad0b8ed9da15578ea",
+      "review_digest": "1bf89069bb9d53fc611e147c9bf2a2e28a3129717074caaff3339c3ab66478a7",
+      "scope": "Bound exact target reads and preserve explicit focus and actual host evidence",
+      "limitations": [
+        "Local supporting implementation only; actual desktop UI06 reached publication/restart and standard rendered focus before separate semantic/zoom failures.",
+        "Managed UI02 published both customized copies but failed after reload; no complete managed/accessibility or parent qualification.",
+        "Current parent candidate, restricted legacy review, native storage, models and providers remain separately pending."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "e2e-default-imported",
+      "work_id": "assets-host-accessibility-qualification",
+      "work_criteria": [
+        "fresh-workspace-search",
+        "semantic-summary-details",
+        "bounded-real-host-checks",
+        "honest-qualification"
+      ],
+      "receipt_digest": "b9b69647b7821f2443cf00fe006cda9a9f9820dd258f778356eb83ea1f6e7473",
+      "review_digest": "27fb612fd741cbf1e7443e4029b2cce3dd34e504b0c8f4c87416ef4072247ab7",
+      "scope": "Qualify actual Assets publication/persistence and accessible desktop and managed-browser surfaces",
+      "limitations": [
+        "Both actual hosts passed full public default/imported/Studio/Saved review-publication journeys: desktop native close/exit/relaunch and managed renderer reload,1440/320reflow and native400zoom, keyboard/modal/focus, configured WCAG-tagged axe rules including incomplete resolution, reduced-motion and real PNG contrast/geometry at the recorded local candidate. Managed server restart is not qualified.",
+        "Fresh registered checks,15controlled DOM regressions and production desktop types pass. Preserve all earlier failed source-bound runs; this UI support does not retry or replace the separately restricted legacy authority review.",
+        "Local implementation support only: current parent target qualification/final gates, native storage effects, generation matrix, providers and supported-major runtime qualification remain separate. No parent pass, criterion completion or increment completion is granted."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "e2e-studio-saved",
+      "work_id": "assets-host-accessibility-qualification",
+      "work_criteria": [
+        "fresh-workspace-search",
+        "semantic-summary-details",
+        "bounded-real-host-checks",
+        "honest-qualification"
+      ],
+      "receipt_digest": "b9b69647b7821f2443cf00fe006cda9a9f9820dd258f778356eb83ea1f6e7473",
+      "review_digest": "27fb612fd741cbf1e7443e4029b2cce3dd34e504b0c8f4c87416ef4072247ab7",
+      "scope": "Qualify actual Assets publication/persistence and accessible desktop and managed-browser surfaces",
+      "limitations": [
+        "Both actual hosts passed full public default/imported/Studio/Saved review-publication journeys: desktop native close/exit/relaunch and managed renderer reload,1440/320reflow and native400zoom, keyboard/modal/focus, configured WCAG-tagged axe rules including incomplete resolution, reduced-motion and real PNG contrast/geometry at the recorded local candidate. Managed server restart is not qualified.",
+        "Fresh registered checks,15controlled DOM regressions and production desktop types pass. Preserve all earlier failed source-bound runs; this UI support does not retry or replace the separately restricted legacy authority review.",
+        "Local implementation support only: current parent target qualification/final gates, native storage effects, generation matrix, providers and supported-major runtime qualification remain separate. No parent pass, criterion completion or increment completion is granted."
+      ]
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "increment_id": "production-qualification",
+      "criterion_id": "desktop-thin-accessibility",
+      "work_id": "assets-host-accessibility-qualification",
+      "work_criteria": [
+        "fresh-workspace-search",
+        "semantic-summary-details",
+        "bounded-real-host-checks",
+        "honest-qualification"
+      ],
+      "receipt_digest": "b9b69647b7821f2443cf00fe006cda9a9f9820dd258f778356eb83ea1f6e7473",
+      "review_digest": "27fb612fd741cbf1e7443e4029b2cce3dd34e504b0c8f4c87416ef4072247ab7",
+      "scope": "Qualify actual Assets publication/persistence and accessible desktop and managed-browser surfaces",
+      "limitations": [
+        "Both actual hosts passed full public default/imported/Studio/Saved review-publication journeys: desktop native close/exit/relaunch and managed renderer reload,1440/320reflow and native400zoom, keyboard/modal/focus, configured WCAG-tagged axe rules including incomplete resolution, reduced-motion and real PNG contrast/geometry at the recorded local candidate. Managed server restart is not qualified.",
+        "Fresh registered checks,15controlled DOM regressions and production desktop types pass. Preserve all earlier failed source-bound runs; this UI support does not retry or replace the separately restricted legacy authority review.",
+        "Local implementation support only: current parent target qualification/final gates, native storage effects, generation matrix, providers and supported-major runtime qualification remain separate. No parent pass, criterion completion or increment completion is granted."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "qualified-user-and-model-outcomes",
+      "criterion_id": "model-quality-resource-outcomes",
+      "work_id": "standard-only-model-qualification",
+      "work_criteria": [
+        "prospective-standard-protocol",
+        "bounded-owned-execution",
+        "replayed-model-outcomes",
+        "documented-genuine-gaps"
+      ],
+      "receipt_digest": "fd2f477bbe9fab969ab170ac9100387f54ab2407c657c22a36690b9c0976da0d",
+      "review_digest": "9eaedd5b78e6b01cfd4a2e87f65b49a2d339c0cbf9f80ae204045bdee602bde5",
+      "scope": "Record guarded Standard-only installed-model comparisons and their actual qualification gaps",
+      "limitations": [
+        "Local source-bound support:48 worker attempts,23 full measurements,15 memory denials and10 incomplete historical-baseline contract failures. All native exits0 and model cleanup observed. Neither complete model profile qualifies.",
+        "1.5B GPU fixed quality passes but throughput misses1.20; CPU denied. Smaller-model measured quality misses23of24 and last constrained CPU repetition is denied; matched baselines remain failed/denied. Fixed exposed regression cases establish no general capability.",
+        "No parent criterion/chunk/increment completion or current parent qualification. Native/staging/offload, whole-host, optional adaptive/override UI and final owning gates remain separate; no generative budget or human acceptance requirement is introduced."
+      ]
+    },
+    {
+      "roadmap_id": "optional-constrained-json-generation",
+      "increment_id": "production-hardening-and-qualification",
+      "criterion_id": "representative-resource-and-usability-qualification",
+      "work_id": "standard-only-model-qualification",
+      "work_criteria": [
+        "prospective-standard-protocol",
+        "bounded-owned-execution",
+        "replayed-model-outcomes",
+        "documented-genuine-gaps"
+      ],
+      "receipt_digest": "fd2f477bbe9fab969ab170ac9100387f54ab2407c657c22a36690b9c0976da0d",
+      "review_digest": "9eaedd5b78e6b01cfd4a2e87f65b49a2d339c0cbf9f80ae204045bdee602bde5",
+      "scope": "Record guarded Standard-only installed-model comparisons and their actual qualification gaps",
+      "limitations": [
+        "Local source-bound support:48 worker attempts,23 full measurements,15 memory denials and10 incomplete historical-baseline contract failures. All native exits0 and model cleanup observed. Neither complete model profile qualifies.",
+        "1.5B GPU fixed quality passes but throughput misses1.20; CPU denied. Smaller-model measured quality misses23of24 and last constrained CPU repetition is denied; matched baselines remain failed/denied. Fixed exposed regression cases establish no general capability.",
+        "No parent criterion/chunk/increment completion or current parent qualification. Native/staging/offload, whole-host, optional adaptive/override UI and final owning gates remain separate; no generative budget or human acceptance requirement is introduced."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "qualified-user-and-model-outcomes",
+      "criterion_id": "model-quality-resource-outcomes",
+      "work_id": "latest-model-bundle-assessment",
+      "work_criteria": [
+        "verified-raw-evidence",
+        "accurate-qualification-boundary",
+        "reviewable-safe-results"
+      ],
+      "receipt_digest": "deb2afda09f3535212bb0d7133bc6796a0b70a3d7fc39457924b794eef6f71f4",
+      "review_digest": "23bf76c6eb344fd1c3a17933d2fd3055602d35b95bbc5daea73d9288b251d9aa",
+      "scope": "Accept the completed1.5B absolute-quality check at22of24 and review the latest operator-run model evidence",
+      "limitations": [
+        "The user accepts all7completed1.5B candidate observations at22of24. Five1.5B candidate observations remain memory-denied/pending;0.5B has9measured failures below22 and3denied candidates. Original23protocol and paired comparison results remain unchanged.",
+        "Reviewed48attempts retain23fullmeasurements,16denials and9historicalbaselinecontractfailures. All48native exits0/model cleanups observed for this bundle. Complete1104case rows plus21partial rows are preserved;9unfinished baseline predictions remain unclassified. The old interrupted run remains unknown-cleanup.",
+        "Direct Standard model support only: valid1.5B GPU quality/resource budgets do not fill missingCPU/model repetitions, paired no-regression, smaller-model, adaptive/override/packaged-host UI or final owning qualification. Native/offload/provider/OCR/security concerns remain separate. No full parent criterion, chunk, increment or roadmap completion is granted."
+      ]
+    },
+    {
+      "roadmap_id": "optional-constrained-json-generation",
+      "increment_id": "production-hardening-and-qualification",
+      "criterion_id": "representative-resource-and-usability-qualification",
+      "work_id": "latest-model-bundle-assessment",
+      "work_criteria": [
+        "verified-raw-evidence",
+        "accurate-qualification-boundary",
+        "reviewable-safe-results"
+      ],
+      "receipt_digest": "deb2afda09f3535212bb0d7133bc6796a0b70a3d7fc39457924b794eef6f71f4",
+      "review_digest": "23bf76c6eb344fd1c3a17933d2fd3055602d35b95bbc5daea73d9288b251d9aa",
+      "scope": "Accept the completed1.5B absolute-quality check at22of24 and review the latest operator-run model evidence",
+      "limitations": [
+        "The user accepts all7completed1.5B candidate observations at22of24. Five1.5B candidate observations remain memory-denied/pending;0.5B has9measured failures below22 and3denied candidates. Original23protocol and paired comparison results remain unchanged.",
+        "Reviewed48attempts retain23fullmeasurements,16denials and9historicalbaselinecontractfailures. All48native exits0/model cleanups observed for this bundle. Complete1104case rows plus21partial rows are preserved;9unfinished baseline predictions remain unclassified. The old interrupted run remains unknown-cleanup.",
+        "Direct Standard model support only: valid1.5B GPU quality/resource budgets do not fill missingCPU/model repetitions, paired no-regression, smaller-model, adaptive/override/packaged-host UI or final owning qualification. Native/offload/provider/OCR/security concerns remain separate. No full parent criterion, chunk, increment or roadmap completion is granted."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "qualified-user-and-model-outcomes",
+      "criterion_id": "model-quality-resource-outcomes",
+      "work_id": "model-output-failure-diagnostics",
+      "work_criteria": [
+        "complete-failed-output-accounting",
+        "actionable-memory-and-prerequisite-diagnostics",
+        "preserved-execution-controls"
+      ],
+      "receipt_digest": "280abd835ba47b9a142cd6def591c4d7350d8abb7e1f1a12b5942d0d2cf42847",
+      "review_digest": "e9e0998b0d0097ee6caecfcf9741c00dcbc439f58700d1e05469519954296249",
+      "scope": "Reviewed offline model diagnostics, remaining-only execution and user-directed CPU admission estimates",
+      "limitations": [
+        "Implementation support only. Source-bound focused checks and separate review passed; no new model inference occurred and no parent criterion/chunk/increment pass is granted.",
+        "The next trial selects17unresolved current candidates from hashed reviewed evidence;7accepted1.5B candidates and all historical baseline workers are excluded. Original measurements, failures and paired regression findings remain historical. No cross-run result splicing or automatic pass transfer.",
+        "CPU3GiB/3.5GiB estimates require the exact approved safe-weight/config hashes and size/profile checks. Actual quality/capacity/cleanup remain unmeasured at the new estimates;4GiB sampled RSS and native/offload/provider/OCR/host/restricted-review boundaries remain."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "qualified-user-and-model-outcomes",
+      "criterion_id": "model-quality-resource-outcomes",
+      "work_id": "remaining-model-tests-and-cpu-admission",
+      "work_criteria": [
+        "bounded-cpu-estimates",
+        "only-unresolved-execution",
+        "reviewable-offline-handoff"
+      ],
+      "receipt_digest": "2a7239674e0f294d9f399916ebc27c528269de5d79f2c994bcf78c4141a33254",
+      "review_digest": "cf1292b90e20c9f7cfc620ad4f2d3f3bdc1707d82ddcfaf37fafd17a9572f06e",
+      "scope": "Reviewed offline model diagnostics, remaining-only execution and user-directed CPU admission estimates",
+      "limitations": [
+        "Implementation support only. Source-bound focused checks and separate review passed; no new model inference occurred and no parent criterion/chunk/increment pass is granted.",
+        "The next trial selects17unresolved current candidates from hashed reviewed evidence;7accepted1.5B candidates and all historical baseline workers are excluded. Original measurements, failures and paired regression findings remain historical. No cross-run result splicing or automatic pass transfer.",
+        "CPU3GiB/3.5GiB estimates require the exact approved safe-weight/config hashes and size/profile checks. Actual quality/capacity/cleanup remain unmeasured at the new estimates;4GiB sampled RSS and native/offload/provider/OCR/host/restricted-review boundaries remain."
+      ]
+    },
+    {
+      "roadmap_id": "optional-constrained-json-generation",
+      "increment_id": "production-hardening-and-qualification",
+      "criterion_id": "representative-resource-and-usability-qualification",
+      "work_id": "model-output-failure-diagnostics",
+      "work_criteria": [
+        "complete-failed-output-accounting",
+        "actionable-memory-and-prerequisite-diagnostics",
+        "preserved-execution-controls"
+      ],
+      "receipt_digest": "280abd835ba47b9a142cd6def591c4d7350d8abb7e1f1a12b5942d0d2cf42847",
+      "review_digest": "e9e0998b0d0097ee6caecfcf9741c00dcbc439f58700d1e05469519954296249",
+      "scope": "Reviewed offline model diagnostics, remaining-only execution and user-directed CPU admission estimates",
+      "limitations": [
+        "Implementation support only. Source-bound focused checks and separate review passed; no new model inference occurred and no parent criterion/chunk/increment pass is granted.",
+        "The next trial selects17unresolved current candidates from hashed reviewed evidence;7accepted1.5B candidates and all historical baseline workers are excluded. Original measurements, failures and paired regression findings remain historical. No cross-run result splicing or automatic pass transfer.",
+        "CPU3GiB/3.5GiB estimates require the exact approved safe-weight/config hashes and size/profile checks. Actual quality/capacity/cleanup remain unmeasured at the new estimates;4GiB sampled RSS and native/offload/provider/OCR/host/restricted-review boundaries remain."
+      ]
+    },
+    {
+      "roadmap_id": "optional-constrained-json-generation",
+      "increment_id": "production-hardening-and-qualification",
+      "criterion_id": "representative-resource-and-usability-qualification",
+      "work_id": "remaining-model-tests-and-cpu-admission",
+      "work_criteria": [
+        "bounded-cpu-estimates",
+        "only-unresolved-execution",
+        "reviewable-offline-handoff"
+      ],
+      "receipt_digest": "2a7239674e0f294d9f399916ebc27c528269de5d79f2c994bcf78c4141a33254",
+      "review_digest": "cf1292b90e20c9f7cfc620ad4f2d3f3bdc1707d82ddcfaf37fafd17a9572f06e",
+      "scope": "Reviewed offline model diagnostics, remaining-only execution and user-directed CPU admission estimates",
+      "limitations": [
+        "Implementation support only. Source-bound focused checks and separate review passed; no new model inference occurred and no parent criterion/chunk/increment pass is granted.",
+        "The next trial selects17unresolved current candidates from hashed reviewed evidence;7accepted1.5B candidates and all historical baseline workers are excluded. Original measurements, failures and paired regression findings remain historical. No cross-run result splicing or automatic pass transfer.",
+        "CPU3GiB/3.5GiB estimates require the exact approved safe-weight/config hashes and size/profile checks. Actual quality/capacity/cleanup remain unmeasured at the new estimates;4GiB sampled RSS and native/offload/provider/OCR/host/restricted-review boundaries remain."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "qualified-user-and-model-outcomes",
+      "criterion_id": "model-quality-resource-outcomes",
+      "work_id": "remaining-model-evidence-review-1283",
+      "work_criteria": [
+        "additional-larger-cpu-outcomes-qualified",
+        "remaining-resource-and-output-evidence-reviewed",
+        "honest-owner-closure-and-safe-publication"
+      ],
+      "receipt_digest": "0d3d1e528776f8a9c4d975733ddc56465ec9992acd52d059da70300abaf9aabc",
+      "review_digest": "45d1dee7a4ad2f8e1b6d7bc29dd2aceba907f777a1a261c7c4215ed25052189b",
+      "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
+      "limitations": [
+        "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
+      ]
+    },
+    {
+      "roadmap_id": "optional-constrained-json-generation",
+      "increment_id": "production-hardening-and-qualification",
+      "criterion_id": "representative-resource-and-usability-qualification",
+      "work_id": "remaining-model-evidence-review-1283",
+      "work_criteria": [
+        "additional-larger-cpu-outcomes-qualified",
+        "remaining-resource-and-output-evidence-reviewed",
+        "honest-owner-closure-and-safe-publication"
+      ],
+      "receipt_digest": "0d3d1e528776f8a9c4d975733ddc56465ec9992acd52d059da70300abaf9aabc",
+      "review_digest": "45d1dee7a4ad2f8e1b6d7bc29dd2aceba907f777a1a261c7c4215ed25052189b",
+      "scope": "Reviewed remaining-only actual model evidence: two additional larger CPU absolute-quality passes and representative smaller constrained CPU/accelerator structural/resource support",
+      "limitations": [
+        "Scoped assessment support only; no parent criterion, chunk, increment or roadmap completion. All implementation chunks were already complete. Exact17attempts/14measurements/3denials,27indexedfiles and672exposed-case rows independently replayed; no new inference during review.",
+        "Two1.5B CPU unchecked repetitions pass user22/24 plus time/RSS/cleanup. All12smaller resource measurements pass but semantic quality stays9\u201312of24; three larger constrained CPU outcomes remain denied. Historical accepted candidates and original paired failures remain separate sources.",
+        "The optional JSON criterion structural/resource portion now has representative CPU evidence; actual adaptive-state/explicit-override/packaged visual-builder UI still needs qualification. No extra semantic threshold is invented for that criterion. Native/offload/provider/advanced-quality/restricted review/current aggregate gaps remain."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "qualified-user-and-model-outcomes",
+      "criterion_id": "model-quality-resource-outcomes",
+      "work_id": "model-software-quality-30-80-qualification",
+      "work_criteria": [
+        "completed-model-quality-tests-closed",
+        "environment-and-software-outcomes-separated",
+        "auditable-safe-scope-and-history"
+      ],
+      "receipt_digest": "bc958ff98ce07a64a37e0e559d244339eec51573d3b5c2019399ee87dc2a2058",
+      "review_digest": "2a64227e45701c5a4e7ab36ddcf7425c8d484090e8fa73330e8376d2603851a7",
+      "scope": "Completed Standard model-output quality closed under explicit user30 percent0.5B and80 percent1.5B requirements",
+      "limitations": [
+        "The completed model-quality tests are passed and closed:12current smaller cohorts score37.5-50 percent and2current larger CPU cohorts score91.67 percent on all24requested cases in both phases. Three resource-denied attempts have no output/accuracy and are not quality failures or closure blockers.",
+        "Evidence is14current Standard-mode cohorts on24exposed regression cases. Earlier7accepted larger observations remain separately historical; no fresh complete matrix, unseen general accuracy, cross-source result splicing or new inference is claimed.",
+        "No unchanged full composite criterion, increment or roadmap pass. Actual native offload protection/accounting/process proof, optional mode execution, packaged-host behavior, current target and final aggregate gates remain distinct software qualification. Historical protocols/failures, safety guards and restricted-review boundaries remain intact."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "measured-low-memory-model-outcomes",
+      "work_id": "model-software-quality-30-80-qualification",
+      "work_criteria": [
+        "completed-model-quality-tests-closed",
+        "environment-and-software-outcomes-separated",
+        "auditable-safe-scope-and-history"
+      ],
+      "receipt_digest": "bc958ff98ce07a64a37e0e559d244339eec51573d3b5c2019399ee87dc2a2058",
+      "review_digest": "2a64227e45701c5a4e7ab36ddcf7425c8d484090e8fa73330e8376d2603851a7",
+      "scope": "Completed Standard model-output quality closed under explicit user30 percent0.5B and80 percent1.5B requirements",
+      "limitations": [
+        "The completed model-quality tests are passed and closed:12current smaller cohorts score37.5-50 percent and2current larger CPU cohorts score91.67 percent on all24requested cases in both phases. Three resource-denied attempts have no output/accuracy and are not quality failures or closure blockers.",
+        "Evidence is14current Standard-mode cohorts on24exposed regression cases. Earlier7accepted larger observations remain separately historical; no fresh complete matrix, unseen general accuracy, cross-source result splicing or new inference is claimed.",
+        "No unchanged full composite criterion, increment or roadmap pass. Actual native offload protection/accounting/process proof, optional mode execution, packaged-host behavior, current target and final aggregate gates remain distinct software qualification. Historical protocols/failures, safety guards and restricted-review boundaries remain intact."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "qualified-user-and-model-outcomes",
+      "criterion_id": "accessibility-outcomes-qualified",
+      "work_id": "current-host-memory-notification-qualification-retry",
+      "work_criteria": [
+        "actual-two-host-notification-delivery",
+        "owned-host-lifecycle-and-accessibility",
+        "source-bound-honest-evidence"
+      ],
+      "receipt_digest": "118cb5fa6a653e1ce27125939909515d955e547ad5974bab77e7476e4a25ad54",
+      "review_digest": "3e7f666f06162018e9f0430acdc7b995363eebbaac961d826a1b271d85116ce2",
+      "scope": "Current automated Canvas browse/accessibility on packaged desktop and thin client",
+      "limitations": [
+        "All4actualhostjourneys passed on stable982dsource; worker and rows are synthetic, not model inference or actual offload. Both earlier failed test runs remain in the versioned assessment.",
+        "Controlled desktop main exit0 and one observed worker with zero alive apply only to that isolated run. They cannot prove historical worker exit, protected staging/accounting, actual model cleanup or another native domain.",
+        "Supporting work never grants parent/current-target qualification, increment/chunk completion or roadmap closure."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "automated-optional-mode-journeys",
+      "work_id": "current-host-memory-notification-qualification-retry",
+      "work_criteria": [
+        "actual-two-host-notification-delivery",
+        "owned-host-lifecycle-and-accessibility",
+        "source-bound-honest-evidence"
+      ],
+      "receipt_digest": "118cb5fa6a653e1ce27125939909515d955e547ad5974bab77e7476e4a25ad54",
+      "review_digest": "3e7f666f06162018e9f0430acdc7b995363eebbaac961d826a1b271d85116ce2",
+      "scope": "Current actual two-host optional-profile selection, measured-shortfall notification and recovery/review/save/reopen journeys",
+      "limitations": [
+        "All4actualhostjourneys passed on stable982dsource; worker and rows are synthetic, not model inference or actual offload. Both earlier failed test runs remain in the versioned assessment.",
+        "Controlled desktop main exit0 and one observed worker with zero alive apply only to that isolated run. They cannot prove historical worker exit, protected staging/accounting, actual model cleanup or another native domain.",
+        "Supporting work never grants parent/current-target qualification, increment/chunk completion or roadmap closure."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "cancellation-and-resource-cleanup",
+      "work_id": "current-host-memory-notification-qualification-retry",
+      "work_criteria": [
+        "actual-two-host-notification-delivery",
+        "owned-host-lifecycle-and-accessibility",
+        "source-bound-honest-evidence"
+      ],
+      "receipt_digest": "118cb5fa6a653e1ce27125939909515d955e547ad5974bab77e7476e4a25ad54",
+      "review_digest": "3e7f666f06162018e9f0430acdc7b995363eebbaac961d826a1b271d85116ce2",
+      "scope": "Truthful running/queued cancellation plus confirmed shutdown of the isolated synthetic desktop worker",
+      "limitations": [
+        "All4actualhostjourneys passed on stable982dsource; worker and rows are synthetic, not model inference or actual offload. Both earlier failed test runs remain in the versioned assessment.",
+        "Controlled desktop main exit0 and one observed worker with zero alive apply only to that isolated run. They cannot prove historical worker exit, protected staging/accounting, actual model cleanup or another native domain.",
+        "Supporting work never grants parent/current-target qualification, increment/chunk completion or roadmap closure."
+      ]
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "increment_id": "qualified-user-and-model-outcomes",
+      "criterion_id": "security-impact-reviewed",
+      "work_id": "dataset-admission-recovery-and-restoration",
+      "work_criteria": [
+        "protected-task-admission-and-recovery",
+        "fail-closed-saved-profile-restoration",
+        "current-policy-and-evidence-limits"
+      ],
+      "receipt_digest": "3c55bbbc186bb2324e70beb7670b8945be8f1e6f6c03b31e016ad105ecd68964",
+      "review_digest": "91a7be6c03fccba71ac7a2c5d19e6275da31d696baf1fdb36c1b06dfdec79ea0",
+      "scope": "Reviewed bounded Dataset admission/recovery ownership and atomic rejection of unsupported saved memory profiles",
+      "limitations": [
+        "Deferred/disconnected POST, stale read/cancel, malformed IDs, recovery fences and saved-profile tests are synthetic/local software evidence. Original failures and current30percent/80percentquality closure remain recorded.",
+        "No actual offload execution, protected staging/accounting, historical process-exit proof, native hard-memory limit or parent/current-target qualification follows from this support."
+      ]
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "increment_id": "optional-bounded-offload",
+      "criterion_id": "explicit-compatible-option",
+      "work_id": "dataset-admission-recovery-and-restoration",
+      "work_criteria": [
+        "protected-task-admission-and-recovery",
+        "fail-closed-saved-profile-restoration",
+        "current-policy-and-evidence-limits"
+      ],
+      "receipt_digest": "3c55bbbc186bb2324e70beb7670b8945be8f1e6f6c03b31e016ad105ecd68964",
+      "review_digest": "91a7be6c03fccba71ac7a2c5d19e6275da31d696baf1fdb36c1b06dfdec79ea0",
+      "scope": "Reviewed bounded Dataset admission/recovery ownership and atomic rejection of unsupported saved memory profiles",
+      "limitations": [
+        "Deferred/disconnected POST, stale read/cancel, malformed IDs, recovery fences and saved-profile tests are synthetic/local software evidence. Original failures and current30percent/80percentquality closure remain recorded.",
+        "No actual offload execution, protected staging/accounting, historical process-exit proof, native hard-memory limit or parent/current-target qualification follows from this support."
       ]
     }
   ]

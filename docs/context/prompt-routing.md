@@ -107,7 +107,7 @@ and acceptance details. A discovery-only 0/0 shell is insufficient; share the
 verified link before asking. Publication never supplies approval.
 
 Approved not-started work is Pending (`ready`); active work is In progress
-(`executing`). Reserve Blocked for an actual obstacle. User-ordered future work
+(`executing`). Reserve Blocked for a concrete action that a person must take. Agent-owned implementation and automated checks are pending work. User-ordered future work
 stays queued in its plan, without inventing a blocker or automatic cross-roadmap
 gate. For actual blockers, use the skill's `resumed` reconciliation before a new
 increment; current approval, ordering and dependencies remain mandatory.
@@ -148,3 +148,8 @@ approval gates apply.
 
 - If required canonical guidance is missing, unclear, or conflicting, update or request clarification for the canonical docs rather than inventing policy silently.
 - If the security impact cannot be dispositioned, or a material identity, tenancy, secret, sandbox, public exposure, encryption, retention, audit, or residual-risk choice is unresolved, stop at the decision gate rather than assuming a permissive policy.
+
+For unclear review-site instructions, use the existing source-bound presentation
+JSON. State the responsible role, exact action, action location and completion
+proof. Show plain user wording on the review site and retain technical definitions
+internally. Reclassification is not a test pass, scope removal or new authority.

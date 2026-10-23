@@ -45,14 +45,15 @@ const reviewStatusKey = [
   { id: "pending", aliases: ["ready"], description: "Approved work has not started or is queued." },
   { id: "in-progress", aliases: ["executing", "verifying"], description: "Implementation or verification is underway." },
   { id: "awaiting-approval", aliases: ["roadmap-review", "decision-approval", "approval-required"], description: "A proposed roadmap, decision or revised scope needs user approval." },
-  { id: "pending-qualification", aliases: ["implementation-complete-qualification-pending", "implemented-pending-qualification"], description: "Implementation is finished; required evidence or qualification checks remain." },
-  { id: "technical-check-pending", aliases: [], description: "This criterion still needs its required technical verification; it has not qualified." },
-  { id: "blocked", aliases: ["blocked"], description: "A recorded obstacle needs action before work can continue." },
+  { id: "pending-qualification", aliases: ["implementation-complete-qualification-pending", "implemented-pending-qualification"], description: "The code is written. Required tests or evidence still need to be checked." },
+  { id: "technical-check-pending", aliases: [], description: "The agent must run or review a required technical check. This is not a request for human testing." },
+  { id: "blocked", aliases: ["blocked"], description: "A person must supply an approval, access or other named action before this work can continue." },
   { id: "completed", aliases: ["completed", "complete", "final-approved"], description: "Required work and qualification checks are recorded complete." },
 ];
 const roadmapStatusAliases = new Map(reviewStatusKey.flatMap(row => row.aliases.map(alias => [alias, row.id])));
 roadmapStatusAliases.set("roadmap-ready-to-close", "ready-to-finalize");
 function roadmapDisplayStatus(item) {
+  if (item.status === "blocked" && !item.blockers?.some(row => row.action_owner === "human")) return "status-review-needed";
   return roadmapStatusAliases.get(item.status) || item.status;
 }
 function roadmapStatusLegend() {
@@ -85,7 +86,7 @@ function roadmapStatusLegend() {
     const group = el("div"); group.append(el("dt", title), el("dd", description)); additional.append(group);
   }
   more.append(additional);
-  legend.append(definitions, more, el("p", "Roadmap-level status follows the recorded workflow. Individual criteria retain their own evidence and qualification results.", "small"));
+  legend.append(definitions, more, el("p", "Blocked means a person must act. Pending agent work and technical checks do not mean blocked. Each criterion keeps its own test result.", "small"));
   return legend;
 }
 
@@ -166,56 +167,60 @@ function proposalDetails(increment) {
   return detail;
 }
 
-function appendBlockerExplanation(container, row, criterion = false) {
+function appendBlockerExplanation(container, row) {
   const copy = row.plain_language;
   const limits = { needed: 400, prevents: 800, action: 800 };
   const valid = copy && typeof copy === "object" && !Array.isArray(copy) &&
-    Object.keys(copy).length === 3 && Object.entries(limits).every(([key, limit]) =>
+    Object.entries(limits).every(([key, limit]) =>
       typeof copy[key] === "string" && copy[key].trim() && copy[key].length <= limit);
-  const technical = valid ? el("details", undefined, "blocker-technical-details") : container;
-  if (valid) {
-    container.append(el("strong", `What’s needed: ${copy.needed}`),
-      el("p", `Why it matters: ${copy.prevents}`), el("p", `What to do: ${copy.action}`));
-    technical.append(el("summary", "Technical details"));
-  }
-  if (typeof row.kind === "string" && typeof row.id === "string") technical.append(el("strong", `${readable(row.kind.slice(0, 80))} · ${readable(row.id.slice(0, 80))}`));
-  technical.append(el("p", row.summary.slice(0, 1600)));
-  if (criterion) technical.append(el("p", `Prevents: ${row.prevents.slice(0, 800)}`));
-  technical.append(el("p", `${criterion ? "Needed action" : "Required action"}: ${row.required_action.slice(0, 1600)}`, "small"));
-  if (valid) container.append(technical);
+  const userText = (key, limit, fallback) => valid && typeof copy[key] === "string" && copy[key].trim() && copy[key].length <= limit ? copy[key] : fallback;
+  const human = row.action_owner === "human";
+  container.append(el("strong", valid ? copy.needed : "Clear action instructions are not yet available."));
+  container.append(el("p", `Who will act: ${userText("responsible_role", 160,
+    human ? "Repository owner" : row.action_owner === "agent" ? "Coding agent" : "The agent must confirm responsibility")}`));
+  if (valid) container.append(el("p", `Why it matters: ${copy.prevents}`));
+  container.append(el("p", `Your action: ${userText("user_action", 800,
+    human ? "Ask the agent for the exact action instructions before proceeding." : "None. The agent will continue this work.")}`));
+  if (valid) container.append(el("p", `${human ? "Required action" : "Agent work"}: ${copy.action}`));
+  container.append(el("p", `Complete when: ${userText("done_when", 800,
+    "The required result has been checked and recorded. This item does not yet have complete action instructions.")}`));
 }
 
-function blockerDetails(roadmap) {
-  const rows = Array.isArray(roadmap.blockers) ? roadmap.blockers.slice(0, 40) : [];
+function issueSection(rows, title, className, heading = "h5") {
   if (!rows.length) return null;
-  const details = el("details", undefined, "roadmap-blockers");
-  details.append(el("summary", `${roadmap.status === "blocked" ? "Why blocked" : "Recorded obstacles"} · ${roadmap.blocker_count || rows.length} recorded obstacles`));
-  for (const row of rows) {
-    if (!row || typeof row !== "object" || typeof row.summary !== "string" || typeof row.required_action !== "string") continue;
-    const explanation = el("div", undefined, "blocker-explanation");
-    appendBlockerExplanation(explanation, row); details.append(explanation);
-  }
-  if (roadmap.blocker_count > rows.length) details.append(el("p", `Showing ${rows.length} of ${roadmap.blocker_count} recorded obstacles.`, "small"));
-  return details;
-}
-
-function criterionBlockers(criterion) {
-  const rows = Array.isArray(criterion.blockers) ? criterion.blockers.slice(0, 20).filter(row => row && typeof row === "object" &&
-    typeof row.summary === "string" && typeof row.prevents === "string" && typeof row.required_action === "string") : [];
-  if (!rows.length) return null;
-  const section = el("section", undefined, "criterion-blockers");
-  section.setAttribute("aria-label", `Blockers for ${criterion.title || readable(criterion.id)}`);
-  section.append(el("h5", "Blockers"));
+  const section = el("section", undefined, className);
+  section.setAttribute("aria-label", title);
+  section.append(el(heading, title));
   const list = el("ul");
-  for (const row of rows) {
-    const item = el("li");
-    appendBlockerExplanation(item, row, true);
-    list.append(item);
-  }
+  for (const row of rows) { const item = el("li"); appendBlockerExplanation(item, row); list.append(item); }
   section.append(list);
   return section;
 }
 
+function blockerDetails(roadmap) {
+  const human = (roadmap.blockers || []).slice(0, 40).filter(row => row?.action_owner === "human");
+  const pending = [...(roadmap.pending_work || []), ...(roadmap.blockers || []).filter(row => row?.action_owner !== "human")].slice(0, 40);
+  if (!human.length && !pending.length) return null;
+  const container = el("div", undefined, "roadmap-issues");
+  for (const [rows, title, className] of [[human, "Blockers — human action needed", "roadmap-blockers"], [pending, "Pending work — coding agent", "roadmap-pending-work"]]) {
+    const section = issueSection(rows, title, className, "h4"); if (section) container.append(section);
+  }
+  for (const [total, shown, label] of [[roadmap.blocker_count, human.length, "human actions"], [roadmap.pending_work_count, pending.length, "agent work items"]]) {
+    if (Number.isSafeInteger(total) && total > shown) container.append(el("p", `Showing ${shown} of ${total} ${label}. The agent must check the remaining records.`, "small"));
+  }
+  return container;
+}
+
+function criterionBlockers(criterion) {
+  const human = (criterion.blockers || []).slice(0, 20).filter(row => row?.action_owner === "human");
+  const pending = [...(criterion.pending_work || []), ...(criterion.blockers || []).filter(row => row?.action_owner !== "human")].slice(0, 20);
+  if (!human.length && !pending.length) return null;
+  const container = el("div", undefined, "criterion-issues");
+  for (const [rows, title, className] of [[human, "Blockers", "criterion-blockers"], [pending, "Pending work — coding agent", "criterion-pending-work"]]) {
+    const section = issueSection(rows, title, className); if (section) container.append(section);
+  }
+  return container;
+}
 
 function criteriaList(criteria, chunks = []) {
   const list = el("ul", undefined, "criteria");
@@ -293,7 +298,7 @@ function render() {
   const all = data[view];
   const done = all.filter(i => view === "roadmaps" ? completedRoadmap(i) : ["completed", "complete", "closed", "final-approved"].includes(i.status)).length;
   const active = all.filter(i => view === "roadmaps" ? roadmapDisplayStatus(i) === "in-progress" : ["executing", "active", "verifying", "prepared"].includes(i.status)).length;
-  const summary = document.querySelector("#summary"); summary.replaceChildren(metric(all.length, "Total records"), metric(active, "In progress"), metric(done, "Completed"), metric(all.reduce((n, i) => n + (i.blocker_count || 0), 0), "Open blockers"));
+  const summary = document.querySelector("#summary"); summary.replaceChildren(metric(all.length, "Total records"), metric(active, "In progress"), metric(done, "Completed"), metric(all.reduce((n, i) => n + (i.blocker_count || 0), 0), "Human actions needed"));
   const query = document.querySelector("#search").value.toLowerCase();
   const selected = all.filter(i => JSON.stringify([i.title, i.id, i.objective, i.outcome, i.roadmap_title, i.increment_title, i.criteria_ids, i.merged_history]).toLowerCase().includes(query));
   const items = document.querySelector("#items"); items.replaceChildren();
@@ -306,7 +311,7 @@ function render() {
   for (const item of selected) {
     const card = el("article", undefined, "card");
     const row = el("div", undefined, "card-heading"); const title = el("div"); title.append(el("p", item.id, "record-id"), el(sections ? "h3" : "h2", item.title || item.task_id || item.summary || item.id)); row.append(title, badge(sections ? roadmapDisplayStatus(item) : item.status)); card.append(row);
-    if (sections && item.status === "blocked" && item.blocker_count === 0) card.append(el("p", "Status needs review: this record is blocked but has no recorded open blocker.", "small status-review-note"));
+    if (sections && roadmapDisplayStatus(item) === "status-review-needed") card.append(el("p", "The agent must review this status. No specific human action has been recorded.", "small status-review-note"));
     if (item.objective || item.outcome && typeof item.outcome === "object") card.append(el("p", item.objective || item.outcome.success || item.outcome.problem, "objective"));
     const obstacles = sections ? blockerDetails(item) : null; if (obstacles) card.append(obstacles);
     if (item.increments) {
@@ -318,7 +323,7 @@ function render() {
           el("p", "Historical evidence preserved. Remaining execution belongs to this roadmap; no legacy or current qualification pass is inferred.", "small"));
         for (const increment of legacy.increments || []) {
           const detail = el("details", undefined, "increment");
-          const heading = el("summary"); heading.append(el("span", `${increment.number}. ${increment.title}`), badge(increment.status));
+          const heading = el("summary"); heading.append(el("span", `${increment.number}. ${increment.title}`), badge(increment.status === "blocked" ? "archived-pending" : increment.status));
           detail.append(heading); const proposal = proposalDetails(increment); if (proposal) detail.append(proposal); detail.append(criteriaList(increment.criteria || []));
           for (const chunk of increment.chunks || []) detail.append(el("p", `${chunk.title}: ${readable(chunk.status)}${chunk.summary ? ` · ${chunk.summary}` : ""}`, "small"));
           for (const owner of (legacy.criterion_owners || []).filter(row => row.increment_id === increment.id)) {
@@ -335,7 +340,7 @@ function render() {
       card.append(el("p", progressLabel, "small")); const meter = el("progress"); meter.max = item.increments.length || 1; meter.value = progress; meter.setAttribute("aria-label", progressLabel); card.append(meter);
       for (const i of item.increments) {
         const details = el("details", undefined, "increment"); if (item.current_increment === i.id || focusedIncrement === i.id) details.open = true;
-        const summary = el("summary"); const heading = el("span", `${i.number}. ${i.title}`); summary.append(heading, badge(i.status)); details.append(summary, el("p", i.objective, "objective"));
+        const summary = el("summary"); const heading = el("span", `${i.number}. ${i.title}`); summary.append(heading, badge(i.status === "blocked" && !item.blockers?.some(row => row.action_owner === "human") ? "status-review-needed" : i.status)); details.append(summary, el("p", i.objective, "objective"));
         const planning = i.chunk_plan_pending_approval ? "Implementation chunk plan is created after roadmap approval" : i.chunk_plan_pending_start ? "Implementation chunk plan is created when this increment starts" : null;
         details.append(el("p", `${planning || `${i.chunks_complete} / ${i.chunks_planned} work chunks`} · ${i.criteria.filter(c => c.outcome === "passed").length} / ${i.criteria.length} criteria passed`, "small"));
         const proposal = proposalDetails(i); if (proposal) details.append(proposal);

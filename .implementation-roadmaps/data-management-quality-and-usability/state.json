@@ -1,5 +1,89 @@
 {
-  "blockers": [],
+  "blockerReclassifications": [
+    {
+      "assignment": {
+        "actionLocation": "Approved private Hugging Face dataset repository and existing secure app credential store",
+        "actionOwner": "agent",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "Current private publication and ingestion tests pass, with exact-candidate checks and independent review. The supplied credential alone is not a test pass.",
+        "requiredAction": "Use the saved credential through the existing secure path. Create the already authorized private synthetic test repository if absent, then qualify publishing and ingestion. Preserve independent advanced-runtime and scale requirements.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "blockerId": "private-provider-and-advanced-runtime-unavailable",
+      "originalBlocker": {
+        "id": "private-provider-and-advanced-runtime-unavailable",
+        "kind": "credential",
+        "recordedAt": "2026-10-22T16:25:38Z",
+        "requiredAction": "Supply a separately authorized private test repository/credential through the existing secure path for private-provider checks. Continue available synthetic local/model/UI/scale work; this status does not assert all subwork is complete and grants no external publication authority.",
+        "resolution": null,
+        "resolvedAt": null,
+        "status": "open",
+        "summary": "Real private-provider publication/ingestion qualification requires an authorized private test repository and credentials that have not been supplied. This credential dependency is independent of the pending advanced-runtime/model/UI/scale work; no human participants are required."
+      },
+      "originalDigest": "57c3c1a7a604db304e1b17fd557caaba2aefcc26c27ffb3d0f4525cc26ca4e5f",
+      "reason": "The latest user authority confirms saved credentials and exact private repository creation approval. No provider call was made by this reviewer. An actual access error can require a later precise human request; its existence must not be assumed.",
+      "recordedAt": "2026-10-23T18:49:25Z",
+      "revisedSummary": "Saved Hugging Face credentials and the exact private test repository are authorized. Real private publishing and ingestion verification remains unfinished; independent advanced-runtime/model/UI/scale requirements remain pending."
+    },
+    {
+      "assignment": {
+        "actionLocation": "Data roadmap advanced preparation and scalable ingestion increments",
+        "actionOwner": "agent",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "The unchanged advanced-capability acceptance checks have measured evidence and independent review. Any new supplier choice is separately approved before adoption.",
+        "requiredAction": "Complete the available approved data, model, UI and scale work. Prepare bounded OCR provider options before requesting any new supplier decision; do not claim unsupported OCR is delivered.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "blockerId": "advanced-runtime-qualification-unavailable",
+      "originalBlocker": {
+        "id": "advanced-runtime-qualification-unavailable",
+        "kind": "technical",
+        "recordedAt": "2026-10-22T16:25:39Z",
+        "requiredAction": "Use admitted approved installed models and synthetic sources for feasible tests; separately govern and qualify a selected OCR provider before any supported OCR claim. Preserve model/resource/scale/UI failures and do not treat an unavailable OCR readiness state as delivery.",
+        "resolution": null,
+        "resolvedAt": null,
+        "status": "open",
+        "summary": "OCR has no qualified provider/runtime. Actual advanced model/layout/semantic quality, representative resources, scale, progress/cancellation/cleanup and automated UI/preset coverage remain technical gaps. Human participants are not a prerequisite."
+      },
+      "originalDigest": "c08505e81cfa15d800d2b5a9ad83c5cf4e156ceb60e80f30e9550f59f3a45ead",
+      "reason": "Mixed record: available advanced/local/model/scale/UI work is agent-owned. OCR is intentionally unsupported. A concrete new provider/package choice may require user approval, but the agent must first prepare bounded options; no selected supplier or unasked approval is invented.",
+      "recordedAt": "2026-10-23T18:49:25Z"
+    }
+  ],
+  "blockers": [
+    {
+      "actionLocation": "Approved private Hugging Face dataset repository and existing secure app credential store",
+      "actionOwner": "agent",
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "completionCondition": "Current private publication and ingestion tests pass, with exact-candidate checks and independent review. The supplied credential alone is not a test pass.",
+      "id": "private-provider-and-advanced-runtime-unavailable",
+      "kind": "credential",
+      "recordedAt": "2026-10-22T16:25:38Z",
+      "requiredAction": "Use the saved credential through the existing secure path. Create the already authorized private synthetic test repository if absent, then qualify publishing and ingestion. Preserve independent advanced-runtime and scale requirements.",
+      "resolution": null,
+      "resolvedAt": null,
+      "responsibleRole": "Coding agent",
+      "status": "open",
+      "summary": "Saved Hugging Face credentials and the exact private test repository are authorized. Real private publishing and ingestion verification remains unfinished; independent advanced-runtime/model/UI/scale requirements remain pending."
+    },
+    {
+      "actionLocation": "Data roadmap advanced preparation and scalable ingestion increments",
+      "actionOwner": "agent",
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "completionCondition": "The unchanged advanced-capability acceptance checks have measured evidence and independent review. Any new supplier choice is separately approved before adoption.",
+      "id": "advanced-runtime-qualification-unavailable",
+      "kind": "technical",
+      "recordedAt": "2026-10-22T16:25:39Z",
+      "requiredAction": "Complete the available approved data, model, UI and scale work. Prepare bounded OCR provider options before requesting any new supplier decision; do not claim unsupported OCR is delivered.",
+      "resolution": null,
+      "resolvedAt": null,
+      "responsibleRole": "Coding agent",
+      "status": "open",
+      "summary": "OCR has no qualified provider/runtime. Actual advanced model/layout/semantic quality, representative resources, scale, progress/cancellation/cleanup and automated UI/preset coverage remain technical gaps. Human participants are not a prerequisite."
+    }
+  ],
   "chunks": [
     {
       "areas": [
@@ -1464,6 +1548,17 @@
       "outcome": "passed",
       "recordedAt": "2026-07-30T14:00:21Z",
       "summary": "The provider selector reuses host-owned credential storage and bounded browse APIs, retains adapter-returned immutable revisions, redacts provider errors, keeps live network boundaries out of deterministic E2E tests, and preserves the existing controlled-environment qualification requirement. Documentation, architecture, agent-support, thin-client build, and desktop package gates passed."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "controlled-advanced-capabilities-are-qualified",
+      "id": "evidence-42",
+      "incrementId": "advanced-preparation-and-synthetic-quality",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-22T14:07:35Z",
+      "summary": "Technical qualification pending: actual OCR/layout, semantic/hard-negative and model/critic quality, representative resource bounds, progress/cancellation/cleanup and automated accessible preset journeys. OCR is truthfully unavailable; private-provider qualification remains separate. No disabled capability is counted as delivered."
     }
   ],
   "feedback": [
@@ -2389,6 +2484,48 @@
       "recordedAt": "2026-10-21T17:07:35Z",
       "sequence": 125,
       "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "4a5ee37769fad741e4abc7d4a83a19b071cc1efa2c0ffead324136d6237b7b2b",
+      "recordedAt": "2026-10-22T14:04:24Z",
+      "sequence": 126,
+      "type": "legacy-acceptance-scope-revised"
+    },
+    {
+      "eventFingerprint": "e400f7a09ceea2daa563c6102534f827fd44275b8b37931e2b0af0444790d129",
+      "recordedAt": "2026-10-22T14:04:25Z",
+      "sequence": 127,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "d9fc1536b28b0dad0d0ba54fe110dcc2e9702d02230ab54060e2bdb392855da9",
+      "recordedAt": "2026-10-22T14:07:35Z",
+      "sequence": 128,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "43c7a259ec816a3836f9c5c89cd4863b60d4e280398bfde6a4671bf4566a4fa6",
+      "recordedAt": "2026-10-22T16:25:38Z",
+      "sequence": 129,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "6513c7105fec6afcf0701e9ef639ecf7b05010bc446e8aeef4f8217e926989eb",
+      "recordedAt": "2026-10-22T16:25:39Z",
+      "sequence": 130,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "250c4be32457e74a1ca1db17a7723e97cd32e99a83505af7240952d653379dcf",
+      "recordedAt": "2026-10-23T18:49:25Z",
+      "sequence": 131,
+      "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "acd9188c155c8f751d0f52f7021cc8addb7a5822d9034d8f7e1c7f8371e41908",
+      "recordedAt": "2026-10-23T18:49:25Z",
+      "sequence": 132,
+      "type": "blocker-reclassified"
     }
   ],
   "humanAcceptanceTransfers": [
@@ -3675,7 +3812,7 @@
           "qualification": "local"
         },
         {
-          "description": "Controlled representative hardware and accessibility qualification proves OCR and layout extraction, semantic deduplication, hard-negative mining, model generation and criticism, progress, cancellation, memory and time bounds, quality evidence, and non-technical preset usability with synthetic data.",
+          "description": "Agent-executable qualification on controlled representative hardware and automated accessibility/UI tests proves OCR and layout extraction, semantic deduplication, hard-negative mining, model generation and criticism, progress, cancellation, memory and time bounds, quality evidence, and non-technical preset workflows with synthetic data, including keyboard/focus, accessibility-tree semantics, zoom/reflow, reduced-motion and responsive behavior.",
           "id": "controlled-advanced-capabilities-are-qualified",
           "qualification": "controlled-environment"
         }
@@ -4126,6 +4263,111 @@
       ]
     }
   ],
+  "legacyAcceptanceScopeRevisions": [
+    {
+      "authorityRef": "user-agent-only-acceptance-and-current-scope-20261022",
+      "incrementId": "advanced-preparation-and-synthetic-quality",
+      "originalPlan": {
+        "assumptions": [
+          "The existing managed Python worker remains the only runtime topology and all advanced processing stays local.",
+          "No new package is needed: deterministic local algorithms cover structure and semantic evidence, while OCR remains explicitly unavailable until a separately governed provider is qualified.",
+          "Standard remains the default and produces the existing request semantics when advanced configuration is absent.",
+          "Controlled representative-hardware, screen-reader, reduced-motion, and non-technical usability evidence may remain pending under the increment's approved qualification allowance."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "advanced-content-processing-preserves-structure-and-lineage",
+              "security-model-assisted-boundaries-reviewed"
+            ],
+            "id": "advanced-capability-contracts-and-structured-processing",
+            "outcome": "Opt-in token, sentence, section, table, semantic, and layout-aware processing records bounded source-span lineage and extraction quality, while unavailable OCR reports an explicit disabled readiness state without fabricated text.",
+            "title": "Capability contracts and structure-aware processing"
+          },
+          {
+            "criteriaIds": [
+              "semantic-curation-improves-measured-quality",
+              "security-model-assisted-boundaries-reviewed"
+            ],
+            "id": "semantic-curation-and-mixing",
+            "outcome": "Deterministic recorded embeddings, thresholds, source caps, balancing, coverage, and hard-negative recommendations improve synthetic reference data without cross-split leakage.",
+            "title": "Semantic curation and mixing"
+          },
+          {
+            "criteriaIds": [
+              "synthetic-examples-are-validated-before-admission",
+              "security-model-assisted-boundaries-reviewed"
+            ],
+            "id": "verified-synthetic-generation-and-review",
+            "outcome": "Bounded multi-candidate generation records citations and sends schema, grounding, critic, duplicate, safety, or diversity failures to the existing quarantine and human-review boundary before splitting.",
+            "title": "Verified synthetic generation and review"
+          },
+          {
+            "criteriaIds": [
+              "advanced-options-do-not-complicate-the-default-path",
+              "security-model-assisted-boundaries-reviewed",
+              "controlled-advanced-capabilities-are-qualified"
+            ],
+            "id": "plain-language-advanced-presets",
+            "outcome": "Desktop and thin-client users retain the concise Standard path and can opt into Better document understanding or Generate examples with readiness, effort, review, cancel, retry, and advanced details kept clear.",
+            "title": "Plain-language advanced presets"
+          }
+        ],
+        "completionTests": [
+          "Run the focused complete preparation worker and UI suites after all chunks are implemented.",
+          "Run npm run security:dependencies only if dependency manifests, lockfiles, or runtime dependency inputs change.",
+          "Run npm run docs:check, npm run architecture:check, npm run agent-support:check, npm run build:server, npm run build:thin-client, npm run package, and npm test once for final increment qualification.",
+          "Validate the roadmap state and record controlled hardware/accessibility qualification as pending unless representative evidence is available."
+        ],
+        "documentation": [
+          "Runtime worker and dataset-preparation READMEs",
+          "Data management architecture and context pack",
+          "Data management threat model and persistence/operations guidance",
+          "Approved roadmap and concise generated implementation report"
+        ],
+        "fingerprint": "f0a04606361d1135ba508a22668f868912b8fb9fd16024d76675399362d15ff8",
+        "focusedTests": [
+          "Worker contract and structure tests for every enabled strategy, exact bounded span or region lineage, quality metrics, unsupported OCR, malformed files, and resource ceilings.",
+          "Worker semantic tests for deterministic hashed embeddings, near duplicates, coverage, balancing, source caps, hard-negative recommendations, and group-safe split leakage prevention.",
+          "Worker generation tests for multiple candidates, strict task schemas, grounding, citations, independent critic decisions, duplication, diversity, quarantine, review-required denial, cancellation-safe progress, and sanitized diagnostics.",
+          "Desktop and thin-client request/UI tests for all three presets, Standard backward compatibility, readiness and effort copy, Advanced settings disclosure, disabled controls during progress, cancel/retry, keyboard semantics, and no obsolete page-level notifications."
+        ],
+        "recordedAt": "2026-07-30T05:41:17Z",
+        "rollback": "Disable or remove the additive advanced profiles and presets while retaining the unchanged Standard request shape, baseline bounded parser, quality policy, deterministic group-safe splits, review flow, and immutable advanced-derived lineage. Never reuse an unverified generated row or silently substitute an unavailable capability.",
+        "steps": [
+          "Define portable advanced-profile, capability-readiness, lineage, and aggregate-evidence contracts, then add bounded structure-aware processing in the managed worker.",
+          "Add deterministic semantic duplicate, coverage, balancing, source-cap, and hard-negative evidence before split creation.",
+          "Add bounded multi-candidate generation with source citations and independent deterministic admission checks that route rejected candidates to quarantine.",
+          "Expose Standard, Better document understanding, and Generate examples in both ordered workflows, document the behavior and security boundary, then run completion qualification once."
+        ],
+        "summary": "Deliver advanced dataset preparation as four additive, reviewable chunks inside the existing worker and ordered workflows, preserving Standard defaults and failing closed whenever an opted-in capability cannot prove readiness or candidate quality."
+      },
+      "previousApproval": {
+        "approvedAt": "2026-10-21T17:07:35Z",
+        "fingerprint": "2b272ad7f7d97dfe591a2e365120f129627742e221bd618be873727eb648ef0d",
+        "note": "User explicitly directed removal of solely blocking human acceptance tasks and closure of technically implemented increments, with human acceptance handled offline. Approve only this archived human-acceptance scope transfer; retain every technical criterion and legacy evidence limitations."
+      },
+      "recordedAt": "2026-10-22T14:04:24Z",
+      "removedCriteria": [],
+      "replacedCriteria": [
+        {
+          "humanScope": "Participant/non-technical usability studies and observed human screen-reader/manual acceptance are handled offline. This transfers no automated accessibility/UI, actual OCR/layout, hardware/model/resource/quality/security qualification or product human approval/curation controls.",
+          "original": {
+            "description": "Controlled representative hardware and accessibility qualification proves OCR and layout extraction, semantic deduplication, hard-negative mining, model generation and criticism, progress, cancellation, memory and time bounds, quality evidence, and non-technical preset usability with synthetic data.",
+            "id": "controlled-advanced-capabilities-are-qualified",
+            "qualification": "controlled-environment"
+          },
+          "revised": {
+            "description": "Agent-executable qualification on controlled representative hardware and automated accessibility/UI tests proves OCR and layout extraction, semantic deduplication, hard-negative mining, model generation and criticism, progress, cancellation, memory and time bounds, quality evidence, and non-technical preset workflows with synthetic data, including keyboard/focus, accessibility-tree semantics, zoom/reflow, reduced-motion and responsive behavior.",
+            "id": "controlled-advanced-capabilities-are-qualified",
+            "qualification": "controlled-environment"
+          }
+        }
+      ],
+      "status": "offline-user-owned",
+      "summary": "User-directed offline human acceptance; preserve every technical requirement and all prior evidence. No test pass or closure is asserted."
+    }
+  ],
   "name": "Data Management Quality and Usability",
   "objective": "Deliver a secure, reliable, plain-language Data Management workflow that turns uploaded, web, and repository-backed sources into validated, versioned training datasets without requiring users to understand technical pipeline details.",
   "paths": {
@@ -4135,12 +4377,12 @@
   },
   "resumeAudits": [],
   "roadmapApproval": {
-    "approvedAt": "2026-10-21T17:07:35Z",
-    "fingerprint": "2b272ad7f7d97dfe591a2e365120f129627742e221bd618be873727eb648ef0d",
-    "note": "User explicitly directed removal of solely blocking human acceptance tasks and closure of technically implemented increments, with human acceptance handled offline. Approve only this archived human-acceptance scope transfer; retain every technical criterion and legacy evidence limitations."
+    "approvedAt": "2026-10-22T14:04:25Z",
+    "fingerprint": "6a7bfa92ed38f7ab73554aeba8eb38750d73ec455ec14332648a020cfbb88854",
+    "note": "The user explicitly directed AI-executable roadmap acceptance, offline human testing and removal of obsolete scope. This reapproval covers only the independently reviewed human wording amendment; technical qualification and product approval controls are unchanged."
   },
   "schemaVersion": 1,
   "slug": "data-management-quality-and-usability",
   "status": "implementation-complete-qualification-pending",
-  "updatedAt": "2026-10-21T17:07:35Z"
+  "updatedAt": "2026-10-23T18:49:25Z"
 }

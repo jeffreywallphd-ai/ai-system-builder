@@ -1,24 +1,126 @@
 {
+  "blockerReclassifications": [
+    {
+      "assignment": {
+        "actionLocation": "Security roadmap file-and-workspace-authority native file-operation implementation",
+        "actionOwner": "agent",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "Supported-host native concurrency and cache-compatibility evidence plus exact-candidate independent review satisfy the unchanged owning security criteria.",
+        "requiredAction": "Finish and independently qualify approved identity-preserving native file operations and atomic source-record binding. Keep unsafe file effects disabled; preserve authorization, provenance, concurrency and supported-cache checks.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "blockerId": "model-file-effect-native-qualification",
+      "originalBlocker": {
+        "id": "model-file-effect-native-qualification",
+        "kind": "technical",
+        "recordedAt": "2026-10-21T03:35:01Z",
+        "requiredAction": "Keep file effects fail-closed until a qualified identity-preserving host primitive and atomic provenance binding are available. Preserve all findings and current partial evidence; continue the independent functionality roadmap as requested.",
+        "resolution": null,
+        "resolvedAt": null,
+        "status": "open",
+        "summary": "Independent review found unresolved host file-effect concurrency and supported-cache compatibility issues. Authentication, scoped revisions, library creation and source staging have focused passing regressions; model file-effect completion is not claimed."
+      },
+      "originalDigest": "16e901ea8b3f78327aac6c49c2c3629e19b0cb906530ef3eb3c693525f388041",
+      "reason": "Approved implementation and physical qualification work remains. No new human permission, privilege or unavailable named host has been established by this record.",
+      "recordedAt": "2026-10-23T18:49:25Z"
+    },
+    {
+      "assignment": {
+        "actionLocation": "Security roadmap approved native file-control design and qualification fixtures",
+        "actionOwner": "agent",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "Current supported-host evidence and independent review prove protected ownership, publication, concurrency and supported model-cache behavior required by the unchanged security criteria.",
+        "requiredAction": "Implement and independently qualify the already approved exclusive-ownership/native design. Keep all unproven physical effects pending and preserve supported model-cache workflows.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "blockerId": "approved-native-design-qualification-pending",
+      "originalBlocker": {
+        "id": "approved-native-design-qualification-pending",
+        "kind": "technical",
+        "recordedAt": "2026-10-21T11:12:44Z",
+        "requiredAction": "Implement and independently review the selected exclusive-ownership/native design; retain unavailable physical effects and pending qualification until actual supported-host evidence is available. Continue independent bounded controls meanwhile.",
+        "resolution": null,
+        "resolvedAt": null,
+        "status": "open",
+        "summary": "Native design direction is approved, but the identity-preserving implementation, protected ownership publication and supported-cache positive/race qualification are not yet demonstrated. The original native blocker remains unresolved."
+      },
+      "originalDigest": "8e9e973b920e4913a55a1e3bfaa71c96eaf91a157e60005ac3b85f0981dafecb",
+      "reason": "The design is already approved. Missing implementation and qualification do not themselves require human intervention. The earlier unresolved technical concern and all failed evidence remain.",
+      "recordedAt": "2026-10-23T18:49:25Z"
+    },
+    {
+      "assignment": {
+        "actionLocation": "Existing work security-legacy-assets-workspace-authority; Assets production-qualification/security-review and Security file-and-workspace-authority/security-impact-reviewed",
+        "actionOwner": "human",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "An allowed independent reviewer supplies a genuine review of the actual candidate, with identity, findings and required current checks. Author tests and this status audit do not replace the review.",
+        "requiredAction": "Arrange one permitted independent assessment of the existing Assets access-control change. Do not retry the restricted coding-agent review through another agent, tool or route. The same assessment supplies both roadmap owners.",
+        "responsibleRole": "Repository owner"
+      },
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "blockerId": "legacy-authority-independent-review-unavailable",
+      "originalBlocker": {
+        "id": "legacy-authority-independent-review-unavailable",
+        "kind": "dependency",
+        "recordedAt": "2026-10-22T16:25:38Z",
+        "requiredAction": "Obtain an allowed independent review and fresh exact-candidate checks for the legacy authorization component. Do not retry the blocked review through another mechanism or mark author tests as independent review. Continue unrelated permitted work and preserve native/effect/record/process qualification requirements.",
+        "resolution": null,
+        "resolvedAt": null,
+        "status": "open",
+        "summary": "Legacy Assets authorization fixes passed their four registered checks and desktop/server type/build checks, but the separately invoked review was stopped before review by an external cybersecurity restriction. No reviewer identity, acceptance or parent qualification has been fabricated. Existing native identity/effect blockers remain unresolved."
+      },
+      "originalDigest": "32148fa707a8621462350eb77558d96dcd2b7050fa71ec9fb8e1a16c3b2de6b0",
+      "reason": "An independent security review is needed. The repository owner must arrange a permitted review.",
+      "recordedAt": "2026-10-23T18:49:25Z"
+    }
+  ],
   "blockers": [
     {
+      "actionLocation": "Security roadmap file-and-workspace-authority native file-operation implementation",
+      "actionOwner": "agent",
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "completionCondition": "Supported-host native concurrency and cache-compatibility evidence plus exact-candidate independent review satisfy the unchanged owning security criteria.",
       "id": "model-file-effect-native-qualification",
       "kind": "technical",
       "recordedAt": "2026-10-21T03:35:01Z",
-      "requiredAction": "Keep file effects fail-closed until a qualified identity-preserving host primitive and atomic provenance binding are available. Preserve all findings and current partial evidence; continue the independent functionality roadmap as requested.",
+      "requiredAction": "Finish and independently qualify approved identity-preserving native file operations and atomic source-record binding. Keep unsafe file effects disabled; preserve authorization, provenance, concurrency and supported-cache checks.",
       "resolution": null,
       "resolvedAt": null,
+      "responsibleRole": "Coding agent",
       "status": "open",
       "summary": "Independent review found unresolved host file-effect concurrency and supported-cache compatibility issues. Authentication, scoped revisions, library creation and source staging have focused passing regressions; model file-effect completion is not claimed."
     },
     {
+      "actionLocation": "Security roadmap approved native file-control design and qualification fixtures",
+      "actionOwner": "agent",
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "completionCondition": "Current supported-host evidence and independent review prove protected ownership, publication, concurrency and supported model-cache behavior required by the unchanged security criteria.",
       "id": "approved-native-design-qualification-pending",
       "kind": "technical",
       "recordedAt": "2026-10-21T11:12:44Z",
-      "requiredAction": "Implement and independently review the selected exclusive-ownership/native design; retain unavailable physical effects and pending qualification until actual supported-host evidence is available. Continue independent bounded controls meanwhile.",
+      "requiredAction": "Implement and independently qualify the already approved exclusive-ownership/native design. Keep all unproven physical effects pending and preserve supported model-cache workflows.",
       "resolution": null,
       "resolvedAt": null,
+      "responsibleRole": "Coding agent",
       "status": "open",
       "summary": "Native design direction is approved, but the identity-preserving implementation, protected ownership publication and supported-cache positive/race qualification are not yet demonstrated. The original native blocker remains unresolved."
+    },
+    {
+      "actionLocation": "Existing work security-legacy-assets-workspace-authority; Assets production-qualification/security-review and Security file-and-workspace-authority/security-impact-reviewed",
+      "actionOwner": "human",
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "completionCondition": "An allowed independent reviewer supplies a genuine review of the actual candidate, with identity, findings and required current checks. Author tests and this status audit do not replace the review.",
+      "id": "legacy-authority-independent-review-unavailable",
+      "kind": "dependency",
+      "recordedAt": "2026-10-22T16:25:38Z",
+      "requiredAction": "Arrange one permitted independent assessment of the existing Assets access-control change. Do not retry the restricted coding-agent review through another agent, tool or route. The same assessment supplies both roadmap owners.",
+      "resolution": null,
+      "resolvedAt": null,
+      "responsibleRole": "Repository owner",
+      "status": "open",
+      "summary": "Legacy Assets authorization fixes passed their four registered checks and desktop/server type/build checks, but the separately invoked review was stopped before review by an external cybersecurity restriction. No reviewer identity, acceptance or parent qualification has been fabricated. Existing native identity/effect blockers remain unresolved."
     }
   ],
   "chunks": [
@@ -691,6 +793,26 @@
       "recordedAt": "2026-10-21T19:37:45Z",
       "summary": "The dynamic review projection now shows 79 validated links from completed reviewed local security component work to 25 of 26 parent criteria. Runtime provenance intentionally has no completed qualified supporting record. Parent criterion outcomes, planned chunks, original failures/native qualification and scanner finding dispositions remain preserved. Actual malformed/forged/failed/self-reviewed lineage denial tests and independent review accepted the display; no security closure is inferred.",
       "targetIncrementId": "file-and-workspace-authority"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "desktop-ingestion-missing-origin-binding",
+      "impact": "within-increment",
+      "nextAction": "After optional/functionality qualification, assess and repair the ingestion origin publication within the existing security roadmap scope; preserve native race and recovery qualification gaps and the failed desktop run.",
+      "recordedAt": "2026-10-22T05:45:00Z",
+      "summary": "Native optional-host run25 exposed an existing supported desktop Add data defect: governed ingestion finalizes and catalogs an explicit-key file but creates no primary local storage binding, so Dataset Preparation denies the source before runtime. Retain fail-closed read behavior; fix only at authoritative ingestion publication/recovery with ownership, conditional metadata, byte integrity and retry tests. Upload-seeded optional-mode host evidence does not cover this path.",
+      "targetIncrementId": "runtime-execution-integrity"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "user-unified-security-backlog-20261022",
+      "impact": "within-increment",
+      "nextAction": "Use this as the single active security execution owner, retain the legacy plan as merged history, and assess current code/tests before scheduling residual work. No new criterion, completion or approval is inferred.",
+      "recordedAt": "2026-10-22T13:31:46Z",
+      "summary": "The user requested merging both security roadmaps, removing duplicate execution and revalidating remaining concerns. Existing approved successor ownership is retained; original completed history, evidence and pending technical qualification are preserved.",
+      "targetIncrementId": "file-and-workspace-authority"
     }
   ],
   "finalApproval": null,
@@ -964,6 +1086,42 @@
       "recordedAt": "2026-10-21T19:37:45Z",
       "sequence": 45,
       "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "464ba65d1572f595389523832a82e15988f2f38d5abb042779432ec240b7c5d9",
+      "recordedAt": "2026-10-22T05:45:00Z",
+      "sequence": 46,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "5ad90356ec698cbfd21c07f918040967d82d235050aaaa631ffdbb035bf5756c",
+      "recordedAt": "2026-10-22T13:31:46Z",
+      "sequence": 47,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "1affd3e88b75efacff57e2dccd711f8e015374d8f84392b5feb04cb2ce4abb79",
+      "recordedAt": "2026-10-22T16:25:38Z",
+      "sequence": 48,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "b074dbab7e409ae503035354c4346f69039980764db6af8054cff1666ef9e9b5",
+      "recordedAt": "2026-10-23T18:49:25Z",
+      "sequence": 49,
+      "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "c8da655af56e1ac22c1a95718d5d58662f5018337961834e43806cef8f2d374c",
+      "recordedAt": "2026-10-23T18:49:25Z",
+      "sequence": 50,
+      "type": "blocker-reclassified"
+    },
+    {
+      "eventFingerprint": "b21a1231438b4cf55f7eb7d226a1686f3b7f2b416148bf474bda748d4a483bed",
+      "recordedAt": "2026-10-23T18:49:25Z",
+      "sequence": 51,
+      "type": "blocker-reclassified"
     }
   ],
   "increments": [
@@ -1445,5 +1603,5 @@
   "schemaVersion": 1,
   "slug": "security-findings-refresh",
   "status": "blocked",
-  "updatedAt": "2026-10-21T19:37:45Z"
+  "updatedAt": "2026-10-23T18:49:25Z"
 }

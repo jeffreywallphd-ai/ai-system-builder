@@ -60,6 +60,15 @@ def security_impact() -> dict:
     }
 
 
+def human_action_fields() -> dict:
+    return {
+        "actionOwner": "human", "responsibleRole": "Repository owner",
+        "actionLocation": "The approved review channel",
+        "completionCondition": "The requested evidence is provided and independently checked.",
+        "authorityRef": "user-human-action-policy",
+    }
+
+
 def increment_definition(
     identifier: str,
     number: int,
@@ -633,6 +642,218 @@ class RoadmapEngineTest(unittest.TestCase):
                 {"type": "increment-started", "incrementId": "increment-2"}
             )
 
+    def legacy_pending_work(self, *, active=False):
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        if active:
+            self.apply({"type": "increment-started", "incrementId": "increment-1"})
+        self.state["blockers"].append({
+            "id": "native-proof", "kind": "technical", "status": "open",
+            "summary": "Native protection and its technical checks are unfinished.",
+            "requiredAction": "Implement and verify the approved protection.",
+            "recordedAt": "2026-10-20T00:00:00Z", "resolvedAt": None, "resolution": None,
+        })
+        self.state["status"] = "blocked"
+        if active:
+            self.state["increments"][0]["status"] = "blocked"
+
+    def reclassification(self, owner="agent", identifier="native-proof"):
+        blocker = next(b for b in self.state["blockers"] if b["id"] == identifier)
+        return {
+            "type": "blocker-reclassified", "blockerId": identifier,
+            "expectedBlockerDigest": roadmap.fingerprint(blocker),
+            **human_action_fields(), "actionOwner": owner,
+            "responsibleRole": "Coding agent" if owner == "agent" else "Repository owner",
+            "requiredAction": "Implement the approved protection and run its checks.",
+            "actionLocation": "The owning implementation increment",
+            "completionCondition": "Current technical checks and independent review confirm the protection.",
+            "reason": "The user reserves Blocked for an explicit human action; technical work is unfinished.",
+        }
+
+    def test_reclassification_archives_exact_record_and_preserves_scope(self):
+        self.legacy_pending_work()
+        before = copy.deepcopy(self.state)
+        event = self.reclassification()
+        self.apply(event)
+        current = self.state["blockers"][0]
+        self.assertEqual(current["status"], "open")
+        self.assertIsNone(current["resolution"])
+        self.assertIsNone(current["resolvedAt"])
+        self.assertEqual(self.state["blockerReclassifications"][0]["originalBlocker"], before["blockers"][0])
+        self.assertEqual(self.state["history"][:-1], before["history"])
+        for key in ["increments", "chunks", "evidence", "roadmapApproval", "decisions", "feedback"]:
+            self.assertEqual(self.state[key], before[key])
+        self.assertEqual(roadmap.roadmap_fingerprint(self.state), roadmap.roadmap_fingerprint(before))
+        self.assertEqual(self.state["status"], "ready")
+        self.apply({"type": "increment-started", "incrementId": "increment-1"})
+        self.assertEqual(self.state["status"], "executing")
+        self.assertEqual(self.state["blockers"][0]["status"], "open")
+        self.assertIn("No user action is needed", roadmap.next_checkpoint(self.state))
+        for rendered in [roadmap.render_roadmap(self.state), roadmap.render_report(self.state)]:
+            self.assertIn("## Pending work", rendered)
+            self.assertNotIn("## Human action needed", rendered)
+            self.assertNotIn("## Open blockers", rendered)
+
+    def test_reclassification_denies_missing_stale_and_unsafe_fields_atomically(self):
+        self.legacy_pending_work()
+        event = self.reclassification(); before = copy.deepcopy(self.state)
+        cases = [{**event, key: value} for key, value in [
+            ("expectedBlockerDigest", "0" * 64), ("actionOwner", "automatic"),
+            ("actionOwner", []), ("actionOwner", {}), ("summary", ""),
+            ("responsibleRole", "x" * 2001),
+            ("responsibleRole", ""), ("actionLocation", ""), ("completionCondition", ""),
+            ("requiredAction", ""), ("authorityRef", ""), ("reason", ""),
+            ("status", "resolved"), ("evidence", []), ("blockerId", "missing"),
+        ]]
+        cases += [{k: v for k, v in event.items() if k != key} for key in event if key != "type"]
+        for invalid in cases:
+            with self.subTest(event=invalid), self.assertRaises(roadmap.RoadmapError):
+                roadmap.apply_event(self.state, invalid)
+            self.assertEqual(self.state, before)
+        self.apply(event)
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply(self.reclassification())
+
+    def test_new_blocker_requires_explicit_human_action(self):
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        event = {"type": "blocker-recorded", "id": "review-needed", "kind": "dependency",
+                 "summary": "A permitted independent review is needed.", "requiredAction": "Arrange that review.",
+                 **human_action_fields()}
+        before = copy.deepcopy(self.state)
+        for invalid in [{**event, "actionOwner": "agent"}] + [
+                {k: v for k, v in event.items() if k != key} for key in human_action_fields()]:
+            with self.subTest(event=invalid), self.assertRaises(roadmap.RoadmapError):
+                self.apply(invalid)
+            self.assertEqual(self.state, before)
+        self.apply(event)
+        self.assertTrue(roadmap.execution_blocked(self.state))
+        self.assertIn("## Human action needed", roadmap.render_report(self.state))
+        self.assertIn("Repository owner", roadmap.render_report(self.state))
+
+    def test_mixed_responsibility_and_reapproval_preserve_human_execution_guard(self):
+        self.legacy_pending_work(active=True)
+        self.apply(self.reclassification())
+        self.assertEqual(self.state["status"], "executing")
+        self.apply({"type": "blocker-recorded", "id": "review-needed", "kind": "dependency",
+                    "summary": "A separate permitted review is needed.", "requiredAction": "Arrange the review.",
+                    **human_action_fields()})
+        self.apply({"type": "roadmap-approved", "note": "The existing scope remains approved."})
+        self.assertEqual(self.state["status"], "blocked")
+        self.apply({"type": "resumed", "blockerId": "review-needed", "resolution": "The review was actually received.",
+                    "reconciliation": "Review evidence is separate; unfinished agent work remains open."})
+        self.assertEqual(self.state["status"], "executing")
+        self.assertEqual(self.state["blockers"][0]["status"], "open")
+        self.assertEqual(self.state["increments"][0]["status"], "researching")
+
+    def test_agent_work_permits_checks_but_refuses_completion_despite_passed_evidence(self):
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        self.execute_increment(1)
+        self.state["blockers"] = [{"id": "native-proof", "kind": "technical", "status": "open"}]
+        self.apply(self.reclassification())
+        self.assertEqual(self.state["status"], "implementation-complete-qualification-pending")
+        self.assertTrue(roadmap.implementation_ready_for_overall(self.state))
+        for event in [{"type": "roadmap-completed", "summary": "Not yet"},
+                      {"type": "increment-qualified", "incrementId": "increment-1"}]:
+            before = copy.deepcopy(self.state)
+            with self.subTest(event=event), self.assertRaisesRegex(roadmap.RoadmapError, "pending technical"):
+                self.apply(event)
+            self.assertEqual(self.state, before)
+        self.state["currentIncrementId"] = "increment-1"
+        self.state["increments"][0]["status"] = "verifying"
+        self.state["status"] = "executing"
+        with self.assertRaisesRegex(roadmap.RoadmapError, "pending technical"):
+            self.apply({"type": "increment-completed", "summary": "Not yet"})
+        self.apply({"type": "resumed", "blockerId": "native-proof", "resolution": "The technical work is actually verified.",
+                    "reconciliation": "Current proof was reviewed separately, without changing criterion evidence."})
+        self.apply({"type": "increment-completed", "summary": "All actual work is complete."})
+        self.apply({"type": "roadmap-completed", "summary": "All actual requirements are complete."})
+        self.assertEqual(self.state["status"], "completed")
+
+    def test_reclassification_chain_and_archive_tamper_fail_closed(self):
+        self.legacy_pending_work()
+        self.apply(self.reclassification())
+        self.apply(self.reclassification("human"))
+        self.assertEqual(self.state["status"], "blocked")
+        self.assertEqual(len(self.state["blockerReclassifications"]), 2)
+        good = copy.deepcopy(self.state)
+        for key, value in [("originalDigest", "0" * 64), ("authorityRef", "other"), ("reason", "")]:
+            bad = copy.deepcopy(good); bad["blockerReclassifications"][0][key] = value
+            with self.subTest(key=key), self.assertRaises(roadmap.RoadmapError):
+                roadmap.validate_state_shape(self.repo, bad)
+        bad = copy.deepcopy(good); bad["blockers"][0]["actionOwner"] = "agent"
+        with self.assertRaises(roadmap.RoadmapError):
+            roadmap.validate_state_shape(self.repo, bad)
+        bad = copy.deepcopy(good); bad["blockerReclassifications"][1]["originalBlocker"]["summary"] = "tampered"
+        bad["blockerReclassifications"][1]["originalDigest"] = roadmap.fingerprint(bad["blockerReclassifications"][1]["originalBlocker"])
+        with self.assertRaises(roadmap.RoadmapError):
+            roadmap.validate_state_shape(self.repo, bad)
+
+    def test_legacy_evidence_cannot_promote_unfinished_agent_work(self):
+        self.define_and_approve([increment_definition("increment-1", 1, qualification="controlled-environment", allow_pending=True)])
+        self.execute_increment(1, "pending")
+        self.state["blockers"] = [{"id": "native-proof", "kind": "technical", "status": "open"}]
+        event = {**self.reclassification(), "summary": "The sign-in is already saved; the agent must run the checks."}
+        self.apply(event)
+        self.assertEqual(self.state["blockers"][0]["summary"], event["summary"])
+        self.assertNotIn("summary", self.state["blockerReclassifications"][0]["originalBlocker"])
+        self.assertEqual(self.state["blockerReclassifications"][0]["revisedSummary"], event["summary"])
+        self.apply({"type": "evidence-recorded", "incrementId": "increment-1", "criterionId": "criterion-1",
+                    "kind": "test", "outcome": "passed", "summary": "The criterion check passed; other work is unfinished."})
+        self.assertEqual(self.state["increments"][0]["status"], "implemented-pending-qualification")
+        self.assertEqual(self.state["blockers"][0]["status"], "open")
+        self.assertEqual(self.state["increments"][0]["pendingCriteria"], [])
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply({"type": "roadmap-completed", "summary": "Unfinished work cannot close."})
+
+    def test_reclassification_retains_stale_approval_and_rejects_resolved_record(self):
+        self.legacy_pending_work(active=True)
+        self.apply({"type": "feedback-recorded", "id": "new-decision", "summary": "A changed scope needs real approval.",
+                    "category": "decision", "impact": "high-level", "targetIncrementId": "increment-1",
+                    "disposition": "needs-decision", "nextAction": "Obtain approval for the changed scope."})
+        self.apply(self.reclassification())
+        self.assertEqual(self.state["status"], "approval-required")
+        self.assertIsNone(self.state["roadmapApproval"])
+        self.assertEqual(self.state["increments"][0]["status"], "paused-for-approval")
+        self.apply({"type": "resumed", "blockerId": "native-proof", "resolution": "Actual proof was received.",
+                    "reconciliation": "The separate scope approval remains missing."})
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply(self.reclassification())
+
+    def test_blocked_feedback_requires_actual_recorded_human_action(self):
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        event = {"type": "feedback-recorded", "id": "wait", "summary": "A required action is outstanding.",
+                 "category": "verification", "impact": "within-increment", "targetIncrementId": "increment-1",
+                 "disposition": "blocked", "nextAction": "Complete the requested action."}
+        before = copy.deepcopy(self.state)
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply(event)
+        self.assertEqual(self.state, before)
+        self.apply({"type": "blocker-recorded", "id": "review", "kind": "dependency",
+                    "summary": "An independent review is needed.", "requiredAction": "Arrange the permitted review.",
+                    **human_action_fields()})
+        self.apply(event)
+        self.assertEqual(self.state["status"], "blocked")
+
+    def test_portable_human_action_guidance_is_kept_together(self):
+        base = MODULE_PATH.parents[1]
+        for relative in ["SKILL.md", "references/events.md", "references/workflow.md", "references/installation.md"]:
+            text = (base / relative).read_text(encoding="utf-8")
+            with self.subTest(relative=relative):
+                self.assertIn("blocker-reclassified", text)
+                self.assertIn("ASD-STE100", text)
+                self.assertIn("technical accordion", text)
+
+    def test_legacy_unclassified_does_not_infer_human_or_agent_from_kind(self):
+        self.legacy_pending_work()
+        roadmap.validate_state_shape(self.repo, self.state)
+        self.assertTrue(roadmap.execution_blocked(self.state))
+        self.assertIn("## Legacy classification pending", roadmap.render_report(self.state))
+        self.assertNotIn("## Human action needed", roadmap.render_report(self.state))
+        self.assertNotIn("## Pending work", roadmap.render_report(self.state))
+        before = copy.deepcopy(self.state)
+        with self.assertRaises(roadmap.RoadmapError):
+            self.apply({"type": "increment-started", "incrementId": "increment-1"})
+        self.assertEqual(self.state, before)
+
     def test_new_increment_refuses_unresolved_blockers_atomically(self) -> None:
         self.define_and_approve([increment_definition("increment-1", 1)])
         approved = copy.deepcopy(self.state)
@@ -641,7 +862,7 @@ class RoadmapEngineTest(unittest.TestCase):
             with self.subTest(kind=kind, status=status):
                 self.state = copy.deepcopy(approved)
                 self.apply({
-                    "type": "blocker-recorded", "id": "actual-obstacle", "kind": kind,
+                    "type": "blocker-recorded", **human_action_fields(), "id": "actual-obstacle", "kind": kind,
                     "summary": "A required technical prerequisite is unavailable.",
                     "requiredAction": "Resolve and reconcile the actual prerequisite before starting.",
                 })
@@ -663,7 +884,7 @@ class RoadmapEngineTest(unittest.TestCase):
     def test_resolving_only_some_blockers_keeps_new_increment_denied(self) -> None:
         self.define_and_approve([increment_definition("increment-1", 1)])
         for identifier in ["first-obstacle", "second-obstacle"]:
-            self.apply({"type": "blocker-recorded", "id": identifier, "kind": "technical", "summary": "A required prerequisite is unavailable.", "requiredAction": "Resolve the actual prerequisite."})
+            self.apply({"type": "blocker-recorded", **human_action_fields(), "id": identifier, "kind": "technical", "summary": "A required prerequisite is unavailable.", "requiredAction": "Resolve the actual prerequisite."})
         self.apply({"type": "resumed", "blockerId": "first-obstacle", "resolution": "The first prerequisite is available.", "reconciliation": "Verified only the first prerequisite; the other remains unavailable."})
         before = copy.deepcopy(self.state)
         with self.assertRaisesRegex(roadmap.RoadmapError, "blocker"):
@@ -673,7 +894,7 @@ class RoadmapEngineTest(unittest.TestCase):
     def test_resolved_blocker_allows_start_and_preserves_approval(self) -> None:
         self.define_and_approve([increment_definition("increment-1", 1)])
         approval = copy.deepcopy(self.state["roadmapApproval"])
-        self.apply({"type": "blocker-recorded", "id": "runtime-prerequisite", "kind": "environment", "summary": "The required runtime is unavailable.", "requiredAction": "Verify runtime availability."})
+        self.apply({"type": "blocker-recorded", **human_action_fields(), "id": "runtime-prerequisite", "kind": "environment", "summary": "The required runtime is unavailable.", "requiredAction": "Verify runtime availability."})
         self.apply({"type": "resumed", "blockerId": "runtime-prerequisite", "resolution": "The required runtime is available.", "reconciliation": "Verified the prerequisite before continuing."})
         self.assertEqual(self.state["status"], "ready")
         self.assertTrue(roadmap.approval_is_current(self.state))
@@ -687,7 +908,7 @@ class RoadmapEngineTest(unittest.TestCase):
         self.define_and_approve([increment_definition("increment-1", 1), increment_definition("increment-2", 2, depends_on=["increment-1"])])
         # A legacy non-active blocked prefix is still an incomplete dependency.
         self.state["increments"][0]["status"] = "blocked"
-        self.apply({"type": "blocker-recorded", "id": "environment", "kind": "environment", "summary": "A host prerequisite is unavailable.", "requiredAction": "Verify host availability."})
+        self.apply({"type": "blocker-recorded", **human_action_fields(), "id": "environment", "kind": "environment", "summary": "A host prerequisite is unavailable.", "requiredAction": "Verify host availability."})
         self.apply({"type": "resumed", "blockerId": "environment", "resolution": "The host is available.", "reconciliation": "The host recovered; the earlier increment remains incomplete."})
         before = copy.deepcopy(self.state)
         with self.assertRaisesRegex(roadmap.RoadmapError, "dependencies are incomplete"):
@@ -709,7 +930,7 @@ class RoadmapEngineTest(unittest.TestCase):
                 self.define_and_approve(increments)
                 self.execute_increment(1, outcome)
                 preserved = copy.deepcopy({key: self.state[key] for key in ["increments", "evidence", "chunks", "roadmapApproval"]})
-                self.apply({"type": "blocker-recorded", "id": "host", "kind": "environment", "summary": "A host prerequisite is unavailable.", "requiredAction": "Verify host recovery."})
+                self.apply({"type": "blocker-recorded", **human_action_fields(), "id": "host", "kind": "environment", "summary": "A host prerequisite is unavailable.", "requiredAction": "Verify host recovery."})
                 self.apply({"type": "resumed", "blockerId": "host", "resolution": "Host prerequisite recovered.", "reconciliation": "Recovery changes no implementation or qualification facts."})
                 self.assertEqual(self.state["status"], expected)
                 self.assertEqual({key: self.state[key] for key in preserved}, preserved)
@@ -730,7 +951,7 @@ class RoadmapEngineTest(unittest.TestCase):
                     self.apply({"type": "chunk-recorded", "chunkId": "chunk-1", "summary": "Implemented outcome.", "areas": ["Scoped area"], "tests": ["Focused check passed."], "documentation": ["Guidance updated."], "feedbackAddressed": []})
                 if stage == "stale-approval":
                     self.apply({"type": "feedback-recorded", "id": "new-choice", "summary": "User requests a changed high-level choice.", "category": "decision", "impact": "high-level", "targetIncrementId": "increment-1", "disposition": "needs-decision", "nextAction": "Obtain actual approval."})
-                self.apply({"type": "blocker-recorded", "id": "host", "kind": "environment", "summary": "A required host is unavailable.", "requiredAction": "Verify recovery."})
+                self.apply({"type": "blocker-recorded", **human_action_fields(), "id": "host", "kind": "environment", "summary": "A required host is unavailable.", "requiredAction": "Verify recovery."})
                 self.apply({"type": "resumed", "blockerId": "host", "resolution": "Host recovered.", "reconciliation": "Resume only the prior progress; no qualification change."})
                 self.assertEqual(self.state["status"], "approval-required" if stage == "stale-approval" else "executing")
                 self.assertEqual(self.state["increments"][0]["status"], "paused-for-approval" if stage == "stale-approval" else stage)

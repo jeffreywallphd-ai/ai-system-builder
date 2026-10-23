@@ -9,12 +9,15 @@
       "blockers": [
         {
           "blocker_id": "restricted-legacy-authority-review-pending",
-          "source_blocker_digest": "4be25f9ecdd629e8438cd89bbe36a4dbb844827a48e9f99e184fb94fe9b44cd9",
+          "source_blocker_digest": "698640d7d30ec919b5c26afb88b5c1175cc2ff5e026c71bce46b5d703e85f8c9",
           "prevents": "Independent qualification of the existing Assets authority component cannot be completed while its review is restricted.",
           "plain_language": {
             "needed": "An independent security review of Assets access controls.",
-            "prevents": "This part of the Assets roadmap depends on a security review that is currently restricted. The completed UI tests do not replace it.",
-            "action": "Wait until an allowed independent review is available. Continue other permitted work without retrying the restricted review."
+            "prevents": "This review is restricted for the coding agent. Tests written by the author do not replace an independent review.",
+            "responsible_role": "Repository owner",
+            "user_action": "Arrange one permitted independent security review of the Assets workspace access-control change. Provide the reviewer’s report in this repository.",
+            "action": "Use the same review for the Assets and Security roadmap requirements. Do not retry the restricted coding-agent review route.",
+            "done_when": "An allowed independent reviewer assesses the actual code and provides findings. The required current checks and review results are recorded."
           }
         }
       ]
@@ -27,12 +30,15 @@
       "blockers": [
         {
           "blocker_id": "private-provider-and-advanced-runtime-unavailable",
-          "source_blocker_digest": "17c028da2af802617154f557ece278b63099b5d3815cae6f88eb5742b6e8d9b7",
+          "source_blocker_digest": "579fbd0f0800c327f0bf7c22d70ccc5a5d812ed0b7d01e2cc739423946563b4e",
           "prevents": "Real publication to a private Hugging Face test repository requires an authorized repository and provider credentials configured through the existing secure credential path.",
           "plain_language": {
-            "needed": "Verification of the authorized private Hugging Face test repository access.",
-            "prevents": "Access has been supplied and use is authorized. The private publishing and ingestion checks still need to verify that access works. Other local tests can continue.",
-            "action": "Verify the saved credential through the existing secure path, create the approved private test repository if absent, and run a small synthetic upload and download. Record the result before closing this check."
+            "needed": "Test the authorized private Hugging Face repository.",
+            "prevents": "You have supplied the credential and approved the test repository. Publishing and reading test files still need to be checked.",
+            "responsible_role": "Coding agent",
+            "user_action": "None. The saved credential and existing test-repository approval are sufficient to start these checks.",
+            "action": "Verify the saved access. Create the approved private test repository if needed. Upload and read small synthetic files. Record the results.",
+            "done_when": "The private publishing and ingestion tests pass. An independent review confirms the results without exposing the credential."
           }
         }
       ]
@@ -45,12 +51,15 @@
       "blockers": [
         {
           "blocker_id": "private-provider-and-advanced-runtime-unavailable",
-          "source_blocker_digest": "17c028da2af802617154f557ece278b63099b5d3815cae6f88eb5742b6e8d9b7",
+          "source_blocker_digest": "579fbd0f0800c327f0bf7c22d70ccc5a5d812ed0b7d01e2cc739423946563b4e",
           "prevents": "The private-provider portion of ingestion qualification needs an authorized private test repository and provider credentials. Independent local/website/scale subchecks can continue.",
           "plain_language": {
-            "needed": "Verification of the authorized private Hugging Face test repository access.",
-            "prevents": "Access has been supplied and use is authorized. The private publishing and ingestion checks still need to verify that access works. Other local tests can continue.",
-            "action": "Verify the saved credential through the existing secure path, create the approved private test repository if absent, and run a small synthetic upload and download. Record the result before closing this check."
+            "needed": "Test the authorized private Hugging Face repository.",
+            "prevents": "You have supplied the credential and approved the test repository. Publishing and reading test files still need to be checked.",
+            "responsible_role": "Coding agent",
+            "user_action": "None. The saved credential and existing test-repository approval are sufficient to start these checks.",
+            "action": "Verify the saved access. Create the approved private test repository if needed. Upload and read small synthetic files. Record the results.",
+            "done_when": "The private publishing and ingestion tests pass. An independent review confirms the results without exposing the credential."
           }
         }
       ]
@@ -63,12 +72,15 @@
       "blockers": [
         {
           "blocker_id": "advanced-runtime-qualification-unavailable",
-          "source_blocker_digest": "6d23be515c8a30a6c3fe529b87224217f215b63d31fd2bc3c435b3a6fd42b749",
+          "source_blocker_digest": "cbd72d5815ac82f2923fd87c384c03458475c62e36812201bae0050001921895",
           "prevents": "The OCR and layout-extraction portion cannot qualify until a selected OCR provider/runtime is governed and available. Available model/UI subchecks can continue.",
           "plain_language": {
-            "needed": "An approved OCR tool for reading scanned text and document layout.",
-            "prevents": "The OCR and layout tests cannot run because the selected tool is not yet approved and available. Other available tests can continue.",
-            "action": "Select and configure the OCR tool through the approved workflow, then run the OCR and layout tests."
+            "needed": "Finish the advanced data-processing tests and prepare the text-recognition options.",
+            "prevents": "Some document, model, interface and scale checks remain unfinished. Text recognition is not yet a supported capability.",
+            "responsible_role": "Coding agent",
+            "user_action": "None now. The agent must prepare clear options before asking you to choose any new text-recognition tool.",
+            "action": "Complete the available approved tests. Prepare options for a tool that reads scanned text. Obtain approval before adopting a new supplier.",
+            "done_when": "The unchanged data-processing requirements have measured results and independent review. Any new tool is approved and tested before support is claimed."
           }
         }
       ]
@@ -81,12 +93,15 @@
       "blockers": [
         {
           "blocker_id": "native-staging-restart-proof-unavailable",
-          "source_blocker_digest": "ac246c697ef4560b6bf62c8ef186122b0ebfb615f03902f987e9adcfa4c636e9",
+          "source_blocker_digest": "e888a8abd9f2d9a8d3139a3d30aebef8980f35cf3ff022d59d4001ba086e2211",
           "prevents": "Actual optional offload is denied until retained staging protection/accounting and owned-worker exit/recovery proof qualify. Completed Standard model-quality tests are already closed and must not be rerun.",
           "plain_language": {
-            "needed": "A safe restart path for low-memory mode.",
-            "prevents": "Another offload test cannot run safely until old temporary files are protected, counted against the disk limit and separated from a new test.",
-            "action": "Finish and test the Windows file protection, disk accounting, background-worker shutdown and restart safeguards. Completed model accuracy tests stay closed."
+            "needed": "Finish the safe restart controls for low-memory mode.",
+            "prevents": "The software must protect temporary model files and count their disk use before it starts another low-memory run.",
+            "responsible_role": "Coding agent",
+            "user_action": "None. The agent must finish the code and automated tests.",
+            "action": "Complete and test the approved Windows restart controls. Keep new low-memory runs disabled until the safety checks pass. Preserve the old files unchanged.",
+            "done_when": "File protection, the 12 GiB disk limit, worker shutdown and crash recovery pass independent checks. Accepted model accuracy tests remain closed."
           }
         }
       ]
@@ -99,22 +114,28 @@
       "blockers": [
         {
           "blocker_id": "model-file-effect-native-qualification",
-          "source_blocker_digest": "760f7e0af4d151645f997f55b4eebc461fc35ec4e849467110dd0e22605ddd26",
+          "source_blocker_digest": "6966d82589bc2c2f8d14e03a4e499cf11b666ec20eb77670b0692578c1833408",
           "prevents": "Supported model file operations cannot qualify until identity-preserving native file-effect and concurrency controls have actual supported-host evidence.",
           "plain_language": {
-            "needed": "Proof that model file operations stay inside the intended folder.",
-            "prevents": "The software has not yet demonstrated safe model file operations when another process changes a folder or file at the same time.",
-            "action": "Complete the supported Windows file-operation controls and run the concurrency tests on a supported host."
+            "needed": "Finish safe model-file operations on Windows.",
+            "prevents": "The remaining tests must prove that file operations stay safe when another process changes files or folders.",
+            "responsible_role": "Coding agent",
+            "user_action": "None. The agent must finish the approved code and supported-host tests.",
+            "action": "Complete the Windows file-identity and source-record controls. Test concurrent file changes and supported model caches. Keep unsafe operations disabled.",
+            "done_when": "The required Windows concurrency and cache tests pass. Independent review confirms that each operation acts on the authorized file."
           }
         },
         {
           "blocker_id": "approved-native-design-qualification-pending",
-          "source_blocker_digest": "bb1db8cfd43cb7ecd589965731e27e02813dee5c1bbf7c12b709be1d6b023d39",
+          "source_blocker_digest": "f9aeeb604fb64e118bffcf0197b72f9426b0b63fbea0d78d79645b4a3cd893ab",
           "prevents": "The selected native ownership design is approved, but implementation, protected ownership publication and supported-host race qualification are not yet demonstrated.",
           "plain_language": {
-            "needed": "Implementation and tests for the approved Windows file-ownership design.",
-            "prevents": "The design is approved, but the actual protected file-ownership and race-test evidence is still missing.",
-            "action": "Implement the approved design and collect the supported-host ownership and concurrency test results."
+            "needed": "Finish the Windows file-control design that you already approved.",
+            "prevents": "Design approval does not prove that the code or the required Windows tests are complete.",
+            "responsible_role": "Coding agent",
+            "user_action": "None. No further design approval is requested.",
+            "action": "Finish and test the approved ownership and file-publication controls. Preserve supported model-cache behavior. Obtain an independent review.",
+            "done_when": "Windows tests prove file protection, safe publication and resistance to competing changes. Supported model-cache workflows continue to work."
           }
         }
       ]
@@ -127,12 +148,15 @@
       "blockers": [
         {
           "blocker_id": "legacy-authority-independent-review-unavailable",
-          "source_blocker_digest": "754a10029b3f86062eefdb2730cf6b06d1cb4edfcd9869e282aa2a8273b45743",
+          "source_blocker_digest": "b6c1500b2f26ae9872c587e87adee4430bdd9dbbc774ff5dd07e5561ff5f9321",
           "prevents": "The legacy Assets authorization portion of this increment's independent security review cannot be completed while that separately invoked review remains restricted. Other permitted threat/control work may continue; author tests cannot replace it.",
           "plain_language": {
-            "needed": "An independent security review of the existing Assets access controls.",
-            "prevents": "The legacy Assets portion of this security review cannot close because the independent review is currently restricted. Author tests cannot replace it.",
-            "action": "Wait until an allowed independent review is available. Continue other permitted security work without retrying the restricted review."
+            "needed": "An independent security review of Assets access controls.",
+            "prevents": "This review is restricted for the coding agent. Tests written by the author do not replace an independent review.",
+            "responsible_role": "Repository owner",
+            "user_action": "Arrange one permitted independent security review of the Assets workspace access-control change. Provide the reviewer’s report in this repository.",
+            "action": "Use the same review for the Assets and Security roadmap requirements. Do not retry the restricted coding-agent review route.",
+            "done_when": "An allowed independent reviewer assesses the actual code and provides findings. The required current checks and review results are recorded."
           }
         }
       ]

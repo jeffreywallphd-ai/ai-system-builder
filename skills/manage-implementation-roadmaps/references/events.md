@@ -243,9 +243,10 @@ invalidates the prior roadmap approval.
 ```
 
 The event requires current approval, the next pending increment and satisfied
-dependencies, and refuses every blocker not explicitly resolved before changing
-state or generated documents. Resolve actual obstacles through `resumed` with
-reconciliation. Approved not-started work remains pending (`ready`); a user-ordered
+dependencies, and refuses unresolved human actions and unclassified legacy
+records before changing state or generated documents. Explicit agent-owned work
+remains open and permits execution; it does not permit completion. Use
+`blocker-reclassified` for responsibility changes and `resumed` for actual completion. Approved not-started work remains pending (`ready`); a user-ordered
 future start is a plan constraint, not itself a blocker or an automatic check of
 another roadmap's completion.
 
@@ -522,7 +523,9 @@ With `evidencePolicy: control-plane-v1`, first complete the guide's reviewed
 Completed increment declarations alone cannot qualify final closure.
 Overall verification may run with the final increment verifying only after every
 implementation chunk and all predecessors are implemented, approval is current
-and no blocker is open. This admits checks, never controlled evidence or closure.
+and no human action or unclassified legacy record prevents execution. Open
+agent-owned work may run checks; it still prevents technical completion. This
+admits checks, never controlled evidence or closure.
 Do not record aggregate execution as a completed implementation chunk in advance.
 
 ```json
@@ -612,7 +615,8 @@ or `verification`.
 Impacts: `within-increment`, `later-increment`, `high-level`, `scope-change`,
 or `environment`.
 
-Dispositions: `accepted`, `deferred`, `needs-decision`, or `blocked`.
+Dispositions: `accepted`, `deferred`, `needs-decision`, or `blocked`. New
+`blocked` feedback requires a recorded unresolved explicit human action.
 High-level, scope-changing, and needs-decision feedback invalidates roadmap approval.
 
 ### `blocker-recorded`
@@ -620,20 +624,70 @@ High-level, scope-changing, and needs-decision feedback invalidates roadmap appr
 ```json
 {
   "type": "blocker-recorded",
-  "id": "sandbox-acl",
-  "kind": "environment",
-  "summary": "The Windows sandbox cannot read a generated temporary directory.",
-  "requiredAction": "Repair or remove the stale temporary directory ACL."
+  "id": "independent-review-needed",
+  "kind": "dependency",
+  "summary": "An independent security review is needed.",
+  "actionOwner": "human",
+  "responsibleRole": "Repository owner",
+  "requiredAction": "Arrange a permitted independent review.",
+  "actionLocation": "The approved review channel",
+  "completionCondition": "A candidate-bound independent review is received and checked.",
+  "authorityRef": "user-human-action-policy"
 }
 ```
 
 Kinds: `environment`, `dependency`, `decision`, `credential`,
-`production-authority`, or `technical`.
+`production-authority`, or `technical`. A new record requires `actionOwner: human`
+and every nonempty action field shown above. Authority references are bounded
+identifiers, not proof that a person acted. The record stays open until actual
+resolution. Its presence pauses execution; it does not change technical criteria.
 
-Record a blocker only for an actual obstacle. Not-started approved work is pending,
-and ongoing work is in progress. When correcting a scheduling-only misclassification,
-use `resumed` with the actual reclassification authority and retain the user order
-in the plan; do not claim that an unavailable prerequisite passed or completed.
+Missing implementation or unrun checks belong to the agent plan. They are In
+progress or Technical check pending, not Blocked. A user start order stays a plan
+constraint. Do not request a credential or approval already supplied. A failed
+check remains failed regardless of who owns its correction.
+
+### `blocker-reclassified`
+
+```json
+{
+  "type": "blocker-reclassified",
+  "blockerId": "saved-technical-gap",
+  "expectedBlockerDigest": "replace-with-engine-fingerprint-of-current-record",
+  "actionOwner": "agent",
+  "responsibleRole": "Coding agent",
+  "requiredAction": "Implement the approved protection and run its checks.",
+  "actionLocation": "The owning implementation increment",
+  "completionCondition": "Current checks and independent review confirm the protection.",
+  "authorityRef": "user-human-action-policy",
+  "reason": "The user reserves Blocked for a required human action. This work is unfinished."
+}
+```
+
+This event changes responsibility for one existing open record. Both `agent` and
+`human` require the same concrete action fields. `expectedBlockerDigest` uses the
+engine's `fingerprint(record)` (canonical sorted ASCII JSON, SHA-256). A stale
+record, missing field, unknown field or unchanged assignment is refused without
+mutation. Optional `summary` corrects an obsolete factual summary; it cannot alter
+criteria. The exact old record/digest, new assignment, reason, authority reference
+and optional revised summary are retained in `blockerReclassifications`.
+
+The record remains `open`, with no invented resolution or completion. Agent
+ownership permits ordered approved execution and checks. Human ownership pauses
+execution. Unclassified legacy open records remain valid and conservatively stop
+execution until an explicit reviewed classification; kind/text never infers owner.
+
+Criteria, chunks, evidence, approvals and their fingerprints remain unchanged.
+Unfinished work of either owner prevents increment completion, exact-target
+qualification, roadmap completion and final approval. It also prevents legacy
+passing evidence from automatically closing an increment. Checks may run before
+actual work is reconciled; a check receipt is not a resolution event. Keep frozen
+successor histories archived rather than reactivating them for display changes.
+
+Generated reports separate Pending work, Human action needed and unclassified
+legacy records. User descriptions follow ASD-STE100 principles: name the actor,
+action, location and completion condition in plain sentences. Keep source-bound technical detail internally; do
+not expose a technical accordion or shorten a technical acceptance requirement.
 
 ### `resumed`
 
@@ -646,7 +700,10 @@ in the plan; do not claim that an unavailable prerequisite passed or completed.
 }
 ```
 
-After resolution, other open blockers retain `blocked` and stale approval retains
+Use this event only after the action or technical work is actually done. For an
+unfinished responsibility change use `blocker-reclassified`, not a false resolution.
+Other human actions or unclassified legacy records retain `blocked`; remaining
+agent-owned work stays open without pausing execution. Stale approval retains
 `approval-required`. Active work resumes its actual research/planning/implementation/
 verification stage. Without active work, all completed increments yield
 `roadmap-ready-to-close`; all implemented increments with outstanding qualification

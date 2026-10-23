@@ -13,6 +13,13 @@ Share the returned verified loopback URL with the user. The buildless UI polls
 versioned roadmap JSON and local controller JSON. No Markdown parsing, build,
 external fonts, analytics, credentials or hosting service is required.
 
+The first visit uses dark mode, including before JavaScript loads. The header's
+Light mode / Dark mode button changes only the local display and remembers an
+explicit `dark` or `light` preference under `aisb-review-theme-v1`. Invalid or
+unavailable browser storage falls back safely; storage failures do not block
+review refresh or navigation. Both palettes use explicit colors with tested text,
+badge, error, focus and input-boundary contrast, without inverting content.
+
 Work items include the planned chunks projected from roadmap JSON and separate
 execution records. Each increment shows its ordered chunks, recorded completion,
 criterion links and verification notes. Use "View these work items" to filter
@@ -27,10 +34,32 @@ or completing planned chunks. Long qualification badges wrap inside their own
 column in narrow review panels. Agent-only labels distinguish automated technical
 checks from archived offline human acceptance; genuine technical gaps stay pending.
 
-Roadmaps and work items appear newest first by creation time, regardless of
-status or later updates. Chunks use their plan's recorded time, falling back to
+Open Roadmaps appears first, followed by Completed Roadmaps. Only the roadmap's
+top-level `completed` status selects the completed section; legacy `complete` and
+`final-approved` records remain readable and display as `completed`. Current final
+approval preserves `completed` and its separate immutable approval fact. Completed
+increments never promote an open parent. Each section keeps
+the API's newest-first original creation order, unaffected by later updates or
+completion dates. Work items also appear newest first by creation time. Chunks
+use their plan's recorded time, falling back to
 increment start or roadmap creation for legacy data. Equal-time chunks retain
 their increment/plan order; missing or invalid creation dates sort last.
+
+The security plans share one execution backlog in `security-findings-refresh`.
+The obsolete unapproved Run & Test proposal is separately retained beneath its
+completed Publish lifecycle successor through a fixed validated retirement
+manifest. It supplies no current pass and cannot hide started work. Mixed legacy
+human acceptance appears offline while technical criteria remain pending.
+Expand its **Merged history** to inspect the original remediation increments,
+recorded criteria/chunks and exact primary/companion acceptance owners. The fixed
+versioned consolidation JSON must cover every unfinished legacy criterion and
+every current criterion, preserve both finding inventories, bind the frozen
+legacy state and current acceptance definitions, validate current approval using
+the canonical roadmap engine, reject successor cycles/chains through folded
+history, and retain final qualification.
+Only then is the legacy card/chunk backlog folded into history. Missing, malformed
+or stale data leaves both original records visible with a diagnostic. Folding
+does not change either roadmap's status, approval, evidence or completion.
 
 `/api/status` identifies the repository and local server instance. GET/HEAD
 routes are fixed; the server checks Host/Origin, has no CORS or mutation API,
@@ -39,7 +68,11 @@ raw logs and paths. Read `docs/architecture/ai-development-control-plane.md`
 and the contributor threat model before changing exposure or data fields.
 
 Focused tests live in `dev-tools/helpers/tests/test_control_plane_site.py`;
-browser behavior is covered by the contributor Node tests. Use `review-site
+browser behavior is covered by the complete contributor Node DOM/controller file.
+The policy-bound `review-site` source-owned profile selects that exact file for
+UI assets and its test changes; no desktop, model or native qualification is
+inferred. Uncovered sources and explicitly required generic focused checks retain
+their existing gates. Use `review-site
 status` for readiness and `review-site stop` for explicit, identity-checked
 shutdown. A localhost isolation policy may require the host's normal approval
 mechanism; keep the binding on numeric loopback.
@@ -73,9 +106,9 @@ entries fall back to the complete sanitized original as one bullet. No runtime
 punctuation heuristic or Markdown parser is used.
 
 Roadmap display labels show Pending for canonical ready, In progress for
-executing and Awaiting approval for roadmap-review. Actual open blockers
-remain Blocked; a blocked record with an explicit zero blocker count
-keeps its source status and shows a needs-review note. The accessible
+executing and Awaiting approval for roadmap-review. Explicit human-action requests
+remain Blocked. A legacy record without a named human action displays
+Status review needed; its execution guard remains unchanged until classification. The accessible
 status key above Open Roadmaps explains these labels and pending
 qualification without changing criteria or granting authority. Labels never change
 canonical workflow state, ordering, approval or start authority.
@@ -94,16 +127,45 @@ criterion payloads. Older rich work records remain a display fallback.
 
 ## Plain-language blocker explanations
 
-Optional `plain_language` copy on an existing blocker reference contains exactly
-`needed` (400 characters), `prevents` (800) and `action` (800). The same current
-criterion-description and still-open canonical blocker digest checks govern this
-copy. Shared blocker explanations must agree; conflicting or invalid copy falls
-back to canonical facts with a diagnostic. Sanitization and inert text rendering
-remain mandatory. No copy changes status, authority or qualification.
+An existing issue reference can carry reviewed `plain_language` copy. Legacy
+three-field copy remains readable: `needed` (400 characters), `prevents` (800)
+and `action` (800). New complete explanations also require `responsible_role`
+(160), `user_action` (800) and `done_when` (800). The exact current criterion and
+unresolved issue digests govern every explanation. Shared copies must agree.
+Invalid, conflicting or stale copy produces a diagnostic; the page requests clear
+instructions instead of displaying technical source text or inventing an action.
+All text stays sanitized and inert. Presentation grants no authority or test pass.
 
-Parent and affected-criterion views show **What’s needed**, **Why it matters** and
-**What to do**, followed by expandable **Technical details** retaining the original
-canonical summary/action and criterion-specific operation explanation. Historical
-technical wording can predate newly supplied access; primary copy must accurately
-distinguish authorized access from successful verification. Do not ask for access
-again when it has been supplied, or imply it works before an actual check passes.
+Parent and affected-criterion views show the responsible role, the user's action,
+the remaining work and its completion check. Technical summary/action text stays
+in versioned JSON for agents. No technical-details accordion appears in these
+issue cards. Distinguish supplied access from successful tests. Do not request
+credentials again after the user supplied them.
+
+## Responsibility and pending work
+
+Use **Blocked** only when a person must take a specific action. Coding-agent
+implementation, debugging and available automated checks are pending work. They
+do not become human requests because the code or evidence is unfinished.
+
+Canonical open issue records carry `actionOwner`, `responsibleRole`,
+`requiredAction`, `actionLocation` and `completionCondition`. The governed
+`blocker-reclassified` event archives the prior record without resolving its
+technical requirement. Unknown legacy responsibility needs review; it cannot be
+silently assigned or accepted. Only explicit human issues contribute to the
+human-action count. Agent-owned issues appear in **Pending work** at roadmap and
+criterion level. Their technical tests still prevent completion until satisfied.
+
+The source-bound blocker presentation supports a complete plain explanation:
+`needed`, `prevents`, `responsible_role`, `user_action`, `action` and `done_when`.
+Review this explanation for the same scope as its exact canonical issue digest.
+The page shows the user explanation. Technical source text stays in versioned JSON
+for agents; there is no technical-details accordion for these issue cards.
+Missing or stale explanations show an instruction-review message, rather than
+unsupported technical instructions or an invented request for access.
+
+Each card answers: Who will act? What must the user do? What work remains? What
+result will close it? Use short active sentences and separate actions. Apply the
+applicable [ASD-STE100 Issue 9](https://www.asd-ste100.org/assets/files/ASD-STE100_ISSUE9.pdf) writing principles; this is not a claim of formal
+ASD-STE100 certification. Retain security controls, accurate limits and completed
+model results when simplifying the wording.

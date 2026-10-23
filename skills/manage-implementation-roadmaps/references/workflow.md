@@ -28,12 +28,21 @@ transfer may close only when every retained technical criterion already passes.
 - The state engine records workflow facts but never runs implementation or test
   commands.
 - Approved not-started work is pending (`ready`); active work is in progress
-  (`executing`). A future start order alone is not an obstacle. Record `blocked`
-  only when an actual prerequisite prevents progress, and retain user sequencing
-  in the plan rather than inventing automatic cross-roadmap enforcement.
-- A new increment cannot start while any blocker is unresolved. After actual
-  resolution use `resumed` with reconciliation; approval, increment ordering and
-  dependency checks still apply. A resume declaration is not external proof.
+  (`executing`). Use `blocked` only for a specific action a human must take.
+  Record the role, action, location and completion condition. A future start order,
+  missing implementation or unrun check is not a human blocker.
+- New increments refuse unresolved human actions and unclassified legacy records.
+  Explicitly reclassified agent work remains open and permits approved execution.
+  It still prevents technical completion. Use `resumed` only after actual completion;
+  use `blocker-reclassified` for responsibility changes. Preserve approval, order,
+  dependencies, criteria, chunks and evidence. Neither event creates a test pass.
+
+Write separate source-bound user descriptions with short sentences, familiar words
+and one clear action, following ASD-STE100 principles. Name the actor. Give the
+location and completion proof. For agent work say "No action needed" and display
+In progress or Technical check pending. Keep technical detail and original history
+internally; do not expose a technical accordion in the user view. These principles
+do not certify full ASD-STE100 conformance.
 
 ## Artifact model
 
@@ -220,7 +229,8 @@ obtain separate review and complete it before `roadmap-completed`. Aggregate
 checks are refused earlier, and source edits invalidate final qualification.
 The final active increment may be verifying when every predecessor is implemented
 and every nonempty planned chunk set matches its completed set. Approval must be
-current and no blocker may be open. Release its source claim before starting the
+current and no human action or unclassified legacy record may prevent execution.
+Open agent work permits checks but still prevents completion. Release its source claim before starting the
 serial overall claim, then recover it to record evidence. External qualification
 remains pending; final closure still requires every controlled criterion to pass.
 Publication uses exclusive unpredictable temporary files; parent-directory native
@@ -370,6 +380,9 @@ credentials or external coordination, an unresolved security policy choice, a
 genuine blocker or controlled-environment gap, or an explicit user-requested
 checkpoint. This continuation rule does not infer initial implementation approval,
 expand scope, or remove final overall approval.
+A technical gap without a specific human action stays pending. Continue other
+feasible approved work. Prepare actual decision options before requesting human
+intervention; do not ask for existing authority or infer a pass from reclassification.
 
 After recording `roadmap-completed`, present the concise temporary report and wait
 for explicit user approval of the overall completed work. Record
@@ -415,7 +428,7 @@ Classify each feedback item:
 | clarification | Apply within the increment if approved intent is unchanged.           |
 | defect        | Fix in the current or targeted increment and add regression evidence. |
 | verification  | Update checks or evidence without rewriting product scope.            |
-| environment   | Record a blocker or controlled-environment qualification.             |
+| environment   | Keep agent checks pending; record a blocker only for a human action.   |
 | decision      | Stop and obtain a new high-level option approval.                     |
 | scope         | Stop, revise or replace the roadmap, and obtain roadmap approval.     |
 
@@ -429,7 +442,12 @@ approval.
 
 ## Block and resume loop
 
-Record the exact blocker and required external action. When it clears:
+Record a blocker only for a required human action. State the responsible role,
+action, location and completion condition. Missing agent work remains pending.
+For an old mixed record use `blocker-reclassified`: archive its exact prior record,
+authority and reason, keep it open and retain all technical requirements. Do not
+use `resumed` to pretend unfinished work is resolved. When the actual action or
+technical work is done:
 
 1. Inspect worktree and generated artifact drift.
 2. State what changed while work was stopped.

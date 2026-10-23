@@ -1,5 +1,12 @@
 # Contributor Control Plane
 
+For user-directed superseded-proposal cleanup, retain exact history, map every
+former criterion to its real successor, freeze old execution with the existing
+blocker event and use only the registered bounded retirement manifest. Do not
+reintroduce the removed Run & Test surface. Mixed legacy human acceptance uses
+the explicit scope event and independent classification. Technical qualification
+and product approval remain.
+
 - Status: current
 - Verification: `dev-tools/helpers/tests/`, `npm run agent-support:check`
 
@@ -24,6 +31,10 @@ The site reads versioned JSON and `/api/review` returns `development-review-v1`.
 Markdown is generated documentation and is never parsed into the site database.
 The UI refreshes every five seconds. It has no approval or mutation controls.
 
+Dark mode is the initial display. The top Light mode / Dark mode action remembers
+only an explicit validated local preference; missing, invalid or blocked storage
+cannot disable the review. This action changes no workflow records or authority.
+
 Expand an increment to inspect its ordered work chunks and acceptance criteria.
 Chunks show their planned/completed state, next planned work, linked criterion
 outcomes, recorded completion summary and verification notes. "View these work
@@ -33,12 +44,29 @@ records, labeled separately. Passing criteria never marks a planned chunk
 complete. Legacy roadmap declarations retain their evidence label and never
 gain invented receipts or review attestations.
 
-Roadmaps and work items sort by creation time, newest first. Completion, updates
-and status do not move older records above newer ones. Chunk creation follows
+The Roadmaps view shows Open Roadmaps first and Completed Roadmaps afterward.
+Completion uses only the roadmap's top-level completion status, never increment
+or work-item progress. The canonical status is `completed`; legacy `complete` and
+`final-approved` records remain readable with the same displayed badge. Explicit
+legacy conversion uses the skill engine's `completion-status-normalized` event,
+which preserves final approval, history and evidence without new qualification.
+Each section and
+the Work items view sort by original creation time, newest first. Completion and
+updates do not move older records above newer ones in a section. Chunk creation follows
 the recorded plan time (legacy fallback: increment start, then roadmap creation);
 equal-date chunks keep plan order and undated records appear last.
 
 ## Define bounded work
+
+For the explicitly consolidated security plans, execute only
+`security-findings-refresh`. Its **Merged history** preserves the legacy roadmap,
+completed increments, original criteria/chunks and primary/companion ownership
+mapping. The machine-readable concern review is
+`docs/security/security-roadmap-consolidation.json`; historical baseline assertions
+are not newly scheduled defects. Recheck current implementation and qualification
+gaps before coding. No criterion or scanner closure follows from consolidation.
+An invalid, incomplete or stale mapping leaves both records visible with a safe
+diagnostic; repair that mapping through scoped work rather than hiding data.
 
 Copy `dev-tools/helpers/control-plane-work.example.json` into ignored
 `.local-codex/`, edit it for the actual request, and use an opaque invocation ID.
@@ -59,6 +87,12 @@ catalog includes documentation, agent-support, control-plane, roadmap,
 architecture, source-owned focused tests, dependency security and evaluation.
 Unknown impact needs a bounded catalog rule and regression test; do not replace
 it with arbitrary shell text or an early aggregate run.
+The automatically selected `review-site` profile owns exact HTML, JavaScript,
+CSS and DOM-test paths and executes the complete fixed Node DOM/controller file.
+It substitutes coarse focused ownership only when all focused impact is explicitly
+covered; uncovered paths and an explicit `focused-tests` requirement keep the
+generic gate. The receipt must show actual execution. This UI qualification does
+not claim a desktop closure, model result or native security pass.
 Focused Node/Vitest routing follows actual test imports, rather than words in
 test descriptions or fixture strings; controlled AI tests remain opt-in.
 
@@ -329,6 +363,8 @@ recorded work and limits, and follow successor navigation for superseded deliver
 plans. Keep canonical failed/pending evidence, native/security/reference gaps and
 stronger governed completion guards intact.
 
+For unavailable technical evidence, record the exact limitation and the agent work that remains. Use `blocker-recorded` only when a named person must take a concrete action. Use `blocker-reclassified` to correct an old assignment without resolving unfinished work. A status change is neither a pass nor a claim that independent tasks are complete. Preserve completed increments, technical criteria/chunks, evidence, approvals and all failed attempts. The crosswalk and supporting-work registry must follow current approved agent-only scope; historical evidence keys containing `manual` do not require a human operator. User acceptance stays offline.
+
 ## Complete proposal presentation
 
 Maintain precise criterion blocker associations in
@@ -373,16 +409,32 @@ trees or change their qualification.
 
 ## Plain-language blocker explanations
 
-Optional `plain_language` copy on an existing blocker reference contains exactly
-`needed` (400 characters), `prevents` (800) and `action` (800). The same current
-criterion-description and still-open canonical blocker digest checks govern this
-copy. Shared blocker explanations must agree; conflicting or invalid copy falls
-back to canonical facts with a diagnostic. Sanitization and inert text rendering
-remain mandatory. No copy changes status, authority or qualification.
+An existing issue reference can carry reviewed `plain_language` copy. Legacy
+three-field copy remains readable: `needed` (400 characters), `prevents` (800)
+and `action` (800). New complete explanations also require `responsible_role`
+(160), `user_action` (800) and `done_when` (800). The exact current criterion and
+unresolved issue digests govern every explanation. Shared copies must agree.
+Invalid, conflicting or stale copy produces a diagnostic; the page requests clear
+instructions instead of displaying technical source text or inventing an action.
+All text stays sanitized and inert. Presentation grants no authority or test pass.
 
-Parent and affected-criterion views show **What’s needed**, **Why it matters** and
-**What to do**, followed by expandable **Technical details** retaining the original
-canonical summary/action and criterion-specific operation explanation. Historical
-technical wording can predate newly supplied access; primary copy must accurately
-distinguish authorized access from successful verification. Do not ask for access
-again when it has been supplied, or imply it works before an actual check passes.
+Parent and affected-criterion views show the responsible role, the user's action,
+the remaining work and its completion check. Technical summary/action text stays
+in versioned JSON for agents. No technical-details accordion appears in these
+issue cards. Distinguish supplied access from successful tests. Do not request
+credentials again after the user supplied them.
+
+## Human actions and agent work
+
+**Blocked** means a person must do a specific action before the affected work can
+continue. Unfinished agent implementation and available automated checks stay
+pending. Record who must act, the action, where to do it and the result needed.
+Use the roadmap engine's `blocker-reclassified` event to correct an old label. It
+archives the old responsibility without resolving or qualifying technical work.
+
+The review site separates human-action **Blockers** from agent-owned **Pending
+work** under the affected roadmap and criterion. Its user explanation states the
+responsible role, the user's action, the remaining work and the completion check.
+The technical definition stays in JSON for agents. Simplifying text or changing
+responsibility cannot supply credentials, grant restricted authority, bypass a
+safety guard, approve new scope or close a technical acceptance check.

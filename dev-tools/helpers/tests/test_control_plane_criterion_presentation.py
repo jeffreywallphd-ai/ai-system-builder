@@ -238,9 +238,47 @@ class CriterionPresentationTests(unittest.TestCase):
         self.assertEqual(value['inventory'], {'execution_records_total': 1002, 'execution_records_shown': 1000, 'execution_records_truncated': True})
         self.assertIn({'code': 'projection.execution-records-truncated', 'total': 1002, 'shown': 1000}, value['diagnostics'])
 
+    def test_agent_work_is_pending_and_human_actions_remain_separate_without_a_pass(self):
+        from control_plane.common import digest
+        row = self.blocker_fixture()
+        issue = self.state['blockers'][0]
+        issue.update(actionOwner='agent', responsibleRole='Coding agent',
+                     completionCondition='The required safe restart tests pass.')
+        self.state['status'] = 'executing'
+        self.state['increments'][0]['status'] = 'verifying'
+        self.state_path.write_text(json.dumps(self.state))
+        row['blockers'][0]['source_blocker_digest'] = digest(issue)
+        row['blockers'][0]['plain_language'] = {
+            'needed': 'Finish the safe restart tests.', 'prevents': 'A new low-memory run must wait for file safety tests.',
+            'action': 'Finish the code and run the safe restart tests.', 'responsible_role': 'Coding agent',
+            'user_action': 'None. The coding agent will continue.', 'done_when': 'The required tests pass and have an independent review.'}
+        self.write_blocker_map([row])
+        before = self.state_path.read_bytes()
+        value = project(self.root)
+        roadmap = value['roadmaps'][0]
+        criterion = self.criterion(value)
+        self.assertEqual(roadmap['status'], 'executing')
+        self.assertEqual(roadmap['blocker_count'], 0)
+        self.assertEqual(roadmap['blockers'], [])
+        self.assertEqual(len(roadmap['pending_work']), 1)
+        self.assertEqual(criterion['blockers'], [])
+        self.assertEqual(criterion['pending_work'][0]['action_owner'], 'agent')
+        self.assertEqual(criterion['pending_work'][0]['plain_language']['user_action'], 'None. The coding agent will continue.')
+        self.assertEqual(criterion['outcome'], 'pending')
+        self.assertEqual(self.state_path.read_bytes(), before)
+        self.assertEqual(value['diagnostics'], [])
+        # A source change invalidates explanations; the pending technical work remains visible.
+        issue['completionCondition'] = 'A changed test requirement.'
+        self.state_path.write_text(json.dumps(self.state))
+        value = project(self.root)
+        self.assertEqual(self.criterion(value)['pending_work'], [])
+        self.assertEqual(len(value['roadmaps'][0]['pending_work']), 1)
+        self.assertEqual(self.criterion(value)['outcome'], 'pending')
+        self.assertTrue(value['diagnostics'])
+
     def test_only_actual_open_blockers_expose_safe_summary_and_action(self):
         self.state['blockers'] = [
-            {'id': 'actual-gap', 'kind': 'technical', 'status': 'open',
+            {'id': 'actual-gap', 'kind': 'technical', 'status': 'open', 'actionOwner': 'human',
              'summary': 'Resource qualification remains pending password=synthetic-blocker-secret.',
              'requiredAction': 'Collect safe evidence without C:\\private\\example.',
              'authorityRef': 'private-blocker-authority', 'resolution': 'private-resolution'},
@@ -251,7 +289,7 @@ class CriterionPresentationTests(unittest.TestCase):
         roadmap = value['roadmaps'][0]
         self.assertEqual(roadmap['blocker_count'], 1)
         self.assertEqual(len(roadmap['blockers']), 1)
-        self.assertEqual(set(roadmap['blockers'][0]), {'id', 'kind', 'summary', 'required_action'})
+        self.assertEqual(set(roadmap['blockers'][0]), {'id', 'kind', 'summary', 'required_action', 'action_owner'})
         for private in ['synthetic-blocker-secret', 'private-blocker-authority', 'private-resolution', 'Resolved private history', 'Old private action', 'C:\\\\private']:
             self.assertNotIn(private, json.dumps(value))
         self.state['blockers'] = [self.state['blockers'][0]] * 45
@@ -259,6 +297,19 @@ class CriterionPresentationTests(unittest.TestCase):
         value = project(self.root)
         self.assertEqual(value['roadmaps'][0]['blocker_count'], 45)
         self.assertEqual(len(value['roadmaps'][0]['blockers']), 40)
+
+    def test_many_earlier_agent_items_cannot_hide_a_later_human_request(self):
+        agent = {'id': 'agent-task', 'kind': 'technical', 'status': 'open', 'actionOwner': 'agent',
+                 'summary': 'Agent code remains.', 'requiredAction': 'Complete the approved code.'}
+        human = {'id': 'human-action', 'kind': 'dependency', 'status': 'open', 'actionOwner': 'human',
+                 'summary': 'Arrange a permitted review.', 'requiredAction': 'Supply a permitted independent review.'}
+        self.state['blockers'] = [dict(agent, id='agent-' + str(n)) for n in range(45)] + [human]
+        self.state_path.write_text(json.dumps(self.state))
+        roadmap = project(self.root)['roadmaps'][0]
+        self.assertEqual(roadmap['blocker_count'], 1)
+        self.assertEqual(roadmap['blockers'][0]['id'], 'human-action')
+        self.assertEqual(roadmap['pending_work_count'], 45)
+        self.assertEqual(len(roadmap['pending_work']), 39)
 
     def test_execution_byte_admission_keeps_response_bounded_and_reports_actual_inventory(self):
         from unittest.mock import patch
@@ -301,7 +352,7 @@ class CriterionPresentationTests(unittest.TestCase):
 
     def blocker_fixture(self):
         from control_plane.common import digest
-        blocker = {'id': 'provider-qualification', 'kind': 'controlled-environment', 'status': 'open',
+        blocker = {'id': 'provider-qualification', 'kind': 'controlled-environment', 'status': 'open', 'actionOwner': 'human',
                    'summary': 'Private provider qualification needs operator credentials.',
                    'requiredAction': 'Supply an authorized private test repository and credential through the approved secret store.',
                    'authorityRef': 'private-authority-sentinel'}

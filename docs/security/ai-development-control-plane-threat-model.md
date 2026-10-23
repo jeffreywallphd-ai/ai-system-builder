@@ -6,6 +6,34 @@
 
 ## Assets and authority
 
+The superseded unstarted Run & Test draft has a fixed separate retirement
+manifest. Admission requires the exact source/Publish pair, no source approval,
+plan, evidence or started chunks, a frozen handoff, current canonical completed
+successor and complete primary/companion coverage. It cannot retire started work
+or change completion facts. Security consolidation still requires its current
+governed owner and all finding identities. Mixed legacy scope uses a separate
+explicit event/archive with the same pending-controlled, current-approval and
+complete-chunk guards. Only human acceptance is archived; model/native/resource/
+provider/security checks and product approval controls remain.
+
+Security roadmap consolidation protects execution ownership, unresolved acceptance
+and original evidence. Folding uses a fixed bounded JSON source, exact frozen
+legacy state and current acceptance definitions, the existing open legacy handoff
+blocker and current governed successor approval. The fixed canonical roadmap
+engine validates state shape, identity and the actual approval fingerprint; a
+truthy stale or malformed approval cannot hide work. The entire successor graph
+must be acyclic, with no incoming or outgoing successor chain through folded
+history. Every unfinished legacy criterion needs
+one known primary owner and explicit companion checks; every successor criterion
+needs current source references and an explicit validity disposition. Both complete finding
+identity inventories and the all-suite completion policy are retained. Missing,
+duplicate, foreign, changed, circular or incomplete mappings leave the original
+records visible with a diagnostic. The site renders only sanitized summaries,
+never approval notes or referenced source content. Folding cannot change status,
+manufacture a pass, grant authority or import historical receipts. Definition
+changes require reinspection; source-review dispositions themselves remain
+inspection evidence, not current execution qualification.
+
 Pending-target qualification protects the same completion authority. It admits
 only currently approved governed implementation with all chunks complete and no
 blockers, retaining other active work. Exact target plan/chunks, criterion
@@ -59,6 +87,18 @@ unchanged. Missing/malformed facts, overrides, repeat conversion and later edits
 fail closed. `finalApproval` governs terminal immutability/report removal for both
 legacy and canonical `completed` status. This supplies no new qualification and
 does not authenticate approval against hostile same-user filesystem tampering.
+
+The source-owned review profile is selected only by fixed exact UI asset/test
+patterns. It executes the complete fixed Node DOM/controller file, without name
+filters or arbitrary commands. Substitution needs complete explicit source
+coverage; uncovered impact and an explicit generic focused requirement retain
+their gate. Catalog/data digests bind the policy. Earlier whole-desktop memory
+failures remain unqualified; successful UI checks cannot erase or replace them.
+
+Theme preference is untrusted local browser data. Only literal `dark`/`light`
+values select predefined CSS colors. Invalid values and storage errors fall back
+without blocking review. The button changes no records, routes or permissions;
+the existing fixed assets, CSP, inert text and loopback controls remain intact.
 
 An explicit offline human-acceptance transfer changes scope, not test truth.
 The roadmap engine requires the current approved fingerprint, explicit authority

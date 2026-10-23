@@ -122,9 +122,14 @@ def canonical_blocker_source(state):
 
 def _plain_blocker_copy(value):
     """Optional reviewed explanation; never replaces the authoritative obstacle."""
-    fields(value, {'needed', 'prevents', 'action'}, {'needed', 'prevents', 'action'})
-    return {key: safe_text(text(value[key], limit=limit), limit)
-            for key, limit in (('needed', 400), ('prevents', 800), ('action', 800))}
+    original = {'needed', 'prevents', 'action'}
+    expanded = original | {'responsible_role', 'user_action', 'done_when'}
+    fields(value, expanded, original)
+    if set(value) != original and set(value) != expanded:
+        raise ValueError('complete owner, user action and completion explanation required')
+    limits = {'needed': 400, 'prevents': 800, 'action': 800,
+              'responsible_role': 160, 'user_action': 800, 'done_when': 800}
+    return {key: safe_text(text(item, limit=limits[key]), limits[key]) for key, item in value.items()}
 
 
 def apply_blocker_presentations(root: Path, roadmaps: list, sources: dict, diagnostics: list) -> None:
@@ -140,7 +145,7 @@ def apply_blocker_presentations(root: Path, roadmaps: list, sources: dict, diagn
                 if key in known:
                     ambiguous.add(key)
                 known[key] = criterion
-        if roadmap['status'] == 'blocked':
+        if sources.get(roadmap['id'], {}).get('blockers'):
             expected.update((roadmap['id'], blocker_id) for blocker_id in sources.get(roadmap['id'], {}).get('blockers', {}))
     try:
         path = confined_path(root, BLOCKER_REFERENCE)
@@ -188,6 +193,11 @@ def apply_blocker_presentations(root: Path, roadmaps: list, sources: dict, diagn
                                      'summary': safe_text(blocker.get('summary', ''), 1600),
                                      'prevents': safe_text(text(reference['prevents'], limit=800), 800),
                                      'required_action': safe_text(blocker.get('requiredAction', ''), 1600)})
+                    if blocker.get('actionOwner') in {'agent', 'human'}:
+                        selected[-1]['action_owner'] = blocker['actionOwner']
+                        for field, public in [('responsibleRole', 'responsible_role'), ('completionCondition', 'done_when')]:
+                            if isinstance(blocker.get(field), str):
+                                selected[-1][public] = safe_text(blocker[field], 800)
                     if 'plain_language' in reference:
                         selected[-1]['plain_language'] = _plain_blocker_copy(reference['plain_language'])
                 staged[key] = selected

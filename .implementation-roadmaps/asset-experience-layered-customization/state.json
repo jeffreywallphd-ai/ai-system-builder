@@ -1,5 +1,78 @@
 {
-  "blockers": [],
+  "blockerReclassifications": [
+    {
+      "assignment": {
+        "actionLocation": "Existing work security-legacy-assets-workspace-authority; Assets production-qualification/security-review and Security file-and-workspace-authority/security-impact-reviewed",
+        "actionOwner": "human",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "An allowed independent reviewer supplies a genuine review of the actual candidate, with identity, findings and required current checks. Author tests and this status audit do not replace the review.",
+        "requiredAction": "Arrange one permitted independent assessment of the existing Assets access-control change. Do not retry the restricted coding-agent review through another agent, tool or route. The same assessment supplies both roadmap owners.",
+        "responsibleRole": "Repository owner"
+      },
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "blockerId": "restricted-legacy-authority-review-pending",
+      "originalBlocker": {
+        "id": "restricted-legacy-authority-review-pending",
+        "kind": "dependency",
+        "recordedAt": "2026-10-22T22:18:47Z",
+        "requiredAction": "Obtain an allowed independent review of the existing legacy authority component and fresh exact-target parent qualification/final gates. This is the shared security dependency, not duplicate implementation work. Do not retry the restricted review through another mechanism, replace it with author tests/UI review or infer a server-restart/security pass from renderer reload.",
+        "resolution": null,
+        "resolvedAt": null,
+        "status": "open",
+        "summary": "The shared legacy Assets authorization review owned by security-findings-refresh remains unperformed because its independent review turn was restricted before review. Reviewed local UI support now passes desktop native close/exit/relaunch and managed renderer reload, with configured WCAG-tagged axe rules, keyboard/focus, reduced-motion, reflow and native400zoom. Managed server restart and parent current-target security qualification are not claimed."
+      },
+      "originalDigest": "2d7521eb819e89aa5fbc6bbd8c4d3105a25ad855ff81882ff043be21e65730af",
+      "reason": "An independent security review is needed. The repository owner must arrange a permitted review.",
+      "recordedAt": "2026-10-23T18:49:24Z"
+    }
+  ],
+  "blockers": [
+    {
+      "id": "managed-host-and-independent-review-unavailable",
+      "kind": "dependency",
+      "recordedAt": "2026-10-22T16:25:36Z",
+      "requiredAction": "Restore the existing authorized managed test environment and obtain an allowed independent review of the exact current candidate. Finish any remaining Windows UI assertions, then qualify each owning criterion and final gates; do not replace the managed host with an unauthorised compatibility fixture.",
+      "resolution": "The authorized local Docker engine and separately owned isolated cached-image fixture were restored, with actual managed OIDC/TLS/PostgreSQL preflight, full Assets journeys and teardown passing. The compound historical blocker is replaced by the precise still-open legacy-authority-independent-review-unavailable dependency; its review component is not claimed resolved.",
+      "resolvedAt": "2026-10-22T22:16:11Z",
+      "status": "resolved",
+      "summary": "Managed OIDC/PostgreSQL/TLS qualification cannot start because the existing Docker daemon is unavailable. Independent legacy authority review was stopped by an external review-tool restriction; no review pass exists. Available Windows UI qualification continues separately."
+    },
+    {
+      "id": "published-studio-workspace-rediscovery-fails",
+      "kind": "technical",
+      "recordedAt": "2026-10-22T16:25:39Z",
+      "requiredAction": "Integrate the existing Studio publication lineage into an explicitly owner-bound workspace visibility/read path, with regression tests and independent security review. Preserve legacy/reuse sources and fail closed for foreign, missing or unverifiable ownership; do not admit the global catalog wholesale. Rerun final resource, restart and accessibility assertions after that boundary is qualified.",
+      "resolution": "Reviewed assets-published-workspace-rediscovery and assets-catalog-and-host-reliability restore exact owner-bound Studio/derived list/detail and bounded target reads. Completed assets-host-accessibility-qualification verifies real default/imported customizations and three-resource Studio Saved/review/publication, exact Browse rediscovery/history and unchanged bases after restarts through both desktop and managed hosts. Exact receipt/review links are recorded in roadmap-supporting-work.json; no global-catalog admission or automatic implementation activation is inferred.",
+      "resolvedAt": "2026-10-22T22:16:11Z",
+      "status": "resolved",
+      "summary": "Actual packaged Windows UI10 passes package admission, two customization publish/restart flows and exact Saved Studio reopen/review/publication, then the published Studio asset is absent from Browse after restart. Later resource rediscovery/accessibility assertions have not run."
+    },
+    {
+      "id": "legacy-authority-independent-review-unavailable",
+      "kind": "dependency",
+      "recordedAt": "2026-10-22T22:16:11Z",
+      "requiredAction": "Obtain an allowed independent legacy authority review and fresh exact-target parent checks/review, preserving all security and qualification requirements. Do not retry the restricted review through another mechanism or substitute author tests or this local UI review. Complete final owning gates only after that dependency is available.",
+      "resolution": "Metadata precision correction only: restricted-legacy-authority-review-pending preserves this still-unresolved dependency. Earlier combined publication/restart wording is superseded: desktop uses native close/exit/relaunch; managed qualification uses renderer reload and does not prove server restart. Configured WCAG-tagged axe rules passed, not an assertion of universal WCAG coverage.",
+      "resolvedAt": "2026-10-22T22:18:47Z",
+      "status": "resolved",
+      "summary": "Actual Windows Electron and managed OIDC/TLS/PostgreSQL Assets authoring, publication/restart, keyboard, contrast, reflow and native400 journeys now pass as independently reviewed local support. The separate legacy Assets authorization review remains unperformed because its independent review turn was restricted before review; no parent security or current-target pass exists."
+    },
+    {
+      "actionLocation": "Existing work security-legacy-assets-workspace-authority; Assets production-qualification/security-review and Security file-and-workspace-authority/security-impact-reviewed",
+      "actionOwner": "human",
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "completionCondition": "An allowed independent reviewer supplies a genuine review of the actual candidate, with identity, findings and required current checks. Author tests and this status audit do not replace the review.",
+      "id": "restricted-legacy-authority-review-pending",
+      "kind": "dependency",
+      "recordedAt": "2026-10-22T22:18:47Z",
+      "requiredAction": "Arrange one permitted independent assessment of the existing Assets access-control change. Do not retry the restricted coding-agent review through another agent, tool or route. The same assessment supplies both roadmap owners.",
+      "resolution": null,
+      "resolvedAt": null,
+      "responsibleRole": "Repository owner",
+      "status": "open",
+      "summary": "The shared legacy Assets authorization review owned by security-findings-refresh remains unperformed because its independent review turn was restricted before review. Reviewed local UI support now passes desktop native close/exit/relaunch and managed renderer reload, with configured WCAG-tagged axe rules, keyboard/focus, reduced-motion, reflow and native400zoom. Managed server restart and parent current-target security qualification are not claimed."
+    }
+  ],
   "chunks": [
     {
       "areas": [
@@ -1018,6 +1091,17 @@
       "outcome": "pending",
       "recordedAt": "2026-07-18T21:14:31Z",
       "summary": "Automated review passed for source containment, unsafe paths, protected content, secrets, size limits, stale revisions, workspace isolation, immutable bases, non-execution, safe diagnostics, and fail-closed revocation truth. The controlled target-environment security review remains required and is not inferred."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "desktop-thin-accessibility",
+      "id": "evidence-35",
+      "incrementId": "production-qualification",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-22T14:07:35Z",
+      "summary": "Technical qualification pending: actual automated desktop/thin-client keyboard, accessibility-tree semantics, 400-percent zoom/reflow, measured contrast, focus/modal, reduced-motion and responsive checks on supported profiles. Independent controlled security qualification is retained as a separate unchanged criterion."
     }
   ],
   "feedback": [
@@ -1724,6 +1808,72 @@
       "recordedAt": "2026-07-18T21:14:33Z",
       "sequence": 97,
       "type": "increment-completed"
+    },
+    {
+      "eventFingerprint": "e6366631df42ffd1556fcea22b104b4f341631771373fd2307e3d62a4ee005d8",
+      "recordedAt": "2026-10-22T14:04:01Z",
+      "sequence": 98,
+      "type": "legacy-acceptance-scope-revised"
+    },
+    {
+      "eventFingerprint": "e400f7a09ceea2daa563c6102534f827fd44275b8b37931e2b0af0444790d129",
+      "recordedAt": "2026-10-22T14:04:02Z",
+      "sequence": 99,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "2fe4430b34e91356bad2dbbbd03e38d794180379d69011ee6d5ae9c221e060e2",
+      "recordedAt": "2026-10-22T14:07:35Z",
+      "sequence": 100,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5c439e8cce03834d0a34aed54f5ccf50fd0d785c1c2792fcf2c4343eaeaa0d7e",
+      "recordedAt": "2026-10-22T16:25:36Z",
+      "sequence": 101,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "ab1bbfc6eb23123ef1cf6b2770179f2d0869704e5edc354c6a02b612ab863e50",
+      "recordedAt": "2026-10-22T16:25:39Z",
+      "sequence": 102,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "bd5cc8799ee4e800ffe8fe0eae22176ee1204d802b824d88af7f6bd39e58e7e1",
+      "recordedAt": "2026-10-22T22:16:11Z",
+      "sequence": 103,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "1c4ff89ac8949f33898689b054c94e58e297a473bcb9517257a606c0efa3b96a",
+      "recordedAt": "2026-10-22T22:16:11Z",
+      "sequence": 104,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "ccf81d1c31b2be54d0aa90d7aef056dfc9aa2a3e22c013f591a771608dd2d087",
+      "recordedAt": "2026-10-22T22:16:11Z",
+      "sequence": 105,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "909ef85f27a07a258b49419039fdec3185293294b4f9cdcec580c940c9d6f7ca",
+      "recordedAt": "2026-10-22T22:18:47Z",
+      "sequence": 106,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "ee81a5e14d907228d947ba76631ff3fc47cfd31169bc07d0721f9f3cd435f683",
+      "recordedAt": "2026-10-22T22:18:47Z",
+      "sequence": 107,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "4bcf6755ffcb918731e9d48671c3e1db4f0f4bfcbca8fca5babbbc20211bd4ad",
+      "recordedAt": "2026-10-23T18:49:24Z",
+      "sequence": 108,
+      "type": "blocker-reclassified"
     }
   ],
   "increments": [
@@ -2797,7 +2947,7 @@
           "qualification": "local"
         },
         {
-          "description": "Documented keyboard, screen-reader, 400-percent zoom and reflow, contrast, focus, modal, and responsive checks pass on supported desktop and thin-client surfaces.",
+          "description": "Agent-executed automated keyboard interactions, accessibility-tree semantics for screen-reader compatibility, 400-percent zoom and reflow, text and non-text contrast, focus, modal, reduced-motion and responsive checks pass on supported desktop and thin-client surfaces.",
           "id": "desktop-thin-accessibility",
           "qualification": "controlled-environment"
         },
@@ -2973,6 +3123,102 @@
       ]
     }
   ],
+  "legacyAcceptanceScopeRevisions": [
+    {
+      "authorityRef": "user-agent-only-acceptance-and-current-scope-20261022",
+      "incrementId": "production-qualification",
+      "originalPlan": {
+        "assumptions": [
+          "The shared React surfaces are the authoritative UI implementation for both desktop and thin client.",
+          "Imported and authored source remains non-executable until a separately qualified sandbox exists.",
+          "Controlled manual accessibility and security evidence may remain pending when the required environment or reviewer is unavailable, but it must never be inferred from automated tests."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "e2e-default-imported",
+              "e2e-studio-saved"
+            ],
+            "id": "representative-lifecycle-matrix",
+            "outcome": "System Foundation, admitted imported, and Studio-authored assets are qualified through save, reopen, review, publication, restart rediscovery, immutable-base, and non-execution assertions.",
+            "title": "Representative lifecycle and restart matrix"
+          },
+          {
+            "criteriaIds": [
+              "desktop-thin-accessibility",
+              "security-review"
+            ],
+            "id": "failure-security-accessibility",
+            "outcome": "Negative matrices and cross-host shared-surface checks cover isolation, stale state, unsafe and oversized content, unavailable adapters, modal/focus semantics, keyboard naming, status announcements, and narrow-layout CSS; controlled manual evidence is recorded truthfully.",
+            "title": "Fail-closed, security, accessibility, and responsive qualification"
+          },
+          {
+            "criteriaIds": [
+              "all-gates-pass"
+            ],
+            "id": "release-evidence-gates",
+            "outcome": "Canonical docs and support qualification match implemented behavior and limitations, sanitized evidence is ready for controlled review, and every applicable repository, security, build, and package gate has one final recorded result.",
+            "title": "Release evidence, canonical docs, and complete gates"
+          }
+        ],
+        "completionTests": [
+          "npm test",
+          "npm run docs:check",
+          "npm run architecture:check",
+          "npm run agent-support:check",
+          "npm run security:dependencies",
+          "npm run asset-system:check",
+          "npm run build:server",
+          "npm run build:thin-client",
+          "npm run package"
+        ],
+        "documentation": [
+          "Asset and System Support Qualification",
+          "Asset authoring and execution security architecture",
+          "Asset authoring context pack and nearest READMEs",
+          "Temporary concise roadmap implementation report"
+        ],
+        "fingerprint": "8df22d4ffc926280f02ea98ceed5a72e1b362a4891afab8205251c4ab67b4560",
+        "focusedTests": [
+          "Focused lifecycle tests for the representative matrix",
+          "Focused qualification and shared UI tests for failure, security, accessibility semantics, and responsive contracts",
+          "Qualification harness and documentation checks for release evidence"
+        ],
+        "recordedAt": "2026-07-18T20:45:36Z",
+        "rollback": "Retain safe browse, import, Saved, Studio, and Customizations behavior plus persisted drafts; revert qualification-only checks independently and capability-gate create operations without deleting user data.",
+        "steps": [
+          "Extend representative lifecycle coverage across System Foundation, admitted imported, and from-scratch Studio assets, including restart rediscovery and immutable-base or non-execution proofs.",
+          "Exercise failure, security, accessibility-semantic, modal, and responsive invariants across shared desktop and thin-client surfaces; fix any product defects found.",
+          "Update canonical qualification documentation and sanitized controlled-review templates, then run the complete release gate set once all chunks are implemented."
+        ],
+        "summary": "Qualify the complete Assets experience with representative lifecycle matrices, fail-closed and cross-host UI hardening, then one final release-evidence and repository-gate pass."
+      },
+      "previousApproval": {
+        "approvedAt": "2026-07-18T17:54:42Z",
+        "fingerprint": "66ab56b6115450df42f5777e05e79a0715e3790e0de660c8f5915f5d5772fa51",
+        "note": "The user explicitly requested one Studio tab for semantic data and backing resources, directed implementation as requested, and approved adding a new cohesive increment after Increment 4."
+      },
+      "recordedAt": "2026-10-22T14:04:01Z",
+      "removedCriteria": [],
+      "replacedCriteria": [
+        {
+          "humanScope": "Observed human screen-reader sessions and participant/manual accessibility acceptance are handled offline. This transfers no automated keyboard/touch compatibility, accessibility-tree semantics, actual400-percent zoom/reflow, contrast or claimed physical-hardware/native support qualification.",
+          "original": {
+            "description": "Documented keyboard, screen-reader, 400-percent zoom and reflow, contrast, focus, modal, and responsive checks pass on supported desktop and thin-client surfaces.",
+            "id": "desktop-thin-accessibility",
+            "qualification": "controlled-environment"
+          },
+          "revised": {
+            "description": "Agent-executed automated keyboard interactions, accessibility-tree semantics for screen-reader compatibility, 400-percent zoom and reflow, text and non-text contrast, focus, modal, reduced-motion and responsive checks pass on supported desktop and thin-client surfaces.",
+            "id": "desktop-thin-accessibility",
+            "qualification": "controlled-environment"
+          }
+        }
+      ],
+      "status": "offline-user-owned",
+      "summary": "User-directed offline human acceptance; preserve every technical requirement and all prior evidence. No test pass or closure is asserted."
+    }
+  ],
   "name": "Asset Experience and Layered Customization",
   "objective": "Deliver a responsive card-and-modal Asset Browser, consistent attached tab surfaces for Assets and Systems, a guided Import Assets template experience, and a production-ready workspace-owned layered customization workflow that preserves immutable source assets while exposing authorized definition and implementation internals.",
   "paths": {
@@ -2980,14 +3226,30 @@
     "roadmap": "docs/asset-experience-layered-customization-implementation-roadmap.md",
     "state": ".implementation-roadmaps/asset-experience-layered-customization/state.json"
   },
-  "resumeAudits": [],
+  "resumeAudits": [
+    {
+      "blockerId": "published-studio-workspace-rediscovery-fails",
+      "reconciliation": "Retain original failed UI runs, all technical acceptance/evidence/chunk/approval records and the remaining legacy authority dependency. Local supporting work does not grant parent qualification or completion.",
+      "recordedAt": "2026-10-22T22:16:11Z"
+    },
+    {
+      "blockerId": "managed-host-and-independent-review-unavailable",
+      "reconciliation": "Preserve original environment and restricted-review history. Do not adopt unrelated fixtures, retry the restricted review or grant any parent pass from the completed UI support.",
+      "recordedAt": "2026-10-22T22:16:11Z"
+    },
+    {
+      "blockerId": "legacy-authority-independent-review-unavailable",
+      "reconciliation": "Preserve all prior text/history and all technical criterion/chunk/evidence/approval fields. This wording correction supplies no security review, new test, parent qualification or completion.",
+      "recordedAt": "2026-10-22T22:18:47Z"
+    }
+  ],
   "roadmapApproval": {
-    "approvedAt": "2026-07-18T17:54:42Z",
-    "fingerprint": "66ab56b6115450df42f5777e05e79a0715e3790e0de660c8f5915f5d5772fa51",
-    "note": "The user explicitly requested one Studio tab for semantic data and backing resources, directed implementation as requested, and approved adding a new cohesive increment after Increment 4."
+    "approvedAt": "2026-10-22T14:04:02Z",
+    "fingerprint": "cc618942966618e81b3df4ab187cc1037c0ae3997a45e893a7e0d10df0dc825a",
+    "note": "The user explicitly directed AI-executable roadmap acceptance, offline human testing and removal of obsolete scope. This reapproval covers only the independently reviewed human wording amendment; technical qualification and product approval controls are unchanged."
   },
   "schemaVersion": 1,
   "slug": "asset-experience-layered-customization",
-  "status": "implementation-complete-qualification-pending",
-  "updatedAt": "2026-07-18T21:14:33Z"
+  "status": "blocked",
+  "updatedAt": "2026-10-23T18:49:24Z"
 }

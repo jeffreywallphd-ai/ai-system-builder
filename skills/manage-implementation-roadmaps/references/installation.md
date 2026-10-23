@@ -85,7 +85,8 @@ before `roadmap-completed`. Portable repositories without the adapter retain
 their declarative workflow.
 Preserve implementation-boundary tests: final verifying work can qualify only
 when every implementation chunk and predecessor is done, approval is current and
-no blocker is open. Pending external criteria still prevent final closure.
+no human action or unclassified legacy record prevents execution. Open agent work
+permits checks but still prevents completion. Pending criteria prevent final closure.
 Keep exclusive unpredictable temporary publication and failure-cleanup tests;
 portable installation does not attest OS-native ACL/reparse race qualification.
 Preserve canonical completion regression tests: final approval keeps `completed`,
@@ -110,13 +111,22 @@ discovery-only 0/0 shell becoming a reviewable draft through live JSON refresh,
 and prove that publication cannot start implementation or create approval.
 Portable installation alone does not install a server or grant authority.
 
-Preserve the portable new-increment blocker guard and its atomic denial tests.
-An approved not-started roadmap with an unresolved blocker cannot start; complete
-`resumed` reconciliation permits normal admission while approval, order and
-dependency guards remain intact. Keep pending (`ready`), in-progress (`executing`)
-and actual-obstacle (`blocked`) guidance aligned on every supported agent host.
-A future user start order stays a workflow constraint, not an invented blocker or
-proof that another roadmap completed.
+Preserve the portable human-action execution guard and atomic denial tests.
+New `blocker-recorded` events require a human owner, responsible role, required
+action, location, completion condition and authority reference. Legacy stored
+records remain valid and conservative until explicitly classified. Bundle
+`blocker-reclassified`, exact old-record/digest archives, strict fields and stale
+record denial tests together. Agent work stays open and allows approved execution;
+it never supplies resolution, a pass or technical completion. Test mixed owners,
+reapproval, archive chains/tampering, actual resolution and every completion path,
+including legacy evidence promotion. Keep approvals, criteria, chunks and evidence.
+
+Keep user descriptions separate and source-bound. Apply ASD-STE100 principles:
+short sentences, a clear actor, one action, its location and completion proof.
+Show agent work as In progress or Technical check pending with No action needed.
+Keep technical detail internally, without a technical accordion in the user view.
+Do not claim full ASD-STE100 conformance. Do not reactivate frozen successor history
+or ask for credentials/approval already supplied merely to change a status label.
 
 Preserve the reviewed-chunk checkpoint procedure across hosts. Completed, tested
 and independently reviewed chunks commit on the authorized branch before later

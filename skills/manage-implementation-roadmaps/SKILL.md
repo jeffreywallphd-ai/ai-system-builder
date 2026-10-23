@@ -25,14 +25,26 @@ while all predecessors are implemented. Pending controlled qualification never
 becomes a pass and still prevents final roadmap closure.
 
 Approved work that has not started is pending (`ready`), and active work is in
-progress (`executing`). Record `blocked` only for an actual obstacle. A user-ordered
-future start is a plan/workflow constraint, not automatically a blocker or an
-external-roadmap enforcement mechanism. New increments refuse unresolved blockers;
-use `resumed` after actual resolution and reconciliation, retaining approval,
-ordered increments and dependencies.
-Resuming derives status from actual progress: inactive implemented work retains
-pending qualification, and all completed increments remain ready to close.
-Reclassification grants no implementation, qualification or closure.
+progress (`executing`). Use `blocked` only when a human must take a specific action.
+Name the responsible role, action, location and proof that the action is done.
+Missing coding, an unrun technical check or a future user start order is agent work,
+not a human blocker. New `blocker-recorded` events require human action details.
+Use `blocker-reclassified` to assign saved unresolved work to `agent` or `human`.
+It archives the exact earlier record and authority/reason; agent work stays open.
+Unclassified legacy records retain their execution guard until explicitly reviewed.
+Agent work permits approved execution and checks, but unresolved technical work
+still prevents increment, target and final completion. Use `resumed` only when the
+recorded action or technical work is actually done, not to change a status label.
+Approval, ordered increments, dependencies and every technical criterion remain.
+
+Write user descriptions with ASD-STE100 principles: short sentences, familiar
+words, one clear action and an explicit actor. State what the user must do, where
+to do it and how completion is checked. For agent work say "No action needed" and
+use "In progress" or "Technical check pending". Do not ask for saved credentials
+or repeat authority already granted. Keep technical facts and history internally.
+Bind separate user descriptions to the current source; do not replace technical
+requirements or expose a technical accordion in the user view. Do not claim full
+ASD-STE100 conformance from these writing principles alone.
 
 For an explicitly authorized change to a pending technical acceptance policy,
 use `technical-acceptance-revised` as documented in `references/events.md`.
@@ -231,6 +243,10 @@ is genuinely unavailable, or the user explicitly requests an increment checkpoin
 Continuous execution never infers initial implementation approval and never broadens
 the approved scope or authority. The explicit final overall approval remains
 required after `roadmap-completed`.
+A technical gap alone remains pending, not Blocked. Continue feasible approved
+work. If a human decision is actually needed, first prepare the concrete choice
+and record its role, action, location and completion condition. Do not invent a
+credential request, privilege requirement or test pass to change a status.
 
 For every approved increment, repeat this loop:
 
@@ -291,7 +307,10 @@ For every approved increment, repeat this loop:
 - Invalidate approval and stop when feedback changes a high-level decision or scope.
 - Re-run the security impact screen for feedback that changes scope, data flow,
   authority, side effects, dependencies, rollback, or an implementation boundary.
-- Record blockers with the action required to clear them.
+- Record human blockers with a responsible role, action, location and completion
+  condition. Keep unfinished agent implementation and checks pending.
+- Reclassify old mixed records explicitly; preserve their original text and reason.
+  Never mark unfinished technical work resolved to change a status label.
 - On resume, inspect worktree and artifact drift, resolve the blocker, document the
   reconciliation, re-run affected checks, and continue from the last proven state.
 - After every user approval response, perform the plan-continuity reconciliation

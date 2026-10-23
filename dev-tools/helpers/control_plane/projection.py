@@ -50,12 +50,19 @@ def open_blocker_details(state):
     if not isinstance(rows, list):
         return []
     result = []
+    # Keep explicit human requests visible even when many agent tasks precede them.
+    rows = sorted(rows, key=lambda row: 0 if isinstance(row, dict) and row.get("actionOwner") == "human" else 1)
     for row in rows:
         if not isinstance(row, dict) or row.get("status") != "open" or not all(
                 isinstance(row.get(key, ""), str) for key in ("id", "kind", "summary", "requiredAction")):
             continue
         result.append({"id": safe_text(row.get("id", ""), 80), "kind": safe_text(row.get("kind", ""), 80),
                        "summary": safe_text(row.get("summary", ""), 1600), "required_action": safe_text(row.get("requiredAction", ""), 1600)})
+        if row.get('actionOwner') in {'agent', 'human'}:
+            result[-1]['action_owner'] = row['actionOwner']
+            for source, target in [('responsibleRole', 'responsible_role'), ('completionCondition', 'done_when')]:
+                if isinstance(row.get(source), str):
+                    result[-1][target] = safe_text(row[source], 800)
         if len(result) == 40:
             break
     return result
@@ -81,7 +88,7 @@ def project(root: Path) -> dict:
                     completed = set(i.get("completedChunks", []))
                     transferred_ids = {c["id"] for t in s.get("humanAcceptanceTransfers", []) if t.get("incrementId") == i["id"] for c in t.get("criteria", [])}
                     offline = [{"status": "offline-user-owned", "criteria": [{"id": safe_text(c["id"], 80), "description": safe_text(c["description"], 1500)} for c in t.get("criteria", [])[:100]]} for t in s.get("humanAcceptanceTransfers", [])[:100] if t.get("incrementId") == i["id"]]
-                    for revision in s.get("acceptanceScopeRevisions", [])[:100]:
+                    for revision in (s.get("acceptanceScopeRevisions", []) + s.get("legacyAcceptanceScopeRevisions", []))[:100]:
                         if revision.get("incrementId") != i["id"]:
                             continue
                         retired = revision.get("removedCriteria", [])[:100]
@@ -98,7 +105,7 @@ def project(root: Path) -> dict:
                         record = records.get(c["id"], {})
                         chunks.append({"id": safe_text(c["id"], 80), "chunk_number": number, "title": safe_text(c["title"]), "outcome": safe_text(c["outcome"], 1400), "created_at": chunk_created, "status": "completed" if c["id"] in completed else "planned", "is_next": s.get("currentIncrementId") == i["id"] and c["id"] == next_id, "criteria_ids": [safe_text(k, 80) for k in c.get("criteriaIds", [])[:100] if k not in transferred_ids], "completed_at": safe_text(record.get("completedAt", ""), 80), "summary": safe_text(record.get("summary", ""), 1000), "tests": [safe_text(t, 400) for t in record.get("tests", [])[:12]]})
                     increments.append({"id": safe_text(i["id"], 80), "number": i["number"], "title": safe_text(i["title"]), "objective": safe_text(i["objective"], 1600), "status": safe_text(i["status"]), "proposal": increment_proposal(i), "chunk_plan_pending_approval": s.get("status") == "roadmap-review" and not s.get("roadmapApproval") and i.get("status") == "pending" and not i.get("plan") and not chunks, "chunk_plan_pending_start": bool(s.get("roadmapApproval")) and i.get("status") == "pending" and not i.get("plan") and not chunks, "criteria": criteria, "offline_acceptance": offline, "chunks_complete": sum(c["status"] == "completed" for c in chunks), "chunks_planned": len(chunks), "chunks": chunks})
-                roadmaps.append({"id": safe_text(s["slug"], 80), "title": safe_text(s["name"]), "objective": safe_text(s["objective"], 1800), "created_at": roadmap_created, "status": safe_text(s["status"]), "evidence_policy": s.get("evidencePolicy", "declarative-legacy"), "current_increment": safe_text(s.get("currentIncrementId") or "none"), "increments": increments, "blockers": open_blocker_details(s), "blocker_count": sum(b.get("status") == "open" for b in s.get("blockers", []))})
+                roadmaps.append({"id": safe_text(s["slug"], 80), "title": safe_text(s["name"]), "objective": safe_text(s["objective"], 1800), "created_at": roadmap_created, "status": safe_text(s["status"]), "evidence_policy": s.get("evidencePolicy", "declarative-legacy"), "current_increment": safe_text(s.get("currentIncrementId") or "none"), "increments": increments, "blockers": open_blocker_details(s), "blocker_count": sum(b.get("status") == "open" and b.get("actionOwner") == "human" for b in s.get("blockers", [])), "pending_work_count": sum(b.get("status") == "open" and b.get("actionOwner") == "agent" for b in s.get("blockers", []))})
             except (ControlError, ValueError, KeyError, TypeError):
                 diagnostics.append({"code": "projection.roadmap-unavailable"})
     # Stable identifiers break equal-date ties; unknown creation dates stay last.
@@ -112,6 +119,20 @@ def project(root: Path) -> dict:
     apply_presentations(root, roadmaps, diagnostics)
     enrich(root, roadmaps, state, diagnostics)
     apply_blocker_presentations(root, roadmaps, blocker_sources, diagnostics)
+    # Responsibility affects display and scheduling, never acceptance. Keep each
+    # unfinished issue visible; only an explicit human request is a blocker.
+    for roadmap in roadmaps:
+        issues = roadmap.get('blockers', [])
+        roadmap['pending_work'] = [row for row in issues if row.get('action_owner') == 'agent']
+        roadmap['blockers'] = [row for row in issues if row.get('action_owner') != 'agent']
+        for increment in roadmap['increments']:
+            for criterion in increment['criteria']:
+                issues = criterion.get('blockers', [])
+                criterion['pending_work'] = [row for row in issues if row.get('action_owner') == 'agent']
+                criterion['blockers'] = [row for row in issues if row.get('action_owner') != 'agent']
+    # A complete validated consolidation folds frozen delivery history beneath
+    # its sole owner; it cannot mark that history or any criterion completed.
+    roadmaps = [r for r in roadmaps if r.get('execution_role') != 'merged-history']
     works = []
     for roadmap in roadmaps:
         for increment in roadmap["increments"]:

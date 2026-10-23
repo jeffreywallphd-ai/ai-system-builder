@@ -1,5 +1,28 @@
 # AI Development Control Plane
 
+The fixed superseded Run & Test draft may fold beneath the completed Publish
+lifecycle owner only with an exact frozen unapproved/unstarted source, dedicated
+open handoff blocker, current canonical successor approval and complete criterion
+mapping. Retain all history. This exception never admits other legacy successors,
+completes the old draft or grants current qualification. Invalid mappings leave
+both visible. Mixed legacy human acceptance uses a separate metadata-only event
+and archive; technical evidence/pending status and product approval remain.
+
+User-directed security consolidation has one execution owner. A fixed versioned
+JSON crosswalk maps every unfinished legacy criterion to one existing primary
+owner plus required companion acceptance, and assesses every current criterion
+against code/tests. The frozen legacy state digest, current acceptance-definition
+digest, existing handoff blocker, canonical current approval and complete finding identities
+must match before projection folds the original card/chunks beneath the successor's
+merged history. The original state and completed history remain unchanged except
+serialized clarification events. Invalid or stale mapping restores both visible
+records with a diagnostic. This projection cannot transfer approval, execution
+receipts, passes or completion, and preserves the configured overall all-suite
+and applicable build/release/security qualification.
+The fixed roadmap engine validates the successor state and approval; the complete
+successor graph rejects cycles and chains through folded records, including
+ordinary links without consolidation metadata.
+
 Explicit user-directed offline human acceptance may leave technical closure through
 the roadmap skill's bounded transfer event. The archive preserves original
 criteria, plan, approval and evidence; the active scope needs explicit reapproval.
@@ -155,9 +178,23 @@ navigation follows roadmap/increment/chunk identities. Criterion qualification
 and chunk completion remain independent dimensions.
 
 The projection orders roadmaps and work items by normalized creation time,
-descending. Work uses its initial event and chunks use plan recording time with
+descending. The Roadmaps view partitions that order into Open Roadmaps first,
+then Completed Roadmaps, using only top-level completion. The canonical roadmap
+status remains `completed` after final approval; the separate `finalApproval`
+fact governs immutability and report removal. A narrow user-authorized legacy
+normalization event preserves all prior facts and appends history. The site also
+reads legacy `complete` and `final-approved` statuses and displays completion
+badges as `completed`, including internal execution `complete` badges. It never
+infers a parent pass from child increments or local support. Within each section, original
+creation time governs; completion and update times do not reorder records.
+Work uses its initial event and chunks use plan recording time with
 legacy increment/roadmap fallbacks. Unknown dates sort last and equal timestamps
 retain deterministic identity/plan order; source modification time is not used.
+
+The buildless page defaults to dark colors before JavaScript runs. Its header
+action stores only a validated explicit dark/light preference in browser storage;
+storage failure is nonfatal and no server mutation or approval is introduced.
+Explicit palette tokens preserve text, badge, error, focus and control contrast.
 
 The server binds numeric loopback only, accepts exact same-origin Host/Origin,
 provides fixed GET/HEAD routes, bounds clients and output, and serves no arbitrary

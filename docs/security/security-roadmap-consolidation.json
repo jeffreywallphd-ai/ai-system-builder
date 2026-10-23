@@ -1,0 +1,603 @@
+{
+  "schema_version": "security-roadmap-consolidation-v1",
+  "source_roadmap_id": "security-vulnerability-remediation",
+  "target_roadmap_id": "security-findings-refresh",
+  "source_digest": "c74c24552248e7763036058d519939c7b627aa01dde8764aad9f84f7f4b57d65",
+  "target_criteria_digest": "a40bf9542251a016d57ef7b048ef4bf228d173d83d65450087b053611a5c249b",
+  "authority_ref": "user-merge-security-roadmaps-20261022",
+  "summary": "Unified execution uses security-findings-refresh. The four completed legacy increments and all original evidence remain historical; the10unfinished legacy criteria have one primary existing owner plus explicit companion checks. Current implementation and technical qualification gaps remain active. No status, approval or pass transfers. Source paths identify context and ownership, not proof that uncommitted changes are included or qualified by this checkpoint.",
+  "legacy_criteria": [
+    {
+      "increment_id": "medium-runtime-and-process-hardening",
+      "criterion_id": "medium-runtime-privilege",
+      "owner_increment_id": "runtime-execution-integrity",
+      "owner_criterion_id": "runtime-authority-and-paths",
+      "disposition": "merged-existing-owner",
+      "summary": "Retain exact host-derived lifecycle/configuration authority as the existing owner. Runtime-provenance is companion scope for approved repairs. Existing role policies and local denial tests are support, not complete native/runtime qualification.",
+      "evidence_paths": [
+        "modules/adapters/transport/api-express/security/apiRouteSecurityPolicy.ts",
+        "modules/adapters/runtime/installer/comfyui/createComfyUiRuntimeInstaller.ts",
+        "modules/hosts/desktop/composition/composeDesktopHost.ts"
+      ],
+      "related_owners": [
+        {
+          "increment_id": "runtime-execution-integrity",
+          "criterion_id": "runtime-provenance"
+        },
+        {
+          "increment_id": "runtime-execution-integrity",
+          "criterion_id": "security-impact-reviewed"
+        }
+      ]
+    },
+    {
+      "increment_id": "medium-runtime-and-process-hardening",
+      "criterion_id": "medium-runtime-bounds",
+      "owner_increment_id": "runtime-execution-integrity",
+      "owner_criterion_id": "runtime-resource-budgets",
+      "disposition": "merged-existing-owner",
+      "summary": "One execution owner for request, admission, bytes/time/concurrency and review budgets. Keep runtime-recovery-truth and supported-runtime-journeys as companions. Parameter bounds and bounded task registry already exist; aggregate principal/organization reservations and actual cancellation/recovery/resource proof remain.",
+      "evidence_paths": [
+        "modules/contracts/image-generation/image-generation-request-validation.ts",
+        "modules/adapters/runtime/python/worker/app.py",
+        "modules/adapters/runtime/python/worker/tasks/review_dataset.py",
+        "docs/adr/ADR-0043-owned-resource-effects-and-private-identities.md"
+      ],
+      "related_owners": [
+        {
+          "increment_id": "runtime-execution-integrity",
+          "criterion_id": "runtime-recovery-truth"
+        },
+        {
+          "increment_id": "runtime-execution-integrity",
+          "criterion_id": "supported-runtime-journeys"
+        },
+        {
+          "increment_id": "runtime-execution-integrity",
+          "criterion_id": "security-impact-reviewed"
+        }
+      ]
+    },
+    {
+      "increment_id": "medium-runtime-and-process-hardening",
+      "criterion_id": "medium-runtime-paths-and-diagnostics",
+      "owner_increment_id": "runtime-execution-integrity",
+      "owner_criterion_id": "runtime-authority-and-paths",
+      "disposition": "merged-existing-owner",
+      "summary": "Primary owner retains worker file authority/private contained staging. runtime-private-diagnostics, host-file-authority and dataset-source-isolation retain the other broad original concerns. Session-only diagnostics and local source checks do not prove native publication/ACL or parent substitution safety.",
+      "evidence_paths": [
+        "modules/adapters/runtime/python/ensurePythonRuntimeWorkerDependencies.ts",
+        "modules/application/use-cases/prepare-training-dataset-from-artifacts.use-case.ts",
+        "docs/adr/ADR-0043-owned-resource-effects-and-private-identities.md"
+      ],
+      "related_owners": [
+        {
+          "increment_id": "runtime-execution-integrity",
+          "criterion_id": "runtime-private-diagnostics"
+        },
+        {
+          "increment_id": "file-and-workspace-authority",
+          "criterion_id": "host-file-authority"
+        },
+        {
+          "increment_id": "file-and-workspace-authority",
+          "criterion_id": "dataset-source-isolation"
+        },
+        {
+          "increment_id": "runtime-execution-integrity",
+          "criterion_id": "security-impact-reviewed"
+        }
+      ]
+    },
+    {
+      "increment_id": "medium-runtime-and-process-hardening",
+      "criterion_id": "medium-installer-provenance",
+      "owner_increment_id": "runtime-execution-integrity",
+      "owner_criterion_id": "runtime-provenance",
+      "disposition": "merged-existing-owner",
+      "summary": "Do not redo explicit allowUpdate and unmanaged-root denials. Retain missing immutable-source/current-executable-tree/marker authority, secure approved pinned repair and native race qualification under the existing provenance owner.",
+      "evidence_paths": [
+        "modules/adapters/runtime/installer/git/createGitRuntimeInstallerAdapter.ts",
+        "modules/adapters/runtime/installer/git/tests/createGitRuntimeInstallerAdapter.unit.test.ts",
+        "modules/adapters/runtime/installer/comfyui/createComfyUiRuntimeInstaller.ts"
+      ],
+      "related_owners": [
+        {
+          "increment_id": "runtime-execution-integrity",
+          "criterion_id": "runtime-authority-and-paths"
+        },
+        {
+          "increment_id": "runtime-execution-integrity",
+          "criterion_id": "supported-runtime-journeys"
+        },
+        {
+          "increment_id": "runtime-execution-integrity",
+          "criterion_id": "security-impact-reviewed"
+        }
+      ]
+    },
+    {
+      "increment_id": "medium-runtime-and-process-hardening",
+      "criterion_id": "medium-runtime-functionality",
+      "owner_increment_id": "runtime-execution-integrity",
+      "owner_criterion_id": "supported-runtime-journeys",
+      "disposition": "merged-existing-owner",
+      "summary": "Supported generation/download/dataset/training/validation/setup flows need real integrated positive/error/stop/retry evidence under hardened controls. Standalone model publishing is explicitly not implemented and must remain unavailable before effects; do not turn unavailable publishing into a missing security implementation or fabricated successful journey. Recovery and budgets remain companion criteria.",
+      "evidence_paths": [
+        "modules/application/use-cases/model/publish-model.use-case.ts",
+        "modules/adapters/runtime/python/worker/app.py",
+        "docs/security/security-local-controls-qualification.json"
+      ],
+      "related_owners": [
+        {
+          "increment_id": "runtime-execution-integrity",
+          "criterion_id": "runtime-recovery-truth"
+        },
+        {
+          "increment_id": "runtime-execution-integrity",
+          "criterion_id": "runtime-resource-budgets"
+        },
+        {
+          "increment_id": "runtime-execution-integrity",
+          "criterion_id": "security-impact-reviewed"
+        }
+      ]
+    },
+    {
+      "increment_id": "low-hardening-and-security-qualification",
+      "criterion_id": "low-canonical-safe-data",
+      "owner_increment_id": "canonical-safe-records",
+      "owner_criterion_id": "strict-nested-safe-records",
+      "disposition": "merged-existing-owner",
+      "summary": "One canonical safe-record execution slice; retain all five specific companion criteria complete-integrity-input, trusted-provenance-and-opaque-identity, readiness-blockers-preserved, safe-user-facing-compatibility and security-impact-reviewed. Existing component-qualified strict schemas and semantic/public-identity controls must be preserved rather than rebuilt. Native/legacy migration/current parent gaps remain.",
+      "evidence_paths": [
+        "modules/contracts/execution-runs/execution-run-normalization.ts",
+        "modules/contracts/execution-plans/execution-plan-normalization.ts",
+        "modules/application/services/asset-packs/asset-pack-fingerprint.service.ts",
+        "modules/application/services/asset/asset-image-resource-backed-view-provider.service.ts",
+        "docs/security/security-local-controls-qualification.json"
+      ],
+      "related_owners": [
+        {
+          "increment_id": "canonical-safe-records",
+          "criterion_id": "complete-integrity-input"
+        },
+        {
+          "increment_id": "canonical-safe-records",
+          "criterion_id": "trusted-provenance-and-opaque-identity"
+        },
+        {
+          "increment_id": "canonical-safe-records",
+          "criterion_id": "readiness-blockers-preserved"
+        },
+        {
+          "increment_id": "canonical-safe-records",
+          "criterion_id": "safe-user-facing-compatibility"
+        },
+        {
+          "increment_id": "canonical-safe-records",
+          "criterion_id": "security-impact-reviewed"
+        }
+      ]
+    },
+    {
+      "increment_id": "low-hardening-and-security-qualification",
+      "criterion_id": "low-secure-development-boundaries",
+      "owner_increment_id": "development-and-tooling-security",
+      "owner_criterion_id": "secure-development-exposure",
+      "disposition": "merged-existing-owner",
+      "summary": "Retain loopback/HTTPS/auth posture in existing owner. Existing server admin toggle and frontend/proxy rules are implemented; real supported LAN/certificate/operator qualification remains. No current claim that listeners default all interfaces or enforced mode can be anonymously downgraded.",
+      "evidence_paths": [
+        "apps/thin-client/vite.config.ts",
+        "apps/thin-client/viteDevHttpsConfig.ts",
+        "modules/adapters/transport/api-express/security/registerSecurityRoutes.ts",
+        "apps/thin-client/tests/vite-dev-proxy-config.unit.test.ts"
+      ],
+      "related_owners": [
+        {
+          "increment_id": "development-and-tooling-security",
+          "criterion_id": "security-impact-reviewed"
+        }
+      ]
+    },
+    {
+      "increment_id": "low-hardening-and-security-qualification",
+      "criterion_id": "low-secure-roadmap-writes",
+      "owner_increment_id": "development-and-tooling-security",
+      "owner_criterion_id": "secure-roadmap-publication",
+      "disposition": "merged-existing-owner",
+      "summary": "Portable exclusive unpredictable creation, fsync and replace already exist. Keep native parent/reparse/ACL race qualification and interrupted journal recovery under one owner; do not schedule the original predictable temporary-file behavior as still present. Governed-workflow-preserved remains companion scope.",
+      "evidence_paths": [
+        "skills/manage-implementation-roadmaps/scripts/roadmap.py",
+        "skills/manage-implementation-roadmaps/tests/test_roadmap.py"
+      ],
+      "related_owners": [
+        {
+          "increment_id": "development-and-tooling-security",
+          "criterion_id": "governed-workflow-preserved"
+        },
+        {
+          "increment_id": "development-and-tooling-security",
+          "criterion_id": "security-impact-reviewed"
+        }
+      ]
+    },
+    {
+      "increment_id": "low-hardening-and-security-qualification",
+      "criterion_id": "all-findings-closed",
+      "owner_increment_id": "development-and-tooling-security",
+      "owner_criterion_id": "issue-traceability-and-qualified-dispositions",
+      "disposition": "merged-existing-owner",
+      "summary": "Preserve all78legacy finding identities and all88CSV row identities, but one execution owner for each valid concern. Revalidate stale claims; duplicates remain individual ledger identities rather than duplicate chunks. The successor records evidence-based dispositions and cannot claim all historical findings repaired merely from merging. Other-repository and purely functional rows are not security fixes.",
+      "evidence_paths": [
+        "docs/security-vulnerability-remediation-finding-register.md",
+        "docs/security/security-findings-refresh-assessment.json",
+        "docs/operations/roadmap-supporting-work.json"
+      ],
+      "related_owners": [
+        {
+          "increment_id": "file-and-workspace-authority",
+          "criterion_id": "legacy-history-preserved"
+        },
+        {
+          "increment_id": "file-and-workspace-authority",
+          "criterion_id": "security-impact-reviewed"
+        },
+        {
+          "increment_id": "runtime-execution-integrity",
+          "criterion_id": "security-impact-reviewed"
+        },
+        {
+          "increment_id": "canonical-safe-records",
+          "criterion_id": "security-impact-reviewed"
+        },
+        {
+          "increment_id": "development-and-tooling-security",
+          "criterion_id": "security-impact-reviewed"
+        }
+      ]
+    },
+    {
+      "increment_id": "low-hardening-and-security-qualification",
+      "criterion_id": "production-security-gates",
+      "owner_increment_id": "development-and-tooling-security",
+      "owner_criterion_id": "governed-workflow-preserved",
+      "disposition": "merged-existing-owner",
+      "summary": "Retain existing control-plane-v1 overall boundary and completionSuite all after all implementation. Companion issue-traceability-and-qualified-dispositions and every owning security-impact-reviewed criterion preserve final integrated documentation, architecture, agent-support, dependency, affected builds/deployment/packaging and actual native/host gates. No duplicate overall suite or early full-suite execution.",
+      "evidence_paths": [
+        "docs/security-findings-refresh-implementation-roadmap.md",
+        "AGENTS.md",
+        "docs/diagnostics/ai-development-control-plane.md",
+        ".implementation-roadmaps/security-findings-refresh/state.json"
+      ],
+      "related_owners": [
+        {
+          "increment_id": "development-and-tooling-security",
+          "criterion_id": "issue-traceability-and-qualified-dispositions"
+        },
+        {
+          "increment_id": "file-and-workspace-authority",
+          "criterion_id": "security-impact-reviewed"
+        },
+        {
+          "increment_id": "runtime-execution-integrity",
+          "criterion_id": "security-impact-reviewed"
+        },
+        {
+          "increment_id": "canonical-safe-records",
+          "criterion_id": "security-impact-reviewed"
+        },
+        {
+          "increment_id": "development-and-tooling-security",
+          "criterion_id": "security-impact-reviewed"
+        }
+      ]
+    }
+  ],
+  "current_criteria": [
+    {
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "host-file-authority",
+      "disposition": "partial-implementation",
+      "summary": "Path-based effects are held unavailable; read-only Windows identity primitive is local component support. Identity-preserving production delete/reveal, protected owned publication and actual positive/cache/race qualification remain. Read-only handles do not protect tree growth or grant deletion. Local-only scope: the read-only native prototype remains uncommitted and is not included in this metadata checkpoint. Its owning state retains all physical-operation and qualification gaps; these references do not attest committed native implementation.",
+      "evidence_paths": [
+        "modules/hosts/desktop/composition/composeDesktopModelFeature.ts",
+        "docs/adr/ADR-0043-owned-resource-effects-and-private-identities.md",
+        ".implementation-roadmaps/security-findings-refresh/state.json",
+        "docs/security/security-findings-refresh-assessment.json"
+      ]
+    },
+    {
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "dataset-source-isolation",
+      "disposition": "qualification-required",
+      "summary": "Workspace/catalog/binding authority and private staged reads have existing denial/positive tests. Requalify current exact source and the owning integrated boundary; newly unqualified ingestion publication work grants no pass.",
+      "evidence_paths": [
+        "modules/application/use-cases/prepare-training-dataset-from-artifacts.use-case.ts",
+        "modules/application/use-cases/tests/prepare-training-dataset-source-isolation.integration.test.ts"
+      ]
+    },
+    {
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "write-owned-model-completion",
+      "disposition": "partial-implementation",
+      "summary": "Read/list zero-write and exact write-owned task identity have recorded local support. Durable restart ownership/provenance, exact publication and current integrated qualification remain; in-process deduplication is not durable replay proof.",
+      "evidence_paths": [
+        "modules/application/use-cases/model/model-download-tasks.use-case.ts",
+        "docs/operations/roadmap-supporting-work.json"
+      ]
+    },
+    {
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "scoped-state-integrity",
+      "disposition": "qualification-required",
+      "summary": "Workspace-keyed revisions and atomic library collision denial are implemented with local concurrency tests. Preserve them and requalify exact target; library promotion does not settle personal-library migration or broader native storage integrity.",
+      "evidence_paths": [
+        "modules/adapters/persistence/asset-authoring/createLocalAssetAuthoringRepositoryAdapters.ts",
+        "modules/adapters/persistence/asset-authoring/tests/local-asset-authoring-repositories.unit.test.ts",
+        "modules/adapters/persistence/user-library/tests/local-user-library-repository-adapters.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "authentication-result-invariant",
+      "disposition": "qualification-required",
+      "summary": "Strict authenticated verifier admission already exists. Current denied malformed/anonymous and supported-authenticated regression evidence must cover final target, without inventing a new issuer/deployment policy.",
+      "evidence_paths": [
+        "modules/application/services/security/verify-transport-authentication.service.ts",
+        "docs/operations/roadmap-supporting-work.json"
+      ]
+    },
+    {
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "legacy-history-preserved",
+      "disposition": "qualification-required",
+      "summary": "Existing approved successor handoff already freezes duplicate legacy execution. Validate ten unfinished mappings, preserve original first four completed increments and all evidence, and present one active owner without declaring the old roadmap complete.",
+      "evidence_paths": [
+        ".implementation-roadmaps/security-vulnerability-remediation/state.json",
+        "docs/security/security-findings-refresh-assessment.json",
+        "docs/operations/roadmap-supporting-work.json"
+      ]
+    },
+    {
+      "increment_id": "file-and-workspace-authority",
+      "criterion_id": "security-impact-reviewed",
+      "disposition": "qualification-required",
+      "summary": "Current exact-source review of I1 authority, isolation, failure paths and safe rollback remains required; previous component acceptance supplies support only.",
+      "evidence_paths": [
+        "docs/standards/security-by-design-standards.md",
+        "docs/adr/ADR-0043-owned-resource-effects-and-private-identities.md"
+      ]
+    },
+    {
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-authority-and-paths",
+      "disposition": "partial-implementation",
+      "summary": "Existing host lifecycle/role, launch-token, safe-name and source staging controls remain. Exact private source/output ownership and publication, native path replacement and untrusted worker outputs are unresolved across the full execution surface.",
+      "evidence_paths": [
+        "modules/adapters/runtime/python/createPythonRuntimePort.ts",
+        "modules/adapters/runtime/python/worker/tasks/prepare_training_dataset.py",
+        "modules/adapters/runtime/installer/comfyui/createComfyUiRuntimeInstaller.ts"
+      ]
+    },
+    {
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-resource-budgets",
+      "disposition": "partial-implementation",
+      "summary": "Image dimensions/steps/batches, worker task counts/history and encoded review/page work are bounded. Principal/organization aggregate download/storage reservations, decoded/decompression memory, fair admission and physical bounded behavior remain. R08 missing-upper-limit prose is stale.",
+      "evidence_paths": [
+        "modules/contracts/image-generation/image-generation-request-validation.ts",
+        "modules/adapters/runtime/comfyui/comfyUiImageGenerationWorkflowMapper.ts",
+        "modules/adapters/runtime/python/worker/app.py",
+        "modules/adapters/runtime/python/worker/tasks/review_dataset.py",
+        "docs/adr/ADR-0043-owned-resource-effects-and-private-identities.md"
+      ]
+    },
+    {
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-recovery-truth",
+      "disposition": "partial-implementation",
+      "summary": "Shared starts, generation fences, retained uncertain owners and retained feature controllers correct old R57/R60/R81 local defects. Worker queued cancellation/cooperative subsets do not guarantee arbitrary running-task termination; actual descendant-tree, physical recovery and pending resource cleanup remain.",
+      "evidence_paths": [
+        "modules/adapters/runtime/python/supervisor/createPythonRuntimeSupervisor.ts",
+        "modules/adapters/runtime/comfyui/createComfyUiRuntimeSupervisor.ts",
+        "modules/adapters/runtime/python/tests/runtime-start-shutdown-races.unit.test.ts",
+        "modules/hosts/desktop/composition/composeDesktopHost.ts",
+        "modules/adapters/runtime/python/worker/app.py"
+      ]
+    },
+    {
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-provenance",
+      "disposition": "partial-implementation",
+      "summary": "Explicit update authority and nonempty unmanaged-tree denial are implemented. Mutable metadata-based managed reuse still does not prove executable tree bytes or immutable approved origin/revision; pinned repair, authentic markers and native substitution qualification remain.",
+      "evidence_paths": [
+        "modules/adapters/runtime/installer/git/createGitRuntimeInstallerAdapter.ts",
+        "modules/adapters/runtime/installer/git/tests/createGitRuntimeInstallerAdapter.unit.test.ts",
+        "modules/adapters/runtime/installer/comfyui/createComfyUiRuntimeInstaller.ts"
+      ]
+    },
+    {
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "runtime-private-diagnostics",
+      "disposition": "partial-implementation",
+      "summary": "Dependency setup now publishes bounded immutable session-only outcomes and no implicit diagnostic file. Preserve current public-safe schemas; explicitly composed persistent sinks/private native storage/retention and complete runtime diagnostic surface qualification remain separate.",
+      "evidence_paths": [
+        "modules/adapters/runtime/python/ensurePythonRuntimeWorkerDependencies.ts",
+        "modules/contracts/runtime/runtime-execution-diagnostic.ts",
+        "docs/adr/ADR-0043-owned-resource-effects-and-private-identities.md"
+      ]
+    },
+    {
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "supported-runtime-journeys",
+      "disposition": "qualification-required",
+      "summary": "Exercise supported actual model/hardware/host journeys and negative/error/stop/retry behavior. Installed-model failures and unavailable environments remain pending. Standalone model publishing is intentionally unavailable before dispatch and is excluded from fabricated supported successes.",
+      "evidence_paths": [
+        "modules/application/use-cases/model/publish-model.use-case.ts",
+        "modules/adapters/runtime/python/worker/tests/test_worker_app.py",
+        "docs/security/security-local-controls-qualification.json"
+      ]
+    },
+    {
+      "increment_id": "runtime-execution-integrity",
+      "criterion_id": "security-impact-reviewed",
+      "disposition": "qualification-required",
+      "summary": "Review current runtime authority, resources, provenance, public diagnostics and safe rollback together; component/mock evidence does not prove physical runtime/descendant ownership.",
+      "evidence_paths": [
+        "docs/standards/security-by-design-standards.md",
+        "docs/security/security-local-controls-qualification.json",
+        "docs/adr/ADR-0043-owned-resource-effects-and-private-identities.md"
+      ]
+    },
+    {
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "strict-nested-safe-records",
+      "disposition": "qualification-required",
+      "summary": "Passive strict nested execution/projection/readiness schemas already exist with component-qualified support. Requalify integrated current round trips and malformed stored-record no-rewrite behavior rather than reimplementing historical spread/coercion bugs.",
+      "evidence_paths": [
+        "modules/contracts/execution-runs/execution-run-normalization.ts",
+        "modules/contracts/execution-plans/execution-plan-normalization.ts",
+        "modules/adapters/persistence/effective-asset-projections/local-effective-asset-projection-record-store.ts"
+      ]
+    },
+    {
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "complete-integrity-input",
+      "disposition": "partial-implementation",
+      "summary": "Complete bounded passive semantic-v2 input and imported claim enforcement have qualified component support. Legacy installed-record activation/migration and broader package resource/schema/provenance boundaries still require explicit handling and final qualification; semantic digest is not full byte-artifact trust.",
+      "evidence_paths": [
+        "modules/application/services/asset-packs/asset-pack-fingerprint-input.ts",
+        "modules/application/services/asset-packs/asset-pack-fingerprint.service.ts",
+        "modules/adapters/package/aisb/createAisbPackageInspector.ts",
+        "docs/security/security-local-controls-qualification.json"
+      ]
+    },
+    {
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "trusted-provenance-and-opaque-identity",
+      "disposition": "partial-implementation",
+      "summary": "Code-owned exact-content classification and persisted owner-scoped random public identity mapping exist. Explicit legacy reference/installed record migration and native persistence/hostile database qualification remain, with no automatic trust or owner reassignment.",
+      "evidence_paths": [
+        "modules/application/services/asset/asset-registry-read-facade.service.ts",
+        "modules/application/services/asset/asset-image-resource-backed-view-provider.service.ts",
+        "docs/security/security-local-controls-qualification.json"
+      ]
+    },
+    {
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "readiness-blockers-preserved",
+      "disposition": "qualification-required",
+      "summary": "Exact scoped plan identity/version and retained blockers are implemented. Current final candidate negative/refresh/persistence tests must prove no blocker erasure; they grant no execution or route authority.",
+      "evidence_paths": [
+        "modules/application/use-cases/runtime-readiness/runtime-readiness-validation.service.ts",
+        "modules/application/use-cases/runtime-readiness/tests/runtime-readiness-validation.use-case.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "safe-user-facing-compatibility",
+      "disposition": "qualification-required",
+      "summary": "Typed prompt/authoring/readiness summaries and safe explanatory text have local support. Run current supported round trips alongside non-disclosure tests; generic substring bans must not replace output schemas.",
+      "evidence_paths": [
+        "modules/contracts/asset-composition/asset-composition-capability.ts",
+        "modules/application/services/asset-packs/asset-pack-validation.service.ts",
+        "modules/application/services/asset/asset-registry-read-facade.service.ts"
+      ]
+    },
+    {
+      "increment_id": "canonical-safe-records",
+      "criterion_id": "security-impact-reviewed",
+      "disposition": "qualification-required",
+      "summary": "Current review must distinguish semantic integrity, package byte trust, public random identity, legacy migration and actual native guarantees; local component support cannot close parent scope.",
+      "evidence_paths": [
+        "docs/standards/security-by-design-standards.md",
+        "docs/security/security-local-controls-qualification.json"
+      ]
+    },
+    {
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "bounded-helper-argument-authority",
+      "disposition": "qualification-required",
+      "summary": "Option-looking path/type denial and fixed option terminators already have component support. Requalify valid bounded commands and zero-effect denial on the final candidate; plans do not grant arbitrary execution.",
+      "evidence_paths": [
+        "dev-tools/helpers/run_repository_checks.py",
+        "docs/security/security-local-controls-qualification.json"
+      ]
+    },
+    {
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "secure-roadmap-publication",
+      "disposition": "partial-implementation",
+      "summary": "NamedTemporaryFile exclusive unpredictable creation, fsync and atomic replace fix predictable temp ownership. Parent-directory/native reparse/ACL replacement and interrupted multi-output journal recovery still need actual protection/qualification.",
+      "evidence_paths": [
+        "skills/manage-implementation-roadmaps/scripts/roadmap.py",
+        "skills/manage-implementation-roadmaps/tests/test_roadmap.py",
+        "docs/security/security-local-controls-qualification.json"
+      ]
+    },
+    {
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "secure-development-exposure",
+      "disposition": "qualification-required",
+      "summary": "Loopback defaults, secure LAN frontend/proxy configuration and nonpublic admin toggle are implemented. Preserve them and obtain current supported actual LAN/certificate/operator qualification; no default-open exposure or anonymous downgrade is asserted.",
+      "evidence_paths": [
+        "apps/thin-client/vite.config.ts",
+        "apps/thin-client/viteDevHttpsConfig.ts",
+        "modules/adapters/transport/api-express/security/registerSecurityRoutes.ts",
+        "apps/thin-client/tests/vite-dev-proxy-config.unit.test.ts"
+      ]
+    },
+    {
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "issue-traceability-and-qualified-dispositions",
+      "disposition": "partial-implementation",
+      "summary": "All78legacy/88CSV identities are retained, but current concern/disposition/evidence reconciliation is still being consolidated. Track duplicate identity separately from execution and qualify actual valid boundaries.21other-repository and25functional/partial-functional rows are not repaired security issues; no scanner closure from metadata.",
+      "evidence_paths": [
+        "docs/security-vulnerability-remediation-finding-register.md",
+        "docs/security/security-findings-refresh-assessment.json",
+        "docs/operations/roadmap-supporting-work.json"
+      ]
+    },
+    {
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "governed-workflow-preserved",
+      "disposition": "qualification-required",
+      "summary": "Existing JSON-only review site, claims, fixed checks, receipts, independent review and roadmap terminal protection remain. Qualify final candidate workflow/portable skill/recovery behavior and preserve configured overall all-suite plus applicable release gates after implementation; consolidation grants no current receipt.",
+      "evidence_paths": [
+        "AGENTS.md",
+        "docs/diagnostics/ai-development-control-plane.md",
+        "skills/manage-implementation-roadmaps/scripts/roadmap.py",
+        "dev-tools/helpers/control_plane/catalog.py"
+      ]
+    },
+    {
+      "increment_id": "development-and-tooling-security",
+      "criterion_id": "security-impact-reviewed",
+      "disposition": "qualification-required",
+      "summary": "Current tooling/development/consolidation authority review must prove no stale or malformed mapping can hide valid open work, grant approval, mutate historical completion or relax final gates.",
+      "evidence_paths": [
+        "docs/standards/security-by-design-standards.md",
+        "docs/security/ai-development-control-plane-threat-model.md"
+      ]
+    }
+  ],
+  "finding_inventories": {
+    "legacy_count": 78,
+    "csv_count": 88,
+    "legacy_register": "docs/security-vulnerability-remediation-finding-register.md",
+    "csv_assessment": "docs/security/security-findings-refresh-assessment.json"
+  },
+  "overall_qualification": {
+    "completion_suite": "all",
+    "procedure": [
+      "Implement all approved chunks and obtain current criterion-complete independent reviews at owning boundaries.",
+      "After all implementation, run npm run test:all once through completion-all overall binding.",
+      "Run applicable docs:check, architecture:check, agent-support:check and dependency security; final changed host/release inputs require corresponding server/thin-client build, deployment and desktop packaging qualification.",
+      "Revalidate all78legacy finding identities and all67current-repository CSV rows with dispositions, actual denial/supported-flow evidence and pending controlled boundaries.21other-repository and25functional/partial-functional rows do not count as repaired security issues.",
+      "Retain required actual native filesystem/process, supported host/model/provider/hardware qualification. A skipped, denied, failed or unavailable technical check never becomes passed.",
+      "Only current exact-candidate overall receipt plus real separate-invocation review and all completed increments permit roadmap completion; metadata consolidation supplies neither."
+    ],
+    "limits": "Current governed execution, all required technical checks and independent reviews remain mandatory. This inspection crosswalk is not completion evidence, scanner closure or approval."
+  }
+}

@@ -1,0 +1,1158 @@
+{
+  "blockerReclassifications": [
+    {
+      "assignment": {
+        "actionLocation": "Optional low-memory runtime Windows protection and restart implementation; owned synthetic qualification fixtures only until admission qualifies",
+        "actionOwner": "agent",
+        "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+        "completionCondition": "Exact-candidate native tests and independent review prove file protection, stable disk accounting within the unchanged total 12 GiB limit, and owned-worker exit/recovery before any fresh lease.",
+        "requiredAction": "Implement and independently qualify the approved native file protection, durable disk accounting, owned-worker shutdown and crash/restart proof. Do not inspect, adopt, delete, move or change ACLs of retained old staging, acquire a fresh offload lease or weaken the guard. Keep accepted model quality closed.",
+        "responsibleRole": "Coding agent"
+      },
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "blockerId": "native-staging-restart-proof-unavailable",
+      "originalBlocker": {
+        "id": "native-staging-restart-proof-unavailable",
+        "kind": "technical",
+        "recordedAt": "2026-10-22T16:25:37Z",
+        "requiredAction": "Implement and independently qualify the approved native protection/accounting/process proof before any fresh offload lease. Preserve retained data and unknown historical ownership; do not inspect, adopt, delete, move, change ACLs or relax the existing guard to produce evidence.",
+        "resolution": null,
+        "resolvedAt": null,
+        "status": "open",
+        "summary": "The approved guarded restart still denies admission: no qualified retained-tree protection, protected durable accounting or owned-worker/crash proof is composed. Read-only identity allows child creation and cannot establish a stable staging fence."
+      },
+      "originalDigest": "818dd9cec6c9001b44eb945710981877531a553d274156027e50d4f083fc69e6",
+      "reason": "Approved native protection, protected accounting and worker-lifetime proof are missing implementation/qualification. Latest user/root steering assigns this to the coding agent with no user action. Accuracy tests stay closed. Old unknown ownership and full staging reservation remain; no old-slot access or new effects are authorized by reclassification.",
+      "recordedAt": "2026-10-23T18:49:25Z"
+    }
+  ],
+  "blockers": [
+    {
+      "actionLocation": "Optional low-memory runtime Windows protection and restart implementation; owned synthetic qualification fixtures only until admission qualifies",
+      "actionOwner": "agent",
+      "authorityRef": "user-human-only-blocked-and-clear-action-owner-request",
+      "completionCondition": "Exact-candidate native tests and independent review prove file protection, stable disk accounting within the unchanged total 12 GiB limit, and owned-worker exit/recovery before any fresh lease.",
+      "id": "native-staging-restart-proof-unavailable",
+      "kind": "technical",
+      "recordedAt": "2026-10-22T16:25:37Z",
+      "requiredAction": "Implement and independently qualify the approved native file protection, durable disk accounting, owned-worker shutdown and crash/restart proof. Do not inspect, adopt, delete, move or change ACLs of retained old staging, acquire a fresh offload lease or weaken the guard. Keep accepted model quality closed.",
+      "resolution": null,
+      "resolvedAt": null,
+      "responsibleRole": "Coding agent",
+      "status": "open",
+      "summary": "The approved guarded restart still denies admission: no qualified retained-tree protection, protected durable accounting or owned-worker/crash proof is composed. Read-only identity allows child creation and cannot establish a stable staging fence."
+    }
+  ],
+  "chunks": [
+    {
+      "areas": [
+        "Runtime contracts and status",
+        "Preparation application and host capability guards",
+        "Desktop/thin saved settings and request builders"
+      ],
+      "chunkId": "explicit-profile-and-readiness",
+      "completedAt": "2026-10-22T04:18:56Z",
+      "criteriaIds": [
+        "explicit-compatible-option",
+        "automated-optional-mode-journeys",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "ADR-0045 and initial capability/version/model/template policy",
+        "Optional-memory operator guide",
+        "Runtime/data architecture, owning security threat model, context packs and adapter README"
+      ],
+      "feedbackAddressed": [],
+      "id": "optional-bounded-offload-explicit-profile-and-readiness",
+      "incrementId": "optional-bounded-offload",
+      "summary": "Implemented the default-off finite memory profile end-to-end through application capability admission, both host compositions, saved/reproduction settings, desktop/thin request mappers, current readiness and loaded-model HTTP/IPC identity. Invalid settings and missing/old capability deny without silent model/profile fallback. Thin reconnect polling and both hosts' stale-response guards preserve workspace and profile choices. This chunk is local implementation; real-model outcome qualification remains in the final chunk and is not passed by these tests.",
+      "tests": [
+        "Contract/profile, strict status and IPC focused checks passed",
+        "Application old/missing/version-mismatched capability denials passed before staging/start",
+        "Five dedicated desktop/thin UI journeys passed, alongside50 existing/request-builder regressions",
+        "Server and thin TypeScript checks passed; both focused desktop renderer entrypoints and imports typechecked",
+        "Documentation drift checks passed after retaining the200-line context-pack bound"
+      ],
+      "title": "Explicit compatible profile and readiness"
+    },
+    {
+      "areas": [
+        "Native finite loader and safetensors/tokenizer inventory",
+        "Cached generator, request views, staging leases and unload/task fencing",
+        "Pinned tied-index and dispatch compatibility"
+      ],
+      "chunkId": "owned-bounded-offload-delivery",
+      "completedAt": "2026-10-22T04:44:03Z",
+      "criteriaIds": [
+        "bounded-loading-and-staging",
+        "cancellation-and-resource-cleanup",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "ADR-0045 accepted boundaries retained",
+        "Optional-memory operator guide details refined placement, alias/dispatch fixes and interrupted-forward unload policy",
+        "Runtime/data architecture and owning threat model preserve separate native and model qualification gaps"
+      ],
+      "feedbackAddressed": [],
+      "id": "optional-bounded-offload-owned-bounded-offload-delivery",
+      "incrementId": "optional-bounded-offload",
+      "summary": "Implemented verified safe-weight/tokenizer admission, tied meta planning with finite placement and unchanged execution reserves, current-RAM CPU residency refinement, private cache ownership and safe unload/retry. Corrected the pinned supplier's omitted tied disk-index alias and meta-pointer collision through a per-load inspected seam, with no weight copies, global loader patch, unsafe rematerialization or weaker guards. Native1.5B BF16 CPU mechanical delivery succeeded with one non-heldout nonempty response, sampled1.55GB peak RSS, zero remaining staging and confirmed native exit0. Interrupted forwards poison cached reuse until explicit observed unload. Model cohort quality/resource qualification remains in the last chunk.",
+      "tests": [
+        "63 focused loader/generator/inventory checks passed, including actual tiny safe-tensor reader and full tied-Qwen production-loader parity/regression",
+        "Worker queued/running/unload race tests passed",
+        "Native1.5B CPU one-request mechanical diagnostic passed with actual dtype, source/operator stability, owned exit and cleanup; earlier denials/failed forwards preserved",
+        "Historical generation harness stays unchanged and refuses changed shared runtime;14 test guards passed"
+      ],
+      "title": "Owned bounded low-memory delivery"
+    },
+    {
+      "areas": [
+        "Actual desktop/thin preparation and review/save workflows",
+        "Source-owned conditional upload metadata and runtime cancellation ownership",
+        "Prospective model/resource and approved Context qualification"
+      ],
+      "chunkId": "usable-and-qualified-model-workflows",
+      "completedAt": "2026-10-22T05:54:52Z",
+      "criteriaIds": [
+        "automated-optional-mode-journeys",
+        "measured-low-memory-model-outcomes",
+        "security-impact-reviewed"
+      ],
+      "documentation": [
+        "ADR-0045 and optional inference operation/qualification limits",
+        "Runtime/data architecture, owning threat model and bounded context packs",
+        "Artifact catalog/store and dataset review README guidance"
+      ],
+      "feedbackAddressed": [],
+      "id": "optional-bounded-offload-usable-and-qualified-model-workflows",
+      "incrementId": "optional-bounded-offload",
+      "summary": "Implemented optional desktop/thin profile interaction, persistence/readiness and actual host preparation/review/save/retry journeys. Repaired observed upload-origin conditional metadata, running-dataset recovery and review policy/error gaps without admitting denied API families or read-time source adoption. Added and independently reviewed fixed prospective original24case model matrices and full Context budget assessor, with historical failures retained. Both final-source host journeys pass; measured controlled model/Context outcomes remain pending and block closure until executed and separately reviewed. Separate desktop Add data origin-binding defect is retained for security remediation, not covered by upload-seeded host evidence.",
+      "tests": [
+        "Current60file scoped functionality-outcomes profile passes; docs, agent-support and architecture pass under04a54899",
+        "Both real hosts pass on source.9b61d79b616c3b00e94f2a7c29e82f50dc85495cb5ae1d8b042a93d1829e5590 with exact settings reopened and actual native cleanup",
+        "64native loader/generator tests,15focusedUI regressions and9worker-fixture tests pass; controlled full model outcomes pending",
+        "Server and thin production builds pass; existing thin bundle-size advisory retained"
+      ],
+      "title": "Usable and measured model workflows"
+    }
+  ],
+  "completion": null,
+  "completionSuite": "all",
+  "createdAt": "2026-10-22T03:20:10Z",
+  "currentIncrementId": "optional-bounded-offload",
+  "decisions": [
+    {
+      "approvalNote": "The user explicitly selected planning optional Accelerate offloading. Record only that high-level choice; implementation of the completed roadmap still requires explicit approval.",
+      "approvedAt": "2026-10-22T03:20:10Z",
+      "approvedFingerprint": "5f04dbe89c4734a52f4631dd81df40d30142644dd80fb441906f757f674246f4",
+      "context": "The user requested optional memory-saving support on lightweight laptops and PCs; source research identifies existing Accelerate versus a separate AirLLM engine.",
+      "id": "optional-memory-backend",
+      "options": [
+        {
+          "consequences": [
+            "Frozen standard versus opt-in profiles for0.5B/1.5B on separate CPU/GPU cohorts; record load and generation RSS/VRAM, disk bytes, quality, invalid output/repair, throughput, cancellation and cleanup. No larger model download is implied."
+          ],
+          "id": "managed-accelerate-offload",
+          "label": "Existing Accelerate offloading",
+          "recommended": true,
+          "summary": "Extend the existing Transformers/Accelerate backend with an optional bounded low-memory loading/offload profile.",
+          "tradeoffs": [
+            "Reuses the installed managed dependency and existing tokenizer/generation/grammar/adapter integration; allows controlled CPU/GPU placement and disk-backed weights without a second generation engine.",
+            "Requires measured admission for resident layers, runtime/KV/activation headroom and finite private disk staging. Disk traffic can make generation slow, especially CPU-only. Existing device_map=auto alone supplies neither a hard process ceiling nor a proven memory saving."
+          ]
+        },
+        {
+          "consequences": [
+            "Requires separate implementation and qualification; existing results remain unchanged."
+          ],
+          "id": "experimental-airllm",
+          "label": "Experimental AirLLM adapter",
+          "recommended": false,
+          "summary": "Add AirLLM as a separately installed optional experimental runtime adapter.",
+          "tradeoffs": [
+            "Layer streaming is designed for constrained model residency and the supplier advertises CPU and Qwen2.5 support.",
+            "A new supplier/runtime and transformed layer cache add install, provenance, Windows compatibility, grammar/logits, cancellation and cleanup work. Inspected current source enables trust_remote_code in architecture/tokenizer paths and has a remote-code fallback, so it cannot be integrated unchanged under current controls. Supplier model-size/VRAM claims are not local RAM or responsiveness evidence."
+          ]
+        },
+        {
+          "consequences": [
+            "Requires separate implementation and qualification; existing results remain unchanged."
+          ],
+          "id": "defer-backend-expansion",
+          "label": "Defer backend expansion",
+          "recommended": false,
+          "summary": "Retain current runtime options and finish existing technical qualification first.",
+          "tradeoffs": [
+            "No new runtime/cache/settings boundary; preserves current installed-model evidence.",
+            "Does not provide a new way to admit a RAM-limited CPU profile; unavailable qualification stays pending."
+          ]
+        }
+      ],
+      "proposalFingerprint": "5f04dbe89c4734a52f4631dd81df40d30142644dd80fb441906f757f674246f4",
+      "question": "Which approach should govern optional low-memory local inference?",
+      "selectedOptionId": "managed-accelerate-offload",
+      "status": "approved",
+      "title": "Optional low-memory backend"
+    }
+  ],
+  "discovery": {
+    "constraints": [
+      "Planning approval is not implementation approval; present this complete roadmap for approval before product changes.",
+      "Standard remains default and older saved settings retain behavior. No new engine, dependency/version, remote model code, pickle, provider traffic, download, overflow allowance or precision/decoding change is implied.",
+      "Reuse the pinned cached0.5B/1.5B models for initial qualification; acquisition of another model remains separately authorized.",
+      "Keep the current memory guard, finite deadlines, task/workspace/organization ownership and confirmed cleanup. Backend-aware estimates need measured validation; weight-placement caps are not a hard whole-process bound.",
+      "No human acceptance task. Automated UI and installed-model tests are required. Unavailable technical profiles remain pending and prevent closure; measured failures remain failed.",
+      "Existing functionality/security/Canvas roadmap histories and gates stay intact. This roadmap introduces an optional capability rather than waiving their failed criteria."
+    ],
+    "decisionRequired": true,
+    "recordedAt": "2026-10-22T03:20:10Z",
+    "securityImpact": {
+      "abuseCases": [
+        "Unknown/oversized budgets or unsupported placement evade admission",
+        "Traversal/reparse/substitution or stale ownership redirects or deletes files",
+        "Silent remote code/download/precision change or unsafe fallback",
+        "Cancellation/load failure leaks staging or disturbs another task"
+      ],
+      "assets": [
+        "Local user content and model integrity",
+        "RAM/VRAM/disk availability and finite worker capacity",
+        "Workspace-scoped task/staging ownership and safe diagnostics"
+      ],
+      "controls": [
+        "Explicit default-off capability and finite validated budget presets",
+        "Verified local safetensors and no remote code/pickle/network",
+        "Private non-linked owner-bound staging, immutable input model and bounded bytes",
+        "Preserve task fences, existing resource guard and no permissive fallback",
+        "Bounded path-free readiness/progress/failures and confirmed cleanup before release"
+      ],
+      "disposition": "security-relevant",
+      "residualRisks": [
+        "Actual savings and speed on the named host are unmeasured",
+        "Unexecuted native file-race or other hardware profiles remain pending; component tests do not qualify those profiles",
+        "Opt-in mode initially excludes unqualified LoRA, training and seq2seq combinations; standard behavior remains supported"
+      ],
+      "summary": "Explicit offload adds a settings-to-worker resource decision and private model-layer disk staging; keep enforcement in the existing host/adapter/task boundaries.",
+      "trustBoundaries": [
+        "Untrusted settings/model metadata to managed worker loading",
+        "Verified safe-weight files to private offload staging",
+        "Worker results to public task/UI status"
+      ],
+      "verification": [
+        "Malformed/insufficient-resource/unsupported-mode and loading denials",
+        "Staging containment, ownership/substitution/interruption and cleanup tests",
+        "Default/saved-config and structured/unconstrained behavior regressions",
+        "Automated desktop/thin-client UI journeys",
+        "Matched real CPU/GPU model runs with actual resource and task-quality records"
+      ]
+    },
+    "sources": [
+      {
+        "note": "Extend the existing worker through adapter-owned execution, explicit readiness and task lifecycle; the selected opt-in policy supersedes implicit-disk-offload denial only for this bounded profile after implementation.",
+        "title": "Runtime ownership and current explicit-disk-offload denial",
+        "url": "docs/architecture/runtime-model.md"
+      },
+      {
+        "note": "Automatic placement exists; no bounded optional offload profile is exposed. Keep standard path and active model/task ownership.",
+        "title": "Current generation loader and resource guard",
+        "url": "modules/adapters/runtime/python/worker/tasks/local_text_generation.py"
+      },
+      {
+        "note": "Accelerate1.14.0 and Transformers4.51.3 are already managed; prefer no new dependency or version change.",
+        "title": "Managed dependency pins",
+        "url": "modules/adapters/runtime/python/worker/requirements.txt"
+      },
+      {
+        "note": "Propagate explicit optional settings without conflating memoryOverflowPolicy, dtype, device or decoder mode.",
+        "title": "Current model configuration",
+        "url": "modules/adapters/runtime/python/worker/models.py"
+      },
+      {
+        "note": "Preserve local-model integrity, source authority, safe diagnostics, bounded processing and task ownership.",
+        "title": "Runtime trust and data management",
+        "url": "docs/security/data-management-threat-model.md"
+      },
+      {
+        "note": "Supports meta initialization and CPU/disk dispatch. Placement budgets cover weights rather than full process usage; disk I/O can be slow. Confirm installed pinned behavior before coding.",
+        "title": "Accelerate big-model inference",
+        "url": "https://huggingface.co/docs/accelerate/main/concept_guides/big_model_inference"
+      },
+      {
+        "note": "Review exact pinned loading/dispatch/hook cleanup paths; do not equate mutable upstream source with an approved install.",
+        "title": "Accelerate implementation",
+        "url": "https://github.com/huggingface/accelerate/blob/main/src/accelerate/big_modeling.py"
+      },
+      {
+        "note": "Inspected current loader opts into remote code. A future AirLLM adapter needs a separate hardening/supplier decision; it is not selected.",
+        "title": "AirLLM loader alternative",
+        "url": "https://github.com/lyogavin/airllm/blob/main/air_llm/airllm/auto_model.py"
+      },
+      {
+        "note": "Preserve original failed and pending cohorts. New mode evidence cannot retroactively qualify CPU/GPU/dtype cohorts or relax existing quality/throughput gates.",
+        "title": "Existing model qualification and realistic expectations",
+        "url": "docs/operations/functionality-outcome-qualification.md"
+      }
+    ],
+    "summary": "The user selected planning optional Accelerate offloading rather than a new AirLLM engine. Existing managed dependencies support the direction, but explicit bounded placement/staging/configuration and installed-model evidence are missing. One cohesive end-to-end increment includes the setting, owning loader, UI, cleanup and qualification; separate layer-only increments would not deliver a useful feature."
+  },
+  "evidence": [
+    {
+      "artifact": "docs/operations/optional-low-memory-inference.md",
+      "command": "python dev-tools/scripts/qualification/run_optional_generation_qualification.py --model-manifest <approved-acquisition-manifest>",
+      "criterionId": "measured-low-memory-model-outcomes",
+      "id": "evidence-1",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-22T05:42:47Z",
+      "summary": "Native64focused loader/generator checks and one mechanical1.5B CPU request pass, but they do not qualify heldout outcomes. Await full final-source Standard/offload CPU/CUDA unchecked/constrained first/warm24case matrix with3fresh repetitions per mode for both approved model profiles. Preserve historical failures and4GiB sampled abort; no model quality pass asserted."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-10-22t05-49-38-266z-8d0473c0/evidence.json",
+      "command": "PYTHON_RUNTIME_QUALIFICATION_SCENARIO=dataset-profile playwright test low-memory.e2e.spec.ts --config dev-tools/config/playwright.visual-composer.config.ts",
+      "criterionId": "automated-optional-mode-journeys",
+      "id": "evidence-2",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T05:51:48Z",
+      "summary": "One unchanged-source native run passed both real thin-client and packaged-desktop preparation/review/save journeys. Exact model/device/precision/profile persists on reopening; resource denial and same-settings retry, running cancellation nonconfirmation, queued cancellation/retry, accepted-row review and exact saved artifact/preview pass. Packaged desktop confirms actual owned worker/main exit and cleanup. Authorized upload APIs seed fixture sources; resumable Add data and real model quality are explicitly separate. Focused15UI regressions additionally cover saved settings, capability absence and invalid profiles."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-10-22t05-53-22-439z-22774dc8/evidence.json",
+      "command": "PYTHON_RUNTIME_QUALIFICATION_SCENARIO=dataset-profile playwright test low-memory.e2e.spec.ts --config dev-tools/config/playwright.visual-composer.config.ts",
+      "criterionId": "automated-optional-mode-journeys",
+      "id": "evidence-3",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T05:54:51Z",
+      "summary": "Final unchanged-source9b61d79b run passes both real host journeys: exact reopened model/device/dtype/memory settings, resource denial/same-settings retry, running cancellation nonconfirmation, queued cancellation/retry, accepted-row review and exact saved artifact/preview. Packaged desktop confirms actual owned worker/main exit0 and cleanup. Authorized HTTP/trusted IPC upload seeds sources; resumable ingestion and real model quality are separate. Current scoped60test-file profile and docs/agent/architecture gates pass under receipt04a54899."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/low-memory-integrated-focused-receipt-02.json",
+      "command": "development_control_plane verify optional-low-memory-integrated-qualification",
+      "criterionId": "explicit-compatible-option",
+      "id": "evidence-4",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T05:55:57Z",
+      "summary": "Current60file scoped profile passes default Standard compatibility, strict memory/capability/loaded status HTTP+IPC contracts, saved settings and request builders, old/missing/stale capability denial and exact host application admission. Both final real host journeys preserve exact model/device/dtype/profile on reopening. Scoped receipt 04a54899c68c7e516703632e408fd0d2bf2b18b2225450362c4fb0e238d0b4c6; final full model qualification remains separate."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/low-memory-integrated-focused-receipt-02.json",
+      "command": "development_control_plane verify optional-low-memory-integrated-qualification",
+      "criterionId": "bounded-loading-and-staging",
+      "id": "evidence-5",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T05:55:58Z",
+      "summary": "Current scoped profile and64native offload regressions pass verified safe-weight/tokenizer/index binding, finite profile/placement math and headroom, tied native map/dispatch parity, no unsupported/all-disk/remote-code/pickle loading and owned staging failures/retry. Existing1.5B mechanical trial is not full qualification; final24case CPU/CUDA resource/quality matrix remains pending."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/low-memory-integrated-focused-receipt-02.json",
+      "command": "development_control_plane verify optional-low-memory-integrated-qualification",
+      "criterionId": "cancellation-and-resource-cleanup",
+      "id": "evidence-6",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T05:55:58Z",
+      "summary": "Current scoped profile plus final real host journeys pass queued cancellation, truthful running cancellation nonconfirmation/continued observation and retry after actual completion, unload/task-admission fencing, sibling preservation, interrupted-forward poison and incremental owned staging cleanup. Final desktop confirms main/owned worker exit0. Native64loader/generator checks preserve cleanup uncertainty rather than claiming success; real-model whole-delivery resource outcomes remain pending."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/low-memory-local-security-review.json",
+      "command": "Independent local supplier-discovery/source-binding review; inert probes only",
+      "criterionId": "bounded-loading-and-staging",
+      "id": "evidence-7",
+      "incrementId": "optional-bounded-offload",
+      "kind": "review",
+      "outcome": "failed",
+      "recordedAt": "2026-10-22T06:04:07Z",
+      "summary": "Independent actual-source review found native supplier PEFT discovery could read an unbound adapter_config.json and redirect the base model path. Inert admission/mutation/supplier probes reproduce the gap on the installed supported stack. Original source9b61d79b and receipt04a54899 remain historical; matrix19d7531d was withdrawn and ended aborted-source-drift with observed child cleanup/exits. A case-insensitive pre-supplier denial fix and focused59tests are now implemented, but require fresh independent closure and candidate requalification. No old pass is promoted to the fix."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/low-memory-local-security-review.json",
+      "command": "Independent local supplier-discovery/source-binding review; inert probes only",
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-8",
+      "incrementId": "optional-bounded-offload",
+      "kind": "review",
+      "outcome": "failed",
+      "recordedAt": "2026-10-22T06:04:07Z",
+      "summary": "Independent actual-source review found native supplier PEFT discovery could read an unbound adapter_config.json and redirect the base model path. Inert admission/mutation/supplier probes reproduce the gap on the installed supported stack. Original source9b61d79b and receipt04a54899 remain historical; matrix19d7531d was withdrawn and ended aborted-source-drift with observed child cleanup/exits. A case-insensitive pre-supplier denial fix and focused59tests are now implemented, but require fresh independent closure and candidate requalification. No old pass is promoted to the fix."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/low-memory-integrated-focused-receipt-03.json",
+      "command": "Current scoped control-plane receipt plus independently observed local controls and actual host journeys; not final model acceptance",
+      "criterionId": "explicit-compatible-option",
+      "id": "evidence-9",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T06:13:29Z",
+      "summary": "Current60file scoped profile passes default Standard compatibility, strict profile/capability/loaded HTTP and IPC contracts, saved settings/request builders and missing/old/stale capability denials. Both actual hosts preserve exact reopened model/device/dtype/profile. Receipt6be313c33543 covers current source; real-model qualification is separate. Frozen candidate source.9ee729399a36010e870a48e76267310ba3ab82d856edf0fb2330c5a17bd5367a."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/low-memory-integrated-focused-receipt-03.json",
+      "command": "Current scoped control-plane receipt plus independently observed local controls and actual host journeys; not final model acceptance",
+      "criterionId": "bounded-loading-and-staging",
+      "id": "evidence-10",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T06:13:29Z",
+      "summary": "Current scoped checks and independent adapter-discovery closure verify case-insensitive PEFT metadata/weight-family denial before supplier reads, source recheck, safe weight/index/template binding, finite placement/staging ownership and unchanged CPU/CUDA headroom. Resource denials are typed and numeric-only before any supplier forward; no reserve weakening. Original failed adapter review remains archived. Full measured model outcomes remain pending. Frozen candidate source.9ee729399a36010e870a48e76267310ba3ab82d856edf0fb2330c5a17bd5367a."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/low-memory-integrated-focused-receipt-03.json",
+      "command": "Current scoped control-plane receipt plus independently observed local controls and actual host journeys; not final model acceptance",
+      "criterionId": "cancellation-and-resource-cleanup",
+      "id": "evidence-11",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T06:13:30Z",
+      "summary": "Current scoped checks and both actual host journeys pass queued cancellation, truthful running non-cancellation, continued observation/retry, sibling preservation, unload/task fencing, interrupted-forward poison and owned staging cleanup. Packaged desktop observes actual main/owned-worker exit0. Cleanup uncertainty remains retained; final real-model whole-delivery budgets and all cohorts are separately pending. Frozen candidate source.9ee729399a36010e870a48e76267310ba3ab82d856edf0fb2330c5a17bd5367a."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-10-22t06-08-19-287z-4b62c41b/evidence.json",
+      "command": "Current scoped control-plane receipt plus independently observed local controls and actual host journeys; not final model acceptance",
+      "criterionId": "automated-optional-mode-journeys",
+      "id": "evidence-12",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T06:13:30Z",
+      "summary": "Both actual host journeys pass on the final source: explicit profile, exact reopened settings, resource denial/retry, running cancellation nonconfirmation, queued cancellation/retry, accepted-row review, exact saved artifact and preview. Desktop confirms owned worker/main exit0. Authorized upload seeds sources; resumable Add data ingestion and model quality remain separate. Current60file scoped receipt6be313c33543 also passes docs/agent/architecture. Frozen candidate source.9ee729399a36010e870a48e76267310ba3ab82d856edf0fb2330c5a17bd5367a."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/low-memory-resource-control-review.json",
+      "command": "Current scoped control-plane receipt plus independently observed local controls and actual host journeys; not final model acceptance",
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-13",
+      "incrementId": "optional-bounded-offload",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T06:13:30Z",
+      "summary": "Independent scoped actual-code review cleared case-insensitive native PEFT discovery denial and unchanged resource guards, numeric-only failure diagnostics, typed QA/structured propagation and pre/post-child source/operator drift fences. Adapter closure note507ffdb65037 and resource note7e21f1adc797 retain the original failed note9a9523d6b12e. Current focused receipt6be313c33543 and both host journeys pass. Exact final six-criterion/model acceptance remains pending; native race/ACL gaps are explicitly preserved. Rollback only withdraws opt-in support without weaker loading or cancellation fallback. Frozen candidate source.9ee729399a36010e870a48e76267310ba3ab82d856edf0fb2330c5a17bd5367a."
+    },
+    {
+      "artifact": ".local-codex/optional-generation/a040bdf64b3b4ca18b9a16f00fbb0f01/report.json",
+      "command": "Full offline prospective optional generation qualification; no new downloads",
+      "criterionId": "measured-low-memory-model-outcomes",
+      "id": "evidence-14",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-22T06:46:11Z",
+      "summary": "Full corrected-source0.5B Standard/offload matrix a040bdf64b3b4ca18b9a16f00fbb0f01 is running; pinned1.5B matrix follows serially. Fixed original24cases, first/warm phases,3fresh repetitions, CPU/CUDA and constrained/unchecked remain required with unchanged guards/precision/oracle. Current source9ee729399a36010e870a48e76267310ba3ab82d856edf0fb2330c5a17bd5367a. Earlier quality/resource failures and withdrawn source9b61matrix remain historical; corrected typed resource denial and PEFT discovery controls passed local/host checks, not model qualification. Context increment3 has separately completed under approved budgets. Any required failed/denied/unexecuted model cohort still blocks this criterion."
+    },
+    {
+      "artifact": ".local-codex/optional-generation/a040bdf64b3b4ca18b9a16f00fbb0f01/report.json",
+      "command": "Full original24case offline model matrix a040bdf64b3b4ca18b9a16f00fbb0f01, still continuing remaining required cohorts",
+      "criterionId": "measured-low-memory-model-outcomes",
+      "id": "evidence-15",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-22T06:51:44Z",
+      "summary": "Final-source0.5B CPU unchecked attempts failed the unchanged forward RAM guard: observed available2519232512/2493902848/2752864256bytes versus required2925661184bytes. Exact GenerationInsufficientResourcesError now explains failure; all three attempted owned children confirm native exit0, stable source and cleanup. First Standard CPU repetition completed48cases with12of24correct in each phase; later Standard repetitions were denied at load. No complete CPU comparison or overall model pass exists. Full remaining CPU/CUDA/decoder trials continue, and pinned1.5B trials remain pending. Earlier failures stay retained; do not weaken guards, change precision/oracle or request more user RAM."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/low-memory-integrated-focused-receipt-04.json",
+      "command": "Focused profile receipt04, separate post-wording docs check, actual host journeys04 and independent scoped correction review; not final model acceptance",
+      "criterionId": "explicit-compatible-option",
+      "id": "evidence-16",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T07:16:38Z",
+      "summary": "Current60-file focused profile passes Standard defaults, strict profile/capability contracts and saved/request settings. Actual desktop and thin-client journeys pass exact reopened configuration and unsupported-worker denial. Receipt a9469112421f covers current product source; subsequent documentation-only wording cleanup passed docs:check separately. Fresh exact whole-candidate final review/receipt remains required. Frozen product source source.d7d6026c2799f4583f2789cdd307431ec3e5222fdb9521fb40f1c04f694ef25c."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/low-memory-integrated-focused-receipt-04.json",
+      "command": "Focused profile receipt04, separate post-wording docs check, actual host journeys04 and independent scoped correction review; not final model acceptance",
+      "criterionId": "bounded-loading-and-staging",
+      "id": "evidence-17",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T07:16:39Z",
+      "summary": "Current focused profile retains case-insensitive PEFT discovery denial, safe-weight/index/template binding, finite placement/staging and unchanged RAM/VRAM admission. Typed resource errors remain numeric-only. Actual host journeys pass after the unload/floor correction. Real model outcomes and native filesystem race/ACL guarantees are separate. Frozen product source source.d7d6026c2799f4583f2789cdd307431ec3e5222fdb9521fb40f1c04f694ef25c."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-10-22t07-10-50-413z-8bae1f77/evidence.json",
+      "command": "Focused profile receipt04, separate post-wording docs check, actual host journeys04 and independent scoped correction review; not final model acceptance",
+      "criterionId": "cancellation-and-resource-cleanup",
+      "id": "evidence-18",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T07:16:39Z",
+      "summary": "Both actual hosts pass queued cancellation, truthful running non-cancellation, continued observation/retry, accepted-row save and owned fixture cleanup. Desktop records actual owned main/worker native shutdown. Focused weakref tests prove the final Standard generator reference is released before collection/allocator release; uncertain offload close still retains ownership. Actual model cleanup is separately measured, not inferred from synthetic host workers. Frozen product source source.d7d6026c2799f4583f2789cdd307431ec3e5222fdb9521fb40f1c04f694ef25c."
+    },
+    {
+      "artifact": "artifacts/qualification/visual-composer/runs/2026-10-22t07-10-50-413z-8bae1f77/evidence.json",
+      "command": "Focused profile receipt04, separate post-wording docs check, actual host journeys04 and independent scoped correction review; not final model acceptance",
+      "criterionId": "automated-optional-mode-journeys",
+      "id": "evidence-19",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T07:16:39Z",
+      "summary": "Both current-source actual host journeys pass, thin19.0seconds and packaged desktop27.5seconds. Exercise option/settings round-trip, resource denial/retry, running cancellation nonconfirmation, queued cancellation/retry, accepted-row review and saved artifact/preview. Evidence SHA7486a975466a552ea1230e426d33809a425056d5789f2dcf0db29a30e883d00c. Workers are finite synthetic fixtures; sources use authorized upload. Resumable Add data origin publication and actual model quality are not qualified by this evidence. Frozen product source source.d7d6026c2799f4583f2789cdd307431ec3e5222fdb9521fb40f1c04f694ef25c."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/low-memory-cleanup-floor-correction-independent-review.json",
+      "command": "Focused profile receipt04, separate post-wording docs check, actual host journeys04 and independent scoped correction review; not final model acceptance",
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-20",
+      "incrementId": "optional-bounded-offload",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T07:16:39Z",
+      "summary": "Independent scoped correction review1171cde3c0a9 verified production unload reference ordering, fixed prospective CUDA runtime initialization, retained actual floor/error observations and strict both-arm cleanup/native-exit predicates. Model-free native0 diagnostic reproduces8.125MiB allocated/20MiB reserved after matmul, with no model/private-workspace clear. Old2.5GiB reservation and CPU/quality failures remain failed; no retrospective pass, ceiling/precision/oracle change or guard weakening. Earlier PEFT/resource reviews remain retained. Final six-criterion acceptance still requires complete actual model results and current exact receipt; physical filesystem/native race/ACL gaps remain separate. Frozen product source source.d7d6026c2799f4583f2789cdd307431ec3e5222fdb9521fb40f1c04f694ef25c."
+    },
+    {
+      "artifact": ".local-codex/optional-generation/09fa0732c3504a60b9de83fd47aefb0e/report.json",
+      "command": "Full prospective-v2 offline original24case qualification; actual results incomplete, historical failures retained",
+      "criterionId": "measured-low-memory-model-outcomes",
+      "id": "evidence-21",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-22T07:16:39Z",
+      "summary": "The previous0.5B matrix a040bdf64b3b4ca18b9a16f00fbb0f01 was explicitly withdrawn after production unload-reference ordering and CUDA-floor observation defects were found. Its recorded CPU resource failures,12of24 Standard quality and cleanup_passed:false CUDA observations remain unchanged. Prospective optional-memory-v2 now records strict actual runtime floors, failure observations and native exits. The full pinned1.5B matrix09fa0732c3504a60b9de83fd47aefb0e is running on frozen product source source.d7d6026c2799f4583f2789cdd307431ec3e5222fdb9521fb40f1c04f694ef25c; complete0.5B rerun follows serially. First1.5BCPU offload attempt generated two correct answers before a wrong label and then failed the unchanged forward RAM guard; confirmed native exit0 and cleanup pass do not qualify this incomplete cohort. All required original24case, first/warm, CPU/CUDA, decoder and3fresh repetition checks remain. No model criterion passes; all unexecuted profiles remain pending. No guard/oracle/precision changes or user memory-reclamation requests."
+    },
+    {
+      "artifact": ".local-codex/optional-generation/09fa0732c3504a60b9de83fd47aefb0e/report.json",
+      "command": "Full fixed prospective-v2 original24case offline matrix continues; no required case/profile is omitted",
+      "criterionId": "measured-low-memory-model-outcomes",
+      "id": "evidence-22",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-22T07:40:19Z",
+      "summary": "Current prospective-v2 1.5B matrix09fa0732 on frozen d7d6026 product source has three Standard CPU unchecked load denials and three optional CPU unchecked forward-resource failures, each completed attempt with native exit0 and cleanup_passed true. First constrained CPU optional trial ended with parent RuntimeError at the fixed20minute execution boundary before all cases/phases completed; last retained child report has16first cases,14correct, no warm phase and no completed cleanup report. Supervisor proceeded only after owned native termination was confirmed; no native exit0 or successful pre-exit model cleanup is asserted for the timed-out child. The fixed deadline is the inferred cause from the observed boundary, not a retained typed child error. Remaining1.5B CPU/CUDA repetitions and the full0.5B rerun are pending/running and cannot pass this criterion. Original CPU/quality/cleanup failures and withdrawn matrices remain unchanged; no guard/oracle/precision/deadline relaxation."
+    },
+    {
+      "artifact": ".local-codex/optional-generation/09fa0732c3504a60b9de83fd47aefb0e/report.json",
+      "command": "Fixed full original24case model matrices; both aborted without qualification; no controlled pass inferred",
+      "criterionId": "measured-low-memory-model-outcomes",
+      "id": "evidence-23",
+      "incrementId": "optional-bounded-offload",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-22T07:45:29Z",
+      "summary": "Both new prospective-v2 matrices stopped without qualification. Pinned1.5B report09fa0732 retains three Standard CPU unchecked load denials, three optional CPU unchecked forward-resource failures (native0/cleanup confirmed for completed attempts), then a failed first constrained CPU child at the fixed20minute boundary with16first cases/14correct and no warm/complete-cleanup report. Its retained staging caused the next child to reject before ready; native observation was unavailable, so the parent aborted-unconfirmed-child-exit. The subsequent0.5B matrix5fac0890 also aborted at that pre-ready staging rejection before any cohort. Both models share the parent offload cache; separate acquisition directories do not isolate it. Read-only native process inventory confirmed no matching qualification processes or recorded launchers remain; that is not a retroactive native0/model-cleanup pass. Original caches, all failed/withdrawn reports and staging remain untouched. Unexecuted CPU/CUDA repetitions remain pending; do not waive guards, quality, precision, deadlines or unknown ownership. Local tests and actual synthetic host journeys remain separate passing component evidence."
+    },
+    {
+      "artifact": "docs/operations/model-software-quality-qualification.json",
+      "command": "Read-only replay and independent review of existing completed Standard cases under explicit user30/80software-quality contract; no new inference.",
+      "criterionId": "measured-low-memory-model-outcomes",
+      "id": "evidence-24",
+      "incrementId": "optional-bounded-offload",
+      "kind": "review",
+      "outcome": "pending",
+      "recordedAt": "2026-10-23T14:20:49Z",
+      "summary": "The separately measured Standard model-output quality dependency is passed and closed at the user-approved30 percent0.5B/80 percent1.5B standards. Local memory denials have no output and do not block that quality closure. Bundle1283executes Standard mode only and supplies no offload execution. The actual optional feature still lacks qualified native stable-tree protection/protected durable accounting/owned-worker and crash proof, followed by admitted low-memory execution, measured placement/staging/lifecycle and confirmed cleanup. Preserve earlier offload failures and retained ownership uncertainty; no full optional criterion or roadmap pass is granted."
+    }
+  ],
+  "evidencePolicy": "control-plane-v1",
+  "feedback": [
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "independent-plan-review-reconciled",
+      "impact": "within-increment",
+      "nextAction": "Validate reviewed revision, record actual user approval conditional on completed review, and research/plan this increment. The original proposal remains historical; current0.5Bfloat32/1.5Bbfloat16 and old6GiB/new4GiB sampled abort wording govern. Finish optional offload and functionality qualification, then return to remaining feasible security-findings-refresh work as explicitly directed.",
+      "recordedAt": "2026-10-22T03:25:32Z",
+      "summary": "Separate planning review accepted the existing-backend single increment with8concrete corrections. The reviewed revision resolves resource/precision facts, CPU+disk and temp/lease ownership, default/old-worker compatibility, truthful cancellation and prospective installed-model evidence without new engine/authority or old target waiver.",
+      "targetIncrementId": "optional-bounded-offload"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "completed-model-quality-thirty-eighty-policy",
+      "impact": "within-increment",
+      "nextAction": "Keep the accepted Standard quality dependency closed. Implement and independently qualify the approved native staging protection, protected accounting and owned-worker/crash proof before any new offload lease, then collect actual optional-profile resource/lifecycle/host evidence under approved output-quality expectations and fresh owning gates/review. Do not inspect/adopt/delete/move/change ACLs of old staging, weaken guards, count arithmetic as authority, or represent Standard output as low-memory execution.",
+      "recordedAt": "2026-10-23T14:20:48Z",
+      "summary": "The separately measured Standard model-output quality dependency is passed and closed at the user-approved30 percent0.5B/80 percent1.5B standards. Local memory denials have no output and do not block that quality closure. Bundle1283executes Standard mode only and supplies no offload execution. The actual optional feature still lacks qualified native stable-tree protection/protected durable accounting/owned-worker and crash proof, followed by admitted low-memory execution, measured placement/staging/lifecycle and confirmed cleanup. Preserve earlier offload failures and retained ownership uncertainty; no full optional criterion or roadmap pass is granted.",
+      "targetIncrementId": "optional-bounded-offload"
+    }
+  ],
+  "finalApproval": null,
+  "history": [
+    {
+      "eventFingerprint": "f2d3124fe6a409ed55e55cc56e542b9cb9918c9d63138d2408de0ed9e677a5a5",
+      "recordedAt": "2026-10-22T03:20:10Z",
+      "sequence": 1,
+      "type": "discovery-recorded"
+    },
+    {
+      "eventFingerprint": "3c176705e1b8f67326cb634b4b7628d65fff49994922ea9ba77b0611f3cc0a99",
+      "recordedAt": "2026-10-22T03:20:10Z",
+      "sequence": 2,
+      "type": "decision-proposed"
+    },
+    {
+      "eventFingerprint": "a50ad34cfb52443e83d0f503eb9ce4569694d7cb90c560b5185dcd3a5c3083a0",
+      "recordedAt": "2026-10-22T03:20:10Z",
+      "sequence": 3,
+      "type": "decision-approved"
+    },
+    {
+      "eventFingerprint": "1cb9b7120bd2ad479d9a8e0e1465220f1f3d12f892912d5af061f25d073dffa4",
+      "recordedAt": "2026-10-22T03:20:11Z",
+      "sequence": 4,
+      "type": "roadmap-defined"
+    },
+    {
+      "eventFingerprint": "23bfec5243e5fa167d988b1cee7094e3602cef629d07a9f5e63d05143a49cfe5",
+      "recordedAt": "2026-10-22T03:25:32Z",
+      "sequence": 5,
+      "type": "roadmap-revised"
+    },
+    {
+      "eventFingerprint": "513a4058839a85b682def4456a675707d200544633547c6e3606bd62edf88ded",
+      "recordedAt": "2026-10-22T03:25:32Z",
+      "sequence": 6,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "779688cf224ed48a38ab2030d0e713f0b107fa61a1ef19cfb4819c72fe5d57bb",
+      "recordedAt": "2026-10-22T03:26:23Z",
+      "sequence": 7,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "3843c7aedb109e9d3a3e9c3d70a3105ede503c2c63d564d633460c55e793dd86",
+      "recordedAt": "2026-10-22T03:26:23Z",
+      "sequence": 8,
+      "type": "increment-started"
+    },
+    {
+      "eventFingerprint": "ebf036098fb1fa205fe09ef38566133d430ff701efee4ae064bb8fe6f97fd250",
+      "recordedAt": "2026-10-22T03:26:23Z",
+      "sequence": 9,
+      "type": "increment-research-recorded"
+    },
+    {
+      "eventFingerprint": "4bcd10b4fbf0b474f988cdee9f1b9156b5b324a0d0e2431062720ee551f4d10f",
+      "recordedAt": "2026-10-22T03:26:32Z",
+      "sequence": 10,
+      "type": "increment-plan-recorded"
+    },
+    {
+      "eventFingerprint": "3bcf1dc1ee6aa3999a4496ed4214234f1cb4a8f731c4de68a96da0be9455a21c",
+      "recordedAt": "2026-10-22T04:18:56Z",
+      "sequence": 11,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "b47cb080194d325d4e56d67cdea36733d8afa085ca111615c382797e7ecf79eb",
+      "recordedAt": "2026-10-22T04:44:03Z",
+      "sequence": 12,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "fba5d63e464c53fc464e97f8f41db675c11cd71da7c1873ae2cee59b5a1695ee",
+      "recordedAt": "2026-10-22T05:42:47Z",
+      "sequence": 13,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "49b006d549d73a0ebcadc4f358ba9a4cafc7a0be0ee679050b150bb6f524120d",
+      "recordedAt": "2026-10-22T05:51:48Z",
+      "sequence": 14,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "6ef8184db79d204c5fb9b9cedd4d5820eede22adc8461f9789d321ca235db537",
+      "recordedAt": "2026-10-22T05:54:51Z",
+      "sequence": 15,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "25813075ae069d410617a80a2b20c9d20e0d4e26a60f7ba46dc866590b02f04f",
+      "recordedAt": "2026-10-22T05:54:52Z",
+      "sequence": 16,
+      "type": "chunk-recorded"
+    },
+    {
+      "eventFingerprint": "03bca7b24c3878f75058cc3cdd6584621299c2776512dd9b6e58f3b7079e9564",
+      "recordedAt": "2026-10-22T05:55:57Z",
+      "sequence": 17,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a0bcb6c2fbde4d99dbedabe43d971cc9d3cfce4513ddcba7586c5d080af22059",
+      "recordedAt": "2026-10-22T05:55:58Z",
+      "sequence": 18,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5db91dd660faf250eef39512cf1b9f061131e39baf88f6d172422d442671f99e",
+      "recordedAt": "2026-10-22T05:55:58Z",
+      "sequence": 19,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "f4da41575b97f820b9c4709b9b9f44e50853fa6597fb6f2b9ee522185750b1b7",
+      "recordedAt": "2026-10-22T06:04:07Z",
+      "sequence": 20,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "82793945c1a6ebbeb0fe1ecdc9104bb339e6bde6ae7e0c9bf4b431d551f28bfa",
+      "recordedAt": "2026-10-22T06:04:07Z",
+      "sequence": 21,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1db4aa2e020638d945c0d122f8bba68b508f0f2408df64b0124d3ee1eeb05e74",
+      "recordedAt": "2026-10-22T06:13:29Z",
+      "sequence": 22,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "cb05857139f7f332c34ef3a1d208572c7452f7106fd91a141004d602b56ad0f3",
+      "recordedAt": "2026-10-22T06:13:29Z",
+      "sequence": 23,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ce2f2642fdf5603db31b4f3dcce8390fa22c065ecd073da7cda27f2c7c105e1b",
+      "recordedAt": "2026-10-22T06:13:30Z",
+      "sequence": 24,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "573524534488e04d35693ea603c0f3d9263cdc0defca88bbe5c4e289ab07473c",
+      "recordedAt": "2026-10-22T06:13:30Z",
+      "sequence": 25,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "8b781b9d1916c89ec7715bafc47b5f700a31506552c4feb82c3bff7623d0908f",
+      "recordedAt": "2026-10-22T06:13:30Z",
+      "sequence": 26,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "605bbfabc8d0aa61e2bf26993fcab2bb11be7c0444ab52a7ca4316cf42771def",
+      "recordedAt": "2026-10-22T06:46:11Z",
+      "sequence": 27,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5d0ffe87e757485905fa4982d4f7f52da234967c32879833228c2227d76f1282",
+      "recordedAt": "2026-10-22T06:51:44Z",
+      "sequence": 28,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "66ef31b215dd3921c918c8953506056af57c4afdbc1b01e5cd6c38ba90d1490e",
+      "recordedAt": "2026-10-22T07:16:38Z",
+      "sequence": 29,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "81bfa356fa5a630704b15ba39feab52ba8326f52fa4310411260e4f9c53af1ad",
+      "recordedAt": "2026-10-22T07:16:39Z",
+      "sequence": 30,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "dd0f7a062214c198c821c134c919240f2df5f184a10d571f657bd9993f2d3c4e",
+      "recordedAt": "2026-10-22T07:16:39Z",
+      "sequence": 31,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1a5ed3b3836c0adb1f246693c1961f55ebd4e71f6670cafd9350c104c83433e1",
+      "recordedAt": "2026-10-22T07:16:39Z",
+      "sequence": 32,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "480ea90aff255f64569831796863f92a8ccf6519a07f2843e3cd33743d1a3edb",
+      "recordedAt": "2026-10-22T07:16:39Z",
+      "sequence": 33,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5a3705f0a0a9b1731869c536e77b7799247cbb1ed819dc55ecaf8c5177774599",
+      "recordedAt": "2026-10-22T07:16:39Z",
+      "sequence": 34,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "7b2d6c2b28f1d373e0ee3984617511fd27b1b972d5b184e71709660e28d84ff9",
+      "recordedAt": "2026-10-22T07:40:19Z",
+      "sequence": 35,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "8a321b7d271cb92a57836eff22f887e25672f55a9825d654e6d0878a4e68527b",
+      "recordedAt": "2026-10-22T07:45:29Z",
+      "sequence": 36,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5ec60d3b879d2f743c74e7c1f4e3477441e66dd59737bb4dd2a4c90a3120994c",
+      "recordedAt": "2026-10-22T16:25:37Z",
+      "sequence": 37,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "cb43efe229dddb5c04bff9c29f0059aa7915128c65d9986aa7b1b88199bf8f5d",
+      "recordedAt": "2026-10-23T14:20:48Z",
+      "sequence": 38,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "412639c6c008a5f5aca14574128cbe9d491f696a473321ca1d4ab96648e9e628",
+      "recordedAt": "2026-10-23T14:20:49Z",
+      "sequence": 39,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a77d0648ec7b4c58f49d51af6923675df9c7260e7073560eeed63199a03fce61",
+      "recordedAt": "2026-10-23T14:38:23Z",
+      "sequence": 40,
+      "type": "technical-acceptance-revised"
+    },
+    {
+      "eventFingerprint": "db90f6f4f2893835ad6f9458ba928303929e5a9d5a31617a8ce42a4098a66fd0",
+      "recordedAt": "2026-10-23T14:38:23Z",
+      "sequence": 41,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "2e957bfd39085e1362a79b198e5e831f287a71a2135325472c8b4b5bf87105d0",
+      "recordedAt": "2026-10-23T18:49:25Z",
+      "sequence": 42,
+      "type": "blocker-reclassified"
+    }
+  ],
+  "increments": [
+    {
+      "acceptanceCriteria": [
+        {
+          "description": "An explicit default-off standard/low-memory finite profile round-trips through supported contracts, saved settings, request mappers, readiness and loaded-model identity/inventory. Omitted and explicit standard normalize to current behavior. Advertise an exact versioned capability; deny new-client/old-worker or absent/stale capability before dispatch because an older worker may ignore unknown fields. Retain standard device/dtype/overflow/LoRA/seq2seq/grammar behavior. Opt-in unknown profiles, unsupported LoRA/seq2seq/quantization and invalid placement deny without silent fallback.",
+          "id": "explicit-compatible-option",
+          "qualification": "local"
+        },
+        {
+          "description": "Reuse the pinned managed Transformers4.51.3/Accelerate1.14.0 route with verified local safetensors, explicit CPU-only or CUDA execution, resolved dtype, tied/no-split layer and buffer policy. Require a valid bounded CPU-plus-disk or CUDA/CPU/disk map; reject all-disk or oversized-layer maps before load, and never fully load a model before offloading it. Preserve no remote code/pickle/network. Admission reserves largest execution layer, bounded input/batch/token KV/activation and runtime/import headroom; unknown or insufficient RAM/VRAM/disk facts deny opt-in. Library max_memory limits parameter placement rather than disk or whole-process usage. Separately bound all owned persistent/temporary staging to12GiB with pre-write tensor/index/byte validation and available-disk admission. Prefer immutable verified original safetensors references without copying weights when supported; explicitly avoid or own secondary offload_state_dict temporaries, including failure paths, without process-global tempfile monkeypatches. No arbitrary caller paths or original-weight deletion.",
+          "id": "bounded-loading-and-staging",
+          "qualification": "local"
+        },
+        {
+          "description": "Bind staging/input references to private cached-generator leases, not task completion. Bound aggregate loaded-model/staging ownership and include resolved mode/limits in reuse identity; same-profile reuse is safe, differing profiles cannot reuse silently, two task users cannot delete each other's bytes. Prove selected-path supported teardown does not reconstruct the full model or violate the declared measured budget. Test success, load/decoder/OOM failure, queued cancellation, truthful running non-cancellation, unload/start races, terminal cleanup and retry. Preserve current unsupported running dataset-preparation cancellation: a cancel request or timeout cannot relabel running work terminal or kill the shared worker. Retain ownership/staging during synchronous load/forward and after failed or unconfirmed cleanup; release only after confirmed completion/last lease or verified owned process exit.",
+          "id": "cancellation-and-resource-cleanup",
+          "qualification": "local"
+        },
+        {
+          "description": "Automated desktop and thin-client journeys select a supported local causal/chat model, enable/disable the profile, save/reopen exact settings and show estimated placement limits separately from observed process usage and disk/speed tradeoffs. Exercise capability absent/old-worker, insufficient-resource denial, actual supported generation, queued cancellation, truthful running non-cancellation and safe retry after confirmed completion. Standard mode and existing constrained/unchecked generation remain covered; passive reads never install, download or load.",
+          "id": "automated-optional-mode-journeys",
+          "qualification": "local"
+        },
+        {
+          "description": "Qualify actual optional offload execution separately from completed Standard model quality. Use the frozen 24-case oracle, exact approved Qwen0.5B float32/Qwen1.5B bfloat16 settings, and separate CPU/CUDA and constrained/unchecked observations. Completed output phases use the user-approved 30% small-model/80% larger-model accuracy contract; report correct, wrong, abstained, invalid and repair attempts. Before-load resource denial has no accuracy outcome and does not block that quality closure. Preserve original comparisons as history. Actual1.5B low-memory CPU delivery still needs measurement under1GiB CPU/2GiB CUDA weight placement,12GiB owned staging,4GiB sampled child-RSS abort and existing finite deadlines. Measure load/generation/teardown RAM/commit limitations, allocated/reserved VRAM, stage peak/final bytes and total delivery including disk I/O/cleanup; report slower inference. Placement/sampled limits are not hard process caps; historical6GiB abort profiles stay unchanged. Qualify native staging protection/accounting and owned-worker/crash proof before a lease, plus actual owned exit and confirmed cleanup. Standard results cannot certify offload; unexecuted required feature/lifecycle paths remain pending independently of quality closure.",
+          "id": "measured-low-memory-model-outcomes",
+          "qualification": "controlled-environment"
+        },
+        {
+          "description": "Review the exact resource/staging/lifecycle delta and capability/version enforcement through the owning threat model and scoped accepted architecture. Prove finite settings/byte arithmetic, local safe-weight/index/path integrity, no remote code/pickle/network, workspace/task authority, aggregate cached-model ownership, sibling preservation, safe diagnostics, load/teardown failures and retained cleanup uncertainty. Preserve existing native race/ACL and physical security gaps; cooperative containment tests are not native guarantees. Rollback withdraws only opt-in support without weaker loading, overflow, deletion or task-cancellation fallback. All acceptance is agent-executable.",
+          "id": "security-impact-reviewed",
+          "qualification": "local"
+        }
+      ],
+      "allowPendingQualification": true,
+      "completedAt": null,
+      "completedChunks": [
+        "explicit-profile-and-readiness",
+        "owned-bounded-offload-delivery",
+        "usable-and-qualified-model-workflows"
+      ],
+      "deliverables": [
+        "Accepted scoped ADR and runtime/security/context/readiness documentation for explicit offload only",
+        "Optional settings in owning contracts, mappers, model/task configuration and supported desktop/thin-client UI",
+        "Bounded verified local loading/offload adapter and profile-aware model reuse with owner-bound staging lifecycle",
+        "Focused positive/denial/default-behavior and automated UI regressions",
+        "Source/model/input-bound actual CPU/GPU evidence, clear failed/pending profiles and updated review site",
+        "Prospectively declared CPU/GPU precision, useful-outcome oracle, placement/staging budgets and sampled-versus-enforced resource semantics; preserve original generation and Context gates"
+      ],
+      "dependsOn": [],
+      "excluded": [
+        "AirLLM/new generation engine, dependency/version change, automatic acquisition or new model download",
+        "Training, Context embedding, quantization/precision changes, unqualified LoRA/seq2seq offload, model-quality claims from parameter count",
+        "Whole-system memory reclamation, termination of user applications, implicit overflow or a hard total-process guarantee from library max_memory",
+        "Human acceptance tests, public hosting, production rollout or retroactive closure/threshold changes of other roadmaps",
+        "Untested operating systems/hardware; native filesystem race/ACL guarantees remain separately qualified rather than inferred from cooperative staging tests",
+        "Immediate running dataset-preparation cancellation, shared-worker termination, child-per-task topology, new kernel process-quota design or a product hard-memory guarantee"
+      ],
+      "id": "optional-bounded-offload",
+      "number": 1,
+      "objective": "Deliver one usable opt-in memory-saving generation profile across configuration, existing managed loader, UI and technical qualification while preserving standard behavior.",
+      "plan": {
+        "assumptions": [
+          "User approved the roadmap conditional on actual completed review; all8in-scope corrections are now incorporated.",
+          "Use the existing managed dependency pins and already-approved model acquisitions only.",
+          "No human acceptance or unsafe memory/policy fallback is required; standard loading behavior remains authoritative outside explicit opt-in."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "explicit-compatible-option",
+              "automated-optional-mode-journeys",
+              "security-impact-reviewed"
+            ],
+            "id": "explicit-profile-and-readiness",
+            "outcome": "Default-off finite settings and exact capability gate survive every owning mapper and saved/load identity; old workers deny opt-in before dispatch.",
+            "title": "Explicit compatible profile and readiness"
+          },
+          {
+            "criteriaIds": [
+              "bounded-loading-and-staging",
+              "cancellation-and-resource-cleanup",
+              "security-impact-reviewed"
+            ],
+            "id": "owned-bounded-offload-delivery",
+            "outcome": "The existing managed runtime loads supported local models through bounded verified placement and cache/input/staging leases, with safe success/failure/unload semantics and truthful cancellation.",
+            "title": "Owned bounded low-memory delivery"
+          },
+          {
+            "criteriaIds": [
+              "automated-optional-mode-journeys",
+              "measured-low-memory-model-outcomes",
+              "security-impact-reviewed"
+            ],
+            "id": "usable-and-qualified-model-workflows",
+            "outcome": "Both supported UI hosts demonstrate the option and recovery; actual declared model cohorts prove utility, resource behavior and compatibility or retain explicit failed/pending evidence.",
+            "title": "Usable and measured model workflows"
+          }
+        ],
+        "completionTests": [
+          "Change-relevant registered source-owned profiles plus documentation, agent-support, architecture and affected client/server builds after implementation.",
+          "test:all and applicable control-plane/roadmap gates once only after all approved chunks are implemented. Dependency security only when relevant manifests/resolution/build inputs change.",
+          "Current independent exact-candidate review and actual bound CPU/GPU quality/resource/cleanup evidence; unavailable technical checks stay pending."
+        ],
+        "documentation": [
+          "Scoped accepted ADR and decision-readiness/index",
+          "Runtime architecture, security threat model and runtime/context packs",
+          "Contract/adapter/worker and affected feature READMEs",
+          "Prospective model protocol, actual evidence and JSON-backed review site"
+        ],
+        "fingerprint": "1c1016e9357e5d9b1cf38c5721e2713537afed6eec10933f972bdfa775db6bc8",
+        "focusedTests": [
+          "Closed-profile/legacy-standard serialization, field mapper loss, saved configuration and new-client/old-worker capability denial tests.",
+          "Python admission/map/largest-layer/tied-weight/dtype/input-device/secondary-temp and profile-aware cached generator lease tests.",
+          "Malformed/unknown/insufficient resource, source/index/path integrity, partial-load/decoder/OOM, unload/start, queued and truthful unsupported-running cancellation, cleanup retry and unrelated owner preservation tests.",
+          "Existing local generation, constrained schema/decoder, example generation and standard LoRA/seq2seq regressions; no downloads or real models in unit tests.",
+          "Automated desktop/thin-client save/reopen/generate/denial/cancel/retry journeys; separate actual installed-model controlled measurements."
+        ],
+        "recordedAt": "2026-10-22T03:26:32Z",
+        "rollback": "Withdraw only the new optional profile/UI while preserving current standard loading, immutable model inputs, retained ownership/cleanup, safe diagnostics and all failed evidence. Never restore unsafe offload or overflow.",
+        "steps": [
+          "Inspect exact current field mappers, cached-generator lifecycle and installed supplier loading/hook/temp paths; record the selected narrow policy in an accepted ADR and update owning runtime/security guidance.",
+          "Add finite standard/low-memory profile metadata, backward-compatible normalization, versioned capability gating and full config/task/model identity propagation with focused tests.",
+          "Implement explicit safe-weight CPU/CUDA placement with deterministic bounds, validated headroom, owned staging/input leases, no secondary unmanaged temp files and supported cleanup; preserve the standard path and failure policy.",
+          "Expose the option and truthful limits/tradeoffs/readiness in supported desktop and thin-client flows; add useful save/reopen/generation/denial/queued-versus-running-cancel journeys.",
+          "Run bounded sanity trials then frozen matched0.5B/1.5B CPU/CUDA constrained/unchecked cohorts, preserving original oracles/precision and all failures. Qualify useful baseline-denied1.5BCPU outcomes under prospective budgets without inventing a paired ratio.",
+          "After every chunk is implemented, run relevant completion gates and the configured all-suite once, obtain independent exact-candidate review, close only actual passing criteria, commit completed roadmap work and fast-forward main. Resume remaining functionality qualification next and feasible security-refresh work after both roadmaps."
+        ],
+        "summary": "Deliver the reviewed default-off Accelerate profile through explicit compatible settings/readiness, owner-bound bounded loader/cache lifecycle and useful automated UI/model qualification. Finish this mode before remaining functionality installed-model qualification, then return to feasible security-refresh work."
+      },
+      "research": [
+        {
+          "recordedAt": "2026-10-22T03:26:23Z",
+          "risks": [
+            "Meta/index/tied-parameter and temporary-state behavior can change peak memory or filesystem effects; verify exact selected path with focused denial tests before real models.",
+            "CPU streaming may be slow; use finite predeclared runs and report all outcomes. Baseline denial supplies no quality/timing baseline.",
+            "Unconfirmed lifecycle/native cleanup remains pending; a passing local component or model run cannot close unrelated security criteria."
+          ],
+          "sources": [
+            {
+              "note": "Exact installed supplier/source findings and prospective test mapping, not a qualification pass.",
+              "title": "Independent implementation-sensitive planning review",
+              "url": ".local-codex/approved-controls/low-memory-roadmap-independent-review.json"
+            },
+            {
+              "note": "Keep standard path, profile identity, resource guard and generator lifetime; inspect exact supplier path before implementing opt-in.",
+              "title": "Existing generation loader and model cache",
+              "url": "modules/adapters/runtime/python/worker/tasks/local_text_generation.py"
+            },
+            {
+              "note": "Retain owner-bound task fences, truthful unsupported running cancellation, no passive installs and no implicit disk offload.",
+              "title": "Current runtime posture",
+              "url": "docs/architecture/runtime-model.md"
+            },
+            {
+              "note": "User conditional approval follows actual review and incorporated corrections; existing other-roadmap gates remain unchanged.",
+              "title": "Reviewed prospective increment",
+              "url": "docs/optional-low-memory-inference-implementation-roadmap.md"
+            }
+          ],
+          "summary": "Reviewed the selected backend against current loader/contracts/UI, runtime architecture, security/readiness guidance and exact installed Accelerate1.14.0/Transformers4.51.3. Independent planning review resolved8implementation-sensitive details: parameter placement is not a process/disk quota; CPU+disk differs from rejected all-disk; secondary state-dict temporaries need explicit ownership; safe-weight originals can be referenced directly; cached-generator leases outlive tasks; teardown restoration depends on meta initialization; running dataset cancellation remains unsupported; old workers can ignore unknown fields and therefore require capability denial. Current qualification precisions are0.5Bfloat32/1.5Bbfloat16. Historical generator RSS sampled abort is6GiB; new optional profile proposes4GiB sampled abort rather than hard allocation enforcement. No dependency/model acquisition or offload execution has occurred."
+        }
+      ],
+      "rollback": "Disable and withdraw only the opt-in profile and its configuration/UI; preserve standard loading behavior, immutable model inputs, owner-bound cleanup and failed evidence. Never restore implicit offload, unsafe remote code, overflow or deletion behavior.",
+      "startedAt": "2026-10-22T03:26:23Z",
+      "status": "verifying",
+      "title": "Optional bounded local-model offloading",
+      "verification": [
+        "Inspect the installed pinned supplier CPU+disk/meta/safetensors path, largest/tied/no-split layers, buffers, secondary state-dict temporary creation and teardown restoration before implementation. Deny unsupported all-disk maps, source/index drift and unknown resource observations; max_memory is not a disk/process quota.",
+        "Focused runtime contract/mapper/request-builder, resource admission, profile cache identity, staging/cleanup, local generation and constrained-decoder tests per chunk.",
+        "Prove old-worker capability denial, profile-aware model reuse, shared-generator/input/staging leases, aggregate quotas, safe selected-path teardown and queued-versus-running cancellation acknowledgements. Cover failure/interruption/cleanup retry and unrelated task/sibling preservation.",
+        "Automated desktop/thin-client option, round-trip, generation, denial and cancellation/retry journeys with useful task assertions.",
+        "Prospectively freeze mode/prompt/schema/device/dtype/resource settings before actual installed-model runs; preserve all old and new failures and separately reviewed raw bindings.",
+        "After this sole increment is fully implemented run test:all and relevant docs/architecture/agent/control-plane/roadmap gates and affected builds once, then exact candidate independent review. Run security:dependencies only if relevant dependency/build inputs actually change."
+      ],
+      "workPackages": [
+        {
+          "id": "contract-readiness-and-admission",
+          "outcome": "Version-compatible settings, profile-aware model identity, fixed presets and truthful readiness/resource estimates reach the existing worker.",
+          "title": "Explicit compatible option and resource admission"
+        },
+        {
+          "id": "owned-offload-lifecycle",
+          "outcome": "Installed pinned Accelerate dispatch uses private bounded staging with safe load/error/cancel/unload behavior and no change to standard loading.",
+          "title": "Owned bounded loading and cleanup"
+        },
+        {
+          "id": "usable-and-measured-mode",
+          "outcome": "Automated UI demonstrates the option and failure recovery; matched installed-model cohorts measure actual utility and resource tradeoffs under prospective budgets.",
+          "title": "Usable setting and real model evidence"
+        }
+      ]
+    }
+  ],
+  "name": "Optional Low-Memory Local Inference",
+  "objective": "Offer an explicit, default-off Accelerate loading/offload profile for supported local causal models on constrained PCs, with bounded resource admission, safe staging, unchanged standard behavior and measured quality/resource outcomes.",
+  "paths": {
+    "report": "docs/tmp/optional-low-memory-inference-implementation-report.md",
+    "roadmap": "docs/optional-low-memory-inference-implementation-roadmap.md",
+    "state": ".implementation-roadmaps/optional-low-memory-inference/state.json"
+  },
+  "resumeAudits": [],
+  "roadmapApproval": {
+    "approvedAt": "2026-10-23T14:38:23Z",
+    "fingerprint": "97a4126bd00ac0dc60c3b64a1199ce1333511afcdef580eb32d26138c4bb49d0",
+    "note": "The user explicitly replaced model-quality requirements with30% for0.5B and80% for1.5B completed tests, excluded before-load RAM denials from accuracy and directed closure of those tests. This reapproval records only that existing narrow authority; it grants no new hardware/offload evidence or waiver of native/resource/lifecycle qualification."
+  },
+  "schemaVersion": 1,
+  "slug": "optional-low-memory-inference",
+  "status": "executing",
+  "technicalAcceptanceRevisions": [
+    {
+      "authorityRef": "user-explicit-thirty-eighty-completed-model-quality-closure",
+      "incrementId": "optional-bounded-offload",
+      "originalCriterion": {
+        "description": "Before opening results, freeze exact models/oracle/tasks/prompts/schema/settings and current precisions:Qwen0.5Bfloat32 and Qwen1.5Bbfloat16, each separately on CPU/CUDA and constrained/unchecked modes. Preserve original fixed24-case heldout task population and prior failures. For admitted matched standard/low-memory pairs require zero baseline-correct cases lost and no new invalid accepted outputs; report all correct/wrong/abstained/invalid/repair attempts. A standard-CPU-denied1.5Bcohort additionally must achieve the existing>=95percent task floor(at least23of24) in both first/warm phases across3fresh repetitions per decoder mode, successful cleanup and actual owned exit; there is no invented timing ratio/quality baseline from a denied run or another device. Demonstrate successful1.5B low-memory CPU delivery under prospective placement limits1GiBCPUweights/2GiBCUDAweights, separately bounded12GiB owned staging and a new4GiB sampled child-RSS abort budget; preserve existing finite deadlines. The historical installed-generation harness uses6GiB sampled RSS abort, which stays unchanged for old profiles. Sampled abort/placement limits are not hard allocation or product process caps. Measure load/generation/teardown RSS/commit limitations, allocated/reserved VRAM, stage peak/final bytes and complete-delivery time, charging disk I/O and cleanup. Report slower inference explicitly; no throughput-improvement claim is required for this optional mode. Any denied, unexecuted or failed required cohort prevents this criterion passing. New evidence does not retroactively pass the original standard-profile failures or unsupported hardware.",
+        "id": "measured-low-memory-model-outcomes",
+        "qualification": "controlled-environment"
+      },
+      "originalPlan": {
+        "assumptions": [
+          "User approved the roadmap conditional on actual completed review; all8in-scope corrections are now incorporated.",
+          "Use the existing managed dependency pins and already-approved model acquisitions only.",
+          "No human acceptance or unsafe memory/policy fallback is required; standard loading behavior remains authoritative outside explicit opt-in."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "explicit-compatible-option",
+              "automated-optional-mode-journeys",
+              "security-impact-reviewed"
+            ],
+            "id": "explicit-profile-and-readiness",
+            "outcome": "Default-off finite settings and exact capability gate survive every owning mapper and saved/load identity; old workers deny opt-in before dispatch.",
+            "title": "Explicit compatible profile and readiness"
+          },
+          {
+            "criteriaIds": [
+              "bounded-loading-and-staging",
+              "cancellation-and-resource-cleanup",
+              "security-impact-reviewed"
+            ],
+            "id": "owned-bounded-offload-delivery",
+            "outcome": "The existing managed runtime loads supported local models through bounded verified placement and cache/input/staging leases, with safe success/failure/unload semantics and truthful cancellation.",
+            "title": "Owned bounded low-memory delivery"
+          },
+          {
+            "criteriaIds": [
+              "automated-optional-mode-journeys",
+              "measured-low-memory-model-outcomes",
+              "security-impact-reviewed"
+            ],
+            "id": "usable-and-qualified-model-workflows",
+            "outcome": "Both supported UI hosts demonstrate the option and recovery; actual declared model cohorts prove utility, resource behavior and compatibility or retain explicit failed/pending evidence.",
+            "title": "Usable and measured model workflows"
+          }
+        ],
+        "completionTests": [
+          "Change-relevant registered source-owned profiles plus documentation, agent-support, architecture and affected client/server builds after implementation.",
+          "test:all and applicable control-plane/roadmap gates once only after all approved chunks are implemented. Dependency security only when relevant manifests/resolution/build inputs change.",
+          "Current independent exact-candidate review and actual bound CPU/GPU quality/resource/cleanup evidence; unavailable technical checks stay pending."
+        ],
+        "documentation": [
+          "Scoped accepted ADR and decision-readiness/index",
+          "Runtime architecture, security threat model and runtime/context packs",
+          "Contract/adapter/worker and affected feature READMEs",
+          "Prospective model protocol, actual evidence and JSON-backed review site"
+        ],
+        "fingerprint": "1c1016e9357e5d9b1cf38c5721e2713537afed6eec10933f972bdfa775db6bc8",
+        "focusedTests": [
+          "Closed-profile/legacy-standard serialization, field mapper loss, saved configuration and new-client/old-worker capability denial tests.",
+          "Python admission/map/largest-layer/tied-weight/dtype/input-device/secondary-temp and profile-aware cached generator lease tests.",
+          "Malformed/unknown/insufficient resource, source/index/path integrity, partial-load/decoder/OOM, unload/start, queued and truthful unsupported-running cancellation, cleanup retry and unrelated owner preservation tests.",
+          "Existing local generation, constrained schema/decoder, example generation and standard LoRA/seq2seq regressions; no downloads or real models in unit tests.",
+          "Automated desktop/thin-client save/reopen/generate/denial/cancel/retry journeys; separate actual installed-model controlled measurements."
+        ],
+        "recordedAt": "2026-10-22T03:26:32Z",
+        "rollback": "Withdraw only the new optional profile/UI while preserving current standard loading, immutable model inputs, retained ownership/cleanup, safe diagnostics and all failed evidence. Never restore unsafe offload or overflow.",
+        "steps": [
+          "Inspect exact current field mappers, cached-generator lifecycle and installed supplier loading/hook/temp paths; record the selected narrow policy in an accepted ADR and update owning runtime/security guidance.",
+          "Add finite standard/low-memory profile metadata, backward-compatible normalization, versioned capability gating and full config/task/model identity propagation with focused tests.",
+          "Implement explicit safe-weight CPU/CUDA placement with deterministic bounds, validated headroom, owned staging/input leases, no secondary unmanaged temp files and supported cleanup; preserve the standard path and failure policy.",
+          "Expose the option and truthful limits/tradeoffs/readiness in supported desktop and thin-client flows; add useful save/reopen/generation/denial/queued-versus-running-cancel journeys.",
+          "Run bounded sanity trials then frozen matched0.5B/1.5B CPU/CUDA constrained/unchecked cohorts, preserving original oracles/precision and all failures. Qualify useful baseline-denied1.5BCPU outcomes under prospective budgets without inventing a paired ratio.",
+          "After every chunk is implemented, run relevant completion gates and the configured all-suite once, obtain independent exact-candidate review, close only actual passing criteria, commit completed roadmap work and fast-forward main. Resume remaining functionality qualification next and feasible security-refresh work after both roadmaps."
+        ],
+        "summary": "Deliver the reviewed default-off Accelerate profile through explicit compatible settings/readiness, owner-bound bounded loader/cache lifecycle and useful automated UI/model qualification. Finish this mode before remaining functionality installed-model qualification, then return to feasible security-refresh work."
+      },
+      "policyDigest": "d239d080e0a9f6b29ca50d2ca7bfc590bae0d7cee89a38e1c8c06dd8b3a60cbd",
+      "policyRef": "model-software-quality-qualification",
+      "previousApproval": {
+        "approvedAt": "2026-10-22T03:26:23Z",
+        "fingerprint": "6dbfa044e53b7a4a288c275d167a835678098bc48c524f7302868c7b298fbe34",
+        "note": "The user explicitly approved this roadmap once reviewed and requested continuous execution of it and functionality-optimization in the order best for success, followed by feasible remaining security-findings-refresh work. Actual separate review low-memory-roadmap-independent-review.json is complete; the reviewed revision incorporates its in-scope corrections. No new model download, unsafe loading, original-target waiver or immediate running cancellation is authorized."
+      },
+      "recordedAt": "2026-10-23T14:38:23Z",
+      "retainedRequirements": [
+        "Frozen exact model/precision/settings and24-case oracle; separate device/decoder observations and complete correct/wrong/abstained/invalid/repair accounting; all historical results preserved.",
+        "Actual1.5B low-memory CPU delivery;1GiB CPU/2GiB CUDA weight placement,12GiB owned staging,4GiB sampled child RSS and existing finite deadlines; historical6GiB profiles unchanged.",
+        "Actual optional load/generation/teardown, RAM/VRAM/staging/time and slower-inference evidence, qualified native staging protection/protected accounting/owned-worker/crash proof, owned exit and confirmed cleanup.",
+        "All other security/compatibility/host/lifecycle criteria, native blocker, safe-weight controls and current receipt/review plus final all-suite closure remain. Standard-only output is no offload pass."
+      ],
+      "revisedCriterion": {
+        "description": "Qualify actual optional offload execution separately from completed Standard model quality. Use the frozen 24-case oracle, exact approved Qwen0.5B float32/Qwen1.5B bfloat16 settings, and separate CPU/CUDA and constrained/unchecked observations. Completed output phases use the user-approved 30% small-model/80% larger-model accuracy contract; report correct, wrong, abstained, invalid and repair attempts. Before-load resource denial has no accuracy outcome and does not block that quality closure. Preserve original comparisons as history. Actual1.5B low-memory CPU delivery still needs measurement under1GiB CPU/2GiB CUDA weight placement,12GiB owned staging,4GiB sampled child-RSS abort and existing finite deadlines. Measure load/generation/teardown RAM/commit limitations, allocated/reserved VRAM, stage peak/final bytes and total delivery including disk I/O/cleanup; report slower inference. Placement/sampled limits are not hard process caps; historical6GiB abort profiles stay unchanged. Qualify native staging protection/accounting and owned-worker/crash proof before a lease, plus actual owned exit and confirmed cleanup. Standard results cannot certify offload; unexecuted required feature/lifecycle paths remain pending independently of quality closure.",
+        "id": "measured-low-memory-model-outcomes",
+        "qualification": "controlled-environment"
+      },
+      "status": "technical-policy-revised",
+      "summary": "Apply the already explicit user30%/80% completed-output quality policy; archive superseded quality clauses while actual optional offload/native/resource/lifecycle qualification remains pending. No inference, hardware evidence or technical pass follows.",
+      "supersededRequirements": [
+        "The additional23/24 or95percent output-quality threshold for the1.5B profile is replaced by explicit user80percent completed-output acceptance;0.5B uses30percent.",
+        "Zero baseline-correct cases lost is retained as a historical comparison observation, not a second quality veto over the accepted absolute contract.",
+        "A before-load resource-denied attempt has no accuracy outcome and cannot make the completed-output quality tests fail or reopen."
+      ]
+    }
+  ],
+  "updatedAt": "2026-10-23T18:49:25Z"
+}
