@@ -60,7 +60,7 @@ test("root manifest and lock retain the reviewed patched toolchain boundary", as
   ]);
 
   assert.equal(manifest.engines.node, ">=24 <25");
-  assert.equal(manifest.devDependencies.electron, "42.11.3");
+  assert.equal(manifest.devDependencies.electron, "42.11.18");
   assert.equal(manifest.dependencies.selfsigned, "5.5.0");
   assert.deepEqual(manifest.overrides, {
     "brace-expansion": "$brace-expansion",
@@ -68,14 +68,14 @@ test("root manifest and lock retain the reviewed patched toolchain boundary", as
     tmp: "0.2.7",
     "@electron/get": { undici: "7.29.1" },
   });
-  assert.equal(lockfile.packages["node_modules/electron"].version, "42.11.3");
+  assert.equal(lockfile.packages["node_modules/electron"].version, "42.11.18");
   assert.equal(
     lockfile.packages["node_modules/electron"].resolved,
-    "https://registry.npmjs.org/electron/-/electron-42.11.3.tgz",
+    "https://registry.npmjs.org/electron/-/electron-42.11.18.tgz",
   );
   assert.equal(
     lockfile.packages["node_modules/electron"].integrity,
-    "sha512-r/rC6BikQ2vEGQLhnHmFwFpvVPlWTc/rnHcYfJe4HDa5MEl00yhx72ffKw7zMf1WvAM2r2hcGJ3ZftuJRo0QaQ==",
+    "sha512-hbzodG06x/l7uq+oeyob5ugv6qZBmJRWC7Uto5QEE99xSHUARz6d+++Rz+79T/ssTYTQkONW4ciTTcJuAbXKIQ==",
   );
   assert.equal(lockfile.packages["node_modules/selfsigned"].version, "5.5.0");
 

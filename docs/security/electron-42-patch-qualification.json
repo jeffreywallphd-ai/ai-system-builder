@@ -1,0 +1,42 @@
+{
+  "schema_version": "electron-patch-qualification-v1",
+  "security_disposition": "security-relevant",
+  "work_id": "electron-42-current-security-patch",
+  "previous_pin": "42.11.3",
+  "current_pin": "42.11.18",
+  "supplier": "electron/electron",
+  "supplier_release": "https://github.com/electron/electron/releases/tag/v42.11.18",
+  "advisories": [
+    "https://github.com/electron/electron/security/advisories/GHSA-x562-297c-g43g",
+    "https://github.com/electron/electron/security/advisories/GHSA-3qxv-5xgr-q7w9",
+    "https://github.com/electron/electron/security/advisories/GHSA-h3v5-h239-pg29"
+  ],
+  "resolution": "Exact same-supplier patch only. Scripts disabled during npm resolution. Only root manifest and node_modules/electron lock records changed; all other locked package records are preserved.",
+  "controls": [
+    "Official Electron installer and package-bundled archive checksums; no custom mirror, distribution path or remote checksum override",
+    "Existing deny-all runtime permissions, sandboxed preloads, package boundaries and host authorization remain required",
+    "Strict production and complete-tree audits remain blocking; no audit waiver or forced bulk remediation"
+  ],
+  "qualification": {
+    "status": "host-compatibility-passed",
+    "platform": "Windows x64 controlled local host",
+    "archive_sha256": "95db2e9cdbe61d292f28ba42e863518b605115a79e6aebb3c21d5a99b28f35ba",
+    "archive_matches_bundled_checksum": true,
+    "observed_runtime": {"electron": "42.11.18", "node": "24.19.0", "sqlite": "3.53.3"},
+    "native_sqlite": {"tests": 6, "passed": 6, "skipped": 0, "scope": "Actual embedded atomic publication, transaction isolation, migrations, health, backup/restore and guarded maintenance CLI"},
+    "development": {"status": "passed", "scope": "Fresh isolated Forge profile; both renderer listeners, desktop bridge with no renderer Node globals, workspace creation and Systems navigation"},
+    "host_journeys": {
+      "evidence": "artifacts/qualification/visual-composer/runs/2026-10-22t20-59-09-455z-8a4f5ee0/evidence.json",
+      "sha256": "1caf0e8adb27d4cdac0a7ea3acff5d5c38351ddf9248393916023a4957c124a6",
+      "source": "source.8db6ae2239d0e562c58b16fbff594344fe293dd2a3c7af97d9af427d141b8158",
+      "passed": 8,
+      "failed": 0,
+      "scope": "Thin-client Request intake, Operations dashboard, Conversation interface, revisit and guided publication lifecycle; packaged desktop multi-system build, real PDF worker preview and guided publication/runtime lifecycle"
+    },
+    "completion_authority": "The named control-plane work still requires its fresh fixed checks, both zero-advisory audits and independent review. This evidence document never grants work or parent roadmap completion."
+  },
+  "limitations": [
+    "Supplier declares 42.x end-of-support. A supported-major upgrade still requires separate compatibility qualification; this patch is not a claim of continuing supplier support.",
+    "Historical 42.11.3 results remain historical. Parent roadmap, restricted legacy security review and model/offload/provider/native gaps are not closed by changing this pin."
+  ]
+}

@@ -27,8 +27,12 @@ upgrade.
   development and packaged-window checks, independent sandbox preloads and
   self-contained provider clients. Optional native peers retain guarded loading;
   package qualification must not rely on ancestor node_modules from the checkout.
-- The desktop host is exactly pinned to original-supplier Electron 42.11.3,
-  the lowest fixed branch for GHSA-fw47-9c62-h3vw. Preserve deny-all runtime
+- The desktop host is exactly pinned to original-supplier Electron 42.11.18,
+  retaining the qualified patch branch while addressing GHSA-x562-297c-g43g,
+  GHSA-3qxv-5xgr-q7w9 and GHSA-h3v5-h239-pg29 as well as GHSA-fw47-9c62-h3vw.
+  The supplier marks 42.x end-of-support: this patch does not qualify a future
+  supported major or waive that release maintenance gap. Current evidence is
+  in `docs/security/electron-42-patch-qualification.json`. Preserve deny-all runtime
   permissions and qualify the embedded SQLite maintenance, development startup,
   packaged PDF and useful-system journeys after changing that pin. Keep install
   scripts disabled during resolution; acquire its binary only through the reviewed
