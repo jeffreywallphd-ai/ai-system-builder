@@ -28,6 +28,7 @@ function initializeTheme() {
 }
 const el = (tag, value, className) => { const n = document.createElement(tag); if (value !== undefined) n.textContent = value; if (className) n.className = className; return n; };
 const readable = value => String(value).replaceAll("-", " ").replaceAll("_", " ");
+const textLength = value => Array.from(value).length;
 const badge = status => el("span", readable(["complete", "final-approved"].includes(status) ? "completed" : status), `status ${["completed", "complete", "final-approved", "passed", "accepted"].includes(status) ? "good" : ["failed", "blocked", "rejected", "changes-requested"].includes(status) ? "bad" : ""}`);
 function metric(value, label) { const n = el("div", undefined, "metric"); n.append(el("strong", value), el("span", label)); return n; }
 function selectView(next, query = "", increment = null) {
@@ -91,13 +92,18 @@ function roadmapStatusLegend() {
 }
 
 
+function userInstructions(criterion) {
+  const copy = criterion.user_instructions;
+  return data?.presentation_view === "user-v1" && copy?.owner === "agent" &&
+    ["next_action", "completion_proof"].every(key => typeof copy[key] === "string" && copy[key].trim() && textLength(copy[key]) <= 2000) ? copy : null;
+}
 function requirementNodes(criterion) {
   const fallback = [{ text: criterion.description || "" }];
   let remaining = 64;
   const read = (nodes, depth = 1) => {
     if (!Array.isArray(nodes) || !nodes.length || nodes.length > 64 || depth > 3) throw new Error("requirements");
     return nodes.map(node => {
-      if (!node || typeof node !== "object" || typeof node.text !== "string" || !node.text.trim() || node.text.length > 1500 || --remaining < 0) throw new Error("requirements");
+      if (!node || typeof node !== "object" || typeof node.text !== "string" || !node.text.trim() || textLength(node.text) > 1500 || --remaining < 0) throw new Error("requirements");
       if (Object.keys(node).some(key => !["text", "children"].includes(key))) throw new Error("requirements");
       return { text: node.text, ...(node.children === undefined ? {} : { children: read(node.children, depth + 1) }) };
     });
@@ -106,7 +112,7 @@ function requirementNodes(criterion) {
   const normalize = value => String(value).trim().replace(/\s+/gu, " ");
   try {
     const nodes = read(criterion.requirements);
-    return normalize(flatten(nodes).join(" ")) === normalize(criterion.description) ? nodes : fallback;
+    return userInstructions(criterion) || normalize(flatten(nodes).join(" ")) === normalize(criterion.description) ? nodes : fallback;
   } catch { return fallback; }
 }
 function requirementList(nodes, nested = false) {
@@ -120,16 +126,31 @@ function requirementList(nodes, nested = false) {
   return list;
 }
 function criterionRequirements(criterion) {
+  const instructions = userInstructions(criterion);
   const nodes = requirementNodes(criterion);
   const container = el("div", undefined, "criterion-requirement-body");
+  if (instructions) container.append(el("p", criterion.description));
   container.append(requirementList(nodes));
   if (nodes.length > 1 || nodes.some(node => node.children?.length)) {
     container.append(el("p", "These bullets share one criterion and one qualification result.", "small"));
-    const original = el("details", undefined, "original-criterion");
-    original.append(el("summary", "Original criterion wording"), el("p", criterion.description));
-    container.append(original);
+    if (!instructions) {
+      const original = el("details", undefined, "original-criterion");
+      original.append(el("summary", "Original criterion wording"), el("p", criterion.description));
+      container.append(original);
+    }
+  }
+  if (instructions) {
+    container.append(el("p", `Agent work: ${instructions.next_action}`),
+      el("p", `Complete when: ${instructions.completion_proof}`));
   }
   return container;
+}
+
+function appendScope(container, item) {
+  if (!Array.isArray(item.user_scope) || !item.user_scope.length) return;
+  const list = el("ul", undefined, "user-scope");
+  item.user_scope.slice(0, 64).forEach(value => { if (typeof value === "string") list.append(el("li", value)); });
+  container.append(list);
 }
 
 function proposalDetails(increment) {
@@ -172,8 +193,8 @@ function appendBlockerExplanation(container, row) {
   const limits = { needed: 400, prevents: 800, action: 800 };
   const valid = copy && typeof copy === "object" && !Array.isArray(copy) &&
     Object.entries(limits).every(([key, limit]) =>
-      typeof copy[key] === "string" && copy[key].trim() && copy[key].length <= limit);
-  const userText = (key, limit, fallback) => valid && typeof copy[key] === "string" && copy[key].trim() && copy[key].length <= limit ? copy[key] : fallback;
+      typeof copy[key] === "string" && copy[key].trim() && textLength(copy[key]) <= limit);
+  const userText = (key, limit, fallback) => valid && typeof copy[key] === "string" && copy[key].trim() && textLength(copy[key]) <= limit ? copy[key] : fallback;
   const human = row.action_owner === "human";
   container.append(el("strong", valid ? copy.needed : "Clear action instructions are not yet available."));
   container.append(el("p", `Who will act: ${userText("responsible_role", 160,
@@ -233,6 +254,7 @@ function criteriaList(criteria, chunks = []) {
     const linked = chunks.filter(chunk => chunk.criteria_ids.includes(c.id));
     if (linked.length) detail.append(el("p", `Work chunks: ${linked.map(chunk => `${chunk.title} (${readable(chunk.status)})`).join("; ")}`, "small"));
     if (c.evidence_summary) detail.append(el("p", c.evidence_summary, "small"));
+    if (c.evidence_recorded) detail.append(el("p", "Evidence is recorded. The status shows whether the required check has passed.", "small"));
     const support = c.supporting_work || [];
     if (support.length) {
       const local = el("details", undefined, "local-support");
@@ -313,18 +335,23 @@ function render() {
     const row = el("div", undefined, "card-heading"); const title = el("div"); title.append(el("p", item.id, "record-id"), el(sections ? "h3" : "h2", item.title || item.task_id || item.summary || item.id)); row.append(title, badge(sections ? roadmapDisplayStatus(item) : item.status)); card.append(row);
     if (sections && roadmapDisplayStatus(item) === "status-review-needed") card.append(el("p", "The agent must review this status. No specific human action has been recorded.", "small status-review-note"));
     if (item.objective || item.outcome && typeof item.outcome === "object") card.append(el("p", item.objective || item.outcome.success || item.outcome.problem, "objective"));
+    appendScope(card, item);
     const obstacles = sections ? blockerDetails(item) : null; if (obstacles) card.append(obstacles);
     if (item.increments) {
       card.append(el("p", item.evidence_policy === "control-plane-v1" ? "Receipt-backed completion policy" : "Historical roadmap · declarative evidence", "small"));
       if (item.successor) card.append(el("p", item.successor.summary, "small"), action("View active successor roadmap", () => selectView("roadmaps", item.successor.id)));
       for (const legacy of item.merged_history || []) {
         const archive = el("details", undefined, "merged-history");
-        archive.append(el("summary", `Merged history: ${legacy.title}`), el("p", legacy.summary, "small"),
+        archive.append(el("summary", `Merged history: ${legacy.title}`), el("p", data.presentation_view ? legacy.objective : legacy.summary, "small"),
           el("p", "Historical evidence preserved. Remaining execution belongs to this roadmap; no legacy or current qualification pass is inferred.", "small"));
+        appendScope(archive, legacy);
         for (const increment of legacy.increments || []) {
           const detail = el("details", undefined, "increment");
           const heading = el("summary"); heading.append(el("span", `${increment.number}. ${increment.title}`), badge(increment.status === "blocked" ? "archived-pending" : increment.status));
-          detail.append(heading); const proposal = proposalDetails(increment); if (proposal) detail.append(proposal); detail.append(criteriaList(increment.criteria || []));
+          detail.append(heading);
+          if (data.presentation_view) detail.append(el("p", increment.objective));
+          appendScope(detail, increment);
+          const proposal = proposalDetails(increment); if (proposal) detail.append(proposal); detail.append(criteriaList(increment.criteria || []));
           for (const chunk of increment.chunks || []) detail.append(el("p", `${chunk.title}: ${readable(chunk.status)}${chunk.summary ? ` · ${chunk.summary}` : ""}`, "small"));
           for (const owner of (legacy.criterion_owners || []).filter(row => row.increment_id === increment.id)) {
             detail.append(el("p", `${owner.criterion_id} → ${owner.owner_increment_id}/${owner.owner_criterion_id}. ${owner.summary}`, "small"),
@@ -341,6 +368,7 @@ function render() {
       for (const i of item.increments) {
         const details = el("details", undefined, "increment"); if (item.current_increment === i.id || focusedIncrement === i.id) details.open = true;
         const summary = el("summary"); const heading = el("span", `${i.number}. ${i.title}`); summary.append(heading, badge(i.status === "blocked" && !item.blockers?.some(row => row.action_owner === "human") ? "status-review-needed" : i.status)); details.append(summary, el("p", i.objective, "objective"));
+        appendScope(details, i);
         const planning = i.chunk_plan_pending_approval ? "Implementation chunk plan is created after roadmap approval" : i.chunk_plan_pending_start ? "Implementation chunk plan is created when this increment starts" : null;
         details.append(el("p", `${planning || `${i.chunks_complete} / ${i.chunks_planned} work chunks`} · ${i.criteria.filter(c => c.outcome === "passed").length} / ${i.criteria.length} criteria passed`, "small"));
         const proposal = proposalDetails(i); if (proposal) details.append(proposal);
@@ -401,7 +429,10 @@ async function refresh() {
     if (lastDigest !== data.source_digest) { lastDigest = data.source_digest; render(); }
     document.querySelector("#connection").textContent = "Live · JSON connected";
     document.querySelector("#updated").textContent = `Checked ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
-    const error = document.querySelector("#error"); error.hidden = !data.diagnostics.length; error.textContent = data.diagnostics.length ? "Some records could not be loaded. Check the contributor status command for recovery guidance." : "";
+    const error = document.querySelector("#error"); error.hidden = !data.diagnostics.length;
+    error.textContent = !data.diagnostics.length ? "" : data.diagnostics.every(row => row.code === "projection.user-description-unavailable")
+      ? "Some descriptions need an update. The agent will update them. Your action: None."
+      : "Some records could not be loaded. The agent must check the contributor status command for recovery guidance.";
   } catch {
     document.querySelector("#connection").textContent = "Connection interrupted";
     const error = document.querySelector("#error"); error.hidden = false; error.textContent = "The local review server is unavailable. Retry, or start it using the documented review-site command.";

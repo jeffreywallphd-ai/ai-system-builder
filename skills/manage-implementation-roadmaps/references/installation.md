@@ -178,6 +178,12 @@ legacy-only handoff separate and require actual fresh review after scope changes
 
 ## Primary references
 
+For adapters with a user-description view, run its source/qualification binding,
+stale/duplicate/foreign input, joined redaction, historical result preservation and
+inert DOM tests. Confirm technical CLI output remains available, invalid copy gives
+agent-owned recovery guidance, and no description can supply approval or a pass.
+Update routing and installation guidance together with description behavior.
+
 Adapter installations must test `increment-qualified` using portable skill tests
 and repository lifecycle tests. Verify partial/overall-only/stale evidence denial,
 report/plan/evidence binding and preservation of other active increments. Target

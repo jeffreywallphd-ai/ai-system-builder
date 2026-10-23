@@ -2,6 +2,20 @@
 
 # Dynamic Development Review
 
+The production server shows reviewed user descriptions from
+`docs/operations/roadmap-user-descriptions.json`. Purpose, requirement bullets,
+agent action and completion proof replace technical criterion prose. The same
+format covers merged history, roadmap/increment headings and local support limits.
+The technical CLI and canonical roadmap JSON keep the original definitions.
+Description hashes, qualification types and heading hashes must match current
+sources. Missing, stale, duplicate, foreign or unsafe copy shows an agent-owned
+description update, without exposing the technical fallback or changing results.
+The browser does not show a technical criterion accordion. Narrative evidence
+stays internal; the browser preserves its recorded/not-recorded fact and result.
+Other proposal/chunk execution detail retains its existing structured ownership.
+Text limits count Unicode code points in admission and rendering; invalid Unicode
+is refused. File and HTTP limits continue to count encoded bytes.
+
 Start through the unified contributor entry point:
 
 ```text

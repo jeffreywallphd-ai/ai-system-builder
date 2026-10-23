@@ -1,5 +1,15 @@
 # AI Development Control Plane
 
+The browser description adapter is a read-only final projection. It replaces
+criterion prose and headings with independently reviewed, exact-source JSON copy;
+the technical projection/CLI and canonical state are unchanged. Local support
+descriptions bind their exact existing text. It cannot assign action authority,
+change outcome/qualification or complete work. Strict schema, row/text/file bounds,
+joined-text redaction and source freshness apply before display. Missing or invalid
+copy uses neutral agent-owned recovery guidance. The existing2MiB HTTP response
+limit and text-only DOM rendering remain. Generated technical narratives are not
+duplicated into a second complete tree in the HTTP response.
+
 The fixed superseded Run & Test draft may fold beneath the completed Publish
 lifecycle owner only with an exact frozen unapproved/unstarted source, dedicated
 open handoff blocker, current canonical successor approval and complete criterion

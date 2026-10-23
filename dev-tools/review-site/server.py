@@ -16,6 +16,7 @@ from urllib.parse import urlsplit
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "helpers"))
 from control_plane.projection import project
+from control_plane.user_presentation import user_project
 from control_plane.common import digest
 from control_plane.site import server_version
 
@@ -117,7 +118,7 @@ def main():
     args = parser.parse_args()
     if not 0 <= args.port <= 65535 or not (args.repo / "AGENTS.md").is_file():
         parser.error("A repository root and valid local port are required.")
-    with Server(("127.0.0.1", args.port), args.repo) as server:
+    with Server(("127.0.0.1", args.port), args.repo, projection=user_project) as server:
         print(f"http://127.0.0.1:{server.server_port}", flush=True)
         server.serve_forever(poll_interval=0.2)
 

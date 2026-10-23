@@ -46,6 +46,14 @@ Bind separate user descriptions to the current source; do not replace technical
 requirements or expose a technical accordion in the user view. Do not claim full
 ASD-STE100 conformance from these writing principles alone.
 
+For this repository, maintain `docs/operations/roadmap-user-descriptions.json`
+with current criterion/qualification and heading hashes. Review the complete
+meaning of every bullet, action and scope limit separately from syntax/hash checks.
+Include current and inspectable merged history. A display rewrite never removes
+an obligation or supplies a test pass. Do not publish a technical fallback when
+plain copy is stale; the agent must update it. Keep the technical CLI available
+for implementation and preserve exact qualification outcomes and support limits.
+
 For an explicitly authorized change to a pending technical acceptance policy,
 use `technical-acceptance-revised` as documented in `references/events.md`.
 This governed replacement-only event preserves criterion identity/qualification,

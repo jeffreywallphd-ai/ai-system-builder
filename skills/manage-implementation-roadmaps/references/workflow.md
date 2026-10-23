@@ -1,5 +1,14 @@
 # Implementation roadmap workflow
 
+When publishing user descriptions, compare the complete technical meaning first,
+then bind the reviewed copy to current source hashes and qualification types.
+Cover inspectable historical criteria as history; preserve their results and
+superseding owners. Plain purpose, bullet requirements, agent action and completion
+proof must not create new scope or authority. Failed copy admission needs an agent
+description update, not a human blocker. Use the technical CLI/canonical JSON for
+implementation. Check display bounds, redaction, stale/duplicate/foreign refusal,
+inert HTML and unchanged outcomes with automated tests before completion.
+
 User-directed agent-only acceptance uses `acceptance-scope-revised` for governed
 state and the separate `legacy-acceptance-scope-revised` event for mixed legacy
 criteria. Both archive exact human scope without technical closure. Preserve

@@ -1,5 +1,13 @@
 # Contributor Control Plane
 
+For clear user wording, update the versioned
+`docs/operations/roadmap-user-descriptions.json` with the technical source in the
+same change. Independently compare every clause before publication. The production
+HTTP view uses admitted user copy; `review-data` stays technical for agents.
+Source/qualification mismatches produce a description-update diagnostic and an
+agent action, never a human blocker or a raw technical fallback. Keep original
+definitions, results, scope, human approval controls and historical evidence.
+
 For user-directed superseded-proposal cleanup, retain exact history, map every
 former criterion to its real successor, freeze old execution with the existing
 blocker event and use only the registered bounded retirement manifest. Do not

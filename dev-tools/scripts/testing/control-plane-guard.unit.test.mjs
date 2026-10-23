@@ -562,3 +562,51 @@ test("review assigns agent work and human blockers clearly without displaying te
     assert.doesNotMatch(window.document.body.textContent, /Unsupported incomplete copy|staging-fence/);
   } finally { window.close(); }
 });
+
+test("review presents plain requirement bullets and actions without a technical accordion or outcome change", async () => {
+  const dom = new JSDOM(readFileSync("dev-tools/review-site/index.html", "utf8"), { runScripts: "outside-only", url: "http://127.0.0.1:8766" });
+  const { window } = dom;
+  const criterion = { id: "safe-loading", description: "Load a model only when enough memory is free.",
+    requirements: [{ text: "Keep the approved memory guard." }, { text: "Refuse loading when memory is too low." }],
+    user_instructions: { owner: "agent", next_action: "Test the memory check.", completion_proof: "Required tests pass and have a separate review." },
+    qualification: "controlled-environment", evaluation_mode: "agent-executable-technical", outcome: "pending", evidence_recorded: true,
+    technical_description: "Internal diagnostic must remain off the page." };
+  const response = { schema_version: "development-review-v1", presentation_view: "user-v1", source_digest: "plain-user-view",
+    roadmaps: [{ id: "safe-models", title: "Safe model loading", objective: "Keep model loading safe.", user_scope: ["Use the current approved limits."],
+      status: "executing", blocker_count: 0, current_increment: "one", increments: [{ id: "one", number: 1, title: "Test safe loading", objective: "Test the guard.",
+        status: "verifying", user_scope: ["Keep completed accuracy checks closed."], chunks: [], chunks_complete: 0, chunks_planned: 0, criteria: [criterion] }] }],
+    work_items: [], evaluations: [], feedback: [], diagnostics: [] };
+  window.fetch = async () => ({ ok: true, json: async () => structuredClone(response) }); window.setInterval = () => 1;
+  try {
+    window.eval(readFileSync("dev-tools/review-site/app.js", "utf8")); await pause();
+    const body = window.document.body;
+    assert.equal(window.document.querySelectorAll(".original-criterion").length, 0);
+    assert.match(body.textContent, /Agent work: Test the memory check/);
+    assert.match(body.textContent, /Complete when: Required tests pass and have a separate review/);
+    assert.match(body.textContent, /Evidence is recorded/);
+    assert.equal(window.document.querySelectorAll(".criterion-requirement-body li").length, 2);
+    assert.equal(window.document.querySelectorAll(".user-scope li").length, 2);
+    response.source_digest = "maximum-user-bullet";
+    criterion.requirements.push({ text: "x".repeat(1500) });
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.equal(window.document.querySelectorAll(".criterion-requirement-body li").length, 3);
+    response.source_digest = "unicode-user-bounds";
+    criterion.requirements = [{ text: "\u{1f600}".repeat(1500) }];
+    criterion.user_instructions.next_action = "\u{1f600}".repeat(2000);
+    criterion.user_instructions.completion_proof = "\u{1f600}".repeat(2000);
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.equal(Array.from(window.document.querySelector(".criterion-requirement-body li span").textContent).length, 1500);
+    assert.equal(window.document.querySelectorAll(".original-criterion").length, 0);
+    assert.match(body.textContent, /Agent work:/);
+    assert.doesNotMatch(body.textContent, /Internal diagnostic/);
+    assert.equal(window.document.querySelector(".criteria > li > .status").textContent, "technical check pending");
+    response.source_digest = "description-recovery";
+    response.diagnostics = [{ code: "projection.user-description-unavailable" }];
+    criterion.description = "The agent must update this description.";
+    criterion.requirements = [{ text: "<img src=x onerror=alert(1)> remains inert." }];
+    window.document.querySelector("#refresh").click(); await pause();
+    assert.match(window.document.querySelector("#error").textContent, /The agent will update them. Your action: None/);
+    assert.equal(window.document.querySelectorAll("img,.criterion-blockers").length, 0);
+    assert.equal(window.document.querySelector(".criteria > li > .status").textContent, "technical check pending");
+  } finally { window.close(); }
+});

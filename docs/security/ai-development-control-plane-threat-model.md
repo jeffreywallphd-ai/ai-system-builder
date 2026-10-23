@@ -1,5 +1,16 @@
 # AI Development Control Plane Threat Model
 
+Reviewed user descriptions are untrusted display input, not acceptance authority.
+The adapter binds criterion identity, complete description hash and qualification,
+or the exact title/objective hash. Support copy binds existing scope/limitation
+text. Refuse stale, duplicate, foreign, oversized or unknown-schema copy. Check
+joined text across fields/list fragments for secret/path redaction before display.
+Render text inertly. Invalid copy cannot expose raw technical fallback, grant an
+approval, change an outcome, clear a pending check or request new human authority.
+Canonical sources and the agent CLI retain technical details. Human action still
+comes only from the explicit governing issue record. The unchanged HTTP limit
+bounds the complete user projection; diagnostics never include rejected text.
+
 - Status: current
 - Verification: `dev-tools/helpers/tests/`, `skills/manage-implementation-roadmaps/tests/test_roadmap.py`
 - Related decisions: ADR-0015, ADR-0042

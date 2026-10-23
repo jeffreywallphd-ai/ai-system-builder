@@ -153,3 +153,8 @@ For unclear review-site instructions, use the existing source-bound presentation
 JSON. State the responsible role, exact action, action location and completion
 proof. Show plain user wording on the review site and retain technical definitions
 internally. Reclassification is not a test pass, scope removal or new authority.
+
+The browser description adapter reads `docs/operations/roadmap-user-descriptions.json`.
+Review semantic completeness before binding current source/qualification hashes.
+Retain the technical CLI and canonical JSON for agent work; stale copy means an
+agent must update the description. Display formatting cannot change qualification.
