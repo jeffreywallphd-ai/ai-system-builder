@@ -2,8 +2,8 @@
 
 # Functionality and Quality-Adjusted Optimization Implementation Roadmap
 
-- Status: `executing`
-- Updated: `2026-10-23T15:58:34Z`
+- Status: `completed`
+- Updated: `2026-10-23T22:02:32Z`
 
 ## Objective
 
@@ -187,7 +187,7 @@ Current-source review identified this remaining native or policy boundary. The u
 | 1: Responsive workspace navigation and composition | Make Home, feature summaries and Add element useful at representative catalog scale without transferring or re-reading entire collections for counts or one candidate page. | None | `completed` |
 | 2: Efficient and reliable background task journeys | Make downloads, preparation, Context generation, training and image generation remain understandable and release resources correctly when users navigate, disconnect, cancel or encounter a failure, while reducing idle polling. | responsive-workspace-browse | `completed` |
 | 3: Quality-preserving Context and RAG efficiency | Reduce measured query allocation and repeated work in the existing portable LanceDB/Context workflow while preserving exact validation, citations and retrieval correctness. | efficient-reliable-task-journeys | `completed` |
-| 4: Qualify complete user and model outcomes | Turn the implemented feature set into a truthful release decision through representative accessibility/usability, dataset/model and operational outcome evidence, fixing only measured in-scope gaps and preserving existing roadmap owners. | quality-preserving-context-efficiency | `verifying` |
+| 4: Qualify complete user and model outcomes | Turn the implemented feature set into a truthful release decision through representative accessibility/usability, dataset/model and operational outcome evidence, fixing only measured in-scope gaps and preserving existing roadmap owners. | quality-preserving-context-efficiency | `completed` |
 
 ## Increment 1: Responsive workspace navigation and composition
 
@@ -354,7 +354,7 @@ Restore the exact validated query implementation and package format without chan
 ## Increment 4: Qualify complete user and model outcomes
 
 - Id: `qualified-user-and-model-outcomes`
-- Status: `verifying`
+- Status: `completed`
 - Dependencies: `quality-preserving-context-efficiency`
 
 Turn the implemented feature set into a truthful release decision through representative accessibility/usability, dataset/model and operational outcome evidence, fixing only measured in-scope gaps and preserving existing roadmap owners.
@@ -382,8 +382,8 @@ Human portions of the original work packages, deliverables, verification and com
 | --- | --- | --- |
 | `existing-qualification-preserved`: Each existing pending criterion has an owning roadmap and evidence reference or explicit pending reason. New evidence never silently rewrites historical approvals; the active-source Run & Test proposal and security remediation remain separately approval-gated. | local | passed (review) |
 | `accessibility-outcomes-qualified`: Automated packaged-desktop and thin-client UI checks verify keyboard traversal/activation, modal focus return, accessible names/roles/status semantics, 320 CSS-pixel reflow, computed contrast, status text independent of color and reduced motion on declared supported profiles. Critical automated exceptions, data loss or authority confusion block qualification. Retain actual DOM/semantic/visual evidence; unavailable checks remain pending. | controlled-environment | passed (test) |
-| `model-quality-resource-outcomes`: For authorized installed-model trials, retain task quality, invalid-output rate, retry count, accepted examples per minute, peak RAM/VRAM, elapsed time and observed cleanup. Completed Standard output-quality tests for the approved pinned0.5B/1.5B profiles are closed under the explicit user30%/80% contract. Original paired/no-regression observations remain historical rather than an additional veto over that accepted absolute quality contract. Before-load resource denial has no model output/accuracy and cannot block quality closure; do not repeat accepted accuracy checks. Retain separate CPU/accelerator, precision and constrained/unchecked observations without splicing historical sources into a fresh matrix. Resource/optimization qualification still requires at least20% better accepted-output throughput or demonstrated adherence to the approved per-profile resource budget using actual measurements. Preserve actual software failures, unknown cleanup and separate current host/target/final-gate qualification; this policy amendment supplies no new resource, hardware or offload pass. | controlled-environment | pending (review) |
-| `full-current-qualification`: After every increment is implemented, triage the existing standard-Node failures without treating skips as passes, run test:all once plus relevant repository gates/builds, obtain separate-invocation current candidate review and complete the overall-validation work item. Every required controlled criterion must pass before final roadmap completion. | local | failed (test) |
+| `model-quality-resource-outcomes`: For authorized installed-model trials, retain task quality, invalid-output rate, retry count, accepted examples per minute, peak RAM/VRAM, elapsed time and observed cleanup. Completed Standard output-quality tests for the approved pinned0.5B/1.5B profiles are closed under the explicit user30%/80% contract. Original paired/no-regression observations remain historical rather than an additional veto over that accepted absolute quality contract. Before-load resource denial has no model output/accuracy and cannot block quality closure; do not repeat accepted accuracy checks. Retain separate CPU/accelerator, precision and constrained/unchecked observations without splicing historical sources into a fresh matrix. Resource/optimization qualification still requires at least20% better accepted-output throughput or demonstrated adherence to the approved per-profile resource budget using actual measurements. Preserve actual software failures, unknown cleanup and separate current host/target/final-gate qualification; this policy amendment supplies no new resource, hardware or offload pass. | controlled-environment | passed (test) |
+| `full-current-qualification`: After every increment is implemented, triage the existing standard-Node failures without treating skips as passes, run test:all once plus relevant repository gates/builds, obtain separate-invocation current candidate review and complete the overall-validation work item. Every required controlled criterion must pass before final roadmap completion. | local | passed (test) |
 | `security-impact-reviewed`: Refresh the threat/control delta, prove isolation, failure bounds and non-disclosure for this increment, and preserve a rollback at least as secure as the forward path. Coordinate with the security remediation owner rather than duplicating its controls. | local | passed (review) |
 
 ### Technical policy amendment history
