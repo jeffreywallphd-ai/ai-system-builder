@@ -43,3 +43,51 @@ browser behavior is covered by the contributor Node tests. Use `review-site
 status` for readiness and `review-site stop` for explicit, identity-checked
 shutdown. A localhost isolation policy may require the host's normal approval
 mechanism; keep the binding on numeric loopback.
+
+## Readable complete proposals
+
+Affected criteria have an always-visible **Blockers** subsection naming the actual
+obstacle, the operation it prevents and the needed action. The fixed
+`docs/operations/roadmap-blocker-presentation.json` map binds exact criterion
+identity/current description and a fresh still-open canonical blocker digest.
+Summary and action come from current roadmap JSON; the reviewed association adds
+only a bounded operation explanation. Missing/stale/resolved/foreign mappings
+diagnose and retain the parent **Why blocked** disclosure. Ordinary pending
+verification is independent from obstacle presence and never becomes a pass.
+
+Each increment shows bounded JSON dependencies, work packages, deliverables, verification,
+rollback and exclusions in **Increment proposal details**. Planned packages are
+separate from recorded implementation chunks. An unapproved proposal explains
+that chunk planning follows approval; an approved pending increment explains
+that its chunk plan is created when the increment starts. Neither invents work
+or changes qualification.
+
+Acceptance uses explicit nested requirement arrays from
+`docs/operations/roadmap-criterion-presentation.json`. Shared conditions and
+predicates remain with their requirements; alternatives stay together. Every
+bullet shares its criterion's single result. **Original criterion wording**
+retains the complete canonical text. The fixed presentation file is bounded,
+identity/source-description SHA-256 bound and must reconstruct the exact ordered
+canonical wording after whitespace normalization. Stale, malformed or altered
+entries fall back to the complete sanitized original as one bullet. No runtime
+punctuation heuristic or Markdown parser is used.
+
+Roadmap display labels show Pending for canonical ready, In progress for
+executing and Awaiting approval for roadmap-review. Actual open blockers
+remain Blocked; a blocked record with an explicit zero blocker count
+keeps its source status and shows a needs-review note. The accessible
+status key above Open Roadmaps explains these labels and pending
+qualification without changing criteria or granting authority. Labels never change
+canonical workflow state, ordering, approval or start authority.
+
+The status key also explains Technical check pending, missing evidence,
+passed/failed checks, scoped reviewed support and intermediate skill
+states. Pending verification is distinct from a recorded blocker.
+Execution records are sorted by original creation before the finite
+1,000-record display limit and a byte admission limit below the unchanged
+2 MiB response bound. The API exposes total/shown/truncated facts
+and a diagnostic if either limit is exceeded; current work beyond the old
+200-record cap remains visible without exposing private record fields.
+Linked work resolves full requirements, evidence and blockers from its exact
+roadmap/increment/criterion identity in the same response, avoiding duplicate
+criterion payloads. Older rich work records remain a display fallback.

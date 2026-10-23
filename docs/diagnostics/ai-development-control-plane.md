@@ -320,3 +320,45 @@ automated assertions. Human acceptance is offline. Expand local support to see
 recorded work and limits, and follow successor navigation for superseded delivery
 plans. Keep canonical failed/pending evidence, native/security/reference gaps and
 stronger governed completion guards intact.
+
+## Complete proposal presentation
+
+Maintain precise criterion blocker associations in
+`docs/operations/roadmap-blocker-presentation.json`, schema
+`roadmap-criterion-blockers-v1`. Rows identify the roadmap/increment/criterion,
+bind `source_description_sha256` to raw canonical UTF-8 wording and list
+`blocker_id`, `source_blocker_digest` from `control_plane.common.digest` and an
+operation explanation in `prevents`. Never associate every criterion merely
+because its parent is blocked. Independently review the actual pending target
+and authoritative obstacle. Current canonical JSON supplies summary/action;
+resolved or changed obstacles cannot be shown through an old map. Bounds are
+1 MiB, 1,000 rows, 20 references per criterion and 800 explanation characters.
+Mapping failure retains parent obstacle visibility with a diagnostic.
+
+The review site's increment proposal details show dependencies, work packages, deliverables,
+verification, rollback and exclusions independently from executed chunks. Draft
+review and approved-but-not-started increments explain when chunk planning occurs;
+no zero-chunk record is presented as missing implementation work or as a pass.
+
+Maintain readable acceptance formatting in the fixed versioned
+`docs/operations/roadmap-criterion-presentation.json` document. Each row names the
+roadmap, increment and criterion and binds `source_description_sha256` to the
+canonical public description. Its `requirements` array contains `text` and
+optional nested `children`. Retain exact ordered wording, including conditions,
+connectors, alternatives and numerical requirements; group shared context above
+its children. Arrays are presentation only and never independent acceptance
+records. All entries are limited to 64 nodes / 3 levels and the document to 1000 rows
+and 1 MiB. Missing or stale formatting shows original sanitized wording. Update the
+matching row after a governed description amendment; this cannot amend acceptance.
+
+The status key also explains Technical check pending, missing evidence,
+passed/failed checks, scoped reviewed support and intermediate skill
+states. Pending verification is distinct from a recorded blocker.
+Execution records are sorted by original creation before the finite
+1,000-record display limit and a byte admission limit below the unchanged
+2 MiB response bound. The API exposes total/shown/truncated facts
+and a diagnostic if either limit is exceeded; current work beyond the old
+200-record cap remains visible without exposing private record fields.
+Linked work resolves complete criterion details by exact roadmap/increment/criterion
+identity in the same response; it does not duplicate long requirement/evidence
+trees or change their qualification.

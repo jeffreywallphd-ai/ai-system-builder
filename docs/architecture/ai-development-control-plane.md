@@ -187,3 +187,54 @@ whole-candidate qualification is not asserted. Missing/invalid/active/failed rec
 remain unverified. Decoration never changes canonical outcomes, status, approvals,
 chunks or qualification policy. Agent-executable labels and approved successor
 links clarify current technical scope while preserving original histories.
+
+## Lossless acceptance and proposal display
+
+The fixed `docs/operations/roadmap-blocker-presentation.json` map annotates only
+explicitly associated affected criteria. Exact identities, raw canonical
+description SHA-256 and the current canonical open blocker digest bind every
+association. Projection builds that index anew for each response, not from a
+stale display snapshot. It exposes sanitized canonical summary/action and a
+bounded reviewed operation explanation under a visible criterion Blockers list.
+No criterion outcome or authority changes. Invalid/foreign/duplicate/stale or
+resolved mappings diagnose and fall back to the always-preserved current parent
+obstacle display. The 1 MiB/1,000-row/20-reference/800-character limits and fixed
+source path prevent arbitrary reads and unbounded display expansion. Semantic
+review verifies the association; digests alone cannot prove which work it blocks.
+
+Review projection decorates each criterion with bounded explicit requirement
+nodes before supporting-work and merged-history enrichment, so parent, linked
+work and archived-owner views share the same presentation. The one fixed
+versioned presentation file is identity/hash bound to the already sanitized
+canonical description; its ordered tree must reproduce that description after
+whitespace normalization. Up to 1000 rows,64nodes per criterion, 3 levels and 1 MiB
+are admitted. Unknown fields, duplicate/foreign identities, stale hashes and
+changed/omitted/reordered text fall back to the complete safe original with a
+generic diagnostic. Missing data also falls back safely. Rendering uses nested
+semantic lists and textContent with one parent result and an original-wording
+disclosure; no subpass, approval or state mutation is introduced.
+
+Increment proposal projection allowlists only dependency IDs, work-package id/title/outcome,
+deliverables, verification, rollback and exclusions. Collections are capped at 40
+items and strings use existing safe-text bounds (80/240/1600/4000 characters).
+Research, approval/authority notes, raw local records and arbitrary fields remain
+private. Proposal packages never become executed chunks. Pending increments
+without a plan explain either approval-first or start-time planning according
+to their canonical review/approval state; existing active missing plans retain
+their diagnostic wording.
+
+Roadmap display labels show Pending for canonical ready, In progress for
+executing and Awaiting approval for roadmap-review. Actual open blockers
+remain Blocked; a blocked record with an explicit zero blocker count
+keeps its source status and shows a needs-review note. The accessible
+status key above Open Roadmaps explains these labels and pending
+qualification without changing criteria or granting authority. Labels never change
+canonical workflow state, ordering, approval or start authority.
+
+The status key also explains Technical check pending, missing evidence,
+passed/failed checks, scoped reviewed support and intermediate skill
+states. Pending verification is distinct from a recorded blocker.
+Execution records are sorted by original creation before the finite
+1,000-record display limit. The API exposes total/shown/truncated facts
+and a diagnostic if this limit is exceeded; current work beyond the old
+200-record cap remains visible without exposing private record fields.

@@ -174,3 +174,36 @@ contrast retries measure the same exact element after scrolling, with original
 attempts preserved. A profile mismatch, unresolved rule, browser failure or
 source drift prevents a pass. UI corrections change no authorization, preview
 execution, model loading or data-retention authority.
+
+## Readable proposal display delta
+
+Criterion blocker mapping is a separate fixed bounded JSON trust boundary.
+Known criterion identity/raw description SHA and exact fresh canonical open
+blocker digest are required; data cannot override canonical summary/action,
+qualification, state or approval. Current canonical JSON supplies the source on
+every projection. Reject stale, resolved, foreign, duplicated and malformed
+associations; preserve parent obstacle visibility and a generic diagnostic.
+The operation explanation is sanitized bounded plain text, not new authority.
+Independent association review prevents blanket blocking or treating ordinary
+pending checks as obstacles. No credential values are recorded or displayed.
+
+Acceptance formatting and increment proposals are untrusted display data. The
+fixed contained presentation JSON has finite byte/row/node/depth/text limits;
+exact identity, description SHA-256 and ordered whole-description equivalence
+prevent stale substitutions, omissions, additions and fragment-based redaction
+bypasses. Compare against canonical text only after its existing sanitization.
+Duplicates or malformed/foreign entries cannot override admitted acceptance;
+fallback retains the complete safe original and a generic diagnostic. Browser
+validation repeats finite node/wording checks and uses textContent, never HTML,
+links, evaluation or command execution. Semantic classification of grouping is
+independently reviewed; hashes alone do not establish readable logical scope.
+
+Proposal exposure allowlists only bounded sanitized public work-package and
+procedure strings, excluding research, authority notes and unknown fields. No
+local file lookup or effect follows a displayed identifier. The UI distinguishes
+planned packages from executed chunks and retains one qualification result per
+criterion. Tests cover hostile markup, credentials/paths split across fragments,
+stale hashes, omissions/reordering, duplicates, bounds, fallback, proposal-state
+explanations and unchanged canonical history. Rollback removes decoration only;
+canonical requirements remain visible and all approval/native/security/runtime
+qualification boundaries remain unchanged.
