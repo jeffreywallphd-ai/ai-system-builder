@@ -25,6 +25,16 @@ They are not written to satisfy vanity coverage metrics or performative CI check
 - Vitest ownership follows actual import/re-export/dynamic-import syntax, parsed
   as code. Comments and fixture strings cannot change test ownership. Vitest and
   Node discovery remain separate; the runner's own tests must remain discoverable.
+- Aggregate Vitest runs use the exact discovered source files, disable ambient
+  configuration, and check the collected set before accepting results. CLI path
+  substring filters must not execute saved checkpoint copies or unrelated tests.
+  Use one UI worker to bound memory on contributor machines. Missing reports,
+  unexpected files, unhandled errors and all-skipped execution cannot qualify;
+  retain legitimate individual skips separately from passing tests.
+  Validate report ancestors before creating directories or replacing old output.
+  Refuse redirected report paths without changing their targets. Empty standard
+  or E2E discovery writes a fresh zero-execution failure report; empty UI AI
+  discovery is explicitly delegated to the separate controlled AI runner.
 - Text-source fixture assertions normalize line endings before semantic checks.
   Test the actual user journey; hidden tabs need not fetch data eagerly.
 - Canonical repo commands:

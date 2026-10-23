@@ -36,6 +36,9 @@
 - Give adapters focused integration coverage for real translation and boundary behavior.
 - Add host/transport integration tests for wiring, composition, delegation, and safe error mapping.
 - Keep tests deterministic, CI-suitable, and non-flaky.
+- Aggregate UI selection is exact and source-owned, with one worker and no ambient
+  configuration. Saved worktree copies cannot enter coverage through substring
+  matches; missing reports, extra files, unhandled errors and all-skipped runs fail.
 - Keep Context generation AI E2E coverage download-free: generate a tiny local
   embedding model, use bounded source fixtures, validate LanceDB package,
   exact table schema, vector/citation lineage, and query integrity
