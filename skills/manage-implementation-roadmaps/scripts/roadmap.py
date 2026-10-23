@@ -962,6 +962,8 @@ def handle_increment_started(state: dict[str, Any], event: dict[str, Any]) -> No
         raise RoadmapError("Complete or block the active increment before starting another.")
     if not approval_is_current(state):
         raise RoadmapError("Roadmap approval is absent or stale.")
+    if any(item.get("status") != "resolved" for item in state["blockers"]):
+        raise RoadmapError("Resolve and reconcile all blockers before starting an increment.")
     increment_id = require_identifier(event.get("incrementId"), "event.incrementId")
     increment = find_increment(state, increment_id)
     pending = [item for item in state["increments"] if item["status"] == "pending"]
@@ -1487,6 +1489,14 @@ def handle_resumed(state: dict[str, Any], event: dict[str, Any]) -> None:
         else:
             increment["status"] = "researching"
         state["status"] = "executing"
+    elif state["increments"] and all(
+        item["status"] == "completed" for item in state["increments"]
+    ):
+        state["status"] = "roadmap-ready-to-close"
+    elif state["increments"] and all(
+        item["status"] in INCREMENT_DONE for item in state["increments"]
+    ):
+        state["status"] = "implementation-complete-qualification-pending"
     else:
         state["status"] = "ready"
 

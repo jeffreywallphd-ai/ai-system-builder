@@ -633,6 +633,108 @@ class RoadmapEngineTest(unittest.TestCase):
                 {"type": "increment-started", "incrementId": "increment-2"}
             )
 
+    def test_new_increment_refuses_unresolved_blockers_atomically(self) -> None:
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        approved = copy.deepcopy(self.state)
+        kinds = ["environment", "dependency", "decision", "credential", "production-authority", "technical"]
+        for kind, status in [(kind, "open") for kind in kinds] + [("technical", "pending"), ("technical", None)]:
+            with self.subTest(kind=kind, status=status):
+                self.state = copy.deepcopy(approved)
+                self.apply({
+                    "type": "blocker-recorded", "id": "actual-obstacle", "kind": kind,
+                    "summary": "A required technical prerequisite is unavailable.",
+                    "requiredAction": "Resolve and reconcile the actual prerequisite before starting.",
+                })
+                # Only an explicitly resolved record can grant start admission.
+                self.state["blockers"][0]["status"] = status
+                before = copy.deepcopy(self.state)
+                roadmap.write_project_files(self.repo, self.state)
+                paths = [self.repo / path for path in self.state["paths"].values()]
+                original_files = {path: path.read_bytes() for path in paths}
+                event_file = self.repo / "start-event.json"
+                event_file.write_text(json.dumps({"type": "increment-started", "incrementId": "increment-1"}), encoding="utf-8")
+                with self.assertRaisesRegex(roadmap.RoadmapError, "blocker"):
+                    roadmap.command_apply(argparse.Namespace(repo=str(self.repo), state=self.state["paths"]["state"], event_file=str(event_file), dry_run=False))
+                self.assertEqual(self.state, before)
+                self.assertEqual({path: path.read_bytes() for path in paths}, original_files)
+                self.assertEqual(self.state["roadmapApproval"], approved["roadmapApproval"])
+                self.assertIsNone(self.state["currentIncrementId"])
+
+    def test_resolving_only_some_blockers_keeps_new_increment_denied(self) -> None:
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        for identifier in ["first-obstacle", "second-obstacle"]:
+            self.apply({"type": "blocker-recorded", "id": identifier, "kind": "technical", "summary": "A required prerequisite is unavailable.", "requiredAction": "Resolve the actual prerequisite."})
+        self.apply({"type": "resumed", "blockerId": "first-obstacle", "resolution": "The first prerequisite is available.", "reconciliation": "Verified only the first prerequisite; the other remains unavailable."})
+        before = copy.deepcopy(self.state)
+        with self.assertRaisesRegex(roadmap.RoadmapError, "blocker"):
+            self.apply({"type": "increment-started", "incrementId": "increment-1"})
+        self.assertEqual(self.state, before)
+
+    def test_resolved_blocker_allows_start_and_preserves_approval(self) -> None:
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        approval = copy.deepcopy(self.state["roadmapApproval"])
+        self.apply({"type": "blocker-recorded", "id": "runtime-prerequisite", "kind": "environment", "summary": "The required runtime is unavailable.", "requiredAction": "Verify runtime availability."})
+        self.apply({"type": "resumed", "blockerId": "runtime-prerequisite", "resolution": "The required runtime is available.", "reconciliation": "Verified the prerequisite before continuing."})
+        self.assertEqual(self.state["status"], "ready")
+        self.assertTrue(roadmap.approval_is_current(self.state))
+        self.apply({"type": "increment-started", "incrementId": "increment-1"})
+        self.assertEqual(self.state["status"], "executing")
+        self.assertEqual(self.state["currentIncrementId"], "increment-1")
+        self.assertEqual(self.state["roadmapApproval"], approval)
+        self.assertEqual(self.state["blockers"][0]["status"], "resolved")
+
+    def test_resolved_blocker_does_not_allow_incomplete_dependencies(self) -> None:
+        self.define_and_approve([increment_definition("increment-1", 1), increment_definition("increment-2", 2, depends_on=["increment-1"])])
+        # A legacy non-active blocked prefix is still an incomplete dependency.
+        self.state["increments"][0]["status"] = "blocked"
+        self.apply({"type": "blocker-recorded", "id": "environment", "kind": "environment", "summary": "A host prerequisite is unavailable.", "requiredAction": "Verify host availability."})
+        self.apply({"type": "resumed", "blockerId": "environment", "resolution": "The host is available.", "reconciliation": "The host recovered; the earlier increment remains incomplete."})
+        before = copy.deepcopy(self.state)
+        with self.assertRaisesRegex(roadmap.RoadmapError, "dependencies are incomplete"):
+            self.apply({"type": "increment-started", "incrementId": "increment-2"})
+        self.assertEqual(self.state, before)
+
+    def test_resumed_derives_inactive_status_without_qualifying_work(self) -> None:
+        initial = copy.deepcopy(self.state)
+        for outcome, future_pending, expected in [
+            ("passed", False, "roadmap-ready-to-close"),
+            ("pending", False, "implementation-complete-qualification-pending"),
+            ("pending", True, "ready"),
+        ]:
+            with self.subTest(outcome=outcome, future_pending=future_pending):
+                self.state = copy.deepcopy(initial)
+                increments = [increment_definition("increment-1", 1, qualification="controlled-environment", allow_pending=True)]
+                if future_pending:
+                    increments.append(increment_definition("increment-2", 2, depends_on=["increment-1"]))
+                self.define_and_approve(increments)
+                self.execute_increment(1, outcome)
+                preserved = copy.deepcopy({key: self.state[key] for key in ["increments", "evidence", "chunks", "roadmapApproval"]})
+                self.apply({"type": "blocker-recorded", "id": "host", "kind": "environment", "summary": "A host prerequisite is unavailable.", "requiredAction": "Verify host recovery."})
+                self.apply({"type": "resumed", "blockerId": "host", "resolution": "Host prerequisite recovered.", "reconciliation": "Recovery changes no implementation or qualification facts."})
+                self.assertEqual(self.state["status"], expected)
+                self.assertEqual({key: self.state[key] for key in preserved}, preserved)
+                self.assertIsNone(self.state["currentIncrementId"])
+
+    def test_resumed_preserves_active_stage_and_stale_approval_precedence(self) -> None:
+        self.define_and_approve([increment_definition("increment-1", 1)])
+        approved = copy.deepcopy(self.state)
+        for stage in ["researching", "planning", "implementing", "verifying", "stale-approval"]:
+            with self.subTest(stage=stage):
+                self.state = copy.deepcopy(approved)
+                self.apply({"type": "increment-started", "incrementId": "increment-1"})
+                if stage != "researching":
+                    self.apply({"type": "increment-research-recorded", "summary": "Research complete.", "sources": [{"title": "Current source"}], "risks": ["Preserve actual progress."]})
+                if stage in ["implementing", "verifying"]:
+                    self.apply({"type": "increment-plan-recorded", "plan": implementation_plan(1)})
+                if stage == "verifying":
+                    self.apply({"type": "chunk-recorded", "chunkId": "chunk-1", "summary": "Implemented outcome.", "areas": ["Scoped area"], "tests": ["Focused check passed."], "documentation": ["Guidance updated."], "feedbackAddressed": []})
+                if stage == "stale-approval":
+                    self.apply({"type": "feedback-recorded", "id": "new-choice", "summary": "User requests a changed high-level choice.", "category": "decision", "impact": "high-level", "targetIncrementId": "increment-1", "disposition": "needs-decision", "nextAction": "Obtain actual approval."})
+                self.apply({"type": "blocker-recorded", "id": "host", "kind": "environment", "summary": "A required host is unavailable.", "requiredAction": "Verify recovery."})
+                self.apply({"type": "resumed", "blockerId": "host", "resolution": "Host recovered.", "reconciliation": "Resume only the prior progress; no qualification change."})
+                self.assertEqual(self.state["status"], "approval-required" if stage == "stale-approval" else "executing")
+                self.assertEqual(self.state["increments"][0]["status"], "paused-for-approval" if stage == "stale-approval" else stage)
+
     def test_revision_preserves_completed_work_and_replaces_pending_suffix(self) -> None:
         self.define_and_approve(
             [

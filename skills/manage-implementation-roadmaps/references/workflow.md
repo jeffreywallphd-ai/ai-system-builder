@@ -27,6 +27,13 @@ transfer may close only when every retained technical criterion already passes.
   limited to security-named work.
 - The state engine records workflow facts but never runs implementation or test
   commands.
+- Approved not-started work is pending (`ready`); active work is in progress
+  (`executing`). A future start order alone is not an obstacle. Record `blocked`
+  only when an actual prerequisite prevents progress, and retain user sequencing
+  in the plan rather than inventing automatic cross-roadmap enforcement.
+- A new increment cannot start while any blocker is unresolved. After actual
+  resolution use `resumed` with reconciliation; approval, increment ordering and
+  dependency checks still apply. A resume declaration is not external proof.
 
 ## Artifact model
 

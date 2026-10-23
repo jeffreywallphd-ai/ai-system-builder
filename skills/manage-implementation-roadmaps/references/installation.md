@@ -102,6 +102,14 @@ roadmaps; it cannot replace their current candidate-bound completion evidence.
 
 Before publishing or changing the skill:
 
+Preserve the portable new-increment blocker guard and its atomic denial tests.
+An approved not-started roadmap with an unresolved blocker cannot start; complete
+`resumed` reconciliation permits normal admission while approval, order and
+dependency guards remain intact. Keep pending (`ready`), in-progress (`executing`)
+and actual-obstacle (`blocked`) guidance aligned on every supported agent host.
+A future user start order stays a workflow constraint, not an invented blocker or
+proof that another roadmap completed.
+
 Preserve the reviewed-chunk checkpoint procedure across hosts. Completed, tested
 and independently reviewed chunks commit on the authorized branch before later
 chunks even when parent qualification is pending. Verify owned paths/hunks and

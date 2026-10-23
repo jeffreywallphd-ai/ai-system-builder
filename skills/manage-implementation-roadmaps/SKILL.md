@@ -24,6 +24,16 @@ binding for current aggregate qualification. The final increment may be verifyin
 while all predecessors are implemented. Pending controlled qualification never
 becomes a pass and still prevents final roadmap closure.
 
+Approved work that has not started is pending (`ready`), and active work is in
+progress (`executing`). Record `blocked` only for an actual obstacle. A user-ordered
+future start is a plan/workflow constraint, not automatically a blocker or an
+external-roadmap enforcement mechanism. New increments refuse unresolved blockers;
+use `resumed` after actual resolution and reconciliation, retaining approval,
+ordered increments and dependencies.
+Resuming derives status from actual progress: inactive implemented work retains
+pending qualification, and all completed increments remain ready to close.
+Reclassification grants no implementation, qualification or closure.
+
 For an explicitly authorized change to a pending technical acceptance policy,
 use `technical-acceptance-revised` as documented in `references/events.md`.
 This governed replacement-only event preserves criterion identity/qualification,

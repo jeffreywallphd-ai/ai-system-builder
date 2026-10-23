@@ -101,6 +101,12 @@ Before architecture-sensitive implementation, consult `docs/adr/decision-readine
 
 ## Implementation Roadmap Routing
 
+Approved not-started work is Pending (`ready`); active work is In progress
+(`executing`). Reserve Blocked for an actual obstacle. User-ordered future work
+stays queued in its plan, without inventing a blocker or automatic cross-roadmap
+gate. For actual blockers, use the skill's `resumed` reconciliation before a new
+increment; current approval, ordering and dependencies remain mandatory.
+
 Requests to commit completed and tested roadmap chunks also use the roadmap
 skill. Its scoped checkpoint procedure preserves unrelated changes and pending
 parent qualification; a checkpoint grants no publication or main advancement.

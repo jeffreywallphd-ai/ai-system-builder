@@ -242,6 +242,13 @@ invalidates the prior roadmap approval.
 { "type": "increment-started", "incrementId": "contract-slice" }
 ```
 
+The event requires current approval, the next pending increment and satisfied
+dependencies, and refuses every blocker not explicitly resolved before changing
+state or generated documents. Resolve actual obstacles through `resumed` with
+reconciliation. Approved not-started work remains pending (`ready`); a user-ordered
+future start is a plan constraint, not itself a blocker or an automatic check of
+another roadmap's completion.
+
 ### `increment-research-recorded`
 
 ```json
@@ -623,6 +630,11 @@ High-level, scope-changing, and needs-decision feedback invalidates roadmap appr
 Kinds: `environment`, `dependency`, `decision`, `credential`,
 `production-authority`, or `technical`.
 
+Record a blocker only for an actual obstacle. Not-started approved work is pending,
+and ongoing work is in progress. When correcting a scheduling-only misclassification,
+use `resumed` with the actual reclassification authority and retain the user order
+in the plan; do not claim that an unavailable prerequisite passed or completed.
+
 ### `resumed`
 
 ```json
@@ -633,3 +645,10 @@ Kinds: `environment`, `dependency`, `decision`, `credential`,
   "reconciliation": "Re-inspected uncommitted changes and reran the focused baseline."
 }
 ```
+
+After resolution, other open blockers retain `blocked` and stale approval retains
+`approval-required`. Active work resumes its actual research/planning/implementation/
+verification stage. Without active work, all completed increments yield
+`roadmap-ready-to-close`; all implemented increments with outstanding qualification
+yield `implementation-complete-qualification-pending`; a remaining pending increment
+yields `ready`. None of these labels grants qualification or closes work.
