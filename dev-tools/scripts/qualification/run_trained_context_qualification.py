@@ -71,7 +71,8 @@ def physical_exit_code(process, native_thread, native_result):
 def finish_owned_child(process, readers, native_thread, native_result, stderr_tail, folder, workload_error):
     global _UNCONFIRMED_CHILD
     cleanup_errors = []
-    if process.poll() is None:
+    termination_requested = process.poll() is None
+    if termination_requested:
         try:
             if os.name == "nt":
                 stopped = subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True, timeout=10)
@@ -104,14 +105,29 @@ def finish_owned_child(process, readers, native_thread, native_result, stderr_ta
                 stream.close()
         except OSError as error:
             _UNCONFIRMED_CHILD = UnconfirmedChildExit(process.pid, workload_error, [*cleanup_errors, failure_kind(error)])
+    lifecycle = {"launcher_pid": process.pid, "launcher_exit_code": process.poll(),
+                 "native_exit_code": observed, "native_exit_confirmed": observed is not None,
+                 "readers_stopped": not reader_join_failed and not any(reader.is_alive() for reader in readers),
+                 "termination_requested": termination_requested,
+                 "shutdown_failure_types": cleanup_errors, "model_cleanup_status": "not-observed"}
+    if _UNCONFIRMED_CHILD is not None:
+        _UNCONFIRMED_CHILD.evidence.update(lifecycle)
     try:
         if stderr_tail:
             diagnostic = folder / f"private-diagnostic-{uuid.uuid4().hex}.log"
             with diagnostic.open("x", encoding="utf-8") as output:
                 output.write("".join(stderr_tail))
+    except (OSError, UnicodeError) as error:
+        lifecycle["diagnostic_failure_type"] = failure_kind(error)
+        if workload_error is not None:
+            workload_error.owned_child_failure = {"reason": "workload-failed", **lifecycle}
+        else:
+            error.owned_child_failure = {"reason": "diagnostic-unavailable", **lifecycle}
+            raise
     finally:
         if _UNCONFIRMED_CHILD is not None:
             raise _UNCONFIRMED_CHILD from None
+    return lifecycle
 
 
 def abort_unconfirmed_child(error, report, save):
@@ -281,7 +297,7 @@ def measure(args, folder, model_path):
             raise ValueError(f"Embedding accelerator cleanup failed: allocated={allocated}, reserved={reserved}.")
         environment={"platform":sys.platform,"python":sys.version.split()[0],"torch":torch.__version__,"transformers":importlib.metadata.version("transformers"),"lancedb":lancedb.__version__,"pyarrow":pyarrow.__version__,"cuda_runtime":torch.version.cuda,"accelerator":torch.cuda.get_device_name() if args.device=="cuda" else None,"accelerator_memory_bytes":torch.cuda.get_device_properties(0).total_memory if args.device=="cuda" else 0, "memory_profile":memory_profile_evidence() if args.profile=="constrained-2gib" else {"profile":"physical-reference"}}
         progress["status"]="passed"
-        print(json.dumps({"kind": "result", "environment":environment, "cold_ms": cold, "samples_ms": durations, "answers": answers, "recall_at_5": statistics.mean(recalls), "query_recalls": recalls, "actual_tensor_devices": sorted(devices), "peak_vram_bytes": torch.cuda.max_memory_allocated() if args.device == "cuda" else 0, "runtime_vram_floor_bytes":initial_allocated,"runtime_reserved_floor_bytes":initial_reserved,"remaining_vram_bytes":allocated,"remaining_reserved_bytes":reserved,"cleanup_passed":True}), flush=True)
+        print(json.dumps({"kind": "result", "environment":environment, "cold_ms": cold, "samples_ms": durations, "answers": answers, "recall_at_5": statistics.mean(recalls), "query_recalls": recalls, "actual_tensor_devices": sorted(devices), "peak_vram_bytes": torch.cuda.max_memory_allocated() if args.device == "cuda" else 0, "peak_reserved_vram_bytes":torch.cuda.max_memory_reserved() if args.device=="cuda" else 0,"runtime_vram_floor_bytes":initial_allocated,"runtime_reserved_floor_bytes":initial_reserved,"remaining_vram_bytes":allocated,"remaining_reserved_bytes":reserved,"cleanup_passed":True}), flush=True)
     finally:
         if progress["status"]=="running": progress["status"]="failed"
         save_progress()
@@ -301,12 +317,23 @@ def child(args, folder):
         measure(args, folder, model)
 
 
-def run_child(args, folder, count, mode, variant="candidate", device="cpu", phase="timing",profile="reference"):
+def run_child(args, folder, count, mode, variant="candidate", device="cpu", phase="timing",profile="reference", *, execution_seconds=600, early_identity=False):
+    # The separate optional generation protocol retains its original1200s
+    # generation deadline. Existing Context callers keep900s prepare/600s query.
+    extended_standard_cpu = (execution_seconds == 2400 and mode == "measure" and device == "cpu"
+        and Path(SCRIPT).resolve() == ROOT / "dev-tools/scripts/qualification/run_standard_generation_qualification.py")
+    if (type(execution_seconds) is not int or (execution_seconds not in (600, 1200) and not extended_standard_cpu)
+            or type(early_identity) is not bool):
+        raise ValueError("Unsupported owned qualification deadline.")
+    deadline = 900 if mode == "prepare" else execution_seconds
     if _UNCONFIRMED_CHILD is not None:
         raise _UNCONFIRMED_CHILD
     command = [sys.executable, "-s", "-B", str(SCRIPT), "--child", mode, "--run-id", folder.name, "--count", str(count), "--variant", variant, "--device", device, "--phase", phase, "--profile",profile,"--samples", str(args.samples), "--model-manifest", args.model_manifest]
     process = subprocess.Popen(command, cwd=ROOT, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
     stderr_tail=[]; readers=[]; native_thread=None; native_result=[]
+    startup_deadline = time.monotonic() + 60
+    reason = "startup-incomplete"
+    workload_error = None
     try:
         messages = queue.Queue(maxsize=4); overflow = threading.Event()
         def drain(stream, collect):
@@ -322,37 +349,95 @@ def run_child(args, folder, count, mode, variant="candidate", device="cpu", phas
                     stderr_tail.append(line)
         readers = [threading.Thread(target=drain, args=(process.stdout, True), daemon=True), threading.Thread(target=drain, args=(process.stderr, False), daemon=True)]
         for reader in readers: reader.start()
-        ready = json.loads(messages.get(timeout=60))
-        if ready.get("kind") != "ready" or any(type(ready.get(key)) is not int or not 0 < ready[key] <= 0xFFFFFFFF for key in ("pid", "parent_pid")) or (ready["pid"] != process.pid and ready["parent_pid"] != process.pid):
+        def startup_message():
+            nonlocal reason
+            remaining = startup_deadline - time.monotonic()
+            if remaining <= 0:
+                reason = "startup-deadline"
+                raise queue.Empty()
+            while True:
+                if overflow.is_set():
+                    reason = "output-limit"
+                    raise ValueError("Qualification startup output exceeded its bound.")
+                # EOF/nonzero exit must not consume the full startup deadline.
+                try:
+                    line = messages.get(timeout=min(remaining, 0.05))
+                    try:
+                        return json.loads(line)
+                    except (ValueError, TypeError):
+                        reason = "protocol-invalid"
+                        raise
+                except queue.Empty:
+                    if overflow.is_set():
+                        reason = "output-limit"
+                        raise RuntimeError("Qualification startup output exceeded its bound.")
+                    if process.poll() is not None:
+                        raise
+                    remaining = startup_deadline - time.monotonic()
+                    if remaining <= 0:
+                        reason = "startup-deadline"
+                        raise
+        ready = startup_message()
+        reason = "protocol-invalid"
+        if not isinstance(ready, dict) or ready.get("kind") != ("identity" if early_identity else "ready") or any(type(ready.get(key)) is not int or not 0 < ready[key] <= 0xFFFFFFFF for key in ("pid", "parent_pid")) or (ready["pid"] != process.pid and ready["parent_pid"] != process.pid):
             raise ValueError("Qualification child identity failed.")
         if os.name == "nt":
+            reason = "native-observation-unavailable"
             native_ready = threading.Event()
             def native():
                 try:
-                    native_result.append(observe(ready["pid"], native_ready.set, (900 if mode == "prepare" else 600) * 1000 + 30_000))
+                    native_result.append(observe(ready["pid"], native_ready.set, deadline * 1000 + (60_000 if early_identity else 0) + 30_000))
                 except Exception:
                     native_result.append(None)
                     native_ready.set()
             native_thread = threading.Thread(target=native, daemon=True)
             native_thread.start()
-            if not native_ready.wait(5) or native_result:
+            if not native_ready.wait(min(5, max(0, startup_deadline - time.monotonic()))) or native_result:
                 raise RuntimeError("Owned native child observation unavailable.")
         elif ready["pid"] != process.pid:
             raise ValueError("A distinct native worker cannot be observed on this profile.")
+        if early_identity:
+            identity = (ready["pid"], ready["parent_pid"])
+            process.stdin.write("observe\n"); process.stdin.flush()
+            reason = "startup-incomplete"
+            ready = startup_message()
+            reason = "protocol-invalid"
+            if not isinstance(ready, dict) or ready.get("kind") != "ready" or (ready.get("pid"), ready.get("parent_pid")) != identity or any(type(ready.get(key)) is not int for key in ("pid", "parent_pid")):
+                raise ValueError("Qualification measurement identity failed.")
+        reason = "protocol-invalid"
+        if type(ready.get("rss_bytes")) is not int or not 0 <= ready["rss_bytes"] <= 4 * 1024 ** 3:
+            raise ValueError("Qualification child memory observation failed.")
         baseline = peak = ready["rss_bytes"]
         process.stdin.write("run\n"); process.stdin.flush()
         started = time.monotonic()
+        reason = "workload-failed"
         while process.poll() is None:
-            if overflow.is_set() or time.monotonic() - started > (900 if mode == "prepare" else 600):
+            if overflow.is_set():
+                reason = "output-limit"
+                raise RuntimeError("Trained qualification exceeded a bound.")
+            if time.monotonic() - started > deadline:
+                reason = "execution-deadline"
                 raise RuntimeError("Trained qualification exceeded a bound.")
             try: peak = max(peak, rss(ready["pid"]))
             except OSError: process.wait(timeout=0.25)
             if peak > 4 * 1024 ** 3:
+                reason = "rss-limit"
                 raise RuntimeError("Qualification child exceeded the fixed 4GiB safety ceiling.")
             time.sleep(0.005)
         for reader in readers: reader.join(timeout=2)
-        if overflow.is_set() or any(reader.is_alive() for reader in readers) or process.returncode or physical_exit_code(process, native_thread, native_result) != 0:
+        if overflow.is_set():
+            reason = "output-limit"
+            raise RuntimeError("Trained qualification exceeded a bound.")
+        if any(reader.is_alive() for reader in readers):
+            reason = "reader-shutdown-unavailable"
             raise RuntimeError("Trained qualification failed.")
+        if process.returncode:
+            raise RuntimeError("Trained qualification failed.")
+        native_code = physical_exit_code(process, native_thread, native_result)
+        if native_code != 0:
+            reason = "native-exit-unavailable" if native_code is None else "native-exit-failed"
+            raise RuntimeError("Trained qualification failed.")
+        reason = "protocol-invalid"
         result = json.loads(messages.get(timeout=1))
         if result.get("kind") != "result" or not messages.empty():
             raise ValueError("Qualification output invalid.")
@@ -361,8 +446,23 @@ def run_child(args, folder, count, mode, variant="candidate", device="cpu", phas
             return result["corpus"]
         result.update(baseline_rss_bytes=baseline, peak_rss_bytes=peak, incremental_peak_rss_bytes=max(0, peak-baseline),physical_exit_code=0)
         return result
+    except BaseException as error:
+        workload_error = error
+        raise
     finally:
-        finish_owned_child(process, readers, native_thread, native_result, stderr_tail, folder, sys.exc_info()[1])
+        try:
+            lifecycle = finish_owned_child(process, readers, native_thread, native_result, stderr_tail, folder, sys.exc_info()[1])
+        except UnconfirmedChildExit as error:
+            error.evidence["workload_reason"] = reason if workload_error is not None else None
+            raise
+        except Exception as error:
+            if isinstance(getattr(error, "owned_child_failure", None), dict):
+                error.owned_child_failure["workload_reason"] = reason if workload_error is not None else None
+            raise
+        if workload_error is not None and isinstance(lifecycle, dict):
+            # Attach finite supervisor metadata without replacing the original
+            # exception type or treating a forced exit as graceful model cleanup.
+            workload_error.owned_child_failure = {"reason": reason, **lifecycle}
 
 
 def main():
@@ -413,13 +513,15 @@ def main():
                     item["attempts"].append({"variant":variant,"phase":"timing","status":"running"}); save()
                     timed=run_child(args,folder,count,"measure",variant,device,profile=profile)
                     results[variant]=timed
-                    item[variant]={key:value for key,value in timed.items() if key not in ("answers","kind")}
+                    # Keep synthetic returned sets for independent exact-result
+                    # replay; historical reports without them remain unchanged.
+                    item[variant]={key:value for key,value in timed.items() if key != "kind"}
                     item[variant].update(p95_ms=percentile95(timed["samples_ms"]),memory_runs=[])
                     item["attempts"][-1]["status"]="passed"; save()
                     for memory_index in range(3):
                         item["attempts"].append({"variant":variant,"phase":"memory","sample":memory_index,"status":"running"}); save()
                         measured=run_child(args,folder,count,"measure",variant,device,"memory",profile)
-                        item[variant]["memory_runs"].append({key:measured[key] for key in ("baseline_rss_bytes","peak_rss_bytes","incremental_peak_rss_bytes","cleanup_passed","physical_exit_code")})
+                        item[variant]["memory_runs"].append({key:measured[key] for key in ("baseline_rss_bytes","peak_rss_bytes","incremental_peak_rss_bytes","cleanup_passed","physical_exit_code","environment","actual_tensor_devices","peak_vram_bytes","peak_reserved_vram_bytes","runtime_vram_floor_bytes","runtime_reserved_floor_bytes","remaining_vram_bytes","remaining_reserved_bytes")})
                         item[variant]["incremental_peak_rss_bytes"]=statistics.median(run["incremental_peak_rss_bytes"] for run in item[variant]["memory_runs"])
                         item["attempts"][-1]["status"]="passed"; save()
                 item["quality"]=compare(results["baseline"],results["candidate"])

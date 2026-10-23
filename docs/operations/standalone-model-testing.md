@@ -3,20 +3,22 @@
 - Status: current
 - Verification: `dev-tools/scripts/qualification/tests/test_standalone_model_tests.py`
 
-For the complete reviewed CPU/GPU two-model comparison and inventory of every
-remaining memory/output prerequisite, use the new explicit
-[all-blocked bundle mode](model-blocker-testing.md). Its prospective lightweight
-Windows profile has a longer finite1.5B CPU window and absolute batch/resource
-targets. The commands below retain their original diagnostic defaults; those
-defaults alone are not the full qualification matrix. The contributor prepares
-and independently reviews the exact bundle before supplying its run command.
+## Current qualification scope
 
-Close Codex to free RAM, then open Command Prompt. The launcher
-uses the existing repository AI Python environment and an installed Node runtime;
-it installs nothing and works from any current directory.
+Completed Standard model accuracy is closed under the accepted 30%/80%
+requirements for the 0.5B/1.5B models. Do not repeat those tests to close unrelated
+resource, host or native work. See the [model evidence bundle](model-blocker-testing.md)
+for retained protocols and current scope. New collection still needs its own
+reviewed, authorized evidence purpose; these reference commands grant none.
+
+## Diagnostic commands (reference)
+
+For a separately approved diagnostic, open Command Prompt in the repository
+folder. The launcher uses the existing AI Python environment and installed Node
+runtime. It installs nothing. Running it separately frees the coding agent's RAM.
 
 ```bat
-"C:\Users\jeffr\GitHubProjects\projects\ai-system-builder\dev-tools\scripts\qualification\run-model-tests.cmd"
+"dev-tools\scripts\qualification\run-model-tests.cmd"
 ```
 
 The default runs the already cached, pinned Qwen 1.5B model on CPU in both
@@ -131,7 +133,21 @@ roadmap acceptance gate passed. Exit code 1 means preflight, execution or cleanu
 was incomplete. Earlier runs are never overwritten. Review individual failures
 alongside successes; do not pool repetitions as extra independent quality cases.
 
+## Concurrent test commands
+
+Run one model test command at a time. The diagnostic, Standard and evidence-bundle
+commands use the same operating-system locks. A second command refuses execution
+while another command or its child still owns a lock. Wait for that test to exit,
+then retry. Do not delete lock files. A stopped process releases its own lock;
+a surviving child keeps its lock until it exits. The child takes its lock after
+the supervisor confirms native process observation and before model work starts.
+Plan-only commands do not reserve execution locks.
+
 ## Scope and security review
+
+The following run608aab71 findings describe that historical diagnostic only.
+They do not reopen the completed Standard accuracy tests or apply the old
+comparison policy to the current 30%/80% requirements.
 
 The [assessment of supplied run 608aab71](standalone-model-evidence-assessment.json)
 preserves its exact hashes, independently replayed partial results and roadmap
@@ -145,9 +161,9 @@ one-case CUDA rerun. Both unchecked and constrained modes then produced correct
 first/warm measurements, EOS termination, observed model unload and native exit
 zero. Unchecked output used 47 new tokens and constrained output 33, below the
 unchanged 192-token ceiling. This validates the diagnostic seam on those GPU
-deliveries; it does not establish the cause of the earlier CPU cost. Current CPU
-admission remained denied, and the complete matrix/quality comparison remains
-pending.
+deliveries; it does not establish the cause of the earlier CPU cost. At that time, CPU
+admission remained denied and the complete matrix/quality comparison was
+pending. Later accepted Standard quality is closed as stated above.
 
 Security disposition: `security-relevant`. Protected assets are model-cache
 integrity, host RAM/VRAM, retained offload files, source identity and private
@@ -180,9 +196,10 @@ Only the two previously pinned Qwen acquisitions are supported. The runner
 creates no offload stage, claims no retained lease and never removes old model
 files. It neither changes nor completes historical qualification/roadmap
 records. The exposed 24-case corpus is useful for reproducible diagnostics,
-not a fresh holdout or a general model-capability claim. No accuracy threshold
-is weakened for a smaller model. Formal qualification still needs its approved
-comparison protocol and exact-target review. Offload recovery remains separate.
+not a fresh holdout or a general model-capability claim. Current quality uses the approved model-specific 30%/80%
+requirements; this diagnostic does not change or rerun them. Any new qualification
+needs its own approved purpose and exact-target review. Offload recovery remains
+separate.
 
 Residual limits: the supervisor samples RSS rather than enforcing a kernel
 memory quota; native Windows observation must be available or execution fails

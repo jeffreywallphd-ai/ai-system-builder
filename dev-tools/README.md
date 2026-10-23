@@ -2,6 +2,27 @@
 
 # Developer tools
 
+To run cached model tests after closing the coding agent, use
+`scripts/qualification/run-model-tests.cmd` from Command Prompt, or
+`scripts/qualification/run-model-tests.ps1` from PowerShell. Both preserve incremental JSON
+evidence for later review without changing roadmap qualification. See
+[standalone model testing](../docs/operations/standalone-model-testing.md) for
+commands, runtime requirements, safety controls and evidence locations.
+
+The legacy `--all-blocked` option requires a reviewed remaining-only plan.
+Completed Standard model accuracy is closed under the accepted 30%/80%
+requirements; do not repeat those checks. The inventory keeps every registered
+incomplete qualification owner, even when it has no open human-action issue.
+It rejects changed registry inputs, missing targets, owners whose declared targets
+are all complete, and unknown open-issue owners. The issue-only security entry requires its
+unresolved issue. Pending native/offload/provider/OCR/host work stays separate.
+See [model evidence testing](../docs/operations/model-blocker-testing.md) for
+the retained protocol and its limits. Planning grants no execution authority.
+After termination, add `--restart` (`-Restart` in PowerShell) to start one fresh
+same-source/protocol trial from that reviewed template. Old evidence remains;
+OS-owned Standard coordinator/worker slots prevent overlapping supported tests.
+This does not resume an interrupted cohort or qualify its missing cleanup.
+
 The review site's `review-site` source-owned check profile runs the complete fixed
 Node DOM/controller test file for exact HTML/JavaScript/CSS/test ownership. It
 preserves all UI assertions while avoiding unrelated directory-owned desktop

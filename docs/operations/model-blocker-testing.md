@@ -1,10 +1,30 @@
 # Complete standalone model evidence bundle
 
-- Status: runner implementation; actual model qualification remains pending
+- Status: accepted Standard model-quality checks closed; other technical qualification remains pending
 - Verification: `dev-tools/scripts/qualification/tests/test_model_blocker_tests.py`
 - Authority: approved installed-model tests and the user-requested realistic host profile
 
-## Current handoff: unresolved evidence only
+## Current qualification scope
+
+The user accepted at least 30% correct output for the 0.5B model and at least
+80% for the 1.5B model, measured on completed output tests. Those quality checks
+are closed. Do not repeat them to close unrelated resource, host or native work.
+Earlier thresholds, failures and collected evidence remain historical records.
+
+The inventory includes each registered incomplete roadmap and its declared
+criteria, even if an old issue record is resolved. A resolved issue does not
+pass a technical criterion. Unknown open-issue owners, changed registry inputs,
+missing criteria and owners whose declared targets are all complete still refuse planning. The
+issue-only security entry must retain its unresolved issue. The legacy CLI and
+JSON field names remain compatible. Only a specific required human action is a
+blocker in the roadmap review site; agent work stays pending. Inventory reads
+public metadata and starts no model or provider call.
+
+## Historical remaining-only protocol
+
+The following handoff records the earlier remaining-only test protocol. It is
+kept for traceability. Its commands and old quality targets are not instructions
+to repeat the accepted accuracy tests.
 
 New CLI plans require an independently assessed bundle reference. For the latest
 collection, prepare without loading any weights:
