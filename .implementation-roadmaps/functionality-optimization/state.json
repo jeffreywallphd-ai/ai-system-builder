@@ -103,7 +103,88 @@
       "summary": "User explicitly assigned human acceptance offline and requested agent-executable technical acceptance. Human portions of original instructions are superseded; no pass or closure is asserted."
     }
   ],
-  "blockers": [],
+  "blockers": [
+    {
+      "id": "generation-and-managed-host-qualification-blocked",
+      "kind": "technical",
+      "recordedAt": "2026-10-22T16:25:37Z",
+      "requiredAction": "Use a prospectively declared reviewed Standard-only harness for approved installed models, preserving failed trials and exact matching cohort metrics, or complete qualified native offload recovery. Obtain actual missing managed-host outcomes and current target-bound checks/review. Retrieval-only Context budgets are not generation budget approval. Preserve completed exact-target F1-F3 status. This blocks only missing final qualification, not independent feasible support coding.",
+      "resolution": "Reconcile the old combined description after actual managed-host restoration and supplied CPU evidence. Generation remains explicitly blocked under current-generation-matrix-unqualified; BF16 loading and one-case CUDA feasibility do not qualify the fixed full matrix, and restored Assets journeys do not qualify all whole-host generation outcomes.",
+      "resolvedAt": "2026-10-22T22:16:11Z",
+      "status": "resolved",
+      "summary": "No current complete generation comparison meets the fixed quality and accepted-output throughput or separately approved generation-budget alternative. The completed0.5B prompt screen lost baseline-correct constrained cases,1.5B StandardCPU was memory-denied, optional runs depend on the denied native restart, and the managed whole-host environment is unavailable."
+    },
+    {
+      "id": "current-generation-matrix-unqualified",
+      "kind": "technical",
+      "recordedAt": "2026-10-22T22:16:11Z",
+      "requiredAction": "Use a prospectively reviewed complete matched model/precision/decoder/device harness and qualify quality, accepted-output throughput, memory, finite timing and cleanup; or complete qualified native offload recovery. Preserve all partial/failed trials and actual whole-host outcome requirements. Retrieval-only Context budgets do not authorize generative budgets; neither one-case tests nor another precision/model is a passing substitute. Preserve completed F1-F3 qualification.",
+      "resolution": "Metadata action precision correction only: matched-generation-quality-resource-pending continues the actual gap. A complete Standard-only matrix remains an independent path; optional native offload recovery is a prerequisite only for that selected path and must be followed by actual matched model qualification. Neither recovery, renderer reload nor partial diagnostic results supply a pass.",
+      "resolvedAt": "2026-10-22T22:18:48Z",
+      "status": "resolved",
+      "summary": "No complete current matched generation comparison qualifies the fixed quality and accepted-output throughput or separately approved generative-budget alternative. Supplied 608a pinned1.5B BF16 CPU diagnostics loaded and completed first24 cases in each decoder at22correct, then hit the unchanged1200second deadline during warm phases. The one-case CUDA first/warm checks pass only diagnostic feasibility and cleanup. Earlier0.5B baseline-correct losses, Float32 CPU memory denials and native offload restart denial remain retained. Managed Assets qualification is now available local support, not missing whole-host generation qualification."
+    },
+    {
+      "id": "matched-generation-quality-resource-pending",
+      "kind": "technical",
+      "recordedAt": "2026-10-22T22:18:48Z",
+      "requiredAction": "A prospectively reviewed complete Standard-only matrix for approved installed models is independently actionable; run matched model/precision/decoder/device cohorts and qualify quality, accepted-output throughput, memory, finite timing, cleanup and missing whole-host outcomes. If optional offloading is selected, first qualify native restart protection/accounting, then run and pass the same complete matched model matrix. Native recovery alone never substitutes for model qualification. Keep Context retrieval budgets separate from generative budgets and preserve completed F1-F3.",
+      "resolution": "Superseded the outdated pre-experiment description with standard-model-quality-throughput-and-capacity-gaps. Current measured gaps remain open under that precise blocker; this is a status reconciliation, not resolution of model qualification.",
+      "resolvedAt": "2026-10-22T23:41:47Z",
+      "status": "resolved",
+      "summary": "No complete current matched generation matrix qualifies the fixed quality and accepted-output throughput or separately approved generative-budget alternative. Supplied608a pinned1.5B BF16 CPU trials loaded, scored22correct of24firstcases per decoder and timed out during warm phases; one-case CUDA first/warm checks prove only diagnostic feasibility and cleanup. Preserve earlier0.5B baseline-correct losses, Float32 CPU denials and native offload admission denial. Local managed Assets renderer-reload qualification does not prove all generation outcomes or server restart."
+    },
+    {
+      "id": "standard-model-quality-throughput-and-capacity-gaps",
+      "kind": "technical",
+      "recordedAt": "2026-10-22T23:41:47Z",
+      "requiredAction": "Retain the fixed quality/no-lost-correct and accepted-output throughput targets, or a separately prospectively approved generative budget. Complete safely admitted matched CPU/accelerator/model/precision/decoder cohorts and missing whole-host outcomes through reviewed source-bound work; exposed cases are not fresh tuning validation. Keep the observed quality/throughput failures and CPU capacity gaps visible. Native protection must qualify before any offload route; recovery alone never qualifies models. Preserve final owning all-suite/build/security review, completed F1-F3 and separate accessibility owners. Retrieval-only budgets do not authorize generation.",
+      "resolution": "Historical assessment superseded by the validated operator bundle and explicit user22of24 absolute-quality acceptance. Unresolved technical concerns transfer to reviewed-model-cohort-and-host-gaps; they remain open. This records no model, native, host or roadmap qualification pass.",
+      "resolvedAt": "2026-10-23T11:05:22Z",
+      "status": "resolved",
+      "summary": "Reviewed Standard-only experiments attempted all48 owned workers on the frozen current runtime. Pinned1.5B BF16 GPU quality is23of24 in every first/warm phase with zero lost baseline-correct cases, but median delivery ratios0.962711 unchecked and1.018119 constrained miss1.20; all12 CPU attempts were memory-denied. Pinned0.5B Float32 candidate quality is9/24 unchecked and12/24 constrained on GPU,12/24 unchecked and10/24 constrained on CPU; only2of3 constrained CPU candidates completed. Ten historical baselines failed the finite field/label contract and two later CPU baselines were denied. No complete model profile qualifies; all48 native exits and model cleanup were observed. Earlier608a and other failures remain preserved."
+    },
+    {
+      "id": "reviewed-model-cohort-and-host-gaps",
+      "kind": "technical",
+      "recordedAt": "2026-10-23T11:05:21Z",
+      "requiredAction": "Retain the user-accepted22of24 absolutequality check as passed for completed1.5B measurements. Complete safely admitted missing CPU/decoder/model repetitions and whole-host outcomes, preserving paired no-regression observations and smaller-model quality gaps. GPU resource-budget success is valid scoped evidence; do not require a failed legacy1.20 comparison as the only route where the approved absolute-budget alternative applies. Preserve all originalprotocol results, unclassified partial baseline rows and previous denials. Keep native/offload protection, final exact-target checks/review and owning aggregate gates separate; no guard weakening, new model or credential authority follows.",
+      "resolution": "Superseded the earlier bundle description after separately reviewed1283evidence. Actual remaining concerns stay open under remaining-model-quality-capacity-and-host-gaps. This does not grant a full criterion/chunk/increment or roadmap pass.",
+      "resolvedAt": "2026-10-23T13:49:48Z",
+      "status": "resolved",
+      "summary": "Latest reviewed operator bundle4a779a completed collection of48workerattempts:23measured,16memory-denied,9historicalbaselinecontract failures;48native exits0 and model cleanups observed. User22of24 absolutequalitycheck passes all7completed1.5B candidate cohorts, including CPU22of24. Larger-model GPU first/warm23of24, zero lost baseline-correct cases and prospective300second/6GiB budgets pass. Its only CPU unchecked pair remains23baseline/22candidate(one lost-correct case);10CPU attempts are denied and constrained CPU is unmeasured. Legacy GPU delivery medians1.026526/1.071532 remain below1.20.0.5B candidates are12of24CPUunchecked,9unchecked/12constrainedGPU;allconstrainedCPUdenied and9historicalbaselinesfail. Earlierfailed/abortedresultsstayhistorical; no complete model criterion qualifies."
+    },
+    {
+      "id": "remaining-model-quality-capacity-and-host-gaps",
+      "kind": "technical",
+      "recordedAt": "2026-10-23T13:49:48Z",
+      "requiredAction": "Retain the two additional CPU absolute-quality/resource passes and previously accepted candidates without re-execution. Resolve remaining smaller-model task-quality and larger constrained-CPU capacity outcomes under reviewed realistic budgets, then obtain missing actual whole-host outcomes and fresh target/aggregate qualification. Preserve original paired/no-regression findings and approved absolute-resource alternative; do not impose the legacy1.20 gain as the sole path. A successor remaining-only selector needs review before reusing this partial bundle. Native/offload/restricted review boundaries remain separate.",
+      "resolution": "Resolved the obsolete accuracy/capacity portions under the explicit user30/80completed-test quality contract. Model-quality tests are passed and closed. Separate remaining software qualification is named by composite-host-and-current-qualification-pending; no full composite criterion or roadmap pass follows.",
+      "resolvedAt": "2026-10-23T14:20:48Z",
+      "status": "resolved",
+      "summary": "Reviewed remaining-only bundle1283a33f1a7a4d3ca7bf0864d13b3557 supplies two additional1.5B BF16 CPU unchecked repetitions at22/24 in both phases within1800seconds/4GiB sampled RSS. All12smaller-model cohorts now complete within resource budgets, but semantic scores remain12CPUunchecked/10CPUconstrained/9CUDAunchecked/12CUDAconstrained per24. Three1.5B constrained CPU trials remain memory-denied at3.5GiB available-RAM admission. All17native exits0/cleanups observed;14measurements and672case rows verified. Earlier7accepted candidates are historical separate references, not spliced current-source runs. No full model criterion or new chunk closes."
+    },
+    {
+      "id": "composite-host-and-current-qualification-pending",
+      "kind": "technical",
+      "recordedAt": "2026-10-23T14:20:48Z",
+      "requiredAction": "Reuse the completed30/80model-quality artifact without rerunning accepted cases or treating this PC capacity as a quality failure. Preserve original paired observations as history and qualify the wider composite comparison/host requirements plus fresh exact-target and final aggregate/build/review gates. Actual optional offload safeguards and execution remain separately owned software concerns. The requested notification-center memory guidance is independent software work, not a reason to rerun the accepted model benchmark.",
+      "resolution": "The explicit user absolute-quality policy supersedes the old comparative-quality/unavailable-RAM veto. Completed quality remains closed; genuine resource/current software qualification transfers to resource-host-and-current-final-qualification without a new pass.",
+      "resolvedAt": "2026-10-23T15:22:33Z",
+      "status": "resolved",
+      "summary": "The accepted completed model-quality dependency is closed. Remaining qualification concerns the wider unchanged composite comparison/host requirements and current exact-target plus final aggregate/build/review gates; the3local resource denials and37.5-50 percent small-model accuracy are no longer quality blockers."
+    },
+    {
+      "id": "resource-host-and-current-final-qualification",
+      "kind": "technical",
+      "recordedAt": "2026-10-23T15:22:33Z",
+      "requiredAction": "Keep completed30%/80% quality tests closed and reuse their reviewed source-bound artifact without rerunning accuracy. Assess actual retained per-profile throughput-or-approved-budget, RAM/VRAM/timing/retry/cleanup records and required current host/target/final qualification after remaining product changes. Do not treat this PC admission denials as accuracy failures, splice historical runs into a current matrix, weaken guards, or infer native/offload/provider/security qualification.",
+      "resolution": null,
+      "resolvedAt": null,
+      "status": "open",
+      "summary": "The user-approved completed Standard model-quality contract is closed at30% for0.5B and80% for1.5B; before-load resource denial has no accuracy result. The superseded comparative-quality and all-unavailable-cohorts quality veto is archived by same-identity technical amendment. Existing actual throughput-or-approved-budget/resource/cleanup evidence and current host/target/final qualification remain distinct pending software assessment; no model rerun or full composite pass is recorded."
+    }
+  ],
   "chunks": [
     {
       "areas": [
@@ -1652,6 +1733,193 @@
       "outcome": "failed",
       "recordedAt": "2026-10-22T03:15:09Z",
       "summary": "Completed the bounded0.5Bgrounded-caption development trial and exposed0.5B/1.5Bregression comparison with fixed settings and reviewed actual native cleanup. Development improved44/48versus42/48 but only one unique case improved twice. Exposed0.5Bquality still failed;1.5Bconstrained regressed23to22/24with heldout03lost in both phases. Shared production caption was withdrawn conservatively, original bytes restored, regression tests/docs retained, and independently reviewed Work completed. Broad exposed comparison does not isolate caption causality. No fresh unseen validation or full3replicate qualification was supplied. CPUadmission remains pending under the unchanged memory guard; existing quality/20percentthroughput gates and earlier failures are preserved. Model-size expectations now distinguish narrow review-required0.5Bproposals from separately measured larger-model utility without weakening original acceptance."
+    },
+    {
+      "artifact": "docs/operations/functionality-outcome-qualification.md",
+      "command": "run_trained_context_qualification.py full nine-cohort matrix then assess_context_environment_budget.py",
+      "criterionId": "context-runtime-qualified",
+      "id": "evidence-58",
+      "incrementId": "quality-preserving-context-efficiency",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-22T05:57:36Z",
+      "summary": "The user approved the existing environment-budget alternative prospectively: <=2GiB whole-query process RSS per CPU/CUDA profile and <=512MiB allocated/reserved query VRAM on pinned MiniLM/current host. Full final-source nine-cohort requalification and independent assessment remain pending. Preserve all earlier original25percent failures and every recall/exact-result/p95/enforced2GiB-constrainedCPU/native-exit/cleanup check; this pending entry is not a pass or erasure of failed historical measurements."
+    },
+    {
+      "artifact": ".local-codex/trained-context/b4a4a67e441d45f2a74f256305dc0570/report.json",
+      "command": "Full trained Context matrix,30samples/5warmups/3fresh-memory children per arm; no new acquisition",
+      "criterionId": "context-runtime-qualified",
+      "id": "evidence-59",
+      "incrementId": "quality-preserving-context-efficiency",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-22T06:25:04Z",
+      "summary": "Full final-source nine-cohort requalification is in progress under the explicitly approved2GiB process RSS and512MiB query allocated/reserved VRAM alternative. Six cohorts have completed with recall1.0 and lower p95; original25percent10k RSS failures remain failed in the raw report. The final100k CPU/CUDA/constrained cohorts, complete absolute-budget assessment and separate review remain required. No partial run is passed. Source9ee729399a36010e870a48e76267310ba3ab82d856edf0fb2330c5a17bd5367a."
+    },
+    {
+      "artifact": "docs/operations/context-efficiency-qualification.json",
+      "command": "Final-source trained Context matrix plus approved budget assessment and independent actual-report replay; fresh target receipt remains required",
+      "criterionId": "context-stage-baseline",
+      "id": "evidence-60",
+      "incrementId": "quality-preserving-context-efficiency",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T06:40:56Z",
+      "summary": "Retain the separately labeled historical deterministic baseline:1000/10000/100000 rows, captured cold/repeated timings, per-stage durations and three fresh RSS processes per arm;100k384D was unavailable and128D retained unchanged bounds. Its candidate26a28205 exactly matches the CRLF442518c46 source. Later retrieval changes add explicit embedding-device selection and nonquery denial; historical timings are not relabeled new. The new full current-source trained matrix adds actual CPU/CUDA cold/30measured queries and three fresh memory children per arm with current cleanup."
+    },
+    {
+      "artifact": ".local-codex/trained-context/b4a4a67e441d45f2a74f256305dc0570/approved-budget-assessment.json",
+      "command": "Final-source trained Context matrix plus approved budget assessment and independent actual-report replay; fresh target receipt remains required",
+      "criterionId": "context-allocation-target",
+      "id": "evidence-61",
+      "incrementId": "quality-preserving-context-efficiency",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T06:40:57Z",
+      "summary": "User-approved existing environment-budget alternative passes all nine final-source cohorts. Both arms stay within2GiB whole-query process RSS and512MiB query allocated/reserved VRAM, preserve recall/exact results and p95ratio at most.83525. Maximum RSS2021883904bytes, allocated101245952/reserved111149056bytes. Original four25percent relative-memory failures remain failed in unchanged raw report454b5b8b08a7. No package/source ceiling increased."
+    },
+    {
+      "artifact": ".local-codex/trained-context/b4a4a67e441d45f2a74f256305dc0570/approved-budget-assessment.json",
+      "command": "Final-source trained Context matrix plus approved budget assessment and independent actual-report replay; fresh target receipt remains required",
+      "criterionId": "context-quality-invariant",
+      "id": "evidence-62",
+      "incrementId": "quality-preserving-context-efficiency",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T06:40:57Z",
+      "summary": "All nine current-source cohorts retain recall1.0 and identical top5 identities/order/citations with zero score delta. Independent actual-report review18ed8e1861b9 replays returned synthetic result sets, citation/digest authority, fixed corpus rows/source/package bindings and pinned model files. Deterministic exact-search conformance remains separate historical evidence; current fixed trained CPU/CUDA comparisons pass without approximate search or cross-request cache."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/context-approved-budget-actual-report-independent-review.json",
+      "command": "Final-source trained Context matrix plus approved budget assessment and independent actual-report replay; fresh target receipt remains required",
+      "criterionId": "context-integrity-and-cancel",
+      "id": "evidence-63",
+      "incrementId": "quality-preserving-context-efficiency",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T06:40:57Z",
+      "summary": "The current full matrix and independent replay confirm72query children plus4generation children with recorded native exit0, required private-materialization cleanup, exact source/citation bindings and stable inputs. Existing focused archive/schema/vector/cancellation denials remain required in fresh exact-target checks; the current retrieval path preserves them. No download, remote code, shared retained query content, validation bypass or automatic cache is introduced. Cooperative checks do not qualify pending physical filesystem security."
+    },
+    {
+      "artifact": ".local-codex/trained-context/b4a4a67e441d45f2a74f256305dc0570/approved-budget-assessment.json",
+      "command": "Final-source trained Context matrix plus approved budget assessment and independent actual-report replay; fresh target receipt remains required",
+      "criterionId": "context-runtime-qualified",
+      "id": "evidence-64",
+      "incrementId": "quality-preserving-context-efficiency",
+      "kind": "test",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T06:40:57Z",
+      "summary": "Complete final-source MiniLM revision1110a243 CPU/CUDA/reference/enforced2GiB matrix passes the explicitly approved budget alternative,30measured after5warmups and3fresh memory children per arm. Independent review18ed8e1861b9 recomputes all9cohorts/76recordednative0exits/684queries, actual pinned model/package/source hashes, recall1.0, exact results and p95ratios.2081-.8353. Full constrained-memory readbacks and cleanup pass. Raw report454b5b8b08a7 and assessment201c3a1e9217 are immutable; four original RSS failures remain historical failures. No generative-model or other-host qualification."
+    },
+    {
+      "artifact": ".local-codex/approved-controls/context-approved-budget-actual-report-independent-review.json",
+      "command": "Final-source trained Context matrix plus approved budget assessment and independent actual-report replay; fresh target receipt remains required",
+      "criterionId": "security-impact-reviewed",
+      "id": "evidence-65",
+      "incrementId": "quality-preserving-context-efficiency",
+      "kind": "review",
+      "outcome": "passed",
+      "recordedAt": "2026-10-22T06:40:58Z",
+      "summary": "Current controlled Context report integrity was independently reviewed against actual model/package/source bytes, complete schedule, strict numeric/device/readback observations, recorded native0 and cleanup. Context archive/vector/citation denial and cancellation controls remain mandatory in the fresh target receipt; scoped owning threat model and safe rollback preserve full validation, exact search and private cleanup. No new model acquisition, authority, remote execution or cache. Native filesystem/race/ACL guarantees and generative qualification remain separate; historical evidence is not promoted into those guarantees."
+    },
+    {
+      "artifact": ".local-codex/optional-generation/a040bdf64b3b4ca18b9a16f00fbb0f01/report.json",
+      "command": "Full offline prospective optional generation qualification; no new downloads",
+      "criterionId": "model-quality-resource-outcomes",
+      "id": "evidence-66",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-22T06:46:11Z",
+      "summary": "Full corrected-source0.5B Standard/offload matrix a040bdf64b3b4ca18b9a16f00fbb0f01 is running; pinned1.5B matrix follows serially. Fixed original24cases, first/warm phases,3fresh repetitions, CPU/CUDA and constrained/unchecked remain required with unchanged guards/precision/oracle. Current source9ee729399a36010e870a48e76267310ba3ab82d856edf0fb2330c5a17bd5367a. Earlier quality/resource failures and withdrawn source9b61matrix remain historical; corrected typed resource denial and PEFT discovery controls passed local/host checks, not model qualification. Context increment3 has separately completed under approved budgets. Any required failed/denied/unexecuted model cohort still blocks this criterion."
+    },
+    {
+      "artifact": ".local-codex/optional-generation/a040bdf64b3b4ca18b9a16f00fbb0f01/report.json",
+      "command": "Full original24case offline model matrix a040bdf64b3b4ca18b9a16f00fbb0f01, still continuing remaining required cohorts",
+      "criterionId": "model-quality-resource-outcomes",
+      "id": "evidence-67",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-22T06:51:44Z",
+      "summary": "Final-source0.5B CPU unchecked attempts failed the unchanged forward RAM guard: observed available2519232512/2493902848/2752864256bytes versus required2925661184bytes. Exact GenerationInsufficientResourcesError now explains failure; all three attempted owned children confirm native exit0, stable source and cleanup. First Standard CPU repetition completed48cases with12of24correct in each phase; later Standard repetitions were denied at load. No complete CPU comparison or overall model pass exists. Full remaining CPU/CUDA/decoder trials continue, and pinned1.5B trials remain pending. Earlier failures stay retained; do not weaken guards, change precision/oracle or request more user RAM."
+    },
+    {
+      "artifact": ".local-codex/optional-generation/09fa0732c3504a60b9de83fd47aefb0e/report.json",
+      "command": "Full prospective-v2 offline original24case qualification; actual results incomplete, historical failures retained",
+      "criterionId": "model-quality-resource-outcomes",
+      "id": "evidence-68",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-22T07:16:40Z",
+      "summary": "The previous0.5B matrix a040bdf64b3b4ca18b9a16f00fbb0f01 was explicitly withdrawn after production unload-reference ordering and CUDA-floor observation defects were found. Its recorded CPU resource failures,12of24 Standard quality and cleanup_passed:false CUDA observations remain unchanged. Prospective optional-memory-v2 now records strict actual runtime floors, failure observations and native exits. The full pinned1.5B matrix09fa0732c3504a60b9de83fd47aefb0e is running on frozen product source source.d7d6026c2799f4583f2789cdd307431ec3e5222fdb9521fb40f1c04f694ef25c; complete0.5B rerun follows serially. First1.5BCPU offload attempt generated two correct answers before a wrong label and then failed the unchanged forward RAM guard; confirmed native exit0 and cleanup pass do not qualify this incomplete cohort. All required original24case, first/warm, CPU/CUDA, decoder and3fresh repetition checks remain. No model criterion passes; all unexecuted profiles remain pending. No guard/oracle/precision changes or user memory-reclamation requests."
+    },
+    {
+      "artifact": ".local-codex/optional-generation/09fa0732c3504a60b9de83fd47aefb0e/report.json",
+      "command": "Full fixed prospective-v2 original24case offline matrix continues; no required case/profile is omitted",
+      "criterionId": "model-quality-resource-outcomes",
+      "id": "evidence-69",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-22T07:40:20Z",
+      "summary": "Current prospective-v2 1.5B matrix09fa0732 on frozen d7d6026 product source has three Standard CPU unchecked load denials and three optional CPU unchecked forward-resource failures, each completed attempt with native exit0 and cleanup_passed true. First constrained CPU optional trial ended with parent RuntimeError at the fixed20minute execution boundary before all cases/phases completed; last retained child report has16first cases,14correct, no warm phase and no completed cleanup report. Supervisor proceeded only after owned native termination was confirmed; no native exit0 or successful pre-exit model cleanup is asserted for the timed-out child. The fixed deadline is the inferred cause from the observed boundary, not a retained typed child error. Remaining1.5B CPU/CUDA repetitions and the full0.5B rerun are pending/running and cannot pass this criterion. Original CPU/quality/cleanup failures and withdrawn matrices remain unchanged; no guard/oracle/precision/deadline relaxation."
+    },
+    {
+      "artifact": ".local-codex/optional-generation/09fa0732c3504a60b9de83fd47aefb0e/report.json",
+      "command": "Fixed full original24case model matrices; both aborted without qualification; no controlled pass inferred",
+      "criterionId": "model-quality-resource-outcomes",
+      "id": "evidence-70",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-22T07:45:29Z",
+      "summary": "Both new prospective-v2 matrices stopped without qualification. Pinned1.5B report09fa0732 retains three Standard CPU unchecked load denials, three optional CPU unchecked forward-resource failures (native0/cleanup confirmed for completed attempts), then a failed first constrained CPU child at the fixed20minute boundary with16first cases/14correct and no warm/complete-cleanup report. Its retained staging caused the next child to reject before ready; native observation was unavailable, so the parent aborted-unconfirmed-child-exit. The subsequent0.5B matrix5fac0890 also aborted at that pre-ready staging rejection before any cohort. Both models share the parent offload cache; separate acquisition directories do not isolate it. Read-only native process inventory confirmed no matching qualification processes or recorded launchers remain; that is not a retroactive native0/model-cleanup pass. Original caches, all failed/withdrawn reports and staging remain untouched. Unexecuted CPU/CUDA repetitions remain pending; do not waive guards, quality, precision, deadlines or unknown ownership. Local tests and actual synthetic host journeys remain separate passing component evidence."
+    },
+    {
+      "artifact": "docs/operations/model-blocker-evidence-assessment.json",
+      "command": "Operator-run fixed Windows-v2 bundle4a779a; owning read-only source/index/completed-case/comparison replay; no new model inference.",
+      "criterionId": "model-quality-resource-outcomes",
+      "id": "evidence-71",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-23T11:04:29Z",
+      "summary": "Latest reviewed operator bundle4a779a completed collection of48workerattempts:23measured,16memory-denied,9historicalbaselinecontract failures;48native exits0 and model cleanups observed. User22of24 absolutequalitycheck passes all7completed1.5B candidate cohorts, including CPU22of24. Larger-model GPU first/warm23of24, zero lost baseline-correct cases and prospective300second/6GiB budgets pass. Its only CPU unchecked pair remains23baseline/22candidate(one lost-correct case);10CPU attempts are denied and constrained CPU is unmeasured. Legacy GPU delivery medians1.026526/1.071532 remain below1.20.0.5B candidates are12of24CPUunchecked,9unchecked/12constrainedGPU;allconstrainedCPUdenied and9historicalbaselinesfail. Earlierfailed/abortedresultsstayhistorical; no complete model criterion qualifies."
+    },
+    {
+      "artifact": "docs/operations/remaining-model-evidence-assessment.json",
+      "command": "Operator-run remaining-only bundle1283a33f; owning source/restart/index/raw-case replay and independent numeric review; no new inference during assessment.",
+      "criterionId": "model-quality-resource-outcomes",
+      "id": "evidence-72",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "test",
+      "outcome": "failed",
+      "recordedAt": "2026-10-23T13:49:48Z",
+      "summary": "Reviewed remaining-only bundle1283a33f1a7a4d3ca7bf0864d13b3557 supplies two additional1.5B BF16 CPU unchecked repetitions at22/24 in both phases within1800seconds/4GiB sampled RSS. All12smaller-model cohorts now complete within resource budgets, but semantic scores remain12CPUunchecked/10CPUconstrained/9CUDAunchecked/12CUDAconstrained per24. Three1.5B constrained CPU trials remain memory-denied at3.5GiB available-RAM admission. All17native exits0/cleanups observed;14measurements and672case rows verified. Earlier7accepted candidates are historical separate references, not spliced current-source runs. No full model criterion or new chunk closes."
+    },
+    {
+      "artifact": "docs/operations/model-software-quality-qualification.json",
+      "command": "Read-only replay and independent review of existing completed Standard cases under explicit user30/80software-quality contract; no new inference.",
+      "criterionId": "model-quality-resource-outcomes",
+      "id": "evidence-73",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "review",
+      "outcome": "pending",
+      "recordedAt": "2026-10-23T14:20:48Z",
+      "summary": "The completed Standard model-output quality tests are passed and closed under the explicit user contract: at least30 percent for0.5B and80 percent for1.5B. All12current smaller cohorts score37.5-50 percent and both current larger CPU unchecked cohorts score91.67 percent on all24requested cases per phase. The3larger constrained CPU memory denials have no model output/accuracy and do not block this quality closure. Earlier7accepted larger observations remain separate historical source references. The wider unchanged composite criterion still needs actual comparison/host/current-target qualification; no full criterion or roadmap pass is inferred."
+    },
+    {
+      "artifact": "docs/operations/model-software-quality-qualification.json",
+      "command": "Read-only review of existing source-bound completed-quality contract and retained measurements; no accuracy/model execution.",
+      "criterionId": "model-quality-resource-outcomes",
+      "id": "evidence-74",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "kind": "review",
+      "outcome": "pending",
+      "recordedAt": "2026-10-23T15:22:33Z",
+      "summary": "The user-approved completed Standard model-quality contract is closed at30% for0.5B and80% for1.5B; before-load resource denial has no accuracy result. The superseded comparative-quality and all-unavailable-cohorts quality veto is archived by same-identity technical amendment. Existing actual throughput-or-approved-budget/resource/cleanup evidence and current host/target/final qualification remain distinct pending software assessment; no model rerun or full composite pass is recorded."
     }
   ],
   "evidencePolicy": "control-plane-v1",
@@ -1774,6 +2042,46 @@
       "nextAction": "Use the linked completed component records to inspect local implementation; retain each actual technical pending/failed qualification and existing completion authority.",
       "recordedAt": "2026-10-21T19:37:45Z",
       "summary": "Current technical acceptance is agent-executable; archived participant/manual operator acceptance is offline user-owned. Automated accessibility and actual model/resource/profile criteria remain pending. The revised viewer labels those gaps clearly and links reviewed local Canvas startup/useful-system coverage as partial support. Historical failed all-suite/dependency evidence is preserved; the new passing Canvas non-AI aggregate does not substitute for a fresh functionality AI-related overall qualification.",
+      "targetIncrementId": "qualified-user-and-model-outcomes"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "context-approved-environment-budgets",
+      "impact": "within-increment",
+      "nextAction": "After optional low-memory implementation is finalized, bind approved budgets into a separate full current-source matrix; retain all historical reports and independently review actual results.",
+      "recordedAt": "2026-10-22T04:27:44Z",
+      "summary": "User explicitly approved the existing environment-budget alternative prospectively: whole-query process RSS<=2GiB per CPU/CUDA profile and query peak allocated/reserved VRAM<=512MiB on the fixed MiniLM/current-host matrix. Preserve original25percent failures and rerun all nine final-source cohorts with unchanged recall, exact-result, p95 latency, enforced2GiB constrainedCPU and cleanup gates. No pass or current qualification asserted.",
+      "targetIncrementId": "quality-preserving-context-efficiency"
+    },
+    {
+      "category": "decision",
+      "disposition": "accepted",
+      "id": "user-22of24-absolute-quality-accepted",
+      "impact": "within-increment",
+      "nextAction": "Record the explicit22of24 absolute-quality pass separately from unchanged remaining technical qualification.",
+      "recordedAt": "2026-10-23T11:04:28Z",
+      "summary": "The user explicitly accepts22of24 as the absolute quality threshold for completed1.5B observations. All7completedcandidatecohorts pass this revised check. Acceptance is retrospective: original23of24 protocol results, paired metrics and incomplete/denied observations remain unchanged; no missing native/offload or whole-host qualification is waived.",
+      "targetIncrementId": "qualified-user-and-model-outcomes"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "remaining-model-tests-and-cpu-estimates-20261023",
+      "impact": "within-increment",
+      "nextAction": "Run the separately reviewed current-source17candidate remaining-only template after closing Codex:5denied1.5B CPU and12failed/denied0.5B. Seven accepted1.5B candidates and historical baselines are not repeated; retain original22acceptance, paired regression findings and native/offload/provider/host gaps.",
+      "recordedAt": "2026-10-23T11:47:36Z",
+      "summary": "User requested only unresolved model tests, safe diagnostic failure logs and prospective3GiB/3.5GiB CPU admission for the two approved pinned model/precision profiles. Reviewed helper support is implemented; no new model result or parent pass follows.",
+      "targetIncrementId": "qualified-user-and-model-outcomes"
+    },
+    {
+      "category": "clarification",
+      "disposition": "accepted",
+      "id": "completed-model-quality-thirty-eighty-policy",
+      "impact": "within-increment",
+      "nextAction": "Reuse the completed30/80model-quality artifact without rerunning accepted cases or treating this PC capacity as a quality failure. Preserve original paired observations as history and qualify the wider composite comparison/host requirements plus fresh exact-target and final aggregate/build/review gates. Actual optional offload safeguards and execution remain separately owned software concerns. The requested notification-center memory guidance is independent software work, not a reason to rerun the accepted model benchmark.",
+      "recordedAt": "2026-10-23T14:20:47Z",
+      "summary": "The completed Standard model-output quality tests are passed and closed under the explicit user contract: at least30 percent for0.5B and80 percent for1.5B. All12current smaller cohorts score37.5-50 percent and both current larger CPU unchecked cohorts score91.67 percent on all24requested cases per phase. The3larger constrained CPU memory denials have no model output/accuracy and do not block this quality closure. Earlier7accepted larger observations remain separate historical source references. The wider unchanged composite criterion still needs actual comparison/host/current-target qualification; no full criterion or roadmap pass is inferred.",
       "targetIncrementId": "qualified-user-and-model-outcomes"
     }
   ],
@@ -2534,6 +2842,240 @@
       "recordedAt": "2026-10-22T03:15:09Z",
       "sequence": 126,
       "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5ea1cf6c957d84b10aaf85ccf01b0300d5d498b0e0c1c882b7f0eb36155ed450",
+      "recordedAt": "2026-10-22T04:27:44Z",
+      "sequence": 127,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "aa7a74b7963b88cb57e7fb3c8fa4ff5ab6fbc77c0e7c6c154cf463258cba0841",
+      "recordedAt": "2026-10-22T05:57:36Z",
+      "sequence": 128,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "bbb2baaf0e5bcc4db530e5f3a5db2201d6f00589990c8abc3163ea3dcdeaf725",
+      "recordedAt": "2026-10-22T06:25:04Z",
+      "sequence": 129,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "b2d039c00c8b897103e7d01d7ff46c754f53988294618be630b9b665064a8e7a",
+      "recordedAt": "2026-10-22T06:40:56Z",
+      "sequence": 130,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "e6224fccc834c8059a1e707eedd5d7a5083bc40cd40c4811e86b945583e442a9",
+      "recordedAt": "2026-10-22T06:40:57Z",
+      "sequence": 131,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a30da3c4c156a6fb05112c3eff79ac182d70e1e2676fe5fc2490ea43593125cb",
+      "recordedAt": "2026-10-22T06:40:57Z",
+      "sequence": 132,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "9db550c751c873aafd5ccc65798f581be9d0528ce0bf8a1ef2ef600d7d6e0714",
+      "recordedAt": "2026-10-22T06:40:57Z",
+      "sequence": 133,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "78e3184d0292cb34f67a6a3c80ab59cacc183a9c61b019198f9148f765c38c1f",
+      "recordedAt": "2026-10-22T06:40:57Z",
+      "sequence": 134,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "69ea5a0b820afa606e3510ae2f73a1754cf6ada80bb97748da2d48e977cb4e78",
+      "recordedAt": "2026-10-22T06:40:58Z",
+      "sequence": 135,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ef979cbd24ac10e4c23b097452c614649f0ec1a95c2aca4874e428eb5c3b264a",
+      "recordedAt": "2026-10-22T06:45:13Z",
+      "sequence": 136,
+      "type": "increment-qualified"
+    },
+    {
+      "eventFingerprint": "b514888fb7d146f3a23a869ac5a67e9ee4919ee7db7c64ba6b6e407f2cc024f8",
+      "recordedAt": "2026-10-22T06:46:11Z",
+      "sequence": 137,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "db3c525b339521062b964edeb56bd8c018435be553e81f106042763b4748437b",
+      "recordedAt": "2026-10-22T06:51:44Z",
+      "sequence": 138,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "7eea90dc3ac29564490c6cd5031a4791af9d3a06971b97605bfab356b65c470f",
+      "recordedAt": "2026-10-22T07:16:40Z",
+      "sequence": 139,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "5b457629d5920e81c8834b6dbcb9565cdfa4df51496fe341325ea882a6867c1d",
+      "recordedAt": "2026-10-22T07:40:20Z",
+      "sequence": 140,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "aae7208a86c4ebd7f6c10505b4bbde853f99a5d47161a84b48ef6c5550f0ec67",
+      "recordedAt": "2026-10-22T07:45:29Z",
+      "sequence": 141,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "7a79221108be9351eaa24917b2ef684908dbcc9430f3fd8b9dd0734554a8b408",
+      "recordedAt": "2026-10-22T16:25:37Z",
+      "sequence": 142,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "5cf54411725cdd7df272607521d16da7d8449dd0b2eece4fb695a9232e64ccec",
+      "recordedAt": "2026-10-22T22:16:11Z",
+      "sequence": 143,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "bc698be7008644e703832b6779a727e1b3ccde94fbd7bb9ecfcd219ad5a92e02",
+      "recordedAt": "2026-10-22T22:16:11Z",
+      "sequence": 144,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "339b2bed28b9cb00cb3e04aa85ee36f7cd526d210e5e6ec38bbd8e0738f18eec",
+      "recordedAt": "2026-10-22T22:18:48Z",
+      "sequence": 145,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "70e1d15f6b9a7af06ccfa7fef1589161215bd5a9c2dbd980b2f363e5f40b5814",
+      "recordedAt": "2026-10-22T22:18:48Z",
+      "sequence": 146,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "cf2e60e7197eaecbfc992a428d49cb97f43e0b5138c5865074a09a7d29a8b699",
+      "recordedAt": "2026-10-22T23:41:47Z",
+      "sequence": 147,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "bd07b9b0196f831fd8badeb7a0f78a92997fca5000d0d022a389b537a8097fd3",
+      "recordedAt": "2026-10-22T23:41:47Z",
+      "sequence": 148,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "1a12e82995e239db142f1418e2f98e2bf3a50ae9bcb6df0f234f55ab3b4debe3",
+      "recordedAt": "2026-10-23T11:04:28Z",
+      "sequence": 149,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "f999aa48302a847cd1ef9257087c64216c5c20205658cab57bb9ffe3e6068eee",
+      "recordedAt": "2026-10-23T11:04:29Z",
+      "sequence": 150,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "57a4aac0ce9402ef81659758a5f15f5816423e10c684a337382b33e72951752f",
+      "recordedAt": "2026-10-23T11:05:21Z",
+      "sequence": 151,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "2a07df9e8675f530790b50bcbb3f1a8bd2cc34642af4d7be3671f980e3902ca0",
+      "recordedAt": "2026-10-23T11:05:22Z",
+      "sequence": 152,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "e28d2d4ea1ccb81769c0dad76a3f4e09ca60161f39c326b7d414906989ad3d91",
+      "recordedAt": "2026-10-23T11:47:36Z",
+      "sequence": 153,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "b4f91dabf2c223da5a523940fdb47a76b8d096943bd028f9b4990865de639eaf",
+      "recordedAt": "2026-10-23T13:49:48Z",
+      "sequence": 154,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "26f5772b240e8d7295bc6ba782f17e9ab248399a5c62e43bfa5f70ef4f5b1f1b",
+      "recordedAt": "2026-10-23T13:49:48Z",
+      "sequence": 155,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "6caf43b81b3fa24ef40b17ccdd1b88426afd3ed9f189497987d37a274071d268",
+      "recordedAt": "2026-10-23T13:49:48Z",
+      "sequence": 156,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "d47468c47ffc641d09fa321502513cbf45647f8fe9fb68849c5d476a07da4a4b",
+      "recordedAt": "2026-10-23T14:20:47Z",
+      "sequence": 157,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "3094b817cf4548b2f383582bd5b0d9de276637780006fe264b59022db4ef3dee",
+      "recordedAt": "2026-10-23T14:20:48Z",
+      "sequence": 158,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "ac1c812e2d83e1b964239ef88ab72e569a8971b32b2b9a95c7b68b9c2f992b90",
+      "recordedAt": "2026-10-23T14:20:48Z",
+      "sequence": 159,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "e5d9d7c4c11c39bdc9e893a7f71265a5998f9c0e41cf41cff57596eeba746a92",
+      "recordedAt": "2026-10-23T14:20:48Z",
+      "sequence": 160,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "dc0e8675cc2c45b71c80dcf88410c7e3f5cd7d736dd709ee00e441fc40aed404",
+      "recordedAt": "2026-10-23T15:22:32Z",
+      "sequence": 161,
+      "type": "technical-acceptance-revised"
+    },
+    {
+      "eventFingerprint": "ae91623a945f165499fdb7d57fc2d65458d50d44b868cbf2c11aa7a7753a8698",
+      "recordedAt": "2026-10-23T15:22:32Z",
+      "sequence": 162,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "c6600d0dde9d8eb1cb503cacd9a74af17e9e2f6ed78b2033675aa87397aff25a",
+      "recordedAt": "2026-10-23T15:22:33Z",
+      "sequence": 163,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "6ed6d9f6470e3ad7c66a4f55741edcfbe1cbc4b522d30ede020c4e5877fb6502",
+      "recordedAt": "2026-10-23T15:22:33Z",
+      "sequence": 164,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "a916fde96e8ed6b92439876db3da70afc3184c106a358a3001260b381c82c424",
+      "recordedAt": "2026-10-23T15:22:33Z",
+      "sequence": 165,
+      "type": "resumed"
     }
   ],
   "increments": [
@@ -3050,14 +3592,14 @@
         }
       ],
       "allowPendingQualification": true,
-      "completedAt": "2026-10-21T06:32:48Z",
+      "completedAt": "2026-10-22T06:45:13Z",
       "completedChunks": [
         "rag-stage-baseline",
         "bounded-validation-allocation",
         "quality-and-determinism-oracle",
         "context-candidate-qualification"
       ],
-      "completionSummary": "Implemented and independently reviewed exact Context allocation/quality improvements with current passing bounded verification. Real embedding-model CPU/accelerator qualification remains explicitly pending; no controlled pass or overall completion is claimed.",
+      "completionSummary": "All six Context criteria qualified against final-source nine-cohort measurement, explicitly approved2GiB process RSS/512MiB query VRAM alternative, current focused checks and independent exact-receipt review. Retain historical stage provenance and four unchanged original relative-memory failures. All76recordednativeexits/cleanup, exact results, recall1.0, p95 and enforced-memory readbacks pass. This closes only Context increment3; final generative-model and overall qualification remain separate.",
       "deliverables": [
         "Sanitized stage-level timing and peak-memory probe with versioned corpus/model/environment identities",
         "Bounded validation/query implementation only where profiling supports it",
@@ -3077,9 +3619,7 @@
       "id": "quality-preserving-context-efficiency",
       "number": 3,
       "objective": "Reduce measured query allocation and repeated work in the existing portable LanceDB/Context workflow while preserving exact validation, citations and retrieval correctness.",
-      "pendingCriteria": [
-        "context-runtime-qualified"
-      ],
+      "pendingCriteria": [],
       "plan": {
         "assumptions": [
           "Pinned LanceDB0.34.0 and PyArrow25.0.0 are locally available in an ignored qualification environment.",
@@ -3153,6 +3693,12 @@
         ],
         "summary": "Measure and reduce exact Context query allocation using bounded Arrow scanning without weakening any integrity or citation check."
       },
+      "qualificationCompletion": {
+        "qualifiedAt": "2026-10-22T06:45:13Z",
+        "receiptDigest": "59ee11cd1b8e1a41bd4b889ed4eaf016c18c07a0ba617af79f50ad9689ea1cdc",
+        "reviewDigest": "531b7366456af2f34ee94b34388c24177c07e1b7003e14bc848e2ff66e629630",
+        "workId": "functionality-context-approved-budget-qualification"
+      },
       "research": [
         {
           "recordedAt": "2026-10-21T06:15:49Z",
@@ -3182,7 +3728,7 @@
       ],
       "rollback": "Restore the exact validated query implementation and package format without changing stored artifacts. Retain integrity/citation regressions and measured baselines. Cleanup remains private, bounded and fail-closed; no cache migration is introduced.",
       "startedAt": "2026-10-21T06:15:49Z",
-      "status": "implemented-pending-qualification",
+      "status": "completed",
       "title": "Quality-preserving Context and RAG efficiency",
       "verification": [
         "Run focused Context application/worker tests with injected deterministic embeddings; add bounded Arrow iteration, malformed vector/citation, cancellation and memory-accounting assertions.",
@@ -3226,7 +3772,7 @@
           "qualification": "controlled-environment"
         },
         {
-          "description": "For authorized installed-model trials, retain held-out task quality, invalid-output rate, retry count, accepted examples per minute, peak RAM/VRAM and elapsed time. A candidate requires no statistically material quality regression under a predeclared task metric/tolerance and at least20 percent better accepted-output throughput or demonstrated adherence to the approved resource budget. CPU/accelerator and constrained/unchecked modes are separate cohorts; unavailable runs remain pending.",
+          "description": "For authorized installed-model trials, retain task quality, invalid-output rate, retry count, accepted examples per minute, peak RAM/VRAM, elapsed time and observed cleanup. Completed Standard output-quality tests for the approved pinned0.5B/1.5B profiles are closed under the explicit user30%/80% contract. Original paired/no-regression observations remain historical rather than an additional veto over that accepted absolute quality contract. Before-load resource denial has no model output/accuracy and cannot block quality closure; do not repeat accepted accuracy checks. Retain separate CPU/accelerator, precision and constrained/unchecked observations without splicing historical sources into a fresh matrix. Resource/optimization qualification still requires at least20% better accepted-output throughput or demonstrated adherence to the approved per-profile resource budget using actual measurements. Preserve actual software failures, unknown cleanup and separate current host/target/final-gate qualification; this policy amendment supplies no new resource, hardware or offload pass.",
           "id": "model-quality-resource-outcomes",
           "qualification": "controlled-environment"
         },
@@ -3369,7 +3915,7 @@
       ],
       "rollback": "Withdraw or mark the candidate unqualified and return to the last secure qualified release. Revert only a measured UX repair that causes regression, retaining evidence and stronger security controls. Never declare a missing accessibility/model/provider qualification passed to preserve release timing.",
       "startedAt": "2026-10-21T07:18:12Z",
-      "status": "verifying",
+      "status": "blocked",
       "title": "Qualify complete user and model outcomes",
       "verification": [
         "Use only the focused regressions for an actually observed gap during this increment; do not turn ordinary tests into timing gates or add speculative feature changes.",
@@ -3408,14 +3954,153 @@
     "roadmap": "docs/functionality-optimization-implementation-roadmap.md",
     "state": ".implementation-roadmaps/functionality-optimization/state.json"
   },
-  "resumeAudits": [],
+  "resumeAudits": [
+    {
+      "blockerId": "generation-and-managed-host-qualification-blocked",
+      "reconciliation": "Keep exact completed F1-F3, current F4 acceptance/chunks/evidence, all failed trials, pending resource/native/provider checks and existing approval unchanged. This event corrects obsolete environment prose without granting qualification.",
+      "recordedAt": "2026-10-22T22:16:11Z"
+    },
+    {
+      "blockerId": "current-generation-matrix-unqualified",
+      "reconciliation": "Preserve all fixed quality/resource expectations, failed/denied evidence, current F4 criteria/chunks/approval and completed F1-F3. Resolve only the superseded wording record; the technical dependency remains open.",
+      "recordedAt": "2026-10-22T22:18:48Z"
+    },
+    {
+      "blockerId": "matched-generation-quality-resource-pending",
+      "reconciliation": "Preserve every original criterion, increment, chunk, evidence, approval, failure and completion status. Exact completed local support is linked separately; neither this event nor clean worker exits grant current parent qualification.",
+      "recordedAt": "2026-10-22T23:41:47Z"
+    },
+    {
+      "blockerId": "standard-model-quality-throughput-and-capacity-gaps",
+      "reconciliation": "Added the current successor blocker first so qualification stays blocked continuously. Preserved every prior score, protocol, failure and incomplete case; replaced stale older-run statements with current evidence. Original blocker text remains historical, and semantic criteria/chunks/approval/status remain unchanged.",
+      "recordedAt": "2026-10-23T11:05:22Z"
+    },
+    {
+      "blockerId": "reviewed-model-cohort-and-host-gaps",
+      "reconciliation": "Verified actual remaining-only source/template/selection/indexes and raw outcomes. Preserved historical evidence, all technical criteria/chunks/approvals and other roadmap owners. Removed obsolete claims that the smaller constrained CPU profile was unmeasured.",
+      "recordedAt": "2026-10-23T13:49:48Z"
+    },
+    {
+      "blockerId": "remaining-model-quality-capacity-and-host-gaps",
+      "reconciliation": "Reviewed exact source-bound completed cohorts, current quality artifact and separate technical review. Preserved all historical failures/denials, original criteria/chunks/approval/evidence and unrelated states. No human-only scope event or model rerun.",
+      "recordedAt": "2026-10-23T14:20:48Z"
+    },
+    {
+      "blockerId": "composite-host-and-current-qualification-pending",
+      "reconciliation": "Used governed same-identity amendment with exact old criterion/plan/approval archive and actual narrow reapproval. Preserved original measurements, evidence/chunks/other criteria/roadmap states and all native/offload/security controls. No accuracy checks or model runs.",
+      "recordedAt": "2026-10-23T15:22:33Z"
+    }
+  ],
   "roadmapApproval": {
-    "approvedAt": "2026-10-21T18:15:09Z",
-    "fingerprint": "45475662f8e988d74bc3b86d87a0019a26d58d9156532fcd7eeeb16351e705c8",
-    "note": "User explicitly directed these three named technical roadmaps to use AI-agent acceptance, with human studies/manual acceptance handled offline. This narrow scope reapproval preserves technical qualification and does not assert passing tests."
+    "approvedAt": "2026-10-23T15:22:32Z",
+    "fingerprint": "412a205849b97ab2ebd50262b3564b4470ed7ec78376f351a3ab5e3fb5a9e5b4",
+    "note": "The user explicitly approved30%0.5B/80%1.5B completed-output quality, excluded before-load resource denials from accuracy, directed closure and prohibited accuracy reruns. This records only that already supplied narrow authority; actual resource/current software qualification and native/offload/security controls remain."
   },
   "schemaVersion": 1,
   "slug": "functionality-optimization",
-  "status": "executing",
-  "updatedAt": "2026-10-22T03:15:09Z"
+  "status": "blocked",
+  "technicalAcceptanceRevisions": [
+    {
+      "authorityRef": "user-explicit-thirty-eighty-quality-close-without-reruns",
+      "incrementId": "qualified-user-and-model-outcomes",
+      "originalCriterion": {
+        "description": "For authorized installed-model trials, retain held-out task quality, invalid-output rate, retry count, accepted examples per minute, peak RAM/VRAM and elapsed time. A candidate requires no statistically material quality regression under a predeclared task metric/tolerance and at least20 percent better accepted-output throughput or demonstrated adherence to the approved resource budget. CPU/accelerator and constrained/unchecked modes are separate cohorts; unavailable runs remain pending.",
+        "id": "model-quality-resource-outcomes",
+        "qualification": "controlled-environment"
+      },
+      "originalPlan": {
+        "assumptions": [
+          "Participants and physical qualification environments are unavailable; external criteria remain pending.",
+          "No new model download, provider traffic, credential or production mutation is authorized."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "existing-qualification-preserved",
+              "security-impact-reviewed"
+            ],
+            "id": "qualification-owner-reconciliation",
+            "outcome": "Versioned JSON maps every known pending criterion to the canonical owner, required environment, actual procedure and existing harness.",
+            "title": "Preserve qualification owners"
+          },
+          {
+            "criteriaIds": [
+              "existing-qualification-preserved",
+              "security-impact-reviewed"
+            ],
+            "id": "qualification-assessment",
+            "outcome": "Bounded read-only CLI emits source/owner-bound sanitized JSON, detects ownership drift and distinguishes declarations, local evidence and unavailable controlled qualification.",
+            "title": "Assess current evidence safely"
+          },
+          {
+            "criteriaIds": [
+              "user-task-outcome-targets",
+              "accessibility-outcomes-qualified",
+              "model-quality-resource-outcomes",
+              "security-impact-reviewed"
+            ],
+            "id": "qualification-task-procedures",
+            "outcome": "Task scripts, predeclared approved targets, accessibility profiles and separate CPU/accelerator cohorts are ready; unavailable executions remain pending.",
+            "title": "Specify reproducible user and model outcomes"
+          },
+          {
+            "criteriaIds": [
+              "full-current-qualification",
+              "security-impact-reviewed"
+            ],
+            "id": "release-evidence-and-gap-repairs",
+            "outcome": "Reconcile implemented functionality and observed fixes, generate current pending ledger, and prepare aggregate qualification after implementation without declaring unavailable checks passed.",
+            "title": "Prepare honest release assessment"
+          }
+        ],
+        "completionTests": [
+          "functionality-outcomes, documentation, agent-support and required build gates.",
+          "Configured test:all only after implementation; do not treat failed/skipped/unavailable checks as passes."
+        ],
+        "documentation": [
+          "Qualification JSON crosswalk and task/environment procedure",
+          "Functionality review JSON",
+          "Owning control-plane and operations guidance"
+        ],
+        "fingerprint": "a8a12a2298a496de164541eb8e5cdc975862c874d2745b4fcc59afbd19d1e8c1",
+        "focusedTests": [
+          "Exact functionality qualification assessment/CLI tests with synthetic owner states, malformed input, missing evidence and source drift."
+        ],
+        "recordedAt": "2026-10-21T07:18:13Z",
+        "rollback": "Withdraw unqualified assessment and restore last verified source without changing historical evidence or restoring weaker security controls.",
+        "steps": [
+          "Map nine legacy and six current controlled criteria without changing owners or approvals.",
+          "Implement bounded source-bound JSON assessment and denial tests.",
+          "Document exact user, accessibility and model/resource task procedures with approved thresholds and pending environments.",
+          "Reconcile current implemented work and execute final aggregate checks/review at the implementation boundary; pending controlled evidence prevents final closure."
+        ],
+        "summary": "Implement honest qualification ownership and read-only assessment; prepare approved task/model procedures and run current aggregate verification only after every implementation chunk is recorded."
+      },
+      "policyDigest": "d239d080e0a9f6b29ca50d2ca7bfc590bae0d7cee89a38e1c8c06dd8b3a60cbd",
+      "policyRef": "model-software-quality-qualification",
+      "previousApproval": {
+        "approvedAt": "2026-10-21T18:15:09Z",
+        "fingerprint": "45475662f8e988d74bc3b86d87a0019a26d58d9156532fcd7eeeb16351e705c8",
+        "note": "User explicitly directed these three named technical roadmaps to use AI-agent acceptance, with human studies/manual acceptance handled offline. This narrow scope reapproval preserves technical qualification and does not assert passing tests."
+      },
+      "recordedAt": "2026-10-23T15:22:32Z",
+      "retainedRequirements": [
+        "All original paired/baseline/failed/interrupted results, source identities and separate device/precision/decoder observations; no fabricated fresh matrix or general accuracy claim.",
+        "Actual task/output validity, retry/accepted-output throughput, RAM/VRAM, elapsed time and cleanup records; at least20% better throughput or adherence to the explicitly approved resource budget.",
+        "Actual software failure and unknown cleanup, current host/target/final gates and all other security/native/offload/provider requirements. No resource guard change, accuracy rerun or new model/hardware pass."
+      ],
+      "revisedCriterion": {
+        "description": "For authorized installed-model trials, retain task quality, invalid-output rate, retry count, accepted examples per minute, peak RAM/VRAM, elapsed time and observed cleanup. Completed Standard output-quality tests for the approved pinned0.5B/1.5B profiles are closed under the explicit user30%/80% contract. Original paired/no-regression observations remain historical rather than an additional veto over that accepted absolute quality contract. Before-load resource denial has no model output/accuracy and cannot block quality closure; do not repeat accepted accuracy checks. Retain separate CPU/accelerator, precision and constrained/unchecked observations without splicing historical sources into a fresh matrix. Resource/optimization qualification still requires at least20% better accepted-output throughput or demonstrated adherence to the approved per-profile resource budget using actual measurements. Preserve actual software failures, unknown cleanup and separate current host/target/final-gate qualification; this policy amendment supplies no new resource, hardware or offload pass.",
+        "id": "model-quality-resource-outcomes",
+        "qualification": "controlled-environment"
+      },
+      "status": "technical-policy-revised",
+      "summary": "The user-approved completed Standard model-quality contract is closed at30% for0.5B and80% for1.5B; before-load resource denial has no accuracy result. The superseded comparative-quality and all-unavailable-cohorts quality veto is archived by same-identity technical amendment. Existing actual throughput-or-approved-budget/resource/cleanup evidence and current host/target/final qualification remain distinct pending software assessment; no model rerun or full composite pass is recorded.",
+      "supersededRequirements": [
+        "The comparative predeclared no-material-quality-regression veto is replaced only for the completed approved model-quality tests by the explicit30%0.5B/80%1.5B absolute contract.",
+        "Before-load RAM denial is an environment admission observation with no output/accuracy; requiring every such unavailable cohort to pass cannot block that completed quality closure."
+      ]
+    }
+  ],
+  "updatedAt": "2026-10-23T15:22:33Z"
 }

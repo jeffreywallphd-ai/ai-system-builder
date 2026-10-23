@@ -1,0 +1,275 @@
+{
+  "schema_version": "open-roadmap-assessment-v1",
+  "authority_ref": "user-complete-open-roadmaps-or-record-real-blockers-20261022",
+  "qualification_authority": "none",
+  "scope": "Current work order, explicit blockers and remaining technical concerns. Blocked means final qualification cannot currently proceed; it does not assert every independent subtask is complete or impossible. This assessment supplies no test pass, receipt, approval, increment completion or waiver.",
+  "retired_duplicate": {
+    "roadmap_id": "systems-run-workflow-active-source",
+    "owner": "systems-publish-runtime-lifecycle",
+    "mapping": "docs/operations/retired-run-test-roadmap.json",
+    "reason": "The later completed Publish lifecycle explicitly absorbed the unapproved draft and removed standalone Run and Test. Preserve all six mapped security/lifecycle concerns as history, without scheduling the removed UI again."
+  },
+  "human_acceptance": {
+    "owner": "user-offline",
+    "amended_legacy_criteria": [
+      {
+        "roadmap_id": "asset-experience-layered-customization",
+        "increment_id": "production-qualification",
+        "criterion_id": "desktop-thin-accessibility"
+      },
+      {
+        "roadmap_id": "optional-constrained-json-generation",
+        "increment_id": "production-hardening-and-qualification",
+        "criterion_id": "representative-resource-and-usability-qualification"
+      },
+      {
+        "roadmap_id": "data-management-quality-and-usability",
+        "increment_id": "advanced-preparation-and-synthetic-quality",
+        "criterion_id": "controlled-advanced-capabilities-are-qualified"
+      }
+    ],
+    "limits": "Original criteria/plan/approval are archived. Technical IDs, qualification, chunks and prior evidence remain. Product data/row approval, curation, privacy/license policy and publishing authorization remain product controls."
+  },
+  "roadmaps": [
+    {
+      "id": "security-findings-refresh",
+      "state": "blocked",
+      "completed_support": [
+        "security-ingestion-guarded-origin-publication",
+        "security-existing-authority-controls-qualification",
+        "security-r27-exact-download-task-identity",
+        "security-local-tooling-evidence-reconciliation",
+        "roadmaps-final-local-evidence-reconciliation",
+        "security-r30-worker-output-name-admission",
+        "runtime-preparer-defined-option-denial",
+        "security-r08-generation-boundary-bounds",
+        "security-r25-bounded-parquet-review",
+        "security-r41-truthful-dataset-cancel",
+        "security-r60-confirmed-worker-termination",
+        "security-r81-retained-task-controllers",
+        "security-r52-r53-passive-execution-records",
+        "security-passive-readiness-diagnostics",
+        "desktop-tooling-and-home-compatibility",
+        "security-r74-strict-projection-records",
+        "security-r51-explanatory-credential-denial",
+        "security-r50-versioned-semantic-fingerprint",
+        "security-r45-code-owned-asset-classification",
+        "security-r45-installed-content-revalidation",
+        "security-r44-persisted-opaque-image-identities",
+        "security-r68-readiness-preconditions",
+        "security-r43-minimal-model-views",
+        "security-r87-helper-positional-arguments",
+        "roadmap-implementation-qualification-boundary",
+        "security-r47-enforced-toggle-authority",
+        "agent-only-roadmap-acceptance-scope",
+        "bounded-qualification-profiles",
+        "control-plane-snapshot-consumer-qualification",
+        "security-session-vitest-patch-qualification",
+        "security-r32-r33-current-local-qualification",
+        "security-r50-package-semantic-admission",
+        "electron-42-current-security-patch"
+      ],
+      "remaining": [
+        "Production native model delete/reveal and owned publication must use qualified identity/effect authority; read-only native identity is partial support.",
+        "Aggregate admission, private staging/process-tree ownership, truthful native recovery and executable provenance need actual integration and qualification.",
+        "Strict record/native package and opaque identity migration remain technical work; unsupported operations stay denied.",
+        "Hostile native roadmap-parent races and final exact-candidate full-suite/build/dependency/security review remain pending."
+      ],
+      "next_action": "Continue feasible approved security components without duplicating existing controls; preserve all 78 legacy and 88 imported finding identities and current dispositions.",
+      "evidence": [
+        "docs/security/security-roadmap-consolidation.json",
+        "docs/operations/roadmap-supporting-work.json"
+      ],
+      "blockers": [
+        {
+          "id": "model-file-effect-native-qualification",
+          "kind": "technical",
+          "summary": "Independent review found unresolved host file-effect concurrency and supported-cache compatibility issues. Authentication, scoped revisions, library creation and source staging have focused passing regressions; model file-effect completion is not claimed.",
+          "requiredAction": "Keep file effects fail-closed until a qualified identity-preserving host primitive and atomic provenance binding are available. Preserve all findings and current partial evidence; continue the independent functionality roadmap as requested."
+        },
+        {
+          "id": "approved-native-design-qualification-pending",
+          "kind": "technical",
+          "summary": "Native design direction is approved, but the identity-preserving implementation, protected ownership publication and supported-cache positive/race qualification are not yet demonstrated. The original native blocker remains unresolved.",
+          "requiredAction": "Implement and independently review the selected exclusive-ownership/native design; retain unavailable physical effects and pending qualification until actual supported-host evidence is available. Continue independent bounded controls meanwhile."
+        },
+        {
+          "id": "legacy-authority-independent-review-unavailable",
+          "kind": "dependency",
+          "summary": "Legacy Assets authorization fixes passed their four registered checks and desktop/server type/build checks, but the separately invoked review was stopped before review by an external cybersecurity restriction. No reviewer identity, acceptance or parent qualification has been fabricated. Existing native identity/effect blockers remain unresolved.",
+          "requiredAction": "Obtain an allowed independent review and fresh exact-candidate checks for the legacy authorization component. Do not retry the blocked review through another mechanism or mark author tests as independent review. Continue unrelated permitted work and preserve native/effect/record/process qualification requirements."
+        }
+      ]
+    },
+    {
+      "id": "optional-low-memory-inference",
+      "state": "blocked",
+      "remaining": [
+        "Closed dependency: completed Standard output-quality tests pass the explicit user30%0.5B/80%1.5B contract. The superseded23/24, zero-lost-correct and blanket resource-denial quality clauses are archived through a governed same-identity amendment; no new model/hardware result is claimed.",
+        "Actual optional offload execution and cleanup remain pending. Native stable staging protection, protected durable accounting and owned-worker exit/crash proof are not yet implemented/composed; read-only identity cannot prove stable retained-tree accounting.",
+        "After the native prerequisite qualifies, actual1.5B low-memory CPU delivery must demonstrate the retained1GiB CPU/2GiB CUDA placement,12GiB owned staging,4GiB sampled RSS, finite timing and measured load/generation/teardown/cleanup. Standard-only output and unavailable PC capacity cannot substitute for actual optional feature evidence."
+      ],
+      "next_action": "Keep completed Standard quality closed. Qualify the actual native staging/accounting/owned-worker prerequisite before any offload lease, then collect the retained optional execution/resource/lifecycle evidence under the approved30%/80% output contract and fresh current checks/review. No old staging inspection/adoption/deletion/move/ACL change, weaker resource limits, model rerun solely for PC capacity, or restricted security review is authorized.",
+      "evidence": [
+        "dev-tools/scripts/qualification/offload_guarded_restart.py",
+        "modules/adapters/model/local/tests/windows-model-file-identity.native.integration.test.ts",
+        "docs/operations/optional-low-memory-inference.md",
+        "docs/operations/model-software-quality-qualification.json"
+      ],
+      "blockers": [
+        {
+          "id": "native-staging-restart-proof-unavailable",
+          "kind": "technical",
+          "summary": "The approved guarded restart still denies admission: no qualified retained-tree protection, protected durable accounting or owned-worker/crash proof is composed. Read-only identity allows child creation and cannot establish a stable staging fence.",
+          "requiredAction": "Implement and independently qualify the approved native protection/accounting/process proof before any fresh offload lease. Preserve retained data and unknown historical ownership; do not inspect, adopt, delete, move, change ACLs or relax the existing guard to produce evidence."
+        }
+      ],
+      "completed_support": [
+        "model-software-quality-30-80-qualification"
+      ]
+    },
+    {
+      "id": "functionality-optimization",
+      "state": "blocked",
+      "remaining": [
+        "Closed: completed Standard model-output quality uses the explicit user30%0.5B/80%1.5B contract. Before-load RAM denial has no accuracy outcome and does not reopen quality closure. Superseded comparative/unavailable-cohort quality wording is archived; no accuracy reruns are needed.",
+        "The existing actual throughput-or-approved-resource-budget alternative, per-profile RAM/VRAM/timing/retry/cleanup measurements and current source impact still require owning qualification review. Historical sources remain separate; no new model/resource/hardware result is claimed by the amendment.",
+        "Current host/target/final all-suite/build/review gates remain after product changes. Genuine software failures, unknown cleanup and native/offload/provider/security concerns remain independently owned; the accepted quality tests are not rerun."
+      ],
+      "next_action": "Keep completed30%/80% quality tests closed and reuse their reviewed source-bound artifact without rerunning accuracy. Assess actual retained per-profile throughput-or-approved-budget, RAM/VRAM/timing/retry/cleanup records and required current host/target/final qualification after remaining product changes. Do not treat this PC admission denials as accuracy failures, splice historical runs into a current matrix, weaken guards, or infer native/offload/provider/security qualification.",
+      "evidence": [
+        "docs/operations/functionality-outcome-qualification.md",
+        "docs/operations/roadmap-supporting-work.json",
+        "docs/operations/standalone-model-evidence-assessment.json",
+        "docs/operations/standard-generation-qualification.md",
+        "docs/operations/standard-generation-qualification.json",
+        "docs/operations/model-blocker-evidence-assessment.json",
+        "docs/operations/remaining-model-evidence-assessment.json",
+        "docs/operations/model-software-quality-qualification.json"
+      ],
+      "blockers": [
+        {
+          "id": "resource-host-and-current-final-qualification",
+          "kind": "technical",
+          "requiredAction": "Keep completed30%/80% quality tests closed and reuse their reviewed source-bound artifact without rerunning accuracy. Assess actual retained per-profile throughput-or-approved-budget, RAM/VRAM/timing/retry/cleanup records and required current host/target/final qualification after remaining product changes. Do not treat this PC admission denials as accuracy failures, splice historical runs into a current matrix, weaken guards, or infer native/offload/provider/security qualification.",
+          "summary": "The user-approved completed Standard model-quality contract is closed at30% for0.5B and80% for1.5B; before-load resource denial has no accuracy result. The superseded comparative-quality and all-unavailable-cohorts quality veto is archived by same-identity technical amendment. Existing actual throughput-or-approved-budget/resource/cleanup evidence and current host/target/final qualification remain distinct pending software assessment; no model rerun or full composite pass is recorded."
+        }
+      ],
+      "completed_support": [
+        "canvas-startup-bounded-bootstrap",
+        "no-page-terminal-qualification",
+        "managed-browse-route-readiness",
+        "owned-listener-refusal-report-successor",
+        "catalog-single-passive-admission",
+        "standalone-model-progress-and-timing",
+        "standard-only-model-qualification",
+        "latest-model-bundle-assessment",
+        "model-output-failure-diagnostics",
+        "remaining-model-tests-and-cpu-admission",
+        "remaining-model-evidence-review-1283",
+        "model-software-quality-30-80-qualification"
+      ]
+    },
+    {
+      "id": "asset-experience-layered-customization",
+      "state": "blocked",
+      "remaining": [
+        "Local actual desktop authoring with native close/exit/relaunch and managed Assets authoring with renderer reload now pass automated keyboard, configured WCAG-tagged axe contrast/incomplete resolution, focus/modal, reduced-motion,320reflow and native400zoom with exact reviewed support links. Managed server restart and current parent qualification are not claimed.",
+        "The independent legacy authorization/security review is still restricted and unperformed. Source containment, non-execution, isolation, immutable bases, diagnostics and authority remain technical requirements.",
+        "After that dependency clears, obtain fresh owning exact-candidate criterion qualification and final combined repository/build/dependency gates. Preserve all earlier failed runs and technical evidence; human acceptance is offline."
+      ],
+      "next_action": "Keep the precise legacy authority review dependency visible. Do not retry its restricted review through another mechanism or treat local host support as a parent pass. Use fresh target-bound gates/review for actual final closure when the dependency is available.",
+      "evidence": [
+        "docs/operations/asset-experience-controlled-review.md",
+        "docs/operations/asset-system-support-qualification.md",
+        "dev-tools/config/asset-system-qualification.json",
+        "docs/operations/managed-reference-qualification.md",
+        "docs/operations/roadmap-supporting-work.json"
+      ],
+      "blockers": [
+        {
+          "id": "restricted-legacy-authority-review-pending",
+          "kind": "dependency",
+          "summary": "The shared legacy Assets authorization review owned by security-findings-refresh remains unperformed because its independent review turn was restricted before review. Reviewed local UI support now passes desktop native close/exit/relaunch and managed renderer reload, with configured WCAG-tagged axe rules, keyboard/focus, reduced-motion, reflow and native400zoom. Managed server restart and parent current-target security qualification are not claimed.",
+          "requiredAction": "Obtain an allowed independent review of the existing legacy authority component and fresh exact-target parent qualification/final gates. This is the shared security dependency, not duplicate implementation work. Do not retry the restricted review through another mechanism, replace it with author tests/UI review or infer a server-restart/security pass from renderer reload."
+        }
+      ],
+      "completed_support": [
+        "security-assets-sender-source-compatibility",
+        "security-assets-workspace-authority",
+        "security-structured-transaction-ownership",
+        "security-assets-atomic-reviewed-publication",
+        "assets-saved-listing-compatibility",
+        "assets-published-workspace-rediscovery",
+        "electron-42-current-security-patch",
+        "assets-catalog-and-host-reliability",
+        "assets-host-accessibility-qualification"
+      ]
+    },
+    {
+      "id": "optional-constrained-json-generation",
+      "state": "blocked",
+      "remaining": [
+        "Representative0.5B constrained CPU and accelerator structural/resource portions now pass in3current repetitions per device, with valid checked output and observed cleanup. The old both-models-CPU-denied blocker is superseded.",
+        "Actual packaged-host adaptive state, explicit override and successful automated visual-builder workflows, followed by owning current checks/review/final gates, remain pending. This structural/resource criterion adds no22/24 semantic gate; smaller-model task-quality failures remain separately recorded for Functionality."
+      ],
+      "next_action": "Complete actual agent-executed packaged-host adaptive-state, explicit-override and visual-builder UI qualification, then current owning checks/review/final gates. Reuse the reviewed representative CPU/accelerator structural/resource measurements as scoped evidence without requiring duplicate runs or adding an unrelated semantic gate. Preserve wrong-label history under Functionality and retain all native/offload/provider/security boundaries; finite fixture UI does not certify physical model execution.",
+      "evidence": [
+        "modules/adapters/runtime/python/worker/tasks/constrained_json_decoder.py",
+        "docs/optional-constrained-json-generation-implementation-roadmap.md",
+        "docs/operations/standalone-model-evidence-assessment.json",
+        "docs/operations/standard-generation-qualification.md",
+        "docs/operations/standard-generation-qualification.json",
+        "docs/operations/roadmap-supporting-work.json",
+        "docs/operations/model-blocker-evidence-assessment.json",
+        "docs/operations/remaining-model-evidence-assessment.json"
+      ],
+      "blockers": [
+        {
+          "id": "adaptive-override-host-qualification-pending",
+          "kind": "technical",
+          "summary": "The previously missing representative constrained-CPU structural/resource portion is demonstrated by all3current0.5B Float32 CPU repetitions: bounded resource/time,22structurally accepted outputs per24case phase,0invalid-output attempts/accepted outputs, native exit0 and observed cleanup. The3currentconstrainedGPU repetitions also satisfy structural/resource checks. Actual packaged-host adaptive state, explicit override and successful automated visual-builder journeys remain unqualified. Canonical criterion contains no universal22/24 semantic threshold; smaller semantic failures remain with Functionality. No full criterion or new chunk closes.",
+          "requiredAction": "Complete actual agent-executed packaged-host adaptive-state, explicit-override and visual-builder UI qualification, then current owning checks/review/final gates. Reuse the reviewed representative CPU/accelerator structural/resource measurements as scoped evidence without requiring duplicate runs or adding an unrelated semantic gate. Preserve wrong-label history under Functionality and retain all native/offload/provider/security boundaries; finite fixture UI does not certify physical model execution."
+        }
+      ],
+      "completed_support": [
+        "standalone-model-progress-and-timing",
+        "standard-only-model-qualification",
+        "latest-model-bundle-assessment",
+        "model-output-failure-diagnostics",
+        "remaining-model-tests-and-cpu-admission",
+        "remaining-model-evidence-review-1283"
+      ]
+    },
+    {
+      "id": "data-management-quality-and-usability",
+      "state": "blocked",
+      "remaining": [
+        "Private-provider publication and ingestion-scale qualification require an authorized private test repository and credentials; none are supplied by this work request.",
+        "OCR remains explicitly unavailable until a separately governed provider is qualified; do not count disabled readiness as OCR delivery.",
+        "Actual advanced model/layout/semantic quality, representative resource bounds, progress/cancellation/cleanup and automated accessibility/preset journeys remain technical."
+      ],
+      "next_action": "Complete available local synthetic source/stream/lineage and UI checks. Preserve separate private-provider and unavailable OCR boundaries without creating credentials, publishing externally or adding an unapproved dependency.",
+      "evidence": [
+        "docs/architecture/data-management.md",
+        "docs/security/data-management-threat-model.md",
+        "modules/adapters/runtime/python/worker/tasks/advanced_capabilities.py"
+      ],
+      "blockers": [
+        {
+          "id": "private-provider-and-advanced-runtime-unavailable",
+          "kind": "credential",
+          "summary": "Real private-provider publication/ingestion qualification requires an authorized private test repository and credentials that have not been supplied. This credential dependency is independent of the pending advanced-runtime/model/UI/scale work; no human participants are required.",
+          "requiredAction": "Supply a separately authorized private test repository/credential through the existing secure path for private-provider checks. Continue available synthetic local/model/UI/scale work; this status does not assert all subwork is complete and grants no external publication authority."
+        },
+        {
+          "id": "advanced-runtime-qualification-unavailable",
+          "kind": "technical",
+          "summary": "OCR has no qualified provider/runtime. Actual advanced model/layout/semantic quality, representative resources, scale, progress/cancellation/cleanup and automated UI/preset coverage remain technical gaps. Human participants are not a prerequisite.",
+          "requiredAction": "Use admitted approved installed models and synthetic sources for feasible tests; separately govern and qualify a selected OCR provider before any supported OCR claim. Preserve model/resource/scale/UI failures and do not treat an unavailable OCR readiness state as delivery."
+        }
+      ],
+      "completed_support": []
+    }
+  ]
+}

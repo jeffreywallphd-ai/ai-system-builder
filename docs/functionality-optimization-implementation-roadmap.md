@@ -2,8 +2,8 @@
 
 # Functionality and Quality-Adjusted Optimization Implementation Roadmap
 
-- Status: `executing`
-- Updated: `2026-10-22T03:15:09Z`
+- Status: `blocked`
+- Updated: `2026-10-23T15:22:33Z`
 
 ## Objective
 
@@ -186,8 +186,8 @@ Current-source review identified this remaining native or policy boundary. The u
 | --- | --- | --- | --- |
 | 1: Responsive workspace navigation and composition | Make Home, feature summaries and Add element useful at representative catalog scale without transferring or re-reading entire collections for counts or one candidate page. | None | `completed` |
 | 2: Efficient and reliable background task journeys | Make downloads, preparation, Context generation, training and image generation remain understandable and release resources correctly when users navigate, disconnect, cancel or encounter a failure, while reducing idle polling. | responsive-workspace-browse | `completed` |
-| 3: Quality-preserving Context and RAG efficiency | Reduce measured query allocation and repeated work in the existing portable LanceDB/Context workflow while preserving exact validation, citations and retrieval correctness. | efficient-reliable-task-journeys | `implemented-pending-qualification` |
-| 4: Qualify complete user and model outcomes | Turn the implemented feature set into a truthful release decision through representative accessibility/usability, dataset/model and operational outcome evidence, fixing only measured in-scope gaps and preserving existing roadmap owners. | quality-preserving-context-efficiency | `verifying` |
+| 3: Quality-preserving Context and RAG efficiency | Reduce measured query allocation and repeated work in the existing portable LanceDB/Context workflow while preserving exact validation, citations and retrieval correctness. | efficient-reliable-task-journeys | `completed` |
+| 4: Qualify complete user and model outcomes | Turn the implemented feature set into a truthful release decision through representative accessibility/usability, dataset/model and operational outcome evidence, fixing only measured in-scope gaps and preserving existing roadmap owners. | quality-preserving-context-efficiency | `blocked` |
 
 ## Increment 1: Responsive workspace navigation and composition
 
@@ -302,7 +302,7 @@ Revert observation scheduling/UI changes independently from host cleanup control
 ## Increment 3: Quality-preserving Context and RAG efficiency
 
 - Id: `quality-preserving-context-efficiency`
-- Status: `implemented-pending-qualification`
+- Status: `completed`
 - Dependencies: `efficient-reliable-task-journeys`
 
 Reduce measured query allocation and repeated work in the existing portable LanceDB/Context workflow while preserving exact validation, citations and retrieval correctness.
@@ -326,11 +326,11 @@ Reduce measured query allocation and repeated work in the existing portable Lanc
 
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
-| `context-stage-baseline`: Capture cold and repeated query timings, stage durations, peak RSS and cleanup results at1000/10000/100000 chunks with declared384-dimensional embeddings where package bounds permit. Record unavailable workloads explicitly, not as passes; distinguish OS file-cache warmth from model reuse. | local | passed (test) |
+| `context-stage-baseline`: Capture cold and repeated query timings, stage durations, peak RSS and cleanup results at1000/10000/100000 chunks with declared384-dimensional embeddings where package bounds permit. Record unavailable workloads explicitly, not as passes; distinguish OS file-cache warmth from model reuse. | local | passed (review) |
 | `context-allocation-target`: Proposed target: at10000 and100000 chunks, reduce incremental query peak RSS by at least25 percent against unchanged baseline without increasing p95 latency by more than5 percent, or demonstrate that the measured baseline already meets an explicitly approved environment budget. Keep source and package ceilings unchanged. | local | passed (test) |
 | `context-quality-invariant`: For deterministic embeddings, top-k identities/order, scores within the fixed numerical tolerance and exact citations match unchanged exact-search results. For separately authorized local embedding runs, proposed recall@5 is at least0.90 on the labeled synthetic corpus with no regression greater than0.02; invalid/cross-workspace citations remain zero. Quality failures cannot be offset by a cheaper/faster result. | local | passed (test) |
-| `context-integrity-and-cancel`: Every archive/table/vector/citation/digest denial remains enforced; cancellation and failure remove private materialization and produce sanitized bounded state. No optimization bypasses full required validation, downloads a model, retains query/source content or introduces a cross-request cache. | local | passed (test) |
-| `context-runtime-qualified`: Representative CPU and sufficient accelerator profiles report actual local model identity, warm/cold p95, RSS, retrieval quality and cleanup; observed results remain distinct from deterministic conformance and from production guarantees. | controlled-environment | failed (test) |
+| `context-integrity-and-cancel`: Every archive/table/vector/citation/digest denial remains enforced; cancellation and failure remove private materialization and produce sanitized bounded state. No optimization bypasses full required validation, downloads a model, retains query/source content or introduces a cross-request cache. | local | passed (review) |
+| `context-runtime-qualified`: Representative CPU and sufficient accelerator profiles report actual local model identity, warm/cold p95, RSS, retrieval quality and cleanup; observed results remain distinct from deterministic conformance and from production guarantees. | controlled-environment | passed (test) |
 | `security-impact-reviewed`: Refresh the threat/control delta, prove isolation, failure bounds and non-disclosure for this increment, and preserve a rollback at least as secure as the forward path. Coordinate with the security remediation owner rather than duplicating its controls. | local | passed (review) |
 
 ### Verification
@@ -354,7 +354,7 @@ Restore the exact validated query implementation and package format without chan
 ## Increment 4: Qualify complete user and model outcomes
 
 - Id: `qualified-user-and-model-outcomes`
-- Status: `verifying`
+- Status: `blocked`
 - Dependencies: `quality-preserving-context-efficiency`
 
 Turn the implemented feature set into a truthful release decision through representative accessibility/usability, dataset/model and operational outcome evidence, fixing only measured in-scope gaps and preserving existing roadmap owners.
@@ -382,9 +382,16 @@ Human portions of the original work packages, deliverables, verification and com
 | --- | --- | --- |
 | `existing-qualification-preserved`: Each existing pending criterion has an owning roadmap and evidence reference or explicit pending reason. New evidence never silently rewrites historical approvals; the active-source Run & Test proposal and security remediation remain separately approval-gated. | local | passed (review) |
 | `accessibility-outcomes-qualified`: Automated packaged-desktop and thin-client UI checks verify keyboard traversal/activation, modal focus return, accessible names/roles/status semantics, 320 CSS-pixel reflow, computed contrast, status text independent of color and reduced motion on declared supported profiles. Critical automated exceptions, data loss or authority confusion block qualification. Retain actual DOM/semantic/visual evidence; unavailable checks remain pending. | controlled-environment | passed (test) |
-| `model-quality-resource-outcomes`: For authorized installed-model trials, retain held-out task quality, invalid-output rate, retry count, accepted examples per minute, peak RAM/VRAM and elapsed time. A candidate requires no statistically material quality regression under a predeclared task metric/tolerance and at least20 percent better accepted-output throughput or demonstrated adherence to the approved resource budget. CPU/accelerator and constrained/unchecked modes are separate cohorts; unavailable runs remain pending. | controlled-environment | failed (test) |
+| `model-quality-resource-outcomes`: For authorized installed-model trials, retain task quality, invalid-output rate, retry count, accepted examples per minute, peak RAM/VRAM, elapsed time and observed cleanup. Completed Standard output-quality tests for the approved pinned0.5B/1.5B profiles are closed under the explicit user30%/80% contract. Original paired/no-regression observations remain historical rather than an additional veto over that accepted absolute quality contract. Before-load resource denial has no model output/accuracy and cannot block quality closure; do not repeat accepted accuracy checks. Retain separate CPU/accelerator, precision and constrained/unchecked observations without splicing historical sources into a fresh matrix. Resource/optimization qualification still requires at least20% better accepted-output throughput or demonstrated adherence to the approved per-profile resource budget using actual measurements. Preserve actual software failures, unknown cleanup and separate current host/target/final-gate qualification; this policy amendment supplies no new resource, hardware or offload pass. | controlled-environment | pending (review) |
 | `full-current-qualification`: After every increment is implemented, triage the existing standard-Node failures without treating skips as passes, run test:all once plus relevant repository gates/builds, obtain separate-invocation current candidate review and complete the overall-validation work item. Every required controlled criterion must pass before final roadmap completion. | local | failed (test) |
 | `security-impact-reviewed`: Refresh the threat/control delta, prove isolation, failure bounds and non-disclosure for this increment, and preserve a rollback at least as secure as the forward path. Coordinate with the security remediation owner rather than duplicating its controls. | local | passed (review) |
+
+### Technical policy amendment history
+
+- The user-approved completed Standard model-quality contract is closed at30% for0.5B and80% for1.5B; before-load resource denial has no accuracy result. The superseded comparative-quality and all-unavailable-cohorts quality veto is archived by same-identity technical amendment. Existing actual throughput-or-approved-budget/resource/cleanup evidence and current host/target/final qualification remain distinct pending software assessment; no model rerun or full composite pass is recorded. (`user-explicit-thirty-eighty-quality-close-without-reruns`); no test pass or completion is asserted.
+  - Original `model-quality-resource-outcomes`: For authorized installed-model trials, retain held-out task quality, invalid-output rate, retry count, accepted examples per minute, peak RAM/VRAM and elapsed time. A candidate requires no statistically material quality regression under a predeclared task metric/tolerance and at least20 percent better accepted-output throughput or demonstrated adherence to the approved resource budget. CPU/accelerator and constrained/unchecked modes are separate cohorts; unavailable runs remain pending.
+  - Superseded requirements: The comparative predeclared no-material-quality-regression veto is replaced only for the completed approved model-quality tests by the explicit30%0.5B/80%1.5B absolute contract.; Before-load RAM denial is an environment admission observation with no output/accuracy; requiring every such unavailable cohort to pass cannot block that completed quality closure.
+  - Retained requirements: All original paired/baseline/failed/interrupted results, source identities and separate device/precision/decoder observations; no fabricated fresh matrix or general accuracy claim.; Actual task/output validity, retry/accepted-output throughput, RAM/VRAM, elapsed time and cleanup records; at least20% better throughput or adherence to the explicitly approved resource budget.; Actual software failure and unknown cleanup, current host/target/final gates and all other security/native/offload/provider requirements. No resource guard change, accuracy rerun or new model/hardware pass.
 
 ### Human scope handled offline
 
