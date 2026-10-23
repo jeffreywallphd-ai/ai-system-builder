@@ -179,9 +179,9 @@
       "kind": "technical",
       "recordedAt": "2026-10-23T15:22:33Z",
       "requiredAction": "Keep completed30%/80% quality tests closed and reuse their reviewed source-bound artifact without rerunning accuracy. Assess actual retained per-profile throughput-or-approved-budget, RAM/VRAM/timing/retry/cleanup records and required current host/target/final qualification after remaining product changes. Do not treat this PC admission denials as accuracy failures, splice historical runs into a current matrix, weaken guards, or infer native/offload/provider/security qualification.",
-      "resolution": null,
-      "resolvedAt": null,
-      "status": "open",
+      "resolution": "Reclassified available resource assessment, current host assertions and final gates as ordinary pending qualification, not an unavailable authority/environment. Completed30/80model quality stays closed; no criterion, chunk, increment or roadmap passes.",
+      "resolvedAt": "2026-10-23T15:58:34Z",
+      "status": "resolved",
       "summary": "The user-approved completed Standard model-quality contract is closed at30% for0.5B and80% for1.5B; before-load resource denial has no accuracy result. The superseded comparative-quality and all-unavailable-cohorts quality veto is archived by same-identity technical amendment. Existing actual throughput-or-approved-budget/resource/cleanup evidence and current host/target/final qualification remain distinct pending software assessment; no model rerun or full composite pass is recorded."
     }
   ],
@@ -3076,6 +3076,12 @@
       "recordedAt": "2026-10-23T15:22:33Z",
       "sequence": 165,
       "type": "resumed"
+    },
+    {
+      "eventFingerprint": "5c77f159c8b8f7ca705440208a2c80d099ec403a33f333724039c5c39b4e5448",
+      "recordedAt": "2026-10-23T15:58:34Z",
+      "sequence": 166,
+      "type": "resumed"
     }
   ],
   "increments": [
@@ -3915,7 +3921,7 @@
       ],
       "rollback": "Withdraw or mark the candidate unqualified and return to the last secure qualified release. Revert only a measured UX repair that causes regression, retaining evidence and stronger security controls. Never declare a missing accessibility/model/provider qualification passed to preserve release timing.",
       "startedAt": "2026-10-21T07:18:12Z",
-      "status": "blocked",
+      "status": "verifying",
       "title": "Qualify complete user and model outcomes",
       "verification": [
         "Use only the focused regressions for an actually observed gap during this increment; do not turn ordinary tests into timing gates or add speculative feature changes.",
@@ -3989,6 +3995,11 @@
       "blockerId": "composite-host-and-current-qualification-pending",
       "reconciliation": "Used governed same-identity amendment with exact old criterion/plan/approval archive and actual narrow reapproval. Preserved original measurements, evidence/chunks/other criteria/roadmap states and all native/offload/security controls. No accuracy checks or model runs.",
       "recordedAt": "2026-10-23T15:22:33Z"
+    },
+    {
+      "blockerId": "resource-host-and-current-final-qualification",
+      "reconciliation": "All current criterion identities, qualification, pending/failed evidence, original model results, resource guards, approvals and history remain. Continue actual available F4assessment/host/final verification under current source claims; any newly observed concrete obstacle must be recorded specifically.",
+      "recordedAt": "2026-10-23T15:58:34Z"
     }
   ],
   "roadmapApproval": {
@@ -3998,7 +4009,7 @@
   },
   "schemaVersion": 1,
   "slug": "functionality-optimization",
-  "status": "blocked",
+  "status": "executing",
   "technicalAcceptanceRevisions": [
     {
       "authorityRef": "user-explicit-thirty-eighty-quality-close-without-reruns",
@@ -4102,5 +4113,5 @@
       ]
     }
   ],
-  "updatedAt": "2026-10-23T15:22:33Z"
+  "updatedAt": "2026-10-23T15:58:34Z"
 }

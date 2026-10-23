@@ -3,7 +3,7 @@
 # Optional Constrained JSON Generation Implementation Roadmap
 
 - Status: `implementation-complete-qualification-pending`
-- Updated: `2026-07-31T14:24:20Z`
+- Updated: `2026-10-23T15:58:34Z`
 
 ## Objective
 
@@ -329,6 +329,8 @@ Complete packaging, security, documentation, representative performance and usab
 
 ### Work packages
 
+Human portions of the original work packages, deliverables, verification and completed plan below are superseded by the exact offline scope archive. They remain historical approved intent; only the current technical acceptance criteria govern future qualification. No test pass is asserted.
+
 - **Packaged runtime qualification** (`packaged-runtime`): Desktop and server packages install, start, and exercise the pinned decoder and visual-schema contract without network-dependent fixtures or hidden fallback.
 - **Resource, usability, and performance evidence** (`resource-usability-and-performance`): Representative sufficient and constrained machines validate the adaptive default, bounded memory and latency, checked reliability, unchecked compatibility, and teachable visual-builder workflow.
 - **Architecture, security, and guidance** (`architecture-security-and-guidance`): Architecture, threat model, context packs, nearest READMEs, settings help, visual-builder guidance, and dependency provenance describe the shipped behavior and residual risks in plain language.
@@ -347,10 +349,15 @@ Complete packaging, security, documentation, representative performance and usab
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
 | `packaged-host-readiness`: Desktop and server packages install and start the pinned dependency, advertise truthful decoder and schema readiness, and preserve fail-closed checked behavior. | local | passed (test) |
-| `representative-resource-and-usability-qualification`: A representative sufficient accelerator profile and constrained CPU profile confirm the adaptive state, explicit override, bounded memory and latency, valid checked output, and successful visual-builder use by a non-developer without retaining prompts or generated output in evidence. | controlled-environment | pending (external) |
+| `representative-resource-and-usability-qualification`: A representative sufficient accelerator profile and constrained CPU profile confirm the adaptive state, explicit override, bounded memory and latency, valid checked output, and successful agent-executed visual-builder UI workflows without retaining prompts or generated output in evidence. | controlled-environment | pending (test) |
 | `documentation-and-dependency-gates`: Architecture, security, context, README, guidance, dependency provenance, license, audit, and SBOM checks describe and validate the shipped behavior and residual risks. | local | passed (documentation) |
 | `full-short-and-long-suites`: After all increments are implemented, the complete short-duration suite and separately invoked long-duration E2E suite pass once with applicable desktop, server, and thin-client builds. | local | passed (test) |
 | `security-impact-reviewed`: Final review confirms protected task purposes and envelope fields, bounded schema and resource use, no silent fallback, safe diagnostics, dependency integrity, and documented risk for unchecked generation and user-added fields. | local | passed (review) |
+
+### Human scope handled offline
+
+- User-directed offline human acceptance; preserve every technical requirement and all prior evidence. No test pass or closure is asserted. (`user-agent-only-acceptance-and-current-scope-20261022`)
+  - Human portion of `representative-resource-and-usability-qualification`: Observed use by a non-developer and participant usability acceptance are handled offline. Automated visual-builder interaction/accessibility and all original accelerator/CPU, memory/latency and checked-output requirements remain technical. — offline user-owned; technical criterion retained; no test pass asserted.
 
 ### Verification
 

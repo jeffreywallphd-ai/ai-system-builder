@@ -1,0 +1,160 @@
+{
+  "schema_version": "roadmap-status-audit-v1",
+  "authority_ref": "user-audit-all-blocked-and-distinguish-pending-in-progress",
+  "scope": "Historical observation of local canonical status metadata only. It does not deliver or certify review-site consolidation/folding behavior, count a portable rendered view, or supply qualification authority. Governed events preserve approval, criteria, chunks, evidence and history; no criterion or roadmap completion is granted.",
+  "inventory": {
+    "canonical_roadmaps": 24,
+    "ordinary_waits_corrected": 3,
+    "scoped_work_blocked_at_independent_audit": 0,
+    "reviewed_owners": 7,
+    "genuinely_blocked_reviewed_owners": 4
+  },
+  "reviewed_owners": [
+    {
+      "roadmap_id": "comprehensive-ui-automation",
+      "canonical_status": "ready",
+      "display_meaning": "Pending; approved and not started",
+      "classification": "ordinary-pending-or-in-progress",
+      "current_increment_id": null,
+      "state_sha256": "45fa55cf56746cc9501baca3890d6f29e5dce49d140774db9f4ed3b27012e50c",
+      "open_blockers": [],
+      "qualification_granted": false
+    },
+    {
+      "roadmap_id": "functionality-optimization",
+      "canonical_status": "executing",
+      "display_meaning": "In progress; current verification is available",
+      "classification": "ordinary-pending-or-in-progress",
+      "current_increment_id": "qualified-user-and-model-outcomes",
+      "state_sha256": "09db31f86799320ebfe031a55d7177622c937c0043324c9feb97b9bb44ceba46",
+      "open_blockers": [],
+      "qualification_granted": false
+    },
+    {
+      "roadmap_id": "optional-constrained-json-generation",
+      "canonical_status": "implementation-complete-qualification-pending",
+      "display_meaning": "Pending qualification; implementation finished, technical checks remain",
+      "classification": "ordinary-pending-or-in-progress",
+      "current_increment_id": null,
+      "state_sha256": "ff456ef9c5627ec6d371a35216f42e212d2ade2aa781cc67e3020bdb3937877e",
+      "open_blockers": [],
+      "qualification_granted": false
+    },
+    {
+      "roadmap_id": "asset-experience-layered-customization",
+      "canonical_status": "blocked",
+      "display_meaning": "Blocked; concrete obstacle remains",
+      "classification": "genuine-obstacle",
+      "current_increment_id": null,
+      "state_sha256": "23aa417d40a43bc4df2891439475f130d89e07313aaaab929ebdfd6cda715579",
+      "open_blockers": [
+        {
+          "id": "restricted-legacy-authority-review-pending",
+          "kind": "dependency",
+          "summary": "The shared legacy Assets authorization review owned by security-findings-refresh remains unperformed because its independent review turn was restricted before review. Reviewed local UI support now passes desktop native close/exit/relaunch and managed renderer reload, with configured WCAG-tagged axe rules, keyboard/focus, reduced-motion, reflow and native400zoom. Managed server restart and parent current-target security qualification are not claimed.",
+          "required_action": "Obtain an allowed independent review of the existing legacy authority component and fresh exact-target parent qualification/final gates. This is the shared security dependency, not duplicate implementation work. Do not retry the restricted review through another mechanism, replace it with author tests/UI review or infer a server-restart/security pass from renderer reload."
+        }
+      ],
+      "qualification_granted": false
+    },
+    {
+      "roadmap_id": "data-management-quality-and-usability",
+      "canonical_status": "blocked",
+      "display_meaning": "Blocked; concrete obstacle remains",
+      "classification": "genuine-obstacle",
+      "current_increment_id": null,
+      "state_sha256": "18bd3d8f5341e93573d653cdd56a285c162c82dcb193a12488adaf7f51973ca1",
+      "open_blockers": [
+        {
+          "id": "private-provider-and-advanced-runtime-unavailable",
+          "kind": "credential",
+          "summary": "Real private-provider publication/ingestion qualification requires an authorized private test repository and credentials that have not been supplied. This credential dependency is independent of the pending advanced-runtime/model/UI/scale work; no human participants are required.",
+          "required_action": "Supply a separately authorized private test repository/credential through the existing secure path for private-provider checks. Continue available synthetic local/model/UI/scale work; this status does not assert all subwork is complete and grants no external publication authority."
+        },
+        {
+          "id": "advanced-runtime-qualification-unavailable",
+          "kind": "technical",
+          "summary": "OCR has no qualified provider/runtime. Actual advanced model/layout/semantic quality, representative resources, scale, progress/cancellation/cleanup and automated UI/preset coverage remain technical gaps. Human participants are not a prerequisite.",
+          "required_action": "Use admitted approved installed models and synthetic sources for feasible tests; separately govern and qualify a selected OCR provider before any supported OCR claim. Preserve model/resource/scale/UI failures and do not treat an unavailable OCR readiness state as delivery."
+        }
+      ],
+      "qualification_granted": false
+    },
+    {
+      "roadmap_id": "optional-low-memory-inference",
+      "canonical_status": "blocked",
+      "display_meaning": "Blocked; concrete obstacle remains",
+      "classification": "genuine-obstacle",
+      "current_increment_id": "optional-bounded-offload",
+      "state_sha256": "3299068bc18d8d60d75ada25d0c77b37b36d552b0eac70893f7ca5d03a15b104",
+      "open_blockers": [
+        {
+          "id": "native-staging-restart-proof-unavailable",
+          "kind": "technical",
+          "summary": "The approved guarded restart still denies admission: no qualified retained-tree protection, protected durable accounting or owned-worker/crash proof is composed. Read-only identity allows child creation and cannot establish a stable staging fence.",
+          "required_action": "Implement and independently qualify the approved native protection/accounting/process proof before any fresh offload lease. Preserve retained data and unknown historical ownership; do not inspect, adopt, delete, move, change ACLs or relax the existing guard to produce evidence."
+        }
+      ],
+      "qualification_granted": false
+    },
+    {
+      "roadmap_id": "security-findings-refresh",
+      "canonical_status": "blocked",
+      "display_meaning": "Blocked; concrete obstacle remains",
+      "classification": "genuine-obstacle",
+      "current_increment_id": "file-and-workspace-authority",
+      "state_sha256": "ef02689cd213bd474e45306f768200a14916c4fc6042eb9bbd7e159fcc79d8de",
+      "open_blockers": [
+        {
+          "id": "model-file-effect-native-qualification",
+          "kind": "technical",
+          "summary": "Independent review found unresolved host file-effect concurrency and supported-cache compatibility issues. Authentication, scoped revisions, library creation and source staging have focused passing regressions; model file-effect completion is not claimed.",
+          "required_action": "Keep file effects fail-closed until a qualified identity-preserving host primitive and atomic provenance binding are available. Preserve all findings and current partial evidence; continue the independent functionality roadmap as requested."
+        },
+        {
+          "id": "approved-native-design-qualification-pending",
+          "kind": "technical",
+          "summary": "Native design direction is approved, but the identity-preserving implementation, protected ownership publication and supported-cache positive/race qualification are not yet demonstrated. The original native blocker remains unresolved.",
+          "required_action": "Implement and independently review the selected exclusive-ownership/native design; retain unavailable physical effects and pending qualification until actual supported-host evidence is available. Continue independent bounded controls meanwhile."
+        },
+        {
+          "id": "legacy-authority-independent-review-unavailable",
+          "kind": "dependency",
+          "summary": "Legacy Assets authorization fixes passed their four registered checks and desktop/server type/build checks, but the separately invoked review was stopped before review by an external cybersecurity restriction. No reviewer identity, acceptance or parent qualification has been fabricated. Existing native identity/effect blockers remain unresolved.",
+          "required_action": "Obtain an allowed independent review and fresh exact-candidate checks for the legacy authorization component. Do not retry the blocked review through another mechanism or mark author tests as independent review. Continue unrelated permitted work and preserve native/effect/record/process qualification requirements."
+        }
+      ],
+      "qualification_granted": false
+    }
+  ],
+  "preserved_qualification": "Genuine native/file-effect/retained-worker/private-provider/OCR/restricted-review obstacles stay blocked; unfinished available tests remain pending. Other supported subwork may proceed. No model accuracy rerun or retained staging effect.",
+  "implementation_order": "Comprehensive UI remains approved not started. Start only after both optional-low-memory-inference and functionality-optimization actually close through their own workflows. A pending label does not remove this user instruction.",
+  "historical_handoff_observations": [
+    {
+      "roadmap_id": "security-vulnerability-remediation",
+      "observed_canonical_status": "blocked",
+      "state_sha256": "c74c24552248e7763036058d519939c7b627aa01dde8764aad9f84f7f4b57d65",
+      "observed_open_handoff_blockers": [
+        {
+          "id": "approved-successor-handoff",
+          "summary": "Remaining remediation is frozen here and owned by the approved security-findings-refresh successor. Completed legacy history remains unchanged; no approval or completion is transferred.",
+          "required_action": "Execute remaining remediation only through the approved successor and retain this legacy history for revalidation."
+        }
+      ],
+      "interpretation": "Historical frozen handoff; execute its named successor under existing user direction. This audit neither delivers nor certifies projection folding, transfers approval or grants completion."
+    },
+    {
+      "roadmap_id": "systems-run-workflow-active-source",
+      "observed_canonical_status": "blocked",
+      "state_sha256": "e8072735262a822ca2b0d01472d6a6849a777b4065773bd65c55e361908dce5a",
+      "observed_open_handoff_blockers": [
+        {
+          "id": "superseded-by-publish-lifecycle",
+          "summary": "Superseded unapproved proposal: the completed Publish lifecycle explicitly absorbed active-source eligibility and removed the standalone Run and Test surface. Recreating that surface contradicts the later user direction.",
+          "required_action": "Execute current Publish lifecycle and security successor work only. Preserve this draft as mapped history; its six criteria have existing primary and companion owners. No implementation, approval or qualification pass is asserted for this unstarted draft."
+        }
+      ],
+      "interpretation": "Historical frozen handoff; execute its named successor under existing user direction. This audit neither delivers nor certifies projection folding, transfers approval or grants completion."
+    }
+  ]
+}

@@ -1,5 +1,46 @@
 {
-  "blockers": [],
+  "blockers": [
+    {
+      "id": "installed-model-profile-qualification-incomplete",
+      "kind": "technical",
+      "recordedAt": "2026-10-22T16:25:37Z",
+      "requiredAction": "Execute the unchanged supported CPU/accelerator matrix with approved installed models and safe resource admission, preserving failures, followed by actual automated visual-builder workflows and exact-target qualification. No model/device substitution, unsupported OCR/provider download or lowered oracle is authorized by this status change. Standard CPU/CUDA cohorts may proceed wherever safely admitted independently of offload; this status does not assert all feasible subwork is done.",
+      "resolution": "Superseded the outdated pre-experiment description with standard-constrained-model-profile-and-ui-gaps. Current measured gaps remain open under that precise blocker; this is a status reconciliation, not resolution of model qualification.",
+      "resolvedAt": "2026-10-22T23:41:47Z",
+      "status": "resolved",
+      "summary": "The required complete CPU/accelerator constrained-generation, adaptive override and resource/latency/checked-output profile has not passed. Existing denied, failed and incomplete installed-model trials cannot qualify it, and the optional offload route is denied pending native protection."
+    },
+    {
+      "id": "standard-constrained-model-profile-and-ui-gaps",
+      "kind": "technical",
+      "recordedAt": "2026-10-22T23:41:47Z",
+      "requiredAction": "Complete the unchanged safely admitted CPU/accelerator checked-output/resource profile and actual agent-executed adaptive/explicit-override visual-builder and packaged-host workflows, with current exact-target checks/review and final owning gates. Preserve all observed wrong labels, failures, incomplete repetitions and memory denials. Do not infer semantic utility from valid JSON, substitute another model/precision, lower an oracle, acquire an offload lease or use unapproved credentials/downloads. No local supporting work grants a parent pass.",
+      "resolution": "Historical assessment superseded by the validated operator bundle and explicit user22of24 absolute-quality acceptance. Unresolved technical concerns transfer to reviewed-constrained-cpu-and-host-gaps; they remain open. This records no model, native, host or roadmap qualification pass.",
+      "resolvedAt": "2026-10-23T11:05:26Z",
+      "status": "resolved",
+      "summary": "Reviewed current Standard-only constrained GPU measurements completed all3 pairs for pinned1.5B BF16 with23of24 quality per phase;0.5B Float32 GPU candidates completed3repetitions at12of24. Smaller-model constrained CPU candidates completed only2of3 at10of24, followed by unchanged memory denial; larger-model CPU attempts were all denied. Failed/denied historical baselines prevent complete smaller-model matched comparisons. Direct adapter measurements do not qualify packaged-host adaptive defaults, explicit override, visual-builder journeys or complete supported resource/latency profiles. Native/offload protection remains separate and pending."
+    },
+    {
+      "id": "reviewed-constrained-cpu-and-host-gaps",
+      "kind": "technical",
+      "recordedAt": "2026-10-23T11:05:25Z",
+      "requiredAction": "Retain the passed completed1.5B absolutequality check under the user22of24 acceptance, and valid constrainedGPU resource subevidence. Complete safely admitted constrainedCPU/model cohorts and actual automated adaptive/explicit-override packaged-host/visual-builder workflows, with exact-target review/final gates. Keep0.5B failures, denials, oldprotocols and native/offload/whole-host gaps visible. No valid-JSON or resource result certifies semantics; no unapproved change of model, precision, oracle, guard, credential or offload authority.",
+      "resolution": "Superseded the earlier bundle description after separately reviewed1283evidence. Actual remaining concerns stay open under adaptive-override-host-qualification-pending. This does not grant a full criterion/chunk/increment or roadmap pass.",
+      "resolvedAt": "2026-10-23T13:49:48Z",
+      "status": "resolved",
+      "summary": "Latest reviewed Standard-only bundle4a779a has3matched1.5B constrainedGPU pairs at23of24 per first/warm phase, meeting the user22absolutequality threshold and prospective latency/VRAM budgets.0.5B constrainedGPU candidates score12of24, below22. ConstrainedCPU is denied for bothmodels; priorCPUpartialresultsremainhistorical. The bundle does not test packaged-host adaptive default, explicit override or visual-builder UI. All48worker native exits0/model cleanups are observed for this bundle, without qualifying earlier interrupted cleanup, native storage or offload protection."
+    },
+    {
+      "id": "adaptive-override-host-qualification-pending",
+      "kind": "technical",
+      "recordedAt": "2026-10-23T13:49:48Z",
+      "requiredAction": "Complete actual agent-executed packaged-host adaptive-state, explicit-override and visual-builder UI qualification, then current owning checks/review/final gates. Reuse the reviewed representative CPU/accelerator structural/resource measurements as scoped evidence without requiring duplicate runs or adding an unrelated semantic gate. Preserve wrong-label history under Functionality and retain all native/offload/provider/security boundaries; finite fixture UI does not certify physical model execution.",
+      "resolution": "Reclassified available adaptive/explicit-override/visual-builder host assertions as pending qualification rather than an unavailable resource/authority blocker. Reviewed CPU/GPU structural/resource evidence remains scoped, and the composite criterion is not passed.",
+      "resolvedAt": "2026-10-23T15:58:34Z",
+      "status": "resolved",
+      "summary": "The previously missing representative constrained-CPU structural/resource portion is demonstrated by all3current0.5B Float32 CPU repetitions: bounded resource/time,22structurally accepted outputs per24case phase,0invalid-output attempts/accepted outputs, native exit0 and observed cleanup. The3currentconstrainedGPU repetitions also satisfy structural/resource checks. Actual packaged-host adaptive state, explicit override and successful automated visual-builder journeys remain unqualified. Canonical criterion contains no universal22/24 semantic threshold; smaller semantic failures remain with Functionality. No full criterion or new chunk closes."
+    }
+  ],
   "chunks": [
     {
       "areas": [
@@ -962,6 +1003,39 @@
       "outcome": "passed",
       "recordedAt": "2026-07-31T14:24:20Z",
       "summary": "Security-relevant review confirmed bounded schemas and output, unchanged token masking and mandatory post-validation, no raw model data in diagnostics, no silent fallback, and a Windows resource fix that bypasses only optional compilation."
+    },
+    {
+      "artifact": null,
+      "command": null,
+      "criterionId": "representative-resource-and-usability-qualification",
+      "id": "evidence-29",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "external",
+      "outcome": "pending",
+      "recordedAt": "2026-10-22T14:07:35Z",
+      "summary": "Technical qualification pending: actual sufficient accelerator and constrained CPU cohorts, adaptive state and explicit override, bounded memory/latency, valid checked output and automated visual-builder UI journeys using only approved installed models and the pinned safe runtime."
+    },
+    {
+      "artifact": "docs/operations/model-blocker-evidence-assessment.json",
+      "command": "Operator-run fixed Windows-v2 bundle4a779a; owning read-only source/index/completed-case/comparison replay; no new model inference.",
+      "criterionId": "representative-resource-and-usability-qualification",
+      "id": "evidence-30",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-23T11:05:24Z",
+      "summary": "Latest reviewed Standard-only bundle4a779a has3matched1.5B constrainedGPU pairs at23of24 per first/warm phase, meeting the user22absolutequality threshold and prospective latency/VRAM budgets.0.5B constrainedGPU candidates score12of24, below22. ConstrainedCPU is denied for bothmodels; priorCPUpartialresultsremainhistorical. The bundle does not test packaged-host adaptive default, explicit override or visual-builder UI. All48worker native exits0/model cleanups are observed for this bundle, without qualifying earlier interrupted cleanup, native storage or offload protection."
+    },
+    {
+      "artifact": "docs/operations/remaining-model-evidence-assessment.json",
+      "command": "Operator-run remaining-only bundle1283a33f; owning source/restart/index/raw-case replay and independent numeric review; no new inference during assessment.",
+      "criterionId": "representative-resource-and-usability-qualification",
+      "id": "evidence-31",
+      "incrementId": "production-hardening-and-qualification",
+      "kind": "test",
+      "outcome": "pending",
+      "recordedAt": "2026-10-23T13:49:48Z",
+      "summary": "The previously missing representative constrained-CPU structural/resource portion is demonstrated by all3current0.5B Float32 CPU repetitions: bounded resource/time,22structurally accepted outputs per24case phase,0invalid-output attempts/accepted outputs, native exit0 and observed cleanup. The3currentconstrainedGPU repetitions also satisfy structural/resource checks. Actual packaged-host adaptive state, explicit override and successful automated visual-builder journeys remain unqualified. Canonical criterion contains no universal22/24 semantic threshold; smaller semantic failures remain with Functionality. No full criterion or new chunk closes."
     }
   ],
   "feedback": [
@@ -993,6 +1067,26 @@
       "nextAction": "Prefer an installed supported Python interpreter for desktop runtime startup, fail safely when decoder readiness is absent, and normalize only an exact single fenced JSON object before mandatory schema and semantic validation.",
       "recordedAt": "2026-07-31T13:15:55Z",
       "summary": "A checked request reached an unsupported Python decoder runtime, and Qwen 1.5B returned one fenced JSON object that unchecked parsing rejected before schema validation.",
+      "targetIncrementId": "production-hardening-and-qualification"
+    },
+    {
+      "category": "decision",
+      "disposition": "accepted",
+      "id": "user-22of24-absolute-quality-accepted",
+      "impact": "within-increment",
+      "nextAction": "Record the explicit22of24 absolute-quality pass separately from unchanged remaining technical qualification.",
+      "recordedAt": "2026-10-23T11:05:23Z",
+      "summary": "The user explicitly accepts22of24 as the absolute quality threshold for completed1.5B observations. All7completedcandidatecohorts pass this revised check. Acceptance is retrospective: original23of24 protocol results, paired metrics and incomplete/denied observations remain unchanged; no missing native/offload or whole-host qualification is waived.",
+      "targetIncrementId": "production-hardening-and-qualification"
+    },
+    {
+      "category": "verification",
+      "disposition": "accepted",
+      "id": "remaining-model-tests-and-cpu-estimates-20261023",
+      "impact": "within-increment",
+      "nextAction": "Run the separately reviewed current-source17candidate remaining-only template after closing Codex:5denied1.5B CPU and12failed/denied0.5B. Seven accepted1.5B candidates and historical baselines are not repeated; retain original22acceptance, paired regression findings and native/offload/provider/host gaps.",
+      "recordedAt": "2026-10-23T11:47:36Z",
+      "summary": "User requested only unresolved model tests, safe diagnostic failure logs and prospective3GiB/3.5GiB CPU admission for the two approved pinned model/precision profiles. Reviewed helper support is implemented; no new model result or parent pass follows.",
       "targetIncrementId": "production-hardening-and-qualification"
     }
   ],
@@ -1465,6 +1559,96 @@
       "recordedAt": "2026-07-31T14:24:20Z",
       "sequence": 78,
       "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "66fa6d30d9ff60575f440d7c12d60d894d2fe5564dec95a9722d5fe9da08859b",
+      "recordedAt": "2026-10-22T14:04:24Z",
+      "sequence": 79,
+      "type": "legacy-acceptance-scope-revised"
+    },
+    {
+      "eventFingerprint": "e400f7a09ceea2daa563c6102534f827fd44275b8b37931e2b0af0444790d129",
+      "recordedAt": "2026-10-22T14:04:24Z",
+      "sequence": 80,
+      "type": "roadmap-approved"
+    },
+    {
+      "eventFingerprint": "a4ab6d24e4f03e00a05e5c8dc13cecc425519f58d513ae3468837f4a9169242a",
+      "recordedAt": "2026-10-22T14:07:35Z",
+      "sequence": 81,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "a0921c0b4392b8827c1db74f4428fdd72020ac50e608416e6487b899ebd4827d",
+      "recordedAt": "2026-10-22T16:25:37Z",
+      "sequence": 82,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "d8ae05aaaaf3b2cff31a9cdbaaba4c7b922a15fd35632b30b7906542dfc18603",
+      "recordedAt": "2026-10-22T23:41:47Z",
+      "sequence": 83,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "38b52167137edbda9796441b907dfb4eb7f464fd1c5dee8767e93eb0722fc4f2",
+      "recordedAt": "2026-10-22T23:41:47Z",
+      "sequence": 84,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "9aee259d3bb249cf01f94420950eb121afb2af106d0a7ccef8750e5a80fb8149",
+      "recordedAt": "2026-10-23T11:05:23Z",
+      "sequence": 85,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "d8318bf5984270643f2f9de3c182d90059deac345feba546aaee482e9fe338c9",
+      "recordedAt": "2026-10-23T11:05:24Z",
+      "sequence": 86,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "281608c03e77d37727694c6126f30e6cf09a32d07a10c6e9da7bd00107e0370e",
+      "recordedAt": "2026-10-23T11:05:25Z",
+      "sequence": 87,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "2d3e5fafc87f9df8773629eb615820320648dbdacaca9e17880588ecec49231a",
+      "recordedAt": "2026-10-23T11:05:26Z",
+      "sequence": 88,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "baec1f10e524ebb4f902bc44e2e0bf936ca7e4886081b93a1022901b8faacc1d",
+      "recordedAt": "2026-10-23T11:47:36Z",
+      "sequence": 89,
+      "type": "feedback-recorded"
+    },
+    {
+      "eventFingerprint": "9302207051614805664f0cd1e9ba5b84249ea848dbd523fbd26f0f3706acf6f6",
+      "recordedAt": "2026-10-23T13:49:48Z",
+      "sequence": 90,
+      "type": "evidence-recorded"
+    },
+    {
+      "eventFingerprint": "1babd097bdd8609338fe15ed5d4925e68e42b391c78ac9684dd06f3a07ed72e0",
+      "recordedAt": "2026-10-23T13:49:48Z",
+      "sequence": 91,
+      "type": "blocker-recorded"
+    },
+    {
+      "eventFingerprint": "61bbb71012a7d7b22bcedd96f36c56058b35983c3c20d60eafab12a6a088d38e",
+      "recordedAt": "2026-10-23T13:49:48Z",
+      "sequence": 92,
+      "type": "resumed"
+    },
+    {
+      "eventFingerprint": "89085a4c3113e0761a189cde5034d7b4ee03a88a0a7189500e6a3b142a1717a4",
+      "recordedAt": "2026-10-23T15:58:34Z",
+      "sequence": 93,
+      "type": "resumed"
     }
   ],
   "increments": [
@@ -2225,7 +2409,7 @@
           "qualification": "local"
         },
         {
-          "description": "A representative sufficient accelerator profile and constrained CPU profile confirm the adaptive state, explicit override, bounded memory and latency, valid checked output, and successful visual-builder use by a non-developer without retaining prompts or generated output in evidence.",
+          "description": "A representative sufficient accelerator profile and constrained CPU profile confirm the adaptive state, explicit override, bounded memory and latency, valid checked output, and successful agent-executed visual-builder UI workflows without retaining prompts or generated output in evidence.",
           "id": "representative-resource-and-usability-qualification",
           "qualification": "controlled-environment"
         },
@@ -2430,6 +2614,116 @@
       ]
     }
   ],
+  "legacyAcceptanceScopeRevisions": [
+    {
+      "authorityRef": "user-agent-only-acceptance-and-current-scope-20261022",
+      "incrementId": "production-hardening-and-qualification",
+      "originalPlan": {
+        "assumptions": [
+          "No new architecture decision is required because the work remains within accepted Python-adapter, host composition, shared UI, and Data Management boundaries.",
+          "Python 3.10 through 3.13 with the exact reviewed package versions is the only decoder-supported range; other versions remain truthfully unchecked and unavailable.",
+          "Attribution is selected quality policy, not model output: the visual preview shows its locked companion object and the worker adds it only from trusted selected-source metadata after validation.",
+          "The full short and long suites run only after every final increment edit is complete.",
+          "Representative accelerator and non-developer usability evidence cannot be invented; it may remain pending under this increment's approved controlled-environment policy."
+        ],
+        "chunks": [
+          {
+            "criteriaIds": [
+              "packaged-host-readiness",
+              "security-impact-reviewed"
+            ],
+            "id": "packaged-runtime",
+            "outcome": "Desktop and server dependency checks, packages, and capabilities truthfully support the exact decoder only on reviewed Python/package combinations and fail closed otherwise.",
+            "title": "Packaged runtime qualification"
+          },
+          {
+            "criteriaIds": [
+              "representative-resource-and-usability-qualification",
+              "security-impact-reviewed"
+            ],
+            "id": "resource-usability-and-performance",
+            "outcome": "Automated bounded profiles and available local checks verify adaptive behavior, while unavailable representative accelerator and non-developer evidence is retained as sanitized controlled-environment qualification.",
+            "title": "Resource, usability, and performance evidence"
+          },
+          {
+            "criteriaIds": [
+              "documentation-and-dependency-gates",
+              "security-impact-reviewed"
+            ],
+            "id": "architecture-security-and-guidance",
+            "outcome": "Canonical architecture, threat model, context, READMEs, and user guidance accurately describe visual schemas, trusted attribution, dependency posture, rollback, and residual risks without technical clutter in the UI.",
+            "title": "Architecture, security, and guidance"
+          },
+          {
+            "criteriaIds": [
+              "packaged-host-readiness",
+              "documentation-and-dependency-gates",
+              "full-short-and-long-suites",
+              "security-impact-reviewed"
+            ],
+            "id": "completion-gates",
+            "outcome": "Applicable builds and repository gates pass, followed by one separate complete short-suite run and one complete long-suite run after all implementation is finished.",
+            "title": "Completion gates"
+          }
+        ],
+        "completionTests": [
+          "npm run docs:check, npm run architecture:check, npm run agent-support:check, npm run security:dependencies, git diff --check, and applicable desktop/server/thin-client builds",
+          "npm run test:short once after all implementation edits",
+          "npm run test:long once, separately, after the short suite"
+        ],
+        "documentation": [
+          "Runtime contracts and Python adapter/worker READMEs",
+          "Data Management and runtime architecture",
+          "Data Management threat model and data-management/runtime/security context",
+          "Plain-language Dataset Preparation output-shape, attribution, saved-settings, and resource guidance",
+          "Roadmap implementation report with sanitized local and pending controlled evidence"
+        ],
+        "fingerprint": "27c69eed4388d82922d4e2094d329859328f474ca7eb606cb59544d62e666d37",
+        "focusedTests": [
+          "Worker dependency probe, capability, exact-version, unsupported-Python, mismatch, install-retry, and packaged-path tests",
+          "Constrained decoder compilation, processor attachment, EOS acceptance, resource-bound, failure-code, non-disclosure, and no-fallback tests",
+          "Capacity projection and adaptive preference tests for sufficient, constrained, unknown, stale, unsupported, and explicit override states",
+          "Attribution selection, locked UI fields, trusted post-generation metadata, public-URL sanitization, and absent-when-unselected tests",
+          "Packaged desktop/server startup checks that do not require network-dependent model downloads"
+        ],
+        "recordedAt": "2026-07-30T21:17:30Z",
+        "rollback": "Disable capability advertisement and hide the checkbox and visual editor, resolve every recipe to its compatible default shape with constraints off, preserve readable saved layouts, keep strict structural/semantic validation and trusted attribution behavior, and remove the isolated decoder dependencies only after packaged hosts no longer probe or import them.",
+        "steps": [
+          "Audit conditional dependency pins, supported Python range, startup probes, capability advertisement, packaged file inclusion, and fail-closed checked generation; add only missing focused readiness tests.",
+          "Finish plain-language UI and canonical documentation for default schemas, visual editing, adaptive checkbox behavior, trusted attribution, saved settings, training purpose mappings, rollback, and residual limitations.",
+          "Complete the security threat/control review for schema substitution, resource exhaustion, dependency integrity, attribution URL sanitization, diagnostic non-disclosure, unchecked residual risk, and controlled qualification.",
+          "Run focused package/startup and dependency tests, then applicable builds and documentation, architecture, agent-support, dependency-security, and diff hygiene gates.",
+          "After all edits are complete, invoke the full short-duration test command once and the full long-duration E2E command separately once; investigate failures without weakening tests or controls.",
+          "Record local evidence, honestly retain representative supported-host and usability qualification as controlled-environment pending if unavailable, validate roadmap state, and complete the implementation report."
+        ],
+        "summary": "Harden and qualify the completed feature without broadening its architecture: close packaging and dependency-readiness gaps, document trusted schema and attribution behavior in plain language, complete the security and supply-chain review, run focused packaged-host checks, then run the complete short and long suites separately once."
+      },
+      "previousApproval": {
+        "approvedAt": "2026-07-30T19:31:56Z",
+        "fingerprint": "5ad6a36fda9957da0b53d365803193c3f99525510da6c5e9dfb9844ecd18e00b",
+        "note": "User explicitly approved the B3-expanded revised roadmap and requested uninterrupted increment-by-increment execution through a production-ready end-to-end result."
+      },
+      "recordedAt": "2026-10-22T14:04:24Z",
+      "removedCriteria": [],
+      "replacedCriteria": [
+        {
+          "humanScope": "Observed use by a non-developer and participant usability acceptance are handled offline. Automated visual-builder interaction/accessibility and all original accelerator/CPU, memory/latency and checked-output requirements remain technical.",
+          "original": {
+            "description": "A representative sufficient accelerator profile and constrained CPU profile confirm the adaptive state, explicit override, bounded memory and latency, valid checked output, and successful visual-builder use by a non-developer without retaining prompts or generated output in evidence.",
+            "id": "representative-resource-and-usability-qualification",
+            "qualification": "controlled-environment"
+          },
+          "revised": {
+            "description": "A representative sufficient accelerator profile and constrained CPU profile confirm the adaptive state, explicit override, bounded memory and latency, valid checked output, and successful agent-executed visual-builder UI workflows without retaining prompts or generated output in evidence.",
+            "id": "representative-resource-and-usability-qualification",
+            "qualification": "controlled-environment"
+          }
+        }
+      ],
+      "status": "offline-user-owned",
+      "summary": "User-directed offline human acceptance; preserve every technical requirement and all prior evidence. No test pass or closure is asserted."
+    }
+  ],
   "name": "Optional Constrained JSON Generation",
   "objective": "Add an optional token-level JSON Schema constrained decoder for local Qwen dataset generation while preserving strict semantic validation and an explicit user-controlled fallback path.",
   "paths": {
@@ -2437,14 +2731,35 @@
     "roadmap": "docs/optional-constrained-json-generation-implementation-roadmap.md",
     "state": ".implementation-roadmaps/optional-constrained-json-generation/state.json"
   },
-  "resumeAudits": [],
+  "resumeAudits": [
+    {
+      "blockerId": "installed-model-profile-qualification-incomplete",
+      "reconciliation": "Preserve every original criterion, increment, chunk, evidence, approval, failure and completion status. Exact completed local support is linked separately; neither this event nor clean worker exits grant current parent qualification.",
+      "recordedAt": "2026-10-22T23:41:47Z"
+    },
+    {
+      "blockerId": "standard-constrained-model-profile-and-ui-gaps",
+      "reconciliation": "Added the current successor blocker first so qualification stays blocked continuously. Preserved every prior score, protocol, failure and incomplete case; replaced stale older-run statements with current evidence. Original blocker text remains historical, and semantic criteria/chunks/approval/status remain unchanged.",
+      "recordedAt": "2026-10-23T11:05:26Z"
+    },
+    {
+      "blockerId": "reviewed-constrained-cpu-and-host-gaps",
+      "reconciliation": "Verified actual remaining-only source/template/selection/indexes and raw outcomes. Preserved historical evidence, all technical criteria/chunks/approvals and other roadmap owners. Removed obsolete claims that the smaller constrained CPU profile was unmeasured.",
+      "recordedAt": "2026-10-23T13:49:48Z"
+    },
+    {
+      "blockerId": "adaptive-override-host-qualification-pending",
+      "reconciliation": "All implemented chunks, pending criterion/evidence, source-specific resource results, approval and historical failures remain unchanged. Derive implementation-complete-qualification-pending after resolving the last blocker; execute actual UI/target/final checks before qualification. No accuracy or native/offload inference pass is created.",
+      "recordedAt": "2026-10-23T15:58:34Z"
+    }
+  ],
   "roadmapApproval": {
-    "approvedAt": "2026-07-30T19:31:56Z",
-    "fingerprint": "5ad6a36fda9957da0b53d365803193c3f99525510da6c5e9dfb9844ecd18e00b",
-    "note": "User explicitly approved the B3-expanded revised roadmap and requested uninterrupted increment-by-increment execution through a production-ready end-to-end result."
+    "approvedAt": "2026-10-22T14:04:24Z",
+    "fingerprint": "60d5de19b340a52b37cec7e75c25c6a97a55199a53d8a13187f9293671198dbd",
+    "note": "The user explicitly directed AI-executable roadmap acceptance, offline human testing and removal of obsolete scope. This reapproval covers only the independently reviewed human wording amendment; technical qualification and product approval controls are unchanged."
   },
   "schemaVersion": 1,
   "slug": "optional-constrained-json-generation",
   "status": "implementation-complete-qualification-pending",
-  "updatedAt": "2026-07-31T14:24:20Z"
+  "updatedAt": "2026-10-23T15:58:34Z"
 }
